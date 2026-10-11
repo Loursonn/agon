@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import {
@@ -6,6 +6,7 @@ import {
   addWeeks, subWeeks, startOfWeek,
 } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare } from "lucide-react";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed } from "lucide-react";
 import { C } from "@/lib/theme";
 import { MuscleVolumeCard } from "@/components/athlete/StatsViews";
@@ -22,6 +23,8 @@ import { WorkoutsDetailView } from "../components/retours/WorkoutsDetailView";
 import { TestsDetailView } from "../components/retours/TestsDetailView";
 import { CompetitionsDetailView } from "../components/retours/CompetitionsDetailView";
 import { NutritionDetailView } from "../components/retours/NutritionDetailView";
+import { useWeeklyCoachRetour, useUpsertWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
+import { useAuth } from "@/hooks/useAuth";
 
 type ViewMode = "month" | "week";
 type DetailView = "wellness" | "workouts" | "tests" | "competitions" | "nutrition" | null;
@@ -38,6 +41,26 @@ export default function RetoursPage() {
   const { data: monthData, isLoading: monthLoading } = useMonthlyRetours(athleteId!, selectedMonth);
   const { data: weekData,  isLoading: weekLoading  } = useWeeklyRetours(athleteId!, selectedWeek);
   const { data: modifications = [] } = useAthleteModifications(athleteId!);
+  const { user } = useAuth();
+  const weekStartStr = format(selectedWeek, "yyyy-MM-dd");
+  const { data: retourData } = useWeeklyCoachRetour(athleteId, weekStartStr);
+  const upsertRetour = useUpsertWeeklyRetour();
+  const [retourDraft, setRetourDraft] = useState("");
+  const retourSynced = useRef(false);
+
+  // Sync draft with DB data
+  useEffect(() => {
+    if (retourData !== undefined && !retourSynced.current) {
+      setRetourDraft(retourData?.comment ?? "");
+      retourSynced.current = true;
+    }
+  }, [retourData]);
+
+  // Reset sync flag on week change
+  useEffect(() => {
+    retourSynced.current = false;
+    setRetourDraft("");
+  }, [weekStartStr]);
 
   const isLoading = viewMode === "month" ? monthLoading : weekLoading;
   if (isLoading) return <PageSkeleton />;
@@ -175,6 +198,56 @@ export default function RetoursPage() {
           weekData={weekCurrent}
           prevWeekData={weekData?.previous_week}
         />
+      )}
+
+      {/* Coach retour */}
+      {viewMode === "week" && (
+        <div style={{ marginTop: 16, background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <MessageSquare size={14} color={C.ac} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Retour coach</span>
+            {retourData?.comment && retourDraft === retourData.comment && (
+              <span style={{ fontSize: 9, color: C.g, fontWeight: 600 }}>Enregistré</span>
+            )}
+          </div>
+          <textarea
+            value={retourDraft}
+            onChange={(e) => setRetourDraft(e.target.value)}
+            placeholder="Écris ton retour sur la semaine ici… L'athlète le verra dans son onglet Aujourd'hui."
+            rows={4}
+            style={{
+              width: "100%", padding: "10px 12px", borderRadius: 4,
+              border: "1px solid " + C.brdL, background: C.s2,
+              color: C.tx, fontSize: 13, fontFamily: "inherit",
+              resize: "vertical", outline: "none", boxSizing: "border-box",
+              lineHeight: 1.5,
+            }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <button
+              onClick={() => {
+                if (!athleteId || !user?.id) return;
+                upsertRetour.mutate({
+                  athleteId,
+                  coachId: user.id,
+                  weekStart: weekStartStr,
+                  comment: retourDraft.trim(),
+                });
+              }}
+              disabled={upsertRetour.isPending || retourDraft.trim() === (retourData?.comment ?? "")}
+              style={{
+                padding: "8px 20px", borderRadius: 4,
+                border: "none",
+                background: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ac : C.s2,
+                color: retourDraft.trim() !== (retourData?.comment ?? "") ? "#0E0C0A" : C.tx3,
+                fontSize: 12, fontWeight: 700, cursor: "pointer",
+                fontFamily: "inherit", opacity: upsertRetour.isPending ? 0.6 : 1,
+              }}
+            >
+              {upsertRetour.isPending ? "Enregistrement…" : "Enregistrer"}
+            </button>
+          </div>
+        </div>
       )}
 
       {viewMode === "month" && monthData && (

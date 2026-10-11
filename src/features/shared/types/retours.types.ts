@@ -104,6 +104,7 @@ export interface EnergySessionDetail {
   intervals: any[];              // EnergyStep[] — planned structure
   step_log: Record<string, EnergyStepLog> | null; // per-step completion
   block_logs: Record<string, { done: boolean; note?: string }> | null;
+  activity_url: string | null;
 }
 
 // ── Activité libre ────────────────────────────────────────────────────────────

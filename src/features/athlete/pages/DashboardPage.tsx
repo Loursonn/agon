@@ -6,6 +6,7 @@ import { HabitDashboard } from "@/components/athlete/HabitTracker";
 import { WELL_ITEMS } from "@/lib/wellness";
 import { evaluateNutritionDay } from "@/lib/nutrition";
 import { ALL_BZ } from "@/lib/muscles";
+import { useWeeklyDistances } from "@/features/shared/hooks/useWeeklyDistances";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -16,8 +17,10 @@ export default function DashboardPage() {
     energyDayPlan, testSessions, visibilitySettings, wellness, wScore, wReco,
     setShowWellness, activeInjuries, nutritionStrategy, athleteProfile,
     habits, setHabits, habitLogs, toggleHabitLog, habitEnabled, athleteId,
-    goals,
+    goals, freeSessions,
   } = useAthleteContext();
+
+  const weekDistances = useWeeklyDistances(athleteId, freeSessions);
 
   const todayDow = (new Date().getDay() + 6) % 7;
   const doneNow = completedSessions[currentWeek] || [];
@@ -160,6 +163,46 @@ export default function DashboardPage() {
           </div>
         );
       })()}
+
+      {/* Weekly distances */}
+      {weekDistances.bySport.length > 0 && (
+        <div style={{ background: C.s1, borderRadius: 6, padding: "11px 16px", border: "1px solid " + C.brd, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>
+              Kilomètres cette semaine
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.ac }}>{weekDistances.total} km</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {weekDistances.bySport.map((d) => (
+              <div key={d.sport} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{
+                  width: 6, height: 6, borderRadius: "50%", background: d.color, flexShrink: 0,
+                }} />
+                <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.tx2 }}>{d.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: d.color }}>{d.km} km</div>
+              </div>
+            ))}
+          </div>
+          {weekDistances.bySport.length > 1 && (
+            <div style={{
+              marginTop: 8, height: 4, borderRadius: 2, overflow: "hidden",
+              display: "flex", background: C.s2,
+            }}>
+              {weekDistances.bySport.map((d) => (
+                <div
+                  key={d.sport}
+                  style={{
+                    height: "100%",
+                    width: `${(d.km / weekDistances.total) * 100}%`,
+                    background: d.color,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Today's session / next session */}
       <div style={{ marginBottom: 12 }}>

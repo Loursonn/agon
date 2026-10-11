@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, X, Zap } from "lucide-react";
 import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, TrendingUp, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
@@ -18,6 +19,8 @@ import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
 import type { EnergyStep, EnergySessionRow } from "@/types/energy";
+import type { FreeSession } from "@/features/shared/types/athlete";
+import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -965,20 +968,57 @@ function TestChip({ test, onPress }: { test: TestBrief; onPress: (id: string) =>
 
 // ── Day row ───────────────────────────────────────────────────────────────────
 
+function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPress: (f: FreeSession) => void }) {
+  const sportMeta = SPORTS.find(s => s.key === activity.sport);
+  const color = "#1FF0B0";
+  return (
+    <button
+      onClick={() => { haptic(); onPress(activity); }}
+      style={{
+        flex: 1, display: "flex", alignItems: "center", gap: 12,
+        background: color + "12",
+        border: "none", borderLeft: "4px solid " + color,
+        borderRadius: "0 10px 10px 0",
+        padding: "10px 12px",
+        cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
+        minHeight: 44,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {activity.name}
+        </div>
+        <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
+          {sportMeta?.label ?? activity.sport}
+          {activity.duration ? ` · ${activity.duration} min` : ""}
+          {activity.distance_km ? ` · ${activity.distance_km} km` : ""}
+          {" · ✓"}
+        </div>
+      </div>
+      <span style={{ fontSize: 14, color: C.g, flexShrink: 0 }}>✓</span>
+    </button>
+  );
+}
+
 function DayRow({
   day, today, onSessionPress, onReschedule, onTestPress,
+  freeActivities, onAddActivity, onEditActivity, viewOnly,
 }: {
   day: WeekDay;
   today: string;
   onSessionPress: (s: WeekSession) => void;
   onReschedule: (s: WeekSession) => void;
   onTestPress: (id: string) => void;
+  freeActivities: FreeSession[];
+  onAddActivity: (date: string) => void;
+  onEditActivity: (f: FreeSession) => void;
+  viewOnly: boolean;
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
   const d       = new Date(day.date + "T12:00:00");
   const dateNum = d.getDate();
-  const isEmpty = day.sessions.length === 0 && day.tests.length === 0;
+  const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0;
 
   return (
     <div style={{
@@ -1051,6 +1091,34 @@ function DayRow({
           ))}
         </div>
       )}
+
+      {/* Free activities */}
+      {freeActivities.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "6px 0 6px 14px" }}>
+          {freeActivities.map(f => (
+            <FreeActivityChip key={f.id} activity={f} onPress={onEditActivity} />
+          ))}
+        </div>
+      )}
+
+      {/* Add activity button */}
+      {!viewOnly && (
+        <div style={{ padding: "4px 14px 8px" }}>
+          <button
+            onClick={() => { haptic(); onAddActivity(day.date); }}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              padding: "8px 0", borderRadius: 6,
+              border: "1px dashed " + C.brdL, background: "transparent",
+              color: C.tx3, fontSize: 11, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <Plus size={12} />
+            Activité libre
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1084,7 +1152,7 @@ const weekNavBtn: React.CSSProperties = {
 export default function ProgramPage() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
-  const { athleteId, viewOnly } = useAthleteContext();
+  const { athleteId, viewOnly, freeSessions, setFreeSessions } = useAthleteContext();
   const [weekOffset, setWeekOffset] = useState(0);
   const { data, isLoading, isPlaceholderData } = useActivePlan(athleteId ?? "", weekOffset);
 
@@ -1092,6 +1160,8 @@ export default function ProgramPage() {
   const [energyPreview,    setEnergyPreview]    = useState<{ sessionId: string; assignmentId: string; status: string; scheduledDate: string } | null>(null);
   const [rescheduleTarget, setRescheduleTarget] = useState<WeekSession | null>(null);
   const [testPreviewId,    setTestPreviewId]    = useState<string | null>(null);
+  const [activityDate,     setActivityDate]     = useState<string | null>(null);
+  const [editActivity,     setEditActivity]     = useState<FreeSession | null>(null);
 
   const today         = useMemo(() => {
     const d = new Date();
@@ -1268,6 +1338,10 @@ export default function ProgramPage() {
                     onSessionPress={handleSessionPress}
                     onReschedule={setRescheduleTarget}
                     onTestPress={(id) => setTestPreviewId(id)}
+                    freeActivities={freeSessions.filter(f => f.date === day.date && f.sport)}
+                    onAddActivity={setActivityDate}
+                    onEditActivity={setEditActivity}
+                    viewOnly={viewOnly}
                   />
                 ))}
               </div>
@@ -1350,6 +1424,22 @@ export default function ProgramPage() {
         testId={testPreviewId}
         athleteId={athleteId ?? ""}
         onClose={() => setTestPreviewId(null)}
+      />
+
+      {/* Free activity create modal */}
+      <FreeActivityModal
+        date={activityDate}
+        onClose={() => setActivityDate(null)}
+        onSave={(session) => setFreeSessions((prev) => [...prev, session])}
+      />
+
+      {/* Free activity edit modal */}
+      <FreeActivityModal
+        date={editActivity?.date ?? null}
+        existing={editActivity}
+        onClose={() => setEditActivity(null)}
+        onSave={(session) => setFreeSessions((prev) => prev.map((f) => f.id === session.id ? session : f))}
+        onDelete={(id) => setFreeSessions((prev) => prev.filter((f) => f.id !== id))}
       />
     </div>
   );

@@ -211,6 +211,7 @@ export interface EnergySessionAssignmentRow {
   rpe_score?: number | null;
   block_logs?: BlockLogs | null;
   actual_duration_min?: number | null;
+  activity_url?: string | null;
   created_at: string;
   updated_at: string;
   // Jointure optionnelle

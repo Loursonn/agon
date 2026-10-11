@@ -17,6 +17,7 @@ import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useCompleteEnergyAssignment, useUpdateEnergyAssignment, useUpsertEnergyRpe } from "@/features/shared/hooks/useEnergyAssignments";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import type { EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
+import { Check, Moon, Zap, AlertTriangle, Dumbbell, Heart, Info, MessageSquare } from "lucide-react";
 import { Check, Moon, Zap, AlertTriangle, Dumbbell, Heart, Info } from "lucide-react";
 import { AgonIcon } from "@/components/ui/AgonIcon";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
@@ -29,6 +30,8 @@ import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
 import { localISO, normalizeDayMap } from "@/lib/date";
+import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
+import { useWeeklyCoachRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -96,6 +99,9 @@ const WELL_FIELDS: Array<{ key: string; label: string; icon: React.ReactNode; in
   { key: "doms",    label: "DOMS",     icon: <Dumbbell size={12} />, inv: true  },
 ];
 
+// SPORTS list and FreeActivityModal imported from @/features/athlete/components/FreeActivityModal
+
+// FreeActivityModal extracted to @/features/athlete/components/FreeActivityModal
 // ── Sports list ───────────────────────────────────────────────────────────────
 
 const SPORTS = [
@@ -955,6 +961,7 @@ export default function TodayPage() {
   const { mutate: startUnplanned, isPending: startingUnplanned } = useStartUnplannedSession();
   const weekMondayISO = useMemo(localMonday, []);
   const today = localISO();
+  const { data: coachRetour } = useWeeklyCoachRetour(athleteId, weekMondayISO);
 
   // `wellnessHistory` est écrit par saveWellness() avec la clé compacte de
   // todayKey() ("20260817"), alors que tout TodayPage raisonne en ISO à tirets.
@@ -1129,6 +1136,21 @@ export default function TodayPage() {
           <div style={{ marginBottom: 16 }}>
             <CitationDuJour />
           </div>
+
+          {coachRetour?.comment && (
+            <div style={{
+              marginBottom: 16, background: C.acS, borderRadius: 6,
+              border: "1px solid " + C.ac + "30", padding: "12px 14px",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                <MessageSquare size={12} color={C.ac} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.ac }}>Retour de ton coach</span>
+              </div>
+              <div style={{ fontSize: 13, color: C.tx, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                {coachRetour.comment}
+              </div>
+            </div>
+          )}
 
           {readiness ? (
             <div

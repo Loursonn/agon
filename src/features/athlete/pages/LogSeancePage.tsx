@@ -103,6 +103,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
     return init;
   });
   const [globalNote, setGlobalNote] = useState((a.notes ?? "") as string);
+  const [activityUrl, setActivityUrl] = useState(() => ((a as Record<string, unknown>).activity_url as string) ?? "");
   const [actualDuration, setActualDuration] = useState<string>(() => {
     if ((a as Record<string, unknown>).actual_duration_min != null)
       return String((a as Record<string, unknown>).actual_duration_min);
@@ -127,6 +128,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
         block_logs: logs,
         notes: globalNote || undefined,
         actual_duration_min: durationMin && !isNaN(durationMin) ? durationMin : undefined,
+        activity_url: activityUrl.trim() || undefined,
       },
       { onSuccess: () => onRpeDone(a.id) },
     );
@@ -283,6 +285,20 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               border: "1px solid " + C.brdL, background: C.s2,
               color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
               resize: "none", boxSizing: "border-box",
+            }}
+          />
+
+          {/* Lien Strava / Garmin */}
+          <input
+            type="url"
+            placeholder="Lien Strava ou Garmin (optionnel)"
+            value={activityUrl}
+            onChange={e => setActivityUrl(e.target.value)}
+            style={{
+              width: "100%", marginTop: 12, padding: "8px 10px", borderRadius: 4,
+              border: "1px solid " + C.brdL, background: C.s2,
+              color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
+              boxSizing: "border-box",
             }}
           />
 

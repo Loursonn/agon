@@ -166,13 +166,13 @@ async function fetchWeekData(
     db.from("workout_logs")
       .select("id, session_id, session_name, scheduled_date, status, duration_s, notes, rpe_score, athlete_modifications, week_number")
       .eq("athlete_id", athleteId)
-      // include skipped — coaches want to see them
+      .not("status", "eq", "skipped")
       .gte("scheduled_date", start)
       .lte("scheduled_date", end)
       .order("scheduled_date"),
 
     db.from("energy_session_assignments")
-      .select("id, scheduled_date, status, notes, rpe_score, block_logs, actual_duration_min, energy_sessions(id, name, session_kind, total_duration_s, total_distance_m, intervals)")
+      .select("id, scheduled_date, status, notes, rpe_score, block_logs, actual_duration_min, activity_url, energy_sessions(id, name, session_kind, total_duration_s, total_distance_m, intervals)")
       .eq("athlete_id", athleteId)
       .gte("scheduled_date", start)
       .lte("scheduled_date", end),
@@ -416,6 +416,7 @@ async function fetchWeekData(
       intervals:     es.intervals        ?? [],
       step_log:      stepLog,
       block_logs:    e.block_logs        ?? null,
+      activity_url:  (e as Record<string, unknown>).activity_url as string | null ?? null,
     };
   });
 
