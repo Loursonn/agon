@@ -7,6 +7,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed } from "lucide-react";
 import { C } from "@/lib/theme";
 import { MuscleVolumeCard } from "@/components/athlete/StatsViews";
 import { stC, ALL_BZ } from "@/lib/muscles";
