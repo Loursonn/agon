@@ -241,6 +241,8 @@ export interface FreeSession {
   duration?: number;
   intensity?: number;
   note?: string;
+  /** Distance parcourue en kilomètres (course, vélo, natation…) */
+  distance_km?: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   exercises?: any[];
 }

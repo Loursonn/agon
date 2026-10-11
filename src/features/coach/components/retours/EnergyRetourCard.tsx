@@ -262,6 +262,24 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
             </div>
           )}
 
+          {/* Lien Strava / Garmin */}
+          {session.activity_url && (
+            <a
+              href={session.activity_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                fontSize: 11, fontWeight: 600, color: "#FF5500",
+                padding: "6px 10px", borderRadius: 4,
+                background: "rgba(255,85,0,0.08)", border: "1px solid rgba(255,85,0,0.2)",
+                textDecoration: "none", width: "fit-content",
+              }}
+            >
+              {session.activity_url.includes("strava") ? "Strava" : session.activity_url.includes("garmin") ? "Garmin" : "Activité"} ↗
+            </a>
+          )}
+
           {/* Intervals: planned + step log (old system) */}
           {hasIntervals && (
             <div>
