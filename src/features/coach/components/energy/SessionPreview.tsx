@@ -295,7 +295,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
           style={{
             position: "absolute",
             top: Math.max(0, tooltip.y - 8),
-            left: Math.min(tooltip.x + 10, svgW - 160),
+            left: Math.max(0, Math.min(tooltip.x + 10, svgW - 210)),
             background: C.s1,
             border: `1px solid ${C.brdL}`,
             borderRadius: 4,
@@ -305,6 +305,9 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
             pointerEvents: "none",
             zIndex: 20,
             minWidth: 130,
+            maxWidth: 210,
+            overflowWrap: "anywhere",
+            lineHeight: 1.4,
           }}
         >
           <div style={{ fontWeight: 700, color: C.ac, marginBottom: 2 }}>{tooltip.role}</div>
