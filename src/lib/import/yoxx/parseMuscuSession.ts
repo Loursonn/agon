@@ -105,6 +105,10 @@ export function parseMuscuSession(text: string, opts: ParseOptions = {}): MuscuI
   const codes = new Map<string, { group: string; sub: boolean }>();
   /** Paramètres par semaine écrits sous un exercice */
   const weekParams = new Map<string, Map<number, ExerciceParams>>();
+  /** Réglages écrits sur la ligne de l'exercice → communs à toutes ses semaines */
+  const lineSets = new Map<string, Partial<ExerciceParams>>();
+  /** Réglages écrits sur chaque ligne de semaine (prioritaires) */
+  const weekSets = new Map<string, Map<number, Partial<ExerciceParams>>>();
   /** Paramètres « de base » (ligne de l'exercice) */
   const baseParams = new Map<string, ExerciceParams | null>();
 
@@ -160,6 +164,8 @@ export function parseMuscuSession(text: string, opts: ParseOptions = {}): MuscuI
       if (presc.extra) lastExo.exo.comment = joinText(lastExo.exo.comment, `S${week} : ${presc.extra}`);
       if (!weekParams.has(lastExo.exo.id)) weekParams.set(lastExo.exo.id, new Map());
       weekParams.get(lastExo.exo.id)!.set(week, presc.params);
+      if (!weekSets.has(lastExo.exo.id)) weekSets.set(lastExo.exo.id, new Map());
+      weekSets.get(lastExo.exo.id)!.set(week, presc.set);
       continue;
     }
 
@@ -248,7 +254,8 @@ export function parseMuscuSession(text: string, opts: ParseOptions = {}): MuscuI
       const ref: MuscuExerciseRef = { exoId: exo.id, name: exo.exercise_name, line: lineNo, raw };
       if (prescText) {
         const presc = parsePrescription(prescText);
-        const unusable = !presc.params && presc.libre === undefined && !presc.methodName;
+        const unusable = !presc.params && presc.libre === undefined && !presc.methodName && Object.keys(presc.set).length === 0;
+        if (Object.keys(presc.set).length) lineSets.set(exo.id, presc.set);
         if (!unusable) reportPrescription(presc, lineNo, raw, exo.id, add);
         if (presc.libre !== undefined) {
           exo.mode = "libre";
@@ -301,10 +308,18 @@ export function parseMuscuSession(text: string, opts: ParseOptions = {}): MuscuI
   for (const [exoId, weeks] of weekParams) {
     const exo = findExo(blocs, exoId)!;
     const rec: Record<string, ExerciceParams> = {};
-    const first = weeks.get(Math.min(...weeks.keys()))!;
-    let prev = baseParams.get(exoId) ?? first;
+    // Réglage de la ligne d'exercice (tempo, charge, RIR, ISO) appliqué à chaque semaine,
+    // sauf s'il est réécrit sur la ligne de semaine
+    const common = lineSets.get(exoId) ?? {};
+    const merged = new Map<number, ExerciceParams>();
+    for (const [w, written] of weeks) {
+      const own = weekSets.get(exoId)?.get(w) ?? {};
+      const inherited = Object.fromEntries(Object.entries(common).filter(([k]) => !(k in own))) as Partial<ExerciceParams>;
+      merged.set(w, applySet(written, inherited));
+    }
+    let prev = baseParams.get(exoId) ?? merged.get(Math.min(...merged.keys()))!;
     for (let w = 1; w <= nbSemaines; w++) {
-      const p = weeks.get(w) ?? prev;
+      const p = merged.get(w) ?? prev;
       rec[String(w)] = p;
       prev = p;
     }
@@ -406,12 +421,14 @@ export interface Prescription {
   methodSets?: number[];
   /** Texte non compris, conservé en commentaire */
   extra?: string;
+  /** Réglages écrits explicitement (charge, RIR, tempo, ISO) — servent aussi de valeurs communes à toutes les semaines */
+  set: Partial<ExerciceParams>;
   notes: { level: ImportIssueLevel; message: string }[];
 }
 
 export function parsePrescription(input: string): Prescription {
   let s = ` ${cleanTypography(input).trim()} `;
-  const out: Prescription = { params: null, notes: [] };
+  const out: Prescription = { params: null, set: {}, notes: [] };
   const take = (re: RegExp): RegExpMatchArray | null => {
     const m = s.match(re);
     if (m) s = s.slice(0, m.index) + " " + s.slice(m.index! + m[0].length);
@@ -493,41 +510,52 @@ export function parsePrescription(input: string): Prescription {
     s += ` R${restIntra[1]}`;
   }
 
-  if (out.params) {
-    const p = out.params;
-    if (iso) p.reps_mode = { mode: "global", value: "iso" };
-    if (load) {
-      if (load[1]) {
-        p.charge_unit = "PDC";
-      } else {
-        p.charge_unit = /kg/i.test(load[3]) ? "kg" : "%RM";
-        const vals = load[2].split("/").map((x) => parseNum(x)!);
-        p.charge = vals.length > 1
-          ? { mode: "par_serie", values: fit(vals, p.nb_series, out, "charges") }
-          : { mode: "global", value: vals[0] };
-      }
+  // Réglages explicites (valables avec ou sans séries×reps)
+  const set = out.set;
+  if (iso) set.reps_mode = { mode: "global", value: "iso" };
+  if (load) {
+    if (load[1]) {
+      set.charge_unit = "PDC";
+    } else {
+      set.charge_unit = /kg/i.test(load[3]) ? "kg" : "%RM";
+      const vals = load[2].split("/").map((x) => parseNum(x)!);
+      set.charge = vals.length > 1 ? { mode: "par_serie", values: vals } : { mode: "global", value: vals[0] };
     }
-    if (rir) {
-      const vals = rir[1].split("/").map((x) => Number(x.trim()));
-      p.rir = vals.length > 1 ? { mode: "par_serie", values: fit(vals, p.nb_series, out, "RIR") } : { mode: "global", value: vals[0] };
-      if (rpe) out.notes.push({ level: "warning", message: "RIR et RPE écrits tous les deux → RIR gardé." });
-    } else if (rpe) {
-      const hi = parseNum(rpe[2] ?? rpe[1])!;
-      const v = Math.max(0, Math.round(10 - hi));
-      p.rir = { mode: "global", value: v };
-      out.notes.push({ level: "info", message: `RPE ${rpe[2] ? `${rpe[1]}-${rpe[2]}` : rpe[1]} → RIR ${v} (RIR = 10 − RPE).` });
-    }
-    if (tempo) p.tempo = { mode: "global", value: tempo[1].replace(/\s+/g, "").toUpperCase() };
-  } else {
-    // Sans séries×reps, ces réglages n'ont pas de support → remis dans le texte
-    for (const m of [tempo, rir, rpe, load, iso]) if (m) s += ` ${m[0].trim()}`;
   }
+  if (rir) {
+    const vals = rir[1].split("/").map((x) => Number(x.trim()));
+    set.rir = vals.length > 1 ? { mode: "par_serie", values: vals } : { mode: "global", value: vals[0] };
+    if (rpe) out.notes.push({ level: "warning", message: "RIR et RPE écrits tous les deux → RIR gardé." });
+  } else if (rpe) {
+    const hi = parseNum(rpe[2] ?? rpe[1])!;
+    const v = Math.max(0, Math.round(10 - hi));
+    set.rir = { mode: "global", value: v };
+    out.notes.push({ level: "info", message: `RPE ${rpe[2] ? `${rpe[1]}-${rpe[2]}` : rpe[1]} → RIR ${v} (RIR = 10 − RPE).` });
+  }
+  if (tempo) set.tempo = { mode: "global", value: tempo[1].replace(/\s+/g, "").toUpperCase() };
+  if (out.params) out.params = applySet(out.params, set, (what) =>
+    out.notes.push({ level: "warning", message: `Nombre de valeurs de ${what} différent du nombre de séries → ajusté (dernière valeur répétée ou surplus ignoré).` }));
 
   const rest = s.replace(/\s+/g, " ").trim();
   if (rest) {
     out.extra = rest;
     out.notes.push({ level: "warning", message: `« ${rest} » non compris → gardé dans le commentaire de l'exercice` });
   }
+  return out;
+}
+
+/** Applique des réglages explicites sur des paramètres (valeurs « par série » ajustées au nombre de séries). */
+export function applySet(p: ExerciceParams, set: Partial<ExerciceParams>, onMismatch?: (what: string) => void): ExerciceParams {
+  const out: ExerciceParams = { ...p, ...set };
+  const adjust = (v: ExerciceParams["charge"] | ExerciceParams["rir"] | undefined, what: string) => {
+    if (!v || v.mode !== "par_serie" || v.values.length === p.nb_series) return v;
+    onMismatch?.(what);
+    const r = v.values.slice(0, p.nb_series);
+    while (r.length < p.nb_series) r.push(v.values[v.values.length - 1]);
+    return { mode: "par_serie" as const, values: r };
+  };
+  if (set.charge) out.charge = adjust(set.charge, "charges") as ExerciceParams["charge"];
+  if (set.rir) out.rir = adjust(set.rir, "RIR") as ExerciceParams["rir"];
   return out;
 }
 

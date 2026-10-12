@@ -252,6 +252,14 @@ A1.1 Split squat haltères | Par jambe.
   ⚠ Dans l'app, l'affichage « S1: 2×60% / S2: … » d'un exercice veut dire *série 1, série 2* : ne pas confondre.
 - Une semaine non écrite reprend la précédente. Un exercice sans lignes `S` garde les mêmes paramètres toutes les semaines.
 - Si la ligne de l'exercice a aussi une prescription, elle sert de base aux semaines non écrites.
+- **Réglages communs** : un tempo, une charge, un RIR ou `ISO` écrit sur la ligne de l'exercice s'applique à **toutes ses semaines**,
+  sauf si la ligne de semaine le réécrit :
+  ```
+  B1.1 Hip thrust : tempo 4012
+    S1 : 3×8 RIR 3
+    S2 : 4×8 RIR 3
+    S3 : 4×8 RIR 2      ← tempo 4012 sur les 3 semaines
+  ```
 
 ### Exemple : Full body 2 d'Eva
 

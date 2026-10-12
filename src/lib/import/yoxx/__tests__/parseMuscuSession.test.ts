@@ -217,6 +217,27 @@ describe("parseMuscuSession — « : » dans le commentaire", () => {
   });
 });
 
+describe("parseMuscuSession — réglages communs à toutes les semaines", () => {
+  it("tempo / charge / RIR de la ligne d'exercice s'appliquent à chaque semaine, la semaine reste prioritaire", () => {
+    const { session, issues } = parse(`SÉANCE MUSCU : T
+A1 Hip thrust : tempo 4012 @60kg RIR 3 | Pause en haut
+  S1 : 3×8
+  S2 : 4×8 RIR 2
+  S3 : 4×8 @70kg`);
+    expect(issues).toEqual([]);
+    const rec = session.blocs[0].exercices[0].params as Record<string, ExerciceParams>;
+    expect(rec["1"]).toMatchObject({ nb_series: 3, tempo: { value: "4012" }, charge: { value: 60 }, rir: { value: 3 } });
+    expect(rec["2"]).toMatchObject({ nb_series: 4, tempo: { value: "4012" }, charge: { value: 60 }, rir: { value: 2 } });
+    expect(rec["3"]).toMatchObject({ tempo: { value: "4012" }, charge: { value: 70 }, rir: { value: 3 } });
+    expect(session.blocs[0].exercices[0].comment).toBe("Pause en haut");
+  });
+
+  it("réglages seuls sans semaines → séries manquantes", () => {
+    const { issues } = parse("SÉANCE MUSCU : T\nA1 Hip thrust : tempo 4012");
+    expect(issues[0].level).toBe("error");
+  });
+});
+
 describe("deriveShort", () => {
   it("abrège le titre", () => {
     expect(deriveShort("Full body 2")).toBe("FB2");
