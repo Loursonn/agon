@@ -181,9 +181,20 @@ export default function SpecificCatalog() {
         )}
 
         <button
+          onClick={() => navigate("/coach/energy-library/new?kind=specifique&import=texte")}
+          title="Coller une séance écrite au format YOXX"
+          style={{
+            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: `1px solid ${ORANGE}40`,
+            background: ORANGE + "12", color: ORANGE, fontSize: 12,
+            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+          }}
+        >
+          Importer un texte
+        </button>
+        <button
           onClick={() => navigate("/coach/energy-library/new?kind=specifique")}
           style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
+            padding: "7px 14px", borderRadius: 4, border: "none",
             background: ORANGE, color: "#1a1204", fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}

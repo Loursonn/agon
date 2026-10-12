@@ -46,6 +46,7 @@ import { toast } from "sonner";
 import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
 import { issueCounts } from "../components/import/ImportIssueList";
 import ImportReportPanel from "../components/import/ImportReportPanel";
+import ImportSpecificTextDialog, { type SpecificImportApply } from "../components/import/ImportSpecificTextDialog";
 import type { EnergyImportResult } from "@/lib/import/yoxx/parseEnergySession";
 import type { ImportIssue } from "@/lib/import/yoxx/common";
 
@@ -343,6 +344,21 @@ export default function EnergySessionEditorPage() {
     else toast.success("Séance importée — vérifie puis enregistre");
   }
 
+  function handleSpecificTextImport(data: SpecificImportApply, issues: ImportIssue[]) {
+    setName(data.name);
+    setSportId(data.sport_id);
+    setQualityId(data.quality_id);
+    setFormat("classique");
+    setClassiqueBlocks(data.blocks);
+    setNotes(data.notes ?? "");
+    if (data.images.length > 0) setImages((prev) => [...prev, ...data.images]);
+    setImportIssues(issues.filter((i) => i.level !== "info"));
+    setShowTextImport(false);
+    const { errors } = issueCounts(issues);
+    if (errors > 0) toast.warning(`Séance importée — ${errors} point${errors > 1 ? "s" : ""} à compléter`);
+    else toast.success("Séance importée — vérifie puis enregistre");
+  }
+
   function handleSaveBlockToBank(block: SessionBlock) {
     if (!user?.id) return;
     createBlock.mutate({
@@ -597,7 +613,7 @@ export default function EnergySessionEditorPage() {
               Importer une séance
             </button>
           )}
-          {!isSpecifique && (
+          {(!isSpecifique || isClassique) && (
             <button
               onClick={() => setShowTextImport(true)}
               title="Coller une séance écrite au format YOXX"
@@ -648,6 +664,20 @@ export default function EnergySessionEditorPage() {
           <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
             Structure
           </div>
+          {importIssues.length > 0 && (
+            <ImportReportPanel issues={importIssues} onClose={() => setImportIssues([])} />
+          )}
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Consigne de la séance (optionnel, affichée à l'athlète)…"
+            rows={notes ? 2 : 1}
+            style={{
+              width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 12,
+              background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx,
+              fontSize: 12, padding: "8px 10px", fontFamily: "inherit", outline: "none",
+            }}
+          />
           {isClassique ? (
             <ClassiqueBuilder
               blocks={classiqueBlocks}
@@ -656,23 +686,7 @@ export default function EnergySessionEditorPage() {
               onSaveBlockToBank={handleSaveBlockToBank}
             />
           ) : (
-            <>
-              {importIssues.length > 0 && (
-                <ImportReportPanel issues={importIssues} onClose={() => setImportIssues([])} />
-              )}
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Consigne de la séance (optionnel, affichée à l'athlète)…"
-                rows={notes ? 2 : 1}
-                style={{
-                  width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 12,
-                  background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx,
-                  fontSize: 12, padding: "8px 10px", fontFamily: "inherit", outline: "none",
-                }}
-              />
-              <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
-            </>
+            <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
           )}
         </div>
 
@@ -844,7 +858,15 @@ export default function EnergySessionEditorPage() {
       </div>
 
       {/* ── Import modal ── */}
-      {showTextImport && (
+      {showTextImport && isSpecifique && (
+        <ImportSpecificTextDialog
+          onImport={handleSpecificTextImport}
+          onClose={() => setShowTextImport(false)}
+          replacesExisting={classiqueBlocks.length > 0}
+        />
+      )}
+
+      {showTextImport && !isSpecifique && (
         <ImportEnergyTextDialog
           onImport={handleTextImport}
           onClose={() => setShowTextImport(false)}

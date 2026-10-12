@@ -10,17 +10,15 @@ import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { parseMuscuSession } from "@/lib/import/yoxx/parseMuscuSession";
-import { matchExercise, nameKey, type ExerciseMatch } from "@/lib/import/yoxx/matchExercise";
+import { nameKey } from "@/lib/import/yoxx/matchExercise";
 import { resolveMuscuImport } from "@/lib/import/yoxx/resolveMuscuImport";
 import type { ImportIssue } from "@/lib/import/yoxx/common";
 import type { ProgSession } from "../programmation/types";
 import { methodConfigToExerciceParams } from "../library/MethodPreview";
 import { useTrainingMethods } from "@/features/shared/hooks/useTrainingMethods";
-import { useExerciseLibrary, useCreateExercises } from "@/features/shared/hooks/useExerciseLibrary";
 import ImportIssueList, { issueCounts } from "./ImportIssueList";
-import ImportTextDialogShell, { SectionTitle, mono } from "./ImportTextDialogShell";
-
-const CREATE = "__create__";
+import ImportTextDialogShell, { SectionTitle } from "./ImportTextDialogShell";
+import { useExerciseChoices, ExerciseChoiceList } from "./ExerciseChoices";
 
 const DAY_LABEL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
@@ -76,71 +74,44 @@ export default function ImportMuscuTextDialog({
 }) {
   const { user } = useAuth();
   const [text, setText] = useState("");
-  /** Choix du coach par nom (clé normalisée) : id d'exercice ou CREATE */
-  const [choices, setChoices] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
-
-  const { data: library = [], isLoading: libLoading } = useExerciseLibrary();
   const { data: methods = [] } = useTrainingMethods();
-  const createExercises = useCreateExercises();
 
   const parsed = useMemo(() => (text.trim() ? parseMuscuSession(text) : null), [text]);
-
-  // Un rapprochement par nom distinct (hors zones à saisir)
-  const matches = useMemo(() => {
-    const out = new Map<string, { name: string; match: ExerciseMatch }>();
-    if (!parsed) return out;
-    for (const ref of parsed.refs) {
-      const key = nameKey(ref.name);
-      if (!key || ref.name.startsWith("⚠") || out.has(key)) continue;
-      out.set(key, { name: ref.name, match: matchExercise(ref.name, library) });
-    }
-    return out;
-  }, [parsed, library]);
-
-  /** Choix effectif : celui du coach, sinon exact / meilleur candidat / création */
-  const choiceFor = (key: string): string => {
-    const m = matches.get(key)?.match;
-    if (!m) return CREATE;
-    if (m.exact) return m.exact.id;
-    return choices[key] ?? m.candidates[0]?.exercise.id ?? CREATE;
-  };
+  const names = useMemo(() => parsed?.refs.map((r) => r.name) ?? [], [parsed]);
+  const choices = useExerciseChoices(names);
 
   const resolved = useMemo(() => {
     if (!parsed) return null;
     const exercises: Record<string, { id: string; name: string }> = {};
     for (const ref of parsed.refs) {
-      const id = choiceFor(nameKey(ref.name));
-      const lib = id !== CREATE ? library.find((e) => e.id === id) : undefined;
+      const lib = choices.previewFor(ref.name);
       if (lib) exercises[ref.exoId] = lib;
     }
     return resolveMuscuImport(parsed, { exercises, methods, methodToParams: methodConfigToExerciceParams });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsed, library, methods, choices, matches]);
+  }, [parsed, methods, choices.matches, choices.choiceFor]);
 
-  const toCreate = [...matches.entries()].filter(([key]) => choiceFor(key) === CREATE);
   const visibleIssues = resolved?.issues.filter((i) => i.level !== "info" || !i.message.includes("lié à l'exercice")) ?? [];
   const counts = issueCounts(visibleIssues);
   const s = resolved?.session;
   const nbExos = s?.blocs.reduce((n, b) => n + b.exercices.length, 0) ?? 0;
-  const canImport = !!parsed && nbExos > 0 && !libLoading;
+  const canImport = !!parsed && nbExos > 0 && !choices.isLoading;
 
   async function handleImport() {
     if (!parsed || !user?.id) return;
     setImporting(true);
     try {
-      const created = await createExercises.mutateAsync({ names: toCreate.map(([, v]) => v.name), coachId: user.id });
-      const createdByKey = new Map(created.map((e) => [nameKey(e.name), e]));
+      const { byKey, created } = await choices.resolveAll(user.id);
       const exercises: Record<string, { id: string; name: string }> = {};
       for (const ref of parsed.refs) {
-        const key = nameKey(ref.name);
-        const id = choiceFor(key);
-        const lib = id === CREATE ? createdByKey.get(key) : library.find((e) => e.id === id);
+        const lib = byKey.get(nameKey(ref.name));
         if (lib) exercises[ref.exoId] = lib;
       }
       const result = resolveMuscuImport(parsed, { exercises, methods, methodToParams: methodConfigToExerciceParams });
+      const createdKeys = new Set(created.map((e) => nameKey(e.name)));
       const createdIssues: ImportIssue[] = parsed.refs
-        .filter((r) => createdByKey.has(nameKey(r.name)))
+        .filter((r) => createdKeys.has(nameKey(r.name)))
         .map((r) => ({ line: r.line, raw: r.raw, level: "info" as const, stepId: r.exoId, message: `« ${r.name} » créé dans ta bibliothèque.` }));
       if (created.length) toast.success(`${created.length} exercice${created.length > 1 ? "s" : ""} créé${created.length > 1 ? "s" : ""} dans ta bibliothèque`);
       onImport(result.session, [...result.issues, ...createdIssues].sort((a, b) => a.line - b.line));
@@ -151,6 +122,8 @@ export default function ImportMuscuTextDialog({
       setImporting(false);
     }
   }
+
+  const nbCreate = choices.toCreate.length;
 
   return (
     <ImportTextDialogShell
@@ -165,9 +138,9 @@ export default function ImportMuscuTextDialog({
       importing={importing}
       onImport={handleImport}
       onClose={onClose}
-      footerNote={toCreate.length > 0 && (
+      footerNote={nbCreate > 0 && (
         <span style={{ fontSize: 11, color: C.b }}>
-          {toCreate.length} exercice{toCreate.length > 1 ? "s" : ""} sera{toCreate.length > 1 ? "ont" : ""} créé{toCreate.length > 1 ? "s" : ""} dans ta bibliothèque.
+          {nbCreate} exercice{nbCreate > 1 ? "s" : ""} sera{nbCreate > 1 ? "ont" : ""} créé{nbCreate > 1 ? "s" : ""} dans ta bibliothèque.
         </span>
       )}
     >
@@ -186,42 +159,8 @@ export default function ImportMuscuTextDialog({
             </div>
           </div>
 
-          <SectionTitle>Exercices {libLoading && "· chargement de la bibliothèque…"}</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {[...matches.entries()].map(([key, { name, match }]) => {
-              const choice = choiceFor(key);
-              if (match.exact) {
-                return (
-                  <Row key={key} color={C.g} badge="Lié">
-                    <span style={{ color: C.tx }}>{match.exact.name}</span>
-                  </Row>
-                );
-              }
-              if (match.candidates.length === 0) {
-                return (
-                  <Row key={key} color={C.b} badge="Créé">
-                    <span style={{ color: C.tx }}>{name}</span>
-                    <span style={{ color: C.tx3 }}> — aucun nom proche, sera ajouté à ta bibliothèque</span>
-                  </Row>
-                );
-              }
-              return (
-                <Row key={key} color={C.o} badge="À choisir">
-                  <div style={{ color: C.tx, marginBottom: 4 }}>{name}</div>
-                  <select
-                    value={choice}
-                    onChange={(e) => setChoices((c) => ({ ...c, [key]: e.target.value }))}
-                    style={{ width: "100%", background: C.bg, color: C.tx, border: `1px solid ${C.brdL}`, borderRadius: 4, padding: "4px 6px", fontSize: 12, fontFamily: "inherit" }}
-                  >
-                    {match.candidates.map((c) => (
-                      <option key={c.exercise.id} value={c.exercise.id}>→ {c.exercise.name}</option>
-                    ))}
-                    <option value={CREATE}>＋ Créer « {name} »</option>
-                  </select>
-                </Row>
-              );
-            })}
-          </div>
+          <SectionTitle>Exercices {choices.isLoading && "· chargement de la bibliothèque…"}</SectionTitle>
+          <ExerciseChoiceList choices={choices} />
 
           {visibleIssues.length === 0 ? (
             <div style={{ fontSize: 12, color: C.g, fontWeight: 600, marginTop: 12 }}>✓ Tout est lisible, aucune erreur.</div>
@@ -236,16 +175,5 @@ export default function ImportMuscuTextDialog({
         </>
       )}
     </ImportTextDialogShell>
-  );
-}
-
-function Row({ color, badge, children }: { color: string; badge: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 8px", borderRadius: 4, borderLeft: `3px solid ${color}`, background: color + "0F", fontSize: 12 }}>
-      <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 4, background: color + "22", color, flexShrink: 0, marginTop: 1, fontFamily: mono }}>
-        {badge}
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
-    </div>
   );
 }

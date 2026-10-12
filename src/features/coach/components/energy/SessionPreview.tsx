@@ -18,7 +18,7 @@ import {
 } from "@/lib/energy";
 import type { EnergyGroup } from "@/types/energy";
 import HatchPattern from "./HatchPattern";
-import { formatTarget, formatS, formatSLong } from "@/lib/energy/formatTarget";
+import { formatTarget, formatS, formatSLong, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 
 // ── Zone colors (anchors) ─────────────────────────────────────────────────────
@@ -184,11 +184,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
                   if (!svgRect) return;
                   if (isExo) {
                     const exo = fi.interval as import("@/types/energy").ExerciseInterval;
-                    const repsLabel = exo.reps_min
-                      ? exo.reps_max && exo.reps_max !== exo.reps_min
-                        ? `${exo.reps_min}-${exo.reps_max} reps`
-                        : `${exo.reps_min} reps`
-                      : "";
+                    const repsLabel = formatExerciseStep(exo);
                     setTooltip({
                       x: e.clientX - svgRect.left,
                       y: barY,

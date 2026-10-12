@@ -1,4 +1,4 @@
-import type { EnergyTarget } from "@/types/energy";
+import type { EnergyTarget, ExerciseInterval } from "@/types/energy";
 import { paceBounds } from "./paceCompat";
 
 /** Formate un EnergyTarget en string lisible en français. Retourne "" si les valeurs sont vides/invalides. */
@@ -102,4 +102,27 @@ export function formatSLong(totalSecs: number): string {
   const m = Math.floor((totalSecs % 3600) / 60);
   const s = Math.round(totalSecs % 60);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * Résumé d'une étape exercice (WOD) : « 15 reps · 110 kg », « 15 m · 110 kg », « 30 s · PDC ».
+ * Distance prioritaire sur les reps (ex. Sled Push 15 m), puis reps, puis temps.
+ */
+export function formatExerciseStep(ex: ExerciseInterval): string {
+  const d = ex.duration;
+  const qty = d?.kind === "distance"
+    ? `${d.value ?? 0} m`
+    : ex.reps_min
+    ? (ex.reps_max && ex.reps_max !== ex.reps_min ? `${ex.reps_min}-${ex.reps_max} reps` : `${ex.reps_min} reps`)
+    : d?.kind === "time"
+    ? formatS(d.value ?? 0)
+    : d?.kind === "calories"
+    ? `${d.value ?? 0} kcal`
+    : null;
+  const load = ex.weight_unit === "bw"
+    ? (ex.weight_kg ? `PDC + ${ex.weight_kg} kg` : "PDC")
+    : ex.weight_kg
+    ? (ex.weight_unit === "pct_rm" ? `${ex.weight_kg}% RM` : `${ex.weight_kg} kg`)
+    : null;
+  return [qty, load].filter(Boolean).join(" · ");
 }

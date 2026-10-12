@@ -3,7 +3,7 @@
  * Matches maquette vue-athlete-specifique.html styling.
  */
 import type { EnergyStep, EnergyGroup, EnergyInterval, ExerciseInterval } from "@/types/energy";
-import { formatS, formatTarget } from "@/lib/energy/formatTarget";
+import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { estimateIntervalDuration } from "@/lib/energy";
 
 const EQUIPMENT_LABEL: Record<string, string> = {
@@ -47,7 +47,7 @@ function StepCard({ step, color, children }: {
     : null;
 
   const targetStr = isExercise
-    ? [step.reps_min ? (step.reps_max && step.reps_max !== step.reps_min ? `${step.reps_min}-${step.reps_max} reps` : `${step.reps_min} reps`) : null, step.weight_kg ? `${step.weight_kg} ${step.weight_unit === "bw" ? "BW" : step.weight_unit === "pct_rm" ? "%RM" : "kg"}` : null, step.notes].filter(Boolean).join(" · ")
+    ? [formatExerciseStep(step), step.notes].filter(Boolean).join(" · ")
     : step.target.kind !== "none" ? formatTarget(step.target) : step.notes ?? "";
 
   return (

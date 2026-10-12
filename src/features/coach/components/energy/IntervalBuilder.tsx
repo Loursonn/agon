@@ -20,7 +20,7 @@ import {
   reorderChildren, findParent, addStepToGroup,
 } from "@/lib/energy/treeUtils";
 import { formatTarget } from "@/lib/energy/formatTarget";
-import { formatS } from "@/lib/energy/formatTarget";
+import { formatS, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { estimateIntervalDuration, targetToIntensityPct, intensityToColor } from "@/lib/energy";
 import IntervalEditor from "./IntervalEditor";
 import ExerciseStepEditor from "./ExerciseStepEditor";
@@ -167,10 +167,7 @@ function ExerciseRow({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
-  const summary = [
-    exercise.reps_min ? (exercise.reps_max && exercise.reps_max !== exercise.reps_min ? `${exercise.reps_min}-${exercise.reps_max} reps` : `${exercise.reps_min} reps`) : null,
-    exercise.weight_kg ? `${exercise.weight_kg} ${exercise.weight_unit === 'bw' ? 'BW' : exercise.weight_unit === 'pct_rm' ? '%RM' : 'kg'}` : null,
-  ].filter(Boolean).join(" · ");
+  const summary = formatExerciseStep(exercise);
 
   return (
     <div

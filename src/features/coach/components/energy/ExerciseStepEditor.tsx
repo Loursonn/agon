@@ -51,6 +51,8 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
   const [weightKg, setWeightKg] = useState<number | undefined>();
   const [weightUnit, setWeightUnit] = useState<"kg" | "bw" | "pct_rm">("kg");
   const [durationS, setDurationS] = useState<number | undefined>();
+  // Temps (s) ou distance (m) — ex. Sled Push 15 m
+  const [durationKind, setDurationKind] = useState<"time" | "distance">("time");
   const [notes, setNotes] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
@@ -65,7 +67,8 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
       setRepsMax(exercise.reps_max);
       setWeightKg(exercise.weight_kg);
       setWeightUnit(exercise.weight_unit ?? "kg");
-      setDurationS(exercise.duration?.kind === "time" ? exercise.duration.value : undefined);
+      setDurationKind(exercise.duration?.kind === "distance" ? "distance" : "time");
+      setDurationS(exercise.duration?.kind === "time" || exercise.duration?.kind === "distance" ? exercise.duration.value : undefined);
       setNotes(exercise.notes ?? "");
       setShowSearch(false);
     } else {
@@ -79,6 +82,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
       setWeightKg(undefined);
       setWeightUnit("kg");
       setDurationS(undefined);
+      setDurationKind("time");
       setNotes("");
       setShowSearch(true);
     }
@@ -95,7 +99,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
       reps_max: repsMax || undefined,
       weight_kg: weightKg || undefined,
       weight_unit: weightKg ? weightUnit : undefined,
-      duration: durationS ? { kind: "time", value: durationS } : undefined,
+      duration: durationS ? { kind: durationKind, value: durationS } : undefined,
       target: { kind: "none" },
       notes: notes.trim() || undefined,
       youtube_id: youtubeId,
@@ -249,16 +253,27 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
             </div>
           </div>
 
-          {/* Duration (optional) */}
+          {/* Duration / distance (optional) */}
           <div>
-            <label style={labelStyle}>Durée (secondes, optionnel)</label>
-            <input
-              type="number" min={0}
-              value={durationS ?? ""}
-              onChange={(e) => setDurationS(e.target.value ? Number(e.target.value) : undefined)}
-              placeholder="Laisser vide si reps uniquement"
-              style={inputStyle}
-            />
+            <label style={labelStyle}>Durée ou distance (optionnel)</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="number" min={0}
+                value={durationS ?? ""}
+                onChange={(e) => setDurationS(e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="Laisser vide si reps uniquement"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <Select value={durationKind} onValueChange={(v) => setDurationKind(v as "time" | "distance")}>
+                <SelectTrigger style={{ width: 120, background: C.s2, border: `1px solid ${C.brdL}`, color: C.tx, fontSize: 12 }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="time">secondes</SelectItem>
+                  <SelectItem value="distance">mètres</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Notes */}
