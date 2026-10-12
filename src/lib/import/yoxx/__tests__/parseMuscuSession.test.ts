@@ -207,6 +207,16 @@ S2 : 3×8`);
   });
 });
 
+describe("parseMuscuSession — « : » dans le commentaire", () => {
+  it("le commentaire après | peut contenir « : »", () => {
+    const { session, issues } = parse("SÉANCE MUSCU : T\nA1 Split squat | Si douleur : 30\" d'iso.\n  S1 : 3×8 RIR 3\nA2 Curl : 3×10 | Note : lent");
+    expect(issues).toEqual([]);
+    const [a1, a2] = session.blocs[0].exercices;
+    expect(a1).toMatchObject({ exercise_name: "Split squat", comment: "Si douleur : 30\" d'iso.", mode: "classique" });
+    expect(a2).toMatchObject({ exercise_name: "Curl", comment: "Note : lent", params: { nb_series: 3, reps: { value: 10 } } });
+  });
+});
+
 describe("deriveShort", () => {
   it("abrège le titre", () => {
     expect(deriveShort("Full body 2")).toBe("FB2");

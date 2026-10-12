@@ -223,22 +223,13 @@ export function parseMuscuSession(text: string, opts: ParseOptions = {}): MuscuI
         currentBloc = newBloc({ name: "Bloc" });
       }
 
-      const colon = body.indexOf(":");
-      let exoName = (colon >= 0 ? body.slice(0, colon) : body).trim();
-      let afterColon = colon >= 0 ? body.slice(colon + 1) : "";
-      // Commentaire « | … » (peut aussi suivre directement le nom)
-      let comment = "";
-      const pipeInName = exoName.indexOf("|");
-      if (pipeInName >= 0) {
-        comment = exoName.slice(pipeInName + 1).trim();
-        exoName = exoName.slice(0, pipeInName).trim();
-      }
-      const pipe = afterColon.indexOf("|");
-      if (pipe >= 0) {
-        comment = joinText(comment, afterColon.slice(pipe + 1).trim());
-        afterColon = afterColon.slice(0, pipe);
-      }
-      const prescText = afterColon.trim();
+      // Commentaire : tout ce qui suit le 1er « | » (il peut contenir des « : »)
+      const pipe = body.indexOf("|");
+      const head = pipe >= 0 ? body.slice(0, pipe) : body;
+      const comment = pipe >= 0 ? body.slice(pipe + 1).trim() : "";
+      const colon = head.indexOf(":");
+      const exoName = (colon >= 0 ? head.slice(0, colon) : head).trim();
+      const prescText = (colon >= 0 ? head.slice(colon + 1) : "").trim();
 
       const exo: Exercice = {
         id: genId(),
