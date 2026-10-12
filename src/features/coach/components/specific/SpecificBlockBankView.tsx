@@ -172,7 +172,7 @@ function BlockEditorModal({ initial, onClose }: {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {items.map((item) => (
-                <div key={item.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div key={item.id} style={{ display: "flex", gap: 6, alignItems: "flex-start", flexWrap: "wrap" }}>
                   <SpecificItemFields item={item} onChange={(patch) => updateItem(item.id, patch)} />
                   <button
                     onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}

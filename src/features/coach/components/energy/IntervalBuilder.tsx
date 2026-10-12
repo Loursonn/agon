@@ -127,7 +127,7 @@ function IntervalRow({
 
       {/* Summary */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: C.tx, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: 12, color: C.tx, fontWeight: 500, overflowWrap: "anywhere", lineHeight: 1.4 }}>
           {interval.duration.kind === "distance"
             ? `${interval.duration.value ?? 0}m`
             : interval.duration.kind === "calories"
@@ -138,7 +138,7 @@ function IntervalRow({
           }{targetStr && targetStr !== "Libre" ? ` @ ${targetStr}` : ""}
         </div>
         {interval.notes && (
-          <div style={{ fontSize: 10, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 10, color: C.tx3, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
             {interval.notes}
           </div>
         )}
@@ -190,12 +190,17 @@ function ExerciseRow({
       </span>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: C.tx, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: 12, color: C.tx, fontWeight: 600, overflowWrap: "anywhere", lineHeight: 1.4 }}>
           {exercise.exercise_name}
         </div>
         {summary && (
           <div style={{ fontSize: 10, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {summary}
+          </div>
+        )}
+        {exercise.notes && (
+          <div style={{ fontSize: 10, color: C.tx3, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
+            {exercise.notes}
           </div>
         )}
       </div>
