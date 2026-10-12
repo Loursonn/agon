@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, X, Zap } from "lucide-react";
-import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, TrendingUp, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";

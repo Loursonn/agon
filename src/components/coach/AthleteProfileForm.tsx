@@ -78,6 +78,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
   const [bodyFatPct, setBodyFatPct] = useState(athlete.body_fat_pct?.toString() ?? "");
   const [metaMode, setMetaMode] = useState<MetaMode>("manual");
   const [metaManual, setMetaManual] = useState(athlete.base_metabolism?.toString() ?? "");
+  const [isHyrox, setIsHyrox] = useState(athlete.is_hyrox_athlete ?? false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [errorProfile, setErrorProfile] = useState("");
 
@@ -302,6 +303,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         weight_kg: weightKg ? parseFloat(weightKg) : null,
         body_fat_pct: bodyFatPct ? parseFloat(bodyFatPct) : null,
         base_metabolism: metaManual ? parseInt(metaManual) : null,
+        is_hyrox_athlete: isHyrox,
       });
       toast.success("Profil enregistré !");
     } catch (e) {
@@ -450,6 +452,16 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
             </div>
           </div>
         </div>
+
+        {/* HYROX toggle */}
+        {(athlete.coach_id === user?.id || athlete.id === user?.id) && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, padding: "8px 0" }}>
+            <div style={{ fontSize: 12, color: C.tx2 }}>Athlète HYROX</div>
+            <button onClick={() => setIsHyrox(!isHyrox)} style={{ width: 46, height: 26, borderRadius: 13, background: isHyrox ? C.o : C.s2, border: `2px solid ${isHyrox ? C.o : C.brdL}`, cursor: "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0, outline: "none" }}>
+              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: isHyrox ? 24 : 2, transition: "left 0.2s" }} />
+            </button>
+          </div>
+        )}
 
         {errorProfile && <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 4, background: C.r + "15", border: "1px solid " + C.r + "40", fontSize: 13, color: C.r }}>{errorProfile}</div>}
 

@@ -14,10 +14,13 @@ import { getBig3 } from "@/lib/calculations";
 
 const ip = { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "square" as const, strokeLinejoin: "miter" as const };
 
-const ATH_TABS = [
+const BASE_TABS = [
   { k: "",        l: "Aujourd'hui", icon: <svg {...ip}><path d="M3 10L12 4L21 10"/><path d="M4 10V20H20V10"/><path d="M8 20V10M12 20V10M16 20V10"/></svg> },
   { k: "program", l: "Programme",   icon: <svg {...ip}><rect x="3" y="5" width="18" height="16"/><path d="M3 10H21"/><path d="M8 3V7M16 3V7"/><path d="M7 14H9M11 14H13M15 14H17M7 17.5H9M11 17.5H13"/></svg> },
   { k: "test",    l: "Tests",       icon: <svg {...ip}><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg> },
+];
+const HYROX_TAB = { k: "hyrox", l: "HYROX", icon: <svg {...ip}><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26Z" fill="none"/></svg> };
+const TAIL_TABS = [
   { k: "alim",    l: "Nutrition",   icon: <svg {...ip}><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.5"/><path d="M5 4V10M5 7H6.5"/><path d="M19 4V10M19 4H18V7H19"/></svg> },
   { k: "profil",  l: "Profil",      icon: <svg {...ip}><circle cx="12" cy="7" r="3.5"/><path d="M5 21V19A7 7 0 0 1 19 19V21"/></svg> },
 ];
@@ -42,7 +45,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   const [dismissedUnfinished, setDismissedUnfinished] = useState<string[]>([]);
 
   const {
-    athleteId,
+    athleteId, athleteProfile,
     viewOnly, saveStatus, activeInjuries,
     showWellness, setShowWellness, showAppFeedback, setShowAppFeedback,
     showBilan, setShowBilan, showNewBlock, setShowNewBlock,
@@ -57,6 +60,9 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   // Séance passée avec des saisies mais jamais clôturée → bandeau de rappel
   const { data: unfinishedWorkouts = [] } = useUnfinishedWorkouts(viewOnly ? null : athleteId);
   const pendingFinish = unfinishedWorkouts.find((w) => !dismissedUnfinished.includes(w.id)) ?? null;
+
+  // Build tab list based on HYROX flag
+  const ATH_TABS = [...BASE_TABS, ...(athleteProfile?.is_hyrox_athlete ? [HYROX_TAB] : []), ...TAIL_TABS];
 
   // Derive active tab from pathname
   const pathSegments = location.pathname.split("/").filter(Boolean);

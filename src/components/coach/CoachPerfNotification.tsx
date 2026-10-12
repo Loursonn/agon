@@ -21,26 +21,29 @@ interface Notification {
 
 interface Props {
   coachId: string;
+  athleteId?: string;
   C: Record<string, string>;
 }
 
 // ── Composant ─────────────────────────────────────────────────────────────────
 
-export default function CoachPerfNotification({ coachId, C }: Props) {
+export default function CoachPerfNotification({ coachId, athleteId, C }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
     loadNotifications();
-  }, [coachId]);
+  }, [coachId, athleteId]);
 
   const loadNotifications = async () => {
     setLoading(true);
-    const { data: notifs } = await supabase
+    let query = supabase
       .from("performance_notifications")
       .select("*")
-      .eq("coach_id", coachId)
+      .eq("coach_id", coachId);
+    if (athleteId) query = query.eq("athlete_id", athleteId);
+    const { data: notifs } = await query
       .order("created_at", { ascending: false })
       .limit(20);
 

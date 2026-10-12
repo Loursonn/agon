@@ -28,6 +28,7 @@ const ProfilPage         = lazy(() => import("./features/athlete/pages/ProfilPag
 const LogSeancePage   = lazy(() => import("./features/athlete/pages/LogSeancePage.tsx"));
 const AlimPage        = lazy(() => import("./features/athlete/pages/AlimPage.tsx"));
 const AthleteTestPage = lazy(() => import("./features/athlete/pages/AthleteTestPage.tsx"));
+const AthleteHyroxPage = lazy(() => import("./features/athlete/pages/HyroxPage.tsx"));
 const SpecificExecutionPage = lazy(() => import("./features/athlete/pages/SpecificExecutionPage.tsx"));
 
 // Pages coach globales (lazy)
@@ -49,6 +50,7 @@ const AthleteViewPage           = lazy(() => import("./features/coach/pages/Athl
 const EnergySessionEditorPage   = lazy(() => import("./features/coach/pages/EnergySessionEditorPage.tsx"));
 const ProfilAthletePage         = lazy(() => import("./features/coach/pages/ProfilAthletePage.tsx"));
 const EnergyLibraryPage         = lazy(() => import("./features/coach/pages/EnergyLibraryPage.tsx"));
+const CoachHyroxPage            = lazy(() => import("./features/coach/pages/HyroxPage.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -102,6 +104,7 @@ function AnimatedRoutes() {
             <Route path="log" element={<LogSeancePage />} />
             <Route path="alim" element={<AlimPage />} />
             <Route path="test" element={<AthleteTestPage />} />
+            <Route path="hyrox" element={<AthleteHyroxPage />} />
             <Route path="specific/:assignmentId" element={<SpecificExecutionPage />} />
           </Route>
 
@@ -133,6 +136,7 @@ function AnimatedRoutes() {
               <Route path="retours"       element={<RetoursPage />} />
               {/* Legacy : Tests vit maintenant dans Profil athlète → Suivi Testing */}
               <Route path="tests"         element={<Navigate to="../profil-sportif?view=testing" replace />} />
+              <Route path="hyrox"         element={<CoachHyroxPage />} />
               <Route path="athlete-view"  element={<AthleteViewPage />} />
             </Route>
 

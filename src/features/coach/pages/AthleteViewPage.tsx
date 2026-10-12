@@ -1,23 +1,30 @@
 import { useState } from "react";
 import { C } from "@/lib/theme";
+import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import TodayPage from "@/features/athlete/pages/TodayPage";
 import ProgramPage from "@/features/athlete/pages/ProgramPage";
 import ProfilPage from "@/features/athlete/pages/ProfilPage";
 import AthleteTestPage from "@/features/athlete/pages/AthleteTestPage";
 import AlimPage from "@/features/athlete/pages/AlimPage";
+import AthleteHyroxPage from "@/features/athlete/pages/HyroxPage";
 
-const INNER_TABS = [
+const BASE_TABS = [
   { key: "today",   label: "Aujourd'hui" },
   { key: "program", label: "Programme"   },
   { key: "test",    label: "Tests"       },
+] as const;
+
+const HYROX_TAB = { key: "hyrox" as const, label: "HYROX" };
+
+const TAIL_TABS = [
   { key: "alim",    label: "Nutrition"   },
   { key: "profil",  label: "Profil"      },
 ] as const;
 
-type InnerTab = typeof INNER_TABS[number]["key"];
-
 export default function AthleteViewPage() {
-  const [tab, setTab] = useState<InnerTab>("today");
+  const { athleteProfile } = useAthleteContext();
+  const INNER_TABS = [...BASE_TABS, ...(athleteProfile?.is_hyrox_athlete ? [HYROX_TAB] : []), ...TAIL_TABS];
+  const [tab, setTab] = useState<string>("today");
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto" }}>
@@ -56,6 +63,7 @@ export default function AthleteViewPage() {
       {tab === "today"   && <TodayPage />}
       {tab === "program" && <ProgramPage />}
       {tab === "test"    && <AthleteTestPage />}
+      {tab === "hyrox"   && <AthleteHyroxPage />}
       {tab === "alim"    && <AlimPage />}
       {tab === "profil"  && <ProfilPage />}
     </div>

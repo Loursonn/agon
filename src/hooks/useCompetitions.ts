@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { calBaseKey } from '@/features/shared/hooks/useUnifiedCalendar';
 import type { Competition, CompetitionInsert } from '@/types/planning';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,6 +31,8 @@ export function useCompetitions(athleteId: string) {
 
 function invalidate(qc: ReturnType<typeof useQueryClient>, athleteId: string) {
   qc.invalidateQueries({ queryKey: ['competitions', athleteId] });
+  qc.invalidateQueries({ queryKey: ['athlete_next_competition', athleteId] });
+  qc.invalidateQueries({ queryKey: calBaseKey(athleteId) });
 }
 
 export function useCreateCompetition() {

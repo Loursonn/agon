@@ -8,13 +8,17 @@
  *   5. Validations de performances
  */
 import { useState } from "react";
-import { User, Flame, Moon, ListChecks, Award } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { User, Flame, Moon, ListChecks, Award, Zap } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachPerfNotification from "@/components/coach/CoachPerfNotification";
 import type { Profile } from "@/hooks/useAuth";
 import type { Goals, Habit } from "@/features/shared/types/athlete";
 import { useMedicalHistory } from "@/features/shared/hooks/useMedicalHistory";
+import { useHyroxFlag } from "@/features/shared/hooks/hyrox/useHyroxFlag";
+import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
+import { formatMmSs } from "@/lib/time";
 import { MedicalReadOnly } from "@/features/athlete/pages/ProfilPage";
 import { localISO } from "@/lib/date";
 
@@ -170,15 +174,25 @@ function SleepGoalsBody({ goals, setGoals }: { goals: Goals; setGoals: (v: Goals
     return dur > 0 ? Math.round(dur * 10) / 10 : undefined;
   };
 
+  // Defaults mirroring HMPicker's display defaults so autoTarget works
+  // even when only one field has been explicitly set by the user.
+  const DEFAULT_BED = { h: 22, m: 0 };
+  const DEFAULT_UP  = { h: 7,  m: 0 };
+
   const handleChange = (patch: { sleepBedtime?: { h: number; m: number }; sleepWakeup?: { h: number; m: number } }) => {
-    const next = { ...goals, ...patch };
+    const next = {
+      ...goals,
+      sleepBedtime: goals.sleepBedtime ?? DEFAULT_BED,
+      sleepWakeup:  goals.sleepWakeup  ?? DEFAULT_UP,
+      ...patch,
+    };
     next.sleepTarget = autoTarget(next.sleepBedtime, next.sleepWakeup) ?? next.sleepTarget;
     setGoals(next);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const durTarget = autoTarget(goals.sleepBedtime, goals.sleepWakeup);
+  const durTarget = autoTarget(goals.sleepBedtime ?? DEFAULT_BED, goals.sleepWakeup ?? DEFAULT_UP);
 
   return (
     <>
@@ -208,8 +222,12 @@ export function ProfilGeneralTab() {
     habits, habitLogs, habitEnabled, habitToggling, habitToggleErr, toggleHabitEnabled,
   } = useAthleteContext();
 
+  const navigate = useNavigate();
+  const { athleteId: urlAthleteId } = useParams<{ athleteId: string }>();
   const ap = athleteProfile as Profile | null;
   const { data: medicalData } = useMedicalHistory(athleteId);
+  const { enabled: hyroxEnabled, toggling: hyroxToggling, toggle: toggleHyrox } = useHyroxFlag(athleteId);
+  const { data: hyroxRaces = [] } = useHyroxResults(hyroxEnabled ? athleteId : undefined);
 
   const initials = ap
     ? ([ap.first_name, ap.last_name].filter(Boolean).join(" ") || ap.full_name || "?")
@@ -334,6 +352,41 @@ export function ProfilGeneralTab() {
         <SleepGoalsBody goals={goals} setGoals={setGoals} />
       </Section>
 
+      {/* ── 3b. Suivi HYROX ── */}
+      <Section icon={Zap} title="Suivi HYROX" subtitle="Active l'onglet HYROX : courses, stations, Roxzone, radar, tests" color="#F5A623">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Athlète HYROX</div>
+            <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>Activer le suivi HYROX pour cet athlète</div>
+          </div>
+          <button disabled={hyroxToggling} onClick={toggleHyrox} style={{ width: 46, height: 26, borderRadius: 13, background: hyroxEnabled ? "#F5A623" : C.s2, border: `2px solid ${hyroxEnabled ? "#F5A623" : C.brdL}`, cursor: hyroxToggling ? "default" : "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0, outline: "none", opacity: hyroxToggling ? 0.6 : 1 }}>
+            <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: hyroxEnabled ? 24 : 2, transition: "left 0.2s" }} />
+          </button>
+        </div>
+        {hyroxEnabled && (
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 12, color: C.tx2 }}>
+              {hyroxRaces.length} course{hyroxRaces.length !== 1 ? "s" : ""} saisie{hyroxRaces.length !== 1 ? "s" : ""}
+              {hyroxRaces.length > 0 && (() => {
+                const last = hyroxRaces[0];
+                return ` · dernier chrono ${formatMmSs(last.total_s, { hours: true })} (${last.event_name}, ${last.date})`;
+              })()}
+            </div>
+            <button
+              onClick={() => navigate(`/coach/athletes/${urlAthleteId ?? athleteId}/hyrox`)}
+              style={{
+                alignSelf: "flex-start",
+                padding: "6px 14px", borderRadius: 4, border: "1px solid " + C.ac + "40",
+                background: C.acS, color: C.ac, fontSize: 11, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Ouvrir l'onglet HYROX
+            </button>
+          </div>
+        )}
+      </Section>
+
       {/* ── 4. Tracker d'habitudes ── */}
       <Section icon={ListChecks} title="Tracker d'habitudes" subtitle="Habitudes de l'athlète et adhérence" color={COL.habits}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -358,7 +411,7 @@ export function ProfilGeneralTab() {
 
       {/* ── 5. Validations de performances ── */}
       <Section icon={Award} title="Validations de performances" subtitle="Performances déclarées par l'athlète à valider" color={COL.perfs}>
-        <CoachPerfNotification coachId={athleteId} C={C} />
+        <CoachPerfNotification coachId={athleteId} athleteId={athleteId} C={C} />
       </Section>
     </div>
   );
