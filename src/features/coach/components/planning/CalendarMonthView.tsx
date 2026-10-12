@@ -82,12 +82,15 @@ const dayCollisionDetection: CollisionDetection = (args) => {
   return byPointer.length > 0 ? byPointer : closestCenter(args);
 };
 
+const LIFE_EVENT_COLOR = "#9194A0";
+
 const TYPE_COLOR: Record<CalEvent["type"], string> = {
   workout:       C.ac,            // or — muscu
   test:          TEST_COLOR,      // bronze — tests
   competition:   C.r,             // terracotta — compétitions
   energy:        C.b,             // ardoise — énergie
   free_activity: FREE_COLOR,      // patine — activités libres
+  life_event:    LIFE_EVENT_COLOR, // gris — événements vie
 };
 
 const TYPE_BG: Record<CalEvent["type"], string> = {
@@ -96,6 +99,7 @@ const TYPE_BG: Record<CalEvent["type"], string> = {
   competition:   C.rS,
   energy:        C.bS,
   free_activity: FREE_COLOR + "20",
+  life_event:    LIFE_EVENT_COLOR + "20",
 };
 
 const STATUS_OPACITY: Record<string, number> = {
@@ -333,7 +337,6 @@ function DroppableDay({
 
   const today     = isToday(date);
   const maxVisible = 3;
-  const overflow   = Math.max(0, events.length - maxVisible);
 
   return (
     <div
@@ -376,17 +379,48 @@ function DroppableDay({
         {format(date, "d")}
       </div>
 
+      {/* Life events — subtle informational bands */}
+      {events.filter((e) => e.type === "life_event").map((le) => (
+        <div
+          key={le.id}
+          style={{
+            background: LIFE_EVENT_COLOR + "18",
+            borderLeft: "2px solid " + LIFE_EVENT_COLOR,
+            borderRadius: "0 3px 3px 0",
+            padding: "0px 5px",
+            fontSize: 8,
+            fontWeight: 500,
+            color: LIFE_EVENT_COLOR,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            lineHeight: "14px",
+            flexShrink: 0,
+          }}
+        >
+          {le.title}
+        </div>
+      ))}
+
       {/* Events */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
-        {events.slice(0, maxVisible).map((ev) => (
-          <DraggableEventChip key={ev.id} event={ev} compact athleteId={athleteId} coachId={coachId} onEventClick={onEventClick} />
-        ))}
-        {overflow > 0 && (
-          <div style={{ fontSize: 9, color: C.tx3, paddingLeft: 4 }}>
-            +{overflow} autre{overflow > 1 ? "s" : ""}
+      {(() => {
+        const regularEvents = events.filter((e) => e.type !== "life_event");
+        const lifeCount = events.length - regularEvents.length;
+        const maxAfterLife = Math.max(1, maxVisible - lifeCount);
+        const overflow = Math.max(0, regularEvents.length - maxAfterLife);
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+            {regularEvents.slice(0, maxAfterLife).map((ev) => (
+              <DraggableEventChip key={ev.id} event={ev} compact athleteId={athleteId} coachId={coachId} onEventClick={onEventClick} />
+            ))}
+            {overflow > 0 && (
+              <div style={{ fontSize: 9, color: C.tx3, paddingLeft: 4 }}>
+                +{overflow} autre{overflow > 1 ? "s" : ""}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Athlete reschedule markers */}
       {(() => {

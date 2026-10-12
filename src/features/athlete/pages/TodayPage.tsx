@@ -31,6 +31,10 @@ import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } 
 import { localISO, normalizeDayMap } from "@/lib/date";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 import { useWeeklyCoachRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
+import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
+import { LifeEventFormModal } from "@/features/athlete/components/LifeEventFormModal";
+import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
+import { Plus, Trash2, CalendarDays } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -720,6 +724,8 @@ export default function TodayPage() {
   const [showOtherSessions, setShowOtherSessions] = useState(false);
   const [testPreviewId, setTestPreviewId] = useState<string | null>(null);
   const [mensuOpen, setMensuOpen] = useState(false);
+  const [showLifeEventForm, setShowLifeEventForm] = useState(false);
+  const [showCompForm, setShowCompForm] = useState(false);
 
   const {
     athleteId, athleteProfile, wellnessHistory,
@@ -741,6 +747,9 @@ export default function TodayPage() {
   const weekMondayISO = useMemo(localMonday, []);
   const today = localISO();
   const { data: coachRetour } = useWeeklyCoachRetour(athleteId, weekMondayISO);
+  const { data: lifeEvents = [] } = useLifeEvents(athleteId ?? "");
+  const { mutate: deleteLifeEvent } = useDeleteLifeEvent();
+  const myCoachId = profile?.coach_id;
 
   // `wellnessHistory` est écrit par saveWellness() avec la clé compacte de
   // todayKey() ("20260817"), alors que tout TodayPage raisonne en ISO à tirets.
@@ -1433,11 +1442,21 @@ export default function TodayPage() {
         )}
 
         {/* Section 4 — Prochaine compétition */}
-        {nextComp && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
               Prochaine compétition
             </div>
+            {myCoachId && (
+              <button
+                onClick={() => setShowCompForm(true)}
+                style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 3 }}
+              >
+                <Plus size={12} /> Ajouter
+              </button>
+            )}
+          </div>
+          {nextComp ? (
             <div
               style={{
                 background: C.s1, borderRadius: 6, padding: 16,
@@ -1466,8 +1485,24 @@ export default function TodayPage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ background: C.s1, borderRadius: 6, padding: 20, border: "1px dashed " + C.brd, textAlign: "center" }}>
+              <div style={{ fontSize: 12, color: C.tx3, marginBottom: myCoachId ? 10 : 0 }}>Aucune compétition prévue</div>
+              {myCoachId && (
+                <button
+                  onClick={() => setShowCompForm(true)}
+                  style={{
+                    padding: "10px 20px", borderRadius: 6, border: "none",
+                    background: C.ac, color: "#fff",
+                    fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  Ajouter une compétition
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Section 4b — Compétitions passées à commenter */}
         {uncommentedComps.length > 0 && (
@@ -1493,6 +1528,62 @@ export default function TodayPage() {
             </div>
           </div>
         )}
+
+        {/* Section 4c — Mes événements (life events) */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Mes événements
+            </div>
+            <button
+              onClick={() => setShowLifeEventForm(true)}
+              style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 3 }}
+            >
+              <Plus size={12} /> Ajouter
+            </button>
+          </div>
+          {(() => {
+            const upcoming = lifeEvents.filter((e) => e.date_end >= today);
+            if (upcoming.length === 0) return (
+              <div style={{ background: C.s1, borderRadius: 6, padding: 16, border: "1px dashed " + C.brd, textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: C.tx3 }}>Aucun événement prévu</div>
+                <div style={{ fontSize: 10, color: C.tx3, marginTop: 4 }}>Ajoute tes indisponibilités pour que ton coach adapte le planning</div>
+              </div>
+            );
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {upcoming.map((evt) => (
+                  <div
+                    key={evt.id}
+                    style={{
+                      background: C.s1, borderRadius: 6, padding: "10px 14px",
+                      border: "1px solid " + C.brd,
+                      display: "flex", alignItems: "center", gap: 10,
+                    }}
+                  >
+                    <CalendarDays size={14} style={{ color: "#9194A0", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {evt.title}
+                      </div>
+                      <div style={{ fontSize: 10, color: C.tx3 }}>
+                        {evt.date_start === evt.date_end
+                          ? evt.date_start
+                          : `${evt.date_start} → ${evt.date_end}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteLifeEvent({ id: evt.id, athlete_id: athleteId ?? "" }); }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: C.tx3, padding: 4, flexShrink: 0 }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
 
         {/* Section 5 — Tendance de forme */}
         {wellnessTrendHasData && (
@@ -1668,6 +1759,23 @@ export default function TodayPage() {
           viewOnly={viewOnly}
           initialNew
           onClose={() => setMensuOpen(false)}
+        />
+      )}
+
+      {/* Life event form */}
+      {showLifeEventForm && (
+        <LifeEventFormModal
+          athleteId={athleteId ?? ""}
+          onClose={() => setShowLifeEventForm(false)}
+        />
+      )}
+
+      {/* Competition form (athlete self-add) */}
+      {showCompForm && myCoachId && (
+        <CompetitionFormModal
+          athleteId={athleteId ?? ""}
+          coachId={myCoachId}
+          onClose={() => setShowCompForm(false)}
         />
       )}
     </>

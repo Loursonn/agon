@@ -31,6 +31,19 @@ export const BLOCK_COLORS = [
   '#FF5A33', '#FF6B9D', '#A78BFA', '#34D399',
 ];
 
+// ── Life events ──────────────────────────────────────────────────────────────
+
+export interface LifeEvent {
+  id: string;
+  athlete_id: string;
+  date_start: string;
+  date_end: string;
+  title: string;
+  created_at: string;
+}
+
+export type LifeEventInsert = Omit<LifeEvent, 'id' | 'created_at'>;
+
 /** Default durations (in weeks) for each period level */
 export const PERIOD_DEFAULTS: Record<BlockType, number> = {
   macrocycle: 52,  // 12 months

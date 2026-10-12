@@ -65,4 +65,9 @@ export const QK = {
   appFeedbackList: ['app-feedback'] as const,
   // ── Tendances athlète (Mon profil) ────────────────────────────────────────────
   athleteInsights: (aid: string, day: string) => ['athlete-insights', aid, day] as const,
+  // ── HYROX ─────────────────────────────────────────────────────────────────────
+  hyroxResults:    (aid: string) => ['hyroxResults', aid]    as const,
+  hyroxResult:     (id: string)  => ['hyroxResult', id]      as const,
+  hyroxReferences: ['hyroxReferences']                        as const,
+  hyroxPlans:      (aid: string) => ['hyroxPlans', aid]      as const,
 } as const;

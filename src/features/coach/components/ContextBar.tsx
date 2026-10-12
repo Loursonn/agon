@@ -23,11 +23,12 @@ import {
 
 // ── Navigation tabs ────────────────────────────────────────────────────────────
 
-const TABS: { key: string; label: string; pushRight?: boolean }[] = [
+const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: boolean }[] = [
   { key: "planning",        label: "Planning"        },
   { key: "programmation",   label: "Programmation"   },
   { key: "retours",         label: "Retours"         },
   { key: "profil-sportif",  label: "Profil athlète"  },
+  { key: "hyrox",           label: "HYROX", hyroxOnly: true },
   { key: "athlete-view",    label: "Vue athlète", pushRight: true },
   { key: "donnees",         label: "Historique" },
 ];
@@ -45,6 +46,15 @@ const SUB_TABS: Record<string, { key: string; label: string }[]> = {
     { key: "testing",  label: "Suivi Testing"         },
   ],
   programmation: [],
+  hyrox: [
+    { key: "bilan",    label: "Bilan"             },
+    { key: "courses",  label: "Courses"           },
+    { key: "stations", label: "Stations"          },
+    { key: "runs",     label: "Runs et Roxzone"   },
+    { key: "radar",    label: "Radar"             },
+    { key: "tests",    label: "Tests HYROX"       },
+    { key: "plan",     label: "Plan de course"    },
+  ],
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -73,9 +83,12 @@ export default function ContextBar() {
     },
   });
 
+  // Filter HYROX tab based on athlete flag
+  const TABS = ALL_TABS.filter(t => !t.hyroxOnly || selectedAthlete?.is_hyrox_athlete);
+
   // Active tab derived from URL segment
   const segments = location.pathname.split("/");
-  const activeTab = TABS.find((t) => segments.includes(t.key))?.key ?? "planning";
+  const activeTab = ALL_TABS.find((t) => segments.includes(t.key))?.key ?? "planning";
 
   // Active sub-tab from ?view= param
   const searchParams = new URLSearchParams(location.search);
