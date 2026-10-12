@@ -8,7 +8,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { C } from "@/lib/theme"
-import { Plus, Library } from "lucide-react"
+import { Plus, Library, BookmarkPlus } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import type { Bloc, ProgSession } from "./types"
 import { BLOC_CATEGORIES } from "./types"
@@ -16,6 +16,8 @@ import { BlocCard } from "./BlocCard"
 import { BlocForm } from "./BlocForm"
 import { SemaineNav } from "./SemaineNav"
 import { useBlocBank } from "./hooks/useBlocBank"
+import { prepareBloc } from "./bankUtils"
+import { SaveToBankDialog, type SaveToBankTarget } from "./SaveToBankDialog"
 
 const VIOLET = "#FFC933"
 
@@ -26,6 +28,8 @@ interface SessionBlocEditorProps {
   onChange: (updated: ProgSession) => void
   /** Semaine affichée à l'ouverture (colonne S+1 du drawer). Défaut : 1. */
   initialWeek?: number
+  /** Boutons "Enregistrer dans la banque" (séance + blocs). Défaut : true. */
+  bankActions?: boolean
 }
 
 interface SortableBlocProps {
@@ -36,9 +40,10 @@ interface SortableBlocProps {
   sessionMultiSemaine: boolean
   onChange: (updated: Bloc) => void
   onDelete: () => void
+  onSaveToBank?: () => void
 }
 
-function SortableBloc({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete }: SortableBlocProps) {
+function SortableBloc({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, onSaveToBank }: SortableBlocProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id })
   return (
     <div
@@ -58,15 +63,17 @@ function SortableBloc({ bloc, index, athleteId, activeWeek, sessionMultiSemaine,
         sessionMultiSemaine={sessionMultiSemaine}
         onChange={onChange}
         onDelete={onDelete}
+        onSaveToBank={onSaveToBank}
         dragHandleProps={listeners as Record<string, unknown>}
       />
     </div>
   )
 }
 
-export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initialWeek = 1 }: SessionBlocEditorProps) {
+export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initialWeek = 1, bankActions = true }: SessionBlocEditorProps) {
   const [isAddingBloc, setIsAddingBloc] = useState(false)
   const [showBankPicker, setShowBankPicker] = useState(false)
+  const [saveTarget, setSaveTarget] = useState<SaveToBankTarget | null>(null)
   // La colonne "S+1" du drawer passe la semaine à afficher. Sans cette prop
   // (ignorée jusqu'ici), elle affichait et éditait toujours la semaine 1.
   const [activeWeek, setActiveWeek] = useState(initialWeek)
@@ -124,13 +131,7 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
 
   function addBlocFromBank(bank: Bloc) {
     // Deep copy + fresh ids: the inserted bloc is independent from the bank version
-    const clone = structuredClone(bank) as Bloc
-    const newBloc: Bloc = {
-      ...clone,
-      id: crypto.randomUUID(),
-      exercices: clone.exercices.map((ex, i) => ({ ...ex, id: crypto.randomUUID(), sort_order: i })),
-      sort_order: session.blocs.length,
-    }
+    const newBloc: Bloc = { ...prepareBloc(bank), sort_order: session.blocs.length }
     onChange({ ...session, blocs: [...session.blocs, newBloc] })
     setShowBankPicker(false)
   }
@@ -156,7 +157,27 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
             activeWeek={activeWeek}
             onWeekChange={setActiveWeek}
             onDuplicateWeek={handleDuplicateWeek}
+            weekCount={session.nb_semaines}
           />
+        </div>
+      )}
+
+      {/* Save whole session to the bank */}
+      {bankActions && session.blocs.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button
+            onClick={() => setSaveTarget({ kind: 'session', session })}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "5px 10px", borderRadius: 4,
+              border: "1px solid " + C.brdL, background: "transparent",
+              color: C.tx3, fontSize: 11, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <BookmarkPlus size={12} />
+            Enregistrer la séance dans la banque
+          </button>
         </div>
       )}
 
@@ -180,6 +201,7 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
               sessionMultiSemaine={session.multi_semaine}
               onChange={updated => updateBloc(bloc.id, updated)}
               onDelete={() => deleteBloc(bloc.id)}
+              onSaveToBank={bankActions ? () => setSaveTarget({ kind: 'bloc', bloc }) : undefined}
             />
           ))}
         </SortableContext>
@@ -299,6 +321,9 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
           Depuis la banque
         </button>
       </div>
+      {saveTarget && (
+        <SaveToBankDialog target={saveTarget} activeWeek={activeWeek} onClose={() => setSaveTarget(null)} />
+      )}
     </div>
   )
 }

@@ -19,6 +19,7 @@ import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
 import type { EnergyStep, EnergySessionRow } from "@/types/energy";
 import type { FreeSession } from "@/features/shared/types/athlete";
+import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ function StepCheckRow({
             <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{dur}</span>
           </div>
           {tgt && tgt !== "Libre" && (
-            <div style={{ fontSize: 10, color: C.tx3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tgt}</div>
+            <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{tgt}</div>
           )}
           {step.equipment && step.equipment !== "none" && (
             <div style={{ marginTop: 2 }}>
@@ -768,7 +769,9 @@ function WorkoutPreviewDrawer({
                 <div style={{ background: C.s2, borderRadius: 6, overflow: "hidden" }}>
                   {bloc.exercices.map((ex, idx) => {
                     const nb = ex.params?.nb_series ?? 0;
-                    const reps = ex.params?.reps?.mode === "global" ? ex.params.reps.value : "?";
+                    const reps = ex.params?.cluster
+                      ? formatClusterReps(ex.params.cluster)
+                      : ex.params?.reps?.mode === "global" ? ex.params.reps.value : "?";
                     const rir = ex.params?.rir?.mode === "global" ? ex.params.rir.value : null;
                     const tempo = ex.params?.tempo?.mode === "global" && ex.params.tempo.value ? ex.params.tempo.value : null;
                     return (
@@ -789,11 +792,11 @@ function WorkoutPreviewDrawer({
                           {String.fromCharCode(65 + blocIdx)}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, display: "block" }}>
                             {ex.exercise_name}
                           </span>
                           <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {reps} reps</span>
+                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {reps}{ex.params?.cluster ? "" : " reps"}</span>
                             {rir != null && (
                               <span style={{ fontSize: 10, color: C.tx3 }}>· RIR {rir}</span>
                             )}

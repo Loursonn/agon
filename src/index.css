@@ -66,6 +66,8 @@
     background-color: #0E0C0A;
     color: #FFFFFF;
     font-family: "Geist", system-ui, sans-serif;
+    /* Long unbroken strings (grilles, allures…) wrap instead of overflowing, incl. portaled drawers */
+    overflow-wrap: break-word;
     @apply bg-background text-foreground;
   }
 }

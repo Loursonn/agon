@@ -779,8 +779,7 @@ function SupersetCard({
                   {SS_LETTERS[mi]}
                 </span>
                 <span style={{
-                  fontSize: 12, fontWeight: 800, color: C.tx,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
+                  fontSize: 12, fontWeight: 800, color: C.tx, minWidth: 0,
                 }}>
                   {m.name}
                 </span>
@@ -990,9 +989,6 @@ function ExerciceCard({
                 fontSize: 13,
                 fontWeight: 800,
                 color: C.tx,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
               {name}
@@ -1036,7 +1032,7 @@ function ExerciceCard({
         </div>
         {/* Coach comment */}
         {coachComment && (
-          <div style={{ marginTop: 5, fontSize: 10, color: C.tx2, fontStyle: "italic", lineHeight: 1.4 }}>
+          <div style={{ marginTop: 5, fontSize: 10, color: C.tx2, fontStyle: "italic", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg>{coachComment}
           </div>
         )}
@@ -2876,6 +2872,12 @@ export default function WorkoutDetailPage() {
                     </div>
                   );
                 })()}
+
+                {bloc.instructions && (
+                  <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.45, whiteSpace: "pre-wrap", margin: "-2px 2px 8px" }}>
+                    {bloc.instructions}
+                  </div>
+                )}
 
                 {/* Exercices — colored background groups them visually as superset */}
                 <div

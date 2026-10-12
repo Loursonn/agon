@@ -88,6 +88,8 @@ export interface EnergyGroup {
   rest_between?: EnergyInterval;
   /** Départ fixe : chaque répétition commence toutes les N secondes (EMOM-style) */
   departure_every_s?: number;
+  /** Consignes du groupe, affichées à l'athlète */
+  instructions?: string;
 }
 
 // ── ExerciseInterval ──────────────────────────────────────────────────────────

@@ -39,6 +39,7 @@ export interface WorkoutBlocData {
   timing_repos_sec?: number;
   timing_depart_min?: number;
   timing_depart_sec?: number;
+  instructions?: string;
   exercices: WorkoutExerciceData[];
 }
 
@@ -159,6 +160,7 @@ function buildProgBlocs(
       timing_repos_sec: bloc.timing_repos_sec,
       timing_depart_min: bloc.timing_depart_min,
       timing_depart_sec: bloc.timing_depart_sec,
+      instructions: bloc.instructions,
       exercices: bloc.exercices.map((ex) => {
         let params: ExerciceParams;
 

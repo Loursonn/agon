@@ -324,8 +324,8 @@ export default function EnergySessionEditorPage() {
       sport_id: sportId,
       quality_id: qualityId,
       content: isWodBlock(block)
-        ? { title: block.title, kind: "wod", steps: block.steps }
-        : { title: block.title, items: block.items.filter((i) => i.name.trim()) },
+        ? { title: block.title, instructions: block.instructions, kind: "wod", steps: block.steps }
+        : { title: block.title, instructions: block.instructions, items: block.items.filter((i) => i.name.trim()) },
     });
   }
 

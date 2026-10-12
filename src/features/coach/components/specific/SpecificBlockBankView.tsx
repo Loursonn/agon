@@ -46,14 +46,16 @@ function BlockEditorModal({ initial, onClose }: {
     initial?.content.items?.length ? initial.content.items : [{ id: genId(), name: "" }]
   );
   const [steps, setSteps]         = useState<EnergyStep[]>(initial?.content.steps ?? []);
+  const [instructions, setInstructions] = useState(initial?.content.instructions ?? "");
 
   const isSaving = createBlock.isPending || updateBlock.isPending;
 
   async function handleSave() {
     if (!user?.id) return;
+    const instr = instructions.trim() || undefined;
     const content = kind === "wod"
-      ? { title: name, kind: "wod" as const, steps }
-      : { title: name, items: items.filter((i) => i.name.trim()) };
+      ? { title: name, instructions: instr, kind: "wod" as const, steps }
+      : { title: name, instructions: instr, items: items.filter((i) => i.name.trim()) };
     if (initial) {
       await updateBlock.mutateAsync({
         id: initial.id, name: name.trim() || "Bloc sans titre",
@@ -151,6 +153,14 @@ function BlockEditorModal({ initial, onClose }: {
               ))}
             </div>
           </div>
+
+          <textarea
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder="Consignes du bloc (optionnel)…"
+            rows={2}
+            style={{ ...inputStyle, width: "100%", boxSizing: "border-box", resize: "vertical", lineHeight: 1.4, marginBottom: 16 }}
+          />
 
           {/* Content */}
           {kind === "wod" ? (

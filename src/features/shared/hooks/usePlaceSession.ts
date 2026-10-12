@@ -60,7 +60,8 @@ export function usePlaceSession() {
             const { error } = await supabase
               .from("workout_logs")
               .upsert(logs, {
-                onConflict: "athlete_id,session_id,original_scheduled_date",
+                // Must match the real unique index (idx_workout_logs_unique)
+                onConflict: "athlete_id,session_id,scheduled_date",
                 ignoreDuplicates: true,
               });
             if (error) throw error;
@@ -80,7 +81,7 @@ export function usePlaceSession() {
         status: "planned",
         ...(weekNumber != null ? { week_number: weekNumber } : {}),
       }, {
-        onConflict: "athlete_id,session_id,original_scheduled_date",
+        onConflict: "athlete_id,session_id,scheduled_date",
         ignoreDuplicates: true,
       });
       if (error) throw error;

@@ -11,6 +11,8 @@ interface SemaineNavProps {
   activeWeek: number
   onWeekChange: (week: number) => void
   onDuplicateWeek: () => void
+  /** Nombre de semaines à afficher quand il n'y a pas de cycle (ex. séance de la banque) */
+  weekCount?: number
 }
 
 interface Microcycle {
@@ -19,7 +21,7 @@ interface Microcycle {
   end_date: string
 }
 
-export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek }: SemaineNavProps) {
+export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek, weekCount }: SemaineNavProps) {
   const { data: microcycles = [] } = useQuery<Microcycle[]>({
     queryKey: ["microcycles-nav", cycleId],
     enabled: !!cycleId,
@@ -35,7 +37,7 @@ export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek 
     },
   })
 
-  const count = Math.max(microcycles.length, 1)
+  const count = Math.max(microcycles.length || (cycleId ? 0 : weekCount ?? 0), 1)
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 8 }}>

@@ -65,7 +65,7 @@ function StepCard({ step, color, children }: {
         }}>
           {kindLabel}
         </span>
-        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, color: "#F2F1F5" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, color: "#F2F1F5", whiteSpace: "pre-wrap" }}>
           {title}
         </div>
         {(equipmentLabel || targetStr) && (
@@ -135,6 +135,11 @@ export default function StepTimeline({ steps }: { steps: EnergyStep[] }) {
                 × {group.repeat} tours
               </span>
             </div>
+            {group.instructions && (
+              <div style={{ fontSize: 12, color: "#B9AE9C", lineHeight: 1.4, whiteSpace: "pre-wrap", padding: "0 4px 8px" }}>
+                {group.instructions}
+              </div>
+            )}
             <div style={{ marginLeft: 6 }}>
               <StepTimeline steps={group.children} />
             </div>

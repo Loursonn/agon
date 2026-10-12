@@ -22,7 +22,7 @@ import { WorkoutsDetailView } from "../components/retours/WorkoutsDetailView";
 import { TestsDetailView } from "../components/retours/TestsDetailView";
 import { CompetitionsDetailView } from "../components/retours/CompetitionsDetailView";
 import { NutritionDetailView } from "../components/retours/NutritionDetailView";
-import { useWeeklyCoachRetour, useUpsertWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
+import { useWeeklyCoachRetour, useUpsertWeeklyRetour, reactionEmoji } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { useAuth } from "@/hooks/useAuth";
 
 type ViewMode = "month" | "week";
@@ -208,11 +208,22 @@ export default function RetoursPage() {
             {retourData?.comment && retourDraft === retourData.comment && (
               <span style={{ fontSize: 9, color: C.g, fontWeight: 600 }}>Enregistré</span>
             )}
+            {retourData?.comment && (
+              <span style={{ marginLeft: "auto", fontSize: 11, color: C.tx3, display: "flex", alignItems: "center", gap: 5 }}>
+                {retourData.athlete_reaction ? (
+                  <>
+                    Vu par l'athlète
+                    <span style={{ fontSize: 14 }}>{reactionEmoji(retourData.athlete_reaction)}</span>
+                    {retourData.reacted_at && new Date(retourData.reacted_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  </>
+                ) : "Pas encore vu"}
+              </span>
+            )}
           </div>
           <textarea
             value={retourDraft}
             onChange={(e) => setRetourDraft(e.target.value)}
-            placeholder="Écris ton retour sur la semaine ici… L'athlète le verra dans son onglet Aujourd'hui."
+            placeholder="Écris ton retour sur la semaine ici… L'athlète le verra sur son accueil jusqu'à ce qu'il réagisse."
             rows={4}
             style={{
               width: "100%", padding: "10px 12px", borderRadius: 4,

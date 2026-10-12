@@ -84,6 +84,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
         return {
           id: genId(),
           title: b.content.title || b.name,
+          instructions: b.content.instructions,
           kind: "wod" as const,
           sourceBlockId: b.id,
           steps: cloneSteps(b.content.steps ?? []),
@@ -92,6 +93,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
       return {
         id: genId(),
         title: b.content.title || b.name,
+        instructions: b.content.instructions,
         sourceBlockId: b.id,
         items: (b.content.items ?? []).map((i) => ({ ...i, id: genId() })),
       };
