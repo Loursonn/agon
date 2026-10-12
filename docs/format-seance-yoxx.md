@@ -6,7 +6,7 @@ importe **sans IA** (parseur déterministe, `src/lib/import/yoxx/`).
 | Étape | Contenu | État |
 |---|---|---|
 | 1 | Séance **ÉNERGÉTIQUE** | ✅ disponible (bouton « Importer un texte ») |
-| 2 | Séance **MUSCU** (toutes les méthodes) | inventaire fait, notation à valider |
+| 2 | Séance **MUSCU** (toutes les méthodes) | ✅ disponible (Programmation athlète > Muscu, et Banque de séances) |
 | 3 | Séance **SPÉCIFIQUE** (blocs classique + WOD) | inventaire fait, notation à valider |
 | 4 | **PROGRAMME** complet d'un athlète | à faire |
 
@@ -159,54 +159,138 @@ RETOUR 8' [Course] @ 9-10km/h
 
 ---
 
-## 2. Séance MUSCU — inventaire (notation à valider à l'étape 2)
+## 2. Séance MUSCU ✅
 
-Stockage : `app_data` clé `asp:prog` (par athlète) et `asp:session-bank` / banque de blocs (par coach).
-Types : `src/features/coach/components/programmation/types.ts`, méthodes : `src/types/trainingMethods.ts`.
-
-**Séance** (`ProgSession`) : nom · abrégé (`short`, ex. FB1) · jour (`day_of_week`) · récurrence (`weekly` | `once`) ·
-multi-semaine (`multi_semaine`, `nb_semaines`) · blocs.
-
-**Bloc** (`Bloc`) : nom · catégorie (`Echauffement` · `Force` · `Hypertrophie` · `Explo/vitesse` · `Mixte` · `Cardio`) · couleur ·
-séries du bloc (`series_mode` libre | fixe + `series_count`) · timing (`timing_mode` libre | départ toutes les X | repos X entre séries,
-en min + s) · consigne du bloc (`instructions`) · exercices.
-
-**Exercice** (`Exercice`) : exercice de la banque (`exercise_id`, `exercise_name`) · mode (`classique` | `methode` | `libre` + `libre_text`) ·
-méthode (`methode_id`, `applied_to_sets` = sur quelles séries pour une méthode de scope « set ») · superset avec le suivant
-(`superset_with_next`) · multi-semaine propre à l'exercice · commentaire coach (`comment`) · paramètres (une fois, ou par semaine S1/S2/S3…).
-
-**Paramètres** (`ExerciceParams`), chacun « global » ou « par série » :
-nombre de séries · reps (+ `reps_max` = fourchette) · EC / ISO (`reps_mode`) · unité de charge (`%RM` | `kg` | `PDC`) · charge ·
-RIR (vide = libre) · tempo (`3-0-1` / `3-0-1-0`) · cluster (`nb_clusters`, reps par cluster, récup en s) · 1RM fictif (`manual_rm`).
-
-**Méthodes** (`training_methods`, 3 scopes) :
-- `classic` : séries × reps (fixe / fourchette / AMRAP), repos (libre / fixe / variable), charge (identique / montante / descendante / par série, kg ou %1RM), RIR.
-- `set` : sous-séries sur une série (nombre fixe ou fourchette ; reps fixes / dégressives / progressives / AMRAP / motif `5,4,3,2,1` ; récup intra libre ou fixe ; charge identique / libre / ±% / par sous-série).
-- `exercise` : remplace toutes les séries (reps fixes / montantes / descendantes / motif ; repos ; charge ; tempo).
-- toutes : `weekly_configs` (config par semaine).
-- Officielles (seed) : Cluster, Drop Set, Rest-Pause, Myoreps, Drop Set mécanique, Pyramide montante, Pyramide descendante,
-  Volume constant, AMRAP, Tempo contrôlé, Vagues de charge (+ méthodes perso de Hugo, à recenser via Supabase).
-
-**Notation proposée (brouillon)** :
+Où : **Programmation d'un athlète → Muscu → « Importer un texte »** (ajoute la séance à son planning)
+et **Bibliothèque → Musculaire → Séances → « Importer un texte »** (ajoute à la banque).
 
 ```
-SÉANCE MUSCU : FullBody 1
-ABRÉGÉ : FB1
+SÉANCE MUSCU : <titre>
+ABRÉGÉ : FB2
+JOUR : Lundi … Dimanche
+RÉCURRENCE : hebdo | unique
+SEMAINES : 4
+CONSIGNE : <consigne générale>
+
+BLOC <nom> [Catégorie] <timing> <N séries> | <consigne du bloc>
+A1 <Exercice> : <prescription> | <commentaire>
+A2.1 <Exercice> : <prescription>          ← A2.1 + A2.2 = superset
+A2.2 <Exercice>
+  S1 : <prescription>                      ← une ligne par semaine
+  S2 : <prescription>
+```
+
+### En-têtes de séance (`ProgSession`)
+
+| Paramètre app | Écriture | Si absent |
+|---|---|---|
+| Nom | `SÉANCE MUSCU : Full body 2` | « Séance importée » + avertissement |
+| Abrégé (`short`) | `ABRÉGÉ : FB2` | initiales du titre (« Full body 2 » → FB2) |
+| Jour (`day_of_week`) | `JOUR : Vendredi` | aucun jour |
+| Récurrence | `RÉCURRENCE : hebdo` ou `unique` | hebdo |
+| Multi-semaine (`multi_semaine`, `nb_semaines`) | automatique dès qu'il y a des lignes `S1 :`, `S2 :` ; `SEMAINES : 5` pour forcer le nombre | séance sur 1 semaine |
+| Consigne de séance | `CONSIGNE : …` → placée dans la consigne du **1er bloc** (pas de champ séance en muscu) | — |
+
+### Bloc (`Bloc`) : `BLOC <nom> [Catégorie] <timing> <séries> | <consigne>`
+
+| Paramètre app | Écriture |
+|---|---|
+| Nom | le texte après `BLOC` (ex. `BLOC A`, `BLOC Échauffement`) |
+| Catégorie | `[Echauffement]` `[Force]` `[Hypertrophie]` `[Explo/vitesse]` `[Mixte]` `[Cardio]` — absente = Mixte |
+| Timing repos entre séries | `repos 2'30` |
+| Timing départ fixe | `départ 3'` |
+| Timing libre | `repos libre` ou rien |
+| Nombre de séries du bloc (`series_mode` fixe) | `3 séries` (ou `3 tours`) |
+| Consigne du bloc (`instructions`) | après `\|` |
+| Couleur | automatique (palette de l'app, dans l'ordre des blocs) |
+
+Sans aucune ligne `BLOC`, les blocs sont déduits des lettres (`A1`, `A2` → bloc A ; `B1` → bloc B).
+
+### Exercice : `<code> <nom> : <prescription> | <commentaire>`
+
+- **Code** : `A1`, `A2`… = exercices séparés ; `A1.1`, `A1.2` (même `A1`) = **superset** (enchaînés).
+- **Nom** : cherché dans ta bibliothèque. Nom identique (majuscules, accents, tirets ignorés) → lié.
+  Noms proches → l'écran d'import te les propose (choisir, ou « Créer »). Aucun nom proche → **créé** dans ta bibliothèque.
+- **Commentaire** (`comment`) : après `|`.
+
+| Paramètre app (`ExerciceParams`) | Écriture |
+|---|---|
+| Séries × reps | `3×8` (aussi `3x8`) |
+| Fourchette de reps (`reps_max`) | `3×8-10` |
+| Reps par série | `4×10/8/6/6` |
+| ISO (secondes) | `3×20" ISO` ou `3×20"` |
+| Cluster | `3×(3+3) R15"` = 3 séries de 2 clusters de 3 reps, 15 s entre clusters (affiché « 3×(3+3 + 15s) ») |
+| Charge en kg | `@80kg` · par série `@60/70/80kg` |
+| Charge en % du 1RM | `@75%` · par série `@70/75/80/80%` (calculée depuis les records ; sans record le % est gardé) |
+| Poids du corps | `@PDC` |
+| RIR | `RIR 2` · par série `RIR 3/2/1` |
+| RPE | `RPE 8` → **converti en RIR 2** (RIR = 10 − RPE ; `RPE 5-6` → RIR 4) |
+| Tempo | `tempo 3-0-1` · `tempo 3-0-1-0` · `tempo 3010` · `tempo 42X` (gardé tel qu'écrit) |
+| Mode libre (`libre_text`) | `A1 Mobilité : libre "5' de flow"` |
+| Méthode (`methode_id`) | `méthode "Rest-Pause"` en **fin de ligne**, nom exact de ta banque entre guillemets |
+| Séries concernées (méthodes « sur une série ») | `méthode "Drop Set" sur séries 3-4` (sinon toutes les séries) |
+| AMRAP | `3×AMRAP` → méthode « AMRAP » de la banque |
+
+Méthodes :
+- Avec séries×reps écrits → les paramètres du texte sont gardés et la méthode est attachée
+  (méthode « sur une série » : le découpage en sous-séries vient de la méthode si le texte n'en donne pas).
+- Méthode seule (`A2 Squat : méthode "6 x 6"`) → paramètres pris dans la méthode.
+- Méthode introuvable → l'exercice reste en classique avec le commentaire **« ⚠ Méthode non importée : … »** + erreur dans le rapport.
+- Méthodes de la banque au 12/10 : 5×5, AMRAP, Pyramide descendante, Pyramide montante, Tempo contrôlé, Vagues de charge,
+  Volume constant, 21 rep, Cluster, Double contraction, Drop Set, Drop Set mécanique, Myoreps, Rest-Pause,
+  4 x 10-12, 4 x 12-15, 4 x 4-6, 4 x 6-8, 5x5 -> 8x8, 6 x 6, 10-8-6-15 : Thibarmy, 3/7 ondulatoire (4semaines), 3/7 linéaire legeard.
+
+### Progression par semaine : une ligne par semaine sous l'exercice
+
+```
+A1.1 Split squat haltères | Par jambe.
+  S1 : 3×8 RIR 3
+  S2 : 4×8 RIR 3
+  S3 : 4×8 RIR 2
+```
+- `S1 :` (ou `Semaine 1 :`) = **semaine**. Les valeurs par **série** s'écrivent avec des `/` (`4×10/8/6/6`).
+  ⚠ Dans l'app, l'affichage « S1: 2×60% / S2: … » d'un exercice veut dire *série 1, série 2* : ne pas confondre.
+- Une semaine non écrite reprend la précédente. Un exercice sans lignes `S` garde les mêmes paramètres toutes les semaines.
+- Si la ligne de l'exercice a aussi une prescription, elle sert de base aux semaines non écrites.
+
+### Exemple : Full body 2 d'Eva
+
+```
+SÉANCE MUSCU : Full body 2
+ABRÉGÉ : FB2
+JOUR : Vendredi
+CONSIGNE : Easy day, lendemain du compromised.
 
 BLOC Échauffement [Echauffement] repos libre
-A1 RAC Hanche + Cheville : S1 2×60% · S2 2×60% · S3 2×60%
-A2 RAC Genou : S1 4×60% · S2 4×80% RIR 2
-A3 Montée en charge : 1×1
+A1 RACs hanche, cheville, épaule : libre "6'"
+A2 Mobilité thoracique : libre "4' — extension sur banc, rotations en quadrupédie"
 
-BLOC A [Force] repos 2'29 | consigne du bloc
-A1.1 Box Squat barre : 3×20 @75% RIR 4 tempo 3-0-1
-A1.2 Traction assistée : 3 × 3 R15 @PDC RIR 3          ← cluster (3×(3+3 + 15s))
+BLOC A [Force] repos 2'
+A1.1 Split squat haltères | Par jambe. Amplitude sans douleur.
+  S1 : 3×8 RIR 3
+  S2 : 4×8 RIR 3
+A1.2 Développé militaire haltères : 3×8 RIR 4
+
+BLOC B [Force] repos 2'
+B1.1 Hip thrust : 3×10 RIR 4 | Pause 2" en haut.
+B1.2 Rowing haltère : 3×10 RIR 4 | Par bras.
+
+BLOC C [Mixte] repos libre
+C1.1 Abduction de hanche élastique : 3×15 | Par côté.
+C1.2 Copenhagen plank levier court : 3×20" ISO | Par côté.
+C2 Extension lombaire banc 45° (ou GHD) : 3×12-15 | Pause 2" en haut.
 ```
-- `A1, A2` = exercices séparés ; `A1.1, A1.2` = superset (enchaînés).
-- Charge : `@80kg` · `@75%` (du 1RM, calculé depuis les records ; sans record le % est gardé) · `@PDC` · `RIR 2` · `RPE 8` → converti en **RIR 2** (RIR = 10 − RPE).
-- Par série : `4×10/8/6/6 @70/75/80/80%` · fourchette `3×8-10` · `AMRAP` · `ISO`.
-- Méthode : `méthode Rest-Pause` (nom exact de la banque) ; méthode introuvable → « méthode non importée » à cet endroit.
-- Semaines : `S1 … · S2 … · S3 …`.
+
+Exemple avec cluster et méthode (Full body 1 tel qu'enregistré dans la banque) :
+
+```
+BLOC A [Mixte] repos 2'29
+A1.1 Box Squat barre : 3×20" ISO @75% RIR 4
+A1.2 Traction assistée : 3×(3+3) R15" @PDC RIR 3
+BLOC C [Mixte] repos 1'30
+C1.1 Leg curl swiss ball : 3×6-8 @PDC RIR 3 tempo 401
+C1.2 Leg extension : 3×6 @75% RIR 2 méthode "Double contraction"
+```
 
 ## 3. Séance SPÉCIFIQUE — inventaire (notation à valider à l'étape 3)
 

@@ -44,7 +44,8 @@ import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuali
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
 import { toast } from "sonner";
 import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
-import ImportIssueList, { issueCounts, scrollToStep } from "../components/import/ImportIssueList";
+import { issueCounts } from "../components/import/ImportIssueList";
+import ImportReportPanel from "../components/import/ImportReportPanel";
 import type { EnergyImportResult } from "@/lib/import/yoxx/parseEnergySession";
 import type { ImportIssue } from "@/lib/import/yoxx/common";
 
@@ -218,33 +219,6 @@ function ImportSessionModal({ onImport, onClose }: {
         </div>
       </div>
     </>
-  );
-}
-
-// ── Rapport d'import texte (liens cliquables vers les étapes) ────────────────
-
-function ImportReportPanel({ issues, onClose }: { issues: ImportIssue[]; onClose: () => void }) {
-  const { errors, warnings } = issueCounts(issues);
-  return (
-    <div style={{ border: `1px solid ${C.r}40`, background: C.r + "08", borderRadius: 4, padding: 12, marginBottom: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: C.tx }}>
-          Rapport d'import · {errors} erreur{errors > 1 ? "s" : ""} · {warnings} à vérifier
-        </div>
-        <button
-          onClick={onClose}
-          style={{ background: "none", border: "none", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
-        >
-          Masquer
-        </button>
-      </div>
-      <div style={{ maxHeight: 220, overflowY: "auto" }}>
-        <ImportIssueList
-          issues={issues}
-          onSelect={(id) => { if (!scrollToStep(id)) toast.info("Étape introuvable (déjà modifiée ou supprimée)"); }}
-        />
-      </div>
-    </div>
   );
 }
 
