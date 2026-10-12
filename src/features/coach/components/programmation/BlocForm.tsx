@@ -54,6 +54,7 @@ export function BlocForm({ initial, onSubmit, onCancel }: BlocFormProps) {
   const [timingDepartSec, setTimingDepartSec] = useState<number>(initial?.timing_depart_sec ?? 0)
   const [timingReposMin, setTimingReposMin] = useState<number>(initial?.timing_repos_min ?? 2)
   const [timingReposSec, setTimingReposSec] = useState<number>(initial?.timing_repos_sec ?? 0)
+  const [instructions, setInstructions] = useState(initial?.instructions ?? "")
 
   function handleSubmit() {
     const data: BlocFormData = {
@@ -67,6 +68,7 @@ export function BlocForm({ initial, onSubmit, onCancel }: BlocFormProps) {
       timing_depart_sec: timingMode === 'depart' ? timingDepartSec : undefined,
       timing_repos_min: timingMode === 'repos' ? timingReposMin : undefined,
       timing_repos_sec: timingMode === 'repos' ? timingReposSec : undefined,
+      instructions: instructions.trim() || undefined,
     }
     onSubmit(data)
   }
@@ -187,6 +189,18 @@ export function BlocForm({ initial, onSubmit, onCancel }: BlocFormProps) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Consignes */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4, fontWeight: 600 }}>Consignes</label>
+        <textarea
+          value={instructions}
+          onChange={e => setInstructions(e.target.value)}
+          placeholder="ex. Charge progressive, garder 1-2 reps en réserve, gainage serré…"
+          rows={3}
+          style={{ ...inputStyle, resize: "vertical", lineHeight: 1.4 }}
+        />
       </div>
 
       {/* Actions */}

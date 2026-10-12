@@ -18,6 +18,7 @@ import { CoachSessionOverrideModal } from "./CoachSessionOverrideModal";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import type { ProgSession, Bloc, Exercice, ExerciceParams } from "@/features/coach/components/programmation/types";
+import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -68,7 +69,9 @@ type ExoRow = {
 function fmtPlanned(p: ExerciceParams): string {
   const parts: string[] = [];
   parts.push(`${p.nb_series}×`);
-  if (p.reps.mode === "global") {
+  if (p.cluster) {
+    parts.push(formatClusterReps(p.cluster));
+  } else if (p.reps.mode === "global") {
     const rMin = p.reps.value;
     const rMax = p.reps_max?.mode === "global" ? p.reps_max.value : null;
     parts.push(rMax != null && rMax !== rMin ? `${rMin}-${rMax}` : String(rMin));

@@ -415,23 +415,19 @@ export function useDeleteCalendarEvent() {
         return;
       }
 
-      const isPast = date ? new Date(date + "T23:59:59") < new Date() : true;
-
       // Projected block-plan workout
       if (type === "workout" && id.startsWith("block-") && sessionId && date) {
-        if (isPast) {
-          // Past: insert a skipped log so the projection doesn't reappear
-          const { error } = await supabase.from("workout_logs").insert({
-            athlete_id:     athleteId,
-            coach_id:       coachId ?? null,
-            session_id:     sessionId,
-            session_name:   sessionName ?? "Séance",
-            scheduled_date: date,
-            status:         "skipped",
-          });
-          if (error) throw error;
-        }
-        // Future projected: no DB record — a future session cannot be "skipped"
+        // Past or future: a skipped log suppresses this single occurrence of the
+        // recurring session (same mechanism as moving it to another day)
+        const { error } = await supabase.from("workout_logs").upsert({
+          athlete_id:     athleteId,
+          coach_id:       coachId ?? null,
+          session_id:     sessionId,
+          session_name:   sessionName ?? "Séance",
+          scheduled_date: date,
+          status:         "skipped",
+        }, { onConflict: "athlete_id,session_id,scheduled_date" });
+        if (error) throw error;
         return;
       }
 
@@ -440,15 +436,11 @@ export function useDeleteCalendarEvent() {
           // Séance validée : hard delete pour pouvoir supprimer les doublons
           const { error } = await supabase.from("workout_logs").delete().eq("id", id);
           if (error) throw error;
-        } else if (isPast) {
-          // Past real log: mark skipped so projected event stays suppressed
+        } else {
+          // Past or future real log: mark skipped. A hard delete would let the
+          // recurring projection reappear on the same day.
           const { error } = await supabase.from("workout_logs")
             .update({ status: "skipped" }).eq("id", id);
-          if (error) throw error;
-        } else {
-          // Future real log: hard delete — no semantic meaning in "skipping" a future session
-          const { error } = await supabase.from("workout_logs")
-            .delete().eq("id", id);
           if (error) throw error;
         }
         return;

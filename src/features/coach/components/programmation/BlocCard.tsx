@@ -8,7 +8,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { C } from "@/lib/theme"
-import { Settings, X, Plus, GripVertical, Link2 } from "lucide-react"
+import { Settings, X, Plus, GripVertical, Link2, BookmarkPlus } from "lucide-react"
 import type { Bloc, Exercice } from "./types"
 import { defaultExerciceParams } from "./types"
 import { BlocForm } from "./BlocForm"
@@ -38,6 +38,8 @@ interface BlocCardProps {
   onChange: (updated: Bloc) => void
   onDelete: () => void
   dragHandleProps?: Record<string, unknown>
+  /** Shows the "save to bloc bank" action when provided */
+  onSaveToBank?: () => void
 }
 
 interface SortableExerciceProps {
@@ -100,7 +102,7 @@ function timingLabel(bloc: Bloc): string {
   return `—`
 }
 
-export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, dragHandleProps }: BlocCardProps) {
+export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, dragHandleProps, onSaveToBank }: BlocCardProps) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -234,6 +236,14 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
                 style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               ><Settings size={11} /></button>
 
+              {onSaveToBank && (
+                <button
+                  onClick={onSaveToBank}
+                  title="Enregistrer dans la banque de blocs"
+                  style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                ><BookmarkPlus size={11} /></button>
+              )}
+
               {confirmDelete ? (
                 <>
                   <button
@@ -253,6 +263,15 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
               )}
             </div>
           </div>
+          {bloc.instructions && (
+            <div
+              onClick={() => setEditing(true)}
+              title="Modifier les consignes"
+              style={{ marginTop: 6, marginLeft: 36, fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", cursor: "pointer" }}
+            >
+              {bloc.instructions}
+            </div>
+          )}
         </div>
       )}
 

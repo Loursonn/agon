@@ -97,7 +97,8 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   }, [location.pathname]);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    // overflowWrap hérité : les longues chaînes sans espace (grilles, allures…) reviennent à la ligne
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", overflowWrap: "anywhere" }}>
       {/* ── Sticky header ── */}
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: C.bg, borderBottom: "1px solid " + C.brd }}>
         <div style={{ padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

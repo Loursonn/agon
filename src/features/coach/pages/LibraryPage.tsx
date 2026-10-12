@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Dumbbell, X, Zap, Target, Construction } from "lucide-react";
+import { Dumbbell, X, Zap, Target } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import { ExerciseBank } from "@/components/coach/ExerciseBank";
 import { BlocBankView } from "@/features/coach/components/programmation/BlocBankView";
+import { SessionBankView } from "@/features/coach/components/programmation/SessionBankView";
 import SpecificCatalog from "@/features/coach/components/specific/SpecificCatalog";
 import SpecificBlockBankView from "@/features/coach/components/specific/SpecificBlockBankView";
 import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
@@ -555,13 +556,7 @@ export default function LibraryPage() {
             {muscuTab === "exercices" && <ExerciseBank coachId={user.id} onAddToExos={undefined} />}
             {muscuTab === "methodes"  && <MethodsTab coachId={user.id} />}
             {muscuTab === "blocs"     && <BlocBankView />}
-            {muscuTab === "seances"   && (
-              <div style={{ textAlign: "center", padding: "60px 20px", color: C.tx3 }}>
-                <div style={{ marginBottom: 12 }}><Construction size={36} style={{ color: C.tx3 }} /></div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>Banque de séances musculaires</div>
-                <div style={{ fontSize: 13 }}>À venir — les séances complètes réutilisables arriveront ici.</div>
-              </div>
-            )}
+            {muscuTab === "seances"   && <SessionBankView />}
           </>
         )}
         {activeTab === "energetique" && <EnergyTab />}

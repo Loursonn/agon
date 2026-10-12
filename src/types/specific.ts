@@ -54,6 +54,8 @@ export interface ClassiqueBlock {
   kind?: 'classique';
   /** Renseigné si importé depuis specific_blocks */
   sourceBlockId?: string;
+  /** Consignes du bloc, affichées à l'athlète sous le titre */
+  instructions?: string;
   items: ClassiqueItem[];
 }
 
@@ -63,6 +65,8 @@ export interface WodBlock {
   title: string;
   kind: 'wod';
   sourceBlockId?: string;
+  /** Consignes du bloc, affichées à l'athlète sous le titre */
+  instructions?: string;
   steps: import('./energy').EnergyStep[];
 }
 
@@ -90,6 +94,7 @@ export interface SpecificBlockRow {
   /** Contenu du bloc sans id/sourceBlockId. kind absent = classique. */
   content: {
     title: string;
+    instructions?: string;
     kind?: BlockKind;
     items?: ClassiqueItem[];
     steps?: import('./energy').EnergyStep[];

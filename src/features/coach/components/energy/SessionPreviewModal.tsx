@@ -67,7 +67,7 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
             <div
               key={step.id ?? i}
               style={{
-                display: "flex", alignItems: "center", gap: 8,
+                display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8,
                 padding: "5px 8px",
                 marginLeft: depth * 14,
                 borderRadius: 6,
@@ -80,7 +80,7 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
               </span>
               <span style={{ fontSize: 11, fontWeight: 700, color: C.tx, minWidth: 40 }}>{dur}</span>
               {tgt && tgt !== "Libre" && (
-                <span style={{ fontSize: 10, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 10, color: C.tx3, minWidth: 0 }}>
                   {tgt}
                 </span>
               )}
@@ -90,7 +90,7 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
                 </span>
               )}
               {step.notes && (
-                <span style={{ fontSize: 9, color: C.tx3, fontStyle: "italic", marginLeft: "auto", flexShrink: 0 }}>
+                <span style={{ fontSize: 9, color: C.tx3, fontStyle: "italic", flexBasis: "100%", paddingLeft: 11, whiteSpace: "pre-wrap" }}>
                   {step.notes}
                 </span>
               )}
@@ -108,7 +108,7 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
             <div
               key={step.id ?? i}
               style={{
-                display: "flex", alignItems: "center", gap: 8,
+                display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8,
                 padding: "5px 8px",
                 marginLeft: depth * 14,
                 borderRadius: 6,
@@ -120,7 +120,7 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
               <span style={{ fontSize: 11, fontWeight: 700, color: C.tx }}>{step.exercise_name}</span>
               {detail && <span style={{ fontSize: 10, color: C.tx3 }}>{detail}</span>}
               {step.notes && (
-                <span style={{ fontSize: 9, color: C.tx3, fontStyle: "italic", marginLeft: "auto", flexShrink: 0 }}>
+                <span style={{ fontSize: 9, color: C.tx3, fontStyle: "italic", flexBasis: "100%", paddingLeft: 11, whiteSpace: "pre-wrap" }}>
                   {step.notes}
                 </span>
               )}
@@ -144,6 +144,11 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
                 <span style={{ fontSize: 9, color: C.tx3 }}>répétitions</span>
               )}
             </div>
+            {step.instructions && (
+              <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", padding: "0 8px 4px 10px" }}>
+                {step.instructions}
+              </div>
+            )}
             <StepTree steps={step.children} depth={depth + 1} />
             {step.rest_between && (
               <div style={{ marginLeft: (depth + 1) * 14 }}>
@@ -169,6 +174,11 @@ function ClassiqueBlockView({ block }: { block: ClassiqueBlock }) {
       <div style={{ fontSize: 10, fontWeight: 700, color: "#66F03C", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>
         {block.title || "Bloc classique"}
       </div>
+      {block.instructions && (
+        <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 6 }}>
+          {block.instructions}
+        </div>
+      )}
       {block.items.map((item) => (
         <div key={item.id} style={{
           display: "flex", gap: 8, alignItems: "baseline",
@@ -178,14 +188,14 @@ function ClassiqueBlockView({ block }: { block: ClassiqueBlock }) {
             {item.name}
           </span>
           {item.prescription && (
-            <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>{item.prescription}</span>
+            <span style={{ fontSize: 10, color: C.tx3, textAlign: "right", maxWidth: "55%" }}>{item.prescription}</span>
           )}
         </div>
       ))}
       {block.items.some((it) => it.notes) && (
         <div style={{ marginTop: 4 }}>
           {block.items.filter((it) => it.notes).map((it) => (
-            <div key={it.id} style={{ fontSize: 9, color: C.tx3, padding: "1px 0" }}>
+            <div key={it.id} style={{ fontSize: 9, color: C.tx3, padding: "1px 0", whiteSpace: "pre-wrap" }}>
               {it.name} : {it.notes}
             </div>
           ))}
@@ -208,6 +218,11 @@ function WodBlockView({ block }: { block: WodBlock }) {
           {block.steps.length} étape{block.steps.length > 1 ? "s" : ""}
         </span>
       </div>
+      {block.instructions && (
+        <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 4 }}>
+          {block.instructions}
+        </div>
+      )}
       <div style={{ marginLeft: 4 }}>
         <StepTree steps={block.steps} />
       </div>
@@ -260,6 +275,7 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
       <div
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 61,
+          overflowWrap: "anywhere",
           maxHeight: "92vh",
           background: C.s1, borderRadius: "6px 6px 0 0", border: "1px solid " + C.brd,
           borderBottom: "none",
@@ -280,7 +296,7 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
             <Zap size={16} color={kc} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>
               {session.name}
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2, flexWrap: "wrap" }}>
@@ -309,7 +325,7 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
 
           {/* Notes */}
           {session.notes && (
-            <div style={{ margin: "0 18px 12px", padding: "9px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + C.brd, fontSize: 11, color: C.tx2, lineHeight: 1.6 }}>
+            <div style={{ margin: "0 18px 12px", padding: "9px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + C.brd, fontSize: 11, color: C.tx2, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
               <span style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 3 }}>Notes</span>
               {session.notes}
             </div>

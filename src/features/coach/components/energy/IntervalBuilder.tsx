@@ -6,6 +6,7 @@
  * - DndContext unique au niveau du builder
  */
 import { useState, useCallback } from "react";
+import { Settings } from "lucide-react";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
@@ -144,7 +145,7 @@ function IntervalRow({
 
       {/* Actions */}
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <ActionBtn onClick={onEdit} title="Éditer"></ActionBtn>
+        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} style={{ display: "block" }} /></ActionBtn>
         <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
         <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
       </div>
@@ -202,7 +203,7 @@ function ExerciseRow({
       </div>
 
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <ActionBtn onClick={onEdit} title="Éditer"></ActionBtn>
+        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} style={{ display: "block" }} /></ActionBtn>
         <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
         <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
       </div>
@@ -229,7 +230,7 @@ function parseMMSS(raw: string): number {
 function GroupRowHeader({
   group, depth, listeners,
   onEditRepeat, onDuplicate, onDelete, onAddInterval, onAddGroup,
-  isSpecifique, onAddExercise, onEditDeparture,
+  isSpecifique, onAddExercise, onEditDeparture, onEditInstructions,
 }: {
   group: EnergyGroup;
   depth: number;
@@ -242,14 +243,18 @@ function GroupRowHeader({
   isSpecifique?: boolean;
   onAddExercise?: () => void;
   onEditDeparture?: (seconds: number | undefined) => void;
+  onEditInstructions?: (text: string | undefined) => void;
 }) {
   const [editingRepeat, setEditingRepeat] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(!!group.instructions);
+  const [instructionsVal, setInstructionsVal] = useState(group.instructions ?? "");
   const [repeatVal, setRepeatVal] = useState(group.repeat);
   const [editingDeparture, setEditingDeparture] = useState(false);
   const [departureVal, setDepartureVal] = useState(group.departure_every_s ? toMMSS(group.departure_every_s) : "1:00");
   const color = ROLE_COLOR[group.role] ?? C.tx3;
 
   return (
+    <>
     <div
       style={{
         display: "flex", alignItems: "center", gap: 8,
@@ -330,9 +335,31 @@ function GroupRowHeader({
       <ActionBtn onClick={onAddInterval} title="+ Intervalle">＋I</ActionBtn>
       {isSpecifique && onAddExercise && <ActionBtn onClick={onAddExercise} title="+ Exercice">＋E</ActionBtn>}
       <ActionBtn onClick={onAddGroup} title="+ Sous-groupe">＋G</ActionBtn>
+      {onEditInstructions && (
+        <ActionBtn onClick={() => setShowInstructions((v) => !v)} title="Consignes du groupe">✎</ActionBtn>
+      )}
       <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
       <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
     </div>
+    {onEditInstructions && showInstructions && (
+      <div style={{ paddingLeft: 15 + depth * 20, paddingRight: 8, marginBottom: 4 }}>
+        <textarea
+          autoFocus={!group.instructions}
+          value={instructionsVal}
+          onChange={(e) => setInstructionsVal(e.target.value)}
+          onBlur={() => onEditInstructions(instructionsVal.trim() || undefined)}
+          placeholder="Consignes du groupe (ex. allure régulière, récup active…)"
+          rows={2}
+          style={{
+            width: "100%", boxSizing: "border-box", resize: "vertical",
+            background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
+            color: C.tx, fontSize: 12, lineHeight: 1.4, padding: "6px 8px",
+            fontFamily: "inherit", outline: "none",
+          }}
+        />
+      </div>
+    )}
+    </>
   );
 }
 
@@ -426,6 +453,7 @@ function GroupRenderer({
                     isSpecifique={isSpecifique}
                     onAddExercise={() => onChange(addStepToGroup(root, child.id, makeExerciseInterval({ id: "", name: "Exercice" })))}
                     onEditDeparture={(s) => onChange(updateStep(root, { ...child, departure_every_s: s }))}
+                    onEditInstructions={(t) => onChange(updateStep(root, { ...child, instructions: t }))}
                   />
                   <GroupRenderer
                     group={child}

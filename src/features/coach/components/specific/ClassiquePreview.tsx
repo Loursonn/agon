@@ -54,6 +54,12 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
               )}
             </div>
 
+            {block.instructions && (
+              <div style={{ padding: "6px 12px 0", fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
+                {block.instructions}
+              </div>
+            )}
+
             {wod ? (
               <div style={{ padding: "8px 10px" }}>
                 {(block as WodBlock).steps.length > 0 ? (

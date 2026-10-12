@@ -14,6 +14,8 @@ import { todayKey } from "@/lib/date";
 import { useAthleteTrends, useAthleteInsights } from "@/features/shared/hooks/useAthleteTrends";
 import { TrendCard } from "@/features/athlete/components/profile/TrendCard";
 import { AppFeedbackSection } from "@/features/athlete/components/profile/AppFeedbackSection";
+import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
+import { useAthleteRetours } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import type { TrendSummary } from "@/lib/athleteTrends";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +45,11 @@ export default function ProfileDrawer({ onClose }: Props) {
 
   const ap = athleteProfile as Profile | null;
   const name = ap ? ([ap.first_name, ap.last_name].filter(Boolean).join(" ") || ap.full_name || "Athlète") : "Athlète";
+
+  // Retours hebdo déjà vus (= avec réaction) — les non lus sont sur l'accueil
+  const { data: coachRetours = [] } = useAthleteRetours(athleteId ?? undefined);
+  const seenRetours = coachRetours.filter((r) => r.athlete_reaction);
+  const [showAllRetours, setShowAllRetours] = useState(false);
 
   // Retour coach : uniquement s'il date des 14 derniers jours
   const recentFb = Object.entries(coachFeedbacks)
@@ -209,6 +216,24 @@ export default function ProfileDrawer({ onClose }: Props) {
             </div>
           )}
         </section>
+
+        {/* ── Retours hebdo du coach déjà vus ── */}
+        {seenRetours.length > 0 && (
+          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>Retours du coach</div>
+            {(showAllRetours ? seenRetours : seenRetours.slice(0, 1)).map((r) => (
+              <CoachRetourCard key={r.id} retour={r} />
+            ))}
+            {seenRetours.length > 1 && (
+              <button
+                onClick={() => setShowAllRetours((v) => !v)}
+                style={{ background: "none", border: "none", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit", padding: 0, textAlign: "left" as const, textDecoration: "underline" }}
+              >
+                {showAllRetours ? "Masquer les anciens retours" : `Voir les ${seenRetours.length - 1} retours précédents`}
+              </button>
+            )}
+          </section>
+        )}
 
         {/* ── Retour coach (14 derniers jours uniquement) ── */}
         {recentFb && (

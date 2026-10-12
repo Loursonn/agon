@@ -17,7 +17,7 @@ import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useCompleteEnergyAssignment, useUpdateEnergyAssignment, useUpsertEnergyRpe } from "@/features/shared/hooks/useEnergyAssignments";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import type { EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
-import { Check, Moon, Zap, AlertTriangle, Dumbbell, Heart, Info, MessageSquare } from "lucide-react";
+import { Check, Moon, Zap, AlertTriangle, Dumbbell, Heart, Info } from "lucide-react";
 import { AgonIcon } from "@/components/ui/AgonIcon";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import { MensurationsDrawer } from "@/features/athlete/components/MensurationsDrawer";
@@ -30,7 +30,8 @@ import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
 import { localISO, normalizeDayMap } from "@/lib/date";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
-import { useWeeklyCoachRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
+import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
+import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
 import { LifeEventFormModal } from "@/features/athlete/components/LifeEventFormModal";
 import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
@@ -746,7 +747,10 @@ export default function TodayPage() {
   const { mutate: startUnplanned, isPending: startingUnplanned } = useStartUnplannedSession();
   const weekMondayISO = useMemo(localMonday, []);
   const today = localISO();
-  const { data: coachRetour } = useWeeklyCoachRetour(athleteId, weekMondayISO);
+  // Retours coach pas encore vus (= sans réaction), toutes semaines confondues
+  const { data: coachRetours = [] } = useAthleteRetours(athleteId ?? undefined);
+  const unreadRetours = coachRetours.filter((r) => !r.athlete_reaction);
+  const { mutate: reactRetour } = useReactWeeklyRetour();
   const { data: lifeEvents = [] } = useLifeEvents(athleteId ?? "");
   const { mutate: deleteLifeEvent } = useDeleteLifeEvent();
   const myCoachId = profile?.coach_id;
@@ -925,18 +929,18 @@ export default function TodayPage() {
             <CitationDuJour />
           </div>
 
-          {coachRetour?.comment && (
-            <div style={{
-              marginBottom: 16, background: C.acS, borderRadius: 6,
-              border: "1px solid " + C.ac + "30", padding: "12px 14px",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <MessageSquare size={12} color={C.ac} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: C.ac }}>Retour de ton coach</span>
-              </div>
-              <div style={{ fontSize: 13, color: C.tx, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                {coachRetour.comment}
-              </div>
+          {unreadRetours.length > 0 && (
+            <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+              {unreadRetours.map((r) => (
+                <CoachRetourCard
+                  key={r.id}
+                  retour={r}
+                  onReact={viewOnly || !athleteId ? undefined : (reaction) => {
+                    haptic();
+                    reactRetour({ retourId: r.id, athleteId, reaction });
+                  }}
+                />
+              ))}
             </div>
           )}
 
@@ -1265,17 +1269,9 @@ export default function TodayPage() {
                           weekMondayISO,
                         },
                         {
-                          onSuccess: () => {
-                            navigate("/athlete/log", {
-                              state: {
-                                initialSess: {
-                                  id:          s.sessionId ?? s.id,
-                                  name:        s.sessionName,
-                                  short:       s.sessionName.slice(0, 3).toUpperCase(),
-                                  day_of_week: (new Date(s.scheduledDate + "T12:00:00").getDay() + 6) % 7,
-                                },
-                              },
-                            });
+                          // Écran de séance actuel (blocs, consignes, clusters) — pas l'ancien LogView
+                          onSuccess: (log) => {
+                            navigate("/athlete/program/workout/" + log.id);
                           },
                         }
                       );

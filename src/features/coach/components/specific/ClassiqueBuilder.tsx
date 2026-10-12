@@ -161,6 +161,19 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
         </button>
       </div>
 
+      <textarea
+        value={block.instructions ?? ""}
+        onChange={(e) => onChange({ instructions: e.target.value || undefined } as Partial<SessionBlock>)}
+        placeholder="Consignes du bloc (optionnel)…"
+        rows={2}
+        style={{
+          width: "100%", boxSizing: "border-box", resize: "vertical",
+          background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
+          color: C.tx, fontSize: 12, lineHeight: 1.4, padding: "6px 8px",
+          fontFamily: "inherit", outline: "none", marginBottom: 10,
+        }}
+      />
+
       {/* Body */}
       {wod ? (
         <IntervalBuilder

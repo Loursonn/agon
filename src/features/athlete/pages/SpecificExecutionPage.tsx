@@ -53,6 +53,11 @@ function ClassiqueBlockPreview({ block }: { block: ClassiqueBlock }) {
       }}>
         {block.title || "Bloc classique"}
       </div>
+      {block.instructions && (
+        <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 8 }}>
+          {block.instructions}
+        </div>
+      )}
       {block.items.map((item) => (
         <div key={item.id} style={{
           display: "flex", gap: 8, alignItems: "baseline",
@@ -62,7 +67,7 @@ function ClassiqueBlockPreview({ block }: { block: ClassiqueBlock }) {
             {item.name}
           </span>
           {item.prescription && (
-            <span style={{ fontSize: 12, color: C.tx2, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: C.tx2, textAlign: "right", maxWidth: "55%", whiteSpace: "pre-wrap" }}>
               {item.prescription}
             </span>
           )}
@@ -94,6 +99,11 @@ function WodBlockPreview({ block }: { block: WodBlock }) {
           {block.steps.length} étape{block.steps.length > 1 ? "s" : ""}
         </span>
       </div>
+      {block.instructions && (
+        <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 6 }}>
+          {block.instructions}
+        </div>
+      )}
       <div style={{ marginLeft: 6 }}>
         <StepTimeline steps={block.steps} />
       </div>
@@ -126,6 +136,11 @@ function ClassiqueBlockExecution({
         {block.title || "Bloc classique"}
         {allDone && " ✓"}
       </div>
+      {block.instructions && (
+        <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 8 }}>
+          {block.instructions}
+        </div>
+      )}
       {block.items.map((item) => {
         const done = !!blockLogs[item.id];
         return (
@@ -150,13 +165,13 @@ function ClassiqueBlockExecution({
               {done ? "✓" : ""}
             </span>
             <span style={{
-              fontSize: 14, fontWeight: 600, color: C.tx, flex: 1,
+              fontSize: 14, fontWeight: 600, color: C.tx, flex: 1, minWidth: 0,
               textDecoration: done ? "line-through" : "none",
             }}>
               {item.name}
             </span>
             {item.prescription && (
-              <span style={{ fontSize: 12, color: C.tx2, flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: C.tx2, textAlign: "right", maxWidth: "55%", whiteSpace: "pre-wrap" }}>
                 {item.prescription}
               </span>
             )}
@@ -166,7 +181,7 @@ function ClassiqueBlockExecution({
       {block.items.some((it) => it.notes) && (
         <div style={{ marginTop: 6 }}>
           {block.items.filter((it) => it.notes).map((it) => (
-            <div key={it.id} style={{ fontSize: 11, color: C.tx2, padding: "2px 0" }}>
+            <div key={it.id} style={{ fontSize: 11, color: C.tx2, padding: "2px 0", whiteSpace: "pre-wrap" }}>
               Note — {it.name} : {it.notes}
             </div>
           ))}
@@ -365,7 +380,7 @@ export default function SpecificExecutionPage() {
             background: C.card, border: `1px solid ${C.border}`,
             borderLeft: `3px solid ${C.orange}`,
             borderRadius: 6, padding: "12px 14px", fontSize: 13,
-            marginBottom: 16,
+            marginBottom: 16, whiteSpace: "pre-wrap",
           }}>
             <strong style={{ display: "block", fontSize: 11, color: C.orange, textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 4 }}>
               Note coach
