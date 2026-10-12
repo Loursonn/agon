@@ -370,10 +370,12 @@ interface EnergyPanelProps {
   coachId: string;
   athleteId?: string;
   onNew: () => void;
+  /** Import d'une séance au format texte YOXX (énergétique uniquement) */
+  onImportText?: () => void;
   onEdit: (sessionId: string) => void;
 }
 
-function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
+function EnergyPanel({ coachId, athleteId, onNew, onImportText, onEdit }: EnergyPanelProps) {
   const { data: allAthlSessions = [], isLoading } = useEnergySessions();
   // Filtrage client : séances de cet athlète, ou banque perso coach si pas d'athlète
   const sessions = athleteId
@@ -412,6 +414,20 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
             <Library size={13} />
             Importer une séance
           </button>
+          {onImportText && (
+            <button
+              onClick={onImportText}
+              title="Coller une séance écrite au format YOXX"
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "7px 12px", borderRadius: 4,
+                border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac,
+                fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Importer un texte
+            </button>
+          )}
           <button
             onClick={onNew}
             style={{
@@ -984,6 +1000,7 @@ export default function ProgrammationPage() {
           coachId={user?.id ?? ""}
           athleteId={athleteId ?? undefined}
           onNew={() => navigate(athleteId ? `/coach/athletes/${athleteId}/energy/new` : "/coach/energy-library/new")}
+          onImportText={() => navigate(`${athleteId ? `/coach/athletes/${athleteId}/energy/new` : "/coach/energy-library/new"}?import=texte`)}
           onEdit={(sessionId: string) => navigate(athleteId ? `/coach/athletes/${athleteId}/energy/${sessionId}/edit` : `/coach/energy-library/${sessionId}/edit`)}
         />
       )}

@@ -55,6 +55,7 @@ function SortableItem({ id, children }: { id: string; children: (listeners: Reco
   return (
     <div
       ref={setNodeRef}
+      data-step-id={id}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,

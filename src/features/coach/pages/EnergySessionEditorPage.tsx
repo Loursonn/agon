@@ -42,6 +42,11 @@ import ClassiquePreview from "../components/specific/ClassiquePreview";
 import BlockBankDrawer from "../components/specific/BlockBankDrawer";
 import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuality } from "@/features/shared/hooks/useSpecificTaxonomy";
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
+import { toast } from "sonner";
+import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
+import ImportIssueList, { issueCounts, scrollToStep } from "../components/import/ImportIssueList";
+import type { EnergyImportResult } from "@/lib/import/yoxx/parseEnergySession";
+import type { ImportIssue } from "@/lib/import/yoxx/common";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -216,6 +221,33 @@ function ImportSessionModal({ onImport, onClose }: {
   );
 }
 
+// ── Rapport d'import texte (liens cliquables vers les étapes) ────────────────
+
+function ImportReportPanel({ issues, onClose }: { issues: ImportIssue[]; onClose: () => void }) {
+  const { errors, warnings } = issueCounts(issues);
+  return (
+    <div style={{ border: `1px solid ${C.r}40`, background: C.r + "08", borderRadius: 4, padding: 12, marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: C.tx }}>
+          Rapport d'import · {errors} erreur{errors > 1 ? "s" : ""} · {warnings} à vérifier
+        </div>
+        <button
+          onClick={onClose}
+          style={{ background: "none", border: "none", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          Masquer
+        </button>
+      </div>
+      <div style={{ maxHeight: 220, overflowY: "auto" }}>
+        <ImportIssueList
+          issues={issues}
+          onSelect={(id) => { if (!scrollToStep(id)) toast.info("Étape introuvable (déjà modifiée ou supprimée)"); }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function EnergySessionEditorPage() {
@@ -247,6 +279,10 @@ export default function EnergySessionEditorPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  // Import texte YOXX (?import=texte ouvre directement la fenêtre)
+  const [showTextImport, setShowTextImport] = useState(searchParams.get("import") === "texte");
+  const [importIssues, setImportIssues] = useState<ImportIssue[]>([]);
+  const [notes, setNotes] = useState("");
 
   // Spécifique : sport / qualité / format
   // Nouvelle séance spécifique = toujours par blocs (mix Classique/WOD).
@@ -283,6 +319,7 @@ export default function EnergySessionEditorPage() {
       };
       setRoot(rootG);
       setFieldSchema(existingSession.schema ?? null);
+      setNotes(existingSession.notes ?? "");
       setImages(((existingSession as any).images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
       setSportId(existingSession.sport_id ?? null);
       setQualityId(existingSession.quality_id ?? null);
@@ -297,6 +334,7 @@ export default function EnergySessionEditorPage() {
     setCustomKind(session.custom_kind || "vo2");
     setCustomKind(session.custom_kind ?? "");
     setStructureType(session.structure_type);
+    setNotes(session.notes ?? "");
     const clonedChildren = deepCloneIntervals(session.intervals ?? []);
     setRoot({
       type: "group", id: "__root__", role: "open", repeat: 1,
@@ -314,6 +352,21 @@ export default function EnergySessionEditorPage() {
       )
     );
     setShowImport(false);
+  }
+
+  function handleTextImport({ session, issues }: EnergyImportResult) {
+    setName(session.name);
+    setSessionKind(session.session_kind);
+    if (session.session_kind === "custom") setCustomKind(session.custom_kind ?? "");
+    setStructureType(session.structure_type);
+    setRoot({ type: "group", id: "__root__", role: "open", repeat: 1, children: session.intervals });
+    setNotes(session.notes ?? "");
+    if (session.images.length > 0) setImages((prev) => [...prev, ...session.images]);
+    setImportIssues(issues.filter((i) => i.level !== "info"));
+    setShowTextImport(false);
+    const { errors } = issueCounts(issues);
+    if (errors > 0) toast.warning(`Séance importée — ${errors} zone${errors > 1 ? "s" : ""} « À SAISIR » à compléter`);
+    else toast.success("Séance importée — vérifie puis enregistre");
   }
 
   function handleSaveBlockToBank(block: SessionBlock) {
@@ -390,6 +443,7 @@ export default function EnergySessionEditorPage() {
         ? (existingSession?.custom_kind ?? null)
         : (sessionKind === "custom" ? customKind : null),
       modality: null,
+      notes: notes.trim() || null,
       structure_type: structureType,
       intervals: root.children,
       schema: fieldSchema ?? null,
@@ -569,6 +623,15 @@ export default function EnergySessionEditorPage() {
               Importer une séance
             </button>
           )}
+          {!isSpecifique && (
+            <button
+              onClick={() => setShowTextImport(true)}
+              title="Coller une séance écrite au format YOXX"
+              style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Importer un texte
+            </button>
+          )}
           <button
             onClick={navigateBack}
             style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
@@ -619,7 +682,23 @@ export default function EnergySessionEditorPage() {
               onSaveBlockToBank={handleSaveBlockToBank}
             />
           ) : (
-            <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
+            <>
+              {importIssues.length > 0 && (
+                <ImportReportPanel issues={importIssues} onClose={() => setImportIssues([])} />
+              )}
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Consigne de la séance (optionnel, affichée à l'athlète)…"
+                rows={notes ? 2 : 1}
+                style={{
+                  width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 12,
+                  background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx,
+                  fontSize: 12, padding: "8px 10px", fontFamily: "inherit", outline: "none",
+                }}
+              />
+              <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
+            </>
           )}
         </div>
 
@@ -791,6 +870,14 @@ export default function EnergySessionEditorPage() {
       </div>
 
       {/* ── Import modal ── */}
+      {showTextImport && (
+        <ImportEnergyTextDialog
+          onImport={handleTextImport}
+          onClose={() => setShowTextImport(false)}
+          replacesExisting={root.children.length > 0}
+        />
+      )}
+
       {showImport && (
         <ImportSessionModal
           onImport={handleImportSession}
