@@ -21,6 +21,30 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-14-import-texte",
+    date: "2026-10-14",
+    title: "Nouveau : importer une séance écrite",
+    summary: "Colle une séance rédigée au format texte YOXX : elle est créée automatiquement, en musculation comme en énergétique.",
+    sections: [
+      {
+        title: "Comment ça marche",
+        points: [
+          "Bouton « Importer un texte » dans la Programmation de l'athlète (Muscu et Énergie), la Banque de séances, la Bibliothèque et la Banque énergétique.",
+          "Musculation : blocs, supersets, séries × reps, charges (kg, %1RM, PDC), RIR, tempo, méthodes et une ligne par semaine sont reconnus.",
+          "Énergétique : intervalles, durées, cibles (zones, % FCmax, allure, % VMA, watts…), groupes répétés et consigne de séance.",
+          "Rien n'est bloquant : un rapport liste ce qui reste à compléter (« À SAISIR ») avec un lien direct vers l'endroit concerné.",
+          "Un exercice au nom identique est relié à ta bibliothèque ; un nom proche te propose un choix ; sinon il est créé.",
+        ],
+      },
+      {
+        title: "Pour tes athlètes",
+        points: [
+          "La consigne d'une séance énergétique s'affiche désormais dans leur programme.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-14-ameliorations",
     date: "2026-10-14",
     title: "Séances plus claires et corrections",
