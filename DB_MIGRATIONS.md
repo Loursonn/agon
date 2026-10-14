@@ -332,7 +332,7 @@ Rollback : `DROP TABLE IF EXISTS public.citation_likes, public.citation_stats CA
 ## Migration 2026-10-14 (2) — Nouveautés coach (accusés de lecture)
 
 **Fichier :** `supabase/migrations/20261014200000_app_update_reads.sql`
-**Statut : ⚠️ EN ATTENTE** — table `app_update_reads` (lecture / insertion de ses propres lignes) + RPC admin `get_app_update_reads()`.
+**Statut : ✅ APPLIQUÉE en prod le 2026-10-14** — table `app_update_reads` (lecture / insertion de ses propres lignes) + RPC admin `get_app_update_reads()`.
 Le contenu des nouveautés est dans `src/data/releaseNotes.ts`. Sans la table, la carte d'accueil reste masquée.
 
 Rollback : `DROP FUNCTION IF EXISTS public.get_app_update_reads(); DROP TABLE IF EXISTS public.app_update_reads;`
