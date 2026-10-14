@@ -24,7 +24,7 @@ export default function CoachUpdatesPage() {
   const totalCoaches = stats[0]?.total_coaches ?? null;
 
   return (
-    <div style={{ padding: "24px 20px 60px", maxWidth: 820 }}>
+    <div style={{ padding: "24px 20px 60px", width: "100%", boxSizing: "border-box" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, color: C.tx, margin: 0, flex: 1 }}>Nouveautés</h1>
         {user && unseen.length > 1 && (
