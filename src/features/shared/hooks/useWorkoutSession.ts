@@ -14,6 +14,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { defaultExerciceParams } from "@/features/coach/components/programmation/types";
 import type { Bloc, ExerciceParams } from "@/features/coach/components/programmation/types";
 import type { AthleteModifications, Exercise, WeekConfig } from "../types/athlete";
+import type { FicheAttachment } from "../types/fiches";
 
 export interface WorkoutExerciceData {
   id: string;
@@ -40,6 +41,8 @@ export interface WorkoutBlocData {
   timing_depart_min?: number;
   timing_depart_sec?: number;
   instructions?: string;
+  /** Fiches du bloc (brutes : résoudre avec resolveFicheForWeek(att, weekNumber)) */
+  fiches?: FicheAttachment[];
   exercices: WorkoutExerciceData[];
 }
 
@@ -54,6 +57,8 @@ export interface WorkoutSessionResult {
   rpeScore: number | null;
   scheduledDate: string | null;
   weekNumber: number;
+  /** Fiches de la séance (brutes : résoudre avec resolveFicheForWeek) */
+  sessionFiches: FicheAttachment[];
   athleteModifications: AthleteModifications | null;
   rescheduledByAthlete: boolean;
   originalScheduledDate: string | null;
@@ -161,6 +166,7 @@ function buildProgBlocs(
       timing_depart_min: bloc.timing_depart_min,
       timing_depart_sec: bloc.timing_depart_sec,
       instructions: bloc.instructions,
+      fiches: bloc.fiches,
       exercices: bloc.exercices.map((ex) => {
         let params: ExerciceParams;
 
@@ -307,6 +313,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
       rpeScore: null,
       scheduledDate: null,
       weekNumber: 1,
+      sessionFiches: [],
       athleteModifications: null,
       rescheduledByAthlete: false,
       originalScheduledDate: null,
@@ -334,6 +341,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
         rpeScore: wlog.rpe_score ?? null,
         scheduledDate: wlog.scheduled_date,
         weekNumber,
+        sessionFiches: earlyMods.coachOverride.fiches ?? [],
         athleteModifications: earlyMods,
         rescheduledByAthlete: wlog.rescheduled_by_athlete ?? false,
         originalScheduledDate: wlog.original_scheduled_date ?? null,
@@ -362,6 +370,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
         rpeScore: wlog.rpe_score ?? null,
         scheduledDate: wlog.scheduled_date,
         weekNumber,
+        sessionFiches: [],
         athleteModifications: (wlog.athlete_modifications as AthleteModifications | null) ?? null,
         rescheduledByAthlete: wlog.rescheduled_by_athlete ?? false,
         originalScheduledDate: wlog.original_scheduled_date ?? null,
@@ -384,6 +393,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
       rpeScore: wlog.rpe_score ?? null,
       scheduledDate: wlog.scheduled_date,
       weekNumber,
+      sessionFiches: progSession.fiches ?? [],
       athleteModifications: mods,
       rescheduledByAthlete: wlog.rescheduled_by_athlete ?? false,
       originalScheduledDate: wlog.original_scheduled_date ?? null,

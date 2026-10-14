@@ -248,6 +248,12 @@ export default function ProfileDrawer({ onClose }: Props) {
           </div>
         )}
 
+        {/* ── Mes fiches ── */}
+        <button onClick={() => { navigate("program?vue=fiches"); onClose(); }} style={{ width: "100%", minHeight: 48, background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>📄 Mes fiches</div>
+          <span style={{ fontSize: 11, color: C.tx3 }}>→</span>
+        </button>
+
         {/* ── Objectifs ── */}
         <button onClick={() => setDrawerZoom("goals")} style={{ width: "100%", background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>Objectifs</div>

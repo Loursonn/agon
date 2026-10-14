@@ -26,6 +26,7 @@ import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 import { SchemaViewerWithZoom } from "@/features/coach/components/energy/SchemaViewer";
 import { formatSLong } from "@/lib/energy/formatTarget";
+import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 
 // ── Colors ──────────────────────────────────────────────────────────────────
 const C = {
@@ -388,6 +389,13 @@ export default function SpecificExecutionPage() {
             {session.notes}
           </div>
         )}
+
+        {/* Fiches */}
+        {session.fiches?.length ? (
+          <div style={{ marginBottom: 16 }}>
+            <FicheLinks title="Fiches" attachments={session.fiches} athleteId={user?.id} compact />
+          </div>
+        ) : null}
 
         {/* Schema */}
         {session.schema && (

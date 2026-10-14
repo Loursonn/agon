@@ -7,6 +7,7 @@ import ProfilPage from "@/features/athlete/pages/ProfilPage";
 import AthleteTestPage from "@/features/athlete/pages/AthleteTestPage";
 import AlimPage from "@/features/athlete/pages/AlimPage";
 import AthleteHyroxPage from "@/features/athlete/pages/HyroxPage";
+import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
 
 const BASE_TABS = [
   { key: "today",   label: "Aujourd'hui" },
@@ -22,7 +23,7 @@ const TAIL_TABS = [
 ] as const;
 
 export default function AthleteViewPage() {
-  const { athleteProfile } = useAthleteContext();
+  const { athleteProfile, athleteId } = useAthleteContext();
   const INNER_TABS = [...BASE_TABS, ...(athleteProfile?.is_hyrox_athlete ? [HYROX_TAB] : []), ...TAIL_TABS];
   const [tab, setTab] = useState<string>("today");
 
@@ -66,6 +67,7 @@ export default function AthleteViewPage() {
       {tab === "hyrox"   && <AthleteHyroxPage />}
       {tab === "alim"    && <AlimPage />}
       {tab === "profil"  && <ProfilPage />}
+      <FicheViewerHost athleteId={athleteId} viewOnly />
     </div>
   );
 }

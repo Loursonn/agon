@@ -7,6 +7,7 @@ import type { EnergySessionRow, EnergyStep, EnergyGroup, SessionImage } from "@/
 import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 import { formatTarget, formatS } from "@/lib/energy/formatTarget";
+import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 
 // ── Shared constants ──────────────────────────────────────────────────────────
 
@@ -322,6 +323,13 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
               <SessionPreview intervals={rootGroup} athleteId={athleteId} />
             </div>
           )}
+
+          {/* Fiches (côté athlète) */}
+          {athleteId && session.fiches?.length ? (
+            <div style={{ margin: "0 18px 12px" }}>
+              <FicheLinks title="Fiches" attachments={session.fiches} athleteId={athleteId} compact />
+            </div>
+          ) : null}
 
           {/* Notes */}
           {session.notes && (

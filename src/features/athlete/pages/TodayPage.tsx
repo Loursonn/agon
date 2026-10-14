@@ -9,6 +9,7 @@ import { useTodayWellness } from "@/features/shared/hooks/useTodayWellness";
 import { useReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import { useUpcomingCompetition } from "@/features/shared/hooks/useUpcomingCompetition";
 import { useWeekProgram } from "@/features/shared/hooks/useWeekProgram";
+import { TodayWorkoutFiches } from "@/features/athlete/components/fiches/TodayWorkoutFiches";
 import { useActivePlan } from "@/features/shared/hooks/useActivePlan";
 import { useStartUnplannedSession } from "@/features/shared/hooks/useStartUnplannedSession";
 import { useUnifiedCalendar } from "@/features/shared/hooks/useUnifiedCalendar";
@@ -1184,6 +1185,7 @@ export default function TodayPage() {
                           </div>
                         </div>
                       </div>
+                      {w.workoutLogId && <TodayWorkoutFiches workoutLogId={w.workoutLogId} athleteId={athleteId} />}
                       {!viewOnly && (
                         <button
                           onClick={() => { haptic(); navigate("/athlete/program/workout/" + w.workoutLogId); }}

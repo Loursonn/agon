@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -21,6 +21,7 @@ import type { EnergyStep, EnergySessionRow } from "@/types/energy";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
+import { AthleteFichesView } from "@/features/athlete/components/fiches/AthleteFichesView";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1151,7 +1152,7 @@ const weekNavBtn: React.CSSProperties = {
   background: C.s2, border: "1px solid " + C.brdL, color: C.tx, cursor: "pointer",
 };
 
-export default function ProgramPage() {
+function ProgramSessionsView() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
   const { athleteId, viewOnly, freeSessions, setFreeSessions } = useAthleteContext();
@@ -1259,6 +1260,7 @@ export default function ProgramPage() {
         padding: "14px 16px", textAlign: "center",
       }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, letterSpacing: "-0.2px" }}>Programme</div>
+        <ProgramViewSwitch />
       </div>
 
       {isLoading ? (
@@ -1443,6 +1445,56 @@ export default function ProgramPage() {
         onSave={(session) => setFreeSessions((prev) => prev.map((f) => f.id === session.id ? session : f))}
         onDelete={(id) => setFreeSessions((prev) => prev.filter((f) => f.id !== id))}
       />
+    </div>
+  );
+}
+
+// ── Sélecteur Séances | Fiches (?vue=fiches) ──────────────────────────────────
+
+function ProgramViewSwitch() {
+  const [params, setParams] = useSearchParams();
+  const vue = params.get("vue") === "fiches" ? "fiches" : "seances";
+  const go = (v: "seances" | "fiches") => {
+    const next = new URLSearchParams(params);
+    if (v === "fiches") next.set("vue", "fiches");
+    else next.delete("vue");
+    setParams(next, { replace: true });
+  };
+  return (
+    <div role="tablist" style={{ display: "flex", gap: 2, background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: 3, marginTop: 10 }}>
+      {([["seances", "Séances"], ["fiches", "Fiches"]] as const).map(([k, l]) => (
+        <button
+          key={k}
+          role="tab"
+          aria-selected={vue === k}
+          onClick={() => go(k)}
+          style={{
+            flex: 1, minHeight: 36, borderRadius: 4, border: "none",
+            background: vue === k ? C.acS : "transparent",
+            color: vue === k ? C.ac : C.tx3, fontSize: 13, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",
+          }}
+        >{l}</button>
+      ))}
+    </div>
+  );
+}
+
+export default function ProgramPage() {
+  const [params] = useSearchParams();
+  if (params.get("vue") !== "fiches") return <ProgramSessionsView />;
+  return (
+    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+      <div style={{
+        position: "sticky", top: 45, zIndex: 5,
+        background: "linear-gradient(135deg, rgba(255,201,51,0.18) 0%, rgba(21,18,15,0.98) 70%)",
+        borderBottom: "1px solid rgba(255,201,51,0.25)",
+        padding: "14px 16px", textAlign: "center",
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, letterSpacing: "-0.2px" }}>Programme</div>
+        <ProgramViewSwitch />
+      </div>
+      <AthleteFichesView />
     </div>
   );
 }

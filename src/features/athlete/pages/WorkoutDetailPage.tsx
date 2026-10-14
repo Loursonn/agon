@@ -12,6 +12,7 @@ import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
 import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import type { AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
 import type { ExerciceParams, ClusterConfig } from "@/features/coach/components/programmation/types";
+import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -2759,6 +2760,14 @@ export default function WorkoutDetailPage() {
           gap: 16,
         }}
       >
+        {/* Fiches de la séance (variante de la semaine) */}
+        <FicheLinks
+          title="Fiches de la séance"
+          attachments={workout.sessionFiches}
+          week={workout.weekNumber}
+          athleteId={athleteId}
+        />
+
         {workout.blocs.length === 0 ? (
           <div
             style={{
@@ -2876,6 +2885,12 @@ export default function WorkoutDetailPage() {
                 {bloc.instructions && (
                   <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.45, whiteSpace: "pre-wrap", margin: "-2px 2px 8px" }}>
                     {bloc.instructions}
+                  </div>
+                )}
+
+                {bloc.fiches && bloc.fiches.length > 0 && (
+                  <div style={{ margin: "0 2px 8px" }}>
+                    <FicheLinks compact attachments={bloc.fiches} week={workout.weekNumber} athleteId={athleteId} />
                   </div>
                 )}
 
