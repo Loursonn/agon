@@ -341,7 +341,13 @@ ON CONFLICT (id) DO UPDATE
 DROP POLICY IF EXISTS "docs_storage_select" ON storage.objects;
 CREATE POLICY "docs_storage_select" ON storage.objects
   FOR SELECT TO authenticated
-  USING (bucket_id = 'docs' AND public.can_read_doc_file(name));
+  USING (
+    bucket_id = 'docs' AND (
+      public.can_read_doc_file(name)
+      -- l'auteur d'un upload le voit toujours (nettoyage d'un orphelin, suppression)
+      OR owner_id = auth.uid()::text
+    )
+  );
 
 DROP POLICY IF EXISTS "docs_storage_insert" ON storage.objects;
 CREATE POLICY "docs_storage_insert" ON storage.objects

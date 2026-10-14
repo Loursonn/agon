@@ -78,9 +78,10 @@ export function useDeleteDocComment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (c: DocComment) => {
+      // Image d'abord : la RLS Storage exige que l'objet soit encore lisible
+      if (c.image_path) await supabase.storage.from("docs").remove([c.image_path]);
       const { error } = await supabase.from("doc_comments").delete().eq("id", c.id);
       if (error) throw error;
-      if (c.image_path) await supabase.storage.from("docs").remove([c.image_path]);
     },
     onSuccess: (_d, c) => {
       qc.invalidateQueries({ queryKey: QK.docComments(c.doc_id, c.athlete_id) });

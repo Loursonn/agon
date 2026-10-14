@@ -195,9 +195,13 @@ export function useDeleteOwnDoc() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (doc: Doc) => {
+      // Fichier d'abord : la RLS Storage exige que l'objet soit encore lisible
+      if (doc.file_path) {
+        const { error: rmErr } = await supabase.storage.from("docs").remove([doc.file_path]);
+        if (rmErr) throw rmErr;
+      }
       const { error } = await supabase.from("docs").delete().eq("id", doc.id);
       if (error) throw error;
-      if (doc.file_path) await supabase.storage.from("docs").remove([doc.file_path]);
     },
     onSuccess: () => {
       invalidateDocs(qc);
