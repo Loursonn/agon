@@ -51,6 +51,8 @@ const EnergySessionEditorPage   = lazy(() => import("./features/coach/pages/Ener
 const ProfilAthletePage         = lazy(() => import("./features/coach/pages/ProfilAthletePage.tsx"));
 const EnergyLibraryPage         = lazy(() => import("./features/coach/pages/EnergyLibraryPage.tsx"));
 const CoachHyroxPage            = lazy(() => import("./features/coach/pages/HyroxPage.tsx"));
+const FichesPage                = lazy(() => import("./features/coach/pages/FichesPage.tsx"));
+const AthleteFichesPage         = lazy(() => import("./features/coach/pages/AthleteFichesPage.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -117,6 +119,7 @@ function AnimatedRoutes() {
             <Route path="athletes" element={<AthletesListPage />} />
             <Route path="library"  element={<LibraryPage />} />
             <Route path="tests"    element={<CoachTestsBankPage />} />
+            <Route path="fiches"   element={<FichesPage />} />
             <Route path="coaches"  element={<CoachesListPage />} />
             <Route path="roadmap"  element={<RoadmapPage />} />
             <Route path="avis"     element={<AthleteFeedbackPage />} />
@@ -137,6 +140,7 @@ function AnimatedRoutes() {
               {/* Legacy : Tests vit maintenant dans Profil athlète → Suivi Testing */}
               <Route path="tests"         element={<Navigate to="../profil-sportif?view=testing" replace />} />
               <Route path="hyrox"         element={<CoachHyroxPage />} />
+              <Route path="fiches"        element={<AthleteFichesPage />} />
               <Route path="athlete-view"  element={<AthleteViewPage />} />
             </Route>
 
