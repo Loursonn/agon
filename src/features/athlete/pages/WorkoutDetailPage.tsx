@@ -13,6 +13,7 @@ import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import type { AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
 import type { ExerciceParams, ClusterConfig } from "@/features/coach/components/programmation/types";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
+import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -2628,9 +2629,7 @@ export default function WorkoutDetailPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["workout-log-detail", id] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
-      qc.invalidateQueries({ queryKey: ["activePlan", athleteId] });
+      invalidateSessionStatus(qc, athleteId, id);
       toast.success("Séance réouverte");
     },
     onError: () => toast.error("Erreur lors de la réouverture"),
@@ -2653,9 +2652,7 @@ export default function WorkoutDetailPage() {
     },
     onSuccess: () => {
       localStorage.removeItem("activeWorkoutSession");
-      qc.invalidateQueries({ queryKey: ["workout-log-detail", id] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
-      qc.invalidateQueries({ queryKey: ["activePlan", athleteId] });
+      invalidateSessionStatus(qc, athleteId, id);
       setShowFinish(false);
       setShowRpe(true);
       toast.success("Séance complétée ! ");

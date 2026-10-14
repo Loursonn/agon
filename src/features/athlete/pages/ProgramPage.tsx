@@ -22,6 +22,7 @@ import type { FreeSession } from "@/features/shared/types/athlete";
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 import { AthleteFichesView } from "@/features/athlete/components/fiches/AthleteFichesView";
+import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1234,13 +1235,14 @@ function ProgramSessionsView() {
     mutationFn: async (assignmentId: string) => {
       const { error } = await supabase
         .from("energy_session_assignments")
-        .update({ status: "planned" })
+        // Même remise à zéro que depuis l'accueil : blocs cochés et RPE effacés
+        .update({ status: "planned", block_logs: {}, rpe_score: null, updated_at: new Date().toISOString() })
         .eq("id", assignmentId);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.activePlan(athleteId ?? "") });
-      toast.success("Séance annulée");
+      invalidateSessionStatus(qc, athleteId);
+      toast.success("Validation annulée");
       setEnergyPreview(null);
     },
     onError: () => toast.error("Erreur lors de l'annulation"),

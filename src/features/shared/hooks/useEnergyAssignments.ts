@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import { syncDocAssignmentsFromEnergy } from "./fiches/syncDocAssignments";
+import { invalidateSessionStatus } from "./invalidateSessionStatus";
 import type {
   EnergySessionAssignmentRow,
   CreateAssignmentInput,
@@ -139,8 +140,7 @@ export function useUpdateEnergyAssignment() {
       toast.error("Erreur lors de la mise à jour de l'assignation");
     },
     onSuccess: (_data, { athleteId }) => {
-      qc.invalidateQueries({ queryKey: QK.energyAssignments(athleteId) });
-      qc.invalidateQueries({ queryKey: ["cal", athleteId] });
+      invalidateSessionStatus(qc, athleteId);
       toast.success("Assignation mise à jour");
     },
   });
