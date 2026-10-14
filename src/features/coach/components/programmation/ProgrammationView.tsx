@@ -368,10 +368,12 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
   }
 
   function addSession(data: Omit<ProgSession, 'id' | 'blocs'>) {
+    const prepared = bankTemplate ? prepareSession(bankTemplate) : null
     const newSession: ProgSession = {
       ...data,
       id: crypto.randomUUID(),
-      blocs: bankTemplate ? prepareSession(bankTemplate).blocs : [],
+      blocs: prepared ? prepared.blocs : [],
+      ...(prepared?.fiches?.length ? { fiches: prepared.fiches } : {}),
     }
     setBankTemplate(null)
     const next = [...sessions, newSession]

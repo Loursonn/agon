@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { C } from "@/lib/theme";
+import { useQueryClient } from "@tanstack/react-query";
+import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor";
+import { syncEnergySessionAthletes } from "@/features/shared/hooks/fiches/syncDocAssignments";
+import type { FicheAttachment } from "@/features/shared/types/fiches";
 import { makeRootGroup, genId } from "@/lib/energy/treeUtils";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 import { formatSLong } from "@/lib/energy/formatTarget";
@@ -241,6 +245,8 @@ export default function EnergySessionEditorPage() {
   const [fieldSchema, setFieldSchema] = useState<FieldSchema | null>(null);
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [images, setImages] = useState<SessionImage[]>([]);
+  const [fiches, setFiches] = useState<FicheAttachment[]>([]);
+  const qc = useQueryClient();
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -284,6 +290,7 @@ export default function EnergySessionEditorPage() {
       setRoot(rootG);
       setFieldSchema(existingSession.schema ?? null);
       setImages(((existingSession as any).images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
+      setFiches(existingSession.fiches ?? []);
       setSportId(existingSession.sport_id ?? null);
       setQualityId(existingSession.quality_id ?? null);
       setFormat(existingSession.format ?? "wod");
@@ -305,6 +312,7 @@ export default function EnergySessionEditorPage() {
     setSportId(session.sport_id ?? null);
     setQualityId(session.quality_id ?? null);
     setImages(((session as any).images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
+    setFiches(session.fiches ?? []);
     setFormat(session.format ?? "wod");
     setClassiqueBlocks(
       (session.classique_structure?.blocks ?? []).map((b): SessionBlock =>
@@ -394,6 +402,7 @@ export default function EnergySessionEditorPage() {
       intervals: root.children,
       schema: fieldSchema ?? null,
       images: images.length > 0 ? images : null,
+      fiches: fiches.length > 0 ? fiches : null,
       sport_id: isSpecifique ? sportId : null,
       quality_id: isSpecifique ? qualityId : null,
       format: isSpecifique ? format : "wod",
@@ -406,6 +415,8 @@ export default function EnergySessionEditorPage() {
 
     if (isEdit && sessionId) {
       await updateMutation.mutateAsync({ id: sessionId, ...payload });
+      // Attributions 'energie' des athlètes qui ont cette séance au planning
+      void syncEnergySessionAthletes(sessionId, qc);
       if (andPlan && athleteId) {
         setSavedSessionId(sessionId);
         setShowAssignModal(true);
@@ -688,6 +699,14 @@ export default function EnergySessionEditorPage() {
             value={fieldSchema}
             onSave={(s) => { setFieldSchema(s); setShowSchemaEditor(false); }}
           />
+
+          {/* ── Fiches ── */}
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              Fiches
+            </div>
+            <FicheAttachmentsEditor value={fiches} onChange={setFiches} athleteId={athleteId} />
+          </div>
 
           {/* ── Illustrations ── */}
           <div style={{ marginTop: 16 }}>

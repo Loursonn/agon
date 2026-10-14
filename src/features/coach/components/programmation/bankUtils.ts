@@ -35,6 +35,14 @@ function prepareExercice(ex: Exercice, mode: BankWeekMode): Exercice {
   return { ...base, params, multi_semaine: false }
 }
 
+/** Semaines proposées pour « Varier selon la semaine » d'une fiche (vide si une seule). */
+export function ficheWeeksFor(session: Pick<ProgSession, 'multi_semaine' | 'nb_semaines' | 'blocs'>): number[] {
+  const n = session.multi_semaine
+    ? Math.max(session.nb_semaines ?? 1, maxWeek(session.blocs))
+    : maxWeek(session.blocs)
+  return n > 1 ? Array.from({ length: n }, (_, i) => i + 1) : []
+}
+
 /** Deep copy with fresh ids, ready to be stored in (or inserted from) a bank. */
 export function prepareBloc(bloc: Bloc, mode: BankWeekMode = 'all'): Bloc {
   const clone = structuredClone(bloc) as Bloc

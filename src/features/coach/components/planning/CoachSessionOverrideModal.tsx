@@ -16,6 +16,7 @@ import { defaultExerciceParams } from "@/features/coach/components/programmation
 import type { Bloc, Exercice, ExerciceParams, ProgSession } from "@/features/coach/components/programmation/types";
 import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride";
 import type { AthleteModifications } from "@/features/shared/types/athlete";
+import { flattenFichesToWeek } from "@/features/shared/types/fiches";
 
 // ── Param flattening (mirror of ProgSessionWeekDrawer.resolveParams) ───────────
 
@@ -40,6 +41,7 @@ function resolveParams(
 function flattenBlocsToWeek(blocs: Bloc[], week: number, multi: boolean): Bloc[] {
   return (structuredClone(blocs) as Bloc[]).map((b) => ({
     ...b,
+    ...(b.fiches ? { fiches: flattenFichesToWeek(b.fiches, week) } : {}),
     exercices: b.exercices.map((ex) => ({
       ...ex,
       multi_semaine: false,
@@ -102,6 +104,11 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
       blocs = [];
     }
 
+    // Fiches de séance : celles de l'override, sinon celles du modèle pour cette semaine
+    const fiches = existingOverride
+      ? existingOverride.fiches
+      : flattenFichesToWeek(sourceSession?.fiches, weekNumber);
+
     setSession({
       id: sourceSession?.id ?? wlog?.session_id ?? "override",
       name,
@@ -109,6 +116,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
       recurrence: "once",
       multi_semaine: false,
       blocs,
+      ...(fiches?.length ? { fiches } : {}),
     });
   }, [session, loadingLog, loadingSessions, wlog, sourceSession, existingOverride]);
 
@@ -118,7 +126,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
   function handleSave() {
     if (!session) return;
     saveOverride(
-      { workoutLogId, athleteId, override: { blocs: session.blocs } },
+      { workoutLogId, athleteId, override: { blocs: session.blocs, fiches: session.fiches } },
       { onSuccess: onClose },
     );
   }

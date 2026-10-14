@@ -13,6 +13,7 @@ import type { Bloc, Exercice } from "./types"
 import { defaultExerciceParams } from "./types"
 import { BlocForm } from "./BlocForm"
 import { ExerciceRow } from "./ExerciceRow"
+import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor"
 
 const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
@@ -40,6 +41,8 @@ interface BlocCardProps {
   dragHandleProps?: Record<string, unknown>
   /** Shows the "save to bloc bank" action when provided */
   onSaveToBank?: () => void
+  /** Semaines pour « Varier selon la semaine » des fiches du bloc */
+  ficheWeeks?: number[]
 }
 
 interface SortableExerciceProps {
@@ -102,7 +105,7 @@ function timingLabel(bloc: Bloc): string {
   return `—`
 }
 
-export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, dragHandleProps, onSaveToBank }: BlocCardProps) {
+export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, dragHandleProps, onSaveToBank, ficheWeeks = [] }: BlocCardProps) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -272,6 +275,15 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
               {bloc.instructions}
             </div>
           )}
+          <div style={{ marginTop: 6, marginLeft: 36 }}>
+            <FicheAttachmentsEditor
+              compact
+              value={bloc.fiches}
+              onChange={fiches => onChange({ ...bloc, fiches })}
+              athleteId={athleteId}
+              weeks={ficheWeeks}
+            />
+          </div>
         </div>
       )}
 

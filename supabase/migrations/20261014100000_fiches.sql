@@ -277,7 +277,8 @@ GRANT EXECUTE ON FUNCTION public.mark_doc_seen(uuid) TO authenticated;
 -- liste des fiches référencées dans le JSON (asp:prog, overrides, energy_sessions.fiches).
 -- Insère les manquantes, supprime celles de cette source qui ne sont plus
 -- référencées. Ne touche jamais 'manuel'. Conserve seen_at des lignes gardées.
--- N'attribue que des fiches du coach appelant.
+-- N'attribue que des fiches du coach appelant, et jamais la fiche personnelle
+-- d'un autre athlète (ex. bloc de banque créé depuis la programmation d'un autre).
 CREATE OR REPLACE FUNCTION public.sync_doc_assignments(p_athlete uuid, p_source text, p_doc_ids uuid[])
 RETURNS void
 LANGUAGE plpgsql
@@ -307,6 +308,8 @@ BEGIN
     FROM public.docs d
    WHERE d.id = ANY (COALESCE(p_doc_ids, '{}'::uuid[]))
      AND d.coach_id = auth.uid()
+     -- fiche de banque, ou fiche personnelle de CET athlète uniquement
+     AND (d.athlete_id IS NULL OR d.athlete_id = p_athlete)
   ON CONFLICT (doc_id, athlete_id, source) DO NOTHING;
 END;
 $$;
