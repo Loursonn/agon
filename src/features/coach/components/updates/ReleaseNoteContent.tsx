@@ -1,6 +1,7 @@
 /** Détail d'une nouveauté : sections + points. */
 import { C } from "@/lib/theme";
 import type { ReleaseNote } from "@/data/releaseNotes";
+import { ReleaseNoteResourceBox } from "./ReleaseNoteResourceBox";
 
 export function ReleaseNoteContent({ note }: { note: ReleaseNote }) {
   return (
@@ -17,6 +18,7 @@ export function ReleaseNoteContent({ note }: { note: ReleaseNote }) {
           </ul>
         </div>
       ))}
+      {note.resources?.map(r => <ReleaseNoteResourceBox key={r.label} resource={r} />)}
     </div>
   );
 }

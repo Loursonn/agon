@@ -1,3 +1,5 @@
+import { IMPORT_PROMPT, IMPORT_PROMPT_FILENAME } from "./importPrompt";
+
 /**
  * Nouveautés de l'app, affichées aux coachs (accueil + page Nouveautés).
  * Entrée la plus récente EN TÊTE. `id` unique et stable (sert d'accusé de
@@ -11,15 +13,70 @@ export interface ReleaseNoteSection {
   points: string[];
 }
 
+/** Texte prêt à l'emploi joint à une nouveauté (copier / télécharger). */
+export interface ReleaseNoteResource {
+  label: string;
+  description?: string;
+  text: string;
+  /** Nom du fichier proposé au téléchargement (.md) */
+  filename?: string;
+}
+
 export interface ReleaseNote {
   id: string;
   date: string; // yyyy-MM-dd
   title: string;
   summary: string;
   sections: ReleaseNoteSection[];
+  resources?: ReleaseNoteResource[];
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: "2026-10-14-import-mode-emploi",
+    date: "2026-10-14",
+    title: "Mode d'emploi : importer une séance écrite",
+    summary: "Tu écris tes séances dans tes notes, sur Word ou sur papier ? Une IA les met au bon format et Agon les crée pour toi, en 5 minutes.",
+    sections: [
+      {
+        title: "Ce dont tu as besoin",
+        points: [
+          "Un compte gratuit sur Claude (claude.ai) ou ChatGPT (chatgpt.com), sur ordinateur ou téléphone.",
+          "Ta séance, sous n'importe quelle forme : texte copié de tes notes, tableau Excel, ou simple photo d'une feuille.",
+          "Le prompt Agon ci-dessous : c'est le « mode d'emploi » qui explique à l'IA comment écrire la séance pour l'app.",
+        ],
+      },
+      {
+        title: "Pas à pas (la première fois)",
+        points: [
+          "1. Clique sur « Copier » sous « Prompt Agon » en bas de cette carte.",
+          "2. Ouvre Claude ou ChatGPT, démarre une nouvelle conversation et colle le prompt (Cmd+V sur Mac, Ctrl+V sur PC).",
+          "3. Juste après, colle ta séance (ou ajoute la photo avec le trombone 📎), puis envoie.",
+          "4. L'IA répond avec un bloc de texte qui commence par « SÉANCE … : ». Copie-le en entier (bouton « Copier » en haut du bloc).",
+          "5. Dans Agon, va à l'endroit où créer la séance : Programmation de l'athlète (Muscu, Énergie ou Spécifique), Banque de séances, Banque énergétique ou catalogue Spécifique. Clique « Importer un texte ».",
+          "6. Colle le texte à gauche. À droite, l'aperçu montre ce qui va être créé et le rapport liste ce qui manque (« À SAISIR »). Pour les exercices proposés au choix, vérifie celui de ta bibliothèque.",
+          "7. Clique « Importer », vérifie la séance dans l'éditeur, complète les zones « À SAISIR » si besoin, puis enregistre.",
+        ],
+      },
+      {
+        title: "Pour aller plus vite ensuite",
+        points: [
+          "Sur Claude : crée un Projet « Agon » et colle le prompt dans les instructions du projet (ou ajoute le fichier .md téléchargé ci-dessous). Ensuite, dans ce projet, tu n'as plus qu'à coller tes séances, sans recopier le prompt.",
+          "Sur ChatGPT : même principe avec un « GPT » personnalisé ou un Projet, en y collant le prompt.",
+          "Tu peux envoyer plusieurs séances d'un coup : l'IA renvoie un bloc par séance, à importer une par une.",
+          "Si l'IA ne connaît pas une valeur (allure, charge…), elle l'écrit entre guillemets : tu la complètes ensuite dans l'éditeur. Rien n'est jamais bloquant.",
+        ],
+      },
+    ],
+    resources: [
+      {
+        label: "Prompt Agon (format d'import des séances)",
+        description: "À coller dans Claude ou ChatGPT avant ta séance, ou à ajouter une fois pour toutes dans un Projet.",
+        text: IMPORT_PROMPT,
+        filename: IMPORT_PROMPT_FILENAME,
+      },
+    ],
+  },
   {
     id: "2026-10-14-import-specifique",
     date: "2026-10-14",
