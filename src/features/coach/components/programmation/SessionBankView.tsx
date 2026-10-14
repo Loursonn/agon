@@ -7,6 +7,11 @@ import { SessionForm } from "./SessionForm"
 import { SessionBlocEditor } from "./SessionBlocEditor"
 import { useSessionBank, useUpdateSessionBank } from "./hooks/useSessionBank"
 import { CardSkeleton } from "@/features/shared/components/skeletons"
+import { toast } from "sonner"
+import ImportMuscuTextDialog from "../import/ImportMuscuTextDialog"
+import ImportReportPanel from "../import/ImportReportPanel"
+import { scrollToStep } from "../import/ImportIssueList"
+import type { ImportIssue } from "@/lib/import/yoxx/common"
 
 const VIOLET = "#FFC933"
 
@@ -30,6 +35,8 @@ export function SessionBankView() {
   const [editingMetaId, setEditingMetaId] = useState<string | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [showTextImport, setShowTextImport] = useState(false)
+  const [importReport, setImportReport] = useState<{ sessionId: string; issues: ImportIssue[] } | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
   const hasPendingSave = useRef(false)
 
@@ -55,6 +62,17 @@ export function SessionBankView() {
     updateMutation.mutate(next)
     setIsAdding(false)
     setOpenId(newSession.id)
+  }
+
+  function handleTextImport(session: ProgSession, issues: ImportIssue[]) {
+    const next = [...sessions, session]
+    setSessions(next)
+    updateMutation.mutate(next)
+    setShowTextImport(false)
+    setOpenId(session.id)
+    const shown = issues.filter(i => i.level !== "info")
+    setImportReport(shown.length ? { sessionId: session.id, issues: shown } : null)
+    toast.success(`Séance "${session.name}" ajoutée à la banque`)
   }
 
   function updateMeta(id: string, data: Omit<ProgSession, 'id' | 'blocs'>) {
@@ -98,6 +116,18 @@ export function SessionBankView() {
         <div style={{ fontSize: 12, color: C.tx3 }}>
           Séances réutilisables (Programmation → Depuis la banque)
         </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <button
+          onClick={() => setShowTextImport(true)}
+          title="Coller une séance écrite au format YOXX"
+          style={{
+            padding: "8px 16px", borderRadius: 4,
+            border: "1px solid " + C.ac + "40", background: C.ac + "12", color: C.ac,
+            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          }}
+        >
+          Importer un texte
+        </button>
         <button
           onClick={() => setIsAdding(true)}
           style={{
@@ -111,7 +141,27 @@ export function SessionBankView() {
           <Plus size={13} />
           Créer une séance
         </button>
+        </div>
       </div>
+
+      {showTextImport && (
+        <ImportMuscuTextDialog
+          onImport={handleTextImport}
+          onClose={() => setShowTextImport(false)}
+          importLabel="Ajouter à la banque"
+        />
+      )}
+
+      {importReport && (
+        <ImportReportPanel
+          issues={importReport.issues}
+          onClose={() => setImportReport(null)}
+          onSelect={(id) => {
+            setOpenId(importReport.sessionId)
+            setTimeout(() => { if (!scrollToStep(id)) toast.info("Exercice introuvable (déjà modifié ou supprimé)") }, 150)
+          }}
+        />
+      )}
 
       {isAdding && <SessionForm onSubmit={addSession} onCancel={() => setIsAdding(false)} />}
 

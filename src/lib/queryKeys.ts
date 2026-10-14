@@ -70,4 +70,18 @@ export const QK = {
   hyroxResult:     (id: string)  => ['hyroxResult', id]      as const,
   hyroxReferences: ['hyroxReferences']                        as const,
   hyroxPlans:      (aid: string) => ['hyroxPlans', aid]      as const,
+  // ── Fiches ────────────────────────────────────────────────────────────────────
+  docs:            ['docs'] as const,
+  docsBank:        (cid: string) => ['docs', 'bank', cid]          as const,
+  docsSelfService: (cid: string) => ['docs', 'self-service', cid]  as const,
+  docsByIds:       (ids: string) => ['docs', 'by-ids', ids]        as const,
+  doc:             (id: string)  => ['docs', 'one', id]            as const,
+  docFamily:       (oid: string) => ['docs', 'family', oid]        as const,
+  athleteDocs:     (aid: string) => ['docs', 'athlete', aid]       as const,
+  docAssignments:  (oid: string) => ['docs', 'assignments', oid]   as const,
+  docComments:     (docId: string, aid: string) => ['docs', 'comments', docId, aid] as const,
+  docSignedUrl:    (path: string) => ['docs', 'signed-url', path]  as const,
+  // ── Nouveautés de l'app (vue coach) ───────────────────────────────────────────
+  appUpdateReads:  (uid: string) => ['app-update-reads', uid] as const,
+  appUpdateStats:  ['app-update-stats'] as const,
 } as const;

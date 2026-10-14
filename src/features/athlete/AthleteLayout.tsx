@@ -5,6 +5,7 @@ import { AgonIcon } from "@/components/ui/AgonIcon";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
 import ProfileDrawer from "./components/ProfileDrawer";
+import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
 import AppFbForm from "./components/AppFbForm";
 import { WellnessFlow } from "@/components/athlete/WellnessFlow";
 import { NewBlockModal } from "@/components/coach/CoachComponents";
@@ -383,6 +384,9 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── Profile drawer ── */}
       {drawerOpen && <ProfileDrawer onClose={() => setDrawerOpen(false)} />}
+
+      {/* ── Viewer de fiche ── */}
+      <FicheViewerHost athleteId={athleteId} viewOnly={viewOnly} />
 
       {/* ── Logout confirm ── */}
       {showLogoutConfirm && (

@@ -205,6 +205,8 @@ export interface SessionSetLog {
 export interface CoachSessionOverride {
   blocs: unknown[];          // Bloc[] — flattened to a single week
   note?: string;             // optional coach note for the day
+  /** Fiches de la séance pour ce jour (flattened, pas de variante par semaine) */
+  fiches?: import("./fiches").FicheAttachment[];
   createdAt: string;         // ISO timestamp
 }
 

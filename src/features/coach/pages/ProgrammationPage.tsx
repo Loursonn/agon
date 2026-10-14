@@ -370,10 +370,12 @@ interface EnergyPanelProps {
   coachId: string;
   athleteId?: string;
   onNew: () => void;
+  /** Import d'une séance au format texte YOXX (énergétique uniquement) */
+  onImportText?: () => void;
   onEdit: (sessionId: string) => void;
 }
 
-function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
+function EnergyPanel({ coachId, athleteId, onNew, onImportText, onEdit }: EnergyPanelProps) {
   const { data: allAthlSessions = [], isLoading } = useEnergySessions();
   // Filtrage client : séances de cet athlète, ou banque perso coach si pas d'athlète
   const sessions = athleteId
@@ -412,6 +414,20 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
             <Library size={13} />
             Importer une séance
           </button>
+          {onImportText && (
+            <button
+              onClick={onImportText}
+              title="Coller une séance écrite au format YOXX"
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "7px 12px", borderRadius: 4,
+                border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac,
+                fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Importer un texte
+            </button>
+          )}
           <button
             onClick={onNew}
             style={{
@@ -568,7 +584,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
 
 const SPECIFIQUE_COLOR = "#F5A623";
 
-function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
+function SpecifiquePanel({ coachId, athleteId, onNew, onImportText, onEdit }: EnergyPanelProps) {
   const { data: allSessions = [], isLoading } = useEnergySessions();
   const sessions = (athleteId
     ? allSessions.filter((s) => s.athlete_id === athleteId && s.session_kind === "specifique")
@@ -592,6 +608,20 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
             </span>
           )}
         </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {onImportText && (
+            <button
+              onClick={onImportText}
+              title="Coller une séance écrite au format YOXX"
+              style={{
+                padding: "7px 12px", borderRadius: 4,
+                border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac,
+                fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Importer un texte
+            </button>
+          )}
         <button
           onClick={onNew}
           style={{
@@ -604,6 +634,7 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
           <Plus size={13} />
           Créer une séance
         </button>
+        </div>
       </div>
 
       {previewSession && (
@@ -984,6 +1015,7 @@ export default function ProgrammationPage() {
           coachId={user?.id ?? ""}
           athleteId={athleteId ?? undefined}
           onNew={() => navigate(athleteId ? `/coach/athletes/${athleteId}/energy/new` : "/coach/energy-library/new")}
+          onImportText={() => navigate(`${athleteId ? `/coach/athletes/${athleteId}/energy/new` : "/coach/energy-library/new"}?import=texte`)}
           onEdit={(sessionId: string) => navigate(athleteId ? `/coach/athletes/${athleteId}/energy/${sessionId}/edit` : `/coach/energy-library/${sessionId}/edit`)}
         />
       )}
@@ -999,6 +1031,7 @@ export default function ProgrammationPage() {
               : "/coach/energy-library/new";
             navigate(`${base}?kind=specifique`);
           }}
+          onImportText={() => navigate(`${athleteId ? `/coach/athletes/${athleteId}/energy/new` : "/coach/energy-library/new"}?kind=specifique&import=texte`)}
           onEdit={(sessionId: string) => navigate(athleteId ? `/coach/athletes/${athleteId}/energy/${sessionId}/edit` : `/coach/energy-library/${sessionId}/edit`)}
         />
       )}

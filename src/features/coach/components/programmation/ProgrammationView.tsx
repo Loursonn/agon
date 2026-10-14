@@ -12,6 +12,10 @@ import { Plus, Pencil, X, ChevronDown, ChevronUp, BarChart2, Copy, Library } fro
 import { toast } from "sonner"
 import { useProgrammation } from "./hooks/useProgrammation"
 import { useUpdateProgrammation } from "./hooks/useUpdateProgrammation"
+import ImportMuscuTextDialog from "../import/ImportMuscuTextDialog"
+import ImportReportPanel from "../import/ImportReportPanel"
+import { scrollToStep } from "../import/ImportIssueList"
+import type { ImportIssue } from "@/lib/import/yoxx/common"
 import { useDuplicateProgSession } from "./hooks/useDuplicateProgSession"
 import { useSessionBank } from "./hooks/useSessionBank"
 import { prepareSession } from "./bankUtils"
@@ -343,6 +347,9 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
   const [weekDrawerSession, setWeekDrawerSession] = useState<ProgSession | null>(null)
+  // Import d'une séance au format texte YOXX
+  const [showTextImport, setShowTextImport] = useState(false)
+  const [importReport, setImportReport] = useState<{ sessionId: string; issues: ImportIssue[] } | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
   const hasPendingSave = useRef(false)
 
@@ -368,10 +375,12 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
   }
 
   function addSession(data: Omit<ProgSession, 'id' | 'blocs'>) {
+    const prepared = bankTemplate ? prepareSession(bankTemplate) : null
     const newSession: ProgSession = {
       ...data,
       id: crypto.randomUUID(),
-      blocs: bankTemplate ? prepareSession(bankTemplate).blocs : [],
+      blocs: prepared ? prepared.blocs : [],
+      ...(prepared?.fiches?.length ? { fiches: prepared.fiches } : {}),
     }
     setBankTemplate(null)
     const next = [...sessions, newSession]
@@ -379,6 +388,19 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
     updateMutation.mutate(next)
     setIsAddingSession(false)
     setOpenSessionId(newSession.id)
+  }
+
+  function handleTextImport(session: ProgSession, issues: ImportIssue[]) {
+    const next = [...sessions, session]
+    setSessions(next)
+    updateMutation.mutate(next)
+    setShowTextImport(false)
+    setOpenSessionId(session.id)
+    const shown = issues.filter(i => i.level !== "info")
+    setImportReport(shown.length ? { sessionId: session.id, issues: shown } : null)
+    const errors = shown.filter(i => i.level === "error").length
+    if (errors > 0) toast.warning(`Séance "${session.name}" importée — ${errors} point${errors > 1 ? "s" : ""} à compléter`)
+    else toast.success(`Séance "${session.name}" importée`)
   }
 
   function updateSessionMeta(id: string, data: Omit<ProgSession, 'id' | 'blocs'>) {
@@ -441,6 +463,18 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
           Depuis la banque
         </button>
         <button
+          onClick={() => { setShowTextImport(true); setIsAddingSession(false); setShowSessionBank(false) }}
+          title="Coller une séance écrite au format YOXX"
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            padding: "8px 16px", borderRadius: 4,
+            border: "1px solid " + C.ac + "40", background: C.ac + "12", color: C.ac,
+            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          }}
+        >
+          Importer un texte
+        </button>
+        <button
           onClick={() => { setIsAddingSession(true); setEditingSessionId(null); setShowSessionBank(false); setBankTemplate(null) }}
           style={{
             display: "flex", alignItems: "center", gap: 5,
@@ -453,6 +487,25 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
           Créer une séance
         </button>
       </div>
+
+      {showTextImport && (
+        <ImportMuscuTextDialog
+          onImport={handleTextImport}
+          onClose={() => setShowTextImport(false)}
+          importLabel="Ajouter à la programmation"
+        />
+      )}
+
+      {importReport && (
+        <ImportReportPanel
+          issues={importReport.issues}
+          onClose={() => setImportReport(null)}
+          onSelect={(id) => {
+            setOpenSessionId(importReport.sessionId)
+            setTimeout(() => { if (!scrollToStep(id)) toast.info("Exercice introuvable (déjà modifié ou supprimé)") }, 150)
+          }}
+        />
+      )}
 
       {/* Session bank picker */}
       {showSessionBank && (

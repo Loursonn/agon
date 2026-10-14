@@ -16,7 +16,8 @@ import { BlocCard } from "./BlocCard"
 import { BlocForm } from "./BlocForm"
 import { SemaineNav } from "./SemaineNav"
 import { useBlocBank } from "./hooks/useBlocBank"
-import { prepareBloc } from "./bankUtils"
+import { ficheWeeksFor, prepareBloc } from "./bankUtils"
+import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor"
 import { SaveToBankDialog, type SaveToBankTarget } from "./SaveToBankDialog"
 
 const VIOLET = "#FFC933"
@@ -30,6 +31,8 @@ interface SessionBlocEditorProps {
   initialWeek?: number
   /** Boutons "Enregistrer dans la banque" (séance + blocs). Défaut : true. */
   bankActions?: boolean
+  /** Rattachement de fiches au niveau séance. Défaut : true. */
+  sessionFiches?: boolean
 }
 
 interface SortableBlocProps {
@@ -41,9 +44,10 @@ interface SortableBlocProps {
   onChange: (updated: Bloc) => void
   onDelete: () => void
   onSaveToBank?: () => void
+  ficheWeeks: number[]
 }
 
-function SortableBloc({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, onSaveToBank }: SortableBlocProps) {
+function SortableBloc({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, onSaveToBank, ficheWeeks }: SortableBlocProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bloc.id })
   return (
     <div
@@ -64,13 +68,14 @@ function SortableBloc({ bloc, index, athleteId, activeWeek, sessionMultiSemaine,
         onChange={onChange}
         onDelete={onDelete}
         onSaveToBank={onSaveToBank}
+        ficheWeeks={ficheWeeks}
         dragHandleProps={listeners as Record<string, unknown>}
       />
     </div>
   )
 }
 
-export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initialWeek = 1, bankActions = true }: SessionBlocEditorProps) {
+export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initialWeek = 1, bankActions = true, sessionFiches = true }: SessionBlocEditorProps) {
   const [isAddingBloc, setIsAddingBloc] = useState(false)
   const [showBankPicker, setShowBankPicker] = useState(false)
   const [saveTarget, setSaveTarget] = useState<SaveToBankTarget | null>(null)
@@ -82,6 +87,7 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
   const { data: bankBlocs = [] } = useBlocBank(user?.id)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const ficheWeeks = ficheWeeksFor(session)
 
   function handleDuplicateWeek() {
     // Duplicate activeWeek params to activeWeek+1 across all exercises in all blocs
@@ -162,6 +168,22 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
         </div>
       )}
 
+      {/* Fiches rattachées à la séance */}
+      {sessionFiches && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Fiches de la séance
+          </span>
+          <FicheAttachmentsEditor
+            compact
+            value={session.fiches}
+            onChange={fiches => onChange({ ...session, fiches })}
+            athleteId={athleteId}
+            weeks={ficheWeeks}
+          />
+        </div>
+      )}
+
       {/* Save whole session to the bank */}
       {bankActions && session.blocs.length > 0 && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
@@ -202,6 +224,7 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
               onChange={updated => updateBloc(bloc.id, updated)}
               onDelete={() => deleteBloc(bloc.id)}
               onSaveToBank={bankActions ? () => setSaveTarget({ kind: 'bloc', bloc }) : undefined}
+              ficheWeeks={ficheWeeks}
             />
           ))}
         </SortableContext>

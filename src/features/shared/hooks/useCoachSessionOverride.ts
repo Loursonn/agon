@@ -15,12 +15,14 @@ import { QK } from "@/lib/queryKeys";
 import { calBaseKey } from "./useUnifiedCalendar";
 import type { AthleteModifications } from "../types/athlete";
 import type { Bloc } from "@/features/coach/components/programmation/types";
+import type { FicheAttachment } from "../types/fiches";
+import { syncDocAssignmentsFromProg } from "./fiches/syncDocAssignments";
 
 interface OverridePayload {
   workoutLogId: string;
   athleteId: string;
   /** Flattened single-week blocs, or `null` to clear the override. */
-  override: { blocs: Bloc[]; note?: string } | null;
+  override: { blocs: Bloc[]; note?: string; fiches?: FicheAttachment[] } | null;
 }
 
 export function useCoachSessionOverride() {
@@ -50,6 +52,7 @@ export function useCoachSessionOverride() {
           coachOverride: {
             blocs: override.blocs,
             note: override.note,
+            ...(override.fiches?.length ? { fiches: override.fiches } : {}),
             createdAt: new Date().toISOString(),
           },
         };
@@ -67,6 +70,8 @@ export function useCoachSessionOverride() {
       qc.invalidateQueries({ queryKey: QK.athleteModifications(vars.athleteId) });
       qc.invalidateQueries({ queryKey: ["week-schedule", vars.athleteId] });
       qc.invalidateQueries({ queryKey: ["workout-logs-week", vars.athleteId] });
+      // Attributions 'programme' : inclut les fiches des overrides d'occurrence
+      void syncDocAssignmentsFromProg(vars.athleteId, undefined, qc);
       toast.success(vars.override === null ? "Adaptation retirée" : "Séance adaptée pour ce jour");
     },
     onError: () => toast.error("Erreur lors de l'enregistrement"),

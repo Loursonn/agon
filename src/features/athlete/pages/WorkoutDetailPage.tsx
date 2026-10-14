@@ -12,6 +12,8 @@ import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
 import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import type { AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
 import type { ExerciceParams, ClusterConfig } from "@/features/coach/components/programmation/types";
+import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
+import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -704,6 +706,8 @@ interface SupersetMemberData {
   isIso: boolean;
   onToggle: (setIdx: number) => void;
   onOpenPad: (setIdx: number, field: "kg" | "reps" | "rir") => void;
+  comment: string;
+  onCommentChange: (c: string) => void;
 }
 
 interface SupersetCardProps {
@@ -888,7 +892,89 @@ function SupersetCard({
           );
         })}
       </div>
+
+      {/* Commentaires par exercice (même stockage que ExerciceCard) */}
+      {(canEdit || members.some((m) => m.comment)) && (
+        <SupersetComments members={members} canEdit={canEdit} />
+      )}
     </div>
+  );
+}
+
+function SupersetComments({ members, canEdit }: { members: SupersetMemberData[]; canEdit: boolean }) {
+  const [open, setOpen] = useState<string[]>([]);
+  return (
+    <div style={{ padding: "6px 14px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+      {members.map((m, mi) => {
+        const shown = open.includes(m.id) || !!m.comment;
+        if (!shown && !canEdit) return null;
+        return shown ? (
+          <div key={m.id}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: SS_ORANGE, marginBottom: 3 }}>
+              {SS_LETTERS[mi]} · {m.name}
+            </div>
+            <textarea
+              value={m.comment}
+              onChange={(e) => m.onCommentChange(e.target.value)}
+              readOnly={!canEdit}
+              placeholder="Commentaire sur cet exercice…"
+              rows={2}
+              style={{
+                width: "100%", background: C.s2, border: `1px solid ${C.brdL}`, borderRadius: 4,
+                padding: "8px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit",
+                outline: "none", resize: "none", boxSizing: "border-box",
+              }}
+            />
+          </div>
+        ) : (
+          <button
+            key={m.id}
+            onClick={() => setOpen((o) => [...o, m.id])}
+            style={{
+              padding: "8px 0", minHeight: 36, borderRadius: 7, border: `1px dashed ${C.brdL}`,
+              background: "transparent", color: C.tx3, fontSize: 10, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            Commentaire {SS_LETTERS[mi]} · {m.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Commentaire d'un exercice « libre » (sous la case à cocher, hors zone cliquable). */
+function LibreComment({ comment, canEdit, onChange }: { comment: string; canEdit: boolean; onChange: (c: string) => void }) {
+  const [open, setOpen] = useState(false);
+  if (!canEdit && !comment) return null;
+  if (!open && !comment) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          width: "100%", marginTop: 6, padding: "8px 0", minHeight: 36, borderRadius: 7,
+          border: `1px dashed ${C.brdL}`, background: "transparent", color: C.tx3,
+          fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+        }}
+      >
+        Commentaire
+      </button>
+    );
+  }
+  return (
+    <textarea
+      value={comment}
+      onChange={(e) => onChange(e.target.value)}
+      readOnly={!canEdit}
+      placeholder="Commentaire sur cet exercice…"
+      rows={2}
+      style={{
+        width: "100%", marginTop: 6, background: C.s2, border: `1px solid ${C.brdL}`, borderRadius: 4,
+        padding: "8px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit",
+        outline: "none", resize: "none", boxSizing: "border-box",
+      }}
+    />
   );
 }
 
@@ -2543,9 +2629,7 @@ export default function WorkoutDetailPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["workout-log-detail", id] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
-      qc.invalidateQueries({ queryKey: ["activePlan", athleteId] });
+      invalidateSessionStatus(qc, athleteId, id);
       toast.success("Séance réouverte");
     },
     onError: () => toast.error("Erreur lors de la réouverture"),
@@ -2568,9 +2652,7 @@ export default function WorkoutDetailPage() {
     },
     onSuccess: () => {
       localStorage.removeItem("activeWorkoutSession");
-      qc.invalidateQueries({ queryKey: ["workout-log-detail", id] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
-      qc.invalidateQueries({ queryKey: ["activePlan", athleteId] });
+      invalidateSessionStatus(qc, athleteId, id);
       setShowFinish(false);
       setShowRpe(true);
       toast.success("Séance complétée ! ");
@@ -2759,6 +2841,14 @@ export default function WorkoutDetailPage() {
           gap: 16,
         }}
       >
+        {/* Fiches de la séance (variante de la semaine) */}
+        <FicheLinks
+          title="Fiches de la séance"
+          attachments={workout.sessionFiches}
+          week={workout.weekNumber}
+          athleteId={athleteId}
+        />
+
         {workout.blocs.length === 0 ? (
           <div
             style={{
@@ -2879,6 +2969,12 @@ export default function WorkoutDetailPage() {
                   </div>
                 )}
 
+                {bloc.fiches && bloc.fiches.length > 0 && (
+                  <div style={{ margin: "0 2px 8px" }}>
+                    <FicheLinks compact attachments={bloc.fiches} week={workout.weekNumber} athleteId={athleteId} />
+                  </div>
+                )}
+
                 {/* Exercices — colored background groups them visually as superset */}
                 <div
                   style={{
@@ -2938,6 +3034,8 @@ export default function WorkoutDetailPage() {
                                   toggleAndPersist(ex.id, setIdx, restSec, afterEx ? afterEx.exercise_name : null, bloc.timing_mode, bloc.id, bloc.exercices.map(e => e.id), undefined, chainIds),
                                 onOpenPad: (setIdx: number, field: "kg" | "reps" | "rir") =>
                                   openPad(ex.id, setIdx, field, ex.params.charge_unit, undefined, iso),
+                                comment: localMods.exerciceComments?.[ex.id] ?? "",
+                                onCommentChange: (c: string) => updateExComment(ex.id, c),
                               };
                             })}
                             blocColor={bColor}
@@ -2969,8 +3067,8 @@ export default function WorkoutDetailPage() {
                       const isDone = s0?.done ?? false;
                       const isSkipped = s0?.skipped ?? false;
                       return (
+                        <div key={ex.id}>
                         <div
-                          key={ex.id}
                           onClick={() => canEdit && toggleAndPersist(ex.id, 0, 0, null, "libre")}
                           style={{
                             display: "flex", alignItems: "center", gap: 12,
@@ -3005,6 +3103,12 @@ export default function WorkoutDetailPage() {
                           }}>
                             {isDone ? "✓" : isSkipped ? "✕" : ""}
                           </div>
+                        </div>
+                        <LibreComment
+                          comment={localMods.exerciceComments?.[ex.id] ?? ""}
+                          canEdit={canEdit}
+                          onChange={(c) => updateExComment(ex.id, c)}
+                        />
                         </div>
                       );
                     }

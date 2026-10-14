@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -67,11 +68,11 @@ export default function InviteAccept() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="password">Mot de passe</Label>
-                <Input id="password" name="password" type="password" required placeholder="••••••••" minLength={6} />
+                <PasswordInput variant="shadcn" id="password" name="password" required placeholder="••••••••" minLength={6} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="confirm">Confirmer le mot de passe</Label>
-                <Input id="confirm" name="confirm" type="password" required placeholder="••••••••" minLength={6} />
+                <PasswordInput variant="shadcn" id="confirm" name="confirm" required placeholder="••••••••" minLength={6} />
               </div>
               {error && <p className="text-sm text-red-400">{error}</p>}
               <Button type="submit" className="w-full" disabled={loading}>

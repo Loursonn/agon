@@ -40,7 +40,7 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
               display: "flex", alignItems: "center", gap: 8,
             }}>
               <span style={{ fontSize: 10, fontWeight: 800, color: accent }}>{idx + 1}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{block.title || "Bloc"}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, minWidth: 0, overflowWrap: "anywhere" }}>{block.title || "Bloc"}</span>
               <span style={{
                 fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 4,
                 background: accent + "20", color: accent,
@@ -77,16 +77,21 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
             ) : (
               <div style={{ padding: "6px 12px 8px" }}>
                 {(block as ClassiqueBlock).items.filter((i) => i.name.trim()).map((item) => (
-                  <div key={item.id} style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "4px 0", borderBottom: `1px solid ${C.brd}30` }}>
-                    <span style={{ fontSize: 11, color: C.tx, flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <div key={item.id} style={{ display: "flex", flexWrap: "wrap", gap: "2px 8px", alignItems: "baseline", padding: "4px 0", borderBottom: `1px solid ${C.brd}30` }}>
+                    <span style={{ fontSize: 11, color: C.tx, flex: "1 1 120px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.4 }}>
                       {item.name}
-                      {item.youtube_id && <Youtube size={11} color="#EF4444" style={{ flexShrink: 0 }} />}
+                      {item.youtube_id && <Youtube size={11} color="#EF4444" style={{ marginLeft: 5, verticalAlign: "middle" }} />}
                     </span>
                     {item.prescription && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: GREEN, flexShrink: 0 }}>{item.prescription}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: GREEN, minWidth: 0, maxWidth: "100%", whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>{item.prescription}</span>
                     )}
                     {item.rest && (
                       <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>R : {item.rest}</span>
+                    )}
+                    {item.notes && (
+                      <div style={{ flexBasis: "100%", fontSize: 10, color: C.tx3, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
+                        {item.notes}
+                      </div>
                     )}
                   </div>
                 ))}

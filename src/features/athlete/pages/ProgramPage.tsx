@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -14,13 +14,15 @@ import { SessionPreviewModal, ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
-import { formatS, formatTarget } from "@/lib/energy/formatTarget";
+import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
 import type { EnergyStep, EnergySessionRow } from "@/types/energy";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
+import { AthleteFichesView } from "@/features/athlete/components/fiches/AthleteFichesView";
+import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -153,19 +155,7 @@ function StepCheckRow({
     // Step exercice (séance spécifique / MetCon) : pas de `children` ni de `repeat`.
     // Sans cette branche, on tombait dans le cas "groupe" → step.children undefined → crash.
     const rc = ROLE_COLOR[step.role] ?? "#6B7280";
-    const reps = step.reps_min != null
-      ? (step.reps_max != null && step.reps_max !== step.reps_min
-          ? `${step.reps_min}-${step.reps_max} reps`
-          : `${step.reps_min} reps`)
-      : step.duration?.kind === "time"
-      ? formatS(step.duration.value ?? 0)
-      : null;
-    const load = step.weight_kg != null
-      ? step.weight_unit === "pct_rm" ? `${step.weight_kg}% RM`
-      : step.weight_unit === "bw" ? "PDC"
-      : `${step.weight_kg} kg`
-      : null;
-    const detail = [reps, load].filter(Boolean).join(" · ");
+    const detail = formatExerciseStep(step);
     infoNode = (
       <>
         <div style={{ width: 3, height: 34, borderRadius: 2, background: rc, flexShrink: 0 }} />
@@ -324,6 +314,11 @@ function EnergyActiveSession({
             <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>
               {validatedCount}/{total} blocs validés · En cours…
             </div>
+            {session.notes && (
+              <div style={{ fontSize: 11, color: C.tx2, marginTop: 4, fontStyle: "italic", whiteSpace: "pre-line" }}>
+                {session.notes}
+              </div>
+            )}
           </div>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <X size={13} />
@@ -768,6 +763,14 @@ function WorkoutPreviewDrawer({
                 </div>
                 <div style={{ background: C.s2, borderRadius: 6, overflow: "hidden" }}>
                   {bloc.exercices.map((ex, idx) => {
+                    // Superset : chaîne d'exercices liés (superset_with_next), comme en séance
+                    const prevLinked = idx > 0 && !!bloc.exercices[idx - 1].superset_with_next;
+                    const inSuperset = prevLinked || !!ex.superset_with_next;
+                    let chainLen = 0;
+                    if (inSuperset && !prevLinked) {
+                      chainLen = 1;
+                      while (bloc.exercices[idx + chainLen - 1]?.superset_with_next && bloc.exercices[idx + chainLen]) chainLen++;
+                    }
                     const nb = ex.params?.nb_series ?? 0;
                     const reps = ex.params?.cluster
                       ? formatClusterReps(ex.params.cluster)
@@ -775,11 +778,21 @@ function WorkoutPreviewDrawer({
                     const rir = ex.params?.rir?.mode === "global" ? ex.params.rir.value : null;
                     const tempo = ex.params?.tempo?.mode === "global" && ex.params.tempo.value ? ex.params.tempo.value : null;
                     return (
+                      <div key={ex.id}>
+                      {chainLen > 1 && (
+                        <div style={{
+                          padding: "6px 14px 0", borderTop: idx > 0 ? "1px solid " + C.brd : "none",
+                          borderLeft: "3px solid #F5A623",
+                          fontSize: 9, fontWeight: 800, color: "#F5A623", letterSpacing: "0.5px",
+                        }}>
+                          SUPERSET ×{chainLen} · ENCHAÎNÉS SANS REPOS
+                        </div>
+                      )}
                       <div
-                        key={ex.id}
                         style={{
                           padding: "10px 14px",
-                          borderTop: idx > 0 ? "1px solid " + C.brd : "none",
+                          borderTop: idx > 0 && !prevLinked && chainLen <= 1 ? "1px solid " + C.brd : "none",
+                          borderLeft: inSuperset ? "3px solid #F5A623" : "3px solid transparent",
                           display: "flex", alignItems: "center", gap: 10,
                         }}
                       >
@@ -805,6 +818,10 @@ function WorkoutPreviewDrawer({
                             )}
                           </div>
                         </div>
+                        {ex.superset_with_next && bloc.exercices[idx + 1] && (
+                          <span title="Lié à l'exercice suivant" style={{ fontSize: 12, color: "#F5A623", flexShrink: 0 }}>↓</span>
+                        )}
+                      </div>
                       </div>
                     );
                   })}
@@ -1151,7 +1168,7 @@ const weekNavBtn: React.CSSProperties = {
   background: C.s2, border: "1px solid " + C.brdL, color: C.tx, cursor: "pointer",
 };
 
-export default function ProgramPage() {
+function ProgramSessionsView() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
   const { athleteId, viewOnly, freeSessions, setFreeSessions } = useAthleteContext();
@@ -1211,13 +1228,14 @@ export default function ProgramPage() {
     mutationFn: async (assignmentId: string) => {
       const { error } = await supabase
         .from("energy_session_assignments")
-        .update({ status: "planned" })
+        // Même remise à zéro que depuis l'accueil : blocs cochés et RPE effacés
+        .update({ status: "planned", block_logs: {}, rpe_score: null, updated_at: new Date().toISOString() })
         .eq("id", assignmentId);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.activePlan(athleteId ?? "") });
-      toast.success("Séance annulée");
+      invalidateSessionStatus(qc, athleteId);
+      toast.success("Validation annulée");
       setEnergyPreview(null);
     },
     onError: () => toast.error("Erreur lors de l'annulation"),
@@ -1259,6 +1277,7 @@ export default function ProgramPage() {
         padding: "14px 16px", textAlign: "center",
       }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, letterSpacing: "-0.2px" }}>Programme</div>
+        <ProgramViewSwitch />
       </div>
 
       {isLoading ? (
@@ -1443,6 +1462,56 @@ export default function ProgramPage() {
         onSave={(session) => setFreeSessions((prev) => prev.map((f) => f.id === session.id ? session : f))}
         onDelete={(id) => setFreeSessions((prev) => prev.filter((f) => f.id !== id))}
       />
+    </div>
+  );
+}
+
+// ── Sélecteur Séances | Fiches (?vue=fiches) ──────────────────────────────────
+
+function ProgramViewSwitch() {
+  const [params, setParams] = useSearchParams();
+  const vue = params.get("vue") === "fiches" ? "fiches" : "seances";
+  const go = (v: "seances" | "fiches") => {
+    const next = new URLSearchParams(params);
+    if (v === "fiches") next.set("vue", "fiches");
+    else next.delete("vue");
+    setParams(next, { replace: true });
+  };
+  return (
+    <div role="tablist" style={{ display: "flex", gap: 2, background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: 3, marginTop: 10 }}>
+      {([["seances", "Séances"], ["fiches", "Fiches"]] as const).map(([k, l]) => (
+        <button
+          key={k}
+          role="tab"
+          aria-selected={vue === k}
+          onClick={() => go(k)}
+          style={{
+            flex: 1, minHeight: 36, borderRadius: 4, border: "none",
+            background: vue === k ? C.acS : "transparent",
+            color: vue === k ? C.ac : C.tx3, fontSize: 13, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit",
+          }}
+        >{l}</button>
+      ))}
+    </div>
+  );
+}
+
+export default function ProgramPage() {
+  const [params] = useSearchParams();
+  if (params.get("vue") !== "fiches") return <ProgramSessionsView />;
+  return (
+    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+      <div style={{
+        position: "sticky", top: 45, zIndex: 5,
+        background: "linear-gradient(135deg, rgba(255,201,51,0.18) 0%, rgba(21,18,15,0.98) 70%)",
+        borderBottom: "1px solid rgba(255,201,51,0.25)",
+        padding: "14px 16px", textAlign: "center",
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, letterSpacing: "-0.2px" }}>Programme</div>
+        <ProgramViewSwitch />
+      </div>
+      <AthleteFichesView />
     </div>
   );
 }

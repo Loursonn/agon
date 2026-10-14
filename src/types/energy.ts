@@ -187,6 +187,8 @@ export interface EnergySessionRow {
   notes?: string | null;
   schema?: FieldSchema | null;
   images?: SessionImage[] | null;
+  /** Fiches rattachées (module Fiches) */
+  fiches?: import('@/features/shared/types/fiches').FicheAttachment[] | null;
   created_by?: string | null;
   athlete_id?: string | null;
   parent_session_id?: string | null;

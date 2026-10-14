@@ -3,7 +3,7 @@
  * Timer countdown, round info, next step preview.
  */
 import type { FlatExecStep } from "@/features/athlete/hooks/useSpecificExecution";
-import { formatTarget } from "@/lib/energy/formatTarget";
+import { formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 
 const PHASE_COLOR: Record<string, string> = {
   warmup: "#66F03C", work: "#E5484D", recovery: "#4FA3FF",
@@ -54,11 +54,11 @@ export default function ExecutionCard({ current, next, secondsLeft, isLastStep, 
   const showTarget = targetStr && targetStr !== "Libre";
 
   const detail = isExercise
-    ? [step.reps_min ? (step.reps_max && step.reps_max !== step.reps_min ? `${step.reps_min}-${step.reps_max} reps` : `${step.reps_min} reps`) : null, step.weight_kg ? `${step.weight_kg} kg` : null].filter(Boolean).join(" · ")
+    ? formatExerciseStep(step)
     : null;
 
   const nextTitle = next ? (
-    next.step.type === "exercise" ? `${next.step.exercise_name}${next.step.reps_min ? ` — ${next.step.reps_max && next.step.reps_max !== next.step.reps_min ? `${next.step.reps_min}-${next.step.reps_max}` : next.step.reps_min} reps` : ""}`
+    next.step.type === "exercise" ? [next.step.exercise_name, formatExerciseStep(next.step)].filter(Boolean).join(" — ")
     : (PHASE_LABEL[next.step.role] ?? next.step.role)
   ) : null;
 

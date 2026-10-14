@@ -39,10 +39,11 @@ function ItemRow({ blockId, item, onChange, onDelete }: {
   return (
     <div
       ref={setNodeRef}
+      data-step-id={item.id}
       style={{
         transform: CSS.Transform.toString(transform), transition,
         opacity: isDragging ? 0.5 : 1,
-        display: "flex", gap: 6, alignItems: "center",
+        display: "flex", gap: 6, alignItems: "flex-start", flexWrap: "wrap",
       }}
     >
       <button

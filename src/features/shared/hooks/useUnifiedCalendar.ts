@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Exercise, WeekConfig } from "@/features/shared/types/athlete";
+import { syncDocAssignmentsFromEnergy } from "./fiches/syncDocAssignments";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -412,6 +413,7 @@ export function useDeleteCalendarEvent() {
       if (type === "energy") {
         const { error } = await supabase.from("energy_session_assignments").delete().eq("id", id);
         if (error) throw error;
+        void syncDocAssignmentsFromEnergy(athleteId);
         return;
       }
 

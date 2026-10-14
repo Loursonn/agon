@@ -1,9 +1,11 @@
 /**
  * SpecificItemFields — champs d'un item de bloc Classique :
  * exercice pris dans la banque d'exercices (ExerciceSearch, avec vidéo) ou
- * consigne libre, + prescription libre + repos.
+ * consigne libre, + prescription libre + repos + notes.
+ * Les textes longs passent à la ligne (zones qui s'agrandissent).
+ * À placer dans une ligne flex avec flexWrap: "wrap" (les notes prennent toute la largeur).
  */
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Youtube } from "lucide-react";
 import { C } from "@/lib/theme";
 import { ExerciceSearch } from "../programmation/ExerciceSearch";
@@ -19,6 +21,7 @@ interface Props {
 export default function SpecificItemFields({ item, onChange }: Props) {
   // Nouvel item vide → recherche ouverte directement
   const [searching, setSearching] = useState(!item.name.trim());
+  const [showNotes, setShowNotes] = useState(!!item.notes);
 
   const inputStyle: React.CSSProperties = {
     background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 6,
@@ -57,7 +60,7 @@ export default function SpecificItemFields({ item, onChange }: Props) {
               fontSize: 12, fontFamily: "inherit", cursor: "pointer",
             }}
           >
-            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ flex: 1, minWidth: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
               {item.name.trim() || "Exercice / consigne…"}
             </span>
             {item.youtube_id && <Youtube size={12} color="#EF4444" style={{ flexShrink: 0 }} />}
@@ -65,18 +68,60 @@ export default function SpecificItemFields({ item, onChange }: Props) {
         )}
       </div>
 
-      <input
+      <AutoTextarea
         value={item.prescription ?? ""}
-        onChange={(e) => onChange({ prescription: e.target.value })}
+        onChange={(v) => onChange({ prescription: v })}
         placeholder="4x30m, 5×8, 3'…"
         style={{ ...inputStyle, flex: 1.2 }}
       />
-      <input
+      <AutoTextarea
         value={item.rest ?? ""}
-        onChange={(e) => onChange({ rest: e.target.value })}
+        onChange={(v) => onChange({ rest: v })}
         placeholder="Repos"
-        style={{ ...inputStyle, width: 70 }}
+        style={{ ...inputStyle, width: 70, flex: "0 0 70px" }}
       />
+      {showNotes ? (
+        <AutoTextarea
+          value={item.notes ?? ""}
+          onChange={(v) => onChange({ notes: v || undefined })}
+          placeholder="Consigne de la ligne (optionnel)…"
+          style={{ ...inputStyle, flexBasis: "100%", marginLeft: 22, color: C.tx2 }}
+        />
+      ) : (
+        <button
+          onClick={() => setShowNotes(true)}
+          title="Ajouter une consigne à cette ligne"
+          style={{ background: "none", border: "none", color: C.tx3, fontSize: 11, cursor: "pointer", padding: "0 2px", fontFamily: "inherit" }}
+        >
+          ＋ consigne
+        </button>
+      )}
     </>
+  );
+}
+
+/** Zone de texte d'une ligne qui s'agrandit avec son contenu (retour à la ligne visible). */
+function AutoTextarea({ value, onChange, placeholder, style }: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{ resize: "none", overflow: "hidden", lineHeight: 1.4, boxSizing: "border-box", ...style }}
+    />
   );
 }

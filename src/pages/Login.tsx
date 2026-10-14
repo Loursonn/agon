@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -168,7 +169,7 @@ export default function Login() {
               </div>
               <div>
                 <label style={labelStyle}>Mot de passe</label>
-                <input name="password" type="password" required placeholder="••••••••" style={inputStyle} />
+                <PasswordInput name="password" iconColor={S.tx2} required placeholder="••••••••" style={inputStyle} />
               </div>
               {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
               <button type="submit" style={btnPrimary()} disabled={loading}>
@@ -253,11 +254,11 @@ export default function Login() {
               </div>
               <div>
                 <label style={labelStyle}>Mot de passe</label>
-                <input name="password" type="password" required placeholder="••••••••" minLength={6} style={inputStyle} />
+                <PasswordInput name="password" iconColor={S.tx2} required placeholder="••••••••" minLength={6} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Confirmer le mot de passe</label>
-                <input name="confirm" type="password" required placeholder="••••••••" minLength={6} style={inputStyle} />
+                <PasswordInput name="confirm" iconColor={S.tx2} required placeholder="••••••••" minLength={6} style={inputStyle} />
               </div>
               {/* Option coach-athlète */}
               <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 12px", borderRadius: 4, background: S.s2, border: "1px solid " + (isCoachAthlete ? S.ac : S.brd) }}>
@@ -299,11 +300,11 @@ export default function Login() {
               </div>
               <div>
                 <label style={labelStyle}>Mot de passe</label>
-                <input name="password" type="password" required placeholder="••••••••" minLength={6} style={inputStyle} />
+                <PasswordInput name="password" iconColor={S.tx2} required placeholder="••••••••" minLength={6} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Confirmer le mot de passe</label>
-                <input name="confirm" type="password" required placeholder="••••••••" minLength={6} style={inputStyle} />
+                <PasswordInput name="confirm" iconColor={S.tx2} required placeholder="••••••••" minLength={6} style={inputStyle} />
               </div>
               {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
               <button type="submit" style={btnPrimary()} disabled={loading}>

@@ -29,6 +29,7 @@ const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: b
   { key: "retours",         label: "Retours"         },
   { key: "profil-sportif",  label: "Profil athlète"  },
   { key: "hyrox",           label: "HYROX", hyroxOnly: true },
+  { key: "fiches",          label: "Fiches"          },
   { key: "athlete-view",    label: "Vue athlète", pushRight: true },
   { key: "donnees",         label: "Historique" },
 ];

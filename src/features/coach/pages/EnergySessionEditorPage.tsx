@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { C } from "@/lib/theme";
+import { useQueryClient } from "@tanstack/react-query";
+import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor";
+import { syncEnergySessionAthletes } from "@/features/shared/hooks/fiches/syncDocAssignments";
+import type { FicheAttachment } from "@/features/shared/types/fiches";
 import { makeRootGroup, genId } from "@/lib/energy/treeUtils";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 import { formatSLong } from "@/lib/energy/formatTarget";
@@ -42,6 +46,13 @@ import ClassiquePreview from "../components/specific/ClassiquePreview";
 import BlockBankDrawer from "../components/specific/BlockBankDrawer";
 import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuality } from "@/features/shared/hooks/useSpecificTaxonomy";
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
+import { toast } from "sonner";
+import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
+import { issueCounts } from "../components/import/ImportIssueList";
+import ImportReportPanel from "../components/import/ImportReportPanel";
+import ImportSpecificTextDialog, { type SpecificImportApply } from "../components/import/ImportSpecificTextDialog";
+import type { EnergyImportResult } from "@/lib/import/yoxx/parseEnergySession";
+import type { ImportIssue } from "@/lib/import/yoxx/common";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -241,12 +252,18 @@ export default function EnergySessionEditorPage() {
   const [fieldSchema, setFieldSchema] = useState<FieldSchema | null>(null);
   const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   const [images, setImages] = useState<SessionImage[]>([]);
+  const [fiches, setFiches] = useState<FicheAttachment[]>([]);
+  const qc = useQueryClient();
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  // Import texte YOXX (?import=texte ouvre directement la fenêtre)
+  const [showTextImport, setShowTextImport] = useState(searchParams.get("import") === "texte");
+  const [importIssues, setImportIssues] = useState<ImportIssue[]>([]);
+  const [notes, setNotes] = useState("");
 
   // Spécifique : sport / qualité / format
   // Nouvelle séance spécifique = toujours par blocs (mix Classique/WOD).
@@ -283,7 +300,9 @@ export default function EnergySessionEditorPage() {
       };
       setRoot(rootG);
       setFieldSchema(existingSession.schema ?? null);
+      setNotes(existingSession.notes ?? "");
       setImages(((existingSession as any).images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
+      setFiches(existingSession.fiches ?? []);
       setSportId(existingSession.sport_id ?? null);
       setQualityId(existingSession.quality_id ?? null);
       setFormat(existingSession.format ?? "wod");
@@ -297,6 +316,7 @@ export default function EnergySessionEditorPage() {
     setCustomKind(session.custom_kind || "vo2");
     setCustomKind(session.custom_kind ?? "");
     setStructureType(session.structure_type);
+    setNotes(session.notes ?? "");
     const clonedChildren = deepCloneIntervals(session.intervals ?? []);
     setRoot({
       type: "group", id: "__root__", role: "open", repeat: 1,
@@ -305,6 +325,7 @@ export default function EnergySessionEditorPage() {
     setSportId(session.sport_id ?? null);
     setQualityId(session.quality_id ?? null);
     setImages(((session as any).images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
+    setFiches(session.fiches ?? []);
     setFormat(session.format ?? "wod");
     setClassiqueBlocks(
       (session.classique_structure?.blocks ?? []).map((b): SessionBlock =>
@@ -314,6 +335,36 @@ export default function EnergySessionEditorPage() {
       )
     );
     setShowImport(false);
+  }
+
+  function handleTextImport({ session, issues }: EnergyImportResult) {
+    setName(session.name);
+    setSessionKind(session.session_kind);
+    if (session.session_kind === "custom") setCustomKind(session.custom_kind ?? "");
+    setStructureType(session.structure_type);
+    setRoot({ type: "group", id: "__root__", role: "open", repeat: 1, children: session.intervals });
+    setNotes(session.notes ?? "");
+    if (session.images.length > 0) setImages((prev) => [...prev, ...session.images]);
+    setImportIssues(issues.filter((i) => i.level !== "info"));
+    setShowTextImport(false);
+    const { errors } = issueCounts(issues);
+    if (errors > 0) toast.warning(`Séance importée — ${errors} zone${errors > 1 ? "s" : ""} « À SAISIR » à compléter`);
+    else toast.success("Séance importée — vérifie puis enregistre");
+  }
+
+  function handleSpecificTextImport(data: SpecificImportApply, issues: ImportIssue[]) {
+    setName(data.name);
+    setSportId(data.sport_id);
+    setQualityId(data.quality_id);
+    setFormat("classique");
+    setClassiqueBlocks(data.blocks);
+    setNotes(data.notes ?? "");
+    if (data.images.length > 0) setImages((prev) => [...prev, ...data.images]);
+    setImportIssues(issues.filter((i) => i.level !== "info"));
+    setShowTextImport(false);
+    const { errors } = issueCounts(issues);
+    if (errors > 0) toast.warning(`Séance importée — ${errors} point${errors > 1 ? "s" : ""} à compléter`);
+    else toast.success("Séance importée — vérifie puis enregistre");
   }
 
   function handleSaveBlockToBank(block: SessionBlock) {
@@ -390,10 +441,12 @@ export default function EnergySessionEditorPage() {
         ? (existingSession?.custom_kind ?? null)
         : (sessionKind === "custom" ? customKind : null),
       modality: null,
+      notes: notes.trim() || null,
       structure_type: structureType,
       intervals: root.children,
       schema: fieldSchema ?? null,
       images: images.length > 0 ? images : null,
+      fiches: fiches.length > 0 ? fiches : null,
       sport_id: isSpecifique ? sportId : null,
       quality_id: isSpecifique ? qualityId : null,
       format: isSpecifique ? format : "wod",
@@ -406,6 +459,8 @@ export default function EnergySessionEditorPage() {
 
     if (isEdit && sessionId) {
       await updateMutation.mutateAsync({ id: sessionId, ...payload });
+      // Attributions 'energie' des athlètes qui ont cette séance au planning
+      void syncEnergySessionAthletes(sessionId, qc);
       if (andPlan && athleteId) {
         setSavedSessionId(sessionId);
         setShowAssignModal(true);
@@ -569,6 +624,15 @@ export default function EnergySessionEditorPage() {
               Importer une séance
             </button>
           )}
+          {(!isSpecifique || isClassique) && (
+            <button
+              onClick={() => setShowTextImport(true)}
+              title="Coller une séance écrite au format YOXX"
+              style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Importer un texte
+            </button>
+          )}
           <button
             onClick={navigateBack}
             style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
@@ -611,6 +675,20 @@ export default function EnergySessionEditorPage() {
           <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
             Structure
           </div>
+          {importIssues.length > 0 && (
+            <ImportReportPanel issues={importIssues} onClose={() => setImportIssues([])} />
+          )}
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Consigne de la séance (optionnel, affichée à l'athlète)…"
+            rows={notes ? 2 : 1}
+            style={{
+              width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 12,
+              background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx,
+              fontSize: 12, padding: "8px 10px", fontFamily: "inherit", outline: "none",
+            }}
+          />
           {isClassique ? (
             <ClassiqueBuilder
               blocks={classiqueBlocks}
@@ -688,6 +766,14 @@ export default function EnergySessionEditorPage() {
             value={fieldSchema}
             onSave={(s) => { setFieldSchema(s); setShowSchemaEditor(false); }}
           />
+
+          {/* ── Fiches ── */}
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              Fiches
+            </div>
+            <FicheAttachmentsEditor value={fiches} onChange={setFiches} athleteId={athleteId} />
+          </div>
 
           {/* ── Illustrations ── */}
           <div style={{ marginTop: 16 }}>
@@ -791,6 +877,22 @@ export default function EnergySessionEditorPage() {
       </div>
 
       {/* ── Import modal ── */}
+      {showTextImport && isSpecifique && (
+        <ImportSpecificTextDialog
+          onImport={handleSpecificTextImport}
+          onClose={() => setShowTextImport(false)}
+          replacesExisting={classiqueBlocks.length > 0}
+        />
+      )}
+
+      {showTextImport && !isSpecifique && (
+        <ImportEnergyTextDialog
+          onImport={handleTextImport}
+          onClose={() => setShowTextImport(false)}
+          replacesExisting={root.children.length > 0}
+        />
+      )}
+
       {showImport && (
         <ImportSessionModal
           onImport={handleImportSession}
