@@ -1,4 +1,5 @@
 import type { Bloc, Exercice, ExerciceParams, ProgSession } from "./types"
+import { flattenFichesToWeek } from "@/features/shared/types/fiches"
 
 /** 'all' keeps every week's params; a number keeps only that week (flattened). */
 export type BankWeekMode = 'all' | number
@@ -40,6 +41,8 @@ export function prepareBloc(bloc: Bloc, mode: BankWeekMode = 'all'): Bloc {
   return {
     ...clone,
     id: crypto.randomUUID(),
+    // Rattachements de fiches conservés ; en mode mono-semaine, variante de cette semaine
+    ...(mode !== 'all' && clone.fiches ? { fiches: flattenFichesToWeek(clone.fiches, mode) } : {}),
     exercices: clone.exercices.map((ex, i) => ({ ...prepareExercice(ex, mode), sort_order: i })),
   }
 }
@@ -48,7 +51,10 @@ export function prepareBloc(bloc: Bloc, mode: BankWeekMode = 'all'): Bloc {
 export function prepareSession(session: ProgSession, mode: BankWeekMode = 'all'): ProgSession {
   const blocs = session.blocs.map((b, i) => ({ ...prepareBloc(b, mode), sort_order: i }))
   if (mode !== 'all') {
-    return { ...session, id: crypto.randomUUID(), blocs, multi_semaine: false, nb_semaines: undefined }
+    return {
+      ...session, id: crypto.randomUUID(), blocs, multi_semaine: false, nb_semaines: undefined,
+      ...(session.fiches ? { fiches: flattenFichesToWeek(session.fiches, mode) } : {}),
+    }
   }
   const weeks = maxWeek(blocs)
   return {

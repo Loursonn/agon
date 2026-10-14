@@ -1,3 +1,5 @@
+import type { FicheAttachment } from "@/features/shared/types/fiches"
+
 export type ParamValue<T> =
   | { mode: 'global'; value: T }
   | { mode: 'par_serie'; values: T[] }
@@ -54,6 +56,8 @@ export interface Bloc {
   timing_repos_sec?: number
   /** Consignes du bloc, affichées à l'athlète sous le titre */
   instructions?: string
+  /** Fiches rattachées au bloc (variante possible par semaine) */
+  fiches?: FicheAttachment[]
   // NO multi_semaine here anymore
   exercices: Exercice[]
   sort_order: number
@@ -67,6 +71,8 @@ export interface ProgSession {
   recurrence: 'weekly' | 'once'
   multi_semaine: boolean
   nb_semaines?: number
+  /** Fiches rattachées à la séance (variante possible par semaine) */
+  fiches?: FicheAttachment[]
   blocs: Bloc[]
 }
 

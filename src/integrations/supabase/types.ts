@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       app_data: {
@@ -36,6 +61,129 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "app_data_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_feedback: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          page: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          kind?: string
+          page?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          page?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_feedback_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_life_events: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          date_end: string
+          date_start: string
+          id: string
+          title: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          date_end: string
+          date_start: string
+          id?: string
+          title: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          date_end?: string
+          date_start?: string
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_life_events_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_profile_items: {
+        Row: {
+          athlete_id: string
+          category: string
+          created_at: string
+          id: string
+          label: string
+          note: string | null
+          rating: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          category: string
+          created_at?: string
+          id?: string
+          label: string
+          note?: string | null
+          rating?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          note?: string | null
+          rating?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_profile_items_athlete_id_fkey"
             columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -269,39 +417,253 @@ export type Database = {
           },
         ]
       }
-      energy_session_assignments: {
+      doc_assignments: {
+        Row: {
+          assigned_by: string | null
+          athlete_id: string
+          coach_note: string | null
+          created_at: string
+          doc_id: string
+          id: string
+          seen_at: string | null
+          source: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          athlete_id: string
+          coach_note?: string | null
+          created_at?: string
+          doc_id: string
+          id?: string
+          seen_at?: string | null
+          source: string
+        }
+        Update: {
+          assigned_by?: string | null
+          athlete_id?: string
+          coach_note?: string | null
+          created_at?: string
+          doc_id?: string
+          id?: string
+          seen_at?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_assignments_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_assignments_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "docs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doc_comments: {
         Row: {
           athlete_id: string
+          author_id: string
+          body: string
+          created_at: string
+          doc_id: string
+          id: string
+          image_path: string | null
+        }
+        Insert: {
+          athlete_id: string
+          author_id: string
+          body?: string
+          created_at?: string
+          doc_id: string
+          id?: string
+          image_path?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          author_id?: string
+          body?: string
+          created_at?: string
+          doc_id?: string
+          id?: string
+          image_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_comments_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_comments_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "docs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      docs: {
+        Row: {
+          archived_at: string | null
+          athlete_id: string | null
+          category: string
+          coach_id: string
+          created_at: string
+          description: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          is_self_service: boolean
+          kind: string
+          mime_type: string | null
+          origin_id: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+          variant_label: string | null
+          variant_order: number
+        }
+        Insert: {
+          archived_at?: string | null
+          athlete_id?: string | null
+          category?: string
+          coach_id: string
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          is_self_service?: boolean
+          kind?: string
+          mime_type?: string | null
+          origin_id?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+          variant_label?: string | null
+          variant_order?: number
+        }
+        Update: {
+          archived_at?: string | null
+          athlete_id?: string | null
+          category?: string
+          coach_id?: string
+          created_at?: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          is_self_service?: boolean
+          kind?: string
+          mime_type?: string | null
+          origin_id?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          variant_label?: string | null
+          variant_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docs_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docs_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docs_origin_id_fkey"
+            columns: ["origin_id"]
+            isOneToOne: false
+            referencedRelation: "docs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "docs_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      energy_session_assignments: {
+        Row: {
+          activity_url: string | null
+          actual_duration_min: number | null
+          athlete_id: string
+          block_logs: Json
           coach_id: string | null
           created_at: string
           energy_session_id: string
           id: string
           microcycle_id: string | null
           notes: string | null
+          rpe_score: number | null
           scheduled_date: string
           status: string
           updated_at: string
         }
         Insert: {
+          activity_url?: string | null
+          actual_duration_min?: number | null
           athlete_id: string
+          block_logs?: Json
           coach_id?: string | null
           created_at?: string
           energy_session_id: string
           id?: string
           microcycle_id?: string | null
           notes?: string | null
+          rpe_score?: number | null
           scheduled_date: string
           status?: string
           updated_at?: string
         }
         Update: {
+          activity_url?: string | null
+          actual_duration_min?: number | null
           athlete_id?: string
+          block_logs?: Json
           coach_id?: string | null
           created_at?: string
           energy_session_id?: string
           id?: string
           microcycle_id?: string | null
           notes?: string | null
+          rpe_score?: number | null
           scheduled_date?: string
           status?: string
           updated_at?: string
@@ -339,16 +701,26 @@ export type Database = {
       }
       energy_sessions: {
         Row: {
+          athlete_id: string | null
+          classique_structure: Json | null
           created_at: string
           created_by: string | null
           custom_kind: string | null
+          fiches: Json | null
+          format: string
           id: string
+          images: Json | null
           intervals: Json
           is_public: boolean
           is_verified: boolean
+          modality: string | null
           name: string
           notes: string | null
+          parent_session_id: string | null
+          quality_id: string | null
+          schema: Json | null
           session_kind: string
+          sport_id: string | null
           structure_type: string
           total_distance_m: number | null
           total_duration_s: number | null
@@ -357,16 +729,26 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
+          athlete_id?: string | null
+          classique_structure?: Json | null
           created_at?: string
           created_by?: string | null
           custom_kind?: string | null
+          fiches?: Json | null
+          format?: string
           id?: string
+          images?: Json | null
           intervals?: Json
           is_public?: boolean
           is_verified?: boolean
+          modality?: string | null
           name: string
           notes?: string | null
+          parent_session_id?: string | null
+          quality_id?: string | null
+          schema?: Json | null
           session_kind: string
+          sport_id?: string | null
           structure_type: string
           total_distance_m?: number | null
           total_duration_s?: number | null
@@ -375,16 +757,26 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
+          athlete_id?: string | null
+          classique_structure?: Json | null
           created_at?: string
           created_by?: string | null
           custom_kind?: string | null
+          fiches?: Json | null
+          format?: string
           id?: string
+          images?: Json | null
           intervals?: Json
           is_public?: boolean
           is_verified?: boolean
+          modality?: string | null
           name?: string
           notes?: string | null
+          parent_session_id?: string | null
+          quality_id?: string | null
+          schema?: Json | null
           session_kind?: string
+          sport_id?: string | null
           structure_type?: string
           total_distance_m?: number | null
           total_duration_s?: number | null
@@ -394,6 +786,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "energy_sessions_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "energy_sessions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -401,8 +800,76 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "energy_sessions_parent_session_id_fkey"
+            columns: ["parent_session_id"]
+            isOneToOne: false
+            referencedRelation: "energy_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "energy_sessions_quality_id_fkey"
+            columns: ["quality_id"]
+            isOneToOne: false
+            referencedRelation: "physical_qualities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "energy_sessions_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "specific_sports"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "energy_sessions_verified_by_fkey"
             columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_pr_logs: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          date: string
+          exercise_ref: string
+          id: string
+          kg: number
+          notes: string | null
+          source: string
+          source_kg: number | null
+          source_reps: number | null
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          date: string
+          exercise_ref: string
+          id?: string
+          kg: number
+          notes?: string | null
+          source?: string
+          source_kg?: number | null
+          source_reps?: number | null
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          date?: string
+          exercise_ref?: string
+          id?: string
+          kg?: number
+          notes?: string | null
+          source?: string
+          source_kg?: number | null
+          source_reps?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_pr_logs_athlete_id_fkey"
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -540,6 +1007,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          sort_order: number | null
         }
         Insert: {
           athlete_id: string
@@ -549,6 +1017,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          sort_order?: number | null
         }
         Update: {
           athlete_id?: string
@@ -558,11 +1027,309 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          sort_order?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "habits_athlete_id_fkey"
             columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_race_plans: {
+        Row: {
+          athlete_id: string
+          competition_id: string | null
+          created_at: string
+          created_by: string | null
+          division: string
+          id: string
+          name: string
+          notes: string | null
+          predicted_from: Json | null
+          predicted_high_s: number | null
+          predicted_total_s: number | null
+          profile: string
+          result_id: string | null
+          target_total_s: number
+          targets: Json
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          competition_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          division: string
+          id?: string
+          name: string
+          notes?: string | null
+          predicted_from?: Json | null
+          predicted_high_s?: number | null
+          predicted_total_s?: number | null
+          profile?: string
+          result_id?: string | null
+          target_total_s: number
+          targets: Json
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          competition_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          division?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          predicted_from?: Json | null
+          predicted_high_s?: number | null
+          predicted_total_s?: number | null
+          profile?: string
+          result_id?: string | null
+          target_total_s?: number
+          targets?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_race_plans_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_race_plans_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_race_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_race_plans_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "hyrox_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_reference_segments: {
+        Row: {
+          bracket: string
+          division: string
+          id: string
+          is_estimate: boolean
+          p1_s: number | null
+          p10_s: number | null
+          p25_s: number | null
+          p5_s: number | null
+          p50_s: number
+          p75_s: number | null
+          p90_s: number | null
+          sample_size: number | null
+          segment: string
+          source: string
+        }
+        Insert: {
+          bracket?: string
+          division: string
+          id?: string
+          is_estimate?: boolean
+          p1_s?: number | null
+          p10_s?: number | null
+          p25_s?: number | null
+          p5_s?: number | null
+          p50_s: number
+          p75_s?: number | null
+          p90_s?: number | null
+          sample_size?: number | null
+          segment: string
+          source: string
+        }
+        Update: {
+          bracket?: string
+          division?: string
+          id?: string
+          is_estimate?: boolean
+          p1_s?: number | null
+          p10_s?: number | null
+          p25_s?: number | null
+          p5_s?: number | null
+          p50_s?: number
+          p75_s?: number | null
+          p90_s?: number | null
+          sample_size?: number | null
+          segment?: string
+          source?: string
+        }
+        Relationships: []
+      }
+      hyrox_results: {
+        Row: {
+          activity_url: string | null
+          age_group: string | null
+          athlete_comment: string | null
+          athlete_id: string
+          bbj_s: number | null
+          coach_comment: string | null
+          competition_id: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          division: string
+          event_name: string
+          farmers_s: number | null
+          format: string
+          id: string
+          is_official: boolean
+          lunges_s: number | null
+          participants_age_group: number | null
+          participants_overall: number | null
+          penalties_note: string | null
+          penalties_s: number
+          rank_age_group: number | null
+          rank_overall: number | null
+          row_s: number | null
+          roxzone_splits: Json | null
+          roxzone_total_s: number | null
+          run_1_s: number | null
+          run_2_s: number | null
+          run_3_s: number | null
+          run_4_s: number | null
+          run_5_s: number | null
+          run_6_s: number | null
+          run_7_s: number | null
+          run_8_s: number | null
+          ski_s: number | null
+          sled_pull_s: number | null
+          sled_push_s: number | null
+          source: string
+          status: string
+          total_s: number
+          updated_at: string
+          venue: string | null
+          wall_balls_s: number | null
+        }
+        Insert: {
+          activity_url?: string | null
+          age_group?: string | null
+          athlete_comment?: string | null
+          athlete_id: string
+          bbj_s?: number | null
+          coach_comment?: string | null
+          competition_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          division: string
+          event_name: string
+          farmers_s?: number | null
+          format?: string
+          id?: string
+          is_official?: boolean
+          lunges_s?: number | null
+          participants_age_group?: number | null
+          participants_overall?: number | null
+          penalties_note?: string | null
+          penalties_s?: number
+          rank_age_group?: number | null
+          rank_overall?: number | null
+          row_s?: number | null
+          roxzone_splits?: Json | null
+          roxzone_total_s?: number | null
+          run_1_s?: number | null
+          run_2_s?: number | null
+          run_3_s?: number | null
+          run_4_s?: number | null
+          run_5_s?: number | null
+          run_6_s?: number | null
+          run_7_s?: number | null
+          run_8_s?: number | null
+          ski_s?: number | null
+          sled_pull_s?: number | null
+          sled_push_s?: number | null
+          source?: string
+          status?: string
+          total_s: number
+          updated_at?: string
+          venue?: string | null
+          wall_balls_s?: number | null
+        }
+        Update: {
+          activity_url?: string | null
+          age_group?: string | null
+          athlete_comment?: string | null
+          athlete_id?: string
+          bbj_s?: number | null
+          coach_comment?: string | null
+          competition_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          division?: string
+          event_name?: string
+          farmers_s?: number | null
+          format?: string
+          id?: string
+          is_official?: boolean
+          lunges_s?: number | null
+          participants_age_group?: number | null
+          participants_overall?: number | null
+          penalties_note?: string | null
+          penalties_s?: number
+          rank_age_group?: number | null
+          rank_overall?: number | null
+          row_s?: number | null
+          roxzone_splits?: Json | null
+          roxzone_total_s?: number | null
+          run_1_s?: number | null
+          run_2_s?: number | null
+          run_3_s?: number | null
+          run_4_s?: number | null
+          run_5_s?: number | null
+          run_6_s?: number | null
+          run_7_s?: number | null
+          run_8_s?: number | null
+          ski_s?: number | null
+          sled_pull_s?: number | null
+          sled_push_s?: number | null
+          source?: string
+          status?: string
+          total_s?: number
+          updated_at?: string
+          venue?: string | null
+          wall_balls_s?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_results_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_results_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_results_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -647,6 +1414,127 @@ export type Database = {
             foreignKeyName: "macrocycles_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_logs: {
+        Row: {
+          athlete_id: string
+          bras: number | null
+          bras_d: number | null
+          bras_g: number | null
+          created_at: string
+          cuisse: number | null
+          cuisse_d: number | null
+          cuisse_g: number | null
+          date: string
+          epaules: number | null
+          hanche: number | null
+          id: string
+          mollet: number | null
+          mollet_d: number | null
+          mollet_g: number | null
+          photos: Json
+          poitrine: number | null
+          taille: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          athlete_id: string
+          bras?: number | null
+          bras_d?: number | null
+          bras_g?: number | null
+          created_at?: string
+          cuisse?: number | null
+          cuisse_d?: number | null
+          cuisse_g?: number | null
+          date?: string
+          epaules?: number | null
+          hanche?: number | null
+          id?: string
+          mollet?: number | null
+          mollet_d?: number | null
+          mollet_g?: number | null
+          photos?: Json
+          poitrine?: number | null
+          taille?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          athlete_id?: string
+          bras?: number | null
+          bras_d?: number | null
+          bras_g?: number | null
+          created_at?: string
+          cuisse?: number | null
+          cuisse_d?: number | null
+          cuisse_g?: number | null
+          date?: string
+          epaules?: number | null
+          hanche?: number | null
+          id?: string
+          mollet?: number | null
+          mollet_d?: number | null
+          mollet_g?: number | null
+          photos?: Json
+          poitrine?: number | null
+          taille?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_logs_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_history: {
+        Row: {
+          allergies: string | null
+          athlete_id: string
+          conditions: string | null
+          created_at: string | null
+          current_treatments: string | null
+          id: string
+          medical_notes: string | null
+          past_injuries: Json | null
+          surgeries: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          allergies?: string | null
+          athlete_id: string
+          conditions?: string | null
+          created_at?: string | null
+          current_treatments?: string | null
+          id?: string
+          medical_notes?: string | null
+          past_injuries?: Json | null
+          surgeries?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          allergies?: string | null
+          athlete_id?: string
+          conditions?: string | null
+          created_at?: string | null
+          current_treatments?: string | null
+          id?: string
+          medical_notes?: string | null
+          past_injuries?: Json | null
+          surgeries?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_history_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -865,6 +1753,41 @@ export type Database = {
           },
         ]
       }
+      physical_qualities: {
+        Row: {
+          coach_id: string | null
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          coach_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          coach_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physical_qualities_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planning_blocks: {
         Row: {
           athlete_id: string
@@ -962,6 +1885,7 @@ export type Database = {
           id: string
           is_admin: boolean
           is_certified_coach: boolean
+          is_hyrox_athlete: boolean
           last_name: string | null
           role: string
           weight_kg: number | null
@@ -982,6 +1906,7 @@ export type Database = {
           id: string
           is_admin?: boolean
           is_certified_coach?: boolean
+          is_hyrox_athlete?: boolean
           last_name?: string | null
           role: string
           weight_kg?: number | null
@@ -1002,6 +1927,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           is_certified_coach?: boolean
+          is_hyrox_athlete?: boolean
           last_name?: string | null
           role?: string
           weight_kg?: number | null
@@ -1084,6 +2010,140 @@ export type Database = {
           },
         ]
       }
+      roadmap_items: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          phase_id: string | null
+          priority: string
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          phase_id?: string | null
+          priority?: string
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          phase_id?: string | null
+          priority?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_items_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_phases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          quarter: string
+          sort_order: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          quarter: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          quarter?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_phases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_votes: {
+        Row: {
+          id: string
+          item_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_votes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
           athlete_id: string
@@ -1129,36 +2189,144 @@ export type Database = {
           },
         ]
       }
+      specific_blocks: {
+        Row: {
+          coach_id: string
+          content: Json
+          created_at: string
+          id: string
+          name: string
+          quality_id: string | null
+          sport_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          content?: Json
+          created_at?: string
+          id?: string
+          name: string
+          quality_id?: string | null
+          sport_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          quality_id?: string | null
+          sport_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specific_blocks_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specific_blocks_quality_id_fkey"
+            columns: ["quality_id"]
+            isOneToOne: false
+            referencedRelation: "physical_qualities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specific_blocks_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "specific_sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specific_sports: {
+        Row: {
+          coach_id: string | null
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_default: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          coach_id?: string | null
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          coach_id?: string | null
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specific_sports_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_definitions: {
         Row: {
+          articulation: string | null
+          category: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          fill_mode: string
           id: string
           is_global: boolean
           kind: string
+          media_url: string | null
           name: string
           protocol: Json | null
           updated_at: string | null
         }
         Insert: {
+          articulation?: string | null
+          category?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          fill_mode?: string
           id?: string
           is_global?: boolean
           kind?: string
+          media_url?: string | null
           name: string
           protocol?: Json | null
           updated_at?: string | null
         }
         Update: {
+          articulation?: string | null
+          category?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          fill_mode?: string
           id?: string
           is_global?: boolean
           kind?: string
+          media_url?: string | null
           name?: string
           protocol?: Json | null
           updated_at?: string | null
@@ -1314,6 +2482,9 @@ export type Database = {
         Row: {
           better_when: string
           created_at: string | null
+          extrap_factor: number | null
+          extrap_metric: string | null
+          extrap_op: string | null
           id: string
           key: string
           label: string
@@ -1324,6 +2495,9 @@ export type Database = {
         Insert: {
           better_when?: string
           created_at?: string | null
+          extrap_factor?: number | null
+          extrap_metric?: string | null
+          extrap_op?: string | null
           id?: string
           key: string
           label: string
@@ -1334,6 +2508,9 @@ export type Database = {
         Update: {
           better_when?: string
           created_at?: string | null
+          extrap_factor?: number | null
+          extrap_metric?: string | null
+          extrap_op?: string | null
           id?: string
           key?: string
           label?: string
@@ -1347,56 +2524,6 @@ export type Database = {
             columns: ["test_definition_id"]
             isOneToOne: false
             referencedRelation: "test_definitions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      training_methods: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          scope: string
-          category: string
-          config: Json
-          is_official: boolean
-          created_by: string | null
-          tags: string[]
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          scope: string
-          category: string
-          config?: Json
-          is_official?: boolean
-          created_by?: string | null
-          tags?: string[]
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          scope?: string
-          category?: string
-          config?: Json
-          is_official?: boolean
-          created_by?: string | null
-          tags?: string[]
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "training_methods_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1433,6 +2560,107 @@ export type Database = {
           {
             foreignKeyName: "tests_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_methods: {
+        Row: {
+          category: string
+          config: Json
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_official: boolean
+          name: string
+          scope: string
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          config?: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_official?: boolean
+          name: string
+          scope: string
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          config?: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_official?: boolean
+          name?: string
+          scope?: string
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_methods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_retours: {
+        Row: {
+          athlete_id: string
+          athlete_reaction: string | null
+          coach_id: string
+          comment: string
+          created_at: string
+          id: string
+          reacted_at: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          athlete_id: string
+          athlete_reaction?: string | null
+          coach_id: string
+          comment?: string
+          created_at?: string
+          id?: string
+          reacted_at?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          athlete_id?: string
+          athlete_reaction?: string | null
+          coach_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          reacted_at?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_retours_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_retours_coach_id_fkey"
+            columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1487,7 +2715,7 @@ export type Database = {
       workout_logs: {
         Row: {
           athlete_id: string
-          athlete_modifications: import("@/features/shared/types/athlete").AthleteModifications | null
+          athlete_modifications: Json | null
           coach_alert: boolean
           coach_id: string | null
           completed_at: string | null
@@ -1496,8 +2724,7 @@ export type Database = {
           id: string
           microcycle_id: string | null
           notes: string | null
-          original_scheduled_date: string
-          reschedule_reason: string | null
+          original_scheduled_date: string | null
           rescheduled_by_athlete: boolean
           rpe_score: number | null
           scheduled_date: string
@@ -1506,10 +2733,11 @@ export type Database = {
           started_at: string | null
           status: string
           updated_at: string
+          week_number: number | null
         }
         Insert: {
           athlete_id: string
-          athlete_modifications?: import("@/features/shared/types/athlete").AthleteModifications | null
+          athlete_modifications?: Json | null
           coach_alert?: boolean
           coach_id?: string | null
           completed_at?: string | null
@@ -1518,8 +2746,7 @@ export type Database = {
           id?: string
           microcycle_id?: string | null
           notes?: string | null
-          original_scheduled_date?: string
-          reschedule_reason?: string | null
+          original_scheduled_date?: string | null
           rescheduled_by_athlete?: boolean
           rpe_score?: number | null
           scheduled_date?: string
@@ -1528,10 +2755,11 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
+          week_number?: number | null
         }
         Update: {
           athlete_id?: string
-          athlete_modifications?: import("@/features/shared/types/athlete").AthleteModifications | null
+          athlete_modifications?: Json | null
           coach_alert?: boolean
           coach_id?: string | null
           completed_at?: string | null
@@ -1540,8 +2768,7 @@ export type Database = {
           id?: string
           microcycle_id?: string | null
           notes?: string | null
-          original_scheduled_date?: string
-          reschedule_reason?: string | null
+          original_scheduled_date?: string | null
           rescheduled_by_athlete?: boolean
           rpe_score?: number | null
           scheduled_date?: string
@@ -1550,6 +2777,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
+          week_number?: number | null
         }
         Relationships: [
           {
@@ -1695,6 +2923,9 @@ export type Database = {
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
+      can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
+      can_read_doc_file: { Args: { object_name: string }; Returns: boolean }
+      close_unfinished_workouts: { Args: never; Returns: number }
       col_is_null:
         | {
             Args: {
@@ -1775,6 +3006,7 @@ export type Database = {
       is_empty: { Args: { "": string }; Returns: string }
       isnt_empty: { Args: { "": string }; Returns: string }
       lives_ok: { Args: { "": string }; Returns: string }
+      mark_doc_seen: { Args: { doc_uuid: string }; Returns: undefined }
       mark_missed_workouts: { Args: never; Returns: number }
       microcycle_for_athlete_date: {
         Args: { p_athlete_id: string; p_date?: string }
@@ -1787,6 +3019,7 @@ export type Database = {
           week_number: number
         }[]
       }
+      my_coach_id: { Args: never; Returns: string }
       no_plan: { Args: never; Returns: boolean[] }
       num_failed: { Args: never; Returns: number }
       os_name: { Args: never; Returns: string }
@@ -1796,6 +3029,17 @@ export type Database = {
       pg_version: { Args: never; Returns: string }
       pg_version_num: { Args: never; Returns: number }
       pgtap_version: { Args: never; Returns: number }
+      react_weekly_retour: {
+        Args: { p_reaction: string; p_retour_id: string }
+        Returns: undefined
+      }
+      run_workout_status_maintenance: {
+        Args: never
+        Returns: {
+          closed: number
+          missed: number
+        }[]
+      }
       runtests:
         | { Args: never; Returns: string[] }
         | { Args: { "": string }; Returns: string[] }
@@ -1810,6 +3054,10 @@ export type Database = {
       skip:
         | { Args: { "": string }; Returns: string }
         | { Args: { how_many: number; why: string }; Returns: string }
+      sync_doc_assignments: {
+        Args: { p_athlete: string; p_doc_ids: string[]; p_source: string }
+        Returns: undefined
+      }
       throws_ok: { Args: { "": string }; Returns: string }
       todo:
         | { Args: { how_many: number }; Returns: boolean[] }
@@ -1825,6 +3073,7 @@ export type Database = {
         Returns: undefined
       }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
+      workout_log_has_entries: { Args: { mods: Json }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
@@ -1845,12 +3094,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1874,11 +3123,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1899,11 +3148,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1924,11 +3173,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1941,11 +3190,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1955,6 +3204,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

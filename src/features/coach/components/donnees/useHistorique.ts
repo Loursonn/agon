@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Macrocycle, Mesocycle, Cycle } from "@/features/coach/components/planning/hooks/useTimelineData";
 import type { ProgSession } from "@/features/coach/components/programmation/types";
+import { stripForeignPersonalFiches } from "@/features/shared/hooks/fiches/syncDocAssignments";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -128,16 +129,19 @@ export function useCopySessionAsType() {
         .maybeSingle();
       if (tErr) throw tErr;
       const existing = (t?.value ?? []) as ProgSession[];
-      const next = [...existing, cloneSession(src)];
+      const { session: clean, removed } = await stripForeignPersonalFiches(cloneSession(src), targetAthleteId);
+      const next = [...existing, clean];
 
       const { error: upErr } = await supabase
         .from("app_data")
         .upsert({ athlete_id: targetAthleteId, key: "asp:seances-type", value: next as unknown as Record<string, unknown>[] });
       if (upErr) throw upErr;
+      return { removed };
     },
-    onSuccess: (_d, vars) => {
+    onSuccess: ({ removed }, vars) => {
       qc.invalidateQueries({ queryKey: ["asp-seances-type", vars.targetAthleteId] });
       toast.success("Séance copiée dans les Séances Type ✓");
+      if (removed > 0) toast.info(`${removed} fiche(s) personnelle(s) non copiée(s)`);
     },
     onError: (err: unknown) => {
       const msg = (err as { message?: string })?.message ?? "";

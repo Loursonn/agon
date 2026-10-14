@@ -2,6 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { supabase } from "@/integrations/supabase/client"
 import type { ProgSession } from "../types"
+import {
+  stripForeignPersonalFiches,
+  syncDocAssignmentsFromProg,
+} from "@/features/shared/hooks/fiches/syncDocAssignments"
 
 /** Clone profond avec nouveaux ids (séance, blocs, exercices) pour éviter
  *  toute collision avec les workout_logs / drag&drop de l'athlète source. */
@@ -30,15 +34,20 @@ export function useDuplicateProgSession() {
       if (error) throw error
 
       const existing = (data?.value ?? []) as ProgSession[]
-      const next = [...existing, cloneSession(session)]
+      // Les fiches de banque suivent ; une fiche personnelle d'un autre athlète non
+      const { session: clean, removed } = await stripForeignPersonalFiches(cloneSession(session), targetAthleteId)
+      const next = [...existing, clean]
 
       const { error: upsertError } = await supabase
         .from('app_data')
         .upsert({ athlete_id: targetAthleteId, key: 'asp:prog', value: next as unknown as Record<string, unknown>[] })
       if (upsertError) throw upsertError
+      await syncDocAssignmentsFromProg(targetAthleteId, next, qc)
+      return { removed }
     },
-    onSuccess: (_, vars) => {
+    onSuccess: ({ removed }, vars) => {
       qc.invalidateQueries({ queryKey: ['asp-prog', vars.targetAthleteId] })
+      if (removed > 0) toast.info(`${removed} fiche(s) personnelle(s) non copiée(s)`)
     },
     onError: () => toast.error("Erreur lors de la duplication"),
   })
