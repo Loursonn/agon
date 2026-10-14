@@ -312,3 +312,18 @@ Coche [x] au fur et à mesure. Ne coche QUE ce qui est 100% terminé et testé.
 
 **Dernière mise à jour :** 2026-07-18 — PROMPT 9 code terminé (migration à déployer + TEST MANUEL restants)
 - [x] Évolution : plus de toggle global WOD/Classique — nouvelle séance spécifique = par blocs, chaque bloc typé Classique ou WOD (mix possible, pastille Mixte), legacy WOD pleine page éditable + bouton « Convertir en blocs »
+
+---
+
+## ✅ Module Fiches (2026-10-14)
+- [x] Migration `20261014100000_fiches.sql` (tables, RLS, RPC, bucket privé `docs`) appliquée en prod
+- [x] Tests RLS `supabase/tests/fiches_rls.sql` : 29/29 (bloc annulé, sans effet de bord)
+- [x] Types + hooks React Query + sync des attributions (programme / énergie)
+- [x] Tests unitaires (resolveFicheForWeek, collecte doc_id, retrait fiches perso, compressImage)
+- [x] Page coach `/coach/fiches` (banque, import, variantes, archivage, libre-service)
+- [x] Rattachement séance / bloc / occurrence / séance énergie (FichePickerDrawer)
+- [x] Athlète : viewer, Programme → Fiches, séance, carte du jour, énergie, menu ☰, ajouts, commentaires
+- [x] Coach : onglet Fiches de l'espace athlète
+- [x] `npm run build` OK ; aucune nouvelle erreur lint / test
+- [ ] **TEST MANUEL** des 8 scénarios avec comptes coach / athlète de test (aucun compte de test disponible)
+

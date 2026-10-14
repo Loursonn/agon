@@ -74,6 +74,24 @@ Statuts : ✅ Fait — 🔄 En cours — ⬜ À faire — ❌ Abandonné
 
 ---
 
+## Module Fiches (documents coach → athlète)
+
+Détail : `docs/FICHES_FEATURE.md`.
+
+| Fonctionnalité | Statut | Notes |
+|----------------|--------|-------|
+| Banque de fiches PDF / images, catégories, tags | ✅ | `/coach/fiches`, import multi-fichiers |
+| Variantes d'une fiche (V1, V2, Prog S5…) | ✅ | Une ligne + un fichier par variante |
+| Libre-service pour les athlètes du coach | ✅ | Archivage = retrait |
+| Rattachement séance / bloc / occurrence / séance énergie | ✅ | Variante par semaine possible |
+| Fiches personnelles d'un athlète + attribution manuelle avec note | ✅ | Onglet Fiches de l'espace athlète |
+| Vue athlète Programme → Fiches (Mes fiches, Banque, Mes ajouts) | ✅ | `?vue=fiches` |
+| Viewer plein écran (react-pdf), vu / non vu, commentaires avec image | ✅ | |
+| Ajouts athlète (captures, photos, PDF) compressés | ✅ | WebP 1600 px |
+| Questionnaires (POMS…) | ⬜ | V2, esquisse dans FICHES_FEATURE.md |
+
+---
+
 ## Phase 2 — Refactorisation + Multi-coachs
 
 | Fonctionnalité | Statut | Notes |

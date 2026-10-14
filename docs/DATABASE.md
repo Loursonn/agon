@@ -69,6 +69,23 @@ pr_logs           (id, athlete_id, exercise_id, kg, date)
 
 ---
 
+## Module Fiches (2026-10-14)
+
+```
+docs             (id, coach_id, athlete_id?, uploaded_by?, origin_id?, variant_label, variant_order,
+                  title, description, category, tags[], kind, file_path, file_size, mime_type,
+                  is_self_service, archived_at, created_at, updated_at)
+doc_assignments  (id, doc_id, athlete_id, assigned_by, source: manuel|programme|energie,
+                  coach_note, seen_at, created_at)  UNIQUE (doc_id, athlete_id, source)
+doc_comments     (id, doc_id, athlete_id, author_id, body, image_path, created_at)
+energy_sessions.fiches  jsonb  (FicheAttachment[])
+```
+
+Bucket Storage privé `docs` (10 Mo, PDF + images). RLS via `can_read_doc()` / `can_read_doc_file()`,
+RPC `mark_doc_seen`, `sync_doc_assignments`. Voir `docs/FICHES_FEATURE.md`.
+
+---
+
 ## Row Level Security (RLS)
 
 Supabase RLS est actif. Règles en place :

@@ -288,3 +288,32 @@ Policy `exercises_update_certified` : coach certifié (`is_certified_coach`) ou 
 Rollback : `DROP POLICY IF EXISTS "exercises_update_certified" ON public.exercises;`
 
 Note taxonomie `ex_type` : valeurs DB `muscu | halterophilie | mobilite | plio | vitesse | gainage` (labels français dans `src/lib/exerciseTypes.ts`). Pas de contrainte CHECK sur la colonne — les deux nouvelles valeurs ne nécessitent pas de migration.
+
+---
+
+## Migration 2026-10-14 — Module Fiches
+
+**Fichier :** `supabase/migrations/20261014100000_fiches.sql`
+**Statut : ✅ APPLIQUÉE en prod le 2026-10-14** via `supabase db query --linked -f` (pas de `db push` : historique distant désynchronisé).
+
+Tables `docs`, `doc_assignments`, `doc_comments` ; colonne `energy_sessions.fiches` ; fonctions `my_coach_id`, `can_read_doc`, `can_read_doc_file`, `mark_doc_seen`, `sync_doc_assignments` ; bucket privé `docs` + 3 policies `storage.objects`. Détail : `docs/FICHES_FEATURE.md`.
+
+Tests : `supabase db query --linked -f supabase/tests/fiches_rls.sql` → message `RESULTS ok=29 ko=0` (bloc DO toujours annulé).
+
+### Rollback
+
+```sql
+DROP POLICY IF EXISTS "docs_storage_select" ON storage.objects;
+DROP POLICY IF EXISTS "docs_storage_insert" ON storage.objects;
+DROP POLICY IF EXISTS "docs_storage_delete" ON storage.objects;
+-- vider le bucket depuis le Dashboard s'il contient des fichiers, puis :
+DELETE FROM storage.buckets WHERE id = 'docs';
+DROP FUNCTION IF EXISTS public.sync_doc_assignments(uuid, text, uuid[]);
+DROP FUNCTION IF EXISTS public.mark_doc_seen(uuid);
+DROP TABLE IF EXISTS public.doc_comments, public.doc_assignments, public.docs CASCADE;
+DROP FUNCTION IF EXISTS public.can_read_doc_file(text);
+DROP FUNCTION IF EXISTS public.can_read_doc(uuid);
+DROP FUNCTION IF EXISTS public.my_coach_id();
+ALTER TABLE public.energy_sessions DROP COLUMN IF EXISTS fiches;
+```
+
