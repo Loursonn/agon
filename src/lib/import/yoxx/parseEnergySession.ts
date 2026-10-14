@@ -21,6 +21,7 @@ import type {
   EnergyInterval,
   EnergyStep,
   EnergyTarget,
+  ExerciseInterval,
   IntervalRole,
   SessionImage,
   SessionKind,
@@ -124,6 +125,9 @@ const HELP_STEP =
   "Une étape commence par ÉCHAUFFEMENT, EFFORT, RÉCUP, REPOS, RETOUR ou LIBRE, " +
   "puis la durée (10' · 30\" · 400m · 15cal · LAP). Un groupe commence par « GROUPE x6 » et se ferme par « FIN ».";
 
+const HELP_WOD =
+  "Dans un bloc WOD : une étape (EFFORT 600m @ 4'45/km), un exercice (EXO Wall Ball Shot 10 reps @6kg) ou un groupe (GROUPE x6 … FIN).";
+
 // ── Parseur ──────────────────────────────────────────────────────────────────
 
 export function parseEnergySession(text: string, opts: ParseOptions = {}): EnergyImportResult {
@@ -139,21 +143,7 @@ export function parseEnergySession(text: string, opts: ParseOptions = {}): Energ
   const notes: string[] = [];
   const images: SessionImage[] = [];
 
-  const rootChildren: EnergyStep[] = [];
-  const stack: { group: EnergyGroup; line: number; raw: string }[] = [];
-  const current = () => (stack.length ? stack[stack.length - 1].group.children : rootChildren);
-  /** Étapes dont le matériel a été écrit explicitement (ne pas écraser par MATÉRIEL) */
-  const explicitEquipment = new Set<string>();
-  let hasGroup = false;
-
-  const placeholder = (raw: string): EnergyInterval => ({
-    type: "interval",
-    id: genId(),
-    role: "open",
-    duration: { kind: "lap_button" },
-    target: { kind: "text", value: A_SAISIR },
-    notes: raw,
-  });
+  const steps = createStepsParser({ genId, add });
 
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
@@ -208,65 +198,10 @@ export function parseEnergySession(text: string, opts: ParseOptions = {}): Energ
       // Clé inconnue : on tente quand même la lecture comme étape (ex. « EFFORT 10:00 @ Z2 »)
     }
 
-    // ── Fermeture de groupe ──
-    if (/^fin\b/.test(n)) {
-      const closed = stack.pop();
-      if (!closed) add(lineNo, raw, "warning", "« FIN » sans « GROUPE » ouvert → ignoré.");
-      else if (closed.group.children.length === 0)
-        add(closed.line, closed.raw, "warning", "Groupe vide (aucune étape entre GROUPE et FIN).", closed.group.id);
-      continue;
-    }
-
-    // ── Ouverture de groupe ──
-    if (/^groupe\b/.test(n)) {
-      hasGroup = true;
-      const [head, ...rest] = line.split("|");
-      const instructions = rest.join("|").trim();
-      const h = norm(head).replace(/^groupe\s*/, "");
-      const group: EnergyGroup = { type: "group", id: genId(), role: "work", repeat: 1, children: [] };
-
-      const rep = h.match(/(?:^|\s)(?:x\s*(\d+)|(\d+)\s*x)(?=\s|$)/);
-      if (rep) group.repeat = Number(rep[1] ?? rep[2]);
-      if (!rep || group.repeat < 1) {
-        group.repeat = 1;
-        add(lineNo, raw, "error", "Nombre de répétitions manquant ou invalide → mis à 1. Écris « GROUPE x6 ».", group.id);
-      }
-
-      const dep = h.match(/depart(?:\s*fixe)?\s*:?\s*(\S+)/);
-      if (dep) {
-        const s = parseTime(dep[1]);
-        if (s && s > 0) group.departure_every_s = s;
-        else add(lineNo, raw, "error", `Départ fixe « ${dep[1]} » illisible → à saisir. Écris par ex. « départ 4'30 ».`, group.id);
-      }
-
-      if (instructions) group.instructions = instructions;
-      current().push(group);
-      stack.push({ group, line: lineNo, raw });
-      continue;
-    }
-
-    // ── Étape ──
-    const step = parseStepLine(line, lineNo, raw, genId, add);
-    if (!step) {
-      const ph = placeholder(raw);
-      add(lineNo, raw, "error", `Ligne non reconnue → zone « À SAISIR ». ${HELP_STEP}`, ph.id);
-      current().push(ph);
-      continue;
-    }
-    if (step.equipment) explicitEquipment.add(step.id);
-    current().push(step);
+    steps.feed(line, lineNo, raw);
   }
 
-  for (const open of stack) {
-    add(open.line, open.raw, "warning", "Groupe jamais fermé par « FIN » → fermé automatiquement en fin de texte.", open.group.id);
-  }
-
-  // Matériel par défaut (sauf repos passif et zones à saisir)
-  if (defaultEquipment) {
-    forEachInterval(rootChildren, (iv) => {
-      if (!explicitEquipment.has(iv.id) && iv.role !== "rest" && !isPlaceholder(iv)) iv.equipment = defaultEquipment!;
-    });
-  }
+  const { steps: rootChildren, hasGroup } = steps.finish(defaultEquipment);
 
   // Type de séance
   let session_kind: SessionKind = "autre";
@@ -308,6 +243,202 @@ export function parseEnergySession(text: string, opts: ParseOptions = {}): Energ
     },
     issues,
   };
+}
+
+// ── Lecteur d'étapes (réutilisé par les blocs WOD des séances spécifiques) ──
+
+/** Exercice de la bibliothèque à rattacher (lignes EXO d'un WOD) */
+export interface WodExerciseRef {
+  stepId: string;
+  name: string;
+  line: number;
+  raw: string;
+}
+
+export interface StepsParserOptions {
+  genId: () => string;
+  add: AddIssue;
+  /** Accepte les lignes « EXO … » (blocs WOD des séances spécifiques) */
+  allowExercises?: boolean;
+}
+
+/**
+ * Lit des lignes d'étapes (ÉCHAUFFEMENT / EFFORT / … , GROUPE … FIN, EXO …)
+ * et construit l'arbre EnergyStep[]. Une ligne illisible devient une zone « À SAISIR ».
+ */
+export function createStepsParser({ genId, add, allowExercises = false }: StepsParserOptions) {
+  const rootChildren: EnergyStep[] = [];
+  const stack: { group: EnergyGroup; line: number; raw: string }[] = [];
+  const current = () => (stack.length ? stack[stack.length - 1].group.children : rootChildren);
+  /** Étapes dont le matériel a été écrit explicitement (ne pas écraser par MATÉRIEL) */
+  const explicitEquipment = new Set<string>();
+  const exercises: WodExerciseRef[] = [];
+  let hasGroup = false;
+
+  const placeholder = (raw: string): EnergyInterval => ({
+    type: "interval",
+    id: genId(),
+    role: "open",
+    duration: { kind: "lap_button" },
+    target: { kind: "text", value: A_SAISIR },
+    notes: raw,
+  });
+
+  return {
+    /** Traite une ligne déjà nettoyée (cleanTypography, puces retirées). */
+    feed(line: string, lineNo: number, raw: string) {
+      const n = norm(line);
+
+      // ── Fermeture de groupe ──
+      if (/^fin\b/.test(n)) {
+        const closed = stack.pop();
+        if (!closed) add(lineNo, raw, "warning", "« FIN » sans « GROUPE » ouvert → ignoré.");
+        else if (closed.group.children.length === 0)
+          add(closed.line, closed.raw, "warning", "Groupe vide (aucune étape entre GROUPE et FIN).", closed.group.id);
+        return;
+      }
+
+      // ── Ouverture de groupe ──
+      if (/^groupe\b/.test(n)) {
+        hasGroup = true;
+        const [head, ...rest] = line.split("|");
+        const instructions = rest.join("|").trim();
+        const h = norm(head).replace(/^groupe\s*/, "");
+        const group: EnergyGroup = { type: "group", id: genId(), role: "work", repeat: 1, children: [] };
+
+        const rep = h.match(/(?:^|\s)(?:x\s*(\d+)|(\d+)\s*x)(?=\s|$)/);
+        if (rep) group.repeat = Number(rep[1] ?? rep[2]);
+        if (!rep || group.repeat < 1) {
+          group.repeat = 1;
+          add(lineNo, raw, "error", "Nombre de répétitions manquant ou invalide → mis à 1. Écris « GROUPE x6 ».", group.id);
+        }
+
+        const dep = h.match(/depart(?:\s*fixe)?\s*:?\s*(\S+)/);
+        if (dep) {
+          const s = parseTime(dep[1]);
+          if (s && s > 0) group.departure_every_s = s;
+          else add(lineNo, raw, "error", `Départ fixe « ${dep[1]} » illisible → à saisir. Écris par ex. « départ 4'30 ».`, group.id);
+        }
+
+        if (instructions) group.instructions = instructions;
+        current().push(group);
+        stack.push({ group, line: lineNo, raw });
+        return;
+      }
+
+      // ── Exercice (WOD) ──
+      if (allowExercises && /^exo(?:rcice)?\b/.test(n)) {
+        const ex = parseExerciseLine(line, lineNo, raw, genId, add);
+        current().push(ex);
+        exercises.push({ stepId: ex.id, name: ex.exercise_name, line: lineNo, raw });
+        return;
+      }
+
+      // ── Étape ──
+      const step = parseStepLine(line, lineNo, raw, genId, add);
+      if (!step) {
+        const ph = placeholder(raw);
+        add(lineNo, raw, "error", `Ligne non reconnue → zone « À SAISIR ». ${allowExercises ? HELP_WOD : HELP_STEP}`, ph.id);
+        current().push(ph);
+        return;
+      }
+      if (step.equipment) explicitEquipment.add(step.id);
+      current().push(step);
+    },
+
+    /** Ferme les groupes restés ouverts et applique le matériel par défaut. */
+    finish(defaultEquipment?: string | null) {
+      for (const open of stack) {
+        add(open.line, open.raw, "warning", "Groupe jamais fermé par « FIN » → fermé automatiquement à la fin du bloc.", open.group.id);
+      }
+      stack.length = 0;
+      // Matériel par défaut (sauf repos passif et zones à saisir)
+      if (defaultEquipment) {
+        forEachInterval(rootChildren, (iv) => {
+          if (!explicitEquipment.has(iv.id) && iv.role !== "rest" && !isPlaceholder(iv)) iv.equipment = defaultEquipment;
+        });
+      }
+      return { steps: rootChildren, hasGroup, exercises };
+    },
+  };
+}
+
+// ── Ligne EXO (exercice dans un WOD) : « EXO Sled Push 15m @110kg | consigne » ──
+
+const QTY_RE = /\s+((?:\d+(?:\s*-\s*\d+)?\s*(?:reps?|r[ée]p(?:[ée]titions?)?)\b)|(?:\d+(?:[.,]\d+)?\s*(?:km|m)\b)|(?:\d+\s*k?cals?\b)|(?:\d+h\d*|\d+'(?:\d{1,2}"?)?|\d+(?:"|s\b|sec\b|min\b)|\d+:\d{2}))\s*$/i;
+
+function parseExerciseLine(line: string, lineNo: number, raw: string, genId: () => string, add: AddIssue): ExerciseInterval {
+  const id = genId();
+  let body = line.replace(/^exo(?:rcice)?\s*:?\s*/i, "");
+  const pipe = body.indexOf("|");
+  const notes: string[] = [];
+  if (pipe >= 0) {
+    const c = body.slice(pipe + 1).trim();
+    if (c) notes.push(c);
+    body = body.slice(0, pipe);
+  }
+  const at = body.indexOf("@");
+  const chargeRaw = at >= 0 ? body.slice(at + 1).trim() : "";
+  let left = (at >= 0 ? body.slice(0, at) : body).trim();
+
+  // Nom / quantité : « Nom : 15m » ou « Nom 15m »
+  let qty = "";
+  const colon = left.indexOf(":");
+  if (colon >= 0) {
+    qty = left.slice(colon + 1).trim();
+    left = left.slice(0, colon).trim();
+  } else {
+    const m = left.match(QTY_RE);
+    if (m) {
+      qty = m[1].trim();
+      left = left.slice(0, m.index).trim();
+    }
+  }
+
+  const ex: ExerciseInterval = {
+    type: "exercise",
+    id,
+    role: "work",
+    exercise_id: "",
+    exercise_name: left || A_SAISIR,
+    target: { kind: "none" },
+  };
+  if (!left) add(lineNo, raw, "error", "Nom de l'exercice manquant. Écris « EXO Wall Ball Shot 10 reps @6kg ».", id);
+
+  if (qty) {
+    const q = cleanTypography(qty).toLowerCase().replace(/\s+/g, "");
+    const reps = q.match(/^(\d+)(?:-(\d+))?(?:reps?|r[ée]p(?:[ée]titions?)?)?$/);
+    if (reps) {
+      ex.reps_min = Number(reps[1]);
+      if (reps[2]) ex.reps_max = Number(reps[2]);
+    } else {
+      const d = parseDuration(q);
+      if (d && d.kind !== "lap_button") ex.duration = d;
+      else {
+        notes.unshift(`${A_SAISIR} quantité : ${qty}`);
+        add(lineNo, raw, "error", `Quantité « ${qty} » illisible → à saisir. Écris 10 reps · 10-12 reps · 15m · 30" · 15cal.`, id);
+      }
+    }
+  } else {
+    add(lineNo, raw, "warning", "Quantité absente (reps, distance ou temps). Ex. : « EXO Sled Push 15m @110kg ».", id);
+  }
+
+  if (chargeRaw) {
+    const c = norm(cleanTypography(chargeRaw)).replace(/\s+/g, "");
+    const kg = c.match(/^(\d+(?:[.,]\d+)?)kg$/);
+    const pct = c.match(/^(\d+(?:[.,]\d+)?)%(?:1?rm)?$/);
+    const bw = c.match(/^(?:pdc|bw|poidsducorps)(?:\+(\d+(?:[.,]\d+)?)kg)?$/);
+    if (kg) { ex.weight_kg = parseNum(kg[1])!; ex.weight_unit = "kg"; }
+    else if (pct) { ex.weight_kg = parseNum(pct[1])!; ex.weight_unit = "pct_rm"; }
+    else if (bw) { ex.weight_unit = "bw"; if (bw[1]) ex.weight_kg = parseNum(bw[1])!; }
+    else {
+      notes.push(`Charge : ${chargeRaw}`);
+      add(lineNo, raw, "warning", `Charge « ${chargeRaw} » non reconnue → gardée dans la consigne. Formats : @110kg · @75% · @PDC · @PDC+10kg.`, id);
+    }
+  }
+
+  if (notes.length) ex.notes = notes.join(" · ");
+  return ex;
 }
 
 // ── Ligne d'étape ────────────────────────────────────────────────────────────

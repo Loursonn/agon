@@ -6,7 +6,7 @@ import { SchemaViewerWithZoom } from "./SchemaViewer";
 import type { EnergySessionRow, EnergyStep, EnergyGroup, SessionImage } from "@/types/energy";
 import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
-import { formatTarget, formatS } from "@/lib/energy/formatTarget";
+import { formatTarget, formatS, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 
 // ── Shared constants ──────────────────────────────────────────────────────────
@@ -101,10 +101,7 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
         // Exercise
         if (step.type === "exercise") {
           const exoColor = "#FFC933";
-          const detail = [
-            step.reps_min ? (step.reps_max && step.reps_max !== step.reps_min ? `${step.reps_min}-${step.reps_max} reps` : `${step.reps_min} reps`) : null,
-            step.weight_kg ? `${step.weight_kg} ${step.weight_unit === "bw" ? "BW" : step.weight_unit === "pct_rm" ? "%RM" : "kg"}` : null,
-          ].filter(Boolean).join(" · ");
+          const detail = formatExerciseStep(step);
           return (
             <div
               key={step.id ?? i}

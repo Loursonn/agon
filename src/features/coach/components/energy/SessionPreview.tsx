@@ -18,7 +18,7 @@ import {
 } from "@/lib/energy";
 import type { EnergyGroup } from "@/types/energy";
 import HatchPattern from "./HatchPattern";
-import { formatTarget, formatS, formatSLong } from "@/lib/energy/formatTarget";
+import { formatTarget, formatS, formatSLong, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 
 // ── Zone colors (anchors) ─────────────────────────────────────────────────────
@@ -184,11 +184,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
                   if (!svgRect) return;
                   if (isExo) {
                     const exo = fi.interval as import("@/types/energy").ExerciseInterval;
-                    const repsLabel = exo.reps_min
-                      ? exo.reps_max && exo.reps_max !== exo.reps_min
-                        ? `${exo.reps_min}-${exo.reps_max} reps`
-                        : `${exo.reps_min} reps`
-                      : "";
+                    const repsLabel = formatExerciseStep(exo);
                     setTooltip({
                       x: e.clientX - svgRect.left,
                       y: barY,
@@ -299,7 +295,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
           style={{
             position: "absolute",
             top: Math.max(0, tooltip.y - 8),
-            left: Math.min(tooltip.x + 10, svgW - 160),
+            left: Math.max(0, Math.min(tooltip.x + 10, svgW - 210)),
             background: C.s1,
             border: `1px solid ${C.brdL}`,
             borderRadius: 4,
@@ -309,6 +305,9 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
             pointerEvents: "none",
             zIndex: 20,
             minWidth: 130,
+            maxWidth: 210,
+            overflowWrap: "anywhere",
+            lineHeight: 1.4,
           }}
         >
           <div style={{ fontWeight: 700, color: C.ac, marginBottom: 2 }}>{tooltip.role}</div>

@@ -14,7 +14,7 @@ import { SessionPreviewModal, ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
-import { formatS, formatTarget } from "@/lib/energy/formatTarget";
+import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
 import type { EnergyStep, EnergySessionRow } from "@/types/energy";
@@ -155,19 +155,7 @@ function StepCheckRow({
     // Step exercice (séance spécifique / MetCon) : pas de `children` ni de `repeat`.
     // Sans cette branche, on tombait dans le cas "groupe" → step.children undefined → crash.
     const rc = ROLE_COLOR[step.role] ?? "#6B7280";
-    const reps = step.reps_min != null
-      ? (step.reps_max != null && step.reps_max !== step.reps_min
-          ? `${step.reps_min}-${step.reps_max} reps`
-          : `${step.reps_min} reps`)
-      : step.duration?.kind === "time"
-      ? formatS(step.duration.value ?? 0)
-      : null;
-    const load = step.weight_kg != null
-      ? step.weight_unit === "pct_rm" ? `${step.weight_kg}% RM`
-      : step.weight_unit === "bw" ? "PDC"
-      : `${step.weight_kg} kg`
-      : null;
-    const detail = [reps, load].filter(Boolean).join(" · ");
+    const detail = formatExerciseStep(step);
     infoNode = (
       <>
         <div style={{ width: 3, height: 34, borderRadius: 2, background: rc, flexShrink: 0 }} />

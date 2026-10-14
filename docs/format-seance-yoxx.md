@@ -7,7 +7,7 @@ importe **sans IA** (parseur déterministe, `src/lib/import/yoxx/`).
 |---|---|---|
 | 1 | Séance **ÉNERGÉTIQUE** | ✅ disponible (bouton « Importer un texte ») |
 | 2 | Séance **MUSCU** (toutes les méthodes) | ✅ disponible (Programmation athlète > Muscu, et Banque de séances) |
-| 3 | Séance **SPÉCIFIQUE** (blocs classique + WOD) | inventaire fait, notation à valider |
+| 3 | Séance **SPÉCIFIQUE** (blocs classique + WOD) | ✅ disponible (éditeur de séance spécifique, catalogue Spécifique, Programmation athlète > Spécifique) |
 | 4 | **PROGRAMME** complet d'un athlète | à faire |
 
 Principes communs :
@@ -300,38 +300,79 @@ C1.1 Leg curl swiss ball : 3×6-8 @PDC RIR 3 tempo 401
 C1.2 Leg extension : 3×6 @75% RIR 2 méthode "Double contraction"
 ```
 
-## 3. Séance SPÉCIFIQUE — inventaire (notation à valider à l'étape 3)
+## 3. Séance SPÉCIFIQUE ✅
 
-Stockage : `energy_sessions` avec `session_kind = specifique`, `format = classique`, `classique_structure.blocks`.
+Où : **« Importer un texte »** dans l'éditeur d'une séance spécifique, le catalogue Spécifique
+et Programmation d'un athlète → Spécifique. L'import remplit l'éditeur (blocs), puis « Enregistrer » / « Enregistrer & planifier ».
 
-**Séance** : nom · sport (`sport_id`, ex. Hyrox) · qualité physique (`quality_id`, ex. Compromised) · consigne · images · schéma terrain.
+```
+SÉANCE SPÉCIFIQUE : <titre>
+SPORT : Hyrox
+QUALITÉ : Compromised
+CONSIGNE : <consigne générale>
+IMAGE : https://…
 
-**Bloc CLASSIQUE** (`ClassiqueBlock`) : titre · consigne (`instructions`) · items : nom (exercice de la banque ou consigne libre) ·
-prescription libre (« 4x30m, 5x8, 3' ») · repos · notes · vidéo (via l'exercice).
+BLOC CLASSIQUE : <titre> | <consigne du bloc>
+- <nom> : <prescription libre> | repos 1' | <notes>
 
-**Bloc WOD** (`WodBlock`) : titre · consigne · étapes = **mêmes étapes que l'énergétique** (intervalles, groupes, départ fixe)
-**+ étape EXERCICE** (`ExerciseInterval`) : exercice de la banque · rôle · reps min / max · charge (`kg` | `PDC` | `%RM`) ·
-durée (temps) · consigne · vidéo.
+BLOC WOD : <titre> | <consigne du bloc>
+<lignes de l'énergétique : ÉCHAUFFEMENT / EFFORT / RÉCUP / REPOS / RETOUR / LIBRE, GROUPE … FIN>
+EXO <exercice> <quantité> @<charge> | <consigne>
+```
 
-**Notation proposée (brouillon)** :
+### En-têtes
+
+| Paramètre app | Écriture | Si absent |
+|---|---|---|
+| Nom | `SÉANCE SPÉCIFIQUE : Compromised Run` | « Séance importée » |
+| Sport (`sport_id`) | `SPORT : Hyrox` — lié par nom, **créé** s'il n'existe pas | à choisir dans l'éditeur |
+| Qualité physique (`quality_id`) | `QUALITÉ : Compromised` — liée par nom, **créée** sinon | aucune |
+| Consigne de séance (`notes`) | `CONSIGNE : …` (affichée à l'athlète) | aucune |
+| Illustration | `IMAGE : https://…` | aucune |
+| Schéma terrain | non importable (dessin) | — |
+
+### Bloc CLASSIQUE
+
+| Paramètre app (`ClassiqueItem`) | Écriture |
+|---|---|
+| Titre du bloc / consigne du bloc | `BLOC CLASSIQUE : Échauffement en autonomie \| consigne` |
+| Nom (consigne ou exercice) | texte avant `:` — **consigne simple** ; lié à la bibliothèque (vidéo) seulement si le nom est **identique** à un exercice |
+| Prescription libre | après `:` (ex. `4x30m, 5x8, 3'`) |
+| Repos | segment `\| repos 1'` |
+| Notes | autres segments après `\|` |
+
+### Bloc WOD
+
+Toutes les lignes de l'énergétique (rôles, durées, matériel, cibles, `GROUPE x6 départ 4' | consigne … FIN`), plus :
+
+| Paramètre app (`ExerciseInterval`) | Écriture |
+|---|---|
+| Exercice | `EXO <nom>` — nom identique → lié ; noms proches → choix ; sinon **créé** dans la bibliothèque |
+| Répétitions | `10 reps` · `8-10 reps` (ou `EXO Wall ball : 15`) |
+| **Distance** | `15m` · `1km` (ex. Sled Push 15 m) |
+| Temps | `30"` · `1'30` |
+| Calories | `15cal` |
+| Charge | `@110kg` · `@75%` (du 1RM) · `@PDC` · `@PDC+10kg` |
+| Consigne | après `\|` |
+
+Nom et quantité : `EXO Sled Push 15m @110kg` ou, plus sûr si le nom contient des chiffres, `EXO Sled Push : 15m @110kg`.
+
+### Exemple : Compromised Run
 
 ```
 SÉANCE SPÉCIFIQUE : Compromised Run
 SPORT : Hyrox
 QUALITÉ : Compromised
+CONSIGNE : Wall balls toujours avec une box dessous.
 
-BLOC CLASSIQUE : Échauffement en autonomie | consigne du bloc
+BLOC CLASSIQUE : Échauffement en autonomie | Mobilisation + Run + Force progressive + stimulation cardiaque
 - Mobilisation + Run + Force progressive : 4x30m, 5x8, 3' | repos 1'
 
-BLOC WOD : Compromised SPush + Run + WB | décrément < 1'15
+BLOC WOD : Compromised SPush + Run + WB | Aucun bloc > bloc le plus rapide + 1'15
 GROUPE x6
-  EXO Sled Push 15m @ 110kg
+  EXO Sled Push 15m @110kg | Buste un peu plus haut. Pousse le sol derrière toi.
   EFFORT 600m [Course] @ 4'45/km
-  EXO Wall Ball Shot 10 reps @ 6kg
+  EXO Wall Ball Shot 10 reps @6kg
   RÉCUP 2' [Course] | Footing léger permet de récup
 FIN
 ```
-
-**Manque repéré dans l'app** : une étape EXERCICE du WOD ne sait saisir qu'un **temps**, pas une **distance**
-(Sled Push « 15 reps » au lieu de « 15 m »). Le type de données l'accepte déjà (`duration.kind = distance`) :
-à ajouter dans l'éditeur et l'affichage avant l'étape 3.
