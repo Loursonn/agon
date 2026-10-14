@@ -131,6 +131,17 @@ export default function EnergyLibraryPage() {
             Banque énergétique
           </h1>
           <button
+            onClick={() => navigate("/coach/energy-library/new?import=texte")}
+            title="Coller une séance écrite au format YOXX"
+            style={{
+              padding: "8px 16px", borderRadius: 4, border: `1px solid ${C.ac}40`,
+              background: C.ac + "12", color: C.ac, fontSize: 13,
+              fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+            }}
+          >
+            Importer un texte
+          </button>
+          <button
             onClick={() => navigate("/coach/energy-library/new")}
             style={{
               padding: "8px 16px", borderRadius: 4, border: "none",

@@ -72,7 +72,7 @@ export function ExerciceRow({
   const hasName = !!exercice.exercise_name
 
   return (
-    <div style={{
+    <div data-step-id={exercice.id} style={{
       borderRadius: 4,
       border: "1px solid " + (showParams ? accent + "50" : C.brdL),
       background: showParams ? accent + "08" : C.s1,

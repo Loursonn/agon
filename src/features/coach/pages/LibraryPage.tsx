@@ -172,9 +172,20 @@ function EnergyTab() {
         )}
 
         <button
+          onClick={() => navigate("/coach/energy-library/new?import=texte")}
+          title="Coller une séance écrite au format YOXX"
+          style={{
+            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.ac}40`,
+            background: C.ac + "12", color: C.ac, fontSize: 12,
+            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+          }}
+        >
+          Importer un texte
+        </button>
+        <button
           onClick={() => navigate("/coach/energy-library/new")}
           style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
+            padding: "7px 14px", borderRadius: 4, border: "none",
             background: C.acV, color: "#0E0C0A", fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}

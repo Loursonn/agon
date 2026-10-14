@@ -326,6 +326,11 @@ function EnergyActiveSession({
             <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>
               {validatedCount}/{total} blocs validés · En cours…
             </div>
+            {session.notes && (
+              <div style={{ fontSize: 11, color: C.tx2, marginTop: 4, fontStyle: "italic", whiteSpace: "pre-line" }}>
+                {session.notes}
+              </div>
+            )}
           </div>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <X size={13} />
