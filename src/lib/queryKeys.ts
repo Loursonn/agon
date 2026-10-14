@@ -81,4 +81,7 @@ export const QK = {
   docAssignments:  (oid: string) => ['docs', 'assignments', oid]   as const,
   docComments:     (docId: string, aid: string) => ['docs', 'comments', docId, aid] as const,
   docSignedUrl:    (path: string) => ['docs', 'signed-url', path]  as const,
+  // ── Nouveautés de l'app (vue coach) ───────────────────────────────────────────
+  appUpdateReads:  (uid: string) => ['app-update-reads', uid] as const,
+  appUpdateStats:  ['app-update-stats'] as const,
 } as const;

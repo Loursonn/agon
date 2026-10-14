@@ -18,6 +18,7 @@ import { CommandPaletteProvider } from "./context/CommandPaletteContext";
 import { CommandPalette } from "./components/CommandPalette";
 import { useCommandPalette } from "./context/CommandPaletteContext";
 import { Search } from "lucide-react";
+import { useAppUpdates } from "@/features/shared/hooks/useAppUpdates";
 
 // ── Agon brand icons (inline SVG, currentColor) ─────────────────────────────
 
@@ -27,6 +28,7 @@ const AgonIcons = {
   stats:       <svg {...iconProps}><path d="M3 20H21M6 20V13M12 20V5M18 20V9"/></svg>,
   groupe:      <svg {...iconProps}><circle cx="9" cy="8" r="3"/><path d="M3 20V19A6 6 0 0 1 15 19V20"/><path d="M15 5.3A3 3 0 0 1 15 10.7M18 14A5 5 0 0 1 21 18.5V20"/></svg>,
   barre:       <svg {...iconProps}><path d="M3 12H21M6 7V17M9 9V15M15 9V15M18 7V17"/></svg>,
+  nouveautes:  <svg {...iconProps}><path d="M6 17V11A6 6 0 0 1 18 11V17M4 17H20M12 3V5M10 20H14"/></svg>,
   fiche:       <svg {...iconProps}><path d="M6 3H14L19 8V21H6Z"/><path d="M14 3V8H19M9 12H16M9 15.5H16M9 19H13"/></svg>,
   test:        <svg {...iconProps}><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>,
   coach:       <svg {...iconProps}><rect x="5" y="4" width="14" height="17"/><path d="M9 4V2.5H15V4M8.5 9H15.5M8.5 13H15.5M8.5 17H12"/></svg>,
@@ -46,6 +48,7 @@ const NAV_ITEMS = [
   { icon: AgonIcons.coach,       label: "Coachs",         path: "/coach/coaches",    exact: false, certified: true,  roadmap: false },
   { icon: AgonIcons.progression, label: "Roadmap",        path: "/coach/roadmap",    exact: false, certified: false, roadmap: true  },
   { icon: AgonIcons.message,     label: "Avis athlètes",  path: "/coach/avis",       exact: false, certified: false, roadmap: true  },
+  { icon: AgonIcons.nouveautes, label: "Nouveautés",     path: "/coach/nouveautes", exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.reglages,   label: "Paramètres",     path: "/coach/settings",   exact: false, certified: false, roadmap: false },
 ];
 
@@ -67,7 +70,8 @@ const SIDEBAR_STYLE: React.CSSProperties = {
 function CoachShellInner() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
+  const unseenUpdates = useAppUpdates(user?.id).unseen.length;
   const { toggle } = useCommandPalette();
 
   function isActive(path: string, exact: boolean) {
@@ -168,7 +172,13 @@ function CoachShellInner() {
                     <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
                       {item.icon}
                     </span>
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    <span className="group-data-[collapsible=icon]:hidden" style={{ flex: 1 }}>{item.label}</span>
+                    {item.path === "/coach/nouveautes" && unseenUpdates > 0 && (
+                      <span aria-label={`${unseenUpdates} nouveauté(s) non vue(s)`} style={{
+                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 5px", background: C.ac, color: "#0E0C0A",
+                        fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      }}>{unseenUpdates}</span>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );

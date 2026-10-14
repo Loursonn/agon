@@ -52,6 +52,7 @@ const ProfilAthletePage         = lazy(() => import("./features/coach/pages/Prof
 const EnergyLibraryPage         = lazy(() => import("./features/coach/pages/EnergyLibraryPage.tsx"));
 const CoachHyroxPage            = lazy(() => import("./features/coach/pages/HyroxPage.tsx"));
 const FichesPage                = lazy(() => import("./features/coach/pages/FichesPage.tsx"));
+const CoachUpdatesPage          = lazy(() => import("./features/coach/pages/CoachUpdatesPage.tsx"));
 const AthleteFichesPage         = lazy(() => import("./features/coach/pages/AthleteFichesPage.tsx"));
 
 const queryClient = new QueryClient();
@@ -120,6 +121,7 @@ function AnimatedRoutes() {
             <Route path="library"  element={<LibraryPage />} />
             <Route path="tests"    element={<CoachTestsBankPage />} />
             <Route path="fiches"   element={<FichesPage />} />
+            <Route path="nouveautes" element={<CoachUpdatesPage />} />
             <Route path="coaches"  element={<CoachesListPage />} />
             <Route path="roadmap"  element={<RoadmapPage />} />
             <Route path="avis"     element={<AthleteFeedbackPage />} />

@@ -22,6 +22,7 @@ import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWork
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/lib/theme";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
+import { CoachUpdatesCard } from "@/features/coach/components/updates/CoachUpdatesCard";
 import { COMPETITION_META } from "@/types/planning";
 import type { SessionStatus } from "@/features/shared/hooks/useCoachDashboard";
 
@@ -142,6 +143,10 @@ export default function CoachHomePage() {
             {isCoachAthlete ? " · ton programme inclus" : ""}
           </p>
         </motion.div>
+
+        <div className="mt-5">
+          <CoachUpdatesCard />
+        </div>
 
         <motion.div variants={fadeUp} className="mt-5 mb-5">
           <CitationDuJour />

@@ -1,0 +1,80 @@
+/**
+ * Nouveautés de l'app, affichées aux coachs (accueil + page Nouveautés).
+ * Entrée la plus récente EN TÊTE. `id` unique et stable (sert d'accusé de
+ * lecture en base : app_update_reads.update_id) — ne jamais le modifier.
+ * Rédaction : pour un coach, l'utilité concrète avant tout, pas de jargon.
+ */
+
+export interface ReleaseNoteSection {
+  title: string;
+  /** Une phrase par point : ce que ça permet, où le trouver */
+  points: string[];
+}
+
+export interface ReleaseNote {
+  id: string;
+  date: string; // yyyy-MM-dd
+  title: string;
+  summary: string;
+  sections: ReleaseNoteSection[];
+}
+
+export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: "2026-10-14-ameliorations",
+    date: "2026-10-14",
+    title: "Séances plus claires et corrections",
+    summary: "Supersets visibles partout, commentaires sur tous les exercices, annulation de validation fiable.",
+    sections: [
+      {
+        title: "Pour tes athlètes",
+        points: [
+          "Les supersets apparaissent dans l'aperçu de la séance (Programme) : l'athlète voit avant de commencer quels exercices s'enchaînent sans repos.",
+          "L'athlète peut commenter chaque exercice, y compris dans un superset et les exercices libres : tu reçois ses retours sur tous les blocs.",
+          "Annuler la validation d'une séance (bouton « Rouvrir » en musculation, « Annuler » en énergie) remet la séance à faire partout : accueil, programme, calendrier.",
+          "Le « J'aime » de la citation du jour fonctionne : le compteur est commun à tous les athlètes.",
+          "Un œil permet d'afficher le mot de passe à la connexion et à l'inscription.",
+          "L'icône Agon s'affiche quand l'app est ajoutée à l'écran d'accueil d'un iPhone (supprimer puis réajouter le raccourci).",
+        ],
+      },
+      {
+        title: "Pour toi",
+        points: [
+          "Cette carte « Nouveautés » : chaque mise à jour de l'app est résumée ici. Clique « J'ai vu » pour la ranger ; l'historique reste dans le menu Nouveautés.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-14-fiches",
+    date: "2026-10-14",
+    title: "Nouveau : les Fiches",
+    summary: "Une banque de PDF et d'images (mobilité, pacing, nutrition…) à rattacher aux séances et à partager avec tes athlètes.",
+    sections: [
+      {
+        title: "Ta banque de fiches",
+        points: [
+          "Menu « Fiches » : importe tes PDF ou images par glisser-déposer, classe-les par catégorie et retrouve-les avec la recherche.",
+          "Crée des variantes d'une même fiche (V1, V2, « Prog S5 »…) pour faire évoluer un document sans le dupliquer.",
+          "Coche « Libre-service » pour qu'une fiche soit consultable par tous tes athlètes ; archive-la pour la retirer sans casser les séances où elle est rattachée.",
+        ],
+      },
+      {
+        title: "Dans la programmation",
+        points: [
+          "Bouton « + Fiche » sur une séance ou un bloc : l'athlète voit un lien 📄 au bon moment, pendant sa séance.",
+          "« Varier selon la semaine » : une variante différente en S1-S2 puis en S3-S4, sans rien refaire chaque semaine.",
+          "Les fiches suivent quand tu enregistres une séance dans la banque ou la duplique vers un autre athlète (les fiches personnelles ne sont pas copiées).",
+        ],
+      },
+      {
+        title: "Pour chaque athlète",
+        points: [
+          "Onglet « Fiches » de l'athlète : ce qu'il a reçu, ce qu'il a ouvert (vu / non vu) et ses commentaires.",
+          "Importe une fiche personnelle (ex. pacing individualisé) visible uniquement par lui, ou attribue une fiche de la banque avec une note.",
+          "L'athlète peut t'envoyer captures d'écran, photos ou PDF depuis Programme → Fiches → Mes ajouts (images compressées automatiquement).",
+        ],
+      },
+    ],
+  },
+];
