@@ -80,6 +80,8 @@ export function FicheImportDialog({ athleteId, athleteName, defaultCategory = "a
       }
     }
     setBusy(false);
+    // Les fiches importées sortent du formulaire ; les échecs restent pour réessayer
+    setRows(r => r.filter(x => x.status !== "done"));
     if (created.length) {
       toast.success(`${created.length} fiche(s) importée(s)`);
       onDone?.(created);

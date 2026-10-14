@@ -135,8 +135,9 @@ export function FichePickerDrawer({
               ))}
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-              {tab === "import" ? (
-                <>
+              {/* Formulaire d'import toujours monté (masqué hors onglet) : la saisie
+                  survit aux changements d'onglet et à la bascule banque / perso */}
+              <div style={{ display: tab === "import" ? "block" : "none" }}>
                 {athleteId && (
                   <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                     <button style={chip(!importPersonal)} onClick={() => setImportPersonal(false)}>Dans la banque</button>
@@ -144,14 +145,13 @@ export function FichePickerDrawer({
                   </div>
                 )}
                 <FicheImportDialog
-                  key={importPersonal ? "perso" : "banque"}
                   inline
                   athleteId={importPersonal ? athleteId : undefined}
                   onClose={() => setTab("banque")}
                   onDone={docs => { if (docs[0]) pickFamily({ origin: docs[0], variants: [] }); }}
                 />
-                </>
-              ) : (
+              </div>
+              {tab !== "import" && (
                 <>
                   <input style={{ ...input, marginBottom: 8 }} placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} />
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
