@@ -346,7 +346,7 @@ export function MethodPreview({ config, compact = false }: MethodPreviewProps) {
 
   return (
     <div style={{
-      background: C.s2, borderRadius: 8, padding: "10px 14px",
+      background: C.s2, borderRadius: 4, padding: "10px 14px",
       border: `1px solid ${C.brdL}`,
     }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>

@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Dumbbell, X } from "lucide-react";
+import { Dumbbell, X, Zap, Target } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import { ExerciseBank } from "@/components/coach/ExerciseBank";
 import { BlocBankView } from "@/features/coach/components/programmation/BlocBankView";
+import { SessionBankView } from "@/features/coach/components/programmation/SessionBankView";
 import SpecificCatalog from "@/features/coach/components/specific/SpecificCatalog";
 import SpecificBlockBankView from "@/features/coach/components/specific/SpecificBlockBankView";
 import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
@@ -30,10 +31,16 @@ import { formValuesToConfig } from "@/features/coach/components/library/MethodPr
 
 type LibTab = "musculaire" | "energetique" | "specifique";
 
-const TABS: { key: LibTab; label: string; icon: string }[] = [
-  { key: "musculaire",  label: "Musculaire",  icon: "🏋️" },
-  { key: "energetique", label: "Énergétique", icon: "⚡" },
-  { key: "specifique",  label: "Spécifique",  icon: "🎯" },
+const TAB_ICONS: Record<LibTab, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
+  musculaire:  Dumbbell,
+  energetique: Zap,
+  specifique:  Target,
+};
+
+const TABS: { key: LibTab; label: string }[] = [
+  { key: "musculaire",  label: "Musculaire"  },
+  { key: "energetique", label: "Énergétique" },
+  { key: "specifique",  label: "Spécifique"  },
 ];
 
 // ── Energy sub-tab constants ──────────────────────────────────────────────────
@@ -62,7 +69,7 @@ const KIND_OPTIONS: { value: string; label: string }[] = [
 
 function SkeletonCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
       <div style={{ height: 3, background: C.s2 }} />
       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ height: 13, width: "60%", background: C.s2, borderRadius: 4 }} />
@@ -112,7 +119,7 @@ function EnergyTab() {
         marginBottom: 20,
       }}>
         {/* Filter tabs */}
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 8, padding: 2 }}>
+        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
           {FILTER_TABS.map((t) => (
             <button
               key={t.value}
@@ -167,8 +174,8 @@ function EnergyTab() {
         <button
           onClick={() => navigate("/coach/energy-library/new")}
           style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 8, border: "none",
-            background: C.ac, color: "#fff", fontSize: 12,
+            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
+            background: C.acV, color: "#0E0C0A", fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -187,14 +194,14 @@ function EnergyTab() {
           Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
         ) : filtered.length === 0 ? (
           <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px 20px", color: C.tx3 }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>⚡</div>
+            <div style={{ marginBottom: 12 }}><Zap size={36} style={{ color: C.tx3 }} /></div>
             <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>Aucune séance</div>
             <div style={{ fontSize: 13, marginBottom: 20 }}>Créez la première séance de la banque énergétique.</div>
             <button
               onClick={() => navigate("/coach/energy-library/new")}
               style={{
-                padding: "9px 20px", borderRadius: 8, border: "none",
-                background: C.ac, color: "#fff", fontSize: 13,
+                padding: "9px 20px", borderRadius: 4, border: "none",
+                background: C.acV, color: "#0E0C0A", fontSize: 13,
                 fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               }}
             >
@@ -235,7 +242,7 @@ const SCOPE_OPTIONS: { value: "all" | MethodScope; label: string }[] = [
 
 function SkeletonMethodCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
       <div style={{ height: 3, background: C.s2 }} />
       <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ height: 14, width: "55%", background: C.s2, borderRadius: 4 }} />
@@ -318,7 +325,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
         padding: "14px 0 16px", borderBottom: `1px solid ${C.brd}`, marginBottom: 20,
       }}>
         {/* Scope */}
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 8, padding: 2 }}>
+        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
           {SCOPE_OPTIONS.map((t) => (
             <button key={t.value} onClick={() => setScopeFilter(t.value)} style={{
               padding: "5px 12px", borderRadius: 6, border: "none",
@@ -337,7 +344,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           style={{
-            padding: "5px 10px", borderRadius: 8, border: `1px solid ${C.brd}`,
+            padding: "5px 10px", borderRadius: 4, border: `1px solid ${C.brd}`,
             background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit",
             cursor: "pointer", outline: "none", height: 32,
           }}
@@ -349,7 +356,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
         </select>
 
         {/* Official / custom */}
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 8, padding: 2 }}>
+        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
           {(["all", "official", "custom"] as const).map((v) => (
             <button key={v} onClick={() => setOfficialFilter(v)} style={{
               padding: "5px 12px", borderRadius: 6, border: "none",
@@ -385,8 +392,8 @@ function MethodsTab({ coachId }: { coachId: string }) {
         <button
           onClick={openCreate}
           style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 8, border: "none",
-            background: C.ac, color: "#fff", fontSize: 12,
+            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
+            background: C.acV, color: "#0E0C0A", fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -436,10 +443,9 @@ function MethodsTab({ coachId }: { coachId: string }) {
           <div style={{
             position: "fixed", top: "50%", left: "50%", zIndex: 91,
             transform: "translate(-50%, -50%)",
-            background: C.bg, borderRadius: 16,
+            background: C.bg, borderRadius: 6,
             width: "min(96vw, 820px)", maxHeight: "90vh",
             display: "flex", flexDirection: "column",
-            boxShadow: "0 12px 48px rgba(0,0,0,0.6)",
             border: `1px solid ${C.brdL}`,
           }}>
             <div style={{ padding: "16px 20px 14px", borderBottom: `1px solid ${C.brd}`, flexShrink: 0, display: "flex", alignItems: "center" }}>
@@ -448,7 +454,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
               </div>
               <button
                 onClick={() => setSheetOpen(false)}
-                style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 30, height: 30, borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 <X size={14} />
               </button>
@@ -499,24 +505,27 @@ export default function LibraryPage() {
           paddingTop: 16,
         }}
       >
-        {TABS.map(({ key, label, icon }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            style={{
-              padding: "8px 18px", border: "none", background: "transparent",
-              color: activeTab === key ? C.ac : C.tx3,
-              fontSize: 13, fontWeight: activeTab === key ? 700 : 400,
-              cursor: "pointer", fontFamily: "inherit",
-              borderBottom: "2px solid " + (activeTab === key ? C.ac : "transparent"),
-              display: "flex", alignItems: "center", gap: 6,
-              transition: "color 150ms",
-            }}
-          >
-            <span style={{ fontSize: 15 }}>{icon}</span>
-            {label}
-          </button>
-        ))}
+        {TABS.map(({ key, label }) => {
+          const Icon = TAB_ICONS[key];
+          return (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              style={{
+                padding: "8px 18px", border: "none", background: "transparent",
+                color: activeTab === key ? C.ac : C.tx3,
+                fontSize: 13, fontWeight: activeTab === key ? 700 : 400,
+                cursor: "pointer", fontFamily: "inherit",
+                borderBottom: "2px solid " + (activeTab === key ? C.ac : "transparent"),
+                display: "flex", alignItems: "center", gap: 6,
+                transition: "color 150ms",
+              }}
+            >
+              <Icon size={15} style={{ color: activeTab === key ? C.ac : C.tx3 }} />
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab content */}
@@ -535,7 +544,7 @@ export default function LibraryPage() {
                   key={t.k}
                   onClick={() => setMuscuTab(t.k as typeof muscuTab)}
                   style={{
-                    padding: "6px 14px", borderRadius: 8,
+                    padding: "6px 14px", borderRadius: 4,
                     border: "1px solid " + (muscuTab === t.k ? C.ac : C.brdL),
                     background: muscuTab === t.k ? C.acS : "transparent",
                     color: muscuTab === t.k ? C.ac : C.tx3,
@@ -547,13 +556,7 @@ export default function LibraryPage() {
             {muscuTab === "exercices" && <ExerciseBank coachId={user.id} onAddToExos={undefined} />}
             {muscuTab === "methodes"  && <MethodsTab coachId={user.id} />}
             {muscuTab === "blocs"     && <BlocBankView />}
-            {muscuTab === "seances"   && (
-              <div style={{ textAlign: "center", padding: "60px 20px", color: C.tx3 }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>🏗️</div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>Banque de séances musculaires</div>
-                <div style={{ fontSize: 13 }}>À venir — les séances complètes réutilisables arriveront ici.</div>
-              </div>
-            )}
+            {muscuTab === "seances"   && <SessionBankView />}
           </>
         )}
         {activeTab === "energetique" && <EnergyTab />}
@@ -566,7 +569,7 @@ export default function LibraryPage() {
                   key={t.k}
                   onClick={() => setSpecTab(t.k as "seances" | "blocs")}
                   style={{
-                    padding: "6px 14px", borderRadius: 8,
+                    padding: "6px 14px", borderRadius: 4,
                     border: "1px solid " + (specTab === t.k ? "#F5A623" : C.brdL),
                     background: specTab === t.k ? "#F5A62315" : "transparent",
                     color: specTab === t.k ? "#F5A623" : C.tx3,

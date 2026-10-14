@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { Search, Plus } from "lucide-react"
 import { EX_TYPES, exTypeLabel, exTypeColor } from "@/lib/exerciseTypes"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 
 interface ExerciceSearchProps {
   value: string
@@ -79,7 +79,7 @@ export function ExerciceSearch({ value, onSelect, onClose, onFreeText, showTypeF
 
   return (
     <div style={{ position: "relative" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, border: "1px solid " + C.brdL, background: C.s2 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2 }}>
         <Search size={13} color={C.tx3} />
         <input
           ref={inputRef}
@@ -110,7 +110,7 @@ export function ExerciceSearch({ value, onSelect, onClose, onFreeText, showTypeF
                 key={t.value}
                 onClick={() => setTypeFilter(on ? "" : t.value)}
                 style={{
-                  padding: "3px 9px", borderRadius: 20,
+                  padding: "3px 9px", borderRadius: 6,
                   border: "1px solid " + (on ? color : C.brdL),
                   background: on ? color + "18" : "transparent",
                   color: on ? color : C.tx3,
@@ -128,8 +128,8 @@ export function ExerciceSearch({ value, onSelect, onClose, onFreeText, showTypeF
       {(results.length > 0 || showCreate || (onFreeText && search.trim())) && (
         <div style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
-          background: C.s1, border: "1px solid " + C.brdL, borderRadius: 10,
-          marginTop: 4, maxHeight: 240, overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          background: C.s1, border: "1px solid " + C.brdL, borderRadius: 4,
+          marginTop: 4, maxHeight: 240, overflowY: "auto",
         }}>
           {results.map(ex => (
             <button

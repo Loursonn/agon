@@ -24,7 +24,7 @@ export function EmptyState({ icon: Icon, title, description, cta }: EmptyStatePr
         alignItems: "center",
         justifyContent: "center",
         padding: "48px 24px",
-        borderRadius: 14,
+        borderRadius: 6,
         border: "1px dashed rgba(255,255,255,0.08)",
         textAlign: "center",
       }}
@@ -33,8 +33,8 @@ export function EmptyState({ icon: Icon, title, description, cta }: EmptyStatePr
         style={{
           width: 48,
           height: 48,
-          borderRadius: 12,
-          background: "rgba(201,161,74,0.10)",
+          borderRadius: 6,
+          background: "rgba(255,201,51,0.10)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -60,9 +60,9 @@ export function EmptyState({ icon: Icon, title, description, cta }: EmptyStatePr
           style={{
             marginTop: 20,
             padding: "8px 20px",
-            borderRadius: 8,
+            borderRadius: 4,
             border: "1px solid " + C.ac + "50",
-            background: "rgba(201,161,74,0.12)",
+            background: "rgba(255,201,51,0.12)",
             color: C.ac,
             fontSize: 13,
             fontWeight: 600,
@@ -71,10 +71,10 @@ export function EmptyState({ icon: Icon, title, description, cta }: EmptyStatePr
             transition: "background 150ms ease-out",
           }}
           onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "rgba(201,161,74,0.22)")
+            ((e.currentTarget as HTMLElement).style.background = "rgba(255,201,51,0.22)")
           }
           onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "rgba(201,161,74,0.12)")
+            ((e.currentTarget as HTMLElement).style.background = "rgba(255,201,51,0.12)")
           }
         >
           {cta.label}

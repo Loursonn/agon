@@ -8,11 +8,13 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { C } from "@/lib/theme"
-import { Plus, Pencil, X, ChevronDown, ChevronUp, BarChart2, Copy } from "lucide-react"
+import { Plus, Pencil, X, ChevronDown, ChevronUp, BarChart2, Copy, Library } from "lucide-react"
 import { toast } from "sonner"
 import { useProgrammation } from "./hooks/useProgrammation"
 import { useUpdateProgrammation } from "./hooks/useUpdateProgrammation"
 import { useDuplicateProgSession } from "./hooks/useDuplicateProgSession"
+import { useSessionBank } from "./hooks/useSessionBank"
+import { prepareSession } from "./bankUtils"
 import { usePlaceSession } from "@/features/shared/hooks/usePlaceSession"
 import { useAuth } from "@/hooks/useAuth"
 import type { ProgSession } from "./types"
@@ -21,7 +23,7 @@ import { SessionBlocEditor } from "./SessionBlocEditor"
 import { CardSkeleton } from "@/features/shared/components/skeletons"
 import { ProgSessionWeekDrawer } from "./ProgSessionWeekDrawer"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
@@ -65,7 +67,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 12, border: "1px solid " + (isOpen ? VIOLET + "60" : C.brdL),
+      background: C.s1, borderRadius: 6, border: "1px solid " + (isOpen ? VIOLET + "60" : C.brdL),
       overflow: "hidden", marginBottom: 8,
       transition: "border-color 150ms",
     }}>
@@ -149,7 +151,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
             onClick={() => { setShowPlace(p => !p); setShowDuplicate(false) }}
             title="Placer dans le planning"
             style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: showPlace ? VIOLET_S : "transparent", color: showPlace ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
-          >📅</button>
+          ></button>
 
           <button
             onClick={() => { setShowDuplicate(p => !p); setShowPlace(false) }}
@@ -161,7 +163,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
             <>
               <button
                 onClick={onDelete}
-                style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: C.r, color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
+                style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
               >Supprimer</button>
               <button
                 onClick={() => setConfirmDelete(false)}
@@ -206,7 +208,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                   setShowPlace(false)
                 }}
                 disabled={placeSession.isPending}
-                style={{ padding: "10px 0", borderRadius: 9, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "10px 0", borderRadius: 4, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 {placeSession.isPending ? "En cours…" : "Générer tout le cycle ▶"}
               </button>
@@ -217,7 +219,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                 type="date"
                 value={placeDate}
                 onChange={e => setPlaceDate(e.target.value)}
-                style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none" }}
+                style={{ flex: 1, padding: "8px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none" }}
               />
               <button
                 onClick={async () => {
@@ -232,7 +234,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                   setShowPlace(false)
                 }}
                 disabled={placeSession.isPending}
-                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 {placeSession.isPending ? "…" : "Placer"}
               </button>
@@ -268,7 +270,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                   }}
                   style={{
                     display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                    padding: "8px 10px", borderRadius: 8,
+                    padding: "8px 10px", borderRadius: 4,
                     border: "1px solid " + C.brdL, background: C.s1, color: C.tx,
                     fontSize: 12, fontWeight: 600, cursor: duplicateSession.isPending ? "not-allowed" : "pointer",
                     fontFamily: "inherit", opacity: duplicateSession.isPending ? 0.6 : 1,
@@ -333,6 +335,11 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
   const updateMutation = useUpdateProgrammation(athleteId)
   const [sessions, setSessions] = useState<ProgSession[]>([])
   const [isAddingSession, setIsAddingSession] = useState(false)
+  const [showSessionBank, setShowSessionBank] = useState(false)
+  // Modèle choisi dans la banque : SessionForm pré-rempli, blocs copiés à la validation
+  const [bankTemplate, setBankTemplate] = useState<ProgSession | null>(null)
+  const { user } = useAuth()
+  const { data: bankSessions = [] } = useSessionBank(user?.id)
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
   const [weekDrawerSession, setWeekDrawerSession] = useState<ProgSession | null>(null)
@@ -364,8 +371,9 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
     const newSession: ProgSession = {
       ...data,
       id: crypto.randomUUID(),
-      blocs: [],
+      blocs: bankTemplate ? prepareSession(bankTemplate).blocs : [],
     }
+    setBankTemplate(null)
     const next = [...sessions, newSession]
     setSessions(next)
     updateMutation.mutate(next)
@@ -417,12 +425,26 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
   return (
     <div>
       {/* Top bar */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
         <button
-          onClick={() => { setIsAddingSession(true); setEditingSessionId(null) }}
+          onClick={() => { setShowSessionBank(p => !p); setIsAddingSession(false); setBankTemplate(null) }}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "8px 16px", borderRadius: 9,
+            padding: "8px 16px", borderRadius: 4,
+            border: "1px solid " + (showSessionBank ? VIOLET : C.brdL),
+            background: showSessionBank ? VIOLET + "0F" : "transparent",
+            color: showSessionBank ? VIOLET : C.tx3,
+            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+          }}
+        >
+          <Library size={13} />
+          Depuis la banque
+        </button>
+        <button
+          onClick={() => { setIsAddingSession(true); setEditingSessionId(null); setShowSessionBank(false); setBankTemplate(null) }}
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            padding: "8px 16px", borderRadius: 4,
             border: "none", background: VIOLET, color: "#fff",
             fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
           }}
@@ -432,18 +454,65 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
         </button>
       </div>
 
-      {/* Add session inline form */}
+      {/* Session bank picker */}
+      {showSessionBank && (
+        <div style={{ marginBottom: 12, padding: 10, borderRadius: 4, border: "1px solid " + VIOLET + "40", background: VIOLET + "08" }}>
+          <div style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+            Séances de la banque
+          </div>
+          {bankSessions.length === 0 ? (
+            <div style={{ fontSize: 12, color: C.tx3, padding: "4px 0 8px" }}>
+              Aucune séance enregistrée — utilise « Enregistrer la séance dans la banque » dans une séance, ou Bibliothèque → Musculaire → Séances.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {bankSessions.map(t => {
+                const nbEx = totalExercices(t)
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => { setBankTemplate(t); setShowSessionBank(false); setIsAddingSession(true); setEditingSessionId(null) }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, textAlign: "left",
+                      padding: "9px 10px", borderRadius: 4,
+                      border: "1px solid " + C.brdL, background: C.s1, color: C.tx,
+                      fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    }}
+                  >
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t.name || "Séance sans nom"}
+                    </span>
+                    <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
+                      {t.blocs.length} bloc{t.blocs.length !== 1 ? "s" : ""} · {nbEx} ex.
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          <button
+            onClick={() => setShowSessionBank(false)}
+            style={{ width: "100%", marginTop: 6, padding: "6px 0", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Annuler
+          </button>
+        </div>
+      )}
+
+      {/* Add session inline form (blank, or pre-filled from a bank template) */}
       {isAddingSession && (
         <SessionForm
+          key={bankTemplate?.id ?? "blank"}
+          initial={bankTemplate ?? undefined}
           onSubmit={addSession}
-          onCancel={() => setIsAddingSession(false)}
+          onCancel={() => { setIsAddingSession(false); setBankTemplate(null) }}
         />
       )}
 
       {/* Empty state */}
       {!isAddingSession && sessions.length === 0 && (
         <div style={{ textAlign: "center", padding: "50px 20px" }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>🏋️</div>
+          <div style={{ fontSize: 36, marginBottom: 12 }}></div>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 4 }}>Aucune séance</div>
           <div style={{ fontSize: 12, color: C.tx3, marginBottom: 20 }}>
             Crée ta première séance pour commencer à programmer.
@@ -451,7 +520,7 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
           <button
             onClick={() => setIsAddingSession(true)}
             style={{
-              padding: "10px 22px", borderRadius: 10,
+              padding: "10px 22px", borderRadius: 4,
               border: "none", background: VIOLET, color: "#fff",
               fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               display: "inline-flex", alignItems: "center", gap: 6,

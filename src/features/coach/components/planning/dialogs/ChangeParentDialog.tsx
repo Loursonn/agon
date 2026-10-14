@@ -22,7 +22,7 @@ export function ChangeParentDialog({
   newStart, newEnd, onConfirm, onCancel, saving,
 }: Props) {
   const btnBase: React.CSSProperties = {
-    padding: "10px 16px", borderRadius: 9,
+    padding: "10px 16px", borderRadius: 4,
     fontSize: 12, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer",
     fontFamily: "inherit", opacity: saving ? 0.7 : 1,
   };
@@ -34,7 +34,7 @@ export function ChangeParentDialog({
         position: "fixed", top: "50%", left: "50%", zIndex: 81,
         transform: "translate(-50%,-50%)",
         width: 400, maxWidth: "92vw",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 22px",
         animation: "fadeScaleIn 150ms ease-out",
       }}>
@@ -57,11 +57,11 @@ export function ChangeParentDialog({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
-          <div style={{ padding: "8px 12px", borderRadius: 8, background: C.s2, fontSize: 12, color: C.tx2 }}>
+          <div style={{ padding: "8px 12px", borderRadius: 4, background: C.s2, fontSize: 12, color: C.tx2 }}>
             <span style={{ color: C.tx3 }}>Depuis : </span>
             <strong style={{ color: C.tx }}>{currentParentName}</strong>
           </div>
-          <div style={{ padding: "8px 12px", borderRadius: 8, background: C.coachS, border: "1px solid " + C.coach + "30", fontSize: 12 }}>
+          <div style={{ padding: "8px 12px", borderRadius: 4, background: C.coachS, border: "1px solid " + C.coach + "30", fontSize: 12 }}>
             <span style={{ color: C.tx3 }}>Vers : </span>
             <strong style={{ color: C.coach }}>{newParentName}</strong>
             <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
@@ -80,7 +80,7 @@ export function ChangeParentDialog({
           <button
             onClick={!saving ? onConfirm : undefined}
             disabled={saving}
-            style={{ ...btnBase, background: C.coach, border: "none", color: "#fff" }}
+            style={{ ...btnBase, background: C.acV, border: "none", color: "#0E0C0A" }}
           >
             {saving ? "…" : "Déplacer dans " + newParentName}
           </button>

@@ -49,15 +49,15 @@ export function MesocycleSummary({ meso, athleteId }: Props) {
   return (
     <AccordionItem
       value={meso.id}
-      className="rounded-xl border border-[#C9A14A]/30 bg-[#C9A14A]/10 overflow-hidden"
+      className="rounded-xl border border-[#FFC933]/30 bg-[#FFC933]/10 overflow-hidden"
     >
-      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors [&>svg]:text-[#C9A14A]/60">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors [&>svg]:text-[#FFC933]/60">
         <div className="flex items-center gap-2 text-left">
-          <Layers size={14} className="text-[#C9A14A] shrink-0" />
+          <Layers size={14} className="text-[#FFC933] shrink-0" />
           <span className="text-sm font-bold text-white">{meso.name}</span>
           <span className="text-xs text-white/40">{dateRange}</span>
           <div className="ml-auto mr-2 flex gap-1.5">
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#C9A14A]/20 text-[#C9A14A] font-semibold">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FFC933]/20 text-[#FFC933] font-semibold">
               {numWeeks} sem.
             </span>
             {totalMicros > 0 && (
@@ -120,13 +120,13 @@ export function MesocycleSummary({ meso, athleteId }: Props) {
                   />
                   <YAxis hide />
                   <Tooltip
-                    contentStyle={{ backgroundColor: "#15120F", border: "none", borderRadius: 8, fontSize: 10 }}
-                    cursor={{ fill: "#C9A14A", opacity: 0.1 }}
+                    contentStyle={{ backgroundColor: "#0E0C0A", border: "none", borderRadius: 4, fontSize: 10 }}
+                    cursor={{ fill: "#FFC933", opacity: 0.1 }}
                     labelStyle={{ color: "#fff" }}
-                    itemStyle={{ color: "#C9A14A" }}
+                    itemStyle={{ color: "#FFC933" }}
                     formatter={(v: number) => [v, "Charge"]}
                   />
-                  <Bar dataKey="load" fill="#C9A14A" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="load" fill="#FFC933" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -160,7 +160,7 @@ function InfoCard({
   valueStyle?:  React.CSSProperties;
 }) {
   return (
-    <div className="rounded-lg p-3 bg-[#15120F]/50 border border-white/5">
+    <div className="rounded-lg p-3 bg-[#0E0C0A]/50 border border-white/5">
       <p className="text-[9px] text-white/40 uppercase tracking-wider mb-1">{label}</p>
       {renderValue ? (
         renderValue()

@@ -84,7 +84,7 @@ function LogCard({
   }
 
   return (
-    <div style={{ background: C.s1, borderRadius: 12, border: '1px solid ' + C.brd, padding: '14px 16px' }}>
+    <div style={{ background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd, padding: '14px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: chips.length ? 10 : 0 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>
           {format(new Date(log.date + 'T12:00:00'), 'd MMM yyyy', { locale: fr })}
@@ -121,7 +121,7 @@ function LogCard({
       {photoPaths.length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
           {photoPaths.map(([slot, path]) => (
-            <div key={slot} style={{ width: 56, height: 72, borderRadius: 8, overflow: 'hidden', background: C.s2, border: '1px solid ' + C.brd, position: 'relative' }}>
+            <div key={slot} style={{ width: 56, height: 72, borderRadius: 4, overflow: 'hidden', background: C.s2, border: '1px solid ' + C.brd, position: 'relative' }}>
               {urls[path] ? (
                 <img src={urls[path]} alt={slot} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
@@ -135,11 +135,11 @@ function LogCard({
       )}
 
       {confirmDel && (
-        <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 10, background: C.rS, border: '1px solid ' + C.r + '40' }}>
+        <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 4, background: C.rS, border: '1px solid ' + C.r + '40' }}>
           <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cette saisie ?</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-            <button onClick={() => { onDelete(); setConfirmDel(false); }} style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', background: C.r, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Supprimer</button>
+            <button onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: '8px 0', borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+            <button onClick={() => { onDelete(); setConfirmDel(false); }} style={{ flex: 1, padding: '8px 0', borderRadius: 4, border: 'none', background: C.rV, color: '#0E0C0A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Supprimer</button>
           </div>
         </div>
       )}
@@ -263,7 +263,7 @@ function EntryForm({
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '6px 8px', borderRadius: 8,
+    width: '100%', padding: '6px 8px', borderRadius: 4,
     border: '1px solid ' + C.brdL, background: C.s1,
     color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
     outline: 'none', boxSizing: 'border-box',
@@ -272,7 +272,7 @@ function EntryForm({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Poids du jour */}
-      <div style={{ background: C.s2, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ background: C.s2, borderRadius: 4, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2 }}>Poids du jour</div>
           <div style={{ fontSize: 10, color: C.tx3 }}>kg</div>
@@ -281,7 +281,7 @@ function EntryForm({
           type="number" inputMode="decimal" value={weight}
           onChange={(e) => setWeight(e.target.value)} placeholder="0"
           style={{
-            width: 90, padding: '7px 10px', borderRadius: 8,
+            width: 90, padding: '7px 10px', borderRadius: 4,
             border: '1px solid ' + C.brdL, background: C.s1,
             color: C.tx, fontSize: 15, fontWeight: 700, fontFamily: 'inherit',
             outline: 'none', textAlign: 'right', boxSizing: 'border-box',
@@ -297,7 +297,7 @@ function EntryForm({
             if (f.bilateral) {
               const { gKey, dKey } = f.bilateral;
               return (
-                <div key={f.key} style={{ background: C.s2, borderRadius: 10, padding: '8px 12px' }}>
+                <div key={f.key} style={{ background: C.s2, borderRadius: 4, padding: '8px 12px' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2, marginBottom: 6 }}>{f.label}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -323,7 +323,7 @@ function EntryForm({
               );
             }
             return (
-              <div key={f.key} style={{ background: C.s2, borderRadius: 10, padding: '8px 12px' }}>
+              <div key={f.key} style={{ background: C.s2, borderRadius: 4, padding: '8px 12px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2, marginBottom: 4 }}>{f.label}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <input
@@ -353,7 +353,7 @@ function EntryForm({
               <div key={s.key} style={{ flexShrink: 0, textAlign: 'center', position: 'relative' }}>
                 <label style={{ cursor: 'pointer', display: 'block' }}>
                   <div style={{
-                    width: 72, height: 92, borderRadius: 10, overflow: 'hidden',
+                    width: 72, height: 92, borderRadius: 4, overflow: 'hidden',
                     background: C.s2, border: '1px dashed ' + (hasImg ? C.g + '60' : C.brdL),
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
@@ -373,7 +373,7 @@ function EntryForm({
                     title="Retirer"
                     style={{
                       position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%',
-                      border: 'none', background: C.r, color: '#fff', cursor: 'pointer',
+                      border: 'none', background: C.rV, color: '#0E0C0A', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit',
                     }}
                   >
@@ -389,7 +389,7 @@ function EntryForm({
       <button
         onClick={handleSave} disabled={saving}
         style={{
-          width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
+          width: '100%', padding: '13px 0', borderRadius: 6, border: 'none',
           background: saving ? C.s2 : C.g, color: saving ? C.tx3 : '#fff',
           fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer',
           fontFamily: 'inherit', minHeight: 44,
@@ -447,7 +447,7 @@ export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }:
                 <ChevronLeft size={20} />
               </button>
             )}
-            <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: C.gS, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0, background: C.gS, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Ruler size={18} color={C.g} />
             </div>
             <DrawerTitle style={{ fontSize: 16, fontWeight: 700, color: C.tx }}>
@@ -471,7 +471,7 @@ export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }:
                   onClick={() => setMode({ kind: 'new' })}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '12px 0', borderRadius: 12, border: 'none', background: C.g,
+                    padding: '12px 0', borderRadius: 6, border: 'none', background: C.g,
                     color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44,
                   }}
                 >

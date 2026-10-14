@@ -38,7 +38,7 @@ function CoachRow({
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 14,
-      padding: '14px 18px', background: C.s1, borderRadius: 12,
+      padding: '14px 18px', background: C.s1, borderRadius: 6,
       border: '1px solid ' + C.brd,
       opacity: toggling ? 0.6 : 1,
       transition: 'opacity 150ms ease-out',
@@ -46,8 +46,8 @@ function CoachRow({
       {/* Avatar */}
       <div style={{
         width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-        background: isSelf ? 'rgba(201,161,74,0.15)' : 'rgba(124,116,128,0.15)',
-        border: '1px solid ' + (isSelf ? C.ac + '40' : 'rgba(124,116,128,0.25)'),
+        background: isSelf ? 'rgba(255,201,51,0.15)' : 'rgba(231,211,168,0.15)',
+        border: '1px solid ' + (isSelf ? C.ac + '40' : 'rgba(231,211,168,0.25)'),
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 14, fontWeight: 700,
         color: isSelf ? C.ac : C.tx3,
@@ -80,10 +80,10 @@ function CoachRow({
             title="Retirer la certification"
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px', borderRadius: 8,
+              padding: '6px 12px', borderRadius: 4,
               border: '1px solid rgba(239,75,75,0.3)',
               background: 'rgba(239,75,75,0.08)',
-              color: '#D9705A', fontSize: 11, fontWeight: 600,
+              color: '#FF5A33', fontSize: 11, fontWeight: 600,
               cursor: toggling ? 'default' : 'pointer', fontFamily: 'inherit',
               transition: 'background 150ms ease-out',
               flexShrink: 0,
@@ -101,7 +101,7 @@ function CoachRow({
             title="Certifier ce coach"
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px', borderRadius: 8,
+              padding: '6px 12px', borderRadius: 4,
               border: '1px solid ' + C.g + '40',
               background: 'rgba(34,201,147,0.08)',
               color: C.g, fontSize: 11, fontWeight: 600,

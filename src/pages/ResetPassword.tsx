@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const S = {
-  bg: "#15120F", s1: "#1E1A16", s2: "#27221D",
+  bg: "#0E0C0A", s1: "#1E1A16", s2: "#27221D",
   brd: "rgba(255,255,255,0.06)", brdL: "rgba(255,255,255,0.1)",
   tx: "#F2F2F4", tx2: "#9194A0", tx3: "#555866",
-  ac: "#C9A14A", g: "#9DB06A", r: "#D9705A",
+  ac: "#FFC933", g: "#66F03C", r: "#FF5A33",
 };
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "10px 12px", borderRadius: 10,
+  width: "100%", padding: "10px 12px", borderRadius: 4,
   border: "1px solid " + S.brdL, background: S.s2, color: S.tx,
   fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
 };
@@ -75,15 +75,15 @@ export default function ResetPassword() {
         </div>
 
         {done ? (
-          <div style={{ background: S.s1, borderRadius: 16, padding: 24, border: "1px solid " + S.brd, textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+          <div style={{ background: S.s1, borderRadius: 6, padding: 24, border: "1px solid " + S.brd, textAlign: "center" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: S.g, marginBottom: 16 }}>✓</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: S.g, marginBottom: 8 }}>Mot de passe modifié !</div>
             <div style={{ fontSize: 14, color: S.tx2, lineHeight: 1.6 }}>
               Vous pouvez fermer cette page puis vous reconnecter sur l'app avec votre nouveau mot de passe.
             </div>
           </div>
         ) : (
-          <div style={{ background: S.s1, borderRadius: 16, padding: 24, border: "1px solid " + S.brd }}>
+          <div style={{ background: S.s1, borderRadius: 6, padding: 24, border: "1px solid " + S.brd }}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <label style={labelStyle}>Nouveau mot de passe</label>
@@ -112,18 +112,18 @@ export default function ResetPassword() {
               </label>
 
               {hasSession === false && !error && (
-                <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 8, background: S.r + "15" }}>
+                <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>
                   Lien invalide ou expiré — refais une demande depuis la page de connexion.
                 </div>
               )}
               {error && (
-                <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 8, background: S.r + "15" }}>{error}</div>
+                <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>
               )}
 
               <button
                 type="submit" disabled={loading || hasSession === false}
                 style={{
-                  width: "100%", padding: "12px 0", borderRadius: 10, border: "none",
+                  width: "100%", padding: "12px 0", borderRadius: 4, border: "none",
                   background: S.ac, color: "#fff", fontSize: 14, fontWeight: 700,
                   cursor: loading || hasSession === false ? "not-allowed" : "pointer",
                   fontFamily: "inherit", opacity: loading || hasSession === false ? 0.6 : 1,

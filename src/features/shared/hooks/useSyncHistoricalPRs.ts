@@ -136,7 +136,7 @@ export function useSyncHistoricalPRs() {
         const { error: insertErr } = await supabase.from("exercise_pr_logs").insert(inserts);
         if (insertErr) throw insertErr;
         qc.invalidateQueries({ queryKey: ["pr-logs", athleteId] });
-        toast.success(`🏆 ${inserts.length} PR${inserts.length > 1 ? "s" : ""} calculé${inserts.length > 1 ? "s" : ""} depuis l'historique`);
+        toast.success(`${inserts.length} PR${inserts.length > 1 ? "s" : ""} calculé${inserts.length > 1 ? "s" : ""} depuis l'historique`);
       } else {
         toast("PRs déjà à jour", { duration: 2000 });
       }

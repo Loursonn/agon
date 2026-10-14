@@ -15,7 +15,7 @@ import type { Exercise, WeekConfig } from "@/features/shared/types/athlete";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type UCEventType = "workout" | "test" | "competition" | "energy" | "free_activity";
+export type UCEventType = "workout" | "test" | "competition" | "energy" | "free_activity" | "life_event";
 
 export interface UnifiedCalendarEvent {
   id: string;
@@ -44,6 +44,8 @@ export interface UnifiedCalendarEvent {
   sportEmoji?: string;
   duration?: number;
   intensity?: number;
+  // Life event-specific
+  dateEnd?: string;             // multi-day life events
   /** Raw DB row for fields not promoted to typed fields */
   raw: Record<string, unknown>;
 }
@@ -78,8 +80,8 @@ export function useUnifiedCalendar(
     enabled: !!athleteId && !!start && !!end,
     staleTime,
     queryFn: async (): Promise<UnifiedCalendarEvent[]> => {
-      // ── 1. Parallel fetch: workouts + tests + competitions + energy + free ─
-      const [wRes, tRes, cRes, eRes, fRes] = await Promise.all([
+      // ── 1. Parallel fetch: workouts + tests + competitions + energy + free + life events ─
+      const [wRes, tRes, cRes, eRes, fRes, leRes] = await Promise.all([
         supabase
           .from("workout_logs")
           .select("id, session_id, session_name, scheduled_date, status, rpe_score, athlete_modifications")
@@ -118,6 +120,15 @@ export function useUnifiedCalendar(
           .eq("athlete_id", athleteId)
           .eq("key", "asp:freesess")
           .maybeSingle(),
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("athlete_life_events")
+          .select("id, athlete_id, date_start, date_end, title")
+          .eq("athlete_id", athleteId)
+          .lte("date_start", end)
+          .gte("date_end", start)
+          .order("date_start"),
       ]);
 
       const logs         = wRes.data ?? [];
@@ -126,6 +137,8 @@ export function useUnifiedCalendar(
       const energyAssign = eRes.data ?? [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const allFree: any[] = (fRes.data as any)?.value ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lifeEvents: any[] = leRes.data ?? [];
 
       // ── 2. Optionally fetch exercises ──────────────────────────────────────
       const exercisesBySession: Record<string, Exercise[]> = {};
@@ -241,6 +254,24 @@ export function useUnifiedCalendar(
           intensity:   f.intensity,
           raw:         f as Record<string, unknown>,
         });
+      }
+
+      // Expand multi-day life events into one event per day
+      for (const le of lifeEvents) {
+        const ds = new Date(le.date_start + "T00:00:00");
+        const de = new Date(le.date_end + "T00:00:00");
+        for (let d = new Date(ds); d <= de; d.setDate(d.getDate() + 1)) {
+          const iso = d.toISOString().slice(0, 10);
+          if (iso < start || iso > end) continue;
+          events.push({
+            id:      le.id + "_" + iso,
+            type:    "life_event",
+            date:    iso,
+            title:   le.title,
+            dateEnd: le.date_end,
+            raw:     le as Record<string, unknown>,
+          });
+        }
       }
 
       return events;
@@ -384,23 +415,19 @@ export function useDeleteCalendarEvent() {
         return;
       }
 
-      const isPast = date ? new Date(date + "T23:59:59") < new Date() : true;
-
       // Projected block-plan workout
       if (type === "workout" && id.startsWith("block-") && sessionId && date) {
-        if (isPast) {
-          // Past: insert a skipped log so the projection doesn't reappear
-          const { error } = await supabase.from("workout_logs").insert({
-            athlete_id:     athleteId,
-            coach_id:       coachId ?? null,
-            session_id:     sessionId,
-            session_name:   sessionName ?? "Séance",
-            scheduled_date: date,
-            status:         "skipped",
-          });
-          if (error) throw error;
-        }
-        // Future projected: no DB record — a future session cannot be "skipped"
+        // Past or future: a skipped log suppresses this single occurrence of the
+        // recurring session (same mechanism as moving it to another day)
+        const { error } = await supabase.from("workout_logs").upsert({
+          athlete_id:     athleteId,
+          coach_id:       coachId ?? null,
+          session_id:     sessionId,
+          session_name:   sessionName ?? "Séance",
+          scheduled_date: date,
+          status:         "skipped",
+        }, { onConflict: "athlete_id,session_id,scheduled_date" });
+        if (error) throw error;
         return;
       }
 
@@ -409,15 +436,11 @@ export function useDeleteCalendarEvent() {
           // Séance validée : hard delete pour pouvoir supprimer les doublons
           const { error } = await supabase.from("workout_logs").delete().eq("id", id);
           if (error) throw error;
-        } else if (isPast) {
-          // Past real log: mark skipped so projected event stays suppressed
+        } else {
+          // Past or future real log: mark skipped. A hard delete would let the
+          // recurring projection reappear on the same day.
           const { error } = await supabase.from("workout_logs")
             .update({ status: "skipped" }).eq("id", id);
-          if (error) throw error;
-        } else {
-          // Future real log: hard delete — no semantic meaning in "skipping" a future session
-          const { error } = await supabase.from("workout_logs")
-            .delete().eq("id", id);
           if (error) throw error;
         }
         return;
@@ -515,6 +538,7 @@ export interface CalEvent {
   sportEmoji?: string;
   duration?: number;
   intensity?: number;
+  dateEnd?: string;
   raw: Record<string, unknown>;
 }
 
@@ -533,6 +557,7 @@ export function toCalEvent(e: UnifiedCalendarEvent): CalEvent {
     sportEmoji:      e.sportEmoji,
     duration:        e.duration,
     intensity:       e.intensity,
+    dateEnd:         e.dateEnd,
     raw:             e.raw,
   };
 }

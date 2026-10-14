@@ -15,7 +15,7 @@ import { genId } from "@/lib/energy/treeUtils";
 import { ExerciceSearch } from "@/features/coach/components/programmation/ExerciceSearch";
 import { supabase } from "@/integrations/supabase/client";
 
-const EXO_COLOR = "#C9A14A";
+const EXO_COLOR = "#FFC933";
 
 const ROLES: { value: IntervalRole; label: string }[] = [
   { value: "work",     label: "Effort" },
@@ -112,7 +112,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
     fontSize: 11, color: C.tx3, fontWeight: 600, marginBottom: 4, display: "block",
   };
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 8,
+    width: "100%", padding: "8px 10px", borderRadius: 4,
     border: `1px solid ${C.brdL}`, background: C.s2,
     color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
     boxSizing: "border-box",
@@ -156,7 +156,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
                 <span style={{ color: exerciseName ? C.tx : C.tx3 }}>
                   {exerciseName || "Choisir un exercice…"}
                 </span>
-                <span style={{ fontSize: 10, color: EXO_COLOR }}>✎</span>
+                <span style={{ fontSize: 10, color: EXO_COLOR }}></span>
               </button>
             )}
           </div>
@@ -180,7 +180,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
           {/* Video preview */}
           {youtubeId && (
             <div style={{
-              position: "relative", paddingBottom: "56.25%", borderRadius: 10, overflow: "hidden",
+              position: "relative", paddingBottom: "56.25%", borderRadius: 4, overflow: "hidden",
               border: `1px solid ${C.brdL}`,
             }}>
               <iframe
@@ -280,7 +280,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
             <button
               onClick={() => onOpenChange(false)}
               style={{
-                flex: 1, padding: "10px 14px", borderRadius: 10,
+                flex: 1, padding: "10px 14px", borderRadius: 4,
                 border: `1px solid ${C.brdL}`, background: "transparent",
                 color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
               }}
@@ -291,7 +291,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
               onClick={handleSave}
               disabled={!exerciseId}
               style={{
-                flex: 1, padding: "10px 14px", borderRadius: 10,
+                flex: 1, padding: "10px 14px", borderRadius: 4,
                 border: "none", background: EXO_COLOR, color: "#fff",
                 fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                 opacity: exerciseId ? 1 : 0.5,

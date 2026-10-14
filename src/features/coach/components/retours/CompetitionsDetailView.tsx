@@ -27,7 +27,7 @@ function CompCard({ comp }: { comp: CompetitionDetail }) {
   };
 
   return (
-    <div style={{ background: C.s2, borderRadius: 10, padding: "12px 14px" }}>
+    <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -62,7 +62,7 @@ function CompCard({ comp }: { comp: CompetitionDetail }) {
 
       {/* Athlete comment */}
       {comp.athlete_comment && !editing && (
-        <div style={{ background: C.acS, borderRadius: 8, padding: "8px 10px", marginBottom: 8 }}>
+        <div style={{ background: C.acS, borderRadius: 4, padding: "8px 10px", marginBottom: 8 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3 }}>Commentaire athlète</div>
           <div style={{ fontSize: 12, color: C.tx2 }}>{comp.athlete_comment}</div>
         </div>
@@ -88,11 +88,11 @@ function CompCard({ comp }: { comp: CompetitionDetail }) {
             onChange={(e) => setText(e.target.value)}
             rows={3}
             placeholder="Commentaire de l'athlète sur sa performance…"
-            style={{ width: "100%", background: C.s1, border: "1px solid " + C.brdL, borderRadius: 8, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
+            style={{ width: "100%", background: C.s1, border: "1px solid " + C.brdL, borderRadius: 4, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
           />
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={save} disabled={update.isPending}
-              style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.coach, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
               Enregistrer
             </button>
             <button onClick={() => { setEditing(false); setText(comp.athlete_comment ?? ""); }}
@@ -131,7 +131,7 @@ export function CompetitionsDetailView({ competitions, onClose }: CompetitionsDe
               { label: "Priorité B",  value: countB,              color: C.o  },
               { label: "Priorité C",  value: countC,              color: C.y  },
             ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: C.s2, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+              <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
               </div>
@@ -158,7 +158,7 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "16px 16px 0 0",
+  background: C.s1, borderRadius: "6px 6px 0 0",
   width: "100%", maxWidth: 860,
   maxHeight: "92vh", overflowY: "auto",
   padding: "20px 20px 40px",
@@ -166,7 +166,7 @@ const panelStyle: React.CSSProperties = {
 
 const closeBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 8,
+  width: 32, height: 32, borderRadius: 4,
   border: "1px solid " + C.brd, background: C.s2,
   color: C.tx3, cursor: "pointer", fontFamily: "inherit",
 };

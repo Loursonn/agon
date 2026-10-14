@@ -8,17 +8,17 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { C } from "@/lib/theme"
-import { Settings, X, Plus, GripVertical, Link2 } from "lucide-react"
+import { Settings, X, Plus, GripVertical, Link2, BookmarkPlus } from "lucide-react"
 import type { Bloc, Exercice } from "./types"
 import { defaultExerciceParams } from "./types"
 import { BlocForm } from "./BlocForm"
 import { ExerciceRow } from "./ExerciceRow"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 const BLOC_PALETTE = [
-  "#C9A14A", "#F97316", "#22C55E", "#EF4444",
+  "#FFC933", "#F97316", "#22C55E", "#EF4444",
   "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
 ]
 
@@ -38,6 +38,8 @@ interface BlocCardProps {
   onChange: (updated: Bloc) => void
   onDelete: () => void
   dragHandleProps?: Record<string, unknown>
+  /** Shows the "save to bloc bank" action when provided */
+  onSaveToBank?: () => void
 }
 
 interface SortableExerciceProps {
@@ -100,7 +102,7 @@ function timingLabel(bloc: Bloc): string {
   return `—`
 }
 
-export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, dragHandleProps }: BlocCardProps) {
+export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemaine, onChange, onDelete, dragHandleProps, onSaveToBank }: BlocCardProps) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -158,12 +160,11 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
 
   return (
     <div style={{
-      borderRadius: 14,
+      borderRadius: 6,
       border: "1px solid " + C.brdL,
       overflow: "hidden",
       marginBottom: 12,
       background: C.s1,
-      boxShadow: "inset 4px 0 0 " + bColor,
     }}>
       {/* Header */}
       {editing ? (
@@ -235,11 +236,19 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
                 style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               ><Settings size={11} /></button>
 
+              {onSaveToBank && (
+                <button
+                  onClick={onSaveToBank}
+                  title="Enregistrer dans la banque de blocs"
+                  style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                ><BookmarkPlus size={11} /></button>
+              )}
+
               {confirmDelete ? (
                 <>
                   <button
                     onClick={onDelete}
-                    style={{ padding: "0 8px", height: 24, borderRadius: 6, border: "none", background: C.r, color: "#fff", cursor: "pointer", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}
+                    style={{ padding: "0 8px", height: 24, borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}
                   >Supprimer</button>
                   <button
                     onClick={() => setConfirmDelete(false)}
@@ -254,6 +263,15 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
               )}
             </div>
           </div>
+          {bloc.instructions && (
+            <div
+              onClick={() => setEditing(true)}
+              title="Modifier les consignes"
+              style={{ marginTop: 6, marginLeft: 36, fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", cursor: "pointer" }}
+            >
+              {bloc.instructions}
+            </div>
+          )}
         </div>
       )}
 
@@ -262,7 +280,7 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
         <div style={{
           background: hexToRgba(bColor, 0.05),
           border: "1px solid " + hexToRgba(bColor, 0.18),
-          borderRadius: 10,
+          borderRadius: 4,
           padding: bloc.exercices.length > 0 ? "6px" : "0",
           marginBottom: bloc.exercices.length > 0 ? 6 : 0,
         }}>
@@ -293,7 +311,7 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
                           title={ex.superset_with_next ? "Délier (retirer le superset)" : "Lier en superset avec l'exercice suivant"}
                           style={{
                             display: "flex", alignItems: "center", gap: 4,
-                            padding: "1px 8px", borderRadius: 10,
+                            padding: "1px 8px", borderRadius: 4,
                             border: "1px " + (ex.superset_with_next ? "solid " + VIOLET : "dashed " + C.brdL),
                             background: ex.superset_with_next ? VIOLET_S : "transparent",
                             color: ex.superset_with_next ? VIOLET : C.tx3,
@@ -321,7 +339,7 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
           onClick={addExercice}
           style={{
             width: "100%", marginTop: bloc.exercices.length > 0 ? 6 : 0,
-            padding: "7px 0", borderRadius: 8,
+            padding: "7px 0", borderRadius: 4,
             border: "1px dashed " + C.brdL, background: "transparent",
             color: C.tx3, fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",

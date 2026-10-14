@@ -33,7 +33,7 @@ const TABS: { key: Tab; label: string }[] = [
 const TOOLTIP_STYLE = {
   background: C.s1,
   border: "1px solid " + C.brd,
-  borderRadius: 8,
+  borderRadius: 4,
   fontSize: 11,
   color: C.tx,
 };
@@ -206,7 +206,7 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
             { label: "Stress",     value: avgStress,   unit: "/5",   color: C.r  },
             { label: "Énergie",    value: avgEnergie,  unit: "/5",   color: C.g  },
           ].map(({ label, value, unit, color }) => (
-            <div key={label} style={{ background: C.s2, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+            <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>
                 {value ?? "—"}
@@ -217,7 +217,7 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.s2, padding: 3, borderRadius: 8 }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.s2, padding: 3, borderRadius: 4 }}>
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               flex: 1, padding: "6px 0", borderRadius: 6, border: "none",
@@ -331,7 +331,7 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
               return statCards.length > 0 ? (
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${statCards.length}, 1fr)`, gap: 8, marginBottom: 16 }}>
                   {statCards.map(({ label, value, sub, color }) => (
-                    <div key={label} style={{ background: C.s2, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                    <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
                       <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
                       {sub && <div style={{ fontSize: 9, color: C.tx3, marginTop: 3 }}>{sub}</div>}
@@ -380,7 +380,7 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
                       stroke={C.o}
                       strokeDasharray="5 3"
                       strokeWidth={2}
-                      label={{ value: `🌙 ${sleepGoals.bedtime!.h}h${String(sleepGoals.bedtime!.m).padStart(2, "0")}`, fill: C.o, fontSize: 10, fontWeight: 700, position: "insideTopLeft" }}
+                      label={{ value: `${sleepGoals.bedtime!.h}h${String(sleepGoals.bedtime!.m).padStart(2, "0")}`, fill: C.o, fontSize: 10, fontWeight: 700, position: "insideTopLeft" }}
                     />
                   );
                 })()}
@@ -393,7 +393,7 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
                       stroke={C.g}
                       strokeDasharray="5 3"
                       strokeWidth={2}
-                      label={{ value: `☀️ ${sleepGoals.wakeup!.h}h${String(sleepGoals.wakeup!.m).padStart(2, "0")}`, fill: C.g, fontSize: 10, fontWeight: 700, position: "insideTopLeft" }}
+                      label={{ value: `${sleepGoals.wakeup!.h}h${String(sleepGoals.wakeup!.m).padStart(2, "0")}`, fill: C.g, fontSize: 10, fontWeight: 700, position: "insideTopLeft" }}
                     />
                   );
                 })()}
@@ -423,7 +423,7 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "16px 16px 0 0",
+  background: C.s1, borderRadius: "6px 6px 0 0",
   width: "100%", maxWidth: 860,
   maxHeight: "92vh", overflowY: "auto",
   padding: "20px 20px 40px",
@@ -431,7 +431,7 @@ const panelStyle: React.CSSProperties = {
 
 const closeBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 8,
+  width: 32, height: 32, borderRadius: 4,
   border: "1px solid " + C.brd, background: C.s2,
   color: C.tx3, cursor: "pointer", fontFamily: "inherit",
 };

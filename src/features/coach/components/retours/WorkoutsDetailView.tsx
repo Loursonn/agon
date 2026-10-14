@@ -71,7 +71,7 @@ export function WorkoutsDetailView({ workouts, energySessions, onClose }: Workou
             { label: "Durée moyenne",   value: avgDurMin != null ? `${avgDurMin} min` : "—",       color: C.b  },
             { label: "Énergie faites",  value: `${energyDone}/${energySessions.length}`,           color: C.o  },
           ].map(({ label, value, color }) => (
-            <div key={label} style={{ background: C.s2, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+            <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
               <div style={{ fontSize: 17, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
             </div>
@@ -79,7 +79,7 @@ export function WorkoutsDetailView({ workouts, energySessions, onClose }: Workou
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.s2, padding: 3, borderRadius: 8 }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.s2, padding: 3, borderRadius: 4 }}>
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
@@ -93,7 +93,7 @@ export function WorkoutsDetailView({ workouts, energySessions, onClose }: Workou
               {t.label}
               {counts[t.key] > 0 && (
                 <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 10,
+                  fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4,
                   background: tab === t.key ? C.ac + "30" : C.brd,
                   color:      tab === t.key ? C.ac : C.tx3,
                 }}>
@@ -135,7 +135,7 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "16px 16px 0 0",
+  background: C.s1, borderRadius: "6px 6px 0 0",
   width: "100%", maxWidth: 860,
   maxHeight: "92vh", overflowY: "auto",
   padding: "20px 20px 40px",
@@ -143,7 +143,7 @@ const panelStyle: React.CSSProperties = {
 
 const closeBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 8,
+  width: 32, height: 32, borderRadius: 4,
   border: "1px solid " + C.brd, background: C.s2,
   color: C.tx3, cursor: "pointer", fontFamily: "inherit",
 };

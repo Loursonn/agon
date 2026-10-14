@@ -55,7 +55,7 @@ export default function AthleteFeedbackPage() {
             key={f}
             onClick={() => setFilter(f)}
             style={{
-              padding: "6px 12px", borderRadius: 8, border: "1px solid " + (filter === f ? C.ac : C.brd),
+              padding: "6px 12px", borderRadius: 4, border: "1px solid " + (filter === f ? C.ac : C.brd),
               background: filter === f ? C.acS : "transparent", color: filter === f ? C.ac : C.tx2,
               fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
             }}
@@ -70,13 +70,13 @@ export default function AthleteFeedbackPage() {
       ) : error ? (
         <div style={{ color: C.r, fontSize: 13 }}>Impossible de charger les retours (table app_feedback absente ou accès refusé).</div>
       ) : rows.length === 0 ? (
-        <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: 32, textAlign: "center", color: C.tx3, fontSize: 13 }}>
+        <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: 32, textAlign: "center", color: C.tx3, fontSize: 13 }}>
           Aucun retour {filter !== "all" ? "dans cette catégorie" : "pour l'instant"}.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {rows.map(r => (
-            <div key={r.id} style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: "14px 16px" }}>
+            <div key={r.id} style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: KIND_COLOR[r.kind], background: KIND_COLOR[r.kind] + "18", padding: "2px 8px", borderRadius: 5 }}>
                   {FEEDBACK_KIND_LABEL[r.kind]}

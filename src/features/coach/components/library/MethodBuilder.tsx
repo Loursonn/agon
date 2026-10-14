@@ -32,7 +32,7 @@ type FormValues = z.infer<typeof schema>;
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 const GREEN  = "#22c55e"
 const GREEN_S  = "rgba(34,197,94,0.10)"
@@ -89,7 +89,7 @@ const numInputStyle: React.CSSProperties = {
 }
 
 const textInputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", borderRadius: 8,
+  width: "100%", padding: "8px 10px", borderRadius: 4,
   border: `1px solid ${C.brdL}`, background: C.s2,
   color: C.tx, fontSize: 13, fontFamily: "inherit",
   outline: "none", boxSizing: "border-box" as const,
@@ -104,7 +104,7 @@ function FieldError({ message }: { message?: string }) {
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brdL, padding: "10px 14px" }}>
+    <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brdL, padding: "10px 14px" }}>
       {children}
     </div>
   )
@@ -150,7 +150,7 @@ function Stepper({ value, onChange, min = 1, max = 20, step = 1, color = C.tx }:
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", background: C.s1, borderRadius: 8, border: "1px solid " + C.brdL, overflow: "hidden", flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", background: C.s1, borderRadius: 4, border: "1px solid " + C.brdL, overflow: "hidden", flexShrink: 0 }}>
       <button type="button" onClick={() => apply(local - step)}
         style={{ width: 30, height: 30, border: "none", background: "transparent", color: C.tx3, cursor: local <= min ? "default" : "pointer", fontSize: 16, fontFamily: "inherit", flexShrink: 0, opacity: local <= min ? 0.3 : 1 }}>−</button>
       {editing ? (
@@ -183,7 +183,7 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
     <div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
         {value.map((tag) => (
-          <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, background: VIOLET_S, color: VIOLET, fontSize: 11, fontWeight: 600 }}>
+          <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: VIOLET_S, color: VIOLET, fontSize: 11, fontWeight: 600 }}>
             {tag}
             <button type="button" onClick={() => onChange(value.filter(t => t !== tag))}
               style={{ background: "none", border: "none", cursor: "pointer", color: VIOLET, padding: 0, display: "flex", lineHeight: 1 }}>
@@ -196,7 +196,7 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
         <input value={draft} onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
           placeholder="Ajouter un tag…" style={{ ...textInputStyle, flex: 1 }} />
-        <button type="button" onClick={add} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <button type="button" onClick={add} style={{ width: 34, height: 34, borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Plus size={14} />
         </button>
       </div>
@@ -219,7 +219,7 @@ function CategoryInput({ value, onChange, suggestions, error }: {
         placeholder="ex: Intensification, Volume, Technique…" style={textInputStyle} autoComplete="off" />
       {error && <FieldError message={error} />}
       {open && filtered.length > 0 && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 4, overflow: "hidden" }}>
           {filtered.map(s => (
             <button key={s} type="button" onMouseDown={() => { onChange(s); setOpen(false); }}
               style={{ width: "100%", padding: "8px 12px", textAlign: "left" as const, border: "none", borderBottom: `1px solid ${C.brd}`, background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
@@ -264,7 +264,7 @@ function Step1({ control, errors, existingCategories }: {
               const active = field.value === v
               return (
                 <button key={v} type="button" onClick={() => field.onChange(v)} style={{
-                  padding: "10px 14px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+                  padding: "10px 14px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                   border: "1px solid " + (active ? cfg.color : C.brdL),
                   background: active ? cfg.colorS : C.s1,
                   display: "flex", alignItems: "center", gap: 10, textAlign: "left" as const, transition: "all 100ms",
@@ -377,7 +377,7 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {/* Sous-séries */}
         <Section>
-          <div style={{ padding: "10px", borderRadius: 9, border: "1px solid " + AMBER + "50", background: AMBER + "0A" }}>
+          <div style={{ padding: "10px", borderRadius: 4, border: "1px solid " + AMBER + "50", background: AMBER + "0A" }}>
             <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
               <div style={{ textAlign: "center" as const }}>
                 <div style={{ fontSize: 9, color: AMBER, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 4 }}>Sous-séries</div>
@@ -698,7 +698,7 @@ function ClusterEditorInline({ cluster, onChange }: { cluster: ClusterConfig; on
     onChange({ ...cluster, nb_clusters: n, reps: next })
   }
   return (
-    <div style={{ padding: "10px", borderRadius: 9, border: "1px solid " + ORANGE + "50", background: ORANGE + "0A" }}>
+    <div style={{ padding: "10px", borderRadius: 4, border: "1px solid " + ORANGE + "50", background: ORANGE + "0A" }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
         <div style={{ textAlign: "center" as const }}>
           <div style={{ fontSize: 9, color: ORANGE, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 3 }}>Clusters</div>
@@ -809,7 +809,7 @@ function WeekFormSlot({ week, scope, initialConfig, isDeload, onChange, onCopyFr
   const preview = previewConfig ? methodConfigToText(previewConfig as MethodConfig) : "—"
 
   return (
-    <div style={{ borderRadius: 9, border: `1px solid ${expanded ? scopeMeta.color : C.brdL}`, overflow: "hidden", marginBottom: 5 }}>
+    <div style={{ borderRadius: 4, border: `1px solid ${expanded ? scopeMeta.color : C.brdL}`, overflow: "hidden", marginBottom: 5 }}>
       <div onClick={() => setExpanded(p => !p)} style={{ padding: "9px 14px", background: expanded ? scopeMeta.colorS : C.s2, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "all 100ms" }}>
         <div style={{ width: 20, height: 20, borderRadius: 6, background: expanded ? scopeMeta.color : C.s1, border: `1px solid ${expanded ? scopeMeta.color : C.brdL}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <span style={{ fontSize: 9, fontWeight: 900, color: expanded ? "#fff" : C.tx3 }}>S{week}</span>
@@ -827,7 +827,7 @@ function WeekFormSlot({ week, scope, initialConfig, isDeload, onChange, onCopyFr
               Copier ▾
             </button>
             {showCopyMenu && (
-              <div style={{ position: "absolute" as const, right: 0, top: "calc(100% + 4px)", zIndex: 20, background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.35)", overflow: "hidden", minWidth: 100 }}>
+              <div style={{ position: "absolute" as const, right: 0, top: "calc(100% + 4px)", zIndex: 20, background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 4, overflow: "hidden", minWidth: 100 }}>
                 {prevWeeks.map(w => (
                   <button key={w} type="button"
                     onClick={() => { onCopyFrom(w); setShowCopyMenu(false) }}
@@ -1048,15 +1048,15 @@ export function MethodBuilder({ initial, coachId: _coachId, onSubmit, onCancel, 
       {/* Footer */}
       <div style={{ display: "flex", gap: 8, paddingTop: 14, borderTop: `1px solid ${C.brd}`, marginTop: 14, flexShrink: 0 }}>
         {step === 1 ? (
-          <button type="button" onClick={onCancel} style={{ flex: 1, padding: "10px 0", borderRadius: 9, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button type="button" onClick={onCancel} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Annuler
           </button>
         ) : (
-          <button type="button" onClick={() => setStep(1)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 16px", borderRadius: 9, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button type="button" onClick={() => setStep(1)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 16px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             <ChevronLeft size={14} />Retour
           </button>
         )}
-        <button type="button" onClick={handleNext} disabled={!!loading} style={{ flex: 1, padding: "10px 0", borderRadius: 9, border: "none", background: loading ? C.s2 : scopeMeta.color, color: loading ? C.tx3 : "#fff", fontSize: 13, fontWeight: 700, cursor: loading ? "default" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 150ms" }}>
+        <button type="button" onClick={handleNext} disabled={!!loading} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: loading ? C.s2 : scopeMeta.color, color: loading ? C.tx3 : "#fff", fontSize: 13, fontWeight: 700, cursor: loading ? "default" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 150ms" }}>
           {step === 1 ? <><span>Suivant</span><ChevronRight size={14} /></> :
            loading ? "Enregistrement…" :
            <><Check size={14} /><span>{initial ? "Mettre à jour" : "Créer la méthode"}</span></>}

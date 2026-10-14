@@ -17,7 +17,7 @@ import type { EnergySessionAssignmentRow, EnergyStep, EnergyInterval, BlockLogs 
 import { localISO } from "@/lib/date";
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#C9A14A", tempo: "#7E9CA8", seuil: "#F59E0B",
+  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
   footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
 };
 const KIND_LABEL: Record<string, string> = {
@@ -58,9 +58,9 @@ function assignmentStatus(a: EnergySessionAssignmentRow, today: string): "comple
 }
 
 const STATUS_COLOR = {
-  completed: "#9DB06A",
-  partial:   "#7E9CA8",
-  missed:    "#D9705A",
+  completed: "#66F03C",
+  partial:   "#33B5FF",
+  missed:    "#FF5A33",
   planned:   "",
 };
 const STATUS_LABEL = {
@@ -103,6 +103,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
     return init;
   });
   const [globalNote, setGlobalNote] = useState((a.notes ?? "") as string);
+  const [activityUrl, setActivityUrl] = useState(() => ((a as Record<string, unknown>).activity_url as string) ?? "");
   const [actualDuration, setActualDuration] = useState<string>(() => {
     if ((a as Record<string, unknown>).actual_duration_min != null)
       return String((a as Record<string, unknown>).actual_duration_min);
@@ -127,6 +128,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
         block_logs: logs,
         notes: globalNote || undefined,
         actual_duration_min: durationMin && !isNaN(durationMin) ? durationMin : undefined,
+        activity_url: activityUrl.trim() || undefined,
       },
       { onSuccess: () => onRpeDone(a.id) },
     );
@@ -136,7 +138,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
 
   return (
     <div style={{
-      borderRadius: 12, border: "1px solid " + (status === "missed" ? C.r + "40" : status === "completed" ? C.g + "40" : status === "partial" ? "#7E9CA840" : C.brdL),
+      borderRadius: 6, border: "1px solid " + (status === "missed" ? C.r + "40" : status === "completed" ? C.g + "40" : status === "partial" ? "#33B5FF40" : C.brdL),
       background: C.s1, marginBottom: 10, overflow: "hidden",
     }}>
       {/* Header row */}
@@ -145,7 +147,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
         onClick={() => isLogable && setOpen(o => !o)}
       >
         <div style={{
-          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+          width: 32, height: 32, borderRadius: 4, flexShrink: 0,
           background: (status === "missed" ? C.r : status === "completed" ? C.g : kindColor) + "20",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -169,7 +171,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               <span style={{ fontSize: 10, color: C.tx3 }}>{Math.round(es.total_duration_s / 60)} min</span>
             )}
             {a.rpe_score != null && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#C9A14A" }}>RPE {a.rpe_score}/10</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#FFC933" }}>RPE {a.rpe_score}/10</span>
             )}
           </div>
         </div>
@@ -234,7 +236,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
                         value={localBlocks[b.id]?.note ?? ""}
                         onChange={e => setLocalBlocks(prev => ({ ...prev, [b.id]: { ...prev[b.id], note: e.target.value } }))}
                         style={{
-                          width: "100%", padding: "6px 10px", borderRadius: 8,
+                          width: "100%", padding: "6px 10px", borderRadius: 4,
                           border: "1px solid " + C.brdL, background: C.s2,
                           color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
                           boxSizing: "border-box",
@@ -264,7 +266,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               onChange={e => setActualDuration(e.target.value)}
               placeholder="Durée en minutes"
               style={{
-                width: "100%", padding: "8px 10px", borderRadius: 8,
+                width: "100%", padding: "8px 10px", borderRadius: 4,
                 border: "1px solid " + C.brdL, background: C.s2,
                 color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
                 boxSizing: "border-box",
@@ -279,10 +281,24 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
             onChange={e => setGlobalNote(e.target.value)}
             rows={2}
             style={{
-              width: "100%", marginTop: 12, padding: "8px 10px", borderRadius: 8,
+              width: "100%", marginTop: 12, padding: "8px 10px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: C.s2,
               color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
               resize: "none", boxSizing: "border-box",
+            }}
+          />
+
+          {/* Lien Strava / Garmin */}
+          <input
+            type="url"
+            placeholder="Lien Strava ou Garmin (optionnel)"
+            value={activityUrl}
+            onChange={e => setActivityUrl(e.target.value)}
+            style={{
+              width: "100%", marginTop: 12, padding: "8px 10px", borderRadius: 4,
+              border: "1px solid " + C.brdL, background: C.s2,
+              color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
+              boxSizing: "border-box",
             }}
           />
 
@@ -290,7 +306,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
             onClick={handleValidate}
             disabled={complete.isPending}
             style={{
-              width: "100%", marginTop: 10, padding: "11px 0", borderRadius: 10,
+              width: "100%", marginTop: 10, padding: "11px 0", borderRadius: 4,
               border: "none",
               background: C.g,
               color: "#fff",
@@ -356,7 +372,7 @@ function EnergyAthleteView({ athleteId }: { athleteId: string }) {
           <div onClick={() => setRpeAssignmentId(null)} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)" }} />
           <div style={{
             position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
-            background: C.s1, borderRadius: "20px 20px 0 0", borderTop: "1px solid " + C.brd,
+            background: C.s1, borderRadius: "6px 6px 0 0", borderTop: "1px solid " + C.brd,
             padding: "24px 20px 40px", animation: "rpeSlideUp 220ms ease-out",
           }}>
             <style>{`@keyframes rpeSlideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
@@ -390,7 +406,7 @@ function RpeGridInline({ onSubmit, onSkip, isPending }: { onSubmit: (v: number) 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 16 }}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
           <button key={v} onClick={() => setSelected(v)} style={{
-            padding: "14px 0", borderRadius: 12,
+            padding: "14px 0", borderRadius: 6,
             border: "1px solid " + (selected === v ? rpeColor(v) + "80" : C.brdL),
             background: selected === v ? rpeBg(v) : C.s2,
             color: selected === v ? rpeColor(v) : C.tx2,
@@ -402,7 +418,7 @@ function RpeGridInline({ onSubmit, onSkip, isPending }: { onSubmit: (v: number) 
         minHeight: 28, textAlign: "center", marginBottom: 28, fontSize: 13, fontWeight: 600,
         color: selected != null ? rpeColor(selected) : C.tx3,
         background: selected != null ? rpeBg(selected) : "transparent",
-        borderRadius: 8, padding: "4px 12px",
+        borderRadius: 4, padding: "4px 12px",
       }}>
         {selected != null ? `${selected}/10 — ${FOSTER[selected]}` : "Sélectionne une valeur"}
       </div>
@@ -410,7 +426,7 @@ function RpeGridInline({ onSubmit, onSkip, isPending }: { onSubmit: (v: number) 
         onClick={() => selected != null && onSubmit(selected)}
         disabled={isPending || selected == null}
         style={{
-          width: "100%", padding: "15px 0", borderRadius: 14, border: "none",
+          width: "100%", padding: "15px 0", borderRadius: 6, border: "none",
           background: selected != null ? C.ac : C.s2,
           color: selected != null ? "#fff" : C.tx3,
           fontSize: 14, fontWeight: 700, cursor: selected != null ? "pointer" : "default",
@@ -497,7 +513,7 @@ export default function LogSeancePage() {
 
       {logSubTab === "specifique" && (
         <div style={{ padding: "40px 20px", textAlign: "center" }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>⚡</div>
+          <Zap size={32} style={{ color: C.tx3, marginBottom: 12, display: "block", marginLeft: "auto", marginRight: "auto" }} />
           <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 6 }}>Séances Spécifiques</div>
           <div style={{ fontSize: 13, color: C.tx3 }}>Cette fonctionnalité sera disponible prochainement.</div>
         </div>

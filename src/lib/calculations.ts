@@ -97,9 +97,9 @@ export const getBig3 = (exos: Record<string, any[]>) => {
     return null;
   };
   return [
-    { label: "Bench",   name: find(["bi","bv"]), c: "#D9705A" },
-    { label: "Squat",   name: find(["si","sv"]), c: "#7E9CA8" },
-    { label: "Traction",name: find(["ti","tv"]), c: "#9DB06A" },
+    { label: "Bench",   name: find(["bi","bv"]), c: "#FF5A33" },
+    { label: "Squat",   name: find(["si","sv"]), c: "#33B5FF" },
+    { label: "Traction",name: find(["ti","tv"]), c: "#66F03C" },
   ].filter((x) => x.name);
 };
 

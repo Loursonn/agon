@@ -34,7 +34,7 @@ export function PeriodConflictDialog({
   const color = LEVEL_COLOR[periodType] ?? C.ac;
 
   const btnBase: React.CSSProperties = {
-    width: "100%", padding: "11px 0", borderRadius: 10,
+    width: "100%", padding: "11px 0", borderRadius: 4,
     fontSize: 13, fontWeight: 600, cursor: "pointer",
     fontFamily: "inherit", border: "none",
   };
@@ -46,7 +46,7 @@ export function PeriodConflictDialog({
         position: "fixed", top: "50%", left: "50%", zIndex: 81,
         transform: "translate(-50%,-50%)",
         width: 420, maxWidth: "92vw",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 22px",
         animation: "fadeScaleIn 150ms ease-out",
       }}>
@@ -72,7 +72,7 @@ export function PeriodConflictDialog({
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Période{conflicting.length > 1 ? "s" : ""} en conflit :</div>
           {conflicting.map((p) => (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, background: C.s2, marginBottom: 4 }}>
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 4, background: C.s2, marginBottom: 4 }}>
               <div style={{ width: 6, height: 6, borderRadius: 2, background: color, flexShrink: 0 }} />
               <div style={{ fontSize: 12, fontWeight: 600, color: C.tx, flex: 1 }}>{p.name || "Période"}</div>
               <div style={{ fontSize: 10, color: C.tx3 }}>{p.start_date} → {p.end_date}</div>

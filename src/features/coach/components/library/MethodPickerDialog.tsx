@@ -95,10 +95,9 @@ export function MethodPickerDialog({ setsCount, onAttach, onClose }: MethodPicke
       <div style={{
         position: "fixed", top: "50%", left: "50%", zIndex: 91,
         transform: "translate(-50%, -50%)",
-        background: C.bg, borderRadius: 16,
+        background: C.bg, borderRadius: 6,
         width: "min(94vw, 540px)", maxHeight: "85vh",
         display: "flex", flexDirection: "column",
-        boxShadow: "0 12px 48px rgba(0,0,0,0.6)",
         border: `1px solid ${C.brdL}`,
       }}>
         {/* Header */}
@@ -106,14 +105,14 @@ export function MethodPickerDialog({ setsCount, onAttach, onClose }: MethodPicke
           <div style={{ flex: 1, fontSize: 15, fontWeight: 800, color: C.tx }}>
             Appliquer une méthode
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={14} />
           </button>
         </div>
 
         {/* Filters */}
         <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.brd}`, display: "flex", gap: 8, flexWrap: "wrap", flexShrink: 0 }}>
-          <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 8, padding: 2 }}>
+          <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
             {(["all", "classic", "set", "exercise"] as const).map((v) => (
               <button key={v} onClick={() => setScopeFilter(v)} style={{
                 padding: "4px 10px", borderRadius: 6, border: "none",
@@ -208,7 +207,7 @@ export function MethodPickerDialog({ setsCount, onAttach, onClose }: MethodPicke
                     </div>
                     {((selected.config as Record<string, unknown>)?.weekly_configs as FullWeekConfig[]).map((wc) => (
                       <div key={wc.week} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: "#C9A14A", flexShrink: 0, minWidth: 24 }}>S{wc.week}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "#FFC933", flexShrink: 0, minWidth: 24 }}>S{wc.week}</span>
                         <span style={{ fontSize: 11, color: C.tx2, fontFamily: "monospace" }}>
                           {wc.config ? methodConfigToText(wc.config as MethodConfig) : "—"}
                         </span>
@@ -231,7 +230,7 @@ export function MethodPickerDialog({ setsCount, onAttach, onClose }: MethodPicke
                             key={n}
                             onClick={() => toggleSet(n)}
                             style={{
-                              width: 40, height: 40, borderRadius: 9,
+                              width: 40, height: 40, borderRadius: 4,
                               border: `2px solid ${active ? C.ac : C.brdL}`,
                               background: active ? C.acS : "transparent",
                               color: active ? C.ac : C.tx3,
@@ -256,7 +255,7 @@ export function MethodPickerDialog({ setsCount, onAttach, onClose }: MethodPicke
                 {/* Exercise scope warning */}
                 {selected.scope === "exercise" && (
                   <div style={{
-                    padding: "10px 14px", borderRadius: 8,
+                    padding: "10px 14px", borderRadius: 4,
                     background: C.oS, border: `1px solid ${C.o}40`,
                     fontSize: 12, color: C.o, lineHeight: 1.5,
                   }}>
@@ -271,7 +270,7 @@ export function MethodPickerDialog({ setsCount, onAttach, onClose }: MethodPicke
         {/* Footer */}
         <div style={{ padding: "14px 20px", borderTop: `1px solid ${C.brd}`, display: "flex", gap: 8, flexShrink: 0 }}>
           <button onClick={onClose} style={{
-            flex: 1, padding: "10px 0", borderRadius: 9,
+            flex: 1, padding: "10px 0", borderRadius: 4,
             border: `1px solid ${C.brdL}`, background: "transparent",
             color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
           }}>Annuler</button>
@@ -279,7 +278,7 @@ export function MethodPickerDialog({ setsCount, onAttach, onClose }: MethodPicke
             onClick={handleApply}
             disabled={!canApply}
             style={{
-              flex: 2, padding: "10px 0", borderRadius: 9, border: "none",
+              flex: 2, padding: "10px 0", borderRadius: 4, border: "none",
               background: canApply ? C.ac : C.s2,
               color: canApply ? "#fff" : C.tx3,
               fontSize: 13, fontWeight: 700,

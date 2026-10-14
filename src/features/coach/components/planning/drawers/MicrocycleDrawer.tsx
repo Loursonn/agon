@@ -27,7 +27,7 @@ function DayCard({
   return (
     <div
       style={{
-        borderRadius: 10,
+        borderRadius: 4,
         border: "1px solid " + (today ? C.ac + "40" : C.brd),
         background: today ? C.acS : C.s2,
         padding: "7px 7px 8px",
@@ -202,7 +202,7 @@ export function MicrocycleDrawer({ micro, prevMicro, athleteId }: Props) {
               {[{ label: "Début", val: startDate, set: setStartDate }, { label: "Fin", val: endDate, set: setEndDate }].map(({ label, val, set }) => (
                 <div key={label} style={{ flex: 1 }}>
                   <div style={{ fontSize: 9, color: C.tx3, marginBottom: 4 }}>{label}</div>
-                  <input type="date" value={val} onChange={(e) => set(e.target.value)} style={{ width: "100%", padding: "7px 9px", borderRadius: 8, border: "1px solid " + C.tx3 + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }} />
+                  <input type="date" value={val} onChange={(e) => set(e.target.value)} style={{ width: "100%", padding: "7px 9px", borderRadius: 4, border: "1px solid " + C.tx3 + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }} />
                 </div>
               ))}
             </div>

@@ -40,13 +40,13 @@ export function CompetitionRetourCard({ competition }: CompetitionRetourCardProp
   const pStyle = competition.priority ? PRIORITY_STYLE[competition.priority] : null;
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, padding: "10px 14px" }}>
+    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "10px 14px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Trophy size={13} color="#F5A623" />
           <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{competition.name}</span>
           {pStyle && competition.priority && (
-            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 8, background: pStyle.bg, color: pStyle.color }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: pStyle.bg, color: pStyle.color }}>
               {competition.priority}
             </span>
           )}
@@ -91,11 +91,11 @@ export function CompetitionRetourCard({ competition }: CompetitionRetourCardProp
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               rows={3}
-              style={{ width: "100%", background: C.s2, border: "1px solid " + C.brdL, borderRadius: 8, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
+              style={{ width: "100%", background: C.s2, border: "1px solid " + C.brdL, borderRadius: 4, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
             />
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={handleSave} disabled={updateComment.isPending}
-                style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.coach, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 Enregistrer
               </button>
               <button onClick={() => { setIsEditing(false); setCommentText(competition.athlete_comment ?? ""); }}
@@ -105,7 +105,7 @@ export function CompetitionRetourCard({ competition }: CompetitionRetourCardProp
             </div>
           </div>
         ) : competition.athlete_comment ? (
-          <div style={{ background: C.acS, borderRadius: 8, padding: "7px 10px" }}>
+          <div style={{ background: C.acS, borderRadius: 4, padding: "7px 10px" }}>
             <div style={{ fontSize: 12, color: C.tx2 }}>{competition.athlete_comment}</div>
           </div>
         ) : (

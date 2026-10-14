@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Zap, Plus, Library, X, Check, Copy, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight, Zap, Plus, Library, X, Check, Copy, Pencil, Trash2, Repeat, Calendar, Lightbulb, Target } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -45,7 +45,7 @@ function AddMuscuSessionModal({ onAdd, onClose }: {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 8,
+    width: "100%", padding: "8px 10px", borderRadius: 4,
     border: "1px solid " + C.brdL, background: C.s2,
     color: C.tx, fontSize: 13, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box",
@@ -59,7 +59,7 @@ function AddMuscuSessionModal({ onAdd, onClose }: {
           position: "fixed", top: "50%", left: "50%", zIndex: 71,
           transform: "translate(-50%, -50%)",
           width: 400, maxWidth: "94vw",
-          background: C.s1, borderRadius: 14, border: "1px solid " + C.brd,
+          background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
           padding: "20px 22px",
           animation: "fadeScaleIn 150ms ease-out",
         }}
@@ -105,7 +105,7 @@ function AddMuscuSessionModal({ onAdd, onClose }: {
                   key={r}
                   onClick={() => setRecurrence(r)}
                   style={{
-                    flex: 1, padding: "8px 0", borderRadius: 8,
+                    flex: 1, padding: "8px 0", borderRadius: 4,
                     border: "1px solid " + (recurrence === r ? C.coach : C.brdL),
                     background: recurrence === r ? C.coachS : "transparent",
                     color: recurrence === r ? C.coach : C.tx2,
@@ -113,7 +113,7 @@ function AddMuscuSessionModal({ onAdd, onClose }: {
                     transition: "all 120ms",
                   }}
                 >
-                  {r === "weekly" ? "🔁 Récurrente" : "📅 Ponctuelle"}
+                  {r === "weekly" ? "Récurrente" : "Ponctuelle"}
                 </button>
               ))}
             </div>
@@ -145,10 +145,10 @@ function AddMuscuSessionModal({ onAdd, onClose }: {
           )}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 18, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Annuler
           </button>
-          <button onClick={handleSubmit} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: C.coach, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={handleSubmit} style={{ padding: "8px 18px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Créer
           </button>
         </div>
@@ -240,7 +240,7 @@ function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; ath
           position: "fixed", top: "50%", left: "50%", zIndex: 61,
           transform: "translate(-50%, -50%)",
           width: 560, maxWidth: "94vw", maxHeight: "80vh",
-          background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+          background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
           display: "flex", flexDirection: "column",
           animation: "fadeScaleIn 150ms ease-out",
         }}
@@ -254,7 +254,7 @@ function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; ath
             <div style={{ fontSize: 14, fontWeight: 800, color: C.tx }}>Importer une séance</div>
             <div style={{ fontSize: 11, color: C.tx3 }}>La séance sera dupliquée pour cet athlète — l'originale reste intacte.</div>
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={14} />
           </button>
         </div>
@@ -290,7 +290,7 @@ function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; ath
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher une séance…"
             style={{
-              width: "100%", padding: "8px 10px", borderRadius: 8,
+              width: "100%", padding: "8px 10px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: C.s2,
               color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
               boxSizing: "border-box",
@@ -302,7 +302,7 @@ function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; ath
         <div style={{ overflowY: "auto", padding: "12px 20px", flex: 1, scrollbarWidth: "none" }}>
           {isLoading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[1, 2, 3].map((i) => <div key={i} style={{ height: 58, borderRadius: 10, background: C.s2 }} />)}
+              {[1, 2, 3].map((i) => <div key={i} style={{ height: 58, borderRadius: 4, background: C.s2 }} />)}
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "30px 0", color: C.tx3, fontSize: 13 }}>
@@ -319,7 +319,7 @@ function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; ath
                     onClick={() => handleImport(s)}
                     style={{
                       display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 12px", borderRadius: 10,
+                      padding: "10px 12px", borderRadius: 4,
                       border: "1px solid " + C.brdL, background: C.s2,
                       cursor: copying ? "not-allowed" : "pointer",
                       opacity: copying && !isCopying ? 0.5 : 1,
@@ -328,7 +328,7 @@ function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; ath
                     onMouseEnter={(e) => { if (!copying) e.currentTarget.style.borderColor = kc + "60"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.brdL; }}
                   >
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 4, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {isCopying ? <Check size={13} color={kc} /> : <Zap size={13} color={kc} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -404,7 +404,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
             onClick={() => setShowPicker(true)}
             style={{
               display: "flex", alignItems: "center", gap: 5,
-              padding: "7px 12px", borderRadius: 9,
+              padding: "7px 12px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: "transparent", color: C.tx2,
               fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
             }}
@@ -416,8 +416,8 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
             onClick={onNew}
             style={{
               display: "flex", alignItems: "center", gap: 5,
-              padding: "7px 14px", borderRadius: 9,
-              border: "none", background: C.coach, color: "#fff",
+              padding: "7px 14px", borderRadius: 4,
+              border: "none", background: C.acV, color: "#0E0C0A",
               fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
             }}
           >
@@ -441,11 +441,11 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
       {/* Info banner */}
       <div style={{
         display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "10px 14px", borderRadius: 10, marginBottom: 16,
+        padding: "10px 14px", borderRadius: 4, marginBottom: 16,
         background: C.ac + "10", border: "1px solid " + C.ac + "30",
         fontSize: 11, color: C.tx2, lineHeight: 1.5,
       }}>
-        <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
+        <Lightbulb size={14} style={{ color: C.ac, flexShrink: 0 }} />
         <span>
           Importe une séance depuis la banque ou un autre athlète. La copie est personnalisable sans modifier l'originale.
           Pour la planifier, glisse-la depuis <strong style={{ color: C.ac }}>Planning → Mois</strong> vers le jour voulu.
@@ -459,7 +459,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher…"
           style={{
-            width: "100%", padding: "8px 10px", borderRadius: 8,
+            width: "100%", padding: "8px 10px", borderRadius: 4,
             border: "1px solid " + C.brdL, background: C.s2,
             color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
             boxSizing: "border-box", marginBottom: 12,
@@ -471,7 +471,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
       {isLoading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} style={{ height: 64, borderRadius: 12, background: C.s1 }} />
+            <Skeleton key={i} style={{ height: 64, borderRadius: 6, background: C.s1 }} />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -490,7 +490,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
               <button
                 onClick={() => setShowPicker(true)}
                 style={{
-                  padding: "10px 16px", borderRadius: 10,
+                  padding: "10px 16px", borderRadius: 4,
                   border: "1px solid " + C.brdL, background: "transparent", color: C.tx2,
                   fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   display: "flex", alignItems: "center", gap: 6,
@@ -501,8 +501,8 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
               <button
                 onClick={onNew}
                 style={{
-                  padding: "10px 20px", borderRadius: 10, border: "none",
-                  background: C.coach, color: "#fff",
+                  padding: "10px 20px", borderRadius: 4, border: "none",
+                  background: C.acV, color: "#0E0C0A",
                   fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                 }}
               >
@@ -521,7 +521,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
                 onClick={() => setPreviewSession(s)}
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
-                  padding: "12px 14px", borderRadius: 12,
+                  padding: "12px 14px", borderRadius: 6,
                   border: "1px solid " + C.brdL, background: C.s1,
                   cursor: "pointer", transition: "border-color 120ms",
                 }}
@@ -530,7 +530,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps) {
               >
                 {/* Icon */}
                 <div style={{
-                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                  width: 34, height: 34, borderRadius: 4, flexShrink: 0,
                   background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
                   <Zap size={16} color={kc} />
@@ -596,8 +596,8 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
           onClick={onNew}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "7px 14px", borderRadius: 9,
-            border: "none", background: C.coach, color: "#fff",
+            padding: "7px 14px", borderRadius: 4,
+            border: "none", background: C.acV, color: "#0E0C0A",
             fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
           }}
         >
@@ -617,11 +617,11 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
 
       <div style={{
         display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "10px 14px", borderRadius: 10, marginBottom: 16,
+        padding: "10px 14px", borderRadius: 4, marginBottom: 16,
         background: SPECIFIQUE_COLOR + "10", border: "1px solid " + SPECIFIQUE_COLOR + "30",
         fontSize: 11, color: C.tx2, lineHeight: 1.5,
       }}>
-        <span style={{ fontSize: 14, flexShrink: 0 }}>🎯</span>
+        <Target size={14} style={{ color: SPECIFIQUE_COLOR, flexShrink: 0 }} />
         <span>
           Séances spécifiques type CrossFit / MetCon : combine intervalles énergétiques et exercices dans un même builder.
         </span>
@@ -632,7 +632,7 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
           value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher…"
           style={{
-            width: "100%", padding: "8px 10px", borderRadius: 8,
+            width: "100%", padding: "8px 10px", borderRadius: 4,
             border: "1px solid " + C.brdL, background: C.s2,
             color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
             boxSizing: "border-box", marginBottom: 12,
@@ -643,12 +643,12 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
       {isLoading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} style={{ height: 64, borderRadius: 12, background: C.s1 }} />
+            <Skeleton key={i} style={{ height: 64, borderRadius: 6, background: C.s1 }} />
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>🎯</div>
+          <div style={{ marginBottom: 10 }}><Target size={32} style={{ color: C.tx3 }} /></div>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 4 }}>
             {search ? "Aucun résultat" : "Aucune séance spécifique"}
           </div>
@@ -659,8 +659,8 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
             <button
               onClick={onNew}
               style={{
-                padding: "10px 20px", borderRadius: 10, border: "none",
-                background: C.coach, color: "#fff",
+                padding: "10px 20px", borderRadius: 4, border: "none",
+                background: C.acV, color: "#0E0C0A",
                 fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               }}
             >
@@ -676,7 +676,7 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
               onClick={() => setPreviewSession(s)}
               style={{
                 display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 14px", borderRadius: 12,
+                padding: "12px 14px", borderRadius: 6,
                 border: "1px solid " + C.brdL, background: C.s1,
                 cursor: "pointer", transition: "border-color 120ms",
               }}
@@ -684,11 +684,11 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onEdit }: EnergyPanelProps
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.brdL)}
             >
               <div style={{
-                width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                width: 34, height: 34, borderRadius: 4, flexShrink: 0,
                 background: SPECIFIQUE_COLOR + "20", display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 16,
               }}>
-                🎯
+                <Target size={16} style={{ color: SPECIFIQUE_COLOR }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -841,8 +841,8 @@ export default function ProgrammationPage() {
   if (!loaded) {
     return (
       <div style={{ padding: "16px 24px" }}>
-        <Skeleton style={{ height: 80, borderRadius: 14, background: C.s1, marginBottom: 12 }} />
-        <Skeleton style={{ height: 300, borderRadius: 14, background: C.s1 }} />
+        <Skeleton style={{ height: 80, borderRadius: 6, background: C.s1, marginBottom: 12 }} />
+        <Skeleton style={{ height: 300, borderRadius: 6, background: C.s1 }} />
       </div>
     );
   }
@@ -852,7 +852,7 @@ export default function ProgrammationPage() {
 
       {/* ── Bannière cycle ── */}
       <div style={{
-        background: C.s1, borderRadius: 14, padding: "12px 16px",
+        background: C.s1, borderRadius: 6, padding: "12px 16px",
         border: "1px solid " + C.b + "30", marginBottom: 16,
       }}>
         {(cycleLoading || createCycle.isPending) ? (
@@ -892,7 +892,7 @@ export default function ProgrammationPage() {
                 value={activeCycle.id}
                 onChange={(e) => { const c = cyclesList.find((x) => x.id === e.target.value); if (c) selectCycle(c); }}
                 style={{
-                  width: "100%", padding: "7px 9px", borderRadius: 8,
+                  width: "100%", padding: "7px 9px", borderRadius: 4,
                   border: "1px solid " + C.brdL, background: C.s2, color: C.tx,
                   fontSize: 12, fontFamily: "inherit",
                 }}
@@ -930,7 +930,7 @@ export default function ProgrammationPage() {
                 }}
                 disabled={!blockConfig?.startDate || sessions.length === 0}
                 style={{
-                  padding: "8px 14px", borderRadius: 10,
+                  padding: "8px 14px", borderRadius: 4,
                   border: "1px solid " + C.coach + "40",
                   background: C.coachS, color: C.coach,
                   fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
@@ -1028,8 +1028,8 @@ export default function ProgrammationPage() {
           <div style={{
             position: "fixed", top: "50%", left: "50%", zIndex: 81,
             transform: "translate(-50%, -50%)",
-            background: C.bg, borderRadius: 16, padding: "20px",
-            width: "min(92vw, 380px)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
+            background: C.bg, borderRadius: 6, padding: "20px",
+            width: "min(92vw, 380px)",
             display: "flex", flexDirection: "column", gap: 14,
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1047,7 +1047,7 @@ export default function ProgrammationPage() {
                 {trashedSessions.map(({ session: s }) => (
                   <div key={s.id} style={{
                     display: "flex", alignItems: "center", gap: 10,
-                    padding: "10px 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: C.s1,
+                    padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s1,
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{s.name || s.short || "Séance"}</div>
@@ -1096,8 +1096,8 @@ export default function ProgrammationPage() {
           <div style={{
             position: "fixed", top: "50%", left: "50%", zIndex: 83,
             transform: "translate(-50%, -50%)",
-            background: C.bg, borderRadius: 14, padding: "20px 20px",
-            width: "min(88vw, 320px)", boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
+            background: C.bg, borderRadius: 6, padding: "20px 20px",
+            width: "min(88vw, 320px)",
             display: "flex", flexDirection: "column", gap: 16,
           }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>Déplacer vers la corbeille ?</div>
@@ -1108,7 +1108,7 @@ export default function ProgrammationPage() {
               <button
                 onClick={() => setConfirmDelete(null)}
                 style={{
-                  flex: 1, padding: "10px 0", borderRadius: 9,
+                  flex: 1, padding: "10px 0", borderRadius: 4,
                   border: "1px solid " + C.brdL, background: "transparent",
                   color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                 }}
@@ -1127,8 +1127,8 @@ export default function ProgrammationPage() {
                   setConfirmDelete(null);
                 }}
                 style={{
-                  flex: 1, padding: "10px 0", borderRadius: 9,
-                  border: "none", background: C.r, color: "#fff",
+                  flex: 1, padding: "10px 0", borderRadius: 4,
+                  border: "none", background: C.rV, color: "#0E0C0A",
                   fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                 }}
               >Supprimer</button>
@@ -1165,9 +1165,8 @@ export default function ProgrammationPage() {
           />
           <div style={{
             position: "relative", width: "100%",
-            background: C.bg, borderRadius: "20px 20px 0 0",
+            background: C.bg, borderRadius: "6px 6px 0 0",
             padding: "20px 16px 36px",
-            boxShadow: "0 -8px 40px rgba(0,0,0,0.4)",
           }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 4 }}>
               {dayPicker.sessName}
@@ -1186,7 +1185,7 @@ export default function ProgrammationPage() {
                     await rescheduleWorkoutLogs(prev.sessId, idx);
                   }}
                   style={{
-                    padding: "10px 4px", borderRadius: 10,
+                    padding: "10px 4px", borderRadius: 4,
                     border: "1px solid " + (dayPicker.currentDay === idx ? C.coach : C.brdL),
                     background: dayPicker.currentDay === idx ? C.coachS : "transparent",
                     color: dayPicker.currentDay === idx ? C.coach : C.tx2,

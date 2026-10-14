@@ -100,22 +100,22 @@ export default function Login() {
   }
 
   const S = {
-    bg: "#15120F", s1: "#1E1A16", s2: "#27221D",
+    bg: "#0E0C0A", s1: "#1E1A16", s2: "#27221D",
     brd: "rgba(231,211,168,0.10)", brdL: "rgba(231,211,168,0.18)",
-    tx: "#F4EFE3", tx2: "#B9AE9C", tx3: "#7D7468",
-    ac: "#C9A14A", acS: "rgba(201,161,74,0.12)",
-    coach: "#C9A14A", coachS: "rgba(201,161,74,0.12)",
-    g: "#9DB06A", r: "#D9705A",
+    tx: "#FFFFFF", tx2: "#B9AE9C", tx3: "#7D7468",
+    ac: "#FFC933", acS: "rgba(255,201,51,0.12)",
+    coach: "#FFC933", coachS: "rgba(255,201,51,0.12)",
+    g: "#66F03C", r: "#FF5A33",
   };
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "10px 12px", borderRadius: 10,
+    width: "100%", padding: "10px 12px", borderRadius: 4,
     border: "1px solid " + S.brdL, background: S.s2, color: S.tx,
     fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
   };
   const labelStyle: React.CSSProperties = { fontSize: 12, color: S.tx2, marginBottom: 4, display: "block" };
   const btnPrimary = (color = S.ac): React.CSSProperties => ({
-    width: "100%", padding: "12px 0", borderRadius: 10, border: "none",
+    width: "100%", padding: "12px 0", borderRadius: 4, border: "none",
     background: color, color: "#fff", fontSize: 14, fontWeight: 700,
     cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: loading ? 0.7 : 1,
   });
@@ -124,7 +124,6 @@ export default function Login() {
     return (
       <div style={{ minHeight: "100vh", background: S.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px" }}>
         <div style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: S.tx, marginBottom: 8 }}>Compte créé !</div>
           <div style={{ fontSize: 14, color: S.tx2, marginBottom: 24, lineHeight: 1.6 }}>
             Vérifie ta boîte mail et clique sur le lien de confirmation, puis reviens te connecter.
@@ -149,16 +148,16 @@ export default function Login() {
         </div>
 
         {/* Tab switcher */}
-        <div style={{ display: "flex", background: S.s1, borderRadius: 10, padding: 3, marginBottom: 20, border: "1px solid " + S.brd }}>
+        <div style={{ display: "flex", background: S.s1, borderRadius: 4, padding: 3, marginBottom: 20, border: "1px solid " + S.brd }}>
           {(["login", "register"] as Tab[]).map(t => (
             <button key={t} onClick={() => { setTab(t); setRegisterRole(null); setForgot(false); setForgotSent(false); setError(""); }}
-              style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: "none", background: tab === t ? S.s2 : "transparent", color: tab === t ? S.tx : S.tx3, fontSize: 13, fontWeight: tab === t ? 700 : 400, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
+              style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: tab === t ? S.s2 : "transparent", color: tab === t ? S.tx : S.tx3, fontSize: 13, fontWeight: tab === t ? 700 : 400, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
               {t === "login" ? "Connexion" : "Créer un compte"}
             </button>
           ))}
         </div>
 
-        <div style={{ background: S.s1, borderRadius: 16, padding: 24, border: "1px solid " + S.brd }}>
+        <div style={{ background: S.s1, borderRadius: 6, padding: 24, border: "1px solid " + S.brd }}>
 
           {/* ---- CONNEXION ---- */}
           {tab === "login" && !forgot && (
@@ -171,7 +170,7 @@ export default function Login() {
                 <label style={labelStyle}>Mot de passe</label>
                 <input name="password" type="password" required placeholder="••••••••" style={inputStyle} />
               </div>
-              {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 8, background: S.r + "15" }}>{error}</div>}
+              {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
               <button type="submit" style={btnPrimary()} disabled={loading}>
                 {loading ? "Connexion…" : "Se connecter"}
               </button>
@@ -186,7 +185,7 @@ export default function Login() {
           {tab === "login" && forgot && (
             forgotSent ? (
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📬</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: S.g, marginBottom: 12 }}>✓</div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: S.tx, marginBottom: 8 }}>Email envoyé !</div>
                 <div style={{ fontSize: 13, color: S.tx2, lineHeight: 1.6, marginBottom: 20 }}>
                   Vérifie ta boîte mail et clique sur le lien pour créer un nouveau mot de passe.
@@ -211,7 +210,7 @@ export default function Login() {
                   <label style={labelStyle}>Email</label>
                   <input name="email" type="email" required placeholder="ton@email.com" style={inputStyle} />
                 </div>
-                {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 8, background: S.r + "15" }}>{error}</div>}
+                {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
                 <button type="submit" style={btnPrimary()} disabled={loading}>
                   {loading ? "Envoi…" : "Envoyer le lien de réinitialisation"}
                 </button>
@@ -224,13 +223,13 @@ export default function Login() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: S.tx, marginBottom: 4 }}>Tu es… ?</div>
               <button onClick={() => setRegisterRole("coach")}
-                style={{ padding: "16px", borderRadius: 12, border: "1.5px solid " + S.coach + "50", background: S.coachS, color: S.coach, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                <div style={{ fontSize: 18, marginBottom: 4 }}>🎯 Coach</div>
+                style={{ padding: "16px", borderRadius: 6, border: "1.5px solid " + S.coach + "50", background: S.coachS, color: S.coach, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>Coach</div>
                 <div style={{ fontSize: 12, fontWeight: 400, color: S.tx2 }}>Tu crées les programmes et suis tes athlètes</div>
               </button>
               <button onClick={() => setRegisterRole("athlete")}
-                style={{ padding: "16px", borderRadius: 12, border: "1.5px solid " + S.ac + "50", background: S.acS, color: S.ac, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                <div style={{ fontSize: 18, marginBottom: 4 }}>💪 Athlète</div>
+                style={{ padding: "16px", borderRadius: 6, border: "1.5px solid " + S.ac + "50", background: S.acS, color: S.ac, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>Athlète</div>
                 <div style={{ fontSize: 12, fontWeight: 400, color: S.tx2 }}>Tu exécutes ton programme et suis ta progression</div>
               </button>
             </div>
@@ -261,7 +260,7 @@ export default function Login() {
                 <input name="confirm" type="password" required placeholder="••••••••" minLength={6} style={inputStyle} />
               </div>
               {/* Option coach-athlète */}
-              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 12px", borderRadius: 10, background: S.s2, border: "1px solid " + (isCoachAthlete ? S.ac : S.brd) }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 12px", borderRadius: 4, background: S.s2, border: "1px solid " + (isCoachAthlete ? S.ac : S.brd) }}>
                 <input type="checkbox" checked={isCoachAthlete} onChange={e => setIsCoachAthlete(e.target.checked)}
                   style={{ width: 16, height: 16, accentColor: S.ac, cursor: "pointer" }} />
                 <div>
@@ -269,7 +268,7 @@ export default function Login() {
                   <div style={{ fontSize: 11, color: S.tx3 }}>Tu pourras aussi utiliser la vue athlète pour toi-même</div>
                 </div>
               </label>
-              {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 8, background: S.r + "15" }}>{error}</div>}
+              {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
               <button type="submit" style={btnPrimary(S.coach)} disabled={loading}>
                 {loading ? "Création…" : "Créer mon compte coach"}
               </button>
@@ -306,7 +305,7 @@ export default function Login() {
                 <label style={labelStyle}>Confirmer le mot de passe</label>
                 <input name="confirm" type="password" required placeholder="••••••••" minLength={6} style={inputStyle} />
               </div>
-              {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 8, background: S.r + "15" }}>{error}</div>}
+              {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
               <button type="submit" style={btnPrimary()} disabled={loading}>
                 {loading ? "Création…" : "Rejoindre mon coach"}
               </button>

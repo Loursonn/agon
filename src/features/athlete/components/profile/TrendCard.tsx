@@ -30,7 +30,7 @@ export function TrendCard({ label, value, unit, delta, deltaUnit = "", goodWhenU
       type="button"
       onClick={onClick}
       style={{
-        background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: "12px 12px 10px",
+        background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "12px 12px 10px",
         textAlign: "left", cursor: onClick ? "pointer" : "default", fontFamily: "inherit",
         display: "flex", flexDirection: "column", gap: 4, minWidth: 0,
       }}

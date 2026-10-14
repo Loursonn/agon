@@ -29,7 +29,7 @@ function deriveWellness(wellnessToday: CoachOverviewRaw["wellness_today"]) {
     .filter((s): s is number => typeof s === "number");
   if (!scores.length) return { wellnessMean: null, wellnessColor: "#9194A0" };
   const mean = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-  const color = mean >= 70 ? "#9DB06A" : mean >= 50 ? "#F5A623" : "#D9705A";
+  const color = mean >= 70 ? "#66F03C" : mean >= 50 ? "#F5A623" : "#FF5A33";
   return { wellnessMean: mean, wellnessColor: color };
 }
 
@@ -163,7 +163,7 @@ export function useCoachOverview(): CoachOverview {
         .filter((s): s is number => typeof s === "number");
       if (!scores.length) return { wellnessMean: null, wellnessColor: "#9194A0" };
       const mean = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-      const color = mean >= 70 ? "#9DB06A" : mean >= 50 ? "#F5A623" : "#D9705A";
+      const color = mean >= 70 ? "#66F03C" : mean >= 50 ? "#F5A623" : "#FF5A33";
       return { wellnessMean: mean, wellnessColor: color };
     })();
 

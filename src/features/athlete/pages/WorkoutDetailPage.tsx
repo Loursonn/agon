@@ -15,15 +15,15 @@ import type { ExerciceParams, ClusterConfig } from "@/features/coach/components/
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const VIOLET = "#C9A14A";
-const ROSE = "#C9A14A";
-const GREEN = "#9DB06A";
+const ACCENT = "#FFC933";
+const ACCENT_ALT = "#FF9500";
+const GREEN = "#66F03C";
 const REST_DEFAULT = 90;
 const RING_R = 18;
 const RING_C = 2 * Math.PI * RING_R; // ≈ 113.097
 
 const BLOC_PALETTE = [
-  "#C9A14A", "#F97316", "#22C55E", "#EF4444",
+  "#FFC933", "#F97316", "#22C55E", "#EF4444",
   "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
 ];
 
@@ -301,14 +301,14 @@ function blocRestSeconds(bloc: {
 
 // ── BadgeTag ───────────────────────────────────────────────────────────────────
 
-function BadgeTag({ label, color = VIOLET }: { label: string; color?: string }) {
+function BadgeTag({ label, color = ACCENT }: { label: string; color?: string }) {
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
         padding: "2px 7px",
-        borderRadius: 20,
+        borderRadius: 6,
         background: hexToRgba(color, 0.12),
         color,
         fontSize: 9,
@@ -353,7 +353,7 @@ function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, indexCo
         style={{
           background: state.done ? hexToRgba(GREEN, 0.06) : C.s2,
           border: `1px solid ${state.done ? hexToRgba(GREEN, 0.3) : C.brdL}`,
-          borderRadius: 8,
+          borderRadius: 4,
           padding: "7px 2px",
           color: state.done ? GREEN : state.skipped ? C.tx3 : C.tx,
           fontSize: 13,
@@ -391,9 +391,9 @@ function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, indexCo
             onClick={onRemoveSet}
             style={{
               width: 22, height: 22, borderRadius: 6,
-              border: `1px solid ${hexToRgba(ROSE, 0.5)}`,
-              background: hexToRgba(ROSE, 0.12),
-              color: ROSE, fontSize: 13, fontWeight: 700,
+              border: `1px solid ${hexToRgba(ACCENT_ALT, 0.5)}`,
+              background: hexToRgba(ACCENT_ALT, 0.12),
+              color: ACCENT_ALT, fontSize: 13, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit",
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               padding: 0,
@@ -438,19 +438,19 @@ function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, indexCo
           height: 32,
           borderRadius: "50%",
           border: `2px solid ${
-            checkState === "done" ? GREEN : checkState === "skip" ? ROSE : C.brdL
+            checkState === "done" ? GREEN : checkState === "skip" ? ACCENT_ALT : C.brdL
           }`,
           background:
             checkState === "done"
               ? GREEN
               : checkState === "skip"
-              ? hexToRgba(ROSE, 0.18)
+              ? hexToRgba(ACCENT_ALT, 0.18)
               : "transparent",
           color:
             checkState === "done"
               ? "#fff"
               : checkState === "skip"
-              ? ROSE
+              ? ACCENT_ALT
               : C.tx3,
           fontSize: 14,
           fontWeight: 700,
@@ -585,10 +585,10 @@ function ClusterSubRow({
           height: 28,
           borderRadius: "50%",
           border: `2px solid ${
-            checkState === "done" ? GREEN : checkState === "skip" ? ROSE : C.brdL
+            checkState === "done" ? GREEN : checkState === "skip" ? ACCENT_ALT : C.brdL
           }`,
-          background: checkState === "done" ? GREEN : checkState === "skip" ? hexToRgba(ROSE, 0.18) : "transparent",
-          color: checkState === "done" ? "#fff" : checkState === "skip" ? ROSE : C.tx3,
+          background: checkState === "done" ? GREEN : checkState === "skip" ? hexToRgba(ACCENT_ALT, 0.18) : "transparent",
+          color: checkState === "done" ? "#fff" : checkState === "skip" ? ACCENT_ALT : C.tx3,
           fontSize: 12,
           fontWeight: 700,
           cursor: canEdit ? "pointer" : "default",
@@ -637,24 +637,24 @@ function InlineRestStrip({ myKey, seconds, label, activeKey, left, total, onStar
     const urgent = left! <= 10;
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0 2px" }}>
-        <span style={{ fontSize: 9, color: urgent ? ROSE : VIOLET, flexShrink: 0 }}>⏱</span>
+        <span style={{ fontSize: 9, color: urgent ? ACCENT_ALT : ACCENT, flexShrink: 0 }}></span>
         <div style={{ flex: 1, height: 3, background: C.brd, borderRadius: 2, overflow: "hidden" }}>
           <div style={{
             height: "100%",
             width: `${pct * 100}%`,
-            background: urgent ? ROSE : VIOLET,
+            background: urgent ? ACCENT_ALT : ACCENT,
             borderRadius: 2,
             transition: "width 1s linear",
           }} />
         </div>
-        <span style={{ fontSize: 10, fontWeight: 700, color: urgent ? ROSE : VIOLET, minWidth: 28, textAlign: "right" as const }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: urgent ? ACCENT_ALT : ACCENT, minWidth: 28, textAlign: "right" as const }}>
           {fmt(left!)}
         </span>
         <button
           onClick={onStop}
           style={{
             padding: "2px 6px", borderRadius: 4, border: "none",
-            background: hexToRgba(ROSE, 0.15), color: ROSE,
+            background: hexToRgba(ACCENT_ALT, 0.15), color: ACCENT_ALT,
             fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
           }}
         >✕</button>
@@ -666,7 +666,7 @@ function InlineRestStrip({ myKey, seconds, label, activeKey, left, total, onStar
     <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0 1px", opacity: 0.45 }}>
       <div style={{ flex: 1, height: 1, background: C.brdL }} />
       <span style={{ fontSize: 9, color: C.tx3, whiteSpace: "nowrap" as const }}>
-        ⏱ {fmt(seconds)} {label}
+        {fmt(seconds)} {label}
       </span>
       <button
         onClick={onStart}
@@ -736,7 +736,7 @@ function SupersetCard({
   return (
     <div style={{
       background: C.s1,
-      borderRadius: 14,
+      borderRadius: 6,
       border: `1px solid ${hexToRgba(SS_ORANGE, 0.45)}`,
       overflow: "hidden",
     }}>
@@ -744,11 +744,11 @@ function SupersetCard({
       <div style={{ padding: "11px 14px 9px", borderBottom: `1px solid ${C.brd}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <span style={{
-            padding: "2px 9px", borderRadius: 8,
+            padding: "2px 9px", borderRadius: 4,
             background: hexToRgba(SS_ORANGE, 0.14), border: `1px solid ${hexToRgba(SS_ORANGE, 0.4)}`,
             color: SS_ORANGE, fontSize: 10, fontWeight: 800,
           }}>
-            ⛓ Superset ×{members.length}
+            Superset ×{members.length}
           </span>
           <span style={{ fontSize: 9, color: C.tx3, flex: 1, minWidth: 0 }}>
             enchaîner les exos, repos après chaque tour
@@ -758,7 +758,7 @@ function SupersetCard({
               fontSize: 10, fontWeight: 700,
               color: allDone ? C.g : C.tx3,
               background: allDone ? C.gS : C.s2,
-              padding: "2px 8px", borderRadius: 20, flexShrink: 0,
+              padding: "2px 8px", borderRadius: 6, flexShrink: 0,
             }}>
               {doneSets}/{totalSets} ✓
             </span>
@@ -779,8 +779,7 @@ function SupersetCard({
                   {SS_LETTERS[mi]}
                 </span>
                 <span style={{
-                  fontSize: 12, fontWeight: 800, color: C.tx,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
+                  fontSize: 12, fontWeight: 800, color: C.tx, minWidth: 0,
                 }}>
                   {m.name}
                 </span>
@@ -790,22 +789,22 @@ function SupersetCard({
                     title="Voir la vidéo de l'exercice"
                     style={{
                       width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                      border: `1px solid ${hexToRgba(VIOLET, 0.4)}`,
-                      background: hexToRgba(VIOLET, 0.12), color: VIOLET,
+                      border: `1px solid ${hexToRgba(ACCENT, 0.4)}`,
+                      background: hexToRgba(ACCENT, 0.12), color: ACCENT,
                       fontSize: 10, cursor: "pointer", fontFamily: "inherit",
                       display: "inline-flex", alignItems: "center", justifyContent: "center",
                       padding: 0,
                     }}
-                  >🎥</button>
+                  ></button>
                 )}
                 <span style={{ flexShrink: 0 }}>
-                  <BadgeTag label={m.prescription} color={VIOLET} />
+                  <BadgeTag label={m.prescription} color={ACCENT} />
                 </span>
                 {m.muscle && <span style={{ flexShrink: 0 }}><BadgeTag label={m.muscle} color={blocColor} /></span>}
               </div>
               {m.coachComment && (
                 <div style={{ marginTop: 2, marginLeft: 25, fontSize: 10, color: C.tx2, fontStyle: "italic", lineHeight: 1.4 }}>
-                  💬 {m.coachComment}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg>{m.coachComment}
                 </div>
               )}
             </div>
@@ -971,7 +970,7 @@ function ExerciceCard({
     <div
       style={{
         background: C.s1,
-        borderRadius: 14,
+        borderRadius: 6,
         border: `1px solid ${C.brd}`,
         overflow: "hidden",
       }}
@@ -990,9 +989,6 @@ function ExerciceCard({
                 fontSize: 13,
                 fontWeight: 800,
                 color: C.tx,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
               {name}
@@ -1004,13 +1000,13 @@ function ExerciceCard({
               title="Voir la vidéo de l'exercice"
               style={{
                 width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-                border: `1px solid ${hexToRgba(VIOLET, 0.4)}`,
-                background: hexToRgba(VIOLET, 0.12), color: VIOLET,
+                border: `1px solid ${hexToRgba(ACCENT, 0.4)}`,
+                background: hexToRgba(ACCENT, 0.12), color: ACCENT,
                 fontSize: 11, cursor: "pointer", fontFamily: "inherit",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 padding: 0,
               }}
-            >🎥</button>
+            ></button>
           )}
           {doneSets > 0 && (
             <div
@@ -1020,7 +1016,7 @@ function ExerciceCard({
                 color: allDone ? C.g : C.tx3,
                 background: allDone ? C.gS : C.s2,
                 padding: "2px 8px",
-                borderRadius: 20,
+                borderRadius: 6,
                 flexShrink: 0,
               }}
             >
@@ -1031,13 +1027,13 @@ function ExerciceCard({
         {/* Badge row */}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {supersetTag && <BadgeTag label={supersetTag} color="#F5A623" />}
-          <BadgeTag label={prescription} color={VIOLET} />
+          <BadgeTag label={prescription} color={ACCENT} />
           {muscle && <BadgeTag label={muscle} color={blocColor} />}
         </div>
         {/* Coach comment */}
         {coachComment && (
-          <div style={{ marginTop: 5, fontSize: 10, color: C.tx2, fontStyle: "italic", lineHeight: 1.4 }}>
-            💬 {coachComment}
+          <div style={{ marginTop: 5, fontSize: 10, color: C.tx2, fontStyle: "italic", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg>{coachComment}
           </div>
         )}
       </div>
@@ -1231,7 +1227,7 @@ function ExerciceCard({
                 width: "100%",
                 background: C.s2,
                 border: `1px solid ${C.brdL}`,
-                borderRadius: 8,
+                borderRadius: 4,
                 padding: "8px 10px",
                 color: C.tx,
                 fontSize: 12,
@@ -1266,7 +1262,7 @@ function ExerciceCard({
                   fontFamily: "inherit",
                 }}
               >
-                💬 Commentaire
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg>Commentaire
               </button>
             )}
             {!params.cluster && <button
@@ -1351,7 +1347,7 @@ function NumPad({ target, value, onChange, onConfirm, onClose }: NumPadProps) {
           right: 0,
           zIndex: 41,
           background: C.s1,
-          borderRadius: "20px 20px 0 0",
+          borderRadius: "6px 6px 0 0",
           maxWidth: 480,
           margin: "0 auto",
         }}
@@ -1366,7 +1362,7 @@ function NumPad({ target, value, onChange, onConfirm, onClose }: NumPadProps) {
             style={{
               fontSize: 36,
               fontWeight: 900,
-              color: VIOLET,
+              color: ACCENT,
               letterSpacing: "1px",
               minHeight: 44,
               display: "flex",
@@ -1387,10 +1383,10 @@ function NumPad({ target, value, onChange, onConfirm, onClose }: NumPadProps) {
               style={{
                 flex: 1,
                 padding: "9px 0",
-                borderRadius: 8,
+                borderRadius: 4,
                 border: `1px solid ${C.brdL}`,
                 background: C.s2,
-                color: s < 0 ? ROSE : VIOLET,
+                color: s < 0 ? ACCENT_ALT : ACCENT,
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -1417,10 +1413,10 @@ function NumPad({ target, value, onChange, onConfirm, onClose }: NumPadProps) {
               onClick={() => press(k)}
               style={{
                 padding: "14px 0",
-                borderRadius: 10,
+                borderRadius: 4,
                 border: `1px solid ${C.brdL}`,
-                background: k === "←" ? hexToRgba(ROSE, 0.1) : C.s2,
-                color: k === "←" ? ROSE : C.tx,
+                background: k === "←" ? hexToRgba(ACCENT_ALT, 0.1) : C.s2,
+                color: k === "←" ? ACCENT_ALT : C.tx,
                 fontSize: k === "←" ? 18 : 16,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -1439,9 +1435,9 @@ function NumPad({ target, value, onChange, onConfirm, onClose }: NumPadProps) {
             style={{
               width: "100%",
               padding: "14px 0",
-              borderRadius: 12,
+              borderRadius: 6,
               border: "none",
-              background: VIOLET,
+              background: ACCENT,
               color: "#fff",
               fontSize: 14,
               fontWeight: 700,
@@ -1481,7 +1477,7 @@ function getRirColor(val: string): string {
   if (n <= 2.5) return "#FACC15";
   if (n <= 3.5) return "#84CC16";
   if (n <= 4.5) return "#22C55E";
-  if (n <= 5)   return "#9DB06A";
+  if (n <= 5)   return "#66F03C";
   return "#3B9EFF";
 }
 
@@ -1494,7 +1490,7 @@ interface RirPickerProps {
 
 function RirPicker({ value, onChange, onConfirm, onClose }: RirPickerProps) {
   const selectedItem = RIR_ITEMS.find((r) => r.val === value);
-  const selColor = value ? getRirColor(value) : VIOLET;
+  const selColor = value ? getRirColor(value) : ACCENT;
 
   return (
     <>
@@ -1502,7 +1498,7 @@ function RirPicker({ value, onChange, onConfirm, onClose }: RirPickerProps) {
       <div
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 41,
-          background: C.s1, borderRadius: "20px 20px 0 0",
+          background: C.s1, borderRadius: "6px 6px 0 0",
           maxWidth: 480, margin: "0 auto",
         }}
       >
@@ -1548,7 +1544,7 @@ function RirPicker({ value, onChange, onConfirm, onClose }: RirPickerProps) {
                 key={item.val}
                 onClick={() => onChange(item.val)}
                 style={{
-                  height: 52, borderRadius: 10,
+                  height: 52, borderRadius: 4,
                   border: `2px solid ${selected ? color : hexToRgba(color, 0.3)}`,
                   background: selected ? hexToRgba(color, 0.2) : hexToRgba(color, 0.07),
                   color: selected ? color : C.tx2,
@@ -1568,7 +1564,7 @@ function RirPicker({ value, onChange, onConfirm, onClose }: RirPickerProps) {
           <button
             onClick={onConfirm}
             style={{
-              width: "100%", padding: "14px 0", borderRadius: 12,
+              width: "100%", padding: "14px 0", borderRadius: 6,
               border: "none",
               background: value ? selColor : C.s2,
               color: value ? "#fff" : C.tx3,
@@ -1607,13 +1603,12 @@ function RestTimer({ left, total, nextInfo, loop, onDismiss }: RestTimerProps) {
         right: 16,
         zIndex: 30,
         background: C.s1,
-        borderRadius: 16,
-        border: `1px solid ${isUrgent ? ROSE : C.brdL}`,
+        borderRadius: 6,
+        border: `1px solid ${isUrgent ? ACCENT_ALT : C.brdL}`,
         padding: "10px 14px",
         display: "flex",
         alignItems: "center",
         gap: 10,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
         cursor: "pointer",
         maxWidth: 220,
       }}
@@ -1628,7 +1623,7 @@ function RestTimer({ left, total, nextInfo, loop, onDismiss }: RestTimerProps) {
           <circle
             cx={22} cy={22} r={RING_R}
             fill="none"
-            stroke={isUrgent ? ROSE : VIOLET}
+            stroke={isUrgent ? ACCENT_ALT : ACCENT}
             strokeWidth={3}
             strokeDasharray={RING_C}
             strokeDashoffset={offset}
@@ -1639,7 +1634,7 @@ function RestTimer({ left, total, nextInfo, loop, onDismiss }: RestTimerProps) {
             x={22} y={22}
             textAnchor="middle"
             dominantBaseline="central"
-            fill={isUrgent ? ROSE : C.tx}
+            fill={isUrgent ? ACCENT_ALT : C.tx}
             fontSize={10}
             fontWeight={700}
             fontFamily="inherit"
@@ -1706,7 +1701,7 @@ function FinishDialog({
     }
   }
 
-  const FORME_LABELS = ["😴", "😐", "🙂", "💪", "🔥"];
+  const FORME_LABELS = ["1", "2", "3", "4", "5"];
 
   return (
     <>
@@ -1728,7 +1723,7 @@ function FinishDialog({
           right: 0,
           zIndex: 51,
           background: C.bg,
-          borderRadius: "20px 20px 0 0",
+          borderRadius: "6px 6px 0 0",
           padding: "24px 20px 40px",
           maxWidth: 480,
           margin: "0 auto",
@@ -1743,7 +1738,7 @@ function FinishDialog({
             marginBottom: 14,
           }}
         >
-          🏁 Terminer la séance ?
+          Terminer la séance ?
         </div>
 
         {/* Stats */}
@@ -1759,7 +1754,7 @@ function FinishDialog({
             style={{
               textAlign: "center",
               background: C.gS,
-              borderRadius: 12,
+              borderRadius: 6,
               padding: "8px 16px",
             }}
           >
@@ -1770,20 +1765,20 @@ function FinishDialog({
             <div
               style={{
                 textAlign: "center",
-                background: hexToRgba(ROSE, 0.1),
-                borderRadius: 12,
+                background: hexToRgba(ACCENT_ALT, 0.1),
+                borderRadius: 6,
                 padding: "8px 16px",
               }}
             >
-              <div style={{ fontSize: 20, fontWeight: 900, color: ROSE }}>{skippedSets}</div>
-              <div style={{ fontSize: 9, color: ROSE }}>Passées</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: ACCENT_ALT }}>{skippedSets}</div>
+              <div style={{ fontSize: 9, color: ACCENT_ALT }}>Passées</div>
             </div>
           )}
           <div
             style={{
               textAlign: "center",
               background: C.s1,
-              borderRadius: 12,
+              borderRadius: 6,
               padding: "8px 16px",
               border: `1px solid ${C.brd}`,
             }}
@@ -1815,10 +1810,10 @@ function FinishDialog({
                 style={{
                   flex: 1,
                   padding: "8px 4px",
-                  borderRadius: 10,
-                  border: `1px solid ${sessionForme === i + 1 ? VIOLET : C.brdL}`,
+                  borderRadius: 4,
+                  border: `1px solid ${sessionForme === i + 1 ? ACCENT : C.brdL}`,
                   background:
-                    sessionForme === i + 1 ? hexToRgba(VIOLET, 0.15) : C.s2,
+                    sessionForme === i + 1 ? hexToRgba(ACCENT, 0.15) : C.s2,
                   fontSize: 18,
                   cursor: "pointer",
                   fontFamily: "inherit",
@@ -1841,7 +1836,7 @@ function FinishDialog({
             width: "100%",
             background: C.s2,
             border: `1px solid ${C.brdL}`,
-            borderRadius: 10,
+            borderRadius: 4,
             padding: "10px 12px",
             color: C.tx,
             fontSize: 13,
@@ -1859,7 +1854,7 @@ function FinishDialog({
             style={{
               flex: 1,
               padding: "12px 0",
-              borderRadius: 12,
+              borderRadius: 6,
               border: `1px solid ${C.brdL}`,
               background: "transparent",
               color: C.tx2,
@@ -1877,9 +1872,9 @@ function FinishDialog({
             style={{
               flex: 2,
               padding: "12px 0",
-              borderRadius: 12,
+              borderRadius: 6,
               border: "none",
-              background: VIOLET,
+              background: ACCENT,
               color: "#fff",
               fontSize: 13,
               fontWeight: 700,
@@ -1940,7 +1935,7 @@ function RpeSheetForLog({
     { v: 3,  label: "Facile",      color: "#84CC16" },
     { v: 4,  label: "Modéré",      color: "#FACC15" },
     { v: 5,  label: "Rythme",      color: "#F59E0B" },
-    { v: 6,  label: "Intense",     color: "#D99A3E" },
+    { v: 6,  label: "Intense",     color: "#FF9500" },
     { v: 7,  label: "Dur",         color: "#F97316" },
     { v: 8,  label: "Très dur",    color: "#EF4444" },
     { v: 9,  label: "Quasi max",   color: "#DC2626" },
@@ -1966,7 +1961,7 @@ function RpeSheetForLog({
           width: "100%",
           maxWidth: 480,
           background: C.bg,
-          borderRadius: "20px 20px 0 0",
+          borderRadius: "6px 6px 0 0",
           padding: "24px 20px 40px",
         }}
       >
@@ -1979,7 +1974,7 @@ function RpeSheetForLog({
             marginBottom: 6,
           }}
         >
-          🏁 Séance terminée !
+          Séance terminée !
         </div>
         <div
           style={{
@@ -2008,7 +2003,7 @@ function RpeSheetForLog({
                 onClick={() => setRpe(v)}
                 style={{
                   height: 56,
-                  borderRadius: 10,
+                  borderRadius: 4,
                   border: `2px solid ${selected ? color : hexToRgba(color, 0.35)}`,
                   background: selected ? hexToRgba(color, 0.22) : hexToRgba(color, 0.07),
                   color: selected ? color : C.tx2,
@@ -2035,7 +2030,7 @@ function RpeSheetForLog({
             style={{
               flex: 1,
               padding: "12px 0",
-              borderRadius: 12,
+              borderRadius: 6,
               border: `1px solid ${C.brdL}`,
               background: "transparent",
               color: C.tx2,
@@ -2053,9 +2048,9 @@ function RpeSheetForLog({
             style={{
               flex: 2,
               padding: "12px 0",
-              borderRadius: 12,
+              borderRadius: 6,
               border: "none",
-              background: rpe != null ? (RPE_ITEMS.find(r => r.v === rpe)?.color ?? VIOLET) : C.s2,
+              background: rpe != null ? (RPE_ITEMS.find(r => r.v === rpe)?.color ?? ACCENT) : C.s2,
               color: rpe != null ? "#fff" : C.tx3,
               fontSize: 13,
               fontWeight: 700,
@@ -2578,7 +2573,7 @@ export default function WorkoutDetailPage() {
       qc.invalidateQueries({ queryKey: ["activePlan", athleteId] });
       setShowFinish(false);
       setShowRpe(true);
-      toast.success("Séance complétée ! 🏁");
+      toast.success("Séance complétée ! ");
     },
     onError: () => {
       toast.error("Erreur lors de l'enregistrement");
@@ -2651,7 +2646,7 @@ export default function WorkoutDetailPage() {
             style={{
               width: 36,
               height: 36,
-              borderRadius: 10,
+              borderRadius: 4,
               flexShrink: 0,
               border: `1px solid ${C.brdL}`,
               background: "transparent",
@@ -2681,7 +2676,7 @@ export default function WorkoutDetailPage() {
                     alignItems: "center",
                     gap: 4,
                     padding: "2px 8px",
-                    borderRadius: 20,
+                    borderRadius: 6,
                     marginTop: 3,
                     background: "rgba(245,158,11,0.12)",
                     border: "1px solid rgba(245,158,11,0.3)",
@@ -2706,13 +2701,13 @@ export default function WorkoutDetailPage() {
                 fontWeight: 700,
                 color: C.tx3,
                 background: C.s2,
-                borderRadius: 8,
+                borderRadius: 4,
                 padding: "4px 10px",
                 fontVariantNumeric: "tabular-nums",
                 flexShrink: 0,
               }}
             >
-              ⏱ {formatElapsed(elapsed)}
+              {formatElapsed(elapsed)}
             </div>
           ) : (
             <span
@@ -2720,7 +2715,7 @@ export default function WorkoutDetailPage() {
                 fontSize: 11,
                 fontWeight: 700,
                 padding: "3px 10px",
-                borderRadius: 20,
+                borderRadius: 6,
                 background: C.gS,
                 color: C.g,
                 flexShrink: 0,
@@ -2746,7 +2741,7 @@ export default function WorkoutDetailPage() {
               style={{
                 height: "100%",
                 width: `${Math.round((progDone / progTotal) * 100)}%`,
-                background: VIOLET,
+                background: ACCENT,
                 borderRadius: 2,
                 transition: "width 300ms ease",
               }}
@@ -2804,7 +2799,7 @@ export default function WorkoutDetailPage() {
                         gap: 8,
                         marginBottom: 8,
                         padding: "5px 10px 5px 12px",
-                        borderRadius: 8,
+                        borderRadius: 4,
                         background: hexToRgba(bColor, 0.08),
                         borderLeft: `3px solid ${bColor}`,
                       }}
@@ -2837,7 +2832,7 @@ export default function WorkoutDetailPage() {
                             <span style={{
                               fontSize: 13,
                               fontWeight: 900,
-                              color: urgent ? ROSE : bColor,
+                              color: urgent ? ACCENT_ALT : bColor,
                               fontVariantNumeric: "tabular-nums",
                               minWidth: 36,
                               textAlign: "right" as const,
@@ -2849,9 +2844,9 @@ export default function WorkoutDetailPage() {
                               onClick={stopRest}
                               style={{
                                 width: 22, height: 22, borderRadius: 6,
-                                border: `1px solid ${hexToRgba(ROSE, 0.5)}`,
-                                background: hexToRgba(ROSE, 0.12),
-                                color: ROSE, fontSize: 11, fontWeight: 700,
+                                border: `1px solid ${hexToRgba(ACCENT_ALT, 0.5)}`,
+                                background: hexToRgba(ACCENT_ALT, 0.12),
+                                color: ACCENT_ALT, fontSize: 11, fontWeight: 700,
                                 cursor: "pointer", fontFamily: "inherit",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 padding: 0, flexShrink: 0,
@@ -2878,12 +2873,18 @@ export default function WorkoutDetailPage() {
                   );
                 })()}
 
+                {bloc.instructions && (
+                  <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.45, whiteSpace: "pre-wrap", margin: "-2px 2px 8px" }}>
+                    {bloc.instructions}
+                  </div>
+                )}
+
                 {/* Exercices — colored background groups them visually as superset */}
                 <div
                   style={{
                     background: hexToRgba(bColor, 0.05),
                     border: `1px solid ${hexToRgba(bColor, 0.2)}`,
-                    borderRadius: 14,
+                    borderRadius: 6,
                     padding: "8px",
                     display: "flex",
                     flexDirection: "column",
@@ -2973,9 +2974,9 @@ export default function WorkoutDetailPage() {
                           onClick={() => canEdit && toggleAndPersist(ex.id, 0, 0, null, "libre")}
                           style={{
                             display: "flex", alignItems: "center", gap: 12,
-                            padding: "12px 14px", borderRadius: 12,
+                            padding: "12px 14px", borderRadius: 6,
                             background: isDone ? hexToRgba(GREEN, 0.06) : C.s1,
-                            border: `1px solid ${isDone ? hexToRgba(GREEN, 0.35) : isSkipped ? hexToRgba(ROSE, 0.4) : C.brd}`,
+                            border: `1px solid ${isDone ? hexToRgba(GREEN, 0.35) : isSkipped ? hexToRgba(ACCENT_ALT, 0.4) : C.brd}`,
                             cursor: canEdit ? "pointer" : "default",
                             transition: "border-color 150ms, background 150ms",
                           }}
@@ -2995,10 +2996,10 @@ export default function WorkoutDetailPage() {
                             )}
                           </div>
                           <div style={{
-                            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                            border: `2px solid ${isDone ? GREEN : isSkipped ? ROSE : C.brdL}`,
-                            background: isDone ? hexToRgba(GREEN, 0.15) : isSkipped ? hexToRgba(ROSE, 0.12) : "transparent",
-                            color: isDone ? GREEN : ROSE,
+                            width: 28, height: 28, borderRadius: 4, flexShrink: 0,
+                            border: `2px solid ${isDone ? GREEN : isSkipped ? ACCENT_ALT : C.brdL}`,
+                            background: isDone ? hexToRgba(GREEN, 0.15) : isSkipped ? hexToRgba(ACCENT_ALT, 0.12) : "transparent",
+                            color: isDone ? GREEN : ACCENT_ALT,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             fontSize: 14, fontWeight: 900,
                           }}>
@@ -3021,7 +3022,7 @@ export default function WorkoutDetailPage() {
                           const ytId = ex.exercise_id ? videoMap[ex.exercise_id] : undefined;
                           if (ytId) setVideoModal({ name: ex.exercise_name, ytId });
                         }}
-                        supersetTag={supersetIds.length ? `⛓ Superset ${ssPos}/${ch.length}` : undefined}
+                        supersetTag={supersetIds.length ? `Superset ${ssPos}/${ch.length}` : undefined}
                         params={ex.params}
                         sets={sets[ex.id] ?? []}
                         prevSets={prevSets[ex.id] ?? []}
@@ -3050,11 +3051,11 @@ export default function WorkoutDetailPage() {
                       {ex.superset_with_next && nextEx && (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, margin: "-4px 0" }}>
                           <span style={{
-                            padding: "1px 8px", borderRadius: 8,
+                            padding: "1px 8px", borderRadius: 4,
                             background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.4)",
                             color: "#F5A623", fontSize: 9, fontWeight: 800,
                           }}>
-                            ⛓ enchaîner sans repos
+                            enchaîner sans repos
                           </span>
                         </div>
                       )}
@@ -3076,7 +3077,7 @@ export default function WorkoutDetailPage() {
           <div
             style={{
               background: C.s1,
-              borderRadius: 12,
+              borderRadius: 6,
               border: `1px solid ${C.brd}`,
               padding: "12px 16px",
             }}
@@ -3122,10 +3123,10 @@ export default function WorkoutDetailPage() {
               width: "100%",
               maxWidth: 480,
               padding: "14px 0",
-              borderRadius: 16,
-              border: `1px solid ${hexToRgba(ROSE, 0.4)}`,
-              background: hexToRgba(ROSE, 0.08),
-              color: ROSE,
+              borderRadius: 6,
+              border: `1px solid ${hexToRgba(ACCENT_ALT, 0.4)}`,
+              background: hexToRgba(ACCENT_ALT, 0.08),
+              color: ACCENT_ALT,
               fontSize: 13,
               fontWeight: 700,
               cursor: reopening ? "default" : "pointer",
@@ -3166,19 +3167,18 @@ export default function WorkoutDetailPage() {
               width: "100%",
               maxWidth: 480,
               padding: "16px 0",
-              borderRadius: 16,
+              borderRadius: 6,
               border: "none",
-              background: allSetsHandled ? GREEN : VIOLET,
+              background: allSetsHandled ? GREEN : ACCENT,
               color: "#fff",
               fontSize: 14,
               fontWeight: 700,
               cursor: "pointer",
               fontFamily: "inherit",
-              boxShadow: `0 4px 20px ${hexToRgba(allSetsHandled ? GREEN : VIOLET, 0.35)}`,
               animation: allSetsHandled ? "finishPulse 1.8s ease-in-out infinite" : undefined,
             }}
           >
-            {allSetsHandled ? "🏁 Terminer la séance" : "Terminer la séance"}
+            {allSetsHandled ? "Terminer la séance" : "Terminer la séance"}
           </button>
           {allSetsHandled && (
             <style>{`@keyframes finishPulse {
@@ -3221,7 +3221,7 @@ export default function WorkoutDetailPage() {
       {/* ── Inactivity reminder ── */}
       {showInactiveReminder && !isCompleted && (
         <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: C.s1, borderRadius: 18, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center", border: "1px solid " + C.brd }}>
+          <div style={{ background: C.s1, borderRadius: 6, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center", border: "1px solid " + C.brd }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>⏸</div>
             <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 6 }}>Séance en pause ?</div>
             <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5, marginBottom: 20 }}>
@@ -3230,13 +3230,13 @@ export default function WorkoutDetailPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button
                 onClick={() => { setShowInactiveReminder(false); lastActivityRef.current = Date.now(); }}
-                style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: VIOLET, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "none", background: ACCENT, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Continuer la séance
               </button>
               <button
                 onClick={() => { setShowInactiveReminder(false); setShowFinish(true); }}
-                style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "1px solid " + C.g + "60", background: C.g + "15", color: C.g, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "1px solid " + C.g + "60", background: C.g + "15", color: C.g, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Terminer la séance
               </button>
@@ -3275,13 +3275,13 @@ export default function WorkoutDetailPage() {
             onClick={(e) => e.stopPropagation()}
             style={{
               width: "100%", maxWidth: 460,
-              background: C.s1, borderRadius: 16, border: `1px solid ${C.brd}`,
+              background: C.s1, borderRadius: 6, border: `1px solid ${C.brd}`,
               overflow: "hidden",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
               <div style={{ flex: 1, fontSize: 14, fontWeight: 800, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                🎥 {videoModal.name}
+                {videoModal.name}
               </div>
               <button
                 onClick={() => setVideoModal(null)}

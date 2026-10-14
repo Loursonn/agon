@@ -21,7 +21,7 @@ const RED     = "#ef4444";
 const RED_S   = "rgba(239,68,68,0.10)";
 const AMBER   = "#f59e0b";
 const AMBER_S = "rgba(245,158,11,0.10)";
-const VIOLET  = "#C9A14A";
+const VIOLET  = "#FFC933";
 const VIOLET_S = "rgba(123,111,255,0.12)";
 
 interface WorkoutType {
@@ -226,7 +226,7 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
 
   return (
     <div style={{
-      background: C.s2, borderRadius: 10, border: "1px solid " + C.brd,
+      background: C.s2, borderRadius: 4, border: "1px solid " + C.brd,
       overflow: "hidden",
     }}>
       {/* Collapsed header */}
@@ -340,7 +340,7 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
               padding: "5px 8px", borderRadius: 6,
               background: AMBER_S, border: "1px solid " + AMBER + "30",
             }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: AMBER, marginBottom: 2 }}>💬 Commentaire athlète</div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: AMBER, marginBottom: 2 }}>Commentaire athlète</div>
               <div style={{ fontSize: 11, color: C.tx2, fontStyle: "italic" }}>{athleteComment}</div>
             </div>
           )}
@@ -376,11 +376,11 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
                 autoFocus placeholder="Ajouter un commentaire…"
                 value={commentText} onChange={(e) => setCommentText(e.target.value)}
                 rows={2}
-                style={{ width: "100%", background: C.s1, border: "1px solid " + C.brdL, borderRadius: 8, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", background: C.s1, border: "1px solid " + C.brdL, borderRadius: 4, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
               />
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={handleSave} disabled={!commentText.trim() || upsertComment.isPending}
-                  style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.coach, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   Enregistrer
                 </button>
                 <button onClick={() => { setCommenting(false); setCommentText(""); }}
@@ -428,7 +428,7 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
   const totalSets = workout.performed_exercises.reduce((acc, e) => acc + e.sets.filter(s => s.done).length, 0);
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
       {/* Header */}
       <div
         onClick={() => setExpanded((v) => !v)}
@@ -487,7 +487,7 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
           )}
 
           {workout.notes && (
-            <div style={{ background: C.s2, borderRadius: 8, padding: "8px 10px" }}>
+            <div style={{ background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Note de séance</div>
               <div style={{ fontSize: 12, color: C.tx2 }}>{workout.notes}</div>
             </div>
@@ -496,7 +496,7 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
           {/* Athlete session comment + forme (same style as programmation) */}
           {(workout.athlete_session_comment || workout.athlete_forme != null) && (
             <div style={{
-              padding: "7px 10px", borderRadius: 8,
+              padding: "7px 10px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: C.s2,
               display: "flex", flexDirection: "column", gap: 4,
             }}>

@@ -1,7 +1,8 @@
 import { C } from "@/lib/theme"
 import type { ExerciceParams, ParamValue } from "./types"
+import { formatClusterReps } from "./clusterFormat"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 
 interface SyntheseBarProps {
   params: ExerciceParams
@@ -34,6 +35,21 @@ export function SyntheseBar({ params, color }: SyntheseBarProps) {
   // Guard: if reps is missing, nothing meaningful to show
   if (!reps) return null
 
+  // Cluster mode — checked first: cluster reps replace reps, whatever the charge unit
+  if (cluster) {
+    const chargeVal = charge ? getVal(charge) : undefined
+    const rirVal = rir ? getVal(rir) : undefined
+    let text = `${nb_series}×${formatClusterReps(cluster)}`
+    if (charge_unit === 'PDC') text += ` @ PDC`
+    else if (chargeVal != null) text += ` @ ${formatCharge(chargeVal, charge_unit)}`
+    if (rirVal != null) text += ` — RIR ${rirVal}`
+    return (
+      <div style={{ fontSize: 11, color: accent, fontFamily: "inherit", fontWeight: 600 }}>
+        {text}
+      </div>
+    )
+  }
+
   if (charge_unit === 'PDC') {
     // PDC — body weight
     const rirVal = rir ? getVal(rir) : undefined
@@ -62,25 +78,6 @@ export function SyntheseBar({ params, color }: SyntheseBarProps) {
     }
     const rirVal = rir?.mode === 'global' ? getVal(rir) : null
     let text = parts.join(' / ')
-    if (rirVal != null) text += ` — RIR ${rirVal}`
-    return (
-      <div style={{ fontSize: 11, color: accent, fontFamily: "inherit", fontWeight: 600 }}>
-        {text}
-      </div>
-    )
-  }
-
-  // Cluster mode
-  if (cluster) {
-    const chargeVal = charge ? getVal(charge) : undefined
-    const rirVal = rir ? getVal(rir) : undefined
-    // compat: old format had reps_per_cluster (number), new has reps (number[])
-    const repsArr: number[] = Array.isArray(cluster.reps)
-      ? cluster.reps
-      : Array(cluster.nb_clusters).fill((cluster as unknown as { reps_per_cluster?: number }).reps_per_cluster ?? 5)
-    const repsStr = repsArr.join("+")
-    let text = `${nb_series}×(${repsStr} + ${cluster.recup_sec}s)`
-    if (chargeVal != null) text += ` @ ${formatCharge(chargeVal, charge_unit)}`
     if (rirVal != null) text += ` — RIR ${rirVal}`
     return (
       <div style={{ fontSize: 11, color: accent, fontFamily: "inherit", fontWeight: 600 }}>

@@ -97,23 +97,23 @@ function CascadeModal({
         position: "fixed", top: "50%", left: "50%", zIndex: 71,
         transform: "translate(-50%,-50%)",
         width: 360, maxWidth: "92vw",
-        background: C.s1, borderRadius: 14, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 22px",
       }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>⚠ Adapter le planning ?</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>Adapter le planning ?</div>
         <div style={{ fontSize: 13, color: C.tx2, marginBottom: 18, lineHeight: 1.5 }}>
           Modifier ce cycle va décaler{" "}
           <strong style={{ color: C.o }}>{count} cycle{count > 1 ? "s" : ""}</strong>{" "}
           suivant{count > 1 ? "s" : ""}.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: C.o, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.oV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Bouger tout le planning
           </button>
-          <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Uniquement ce cycle
           </button>
-          <button onClick={onCancel} style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none", background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCancel} style={{ width: "100%", padding: "8px 0", borderRadius: 4, border: "none", background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
             Annuler
           </button>
         </div>
@@ -139,10 +139,10 @@ function MesoReassignModal({
         position: "fixed", top: "50%", left: "50%", zIndex: 71,
         transform: "translate(-50%,-50%)",
         width: 380, maxWidth: "92vw",
-        background: C.s1, borderRadius: 14, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 22px",
       }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>🔄 Réassigner ce cycle ?</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>Réassigner ce cycle ?</div>
         <div style={{ fontSize: 13, color: C.tx2, marginBottom: 18, lineHeight: 1.5 }}>
           Les nouvelles dates correspondent au mésocycle{" "}
           <strong style={{ color: C.coach }}>"{newMeso.name}"</strong>.
@@ -151,10 +151,10 @@ function MesoReassignModal({
           )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onReassign} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: C.coach, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onReassign} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Déplacer dans "{newMeso.name}" ✓
           </button>
-          <button onClick={onKeep} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onKeep} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Garder dans "{currentMeso?.name ?? "mésocycle actuel"}"
           </button>
         </div>
@@ -443,8 +443,8 @@ export function CycleDrawer({
           onClick={openThisCycle}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            width: "100%", padding: "12px 0", borderRadius: 10, border: "none",
-            background: C.coach, color: "#fff", fontSize: 13, fontWeight: 700,
+            width: "100%", padding: "12px 0", borderRadius: 4, border: "none",
+            background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700,
             cursor: "pointer", fontFamily: "inherit",
           }}
         >
@@ -476,7 +476,7 @@ export function CycleDrawer({
                     <input
                       type="date" value={val}
                       onChange={(e) => fn(e.target.value)}
-                      style={{ width: "100%", padding: "7px 9px", borderRadius: 8, border: "1px solid " + C.o + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }}
+                      style={{ width: "100%", padding: "7px 9px", borderRadius: 4, border: "1px solid " + C.o + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }}
                     />
                   </div>
                 ))}
@@ -503,7 +503,7 @@ export function CycleDrawer({
                 { label: "Fin",   val: format(parseISO(endDate),   "d MMM", { locale: fr }) },
                 { label: "Durée", val: `${numWeeks} sem.` },
               ].map(({ label, val }) => (
-                <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 8, padding: "8px 10px" }}>
+                <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
                   <div style={{ fontSize: 9, color: C.tx3 }}>{label}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{val}</div>
                 </div>
@@ -536,7 +536,7 @@ export function CycleDrawer({
               <select
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid " + C.o + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 4, border: "1px solid " + C.o + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit" }}
               >
                 <option value="">— Aucun (cycle autonome) —</option>
                 {allMesos.map((m) => (
@@ -546,7 +546,7 @@ export function CycleDrawer({
                 ))}
               </select>
             ) : (
-              <div style={{ background: C.s2, borderRadius: 8, padding: "8px 10px", fontSize: 12, color: C.tx }}>
+              <div style={{ background: C.s2, borderRadius: 4, padding: "8px 10px", fontSize: 12, color: C.tx }}>
                 {allMesos.find((m) => m.id === parentId)?.name ?? <span style={{ color: C.tx3, fontStyle: "italic" }}>Aucun (autonome)</span>}
               </div>
             )}
@@ -555,7 +555,7 @@ export function CycleDrawer({
 
         {/* Parent meso objective */}
         {parentMeso?.objective && (
-          <div style={{ background: C.coachS, borderRadius: 8, padding: "10px 12px", border: "1px solid " + C.coach + "30" }}>
+          <div style={{ background: C.coachS, borderRadius: 4, padding: "10px 12px", border: "1px solid " + C.coach + "30" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: C.coach, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
               Obj. Mésocycle parent
             </div>
@@ -581,10 +581,10 @@ export function CycleDrawer({
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
               rows={3} autoFocus
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid " + C.o + "60", background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.o + "60", background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
             />
           ) : (
-            <div style={{ background: objective ? C.oS : C.s2, borderRadius: 10, padding: "12px 14px", border: "1px solid " + (objective ? C.o + "30" : C.brd), fontSize: 13, color: objective ? C.tx : C.tx3 }}>
+            <div style={{ background: objective ? C.oS : C.s2, borderRadius: 4, padding: "12px 14px", border: "1px solid " + (objective ? C.o + "30" : C.brd), fontSize: 13, color: objective ? C.tx : C.tx3 }}>
               {objective || "Aucun objectif défini"}
             </div>
           )}
@@ -598,7 +598,7 @@ export function CycleDrawer({
               { label: "Réalisées",     val: `${completed} / ${total}` },
               ...(avgRpe ? [{ label: "RPE moyen", val: avgRpe }] : []),
             ].map(({ label, val }) => (
-              <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 8, padding: "8px 10px" }}>
+              <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
                 <div style={{ fontSize: 9, color: C.tx3 }}>{label}</div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{val}</div>
               </div>
@@ -618,7 +618,7 @@ export function CycleDrawer({
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
               {sessions.map((s) => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: s.status === "completed" ? C.gS : C.s2, border: "1px solid " + (s.status === "completed" ? C.g + "25" : C.brd) }}>
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 4, background: s.status === "completed" ? C.gS : C.s2, border: "1px solid " + (s.status === "completed" ? C.g + "25" : C.brd) }}>
                   <StatusIcon status={s.status} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.session_name}</div>
@@ -636,7 +636,7 @@ export function CycleDrawer({
         {/* Calendar link */}
         <a
           href={`?view=month&month=${calMonth}`}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "11px 0", borderRadius: 10, border: "1px solid " + C.o + "40", background: C.oS, color: C.o, fontSize: 13, fontWeight: 700, textDecoration: "none", gap: 6 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.o + "40", background: C.oS, color: C.o, fontSize: 13, fontWeight: 700, textDecoration: "none", gap: 6 }}
         >
           → Ouvrir Calendrier Mois {format(parseISO(cycle.start_date), "MMMM yyyy", { locale: fr })}
         </a>
@@ -644,7 +644,7 @@ export function CycleDrawer({
         {/* Supprimer */}
         <div style={{ paddingTop: 8, borderTop: "1px solid " + C.brd }}>
           {!confirmDelete ? (
-            <button onClick={() => setConfirmDelete(true)} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid " + C.r + "40", background: "transparent", color: C.r, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={() => setConfirmDelete(true)} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.r + "40", background: "transparent", color: C.r, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               Supprimer ce cycle
             </button>
           ) : (
@@ -653,8 +653,8 @@ export function CycleDrawer({
                 Supprimer définitivement ? Les séances planifiées seront effacées.
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-                <button onClick={deleteCycle} disabled={deleting} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: C.r, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: deleting ? 0.6 : 1 }}>
+                <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+                <button onClick={deleteCycle} disabled={deleting} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: deleting ? 0.6 : 1 }}>
                   {deleting ? "Suppression…" : "Confirmer"}
                 </button>
               </div>
@@ -691,10 +691,10 @@ export function CycleDrawer({
             position: "fixed", top: "50%", left: "50%", zIndex: 71,
             transform: "translate(-50%,-50%)",
             width: 380, maxWidth: "92vw",
-            background: C.s1, borderRadius: 14, border: "1px solid " + C.brd,
+            background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
             padding: "20px 22px",
           }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>⚠ Modifier les dates du cycle ?</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>Modifier les dates du cycle ?</div>
             <div style={{ fontSize: 13, color: C.tx2, marginBottom: 18, lineHeight: 1.5 }}>
               {startChanged && (
                 <>Décaler le <strong>début</strong> déplace toutes les semaines ; des séances déjà réalisées peuvent se retrouver au mauvais endroit. </>
@@ -705,10 +705,10 @@ export function CycleDrawer({
               À ne faire que si tu sais ce que tu fais.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={() => { setConfirmStartChange(false); runSaveDates(); }} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: C.o, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              <button onClick={() => { setConfirmStartChange(false); runSaveDates(); }} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.oV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 Oui, appliquer
               </button>
-              <button onClick={() => setConfirmStartChange(false)} style={{ width: "100%", padding: "9px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              <button onClick={() => setConfirmStartChange(false)} style={{ width: "100%", padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                 Annuler
               </button>
             </div>

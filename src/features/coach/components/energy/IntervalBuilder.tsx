@@ -6,6 +6,7 @@
  * - DndContext unique au niveau du builder
  */
 import { useState, useCallback } from "react";
+import { Settings } from "lucide-react";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
@@ -25,7 +26,7 @@ import IntervalEditor from "./IntervalEditor";
 import ExerciseStepEditor from "./ExerciseStepEditor";
 import { C } from "@/lib/theme";
 
-const EXO_COLOR = "#C9A14A";
+const EXO_COLOR = "#FFC933";
 
 // ── Role colors ───────────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ function IntervalRow({
 
       {/* Actions */}
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <ActionBtn onClick={onEdit} title="Éditer">✏️</ActionBtn>
+        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} style={{ display: "block" }} /></ActionBtn>
         <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
         <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
       </div>
@@ -202,7 +203,7 @@ function ExerciseRow({
       </div>
 
       <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <ActionBtn onClick={onEdit} title="Éditer">✏️</ActionBtn>
+        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} style={{ display: "block" }} /></ActionBtn>
         <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
         <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
       </div>
@@ -229,7 +230,7 @@ function parseMMSS(raw: string): number {
 function GroupRowHeader({
   group, depth, listeners,
   onEditRepeat, onDuplicate, onDelete, onAddInterval, onAddGroup,
-  isSpecifique, onAddExercise, onEditDeparture,
+  isSpecifique, onAddExercise, onEditDeparture, onEditInstructions,
 }: {
   group: EnergyGroup;
   depth: number;
@@ -242,14 +243,18 @@ function GroupRowHeader({
   isSpecifique?: boolean;
   onAddExercise?: () => void;
   onEditDeparture?: (seconds: number | undefined) => void;
+  onEditInstructions?: (text: string | undefined) => void;
 }) {
   const [editingRepeat, setEditingRepeat] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(!!group.instructions);
+  const [instructionsVal, setInstructionsVal] = useState(group.instructions ?? "");
   const [repeatVal, setRepeatVal] = useState(group.repeat);
   const [editingDeparture, setEditingDeparture] = useState(false);
   const [departureVal, setDepartureVal] = useState(group.departure_every_s ? toMMSS(group.departure_every_s) : "1:00");
   const color = ROLE_COLOR[group.role] ?? C.tx3;
 
   return (
+    <>
     <div
       style={{
         display: "flex", alignItems: "center", gap: 8,
@@ -281,7 +286,7 @@ function GroupRowHeader({
       ) : (
         <button
           onClick={() => { setRepeatVal(group.repeat); setEditingRepeat(true); }}
-          style={{ background: color + "20", border: `1px solid ${color}40`, borderRadius: 12, color, fontSize: 11, fontWeight: 700, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+          style={{ background: color + "20", border: `1px solid ${color}40`, borderRadius: 6, color, fontSize: 11, fontWeight: 700, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
         >
           × {group.repeat}
         </button>
@@ -307,16 +312,16 @@ function GroupRowHeader({
           ) : (
             <button
               onClick={() => { setDepartureVal(toMMSS(group.departure_every_s!)); setEditingDeparture(true); }}
-              style={{ background: "#F5A623" + "20", border: `1px solid #F5A62340`, borderRadius: 12, color: "#F5A623", fontSize: 10, fontWeight: 600, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+              style={{ background: "#F5A623" + "20", border: `1px solid #F5A62340`, borderRadius: 6, color: "#F5A623", fontSize: 10, fontWeight: 600, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
               title="Départ fixe — cliquer pour modifier, Échap pour supprimer"
             >
-              ⏱ /{toMMSS(group.departure_every_s)}
+              /{toMMSS(group.departure_every_s)}
             </button>
           )
         ) : (
           <button
             onClick={() => { setDepartureVal("1:00"); onEditDeparture(60); setEditingDeparture(true); }}
-            style={{ background: "transparent", border: `1px dashed ${C.brd}`, borderRadius: 12, color: C.tx3, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+            style={{ background: "transparent", border: `1px dashed ${C.brd}`, borderRadius: 6, color: C.tx3, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
             title="Ajouter départ fixe (toutes les X min)"
           >
             + Départ fixe
@@ -330,9 +335,31 @@ function GroupRowHeader({
       <ActionBtn onClick={onAddInterval} title="+ Intervalle">＋I</ActionBtn>
       {isSpecifique && onAddExercise && <ActionBtn onClick={onAddExercise} title="+ Exercice">＋E</ActionBtn>}
       <ActionBtn onClick={onAddGroup} title="+ Sous-groupe">＋G</ActionBtn>
+      {onEditInstructions && (
+        <ActionBtn onClick={() => setShowInstructions((v) => !v)} title="Consignes du groupe">✎</ActionBtn>
+      )}
       <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
       <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
     </div>
+    {onEditInstructions && showInstructions && (
+      <div style={{ paddingLeft: 15 + depth * 20, paddingRight: 8, marginBottom: 4 }}>
+        <textarea
+          autoFocus={!group.instructions}
+          value={instructionsVal}
+          onChange={(e) => setInstructionsVal(e.target.value)}
+          onBlur={() => onEditInstructions(instructionsVal.trim() || undefined)}
+          placeholder="Consignes du groupe (ex. allure régulière, récup active…)"
+          rows={2}
+          style={{
+            width: "100%", boxSizing: "border-box", resize: "vertical",
+            background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
+            color: C.tx, fontSize: 12, lineHeight: 1.4, padding: "6px 8px",
+            fontFamily: "inherit", outline: "none",
+          }}
+        />
+      </div>
+    )}
+    </>
   );
 }
 
@@ -426,6 +453,7 @@ function GroupRenderer({
                     isSpecifique={isSpecifique}
                     onAddExercise={() => onChange(addStepToGroup(root, child.id, makeExerciseInterval({ id: "", name: "Exercice" })))}
                     onEditDeparture={(s) => onChange(updateStep(root, { ...child, departure_every_s: s }))}
+                    onEditInstructions={(t) => onChange(updateStep(root, { ...child, instructions: t }))}
                   />
                   <GroupRenderer
                     group={child}
@@ -505,7 +533,7 @@ export default function IntervalBuilder({ root, onChange, athleteId, sessionKind
         <div style={{
           textAlign: "center", padding: "32px 16px",
           color: C.tx3, fontSize: 13,
-          border: `1px dashed ${C.brd}`, borderRadius: 8,
+          border: `1px dashed ${C.brd}`, borderRadius: 4,
         }}>
           Aucun intervalle.{" "}
           <button
@@ -532,7 +560,7 @@ export default function IntervalBuilder({ root, onChange, athleteId, sessionKind
         <button
           onClick={() => onChange(addStepToGroup(root, root.id, makeInterval()))}
           style={{
-            padding: "7px 14px", borderRadius: 8,
+            padding: "7px 14px", borderRadius: 4,
             border: `1px solid ${C.ac}50`, background: C.ac + "12",
             color: C.ac, fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
@@ -544,7 +572,7 @@ export default function IntervalBuilder({ root, onChange, athleteId, sessionKind
           <button
             onClick={handleAddExercise}
             style={{
-              padding: "7px 14px", borderRadius: 8,
+              padding: "7px 14px", borderRadius: 4,
               border: `1px solid ${EXO_COLOR}50`, background: EXO_COLOR + "12",
               color: EXO_COLOR, fontSize: 12, fontWeight: 600,
               cursor: "pointer", fontFamily: "inherit",
@@ -556,7 +584,7 @@ export default function IntervalBuilder({ root, onChange, athleteId, sessionKind
         <button
           onClick={() => onChange(addStepToGroup(root, root.id, makeGroup()))}
           style={{
-            padding: "7px 14px", borderRadius: 8,
+            padding: "7px 14px", borderRadius: 4,
             border: `1px solid ${C.brd}`, background: "transparent",
             color: C.tx2, fontSize: 12,
             cursor: "pointer", fontFamily: "inherit",

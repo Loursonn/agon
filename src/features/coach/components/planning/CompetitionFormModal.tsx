@@ -74,7 +74,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, onClose }: 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "9px 12px",
     background: C.s2, border: "1px solid " + C.brdL,
-    borderRadius: 10, color: C.tx, fontSize: 13,
+    borderRadius: 4, color: C.tx, fontSize: 13,
     fontFamily: "inherit", outline: "none",
     boxSizing: "border-box",
   };
@@ -99,7 +99,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, onClose }: 
           position: "fixed", top: "50%", left: "50%", zIndex: 201,
           transform: "translate(-50%, -50%)",
           width: 460, maxWidth: "95vw", maxHeight: "90vh",
-          background: C.s1, borderRadius: 20,
+          background: C.s1, borderRadius: 6,
           border: "1px solid " + C.brdL,
           display: "flex", flexDirection: "column",
           overflow: "hidden",
@@ -112,7 +112,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, onClose }: 
             </div>
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <X size={16} />
           </button>
@@ -154,7 +154,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, onClose }: 
                   type="button"
                   onClick={() => setType(t.value)}
                   style={{
-                    padding: "7px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                    padding: "7px 12px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                     fontSize: 12, fontWeight: type === t.value ? 700 : 400,
                     border: "1px solid " + (type === t.value ? C.coach + "60" : C.brdL),
                     background: type === t.value ? C.coachS : C.s2,
@@ -178,7 +178,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, onClose }: 
                   type="button"
                   onClick={() => setPriority(p.value)}
                   style={{
-                    flex: 1, padding: "9px 0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                    flex: 1, padding: "9px 0", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                     fontSize: 12, fontWeight: priority === p.value ? 700 : 400,
                     border: "1px solid " + (priority === p.value ? "#F5A62360" : C.brdL),
                     background: priority === p.value ? "#F5A62318" : C.s2,
@@ -207,7 +207,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, onClose }: 
             type="submit"
             disabled={isPending || !name.trim() || !date}
             style={{
-              marginTop: 4, padding: "13px 0", borderRadius: 12, border: "none",
+              marginTop: 4, padding: "13px 0", borderRadius: 6, border: "none",
               background: name.trim() && date ? C.coach : C.s2,
               color: name.trim() && date ? "#fff" : C.tx3,
               fontSize: 14, fontWeight: 700, cursor: name.trim() && date ? "pointer" : "default",

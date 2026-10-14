@@ -23,7 +23,7 @@ function MethodParamsForm({method,params,onChange,exosInSession,currentExId,plan
   if(!method||!MDEF[method])return null;const p=params||MDEF[method];const upd=(k,v)=>onChange({...p,[k]:v});
   const row=(label,key,min,max,step)=>(<div key={key}><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:4,textAlign:"center"}}>{label}</div><div style={{display:"flex",alignItems:"center",gap:4}}><button onClick={()=>upd(key,Math.max(min,+(p[key]||0)-(step||1)))} style={{width:26,height:26,borderRadius:6,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>-</button><div style={{flex:1,textAlign:"center",fontSize:14,fontWeight:700,color:C.tx}}>{p[key]||0}</div><button onClick={()=>upd(key,Math.min(max,+(p[key]||0)+(step||1)))} style={{width:26,height:26,borderRadius:6,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>+</button></div></div>);
   const mc=DEF_METHODS[method]?.c||C.ac;
-  return(<div style={{marginTop:10,padding:"12px",borderRadius:10,background:C.s2,border:"1px solid "+mc+"40"}}>
+  return(<div style={{marginTop:10,padding:"12px",borderRadius:4,background:C.s2,border:"1px solid "+mc+"40"}}>
     <div style={{fontSize:10,fontWeight:600,color:mc,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>{DEF_METHODS[method]?.label} - Parametres</div>
     {method==="dropset"&&(()=>{const nD=p.drops||2;const pct=p.pct||20;const autoW=i=>plannedKg?Math.round(plannedKg*Math.pow(1-pct/100,i+1)/2.5)*2.5:null;const dw=i=>p.dropWeights?.[i]??autoW(i);const updNCl=(n)=>{const newW=plannedKg?Array.from({length:n},(_,i)=>dw(i)):undefined;onChange({...p,drops:n,...(newW?{dropWeights:newW}:{})});};const updPct=(v)=>{const newW=plannedKg?Array.from({length:nD},(_,i)=>Math.round(plannedKg*Math.pow(1-v/100,i+1)/2.5)*2.5):undefined;onChange({...p,pct:v,...(newW?{dropWeights:newW}:{})});};const updDW=(i,v)=>{const arr=Array.from({length:nD},(_,j)=>dw(j));arr[i]=v;onChange({...p,dropWeights:arr});};return(<div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:plannedKg?10:0}}><div><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:4,textAlign:"center"}}>Nb drops</div><div style={{display:"flex",alignItems:"center",gap:4}}><button onClick={()=>updNCl(Math.max(1,nD-1))} style={{width:26,height:26,borderRadius:6,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>-</button><div style={{flex:1,textAlign:"center",fontSize:14,fontWeight:700,color:C.tx}}>{nD}</div><button onClick={()=>updNCl(Math.min(6,nD+1))} style={{width:26,height:26,borderRadius:6,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>+</button></div></div><div><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:4,textAlign:"center"}}>Réduction %</div><div style={{display:"flex",alignItems:"center",gap:4}}><button onClick={()=>updPct(Math.max(5,pct-5))} style={{width:26,height:26,borderRadius:6,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>-</button><div style={{flex:1,textAlign:"center",fontSize:14,fontWeight:700,color:C.tx}}>{pct}%</div><button onClick={()=>updPct(Math.min(50,pct+5))} style={{width:26,height:26,borderRadius:6,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>+</button></div></div></div>{plannedKg&&<div><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:6}}>Charges par drop</div><div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}><div style={{textAlign:"center",padding:"4px 8px",borderRadius:6,background:C.s1,fontSize:12,fontWeight:700,color:C.tx}}>{plannedKg}<span style={{fontSize:9,color:C.tx3}}> kg</span></div>{Array.from({length:nD},(_,i)=>{const w=dw(i);return(<div key={i} style={{display:"flex",alignItems:"center",gap:4}}><span style={{color:C.tx3,fontSize:12}}>→</span><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><div style={{fontSize:9,color:C.o}}>Drop {i+1}</div><div style={{display:"flex",alignItems:"center",gap:2}}><button onClick={()=>updDW(i,Math.max(0,Math.round(((w||0)-2.5)/2.5)*2.5))} style={{width:20,height:20,borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",fontSize:10,flexShrink:0}}>-</button><div style={{width:36,textAlign:"center",fontSize:12,fontWeight:700,color:C.o}}>{w??"-"}</div><button onClick={()=>updDW(i,Math.round(((w||0)+2.5)/2.5)*2.5)} style={{width:20,height:20,borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit",fontSize:10,flexShrink:0}}>+</button></div></div></div>);})}</div></div>}</div>);})()}
     {method==="myoreps"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{row("Reps activ.","activation",5,25)}{row("Nb mini-sets","minisets",2,10)}{row("Reps/mini","reps_mini",2,10)}{row("Pause (s)","pause",3,30)}</div>}
@@ -278,7 +278,7 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
     setLoading(false);
   };
 
-  const sL={width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit"};
+  const sL={width:"100%",padding:"9px 12px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit"};
   const chipRow=(label,opts,key)=>(<div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:7}}>{label}</div><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{opts.map(o=><button key={o} onClick={()=>upd(key,o)} style={{padding:"6px 11px",borderRadius:7,border:"1px solid "+(form[key]===o?C.coach:C.brdL),background:form[key]===o?C.coachS:"transparent",color:form[key]===o?C.coach:C.tx3,fontSize:11,fontWeight:form[key]===o?700:400,cursor:"pointer",fontFamily:"inherit"}}>{o}</button>)}</div></div>);
 
   return(<div style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",overflowY:"auto"}}>
@@ -297,7 +297,7 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
         </div>
 
         {aiTab==="import"&&(<div style={{padding:"0 16px"}}>
-          <div style={{padding:"10px 14px",borderRadius:10,background:C.coachS,border:"1px solid "+C.coach+"40",marginBottom:16,fontSize:11,color:C.coach,lineHeight:1.6}}>
+          <div style={{padding:"10px 14px",borderRadius:4,background:C.coachS,border:"1px solid "+C.coach+"40",marginBottom:16,fontSize:11,color:C.coach,lineHeight:1.6}}>
             Colle le texte de ton programme ou prends en photo ta feuille. L IA convertit automatiquement.
           </div>
           <div style={{marginBottom:14}}>
@@ -307,18 +307,18 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
           <div style={{marginBottom:14}}>
             <div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:7}}>Fichiers (images, PDF…)</div>
             <input ref={fileRef} type="file" accept="image/*,.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.csv,.ods" multiple onChange={handleFilesUpload} style={{display:"none"}}/>
-            <button onClick={()=>fileRef.current?.click()} style={{width:"100%",padding:"14px 0",borderRadius:10,border:"1.5px dashed "+C.coach+"60",background:importFiles.length?C.gS:C.coachS,color:importFiles.length?C.g:C.coach,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+            <button onClick={()=>fileRef.current?.click()} style={{width:"100%",padding:"14px 0",borderRadius:4,border:"1.5px dashed "+C.coach+"60",background:importFiles.length?C.gS:C.coachS,color:importFiles.length?C.g:C.coach,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
               {importFiles.length?`${importFiles.length} fichier${importFiles.length>1?"s":" "} selectionne${importFiles.length>1?"s":""} — Ajouter d'autres`:"+ Ajouter fichiers (JPG, PNG, PDF…)"}
             </button>
             {importFiles.length>0&&(<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
               {importFiles.map((f,i)=>{
                 const tags=f.sessionTags||[];
                 const isTagged=tags.length>0;
-                return(<div key={i} style={{background:C.s2,borderRadius:8,padding:"8px 10px",border:"1px solid "+(isTagged?C.coach+"50":C.brdL)}}>
+                return(<div key={i} style={{background:C.s2,borderRadius:4,padding:"8px 10px",border:"1px solid "+(isTagged?C.coach+"50":C.brdL)}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     {f.preview
                       ?<img src={f.preview} alt={f.name} style={{width:36,height:36,borderRadius:6,objectFit:"cover",background:C.s1,flexShrink:0}}/>
-                      :<div style={{width:36,height:36,borderRadius:6,background:isTagged?C.coachS:C.s1,border:"1px solid "+C.brdL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>📄</div>}
+                      :<div style={{width:36,height:36,borderRadius:6,background:isTagged?C.coachS:C.s1,border:"1px solid "+C.brdL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>Ex</div>}
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,fontWeight:600,color:C.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</div>
                       <div style={{fontSize:9,color:C.tx3,textTransform:"uppercase"}}>{f.mimeType.split("/")[1]}</div>
@@ -344,14 +344,14 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
               )}
             </div>)}
           </div>
-          {error&&<div style={{padding:"10px 14px",borderRadius:8,background:C.rS,border:"1px solid "+C.r+"40",color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
-          <button onClick={importProgram} disabled={loading} style={{width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:loading?"#333":C.coach,color:loading?C.tx3:"#fff",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer",fontFamily:"inherit"}}>
+          {error&&<div style={{padding:"10px 14px",borderRadius:4,background:C.rS,border:"1px solid "+C.r+"40",color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
+          <button onClick={importProgram} disabled={loading} style={{width:"100%",padding:"14px 0",borderRadius:6,border:"none",background:loading?"#333":C.coach,color:loading?C.tx3:"#fff",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer",fontFamily:"inherit"}}>
             {loading?"Analyse en cours...":"Importer le programme"}
           </button>
         </div>)}
 
         {aiTab==="form"&&(<div style={{padding:"0 16px"}}>
-          <div style={{padding:"10px 14px",borderRadius:10,background:C.coachS,border:"1px solid "+C.coach+"40",marginBottom:16,fontSize:11,color:C.coach,lineHeight:1.6}}>
+          <div style={{padding:"10px 14px",borderRadius:4,background:C.coachS,border:"1px solid "+C.coach+"40",marginBottom:16,fontSize:11,color:C.coach,lineHeight:1.6}}>
             Complete aussi l onglet <strong>Profil detaille</strong> pour un programme vraiment personnalise.
           </div>
           {chipRow("Objectif",GOALS,"goal")}
@@ -360,15 +360,15 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
           <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:7}}>Seances / semaine</div><div style={{display:"flex",gap:6}}>{[3,4,5,6].map(n=><button key={n} onClick={()=>upd("sessionsPerWeek",n)} style={{flex:1,padding:"8px 0",borderRadius:7,border:"1px solid "+(form.sessionsPerWeek===n?C.coach:C.brdL),background:form.sessionsPerWeek===n?C.coachS:"transparent",color:form.sessionsPerWeek===n?C.coach:C.tx3,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{n}</button>)}</div></div>
           <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:7}}>Focus particulier (optionnel)</div><input value={form.focus} onChange={e=>upd("focus",e.target.value)} placeholder="Ex: epaules, force sur bench, post-blessure genou..." style={sL}/></div>
           <div style={{marginBottom:20}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:7}}>Contraintes rapides</div><textarea value={form.constraints} onChange={e=>upd("constraints",e.target.value)} placeholder="Resume rapide de contraintes importantes..." rows={2} style={{...sL,resize:"none",lineHeight:1.5}}/></div>
-          {error&&<div style={{padding:"10px 14px",borderRadius:8,background:C.rS,border:"1px solid "+C.r+"40",color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
-          <button onClick={()=>setAiTab("details")} style={{width:"100%",padding:"11px 0",borderRadius:10,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:8}}>Completer le profil detaille &gt;</button>
-          <button onClick={generate} disabled={loading} style={{width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:loading?"#333":C.coach,color:loading?C.tx3:"#fff",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer",fontFamily:"inherit"}}>
+          {error&&<div style={{padding:"10px 14px",borderRadius:4,background:C.rS,border:"1px solid "+C.r+"40",color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
+          <button onClick={()=>setAiTab("details")} style={{width:"100%",padding:"11px 0",borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:8}}>Completer le profil detaille &gt;</button>
+          <button onClick={generate} disabled={loading} style={{width:"100%",padding:"14px 0",borderRadius:6,border:"none",background:loading?"#333":C.coach,color:loading?C.tx3:"#fff",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer",fontFamily:"inherit"}}>
             {loading?"Generation en cours...":"Generer le programme"}
           </button>
         </div>)}
 
         {aiTab==="details"&&(<div style={{padding:"0 16px"}}>
-          <div style={{padding:"10px 14px",borderRadius:10,background:C.s2,border:"1px solid "+C.brdL,marginBottom:16,fontSize:11,color:C.tx2,lineHeight:1.6}}>
+          <div style={{padding:"10px 14px",borderRadius:4,background:C.s2,border:"1px solid "+C.brdL,marginBottom:16,fontSize:11,color:C.tx2,lineHeight:1.6}}>
             Plus tu remplis ces champs, plus l IA pourra personnaliser le programme. Laisse vide ce qui ne s applique pas.
           </div>
           {DETAIL_FIELDS.map(f=>{
@@ -381,11 +381,11 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
               <textarea value={details[f.k]} onChange={e=>updDetail(f.k,e.target.value)} placeholder={f.placeholder} rows={2} style={{...sL,resize:"none",lineHeight:1.5,border:"1px solid "+(filled?C.g+"40":C.brdL)}}/>
             </div>);
           })}
-          <div style={{padding:"10px 14px",borderRadius:8,background:C.gS,border:"1px solid "+C.g+"30",marginBottom:16,fontSize:11,color:C.g}}>
+          <div style={{padding:"10px 14px",borderRadius:4,background:C.gS,border:"1px solid "+C.g+"30",marginBottom:16,fontSize:11,color:C.g}}>
             {DETAIL_FIELDS.filter(f=>details[f.k]?.trim()).length} / {DETAIL_FIELDS.length} champs remplis
           </div>
-          {error&&<div style={{padding:"10px 14px",borderRadius:8,background:C.rS,border:"1px solid "+C.r+"40",color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
-          <button onClick={generate} disabled={loading} style={{width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:loading?"#333":C.coach,color:loading?C.tx3:"#fff",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer",fontFamily:"inherit"}}>
+          {error&&<div style={{padding:"10px 14px",borderRadius:4,background:C.rS,border:"1px solid "+C.r+"40",color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
+          <button onClick={generate} disabled={loading} style={{width:"100%",padding:"14px 0",borderRadius:6,border:"none",background:loading?"#333":C.coach,color:loading?C.tx3:"#fff",fontSize:14,fontWeight:700,cursor:loading?"default":"pointer",fontFamily:"inherit"}}>
             {loading?"Generation en cours...":"Generer le programme"}
           </button>
         </div>)}
@@ -393,13 +393,13 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
 
       {step===1&&preview&&(<div style={{padding:"16px"}}>
         {/* Résumé IA */}
-        <div style={{padding:"10px 14px",borderRadius:10,background:C.gS,border:"1px solid "+C.g+"40",marginBottom:12}}>
+        <div style={{padding:"10px 14px",borderRadius:4,background:C.gS,border:"1px solid "+C.g+"40",marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:700,color:C.g,marginBottom:2}}>Programme généré</div>
           <div style={{fontSize:11,color:C.tx2,lineHeight:1.5}}>{preview.rationale}</div>
         </div>
         {/* Liste exercices */}
         <div style={{marginBottom:12}}>
-          {Object.entries(preview.sessions||{}).map(([sid,exList])=>{const s=SESSIONS.find(x=>x.id===sid);if(!s||!exList?.length)return null;return(<div key={sid} style={{background:C.s1,borderRadius:10,padding:"10px 14px",marginBottom:6,border:"1px solid "+C.brd}}><div style={{fontSize:12,fontWeight:700,color:C.tx,marginBottom:5}}>{s.name} <span style={{fontSize:10,color:C.tx3}}>({exList.length} exos)</span></div>{exList.map((ex,i)=>{const wks=Object.keys(ex.weeks||{});return(<div key={i} style={{fontSize:11,color:C.tx2,padding:"3px 0",borderTop:i>0?"1px solid "+C.brd:""}}><span style={{color:getMC(ex.target||"Pecs"),fontWeight:600}}>{ex.name}</span><span style={{color:C.tx3}}> - {ex.bloc} - S{wks[0]}→S{wks[wks.length-1]}</span></div>);})}</div>);})}
+          {Object.entries(preview.sessions||{}).map(([sid,exList])=>{const s=SESSIONS.find(x=>x.id===sid);if(!s||!exList?.length)return null;return(<div key={sid} style={{background:C.s1,borderRadius:4,padding:"10px 14px",marginBottom:6,border:"1px solid "+C.brd}}><div style={{fontSize:12,fontWeight:700,color:C.tx,marginBottom:5}}>{s.name} <span style={{fontSize:10,color:C.tx3}}>({exList.length} exos)</span></div>{exList.map((ex,i)=>{const wks=Object.keys(ex.weeks||{});return(<div key={i} style={{fontSize:11,color:C.tx2,padding:"3px 0",borderTop:i>0?"1px solid "+C.brd:""}}><span style={{color:getMC(ex.target||"Pecs"),fontWeight:600}}>{ex.name}</span><span style={{color:C.tx3}}> - {ex.bloc} - S{wks[0]}→S{wks[wks.length-1]}</span></div>);})}</div>);})}
         </div>
         {/* Chat IA pour affiner */}
         <div style={{borderTop:"1px solid "+C.brd,paddingTop:12,marginBottom:12}}>
@@ -410,18 +410,18 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
                 <div style={{maxWidth:"85%",padding:"8px 12px",borderRadius:m.role==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px",background:m.role==="user"?C.coach:C.s2,color:m.role==="user"?"#fff":C.tx,fontSize:11,lineHeight:1.5}}>{m.content}</div>
               </div>
             ))}
-            {convLoading&&<div style={{display:"flex"}}><div style={{padding:"8px 12px",borderRadius:"12px 12px 12px 4px",background:C.s2,color:C.tx3,fontSize:11}}>...</div></div>}
+            {convLoading&&<div style={{display:"flex"}}><div style={{padding:"8px 12px",borderRadius:"6px 6px 6px 4px",background:C.s2,color:C.tx3,fontSize:11}}>...</div></div>}
             {convError&&<div style={{fontSize:11,color:C.r,padding:"6px 10px",borderRadius:7,background:C.rS}}>{convError}</div>}
             <div ref={convEndRef}/>
           </div>)}
           <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-            <textarea value={convInput} onChange={e=>setConvInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendConvMessage();}}} placeholder='Ex: "plus de volume triceps, remplace le hack squat..."' rows={2} disabled={convLoading||convCooldown>0} style={{flex:1,padding:"9px 12px",borderRadius:10,border:"1px solid "+(convCooldown>0?C.o+"60":C.brdL),background:C.s2,color:convCooldown>0?C.tx3:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",lineHeight:1.5}}/>
-            <button onClick={sendConvMessage} disabled={convLoading||convCooldown>0||!convInput.trim()} style={{padding:"9px 14px",borderRadius:10,border:"none",background:convInput.trim()&&!convLoading&&!convCooldown?C.coach:convCooldown>0?C.o+"30":"#333",color:convInput.trim()&&!convLoading&&!convCooldown?"#fff":convCooldown>0?C.o:C.tx3,fontSize:convCooldown>0?11:14,fontWeight:700,cursor:convInput.trim()&&!convLoading&&!convCooldown?"pointer":"default",fontFamily:"inherit",flexShrink:0,alignSelf:"flex-end",minWidth:40}}>{convLoading?"...":convCooldown>0?convCooldown+"s":"↑"}</button>
+            <textarea value={convInput} onChange={e=>setConvInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendConvMessage();}}} placeholder='Ex: "plus de volume triceps, remplace le hack squat..."' rows={2} disabled={convLoading||convCooldown>0} style={{flex:1,padding:"9px 12px",borderRadius:4,border:"1px solid "+(convCooldown>0?C.o+"60":C.brdL),background:C.s2,color:convCooldown>0?C.tx3:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",lineHeight:1.5}}/>
+            <button onClick={sendConvMessage} disabled={convLoading||convCooldown>0||!convInput.trim()} style={{padding:"9px 14px",borderRadius:4,border:"none",background:convInput.trim()&&!convLoading&&!convCooldown?C.coach:convCooldown>0?C.o+"30":"#333",color:convInput.trim()&&!convLoading&&!convCooldown?"#fff":convCooldown>0?C.o:C.tx3,fontSize:convCooldown>0?11:14,fontWeight:700,cursor:convInput.trim()&&!convLoading&&!convCooldown?"pointer":"default",fontFamily:"inherit",flexShrink:0,alignSelf:"flex-end",minWidth:40}}>{convLoading?"...":convCooldown>0?convCooldown+"s":"↑"}</button>
           </div>
         </div>
         {/* Actions */}
         <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>{setStep(0);setConvMsgs([]);setConvError(null);}} style={{flex:1,padding:"12px 0",borderRadius:10,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Régénérer</button>
+          <button onClick={()=>{setStep(0);setConvMsgs([]);setConvError(null);}} style={{flex:1,padding:"12px 0",borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Régénérer</button>
           <button onClick={()=>{
             const targets=importTargetRef.current;
             if(targets.length>0){
@@ -441,7 +441,7 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
             }else{
               onGenerate(preview.sessions);
             }
-          }} style={{flex:2,padding:"12px 0",borderRadius:10,border:"none",background:C.coach,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Appliquer</button>
+          }} style={{flex:2,padding:"12px 0",borderRadius:4,border:"none",background:C.coach,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Appliquer</button>
         </div>
         <div style={{fontSize:10,color:C.tx3,textAlign:"center",marginTop:8}}>Tu pourras modifier chaque exercice dans l'éditeur</div>
       </div>)}
@@ -460,7 +460,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
   const toggleMultiWeek=id=>setMultiWeekExs(prev=>{const n=new Set(prev);if(n.has(id))n.delete(id);else n.add(id);return n;});
   const[expandedMethodWeek,setExpandedMethodWeek]=useState(null);const[exosSearch,setExosSearch]=useState("");const[exosTypeFilter,setExosTypeFilter]=useState("");
   const[copiedSet,setCopiedSet]=useState(null); // { val: number, isRm: boolean }
-  const[newMForm,setNewMForm]=useState(false);const[newM,setNewM]=useState({label:"",c:"#C9A14A",e:"NEW"});
+  const[newMForm,setNewMForm]=useState(false);const[newM,setNewM]=useState({label:"",c:"#FFC933",e:"NEW"});
   const dropRef=useRef(null);
   const[showAI,setShowAI]=useState(false);
   const[addForm,setAddForm]=useState(false);
@@ -651,7 +651,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
     const list=(prev[sid]||[]).map(e=>e.id===eid?{...e,weeks:{...e.weeks,[week]:{...(e.weeks[week]||{}),methodParams:p}}}:e);
     return{...prev,[sid]:list};
   });
-  const fS={background:C.s2,color:C.tx,border:"1px solid "+C.brdL,fontFamily:"inherit",fontSize:13,fontWeight:700,textAlign:"center",borderRadius:8,padding:"7px 4px",width:"100%"};
+  const fS={background:C.s2,color:C.tx,border:"1px solid "+C.brdL,fontFamily:"inherit",fontSize:13,fontWeight:700,textAlign:"center",borderRadius:4,padding:"7px 4px",width:"100%"};
   const addCM=()=>{if(!newM.label)return;const key="custom_"+Date.now();setCustomMethods(p=>[...p,{key,...newM}]);setNewMForm(false);};
 
   const renameSession=(idx,field,val)=>{setSessions(prev=>prev.map((s,i)=>i===idx?{...s,[field]:val}:s));};
@@ -673,7 +673,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
     {/* ── CALENDRIER SEMAINES ── */}
     {!lockedSessId&&(()=>{
       const weeks=Array.from({length:tw},(_,i)=>i+1);
-      return(<div style={{marginBottom:18,background:C.s1,borderRadius:14,overflow:"hidden",border:"1px solid "+C.brd}}>
+      return(<div style={{marginBottom:18,background:C.s1,borderRadius:6,overflow:"hidden",border:"1px solid "+C.brd}}>
         {/* Nav semaine */}
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderBottom:"1px solid "+C.brd,background:C.s2}}>
           <button onClick={()=>setCalWeek(w=>Math.max(1,w-1))} disabled={calWeek<=1} style={{width:28,height:28,borderRadius:7,border:"1px solid "+C.brdL,background:"transparent",color:calWeek<=1?C.tx3+"40":C.tx2,cursor:calWeek<=1?"default":"pointer",fontSize:16,fontFamily:"inherit",flexShrink:0}}>‹</button>
@@ -699,7 +699,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
             return(<div key={s.id} onClick={()=>hasP&&(()=>{setSess(safeSessions.findIndex(x=>x.id===s.id));setWeek(calWeek);setShowEditorModal(true);})()} style={{flex:1,minWidth:88,maxWidth:140,padding:"10px 6px 8px",textAlign:"center",cursor:hasP?"pointer":"default",borderRight:"1px solid "+C.brd,background:done?C.g+"08":"transparent",opacity:hasP?1:0.3,transition:"background 0.12s",boxSizing:"border-box"}}
               onMouseEnter={e=>{if(hasP)e.currentTarget.style.background=done?C.g+"14":C.acS;}}
               onMouseLeave={e=>{e.currentTarget.style.background=done?C.g+"08":"transparent";}}>
-              <div style={{width:34,height:34,borderRadius:10,background:sc+"20",border:"1.5px solid "+sc+"50",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 5px",fontSize:done?17:12,fontWeight:800,color:sc}}>{done?"✓":s.short}</div>
+              <div style={{width:34,height:34,borderRadius:4,background:sc+"20",border:"1.5px solid "+sc+"50",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 5px",fontSize:done?17:12,fontWeight:800,color:sc}}>{done?"✓":s.short}</div>
               <div style={{fontSize:10,fontWeight:700,color:C.tx,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingLeft:2,paddingRight:2}}>{s.name}</div>
               <div style={{fontSize:9,fontWeight:600,color:sc}}>{sl}</div>
               {done&&setsPlQ>0&&<div style={{fontSize:8,color:C.tx3,marginTop:2}}>{setsDoneQ}/{setsPlQ} séries</div>}
@@ -714,17 +714,17 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
     })()}
 
     {!lockedSessId&&showAI&&<AIGeneratorModal onGenerate={applyAI} onClose={()=>setShowAI(false)} allMethods={allMethods} existingExos={exos} sessions={safeSessions}/>}
-    {!lockedSessId&&<button onClick={()=>setShowAI(true)} style={{width:"100%",padding:"11px 0",borderRadius:10,border:"1.5px dashed "+C.coach+"60",background:C.coachS,color:C.coach,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+    {!lockedSessId&&<button onClick={()=>setShowAI(true)} style={{width:"100%",padding:"11px 0",borderRadius:4,border:"1.5px dashed "+C.coach+"60",background:C.coachS,color:C.coach,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
       <span style={{fontSize:14}}>*</span> Generer une base avec l IA
     </button>}
 
     {/* Session tabs */}
     {!lockedSessId&&(<div style={{display:"flex",gap:4,marginBottom:8,overflowX:"auto",scrollbarWidth:"none",alignItems:"center"}}>
-      {safeSessions.map((s,i)=><button key={s.id} onClick={()=>{setSess(i);setOpenEx(null);}} onDoubleClick={()=>setEditingSession(i)} style={{flexShrink:0,padding:"7px 12px",borderRadius:8,border:"1px solid "+(i===safeSess?C.coach:C.brdL),background:i===safeSess?C.coachS:"transparent",color:i===safeSess?C.coach:C.tx2,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{s.short}</button>)}
+      {safeSessions.map((s,i)=><button key={s.id} onClick={()=>{setSess(i);setOpenEx(null);}} onDoubleClick={()=>setEditingSession(i)} style={{flexShrink:0,padding:"7px 12px",borderRadius:4,border:"1px solid "+(i===safeSess?C.coach:C.brdL),background:i===safeSess?C.coachS:"transparent",color:i===safeSess?C.coach:C.tx2,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{s.short}</button>)}
       <button onClick={()=>setNewSessForm(o=>!o)} style={{flexShrink:0,width:28,height:28,borderRadius:7,border:"1px dashed "+C.coach+"50",background:"transparent",color:C.coach,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>+</button>
     </div>)}
 
-    {editingSession!==null&&(<div style={{background:C.s1,borderRadius:10,padding:"10px 12px",border:"1px solid "+C.coach+"40",marginBottom:8}}>
+    {editingSession!==null&&(<div style={{background:C.s1,borderRadius:4,padding:"10px 12px",border:"1px solid "+C.coach+"40",marginBottom:8}}>
       <div style={{fontSize:10,fontWeight:600,color:C.coach,marginBottom:8}}>Renommer la seance</div>
       <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:6,marginBottom:8}}>
         <input value={sessions[editingSession]?.name||""} onChange={e=>renameSession(editingSession,"name",e.target.value)} placeholder="Nom complet" style={{padding:"7px 10px",borderRadius:7,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit"}}/>
@@ -737,7 +737,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
       </div>
     </div>)}
 
-    {newSessForm&&(<div style={{background:C.s1,borderRadius:10,padding:"10px 12px",border:"1px solid "+C.g+"40",marginBottom:8}}>
+    {newSessForm&&(<div style={{background:C.s1,borderRadius:4,padding:"10px 12px",border:"1px solid "+C.g+"40",marginBottom:8}}>
       <div style={{fontSize:10,fontWeight:600,color:C.g,marginBottom:8}}>Nouvelle seance</div>
       <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:6,marginBottom:8}}>
         <input value={newSess.name} onChange={e=>setNewSess(p=>({...p,name:e.target.value}))} placeholder="Ex: Seance de la mort" style={{padding:"7px 10px",borderRadius:7,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit"}}/>
@@ -749,11 +749,11 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
       </div>
     </div>)}
 
-{!lockedSessId&&safeSessions.length>0&&<button onClick={()=>setShowEditorModal(true)} style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1.5px dashed "+C.coach+"60",background:C.coachS,color:C.coach,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:4,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>✎ Éditer le contenu des séances</button>}
+{!lockedSessId&&safeSessions.length>0&&<button onClick={()=>setShowEditorModal(true)} style={{width:"100%",padding:"11px 14px",borderRadius:4,border:"1.5px dashed "+C.coach+"60",background:C.coachS,color:C.coach,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:4,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>Éditer le contenu des séances</button>}
 
     {(showEditorModal||!!lockedSessId)&&(<div style={lockedSessId?{display:"flex",flexDirection:"column"}:{position:"fixed",inset:0,zIndex:300,background:C.bg,overflowY:"auto",display:"flex",flexDirection:"column"}}>
       {!lockedSessId&&<div style={{position:"sticky",top:0,zIndex:5,background:C.bg,borderBottom:"1px solid "+C.brd,padding:"10px 16px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <button onClick={()=>{setShowEditorModal(false);setOpenEx(null);}} style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,fontSize:18,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>←</button>
+        <button onClick={()=>{setShowEditorModal(false);setOpenEx(null);}} style={{width:32,height:32,borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,fontSize:18,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>←</button>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:14,fontWeight:800,color:C.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{safeSessions[safeSess]?.name||"Séance"}</div>
           <div style={{fontSize:10,color:C.tx3}}>Semaine {week} / {tw}{week===dw?" · Deload":""}</div>
@@ -765,7 +765,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
       <div style={{padding:"16px",maxWidth:900,margin:"0 auto",width:"100%",boxSizing:"border-box"}}>
 
     {/* Bloc management per session */}
-    <div style={{marginBottom:12,background:C.s1,borderRadius:10,padding:"10px 12px",border:"1px solid "+C.brdL}}>
+    <div style={{marginBottom:12,background:C.s1,borderRadius:4,padding:"10px 12px",border:"1px solid "+C.brdL}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
         <div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px"}}>Blocs de la séance</div>
         <button onClick={()=>{setEditingBlocs(o=>!o);setEditingBlocId(null);setNewBlocForm(false);}} style={{fontSize:10,color:editingBlocs?C.coach:C.tx3,fontWeight:editingBlocs?700:400,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>{editingBlocs?"Fermer":"Gérer"}</button>
@@ -782,19 +782,19 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
         {sessBlocs.map(b=>{
           const bMethod=BLOC_METHODS.find(m=>m.v===(b.method||""))||BLOC_METHODS[0];
           const isExp=expandedBlocCfg===b.id;
-          return(<div key={b.id} style={{marginBottom:8,borderRadius:10,border:"1px solid "+b.color+"40",background:C.s2,overflow:"hidden"}}>
+          return(<div key={b.id} style={{marginBottom:8,borderRadius:4,border:"1px solid "+b.color+"40",background:C.s2,overflow:"hidden"}}>
             {/* Ligne principale */}
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 8px"}}>
               <div style={{position:"relative",flexShrink:0}}>
                 <div onClick={()=>setEditingBlocId(editingBlocId===b.id?null:b.id)} style={{width:18,height:18,borderRadius:4,background:b.color,cursor:"pointer",border:"2px solid "+b.color+"80"}}/>
                 {editingBlocId===b.id&&(
-                  <div style={{position:"absolute",top:"100%",left:0,zIndex:50,display:"flex",flexWrap:"wrap",gap:3,padding:6,background:C.s1,borderRadius:8,border:"1px solid "+C.brdL,width:108,marginTop:3,boxShadow:"0 4px 16px rgba(0,0,0,0.5)"}}>
+                  <div style={{position:"absolute",top:"100%",left:0,zIndex:50,display:"flex",flexWrap:"wrap",gap:3,padding:6,background:C.s1,borderRadius:4,border:"1px solid "+C.brdL,width:108,marginTop:3}}>
                     {BLOC_COLORS.map(col=><div key={col} onClick={()=>{updateSessionBloc(b.id,{color:col});setEditingBlocId(null);}} style={{width:18,height:18,borderRadius:4,background:col,cursor:"pointer",outline:b.color===col?"2px solid white":"none"}}/>)}
                   </div>
                 )}
               </div>
               <input value={b.label} onChange={e=>updateSessionBloc(b.id,{label:e.target.value})} style={{flex:1,padding:"4px 8px",borderRadius:6,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:11,fontFamily:"inherit"}}/>
-              <button onClick={()=>setExpandedBlocCfg(isExp?null:b.id)} style={{padding:"3px 7px",borderRadius:6,border:"1px solid "+(isExp?b.color:C.brdL),background:isExp?b.color+"20":"transparent",color:isExp?b.color:C.tx3,fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>⚙</button>
+              <button onClick={()=>setExpandedBlocCfg(isExp?null:b.id)} style={{padding:"3px 7px",borderRadius:6,border:"1px solid "+(isExp?b.color:C.brdL),background:isExp?b.color+"20":"transparent",color:isExp?b.color:C.tx3,fontSize:10,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>Cfg</button>
               <button onClick={()=>removeSessionBloc(b.id)} style={{width:20,height:20,borderRadius:4,border:"1px solid "+C.r+"40",background:C.rS,color:C.r,fontSize:10,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
             </div>
             {/* Panneau config étendu */}
@@ -835,7 +835,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
           </div>);
         })}
         {newBlocForm?(
-          <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 8px",borderRadius:8,background:C.gS,border:"1px solid "+C.g+"40"}}>
+          <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 8px",borderRadius:4,background:C.gS,border:"1px solid "+C.g+"40"}}>
             <div style={{width:18,height:18,borderRadius:4,background:newBloc.color,flexShrink:0,border:"2px solid "+newBloc.color+"80"}}/>
             <input value={newBloc.label} onChange={e=>setNewBloc(p=>({...p,label:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addSessionBloc();if(e.key==="Escape")setNewBlocForm(false);}} placeholder="Nom du bloc..." style={{flex:1,padding:"4px 8px",borderRadius:6,border:"1px solid "+C.g+"50",background:C.s2,color:C.tx,fontSize:11,fontFamily:"inherit"}} autoFocus/>
             <div style={{display:"flex",flexWrap:"wrap",gap:2,maxWidth:72}}>
@@ -852,16 +852,16 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
     {!hideWeekNav&&<div style={{display:"flex",gap:3,marginBottom:6,flexWrap:"wrap"}}>{weeksArr.map(w=><button key={w} onClick={()=>setWeek(w)} style={{flex:1,minWidth:36,padding:"9px 0",borderRadius:7,border:w===week?"2px solid "+C.coach:"1px solid "+(w===dw?C.b+"60":C.brd),background:w===week?C.coachS:(w===dw?C.bS:"transparent"),color:w===week?C.coach:(w===dw?C.b:C.tx3),fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",position:"relative"}}>{w===dw&&<span style={{position:"absolute",top:-6,right:-2,fontSize:7,background:C.b,color:"#fff",padding:"1px 4px",borderRadius:4,fontWeight:700}}>DL</span>}S{w}</button>)}</div>}
     {!hideWeekNav&&dw>0&&<div style={{fontSize:10,color:C.b,marginBottom:6,display:"flex",alignItems:"center",gap:4}}><span style={{width:6,height:6,borderRadius:"50%",background:C.b,display:"inline-block"}}/> S{dw} = Deload (-{deloadPct}% charge, volume reduit)</div>}
 
-    {!hideSplitControls&&<button onClick={autoFillProgression} style={{width:"100%",padding:"9px 0",borderRadius:8,border:"1px solid "+C.o+"50",background:C.oS,color:C.o,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+    {!hideSplitControls&&<button onClick={autoFillProgression} style={{width:"100%",padding:"9px 0",borderRadius:4,border:"1px solid "+C.o+"50",background:C.oS,color:C.o,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
       ↗ Surcharge progressive — tout le bloc (S1→S{tw})
     </button>}
 
-    {undoStack.length>0&&(<button onClick={undoLast} style={{width:"100%",padding:"8px 0",borderRadius:8,border:"1px solid "+C.o+"50",background:C.oS,color:C.o,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+    {undoStack.length>0&&(<button onClick={undoLast} style={{width:"100%",padding:"8px 0",borderRadius:4,border:"1px solid "+C.o+"50",background:C.oS,color:C.o,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
       ← Annuler la suppression ({undoStack.length})
     </button>)}
 
     {!hideSplitControls&&exList.length>3&&<div style={{marginBottom:10}}>
-      <input value={exosSearch} onChange={e=>setExosSearch(e.target.value)} placeholder="Rechercher dans la séance..." style={{width:"100%",padding:"9px 12px",borderRadius:9,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",marginBottom:6,outline:"none"}}/>
+      <input value={exosSearch} onChange={e=>setExosSearch(e.target.value)} placeholder="Rechercher dans la séance..." style={{width:"100%",padding:"9px 12px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",marginBottom:6,outline:"none"}}/>
       <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
         {[{k:"",l:"Tous"},{k:"muscu",l:"Muscu"},{k:"halterophilie",l:"Halté."},{k:"plio",l:"Plio"},{k:"mobilite",l:"Mob."}].map(({k,l})=>{const on=exosTypeFilter===k;const tc={muscu:C.tx2,halterophilie:"#8b5cf6",plio:C.o,mobilite:C.b,"":C.tx3}[k];return(<button key={k} onClick={()=>setExosTypeFilter(k)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid "+(on?(k?tc:C.coach):C.brdL),background:on?(k?tc+"20":C.coachS):"transparent",color:on?(k?tc:C.coach):C.tx3,fontSize:11,fontWeight:on?700:400,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>);})}
         {(exosSearch||exosTypeFilter)&&<button onClick={()=>{setExosSearch("");setExosTypeFilter("");}} style={{padding:"5px 10px",borderRadius:7,border:"1px solid "+C.r+"50",background:C.rS,color:C.r,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>}
@@ -880,7 +880,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
       if(filteredExList.length===0&&exList.length>0)return[<div key="empty" style={{textAlign:"center",padding:"20px 0",color:C.tx3,fontSize:12}}>Aucun exercice ne correspond</div>];
       return groups.map(({blocId,exs:groupExs})=>{
         const bloc=getBlocById(blocId);const blocC=bloc?.color||C.tx3;
-        return(<div key={blocId||"__no_bloc__"} onDragOver={e=>{e.preventDefault();if(dragBlocId&&dragBlocId!==blocId)setDragOverBlocId(blocId);else if(dragId&&!dragBlocId)setDragOverBloc(blocId||null);}} onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget)){setDragOverBloc(null);setDragOverBlocId(null);}}} onDrop={e=>{e.preventDefault();e.stopPropagation();if(dragBlocId&&dragBlocId!==blocId){reorderBloc(dragBlocId,blocId);setDragBlocId(null);setDragOverBlocId(null);}else if(dragId&&!dragBlocId){assignToBloc(dragId,blocId||null);setDragId(null);setDragOverId(null);setDragOverBloc(null);}}} style={{marginBottom:14,borderRadius:14,border:"1px solid "+(dragOverBlocId===blocId&&dragBlocId?blocC+"90":dragOverBloc===blocId&&dragId?blocC+"90":blocC+(bloc?"40":"20")),background:blocC+(bloc?"0D":"00"),overflow:"hidden",transition:"border-color 0.15s",opacity:dragBlocId===blocId?0.5:1}}>
+        return(<div key={blocId||"__no_bloc__"} onDragOver={e=>{e.preventDefault();if(dragBlocId&&dragBlocId!==blocId)setDragOverBlocId(blocId);else if(dragId&&!dragBlocId)setDragOverBloc(blocId||null);}} onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget)){setDragOverBloc(null);setDragOverBlocId(null);}}} onDrop={e=>{e.preventDefault();e.stopPropagation();if(dragBlocId&&dragBlocId!==blocId){reorderBloc(dragBlocId,blocId);setDragBlocId(null);setDragOverBlocId(null);}else if(dragId&&!dragBlocId){assignToBloc(dragId,blocId||null);setDragId(null);setDragOverId(null);setDragOverBloc(null);}}} style={{marginBottom:14,borderRadius:6,border:"1px solid "+(dragOverBlocId===blocId&&dragBlocId?blocC+"90":dragOverBloc===blocId&&dragId?blocC+"90":blocC+(bloc?"40":"20")),background:blocC+(bloc?"0D":"00"),overflow:"hidden",transition:"border-color 0.15s",opacity:dragBlocId===blocId?0.5:1}}>
           {/* Bloc header */}
           {bloc&&(<div draggable={true} onDragStart={e=>{e.stopPropagation();setDragBlocId(blocId);e.dataTransfer.effectAllowed="move";}} onDragOver={e=>{e.preventDefault();e.stopPropagation();if(dragBlocId&&dragBlocId!==blocId)setDragOverBlocId(blocId);}} onDrop={e=>{e.preventDefault();e.stopPropagation();if(dragBlocId&&dragBlocId!==blocId){reorderBloc(dragBlocId,blocId);setDragBlocId(null);setDragOverBlocId(null);}}} onDragEnd={()=>{setDragBlocId(null);setDragOverBlocId(null);}} style={{background:dragOverBlocId===blocId&&dragBlocId?blocC+"40":dragOverBloc===blocId&&dragId?blocC+"35":blocC+"22",borderBottom:"1px solid "+blocC+"30",cursor:dragBlocId?"grabbing":"grab",transition:"background 0.15s"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px"}}>
@@ -904,7 +904,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
               onTouchStart={e=>{const t=e.touches[0];touchStartPosRef.current={x:t.clientX,y:t.clientY};touchTimerRef.current=setTimeout(()=>{setTouchDragId(ex.id);setDragId(ex.id);if(navigator.vibrate)navigator.vibrate(40);},800);}}
               onTouchMove={e=>{if(!touchDragId){const t=e.touches[0];if(Math.abs(t.clientX-(touchStartPosRef.current?.x||0))>8||Math.abs(t.clientY-(touchStartPosRef.current?.y||0))>8)clearTimeout(touchTimerRef.current);return;}e.preventDefault();const t=e.touches[0];const hit=[...document.querySelectorAll('[data-exid]')].find(el=>{const r=el.getBoundingClientRect();return t.clientY>=r.top&&t.clientY<=r.bottom;});if(hit&&hit.dataset.exid!==touchDragId){setDragOverId(hit.dataset.exid);setDragOverBloc(exList.find(x=>x.id===hit.dataset.exid)?.bloc||null);}}}
               onTouchEnd={()=>{clearTimeout(touchTimerRef.current);if(touchDragId){if(dragOverId&&touchDragId!==dragOverId){const tgt=exList.find(x=>x.id===dragOverId);if(tgt)moveExToBloc(touchDragId,dragOverId,tgt.bloc);}setTouchDragId(null);setDragId(null);setDragOverId(null);setDragOverBloc(null);}}}
-              style={{background:C.s1,borderRadius:10,marginBottom:4,border:"1px solid "+(dragOverId===ex.id?C.ac:C.brd),overflow:"hidden",opacity:dragId===ex.id?0.65:1,animation:dragId===ex.id?"exShake 0.4s ease-in-out infinite":"none",transition:"opacity 0.15s,border-color 0.15s",userSelect:"none",WebkitUserSelect:"none"}}>
+              style={{background:C.s1,borderRadius:4,marginBottom:4,border:"1px solid "+(dragOverId===ex.id?C.ac:C.brd),overflow:"hidden",opacity:dragId===ex.id?0.65:1,animation:dragId===ex.id?"exShake 0.4s ease-in-out infinite":"none",transition:"opacity 0.15s,border-color 0.15s",userSelect:"none",WebkitUserSelect:"none"}}>
               <div onClick={()=>setOpenEx(isOpen?null:ex.id)} style={{display:"flex",alignItems:"center",padding:"11px 13px",cursor:"pointer",gap:10}}>
                 <div style={{width:3,height:28,borderRadius:2,background:blocC,flexShrink:0,position:"relative"}}><span style={{position:"absolute",top:-6,left:-3,fontSize:7,fontWeight:800,color:exTc.c,background:exTc.c+"20",padding:"0 3px",borderRadius:3}}>{isFlex?"":("T"+exTier)}</span></div>
                 <div style={{flex:1}}>
@@ -926,7 +926,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:4}}>
                   {aNote&&<span style={{fontSize:9,padding:"2px 5px",borderRadius:4,background:C.b+"20",color:C.b,fontWeight:600}}>retour</span>}
-                  {hasVideo&&<button onClick={e=>{e.stopPropagation();setVideoEx(bankEx);}} style={{background:'none',border:'none',color:C.tx3,fontSize:16,cursor:'pointer',padding:'0',lineHeight:1}} title="Voir la vidéo">📹</button>}
+                  {hasVideo&&<button onClick={e=>{e.stopPropagation();setVideoEx(bankEx);}} style={{background:'none',border:'none',color:C.tx3,fontSize:16,cursor:'pointer',padding:'0',lineHeight:1}} title="Voir la vidéo">Vid</button>}
                   <button onClick={e=>{e.stopPropagation();moveExercise(ex.id,-1);}} disabled={exIdx===0} style={{width:20,height:20,borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:exIdx===0?C.tx3+"40":C.tx2,fontSize:10,cursor:exIdx===0?"default":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>↑</button>
                   <button onClick={e=>{e.stopPropagation();moveExercise(ex.id,1);}} disabled={exIdx===exList.length-1} style={{width:20,height:20,borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:exIdx===exList.length-1?C.tx3+"40":C.tx2,fontSize:10,cursor:exIdx===exList.length-1?"default":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>↓</button>
                   <button onClick={e=>{e.stopPropagation();removeExercise(ex.id);}} style={{width:20,height:20,borderRadius:4,border:"1px solid "+C.r+"40",background:C.rS,color:C.r,fontSize:10,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>x</button>
@@ -937,19 +937,19 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                 {/* Multi-week planning toggle */}
                 <div style={{display:"flex",alignItems:"center",gap:6,marginTop:10,marginBottom:8}}>
                   <button onClick={()=>toggleMultiWeek(ex.id)} style={{padding:"3px 10px",borderRadius:6,border:"1px solid "+(isMultiWeek(ex.id)?C.coach:C.brdL),background:isMultiWeek(ex.id)?C.coachS:"transparent",color:isMultiWeek(ex.id)?C.coach:C.tx3,fontSize:10,fontWeight:isMultiWeek(ex.id)?700:400,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-                    📅 {isMultiWeek(ex.id)?"Multi-semaines actif":"Planifier multi-semaines"}
+                    {isMultiWeek(ex.id)?"Multi-semaines actif":"Planifier multi-semaines"}
                   </button>
                 </div>
                 {/* Multi-week table */}
                 {isMultiWeek(ex.id)&&(()=>{
                   const cellSt=(w)=>({width:44,textAlign:"center",padding:"4px 2px",borderRadius:5,border:"1px solid "+(w===week?C.coach:C.brdL),background:w===week?C.coachS:C.s2,color:C.tx,fontSize:11,fontWeight:700,fontFamily:"inherit",boxSizing:"border-box"});
                   const lSt={fontSize:9,color:C.tx3,whiteSpace:"nowrap",paddingRight:6,paddingTop:2};
-                  return(<div style={{marginBottom:12,overflowX:"auto",background:C.s2,borderRadius:10,padding:"10px 10px 6px",border:"1px solid "+C.coach+"30"}}>
+                  return(<div style={{marginBottom:12,overflowX:"auto",background:C.s2,borderRadius:4,padding:"10px 10px 6px",border:"1px solid "+C.coach+"30"}}>
                     <div style={{fontSize:9,fontWeight:700,color:C.coach,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Planification — toutes les semaines</div>
                     <table style={{borderCollapse:"collapse",width:"100%"}}>
                       <thead><tr>
                         <td style={{...lSt,color:"transparent"}}>──</td>
-                        {weeksArr.map(w=><td key={w} style={{textAlign:"center",padding:"0 3px 4px",fontSize:9,fontWeight:w===week?800:400,color:w===dw?C.o:w===week?C.coach:C.tx3}}>S{w}{w===dw?"🔄":""}</td>)}
+                        {weeksArr.map(w=><td key={w} style={{textAlign:"center",padding:"0 3px 4px",fontSize:9,fontWeight:w===week?800:400,color:w===dw?C.o:w===week?C.coach:C.tx3}}>S{w}{w===dw?"↻":""}</td>)}
                       </tr></thead>
                       <tbody>
                         <tr>
@@ -958,7 +958,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                         </tr>
                         {!isFlex&&<tr>
                           <td style={lSt}>Charge</td>
-                          {weeksArr.map(w=>{const wD=ex.weeks[w]||{};const isRm=wD.pct_rm!=null||wd.pct_rm!=null;const val=isRm?wD.pct_rm:wD.kg;const hasPS=!isRm&&wD._perSetMode&&wD.setKgs?.length>0;return(<td key={w} style={{padding:"2px 3px"}}>{hasPS?<div style={{...cellSt(w),display:"flex",alignItems:"center",justifyContent:"center",color:C.tx3,fontSize:9,fontStyle:"italic"}}>⚡</div>:<input type="number" step={isRm?1:0.5} value={val??""} placeholder="-" onChange={e=>updWeekN(ex.id,w,isRm?"pct_rm":"kg",e.target.value)} style={{...cellSt(w),color:isRm?C.g:C.tx,background:isRm?(w===week?C.g+"25":C.g+"10"):w===week?C.coachS:C.s2}}/>}</td>);})}
+                          {weeksArr.map(w=>{const wD=ex.weeks[w]||{};const isRm=wD.pct_rm!=null||wd.pct_rm!=null;const val=isRm?wD.pct_rm:wD.kg;const hasPS=!isRm&&wD._perSetMode&&wD.setKgs?.length>0;return(<td key={w} style={{padding:"2px 3px"}}>{hasPS?<div style={{...cellSt(w),display:"flex",alignItems:"center",justifyContent:"center",color:C.tx3,fontSize:9,fontStyle:"italic"}}>PS</div>:<input type="number" step={isRm?1:0.5} value={val??""} placeholder="-" onChange={e=>updWeekN(ex.id,w,isRm?"pct_rm":"kg",e.target.value)} style={{...cellSt(w),color:isRm?C.g:C.tx,background:isRm?(w===week?C.g+"25":C.g+"10"):w===week?C.coachS:C.s2}}/>}</td>);})}
                         </tr>}
                         {!isFlex&&<tr>
                           <td style={{...lSt,fontSize:8}}>{(wd.pct_rm!=null||weeksArr.some(w=>ex.weeks[w]?.pct_rm!=null))?"%RM":"kg"}</td>
@@ -990,7 +990,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                       <div style={{fontSize:9,color:C.coach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Paramètres méthode par semaine</div>
                       {weeksArr.filter(w=>ex.weeks[w]?.method).map(w=>{const wD=ex.weeks[w]||{};const mk=wD.method;const mDat=DEF_METHODS[mk]||allMethods?.[mk];const mc=mDat?.c||C.ac;const isExp=expandedMethodWeek?.exId===ex.id&&expandedMethodWeek?.week===w;return(<div key={w} style={{marginBottom:4,borderRadius:7,border:"1px solid "+mc+"40",overflow:"hidden"}}>
                         <div onClick={()=>setExpandedMethodWeek(isExp?null:{exId:ex.id,week:w})} style={{padding:"6px 10px",background:mc+"15",display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}>
-                          <span style={{fontSize:10,fontWeight:700,color:mc}}>S{w}{w===dw?"🔄":""}</span>
+                          <span style={{fontSize:10,fontWeight:700,color:mc}}>S{w}{w===dw?"↻":""}</span>
                           <span style={{flex:1,fontSize:10,color:mc}}>{mDat?.label||mk}</span>
                           <span style={{fontSize:9,color:C.tx3}}>{isExp?"▲":"▼"}</span>
                         </div>
@@ -999,7 +999,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                     </div>)}
                   </div>);
                 })()}
-                {aNote&&<div style={{margin:"12px 0",padding:"10px 12px",borderRadius:8,background:C.b+"12",border:"1px solid "+C.b+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.b,textTransform:"uppercase",marginBottom:4}}>Retour S{week}</div><div style={{fontSize:12,color:C.tx2,lineHeight:1.5,fontStyle:"italic"}}>"{aNote}"</div></div>}
+                {aNote&&<div style={{margin:"12px 0",padding:"10px 12px",borderRadius:4,background:C.b+"12",border:"1px solid "+C.b+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.b,textTransform:"uppercase",marginBottom:4}}>Retour S{week}</div><div style={{fontSize:12,color:C.tx2,lineHeight:1.5,fontStyle:"italic"}}>"{aNote}"</div></div>}
                 {(()=>{
                   if(week<=1)return null;
                   const prevW=week-1;
@@ -1007,7 +1007,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                   if(!prevSets.length)return null;
                   const prevWd=ex.weeks[prevW]||{};
                   const bestPrev=prevSets.reduce((b,s)=>{const est=e1rm(s.kg||0,s.reps||1);return est>b.est?{...s,est}:b;},{est:0});
-                  return(<div style={{margin:"12px 0 0",padding:"10px 12px",borderRadius:8,background:C.g+"0D",border:"1px solid "+C.g+"30"}}>
+                  return(<div style={{margin:"12px 0 0",padding:"10px 12px",borderRadius:4,background:C.g+"0D",border:"1px solid "+C.g+"30"}}>
                     <div style={{fontSize:9,fontWeight:600,color:C.g,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>Réalisé S{prevW}</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {prevSets.map((s,i)=>{const rc=rC(s.rir??2);return(<div key={i} style={{padding:"4px 8px",borderRadius:6,background:C.s1,border:"1px solid "+C.brd,fontSize:10}}>
@@ -1020,7 +1020,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                     {prevWd.kg&&prevSets[0]?.kg&&prevSets[0].kg!==prevWd.kg&&<div style={{fontSize:9,color:C.tx3,marginTop:4}}>Prévu {prevWd.kg}kg · Réalisé {prevSets[0].kg}kg</div>}
                   </div>);
                 })()}
-                <div style={{paddingTop:12,marginBottom:12,padding:"10px 12px",borderRadius:8,background:C.s2,border:"1px solid "+C.brdL}}>
+                <div style={{paddingTop:12,marginBottom:12,padding:"10px 12px",borderRadius:4,background:C.s2,border:"1px solid "+C.brdL}}>
                   <div style={{fontSize:9,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Parametres exercice</div>
                   <div style={{marginBottom:8}}><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:4}}>Nom</div><input value={ex.name} onChange={e=>updExField(ex.id,"name",e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:12,fontFamily:"inherit",boxSizing:"border-box"}}/></div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
@@ -1088,7 +1088,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                       </div>
                     </div>
                     {/* rm_ref hint when in %RM mode and no PR found */}
-                    {wd.pct_rm!=null&&athleteId&&(()=>{const effR=effectiveRmRef(ex);return(!effR||!prByRef[effR])&&<div style={{marginTop:4,fontSize:9,color:C.o,padding:"3px 6px",borderRadius:5,background:C.oS}}>⚠ Aucun PR trouvé pour "{effR||ex.name}". Complète une séance ou ajoute un PR manuellement.</div>;})()}
+                    {wd.pct_rm!=null&&athleteId&&(()=>{const effR=effectiveRmRef(ex);return(!effR||!prByRef[effR])&&<div style={{marginTop:4,fontSize:9,color:C.o,padding:"3px 6px",borderRadius:5,background:C.oS}>Aucun PR trouvé pour "{effR||ex.name}". Complète une séance ou ajoute un PR manuellement.</div>;})()}
                     {/* Per-set charge config */}
                     {(wd.sets>=2)&&!wd.pdc&&(()=>{
                       const isRm=wd.pct_rm!=null;
@@ -1115,7 +1115,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                       const ref=effectiveRmRef(ex);const prs=athleteId&&ref?prByRef[ref]:null;const best=prs?.length?prs.reduce((m,p)=>p.kg>m.kg?p:m,prs[0]):null;
                       return(<div style={{marginTop:8}}>
                         <button onClick={togglePerSet} style={{padding:"2px 8px",borderRadius:5,border:"1px solid "+(hasPerSet?C.ac:C.brdL),background:hasPerSet?C.acS:"transparent",color:hasPerSet?C.ac:C.tx3,fontSize:9,fontWeight:hasPerSet?700:400,cursor:"pointer",fontFamily:"inherit"}}>
-                          {hasPerSet?"⚡ Par série · ↩ Globale":"⚡ Par série"}
+                          {hasPerSet?"Par serie · ↩ Globale":"Par serie"}
                         </button>
                         {hasPerSet&&(<div style={{marginTop:6}}>
                           <div style={{display:"flex",gap:4,overflowX:"auto",paddingBottom:2}}>
@@ -1150,7 +1150,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                 <div style={{marginBottom:10}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
                     <div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px"}}>Repetitions / Duree</div>
-                    {!isFlex&&wd.sets>=2&&(()=>{const isPS=(wd.repsRange||"").includes(",");return(<button onClick={()=>{setExos(prev=>({...prev,[sid]:prev[sid].map(e=>{if(e.id!==ex.id)return e;const cw=e.weeks[week]||{};let patch;if(isPS){patch={_repsRangeStash:cw.repsRange,repsRange:(cw.repsRange||"").split(",")[0]||""};}else{const stash=cw._repsRangeStash;if(stash?.includes(",")&&stash.split(",").length===(cw.sets||3)){patch={repsRange:stash};}else{const b=cw.repsRange||"";patch={repsRange:Array.from({length:cw.sets||3},()=>b).join(",")};}}return{...e,weeks:{...e.weeks,[week]:{...cw,...patch}}};}))}));}} style={{padding:"1px 5px",borderRadius:4,border:"1px solid "+(isPS?C.ac:C.brdL),background:isPS?C.acS:"transparent",color:isPS?C.ac:C.tx3,fontSize:9,fontWeight:isPS?700:400,cursor:"pointer",fontFamily:"inherit"}}>⚡ {isPS?"Global":"Par série"}</button>);})()}
+                    {!isFlex&&wd.sets>=2&&(()=>{const isPS=(wd.repsRange||"").includes(",");return(<button onClick={()=>{setExos(prev=>({...prev,[sid]:prev[sid].map(e=>{if(e.id!==ex.id)return e;const cw=e.weeks[week]||{};let patch;if(isPS){patch={_repsRangeStash:cw.repsRange,repsRange:(cw.repsRange||"").split(",")[0]||""};}else{const stash=cw._repsRangeStash;if(stash?.includes(",")&&stash.split(",").length===(cw.sets||3)){patch={repsRange:stash};}else{const b=cw.repsRange||"";patch={repsRange:Array.from({length:cw.sets||3},()=>b).join(",")};}}return{...e,weeks:{...e.weeks,[week]:{...cw,...patch}}};}))}));}} style={{padding:"1px 5px",borderRadius:4,border:"1px solid "+(isPS?C.ac:C.brdL),background:isPS?C.acS:"transparent",color:isPS?C.ac:C.tx3,fontSize:9,fontWeight:isPS?700:400,cursor:"pointer",fontFamily:"inherit"}}>{isPS?"Global":"Par serie"}</button>);})()}
                   </div>
                   {(()=>{const isPS=!isFlex&&wd.sets>=2&&(wd.repsRange||"").includes(",");if(!isPS)return(<input type="text" value={wd.repsRange||""} placeholder={isFlex?"30s ou 10":"10 ou 8-12"} onChange={e=>updField(ex.id,"repsRange",e.target.value)} style={{...fS,textAlign:"left",paddingLeft:10}}/>);const parts=(wd.repsRange||"").split(",");return(<div style={{display:"flex",gap:4,overflowX:"auto",paddingBottom:2}}>{Array.from({length:wd.sets},(_,i)=>{const val=parts[i]??parts[parts.length-1]??"";return(<div key={i} style={{textAlign:"center",minWidth:44,flexShrink:0}}><div style={{fontSize:8,color:C.tx3,marginBottom:2}}>S{i+1}</div><input type="text" value={val} onChange={e=>{const np=Array.from({length:wd.sets},(_,j)=>j===i?e.target.value:(parts[j]??parts[parts.length-1]??""));updField(ex.id,"repsRange",np.join(","));}} style={{width:44,textAlign:"center",padding:"4px 2px",borderRadius:5,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:11,fontWeight:700,fontFamily:"inherit",boxSizing:"border-box"}}/></div>);})}</div>);})()}
                 </div>
@@ -1161,7 +1161,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                 {!isFlex&&(<div style={{marginBottom:14}}>
                   <div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Méthode</div>
                   {wd.method_attachment?(
-                    <div style={{padding:"8px 10px",borderRadius:8,background:C.acS,border:"1px solid "+C.ac+"50"}}>
+                    <div style={{padding:"8px 10px",borderRadius:4,background:C.acS,border:"1px solid "+C.ac+"50"}}>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         <div style={{flex:1,fontSize:11,color:C.ac,fontWeight:700}}>
                           {wd.method_attachment.method_name||"Méthode"}
@@ -1188,7 +1188,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                         const noRef=!ma.reference&&!ma.config?.load?.reference;
                         const noKg=!wd.kg&&!wd.pct_rm&&!wd.pdc;
                         if((loadType==="same"||loadType==="free")&&noRef&&noKg)
-                          return <div style={{marginTop:6,fontSize:10,color:C.o,padding:"4px 8px",borderRadius:6,background:C.o+"15",border:"1px solid "+C.o+"40"}}>⚠ Charge non définie — renseigner la valeur kg ci-dessus pour préremplir côté athlète</div>;
+                          return <div style={{marginTop:6,fontSize:10,color:C.o,padding:"4px 8px",borderRadius:6,background:C.o+"15",border:"1px solid "+C.o+"40"}}>Charge non définie — renseigner la valeur kg ci-dessus pour préremplir côté athlète</div>;
                         return null;
                       })()}
                       {/* Aperçu sous-séries — scope='set' */}
@@ -1219,11 +1219,11 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                     <button onClick={()=>setMethodPickerEx({id:ex.id,sets:wd.sets||4,sid})} style={{padding:"6px 12px",borderRadius:7,border:"1px dashed "+C.ac+"60",background:C.acS,color:C.ac,fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>+ Ajouter une méthode</button>
                   )}
                 </div>)}
-                <div><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Consigne technique</div><textarea value={wd.coachNote||""} onChange={e=>updField(ex.id,"coachNote",e.target.value)} placeholder="Ex: garder les omoplates retractees..." rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid "+C.coach+"60",background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}}/></div>
+                <div><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>Consigne technique</div><textarea value={wd.coachNote||""} onChange={e=>updField(ex.id,"coachNote",e.target.value)} placeholder="Ex: garder les omoplates retractees..." rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:4,border:"1px solid "+C.coach+"60",background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}}/></div>
                 {!isFlex&&wd.repsRange&&(()=>{
                   let kgForCalc=wd.kg;
                   if(wd.pct_rm!=null){const effR=effectiveRmRef(ex);const prs=effR?prByRef[effR]:null;if(prs?.length){const best=prs.reduce((m,p)=>p.kg>m.kg?p:m,prs[0]);kgForCalc=Math.round(wd.pct_rm/100*best.kg*2)/2;}}
-                  return kgForCalc?<div style={{marginTop:10,padding:"8px 12px",borderRadius:8,background:C.s2,display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:C.tx3}}>1RM estime</span><span style={{fontSize:14,fontWeight:700,color:C.coach}}>{e1rm(kgForCalc,parseReps(wd.repsRange)||1)} kg</span></div>:null;
+                  return kgForCalc?<div style={{marginTop:10,padding:"8px 12px",borderRadius:4,background:C.s2,display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:C.tx3}}>1RM estime</span><span style={{fontSize:14,fontWeight:700,color:C.coach}}>{e1rm(kgForCalc,parseReps(wd.repsRange)||1)} kg</span></div>:null;
                 })()}
               </div>)}
             </div>);
@@ -1235,12 +1235,12 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
 
     {/* Add exercise */}
     <div style={{marginTop:8}}>
-      {!addForm?(<button onClick={()=>{setAddForm(true);setNewEx(p=>({...p,bloc:sessBlocs[0]?.id||null}));}} style={{width:"100%",padding:"10px 0",borderRadius:10,border:"1px dashed "+C.g+"50",background:C.gS,color:C.g,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>+ Ajouter un exercice ({exList.length})</button>):(
-        <div style={{background:C.s1,borderRadius:12,padding:"14px",border:"1px solid "+C.g+"40"}}>
+      {!addForm?(<button onClick={()=>{setAddForm(true);setNewEx(p=>({...p,bloc:sessBlocs[0]?.id||null}));}} style={{width:"100%",padding:"10px 0",borderRadius:4,border:"1px dashed "+C.g+"50",background:C.gS,color:C.g,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>+ Ajouter un exercice ({exList.length})</button>):(
+        <div style={{background:C.s1,borderRadius:6,padding:"14px",border:"1px solid "+C.g+"40"}}>
           <div style={{fontSize:11,fontWeight:600,color:C.g,marginBottom:12}}>Nouvel exercice</div>
            <div style={{marginBottom:10,position:"relative"}} ref={dropRef}>
             <div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:5}}>Nom (depuis la base Exos)</div>
-            <input value={exSearch} onChange={e=>{setExSearch(e.target.value);setNewEx(p=>({...p,name:e.target.value}));setShowExDropdown(true);}} onFocus={()=>setShowExDropdown(true)} placeholder="Rechercher ou créer..." style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&addExercise()}/>
+            <input value={exSearch} onChange={e=>{setExSearch(e.target.value);setNewEx(p=>({...p,name:e.target.value}));setShowExDropdown(true);}} onFocus={()=>setShowExDropdown(true)} placeholder="Rechercher ou créer..." style={{width:"100%",padding:"9px 12px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&addExercise()}/>
             {/* Duplicate/similar alert */}
             {(()=>{
               const typed=normalizeExName(exSearch||"").toLowerCase();
@@ -1249,10 +1249,10 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
               const otherSessions=safeSessions.filter(s=>s.id!==sid&&(exos[s.id]||[]).some(x=>normalizeExName(x.name).toLowerCase()===typed));
               if(!inThisSession&&!otherSessions.length)return null;
               return(<div style={{marginTop:4,padding:"6px 10px",borderRadius:7,border:"1px solid "+(inThisSession?C.b:C.g)+"50",background:inThisSession?C.bS:C.gS,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:10,color:inThisSession?C.b:C.g}}>{inThisSession?"ℹ Déjà dans cette séance — sera ajouté en double":"✓ Présent dans : "+otherSessions.map(s=>s.short).join(", ")+" → progression liée"}</span>
+                <span style={{fontSize:10,color:inThisSession?C.b:C.g}}>{inThisSession?"Déjà dans cette séance — sera ajouté en double":"✓ Présent dans : "+otherSessions.map(s=>s.short).join(", ")+" → progression liée"}</span>
               </div>);
             })()}
-            {showExDropdown&&(()=>{const matches=exoDB.filter(e=>e.name.toLowerCase().includes((exSearch||"").toLowerCase()));const exact=matches.some(e=>e.name.toLowerCase()===(exSearch||"").toLowerCase());return(<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:20,background:C.s1,border:"1px solid "+C.brdL,borderRadius:8,maxHeight:200,overflowY:"auto",marginTop:2}}>
+            {showExDropdown&&(()=>{const matches=exoDB.filter(e=>e.name.toLowerCase().includes((exSearch||"").toLowerCase()));const exact=matches.some(e=>e.name.toLowerCase()===(exSearch||"").toLowerCase());return(<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:20,background:C.s1,border:"1px solid "+C.brdL,borderRadius:4,maxHeight:200,overflowY:"auto",marginTop:2}}>
               {matches.slice(0,10).map(e=>{const mc=getMC(e.target||"Pecs");const normE=normalizeExName(e.name).toLowerCase();const inThisSess=exList.some(x=>normalizeExName(x.name).toLowerCase()===normE);const usedIn=safeSessions.filter(s=>(exos[s.id]||[]).some(x=>normalizeExName(x.name).toLowerCase()===normE)).map(s=>s.short);return(<div key={e.name} onClick={()=>{pickExFromDB(e);}} style={{padding:"8px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,opacity:1,borderBottom:"1px solid "+C.brd}}>
                 <span style={{width:3,height:16,borderRadius:2,background:mc,flexShrink:0}}/>
                 <div style={{flex:1}}>
@@ -1268,7 +1268,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
                 const similar=exoDB.filter(e=>normalizeExName(e.name).toLowerCase()===normTyped&&e.name.toLowerCase()!==exSearch.trim().toLowerCase());
                 return(<>
                   {similar.length>0&&<div style={{padding:"6px 12px",background:C.oS,borderBottom:"1px solid "+C.brd}}>
-                    <div style={{fontSize:10,color:C.o}}>⚠ Variante existante : {similar.map(s=>s.name).join(", ")}</div>
+                    <div style={{fontSize:10,color:C.o}}>Variante existante : {similar.map(s=>s.name).join(", ")}</div>
                     <div style={{fontSize:9,color:C.tx3}}>Les stats seront fusionnées automatiquement</div>
                   </div>}
                   <div onClick={()=>{setNewEx(p=>({...p,name:exSearch.trim()}));setShowExDropdown(false);}} style={{padding:"8px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:6,background:C.gS}}>
@@ -1286,21 +1286,21 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
           <div style={{display:"grid",gridTemplateColumns:!["muscu","halterophilie"].includes(newEx.exType||"muscu")?"1fr":"1fr 1fr",gap:8,marginBottom:12}}>
             <div>
               <div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:5}}>Bloc</div>
-              <select value={newEx.bloc||""} onChange={e=>setNewEx(p=>({...p,bloc:e.target.value||null}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid "+(sessBlocs.find(b=>b.id===newEx.bloc)?.color||C.brdL),background:C.s2,color:sessBlocs.find(b=>b.id===newEx.bloc)?.color||C.tx,fontSize:12,fontFamily:"inherit"}}>
+              <select value={newEx.bloc||""} onChange={e=>setNewEx(p=>({...p,bloc:e.target.value||null}))} style={{width:"100%",padding:"8px 10px",borderRadius:4,border:"1px solid "+(sessBlocs.find(b=>b.id===newEx.bloc)?.color||C.brdL),background:C.s2,color:sessBlocs.find(b=>b.id===newEx.bloc)?.color||C.tx,fontSize:12,fontFamily:"inherit"}}>
                 <option value="">— Aucun —</option>
                 {sessBlocs.map(b=><option key={b.id} value={b.id}>{b.label}</option>)}
               </select>
             </div>
             {["muscu","halterophilie"].includes(newEx.exType||"muscu")&&<div>
               <div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",marginBottom:5}}>Muscle cible</div>
-              <select value={newEx.target} onChange={e=>setNewEx(p=>({...p,target:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit"}}>
+              <select value={newEx.target} onChange={e=>setNewEx(p=>({...p,target:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit"}}>
                 {ALL_MIDS.filter(m=>!MTREE.find(g=>g.id===m&&g.s.length>0)).map(m=><option key={m} value={m}>{mL(m)}</option>)}
               </select>
             </div>}
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>{setAddForm(false);setNewEx({name:"",bloc:sessBlocs[0]?.id||null,target:"Pecs",exType:"muscu"});setExSearch("");setShowExDropdown(false);}} style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
-            <button onClick={addExercise} style={{flex:2,padding:"9px 0",borderRadius:8,border:"none",background:C.g,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
+            <button onClick={()=>{setAddForm(false);setNewEx({name:"",bloc:sessBlocs[0]?.id||null,target:"Pecs",exType:"muscu"});setExSearch("");setShowExDropdown(false);}} style={{flex:1,padding:"9px 0",borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
+            <button onClick={addExercise} style={{flex:2,padding:"9px 0",borderRadius:4,border:"none",background:C.g,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Ajouter</button>
           </div>
         </div>
       )}
@@ -1313,12 +1313,12 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
         <div style={{fontSize:14,fontWeight:700,color:C.tx}}>{videoEx.name}</div>
         <button onClick={()=>setVideoEx(null)} style={{background:'none',border:'none',color:C.tx2,fontSize:24,cursor:'pointer',fontFamily:'inherit',lineHeight:1}}>×</button>
       </div>
-      {videoEx.youtube_id?(<div style={{position:'relative',paddingBottom:'56.25%',background:'#000',borderRadius:12,overflow:'hidden'}}>
+      {videoEx.youtube_id?(<div style={{position:'relative',paddingBottom:'56.25%',background:'#000',borderRadius:6,overflow:'hidden'}}>
         <iframe src={'https://www.youtube.com/embed/'+videoEx.youtube_id+'?autoplay=1'} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none'}} allow="autoplay; encrypted-media" allowFullScreen/>
       </div>):videoEx.image_url?(
-        <img src={videoEx.image_url} style={{width:'100%',borderRadius:12,display:'block'}} alt={videoEx.name}/>
+        <img src={videoEx.image_url} style={{width:'100%',borderRadius:6,display:'block'}} alt={videoEx.name}/>
       ):null}
-      <button onClick={()=>setVideoEx(null)} style={{width:'100%',marginTop:14,padding:'11px 0',borderRadius:10,border:'1px solid '+C.brdL,background:'transparent',color:C.tx3,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>Fermer</button>
+      <button onClick={()=>setVideoEx(null)} style={{width:'100%',marginTop:14,padding:'11px 0',borderRadius:4,border:'1px solid '+C.brdL,background:'transparent',color:C.tx3,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>Fermer</button>
     </div>
   </div>)}
   {methodPickerEx&&(<Suspense fallback={null}><MethodPickerDialog
@@ -1414,18 +1414,18 @@ function CoachExoParams({exMeta,setExMeta,exos,setExos,blockConfig}){
   };
   return(<div>
     <div style={{display:"flex",gap:8,marginBottom:14}}>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher..." style={{flex:1,padding:"10px 14px",borderRadius:10,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
-      <button onClick={()=>setAddMode(!addMode)} style={{padding:"8px 14px",borderRadius:10,border:"1px solid "+C.g+"50",background:addMode?C.gS:"transparent",color:C.g,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{addMode?"✕":"+ Exo"}</button>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher..." style={{flex:1,padding:"10px 14px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}/>
+      <button onClick={()=>setAddMode(!addMode)} style={{padding:"8px 14px",borderRadius:4,border:"1px solid "+C.g+"50",background:addMode?C.gS:"transparent",color:C.g,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{addMode?"✕":"+ Exo"}</button>
     </div>
-    {addMode&&(<div style={{background:C.s1,borderRadius:12,padding:14,border:"1px solid "+C.g+"40",marginBottom:14}}>
+    {addMode&&(<div style={{background:C.s1,borderRadius:6,padding:14,border:"1px solid "+C.g+"40",marginBottom:14}}>
       <div style={{fontSize:11,fontWeight:600,color:C.g,marginBottom:8}}>Nouvel exercice</div>
-      <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nom de l'exercice..." onKeyDown={e=>e.key==="Enter"&&addExo()} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:13,fontFamily:"inherit",marginBottom:8,boxSizing:"border-box"}}/>
+      <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nom de l'exercice..." onKeyDown={e=>e.key==="Enter"&&addExo()} style={{width:"100%",padding:"8px 12px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:13,fontFamily:"inherit",marginBottom:8,boxSizing:"border-box"}}/>
       <div style={{fontSize:10,fontWeight:600,color:C.tx3,marginBottom:6}}>Muscles principaux <span style={{fontWeight:400}}>(max 4)</span></div>
       <MuscleSelector value={newTarget} onChange={v=>{const arr=normPrimary(v);if(arr.length<=4)setNewTarget(arr);}} multi/>
-      <button onClick={addExo} disabled={!newName.trim()} style={{width:"100%",padding:"8px",borderRadius:8,border:"none",background:C.g,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:newName.trim()?1:0.4}}>Ajouter</button>
+      <button onClick={addExo} disabled={!newName.trim()} style={{width:"100%",padding:"8px",borderRadius:4,border:"none",background:C.g,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:newName.trim()?1:0.4}}>Ajouter</button>
     </div>)}
     {filt.map(ex=>{const bt=BT[ex.bloc]||{c:C.tx3,l:"?"};const isOpen=open===(ex.id||ex.name);const meta=exMeta[ex.name]||{primary:ex.target,secondary:[]};const primaries=normPrimary(meta.primary);const pc=primaries.length>0?getMC(primaries[0]):getMC(ex.target);const curTier=getExTierFromExos(ex.name);const curTc=tierCfg[curTier]||tierCfg[3];const usage=usageCount(ex.name);const isEditing=editName===ex.name;const eType=ex.exType||(ex.isFlexibility?"mobilite":"muscu");const isMuscu=eType==="muscu"||eType==="halterophilie";
-      return(<div key={ex.id||ex.name} style={{background:C.s1,borderRadius:12,marginBottom:6,border:"1px solid "+(confirmDel===ex.name?C.r+"60":C.brd),overflow:"hidden"}}>
+      return(<div key={ex.id||ex.name} style={{background:C.s1,borderRadius:6,marginBottom:6,border:"1px solid "+(confirmDel===ex.name?C.r+"60":C.brd),overflow:"hidden"}}>
         <div onClick={()=>{if(!isEditing&&confirmDel!==ex.name)setOpen(isOpen?null:(ex.id||ex.name));}} style={{display:"flex",alignItems:"center",padding:"12px 14px",cursor:"pointer",gap:10}}>
           <div style={{width:3,height:28,borderRadius:2,background:bt.c,flexShrink:0}}/>
           <div style={{flex:1}}>
@@ -1445,8 +1445,8 @@ function CoachExoParams({exMeta,setExMeta,exos,setExos,blockConfig}){
         {isOpen&&(<div style={{padding:"0 14px 16px",borderTop:"1px solid "+C.brd}}><div style={{paddingTop:12}}>
           {/* Edit / Delete buttons */}
           <div style={{display:"flex",gap:6,marginBottom:12}}>
-            <button onClick={(e)=>{e.stopPropagation();setEditName(ex.name);setEditVal(ex.name);}} style={{flex:1,padding:"6px",borderRadius:7,border:"1px solid "+C.ac+"40",background:C.acS,color:C.ac,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>✏️ Renommer</button>
-            <button onClick={(e)=>{e.stopPropagation();setConfirmDel(ex.name);}} style={{flex:1,padding:"6px",borderRadius:7,border:"1px solid "+C.r+"40",background:C.rS,color:C.r,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>🗑 Supprimer</button>
+            <button onClick={(e)=>{e.stopPropagation();setEditName(ex.name);setEditVal(ex.name);}} style={{flex:1,padding:"6px",borderRadius:7,border:"1px solid "+C.ac+"40",background:C.acS,color:C.ac,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Renommer</button>
+            <button onClick={(e)=>{e.stopPropagation();setConfirmDel(ex.name);}} style={{flex:1,padding:"6px",borderRadius:7,border:"1px solid "+C.r+"40",background:C.rS,color:C.r,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Supprimer</button>
           </div>
           <div style={{marginBottom:12}}>
             <div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:6}}>Type d'exercice</div>

@@ -56,10 +56,10 @@ export function CompetitionMarkers({ competitions, calc, totalRowHeight, onSelec
                   borderRadius: 6, padding: "3px 8px",
                   fontSize: 10, fontWeight: 600, color,
                   whiteSpace: "nowrap", pointerEvents: "none",
-                  zIndex: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                  zIndex: 20,
                 }}
               >
-                🏆 {comp.name}
+                {comp.name}
                 {comp.priority && (
                   <span style={{ marginLeft: 4, opacity: 0.7 }}>· {comp.priority}</span>
                 )}

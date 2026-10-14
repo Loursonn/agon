@@ -15,7 +15,7 @@ import type { AthleteCurrentValue, AthleteTestResult } from '@/features/shared/t
 function ValueChip({ cv }: { cv: AthleteCurrentValue }) {
   return (
     <div style={{
-      background: C.s1, borderRadius: 10, border: '1px solid ' + C.brd,
+      background: C.s1, borderRadius: 4, border: '1px solid ' + C.brd,
       padding: '10px 14px', minWidth: 90, flexShrink: 0, textAlign: 'center',
     }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>
@@ -38,7 +38,7 @@ function ResultRow({ result }: { result: AthleteTestResult }) {
   const values = result.athlete_test_values ?? [];
   return (
     <div style={{
-      background: C.s1, borderRadius: 12, border: '1px solid ' + C.brd, padding: '14px 16px',
+      background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd, padding: '14px 16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: values.length ? 10 : 0 }}>
         <FlaskConical size={13} color={C.ac} />
@@ -56,7 +56,7 @@ function ResultRow({ result }: { result: AthleteTestResult }) {
             return (
               <div key={v.id} style={{
                 padding: '4px 10px', borderRadius: 7,
-                background: 'rgba(201,161,74,0.08)', border: '1px solid rgba(201,161,74,0.15)',
+                background: 'rgba(255,201,51,0.08)', border: '1px solid rgba(255,201,51,0.15)',
               }}>
                 <span style={{ fontSize: 11, color: C.tx3 }}>{v.test_variables?.label ?? '—'} </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.ac }}>
@@ -93,12 +93,12 @@ export default function AthleteTestPage() {
         onClick={() => setMensuOpen(true)}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-          background: C.s1, borderRadius: 12, border: '1px solid ' + C.brd,
+          background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd,
           padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit',
           marginBottom: 28, textAlign: 'left',
         }}
       >
-        <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: C.gS, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 40, height: 40, borderRadius: 4, flexShrink: 0, background: C.gS, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Ruler size={20} color={C.g} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>

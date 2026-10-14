@@ -29,12 +29,12 @@ const KIND_LABEL: Record<string, string> = {
   footing: "Footing", fartlek: "Fartlek", autre: "Autre", custom: "Custom",
 };
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#C9A14A", tempo: "#7E9CA8", seuil: "#F59E0B",
+  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
   footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
 };
 
 const SIDEBAR_CATS = [
-  { key: "workout"  as Tab, label: "Muscu",      Icon: Dumbbell,     color: "#C9A14A", disabled: false },
+  { key: "workout"  as Tab, label: "Muscu",      Icon: Dumbbell,     color: "#FFC933", disabled: false },
   { key: "energy"   as Tab, label: "Énergie",    Icon: Zap,          color: "#F59E0B", disabled: false },
   { key: "test"     as Tab, label: "Test",        Icon: FlaskConical, color: "#C49A6C", disabled: false },
   { key: "specific" as Tab, label: "Spécifique",  Icon: Layers,       color: C.tx3,     disabled: true  },
@@ -52,7 +52,7 @@ interface QuickAddDialogProps {
 // ── Shared micro-styles ───────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 11px", borderRadius: 9,
+  width: "100%", padding: "8px 11px", borderRadius: 4,
   border: "1px solid " + C.brdL, background: C.s2,
   color: C.tx, fontSize: 12, fontFamily: "inherit",
   outline: "none", boxSizing: "border-box",
@@ -60,7 +60,7 @@ const inputStyle: React.CSSProperties = {
 
 function itemBtn(active: boolean, color: string): React.CSSProperties {
   return {
-    width: "100%", padding: "8px 10px", borderRadius: 9,
+    width: "100%", padding: "8px 10px", borderRadius: 4,
     border: "1px solid " + (active ? color + "60" : C.brd),
     background: active ? color + "15" : C.s2,
     color: active ? color : C.tx,
@@ -181,9 +181,8 @@ export function QuickAddDialog({
           position: "fixed", top: "50%", left: "50%", zIndex: 60,
           transform: "translate(-50%, -50%)",
           width: 520, maxWidth: "95vw",
-          background: C.s1, borderRadius: 20,
+          background: C.s1, borderRadius: 6,
           border: "1px solid " + C.brdL,
-          boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
           display: "flex", flexDirection: "column",
           maxHeight: "84vh", overflow: "hidden",
           animation: "qdIn 180ms ease-out",
@@ -207,7 +206,7 @@ export function QuickAddDialog({
             <div style={{ fontSize: 11, color: C.tx3 }}>{dateLabel}</div>
           </div>
           <button onClick={handleClose} style={{
-            width: 28, height: 28, borderRadius: 8,
+            width: 28, height: 28, borderRadius: 4,
             border: "1px solid " + C.brdL, background: "transparent",
             color: C.tx3, cursor: "pointer", fontFamily: "inherit",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -238,7 +237,7 @@ export function QuickAddDialog({
                   title={disabled ? "Bientôt disponible" : undefined}
                   style={{
                     height: 68,
-                    borderRadius: 12,
+                    borderRadius: 6,
                     border: "1px solid " + (active ? color + "70" : disabled ? C.brd + "40" : C.brd),
                     background: active ? color + "1A" : disabled ? "transparent" : C.s2,
                     color: active ? color : disabled ? C.tx3 + "40" : C.tx3,
@@ -288,7 +287,7 @@ export function QuickAddDialog({
                       <button
                         key={s.id}
                         onClick={() => setSelectedSession(active ? "" : s.id)}
-                        style={itemBtn(active, "#C9A14A")}
+                        style={itemBtn(active, "#FFC933")}
                       >
                         {active && "✓ "}{s.name}
                       </button>
@@ -463,7 +462,7 @@ export function QuickAddDialog({
             {/* ── SPÉCIFIQUE (placeholder) ── */}
             {tab === "specific" && (
               <div style={{ ...emptyTxt, padding: "40px 0" }}>
-                🚧 Bientôt disponible
+                Bientôt disponible
               </div>
             )}
           </div>
@@ -475,7 +474,7 @@ export function QuickAddDialog({
             onClick={handleSubmit}
             disabled={!canSubmit || isPending}
             style={{
-              width: "100%", padding: "12px 0", borderRadius: 10,
+              width: "100%", padding: "12px 0", borderRadius: 4,
               border: "none",
               background: canSubmit && !isPending ? C.ac : C.s2,
               color: canSubmit && !isPending ? "#fff" : C.tx3,

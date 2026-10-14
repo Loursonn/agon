@@ -5,7 +5,7 @@ import { C } from "@/lib/theme";
 import type { TestDetail } from "@/features/shared/types/retours.types";
 
 const TYPE_COLOR: Record<string, string> = {
-  musculation: "#C9A14A", endurance: "#7E9CA8", vitesse: "#EF4444",
+  musculation: "#FFC933", endurance: "#33B5FF", vitesse: "#EF4444",
   puissance: "#F59E0B", souplesse: "#10B981", autre: "#6B7280",
 };
 
@@ -25,7 +25,7 @@ export function TestRetourCard({ test }: TestRetourCardProps) {
     <div style={{
       background: test.completed ? tc + "10" : C.s1,
       border: "1px solid " + (test.completed ? tc + "35" : C.brd),
-      borderRadius: 12, padding: "10px 14px",
+      borderRadius: 6, padding: "10px 14px",
     }}>
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -33,20 +33,20 @@ export function TestRetourCard({ test }: TestRetourCardProps) {
           <FlaskConical size={13} color={tc} />
           <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{test.title}</span>
           <span style={{
-            fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 8,
+            fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 4,
             background: test.completed ? C.g + "20" : C.s2,
             color: test.completed ? C.g : C.tx3,
           }}>
             {test.completed ? "✓ Complété" : "En attente"}
           </span>
           {test.coach_validated && (
-            <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 8, background: tc + "20", color: tc }}>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 4, background: tc + "20", color: tc }}>
               ✓ Validé
             </span>
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 8, background: tc + "15", color: tc, textTransform: "capitalize" as const }}>
+          <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 4, background: tc + "15", color: tc, textTransform: "capitalize" as const }}>
             {test.type}
           </span>
           <span style={{ fontSize: 10, color: C.tx3 }}>
@@ -58,7 +58,7 @@ export function TestRetourCard({ test }: TestRetourCardProps) {
       {/* Structured results (variable key→value) */}
       {test.completed && hasStructured && (
         <div style={{
-          background: C.s2, borderRadius: 8, padding: "7px 10px", marginBottom: 6,
+          background: C.s2, borderRadius: 4, padding: "7px 10px", marginBottom: 6,
           display: "flex", flexWrap: "wrap" as const, gap: "4px 14px",
         }}>
           {Object.entries(structuredVars!).map(([key, val]) =>
@@ -74,7 +74,7 @@ export function TestRetourCard({ test }: TestRetourCardProps) {
 
       {/* results_note (free text or auto-summary) */}
       {test.completed && test.results_note && !hasStructured && (
-        <div style={{ background: C.s2, borderRadius: 8, padding: "7px 10px" }}>
+        <div style={{ background: C.s2, borderRadius: 4, padding: "7px 10px" }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 3 }}>
             Résultats
           </div>

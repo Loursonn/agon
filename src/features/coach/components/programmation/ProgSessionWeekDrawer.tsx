@@ -13,7 +13,7 @@ import { SessionBlocEditor } from "./SessionBlocEditor"
 import { useSessionWeekLogs } from "./hooks/useSessionWeekLogs"
 import type { SessionSetLog } from "@/features/shared/types/athlete"
 
-const VIOLET  = "#C9A14A"
+const VIOLET  = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 const GREEN   = "#22c55e"
 const GREEN_S = "rgba(34,197,94,0.10)"
@@ -23,7 +23,7 @@ const AMBER   = "#f59e0b"
 const AMBER_S = "rgba(245,158,11,0.10)"
 
 const BLOC_PALETTE = [
-  "#C9A14A", "#F97316", "#22C55E", "#EF4444",
+  "#FFC933", "#F97316", "#22C55E", "#EF4444",
   "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
 ]
 
@@ -119,7 +119,7 @@ function Chip({ label, value }: { label: string; value: string }) {
 function ExercicePreview({ exercice, params }: { exercice: Exercice; params: ExerciceParams }) {
   return (
     <div style={{
-      padding: "10px 12px", borderRadius: 9,
+      padding: "10px 12px", borderRadius: 4,
       border: "1px solid " + C.brdL, background: C.s2, marginBottom: 6,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
@@ -205,7 +205,7 @@ function ExerciceRealise({
 
   return (
     <div style={{
-      padding: "10px 12px", borderRadius: 9,
+      padding: "10px 12px", borderRadius: 4,
       border: "1px solid " + C.brdL, background: C.s2, marginBottom: 6,
     }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 8 }}>
@@ -243,7 +243,7 @@ function ExerciceRealise({
           background: AMBER_S, border: "1px solid " + AMBER + "30",
           fontSize: 10, color: C.tx2, fontStyle: "italic",
         }}>
-          💬 {athleteComment}
+          {athleteComment}
         </div>
       )}
     </div>
@@ -392,9 +392,8 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
 
       <div style={{
         position: "relative", width: "100%", height: "92vh",
-        background: C.bg, borderRadius: "20px 20px 0 0",
-        display: "flex", flexDirection: "column",
-        boxShadow: "0 -8px 40px rgba(0,0,0,0.4)", overflow: "hidden",
+        background: C.bg, borderRadius: "6px 6px 0 0",
+        display: "flex", flexDirection: "column", overflow: "hidden",
       }}>
 
         {/* ── Header ── */}
@@ -413,7 +412,7 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
           <button
             onClick={onClose}
             style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 4,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
@@ -473,7 +472,7 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                     const params = resolveParams(ex, activeWeek, session.multi_semaine)
                     if (!params) return (
                       <div key={ex.id} style={{
-                        padding: "7px 10px", borderRadius: 8, marginBottom: 5,
+                        padding: "7px 10px", borderRadius: 4, marginBottom: 5,
                         border: "1px solid " + C.brdL, background: C.s2,
                         fontSize: 10, color: C.tx3,
                       }}>
@@ -511,7 +510,7 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
               {/* Session forme + comment */}
               {(atMods?.sessionForme != null || atMods?.sessionComment) && (
                 <div style={{
-                  padding: "7px 10px", borderRadius: 8, marginBottom: 8,
+                  padding: "7px 10px", borderRadius: 4, marginBottom: 8,
                   border: "1px solid " + C.brdL, background: C.s2,
                   display: "flex", flexDirection: "column", gap: 4,
                 }}>

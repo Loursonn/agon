@@ -28,7 +28,7 @@ function ageFromBirth(birth: string | null | undefined): number | null {
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 12px", borderRadius: 8,
+  width: "100%", padding: "8px 12px", borderRadius: 4,
   border: "1px solid " + C.brd, background: C.s2, color: C.tx,
   fontSize: 13, fontFamily: "inherit", outline: "none",
 };
@@ -37,8 +37,8 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: "0.4px", marginBottom: 4, display: "block",
 };
 const btnPrimary: React.CSSProperties = {
-  padding: "10px 20px", borderRadius: 10, border: "none",
-  background: C.coach, color: "#fff", fontSize: 13, fontWeight: 700,
+  padding: "10px 20px", borderRadius: 4, border: "none",
+  background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700,
   cursor: "pointer", fontFamily: "inherit",
 };
 const sectionTitle: React.CSSProperties = {
@@ -46,7 +46,7 @@ const sectionTitle: React.CSSProperties = {
   letterSpacing: "0.5px", marginBottom: 12,
 };
 const card: React.CSSProperties = {
-  background: C.s1, borderRadius: 16, padding: 16,
+  background: C.s1, borderRadius: 6, padding: 16,
   border: "1px solid " + C.brd,
 };
 
@@ -78,8 +78,9 @@ export default function ProfilPage() {
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <div style={card}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div style={{ ...card, position: "relative", overflow: "hidden" }}>
+            <div aria-hidden style={{ position: "absolute", top: 0, left: 0, right: 0, height: 20, backgroundImage: "url(/brand/agon-pattern-frise-meandre-sombre.svg)", backgroundSize: "600px", backgroundRepeat: "repeat-x", opacity: 0.18, pointerEvents: "none", zIndex: 0, maskImage: "linear-gradient(180deg, #000 0%, transparent 100%)", WebkitMaskImage: "linear-gradient(180deg, #000 0%, transparent 100%)" }} />
+            <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
               <div style={{
                 width: 48, height: 48, borderRadius: "50%",
                 background: C.coach + "25", border: "1px solid " + C.coach + "40",
@@ -95,7 +96,7 @@ export default function ProfilPage() {
               <button
                 onClick={() => setEditing(true)}
                 style={{
-                  padding: "6px 14px", borderRadius: 8,
+                  padding: "6px 14px", borderRadius: 4,
                   border: "1px solid " + C.coach + "50", background: C.coach + "15",
                   color: C.coach, fontSize: 12, fontWeight: 600,
                   cursor: "pointer", fontFamily: "inherit",
@@ -104,14 +105,14 @@ export default function ProfilPage() {
                 Modifier
               </button>
             </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 10, flexWrap: "wrap" }}>
               {[
                 { l: "Âge", v: displayProfile?.age ? `${displayProfile.age} ans` : "—" },
                 { l: "Taille", v: displayProfile?.height_cm ? `${displayProfile.height_cm} cm` : "—" },
                 { l: "Poids", v: bodyWeight?.current ? `${bodyWeight.current} kg` : "—" },
                 { l: "Genre", v: displayProfile?.gender === "male" ? "Homme" : displayProfile?.gender === "female" ? "Femme" : "—" },
               ].map(({ l, v }) => (
-                <div key={l} style={{ background: C.s2, borderRadius: 10, padding: "8px 12px", flex: 1, minWidth: 72 }}>
+                <div key={l} style={{ background: C.s2, borderRadius: 4, padding: "8px 12px", flex: 1, minWidth: 72 }}>
                   <div style={{ fontSize: 9, color: C.tx3 }}>{l}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>{v}</div>
                 </div>
@@ -151,7 +152,7 @@ export default function ProfilPage() {
             style={{
               width: "100%", padding: "14px 16px", border: "none",
               background: "transparent", textAlign: "left",
-              color: "#D9705A", fontSize: 13, fontWeight: 600,
+              color: "#FF5A33", fontSize: 13, fontWeight: 600,
               cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", gap: 8, minHeight: 44,
             }}
@@ -379,7 +380,7 @@ function MedicalHistorySection({ athleteId }: { athleteId: string }) {
             <button
               onClick={() => setEditing(true)}
               style={{
-                padding: "6px 14px", borderRadius: 8,
+                padding: "6px 14px", borderRadius: 4,
                 border: "1px solid " + C.coach + "50", background: C.coach + "15",
                 color: C.coach, fontSize: 12, fontWeight: 600,
                 cursor: "pointer", fontFamily: "inherit",
@@ -487,7 +488,7 @@ function StatsSection({ combinedData, wellnessHistory, weightLog, bodyWeight, pr
                 <Bar dataKey="vol" fill={C.ac} radius={[2, 2, 0, 0]} />
                 <XAxis dataKey="s" tick={{ fontSize: 9, fill: C.tx3 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: C.s1, border: "none", borderRadius: 8, fontSize: 11 }} labelStyle={{ color: C.tx3 }} itemStyle={{ color: C.ac }} />
+                <Tooltip contentStyle={{ background: C.s1, border: "none", borderRadius: 4, fontSize: 11 }} labelStyle={{ color: C.tx3 }} itemStyle={{ color: C.ac }} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -503,7 +504,7 @@ function StatsSection({ combinedData, wellnessHistory, weightLog, bodyWeight, pr
                 <Line type="monotone" dataKey="score" stroke={C.coach} strokeWidth={2} dot={false} connectNulls />
                 <XAxis dataKey="d" tick={{ fontSize: 8, fill: C.tx3 }} axisLine={false} tickLine={false} interval={4} />
                 <YAxis domain={[0, 100]} hide />
-                <Tooltip contentStyle={{ background: C.s1, border: "none", borderRadius: 8, fontSize: 11 }} labelStyle={{ color: C.tx3 }} itemStyle={{ color: C.coach }} />
+                <Tooltip contentStyle={{ background: C.s1, border: "none", borderRadius: 4, fontSize: 11 }} labelStyle={{ color: C.tx3 }} itemStyle={{ color: C.coach }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -526,7 +527,7 @@ function StatsSection({ combinedData, wellnessHistory, weightLog, bodyWeight, pr
                   <Line type="monotone" dataKey="kg" stroke={C.b} strokeWidth={2} dot={false} />
                   <XAxis dataKey="d" tick={{ fontSize: 8, fill: C.tx3 }} axisLine={false} tickLine={false} interval={4} />
                   <YAxis domain={domain} tickCount={4} tick={{ fontSize: 8, fill: C.tx3 }} axisLine={false} tickLine={false} width={32} tickFormatter={(v: number) => `${v}`} />
-                  <Tooltip contentStyle={{ background: C.s1, border: "none", borderRadius: 8, fontSize: 11 }} labelStyle={{ color: C.tx3 }} itemStyle={{ color: C.b }} formatter={(v: number) => [`${v} kg`, "Poids"]} />
+                  <Tooltip contentStyle={{ background: C.s1, border: "none", borderRadius: 4, fontSize: 11 }} labelStyle={{ color: C.tx3 }} itemStyle={{ color: C.b }} formatter={(v: number) => [`${v} kg`, "Poids"]} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

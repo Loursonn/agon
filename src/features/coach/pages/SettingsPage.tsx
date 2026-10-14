@@ -16,7 +16,7 @@ export default function SettingsPage() {
   async function handleCopyCode() {
     if (!profile?.coach_code) return;
     await navigator.clipboard.writeText(profile.coach_code);
-    toast.success("Code copié !");
+    toast.success("Code copié");
   }
 
   return (
@@ -28,7 +28,7 @@ export default function SettingsPage() {
       {/* Profil */}
       <div
         style={{
-          background: C.s1, borderRadius: 14, padding: 16,
+          background: C.s1, borderRadius: 6, padding: 16,
           border: "1px solid " + C.brd, marginBottom: 16,
         }}
       >
@@ -60,7 +60,7 @@ export default function SettingsPage() {
       {/* Code coach */}
       <div
         style={{
-          background: C.s1, borderRadius: 14, padding: 16,
+          background: C.s1, borderRadius: 6, padding: 16,
           border: "1px solid " + C.brd, marginBottom: 16,
         }}
       >
@@ -74,7 +74,7 @@ export default function SettingsPage() {
           <button
             onClick={handleCopyCode}
             style={{
-              padding: "6px 14px", borderRadius: 8,
+              padding: "6px 14px", borderRadius: 4,
               border: "1px solid " + C.coach + "50", background: C.coachS,
               color: C.coach, fontSize: 12, fontWeight: 600,
               cursor: "pointer", fontFamily: "inherit",
@@ -93,7 +93,7 @@ export default function SettingsPage() {
         <button
           onClick={() => setShowLogout(true)}
           style={{
-            width: "100%", padding: "12px 0", borderRadius: 12,
+            width: "100%", padding: "12px 0", borderRadius: 6,
             border: "1px solid rgba(239,75,75,0.3)", background: "rgba(239,75,75,0.08)",
             color: C.r, fontSize: 13, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
@@ -117,7 +117,7 @@ export default function SettingsPage() {
         >
           <div
             style={{
-              background: C.s1, borderRadius: 16, padding: 24,
+              background: C.s1, borderRadius: 6, padding: 24,
               maxWidth: 320, width: "100%", border: "1px solid " + C.brd,
             }}
             onClick={(e) => e.stopPropagation()}
@@ -132,7 +132,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => setShowLogout(false)}
                 style={{
-                  flex: 1, padding: "12px 0", borderRadius: 10,
+                  flex: 1, padding: "12px 0", borderRadius: 4,
                   border: "1px solid " + C.brdL, background: "transparent",
                   color: C.tx2, fontSize: 13, fontWeight: 600,
                   cursor: "pointer", fontFamily: "inherit",
@@ -143,8 +143,8 @@ export default function SettingsPage() {
               <button
                 onClick={handleLogout}
                 style={{
-                  flex: 1, padding: "12px 0", borderRadius: 10,
-                  border: "none", background: C.r, color: "#fff",
+                  flex: 1, padding: "12px 0", borderRadius: 4,
+                  border: "none", background: C.rV, color: "#0E0C0A",
                   fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                 }}
               >

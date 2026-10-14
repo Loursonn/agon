@@ -26,7 +26,7 @@ interface Props {
   athleteId: string;
 }
 
-const LINE_COLORS = ["#C9A14A", "#C9A14A", "#D99A3E", "#22C55E", "#38BDF8"];
+const LINE_COLORS = ["#FFC933", "#FFC933", "#FF9500", "#22C55E", "#38BDF8"];
 
 export function MacrocycleSummary({ macro, athleteId }: Props) {
   const { data: testSeries = [] } = useTestProgression(macro.id);
@@ -58,11 +58,11 @@ export function MacrocycleSummary({ macro, athleteId }: Props) {
   return (
     <AccordionItem
       value={macro.id}
-      className="rounded-xl border border-[#C9A14A]/30 bg-[#C9A14A]/10 overflow-hidden"
+      className="rounded-xl border border-[#FFC933]/30 bg-[#FFC933]/10 overflow-hidden"
     >
-      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors [&>svg]:text-[#C9A14A]/60">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors [&>svg]:text-[#FFC933]/60">
         <div className="flex items-center gap-2.5 text-left">
-          <CalendarRange size={15} className="text-[#C9A14A] shrink-0" />
+          <CalendarRange size={15} className="text-[#FFC933] shrink-0" />
           <div>
             <div className="text-sm font-bold text-white">{macro.name}</div>
             <div className="text-[11px] text-white/40">{dateRange}</div>
@@ -71,7 +71,7 @@ export function MacrocycleSummary({ macro, athleteId }: Props) {
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#22C55E]/20 text-[#22C55E] font-bold">
               {totalMesos} mésos
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#C9A14A]/20 text-[#C9A14A] font-bold">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FFC933]/20 text-[#FFC933] font-bold">
               {totalMicros} semaines
             </span>
           </div>
@@ -83,7 +83,7 @@ export function MacrocycleSummary({ macro, athleteId }: Props) {
 
           {/* Objectif */}
           {macro.objective && (
-            <div className="rounded-lg p-3 bg-[#15120F]/50 border border-white/5">
+            <div className="rounded-lg p-3 bg-[#0E0C0A]/50 border border-white/5">
               <p className="text-[9px] text-white/40 uppercase tracking-wider mb-1">Objectif</p>
               <p className="text-sm text-white leading-relaxed">{macro.objective}</p>
             </div>
@@ -109,9 +109,9 @@ export function MacrocycleSummary({ macro, athleteId }: Props) {
                     tickLine={false}
                   />
                   <Tooltip
-                    contentStyle={{ backgroundColor: "#15120F", border: "1px solid #7D7468", borderRadius: 8, fontSize: 10 }}
+                    contentStyle={{ backgroundColor: "#0E0C0A", border: "1px solid #7D7468", borderRadius: 4, fontSize: 10 }}
                     labelStyle={{ color: "#fff" }}
-                    itemStyle={{ color: "#C9A14A" }}
+                    itemStyle={{ color: "#FFC933" }}
                   />
                   {testSeries.length > 1 && (
                     <Legend wrapperStyle={{ fontSize: 10, color: "#7D7468" }} />

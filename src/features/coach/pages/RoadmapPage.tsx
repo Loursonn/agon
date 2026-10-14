@@ -50,7 +50,7 @@ export default function RoadmapPage() {
 
   const viewBtnStyle = (active: boolean): React.CSSProperties => ({
     display: "flex", alignItems: "center", gap: 6,
-    padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+    padding: "6px 12px", borderRadius: 4, cursor: "pointer",
     border: `1px solid ${active ? C.ac : C.brdL}`,
     background: active ? `${C.ac}18` : "transparent",
     color: active ? C.ac : C.tx3,
@@ -63,7 +63,7 @@ export default function RoadmapPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 24 }}>
         <div style={{
-          width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+          width: 40, height: 40, borderRadius: 4, flexShrink: 0,
           background: `${C.ac}20`, border: `1px solid ${C.ac}40`,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -96,7 +96,7 @@ export default function RoadmapPage() {
             onClick={openNewPhase}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              padding: "8px 14px", borderRadius: 8,
+              padding: "8px 14px", borderRadius: 4,
               border: `1px solid ${C.ac}50`, background: `${C.ac}15`,
               color: C.ac, fontSize: 12, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
@@ -113,9 +113,9 @@ export default function RoadmapPage() {
       ) : phases.length === 0 && items.length === 0 ? (
         <div style={{
           textAlign: "center", padding: 60,
-          background: C.s1, borderRadius: 16, border: `1px solid ${C.brd}`,
+          background: C.s1, borderRadius: 6, border: `1px solid ${C.brd}`,
         }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🗺️</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.tx3, marginBottom: 12 }}>ROADMAP</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Roadmap vide</div>
           <div style={{ fontSize: 13, color: C.tx3 }}>
             {isAdmin ? "Créez votre première phase pour démarrer." : "La roadmap est en cours de préparation."}
@@ -125,8 +125,8 @@ export default function RoadmapPage() {
               type="button"
               onClick={openNewPhase}
               style={{
-                marginTop: 20, padding: "9px 20px", borderRadius: 8,
-                border: "none", background: C.ac, color: "#fff",
+                marginTop: 20, padding: "9px 20px", borderRadius: 4,
+                border: "none", background: C.acV, color: "#0E0C0A",
                 fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               }}
             >

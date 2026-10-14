@@ -426,13 +426,13 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
         <SheetFooter style={{ marginTop: 20, display: "flex", gap: 8, flexDirection: "row", justifyContent: "flex-end" }}>
           <button
             onClick={() => onOpenChange(false)}
-            style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "8px 16px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
           >
             Annuler
           </button>
           <button
             onClick={handleSave}
-            style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: C.ac, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
           >
             Valider
           </button>

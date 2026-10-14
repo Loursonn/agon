@@ -36,17 +36,17 @@ export const MicrocycleCard = memo(function MicrocycleCard({ micro, athleteId }:
       {/* Mini-stats grid */}
       <div className="grid grid-cols-3 gap-1.5">
         {/* Séances */}
-        <div className="rounded-md p-1.5 bg-[#C9A14A]/10 border border-[#C9A14A]/20">
+        <div className="rounded-md p-1.5 bg-[#FFC933]/10 border border-[#FFC933]/20">
           <div className="text-[9px] text-white/40 mb-0.5">Séances</div>
-          <div className="text-sm font-bold text-[#C9A14A]">
+          <div className="text-sm font-bold text-[#FFC933]">
             {stats ? `${stats.completed}/${stats.planned}` : "—"}
           </div>
         </div>
 
         {/* RPE */}
-        <div className="rounded-md p-1.5 bg-[#D99A3E]/10 border border-[#D99A3E]/20">
+        <div className="rounded-md p-1.5 bg-[#FF9500]/10 border border-[#FF9500]/20">
           <div className="text-[9px] text-white/40 mb-0.5">RPE moy.</div>
-          <div className="text-sm font-bold text-[#D99A3E]">
+          <div className="text-sm font-bold text-[#FF9500]">
             {stats?.avg_rpe != null ? stats.avg_rpe.toFixed(1) : "—"}
           </div>
         </div>

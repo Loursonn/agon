@@ -22,8 +22,8 @@ export const EX_TYPE_COLOR: Record<string, string> = {
   muscu:         "#EF4444",
   halterophilie: "#8b5cf6",
   plio:          "#F5A623",
-  mobilite:      "#9DB06A",
-  vitesse:       "#7E9CA8",
+  mobilite:      "#66F03C",
+  vitesse:       "#33B5FF",
 };
 
 export function exTypeLabel(v: string | null | undefined): string {

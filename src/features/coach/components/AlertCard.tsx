@@ -4,10 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 export type AlertVariant = "danger" | "warning" | "success" | "coach";
 
 const VARIANT_COLORS: Record<AlertVariant, string> = {
-  danger:  "#D9705A",   // surcharge / séance manquée
-  warning: "#D99A3E",   // attention — orange tertiary
-  success: "#9DB06A",   // positif — vert
-  coach:   "#C9A14A",   // compétition priorité A — rose secondary
+  danger:  "#FF5A33",   // surcharge / séance manquée
+  warning: "#FF9500",   // attention — orange tertiary
+  success: "#66F03C",   // positif — vert
+  coach:   "#FFC933",   // compétition priorité A — rose secondary
 };
 
 interface AlertRow {
@@ -42,7 +42,7 @@ export function AlertCard({
         background: C.s1,
         border: "1px solid " + C.brd,
         borderLeft: `3px solid ${accent}`,
-        borderRadius: 14,
+        borderRadius: 6,
         overflow: "hidden",
       }}
     >
@@ -65,7 +65,7 @@ export function AlertCard({
                 fontSize: 10, fontWeight: 700,
                 background: accent + "25",
                 color: accent,
-                borderRadius: 20, padding: "1px 7px",
+                borderRadius: 6, padding: "1px 7px",
               }}
             >
               {rows.length}
@@ -98,7 +98,7 @@ export function AlertCard({
           </div>
         ) : rows.length === 0 ? (
           <div style={{ padding: "16px", fontSize: 12, color: C.tx3, textAlign: "center" }}>
-            {emptyMessage ?? "Rien à signaler 👌"}
+            {emptyMessage ?? "Rien à signaler "}
           </div>
         ) : (
           rows.map((row) => (

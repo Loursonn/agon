@@ -164,7 +164,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
           const w      = Math.max(1, x2 - x);
           const isExo  = fi.interval.type === "exercise";
           const barH   = isExo ? Math.max(2, 0.55 * BAR_AREA) : Math.max(2, (displayPct / 100) * BAR_AREA);
-          const fill   = isExo ? "#C9A14A" : intensityToColor(displayPct);
+          const fill   = isExo ? "#FFC933" : intensityToColor(displayPct);
           const opacity = isExo ? 0.8 : isFallback ? 0.55 : 0.85;
           const barY   = BAR_AREA - barH;
 
@@ -302,14 +302,13 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
             left: Math.min(tooltip.x + 10, svgW - 160),
             background: C.s1,
             border: `1px solid ${C.brdL}`,
-            borderRadius: 8,
+            borderRadius: 4,
             padding: "7px 10px",
             fontSize: 11,
             color: C.tx,
             pointerEvents: "none",
             zIndex: 20,
             minWidth: 130,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
           }}
         >
           <div style={{ fontWeight: 700, color: C.ac, marginBottom: 2 }}>{tooltip.role}</div>

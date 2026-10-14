@@ -4,48 +4,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Agon — direction artistique "futurisme antique" */
+/* Agon — direction artistique "Tranchant B" (mode sombre) */
 
 @layer base {
   :root {
-    --background: 24 18% 7%;             /* #15120F obsidienne */
-    --foreground: 38 43% 92%;            /* #F4EFE3 marbre */
+    --background: 20 17% 3%;              /* #0E0C0A obsidienne profond */
+    --foreground: 0 0% 100%;              /* #FFFFFF blanc */
 
-    --card: 24 14% 10%;                  /* #1E1A16 basalte */
-    --card-foreground: 38 43% 92%;
+    --card: 24 14% 10%;                   /* #1E1A16 basalte */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 24 12% 13%;               /* #27221D basalte 2 */
-    --popover-foreground: 38 43% 92%;
+    --popover: 24 12% 13%;                /* #27221D basalte 2 */
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 40 52% 54%;               /* #C9A14A or */
-    --primary-foreground: 24 18% 7%;     /* obsidienne */
+    --primary: 43 100% 60%;               /* #FFC933 or vif */
+    --primary-foreground: 24 28% 7%;      /* #0E0C0A obsidienne */
 
-    --secondary: 33 48% 49%;             /* #A67C52 bronze */
-    --secondary-foreground: 38 43% 92%;
+    --secondary: 38 50% 78%;              /* #E7D3A8 sable */
+    --secondary-foreground: 24 28% 7%;    /* #0E0C0A obsidienne */
 
     --muted: 24 12% 13%;
-    --muted-foreground: 27 8% 45%;       /* #7D7468 pierre */
+    --muted-foreground: 27 8% 45%;        /* #7D7468 pierre */
 
-    --accent: 40 52% 54%;               /* #C9A14A or */
-    --accent-foreground: 24 18% 7%;
+    --accent: 43 100% 60%;                /* #FFC933 or vif */
+    --accent-foreground: 24 28% 7%;
 
-    --destructive: 12 62% 60%;           /* #D9705A terracotta */
-    --destructive-foreground: 38 43% 92%;
+    --destructive: 13 100% 60%;           /* #FF5A33 terracotta vif */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 38 43% 78% / 0.10;         /* sable 10% */
+    --border: 38 43% 78% / 0.12;          /* sable 12% */
     --input: 24 12% 13%;
-    --ring: 40 52% 54%;
+    --ring: 43 100% 60%;
 
-    --radius: 0.625rem;                  /* 10px — agon-radius */
+    --radius: 0.375rem;                   /* 6px — agon module radius */
 
-    --sidebar-background: 24 18% 7%;
+    /* Agon font stack */
+    --font-display: "Archivo", system-ui, sans-serif;
+    --font-ui: "Geist", system-ui, sans-serif;
+    --font-data: "Geist Mono", ui-monospace, monospace;
+
+    /* Agon gold gradient (bouton principal + records) */
+    --gold-gradient: linear-gradient(135deg, #8A6A2C, #E9CF8A 45%, #C9A14A 70%, #9C7A34);
+
+    --sidebar-background: 20 17% 3%;
     --sidebar-foreground: 27 8% 45%;
-    --sidebar-primary: 40 52% 54%;
-    --sidebar-primary-foreground: 24 18% 7%;
-    --sidebar-accent: 40 52% 54% / 0.1;
-    --sidebar-accent-foreground: 40 52% 54%;
+    --sidebar-primary: 43 100% 60%;
+    --sidebar-primary-foreground: 24 28% 7%;
+    --sidebar-accent: 43 100% 60% / 0.1;
+    --sidebar-accent-foreground: 43 100% 60%;
     --sidebar-border: 38 43% 78% / 0.10;
-    --sidebar-ring: 40 52% 54%;
+    --sidebar-ring: 43 100% 60%;
   }
 }
 
@@ -55,9 +63,11 @@
   }
 
   html, body, #root {
-    background-color: #15120F;
-    color: #F4EFE3;
+    background-color: #0E0C0A;
+    color: #FFFFFF;
     font-family: "Geist", system-ui, sans-serif;
+    /* Long unbroken strings (grilles, allures…) wrap instead of overflowing, incl. portaled drawers */
+    overflow-wrap: break-word;
     @apply bg-background text-foreground;
   }
 }

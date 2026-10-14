@@ -70,7 +70,7 @@ export const CATEGORY_LABEL: Record<RoadmapCategory, string> = {
 }
 
 export const CATEGORY_COLOR: Record<RoadmapCategory, string> = {
-  coach:     '#C9A14A',
+  coach:     '#FFC933',
   athlete:   '#22c55e',
   planning:  '#3b82f6',
   nutrition: '#f97316',

@@ -19,6 +19,7 @@ export interface Profile {
   base_metabolism: number | null;
   is_admin: boolean;
   is_certified_coach: boolean;
+  is_hyrox_athlete: boolean;
 }
 
 interface AuthContextType {
@@ -48,6 +49,7 @@ interface AuthContextType {
     weight_kg: number | null;
     body_fat_pct: number | null;
     base_metabolism: number | null;
+    is_hyrox_athlete?: boolean;
   }) => Promise<void>;
 }
 
@@ -240,6 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     weight_kg: number | null;
     body_fat_pct: number | null;
     base_metabolism: number | null;
+    is_hyrox_athlete?: boolean;
   }) {
     const full_name = [fields.first_name, fields.last_name].filter(Boolean).join(" ").trim();
     const { error } = await supabase

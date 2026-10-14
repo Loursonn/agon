@@ -11,13 +11,13 @@ import {
 import { localISO } from "@/lib/date";
 
 const C = {
-  bg: "#15120F", s1: "#1E1A16", s2: "#27221D",
+  bg: "#0E0C0A", s1: "#1E1A16", s2: "#27221D",
   brd: "rgba(255,255,255,0.06)", brdL: "rgba(255,255,255,0.1)",
   tx: "#F2F2F4", tx2: "#9194A0", tx3: "#555866",
-  ac: "#C9A14A", acS: "rgba(123,111,255,0.12)",
-  coach: "#C9A14A", coachS: "rgba(212,83,142,0.12)",
-  g: "#9DB06A", gS: "rgba(34,201,147,0.1)",
-  r: "#D9705A", b: "#7E9CA8", o: "#F5A623",
+  ac: "#FFC933", acS: "rgba(123,111,255,0.12)",
+  coach: "#FFC933", coachS: "rgba(212,83,142,0.12)",
+  g: "#66F03C", gS: "rgba(34,201,147,0.1)",
+  r: "#FF5A33", b: "#33B5FF", o: "#F5A623",
 };
 
 const NAP_OPTIONS = [
@@ -78,6 +78,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
   const [bodyFatPct, setBodyFatPct] = useState(athlete.body_fat_pct?.toString() ?? "");
   const [metaMode, setMetaMode] = useState<MetaMode>("manual");
   const [metaManual, setMetaManual] = useState(athlete.base_metabolism?.toString() ?? "");
+  const [isHyrox, setIsHyrox] = useState(athlete.is_hyrox_athlete ?? false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [errorProfile, setErrorProfile] = useState("");
 
@@ -302,6 +303,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         weight_kg: weightKg ? parseFloat(weightKg) : null,
         body_fat_pct: bodyFatPct ? parseFloat(bodyFatPct) : null,
         base_metabolism: metaManual ? parseInt(metaManual) : null,
+        is_hyrox_athlete: isHyrox,
       });
       toast.success("Profil enregistré !");
     } catch (e) {
@@ -364,7 +366,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const inputStyle = {
-    width: "100%", padding: "9px 12px", borderRadius: 8,
+    width: "100%", padding: "9px 12px", borderRadius: 4,
     border: "1px solid " + C.brdL, background: C.s2, color: C.tx,
     fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const,
   };
@@ -388,18 +390,18 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         <div>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.tx }}>
             {lockTab
-              ? (dataTab === "profil" ? "✎ Modifier l'identité" : "🥗 Plan nutritionnel")
+              ? (dataTab === "profil" ? "Modifier l'identité" : "Plan nutritionnel")
               : (isOwnProfile ? "Mon profil" : "Profil de l'athlète")}
           </div>
           <div style={{ fontSize: 12, color: C.tx3, marginTop: 2 }}>{athlete.full_name}</div>
         </div>
-        <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 18, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+        <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 18, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
       </div>
 
       {/* Onglets Profil / Plan nutri (masqués en mode verrouillé) */}
       {!lockTab && (
-        <div style={{ display: "flex", gap: 4, marginBottom: 20, padding: 4, background: C.s2, borderRadius: 10 }}>
-          {([["profil", "👤 Profil"], ["nutrition", "🥗 Plan nutritionnel"]] as ["profil" | "nutrition", string][]).map(([k, l]) => (
+        <div style={{ display: "flex", gap: 4, marginBottom: 20, padding: 4, background: C.s2, borderRadius: 4 }}>
+          {([["profil", "Profil"], ["nutrition", "Plan nutritionnel"]] as ["profil" | "nutrition", string][]).map(([k, l]) => (
             <button key={k} onClick={() => setDataTab(k)} style={{ flex: 1, padding: "8px 0", borderRadius: 7, border: "none", background: dataTab === k ? C.coach : "transparent", color: dataTab === k ? "#fff" : C.tx3, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
               {l}
             </button>
@@ -429,7 +431,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
               max={localISO()}
             />
             {derivedAge !== null && (
-              <div style={{ padding: "8px 14px", borderRadius: 8, background: C.coach + "18", border: "1px solid " + C.coach + "40", textAlign: "center", flexShrink: 0 }}>
+              <div style={{ padding: "8px 14px", borderRadius: 4, background: C.coach + "18", border: "1px solid " + C.coach + "40", textAlign: "center", flexShrink: 0 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: C.coach }}>{derivedAge}</div>
                 <div style={{ fontSize: 9, color: C.tx3 }}>ans</div>
               </div>
@@ -443,7 +445,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
             <label style={labelStyle}>Genre</label>
             <div style={{ display: "flex", gap: 6, height: 38 }}>
               {(["male", "female"] as const).map(g => (
-                <button key={g} onClick={() => setGender(g)} style={{ flex: 1, borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, border: "1px solid " + (gender === g ? C.ac : C.brdL), background: gender === g ? C.acS : C.s2, color: gender === g ? C.ac : C.tx2 }}>
+                <button key={g} onClick={() => setGender(g)} style={{ flex: 1, borderRadius: 4, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, border: "1px solid " + (gender === g ? C.ac : C.brdL), background: gender === g ? C.acS : C.s2, color: gender === g ? C.ac : C.tx2 }}>
                   {g === "male" ? "Homme" : "Femme"}
                 </button>
               ))}
@@ -451,12 +453,22 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
           </div>
         </div>
 
-        {errorProfile && <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8, background: C.r + "15", border: "1px solid " + C.r + "40", fontSize: 13, color: C.r }}>{errorProfile}</div>}
+        {/* HYROX toggle */}
+        {(athlete.coach_id === user?.id || athlete.id === user?.id) && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, padding: "8px 0" }}>
+            <div style={{ fontSize: 12, color: C.tx2 }}>Athlète HYROX</div>
+            <button onClick={() => setIsHyrox(!isHyrox)} style={{ width: 46, height: 26, borderRadius: 13, background: isHyrox ? C.o : C.s2, border: `2px solid ${isHyrox ? C.o : C.brdL}`, cursor: "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0, outline: "none" }}>
+              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: isHyrox ? 24 : 2, transition: "left 0.2s" }} />
+            </button>
+          </div>
+        )}
+
+        {errorProfile && <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 4, background: C.r + "15", border: "1px solid " + C.r + "40", fontSize: 13, color: C.r }}>{errorProfile}</div>}
 
         <button
           onClick={handleSaveProfile}
           disabled={savingProfile}
-          style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: savingProfile ? C.s2 : C.coach, color: savingProfile ? C.tx3 : "#fff", fontSize: 15, fontWeight: 700, cursor: savingProfile ? "default" : "pointer", fontFamily: "inherit", marginTop: 24 }}
+          style={{ width: "100%", padding: "14px 0", borderRadius: 6, border: "none", background: savingProfile ? C.s2 : C.coach, color: savingProfile ? C.tx3 : "#fff", fontSize: 15, fontWeight: 700, cursor: savingProfile ? "default" : "pointer", fontFamily: "inherit", marginTop: 24 }}
         >
           {savingProfile ? "Enregistrement..." : "Enregistrer le profil"}
         </button>
@@ -476,19 +488,19 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         <div style={sectionTitle}>Métabolisme de base</div>
         <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" as const }}>
           {([["manual", "Manuel"], ["formula_no_bf", "Formule (sans MG)"], ["formula_bf", "Formule (avec MG)"]] as [MetaMode, string][]).map(([mode, label]) => (
-            <button key={mode} onClick={() => setMetaMode(mode)} style={{ padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 600, border: "1px solid " + (metaMode === mode ? C.coach : C.brdL), background: metaMode === mode ? C.coachS : C.s2, color: metaMode === mode ? C.coach : C.tx2 }}>
+            <button key={mode} onClick={() => setMetaMode(mode)} style={{ padding: "6px 12px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 600, border: "1px solid " + (metaMode === mode ? C.coach : C.brdL), background: metaMode === mode ? C.coachS : C.s2, color: metaMode === mode ? C.coach : C.tx2 }}>
               {label}
             </button>
           ))}
         </div>
         {metaMode === "formula_no_bf" && (
-          <div style={{ background: C.s2, borderRadius: 10, padding: 10, marginBottom: 12, border: "1px solid " + C.brd, fontSize: 11, color: C.tx3 }}>
+          <div style={{ background: C.s2, borderRadius: 4, padding: 10, marginBottom: 12, border: "1px solid " + C.brd, fontSize: 11, color: C.tx3 }}>
             Formule Mifflin-St Jeor — nécessite poids, taille, âge et genre
             {(!heightCm || !derivedAge || !gender) && <div style={{ color: C.o, marginTop: 6 }}>Complète taille, date de naissance et genre dans « Modifier l'identité »</div>}
           </div>
         )}
         {metaMode === "formula_bf" && (
-          <div style={{ background: C.s2, borderRadius: 10, padding: 10, marginBottom: 12, border: "1px solid " + C.brd, fontSize: 11, color: C.tx3 }}>
+          <div style={{ background: C.s2, borderRadius: 4, padding: 10, marginBottom: 12, border: "1px solid " + C.brd, fontSize: 11, color: C.tx3 }}>
             Formule Katch-McArdle — nécessite poids et % de masse grasse
           </div>
         )}
@@ -501,8 +513,8 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         {/* Stratégie */}
         <div style={sectionTitle}>Stratégie</div>
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          {([["seche", "🔥 Sèche"], ["maintenance", "⚖️ Maintenance"], ["prise_de_masse", "💪 Prise de masse"]] as [NutritionStrategyType, string][]).map(([k, l]) => (
-            <button key={k} onClick={() => setNutStrategy(k)} style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 700, border: "1px solid " + (nutStrategy === k ? C.coach : C.brdL), background: nutStrategy === k ? C.coachS : C.s2, color: nutStrategy === k ? C.coach : C.tx2, lineHeight: 1.4 }}>
+          {([["seche", "Seche"], ["maintenance", "Maintenance"], ["prise_de_masse", "Prise de masse"]] as [NutritionStrategyType, string][]).map(([k, l]) => (
+            <button key={k} onClick={() => setNutStrategy(k)} style={{ flex: 1, padding: "10px 4px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 700, border: "1px solid " + (nutStrategy === k ? C.coach : C.brdL), background: nutStrategy === k ? C.coachS : C.s2, color: nutStrategy === k ? C.coach : C.tx2, lineHeight: 1.4 }}>
               {l}
             </button>
           ))}
@@ -540,8 +552,8 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         </div>
 
         {/* Calculateur auto */}
-        <div style={{ background: C.s2, borderRadius: 12, padding: "12px 14px", border: "1px solid " + C.coach + "30", marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.coach, marginBottom: 10 }}>🧮 Calculateur automatique</div>
+        <div style={{ background: C.s2, borderRadius: 6, padding: "12px 14px", border: "1px solid " + C.coach + "30", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.coach, marginBottom: 10 }}>Calculateur automatique</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
               <label style={{ ...labelStyle, color: C.tx3 }}>Objectif (kg)</label>
@@ -580,7 +592,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
                 </div>
                 <button
                   onClick={applyAutoCalc}
-                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: C.coach, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  style={{ padding: "6px 14px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
                 >
                   Appliquer
                 </button>
@@ -598,7 +610,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         <div style={sectionTitle}>Niveau d'activité (NAP)</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
           {NAP_OPTIONS.map(opt => (
-            <button key={opt.value} onClick={() => setNutNap(String(opt.value))} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", border: "1px solid " + (nutNap === String(opt.value) ? C.coach : C.brdL), background: nutNap === String(opt.value) ? C.coachS : C.s2, textAlign: "left" }}>
+            <button key={opt.value} onClick={() => setNutNap(String(opt.value))} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit", border: "1px solid " + (nutNap === String(opt.value) ? C.coach : C.brdL), background: nutNap === String(opt.value) ? C.coachS : C.s2, textAlign: "left" }}>
               <div>
                 <span style={{ fontSize: 13, fontWeight: 600, color: nutNap === String(opt.value) ? C.coach : C.tx }}>{opt.label}</span>
                 <span style={{ fontSize: 11, color: C.tx3, marginLeft: 8 }}>{opt.sub}</span>
@@ -608,7 +620,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
           ))}
         </div>
         {tdee > 0 && (
-          <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 8, background: C.s2, border: "1px solid " + C.brdL, fontSize: 12 }}>
+          <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + C.brdL, fontSize: 12 }}>
             <span style={{ color: C.tx3 }}>TDEE (dépense totale) : </span>
             <span style={{ fontWeight: 800, color: C.tx }}>{tdee.toLocaleString("fr-FR")} kcal/j</span>
             <span style={{ color: C.tx3, fontSize: 10 }}> = BMR {bmr} × {nap}</span>
@@ -638,7 +650,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
             <>
               <input style={inputStyle} type="number" min={stratPctMeta.min} max={stratPctMeta.max} step={0.5} placeholder={stratPctMeta.placeholder} value={nutTargetPct} onChange={e => setNutTargetPct(e.target.value)} />
               {nutTargetPct && tdee > 0 && (
-                <div style={{ marginTop: 6, padding: "8px 12px", borderRadius: 8, background: C.s2, border: "1px solid " + C.brdL, fontSize: 12 }}>
+                <div style={{ marginTop: 6, padding: "8px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + C.brdL, fontSize: 12 }}>
                   <span style={{ color: C.tx3 }}>Calories cibles : </span>
                   <span style={{ fontWeight: 800, color: nutStrategy === "seche" ? C.r : nutStrategy === "prise_de_masse" ? C.g : C.b }}>
                     {computeTargetKcal(tdee, nutTargetPct, nutStrategy).toLocaleString("fr-FR")} kcal/j
@@ -674,7 +686,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
                 </div>
               </div>
               {rangeKcalMin != null && rangeKcalMax != null && (
-                <div style={{ marginTop: 6, padding: "8px 12px", borderRadius: 8, background: C.s2, border: "1px solid " + C.brdL, fontSize: 12 }}>
+                <div style={{ marginTop: 6, padding: "8px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + C.brdL, fontSize: 12 }}>
                   <span style={{ color: C.tx3 }}>Fourchette : </span>
                   <span style={{ fontWeight: 800, color: nutStrategy === "seche" ? C.r : nutStrategy === "prise_de_masse" ? C.g : C.b }}>{rangeKcalMin.toLocaleString("fr-FR")}</span>
                   <span style={{ color: C.tx3 }}> → </span>
@@ -695,7 +707,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
               ["active", "BMR + calories actives", "L'athlète saisit ses calories actives quotidiennes"],
               ["hybrid", "Hybride",              "NAP par défaut, remplacé si l'athlète saisit ses calories actives"],
             ] as [CalorieMode, string, string][]).map(([mode, label, sub]) => (
-              <button key={mode} onClick={() => setNutCalorieMode(mode)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", border: "1px solid " + (nutCalorieMode === mode ? C.coach : C.brdL), background: nutCalorieMode === mode ? C.coachS : C.s2, textAlign: "left" }}>
+              <button key={mode} onClick={() => setNutCalorieMode(mode)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit", border: "1px solid " + (nutCalorieMode === mode ? C.coach : C.brdL), background: nutCalorieMode === mode ? C.coachS : C.s2, textAlign: "left" }}>
                 <div>
                   <span style={{ fontSize: 13, fontWeight: 600, color: nutCalorieMode === mode ? C.coach : C.tx }}>{label}</span>
                   <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>{sub}</div>
@@ -710,7 +722,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Total calorique journalier cible (kcal)</label>
           {nutDeficitMode === "range" && rangeKcalMin != null && rangeKcalMax != null ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, background: C.s2, border: "1px solid " + C.coach + "50" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 4, background: C.s2, border: "1px solid " + C.coach + "50" }}>
               <div style={{ flex: 1, textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: C.tx3, marginBottom: 2 }}>Min</div>
                 <div style={{ fontSize: 20, fontWeight: 900, color: C.tx }}>{rangeKcalMin.toLocaleString("fr-FR")}</div>
@@ -762,7 +774,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 8 }}>
                 {macros.map(m => (
-                  <div key={m.k} style={{ background: C.s2, borderRadius: 10, padding: "10px 10px 8px", border: "1px solid " + m.color + "30" }}>
+                  <div key={m.k} style={{ background: C.s2, borderRadius: 4, padding: "10px 10px 8px", border: "1px solid " + m.color + "30" }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: m.color, marginBottom: 8 }}>{m.label}</div>
                     <div style={{ marginBottom: 6 }}>
                       <div style={{ fontSize: 9, color: C.tx3, marginBottom: 3 }}>%</div>
@@ -792,12 +804,12 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
           );
         })()}
 
-        {errorNut && <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8, background: C.r + "15", border: "1px solid " + C.r + "40", fontSize: 13, color: C.r }}>{errorNut}</div>}
+        {errorNut && <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 4, background: C.r + "15", border: "1px solid " + C.r + "40", fontSize: 13, color: C.r }}>{errorNut}</div>}
 
         <button
           onClick={handleSaveNutrition}
           disabled={savingNut || !nutLoaded}
-          style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: savingNut || !nutLoaded ? C.s2 : C.coach, color: savingNut || !nutLoaded ? C.tx3 : "#fff", fontSize: 15, fontWeight: 700, cursor: savingNut || !nutLoaded ? "default" : "pointer", fontFamily: "inherit", marginTop: 24 }}
+          style={{ width: "100%", padding: "14px 0", borderRadius: 6, border: "none", background: savingNut || !nutLoaded ? C.s2 : C.coach, color: savingNut || !nutLoaded ? C.tx3 : "#fff", fontSize: 15, fontWeight: 700, cursor: savingNut || !nutLoaded ? "default" : "pointer", fontFamily: "inherit", marginTop: 24 }}
         >
           {savingNut ? "Enregistrement..." : "Enregistrer le plan nutritionnel"}
         </button>
@@ -807,7 +819,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
   );
 
   if (inline) {
-    return <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.coach + "50" }}>{formContent}</div>;
+    return <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.coach + "50" }}>{formContent}</div>;
   }
 
   return (
@@ -815,9 +827,8 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
       <div
         style={{
           width: "100%", maxWidth: 680,
-          background: C.s1, borderRadius: 16,
+          background: C.s1, borderRadius: 6,
           border: "1px solid " + C.brdL,
-          boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
           maxHeight: "90vh", overflowY: "auto",
         }}
         onClick={e => e.stopPropagation()}

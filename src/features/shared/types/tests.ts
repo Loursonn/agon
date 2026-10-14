@@ -14,11 +14,11 @@ export const TEST_CATEGORY_LABEL: Record<TestCategory, string> = {
 };
 
 export const TEST_CATEGORY_COLOR: Record<TestCategory, string> = {
-  bilan_articulaire: '#7E9CA8', // bleu
-  endurance:         '#9DB06A', // vert
-  force:             '#D9705A', // rouge
-  explosivite:       '#D99A3E', // orange
-  vitesse:           '#C9A14A', // violet
+  bilan_articulaire: '#33B5FF', // bleu
+  endurance:         '#66F03C', // vert
+  force:             '#FF5A33', // rouge
+  explosivite:       '#FF9500', // orange
+  vitesse:           '#FFC933', // violet
 };
 
 export const TEST_CATEGORY_ORDER: TestCategory[] = [

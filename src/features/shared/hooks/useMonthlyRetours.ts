@@ -107,7 +107,7 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
     db.from("workout_logs")
       .select("id, session_id, session_name, scheduled_date, status, duration_s, notes, rpe_score, athlete_modifications, week_number")
       .eq("athlete_id", athleteId)
-      // include skipped — coaches want to see them
+      .not("status", "eq", "skipped")
       .gte("scheduled_date", start)
       .lte("scheduled_date", end)
       .order("scheduled_date"),

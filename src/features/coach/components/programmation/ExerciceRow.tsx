@@ -7,7 +7,7 @@ import { ExerciceParamsPanel } from "./ExerciceParamsPanel"
 import { RmDrawer } from "./RmDrawer"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 
 interface ExerciceRowProps {
   exercice: Exercice
@@ -73,7 +73,7 @@ export function ExerciceRow({
 
   return (
     <div style={{
-      borderRadius: 10,
+      borderRadius: 4,
       border: "1px solid " + (showParams ? accent + "50" : C.brdL),
       background: showParams ? accent + "08" : C.s1,
       overflow: "hidden",
@@ -169,7 +169,7 @@ export function ExerciceRow({
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete() }}
-                style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: C.r, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               ><Check size={11} /></button>
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false) }}

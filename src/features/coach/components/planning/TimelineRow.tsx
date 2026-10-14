@@ -24,7 +24,7 @@ const LEVEL_BG: Record<TLLevel, string> = {
   macrocycle: C.acS,
   mesocycle:  C.coachS,
   cycle:      C.oS,
-  microcycle: "rgba(124,116,128,0.08)",
+  microcycle: "rgba(231,211,168,0.08)",
 };
 
 const LEVEL_LABEL: Record<TLLevel, string> = {

@@ -5,9 +5,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ActivityItem } from "@/features/shared/hooks/useRecentActivity";
 
 const TYPE_META: Record<string, { icon: string; color: string }> = {
-  session:  { icon: "💪", color: "#C9A14A" },   // primary violet
-  wellness: { icon: "❤️", color: "#9DB06A" },   // success vert
-  pr:       { icon: "🏆", color: "#D99A3E" },   // tertiary orange
+  session:  { icon: "musculation", color: "#FFC933" },   // primary violet
+  wellness: { icon: "coeur", color: "#66F03C" },   // success vert
+  pr:       { icon: "trophee", color: "#FF9500" },   // tertiary orange
 };
 
 interface ActivityTimelineProps {
@@ -28,7 +28,7 @@ export function ActivityTimeline({
       style={{
         background: C.s1,
         border: "1px solid " + C.brd,
-        borderRadius: 14,
+        borderRadius: 6,
         overflow: "hidden",
       }}
     >
@@ -45,7 +45,7 @@ export function ActivityTimeline({
           gap: 8,
         }}
       >
-        <span>⚡</span>
+        <span></span>
         <span>Activité récente</span>
       </div>
 
@@ -65,7 +65,7 @@ export function ActivityTimeline({
           </div>
         ) : activities.length === 0 ? (
           <div style={{ padding: "24px 16px", fontSize: 12, color: C.tx3, textAlign: "center" }}>
-            Aucune activité récente pour l'instant 🌱
+            Aucune activité récente pour l'instant 
           </div>
         ) : (
           activities.map((item, i) => {

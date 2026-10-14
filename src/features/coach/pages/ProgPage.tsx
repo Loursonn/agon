@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Calendar, ClipboardList, Target } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachFourWeekCalendar from "@/components/coach/CoachFourWeekCalendar";
@@ -66,7 +66,7 @@ export default function ProgPage() {
     <>
       {/* ── Cycle / Bloc banner ── */}
       <div style={{
-        background: C.s1, borderRadius: 14, padding: "12px 16px",
+        background: C.s1, borderRadius: 6, padding: "12px 16px",
         border: "1px solid " + C.b + "30", marginBottom: 14,
       }}>
         {activeCycle ? (
@@ -112,7 +112,7 @@ export default function ProgPage() {
               }}
               disabled={createCycle.isPending || !blockConfig?.startDate || sessions.length === 0}
               style={{
-                padding: "8px 14px", borderRadius: 10,
+                padding: "8px 14px", borderRadius: 4,
                 border: "1px solid " + C.coach + "40",
                 background: C.coachS, color: C.coach,
                 fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
@@ -163,15 +163,15 @@ export default function ProgPage() {
 
       {progSubTab === "planification" && (
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>📅</div>
+          <div style={{ marginBottom: 12 }}><Calendar size={32} style={{ color: C.tx3 }} /></div>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 4 }}>Planification périodique</div>
           <div style={{ fontSize: 12, color: C.tx3, marginBottom: 16 }}>La frise de planification est disponible dans l'onglet Planning.</div>
           <a
             href={`/coach/athletes/${athleteId}/planning?view=timeline`}
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "9px 18px", borderRadius: 10,
-              background: C.coach, color: "#fff",
+              padding: "9px 18px", borderRadius: 4,
+              background: C.acV, color: "#0E0C0A",
               fontSize: 12, fontWeight: 700, textDecoration: "none",
             }}
           >
@@ -195,7 +195,7 @@ export default function ProgPage() {
 
           {sortedSessions.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 20px" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+              <div style={{ marginBottom: 12 }}><ClipboardList size={40} style={{ color: C.tx3 }} /></div>
               <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 4 }}>Aucune séance</div>
               <div style={{ fontSize: 12, color: C.tx3 }}>Aucune séance configurée dans ce bloc.</div>
             </div>
@@ -208,7 +208,7 @@ export default function ProgPage() {
                     key={sess.id}
                     onClick={() => setOpenDrawer({ sessId: sess.id, sessName: sess.name || sess.short || "Séance" })}
                     style={{
-                      padding: "12px 14px", borderRadius: 12,
+                      padding: "12px 14px", borderRadius: 6,
                       border: "1px solid " + C.brdL, background: C.s1,
                       cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
                       display: "flex", flexDirection: "column" as const, gap: 6,
@@ -229,7 +229,7 @@ export default function ProgPage() {
                           background: C.oS, padding: "2px 7px", borderRadius: 5,
                           alignSelf: "flex-start",
                         }}
-                      >⚠ Jour non défini</span>
+                      >Jour non défini</span>
                     )}
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, paddingRight: 20 }}>
                       {sess.name || sess.short || "Séance"}
@@ -256,7 +256,7 @@ export default function ProgPage() {
                 onClick={() => setShowExoParams(p => !p)}
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
-                  padding: "8px 14px", borderRadius: 10,
+                  padding: "8px 14px", borderRadius: 4,
                   border: "1px solid " + C.brdL,
                   background: showExoParams ? C.acS : "transparent",
                   color: showExoParams ? C.ac : C.tx2,
@@ -264,7 +264,7 @@ export default function ProgPage() {
                   marginBottom: showExoParams ? 12 : 0,
                 }}
               >
-                ⚙ Paramètres exercices{showExoParams ? " ∧" : " ∨"}
+                Paramètres exercices{showExoParams ? " ∧" : " ∨"}
               </button>
               {showExoParams && (
                 <CoachExoParams
@@ -285,7 +285,7 @@ export default function ProgPage() {
 
       {progSubTab === "specifique" && (
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🎯</div>
+          <div style={{ marginBottom: 12 }}><Target size={40} style={{ color: C.tx3 }} /></div>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 4 }}>Séances Spécifiques</div>
           <div style={{ fontSize: 12, color: C.tx3 }}>Planification des séances spécifiques à venir prochainement.</div>
         </div>

@@ -13,7 +13,7 @@ type DayEnergy  = WeeklyRetourData["energy_sessions"][number];
 type DayTest    = WeeklyRetourData["test_sessions"][number];
 
 const TEST_TYPE_COLOR: Record<string, string> = {
-  musculation: "#C9A14A", endurance: "#7E9CA8", vitesse: "#EF4444",
+  musculation: "#FFC933", endurance: "#33B5FF", vitesse: "#EF4444",
   puissance: "#F59E0B", souplesse: "#10B981", autre: "#6B7280",
 };
 
@@ -57,7 +57,7 @@ function wellnessColor(score: number) {
 function WellnessBlock({ wellness, onClick }: { wellness: WellnessDay; onClick: () => void }) {
   const col = wellnessColor(wellness.score);
   return (
-    <div onClick={onClick} style={{ cursor: "pointer", background: col + "12", border: "1px solid " + col + "40", borderRadius: 8, padding: "7px 8px" }}>
+    <div onClick={onClick} style={{ cursor: "pointer", background: col + "12", border: "1px solid " + col + "40", borderRadius: 4, padding: "7px 8px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 5 }}>
         <span style={{ fontSize: 20, fontWeight: 900, color: col, lineHeight: 1 }}>{wellness.score}</span>
         <span style={{ fontSize: 9, color: C.tx3 }}>/100</span>
@@ -65,10 +65,10 @@ function WellnessBlock({ wellness, onClick }: { wellness: WellnessDay; onClick: 
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {[
-          { label: "💤", value: wellness.sommeil },
-          { label: "😴", value: wellness.fatigue },
-          { label: "😰", value: wellness.stress  },
-          { label: "⚡", value: wellness.energie },
+          { label: "repos", value: wellness.sommeil },
+          { label: "sommeil", value: wellness.fatigue },
+          { label: "stress", value: wellness.stress  },
+          { label: "intensite", value: wellness.energie },
         ].map(({ label, value }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 9 }}>{label}</span>
@@ -145,11 +145,11 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail }: { wor
             )}
             {/* Comments indicators */}
             {workout.exercise_comments.length > 0 && (
-              <div style={{ fontSize: 8, color: C.ac }}>💬 {workout.exercise_comments.length} com. coach</div>
+              <div style={{ fontSize: 8, color: C.ac }}>{workout.exercise_comments.length} com. coach</div>
             )}
             {(workout.athlete_session_comment || Object.keys(workout.athlete_exercise_comments ?? {}).length > 0) && (
               <div style={{ fontSize: 8, color: "#f59e0b" }}>
-                💬 {[
+                {[
                   workout.athlete_session_comment ? "séance" : "",
                   Object.keys(workout.athlete_exercise_comments ?? {}).length > 0
                     ? `${Object.keys(workout.athlete_exercise_comments ?? {}).length} exo`
@@ -237,7 +237,7 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
   const hasDetail = done || session.note || session.duration_min != null;
 
   const kindColors: Record<string, string> = {
-    vo2: "#C9A14A", tempo: "#7E9CA8", seuil: "#F59E0B",
+    vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
     footing: "#10B981", fartlek: "#EF4444", specifique: "#F5A623",
   };
   const kindColor = kindColors[session.session_kind ?? ""] ?? "#6B7280";
@@ -344,7 +344,7 @@ function TestRow({ test }: { test: DayTest }) {
         onClick={hasResults ? () => setOpen(v => !v) : undefined}
         style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 7px", cursor: hasResults ? "pointer" : "default" }}
       >
-        <span style={{ fontSize: 9, color: tc, flexShrink: 0 }}>🧪</span>
+        <span style={{ fontSize: 9, color: tc, flexShrink: 0 }}></span>
         <span style={{ flex: 1, fontSize: 10, fontWeight: 600, color: done ? C.tx : C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {test.title}
         </span>
@@ -432,7 +432,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
       <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,0.65)" }} />
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 81,
-        maxHeight: "85vh", background: C.s1, borderRadius: "18px 18px 0 0",
+        maxHeight: "85vh", background: C.s1, borderRadius: "6px 6px 0 0",
         border: "1px solid " + C.brd, borderBottom: "none",
         display: "flex", flexDirection: "column",
         animation: "slideUp 200ms ease-out",
@@ -463,7 +463,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
           {/* Notes */}
           {workout.notes && (
-            <div style={{ padding: "8px 12px", borderRadius: 8, background: C.s2, border: "1px solid " + C.brd, fontSize: 11, color: C.tx2, lineHeight: 1.5 }}>
+            <div style={{ padding: "8px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + C.brd, fontSize: 11, color: C.tx2, lineHeight: 1.5 }}>
               <span style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", display: "block", marginBottom: 3 }}>Notes</span>
               {workout.notes}
             </div>
@@ -471,7 +471,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
 
           {/* Athlete session comment + forme */}
           {(workout.athlete_forme != null || workout.athlete_session_comment) && (
-            <div style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ padding: "8px 12px", borderRadius: 4, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", flexDirection: "column", gap: 4 }}>
               {workout.athlete_forme != null && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase" }}>Forme athlète</span>
@@ -485,7 +485,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                 </div>
               )}
               {workout.athlete_session_comment && (
-                <div style={{ fontSize: 11, color: C.tx2, fontStyle: "italic" }}>💬 « {workout.athlete_session_comment} »</div>
+                <div style={{ fontSize: 11, color: C.tx2, fontStyle: "italic" }}>« {workout.athlete_session_comment} »</div>
               )}
             </div>
           )}
@@ -500,11 +500,11 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
             const plannedMinReps = planned?.reps_range ? parseInt(planned.reps_range.match(/^(\d+)/)?.[1] ?? "0") || undefined : undefined;
 
             return (
-              <div key={exId} style={{ background: C.s2, borderRadius: 9, border: "1px solid " + C.brd, padding: "10px 12px" }}>
+              <div key={exId} style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, padding: "10px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{name}</span>
                   {planned?.method && (
-                    <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 4, background: "rgba(123,111,255,0.12)", color: "#C9A14A", fontWeight: 600 }}>
+                    <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 4, background: "rgba(123,111,255,0.12)", color: "#FFC933", fontWeight: 600 }}>
                       {planned.method}
                     </span>
                   )}
@@ -518,7 +518,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                 {/* Planned — chip style */}
                 {planned && planned.sets > 0 && (
                   <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: "#C9A14A", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5 }}>Prévu</div>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: "#FFC933", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5 }}>Prévu</div>
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {[
                         { l: "Séries", v: String(planned.sets) },
@@ -577,7 +577,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                           {s.kg != null && <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{s.kg} kg</span>}
                           {s.reps != null && <span style={{ fontSize: 12, color: C.tx }}>× {s.reps}</span>}
                           {s.rir != null && <span style={{ fontSize: 11, color: C.tx3 }}>RIR {s.rir}</span>}
-                          {s.method && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: "#C9A14A", fontWeight: 600 }}>{s.method}</span>}
+                          {s.method && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: "#FFC933", fontWeight: 600 }}>{s.method}</span>}
                           <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: sc }}>{ok ? "✓" : "~"}</span>
                         </div>
                       );
@@ -612,14 +612,14 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                 {/* Athlete comment on exercise */}
                 {workout.athlete_exercise_comments?.[exId] && (
                   <div style={{ marginTop: 6, padding: "5px 8px", borderRadius: 5, background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.30)", fontSize: 10, color: C.tx2, fontStyle: "italic" }}>
-                    💬 {workout.athlete_exercise_comments[exId]}
+                    {workout.athlete_exercise_comments[exId]}
                   </div>
                 )}
 
                 {/* Coach comment */}
                 {comment && (
                   <div style={{ marginTop: 6, padding: "5px 8px", borderRadius: 5, background: C.acS, fontSize: 10, color: C.ac }}>
-                    💬 {comment.comment}
+                    {comment.comment}
                   </div>
                 )}
               </div>
@@ -650,7 +650,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
         minWidth: 120,
         background: C.s1,
         border: today ? "2px solid " + C.ac + "60" : "1px solid " + C.brd,
-        borderRadius: 10,
+        borderRadius: 4,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",

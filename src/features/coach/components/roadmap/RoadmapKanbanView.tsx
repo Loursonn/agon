@@ -38,7 +38,7 @@ function ItemCard({ item, voteCount, voted, isAdmin, userId, onEdit }: ItemCardP
 
   return (
     <div style={{
-      background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 10,
+      background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
       padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8,
     }}>
       {/* Top row: category + priority */}
@@ -107,7 +107,7 @@ function ItemCard({ item, voteCount, voted, isAdmin, userId, onEdit }: ItemCardP
           disabled={toggleVote.isPending}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "4px 8px", borderRadius: 20,
+            padding: "4px 8px", borderRadius: 6,
             border: voted ? `1px solid ${C.ac}60` : `1px solid ${C.brdL}`,
             background: voted ? `${C.ac}15` : "transparent",
             color: voted ? C.ac : C.tx3,
@@ -159,7 +159,7 @@ function ItemCard({ item, voteCount, voted, isAdmin, userId, onEdit }: ItemCardP
                   onClick={() => { deleteItem.mutate(item.id); setConfirmDel(false); }}
                   style={{
                     padding: "4px 8px", borderRadius: 6, border: "none",
-                    background: C.r, color: "#fff", fontSize: 10, fontWeight: 700,
+                    background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700,
                     cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
@@ -225,7 +225,7 @@ export function RoadmapKanbanView({
             style={{
               minWidth: 280, width: 280, flexShrink: 0,
               background: C.s1, border: `1px solid ${C.brd}`,
-              borderRadius: 12, overflow: "hidden",
+              borderRadius: 6, overflow: "hidden",
             }}
           >
             {/* Column header */}
@@ -262,7 +262,7 @@ export function RoadmapKanbanView({
                         <button
                           type="button"
                           onClick={() => { deletePhase.mutate(phase.id); setConfirmDelPhase(null); }}
-                          style={{ padding: "3px 6px", borderRadius: 5, border: "none", background: C.r, color: "#fff", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                          style={{ padding: "3px 6px", borderRadius: 5, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
                         >
                           Oui
                         </button>
@@ -314,7 +314,7 @@ export function RoadmapKanbanView({
                 type="button"
                 onClick={() => onAddItem(phase.id)}
                 style={{
-                  width: "100%", padding: "8px 0", borderRadius: 8,
+                  width: "100%", padding: "8px 0", borderRadius: 4,
                   border: `1px dashed ${C.brdL}`, background: "transparent",
                   color: C.tx3, fontSize: 12, cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -334,7 +334,7 @@ export function RoadmapKanbanView({
         <div style={{
           minWidth: 280, width: 280, flexShrink: 0,
           background: C.s1, border: `1px solid ${C.brd}`,
-          borderRadius: 12, overflow: "hidden",
+          borderRadius: 6, overflow: "hidden",
         }}>
           <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.brd}` }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 4 }}>Non assigné</div>
@@ -356,7 +356,7 @@ export function RoadmapKanbanView({
               type="button"
               onClick={() => onAddItem(null)}
               style={{
-                width: "100%", padding: "8px 0", borderRadius: 8,
+                width: "100%", padding: "8px 0", borderRadius: 4,
                 border: `1px dashed ${C.brdL}`, background: "transparent",
                 color: C.tx3, fontSize: 12, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,

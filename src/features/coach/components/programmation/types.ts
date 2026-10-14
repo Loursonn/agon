@@ -52,6 +52,8 @@ export interface Bloc {
   timing_depart_sec?: number
   timing_repos_min?: number
   timing_repos_sec?: number
+  /** Consignes du bloc, affichées à l'athlète sous le titre */
+  instructions?: string
   // NO multi_semaine here anymore
   exercices: Exercice[]
   sort_order: number

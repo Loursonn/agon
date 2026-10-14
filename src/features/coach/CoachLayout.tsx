@@ -6,13 +6,15 @@ import { NewBlockModal } from "@/components/coach/CoachComponents";
 import { AIChatBar } from "@/components/athlete/StatsViews";
 import BlockHistoryViewer from "./components/BlockHistoryViewer";
 
+const ip = { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: 16, height: 16, fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "square" as const, strokeLinejoin: "miter" as const };
+
 const COACH_TABS = [
-  { k: "prog",    l: "Prog",    icon: "📋" },
-  { k: "banque",  l: "Banque",  icon: "🏋" },
-  { k: "stats",   l: "Stats",   icon: "📊" },
-  { k: "donnees", l: "Données", icon: "👤" },
-  { k: "test",    l: "Test",    icon: "🧪" },
-  { k: "retours", l: "Retours", icon: "💬" },
+  { k: "prog",    l: "Prog",    icon: <svg {...ip}><path d="M12 4L20 8L12 12L4 8Z"/><path d="M4 12L12 16L20 12M4 16L12 20L20 16"/></svg> },
+  { k: "banque",  l: "Banque",  icon: <svg {...ip}><path d="M3 12H21M6 7V17M9 9V15M15 9V15M18 7V17"/></svg> },
+  { k: "stats",   l: "Stats",   icon: <svg {...ip}><path d="M3 20H21M6 20V13M12 20V5M18 20V9"/></svg> },
+  { k: "donnees", l: "Données", icon: <svg {...ip}><circle cx="9" cy="8" r="3"/><path d="M3 20V19A6 6 0 0 1 15 19V20"/><path d="M15 5.3A3 3 0 0 1 15 10.7M18 14A5 5 0 0 1 21 18.5V20"/></svg> },
+  { k: "test",    l: "Test",    icon: <svg {...ip}><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg> },
+  { k: "retours", l: "Retours", icon: <svg {...ip}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg> },
 ];
 
 interface CoachLayoutProps {
@@ -69,7 +71,7 @@ export default function CoachLayout({ onSwitchMode, children }: CoachLayoutProps
                 </div>
               </div>
               {blockConfig?.blockName && (
-                <div style={{ padding: "7px 10px", borderRadius: 8, background: C.s2, border: "1px solid " + C.brd }}>
+                <div style={{ padding: "7px 10px", borderRadius: 4, background: C.s2, border: "1px solid " + C.brd }}>
                   <div className="coach-sidebar-label" style={{ fontSize: 11, fontWeight: 700, color: C.tx, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{blockConfig.blockName}</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 10, color: C.b, fontWeight: 600 }}>S{currentWeek}/{tw}</span>
@@ -84,14 +86,14 @@ export default function CoachLayout({ onSwitchMode, children }: CoachLayoutProps
               const active = activeTab === t.k || (activeTab === "" && t.k === "prog");
               return (
                 <button key={t.k} onClick={() => navigate(t.k)} style={{ borderLeft: "3px solid " + (active ? C.coach : "transparent"), background: active ? C.coach + "14" : "transparent", color: active ? C.coach : C.tx2, fontSize: 12, fontWeight: active ? 700 : 500 }}>
-                  <span style={{ fontSize: 15, flexShrink: 0, opacity: active ? 1 : 0.6 }}>{t.icon}</span>
+                  <span style={{ display: "flex", alignItems: "center", flexShrink: 0, opacity: active ? 1 : 0.6 }}>{t.icon}</span>
                   <span className="coach-sidebar-label">{t.l}</span>
                 </button>
               );
             })}
             {onSwitchMode && (
               <button onClick={onSwitchMode} style={{ borderLeft: "3px solid transparent", background: "transparent", color: C.tx3, fontSize: 12, fontWeight: 500, marginTop: "auto" }}>
-                <span style={{ fontSize: 15, flexShrink: 0, opacity: 0.6 }}>👤</span>
+                <span style={{ fontSize: 15, flexShrink: 0, opacity: 0.6 }}></span>
                 <span className="coach-sidebar-label">Vue athlète</span>
               </button>
             )}

@@ -146,7 +146,7 @@ export const SCHEMA_COLORS = [
   { color: "#E5484D", label: "Sprint" },
   { color: "#F5A623", label: "Tempo" },
   { color: "#4FA3FF", label: "Footing" },
-  { color: "#9DB06A", label: "Récup" },
+  { color: "#66F03C", label: "Récup" },
 ] as const;
 
 // ── Arrowhead computation ───────────────────────────────────────────────────

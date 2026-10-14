@@ -286,7 +286,7 @@ export function CreateCycleAssistant({
     fontSize: 9, color: C.tx3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4,
   };
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 8,
+    width: "100%", padding: "8px 10px", borderRadius: 4,
     border: "1px solid " + C.brdL, background: C.s2,
     color: C.tx, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box",
   };
@@ -299,7 +299,7 @@ export function CreateCycleAssistant({
         transform: "translate(-50%, -50%)",
         width: 460, maxWidth: "94vw", maxHeight: "88vh",
         display: "flex", flexDirection: "column",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         animation: "fadeScaleIn 150ms ease-out",
       }}>
         <style>{`@keyframes fadeScaleIn { from { opacity:0; transform:translate(-50%,-50%) scale(0.95) } to { opacity:1; transform:translate(-50%,-50%) scale(1) } }`}</style>
@@ -379,7 +379,7 @@ export function CreateCycleAssistant({
                     return (
                       <div key={c.sessionId} style={{
                         display: "flex", alignItems: "center", gap: 10,
-                        padding: "9px 12px", borderRadius: 9,
+                        padding: "9px 12px", borderRadius: 4,
                         background: s.take ? C.coachS : C.s2,
                         border: "1px solid " + (s.take ? C.coach + "40" : C.brd),
                       }}>
@@ -420,15 +420,15 @@ export function CreateCycleAssistant({
 
         {/* Footer */}
         <div style={{ display: "flex", gap: 10, padding: "14px 22px", borderTop: "1px solid " + C.brd }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Annuler
           </button>
           <button
             onClick={handleCreate}
             disabled={saving || !name.trim() || !parentId}
             style={{
-              flex: 2, padding: "11px 0", borderRadius: 10, border: "none",
-              background: C.coach, color: "#fff", fontSize: 13, fontWeight: 700,
+              flex: 2, padding: "11px 0", borderRadius: 4, border: "none",
+              background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit",
               opacity: (saving || !name.trim() || !parentId) ? 0.5 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,

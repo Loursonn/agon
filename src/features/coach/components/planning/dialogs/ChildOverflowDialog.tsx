@@ -22,7 +22,7 @@ export function ChildOverflowDialog({
   onConfirmMultiParent, onShrinkToParent, onCancel,
 }: Props) {
   const btnBase: React.CSSProperties = {
-    width: "100%", padding: "11px 0", borderRadius: 10,
+    width: "100%", padding: "11px 0", borderRadius: 4,
     fontSize: 13, fontWeight: 600, cursor: "pointer",
     fontFamily: "inherit", border: "none",
   };
@@ -34,7 +34,7 @@ export function ChildOverflowDialog({
         position: "fixed", top: "50%", left: "50%", zIndex: 81,
         transform: "translate(-50%,-50%)",
         width: 420, maxWidth: "92vw",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 22px",
         animation: "fadeScaleIn 150ms ease-out",
       }}>
@@ -68,7 +68,7 @@ export function ChildOverflowDialog({
           {altParentName && (
             <button
               onClick={onConfirmMultiParent}
-              style={{ ...btnBase, background: C.o, color: "#fff" }}
+              style={{ ...btnBase, background: C.oV, color: "#0E0C0A" }}
             >
               Confirmer — rattacher aussi à "{altParentName}"
             </button>

@@ -23,12 +23,13 @@ import {
 
 // ── Navigation tabs ────────────────────────────────────────────────────────────
 
-const TABS: { key: string; label: string; pushRight?: boolean }[] = [
+const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: boolean }[] = [
   { key: "planning",        label: "Planning"        },
   { key: "programmation",   label: "Programmation"   },
   { key: "retours",         label: "Retours"         },
   { key: "profil-sportif",  label: "Profil athlète"  },
-  { key: "athlete-view",    label: "👁 Vue athlète", pushRight: true },
+  { key: "hyrox",           label: "HYROX", hyroxOnly: true },
+  { key: "athlete-view",    label: "Vue athlète", pushRight: true },
   { key: "donnees",         label: "Historique" },
 ];
 
@@ -45,6 +46,15 @@ const SUB_TABS: Record<string, { key: string; label: string }[]> = {
     { key: "testing",  label: "Suivi Testing"         },
   ],
   programmation: [],
+  hyrox: [
+    { key: "bilan",    label: "Bilan"             },
+    { key: "courses",  label: "Courses"           },
+    { key: "stations", label: "Stations"          },
+    { key: "runs",     label: "Runs et Roxzone"   },
+    { key: "radar",    label: "Radar"             },
+    { key: "tests",    label: "Tests HYROX"       },
+    { key: "plan",     label: "Plan de course"    },
+  ],
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -73,9 +83,12 @@ export default function ContextBar() {
     },
   });
 
+  // Filter HYROX tab based on athlete flag
+  const TABS = ALL_TABS.filter(t => !t.hyroxOnly || selectedAthlete?.is_hyrox_athlete);
+
   // Active tab derived from URL segment
   const segments = location.pathname.split("/");
-  const activeTab = TABS.find((t) => segments.includes(t.key))?.key ?? "planning";
+  const activeTab = ALL_TABS.find((t) => segments.includes(t.key))?.key ?? "planning";
 
   // Active sub-tab from ?view= param
   const searchParams = new URLSearchParams(location.search);
@@ -119,8 +132,6 @@ export default function ContextBar() {
         top: 0,
         zIndex: 9,
         background: "rgba(29,28,30,0.9)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
         borderBottom: "1px solid " + C.brd,
         flexShrink: 0,
       }}
@@ -173,14 +184,14 @@ export default function ContextBar() {
             title="Voir les modifications athlète"
             style={{
               display: "flex", alignItems: "center", gap: 4,
-              padding: "3px 8px", borderRadius: 20,
+              padding: "3px 8px", borderRadius: 6,
               border: "1px solid rgba(245,158,11,0.4)",
               background: "rgba(245,158,11,0.12)",
               color: "#F59E0B", fontSize: 10, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
             }}
           >
-            ⚡ {modifCount}
+            {modifCount}
           </button>
         )}
 
@@ -189,7 +200,7 @@ export default function ContextBar() {
           <PopoverTrigger asChild>
             <button
               style={{
-                padding: "5px 12px", borderRadius: 8,
+                padding: "5px 12px", borderRadius: 4,
                 border: "1px solid " + C.brdL, background: "transparent",
                 color: C.tx2, fontSize: 11, fontWeight: 500,
                 cursor: "pointer", fontFamily: "inherit",
@@ -204,7 +215,7 @@ export default function ContextBar() {
             style={{
               width: 260, padding: 0,
               background: C.s1, border: "1px solid " + C.brdL,
-              borderRadius: 12, overflow: "hidden",
+              borderRadius: 6, overflow: "hidden",
             }}
           >
             <Command style={{ background: "transparent" }}>
@@ -227,7 +238,7 @@ export default function ContextBar() {
                       }}
                       style={{
                         cursor: "pointer",
-                        background: a.id === athleteId ? "rgba(201,161,74,0.12)" : "transparent",
+                        background: a.id === athleteId ? "rgba(255,201,51,0.12)" : "transparent",
                         color: a.id === athleteId ? C.ac : C.tx,
                         fontSize: 12,
                         padding: "8px 12px",

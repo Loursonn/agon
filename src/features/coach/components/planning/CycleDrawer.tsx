@@ -34,7 +34,7 @@ function MicroDayCard({ athleteId, day }: { athleteId: string; day: Date }) {
   return (
     <div
       style={{
-        borderRadius: 8,
+        borderRadius: 4,
         border: "1px solid " + (today ? C.ac + "40" : C.brd),
         background: today ? C.acS : C.s2,
         padding: "6px 7px",
@@ -129,7 +129,7 @@ function MicrocycleDashboard({
         <button
           onClick={() => update({ id: micro.id, start_date: startDate, end_date: endDate })}
           disabled={isPending}
-          style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: C.tx2, color: "#fff", fontSize: 13, fontWeight: 700, cursor: isPending ? "default" : "pointer", fontFamily: "inherit", opacity: isPending ? 0.7 : 1 }}
+          style={{ width: "100%", padding: "10px 0", borderRadius: 4, border: "none", background: C.tx2, color: "#fff", fontSize: 13, fontWeight: 700, cursor: isPending ? "default" : "pointer", fontFamily: "inherit", opacity: isPending ? 0.7 : 1 }}
         >
           {isPending ? "Sauvegarde…" : "Enregistrer les dates"}
         </button>
@@ -138,7 +138,7 @@ function MicrocycleDashboard({
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {micro.is_deload && (
-            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 8, background: C.bS, color: C.b }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: C.bS, color: C.b }}>
               DELOAD
             </span>
           )}
@@ -242,7 +242,7 @@ function MesocycleForm({
               key={value}
               onClick={() => setVolumeType(value)}
               style={{
-                padding: "5px 12px", borderRadius: 8,
+                padding: "5px 12px", borderRadius: 4,
                 border: "1px solid " + (volumeType === value ? C.ac + "60" : C.brdL),
                 background: volumeType === value ? C.acS : "transparent",
                 color: volumeType === value ? C.ac : C.tx3,
@@ -269,7 +269,7 @@ function MesocycleForm({
                 key={z}
                 onClick={() => setZones((prev) => active ? prev.filter((x) => x !== z) : [...prev, z])}
                 style={{
-                  width: 40, height: 36, borderRadius: 8,
+                  width: 40, height: 36, borderRadius: 4,
                   border: "1px solid " + (active ? C.coach + "60" : C.brdL),
                   background: active ? C.coachS : "transparent",
                   color: active ? C.coach : C.tx3,
@@ -292,12 +292,12 @@ function MesocycleForm({
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
             onClick={() => setFrequency((f) => Math.max(1, f - 1))}
-            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", fontSize: 16 }}
+            style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", fontSize: 16 }}
           >−</button>
           <div style={{ width: 40, textAlign: "center", fontSize: 20, fontWeight: 800, color: C.tx }}>{frequency}</div>
           <button
             onClick={() => setFrequency((f) => Math.min(14, f + 1))}
-            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", fontSize: 16 }}
+            style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", fontSize: 16 }}
           >+</button>
         </div>
       </div>
@@ -313,7 +313,7 @@ function MesocycleForm({
               key={w}
               onClick={() => setDeloadWeek(w)}
               style={{
-                width: 40, height: 32, borderRadius: 8,
+                width: 40, height: 32, borderRadius: 4,
                 border: "1px solid " + (deloadWeek === w ? C.b + "60" : C.brdL),
                 background: deloadWeek === w ? C.bS : "transparent",
                 color: deloadWeek === w ? C.b : C.tx3,
@@ -332,7 +332,7 @@ function MesocycleForm({
         onClick={save}
         disabled={isPending}
         style={{
-          width: "100%", padding: "12px 0", borderRadius: 12,
+          width: "100%", padding: "12px 0", borderRadius: 6,
           border: "none", background: isPending ? C.s2 : C.ac,
           color: isPending ? C.tx3 : "#fff",
           fontSize: 14, fontWeight: 700, cursor: isPending ? "default" : "pointer",
@@ -366,7 +366,7 @@ function ObjectiveField({
         onChange={(e) => onChange(e.target.value)}
         placeholder="Ex: Courir en 4:00/km…"
         style={{
-          width: "100%", padding: "7px 10px", borderRadius: 8,
+          width: "100%", padding: "7px 10px", borderRadius: 4,
           border: "1px solid " + color + "40", background: C.s2,
           color: C.tx, fontSize: 12, fontFamily: "inherit",
           outline: "none", boxSizing: "border-box",
@@ -389,7 +389,7 @@ function DateFields({
   color: string;
 }) {
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "7px 10px", borderRadius: 8,
+    width: "100%", padding: "7px 10px", borderRadius: 4,
     border: "1px solid " + color + "40", background: C.s2,
     color: C.tx, fontSize: 12, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box",
@@ -430,7 +430,7 @@ function MacrocyclePanel({ macro, athleteId }: { macro: Macrocycle; athleteId: s
         <button
           onClick={() => update({ id: macro.id, start_date: startDate, end_date: endDate, objective: objective || null })}
           disabled={isPending}
-          style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: C.ac, color: "#fff", fontSize: 13, fontWeight: 700, cursor: isPending ? "default" : "pointer", fontFamily: "inherit", opacity: isPending ? 0.7 : 1 }}
+          style={{ width: "100%", padding: "10px 0", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: isPending ? "default" : "pointer", fontFamily: "inherit", opacity: isPending ? 0.7 : 1 }}
         >
           {isPending ? "Sauvegarde…" : "Enregistrer"}
         </button>
@@ -476,7 +476,7 @@ function CyclePanel({ cycle, athleteId, parentObjective }: { cycle: Cycle; athle
         <button
           onClick={() => update({ id: cycle.id, start_date: startDate, end_date: endDate, objective: objective || null })}
           disabled={isPending}
-          style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: C.o, color: "#fff", fontSize: 13, fontWeight: 700, cursor: isPending ? "default" : "pointer", fontFamily: "inherit", opacity: isPending ? 0.7 : 1 }}
+          style={{ width: "100%", padding: "10px 0", borderRadius: 4, border: "none", background: C.oV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: isPending ? "default" : "pointer", fontFamily: "inherit", opacity: isPending ? 0.7 : 1 }}
         >
           {isPending ? "Sauvegarde…" : "Enregistrer"}
         </button>
@@ -490,7 +490,7 @@ function CyclePanel({ cycle, athleteId, parentObjective }: { cycle: Cycle; athle
             { label: "Planifiées", count: planned.length,  color: C.tx3 },
             { label: "Manquées",  count: missed.length,    color: C.r },
           ].map(({ label, count, color }) => (
-            <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
+            <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 4, padding: "8px 10px", textAlign: "center" }}>
               <div style={{ fontSize: 18, fontWeight: 800, color }}>{count}</div>
               <div style={{ fontSize: 9, color: C.tx3, marginTop: 2 }}>{label}</div>
             </div>
@@ -522,7 +522,7 @@ function CyclePanel({ cycle, athleteId, parentObjective }: { cycle: Cycle; athle
                   key={s.id}
                   style={{
                     display: "flex", alignItems: "center", gap: 10,
-                    padding: "9px 12px", borderRadius: 10,
+                    padding: "9px 12px", borderRadius: 4,
                     background: cfg.bg,
                     border: "1px solid " + cfg.color + "30",
                   }}
@@ -564,7 +564,7 @@ function CyclePanel({ cycle, athleteId, parentObjective }: { cycle: Cycle; athle
           navigate(`/coach/athletes/${athleteId}/planning?view=month&month=${cycle.start_date.slice(0, 7)}`)
         }
         style={{
-          width: "100%", padding: "12px 0", borderRadius: 12,
+          width: "100%", padding: "12px 0", borderRadius: 6,
           border: "1px solid " + C.ac + "40", background: C.acS,
           color: C.ac, fontSize: 13, fontWeight: 600,
           cursor: "pointer", fontFamily: "inherit",
@@ -671,7 +671,7 @@ export function CycleDrawer({
           <button
             onClick={onClose}
             style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 4,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", justifyContent: "center",

@@ -9,7 +9,7 @@ import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 
 const ORANGE = "#F5A623";
-const GREEN  = "#9DB06A";
+const GREEN  = "#66F03C";
 
 function hasContent(b: SessionBlock): boolean {
   if (isWodBlock(b)) return b.title.trim().length > 0 || b.steps.length > 0;
@@ -33,7 +33,7 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
         const wod = isWodBlock(block);
         const accent = wod ? ORANGE : GREEN;
         return (
-          <div key={block.id} style={{ background: C.s1, borderRadius: 10, border: `1px solid ${C.brd}`, overflow: "hidden" }}>
+          <div key={block.id} style={{ background: C.s1, borderRadius: 4, border: `1px solid ${C.brd}`, overflow: "hidden" }}>
             <div style={{
               padding: "8px 12px", background: accent + "0D",
               borderBottom: `1px solid ${C.brd}`,
@@ -53,6 +53,12 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
                 </span>
               )}
             </div>
+
+            {block.instructions && (
+              <div style={{ padding: "6px 12px 0", fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
+                {block.instructions}
+              </div>
+            )}
 
             {wod ? (
               <div style={{ padding: "8px 10px" }}>

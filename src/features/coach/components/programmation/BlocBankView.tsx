@@ -9,7 +9,7 @@ import { BlocCard } from "./BlocCard"
 import { useBlocBank, useUpdateBlocBank } from "./hooks/useBlocBank"
 import { CardSkeleton } from "@/features/shared/components/skeletons"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 
 /**
  * Banque de blocs préconstruits du coach.
@@ -86,7 +86,7 @@ export function BlocBankView() {
           onClick={() => setIsAdding(true)}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "8px 16px", borderRadius: 9,
+            padding: "8px 16px", borderRadius: 4,
             border: "none", background: VIOLET, color: "#fff",
             fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
             flexShrink: 0,
@@ -106,7 +106,7 @@ export function BlocBankView() {
 
       {!isAdding && blocs.length === 0 && (
         <div style={{ textAlign: "center", padding: "50px 20px" }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>🧱</div>
+          <div style={{ fontSize: 36, marginBottom: 12 }}></div>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 4 }}>Aucun bloc préconstruit</div>
           <div style={{ fontSize: 12, color: C.tx3, marginBottom: 20 }}>
             Crée des blocs types (échauffement, mobilité, force…) pour les réutiliser dans tes séances.
@@ -114,7 +114,7 @@ export function BlocBankView() {
           <button
             onClick={() => setIsAdding(true)}
             style={{
-              padding: "10px 22px", borderRadius: 10,
+              padding: "10px 22px", borderRadius: 4,
               border: "none", background: VIOLET, color: "#fff",
               fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               display: "inline-flex", alignItems: "center", gap: 6,
@@ -139,7 +139,7 @@ export function BlocBankView() {
               marginBottom: 10, display: "flex", alignItems: "center", gap: 8,
             }}>
               {cat}
-              <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, background: C.s2, padding: "1px 7px", borderRadius: 10 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, background: C.s2, padding: "1px 7px", borderRadius: 4 }}>
                 {catBlocs.length}
               </span>
             </div>
@@ -160,14 +160,13 @@ export function BlocBankView() {
                     style={{
                       position: "relative",
                       padding: "14px 12px 12px",
-                      borderRadius: 12,
+                      borderRadius: 6,
                       border: "1px solid " + (isOpen ? color : C.brdL),
                       background: isOpen ? color + "14" : C.s1,
                       cursor: "pointer", fontFamily: "inherit",
                       textAlign: "left",
                       overflow: "hidden",
                       transition: "border-color 120ms, background 120ms",
-                      boxShadow: "inset 0 3px 0 " + color,
                     }}
                     onMouseEnter={e => { if (!isOpen) e.currentTarget.style.borderColor = color + "80" }}
                     onMouseLeave={e => { if (!isOpen) e.currentTarget.style.borderColor = C.brdL }}

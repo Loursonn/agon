@@ -6,6 +6,9 @@ import { fr } from "date-fns/locale";
 import {
   Users, Calendar, FlaskConical, ChevronRight,
   Heart, Dumbbell, Trophy, Layers, ArrowUpRight,
+  AlertTriangle, Clock, Flag, Medal, ClipboardList,
+  Zap, Check, XCircle, SkipForward, BarChart3, Circle,
+  CalendarDays,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/features/shared/components/EmptyState";
@@ -18,6 +21,7 @@ import { useRecentActivity } from "@/features/shared/hooks/useRecentActivity";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/lib/theme";
+import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
 import { COMPETITION_META } from "@/types/planning";
 import type { SessionStatus } from "@/features/shared/hooks/useCoachDashboard";
 
@@ -35,12 +39,12 @@ const stagger = {
 
 // ── Visual mappings ────────────────────────────────────────────────────────────
 
-const STATUS_EMOJI: Record<SessionStatus, string> = {
-  planned:     "📋",
-  in_progress: "⚡",
-  completed:   "✅",
-  missed:      "❌",
-  skipped:     "⏩",
+const STATUS_ICON: Record<SessionStatus, React.ReactNode> = {
+  planned:     <ClipboardList size={12} style={{ color: C.tx3 }} />,
+  in_progress: <Zap size={12} style={{ color: C.y }} />,
+  completed:   <Check size={12} style={{ color: C.g }} />,
+  missed:      <XCircle size={12} style={{ color: C.r }} />,
+  skipped:     <SkipForward size={12} style={{ color: C.tx3 }} />,
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -53,10 +57,10 @@ function initials(name: string) {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function SectionTitle({ emoji, children }: { emoji?: string; children: React.ReactNode }) {
+function SectionTitle({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <p className="text-[10px] font-bold uppercase tracking-[0.6px] text-[#7D7468] mb-3 flex items-center gap-1.5">
-      {emoji && <span className="text-[11px]">{emoji}</span>}
+      {icon && <span className="flex items-center">{icon}</span>}
       {children}
     </p>
   );
@@ -64,7 +68,7 @@ function SectionTitle({ emoji, children }: { emoji?: string; children: React.Rea
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-[#1E1A16] border border-[rgba(124,116,128,0.15)] rounded-2xl overflow-hidden ${className}`}>
+    <div className={`bg-[#1E1A16] border border-[rgba(231,211,168,0.15)] rounded-2xl overflow-hidden ${className}`}>
       {children}
     </div>
   );
@@ -131,7 +135,7 @@ export default function CoachHomePage() {
       <motion.div variants={stagger} initial="hidden" animate="show" className="mb-8">
         <motion.div variants={fadeUp}>
           <h1 className="text-xl font-extrabold tracking-tight" style={{ color: C.tx }}>
-            Bonjour, {firstName} 👋
+            Bonjour, {firstName}
           </h1>
           <p className="text-[12px] mt-1 capitalize" style={{ color: C.tx3 }}>
             {todayLabel} · {athletes.length} athlète{athletes.length !== 1 ? "s" : ""}
@@ -139,11 +143,14 @@ export default function CoachHomePage() {
           </p>
         </motion.div>
 
+        <motion.div variants={fadeUp} className="mt-5 mb-5">
+          <CitationDuJour />
+        </motion.div>
+
         {/* Action counters */}
         <motion.div variants={fadeUp} className="mt-5 grid grid-cols-2 gap-3">
           <ActionCounter
-            emoji="⚠️"
-            icon={<Calendar size={14} />}
+            icon={<AlertTriangle size={16} style={{ color: C.o }} />}
             label="Manquées hier"
             count={missedSessions.length}
             loading={isLoadingMissed}
@@ -151,8 +158,7 @@ export default function CoachHomePage() {
             onClick={() => navigate("/coach/athletes")}
           />
           <ActionCounter
-            emoji="🧪"
-            icon={<FlaskConical size={14} />}
+            icon={<FlaskConical size={16} style={{ color: C.b }} />}
             label="Tests à venir"
             count={upcomingTests.length}
             loading={isLoadingTests}
@@ -170,7 +176,7 @@ export default function CoachHomePage() {
 
           {/* ── Aujourd'hui ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle emoji="📅">Aujourd'hui</SectionTitle>
+            <SectionTitle icon={<Calendar size={11} style={{ color: "#7D7468" }} />}>Aujourd'hui</SectionTitle>
             <Card>
               {isLoadingToday ? (
                 <SkeletonRows n={3} />
@@ -187,7 +193,7 @@ export default function CoachHomePage() {
                       className="flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.03)]"
                       style={{
                         borderBottom: i < todayAthletes.length - 1
-                          ? "1px solid rgba(124,116,128,0.1)"
+                          ? "1px solid rgba(231,211,168,0.1)"
                           : undefined,
                       }}
                     >
@@ -217,13 +223,13 @@ export default function CoachHomePage() {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {a.sessions.map((s) => (
                               <span key={s.id} className="flex items-center gap-1.5">
-                                <span className="text-[12px]">{STATUS_EMOJI[s.status]}</span>
+                                <span className="text-[12px]">{STATUS_ICON[s.status]}</span>
                                 <span className="text-[12px] font-bold truncate max-w-[100px]" style={{ color: C.tx }}>
                                   {s.sessionName ?? "Séance"}
                                 </span>
                                 <StatusPill status={s.status} />
                                 {s.rpeScore != null && (
-                                  <span className="text-[10px] font-bold px-1.5 py-px rounded bg-[rgba(59,141,240,0.12)] text-[#7E9CA8] border border-[rgba(59,141,240,0.2)]">
+                                  <span className="text-[10px] font-bold px-1.5 py-px rounded bg-[rgba(59,141,240,0.12)] text-[#33B5FF] border border-[rgba(59,141,240,0.2)]">
                                     RPE {s.rpeScore}
                                   </span>
                                 )}
@@ -269,7 +275,7 @@ export default function CoachHomePage() {
           {/* ── À traiter — séances manquées ── */}
           {missedSessions.length > 0 && (
             <motion.div variants={fadeUp}>
-              <SectionTitle emoji="⚠️">À traiter</SectionTitle>
+              <SectionTitle icon={<AlertTriangle size={11} style={{ color: C.o }} />}>À traiter</SectionTitle>
               <Card>
                 {missedSessions.map((m, i) => (
                   <div
@@ -278,7 +284,7 @@ export default function CoachHomePage() {
                     className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(251,146,60,0.05)] transition-colors"
                     style={{
                       borderBottom: i < missedSessions.length - 1
-                        ? "1px solid rgba(124,116,128,0.1)"
+                        ? "1px solid rgba(231,211,168,0.1)"
                         : undefined,
                       borderLeft: `3px solid ${C.o}`,
                     }}
@@ -287,7 +293,7 @@ export default function CoachHomePage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-bold" style={{ color: C.tx }}>{m.athleteName}</p>
                       <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                        ❌ {m.sessionName ?? "Séance"} — non réalisée hier
+                        {m.sessionName ?? "Séance"} — non réalisée hier
                       </p>
                     </div>
                     <ChevronRight size={13} style={{ color: C.tx3 }} />
@@ -300,7 +306,7 @@ export default function CoachHomePage() {
           {/* ── Séances à clôturer ── */}
           {unfinished.length > 0 && (
             <motion.div variants={fadeUp}>
-              <SectionTitle emoji="🏁">Séances à clôturer</SectionTitle>
+              <SectionTitle icon={<Flag size={11} style={{ color: "#7D7468" }} />}>Séances à clôturer</SectionTitle>
               <Card>
                 {unfinished.slice(0, 8).map((w, i) => {
                   const name = athleteNameById.get(w.athleteId)
@@ -312,7 +318,7 @@ export default function CoachHomePage() {
                       className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
                       style={{
                         borderBottom: i < Math.min(unfinished.length, 8) - 1
-                          ? "1px solid rgba(124,116,128,0.1)"
+                          ? "1px solid rgba(231,211,168,0.1)"
                           : undefined,
                         borderLeft: `3px solid ${C.y}`,
                       }}
@@ -321,7 +327,7 @@ export default function CoachHomePage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold" style={{ color: C.tx }}>{name}</p>
                         <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                          🏁 {w.sessionName} — {format(new Date(w.scheduledDate + "T12:00:00"), "d MMM", { locale: fr })} ·{" "}
+                          {w.sessionName} — {format(new Date(w.scheduledDate + "T12:00:00"), "d MMM", { locale: fr })} ·{" "}
                           {w.loggedSets} série{w.loggedSets > 1 ? "s" : ""} saisie{w.loggedSets > 1 ? "s" : ""}, jamais terminée
                         </p>
                       </div>
@@ -335,7 +341,7 @@ export default function CoachHomePage() {
 
           {/* ── Activité récente ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle emoji="🕐">Activité récente</SectionTitle>
+            <SectionTitle icon={<Clock size={11} style={{ color: "#7D7468" }} />}>Activité récente</SectionTitle>
             <Card>
               {loadActivity ? (
                 <SkeletonRows n={4} />
@@ -357,7 +363,7 @@ export default function CoachHomePage() {
                         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
                         style={{
                           borderBottom: i < activities.length - 1
-                            ? "1px solid rgba(124,116,128,0.08)"
+                            ? "1px solid rgba(231,211,168,0.08)"
                             : undefined,
                         }}
                       >
@@ -382,10 +388,10 @@ export default function CoachHomePage() {
           {/* Self as athlete shortcut */}
           {isCoachAthlete && user && (
             <motion.div variants={fadeUp}>
-              <SectionTitle emoji="🏋️">Mon programme</SectionTitle>
+              <SectionTitle icon={<Dumbbell size={11} style={{ color: "#7D7468" }} />}>Mon programme</SectionTitle>
               <button
                 onClick={() => navigate(`/coach/athletes/${user.id}/planning`)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-colors hover:border-[rgba(201,161,74,0.5)]"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-colors hover:border-[rgba(255,201,51,0.5)]"
                 style={{ background: C.acS, border: `1px solid ${C.ac}40`, fontFamily: "inherit" }}
               >
                 <div
@@ -421,7 +427,7 @@ export default function CoachHomePage() {
 
           {/* ── À anticiper ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle emoji="📆">À anticiper</SectionTitle>
+            <SectionTitle icon={<CalendarDays size={11} style={{ color: "#7D7468" }} />}>À anticiper</SectionTitle>
             <Card>
               {loadMargin ? (
                 <SkeletonRows n={3} />
@@ -441,7 +447,7 @@ export default function CoachHomePage() {
                         className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.03)]"
                         style={{
                           borderBottom: i < endingSoon.length - 1
-                            ? "1px solid rgba(124,116,128,0.1)"
+                            ? "1px solid rgba(231,211,168,0.1)"
                             : undefined,
                         }}
                       >
@@ -488,7 +494,7 @@ export default function CoachHomePage() {
 
           {/* ── Records & tests ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle emoji="🏅">Records & tests</SectionTitle>
+            <SectionTitle icon={<Medal size={11} style={{ color: "#7D7468" }} />}>Records & tests</SectionTitle>
             <Card>
               {loadRecords ? (
                 <SkeletonRows n={3} />
@@ -505,12 +511,16 @@ export default function CoachHomePage() {
                       className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
                       style={{
                         borderBottom: i < records.length - 1
-                          ? "1px solid rgba(124,116,128,0.08)"
+                          ? "1px solid rgba(231,211,168,0.08)"
                           : undefined,
                       }}
                     >
-                      <span className="text-[18px] shrink-0 leading-none">
-                        {r.coachValidated === true ? "🏆" : r.coachValidated === null ? "🔵" : "📊"}
+                      <span className="shrink-0 leading-none flex items-center justify-center w-[18px] h-[18px]">
+                        {r.coachValidated === true
+                          ? <Trophy size={16} style={{ color: C.y }} />
+                          : r.coachValidated === null
+                            ? <Circle size={14} style={{ color: C.b }} />
+                            : <BarChart3 size={16} style={{ color: C.tx3 }} />}
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-bold truncate" style={{ color: C.tx }}>{r.metricName}</p>
@@ -534,7 +544,7 @@ export default function CoachHomePage() {
 
           {/* ── Compétitions ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle emoji="🏆">Compétitions</SectionTitle>
+            <SectionTitle icon={<Trophy size={11} style={{ color: "#7D7468" }} />}>Compétitions</SectionTitle>
             <Card>
               {loadCompet ? (
                 <SkeletonRows n={3} />
@@ -555,12 +565,12 @@ export default function CoachHomePage() {
                         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
                         style={{
                           borderBottom: i < arr.length - 1
-                            ? "1px solid rgba(124,116,128,0.08)"
+                            ? "1px solid rgba(231,211,168,0.08)"
                             : undefined,
                           background: isUrgent ? C.rS : "transparent",
                         }}
                       >
-                        <span className="text-[18px] shrink-0 leading-none">{meta.emoji}</span>
+                        <span className="text-[10px] font-extrabold shrink-0 w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: meta.color + "18", color: meta.color }}>{meta.emoji}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-[12px] font-bold truncate" style={{ color: C.tx }}>{c.name}</p>
                           <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
@@ -590,7 +600,6 @@ export default function CoachHomePage() {
 // ── Action counter tile ────────────────────────────────────────────────────────
 
 interface ActionCounterProps {
-  emoji:    string;
   icon:     React.ReactNode;
   label:    string;
   count:    number;
@@ -599,17 +608,17 @@ interface ActionCounterProps {
   onClick?: () => void;
 }
 
-function ActionCounter({ emoji, label, count, loading, color, onClick }: ActionCounterProps) {
+function ActionCounter({ icon, label, count, loading, color, onClick }: ActionCounterProps) {
   return (
     <div
       onClick={onClick}
       className="flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl border transition-all cursor-pointer"
       style={{
         background:  count > 0 ? color + "12" : "#1E1A16",
-        borderColor: count > 0 ? color + "45" : "rgba(124,116,128,0.15)",
+        borderColor: count > 0 ? color + "45" : "rgba(231,211,168,0.15)",
       }}
     >
-      <span className="text-[20px] leading-none">{emoji}</span>
+      <span className="leading-none flex items-center justify-center">{icon}</span>
       {loading ? (
         <Skeleton className="h-7 w-10 rounded bg-[#27221D]" />
       ) : (

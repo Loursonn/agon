@@ -51,7 +51,7 @@ export function TestMarkers({ tests, calc, totalRowHeight }: Props) {
                   zIndex: 20,
                 }}
               >
-                🧪 {t.title}{t.completed ? " ✓" : ""}
+                {t.title}{t.completed ? " ✓" : ""}
               </div>
             )}
             <div

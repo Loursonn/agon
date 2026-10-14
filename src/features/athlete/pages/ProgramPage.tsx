@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, ChevronRight, X, Zap } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
@@ -18,6 +18,9 @@ import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
 import type { EnergyStep, EnergySessionRow } from "@/types/energy";
+import type { FreeSession } from "@/features/shared/types/athlete";
+import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
+import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -25,7 +28,7 @@ const MONTHS_FR    = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","o
 const DOW_FULL_FR  = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
 const ENERGY_KIND_COLOR: Record<string, string> = {
-  vo2: "#C9A14A", tempo: "#7E9CA8", seuil: "#F59E0B",
+  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
   footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
 };
 const ENERGY_KIND_LABEL: Record<string, string> = {
@@ -39,7 +42,7 @@ function haptic() { if (navigator.vibrate) navigator.vibrate(10); }
 
 function sessionColor(s: WeekSession): string {
   return s.kind === "energy"
-    ? (ENERGY_KIND_COLOR[s.sessionKind ?? ""] ?? "#C9A14A")
+    ? (ENERGY_KIND_COLOR[s.sessionKind ?? ""] ?? "#FFC933")
     : C.ac;
 }
 
@@ -47,13 +50,13 @@ function sessionColor(s: WeekSession): string {
 
 function ProgramSkeleton() {
   const pulse: React.CSSProperties = {
-    background: "rgba(255,255,255,0.06)", borderRadius: 8,
+    background: "rgba(255,255,255,0.06)", borderRadius: 4,
     animation: "pulse 1.5s ease-in-out infinite",
   };
   return (
     <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 16 }}>
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
-      <div style={{ background: C.s1, borderRadius: 20, padding: 20, border: "1px solid " + C.brd, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ background: C.s1, borderRadius: 6, padding: 20, border: "1px solid " + C.brd, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ ...pulse, width: 80, height: 22 }} />
           <div style={{ ...pulse, width: 60, height: 16 }} />
@@ -71,7 +74,7 @@ function ProgramSkeleton() {
       </div>
       <div style={{ ...pulse, width: 160, height: 22 }} />
       {[0,1,2,3,4,5,6].map(i => (
-        <div key={i} style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div key={i} style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ ...pulse, width: 80, height: 14 }} />
           <div style={{ ...pulse, width: "100%", height: 44 }} />
         </div>
@@ -131,7 +134,7 @@ function StepCheckRow({
             <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{dur}</span>
           </div>
           {tgt && tgt !== "Libre" && (
-            <div style={{ fontSize: 10, color: C.tx3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tgt}</div>
+            <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{tgt}</div>
           )}
           {step.equipment && step.equipment !== "none" && (
             <div style={{ marginTop: 2 }}>
@@ -200,7 +203,7 @@ function StepCheckRow({
   }
 
   return (
-    <div style={{ borderRadius: 12, background: bg, border: "1px solid " + borderCol, overflow: "hidden" }}>
+    <div style={{ borderRadius: 6, background: bg, border: "1px solid " + borderCol, overflow: "hidden" }}>
       {/* Main row */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
         {infoNode}
@@ -212,7 +215,7 @@ function StepCheckRow({
             onClick={onDone}
             title="Bloc fait"
             style={{
-              width: 32, height: 32, borderRadius: 8, border: "none",
+              width: 32, height: 32, borderRadius: 4, border: "none",
               background: isDone ? C.g : "rgba(255,255,255,0.07)",
               color: isDone ? "#fff" : C.tx3,
               cursor: "pointer", fontFamily: "inherit", fontSize: 14,
@@ -226,7 +229,7 @@ function StepCheckRow({
             onClick={onPartial}
             title="Bloc non terminé"
             style={{
-              width: 32, height: 32, borderRadius: 8, border: "none",
+              width: 32, height: 32, borderRadius: 4, border: "none",
               background: isPartial ? "#F59E0B" : "rgba(255,255,255,0.07)",
               color: isPartial ? "#fff" : C.tx3,
               cursor: "pointer", fontFamily: "inherit", fontSize: 13,
@@ -246,7 +249,7 @@ function StepCheckRow({
             placeholder="Commentaire obligatoire…"
             autoFocus
             style={{
-              width: "100%", padding: "8px 10px", borderRadius: 8,
+              width: "100%", padding: "8px 10px", borderRadius: 4,
               border: "1.5px solid " + (comment.trim() ? C.brdL : "#F59E0B80"),
               background: "rgba(245,158,11,0.06)",
               color: C.tx, fontSize: 12, fontFamily: "inherit",
@@ -307,11 +310,11 @@ function EnergyActiveSession({
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 61,
         maxHeight: "88vh", display: "flex", flexDirection: "column",
-        background: C.s1, borderRadius: "16px 16px 0 0", border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: "6px 6px 0 0", border: "1px solid " + C.brd,
       }}>
         {/* Header */}
         <div style={{ padding: "14px 18px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: kc + "25", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 4, background: kc + "25", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Zap size={14} color={kc} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -353,14 +356,14 @@ function EnergyActiveSession({
         <div style={{ padding: "12px 16px", paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))", borderTop: "1px solid " + C.brd, flexShrink: 0 }}>
           {hasUnsavedPartial && (
             <div style={{ fontSize: 11, color: "#F59E0B", textAlign: "center", marginBottom: 8 }}>
-              ⚠ Remplis les commentaires des blocs non terminés
+              Remplis les commentaires des blocs non terminés
             </div>
           )}
           <button
             onClick={() => onTerminate(stepStates)}
             disabled={hasUnsavedPartial}
             style={{
-              width: "100%", padding: "16px 0", borderRadius: 14, border: "none",
+              width: "100%", padding: "16px 0", borderRadius: 6, border: "none",
               background: hasUnsavedPartial ? C.s2 : C.g,
               color: hasUnsavedPartial ? C.tx3 : "#fff",
               fontSize: 15, fontWeight: 800,
@@ -406,12 +409,12 @@ function EnergyPreviewOverlay({
       <div style={{
         position: "fixed", top: "50%", left: "50%", zIndex: 61,
         transform: "translate(-50%,-50%)", width: 420, maxWidth: "96vw",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: 40, textAlign: "center", color: C.tx3, fontSize: 13,
         display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
       }}>
         <span>Séance introuvable</span>
-        <button onClick={onClose} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Fermer</button>
+        <button onClick={onClose} style={{ padding: "7px 14px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Fermer</button>
       </div>
     </>
   );
@@ -421,7 +424,7 @@ function EnergyPreviewOverlay({
       <div style={{
         position: "fixed", top: "50%", left: "50%", zIndex: 61,
         transform: "translate(-50%,-50%)", width: 420, maxWidth: "96vw",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: 40, textAlign: "center", color: C.tx3, fontSize: 13,
       }}>Chargement…</div>
     </>
@@ -470,17 +473,17 @@ function EnergyPreviewOverlay({
 function ActivePlanCard({ meso, weekSessionCount }: { meso: ActiveMesocycle; weekSessionCount: number }) {
   const color = C.ac;
   return (
-    <div style={{ background: C.s1, borderRadius: 20, border: "1px solid " + C.brd, overflow: "hidden" }}>
+    <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brdL, overflow: "hidden" }}>
       <div style={{ padding: "18px 18px 0" }}>
         {/* Pill + duration */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
           <span style={{
             display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "3px 10px", borderRadius: 20,
+            padding: "3px 10px", borderRadius: 6,
             background: color + "18", color,
             fontSize: 11, fontWeight: 700,
           }}>
-            💪 Programme
+            <Dumbbell size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Programme
           </span>
           <span style={{ fontSize: 11, color: C.tx3 }}>{meso.totalWeeks} semaines</span>
         </div>
@@ -497,8 +500,8 @@ function ActivePlanCard({ meso, weekSessionCount }: { meso: ActiveMesocycle; wee
           </span>
           <span style={{ fontSize: 12, fontWeight: 700, color }}>{meso.progressPct}%</span>
         </div>
-        <div style={{ width: "100%", height: 4, borderRadius: 99, background: "rgba(255,255,255,0.08)", marginBottom: 18, overflow: "hidden" }}>
-          <div style={{ height: "100%", borderRadius: 99, background: color, width: meso.progressPct + "%", transition: "width 0.6s ease" }} />
+        <div style={{ width: "100%", height: 5, borderRadius: 99, background: "rgba(255,255,255,0.08)", marginBottom: 18, overflow: "hidden" }}>
+          <div style={{ height: "100%", borderRadius: 99, background: C.acV, width: meso.progressPct + "%", transition: "width 0.6s ease" }} />
         </div>
 
         {/* Divider */}
@@ -526,11 +529,11 @@ function ActivePlanCard({ meso, weekSessionCount }: { meso: ActiveMesocycle; wee
       {(meso.objective || meso.macroName) && (
         <div style={{
           margin: "0 12px 12px",
-          background: "rgba(59,141,240,0.08)", border: "1px solid rgba(59,141,240,0.25)",
-          borderRadius: 12, padding: "11px 14px",
+          background: C.bS, border: "1px solid " + C.b + "30",
+          borderRadius: 6, padding: "11px 14px",
           display: "flex", alignItems: "flex-start", gap: 10,
         }}>
-          <span style={{ fontSize: 16, marginTop: 1 }}>📈</span>
+          <TrendingUp size={16} style={{ marginTop: 1, flexShrink: 0 }} color={C.b} />
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.b, marginBottom: 2 }}>{meso.macroName}</div>
             {meso.objective && (
@@ -552,7 +555,7 @@ function fmtShort(iso: string): string {
 
 function PastCycleCard({ cycle }: { cycle: PastCycle }) {
   return (
-    <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+    <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brdL, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {cycle.name}
@@ -607,7 +610,7 @@ function WeekRow({
             onClick={() => onSelect(d.iso)}
             style={{
               flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", padding: "7px 2px", borderRadius: 10,
+              alignItems: "center", padding: "7px 2px", borderRadius: 4,
               cursor: "pointer", fontFamily: "inherit",
               border: "1px solid " + (isSel ? C.ac : nextWeek ? "#F59E0B30" : C.brd),
               background: isSel ? C.acS : nextWeek ? "rgba(245,158,11,0.04)" : C.s2,
@@ -685,7 +688,7 @@ function RescheduleDrawer({
           {/* Week 2 */}
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-              Semaine suivante <span style={{ fontSize: 9 }}>⚠ notifie le coach</span>
+              Semaine suivante <span style={{ fontSize: 9 }}>notifie le coach</span>
             </div>
             <WeekRow days={week2} nextWeek selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} />
           </div>
@@ -696,7 +699,7 @@ function RescheduleDrawer({
             onChange={(e) => setReason(e.target.value)}
             placeholder="Raison (optionnel) — blessure, compétition…"
             style={{
-              width: "100%", padding: "9px 12px", borderRadius: 8,
+              width: "100%", padding: "9px 12px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: C.s2,
               color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
               boxSizing: "border-box",
@@ -707,7 +710,7 @@ function RescheduleDrawer({
             onClick={() => onConfirm(selected, reason.trim() || undefined)}
             disabled={!canConfirm}
             style={{
-              width: "100%", padding: "13px 0", borderRadius: 12, border: "none",
+              width: "100%", padding: "13px 0", borderRadius: 6, border: "none",
               background: canConfirm ? C.ac : C.s2,
               color: canConfirm ? "#fff" : C.tx3,
               fontSize: 14, fontWeight: 700, cursor: canConfirm ? "pointer" : "default",
@@ -763,10 +766,12 @@ function WorkoutPreviewDrawer({
                 <div style={{ fontSize: 10, fontWeight: 700, color: C.ac, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
                   Bloc {String.fromCharCode(65 + blocIdx)}{bloc.name ? " — " + bloc.name : ""}
                 </div>
-                <div style={{ background: C.s2, borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ background: C.s2, borderRadius: 6, overflow: "hidden" }}>
                   {bloc.exercices.map((ex, idx) => {
                     const nb = ex.params?.nb_series ?? 0;
-                    const reps = ex.params?.reps?.mode === "global" ? ex.params.reps.value : "?";
+                    const reps = ex.params?.cluster
+                      ? formatClusterReps(ex.params.cluster)
+                      : ex.params?.reps?.mode === "global" ? ex.params.reps.value : "?";
                     const rir = ex.params?.rir?.mode === "global" ? ex.params.rir.value : null;
                     const tempo = ex.params?.tempo?.mode === "global" && ex.params.tempo.value ? ex.params.tempo.value : null;
                     return (
@@ -787,11 +792,11 @@ function WorkoutPreviewDrawer({
                           {String.fromCharCode(65 + blocIdx)}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, display: "block" }}>
                             {ex.exercise_name}
                           </span>
                           <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {reps} reps</span>
+                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {reps}{ex.params?.cluster ? "" : " reps"}</span>
                             {rir != null && (
                               <span style={{ fontSize: 10, color: C.tx3 }}>· RIR {rir}</span>
                             )}
@@ -815,8 +820,8 @@ function WorkoutPreviewDrawer({
             <button
               onClick={onStart}
               style={{
-                width: "100%", padding: "14px 0", borderRadius: 12, border: "none",
-                background: C.ac, color: "#fff",
+                width: "100%", padding: "14px 0", borderRadius: 6, border: "none",
+                background: C.acV, color: "#0E0C0A",
                 fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 44,
               }}
             >
@@ -828,7 +833,7 @@ function WorkoutPreviewDrawer({
             <button
               onClick={onReschedule}
               style={{
-                width: "100%", padding: "11px 0", borderRadius: 12,
+                width: "100%", padding: "11px 0", borderRadius: 6,
                 border: "1px solid " + C.brd, background: "transparent",
                 color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer",
                 fontFamily: "inherit",
@@ -870,7 +875,7 @@ function SessionChip({
         style={{
           flex: 1, display: "flex", alignItems: "center", gap: 12,
           background: isDone ? C.gS : color + "12",
-          border: "none", borderLeft: "4px solid " + (isDone ? C.g : color),
+          border: "none", borderLeft: "4px solid " + (isDone ? C.gV : color),
           borderRadius: "0 10px 10px 0",
           padding: "10px 12px",
           cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
@@ -895,7 +900,7 @@ function SessionChip({
         </div>
         {!isDone && !isMissed && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: color + "20", color, flexShrink: 0,
           }}>
             {session.kind === "energy" ? "Voir →" : "Démarrer ▶"}
@@ -925,7 +930,7 @@ function SessionChip({
 // ── Test chip ─────────────────────────────────────────────────────────────────
 
 const TEST_TYPE_COLOR: Record<string, string> = {
-  musculation: "#C9A14A", endurance: "#7E9CA8", vitesse: "#EF4444",
+  musculation: "#FFC933", endurance: "#33B5FF", vitesse: "#EF4444",
   puissance: "#F59E0B", souplesse: "#10B981", autre: "#6B7280",
 };
 
@@ -944,7 +949,7 @@ function TestChip({ test, onPress }: { test: TestBrief; onPress: (id: string) =>
         minHeight: 44,
       }}
     >
-      <span style={{ fontSize: 14, flexShrink: 0 }}>🧪</span>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {test.title}
@@ -954,7 +959,7 @@ function TestChip({ test, onPress }: { test: TestBrief; onPress: (id: string) =>
         </div>
       </div>
       {!test.completed && (
-        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: tc + "20", color: tc, flexShrink: 0 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: tc + "20", color: tc, flexShrink: 0 }}>
           Remplir →
         </span>
       )}
@@ -965,26 +970,63 @@ function TestChip({ test, onPress }: { test: TestBrief; onPress: (id: string) =>
 
 // ── Day row ───────────────────────────────────────────────────────────────────
 
+function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPress: (f: FreeSession) => void }) {
+  const sportMeta = SPORTS.find(s => s.key === activity.sport);
+  const color = "#1FF0B0";
+  return (
+    <button
+      onClick={() => { haptic(); onPress(activity); }}
+      style={{
+        flex: 1, display: "flex", alignItems: "center", gap: 12,
+        background: color + "12",
+        border: "none", borderLeft: "4px solid " + color,
+        borderRadius: "0 10px 10px 0",
+        padding: "10px 12px",
+        cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
+        minHeight: 44,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {activity.name}
+        </div>
+        <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
+          {sportMeta?.label ?? activity.sport}
+          {activity.duration ? ` · ${activity.duration} min` : ""}
+          {activity.distance_km ? ` · ${activity.distance_km} km` : ""}
+          {" · ✓"}
+        </div>
+      </div>
+      <span style={{ fontSize: 14, color: C.g, flexShrink: 0 }}>✓</span>
+    </button>
+  );
+}
+
 function DayRow({
   day, today, onSessionPress, onReschedule, onTestPress,
+  freeActivities, onAddActivity, onEditActivity, viewOnly,
 }: {
   day: WeekDay;
   today: string;
   onSessionPress: (s: WeekSession) => void;
   onReschedule: (s: WeekSession) => void;
   onTestPress: (id: string) => void;
+  freeActivities: FreeSession[];
+  onAddActivity: (date: string) => void;
+  onEditActivity: (f: FreeSession) => void;
+  viewOnly: boolean;
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
   const d       = new Date(day.date + "T12:00:00");
   const dateNum = d.getDate();
-  const isEmpty = day.sessions.length === 0 && day.tests.length === 0;
+  const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0;
 
   return (
     <div style={{
       background: C.s1,
-      borderRadius: 16,
-      border: "1px solid " + (isToday ? C.ac + "50" : C.brd),
+      borderRadius: 6,
+      border: "1px solid " + (isToday ? C.ac + "50" : C.brdL),
       overflow: "hidden",
     }}>
       {/* Day header */}
@@ -994,14 +1036,14 @@ function DayRow({
         display: "flex", alignItems: "center", gap: 12,
       }}>
         <div style={{
-          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-          background: isToday ? C.ac : C.s2,
+          width: 38, height: 38, borderRadius: 4, flexShrink: 0,
+          background: isToday ? C.acV : C.s2,
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         }}>
-          <span style={{ fontSize: 8, fontWeight: 600, color: isToday ? "rgba(255,255,255,0.8)" : C.tx3, textTransform: "uppercase" }}>
+          <span style={{ fontSize: 8, fontWeight: 600, color: isToday ? "#0E0C0A" : C.tx3, textTransform: "uppercase" }}>
             {DOW_FULL_FR[day.dow].slice(0, 3)}
           </span>
-          <span style={{ fontSize: 16, fontWeight: 800, color: isToday ? "#fff" : C.tx, lineHeight: 1.1 }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: isToday ? "#0E0C0A" : C.tx, lineHeight: 1.1 }}>
             {dateNum}
           </span>
         </div>
@@ -1022,7 +1064,7 @@ function DayRow({
             {day.sessions.map(s => (
               <div key={s.id} style={{
                 width: 6, height: 6, borderRadius: "50%",
-                background: s.status === "completed" ? C.g : sessionColor(s),
+                background: s.status === "completed" ? C.gV : sessionColor(s),
               }} />
             ))}
           </div>
@@ -1051,6 +1093,34 @@ function DayRow({
           ))}
         </div>
       )}
+
+      {/* Free activities */}
+      {freeActivities.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "6px 0 6px 14px" }}>
+          {freeActivities.map(f => (
+            <FreeActivityChip key={f.id} activity={f} onPress={onEditActivity} />
+          ))}
+        </div>
+      )}
+
+      {/* Add activity button */}
+      {!viewOnly && (
+        <div style={{ padding: "4px 14px 8px" }}>
+          <button
+            onClick={() => { haptic(); onAddActivity(day.date); }}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              padding: "8px 0", borderRadius: 6,
+              border: "1px dashed " + C.brdL, background: "transparent",
+              color: C.tx3, fontSize: 11, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <Plus size={12} />
+            Activité libre
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1076,15 +1146,15 @@ function weekRangeLabel(days: WeekDay[]): string {
 }
 
 const weekNavBtn: React.CSSProperties = {
-  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+  width: 36, height: 36, borderRadius: 4, flexShrink: 0,
   display: "flex", alignItems: "center", justifyContent: "center",
-  background: C.s2, border: "1px solid " + C.brd, color: C.tx, cursor: "pointer",
+  background: C.s2, border: "1px solid " + C.brdL, color: C.tx, cursor: "pointer",
 };
 
 export default function ProgramPage() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
-  const { athleteId, viewOnly } = useAthleteContext();
+  const { athleteId, viewOnly, freeSessions, setFreeSessions } = useAthleteContext();
   const [weekOffset, setWeekOffset] = useState(0);
   const { data, isLoading, isPlaceholderData } = useActivePlan(athleteId ?? "", weekOffset);
 
@@ -1092,6 +1162,8 @@ export default function ProgramPage() {
   const [energyPreview,    setEnergyPreview]    = useState<{ sessionId: string; assignmentId: string; status: string; scheduledDate: string } | null>(null);
   const [rescheduleTarget, setRescheduleTarget] = useState<WeekSession | null>(null);
   const [testPreviewId,    setTestPreviewId]    = useState<string | null>(null);
+  const [activityDate,     setActivityDate]     = useState<string | null>(null);
+  const [editActivity,     setEditActivity]     = useState<FreeSession | null>(null);
 
   const today         = useMemo(() => {
     const d = new Date();
@@ -1182,10 +1254,9 @@ export default function ProgramPage() {
       {/* Sticky header */}
       <div style={{
         position: "sticky", top: 45, zIndex: 5,
-        background: "linear-gradient(135deg, rgba(201,161,74,0.22) 0%, rgba(37,35,39,0.98) 70%)",
-        borderBottom: "1px solid rgba(201,161,74,0.25)",
+        background: "linear-gradient(135deg, rgba(255,201,51,0.18) 0%, rgba(21,18,15,0.98) 70%)",
+        borderBottom: "1px solid rgba(255,201,51,0.25)",
         padding: "14px 16px", textAlign: "center",
-        backdropFilter: "blur(8px)",
       }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, letterSpacing: "-0.2px" }}>Programme</div>
       </div>
@@ -1256,7 +1327,7 @@ export default function ProgramPage() {
               </button>
             </div>
             {!data?.weekDays.length ? (
-              <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "24px 16px", textAlign: "center", color: C.tx3, fontSize: 12 }}>
+              <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "24px 16px", textAlign: "center", color: C.tx3, fontSize: 12 }}>
                 Aucune séance cette semaine
               </div>
             ) : (
@@ -1269,6 +1340,10 @@ export default function ProgramPage() {
                     onSessionPress={handleSessionPress}
                     onReschedule={setRescheduleTarget}
                     onTestPress={(id) => setTestPreviewId(id)}
+                    freeActivities={freeSessions.filter(f => f.date === day.date && f.sport)}
+                    onAddActivity={setActivityDate}
+                    onEditActivity={setEditActivity}
+                    viewOnly={viewOnly}
                   />
                 ))}
               </div>
@@ -1323,7 +1398,7 @@ export default function ProgramPage() {
               .then(({ error }) => {
                 if (!error) {
                   qc.invalidateQueries({ queryKey: QK.activePlan(athleteId ?? "") });
-                  toast.success("Séance terminée !");
+                  toast.success("Séance terminée");
                   setEnergyPreview(null);
                 } else {
                   toast.error("Erreur lors de la validation");
@@ -1351,6 +1426,22 @@ export default function ProgramPage() {
         testId={testPreviewId}
         athleteId={athleteId ?? ""}
         onClose={() => setTestPreviewId(null)}
+      />
+
+      {/* Free activity create modal */}
+      <FreeActivityModal
+        date={activityDate}
+        onClose={() => setActivityDate(null)}
+        onSave={(session) => setFreeSessions((prev) => [...prev, session])}
+      />
+
+      {/* Free activity edit modal */}
+      <FreeActivityModal
+        date={editActivity?.date ?? null}
+        existing={editActivity}
+        onClose={() => setEditActivity(null)}
+        onSave={(session) => setFreeSessions((prev) => prev.map((f) => f.id === session.id ? session : f))}
+        onDelete={(id) => setFreeSessions((prev) => prev.filter((f) => f.id !== id))}
       />
     </div>
   );

@@ -37,7 +37,7 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
               { label: "Taux réalisation",  value: rate != null ? `${rate}%` : "—", color: rate != null && rate >= 70 ? C.g : C.o },
               { label: "Validés coach",     value: `${validated}/${completed || 1}`, color: C.ac },
             ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: C.s2, borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+              <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
                 <div style={{ fontSize: 17, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
               </div>
@@ -50,7 +50,7 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {tests.map((t) => (
-              <div key={t.id} style={{ background: C.s2, borderRadius: 10, padding: "12px 14px" }}>
+              <div key={t.id} style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
                 {/* Title + status row */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -84,7 +84,7 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
 
                 {/* Results note */}
                 {t.results_note && (
-                  <div style={{ background: C.s1, borderRadius: 8, padding: "8px 10px" }}>
+                  <div style={{ background: C.s1, borderRadius: 4, padding: "8px 10px" }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>
                       Résultats
                     </div>
@@ -106,7 +106,7 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "16px 16px 0 0",
+  background: C.s1, borderRadius: "6px 6px 0 0",
   width: "100%", maxWidth: 860,
   maxHeight: "92vh", overflowY: "auto",
   padding: "20px 20px 40px",
@@ -114,7 +114,7 @@ const panelStyle: React.CSSProperties = {
 
 const closeBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 8,
+  width: 32, height: 32, borderRadius: 4,
   border: "1px solid " + C.brd, background: C.s2,
   color: C.tx3, cursor: "pointer", fontFamily: "inherit",
 };

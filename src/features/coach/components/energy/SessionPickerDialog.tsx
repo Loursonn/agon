@@ -19,13 +19,13 @@ interface Props {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const KIND_COLORS: Record<string, string> = {
-  vo2:        "#C9A14A",
-  tempo:      "#7E9CA8",
-  seuil:      "#D99A3E",
-  footing:    "#9DB06A",
-  fartlek:    "#D99A3E",
+  vo2:        "#FFC933",
+  tempo:      "#33B5FF",
+  seuil:      "#FF9500",
+  footing:    "#66F03C",
+  fartlek:    "#FF9500",
   autre:      "#7D7468",
-  custom:     "#C9A14A",
+  custom:     "#FFC933",
   specifique: "#F5A623",
 };
 
@@ -106,14 +106,13 @@ export function SessionPickerDialog({ open, onClose, date, athleteId, sessionKin
         style={{
           background: C.s1,
           border: `1px solid ${C.brd}`,
-          borderRadius: 16,
+          borderRadius: 6,
           width: "100%",
           maxWidth: 480,
           maxHeight: "80vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
         }}
       >
         {/* Header */}
@@ -164,7 +163,7 @@ export function SessionPickerDialog({ open, onClose, date, athleteId, sessionKin
               width: "100%",
               background: C.s2,
               border: `1px solid ${C.brdL}`,
-              borderRadius: 8,
+              borderRadius: 4,
               color: C.tx,
               padding: "8px 12px",
               fontSize: 13,
@@ -271,7 +270,7 @@ export function SessionPickerDialog({ open, onClose, date, athleteId, sessionKin
                         fontSize: 10,
                         fontWeight: 700,
                         padding: "2px 7px",
-                        borderRadius: 20,
+                        borderRadius: 6,
                         color: KIND_COLORS[kind] ?? C.tx3,
                         background: (KIND_COLORS[kind] ?? C.tx3) + "20",
                         border: `1px solid ${(KIND_COLORS[kind] ?? C.tx3)}40`,
@@ -314,7 +313,7 @@ function KindPill({
       onClick={onClick}
       style={{
         padding: "3px 10px",
-        borderRadius: 20,
+        borderRadius: 6,
         border: `1px solid ${active ? color : C.brd}`,
         background: active ? color + "20" : "transparent",
         color: active ? color : C.tx3,

@@ -88,6 +88,8 @@ export interface EnergyGroup {
   rest_between?: EnergyInterval;
   /** Départ fixe : chaque répétition commence toutes les N secondes (EMOM-style) */
   departure_every_s?: number;
+  /** Consignes du groupe, affichées à l'athlète */
+  instructions?: string;
 }
 
 // ── ExerciseInterval ──────────────────────────────────────────────────────────
@@ -211,6 +213,7 @@ export interface EnergySessionAssignmentRow {
   rpe_score?: number | null;
   block_logs?: BlockLogs | null;
   actual_duration_min?: number | null;
+  activity_url?: string | null;
   created_at: string;
   updated_at: string;
   // Jointure optionnelle

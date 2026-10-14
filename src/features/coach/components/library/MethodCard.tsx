@@ -47,7 +47,7 @@ export function MethodCard({
 
   return (
     <div style={{
-      background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 12,
+      background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6,
       overflow: "hidden", display: "flex", flexDirection: "column",
       transition: "border-color 150ms",
     }}>
@@ -82,9 +82,9 @@ export function MethodCard({
               {weekCount > 0 && (
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: "rgba(123,111,255,0.15)", color: "#C9A14A",
+                  background: "rgba(123,111,255,0.15)", color: "#FFC933",
                 }}>
-                  📅 {weekCount} sem.
+                  {weekCount} sem.
                 </span>
               )}
               {/* Official badge */}
@@ -120,7 +120,7 @@ export function MethodCard({
           <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
             {weeklyConfigs.map((wc) => (
               <div key={wc.week} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                <span style={{ fontSize: 9, fontWeight: 700, color: "#C9A14A", flexShrink: 0, minWidth: 20 }}>S{wc.week}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: "#FFC933", flexShrink: 0, minWidth: 20 }}>S{wc.week}</span>
                 <span style={{ fontSize: 10, color: C.tx3, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {wc.config ? methodConfigToText(wc.config as MethodConfig) : "—"}
                 </span>
@@ -134,7 +134,7 @@ export function MethodCard({
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             {method.tags.map((tag) => (
               <span key={tag} style={{
-                fontSize: 10, padding: "2px 7px", borderRadius: 20,
+                fontSize: 10, padding: "2px 7px", borderRadius: 6,
                 background: C.s2, color: C.tx3, border: `1px solid ${C.brdL}`,
               }}>
                 {tag}
@@ -171,7 +171,7 @@ export function MethodCard({
                 type="button"
                 onClick={() => onEdit(method)}
                 style={{
-                  flex: 1, padding: "6px 0", borderRadius: 8,
+                  flex: 1, padding: "6px 0", borderRadius: 4,
                   border: `1px solid ${C.brdL}`, background: "transparent",
                   color: C.tx2, fontSize: 11, fontWeight: 600,
                   cursor: "pointer", fontFamily: "inherit",
@@ -186,7 +186,7 @@ export function MethodCard({
                 type="button"
                 onClick={() => onDuplicate(method)}
                 style={{
-                  padding: "6px 10px", borderRadius: 8,
+                  padding: "6px 10px", borderRadius: 4,
                   border: `1px solid ${C.brdL}`, background: "transparent",
                   color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -201,7 +201,7 @@ export function MethodCard({
                 type="button"
                 onClick={() => setConfirmDel(true)}
                 style={{
-                  padding: "6px 10px", borderRadius: 8,
+                  padding: "6px 10px", borderRadius: 4,
                   border: `1px solid ${C.r}40`, background: C.rS,
                   color: C.r, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -217,7 +217,7 @@ export function MethodCard({
                   type="button"
                   onClick={() => { onDelete(method); setConfirmDel(false); }}
                   style={{
-                    flex: 1, padding: "6px 0", borderRadius: 8,
+                    flex: 1, padding: "6px 0", borderRadius: 4,
                     border: "none", background: C.r,
                     color: "#fff", fontSize: 11, fontWeight: 700,
                     cursor: "pointer", fontFamily: "inherit",
@@ -229,7 +229,7 @@ export function MethodCard({
                   type="button"
                   onClick={() => setConfirmDel(false)}
                   style={{
-                    padding: "6px 10px", borderRadius: 8,
+                    padding: "6px 10px", borderRadius: 4,
                     border: `1px solid ${C.brdL}`, background: "transparent",
                     color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
                   }}

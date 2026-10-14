@@ -54,11 +54,11 @@ export function SchemaFullscreenDialog({ schema, open, onOpenChange }: Fullscree
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[95vw] w-full sm:max-w-[700px] p-4 bg-[#15120F] border-[#2E2D33]"
-        style={{ borderRadius: 16 }}
+        className="max-w-[95vw] w-full sm:max-w-[700px] p-4 bg-[#0E0C0A] border-[#2E2D33]"
+        style={{ borderRadius: 6 }}
       >
         <DialogTitle className="sr-only">Schéma</DialogTitle>
-        <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #2E2D33" }}>
+        <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid #2E2D33" }}>
           <svg
             viewBox="0 0 500 320"
             style={{ width: "100%", display: "block", touchAction: "manipulation" }}

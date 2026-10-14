@@ -6,6 +6,7 @@ import { HabitDashboard } from "@/components/athlete/HabitTracker";
 import { WELL_ITEMS } from "@/lib/wellness";
 import { evaluateNutritionDay } from "@/lib/nutrition";
 import { ALL_BZ } from "@/lib/muscles";
+import { useWeeklyDistances } from "@/features/shared/hooks/useWeeklyDistances";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -16,8 +17,10 @@ export default function DashboardPage() {
     energyDayPlan, testSessions, visibilitySettings, wellness, wScore, wReco,
     setShowWellness, activeInjuries, nutritionStrategy, athleteProfile,
     habits, setHabits, habitLogs, toggleHabitLog, habitEnabled, athleteId,
-    goals,
+    goals, freeSessions,
   } = useAthleteContext();
+
+  const weekDistances = useWeeklyDistances(athleteId, freeSessions);
 
   const todayDow = (new Date().getDay() + 6) % 7;
   const doneNow = completedSessions[currentWeek] || [];
@@ -40,7 +43,7 @@ export default function DashboardPage() {
 
       {/* Injuries alert */}
       {activeInjuries.length > 0 && (
-        <button onClick={() => navigate("../stats", { relative: "path" })} style={{ width: "100%", background: C.rS, borderRadius: 14, padding: "10px 14px", border: "1.5px solid " + C.r + "50", marginBottom: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={() => navigate("../stats", { relative: "path" })} style={{ width: "100%", background: C.rS, borderRadius: 6, padding: "10px 14px", border: "1.5px solid " + C.r + "50", marginBottom: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.r, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.r }}>{activeInjuries.length} blessure(s) en cours</div>
@@ -53,7 +56,7 @@ export default function DashboardPage() {
       {/* Wellness card */}
       <button
         onClick={() => { if (!viewOnly) setShowWellness(true); }}
-        style={{ width: "100%", background: C.s1, borderRadius: 16, padding: "14px 16px", border: "1.5px solid " + wReco.c + "35", marginBottom: 12, cursor: viewOnly ? "default" : "pointer", fontFamily: "inherit", textAlign: "left", display: "block" }}
+        style={{ width: "100%", background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1.5px solid " + wReco.c + "35", marginBottom: 12, cursor: viewOnly ? "default" : "pointer", fontFamily: "inherit", textAlign: "left", display: "block" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>Wellness du jour</div>
@@ -130,11 +133,11 @@ export default function DashboardPage() {
         const stratL = strat.strategy === "seche" ? "Sèche" : strat.strategy === "prise_de_masse" ? "Prise" : "Maintenance";
         const feedbackC = !dayEval ? null : dayEval.status === "ok" ? C.g : dayEval.status === "close" ? C.o : C.r;
         const feedbackMsg = !dayEval ? null
-          : dayEval.status === "ok" ? (dayEval.isRange ? "✅ Dans la fourchette aujourd'hui" : "✅ Dans l'objectif aujourd'hui")
-          : (dayEval.status === "close" ? "🟡 Proche de l'objectif " : "⚠️ Hors objectif ")
+          : dayEval.status === "ok" ? (dayEval.isRange ? "✓ Dans la fourchette aujourd'hui" : "✓ Dans l'objectif aujourd'hui")
+          : (dayEval.status === "close" ? "~ Proche de l'objectif " : "Hors objectif ")
             + `(${dayEval.diffPct > 0 ? "+" : ""}${dayEval.diffPct.toFixed(1)}%)`;
         return (
-          <div style={{ background: C.s1, borderRadius: 14, padding: "11px 16px", border: "1px solid " + (feedbackC ? feedbackC + "40" : C.brd), marginBottom: 12 }}>
+          <div style={{ background: C.s1, borderRadius: 6, padding: "11px 16px", border: "1px solid " + (feedbackC ? feedbackC + "40" : C.brd), marginBottom: 12 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: consumed ? 8 : 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>Alimentation</div>
@@ -161,23 +164,63 @@ export default function DashboardPage() {
         );
       })()}
 
+      {/* Weekly distances */}
+      {weekDistances.bySport.length > 0 && (
+        <div style={{ background: C.s1, borderRadius: 6, padding: "11px 16px", border: "1px solid " + C.brd, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>
+              Kilomètres cette semaine
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.ac }}>{weekDistances.total} km</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {weekDistances.bySport.map((d) => (
+              <div key={d.sport} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{
+                  width: 6, height: 6, borderRadius: "50%", background: d.color, flexShrink: 0,
+                }} />
+                <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.tx2 }}>{d.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: d.color }}>{d.km} km</div>
+              </div>
+            ))}
+          </div>
+          {weekDistances.bySport.length > 1 && (
+            <div style={{
+              marginTop: 8, height: 4, borderRadius: 2, overflow: "hidden",
+              display: "flex", background: C.s2,
+            }}>
+              {weekDistances.bySport.map((d) => (
+                <div
+                  key={d.sport}
+                  style={{
+                    height: "100%",
+                    width: `${(d.km / weekDistances.total) * 100}%`,
+                    background: d.color,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Today's session / next session */}
       <div style={{ marginBottom: 12 }}>
         {todayAllDone ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ padding: "10px 14px", borderRadius: 10, background: C.gS, border: "1px solid " + C.g + "40", display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ padding: "10px 14px", borderRadius: 4, background: C.gS, border: "1px solid " + C.g + "40", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 14 }}>✓</span>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.g }}>Séance du jour effectuée !</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.g }}>Séance du jour effectuée</div>
             </div>
             {nextSess && (
-              <button onClick={() => navigate("log", { state: { initialSess: nextSess } })} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "none", background: C.acS, color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => navigate("log", { state: { initialSess: nextSess } })} style={{ width: "100%", padding: "10px 14px", borderRadius: 4, border: "none", background: C.acS, color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
                 <div><div style={{ fontSize: 11, fontWeight: 700 }}>Prochaine séance</div><div style={{ fontSize: 10, color: C.tx2 }}>{nextSess.short} - {nextSess.name}</div></div>
                 <span style={{ marginLeft: "auto", fontSize: 14 }}>&gt;</span>
               </button>
             )}
           </div>
         ) : todayNotDone.length > 0 ? (
-          <button onClick={() => navigate("log", { state: { initialSess: todayNotDone[0] } })} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "none", background: C.coachS, color: C.coach, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => navigate("log", { state: { initialSess: todayNotDone[0] } })} style={{ width: "100%", padding: "10px 14px", borderRadius: 4, border: "none", background: C.coachS, color: C.coach, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.coach }}>Séance du jour</div>
               <div style={{ fontSize: 10, color: C.tx2 }}>{todayNotDone[0].short} - {todayNotDone[0].name}</div>
@@ -186,12 +229,12 @@ export default function DashboardPage() {
             <span style={{ marginLeft: "auto", fontSize: 14 }}>&gt;</span>
           </button>
         ) : nextSess ? (
-          <button onClick={() => navigate("log", { state: { initialSess: nextSess } })} style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "none", background: C.acS, color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => navigate("log", { state: { initialSess: nextSess } })} style={{ width: "100%", padding: "10px 14px", borderRadius: 4, border: "none", background: C.acS, color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
             <div><div style={{ fontSize: 11, fontWeight: 700 }}>Prochaine séance</div><div style={{ fontSize: 10, color: C.tx2 }}>{nextSess.short} - {nextSess.name}</div></div>
             <span style={{ marginLeft: "auto", fontSize: 14 }}>&gt;</span>
           </button>
         ) : (
-          <div style={{ padding: "10px", borderRadius: 10, background: C.gS, color: C.g, fontSize: 11, fontWeight: 600, textAlign: "center" }}>Semaine {currentWeek} complète !</div>
+          <div style={{ padding: "10px", borderRadius: 4, background: C.gS, color: C.g, fontSize: 11, fontWeight: 600, textAlign: "center" }}>Semaine {currentWeek} complète</div>
         )}
       </div>
 

@@ -98,7 +98,7 @@ function MeasurementsTab({ logs }: { logs: MeasurementLog[] }) {
               onClick={() => setSel(f.key)}
               disabled={!has}
               style={{
-                padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                padding: '6px 12px', borderRadius: 4, fontSize: 12, fontWeight: 700,
                 fontFamily: 'inherit', cursor: has ? 'pointer' : 'default',
                 border: '1px solid ' + (active ? C.g : C.brdL),
                 background: active ? C.gS : 'transparent',
@@ -123,7 +123,7 @@ function MeasurementsTab({ logs }: { logs: MeasurementLog[] }) {
             const dw = deltaWeight != null ? fmtDelta(deltaWeight, 'kg') : null;
             return (
               <div key={log.id} style={{
-                background: C.s1, border: '1px solid ' + C.brd, borderRadius: 10,
+                background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4,
                 padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12,
               }}>
                 <div style={{ minWidth: 70 }}>
@@ -198,7 +198,7 @@ function PhotosTab({ logs }: { logs: MeasurementLog[] }) {
               onClick={() => setSel(s.key)}
               disabled={!has}
               style={{
-                padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                padding: '6px 12px', borderRadius: 4, fontSize: 12, fontWeight: 700,
                 fontFamily: 'inherit', cursor: has ? 'pointer' : 'default',
                 border: '1px solid ' + (active ? C.g : C.brdL),
                 background: active ? C.gS : 'transparent',
@@ -220,7 +220,7 @@ function PhotosTab({ logs }: { logs: MeasurementLog[] }) {
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
           {items.map(it => (
             <div key={it.path} style={{ flexShrink: 0, width: 150 }}>
-              <div style={{ width: 150, height: 200, borderRadius: 10, overflow: 'hidden', background: C.s2, border: '1px solid ' + C.brd }}>
+              <div style={{ width: 150, height: 200, borderRadius: 4, overflow: 'hidden', background: C.s2, border: '1px solid ' + C.brd }}>
                 {urls[it.path] ? (
                   <img src={urls[it.path]} alt={it.date} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
@@ -257,13 +257,13 @@ export default function MeasurementComparison({ athleteId }: { athleteId: string
       </div>
 
       {isLoading ? (
-        <div style={{ height: 80, background: C.s1, borderRadius: 12, border: '1px solid ' + C.brd }} />
+        <div style={{ height: 80, background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd }} />
       ) : logs.length === 0 ? (
-        <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 12, padding: '20px', textAlign: 'center', color: C.tx3, fontSize: 12 }}>
+        <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 6, padding: '20px', textAlign: 'center', color: C.tx3, fontSize: 12 }}>
           L'athlète n'a pas encore saisi de mensurations.
         </div>
       ) : (
-        <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 12, padding: '16px' }}>
+        <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 6, padding: '16px' }}>
           {/* Onglets */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
             {([['mensu', 'Mensurations', Ruler], ['photos', 'Photos', Camera]] as const).map(([k, label, Icon]) => {
@@ -274,7 +274,7 @@ export default function MeasurementComparison({ athleteId }: { athleteId: string
                   onClick={() => setTab(k)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                    padding: '7px 14px', borderRadius: 4, fontSize: 12, fontWeight: 700,
                     fontFamily: 'inherit', cursor: 'pointer',
                     border: '1px solid ' + (active ? C.g + '60' : C.brdL),
                     background: active ? C.gS : 'transparent',

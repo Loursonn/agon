@@ -10,7 +10,7 @@ import type { EnergySessionDetail, EnergyStepLog } from "@/features/shared/types
 // ── Kind labels / colors ──────────────────────────────────────────────────────
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#C9A14A", tempo: "#7E9CA8", seuil: "#F59E0B",
+  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
   footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
 };
 const KIND_LABEL: Record<string, string> = {
@@ -28,15 +28,15 @@ const KIND_LABELS: Record<string, string> = {
 
 function StatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { label: string; bg: string; color: string }> = {
-    completed: { label: "Complétée",   bg: "rgba(34,201,147,0.15)", color: "#9DB06A" },
+    completed: { label: "Complétée",   bg: "rgba(34,201,147,0.15)", color: "#66F03C" },
     missed:    { label: "Manquée",     bg: "rgba(239,68,68,0.15)",  color: "#EF4444" },
     skipped:   { label: "Passée",      bg: "rgba(107,114,128,0.2)", color: "#9CA3AF" },
-    planned:   { label: "Planifiée",   bg: "rgba(59,141,240,0.15)", color: "#7E9CA8" },
+    planned:   { label: "Planifiée",   bg: "rgba(59,141,240,0.15)", color: "#33B5FF" },
     in_progress: { label: "En cours",  bg: "rgba(245,158,11,0.15)", color: "#F59E0B" },
   };
   const s = cfg[status] ?? cfg["planned"];
   return (
-    <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 8, background: s.bg, color: s.color }}>
+    <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: s.bg, color: s.color }}>
       {s.label}
     </span>
   );
@@ -64,7 +64,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
     return (
       <div style={{
         display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "8px 10px", borderRadius: 8,
+        padding: "8px 10px", borderRadius: 4,
         background: entry?.status === "done" ? C.g + "10"
           : entry?.status === "partial" ? "#F59E0B10"
           : "transparent",
@@ -109,7 +109,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
   const childCount = (step.children as any[])?.length ?? 0;
   return (
     <div style={{
-      padding: "7px 10px", borderRadius: 8,
+      padding: "7px 10px", borderRadius: 4,
       background: entry?.status === "done" ? C.g + "10"
         : entry?.status === "partial" ? "#F59E0B10"
         : "rgba(59,141,240,0.06)",
@@ -158,7 +158,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
   const doneCount  = blVals.filter((b) => b.done).length;
   const totalCount = blVals.length;
 
-  const statusColor = session.partial ? "#7E9CA8" : session.completed ? "#9DB06A" : "#D99A3E";
+  const statusColor = session.partial ? "#33B5FF" : session.completed ? "#66F03C" : "#FF9500";
   const statusLabel = session.partial
     ? `✓ Partielle ${doneCount}/${totalCount}`
     : session.completed ? "✓ Complétée" : "Non faite";
@@ -168,28 +168,28 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
     : [];
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
       {/* Header (clickable) */}
       <div
         onClick={() => setExpanded(v => !v)}
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", cursor: "pointer" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1, flexWrap: "wrap" }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 4, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Zap size={12} color={kc} />
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {session.session_label}
           </span>
           <span style={{
-            fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 8,
+            fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
             background: statusColor + "25", color: statusColor,
           }}>
             {statusLabel}
           </span>
           {session.rpe_score != null && (
             <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 8,
+              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
               background: rpeBg(session.rpe_score), color: rpeColor(session.rpe_score),
             }}>
               RPE {session.rpe_score}/10
@@ -256,10 +256,28 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
 
           {/* Note */}
           {session.note && (
-            <div style={{ background: C.s2, borderRadius: 8, padding: "8px 10px" }}>
+            <div style={{ background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Note</div>
               <div style={{ fontSize: 12, color: C.tx2 }}>{session.note}</div>
             </div>
+          )}
+
+          {/* Lien Strava / Garmin */}
+          {session.activity_url && (
+            <a
+              href={session.activity_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                fontSize: 11, fontWeight: 600, color: "#FF5500",
+                padding: "6px 10px", borderRadius: 4,
+                background: "rgba(255,85,0,0.08)", border: "1px solid rgba(255,85,0,0.2)",
+                textDecoration: "none", width: "fit-content",
+              }}
+            >
+              {session.activity_url.includes("strava") ? "Strava" : session.activity_url.includes("garmin") ? "Garmin" : "Activité"} ↗
+            </a>
           )}
 
           {/* Intervals: planned + step log (old system) */}
@@ -269,7 +287,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
                 <span>Déroulé</span>
                 {hasStepLog && <span style={{ color: C.ac }}>avec réalisé</span>}
               </div>
-              <div style={{ background: C.s2, borderRadius: 8, padding: "4px 2px", display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ background: C.s2, borderRadius: 4, padding: "4px 2px", display: "flex", flexDirection: "column", gap: 2 }}>
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {((session as any).intervals as any[]).map((step, i) => (
                   <StepLogRow

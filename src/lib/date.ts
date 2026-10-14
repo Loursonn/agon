@@ -63,15 +63,15 @@ export const calcHabitStreak = (logs: string[]): number => {
 };
 
 export const streakMsg = (s: number): string => {
-  if (s === 0)  return "🧊 Fais le aujourd'hui au moins";
-  if (s === 1)  return "1er jour, garde la pêche 🍑";
-  if (s <= 2)   return `🔥 ${s} jours d'affilée`;
-  if (s <= 4)   return `🔥🔥 ${s} jours d'affilée`;
-  if (s <= 9)   return `🔥🔥🔥 ${s} jours d'affilée`;
-  if (s <= 29)  return `🔥🔥🔥🔥 ${s} jours d'affilée`;
-  if (s < 365)  return `🔥🔥🔥🔥🔥 ${s} jours d'affilée`;
+  if (s === 0)  return "Fais-le aujourd'hui au moins";
+  if (s === 1)  return "1er jour, garde la cadence";
+  if (s <= 2)   return `${s} jours d'affilée`;
+  if (s <= 4)   return `${s} jours d'affilée`;
+  if (s <= 9)   return `${s} jours d'affilée`;
+  if (s <= 29)  return `${s} jours d'affilée`;
+  if (s < 365)  return `${s} jours d'affilée`;
   const y = Math.floor(s / 365), day = s % 365;
-  return `🏆🔥 ${y} an${y > 1 ? "s" : ""} et ${day} jours d'affilée !`;
+  return `${y} an${y > 1 ? "s" : ""} et ${day} jours d'affilée !`;
 };
 
 export const getHabitWeekDays = () => {

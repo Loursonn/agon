@@ -14,14 +14,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   render() {
     if (this.state.error) {
       return (
-        <div style={{ minHeight: "100vh", background: "#15120F", color: "#F2F2F4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "system-ui" }}>
+        <div style={{ minHeight: "100vh", background: "#0E0C0A", color: "#F2F2F4", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "system-ui" }}>
           <div style={{ maxWidth: 480, textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+            <div style={{ fontSize: 32, marginBottom: 12 }}></div>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Erreur au chargement</div>
             <div style={{ fontSize: 13, color: "#9194A0", marginBottom: 16 }}>
               {this.state.error.message}
             </div>
-            <div style={{ fontSize: 11, color: "#555866", background: "#1E1A16", borderRadius: 8, padding: 12, textAlign: "left", fontFamily: "monospace", wordBreak: "break-all" }}>
+            <div style={{ fontSize: 11, color: "#555866", background: "#1E1A16", borderRadius: 4, padding: 12, textAlign: "left", fontFamily: "monospace", wordBreak: "break-all" }}>
               {this.state.error.stack?.slice(0, 300)}
             </div>
           </div>

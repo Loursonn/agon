@@ -247,7 +247,7 @@ function DrawerShell({
   }
 
   const btnBase: React.CSSProperties = {
-    width: 32, height: 32, borderRadius: 8,
+    width: 32, height: 32, borderRadius: 4,
     border: "1px solid " + C.brdL, background: "transparent",
     color: C.tx3, cursor: "pointer", fontFamily: "inherit",
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -351,7 +351,7 @@ function DrawerShell({
             <button
               onClick={handleDelete}
               disabled={working}
-              style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: C.r, color: "#fff", fontSize: 11, fontWeight: 700, cursor: working ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: working ? 0.7 : 1 }}
+              style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: working ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: working ? 0.7 : 1 }}
             >
               {working ? "…" : "Supprimer"}
             </button>
@@ -564,7 +564,7 @@ function CreateModal({
   }
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 8,
+    width: "100%", padding: "8px 10px", borderRadius: 4,
     border: "1px solid " + C.brdL, background: C.s2,
     color: C.tx, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box",
   };
@@ -577,7 +577,7 @@ function CreateModal({
           position: "fixed", top: "50%", left: "50%", zIndex: 61,
           transform: "translate(-50%, -50%)",
           width: 400, maxWidth: "92vw",
-          background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+          background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
           padding: "20px 24px",
           animation: "fadeScaleIn 150ms ease-out",
         }}
@@ -600,7 +600,7 @@ function CreateModal({
 
         {/* Snap prompt banner */}
         {snapPrompt && (
-          <div style={{ marginBottom: 16, padding: "12px 14px", borderRadius: 10, background: C.oS, border: "1px solid " + C.o + "50" }}>
+          <div style={{ marginBottom: 16, padding: "12px 14px", borderRadius: 4, background: C.oS, border: "1px solid " + C.o + "50" }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.o, marginBottom: 6 }}>
               Chevauche « {snapPrompt.conflict.name} »
             </div>
@@ -611,7 +611,7 @@ function CreateModal({
               <button
                 type="button"
                 onClick={() => { setSnapPrompt(null); handleSubmit({ start: snapPrompt.snapAfterStart, end: snapPrompt.snapAfterEnd }); }}
-                style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.o, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.oV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Coller après ({snapPrompt.snapAfterStart})
               </button>
@@ -759,14 +759,14 @@ function CreateModal({
         <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
           <button
             onClick={onClose}
-            style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "8px 16px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
           >
             Annuler
           </button>
           <button
             onClick={() => handleSubmit()}
             disabled={saving}
-            style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: saving ? 0.7 : 1 }}
+            style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: saving ? 0.7 : 1 }}
           >
             {saving ? "…" : "Créer"}
           </button>
@@ -798,7 +798,7 @@ function AddDropdown({
         onClick={() => setOpen((v) => !v)}
         style={{
           display: "flex", alignItems: "center", gap: 5,
-          padding: "6px 12px", borderRadius: 9,
+          padding: "6px 12px", borderRadius: 4,
           border: "1px solid " + C.ac + "60", background: C.ac,
           color: "#fff", fontSize: 11, fontWeight: 700,
           cursor: "pointer", fontFamily: "inherit",
@@ -814,9 +814,8 @@ function AddDropdown({
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
           <div style={{
             position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 31,
-            background: C.s1, border: "1px solid " + C.brd, borderRadius: 10,
+            background: C.s1, border: "1px solid " + C.brd, borderRadius: 4,
             padding: "4px", minWidth: 160,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
           }}>
             {items.map(({ level, label, color }) => (
               <button
@@ -906,12 +905,12 @@ function NoParentDragModal({
   }
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 8,
+    width: "100%", padding: "8px 10px", borderRadius: 4,
     border: "1px solid " + C.brdL, background: C.s2,
     color: C.tx, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box",
   };
   const btnBase: React.CSSProperties = {
-    padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+    padding: "8px 16px", borderRadius: 4, fontSize: 12, fontWeight: 600,
     cursor: "pointer", fontFamily: "inherit", border: "none",
   };
 
@@ -922,7 +921,7 @@ function NoParentDragModal({
         position: "fixed", top: "50%", left: "50%", zIndex: 61,
         transform: "translate(-50%, -50%)",
         width: 420, maxWidth: "92vw",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 24px",
         animation: "fadeScaleIn 150ms ease-out",
       }}>
@@ -949,7 +948,7 @@ function NoParentDragModal({
 
         {overlappingMeso ? (
           // Existing meso covers this range — just confirm reassign
-          <div style={{ fontSize: 12, color: C.tx2, marginBottom: 16, padding: "10px 12px", borderRadius: 8, background: C.s2 }}>
+          <div style={{ fontSize: 12, color: C.tx2, marginBottom: 16, padding: "10px 12px", borderRadius: 4, background: C.s2 }}>
             Mésocycle existant trouvé : <b style={{ color: C.coach }}>{overlappingMeso.name}</b>
             <br />Le cycle sera rattaché à ce mésocycle.
           </div>
@@ -972,7 +971,7 @@ function NoParentDragModal({
           </div>
         ) : (
           // No macro either
-          <div style={{ fontSize: 12, color: C.o, padding: "10px 12px", borderRadius: 8, background: C.oS, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: C.o, padding: "10px 12px", borderRadius: 4, background: C.oS, marginBottom: 16 }}>
             Aucun macrocycle pour cette période. Crée d'abord un macrocycle puis déplace à nouveau ce cycle.
           </div>
         )}
@@ -996,7 +995,7 @@ function NoParentDragModal({
                 setSaving(false);
                 onClose();
               }}
-              style={{ ...btnBase, background: C.coach, color: "#fff", opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
+              style={{ ...btnBase, background: C.acV, color: "#0E0C0A", opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
             >
               {saving ? "…" : "Déplacer"}
             </button>
@@ -1005,7 +1004,7 @@ function NoParentDragModal({
             <button
               onClick={handleCreateAndMove}
               disabled={saving}
-              style={{ ...btnBase, background: C.coach, color: "#fff", opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
+              style={{ ...btnBase, background: C.acV, color: "#0E0C0A", opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
             >
               {saving ? "…" : "Créer et déplacer"}
             </button>
@@ -1050,7 +1049,7 @@ function SnapDragDialog({ state }: { state: SnapDragDialogState }) {
   const beforeValid = beforeEnd >= state.movingStart; // needs at least 1 week of room
 
   const btnBase: React.CSSProperties = {
-    padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+    padding: "8px 14px", borderRadius: 4, fontSize: 12, fontWeight: 600,
     cursor: "pointer", fontFamily: "inherit", border: "none",
   };
 
@@ -1061,7 +1060,7 @@ function SnapDragDialog({ state }: { state: SnapDragDialogState }) {
         position: "fixed", top: "50%", left: "50%", zIndex: 71,
         transform: "translate(-50%,-50%)",
         width: 420, maxWidth: "92vw",
-        background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 24px",
         animation: "fadeScaleIn 150ms ease-out",
       }}>
@@ -1080,7 +1079,7 @@ function SnapDragDialog({ state }: { state: SnapDragDialogState }) {
         </div>
 
         {/* Info */}
-        <div style={{ padding: "10px 12px", borderRadius: 8, background: C.oS, marginBottom: 16, fontSize: 12, color: C.tx2 }}>
+        <div style={{ padding: "10px 12px", borderRadius: 4, background: C.oS, marginBottom: 16, fontSize: 12, color: C.tx2 }}>
           <b style={{ color: C.tx }}>{state.movingLabel}</b> chevauche{" "}
           <b style={{ color: C.tx }}>{state.conflict.name}</b>
           <div style={{ marginTop: 4, fontSize: 10, color: C.tx3 }}>
@@ -1092,7 +1091,7 @@ function SnapDragDialog({ state }: { state: SnapDragDialogState }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
           <button
             onClick={() => state.onConfirmSnap(afterStart, afterEnd)}
-            style={{ ...btnBase, background: C.o, color: "#fff", textAlign: "left", padding: "10px 14px" }}
+            style={{ ...btnBase, background: C.oV, color: "#0E0C0A", textAlign: "left", padding: "10px 14px" }}
           >
             <div style={{ fontSize: 11, opacity: 0.85 }}>Coller après</div>
             <div style={{ fontSize: 13, fontWeight: 800 }}>{state.conflict.name}</div>
@@ -1719,13 +1718,13 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
 
   return (
     <>
-      <div style={{ background: C.s1, borderRadius: 16, border: "1px solid " + C.brd, overflow: "hidden" }}>
+      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
         {/* ── Header ── */}
         <div style={{ padding: "12px 20px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {zoomMacro ? (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, background: C.acS, border: "1px solid " + C.ac + "50" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 4, background: C.acS, border: "1px solid " + C.ac + "50" }}>
                   <Eye size={12} color={C.ac} />
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.ac }}>MACROCYCLE EN COURS</span>
                   <span style={{ fontSize: 11, color: C.tx3 }}>·</span>
@@ -1741,13 +1740,13 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
               </>
             ) : (
               <>
-                <button onClick={() => setWindowStart((d) => subMonths(d, 6))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => setWindowStart((d) => subMonths(d, 6))} style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <ChevronLeft size={16} />
                 </button>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, minWidth: 160, textAlign: "center" }}>
                   {format(rangeStart, "MMM yyyy", { locale: fr })} — {format(rangeEnd, "MMM yyyy", { locale: fr })}
                 </div>
-                <button onClick={() => setWindowStart((d) => addMonths(d, 6))} style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => setWindowStart((d) => addMonths(d, 6))} style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <ChevronRight size={16} />
                 </button>
                 <button
@@ -1871,14 +1870,14 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
               </div>
             ) : (data?.macrocycles ?? []).length === 0 ? (
               <div style={{ padding: "60px 0", textAlign: "center" }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}>📅</div>
+                <div style={{ fontSize: 32, marginBottom: 10 }}></div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>Aucun macrocycle sur cette période</div>
                 <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 16 }}>Crée un macrocycle pour visualiser la frise.</div>
                 <button
                   onClick={() => openCreate("macrocycle", undefined, rsStr, reStr)}
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "9px 18px", borderRadius: 10,
+                    padding: "9px 18px", borderRadius: 4,
                     border: "none", background: C.ac,
                     color: "#fff", fontSize: 12, fontWeight: 700,
                     cursor: "pointer", fontFamily: "inherit",
@@ -1945,7 +1944,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
 
         {/* Footer hint */}
         <div style={{ padding: "8px 20px", borderTop: "1px solid " + C.brd, fontSize: 9, color: C.tx3, textAlign: "center" }}>
-          Drag axe X pour déplacer · Poignées colorées pour redimensionner · + pour détails · Compétitions: 🏆 rose(A) violet(B) gris(C)
+          Drag axe X pour déplacer · Poignées colorées pour redimensionner · + pour détails · Compétitions: rose(A) violet(B) gris(C)
         </div>
       </div>
 

@@ -16,13 +16,13 @@ import { makeRootGroup } from "@/lib/energy/treeUtils";
 // ── Kind badge colors ─────────────────────────────────────────────────────────
 
 const KIND_COLOR: Record<SessionKind | string, string> = {
-  vo2:        "#C9A14A",
-  tempo:      "#7E9CA8",
-  seuil:      "#D99A3E",
-  footing:    "#9DB06A",
-  fartlek:    "#D99A3E",
+  vo2:        "#FFC933",
+  tempo:      "#33B5FF",
+  seuil:      "#FF9500",
+  footing:    "#66F03C",
+  fartlek:    "#FF9500",
   autre:      "#7D7468",
-  custom:     "#C9A14A",
+  custom:     "#FFC933",
   specifique: "#F5A623",
 };
 
@@ -58,8 +58,8 @@ function DotMenu({ onDuplicate, onDelete, onAssign }: { onDuplicate: () => void;
       {open && (
         <div style={{
           position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50,
-          background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 8,
-          minWidth: 140, boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+          background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 4,
+          minWidth: 140,
           overflow: "hidden",
         }}>
           {[
@@ -150,7 +150,7 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
       style={{
         background: C.s1,
         border: `1px solid ${C.brd}`,
-        borderRadius: 12,
+        borderRadius: 6,
         overflow: "hidden",
         cursor: canEdit ? "pointer" : "default",
         transition: "border-color 150ms, box-shadow 150ms",
@@ -243,13 +243,13 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
         {/* Metadata footer */}
         <div style={{ display: "flex", gap: 12, fontSize: 10, color: C.tx3, marginTop: 2 }}>
           {totals.durationS > 0 && (
-            <span>⏱ {formatSLong(totals.durationS)}</span>
+            <span>{formatSLong(totals.durationS)}</span>
           )}
           {totals.workCount > 0 && (
-            <span>⚡ {totals.workCount} eff.</span>
+            <span>{totals.workCount} eff.</span>
           )}
           {totals.distanceM > 0 && (
-            <span>📏 {(totals.distanceM / 1000).toFixed(1)} km</span>
+            <span>{(totals.distanceM / 1000).toFixed(1)} km</span>
           )}
         </div>
       </div>
@@ -263,7 +263,7 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
             background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <div style={{ background: C.s1, borderRadius: 12, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
+          <div style={{ background: C.s1, borderRadius: 6, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>
               Programmer « {session.name} »
             </div>
@@ -298,7 +298,7 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
             <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowAssign(false)}
-                style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Annuler
               </button>
@@ -315,7 +315,7 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
                 }}
                 disabled={!assignAthleteId || assignMutation.isPending}
                 style={{
-                  padding: "7px 14px", borderRadius: 8, border: "none",
+                  padding: "7px 14px", borderRadius: 4, border: "none",
                   background: assignAthleteId ? C.g : C.tx3, color: "#fff",
                   fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   opacity: assignAthleteId ? 1 : 0.5,

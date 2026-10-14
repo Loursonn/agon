@@ -37,9 +37,9 @@ function PRsView({prs,exos,tw}){
     <div style={{fontSize:12,color:C.tx2,marginBottom:16}}>1RM estimes (Epley)</div>
 
     {/* Top progressions banner */}
-    {progressors.length>0&&(<div style={{background:C.gS,borderRadius:14,padding:"12px 14px",border:"1px solid "+C.g+"30",marginBottom:16}}>
+    {progressors.length>0&&(<div style={{background:C.gS,borderRadius:6,padding:"12px 14px",border:"1px solid "+C.g+"30",marginBottom:16}}>
       <div style={{fontSize:10,fontWeight:600,color:C.g,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Meilleures progressions</div>
-      <div style={{display:"flex",gap:8}}>{progressors.map((p,i)=><div key={p.name} onClick={()=>setSelEx(p.name)} style={{flex:1,background:C.s1,borderRadius:10,padding:"8px 6px",textAlign:"center",cursor:"pointer",border:"1px solid "+(selEx===p.name?C.g:C.brd)}}>
+      <div style={{display:"flex",gap:8}}>{progressors.map((p,i)=><div key={p.name} onClick={()=>setSelEx(p.name)} style={{flex:1,background:C.s1,borderRadius:4,padding:"8px 6px",textAlign:"center",cursor:"pointer",border:"1px solid "+(selEx===p.name?C.g:C.brd)}}>
         <div style={{fontSize:9,color:C.tx3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name.length>12?p.name.slice(0,12)+"…":p.name}</div>
         <div style={{fontSize:16,fontWeight:800,color:C.g,lineHeight:1.2}}>+{p.prog}</div>
         <div style={{fontSize:8,color:C.tx3}}>kg</div>
@@ -47,7 +47,7 @@ function PRsView({prs,exos,tw}){
     </div>)}
 
     {/* Selected exercise evolution */}
-    {selEx&&selData&&(<div style={{background:C.s1,borderRadius:14,padding:14,border:"1px solid "+C.ac+"30",marginBottom:16}}>
+    {selEx&&selData&&(<div style={{background:C.s1,borderRadius:6,padding:14,border:"1px solid "+C.ac+"30",marginBottom:16}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
         <div><div style={{fontSize:13,fontWeight:700}}>{selEx}</div><div style={{fontSize:10,color:C.tx3}}>Evolution 1RM estime</div></div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -70,7 +70,7 @@ function PRsView({prs,exos,tw}){
     {/* PR list by tier */}
     {[{tier:1,c:C.o,bg:C.oS,label:"Fondamentaux",desc:"Compound lourd"},{tier:2,c:C.ac,bg:C.acS,label:"Composes secondaires",desc:"Force appliquee"},{tier:3,c:C.g,bg:C.gS,label:"Isolation",desc:"Hypertrophie ciblee"}].map(({tier,c,bg,label,desc})=>{
       const tp=Object.entries(prs).filter(([n])=>(EX_TIER[n]||3)===tier).sort((a,b)=>b[1].est-a[1].est);if(!tp.length)return null;
-      return(<div key={tier} style={{marginBottom:22}}><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"10px 12px",borderRadius:10,background:bg,border:"1px solid "+c+"30"}}><div style={{width:30,height:30,borderRadius:8,background:c+"20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:c}}>T{tier}</div><div><div style={{fontSize:12,fontWeight:700,color:c}}>{label}</div><div style={{fontSize:10,color:C.tx2}}>{desc}</div></div></div>
+      return(<div key={tier} style={{marginBottom:22}}><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"10px 12px",borderRadius:4,background:bg,border:"1px solid "+c+"30"}}><div style={{width:30,height:30,borderRadius:4,background:c+"20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:c}}>T{tier}</div><div><div style={{fontSize:12,fontWeight:700,color:c}}>{label}</div><div style={{fontSize:10,color:C.tx2}}>{desc}</div></div></div>
         {tp.map(([name,pr],i)=>{
           const weekData=getWeeklyData(name);const filled=weekData.filter(d=>d.val!=null);const prog=filled.length>=2?filled[filled.length-1].val-filled[0].val:null;
           return(<div key={name} onClick={()=>setSelEx(selEx===name?null:name)} style={{background:selEx===name?c+"08":C.s1,borderRadius:tier===1?14:10,padding:tier===1?"13px 16px":"10px 14px",marginBottom:6,border:"1px solid "+(selEx===name?c+"50":i===0&&tier===1?c+"50":C.brd),cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
@@ -94,7 +94,7 @@ function PRsView({prs,exos,tw}){
 }
 
 function InjuryCard({inj,onEdit,onDelete,onUpdate}){const sc=stC(inj.status);const zoneNames=ALL_BZ.filter(z=>inj.zones.includes(z.id)).map(z=>z.label).join(", ")||"Zone non precisee";const intC=inj.intensity<=3?C.g:inj.intensity<=6?C.o:C.r;
-    return(<div style={{background:C.s1,borderRadius:12,padding:"12px 14px",marginBottom:8,border:"1px solid "+sc+"30"}}>
+    return(<div style={{background:C.s1,borderRadius:6,padding:"12px 14px",marginBottom:8,border:"1px solid "+sc+"30"}}>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
         <div style={{flex:1}}><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:4}}><span style={{fontSize:12,fontWeight:700,color:C.tx}}>{zoneNames}</span>{inj.type&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:5,background:C.s2,color:C.tx3}}>{inj.type}</span>}</div><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{fontSize:11,fontWeight:700,color:sc,padding:"2px 8px",borderRadius:6,background:sc+"20"}}>{inj.status}</span><span style={{fontSize:10,color:C.tx3}}>{inj.date?inj.date.slice(6)+"/"+inj.date.slice(4,6)+"/"+inj.date.slice(0,4):""}</span></div></div>
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}><div style={{textAlign:"center"}}><span style={{fontSize:18,fontWeight:800,color:intC}}>{inj.intensity}</span><span style={{fontSize:9,color:C.tx3}}>/10</span></div><button onClick={()=>onEdit(inj)} style={{padding:"4px 8px",borderRadius:6,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>Edit</button><button onClick={()=>onDelete(inj.id)} style={{width:22,height:22,borderRadius:5,border:"1px solid "+C.r+"40",background:C.rS,color:C.r,fontSize:11,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>x</button></div>
@@ -111,7 +111,7 @@ function InjuriesView({injuries,addInjury,updateInjury,deleteInjury}){
   const active=injuries.filter(i=>i.status!=="Guerie");const healed=injuries.filter(i=>i.status==="Guerie");
   const openEdit=inj=>{setEditing(inj);setShowForm(true);};
   return(<div>
-    <button onClick={()=>{setEditing(null);setShowForm(true);}} style={{width:"100%",padding:"12px 0",borderRadius:12,border:"1.5px solid "+C.r+"50",background:C.rS,color:C.r,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:16}}>+ Nouvelle blessure / douleur</button>
+    <button onClick={()=>{setEditing(null);setShowForm(true);}} style={{width:"100%",padding:"12px 0",borderRadius:6,border:"1.5px solid "+C.r+"50",background:C.rS,color:C.r,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:16}}>+ Nouvelle blessure / douleur</button>
     {showForm&&<div style={{marginBottom:16}}><InjuryForm onSave={inj=>{editing?updateInjury(inj):addInjury(inj);setShowForm(false);setEditing(null);}} onCancel={()=>{setShowForm(false);setEditing(null);}} existing={editing}/></div>}
     {active.length>0&&(<div><div style={{fontSize:11,fontWeight:600,color:C.r,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{active.length} active(s)</div>{active.map(i=><InjuryCard key={i.id} inj={i} onEdit={openEdit} onDelete={deleteInjury} onUpdate={updateInjury}/>)}</div>)}
     {healed.length>0&&(<div style={{marginTop:12}}><div style={{fontSize:11,fontWeight:600,color:C.g,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{healed.length} guerie(s)</div>{healed.map(i=><InjuryCard key={i.id} inj={i} onEdit={openEdit} onDelete={deleteInjury} onUpdate={updateInjury}/>)}</div>)}
@@ -161,10 +161,10 @@ function MuscleVolumeCard({exos,exMeta,sets,sessions,weeksArr,tw,initialWeek}){
   const maxP=Math.max(...sorted.map(([,d])=>d.pl),1);
   const panelD=panel?dispData[panel]:null;
   const bNav={padding:"5px 10px",borderRadius:7,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,fontSize:13,cursor:"pointer",fontFamily:"inherit"};
-  if(!sorted.length)return(<div style={{background:C.s1,borderRadius:14,padding:14,border:"1px solid "+C.brd,marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Séries par muscle</div><div style={{textAlign:"center",color:C.tx3,fontSize:11,padding:"14px 0"}}>Aucun exercice configuré pour S{wk}</div></div>);
+  if(!sorted.length)return(<div style={{background:C.s1,borderRadius:6,padding:14,border:"1px solid "+C.brd,marginBottom:14}}><div style={{fontSize:11,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Séries par muscle</div><div style={{textAlign:"center",color:C.tx3,fontSize:11,padding:"14px 0"}}>Aucun exercice configuré pour S{wk}</div></div>);
   return(<>
     {panel&&<div onClick={()=>setPanel(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:199}}/>}
-    {panel&&panelD&&(<div style={{position:"fixed",top:0,right:0,bottom:0,width:340,background:C.bg,zIndex:200,borderLeft:"1px solid "+C.brdL,display:"flex",flexDirection:"column",overflowY:"auto",boxShadow:"-8px 0 32px rgba(0,0,0,0.4)"}}>
+    {panel&&panelD&&(<div style={{position:"fixed",top:0,right:0,bottom:0,width:340,background:C.bg,zIndex:200,borderLeft:"1px solid "+C.brdL,display:"flex",flexDirection:"column",overflowY:"auto"}}>
       <div style={{padding:"16px 20px",borderBottom:"1px solid "+C.brd,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,background:C.bg,zIndex:1}}>
         <div>
           <div style={{fontSize:16,fontWeight:800,color:getMC(panel)}}>{mL(panel)}</div>
@@ -179,7 +179,7 @@ function MuscleVolumeCard({exos,exMeta,sets,sessions,weeksArr,tw,initialWeek}){
         {panelD.exs.length===0&&<div style={{color:C.tx3,fontSize:11,textAlign:"center",padding:"20px 0"}}>Aucun exercice</div>}
         {panelD.exs.map((ex,i)=>{
           const mc=getMC(panel);const donePct=ex.pl>0?Math.min(ex.done/ex.pl*100,100):0;
-          return(<div key={i} style={{marginBottom:12,padding:"12px 14px",borderRadius:12,background:C.s1,border:"1px solid "+(ex.factor<1?C.brdL:mc+"40")}}>
+          return(<div key={i} style={{marginBottom:12,padding:"12px 14px",borderRadius:6,background:C.s1,border:"1px solid "+(ex.factor<1?C.brdL:mc+"40")}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:700,color:C.tx,marginBottom:2}}>{ex.name}</div>
@@ -201,7 +201,7 @@ function MuscleVolumeCard({exos,exMeta,sets,sessions,weeksArr,tw,initialWeek}){
         })}
       </div>
     </div>)}
-    <div style={{background:C.s1,borderRadius:14,padding:14,border:"1px solid "+C.brd,marginBottom:14}}>
+    <div style={{background:C.s1,borderRadius:6,padding:14,border:"1px solid "+C.brd,marginBottom:14}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px"}}>Séries par muscle</div>
         <button onClick={()=>setShowSubs(!showSubs)} style={{padding:"3px 10px",borderRadius:6,border:"1px solid "+(showSubs?C.ac:C.brdL),background:showSubs?C.acS:"transparent",color:showSubs?C.ac:C.tx3,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Sous-groupes</button>
@@ -221,7 +221,7 @@ function MuscleVolumeCard({exos,exMeta,sets,sessions,weeksArr,tw,initialWeek}){
       {sorted.map(([mid,data])=>{
         const c=getMC(mid);const sel=panel===mid;
         const planPct=data.pl/maxP*100;const realPct=data.pl>0?Math.min(data.done/data.pl*100,100)*planPct/100:0;
-        return(<div key={mid} onClick={()=>setPanel(sel?null:mid)} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer",borderRadius:8,padding:"5px 6px",background:sel?C.s2:"transparent",border:"1px solid "+(sel?c+"40":"transparent"),transition:"all 0.15s"}}>
+        return(<div key={mid} onClick={()=>setPanel(sel?null:mid)} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer",borderRadius:4,padding:"5px 6px",background:sel?C.s2:"transparent",border:"1px solid "+(sel?c+"40":"transparent"),transition:"all 0.15s"}}>
           <span style={{fontSize:10,color:sel?c:C.tx2,width:76,flexShrink:0,textAlign:"right",fontWeight:sel?700:400}}>{mL(mid)}</span>
           <div style={{flex:1,height:16,background:C.s2,borderRadius:4,overflow:"hidden",position:"relative"}}>
             <div style={{position:"absolute",inset:0,width:planPct+"%",background:c+"25",borderRadius:4}}/>
@@ -242,7 +242,7 @@ function WeeklyVolumeCard({exos,sets,sessions,weeksArr,tw,C}){
     return{wk,planned,done};
   });
   const maxP=Math.max(...data.map(d=>d.planned),1);
-  return(<div style={{background:C.s1,borderRadius:16,padding:"14px 16px",border:"1px solid "+C.brd,marginBottom:12}}>
+  return(<div style={{background:C.s1,borderRadius:6,padding:"14px 16px",border:"1px solid "+C.brd,marginBottom:12}}>
     <div style={{fontSize:11,fontWeight:600,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:12}}>Volume hebdomadaire (séries)</div>
     <div style={{display:"flex",gap:4,alignItems:"flex-end",height:70,marginBottom:4}}>
       {data.map(({wk,planned,done},i)=>{
@@ -266,7 +266,7 @@ function WeeklyVolumeCard({exos,sets,sessions,weeksArr,tw,C}){
       const d=data.find(x=>x.wk===sel);
       const prev=data.find(x=>x.wk===sel-1);
       if(!d)return null;
-      return(<div style={{marginTop:8,padding:"10px 12px",borderRadius:10,background:C.s2,border:"1px solid "+C.ac+"30"}}>
+      return(<div style={{marginTop:8,padding:"10px 12px",borderRadius:4,background:C.s2,border:"1px solid "+C.ac+"30"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <div style={{fontSize:12,fontWeight:700,color:C.ac}}>Semaine {sel}</div>
           <div style={{display:"flex",gap:12}}>
@@ -323,14 +323,14 @@ function AIChatBar({exos,sessions,chatHistory,setChatHistory,onApply,onOpenChang
 
   return(<>
     {/* Floating toggle button */}
-    {!open&&<button onClick={()=>setOpen(true)} style={{position:"fixed",bottom:24,right:24,zIndex:90,width:52,height:52,borderRadius:"50%",border:"none",background:C.coach,color:"#fff",fontSize:22,cursor:"pointer",boxShadow:"0 4px 20px rgba(212,83,142,0.5)",display:"flex",alignItems:"center",justifyContent:"center"}}>✦</button>}
+    {!open&&<button onClick={()=>setOpen(true)} style={{position:"fixed",bottom:24,right:24,zIndex:90,width:52,height:52,borderRadius:"50%",border:"none",background:C.coach,color:"#fff",fontSize:22,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>AI</button>}
 
     {/* Chat panel */}
-    {open&&(<div style={{position:"fixed",bottom:0,right:0,left:0,zIndex:90,background:C.s1,borderTop:"1px solid "+C.coach+"40",boxShadow:"0 -4px 30px rgba(0,0,0,0.5)",maxHeight:"60vh",display:"flex",flexDirection:"column"}}>
+    {open&&(<div style={{position:"fixed",bottom:0,right:0,left:0,zIndex:90,background:C.s1,borderTop:"1px solid "+C.coach+"40",maxHeight:"60vh",display:"flex",flexDirection:"column"}}>
       {/* Header */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 16px",borderBottom:"1px solid "+C.brd,flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{fontSize:14,color:C.coach}}>✦</div>
+          <div style={{fontSize:14,color:C.coach}}>AI</div>
           <div style={{fontSize:13,fontWeight:700,color:C.tx}}>Editer avec l'IA</div>
           {loading&&<div style={{fontSize:10,color:C.tx3,animation:"pulse 1.5s infinite"}}>Analyse en cours...</div>}
         </div>
@@ -348,7 +348,7 @@ function AIChatBar({exos,sessions,chatHistory,setChatHistory,onApply,onOpenChang
             <div style={{maxWidth:"80%",padding:"8px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?C.coach:C.s2,color:m.role==="user"?"#fff":C.tx,fontSize:12,lineHeight:1.5}}>{m.content}</div>
           </div>
         ))}
-        {pendingEdit&&<div style={{background:C.gS,border:"1px solid "+C.g+"40",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+        {pendingEdit&&<div style={{background:C.gS,border:"1px solid "+C.g+"40",borderRadius:4,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
           <div style={{fontSize:12,color:C.g,fontWeight:600}}>Modifications pretes. Voulez-vous les appliquer ?</div>
           <div style={{display:"flex",gap:8,flexShrink:0}}>
             <button onClick={cancel} style={{padding:"5px 12px",borderRadius:7,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
@@ -360,8 +360,8 @@ function AIChatBar({exos,sessions,chatHistory,setChatHistory,onApply,onOpenChang
 
       {/* Input */}
       <div style={{padding:"10px 16px",borderTop:"1px solid "+C.brd,display:"flex",gap:8,flexShrink:0}}>
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Ex: Ajoute une semaine de plus, augmente le volume pecs..." style={{flex:1,padding:"9px 12px",borderRadius:9,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit",outline:"none"}} disabled={loading}/>
-        <button onClick={send} disabled={loading||!input.trim()} style={{padding:"9px 16px",borderRadius:9,border:"none",background:loading||!input.trim()?"#333":C.coach,color:loading||!input.trim()?C.tx3:"#fff",fontSize:12,fontWeight:700,cursor:loading||!input.trim()?"default":"pointer",fontFamily:"inherit",flexShrink:0}}>Envoyer</button>
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Ex: Ajoute une semaine de plus, augmente le volume pecs..." style={{flex:1,padding:"9px 12px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit",outline:"none"}} disabled={loading}/>
+        <button onClick={send} disabled={loading||!input.trim()} style={{padding:"9px 16px",borderRadius:4,border:"none",background:loading||!input.trim()?"#333":C.coach,color:loading||!input.trim()?C.tx3:"#fff",fontSize:12,fontWeight:700,cursor:loading||!input.trim()?"default":"pointer",fontFamily:"inherit",flexShrink:0}}>Envoyer</button>
       </div>
     </div>)}
   </>);

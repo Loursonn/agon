@@ -27,7 +27,7 @@ export default function StatsPage() {
       </div>
 
       {/* 1RM Progression */}
-      <div style={{ background: C.s1, borderRadius: 14, padding: 14, border: "1px solid " + C.brd, marginBottom: 14 }}>
+      <div style={{ background: C.s1, borderRadius: 6, padding: 14, border: "1px solid " + C.brd, marginBottom: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 12 }}>Progression 1RM</div>
         {big3.map(({ name, label, c }: { name: string; label: string; c: string }) => {
           const pr = (prs as Record<string, { est?: string }>)[name] || null;
@@ -54,13 +54,13 @@ export default function StatsPage() {
       {Object.keys(sessionLogs).filter(k => sessionLogs[k]?.note || sessionLogs[k]?.forme).length > 0 && (() => {
         const logs = Object.entries(sessionLogs).filter(([, l]) => l?.note || l?.forme).sort((a, b) => ((b[1].date || "") > (a[1].date || "") ? 1 : -1)).slice(0, 10);
         return (
-          <div style={{ background: C.s1, borderRadius: 14, padding: 14, border: "1px solid " + C.brd, marginBottom: 14 }}>
+          <div style={{ background: C.s1, borderRadius: 6, padding: 14, border: "1px solid " + C.brd, marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 10 }}>Comptes rendus de séances</div>
             {logs.map(([key, log]) => {
               const parts = key.split("_"); const wkNum = parts[parts.length - 1]; const sessId = parts.slice(0, -1).join("_");
               const sess = sessions.find(s => s.id === sessId);
               return (
-                <div key={key} style={{ padding: "8px 10px", borderRadius: 8, background: C.s2, marginBottom: 6, border: "1px solid " + C.brd }}>
+                <div key={key} style={{ padding: "8px 10px", borderRadius: 4, background: C.s2, marginBottom: 6, border: "1px solid " + C.brd }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: log.note ? 4 : 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: C.ac }}>{sess?.name || sessId}</span>

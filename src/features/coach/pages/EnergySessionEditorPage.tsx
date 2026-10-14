@@ -9,6 +9,7 @@
  */
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Zap } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -75,7 +76,7 @@ function AssignModal({
       position: "fixed", inset: 0, zIndex: 100,
       background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
     }}>
-      <div style={{ background: C.s1, borderRadius: 12, padding: 24, width: 320, border: `1px solid ${C.brd}` }}>
+      <div style={{ background: C.s1, borderRadius: 6, padding: 24, width: 320, border: `1px solid ${C.brd}` }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>Planifier la séance</div>
         <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Date</div>
         <input
@@ -90,14 +91,14 @@ function AssignModal({
         <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
           <button
             onClick={onClose}
-            style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
           >
             Annuler
           </button>
           <button
             onClick={handleAssign}
             disabled={assign.isPending}
-            style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: C.g, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.gV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
           >
             {assign.isPending ? "…" : "Planifier"}
           </button>
@@ -110,7 +111,7 @@ function AssignModal({
 // ── Import session modal ─────────────────────────────────────────────────────
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#C9A14A", tempo: "#7E9CA8", seuil: "#F59E0B",
+  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
   footing: "#22C55E", fartlek: "#EC4899", autre: "#6B7280", custom: "#14B8A6",
 };
 
@@ -145,7 +146,7 @@ function ImportSessionModal({ onImport, onClose }: {
         position: "fixed", top: "50%", left: "50%", zIndex: 61,
         transform: "translate(-50%, -50%)",
         width: 520, maxWidth: "94vw", maxHeight: "80vh",
-        background: C.s1, borderRadius: 16, border: `1px solid ${C.brd}`,
+        background: C.s1, borderRadius: 6, border: `1px solid ${C.brd}`,
         display: "flex", flexDirection: "column",
         animation: "fadeScaleIn 150ms ease-out",
       }}>
@@ -160,7 +161,7 @@ function ImportSessionModal({ onImport, onClose }: {
           <input
             autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher…"
-            style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "8px 10px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           />
         </div>
 
@@ -181,15 +182,15 @@ function ImportSessionModal({ onImport, onClose }: {
                     onClick={() => onImport(s)}
                     style={{
                       display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 12px", borderRadius: 10,
+                      padding: "10px 12px", borderRadius: 4,
                       border: `1px solid ${C.brdL}`, background: C.s2,
                       cursor: "pointer", transition: "border-color 120ms",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = kc + "60")}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.brdL)}
                   >
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>
-                      ⚡
+                    <div style={{ width: 30, height: 30, borderRadius: 4, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Zap size={14} style={{ color: kc }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
@@ -206,7 +207,7 @@ function ImportSessionModal({ onImport, onClose }: {
         </div>
 
         <div style={{ padding: "12px 20px", borderTop: `1px solid ${C.brd}`, flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
             Annuler
           </button>
         </div>
@@ -323,8 +324,8 @@ export default function EnergySessionEditorPage() {
       sport_id: sportId,
       quality_id: qualityId,
       content: isWodBlock(block)
-        ? { title: block.title, kind: "wod", steps: block.steps }
-        : { title: block.title, items: block.items.filter((i) => i.name.trim()) },
+        ? { title: block.title, instructions: block.instructions, kind: "wod", steps: block.steps }
+        : { title: block.title, instructions: block.instructions, items: block.items.filter((i) => i.name.trim()) },
     });
   }
 
@@ -496,7 +497,7 @@ export default function EnergySessionEditorPage() {
                 onChange={setQualityId}
                 onCreate={async (n) => user?.id ? await createQuality.mutateAsync({ name: n, coachId: user.id }) : undefined}
                 width={150}
-                accent="#C9A14A"
+                accent="#FFC933"
               />
               {/* Legacy WOD pleine page : proposer la conversion en blocs */}
               {format === "wod" && (
@@ -563,21 +564,21 @@ export default function EnergySessionEditorPage() {
           {!isEdit && (
             <button
               onClick={() => setShowImport(true)}
-              style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
             >
               Importer une séance
             </button>
           )}
           <button
             onClick={navigateBack}
-            style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
           >
             Annuler
           </button>
           <button
             onClick={() => handleSave(false)}
             disabled={isSaving}
-            style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: C.ac, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
+            style={{ padding: "7px 16px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
           >
             {isSaving ? "Enregistrement…" : "Enregistrer"}
           </button>
@@ -585,7 +586,7 @@ export default function EnergySessionEditorPage() {
             <button
               onClick={() => handleSave(true)}
               disabled={isSaving}
-              style={{ padding: "7px 16px", borderRadius: 8, border: `1px solid ${C.g}50`, background: C.g + "15", color: C.g, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              style={{ padding: "7px 16px", borderRadius: 4, border: `1px solid ${C.g}50`, background: C.g + "15", color: C.g, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
             >
               Enregistrer & planifier
             </button>
@@ -643,7 +644,7 @@ export default function EnergySessionEditorPage() {
               Ajoute des intervalles pour voir l'aperçu
             </div>
           ) : (
-            <div style={{ background: C.s1, borderRadius: 10, padding: "14px 14px 10px", border: `1px solid ${C.brd}` }}>
+            <div style={{ background: C.s1, borderRadius: 4, padding: "14px 14px 10px", border: `1px solid ${C.brd}` }}>
               <SessionPreview intervals={root} />
             </div>
           )}
@@ -651,7 +652,7 @@ export default function EnergySessionEditorPage() {
           {/* Schema drawing */}
           <div style={{ marginTop: 16 }}>
             {fieldSchema && (
-              <div style={{ background: C.s1, borderRadius: 10, padding: 10, border: `1px solid ${C.brd}`, marginBottom: 8 }}>
+              <div style={{ background: C.s1, borderRadius: 4, padding: 10, border: `1px solid ${C.brd}`, marginBottom: 8 }}>
                 <SchemaViewerWithZoom schema={fieldSchema} />
               </div>
             )}
@@ -659,7 +660,7 @@ export default function EnergySessionEditorPage() {
               <button
                 onClick={() => setShowSchemaEditor(true)}
                 style={{
-                  flex: 1, padding: "10px 0", borderRadius: 10,
+                  flex: 1, padding: "10px 0", borderRadius: 4,
                   border: `1px dashed ${C.brdL}`, background: "transparent",
                   color: C.tx3, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                 }}
@@ -670,7 +671,7 @@ export default function EnergySessionEditorPage() {
                 <button
                   onClick={() => setFieldSchema(null)}
                   style={{
-                    padding: "10px 12px", borderRadius: 10,
+                    padding: "10px 12px", borderRadius: 4,
                     border: `1px solid rgba(239,68,68,0.3)`, background: "rgba(239,68,68,0.08)",
                     color: "#EF4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   }}
@@ -698,7 +699,7 @@ export default function EnergySessionEditorPage() {
             {images.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                 {images.map((img, i) => (
-                  <div key={i} style={{ position: "relative", width: 80, height: 80, borderRadius: 8, overflow: "hidden", border: `1px solid ${C.brd}`, cursor: "pointer" }}
+                  <div key={i} style={{ position: "relative", width: 80, height: 80, borderRadius: 4, overflow: "hidden", border: `1px solid ${C.brd}`, cursor: "pointer" }}
                     onClick={() => setPreviewImage(img.url)}>
                     <img src={img.url} alt={img.caption || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     <button
@@ -727,7 +728,7 @@ export default function EnergySessionEditorPage() {
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddImageUrl(); } }}
                 placeholder="Coller une URL d'image…"
                 style={{
-                  flex: 1, padding: "7px 10px", borderRadius: 8,
+                  flex: 1, padding: "7px 10px", borderRadius: 4,
                   border: `1px solid ${C.brd}`, background: C.s2,
                   color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
                 }}
@@ -736,7 +737,7 @@ export default function EnergySessionEditorPage() {
                 onClick={handleAddImageUrl}
                 disabled={!imageUrlInput.trim()}
                 style={{
-                  padding: "7px 12px", borderRadius: 8,
+                  padding: "7px 12px", borderRadius: 4,
                   border: `1px solid ${C.ac}40`, background: C.ac + "12",
                   color: C.ac, fontSize: 12, fontWeight: 600,
                   cursor: imageUrlInput.trim() ? "pointer" : "default",
@@ -749,7 +750,7 @@ export default function EnergySessionEditorPage() {
 
             {/* File upload */}
             <label style={{
-              display: "block", padding: "10px 0", borderRadius: 10,
+              display: "block", padding: "10px 0", borderRadius: 4,
               border: `1px dashed ${C.brdL}`, background: "transparent",
               color: isUploading ? C.ac : C.tx3, fontSize: 12, fontWeight: 600,
               cursor: isUploading ? "wait" : "pointer", fontFamily: "inherit",
@@ -828,7 +829,7 @@ export default function EnergySessionEditorPage() {
           <img
             src={previewImage}
             alt=""
-            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 8 }}
+            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 4 }}
           />
         </div>
       )}

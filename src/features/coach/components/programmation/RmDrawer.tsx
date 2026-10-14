@@ -7,7 +7,7 @@ import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { localISO } from "@/lib/date";
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 
 interface RmDrawerProps {
   open: boolean
@@ -64,14 +64,14 @@ export function RmDrawer({ open, onClose, exerciseName, athleteId }: RmDrawerPro
           </div>
           <button
             onClick={onClose}
-            style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 30, height: 30, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <X size={14} />
           </button>
         </div>
 
         {/* Add new */}
-        <div style={{ background: C.s2, borderRadius: 10, padding: "12px 14px", border: "1px solid " + C.brdL }}>
+        <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px", border: "1px solid " + C.brdL }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: VIOLET, marginBottom: 8 }}>Ajouter un 1RM</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
             <div>
@@ -104,7 +104,7 @@ export function RmDrawer({ open, onClose, exerciseName, athleteId }: RmDrawerPro
             onClick={handleAdd}
             disabled={!newKg || addPR.isPending}
             style={{
-              width: "100%", padding: "8px 0", borderRadius: 8,
+              width: "100%", padding: "8px 0", borderRadius: 4,
               border: "none", background: VIOLET, color: "#fff",
               fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               opacity: !newKg || addPR.isPending ? 0.5 : 1,
@@ -132,7 +132,7 @@ export function RmDrawer({ open, onClose, exerciseName, athleteId }: RmDrawerPro
                   key={pr.id}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
-                    padding: "8px 10px", borderRadius: 8,
+                    padding: "8px 10px", borderRadius: 4,
                     border: "1px solid " + C.brdL, background: C.s2,
                   }}
                 >

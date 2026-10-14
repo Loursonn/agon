@@ -96,7 +96,7 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
                 style={{
                   minHeight: 80,
                   padding: "6px 7px",
-                  borderRadius: 8,
+                  borderRadius: 4,
                   border: today ? "2px solid " + C.ac : "1px solid " + C.brd,
                   background: inMonth ? C.s1 : C.bg,
                   opacity: inMonth ? 1 : 0.4,

@@ -2,7 +2,7 @@ import { C } from "@/lib/theme";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface KPICardProps {
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   value: string | number | null;
   subtitle?: string;
@@ -24,7 +24,7 @@ export function KPICard({
       style={{
         background: C.s1,
         border: "1px solid " + C.brd,
-        borderRadius: 14,
+        borderRadius: 6,
         padding: 16,
         display: "flex",
         flexDirection: "column",
@@ -41,7 +41,7 @@ export function KPICard({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={{ fontSize: 16, display: "flex", alignItems: "center" }}>{icon}</span>
         <span style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
           {title}
         </span>

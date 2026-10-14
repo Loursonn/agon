@@ -135,9 +135,8 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
           position: "fixed", top: "50%", left: "50%", zIndex: 71,
           transform: "translate(-50%, -50%)",
           width: 640, maxWidth: "96vw", maxHeight: "92vh",
-          background: C.bg, borderRadius: 18, border: "1px solid " + C.brd,
+          background: C.bg, borderRadius: 6, border: "1px solid " + C.brd,
           display: "flex", flexDirection: "column", overflow: "hidden",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
         }}
       >
         {/* Header */}
@@ -156,7 +155,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
           <button
             onClick={onClose}
             style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 4,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
@@ -169,7 +168,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
             padding: "8px 20px", fontSize: 11, color: "#F59E0B",
             background: "#F59E0B14", borderBottom: "1px solid " + C.brd, flexShrink: 0,
           }}>
-            ⚠️ Cette séance est déjà adaptée pour ce jour. Modifie ou réinitialise.
+            Cette séance est déjà adaptée pour ce jour. Modifie ou réinitialise.
           </div>
         )}
 
@@ -204,7 +203,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
               disabled={isPending}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
-                padding: "10px 14px", borderRadius: 10,
+                padding: "10px 14px", borderRadius: 4,
                 border: "1px solid " + C.r + "40", background: "transparent",
                 color: C.r, fontSize: 12, fontWeight: 600,
                 cursor: isPending ? "default" : "pointer", fontFamily: "inherit",
@@ -220,7 +219,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
             onClick={onClose}
             disabled={isPending}
             style={{
-              padding: "10px 16px", borderRadius: 10,
+              padding: "10px 16px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, fontSize: 12, fontWeight: 600,
               cursor: isPending ? "default" : "pointer", fontFamily: "inherit",
@@ -232,7 +231,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
             onClick={handleSave}
             disabled={isPending || !canEdit}
             style={{
-              padding: "10px 18px", borderRadius: 10,
+              padding: "10px 18px", borderRadius: 4,
               border: "1px solid " + C.ac + "40", background: C.acS,
               color: C.ac, fontSize: 12, fontWeight: 700,
               cursor: isPending || !canEdit ? "default" : "pointer", fontFamily: "inherit",

@@ -14,7 +14,7 @@ export function useCompleteWorkout() {
       try {
         completeSession(sessionId, currentWeek);
         if (navigator.vibrate) navigator.vibrate(10);
-        toast.success("Séance terminée ! 💪");
+        toast.success("Séance terminée ! ");
       } catch {
         toast.error("Erreur lors de la complétion");
       }

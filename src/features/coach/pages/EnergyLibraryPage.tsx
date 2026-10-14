@@ -4,6 +4,7 @@
  */
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Zap } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -38,7 +39,7 @@ const KIND_OPTIONS: { value: string; label: string }[] = [
 
 function SkeletonCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
       <div style={{ height: 3, background: C.s2 }} />
       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ height: 13, width: "60%", background: C.s2, borderRadius: 4 }} />
@@ -60,14 +61,14 @@ function EmptyState({ onNew }: { onNew: () => void }) {
       padding: "60px 20px",
       color: C.tx3,
     }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>⚡</div>
+      <div style={{ marginBottom: 12 }}><Zap size={40} style={{ color: C.tx3 }} /></div>
       <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>Aucune séance</div>
       <div style={{ fontSize: 13, marginBottom: 20 }}>Créez la première séance de la banque énergétique.</div>
       <button
         onClick={onNew}
         style={{
-          padding: "9px 20px", borderRadius: 8, border: "none",
-          background: C.ac, color: "#fff", fontSize: 13,
+          padding: "9px 20px", borderRadius: 4, border: "none",
+          background: C.acV, color: "#0E0C0A", fontSize: 13,
           fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
         }}
       >
@@ -132,8 +133,8 @@ export default function EnergyLibraryPage() {
           <button
             onClick={() => navigate("/coach/energy-library/new")}
             style={{
-              padding: "8px 16px", borderRadius: 8, border: "none",
-              background: C.ac, color: "#fff", fontSize: 13,
+              padding: "8px 16px", borderRadius: 4, border: "none",
+              background: C.acV, color: "#0E0C0A", fontSize: 13,
               fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               whiteSpace: "nowrap",
             }}
@@ -148,7 +149,7 @@ export default function EnergyLibraryPage() {
           display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
         }}>
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 8, padding: 2 }}>
+          <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
             {FILTER_TABS.map((t) => (
               <button
                 key={t.value}

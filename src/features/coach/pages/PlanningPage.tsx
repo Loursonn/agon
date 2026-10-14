@@ -31,7 +31,7 @@ export default function PlanningPage() {
   if (!loaded) {
     return (
       <div style={{ padding: "16px 24px" }}>
-        <Skeleton style={{ height: 300, borderRadius: 14, background: C.s1 }} />
+        <Skeleton style={{ height: 300, borderRadius: 6, background: C.s1 }} />
       </div>
     );
   }

@@ -109,7 +109,7 @@ export function useAutoComputePRs() {
       await supabase.from("exercise_pr_logs").insert(inserts);
       qc.invalidateQueries({ queryKey: ["pr-logs", athleteId] });
       if (!silent && newPRs.length > 0) {
-        toast.success(`🏆 Nouveau PR : ${newPRs.join(", ")}`);
+        toast.success(`Nouveau PR : ${newPRs.join(", ")}`);
       }
     }
   }, [qc]);

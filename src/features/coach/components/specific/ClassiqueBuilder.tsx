@@ -23,7 +23,7 @@ import type { SessionBlock, ClassiqueBlock, ClassiqueItem, WodBlock } from "@/ty
 import { isWodBlock } from "@/types/specific";
 
 const ORANGE = "#F5A623";
-const GREEN  = "#9DB06A";
+const GREEN  = "#66F03C";
 
 // ── Item row (sortable, bloc classique) ──────────────────────────────────────
 
@@ -103,7 +103,7 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
       style={{
         transform: CSS.Transform.toString(transform), transition,
         opacity: isDragging ? 0.6 : 1,
-        background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 12,
+        background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6,
         borderLeft: `3px solid ${accent}80`,
         padding: "12px 14px",
       }}
@@ -160,6 +160,19 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
           <Trash2 size={14} />
         </button>
       </div>
+
+      <textarea
+        value={block.instructions ?? ""}
+        onChange={(e) => onChange({ instructions: e.target.value || undefined } as Partial<SessionBlock>)}
+        placeholder="Consignes du bloc (optionnel)…"
+        rows={2}
+        style={{
+          width: "100%", boxSizing: "border-box", resize: "vertical",
+          background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
+          color: C.tx, fontSize: 12, lineHeight: 1.4, padding: "6px 8px",
+          fontFamily: "inherit", outline: "none", marginBottom: 10,
+        }}
+      />
 
       {/* Body */}
       {wod ? (
@@ -239,7 +252,7 @@ export default function ClassiqueBuilder({ blocks, onChange, onImportFromBank, o
 
   const addBtnStyle = (color: string): React.CSSProperties => ({
     flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-    padding: "12px 0", borderRadius: 10,
+    padding: "12px 0", borderRadius: 4,
     border: `1px dashed ${color}50`, background: color + "08",
     color, fontSize: 13, fontWeight: 600,
     cursor: "pointer", fontFamily: "inherit", transition: "all 150ms",
@@ -278,7 +291,7 @@ export default function ClassiqueBuilder({ blocks, onChange, onImportFromBank, o
           onClick={onImportFromBank}
           style={{
             flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "12px 0", borderRadius: 10,
+            padding: "12px 0", borderRadius: 4,
             border: `1px solid ${C.brdL}`, background: "transparent",
             color: C.tx2, fontSize: 13, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit", transition: "all 150ms",

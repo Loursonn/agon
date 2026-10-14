@@ -26,7 +26,7 @@ interface TestData {
 }
 
 const TYPE_COLOR: Record<string, string> = {
-  musculation: "#C9A14A", endurance: "#7E9CA8", vitesse: "#EF4444",
+  musculation: "#FFC933", endurance: "#33B5FF", vitesse: "#EF4444",
   puissance: "#F59E0B", souplesse: "#10B981", autre: "#6B7280",
 };
 
@@ -96,7 +96,7 @@ function VariableInput({
 
   return (
     <div style={{
-      background: C.s2, borderRadius: 10, padding: "10px 14px",
+      background: C.s2, borderRadius: 4, padding: "10px 14px",
       display: "flex", alignItems: "center", gap: 12,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -114,7 +114,7 @@ function VariableInput({
           readOnly={readOnly}
           placeholder={placeholder}
           style={{
-            width: "100%", padding: "7px 10px", borderRadius: 8,
+            width: "100%", padding: "7px 10px", borderRadius: 4,
             border: "1px solid " + C.brdL, background: readOnly ? "transparent" : C.s1,
             color: C.tx, fontSize: 14, fontWeight: 700,
             fontFamily: "inherit", outline: "none",
@@ -250,7 +250,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
         <DrawerHeader style={{ padding: "16px 20px 12px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
-              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              width: 36, height: 36, borderRadius: 4, flexShrink: 0,
               background: tc + "20", display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <FlaskConical size={18} color={tc} />
@@ -262,7 +262,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
                 <DrawerTitle style={{ fontSize: 16, fontWeight: 700, color: C.tx }}>{test.title}</DrawerTitle>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10,
+                    fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 4,
                     background: tc + "20", color: tc, textTransform: "capitalize",
                   }}>
                     {test.type}
@@ -286,7 +286,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
 
             {/* Description */}
             {(test.description ?? definition?.description) && (
-              <div style={{ background: C.s2, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
                   Description
                 </div>
@@ -298,7 +298,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
 
             {/* Protocol */}
             {definition?.protocol?.text && (
-              <div style={{ background: C.s2, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
                   Protocole
                 </div>
@@ -308,8 +308,8 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
 
             {/* Test rempli par le coach : pas de saisie athlète */}
             {coachFilled && (
-              <div style={{ background: C.s2, borderRadius: 10, padding: "12px 14px", border: "1px solid " + C.o + "40" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.o, marginBottom: 4 }}>🎬 Rempli par ton coach</div>
+              <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px", border: "1px solid " + C.o + "40" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.o, marginBottom: 4 }}>Rempli par ton coach</div>
                 <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5 }}>
                   Ce test est noté par ton coach. Envoie-lui ta vidéo (hors application). Tu peux marquer la séance comme réalisée une fois la vidéo envoyée.
                 </div>
@@ -347,7 +347,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
                   placeholder={`Ex : VMA = 17 km/h, 1RM Squat = 120 kg, temps = 4'32"...`}
                   rows={4}
                   style={{
-                    width: "100%", padding: "10px 12px", borderRadius: 10,
+                    width: "100%", padding: "10px 12px", borderRadius: 4,
                     border: "1px solid " + C.brdL, background: C.s2,
                     color: C.tx, fontSize: 13, fontFamily: "inherit",
                     resize: "none", outline: "none", boxSizing: "border-box" as const,
@@ -369,7 +369,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
                   placeholder="Conditions, ressenti…"
                   rows={2}
                   style={{
-                    width: "100%", padding: "10px 12px", borderRadius: 10,
+                    width: "100%", padding: "10px 12px", borderRadius: 4,
                     border: "1px solid " + C.brdL, background: C.s2,
                     color: C.tx, fontSize: 13, fontFamily: "inherit",
                     resize: "none", outline: "none", boxSizing: "border-box" as const,
@@ -378,7 +378,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
               </div>
             )}
             {test.completed && comment && (
-              <div style={{ background: C.s2, borderRadius: 10, padding: "10px 14px" }}>
+              <div style={{ background: C.s2, borderRadius: 4, padding: "10px 14px" }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
                   Commentaire
                 </div>
@@ -392,7 +392,7 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
                 onClick={handleSubmit}
                 disabled={saving}
                 style={{
-                  width: "100%", padding: "13px 0", borderRadius: 12,
+                  width: "100%", padding: "13px 0", borderRadius: 6,
                   border: "none", background: saving ? C.s2 : (coachFilled ? C.g : tc),
                   color: saving ? C.tx3 : "#fff",
                   fontSize: 14, fontWeight: 700,

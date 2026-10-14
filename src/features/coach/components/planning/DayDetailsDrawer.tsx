@@ -18,13 +18,14 @@ import { CoachSessionOverrideModal } from "./CoachSessionOverrideModal";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import type { ProgSession, Bloc, Exercice, ExerciceParams } from "@/features/coach/components/programmation/types";
+import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
 function rpeColor(v: number) { return v <= 4 ? C.g : v <= 7 ? C.o : C.r; }
 function rpeBg(v: number)    { return v <= 4 ? C.gS : v <= 7 ? C.oS : C.rS; }
 
-const FREE_COLOR  = "#7FA88E";   // patine (DA)
+const FREE_COLOR  = "#1FF0B0";   // patine (DA)
 const TEST_COLOR  = "#A67C52";   // bronze (DA)
 
 const ENERGY_KIND_LABEL: Record<string, string> = {
@@ -68,7 +69,9 @@ type ExoRow = {
 function fmtPlanned(p: ExerciceParams): string {
   const parts: string[] = [];
   parts.push(`${p.nb_series}×`);
-  if (p.reps.mode === "global") {
+  if (p.cluster) {
+    parts.push(formatClusterReps(p.cluster));
+  } else if (p.reps.mode === "global") {
     const rMin = p.reps.value;
     const rMax = p.reps_max?.mode === "global" ? p.reps_max.value : null;
     parts.push(rMax != null && rMax !== rMin ? `${rMin}-${rMax}` : String(rMin));
@@ -163,7 +166,7 @@ function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
 
   return (
     <div style={{
-      background: C.s2, borderRadius: 10, border: "1px solid " + C.brd,
+      background: C.s2, borderRadius: 4, border: "1px solid " + C.brd,
       overflow: "hidden", transition: "all 150ms",
     }}>
       {/* Collapsed header — always visible */}
@@ -229,7 +232,7 @@ function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
             {/* Planned */}
             {exo.planned && (
               <div style={{
-                padding: "8px 10px", borderRadius: 8,
+                padding: "8px 10px", borderRadius: 4,
                 background: C.s1, border: "1px dashed " + C.brd,
               }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 6 }}>
@@ -244,7 +247,7 @@ function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
             {/* Actual */}
             {hasActual && (
               <div style={{
-                padding: "8px 10px", borderRadius: 8,
+                padding: "8px 10px", borderRadius: 4,
                 background: C.gS + "30",
               }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.g, textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 6 }}>
@@ -272,7 +275,7 @@ function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
           {/* Exercise comment */}
           {exerciceComment && (
             <div style={{ fontSize: 10, color: C.tx2, fontStyle: "italic", padding: "6px 8px", background: C.acS + "30", borderRadius: 6 }}>
-              💬 {exerciceComment}
+              {exerciceComment}
             </div>
           )}
         </div>
@@ -303,7 +306,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 71,
         maxHeight: "92vh",
-        background: C.s1, borderRadius: "18px 18px 0 0", border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: "6px 6px 0 0", border: "1px solid " + C.brd,
         borderBottom: "none",
         display: "flex", flexDirection: "column",
         animation: "slideUp 200ms ease-out",
@@ -321,7 +324,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
               <span style={{ fontSize: 11, color: C.tx3 }}>{format(new Date(event.date), "d MMMM yyyy", { locale: fr })}</span>
               {event.status && STATUS_LABEL[event.status] && (
                 <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 12,
+                  fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
                   background: STATUS_LABEL[event.status].color + "20",
                   color: STATUS_LABEL[event.status].color,
                   textTransform: "uppercase",
@@ -331,7 +334,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
               )}
               {event.rpe != null && (
                 <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 12,
+                  fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
                   background: rpeBg(event.rpe), color: rpeColor(event.rpe),
                 }}>
                   RPE {event.rpe}/10
@@ -339,7 +342,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
               )}
               {mods?.sessionForme != null && (
                 <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 12,
+                  fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
                   background: mods.sessionForme >= 4 ? C.gS : mods.sessionForme >= 3 ? C.oS : C.rS,
                   color: mods.sessionForme >= 4 ? C.g : mods.sessionForme >= 3 ? C.o : C.r,
                 }}>
@@ -349,7 +352,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
             </div>
           </div>
           <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 8, border: "1px solid " + C.brdL,
+            width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL,
             background: "transparent", color: C.tx3, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
@@ -369,7 +372,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
             ].map(({ label, value, color }) => (
               <div key={label} style={{
                 flex: 1, textAlign: "center", padding: "8px 6px",
-                background: C.s2, borderRadius: 8,
+                background: C.s2, borderRadius: 4,
               }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{label}</div>
                 <div style={{ fontSize: 16, fontWeight: 800, color, marginTop: 2 }}>{value}</div>
@@ -383,7 +386,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
           {isLoading ? (
             <div style={{ textAlign: "center", padding: "30px 0", color: C.tx3, fontSize: 12 }}>Chargement…</div>
           ) : exoRows.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "30px 0", color: C.tx3, fontSize: 12, background: C.s2, borderRadius: 10 }}>
+            <div style={{ textAlign: "center", padding: "30px 0", color: C.tx3, fontSize: 12, background: C.s2, borderRadius: 4 }}>
               Aucun exercice trouvé pour cette séance
             </div>
           ) : (
@@ -413,7 +416,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
 
               {/* Session comment */}
               {mods?.sessionComment && (
-                <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brd, padding: "10px 12px", marginTop: 6 }}>
+                <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, padding: "10px 12px", marginTop: 6 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
                     Commentaire séance
                   </div>
@@ -458,7 +461,7 @@ function WorkoutDetailView({
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         {statusInfo && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: statusInfo.color + "20", color: statusInfo.color,
             textTransform: "uppercase", letterSpacing: "0.4px",
           }}>
@@ -467,7 +470,7 @@ function WorkoutDetailView({
         )}
         {event.rpe != null && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: rpeBg(event.rpe), color: rpeColor(event.rpe),
           }}>
             RPE {event.rpe}/10
@@ -475,7 +478,7 @@ function WorkoutDetailView({
         )}
         {isProjected && (
           <span style={{
-            fontSize: 10, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, padding: "3px 8px", borderRadius: 6,
             background: C.s2, color: C.tx3, fontStyle: "italic",
           }}>
             Prévu (programme)
@@ -483,7 +486,7 @@ function WorkoutDetailView({
         )}
         {hasOverride && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: "#F59E0B20", color: "#F59E0B",
             textTransform: "uppercase", letterSpacing: "0.4px",
           }}>
@@ -497,7 +500,7 @@ function WorkoutDetailView({
         <button
           onClick={() => navigate(`/coach/athletes/${athleteId}/programmation`)}
           style={{
-            width: "100%", padding: "10px 14px", borderRadius: 10,
+            width: "100%", padding: "10px 14px", borderRadius: 4,
             border: "1px solid " + C.coach + "40", background: C.coachS,
             color: C.coach, fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
@@ -513,14 +516,14 @@ function WorkoutDetailView({
         <button
           onClick={onAdaptForDay}
           style={{
-            width: "100%", padding: "10px 14px", borderRadius: 10,
+            width: "100%", padding: "10px 14px", borderRadius: 4,
             border: "1px solid " + C.ac + "40", background: C.acS,
             color: C.ac, fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           }}
         >
-          ✎ {hasOverride ? "Modifier l'adaptation du jour" : "Adapter pour ce jour"}
+          {hasOverride ? "Modifier l'adaptation du jour" : "Adapter pour ce jour"}
         </button>
       )}
 
@@ -528,14 +531,14 @@ function WorkoutDetailView({
       <button
         onClick={onOpenRecap}
         style={{
-          width: "100%", padding: "12px 14px", borderRadius: 10,
+          width: "100%", padding: "12px 14px", borderRadius: 4,
           border: "1px solid " + C.ac + "40", background: C.acS,
           color: C.ac, fontSize: 13, fontWeight: 700,
           cursor: "pointer", fontFamily: "inherit",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
         }}
       >
-        📋 {isCompleted ? "Voir le récap (Prévu vs Réalisé)" : "Voir les exercices prévus"}
+        {isCompleted ? "Voir le récap (Prévu vs Réalisé)" : "Voir les exercices prévus"}
       </button>
 
       {/* Quick athlete feedback summary */}
@@ -552,7 +555,7 @@ function WorkoutDetailView({
         </div>
       )}
       {isCompleted && mods?.sessionComment && (
-        <div style={{ fontSize: 12, color: C.tx2, fontStyle: "italic", background: C.s2, borderRadius: 8, padding: "8px 12px", border: "1px solid " + C.brd }}>
+        <div style={{ fontSize: 12, color: C.tx2, fontStyle: "italic", background: C.s2, borderRadius: 4, padding: "8px 12px", border: "1px solid " + C.brd }}>
           « {mods.sessionComment} »
         </div>
       )}
@@ -574,7 +577,7 @@ function EventCard({
   onSelect: (e: CalEvent) => void;
 }) {
   const isEnergy = event.type === "energy";
-  const color = event.partial && isEnergy ? "#7E9CA8" : TYPE_COLOR[event.type] ?? C.tx3;
+  const color = event.partial && isEnergy ? "#33B5FF" : TYPE_COLOR[event.type] ?? C.tx3;
   const { mutate: del } = useDeleteCalendarEvent();
 
   const rawBlockLogs = isEnergy
@@ -585,7 +588,7 @@ function EventCard({
   const totalCount = blVals.length;
 
   const statusInfo = event.partial && isEnergy
-    ? { label: `Partielle ${doneCount}/${totalCount}`, color: "#7E9CA8" }
+    ? { label: `Partielle ${doneCount}/${totalCount}`, color: "#33B5FF" }
     : event.status ? STATUS_LABEL[event.status] : null;
 
   const isClickable = event.type === "workout" || event.type === "energy" || event.type === "free_activity";
@@ -599,18 +602,18 @@ function EventCard({
     : "Compétition";
 
   const emoji =
-    event.type === "workout"         ? "🏋️ "
-    : event.type === "energy"        ? "⚡ "
-    : event.type === "free_activity" ? (event.sportEmoji ? event.sportEmoji + " " : "🏃 ")
-    : event.type === "test"          ? "🧪 "
-    : "🏆 ";
+    event.type === "workout"         ? ""
+    : event.type === "energy"        ? ""
+    : event.type === "free_activity" ? (event.sportEmoji ? event.sportEmoji + " " : "")
+    : event.type === "test"          ? ""
+    : "";
 
   return (
     <div
       onClick={() => { if (isClickable) onSelect(event); }}
       style={{
         background: C.s2,
-        borderRadius: 12,
+        borderRadius: 6,
         borderLeft: `3px solid ${color}`,
         padding: "12px 14px",
         display: "flex",
@@ -633,7 +636,7 @@ function EventCard({
             )}
             {event.rpe != null && (
               <span style={{
-                fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 8,
+                fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
                 background: rpeBg(event.rpe), color: rpeColor(event.rpe),
               }}>
                 RPE {event.rpe}/10
@@ -664,7 +667,7 @@ function EventCard({
               });
             }}
             style={{
-              width: 28, height: 28, borderRadius: 8,
+              width: 28, height: 28, borderRadius: 4,
               border: "1px solid " + C.r + "30", background: "transparent",
               color: C.r, cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -701,19 +704,19 @@ interface DayDetailsDrawerProps {
 
 function WellnessDayView({ wellness }: { wellness: WellnessData }) {
   const score = Math.round(((wellness.fatigue ?? 3) + (wellness.sommeil ?? 3) + (wellness.stress ?? 3) + (wellness.energie ?? 3) + (wellness.doms ?? 3)) / 25 * 100);
-  const color = score >= 80 ? "#9DB06A" : score >= 65 ? "#7BC67E" : score >= 50 ? C.o : score >= 35 ? "#F07030" : C.r;
+  const color = score >= 80 ? "#66F03C" : score >= 65 ? "#7BC67E" : score >= 50 ? C.o : score >= 35 ? "#F07030" : C.r;
   const label = score >= 80 ? "Optimal" : score >= 65 ? "Bon" : score >= 50 ? "Modéré" : score >= 35 ? "Fatigué" : "Surmenage";
   const metrics = [
     { k: "Récup.", v: wellness.fatigue }, { k: "Sommeil", v: wellness.sommeil },
     { k: "Sérén.", v: wellness.stress }, { k: "Énergie", v: wellness.energie }, { k: "Fraîch.", v: wellness.doms },
   ].filter((m): m is { k: string; v: number } => m.v != null);
   return (
-    <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brd, padding: "10px 12px" }}>
+    <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: metrics.length > 0 ? 8 : 0 }}>
         <span style={{ fontSize: 20, fontWeight: 800, color }}>{score}</span>
         <span style={{ fontSize: 9, color: C.tx3 }}>/100</span>
         <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: color + "20", color }}>{label}</span>
-        {wellness.poids != null && <span style={{ fontSize: 10, color: C.tx3, marginLeft: "auto" }}>⚖️ {wellness.poids} kg</span>}
+        {wellness.poids != null && <span style={{ fontSize: 10, color: C.tx3, marginLeft: "auto" }}>{wellness.poids} kg</span>}
       </div>
       {metrics.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 12px" }}>
@@ -735,7 +738,7 @@ function NutritionDayView({ nutrition }: { nutrition: NutritionDailyLog }) {
   const { total_calories_consumed: kcal, active_calories: active, glucides_consumed: glucides, lipides_consumed: lipides, proteines_consumed: proteines } = nutrition;
   const hasMacros = glucides != null || lipides != null || proteines != null;
   return (
-    <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brd, padding: "10px 12px" }}>
+    <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, padding: "10px 12px" }}>
       {kcal != null && (
         <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, marginBottom: hasMacros ? 6 : 0 }}>
           {kcal} <span style={{ fontSize: 11, fontWeight: 400, color: C.tx3 }}>kcal</span>
@@ -744,7 +747,7 @@ function NutritionDayView({ nutrition }: { nutrition: NutritionDailyLog }) {
       )}
       {hasMacros && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 12px" }}>
-          {proteines != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Prot.</span><span style={{ fontSize: 10, fontWeight: 700, color: "#7E9CA8" }}>{proteines}g</span></div>}
+          {proteines != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Prot.</span><span style={{ fontSize: 10, fontWeight: 700, color: "#33B5FF" }}>{proteines}g</span></div>}
           {glucides != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Gluc.</span><span style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B" }}>{glucides}g</span></div>}
           {lipides != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Lip.</span><span style={{ fontSize: 10, fontWeight: 700, color: "#EF4444" }}>{lipides}g</span></div>}
         </div>
@@ -763,7 +766,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
   const totalCount = blEntries.length;
 
   const statusInfo = event.partial
-    ? { label: `Partielle ${doneCount}/${totalCount}`, color: "#7E9CA8" }
+    ? { label: `Partielle ${doneCount}/${totalCount}`, color: "#33B5FF" }
     : event.status ? STATUS_LABEL[event.status] : null;
 
   return (
@@ -772,7 +775,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         {statusInfo && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: statusInfo.color + "20", color: statusInfo.color,
             textTransform: "uppercase", letterSpacing: "0.4px",
           }}>
@@ -781,7 +784,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
         )}
         {event.sessionKind && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: C.oS, color: C.o,
           }}>
             {ENERGY_KIND_LABEL[event.sessionKind] ?? event.sessionKind}
@@ -789,7 +792,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
         )}
         {event.rpe != null && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: rpeBg(event.rpe), color: rpeColor(event.rpe),
           }}>
             RPE {event.rpe}/10
@@ -799,7 +802,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
 
       {/* Block completion */}
       {blEntries.length > 0 && (
-        <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brd, overflow: "hidden" }}>
+        <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, overflow: "hidden" }}>
           <div style={{ padding: "8px 12px", borderBottom: "1px solid " + C.brd, fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
             Blocs
           </div>
@@ -825,7 +828,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
 
       {/* Notes */}
       {event.raw?.notes && (
-        <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brd, padding: "10px 12px", fontSize: 12, color: C.tx2, fontStyle: "italic" }}>
+        <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, padding: "10px 12px", fontSize: 12, color: C.tx2, fontStyle: "italic" }}>
           {String(event.raw.notes)}
         </div>
       )}
@@ -834,7 +837,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
       <button
         onClick={onOpenPreview}
         style={{
-          padding: "10px 14px", borderRadius: 10, border: "1px solid " + C.o + "40",
+          padding: "10px 14px", borderRadius: 4, border: "1px solid " + C.o + "40",
           background: C.oS, color: C.o, fontSize: 12, fontWeight: 600,
           cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
         }}
@@ -852,7 +855,7 @@ function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: CalEvent
             navigate(base);
           }}
           style={{
-            padding: "10px 14px", borderRadius: 10, border: "1px solid " + C.coach + "40",
+            padding: "10px 14px", borderRadius: 4, border: "1px solid " + C.coach + "40",
             background: C.coachS, color: C.coach, fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -872,7 +875,7 @@ function FreeActivityDetailView({ event }: { event: CalEvent }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Sport */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 32 }}>{event.sportEmoji ?? "🏃"}</span>
+        <span style={{ fontSize: 32 }}>{event.sportEmoji ?? "course"}</span>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.tx }}>{event.sport ?? "Activité libre"}</div>
           <div style={{ fontSize: 11, color: FREE_COLOR, fontWeight: 600 }}>Activité libre</div>
@@ -883,13 +886,13 @@ function FreeActivityDetailView({ event }: { event: CalEvent }) {
       {(event.duration != null || event.intensity != null) && (
         <div style={{ display: "flex", gap: 10 }}>
           {event.duration != null && (
-            <div style={{ background: C.s2, borderRadius: 10, padding: "10px 14px", flex: 1, border: "1px solid " + C.brd }}>
+            <div style={{ background: C.s2, borderRadius: 4, padding: "10px 14px", flex: 1, border: "1px solid " + C.brd }}>
               <div style={{ fontSize: 9, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Durée</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: C.tx }}>{event.duration} <span style={{ fontSize: 11, fontWeight: 400, color: C.tx3 }}>min</span></div>
             </div>
           )}
           {event.intensity != null && (
-            <div style={{ background: C.s2, borderRadius: 10, padding: "10px 14px", flex: 1, border: "1px solid " + C.brd }}>
+            <div style={{ background: C.s2, borderRadius: 4, padding: "10px 14px", flex: 1, border: "1px solid " + C.brd }}>
               <div style={{ fontSize: 9, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>RPE</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: FREE_COLOR }}>{event.intensity}<span style={{ fontSize: 11, fontWeight: 400, color: C.tx3 }}>/10</span></div>
             </div>
@@ -899,7 +902,7 @@ function FreeActivityDetailView({ event }: { event: CalEvent }) {
 
       {/* Note */}
       {event.raw?.note && (
-        <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brd, padding: "10px 12px", fontSize: 12, color: C.tx2, fontStyle: "italic" }}>
+        <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, padding: "10px 12px", fontSize: 12, color: C.tx2, fontStyle: "italic" }}>
           {String(event.raw.note)}
         </div>
       )}
@@ -920,7 +923,7 @@ function EnergyEventPreview({ event, athleteId, onClose }: { event: CalEvent; at
           position: "fixed", top: "50%", left: "50%", zIndex: 61,
           transform: "translate(-50%, -50%)",
           width: 780, maxWidth: "96vw",
-          background: C.s1, borderRadius: 16, border: "1px solid " + C.brd,
+          background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
           padding: "40px", textAlign: "center", color: C.tx3, fontSize: 13,
         }}>
           Chargement…
@@ -1016,7 +1019,7 @@ export function DayDetailsDrawer({
             <button
               onClick={() => setSelectedEvent(null)}
               style={{
-                width: 32, height: 32, borderRadius: 8,
+                width: 32, height: 32, borderRadius: 4,
                 border: "1px solid " + C.brdL, background: "transparent",
                 color: C.tx3, cursor: "pointer", fontFamily: "inherit",
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -1041,7 +1044,7 @@ export function DayDetailsDrawer({
           <button
             onClick={handleClose}
             style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 4,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -1077,14 +1080,14 @@ export function DayDetailsDrawer({
                   key={e.id}
                   onClick={() => setEditingComp(e.raw as unknown as Competition)}
                   style={{
-                    width: "100%", borderRadius: 14, overflow: "hidden",
+                    width: "100%", borderRadius: 6, overflow: "hidden",
                     border: "1px solid " + C.coach + "40",
                     background: "linear-gradient(135deg, rgba(244,114,182,0.12) 0%, rgba(244,114,182,0.05) 100%)",
                     cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
                   }}
                 >
                   <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 22, flexShrink: 0 }}>🏆</span>
+                    <span style={{ fontSize: 22, flexShrink: 0 }}></span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 800, color: C.tx }}>{e.title}</div>
                       {e.raw?.location && (
@@ -1093,13 +1096,13 @@ export function DayDetailsDrawer({
                     </div>
                     {e.raw?.priority && (
                       <span style={{
-                        fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+                        fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
                         background: "#F5A62320", color: "#F5A623",
                       }}>
                         Priorité {String(e.raw.priority)}
                       </span>
                     )}
-                    <span style={{ fontSize: 11, color: C.tx3 }}>✎</span>
+                    <span style={{ fontSize: 11, color: C.tx3 }}></span>
                   </div>
                 </button>
               ))}
@@ -1164,14 +1167,14 @@ export function DayDetailsDrawer({
 
               {wellnessDay && (
                 <section>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#9DB06A", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>❤️ Bien-être</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#66F03C", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Bien-être</div>
                   <WellnessDayView wellness={wellnessDay} />
                 </section>
               )}
 
               {nutritionDay && (
                 <section>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>🍽️ Nutrition</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Nutrition</div>
                   <NutritionDayView nutrition={nutritionDay} />
                 </section>
               )}
@@ -1185,7 +1188,7 @@ export function DayDetailsDrawer({
             <button
               onClick={() => { handleClose(); onQuickAdd(day); }}
               style={{
-                width: "100%", padding: "12px 0", borderRadius: 12,
+                width: "100%", padding: "12px 0", borderRadius: 6,
                 border: "1px solid " + C.ac + "40", background: C.acS,
                 color: C.ac, fontSize: 13, fontWeight: 600,
                 cursor: "pointer", fontFamily: "inherit",

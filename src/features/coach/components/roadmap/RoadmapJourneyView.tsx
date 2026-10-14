@@ -53,7 +53,7 @@ function ItemRow({
   return (
     <div style={{
       display: "flex", alignItems: "flex-start", gap: 12,
-      padding: "10px 14px", borderRadius: 10,
+      padding: "10px 14px", borderRadius: 4,
       background: item.status === "shipped" ? `${C.g}08` : C.s2,
       border: `1px solid ${item.status === "shipped" ? `${C.g}25` : C.brd}`,
       opacity: item.status === "shipped" ? 0.85 : 1,
@@ -99,7 +99,7 @@ function ItemRow({
           value={item.status}
           onChange={(e) => updateItem.mutate({ id: item.id, status: e.target.value as RoadmapItemStatus })}
           style={{
-            fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
+            fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 6,
             background: `${stColor}20`, color: stColor,
             border: `1px solid ${stColor}40`,
             cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
@@ -111,7 +111,7 @@ function ItemRow({
         </select>
       ) : (
         <span style={{
-          fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+          fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
           background: `${stColor}20`, color: stColor, flexShrink: 0,
         }}>
           {ITEM_STATUS_LABEL[item.status]}
@@ -125,7 +125,7 @@ function ItemRow({
         disabled={toggleVote.isPending}
         style={{
           display: "flex", alignItems: "center", gap: 4,
-          padding: "3px 8px", borderRadius: 20, flexShrink: 0,
+          padding: "3px 8px", borderRadius: 6, flexShrink: 0,
           border: voted ? `1px solid ${C.ac}60` : `1px solid ${C.brdL}`,
           background: voted ? `${C.ac}15` : "transparent",
           color: voted ? C.ac : C.tx3,
@@ -197,7 +197,6 @@ function PhaseCard({
           width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
           border: `3px solid ${statusColor}`,
           background: phase.status === "shipped" ? statusColor : C.bg,
-          boxShadow: `0 0 0 4px ${statusColor}20`,
           zIndex: 1,
         }} />
         {/* Bottom connector */}
@@ -213,7 +212,7 @@ function PhaseCard({
       <div style={{
         flex: 1, marginLeft: 16, marginBottom: isLast ? 0 : 20,
         background: C.s1, border: `1px solid ${C.brd}`,
-        borderRadius: 14, overflow: "hidden",
+        borderRadius: 6, overflow: "hidden",
       }}>
         {/* Phase header */}
         <div
@@ -229,7 +228,7 @@ function PhaseCard({
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: C.tx }}>{phase.name}</span>
                 <span style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                  fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6,
                   background: `${statusColor}20`, color: statusColor,
                 }}>
                   {PHASE_STATUS_LABEL[phase.status]}
@@ -302,7 +301,7 @@ function PhaseCard({
               type="button"
               onClick={() => onAddItem(phase.id)}
               style={{
-                width: "100%", padding: "8px 0", borderRadius: 8,
+                width: "100%", padding: "8px 0", borderRadius: 4,
                 border: `1px dashed ${C.brdL}`, background: "transparent",
                 color: C.tx3, fontSize: 12, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -348,7 +347,7 @@ export function RoadmapJourneyView({
     <div style={{ maxWidth: 760, margin: "0 auto" }}>
       {/* Global progress */}
       <div style={{
-        padding: "16px 20px", borderRadius: 14, marginBottom: 28,
+        padding: "16px 20px", borderRadius: 6, marginBottom: 28,
         background: C.s1, border: `1px solid ${C.brd}`,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -403,7 +402,7 @@ export function RoadmapJourneyView({
         <div style={{
           marginTop: phases.length > 0 ? 24 : 0,
           background: C.s1, border: `1px solid ${C.brd}`,
-          borderRadius: 14, overflow: "hidden",
+          borderRadius: 6, overflow: "hidden",
         }}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.brd}` }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Non assignés</span>
@@ -425,7 +424,7 @@ export function RoadmapJourneyView({
               type="button"
               onClick={() => onAddItem(null)}
               style={{
-                width: "100%", padding: "8px 0", borderRadius: 8,
+                width: "100%", padding: "8px 0", borderRadius: 4,
                 border: `1px dashed ${C.brdL}`, background: "transparent",
                 color: C.tx3, fontSize: 12, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,

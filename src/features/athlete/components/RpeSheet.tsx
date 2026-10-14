@@ -56,7 +56,7 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
           background: C.s1,
-          borderRadius: "20px 20px 0 0",
+          borderRadius: "6px 6px 0 0",
           borderTop: "1px solid " + C.brd,
           padding: "24px 20px 40px",
           animation: "rpeSlideUp 220ms ease-out",
@@ -89,7 +89,7 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
                 onClick={() => setSelected(v)}
                 style={{
                   padding: "14px 0",
-                  borderRadius: 12,
+                  borderRadius: 6,
                   border: "1px solid " + (isSelected ? rpeColor(v) + "80" : C.brdL),
                   background: isSelected ? rpeBg(v) : C.s2,
                   color: isSelected ? rpeColor(v) : C.tx2,
@@ -111,7 +111,7 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
             fontSize: 13, fontWeight: 600,
             color: selected != null ? rpeColor(selected) : C.tx3,
             background: selected != null ? rpeBg(selected) : "transparent",
-            borderRadius: 8, padding: "4px 12px",
+            borderRadius: 4, padding: "4px 12px",
             transition: "all 150ms",
           }}
         >
@@ -123,7 +123,7 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
           onClick={handleSubmit}
           disabled={isPending || selected == null}
           style={{
-            width: "100%", padding: "15px 0", borderRadius: 14,
+            width: "100%", padding: "15px 0", borderRadius: 6,
             border: "none",
             background: selected != null ? C.ac : C.s2,
             color: selected != null ? "#fff" : C.tx3,
@@ -131,7 +131,7 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
             cursor: selected != null ? "pointer" : "default",
             fontFamily: "inherit", minHeight: 44,
             transition: "background 150ms",
-            boxShadow: selected != null ? "0 4px 20px rgba(201,161,74,0.3)" : "none",
+            boxShadow: selected != null ? "0 4px 20px rgba(255,201,51,0.3)" : "none",
           }}
         >
           {isPending ? "Enregistrement…" : "Enregistrer"}

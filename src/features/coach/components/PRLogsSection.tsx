@@ -106,7 +106,7 @@ function AddPRForm({ athleteId, existingRefs, defaultRef, onDone }: AddPRFormPro
   const canSubmit = !!ref.trim() && (mode === "direct" ? !!kg : !!epleyKg) && !!date;
 
   return (
-    <div style={{ background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
           Nouveau record
@@ -138,8 +138,7 @@ function AddPRForm({ athleteId, existingRefs, defaultRef, onDone }: AddPRFormPro
         {showSugg && filtered.length > 0 && (
           <div style={{
             position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
-            background: C.bg, border: `1px solid ${C.brd}`, borderRadius: 7,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.3)", marginTop: 2,
+            background: C.bg, border: `1px solid ${C.brd}`, borderRadius: 7, marginTop: 2,
           }}>
             {filtered.map(r => (
               <button key={r} onMouseDown={() => { setRef(r); setShowSugg(false); }} style={{
@@ -396,8 +395,7 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
       <div style={{
         position: "fixed", top: "50%", left: "50%", zIndex: 201,
         transform: "translate(-50%, -50%)",
-        background: C.bg, borderRadius: 14, width: "min(92vw, 420px)",
-        boxShadow: "0 12px 40px rgba(0,0,0,0.6)", border: `1px solid ${C.brdL}`,
+        background: C.bg, borderRadius: 6, width: "min(92vw, 420px)", border: `1px solid ${C.brdL}`,
         display: "flex", flexDirection: "column", overflow: "hidden",
       }}>
         {/* Header */}
@@ -416,7 +414,7 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
         <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Exercise label */}
           <div style={{
-            padding: "8px 12px", borderRadius: 8,
+            padding: "8px 12px", borderRadius: 4,
             background: `${C.coach}12`, border: `1px solid ${C.coach}25`,
             fontSize: 13, fontWeight: 700, color: C.coach,
           }}>
@@ -441,7 +439,7 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
             {/* Always-visible filtered list */}
             {filtered.length > 0 && (
               <div style={{
-                marginTop: 4, background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 8,
+                marginTop: 4, background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
                 maxHeight: 160, overflowY: "auto",
               }}>
                 {filtered.map(r => (
@@ -463,7 +461,7 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
 
           {/* Preview */}
           <div style={{
-            background: C.s2, borderRadius: 9, padding: "10px 14px",
+            background: C.s2, borderRadius: 4, padding: "10px 14px",
             border: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 6,
           }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
@@ -498,14 +496,14 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
         {/* Footer */}
         <div style={{ padding: "10px 18px 14px", display: "flex", gap: 8 }}>
           <button onClick={() => onDismiss(exercise)} style={{
-            padding: "8px 14px", borderRadius: 8,
+            padding: "8px 14px", borderRadius: 4,
             border: `1px solid ${C.r}40`, background: C.rS,
             color: C.r, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
           }}>
             Pas de RM
           </button>
           <button onClick={onClose} style={{
-            flex: 1, padding: "8px 0", borderRadius: 8,
+            flex: 1, padding: "8px 0", borderRadius: 4,
             border: `1px solid ${C.brdL}`, background: "transparent",
             color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
           }}>
@@ -515,7 +513,7 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
             onClick={() => { if (ref.trim()) { onConfirm(exercise, ref.trim()); } }}
             disabled={!ref.trim()}
             style={{
-              flex: 2, padding: "8px 0", borderRadius: 8, border: "none",
+              flex: 2, padding: "8px 0", borderRadius: 4, border: "none",
               background: ref.trim() ? C.g : C.s2,
               color: ref.trim() ? "#fff" : C.tx3,
               fontSize: 12, fontWeight: 700, cursor: ref.trim() ? "pointer" : "default", fontFamily: "inherit",
@@ -686,7 +684,7 @@ export function PRLogsSection({ athleteId, exercises = [], onUpdateExerciseRef }
       ) : refs.length === 0 && unlinkedExercises.length === 0 && adding === null ? (
         <div style={{
           textAlign: "center", padding: "24px 16px",
-          border: `1px dashed ${C.brd}`, borderRadius: 10, color: C.tx3, fontSize: 13,
+          border: `1px dashed ${C.brd}`, borderRadius: 4, color: C.tx3, fontSize: 13,
         }}>
           Aucun record enregistré.<br />
           <span style={{ fontSize: 11 }}>Les PRs sont calculés automatiquement depuis les séances, ou tu peux en ajouter manuellement.</span>
@@ -699,7 +697,7 @@ export function PRLogsSection({ athleteId, exercises = [], onUpdateExerciseRef }
               {muscleOrder.map(muscle => (
                 <div key={muscle} style={{
                   border: `1px solid ${C.brd}`,
-                  borderRadius: 10,
+                  borderRadius: 4,
                   overflow: "hidden",
                   background: C.s1,
                 }}>

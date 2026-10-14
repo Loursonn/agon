@@ -31,7 +31,7 @@ export function CardSkeleton() {
     <div
       style={{
         padding: "16px",
-        borderRadius: 14,
+        borderRadius: 6,
         border: "1px solid rgba(255,255,255,0.06)",
         background: C.s1,
       }}
@@ -49,7 +49,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
   return (
     <div
       style={{
-        borderRadius: 14,
+        borderRadius: 6,
         border: "1px solid rgba(255,255,255,0.06)",
         background: C.s1,
         overflow: "hidden",
@@ -96,7 +96,7 @@ export function ChartSkeleton({ height = 200 }: { height?: number }) {
   return (
     <div
       style={{
-        borderRadius: 14,
+        borderRadius: 6,
         border: "1px solid rgba(255,255,255,0.06)",
         background: C.s1,
         padding: 16,
@@ -104,7 +104,7 @@ export function ChartSkeleton({ height = 200 }: { height?: number }) {
     >
       <Skeleton className="h-3 w-28 mb-2" style={{ background: "rgba(255,255,255,0.06)" }} />
       <Skeleton className="h-3 w-16 mb-4" style={{ background: "rgba(255,255,255,0.04)" }} />
-      <Skeleton style={{ height, borderRadius: 8, background: "rgba(255,255,255,0.05)" }} />
+      <Skeleton style={{ height, borderRadius: 4, background: "rgba(255,255,255,0.05)" }} />
     </div>
   );
 }
@@ -122,7 +122,7 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
             alignItems: "center",
             gap: 12,
             padding: "12px 16px",
-            borderRadius: 10,
+            borderRadius: 4,
             border: "1px solid rgba(255,255,255,0.06)",
             background: C.s1,
           }}

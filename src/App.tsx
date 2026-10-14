@@ -28,6 +28,7 @@ const ProfilPage         = lazy(() => import("./features/athlete/pages/ProfilPag
 const LogSeancePage   = lazy(() => import("./features/athlete/pages/LogSeancePage.tsx"));
 const AlimPage        = lazy(() => import("./features/athlete/pages/AlimPage.tsx"));
 const AthleteTestPage = lazy(() => import("./features/athlete/pages/AthleteTestPage.tsx"));
+const AthleteHyroxPage = lazy(() => import("./features/athlete/pages/HyroxPage.tsx"));
 const SpecificExecutionPage = lazy(() => import("./features/athlete/pages/SpecificExecutionPage.tsx"));
 
 // Pages coach globales (lazy)
@@ -49,6 +50,7 @@ const AthleteViewPage           = lazy(() => import("./features/coach/pages/Athl
 const EnergySessionEditorPage   = lazy(() => import("./features/coach/pages/EnergySessionEditorPage.tsx"));
 const ProfilAthletePage         = lazy(() => import("./features/coach/pages/ProfilAthletePage.tsx"));
 const EnergyLibraryPage         = lazy(() => import("./features/coach/pages/EnergyLibraryPage.tsx"));
+const CoachHyroxPage            = lazy(() => import("./features/coach/pages/HyroxPage.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -62,8 +64,8 @@ const fadeVariants: Variants = {
 // Fallback minimal pendant le chargement des chunks
 function PageLoader() {
   return (
-    <div style={{ minHeight: "100vh", background: "#15120F", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 28, height: 28, border: "2.5px solid rgba(124,116,128,0.2)", borderTopColor: "#C9A14A", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+    <div style={{ minHeight: "100vh", background: "#0E0C0A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 28, height: 28, border: "2.5px solid rgba(231,211,168,0.2)", borderTopColor: "#FFC933", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -102,6 +104,7 @@ function AnimatedRoutes() {
             <Route path="log" element={<LogSeancePage />} />
             <Route path="alim" element={<AlimPage />} />
             <Route path="test" element={<AthleteTestPage />} />
+            <Route path="hyrox" element={<AthleteHyroxPage />} />
             <Route path="specific/:assignmentId" element={<SpecificExecutionPage />} />
           </Route>
 
@@ -133,6 +136,7 @@ function AnimatedRoutes() {
               <Route path="retours"       element={<RetoursPage />} />
               {/* Legacy : Tests vit maintenant dans Profil athlète → Suivi Testing */}
               <Route path="tests"         element={<Navigate to="../profil-sportif?view=testing" replace />} />
+              <Route path="hyrox"         element={<CoachHyroxPage />} />
               <Route path="athlete-view"  element={<AthleteViewPage />} />
             </Route>
 

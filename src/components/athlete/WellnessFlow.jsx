@@ -37,7 +37,7 @@ function BodyMap({selected,onToggle,color}){
 }
 
 // ── Free-point DOMS BodyMap ─────────────────────────────────────────────────
-const DOMS_COLORS = ["#F5A623", "#F07030", "#D9705A"];
+const DOMS_COLORS = ["#F5A623", "#F07030", "#FF5A33"];
 function domsColor(intensity) {
   if (!intensity || intensity <= 3) return DOMS_COLORS[0];
   if (intensity <= 6) return DOMS_COLORS[1];
@@ -197,7 +197,7 @@ function DomsBodyMap({ points, onChange }) {
                   </span>
                   <button onClick={() => { setSelected(selected === p.id ? null : p.id); setView(p.side); }} style={{
                     border: "none", background: "none", color: C.tx3, fontSize: 9, cursor: "pointer", padding: 0, fontFamily: "inherit",
-                  }}>✎</button>
+                  }}></button>
                   <button onClick={() => removePoint(p.id)} style={{
                     border: "none", background: "none", color: C.r, fontSize: 9, cursor: "pointer", padding: 0, fontFamily: "inherit",
                   }}>✕</button>
@@ -208,7 +208,7 @@ function DomsBodyMap({ points, onChange }) {
 
           {/* Intensity editor for selected point */}
           {selectedPt && (
-            <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8, background: C.s1, border: "1px solid " + C.brd }}>
+            <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 4, background: C.s1, border: "1px solid " + C.brd }}>
               <div style={{ fontSize: 9, color: C.tx3, textTransform: "uppercase", marginBottom: 6 }}>Intensité douleur</div>
               <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
@@ -242,7 +242,7 @@ function InjuryForm({onSave,onCancel,existing}){
   const[notes,setNotes]=useState(existing?.notes||"");
   const tog=id=>setZones(p=>p.includes(id)?p.filter(z=>z!==id):[...p,id]);
   const intC=intensity<=3?C.g:intensity<=6?C.o:C.r;
-  return(<div style={{background:C.s1,borderRadius:14,padding:16,border:"1px solid "+C.brd}}>
+  return(<div style={{background:C.s1,borderRadius:6,padding:16,border:"1px solid "+C.brd}}>
     <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Localisation</div><BodyMap selected={zones} onToggle={tog} color={C.r}/></div>
     <div style={{marginBottom:14}}>
       <div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Intensite de la douleur</div>
@@ -255,18 +255,18 @@ function InjuryForm({onSave,onCancel,existing}){
     </div>
     <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Type</div><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{INJ_TYPES.map(t=><button key={t} onClick={()=>setType(type===t?"":t)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid "+(type===t?C.r:C.brdL),background:type===t?C.rS:"transparent",color:type===t?C.r:C.tx3,fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:type===t?700:400}}>{t}</button>)}</div></div>
     <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Statut</div><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{INJ_STATUS.map(s=>{const sc=stC(s);return(<button key={s} onClick={()=>setStatus(s)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid "+(status===s?sc:C.brdL),background:status===s?sc+"20":"transparent",color:status===s?sc:C.tx3,fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:status===s?700:400}}>{s}</button>);})}</div></div>
-    <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:6}}>Notes</div><textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Description, circonstances, traitements..." rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}}/></div>
+    <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:6}}>Notes</div><textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Description, circonstances, traitements..." rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}}/></div>
     <div style={{display:"flex",gap:8}}>
-      {onCancel&&<button onClick={onCancel} style={{flex:1,padding:"10px 0",borderRadius:10,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>}
-      <button onClick={()=>onSave({id:existing?.id||Date.now(),zones,intensity,type,status,notes,date:existing?.date||todayKey()})} style={{flex:2,padding:"10px 0",borderRadius:10,border:"none",background:C.r,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{existing?"Modifier":"Ajouter"}</button>
+      {onCancel&&<button onClick={onCancel} style={{flex:1,padding:"10px 0",borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>}
+      <button onClick={()=>onSave({id:existing?.id||Date.now(),zones,intensity,type,status,notes,date:existing?.date||todayKey()})} style={{flex:2,padding:"10px 0",borderRadius:4,border:"none",background:C.r,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{existing?"Modifier":"Ajouter"}</button>
     </div>
   </div>);
 }
 
-const bSm={width:32,height:32,borderRadius:8,border:"1px solid "+C.brdL,background:C.s2,color:C.tx2,fontSize:16,cursor:"pointer",fontFamily:"inherit"};
+const bSm={width:32,height:32,borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx2,fontSize:16,cursor:"pointer",fontFamily:"inherit"};
 
 function TimePick({label,time,setTime}){
-  return(<div style={{background:C.s1,borderRadius:12,padding:"12px 14px",flex:1,textAlign:"center"}}><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{label}</div><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><div><button onClick={()=>setTime(t=>({...t,h:(t.h+1)%24}))} style={bSm}>+</button><div style={{fontSize:22,fontWeight:800,color:C.tx,fontFamily:"monospace",margin:"4px 0"}}>{String(time.h).padStart(2,"0")}</div><button onClick={()=>setTime(t=>({...t,h:(t.h-1+24)%24}))} style={bSm}>-</button></div><div style={{fontSize:18,color:C.tx3}}>:</div><div><button onClick={()=>setTime(t=>({...t,m:(t.m+15)%60}))} style={bSm}>+</button><div style={{fontSize:22,fontWeight:800,color:C.tx,fontFamily:"monospace",margin:"4px 0"}}>{String(time.m).padStart(2,"0")}</div><button onClick={()=>setTime(t=>({...t,m:(t.m-15+60)%60}))} style={bSm}>-</button></div></div></div>);
+  return(<div style={{background:C.s1,borderRadius:6,padding:"12px 14px",flex:1,textAlign:"center"}}><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{label}</div><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><div><button onClick={()=>setTime(t=>({...t,h:(t.h+1)%24}))} style={bSm}>+</button><div style={{fontSize:22,fontWeight:800,color:C.tx,fontFamily:"monospace",margin:"4px 0"}}>{String(time.h).padStart(2,"0")}</div><button onClick={()=>setTime(t=>({...t,h:(t.h-1+24)%24}))} style={bSm}>-</button></div><div style={{fontSize:18,color:C.tx3}}>:</div><div><button onClick={()=>setTime(t=>({...t,m:(t.m+15)%60}))} style={bSm}>+</button><div style={{fontSize:22,fontWeight:800,color:C.tx,fontFamily:"monospace",margin:"4px 0"}}>{String(time.m).padStart(2,"0")}</div><button onClick={()=>setTime(t=>({...t,m:(t.m-15+60)%60}))} style={bSm}>-</button></div></div></div>);
 }
 
 function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
@@ -313,12 +313,12 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
         setStep(nv.doms<=3?S_DOMS_ZONES:S_INJURY); // doms<=3 = douleurs significatives → zones
       } else {setStep(step+1);}
     };
-    const BTN_COLORS=["#D9705A","#F07030","#F5A623","#7BC67E",C.g];
+    const BTN_COLORS=["#FF5A33","#F07030","#F5A623","#7BC67E",C.g];
     return(<div style={{padding:"20px 20px 40px"}}>{progBar}
       <div style={{fontSize:13,fontWeight:600,color:C.tx2,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Question {step+1}/5</div>
       <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.5px",marginBottom:6}}>{it.q}</div>
-      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.tx3,marginBottom:20}}><span style={{color:BTN_COLORS[0]}}>😫 {it.lo}</span><span style={{color:BTN_COLORS[4]}}>😄 {it.hi}</span></div>
-      <div style={{display:"flex",gap:8}}>{[1,2,3,4,5].map(n=>{const sel=vals[it.k]===n;return(<button key={n} onClick={()=>pick(n)} style={{flex:1,padding:"14px 0",borderRadius:10,border:"2px solid "+(sel?BTN_COLORS[n-1]:C.brdL),background:sel?BTN_COLORS[n-1]+"30":C.s2,color:sel?BTN_COLORS[n-1]:C.tx3,fontSize:18,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>{n}</button>);})}</div>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.tx3,marginBottom:20}}><span style={{color:BTN_COLORS[0]}}>{it.lo}</span><span style={{color:BTN_COLORS[4]}}> {it.hi}</span></div>
+      <div style={{display:"flex",gap:8}}>{[1,2,3,4,5].map(n=>{const sel=vals[it.k]===n;return(<button key={n} onClick={()=>pick(n)} style={{flex:1,padding:"14px 0",borderRadius:4,border:"2px solid "+(sel?BTN_COLORS[n-1]:C.brdL),background:sel?BTN_COLORS[n-1]+"30":C.s2,color:sel?BTN_COLORS[n-1]:C.tx3,fontSize:18,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>{n}</button>);})}</div>
     </div>);
   }
 
@@ -329,7 +329,7 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
       <div style={{fontSize:18,fontWeight:800,letterSpacing:"-0.5px",marginBottom:4}}>Où as-tu des DOMS ?</div>
       <div style={{fontSize:11,color:C.tx3,marginBottom:16}}>Touche le corps pour placer un point. Retouche un point pour ajouter l'intensité.</div>
       <DomsBodyMap points={domsPoints} onChange={setDomsPoints}/>
-      <button onClick={()=>setStep(S_INJURY)} style={{width:"100%",marginTop:16,padding:"13px 0",borderRadius:12,border:"none",background:C.ac,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Suivant</button>
+      <button onClick={()=>setStep(S_INJURY)} style={{width:"100%",marginTop:16,padding:"13px 0",borderRadius:6,border:"none",background:C.ac,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Suivant</button>
     </div>);
   }
 
@@ -340,12 +340,12 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
       <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.5px",marginBottom:4}}>Es-tu blessé/malade ?</div>
       <div style={{fontSize:12,color:C.tx3,marginBottom:20}}>Douleur, maladie ou gêne différente des courbatures</div>
       <div style={{display:"flex",gap:10,marginBottom:injOui===true?16:0}}>
-        <button onClick={()=>setInjOui(true)} style={{flex:1,padding:"16px 0",borderRadius:12,border:"2px solid "+(injOui===true?C.r:C.brdL),background:injOui===true?C.rS:"transparent",color:injOui===true?C.r:C.tx2,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button>
-        <button onClick={()=>{setInjOui(false);setStep(S_SLEEP);}} style={{flex:1,padding:"16px 0",borderRadius:12,border:"2px solid "+(injOui===false?C.g:C.brdL),background:injOui===false?C.gS:"transparent",color:injOui===false?C.g:C.tx2,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Non</button>
+        <button onClick={()=>setInjOui(true)} style={{flex:1,padding:"16px 0",borderRadius:6,border:"2px solid "+(injOui===true?C.r:C.brdL),background:injOui===true?C.rS:"transparent",color:injOui===true?C.r:C.tx2,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button>
+        <button onClick={()=>{setInjOui(false);setStep(S_SLEEP);}} style={{flex:1,padding:"16px 0",borderRadius:6,border:"2px solid "+(injOui===false?C.g:C.brdL),background:injOui===false?C.gS:"transparent",color:injOui===false?C.g:C.tx2,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Non</button>
       </div>
       {injOui===true&&(<>
-        <textarea value={injComment} onChange={e=>setInjComment(e.target.value)} placeholder="Décris la douleur : zone, type, intensité..." rows={4} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:"1px solid "+C.r+"50",background:C.s1,color:C.tx,fontSize:13,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",marginBottom:14}}/>
-        <button onClick={()=>setStep(S_SLEEP)} disabled={!injComment.trim()} style={{width:"100%",padding:"13px 0",borderRadius:12,border:"none",background:injComment.trim()?C.ac:"#333",color:injComment.trim()?"#fff":C.tx3,fontSize:14,fontWeight:700,cursor:injComment.trim()?"pointer":"default",fontFamily:"inherit"}}>Continuer</button>
+        <textarea value={injComment} onChange={e=>setInjComment(e.target.value)} placeholder="Décris la douleur : zone, type, intensité..." rows={4} style={{width:"100%",padding:"12px 14px",borderRadius:6,border:"1px solid "+C.r+"50",background:C.s1,color:C.tx,fontSize:13,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box",marginBottom:14}}/>
+        <button onClick={()=>setStep(S_SLEEP)} disabled={!injComment.trim()} style={{width:"100%",padding:"13px 0",borderRadius:6,border:"none",background:injComment.trim()?C.ac:"#333",color:injComment.trim()?"#fff":C.tx3,fontSize:14,fontWeight:700,cursor:injComment.trim()?"pointer":"default",fontFamily:"inherit"}}>Continuer</button>
       </>)}
     </div>);
   }
@@ -356,7 +356,7 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
       <div style={{fontSize:13,fontWeight:600,color:C.tx2,textTransform:"uppercase",marginBottom:8}}>Sommeil</div>
       <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.5px",marginBottom:20}}>Heures de sommeil</div>
       <div style={{display:"flex",gap:10,marginBottom:16}}><TimePick label="Coucher" time={coucher} setTime={setCoucher}/><TimePick label="Reveil" time={reveil} setTime={setReveil}/></div>
-      <div style={{padding:"12px 14px",borderRadius:10,background:sleepC+"12",border:"1px solid "+sleepC+"40",marginBottom:20}}>
+      <div style={{padding:"12px 14px",borderRadius:4,background:sleepC+"12",border:"1px solid "+sleepC+"40",marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div><div style={{fontSize:12,color:C.tx2,fontWeight:600}}>Duree estimee</div><div style={{fontSize:10,color:C.tx3}}>Objectif: {tgt}h</div></div>
           <div style={{textAlign:"right"}}><div style={{fontSize:28,fontWeight:800,color:sleepC}}>{dur}h</div><div style={{fontSize:11,color:sleepC,fontWeight:600}}>{diff>0?"+":""}{diff}h</div></div>
@@ -365,12 +365,12 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
       <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid "+C.brd}}>
         <div style={{fontSize:13,fontWeight:700,color:C.tx2,marginBottom:10}}>Avez-vous été réveillé cette nuit ?</div>
         <div style={{display:"flex",gap:10,marginBottom:sleepInterrupt===true?12:0}}>
-          <button onClick={()=>setSleepInterrupt(true)} style={{flex:1,padding:"12px 0",borderRadius:10,border:"2px solid "+(sleepInterrupt===true?C.o:C.brdL),background:sleepInterrupt===true?C.oS:"transparent",color:sleepInterrupt===true?C.o:C.tx2,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button>
-          <button onClick={()=>{setSleepInterrupt(false);setSleepInterruptNote("");}} style={{flex:1,padding:"12px 0",borderRadius:10,border:"2px solid "+(sleepInterrupt===false?C.g:C.brdL),background:sleepInterrupt===false?C.gS:"transparent",color:sleepInterrupt===false?C.g:C.tx2,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Non</button>
+          <button onClick={()=>setSleepInterrupt(true)} style={{flex:1,padding:"12px 0",borderRadius:4,border:"2px solid "+(sleepInterrupt===true?C.o:C.brdL),background:sleepInterrupt===true?C.oS:"transparent",color:sleepInterrupt===true?C.o:C.tx2,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Oui</button>
+          <button onClick={()=>{setSleepInterrupt(false);setSleepInterruptNote("");}} style={{flex:1,padding:"12px 0",borderRadius:4,border:"2px solid "+(sleepInterrupt===false?C.g:C.brdL),background:sleepInterrupt===false?C.gS:"transparent",color:sleepInterrupt===false?C.g:C.tx2,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Non</button>
         </div>
-        {sleepInterrupt===true&&(<textarea value={sleepInterruptNote} onChange={e=>setSleepInterruptNote(e.target.value)} placeholder="Durée, raison... (ex: bruit, bébé — ~45 min)" rows={2} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid "+C.o+"50",background:C.s1,color:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",outline:"none",boxSizing:"border-box",marginTop:8}}/>)}
+        {sleepInterrupt===true&&(<textarea value={sleepInterruptNote} onChange={e=>setSleepInterruptNote(e.target.value)} placeholder="Durée, raison... (ex: bruit, bébé — ~45 min)" rows={2} style={{width:"100%",padding:"10px 12px",borderRadius:4,border:"1px solid "+C.o+"50",background:C.s1,color:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",outline:"none",boxSizing:"border-box",marginTop:8}}/>)}
       </div>
-      <button onClick={()=>setStep(S_WEIGHT)} style={{width:"100%",padding:"13px 0",borderRadius:12,border:"none",background:C.ac,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:16}}>Suivant</button>
+      <button onClick={()=>setStep(S_WEIGHT)} style={{width:"100%",padding:"13px 0",borderRadius:6,border:"none",background:C.ac,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginTop:16}}>Suivant</button>
     </div>);
   }
 
@@ -380,35 +380,35 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
       <div style={{fontSize:13,fontWeight:600,color:C.tx2,textTransform:"uppercase",marginBottom:8}}>Poids</div>
       <div style={{fontSize:16,fontWeight:700,marginBottom:20}}>A jeun</div>
       <div style={{display:"flex",gap:8,marginBottom:24,alignItems:"center"}}>
-        <button onClick={()=>setPoids(p=>Math.max(40,+(+p-0.5).toFixed(1)))} style={{width:48,height:48,borderRadius:10,border:"1px solid "+C.brdL,background:C.s2,color:C.tx2,fontSize:20,cursor:"pointer",fontFamily:"inherit"}}>-</button>
-        <input type="number" step="0.1" value={poids} onChange={e=>setPoids(e.target.value)} placeholder={prevPoids?String(prevPoids):"82.5"} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:24,fontWeight:800,fontFamily:"inherit",textAlign:"center"}}/>
+        <button onClick={()=>setPoids(p=>Math.max(40,+(+p-0.5).toFixed(1)))} style={{width:48,height:48,borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx2,fontSize:20,cursor:"pointer",fontFamily:"inherit"}}>-</button>
+        <input type="number" step="0.1" value={poids} onChange={e=>setPoids(e.target.value)} placeholder={prevPoids?String(prevPoids):"82.5"} style={{flex:1,padding:"12px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s1,color:C.tx,fontSize:24,fontWeight:800,fontFamily:"inherit",textAlign:"center"}}/>
         <span style={{fontSize:14,color:C.tx3}}>kg</span>
-        <button onClick={()=>setPoids(p=>+(+p+0.5).toFixed(1))} style={{width:48,height:48,borderRadius:10,border:"1px solid "+C.brdL,background:C.s2,color:C.tx2,fontSize:20,cursor:"pointer",fontFamily:"inherit"}}>+</button>
+        <button onClick={()=>setPoids(p=>+(+p+0.5).toFixed(1))} style={{width:48,height:48,borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx2,fontSize:20,cursor:"pointer",fontFamily:"inherit"}}>+</button>
       </div>
       {prevPoids&&!poids&&<div style={{textAlign:"center",fontSize:12,color:C.tx3,marginTop:-16,marginBottom:16}}>Hier : {prevPoids} kg</div>}
-      <button onClick={()=>{setPoids("");setStep(S_BILAN);}} style={{width:"100%",padding:"11px 0",borderRadius:10,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>Pas de pesée</button>
-      <button onClick={()=>setStep(S_BILAN)} style={{width:"100%",padding:"13px 0",borderRadius:12,border:"none",background:C.ac,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Voir mon bilan</button>
+      <button onClick={()=>{setPoids("");setStep(S_BILAN);}} style={{width:"100%",padding:"11px 0",borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>Pas de pesée</button>
+      <button onClick={()=>setStep(S_BILAN)} style={{width:"100%",padding:"13px 0",borderRadius:6,border:"none",background:C.ac,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Voir mon bilan</button>
     </div>);
   }
 
   // Bilan
   return(<div style={{padding:"20px 20px 40px"}}>
     <div style={{fontSize:18,fontWeight:800,letterSpacing:"-0.5px",marginBottom:20}}>Bilan du jour</div>
-    <div style={{display:"flex",alignItems:"center",gap:16,padding:"16px",borderRadius:14,background:C.s1,border:"1.5px solid "+reco.c+"40",marginBottom:14}}>
+    <div style={{display:"flex",alignItems:"center",gap:16,padding:"16px",borderRadius:6,background:C.s1,border:"1.5px solid "+reco.c+"40",marginBottom:14}}>
       <div style={{position:"relative",width:70,height:70,flexShrink:0}}><svg viewBox="0 0 70 70" style={{width:70,height:70,transform:"rotate(-90deg)"}}><circle cx="35" cy="35" r="28" fill="none" stroke={C.s2} strokeWidth="5"/><circle cx="35" cy="35" r="28" fill="none" stroke={reco.c} strokeWidth="5" strokeDasharray={String(2*Math.PI*28)} strokeDashoffset={String(2*Math.PI*28*(1-score/100))} strokeLinecap="round"/></svg><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:800,color:reco.c}}>{score}</div></div>
       <div><div style={{fontSize:20,fontWeight:800,color:reco.c}}>{reco.label}</div><div style={{fontSize:13,color:C.tx2,marginTop:4}}>{reco.desc}</div></div>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:12}}>
-      {WELL_ITEMS.map(it=>{const v=vals[it.k];const vc=it.inv?(v>=4?C.r:v<=2?C.g:C.o):(v>=4?C.g:v<=2?C.r:C.o);return(<div key={it.k} style={{background:C.s1,borderRadius:10,padding:"8px 10px",border:"1px solid "+C.brd}}><div style={{fontSize:8,color:C.tx3,marginBottom:2}}>{it.k}</div><div style={{fontSize:18,fontWeight:800,color:vc}}>{v}<span style={{fontSize:9,color:C.tx3}}>/5</span></div></div>);})}
-      <div style={{background:C.s1,borderRadius:10,padding:"8px 10px",border:"1px solid "+sleepC+"40"}}><div style={{fontSize:8,color:C.tx3,marginBottom:2}}>Sommeil</div><div style={{fontSize:16,fontWeight:800,color:sleepC}}>{dur}h</div><div style={{fontSize:8,color:sleepC}}>{diff>0?"+":""}{diff}h</div></div>
-      {poids&&<div style={{background:C.s1,borderRadius:10,padding:"8px 10px",border:"1px solid "+C.brd}}><div style={{fontSize:8,color:C.tx3,marginBottom:2}}>Poids</div><div style={{fontSize:16,fontWeight:800,color:C.ac}}>{poids} kg</div></div>}
+      {WELL_ITEMS.map(it=>{const v=vals[it.k];const vc=it.inv?(v>=4?C.r:v<=2?C.g:C.o):(v>=4?C.g:v<=2?C.r:C.o);return(<div key={it.k} style={{background:C.s1,borderRadius:4,padding:"8px 10px",border:"1px solid "+C.brd}}><div style={{fontSize:8,color:C.tx3,marginBottom:2}}>{it.k}</div><div style={{fontSize:18,fontWeight:800,color:vc}}>{v}<span style={{fontSize:9,color:C.tx3}}>/5</span></div></div>);})}
+      <div style={{background:C.s1,borderRadius:4,padding:"8px 10px",border:"1px solid "+sleepC+"40"}}><div style={{fontSize:8,color:C.tx3,marginBottom:2}}>Sommeil</div><div style={{fontSize:16,fontWeight:800,color:sleepC}}>{dur}h</div><div style={{fontSize:8,color:sleepC}}>{diff>0?"+":""}{diff}h</div></div>
+      {poids&&<div style={{background:C.s1,borderRadius:4,padding:"8px 10px",border:"1px solid "+C.brd}}><div style={{fontSize:8,color:C.tx3,marginBottom:2}}>Poids</div><div style={{fontSize:16,fontWeight:800,color:C.ac}}>{poids} kg</div></div>}
     </div>
-    {domsPoints.length>0&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:8,background:C.o+"10",border:"1px solid "+C.o+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.o,textTransform:"uppercase",marginBottom:4}}>DOMS — {domsPoints.length} point{domsPoints.length>1?"s":""}</div><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{domsPoints.map(p=><span key={p.id} style={{fontSize:10,padding:"2px 7px",borderRadius:5,background:domsColor(p.intensity)+"20",color:domsColor(p.intensity)}}>{p.side==="front"?"Avant":"Arrière"}{p.intensity?` ${p.intensity}/10`:""}</span>)}</div></div>)}
-    {domsPoints.length===0&&domsZones.length>0&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:8,background:C.o+"10",border:"1px solid "+C.o+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.o,textTransform:"uppercase",marginBottom:4}}>DOMS</div><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{domsZones.map(id=>{const z=ALL_BZ.find(z=>z.id===id);return z?<span key={id} style={{fontSize:10,padding:"2px 7px",borderRadius:5,background:C.o+"20",color:C.o}}>{z.label}</span>:null;})}</div></div>)}
-    {injOui&&injComment&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:8,background:C.r+"10",border:"1px solid "+C.r+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.r,textTransform:"uppercase",marginBottom:4}}>Blessure signalée</div><div style={{fontSize:11,color:C.r,lineHeight:1.5}}>{injComment}</div></div>)}
-    {alerts.length>0&&<div style={{marginBottom:12}}>{alerts.map((a,i)=><div key={i} style={{padding:"8px 12px",borderRadius:8,background:C.o+"10",border:"1px solid "+C.o+"30",fontSize:11,color:C.o,marginBottom:5}}>{a}</div>)}</div>}
-    {sleepInterrupt===true&&sleepInterruptNote&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:8,background:C.o+"10",border:"1px solid "+C.o+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.o,textTransform:"uppercase",marginBottom:4}}>Réveil nocturne</div><div style={{fontSize:11,color:C.o,lineHeight:1.5}}>{sleepInterruptNote}</div></div>)}
-    <button onClick={()=>onSave({...vals,domsZones,domsPoints,coucher,reveil,sleepDur:dur,poids:+poids||null,score,injComment:injOui?injComment:null,sleepInterrupt:sleepInterrupt??null,sleepInterruptNote:sleepInterrupt?sleepInterruptNote||null:null})} style={{width:"100%",padding:"13px 0",borderRadius:12,border:"none",background:C.g,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Sauvegarder</button>
+    {domsPoints.length>0&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:4,background:C.o+"10",border:"1px solid "+C.o+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.o,textTransform:"uppercase",marginBottom:4}}>DOMS — {domsPoints.length} point{domsPoints.length>1?"s":""}</div><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{domsPoints.map(p=><span key={p.id} style={{fontSize:10,padding:"2px 7px",borderRadius:5,background:domsColor(p.intensity)+"20",color:domsColor(p.intensity)}}>{p.side==="front"?"Avant":"Arrière"}{p.intensity?` ${p.intensity}/10`:""}</span>)}</div></div>)}
+    {domsPoints.length===0&&domsZones.length>0&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:4,background:C.o+"10",border:"1px solid "+C.o+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.o,textTransform:"uppercase",marginBottom:4}}>DOMS</div><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{domsZones.map(id=>{const z=ALL_BZ.find(z=>z.id===id);return z?<span key={id} style={{fontSize:10,padding:"2px 7px",borderRadius:5,background:C.o+"20",color:C.o}}>{z.label}</span>:null;})}</div></div>)}
+    {injOui&&injComment&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:4,background:C.r+"10",border:"1px solid "+C.r+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.r,textTransform:"uppercase",marginBottom:4}}>Blessure signalée</div><div style={{fontSize:11,color:C.r,lineHeight:1.5}}>{injComment}</div></div>)}
+    {alerts.length>0&&<div style={{marginBottom:12}}>{alerts.map((a,i)=><div key={i} style={{padding:"8px 12px",borderRadius:4,background:C.o+"10",border:"1px solid "+C.o+"30",fontSize:11,color:C.o,marginBottom:5}}>{a}</div>)}</div>}
+    {sleepInterrupt===true&&sleepInterruptNote&&(<div style={{marginBottom:8,padding:"8px 12px",borderRadius:4,background:C.o+"10",border:"1px solid "+C.o+"30"}}><div style={{fontSize:9,fontWeight:600,color:C.o,textTransform:"uppercase",marginBottom:4}}>Réveil nocturne</div><div style={{fontSize:11,color:C.o,lineHeight:1.5}}>{sleepInterruptNote}</div></div>)}
+    <button onClick={()=>onSave({...vals,domsZones,domsPoints,coucher,reveil,sleepDur:dur,poids:+poids||null,score,injComment:injOui?injComment:null,sleepInterrupt:sleepInterrupt??null,sleepInterruptNote:sleepInterrupt?sleepInterruptNote||null:null})} style={{width:"100%",padding:"13px 0",borderRadius:6,border:"none",background:C.g,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Sauvegarder</button>
   </div>);
 }
 

@@ -65,13 +65,13 @@ function ItemForm({
   const [f, setF] = useState<FormState>(initial);
   const valid = f.label.trim().length > 0;
   return (
-    <div style={{ background: C.s2, borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid ' + color + '40' }}>
+    <div style={{ background: C.s2, borderRadius: 4, padding: 12, display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid ' + color + '40' }}>
       <input
         value={f.label}
         onChange={e => setF(s => ({ ...s, label: e.target.value }))}
         placeholder="Item (ex: RE hanche, Force max…)"
         autoFocus
-        style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid ' + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+        style={{ width: '100%', padding: '7px 10px', borderRadius: 4, border: '1px solid ' + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 11, color: C.tx3, minWidth: 50 }}>Note /5</span>
@@ -82,11 +82,11 @@ function ItemForm({
         value={f.note}
         onChange={e => setF(s => ({ ...s, note: e.target.value }))}
         placeholder="Note / commentaire (optionnel)"
-        style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid ' + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+        style={{ width: '100%', padding: '7px 10px', borderRadius: 4, border: '1px solid ' + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
       />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-        <button onClick={() => valid && onSave(f)} disabled={!valid || saving} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: valid ? color : C.s1, color: valid ? '#fff' : C.tx3, fontSize: 12, fontWeight: 700, cursor: valid ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <button onClick={onCancel} style={{ padding: '6px 12px', borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+        <button onClick={() => valid && onSave(f)} disabled={!valid || saving} style={{ padding: '6px 14px', borderRadius: 4, border: 'none', background: valid ? color : C.s1, color: valid ? '#fff' : C.tx3, fontSize: 12, fontWeight: 700, cursor: valid ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
           <Check size={13} /> {saving ? '…' : 'OK'}
         </button>
       </div>
@@ -96,7 +96,7 @@ function ItemForm({
 
 function ItemRow({ item, color, onEdit, onDelete }: { item: ProfileItem; color: string; onEdit: () => void; onDelete: () => void }) {
   return (
-    <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{item.label}</div>
         {item.note && <div style={{ fontSize: 11, color: C.tx3, fontStyle: 'italic', marginTop: 2 }}>{item.note}</div>}
@@ -120,11 +120,11 @@ function iconBtn(color: string): React.CSSProperties {
 // ── Couleur /5 (nuance rouge → vert) ──────────────────────────────────────────
 function scoreColor(n: number | null): string {
   if (n == null) return C.tx3;
-  if (n <= 1) return '#D9705A';
-  if (n <= 2) return '#D99A3E';
-  if (n <= 3) return '#D99A3E';
+  if (n <= 1) return '#FF5A33';
+  if (n <= 2) return '#FF9500';
+  if (n <= 3) return '#FF9500';
   if (n <= 4) return '#84CC16';
-  return '#9DB06A';
+  return '#66F03C';
 }
 
 // ── Vue Bilan articulaire (dérivée des tests, groupée par articulation) ────────
@@ -140,10 +140,10 @@ function EvolutionModal({ item, onClose }: { item: ArticularAction; onClose: () 
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
     >
-      <div onClick={e => e.stopPropagation()} style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 16, padding: 20, width: '100%', maxWidth: 440, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 6, padding: 20, width: '100%', maxWidth: 440 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>{item.action}</div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx3, fontSize: 16, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
+          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx3, fontSize: 16, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
         </div>
 
         {asc.length === 0 ? (
@@ -211,7 +211,7 @@ function CategoryDerivedProfile({ athleteId, category }: { athleteId: string; ca
         const lastRaw = s.points[s.points.length - 1];
         const opSym = s.extrapOp === 'mul' ? '×' : '÷';
         return (
-          <div key={'x' + s.testId + s.varId} style={{ background: C.s1, border: '1px solid ' + color + '40', borderRadius: 12, padding: '14px 16px' }}>
+          <div key={'x' + s.testId + s.varId} style={{ background: C.s1, border: '1px solid ' + color + '40', borderRadius: 6, padding: '14px 16px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               {metric?.label ?? s.extrapMetric} extrapolé{metric?.label?.endsWith('A') ? 'e' : ''}
             </div>
@@ -235,7 +235,7 @@ function CategoryDerivedProfile({ athleteId, category }: { athleteId: string; ca
         {series.map(s => {
           const last = s.points[s.points.length - 1];
           return (
-            <div key={s.testId + s.varId} style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 10, padding: '8px 12px' }}>
+            <div key={s.testId + s.varId} style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4, padding: '8px 12px' }}>
               <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.tx }}>{s.testName}{s.varLabel && s.varLabel !== s.testName ? ` · ${s.varLabel}` : ''}</span>
               <span style={{ fontSize: 14, fontWeight: 800, color }}>{last.value % 1 === 0 ? last.value : last.value.toFixed(1)}<span style={{ fontSize: 10, color: C.tx3, fontWeight: 500 }}> {s.unit}</span></span>
             </div>
@@ -269,7 +269,7 @@ function ArticularProfile({ athleteId }: { athleteId: string }) {
                 <button
                   key={it.testId}
                   onClick={() => setSelected(it)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 9, padding: '8px 10px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4, padding: '8px 10px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                 >
                   <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: C.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.action}</span>
                   {it.mediaUrl && (
@@ -315,7 +315,7 @@ export default function CategoryProfiles({ athleteId }: { athleteId: string }) {
   const addingHere = active?.mode === 'add' && active.category === selectedCat;
 
   return (
-    <section style={{ border: '1px solid ' + C.brd, borderRadius: 16, overflow: 'hidden' }}>
+    <section style={{ border: '1px solid ' + C.brd, borderRadius: 6, overflow: 'hidden' }}>
       {/* Header : titre + boutons filtres (1 catégorie à la fois) */}
       <div style={{ padding: '12px 18px', borderBottom: '1px solid ' + C.brd, background: cc + '14', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 13, fontWeight: 800, color: C.tx, textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 'auto' }}>
@@ -330,7 +330,7 @@ export default function CategoryProfiles({ athleteId }: { athleteId: string }) {
                 key={cat}
                 onClick={() => { setSelectedCat(cat); setActive(null); }}
                 style={{
-                  padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+                  padding: '5px 11px', borderRadius: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
                   border: '1px solid ' + (on ? c : C.brdL),
                   background: on ? c : 'transparent',
                   color: on ? '#fff' : C.tx3,

@@ -12,7 +12,7 @@ import { useExerciceRM } from "./hooks/useExerciceRM"
 import type { TrainingMethod } from "@/types/trainingMethods"
 import { methodConfigToExerciceParams } from "@/features/coach/components/library/MethodPreview"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 const ORANGE = "#F5A623"
 
@@ -75,7 +75,7 @@ function InlineLabel({ children }: { children: React.ReactNode }) {
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ background: C.s2, borderRadius: 10, border: "1px solid " + C.brdL, padding: "10px 14px" }}>
+    <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brdL, padding: "10px 14px" }}>
       {children}
     </div>
   )
@@ -128,7 +128,7 @@ function Stepper({
   const displayVal = step < 1 ? local : String(local)
 
   return (
-    <div style={{ display: "flex", alignItems: "center", background: C.s1, borderRadius: 8, border: "1px solid " + C.brdL, overflow: "hidden", flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", background: C.s1, borderRadius: 4, border: "1px solid " + C.brdL, overflow: "hidden", flexShrink: 0 }}>
       <button
         type="button"
         onClick={() => apply(local - step)}
@@ -294,7 +294,7 @@ export function ExerciceParamsPanel({
           />
         ) : (
           <button onClick={() => setShowSearch(true)} style={{
-            width: "100%", padding: "9px 12px", borderRadius: 8,
+            width: "100%", padding: "9px 12px", borderRadius: 4,
             border: "1px solid " + C.brdL, background: C.s1,
             color: exercice.exercise_name ? C.tx : C.tx3,
             fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
@@ -320,7 +320,7 @@ export function ExerciceParamsPanel({
             rows={3}
             autoFocus
             style={{
-              width: "100%", padding: "8px 10px", borderRadius: 8,
+              width: "100%", padding: "8px 10px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: C.s1,
               color: C.tx, fontSize: 12, fontFamily: "inherit",
               outline: "none", resize: "vertical" as const,
@@ -331,7 +331,7 @@ export function ExerciceParamsPanel({
         {exercice.mode === 'methode' && (
           <>
             <button onClick={() => setShowMethodPicker(true)} style={{
-              width: "100%", padding: "9px 12px", borderRadius: 8,
+              width: "100%", padding: "9px 12px", borderRadius: 4,
               border: "1px solid " + (selectedMethod ? VIOLET : C.brdL),
               background: selectedMethod ? VIOLET_S : C.s1,
               cursor: "pointer", fontFamily: "inherit",
@@ -368,7 +368,7 @@ export function ExerciceParamsPanel({
                           onChange({ ...exercice, applied_to_sets: next })
                         }}
                         style={{
-                          width: 36, height: 36, borderRadius: 8,
+                          width: 36, height: 36, borderRadius: 4,
                           border: "2px solid " + (active ? VIOLET : C.brdL),
                           background: active ? VIOLET_S : "transparent",
                           color: active ? VIOLET : C.tx3,
@@ -520,7 +520,7 @@ export function ExerciceParamsPanel({
         </div>
 
         {params.charge_unit === '%RM' && !bestRM && (
-          <div style={{ padding: "7px 10px", borderRadius: 8, marginBottom: 8, background: C.oS, border: "1px solid " + C.o + "40", fontSize: 11, color: C.o }}>
+          <div style={{ padding: "7px 10px", borderRadius: 4, marginBottom: 8, background: C.oS, border: "1px solid " + C.o + "40", fontSize: 11, color: C.o }}>
             <div style={{ textAlign: "center", marginBottom: 6 }}>Aucun 1RM enregistré</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
               <span style={{ fontSize: 10, color: C.tx3 }}>1RM estimé :</span>
@@ -708,7 +708,7 @@ export function ExerciceParamsPanel({
           placeholder="Instruction pour l'athlète (ex: Garder les coudes serrés, tempo contrôlé...)"
           rows={2}
           style={{
-            width: "100%", padding: "8px 10px", borderRadius: 8,
+            width: "100%", padding: "8px 10px", borderRadius: 4,
             border: "1px solid " + C.brdL, background: C.s1,
             color: C.tx, fontSize: 12, fontFamily: "inherit",
             outline: "none", resize: "vertical" as const,
@@ -719,11 +719,11 @@ export function ExerciceParamsPanel({
 
       {/* 10. Synthèse */}
       {exercice.mode !== 'libre' && (
-        <div style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid " + C.brdL, background: C.s2 }}>
+        <div style={{ padding: "8px 14px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2 }}>
           <SyntheseBar params={{ ...params, nb_series: nb }} />
         </div>
       )}
-      <div style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid " + C.brdL, background: C.s2 }}>
+      <div style={{ padding: "8px 14px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2 }}>
         <SyntheseBar params={{ ...params, nb_series: nb }} />
       </div>
 
@@ -764,7 +764,7 @@ function ClusterEditor({ cluster, onChange }: { cluster: ClusterConfig; onChange
   const pattern = safeReps.join("+")
 
   return (
-    <div style={{ padding: "10px", borderRadius: 9, border: "1px solid " + ORANGE + "50", background: ORANGE + "0A" }}>
+    <div style={{ padding: "10px", borderRadius: 4, border: "1px solid " + ORANGE + "50", background: ORANGE + "0A" }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
         <div style={{ textAlign: "center" as const }}>
           <div style={{ fontSize: 9, color: ORANGE, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 4 }}>Clusters</div>

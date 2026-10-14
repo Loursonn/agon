@@ -68,7 +68,7 @@ function WeekSection({ weekStart, month, data, onDayClick }: WeekSectionProps) {
   const [open, setOpen] = useState(true);
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
       {/* Week header */}
       <div
         onClick={() => setOpen((v) => !v)}
@@ -82,7 +82,7 @@ function WeekSection({ weekStart, month, data, onDayClick }: WeekSectionProps) {
           <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{weekLabel}</span>
           {totalSessions > 0 && (
             <span style={{
-              fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 10,
+              fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
               background: C.ac + "20", color: C.ac,
             }}>
               {totalSessions} séance{totalSessions > 1 ? "s" : ""}
@@ -138,7 +138,7 @@ function WeekSection({ weekStart, month, data, onDayClick }: WeekSectionProps) {
                     <div style={{
                       display: "flex", alignItems: "center", gap: 4,
                       background: wellnessColor(wellness.score) + "18",
-                      padding: "2px 8px", borderRadius: 20,
+                      padding: "2px 8px", borderRadius: 6,
                       border: "1px solid " + wellnessColor(wellness.score) + "40",
                     }}>
                       <Heart size={9} color={wellnessColor(wellness.score)} />

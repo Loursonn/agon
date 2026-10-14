@@ -102,7 +102,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
       style={{
         background: C.s1,
         border: `1px solid ${hovered && canEdit ? accent + "60" : C.brd}`,
-        borderRadius: 12,
+        borderRadius: 6,
         overflow: "hidden",
         cursor: canEdit ? "pointer" : "default",
         transition: "border-color 150ms, box-shadow 150ms",
@@ -137,7 +137,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
               {quality && (
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: "#C9A14A20", color: "#C9A14A",
+                  background: "#FFC93320", color: "#FFC933",
                 }}>
                   {quality.name}
                 </span>
@@ -145,8 +145,8 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
               {/* Format pill */}
               <span style={{
                 fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                background: formatLabel === "Classique" ? "#9DB06A20" : formatLabel === "Mixte" ? "#C9A14A20" : ORANGE + "20",
-                color: formatLabel === "Classique" ? "#9DB06A" : formatLabel === "Mixte" ? "#C9A14A" : ORANGE,
+                background: formatLabel === "Classique" ? "#66F03C20" : formatLabel === "Mixte" ? "#FFC93320" : ORANGE + "20",
+                color: formatLabel === "Classique" ? "#66F03C" : formatLabel === "Mixte" ? "#FFC933" : ORANGE,
               }}>
                 {formatLabel}
               </span>
@@ -187,7 +187,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
                   <div key={b.id} style={{
                     background: C.s2, borderRadius: 6, padding: "5px 8px",
                     display: "flex", alignItems: "center", gap: 6,
-                    borderLeft: `2px solid ${wod ? ORANGE : "#9DB06A"}80`,
+                    borderLeft: `2px solid ${wod ? ORANGE : "#66F03C"}80`,
                   }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: C.tx2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {b.title || "Bloc"}
@@ -221,11 +221,11 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
 
         {/* Footer : metadata + hover actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 10, color: C.tx3, marginTop: "auto", minHeight: 24 }}>
-          {!isClassique && totals.durationS > 0 && <span>⏱ {formatSLong(totals.durationS)}</span>}
-          {!isClassique && totals.workCount > 0 && <span>⚡ {totals.workCount} eff.</span>}
+          {!isClassique && totals.durationS > 0 && <span>{formatSLong(totals.durationS)}</span>}
+          {!isClassique && totals.workCount > 0 && <span>{totals.workCount} eff.</span>}
           {isClassique && blocks.length > 0 && (
             <span>
-              🧱 {blocks.length} bloc{blocks.length > 1 ? "s" : ""} · {blocks.reduce((n, b) => n + (isWodBlock(b) ? b.steps.length : b.items.length), 0)} élts
+              {blocks.length} bloc{blocks.length > 1 ? "s" : ""} · {blocks.reduce((n, b) => n + (isWodBlock(b) ? b.steps.length : b.items.length), 0)} élts
             </span>
           )}
 
@@ -237,7 +237,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
             }}
           >
             {actionBtn("Attribuer", C.g, () => setShowAssign(true))}
-            {canEdit && actionBtn("Modifier", "#C9A14A", handleEdit)}
+            {canEdit && actionBtn("Modifier", "#FFC933", handleEdit)}
             {actionBtn("Dupliquer", C.tx2, handleDuplicate)}
             {canDelete && actionBtn("Supprimer", C.r, () => setShowConfirmDelete(true))}
           </div>
@@ -250,7 +250,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
           onClick={(e) => { e.stopPropagation(); setShowConfirmDelete(false); }}
           style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 12, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 6, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Supprimer la séance ?</div>
             <div style={{ fontSize: 12, color: C.tx3, marginBottom: 18 }}>
               « {session.name} » sera définitivement supprimée.
@@ -258,13 +258,13 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowConfirmDelete(false)}
-                style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Annuler
               </button>
               <button
                 onClick={() => { deleteMutation.mutate(session.id); setShowConfirmDelete(false); }}
-                style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: C.r, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Supprimer
               </button>
@@ -279,7 +279,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
           onClick={(e) => { e.stopPropagation(); setShowAssign(false); }}
           style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 12, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 6, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>
               Attribuer « {session.name} »
             </div>
@@ -314,7 +314,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
             <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowAssign(false)}
-                style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Annuler
               </button>
@@ -331,7 +331,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
                 }}
                 disabled={!assignAthleteId || assignMutation.isPending}
                 style={{
-                  padding: "7px 14px", borderRadius: 8, border: "none",
+                  padding: "7px 14px", borderRadius: 4, border: "none",
                   background: assignAthleteId ? C.g : C.tx3, color: "#fff",
                   fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   opacity: assignAthleteId ? 1 : 0.5,

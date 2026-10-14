@@ -40,13 +40,13 @@ const dayCollisionDetection: CollisionDetection = (args) => {
 };
 
 const KIND_COLORS: Record<string, string> = {
-  vo2:        "#C9A14A",
-  tempo:      "#7E9CA8",
-  seuil:      "#D99A3E",
-  footing:    "#9DB06A",
-  fartlek:    "#D99A3E",
+  vo2:        "#FFC933",
+  tempo:      "#33B5FF",
+  seuil:      "#FF9500",
+  footing:    "#66F03C",
+  fartlek:    "#FF9500",
   autre:      "#7D7468",
-  custom:     "#C9A14A",
+  custom:     "#FFC933",
   specifique: "#F5A623",
 };
 
@@ -163,7 +163,7 @@ function DayCell({
           : isCurrentMonth
           ? C.bg
           : C.s2,
-        borderRadius: 8,
+        borderRadius: 4,
         border: today
           ? `1.5px solid ${C.ac}`
           : `1px solid ${C.brd}`,
@@ -216,7 +216,6 @@ function DragOverlayBadge({ assignment }: { assignment: EnergySessionAssignmentR
         color,
         fontSize: 11,
         fontWeight: 600,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
         pointerEvents: "none",
       }}
     >
@@ -232,7 +231,7 @@ function DraggableBankSession({ session }: { session: EnergySessionRow }) {
     id: `bank_${session.id}`,
     data: { bankSession: session },
   });
-  const kc = KIND_COLORS[session.session_kind] ?? "#C9A14A";
+  const kc = KIND_COLORS[session.session_kind] ?? "#FFC933";
   return (
     <div
       ref={setNodeRef}
@@ -281,7 +280,7 @@ function SessionBankSidebar({ sessions, sessionKindFilter }: { sessions: EnergyS
   return (
     <div style={{
       width: 200, flexShrink: 0,
-      background: C.s1, borderRadius: 14,
+      background: C.s1, borderRadius: 6,
       border: `1px solid ${C.brd}`,
       display: "flex", flexDirection: "column",
       overflow: "hidden", maxHeight: "100%",
@@ -446,7 +445,7 @@ export function EnergyCalendarView({ athleteId, sessionKindFilter }: Props) {
           style={{
             background: C.s2,
             border: `1px solid ${C.brd}`,
-            borderRadius: 8,
+            borderRadius: 4,
             color: C.tx,
             padding: "6px 12px",
             fontSize: 13,
@@ -466,7 +465,7 @@ export function EnergyCalendarView({ athleteId, sessionKindFilter }: Props) {
           style={{
             background: C.s2,
             border: `1px solid ${C.brd}`,
-            borderRadius: 8,
+            borderRadius: 4,
             color: C.tx,
             padding: "6px 12px",
             fontSize: 13,

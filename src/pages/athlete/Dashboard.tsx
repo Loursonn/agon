@@ -3,11 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import WeightliftingTracker from "@/components/WeightliftingTracker.jsx";
 
 const C = {
-  bg: "#15120F", s1: "#1E1A16", s2: "#27221D",
+  bg: "#0E0C0A", s1: "#1E1A16", s2: "#27221D",
   brd: "rgba(255,255,255,0.06)", brdL: "rgba(255,255,255,0.1)",
   tx: "#F2F2F4", tx2: "#9194A0", tx3: "#555866",
-  ac: "#C9A14A", acS: "rgba(123,111,255,0.12)",
-  g: "#9DB06A", r: "#D9705A",
+  ac: "#FFC933", acS: "rgba(123,111,255,0.12)",
+  g: "#66F03C", r: "#FF5A33",
 };
 
 export default function AthleteDashboard() {
@@ -63,18 +63,18 @@ export default function AthleteDashboard() {
                 placeholder="Code coach (ex: R4BL7M)"
                 maxLength={6}
                 autoFocus
-                style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", letterSpacing: "0.1em" }}
+                style={{ flex: 1, padding: "8px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", letterSpacing: "0.1em" }}
               />
               <button
                 onClick={handleLink}
                 disabled={loading || !code.trim()}
-                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: code.trim() ? C.ac : C.s2, color: code.trim() ? "#fff" : C.tx3, fontSize: 13, fontWeight: 600, cursor: code.trim() ? "pointer" : "default", fontFamily: "inherit" }}
+                style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: code.trim() ? C.ac : C.s2, color: code.trim() ? "#fff" : C.tx3, fontSize: 13, fontWeight: 600, cursor: code.trim() ? "pointer" : "default", fontFamily: "inherit" }}
               >
                 {loading ? "..." : "Valider"}
               </button>
               <button
                 onClick={() => { setShowChangeCoach(false); setMsg(""); setCode(""); }}
-                style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "8px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Annuler
               </button>

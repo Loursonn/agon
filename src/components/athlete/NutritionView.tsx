@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
+import { EmojiIcon } from "@/components/ui/AgonIcon";
 import {
   getDailyLog,
   upsertDailyLog,
@@ -12,9 +13,9 @@ import {
 } from "@/lib/nutrition";
 
 const STRATEGY_META: Record<string, { label: string; color: string; icon: string; verb: string }> = {
-  maintenance:    { label: "Maintenance",    color: C.b, icon: "⚖️", verb: "Écart visé" },
-  seche:          { label: "Sèche",          color: C.r, icon: "🔥", verb: "Déficit visé" },
-  prise_de_masse: { label: "Prise de masse", color: C.g, icon: "💪", verb: "Surplus visé" },
+  maintenance:    { label: "Maintenance",    color: C.b, icon: "balance", verb: "Écart visé" },
+  seche:          { label: "Sèche",          color: C.r, icon: "flamme", verb: "Déficit visé" },
+  prise_de_masse: { label: "Prise de masse", color: C.g, icon: "musculation", verb: "Surplus visé" },
 };
 
 function todayISO() {
@@ -92,7 +93,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
   }
 
   const card: React.CSSProperties = {
-    background: C.s1, borderRadius: 16, padding: "16px",
+    background: C.s1, borderRadius: 6, padding: "16px",
     border: "1px solid " + C.brd, marginBottom: 12,
   };
 
@@ -101,7 +102,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
       <div style={{ padding: "16px 16px 40px" }}>
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 16 }}>Alimentation</div>
         <div style={{ ...card, textAlign: "center", padding: "32px 20px" }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>🥗</div>
+          <div style={{ fontSize: 28, marginBottom: 12 }}></div>
           <div style={{ fontSize: 14, fontWeight: 600, color: C.tx, marginBottom: 6 }}>Pas encore de plan nutritionnel</div>
           <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>Ton coach n'a pas encore défini de stratégie. Elle apparaîtra ici dès qu'elle sera prête.</div>
         </div>
@@ -110,7 +111,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
   }
 
   const strat = nutritionStrategy;
-  const meta = STRATEGY_META[strat.strategy] || { label: strat.strategy, color: C.ac, icon: "🥗", verb: "Objectif" };
+  const meta = STRATEGY_META[strat.strategy] || { label: strat.strategy, color: C.ac, icon: "nutrition", verb: "Objectif" };
 
   // ── Dépense & évaluation du jour ───────────────────────────────────────────
   const mode = strat.calorie_mode ?? (strat.can_track_calories ? "active" : "nap");
@@ -218,8 +219,8 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
       <div style={card}>
         {/* Stratégie en grand */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid " + C.brd }}>
-          <div style={{ width: 46, height: 46, borderRadius: 14, background: meta.color + "1C", border: "1px solid " + meta.color + "40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-            {meta.icon}
+          <div style={{ width: 46, height: 46, borderRadius: 6, background: meta.color + "1C", border: "1px solid " + meta.color + "40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+            <EmojiIcon value={meta.icon} size={22} />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 19, fontWeight: 900, color: meta.color, letterSpacing: "-0.3px", lineHeight: 1.1 }}>{meta.label}</div>
@@ -231,7 +232,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
             )}
           </div>
           {strat.target_weight && (
-            <div style={{ textAlign: "center", padding: "6px 12px", borderRadius: 12, background: C.s2, border: "1px solid " + C.brdL }}>
+            <div style={{ textAlign: "center", padding: "6px 12px", borderRadius: 6, background: C.s2, border: "1px solid " + C.brdL }}>
               <div style={{ fontSize: 9, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>Poids cible</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: C.ac }}>{strat.target_weight}<span style={{ fontSize: 10, color: C.tx3 }}> kg</span></div>
             </div>
@@ -302,7 +303,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
               <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Série en cours</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
                 <span style={{ fontSize: 28, fontWeight: 900, color: streakData.streak > 0 ? C.o : C.tx3, lineHeight: 1 }}>
-                  {streakData.streak > 0 ? "🔥 " + streakData.streak : "0"}
+                  {streakData.streak > 0 ? "" + streakData.streak : "0"}
                 </span>
                 <span style={{ fontSize: 11, color: C.tx3 }}>jour{streakData.streak > 1 ? "s" : ""} dans l'objectif</span>
               </div>
@@ -371,13 +372,13 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
 
             {/* Calories actives */}
             {showActiveCal && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, background: C.s2, border: "1px solid " + C.brdL }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 6, background: C.s2, border: "1px solid " + C.brdL }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: C.tx2 }}>⌚ Calories actives brûlées</div>
                   <div style={{ fontSize: 9, color: C.tx3, marginTop: 1 }}>montre / app{mode === "hybrid" ? " — optionnel" : ""}</div>
                 </div>
                 <input
-                  style={{ width: 100, padding: "8px 10px", borderRadius: 8, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 15, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
+                  style={{ width: 100, padding: "8px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 15, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
                   type="number" min={0} max={5000} placeholder="0"
                   value={log.active_calories ?? ""}
                   onChange={viewOnly ? undefined : (e => upd("active_calories", e.target.value ? parseInt(e.target.value) : null))}
@@ -396,13 +397,13 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
                 const over = ratio != null && ratio > 1.05;
 
                 return (
-                  <div key={m.key} style={{ background: C.s2, borderRadius: 14, padding: "10px 8px 8px", border: "1px solid " + m.color + "22", display: "flex", flexDirection: "column", gap: 7 }}>
+                  <div key={m.key} style={{ background: C.s2, borderRadius: 6, padding: "10px 8px 8px", border: "1px solid " + m.color + "22", display: "flex", flexDirection: "column", gap: 7 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                       <div style={{ width: 7, height: 7, borderRadius: "50%", background: m.color }} />
                       <span style={{ fontSize: 10, fontWeight: 700, color: m.color, textTransform: "uppercase", letterSpacing: "0.4px" }}>{m.label}</span>
                     </div>
                     <input
-                      style={{ width: "100%", padding: "9px 4px", borderRadius: 10, border: "1px solid " + m.color + (consumed != null ? "55" : "30"), background: C.s1, color: over ? C.o : C.tx, fontSize: 17, fontWeight: 800, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, textAlign: "center" as const }}
+                      style={{ width: "100%", padding: "9px 4px", borderRadius: 4, border: "1px solid " + m.color + (consumed != null ? "55" : "30"), background: C.s1, color: over ? C.o : C.tx, fontSize: 17, fontWeight: 800, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, textAlign: "center" as const }}
                       type="number" min={0} max={1000} placeholder="—"
                       value={log[m.key] ?? ""}
                       onChange={viewOnly ? undefined : (e => upd(m.key, e.target.value ? parseInt(e.target.value) : null))}
@@ -423,7 +424,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
 
             {/* Total calculé + jauge % */}
             {calConsumed > 0 && evalDay && (
-              <div style={{ padding: "12px 14px", borderRadius: 12, background: C.s2, border: "1px solid " + statusColor + "35" }}>
+              <div style={{ padding: "12px 14px", borderRadius: 6, background: C.s2, border: "1px solid " + statusColor + "35" }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: gauge ? 10 : 0 }}>
                   <div>
                     <div style={{ fontSize: 10, color: C.tx3, marginBottom: 2 }}>Total du jour</div>
@@ -447,7 +448,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
                       <div style={{ position: "absolute", top: 6, left: `calc(${gauge.zero}% - 1px)`, width: 1, height: 10, background: C.tx3 }} title="dépense (0%)" />
                     )}
                     {gauge.cursor != null && (
-                      <div style={{ position: "absolute", top: 3, left: `calc(${gauge.cursor}% - 2px)`, width: 4, height: 16, borderRadius: 2, background: statusColor, boxShadow: "0 0 6px " + statusColor + "90", transition: "left 0.3s" }} />
+                      <div style={{ position: "absolute", top: 3, left: `calc(${gauge.cursor}% - 2px)`, width: 4, height: 16, borderRadius: 2, background: statusColor + statusColor + "90", transition: "left 0.3s" }} />
                     )}
                   </div>
                 )}
@@ -458,7 +459,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
               <button
                 onClick={handleSave}
                 disabled={saving}
-                style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: saving ? C.s2 : C.ac, color: saving ? C.tx3 : "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "14px 0", borderRadius: 6, border: "none", background: saving ? C.s2 : C.ac, color: saving ? C.tx3 : "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
               >
                 {saving ? "Enregistrement..." : "Enregistrer ma journée"}
               </button>
@@ -475,13 +476,13 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
         let bg: string, border: string, color: string, icon: string, title: string;
         if (evalDay.status === "ok") {
           bg = C.gS; border = C.g + "40"; color = C.g;
-          icon = "✅"; title = `Objectif ${meta.label} atteint !`;
+          icon = "ok"; title = `Objectif ${meta.label} atteint !`;
         } else if (evalDay.status === "close") {
           bg = C.oS; border = C.o + "40"; color = C.o;
-          icon = "🟡"; title = `Proche de l'objectif (${fmtPct(evalDay.diffPct)} d'écart)`;
+          icon = "~"; title = `Proche de l'objectif (${fmtPct(evalDay.diffPct)} d'écart)`;
         } else {
           bg = C.rS; border = C.r + "40"; color = C.r;
-          icon = "⚠️"; title = `Hors objectif (${fmtPct(evalDay.diffPct)} d'écart)`;
+          icon = "alerte"; title = `Hors objectif (${fmtPct(evalDay.diffPct)} d'écart)`;
         }
 
         return (

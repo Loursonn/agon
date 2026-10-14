@@ -25,13 +25,13 @@ export function useReadinessScore(wellness: WellnessData | null): ReadinessScore
     let color: string;
     let label: string;
     if (score >= 85) {
-      color = "#9DB06A"; label = "Excellent";
+      color = "#66F03C"; label = "Excellent";
     } else if (score >= 70) {
-      color = "#9DB06A"; label = "Bon";
+      color = "#66F03C"; label = "Bon";
     } else if (score >= 50) {
       color = "#F5A623"; label = "Moyen";
     } else {
-      color = "#D9705A"; label = "Faible";
+      color = "#FF5A33"; label = "Faible";
     }
 
     return { score, color, label };

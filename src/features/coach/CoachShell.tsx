@@ -52,12 +52,12 @@ const NAV_ITEMS = [
 const SIDEBAR_STYLE: React.CSSProperties = {
   "--sidebar-width": "240px",
   "--sidebar-width-icon": "64px",
-  "--sidebar-background": "#15120F",
+  "--sidebar-background": "#0E0C0A",
   "--sidebar-foreground": "#7D7468",
-  "--sidebar-border": "rgba(124,116,128,0.2)",
-  "--sidebar-accent": "rgba(201,161,74,0.10)",
-  "--sidebar-accent-foreground": "#C9A14A",
-  "--sidebar-ring": "#C9A14A",
+  "--sidebar-border": "rgba(231,211,168,0.2)",
+  "--sidebar-accent": "rgba(255,201,51,0.10)",
+  "--sidebar-accent-foreground": "#FFC933",
+  "--sidebar-ring": "#FFC933",
 } as React.CSSProperties;
 
 // ── CoachShell ────────────────────────────────────────────────────────────────
@@ -82,10 +82,10 @@ function CoachShellInner() {
       {/* ── Sidebar ── */}
       <Sidebar
         collapsible="icon"
-        style={{ background: "#15120F", borderRight: "1px solid rgba(124,116,128,0.2)" }}
+        style={{ background: "#0E0C0A", borderRight: "1px solid rgba(231,211,168,0.2)" }}
       >
         {/* Logo */}
-        <SidebarHeader style={{ padding: "16px 14px 12px", borderBottom: "1px solid rgba(124,116,128,0.2)" }}>
+        <SidebarHeader style={{ padding: "16px 14px 12px", borderBottom: "1px solid rgba(231,211,168,0.2)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
               src="/brand/agon-symbole-favicon-marbre.svg"
@@ -108,7 +108,7 @@ function CoachShellInner() {
             className="coach-sidebar-search"
             style={{
               width: "100%", display: "flex", alignItems: "center", gap: 8,
-              padding: "7px 10px", borderRadius: 8,
+              padding: "7px 10px", borderRadius: 4,
               border: "1px solid rgba(255,255,255,0.08)",
               background: "rgba(255,255,255,0.04)",
               color: C.tx3, fontSize: 12, cursor: "pointer",
@@ -147,7 +147,7 @@ function CoachShellInner() {
                       padding: "9px 14px",
                       borderRadius: 0,
                       borderLeft: "2px solid " + (active ? C.ac : "transparent"),
-                      background: active ? "rgba(201,161,74,0.10)" : "transparent",
+                      background: active ? "rgba(255,201,51,0.10)" : "transparent",
                       color: active ? C.ac : C.tx2,
                       fontSize: 13,
                       fontWeight: active ? 600 : 400,
@@ -175,7 +175,7 @@ function CoachShellInner() {
         </SidebarContent>
 
         {/* Footer — coach profile */}
-        <SidebarFooter style={{ padding: "12px 14px", borderTop: "1px solid rgba(124,116,128,0.2)" }}>
+        <SidebarFooter style={{ padding: "12px 14px", borderTop: "1px solid rgba(231,211,168,0.2)" }}>
           <SidebarSeparator style={{ marginBottom: 10, background: C.brd }} />
 
           <div
@@ -242,7 +242,7 @@ function CoachShellInner() {
             onClick={toggle}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              padding: "5px 12px", borderRadius: 8,
+              padding: "5px 12px", borderRadius: 4,
               border: "1px solid rgba(255,255,255,0.08)",
               background: "rgba(255,255,255,0.04)",
               color: C.tx3, fontSize: 12, cursor: "pointer",
@@ -261,14 +261,14 @@ function CoachShellInner() {
             <button
               onClick={() => navigate("/athlete")}
               style={{
-                marginLeft: "auto", padding: "5px 12px", borderRadius: 20,
+                marginLeft: "auto", padding: "5px 12px", borderRadius: 6,
                 border: "1px solid " + C.coach + "40",
                 background: C.coach + "15", color: C.coach,
                 fontSize: 11, fontWeight: 700, cursor: "pointer",
                 fontFamily: "inherit", whiteSpace: "nowrap",
               }}
             >
-              🏃 Mode Athlète
+              Mode Athlète
             </button>
           )}
         </div>

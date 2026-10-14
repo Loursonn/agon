@@ -37,7 +37,7 @@ const STATUS_OPTIONS: { value: RoadmapPhaseStatus; label: string }[] = [
 ];
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", borderRadius: 8,
+  width: "100%", padding: "8px 10px", borderRadius: 4,
   border: `1px solid ${C.brdL}`, background: C.s2,
   color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
   boxSizing: "border-box",
@@ -102,7 +102,6 @@ export function RoadmapPhaseDrawer({ phase, onClose }: Props) {
         width: "min(100vw, 420px)", background: C.s1,
         borderLeft: `1px solid ${C.brd}`,
         display: "flex", flexDirection: "column",
-        boxShadow: "-8px 0 32px rgba(0,0,0,0.4)",
       }}>
         {/* Header */}
         <div style={{
@@ -175,7 +174,7 @@ export function RoadmapPhaseDrawer({ phase, onClose }: Props) {
               type="button"
               onClick={onClose}
               style={{
-                flex: 1, padding: "9px 0", borderRadius: 8,
+                flex: 1, padding: "9px 0", borderRadius: 4,
                 border: `1px solid ${C.brdL}`, background: "transparent",
                 color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
               }}
@@ -186,7 +185,7 @@ export function RoadmapPhaseDrawer({ phase, onClose }: Props) {
               type="submit"
               disabled={busy}
               style={{
-                flex: 2, padding: "9px 0", borderRadius: 8,
+                flex: 2, padding: "9px 0", borderRadius: 4,
                 border: "none", background: C.ac,
                 color: "#fff", fontSize: 13, fontWeight: 700,
                 cursor: busy ? "not-allowed" : "pointer",

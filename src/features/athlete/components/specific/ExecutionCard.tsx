@@ -6,8 +6,8 @@ import type { FlatExecStep } from "@/features/athlete/hooks/useSpecificExecution
 import { formatTarget } from "@/lib/energy/formatTarget";
 
 const PHASE_COLOR: Record<string, string> = {
-  warmup: "#9DB06A", work: "#E5484D", recovery: "#4FA3FF",
-  rest: "#8B8A92", cooldown: "#9DB06A", open: "#8B8A92",
+  warmup: "#66F03C", work: "#E5484D", recovery: "#4FA3FF",
+  rest: "#8B8A92", cooldown: "#66F03C", open: "#8B8A92",
 };
 const PHASE_LABEL: Record<string, string> = {
   warmup: "Échauffement", work: "Effort", recovery: "Récupération",
@@ -36,7 +36,7 @@ interface Props {
 export default function ExecutionCard({ current, next, secondsLeft, isLastStep, onNext, onSkip }: Props) {
   const { step, roundLabel } = current;
   const isExercise = step.type === "exercise";
-  const color = isExercise ? "#C9A14A" : (PHASE_COLOR[step.role] ?? "#8B8A92");
+  const color = isExercise ? "#FFC933" : (PHASE_COLOR[step.role] ?? "#8B8A92");
   const phaseLabel = isExercise
     ? (step.role === "work" ? "Effort · Exercice" : "Exercice")
     : (PHASE_LABEL[step.role] ?? step.role);
@@ -64,8 +64,8 @@ export default function ExecutionCard({ current, next, secondsLeft, isLastStep, 
 
   return (
     <div style={{
-      background: "var(--card, #15120F)", border: `1px solid ${color}`,
-      borderRadius: 16, padding: "24px 18px", textAlign: "center",
+      background: "var(--card, #0E0C0A)", border: `1px solid ${color}`,
+      borderRadius: 6, padding: "24px 18px", textAlign: "center",
     }}>
       <div style={{
         fontSize: 12, fontWeight: 700, color, textTransform: "uppercase" as const,
@@ -85,7 +85,7 @@ export default function ExecutionCard({ current, next, secondsLeft, isLastStep, 
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 6, flexWrap: "wrap" }}>
           {equipmentLabel && (
             <span style={{
-              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 6,
               background: "#4FA3FF20", color: "#4FA3FF",
               border: "1px solid #4FA3FF40",
             }}>
@@ -94,7 +94,7 @@ export default function ExecutionCard({ current, next, secondsLeft, isLastStep, 
           )}
           {showTarget && (
             <span style={{
-              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 6,
               background: `${color}20`, color,
               border: `1px solid ${color}40`,
             }}>
@@ -133,7 +133,7 @@ export default function ExecutionCard({ current, next, secondsLeft, isLastStep, 
         <button
           onClick={onSkip}
           style={{
-            borderRadius: 12, padding: 12, fontSize: 14, fontWeight: 700,
+            borderRadius: 6, padding: 12, fontSize: 14, fontWeight: 700,
             cursor: "pointer", border: "1px solid var(--border, #2E2D33)",
             background: "var(--card2, #26252A)", color: "#8B8A92",
             fontFamily: "inherit",
@@ -144,7 +144,7 @@ export default function ExecutionCard({ current, next, secondsLeft, isLastStep, 
         <button
           onClick={onNext}
           style={{
-            borderRadius: 12, padding: 12, fontSize: 14, fontWeight: 700,
+            borderRadius: 6, padding: 12, fontSize: 14, fontWeight: 700,
             cursor: "pointer", border: "1px solid var(--border, #2E2D33)",
             background: "var(--card2, #26252A)", color: "#F2F1F5",
             fontFamily: "inherit",

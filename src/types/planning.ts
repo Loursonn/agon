@@ -19,17 +19,30 @@ export interface Competition {
 export type CompetitionInsert = Omit<Competition, 'id' | 'created_at'>;
 
 export const COMPETITION_META: Record<CompetitionType, { emoji: string; label: string; color: string }> = {
-  competition: { emoji: '🏆', label: 'Compétition', color: '#F5A623' },
-  match:       { emoji: '⚽', label: 'Match',        color: '#D9705A' },
-  stage:       { emoji: '🏕',  label: 'Stage',        color: '#C9A14A' },
-  off:         { emoji: '🔄', label: 'Récup / Off',  color: '#9DB06A' },
-  autre:       { emoji: '📌', label: 'Autre',         color: '#9194A0' },
+  competition: { emoji: 'CP', label: 'Compétition', color: '#F5A623' },
+  match:       { emoji: 'MT', label: 'Match',        color: '#FF5A33' },
+  stage:       { emoji: 'ST', label: 'Stage',        color: '#FFC933' },
+  off:         { emoji: 'OF', label: 'Récup / Off',  color: '#66F03C' },
+  autre:       { emoji: 'AU', label: 'Autre',         color: '#9194A0' },
 };
 
 export const BLOCK_COLORS = [
-  '#C9A14A', '#5AC8FA', '#9DB06A', '#F5A623',
-  '#D9705A', '#FF6B9D', '#A78BFA', '#34D399',
+  '#FFC933', '#5AC8FA', '#66F03C', '#F5A623',
+  '#FF5A33', '#FF6B9D', '#A78BFA', '#34D399',
 ];
+
+// ── Life events ──────────────────────────────────────────────────────────────
+
+export interface LifeEvent {
+  id: string;
+  athlete_id: string;
+  date_start: string;
+  date_end: string;
+  title: string;
+  created_at: string;
+}
+
+export type LifeEventInsert = Omit<LifeEvent, 'id' | 'created_at'>;
 
 /** Default durations (in weeks) for each period level */
 export const PERIOD_DEFAULTS: Record<BlockType, number> = {

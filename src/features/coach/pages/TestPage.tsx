@@ -76,7 +76,7 @@ function MetricRow({ s, color }: { s: MetricSeries; color: string }) {
   const delta = s.points.length >= 2 ? last.value - first.value : null;
   const dColor = delta == null || delta === 0 ? C.tx3 : (delta > 0) === s.betterHigher ? C.g : C.r;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 10, padding: '10px 14px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4, padding: '10px 14px' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
         <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
@@ -141,7 +141,7 @@ function ResultCard({
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 12, border: '1px solid ' + C.brd, padding: '14px 16px',
+      background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd, padding: '14px 16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -164,7 +164,7 @@ function ResultCard({
                 return (
                   <div key={v.id} style={{
                     padding: '4px 10px', borderRadius: 7,
-                    background: 'rgba(201,161,74,0.08)', border: '1px solid rgba(201,161,74,0.15)',
+                    background: 'rgba(255,201,51,0.08)', border: '1px solid rgba(255,201,51,0.15)',
                   }}>
                     <span style={{ fontSize: 11, color: C.tx3 }}>
                       {varDef?.label ?? '—'}{' '}
@@ -203,7 +203,7 @@ function ResultCard({
                 disabled={deleting}
                 style={{
                   padding: '5px 10px', borderRadius: 6, border: 'none', fontFamily: 'inherit',
-                  background: 'rgba(239,75,75,0.15)', color: '#D9705A',
+                  background: 'rgba(239,75,75,0.15)', color: '#FF5A33',
                   fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 }}
               >
@@ -221,7 +221,7 @@ function ResultCard({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'color 150ms ease-out',
             }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = '#D9705A')}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = '#FF5A33')}
             onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = C.tx3)}
             >
               <Trash2 size={13} />
@@ -292,7 +292,7 @@ function AddResultForm({
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 14, border: '1px solid ' + C.ac + '40',
+      background: C.s1, borderRadius: 6, border: '1px solid ' + C.ac + '40',
       padding: '20px', display: 'flex', flexDirection: 'column', gap: 16,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -379,7 +379,7 @@ function AddResultForm({
           onClick={handleSubmit}
           disabled={!isValid || saving}
           style={{
-            padding: '9px 22px', borderRadius: 9, border: 'none', fontFamily: 'inherit',
+            padding: '9px 22px', borderRadius: 4, border: 'none', fontFamily: 'inherit',
             background: isValid && !saving ? C.ac : C.s2,
             color: isValid && !saving ? '#fff' : C.tx3,
             fontSize: 13, fontWeight: 700,
@@ -425,7 +425,7 @@ function CoachToFill({ athleteId }: { athleteId: string }) {
         {pending.map(p => {
           const open = openId === p.sessionId;
           return (
-            <div key={p.sessionId} style={{ background: C.s1, borderRadius: 12, border: '1px solid ' + C.o + '40', padding: '12px 14px' }}>
+            <div key={p.sessionId} style={{ background: C.s1, borderRadius: 6, border: '1px solid ' + C.o + '40', padding: '12px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{p.title}</div>
@@ -437,7 +437,7 @@ function CoachToFill({ athleteId }: { athleteId: string }) {
                   )}
                 </div>
                 <span style={{ fontSize: 9, fontWeight: 700, color: C.o, background: C.o + '1A', border: '1px solid ' + C.o + '40', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>À remplir</span>
-                <button onClick={() => { setOpenId(open ? null : p.sessionId); setVals({}); }} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: C.o, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => { setOpenId(open ? null : p.sessionId); setVals({}); }} style={{ padding: '6px 12px', borderRadius: 4, border: 'none', background: C.oV, color: '#0E0C0A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                   {open ? 'Fermer' : 'Remplir'}
                 </button>
               </div>
@@ -456,7 +456,7 @@ function CoachToFill({ athleteId }: { athleteId: string }) {
                         value={vals[v.id] ?? ''}
                         onChange={e => setVals(s => ({ ...s, [v.id]: e.target.value }))}
                         placeholder={v.value_type === 'scale5' ? '0–5' : '—'}
-                        style={{ flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid ' + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                        style={{ flex: 1, padding: '7px 10px', borderRadius: 4, border: '1px solid ' + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 700, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
                       />
                       <span style={{ minWidth: 40, fontSize: 12, color: C.tx3 }}>{v.unit}</span>
                     </div>
@@ -464,7 +464,7 @@ function CoachToFill({ athleteId }: { athleteId: string }) {
                   <button
                     onClick={() => submit(p.sessionId, p.variables)}
                     disabled={fill.isPending}
-                    style={{ alignSelf: 'flex-end', marginTop: 4, padding: '8px 18px', borderRadius: 9, border: 'none', background: C.o, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{ alignSelf: 'flex-end', marginTop: 4, padding: '8px 18px', borderRadius: 4, border: 'none', background: C.oV, color: '#0E0C0A', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     {fill.isPending ? 'Enregistrement…' : 'Valider la note'}
                   </button>
@@ -525,8 +525,8 @@ export default function TestPage({ embedded = false }: { embedded?: boolean }) {
               onClick={() => setAddingResult(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 14px', borderRadius: 8, border: 'none',
-                background: C.ac, color: '#fff', fontSize: 12, fontWeight: 700,
+                padding: '7px 14px', borderRadius: 4, border: 'none',
+                background: C.acV, color: '#0E0C0A', fontSize: 12, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'opacity 150ms ease-out',
               }}
@@ -592,7 +592,7 @@ export default function TestPage({ embedded = false }: { embedded?: boolean }) {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 11px', borderRadius: 8,
+  width: '100%', padding: '8px 11px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
   background: 'rgba(255,255,255,0.04)',
   color: '#E8E6EA', fontSize: 12, fontFamily: 'inherit',
@@ -605,7 +605,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 const cancelBtnStyle: React.CSSProperties = {
-  padding: '9px 18px', borderRadius: 9,
+  padding: '9px 18px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
   background: 'transparent', color: '#7D7468',
   fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',

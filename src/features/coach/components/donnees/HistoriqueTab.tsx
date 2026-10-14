@@ -56,14 +56,14 @@ function AccordionHeader({
       style={{
         width: "100%", display: "flex", alignItems: "center", gap: 8, padding: pad,
         background: open ? color + "10" : C.s1, border: "1px solid " + (open ? color + "40" : C.brd),
-        borderRadius: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
+        borderRadius: 4, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
       }}
     >
       {open ? <ChevronDown size={14} color={color} /> : <ChevronRight size={14} color={C.tx3} />}
       <span style={{ fontSize: fs, fontWeight: 700, color: open ? color : C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {title}
       </span>
-      {badge && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: color + "20", color, flexShrink: 0 }}>{badge}</span>}
+      {badge && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: color + "20", color, flexShrink: 0 }}>{badge}</span>}
       {subtitle && <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>{subtitle}</span>}
     </button>
   );
@@ -75,7 +75,7 @@ function LogRow({ log, onCopy, onDelete }: { log: HistoLog; onCopy: () => void; 
   const [confirm, setConfirm] = useState(false);
   const meta = STATUS_META[log.status] ?? STATUS_META.planned;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.s2, borderRadius: 8, border: "1px solid " + C.brd }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.s2, borderRadius: 4, border: "1px solid " + C.brd }}>
       <span style={{ fontSize: 13, fontWeight: 800, color: meta.color, width: 16, textAlign: "center", flexShrink: 0 }} title={meta.label}>{meta.icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.session_name}</div>
@@ -84,7 +84,7 @@ function LogRow({ log, onCopy, onDelete }: { log: HistoLog; onCopy: () => void; 
       {confirm ? (
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           <button onClick={() => setConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.r, color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -120,29 +120,29 @@ function CopyDialog({
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 360, background: C.s1, borderRadius: 16, border: "1px solid " + C.brdL, padding: 18 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 360, background: C.s1, borderRadius: 6, border: "1px solid " + C.brdL, padding: 18 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: C.tx, marginBottom: 4 }}>Copier « {log.session_name} »</div>
         <div style={{ fontSize: 11, color: C.tx3, marginBottom: 14 }}>
           La séance sera ajoutée aux <b>Séances Type</b> de l'athlète choisi (squelette réutilisable).
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto" }}>
           {current && (
-            <button onClick={() => onPick(current.id)} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + C.coach + "50", background: C.coachS, color: C.coach, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
+            <button onClick={() => onPick(current.id)} style={{ padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.coach + "50", background: C.coachS, color: C.coach, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
               {current.full_name} <span style={{ fontSize: 10, fontWeight: 400, color: C.tx3 }}>(cet athlète)</span>
             </button>
           )}
           {selfAsAthlete && (
-            <button onClick={() => onPick(selfAsAthlete.id)} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
+            <button onClick={() => onPick(selfAsAthlete.id)} style={{ padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
               {selfAsAthlete.full_name}
             </button>
           )}
           {others.map((a) => (
-            <button key={a.id} onClick={() => onPick(a.id)} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
+            <button key={a.id} onClick={() => onPick(a.id)} style={{ padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
               {a.full_name}
             </button>
           ))}
         </div>
-        <button onClick={onClose} style={{ width: "100%", marginTop: 12, padding: "9px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={onClose} style={{ width: "100%", marginTop: 12, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
           Annuler
         </button>
       </div>
@@ -213,7 +213,7 @@ function WellnessRow({ date, w, onDelete }: { date: string; w: WellnessData; onD
   const score = calcScore(w);
   const reco = getReco(score);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.s2, borderRadius: 8, border: "1px solid " + C.brd }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.s2, borderRadius: 4, border: "1px solid " + C.brd }}>
       <div style={{ width: 44, flexShrink: 0, textAlign: "center" }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: reco.c, lineHeight: 1 }}>{score}</div>
         <div style={{ fontSize: 8, color: C.tx3, marginTop: 2 }}>{reco.label}</div>
@@ -240,7 +240,7 @@ function WellnessRow({ date, w, onDelete }: { date: string; w: WellnessData; onD
       </div>
       {confirm ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.r, color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
           <button onClick={() => setConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
         </div>
       ) : (
@@ -294,7 +294,7 @@ function WellnessHistory() {
       </div>
 
       {byMonth.length === 0 ? (
-        <div style={{ background: C.s1, borderRadius: 12, padding: "14px 16px", border: "1px solid " + C.brd, fontSize: 12, color: C.tx3 }}>
+        <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, fontSize: 12, color: C.tx3 }}>
           Aucun wellness enregistré par cet athlète.
         </div>
       ) : (
@@ -449,7 +449,7 @@ export function HistoriqueTab() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
           {(data?.macros ?? []).length === 0 && standaloneCycles.length === 0 && (
-            <div style={{ background: C.s1, borderRadius: 12, padding: "14px 16px", border: "1px solid " + C.brd, fontSize: 12, color: C.tx3 }}>
+            <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, fontSize: 12, color: C.tx3 }}>
               Aucune planification pour cet athlète — crée un macro/cycle dans l'onglet Planning.
             </div>
           )}

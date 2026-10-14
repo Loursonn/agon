@@ -133,11 +133,11 @@ function SleepTunnel({ wellness }: { wellness: WellnessDay }) {
       </div>
 
       {/* Bar */}
-      <div style={{ position: "relative", height: 20, borderRadius: 10, background: C.s1, overflow: "hidden" }}>
+      <div style={{ position: "relative", height: 20, borderRadius: 4, background: C.s1, overflow: "hidden" }}>
         <div style={{
           position: "absolute",
           left: `${leftPct}%`, width: `${widthPct}%`,
-          height: "100%", borderRadius: 10,
+          height: "100%", borderRadius: 4,
           background: `linear-gradient(90deg, ${C.b}, ${C.ac})`,
           opacity: 0.85,
         }} />
@@ -173,7 +173,7 @@ function DomsDisplay({ wellness }: { wellness: WellnessDay }) {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {zones.map((zone) => (
           <span key={zone} style={{
-            padding: "3px 9px", borderRadius: 20, fontSize: 10,
+            padding: "3px 9px", borderRadius: 6, fontSize: 10,
             background: C.oS, border: "1px solid " + C.o + "40", color: C.o,
           }}>
             {zone}
@@ -202,7 +202,7 @@ function WorkoutCard({ w }: { w: WorkoutDetail }) {
   ])];
 
   return (
-    <div style={{ background: C.s2, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
+    <div style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", marginBottom: 8 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: exIds.length > 0 ? 10 : 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -232,7 +232,7 @@ function WorkoutCard({ w }: { w: WorkoutDetail }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: C.tx2 }}>{name}</span>
                   {planned?.method && (
-                    <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: "#C9A14A", fontWeight: 600 }}>
+                    <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: "#FFC933", fontWeight: 600 }}>
                       {planned.method}
                     </span>
                   )}
@@ -309,7 +309,7 @@ function WorkoutCard({ w }: { w: WorkoutDetail }) {
                 {/* Athlete comment per exercise */}
                 {w.athlete_exercise_comments?.[exId] && (
                   <div style={{ marginTop: 3, padding: "3px 6px", borderRadius: 4, background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.30)", fontSize: 9, color: C.tx2, fontStyle: "italic" }}>
-                    💬 {w.athlete_exercise_comments[exId]}
+                    {w.athlete_exercise_comments[exId]}
                   </div>
                 )}
               </div>
@@ -330,7 +330,7 @@ function WorkoutCard({ w }: { w: WorkoutDetail }) {
             </div>
           )}
           {w.athlete_session_comment && (
-            <div style={{ fontSize: 10, color: C.tx2, fontStyle: "italic" }}>💬 « {w.athlete_session_comment} »</div>
+            <div style={{ fontSize: 10, color: C.tx2, fontStyle: "italic" }}>« {w.athlete_session_comment} »</div>
           )}
         </div>
       )}
@@ -349,14 +349,14 @@ function EnergyCard({ e }: { e: EnergySessionDetail }) {
   const dist     = e.distance_m != null
     ? e.distance_m >= 1000 ? `${(e.distance_m / 1000).toFixed(1)}km` : `${e.distance_m}m`
     : null;
-  const col      = e.partial ? "#7E9CA8" : e.completed ? C.g : C.o;
+  const col      = e.partial ? "#33B5FF" : e.completed ? C.g : C.o;
   const blEntries  = e.block_logs ? Object.entries(e.block_logs) : [];
   const doneCount  = blEntries.filter(([, b]) => b.done).length;
   const totalCount = blEntries.length;
   const hasDetail  = blEntries.length > 0 || !!e.note || e.rpe_score != null;
 
   return (
-    <div style={{ background: C.s2, borderRadius: 10, marginBottom: 8, borderLeft: `3px solid ${col}`, overflow: "hidden" }}>
+    <div style={{ background: C.s2, borderRadius: 4, marginBottom: 8, borderLeft: `3px solid ${col}`, overflow: "hidden" }}>
       {/* Header */}
       <div
         onClick={() => hasDetail && setOpen((v) => !v)}
@@ -416,14 +416,14 @@ function FreeActivityCard({ f }: { f: FreeActivityDetail }) {
   const hasDetail = f.intensity != null || !!f.note;
 
   return (
-    <div style={{ background: FREE_COLOR + "15", borderRadius: 10, marginBottom: 8, borderLeft: `3px solid ${FREE_COLOR}`, overflow: "hidden" }}>
+    <div style={{ background: FREE_COLOR + "15", borderRadius: 4, marginBottom: 8, borderLeft: `3px solid ${FREE_COLOR}`, overflow: "hidden" }}>
       {/* Header */}
       <div
         onClick={() => hasDetail && setOpen((v) => !v)}
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", cursor: hasDetail ? "pointer" : "default" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>{f.sportEmoji ?? "🏃"}</span>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>{f.sportEmoji ?? "course"}</span>
           <div style={{ minWidth: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
               {f.name}
@@ -520,7 +520,7 @@ export function DayDetailPanel({ date, wellness, workouts = [], energySessions =
             <DomsDisplay wellness={wellness} />
 
             {/* Sleep tunnel */}
-            <div style={{ marginTop: 20, background: C.s2, borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ marginTop: 20, background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>
                 Tunnel de sommeil
               </div>
@@ -552,7 +552,7 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "16px 16px 0 0",
+  background: C.s1, borderRadius: "6px 6px 0 0",
   width: "100%", maxWidth: 520,
   maxHeight: "80vh", overflowY: "auto",
   padding: "20px 20px 40px",
@@ -560,7 +560,7 @@ const panelStyle: React.CSSProperties = {
 
 const closeBtnStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 8,
+  width: 32, height: 32, borderRadius: 4,
   border: "1px solid " + C.brd, background: C.s2,
   color: C.tx3, cursor: "pointer", fontFamily: "inherit",
 };

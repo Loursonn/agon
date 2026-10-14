@@ -12,9 +12,9 @@ const EQUIPMENT_LABEL: Record<string, string> = {
 };
 
 const COLORS = {
-  warmup: "#9DB06A", work: "#E5484D", recovery: "#4FA3FF",
-  rest: "#8B8A92", cooldown: "#9DB06A", open: "#8B8A92",
-  exercise: "#C9A14A", repeat: "#F5A623",
+  warmup: "#66F03C", work: "#E5484D", recovery: "#4FA3FF",
+  rest: "#8B8A92", cooldown: "#66F03C", open: "#8B8A92",
+  exercise: "#FFC933", repeat: "#F5A623",
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -53,9 +53,9 @@ function StepCard({ step, color, children }: {
   return (
     <div style={{
       display: "flex", gap: 12,
-      background: "var(--card, #15120F)", border: "1px solid var(--border, #2E2D33)",
+      background: "var(--card, #0E0C0A)", border: "1px solid var(--border, #2E2D33)",
       borderLeft: `4px solid ${color}`,
-      borderRadius: 12, padding: "12px 14px", marginBottom: 8,
+      borderRadius: 6, padding: "12px 14px", marginBottom: 8,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <span style={{
@@ -65,14 +65,14 @@ function StepCard({ step, color, children }: {
         }}>
           {kindLabel}
         </span>
-        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, color: "#F2F1F5" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, color: "#F2F1F5", whiteSpace: "pre-wrap" }}>
           {title}
         </div>
         {(equipmentLabel || targetStr) && (
           <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
             {equipmentLabel && (
               <span style={{
-                fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+                fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
                 background: "#4FA3FF20", color: "#4FA3FF",
                 border: "1px solid #4FA3FF40",
               }}>
@@ -124,7 +124,7 @@ export default function StepTimeline({ steps }: { steps: EnergyStep[] }) {
         return (
           <div key={group.id ?? i} style={{
             border: `1px dashed ${COLORS.repeat}`,
-            borderRadius: 14, padding: 10, marginBottom: 8,
+            borderRadius: 6, padding: 10, marginBottom: 8,
             background: "rgba(245,166,35,0.03)",
           }}>
             <div style={{
@@ -135,6 +135,11 @@ export default function StepTimeline({ steps }: { steps: EnergyStep[] }) {
                 × {group.repeat} tours
               </span>
             </div>
+            {group.instructions && (
+              <div style={{ fontSize: 12, color: "#B9AE9C", lineHeight: 1.4, whiteSpace: "pre-wrap", padding: "0 4px 8px" }}>
+                {group.instructions}
+              </div>
+            )}
             <div style={{ marginLeft: 6 }}>
               <StepTimeline steps={group.children} />
             </div>

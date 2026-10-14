@@ -30,7 +30,7 @@ interface Comp {
 
 const PRIORITY_COLOR: Record<string, string> = {
   A: "#F5A623",
-  B: "#C9A14A",
+  B: "#FFC933",
   C: "#9194A0",
 };
 
@@ -118,7 +118,7 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
             onClick={() => setFormComp("new")}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              padding: "8px 16px", borderRadius: 10,
+              padding: "8px 16px", borderRadius: 4,
               border: "none", background: C.ac,
               color: "#fff", fontSize: 12, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit",
@@ -131,9 +131,9 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
         {competitions.length === 0 ? (
           <div style={{
             padding: "60px 0", textAlign: "center",
-            background: C.s1, borderRadius: 14, border: "1px solid " + C.brd,
+            background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
           }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>🏆</div>
+            <div style={{ fontSize: 32, marginBottom: 10 }}></div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>Aucune compétition</div>
             <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 16 }}>
               Ajoute des compétitions pour planifier la saison.
@@ -142,7 +142,7 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
               onClick={() => setFormComp("new")}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 18px", borderRadius: 10, border: "none", background: C.ac,
+                padding: "8px 18px", borderRadius: 4, border: "none", background: C.ac,
                 color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               }}
             >
@@ -235,7 +235,7 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
     <div
       style={{
         display: "flex", alignItems: "center", gap: 12,
-        padding: "12px 16px", borderRadius: 10,
+        padding: "12px 16px", borderRadius: 4,
         background: C.s1, border: "1px solid " + C.brd,
         opacity: dimmed ? 0.7 : 1,
         transition: "opacity 150ms",
@@ -270,7 +270,7 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
         </div>
         <div style={{ fontSize: 11, color: C.tx3, marginTop: 2, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <span>{format(parseISO(comp.date), "d MMMM yyyy", { locale: fr })}</span>
-          {comp.location && <span>📍 {comp.location}</span>}
+          {comp.location && <span>{comp.location}</span>}
           {comp.notes    && (
             <span style={{ fontStyle: "italic", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {comp.notes}
@@ -285,7 +285,7 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
           <span style={{ fontSize: 11, color: C.r }}>Supprimer ?</span>
           <button
             onClick={onDelete}
-            style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: C.r, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
           >
             Oui
           </button>

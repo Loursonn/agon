@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { useUnifiedCalendar } from "@/features/shared/hooks/useUnifiedCalendar";
-import { C, BT, BLOC_COLORS, HABIT_COLORS, HABIT_EMOJIS } from "@/lib/theme";
+import { C, BT, BLOC_COLORS, HABIT_COLORS, HABIT_ICONS } from "@/lib/theme";
 import { todayKey, hISO } from "@/lib/date";
 import { parseReps, fmtMR, clusterReps, DEF_METHODS, BLOC_METHODS, EVENT_TYPES, normalizeExName, fuzzyExMatch } from "@/lib/exercises";
 import { getMC, mL } from "@/lib/muscles";
@@ -123,17 +123,17 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
   const doneSet=new Set(completedSessions[currentWeek]||[]);
 
   const VIS_ITEMS=[
-    {k:'muscu',label:'Séances musculation',emoji:'🏋'},
-    {k:'energy',label:'Séances énergétiques',emoji:'⚡'},
-    {k:'tests',label:'Tests planifiés',emoji:'📋'},
-    {k:'wellness',label:'Scores wellness',emoji:'💙'},
-    {k:'nutrition',label:'Nutrition',emoji:'🍽'},
-    {k:'pr',label:'Records personnels',emoji:'🏅'},
-    {k:'weight',label:'Poids de corps',emoji:'⚖'},
+    {k:'muscu',label:'Séances musculation',emoji:'MSC'},
+    {k:'energy',label:'Séances énergétiques',emoji:'NRJ'},
+    {k:'tests',label:'Tests planifiés',emoji:'TST'},
+    {k:'wellness',label:'Scores wellness',emoji:'W'},
+    {k:'nutrition',label:'Nutrition',emoji:'N'},
+    {k:'pr',label:'Records personnels',emoji:'PR'},
+    {k:'weight',label:'Poids de corps',emoji:'kg'},
   ];
 
   return(
-    <div style={{background:C.s1,borderRadius:18,border:'1px solid '+C.brd,overflow:'hidden',marginBottom:14,userSelect:'none'}}
+    <div style={{background:C.s1,borderRadius:6,border:'1px solid '+C.brd,overflow:'hidden',marginBottom:14,userSelect:'none'}}
       onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
 
       {/* Header nav */}
@@ -143,10 +143,10 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
           <div style={{fontSize:9,color:C.tx3,marginTop:1}}>Planning 4 semaines — glisser pour naviguer</div>
         </div>
         <div style={{display:'flex',gap:5,alignItems:'center'}}>
-          <button onClick={()=>{setWeekOffset(w=>w-1);setSelectDay(null);}} style={{width:28,height:28,borderRadius:8,border:'1px solid '+C.brdL,background:C.s2,color:C.tx2,fontSize:15,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>‹</button>
+          <button onClick={()=>{setWeekOffset(w=>w-1);setSelectDay(null);}} style={{width:28,height:28,borderRadius:4,border:'1px solid '+C.brdL,background:C.s2,color:C.tx2,fontSize:15,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>‹</button>
           {weekOffset!==0&&<button onClick={()=>{setWeekOffset(0);setSelectDay(null);}} style={{padding:'3px 7px',borderRadius:6,border:'1px solid '+C.ac+'40',background:C.acS,color:C.ac,fontSize:9,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>Auj.</button>}
-          <button onClick={()=>{setWeekOffset(w=>w+1);setSelectDay(null);}} style={{width:28,height:28,borderRadius:8,border:'1px solid '+C.brdL,background:C.s2,color:C.tx2,fontSize:15,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>›</button>
-          <button onClick={()=>setShowVisModal(true)} title="Visibilité athlète" style={{width:28,height:28,borderRadius:8,border:'1px solid '+C.brdL,background:C.s2,color:C.tx3,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>⚙</button>
+          <button onClick={()=>{setWeekOffset(w=>w+1);setSelectDay(null);}} style={{width:28,height:28,borderRadius:4,border:'1px solid '+C.brdL,background:C.s2,color:C.tx2,fontSize:15,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>›</button>
+          <button onClick={()=>setShowVisModal(true)} title="Visibilité athlète" style={{width:28,height:28,borderRadius:4,border:'1px solid '+C.brdL,background:C.s2,color:C.tx3,fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>Cfg</button>
         </div>
       </div>
 
@@ -196,7 +196,7 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
                   {/* Événements locaux */}
                   {dayEvts.slice(0,1).map(ev=>{const ei=EVENT_TYPES.find(t=>t.v===ev.type)||EVENT_TYPES[4];return(<div key={ev.id} style={{fontSize:8,fontWeight:800,padding:'2px 3px',borderRadius:4,background:ei.c+'30',color:ei.c,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2,lineHeight:1.3}}>{ei.e} {(ev.title||ei.l).slice(0,5)}</div>);})}
                   {/* Compétitions planification */}
-                  {planCompsDay.slice(0,1).map(comp=>(<div key={comp.id} style={{fontSize:8,fontWeight:800,padding:'2px 3px',borderRadius:4,background:'#F5A62330',color:'#F5A623',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2,lineHeight:1.3}}>🏆 {comp.name.slice(0,6)}</div>))}
+                  {planCompsDay.slice(0,1).map(comp=>(<div key={comp.id} style={{fontSize:8,fontWeight:800,padding:'2px 3px',borderRadius:4,background:'#F5A62330',color:'#F5A623',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:2,lineHeight:1.3}}>{comp.name.slice(0,6)}</div>))}
                   {planCompsDay.length>1&&<div style={{fontSize:7,color:'#F5A623',lineHeight:1,marginBottom:2}}>+{planCompsDay.length-1}</div>}
                   {/* Séances muscu */}
                   {visibilitySettings.muscu!==false&&sessList.length>0&&<div style={{display:'flex',flexDirection:'column',gap:2,marginBottom:2}}>
@@ -207,11 +207,11 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
                   </div>}
                   {/* Énergie */}
                   {visibilitySettings.energy!==false&&eList.length>0&&(
-                    <div style={{fontSize:8,fontWeight:700,padding:'2px 3px',borderRadius:4,background:C.coach+'22',color:C.coach,lineHeight:1.3,marginBottom:2}}>⚡{eList.length>1?' ×'+eList.length:''}</div>
+                    <div style={{fontSize:8,fontWeight:700,padding:'2px 3px',borderRadius:4,background:C.coach+'22',color:C.coach,lineHeight:1.3,marginBottom:2}}>NRJ{eList.length>1?' ×'+eList.length:''}</div>
                   )}
                   {/* Tests */}
                   {visibilitySettings.tests!==false&&tests.length>0&&(
-                    <div style={{fontSize:8,fontWeight:700,padding:'2px 3px',borderRadius:4,background:'#F5A62322',color:'#F5A623',lineHeight:1.3,marginBottom:2}}>📋{tests.length>1?' ×'+tests.length:''}</div>
+                    <div style={{fontSize:8,fontWeight:700,padding:'2px 3px',borderRadius:4,background:'#F5A62322',color:'#F5A623',lineHeight:1.3,marginBottom:2}}>TST{tests.length>1?' ×'+tests.length:''}</div>
                   )}
                   {/* Wellness */}
                   {visibilitySettings.wellness!==false&&ws2!==null&&(
@@ -249,13 +249,13 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
                 <div style={{fontSize:13,fontWeight:700,color:C.tx}}>{DAYS_FULL[di]} {date.getDate()} {MONTHS_F[date.getMonth()]}</div>
                 <div style={{fontSize:9,color:C.tx3,marginTop:1}}>S{planWeek}{ws3!==null?' · Forme '+ws3+'/100':''}</div>
               </div>
-              <button onClick={()=>setShowPlanModal({wi:selectDay.wi,di,date,planWeek})} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:10,border:'none',background:C.coach,color:'#fff',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+ Planifier</button>
+              <button onClick={()=>setShowPlanModal({wi:selectDay.wi,di,date,planWeek})} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:4,border:'none',background:C.coach,color:'#fff',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+ Planifier</button>
             </div>
             {/* Compétitions depuis Planification (read-only) */}
             {planCompsDay.length>0&&<div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:8}}>
               {planCompsDay.map(comp=>(
-                <div key={comp.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderRadius:9,background:'#F5A62318',border:'1px solid #F5A62350'}}>
-                  <span style={{fontSize:18}}>🏆</span>
+                <div key={comp.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderRadius:4,background:'#F5A62318',border:'1px solid #F5A62350'}}>
+                  <span style={{fontSize:14,fontWeight:700}}>COMP</span>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,fontWeight:700,color:'#F5A623',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{comp.name}</div>
                     {comp.location&&<div style={{fontSize:9,color:C.tx3}}>{comp.location}</div>}
@@ -267,7 +267,7 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
             {/* Événements locaux */}
             {dayEvts.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
               {dayEvts.map(ev=>{const ei=EVENT_TYPES.find(t=>t.v===ev.type)||EVENT_TYPES[4];return(
-                <div key={ev.id} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:9,background:ei.c+'20',border:'1px solid '+ei.c+'50',flex:'1 1 auto'}}>
+                <div key={ev.id} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:4,background:ei.c+'20',border:'1px solid '+ei.c+'50',flex:'1 1 auto'}}>
                   <span style={{fontSize:16}}>{ei.e}</span>
                   <div style={{flex:1}}><div style={{fontSize:11,fontWeight:700,color:ei.c}}>{ei.l}{ev.title?' — '+ev.title:''}</div>{ev.notes&&<div style={{fontSize:9,color:C.tx3}}>{ev.notes}</div>}</div>
                   <button onClick={e=>{e.stopPropagation();removeEvent(isoDate(date),ev.id);}} style={{background:'none',border:'none',color:C.tx3,fontSize:14,cursor:'pointer',padding:0,lineHeight:1,flexShrink:0}}>×</button>
@@ -276,13 +276,13 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
             </div>}
             <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
               {sessList.map(s=>{const done=s._done!==undefined?s._done:doneSet.has(s.id);return(
-                <button key={s.id} onClick={()=>setPreviewItem({type:'muscu',data:s,planWeek:planWeek})} style={{padding:'5px 10px',borderRadius:9,background:C.b+'15',border:'1px solid '+C.b+'30',fontSize:11,fontWeight:600,color:C.b,cursor:'pointer',fontFamily:'inherit'}}>🏋 {s.name}{done?' ✓':''} ›</button>
+                <button key={s.id} onClick={()=>setPreviewItem({type:'muscu',data:s,planWeek:planWeek})} style={{padding:'5px 10px',borderRadius:4,background:C.b+'15',border:'1px solid '+C.b+'30',fontSize:11,fontWeight:600,color:C.b,cursor:'pointer',fontFamily:'inherit'}}>{s.name}{done?' ✓':''} ›</button>
               );})}
               {eAssigned.map(s=>(
-                <button key={s.id||s.session_key} onClick={()=>setPreviewItem({type:'energy',data:s,planWeek:planWeek})} style={{padding:'5px 10px',borderRadius:9,background:C.coach+'15',border:'1px solid '+C.coach+'30',fontSize:11,fontWeight:600,color:C.coach,cursor:'pointer',fontFamily:'inherit'}}>⚡ {s.session_label||'Énergie'} ›</button>
+                <button key={s.id||s.session_key} onClick={()=>setPreviewItem({type:'energy',data:s,planWeek:planWeek})} style={{padding:'5px 10px',borderRadius:4,background:C.coach+'15',border:'1px solid '+C.coach+'30',fontSize:11,fontWeight:600,color:C.coach,cursor:'pointer',fontFamily:'inherit'}}>{s.session_label||'Energie'} ›</button>
               ))}
-              {tests.map(t=>{const tc=t.type==='musculation'?'#C9A14A':t.type==='energetique'?'#D9705A':t.type==='specifique'?'#F5A623':'#9DB06A';return(
-                <button key={t.id} onClick={()=>setPreviewItem({type:'test',data:t,planWeek:planWeek})} style={{padding:'5px 10px',borderRadius:9,background:tc+'15',border:'1px solid '+tc+'30',fontSize:11,fontWeight:600,color:tc,cursor:'pointer',fontFamily:'inherit'}}>📋 {t.title} ›</button>
+              {tests.map(t=>{const tc=t.type==='musculation'?'#FFC933':t.type==='energetique'?'#FF5A33':t.type==='specifique'?'#F5A623':'#66F03C';return(
+                <button key={t.id} onClick={()=>setPreviewItem({type:'test',data:t,planWeek:planWeek})} style={{padding:'5px 10px',borderRadius:4,background:tc+'15',border:'1px solid '+tc+'30',fontSize:11,fontWeight:600,color:tc,cursor:'pointer',fontFamily:'inherit'}}>{t.title} ›</button>
               );})}
               {sessList.length===0&&eAssigned.length===0&&tests.length===0&&dayEvts.length===0&&planCompsDay.length===0&&<span style={{fontSize:11,color:C.tx3}}>Aucun contenu planifié — cliquer "+ Planifier"</span>}
             </div>
@@ -295,7 +295,7 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
         const{di,date,planWeek}=showPlanModal;
         return(
           <div style={{position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,0.78)',display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setShowPlanModal(null)}>
-            <div style={{width:'100%',maxWidth:640,background:C.s1,borderRadius:'20px 20px 0 0',padding:'20px 20px 32px',overflowY:'auto',maxHeight:'80vh'}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:'100%',maxWidth:640,background:C.s1,borderRadius:'6px 6px 0 0',padding:'20px 20px 32px',overflowY:'auto',maxHeight:'80vh'}} onClick={e=>e.stopPropagation()}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
                 <div>
                   <div style={{fontSize:15,fontWeight:700,color:C.tx}}>Planifier — {DAYS_FULL[di]} {date.getDate()} {MONTHS_F[date.getMonth()]}</div>
@@ -310,14 +310,14 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
                 <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:10}}>
                   {EVENT_TYPES.map(et=>{
                     const alreadyHas=eventsForDate(isoDate(date)).some(ev=>ev.type===et.v);
-                    return(<button key={et.v} onClick={()=>{if(alreadyHas)return;const id=String(Date.now());addEvent(isoDate(date),{id,type:et.v,title:"",notes:""}); /* ne pas fermer la modale → edition inline */}} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:10,border:'1px solid '+(alreadyHas?et.c:et.c+'50'),background:alreadyHas?et.c+'30':et.c+'15',color:et.c,fontSize:11,fontWeight:700,cursor:alreadyHas?'default':'pointer',fontFamily:'inherit',opacity:alreadyHas?0.6:1}}>
+                    return(<button key={et.v} onClick={()=>{if(alreadyHas)return;const id=String(Date.now());addEvent(isoDate(date),{id,type:et.v,title:"",notes:""}); /* ne pas fermer la modale → edition inline */}} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:4,border:'1px solid '+(alreadyHas?et.c:et.c+'50'),background:alreadyHas?et.c+'30':et.c+'15',color:et.c,fontSize:11,fontWeight:700,cursor:alreadyHas?'default':'pointer',fontFamily:'inherit',opacity:alreadyHas?0.6:1}}>
                       <span>{et.e}</span><span>{et.l}</span>
                     </button>);
                   })}
                 </div>
                 {eventsForDate(isoDate(date)).length>0&&<div style={{display:'flex',flexDirection:'column',gap:6}}>
                   {eventsForDate(isoDate(date)).map(ev=>{const ei=EVENT_TYPES.find(t=>t.v===ev.type)||EVENT_TYPES[4];return(
-                    <div key={ev.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderRadius:10,background:ei.c+'15',border:'1px solid '+ei.c+'40'}}>
+                    <div key={ev.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderRadius:4,background:ei.c+'15',border:'1px solid '+ei.c+'40'}}>
                       <span style={{fontSize:18}}>{ei.e}</span>
                       <div style={{flex:1}}>
                         <input value={ev.title||''} onClick={e=>e.stopPropagation()} onChange={e=>{e.stopPropagation();const updated=eventsForDate(isoDate(date)).map(x=>x.id===ev.id?{...x,title:e.target.value}:x);if(setWeekSchedule)setWeekSchedule({...(weekSchedule||{}),events:{...wkEvents,[isoDate(date)]:updated}});}} placeholder={`Nom — ex: ${ei.l}`} style={{width:'100%',background:ei.c+'08',border:'1px solid '+ei.c+'30',borderRadius:6,padding:'4px 7px',color:ei.c,fontSize:12,fontWeight:700,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}/>
@@ -340,7 +340,7 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
                     const assigned=effDay===di;
                     const hasOverride=wd&&String(planWeek) in wd;
                     return(
-                      <div key={s.id} onClick={()=>{if(onUpdateSessionWeekDay)onUpdateSessionWeekDay(s.id,planWeek,assigned?null:di);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,border:'1px solid '+(assigned?C.b+'60':C.brdL),background:assigned?C.b+'12':C.s2,marginBottom:6,cursor:'pointer',transition:'all 0.15s'}}>
+                      <div key={s.id} onClick={()=>{if(onUpdateSessionWeekDay)onUpdateSessionWeekDay(s.id,planWeek,assigned?null:di);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:4,border:'1px solid '+(assigned?C.b+'60':C.brdL),background:assigned?C.b+'12':C.s2,marginBottom:6,cursor:'pointer',transition:'all 0.15s'}}>
                         <div style={{width:22,height:22,borderRadius:6,border:'2px solid '+(assigned?C.b:C.tx3),background:assigned?C.b:'transparent',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#fff',fontWeight:800,flexShrink:0}}>{assigned?'✓':''}</div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:'flex',alignItems:'center',gap:5}}><span style={{fontSize:13,fontWeight:600,color:assigned?C.b:C.tx}}>{s.name}</span>{hasOverride&&<span style={{fontSize:8,padding:'1px 5px',borderRadius:4,background:C.ac+'20',color:C.ac,fontWeight:700}}>modif</span>}</div>
@@ -366,10 +366,10 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
                         if(!inWeek){toggleEnergyWeek(sid,planWeek);assignEnergyDay(sid,planWeek,di);}
                         else if(!isHere){assignEnergyDay(sid,planWeek,di);}
                         else{assignEnergyDay(sid,planWeek,null);}
-                      }} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,border:'1px solid '+(isHere?C.coach+'60':inWeek?C.coach+'30':C.brdL),background:isHere?C.coach+'15':inWeek?C.coach+'08':C.s2,marginBottom:6,cursor:'pointer',transition:'all 0.15s'}}>
+                      }} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:4,border:'1px solid '+(isHere?C.coach+'60':inWeek?C.coach+'30':C.brdL),background:isHere?C.coach+'15':inWeek?C.coach+'08':C.s2,marginBottom:6,cursor:'pointer',transition:'all 0.15s'}}>
                         <div style={{width:22,height:22,borderRadius:6,border:'2px solid '+(isHere?C.coach:C.tx3),background:isHere?C.coach:'transparent',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#fff',fontWeight:800,flexShrink:0}}>{isHere?'✓':''}</div>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:13,fontWeight:600,color:isHere?C.coach:inWeek?C.coach+'CC':C.tx}}>⚡ {s.session_label||s.session_key}</div>
+                          <div style={{fontSize:13,fontWeight:600,color:isHere?C.coach:inWeek?C.coach+'CC':C.tx}}>{s.session_label||s.session_key}</div>
                           {inWeek&&!isHere&&assignedDay!=null&&<div style={{fontSize:9,color:C.tx3}}>Assignée : {['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'][assignedDay]||'?'}</div>}
                           {!inWeek&&<div style={{fontSize:9,color:C.tx3}}>Cliquer pour assigner à cette semaine + ce jour</div>}
                         </div>
@@ -390,16 +390,16 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
       {/* Modal visibilité athlète */}
       {showVisModal&&(
         <div style={{position:'fixed',inset:0,zIndex:500,background:'rgba(0,0,0,0.78)',display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setShowVisModal(false)}>
-          <div style={{width:'100%',maxWidth:500,background:C.s1,borderRadius:'20px 20px 0 0',padding:'20px 20px 32px',overflowY:'auto',maxHeight:'75vh'}} onClick={e=>e.stopPropagation()}>
+          <div style={{width:'100%',maxWidth:500,background:C.s1,borderRadius:'6px 6px 0 0',padding:'20px 20px 32px',overflowY:'auto',maxHeight:'75vh'}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-              <div style={{fontSize:15,fontWeight:700,color:C.tx}}>⚙ Visibilité athlète</div>
+              <div style={{fontSize:15,fontWeight:700,color:C.tx}}>Visibilite athlete</div>
               <button onClick={()=>setShowVisModal(false)} style={{background:'none',border:'none',color:C.tx3,fontSize:22,cursor:'pointer',lineHeight:1}}>×</button>
             </div>
             <div style={{fontSize:11,color:C.tx3,marginBottom:16}}>Choisissez ce que l'athlète peut voir dans son application</div>
             {VIS_ITEMS.map(({k,label,emoji})=>{
               const visible=visibilitySettings[k]!==false;
               return(
-                <div key={k} onClick={()=>onUpdateVisibility&&onUpdateVisibility({...visibilitySettings,[k]:!visible})} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderRadius:12,border:'1px solid '+(visible?C.g+'40':C.brd),background:visible?C.g+'08':C.s2,marginBottom:7,cursor:'pointer',transition:'all 0.15s'}}>
+                <div key={k} onClick={()=>onUpdateVisibility&&onUpdateVisibility({...visibilitySettings,[k]:!visible})} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderRadius:6,border:'1px solid '+(visible?C.g+'40':C.brd),background:visible?C.g+'08':C.s2,marginBottom:7,cursor:'pointer',transition:'all 0.15s'}}>
                   <div style={{display:'flex',alignItems:'center',gap:10}}>
                     <span style={{fontSize:18}}>{emoji}</span>
                     <div>
@@ -407,8 +407,8 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
                       <div style={{fontSize:9,color:C.tx3}}>{visible?'Visible par l\'athlète':'Masqué'}</div>
                     </div>
                   </div>
-                  <div style={{width:44,height:24,borderRadius:12,background:visible?C.g:'rgba(255,255,255,0.12)',position:'relative',transition:'all 0.2s',flexShrink:0}}>
-                    <div style={{position:'absolute',top:3,left:visible?23:3,width:18,height:18,borderRadius:'50%',background:'#fff',transition:'all 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
+                  <div style={{width:44,height:24,borderRadius:6,background:visible?C.g:'rgba(255,255,255,0.12)',position:'relative',transition:'all 0.2s',flexShrink:0}}>
+                    <div style={{position:'absolute',top:3,left:visible?23:3,width:18,height:18,borderRadius:'50%',background:'#fff',transition:'all 0.2s'}}/>
                   </div>
                 </div>
               );
@@ -422,12 +422,12 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
         const{type,data,planWeek}=previewItem;
         return(
           <div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setPreviewItem(null)}>
-            <div style={{width:'100%',maxWidth:640,background:C.s1,borderRadius:'20px 20px 0 0',padding:'20px 20px 32px',overflowY:'auto',maxHeight:'80vh'}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:'100%',maxWidth:640,background:C.s1,borderRadius:'6px 6px 0 0',padding:'20px 20px 32px',overflowY:'auto',maxHeight:'80vh'}} onClick={e=>e.stopPropagation()}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
                 <div style={{fontSize:15,fontWeight:700,color:C.tx}}>
-                  {type==='muscu'&&'🏋 '+data.name}
-                  {type==='energy'&&'⚡ '+(data.session_label||'Séance énergétique')}
-                  {type==='test'&&'📋 '+data.title}
+                  {type==='muscu'&&data.name}
+                  {type==='energy'&&(data.session_label||'Seance energetique')}
+                  {type==='test'&&data.title}
                 </div>
                 <button onClick={()=>setPreviewItem(null)} style={{background:'none',border:'none',color:C.tx3,fontSize:22,cursor:'pointer',lineHeight:1}}>×</button>
               </div>
@@ -454,7 +454,7 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
               {/* Prévisuel énergie */}
               {type==='energy'&&(<div>
                 {(data.appareil_types||[]).length>0&&<div style={{fontSize:11,color:C.tx3,marginBottom:12}}>Équipements : {data.appareil_types.join(', ')}</div>}
-                <div style={{padding:'12px 14px',borderRadius:10,background:C.coach+'10',border:'1px solid '+C.coach+'30',fontSize:12,color:C.coach,marginBottom:8}}>
+                <div style={{padding:'12px 14px',borderRadius:4,background:C.coach+'10',border:'1px solid '+C.coach+'30',fontSize:12,color:C.coach,marginBottom:8}}>
                   Pour voir le détail des blocs, ouvrir l'onglet <strong>Prog → Énergétique</strong>.
                 </div>
                 <div style={{fontSize:10,color:C.tx3}}>Semaine planifiée : S{planWeek}</div>
@@ -462,14 +462,14 @@ function CoachFourWeekCalendar({sessions=[],completedSessions={},currentWeek=1,C
 
               {/* Prévisuel test */}
               {type==='test'&&(()=>{
-                const tc=data.type==='musculation'?'#C9A14A':data.type==='energetique'?'#D9705A':data.type==='specifique'?'#F5A623':'#9DB06A';
+                const tc=data.type==='musculation'?'#FFC933':data.type==='energetique'?'#FF5A33':data.type==='specifique'?'#F5A623':'#66F03C';
                 return(<div>
                   <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
                     <span style={{fontSize:11,padding:'3px 10px',borderRadius:7,background:tc+'20',color:tc,fontWeight:600}}>{data.type||'Test'}</span>
-                    <span style={{fontSize:11,color:C.tx3}}>📅 {data.date}</span>
+                    <span style={{fontSize:11,color:C.tx3}}>{data.date}</span>
                     {data.completed&&<span style={{fontSize:11,padding:'3px 10px',borderRadius:7,background:C.g+'20',color:C.g,fontWeight:600}}>✓ Complété</span>}
                   </div>
-                  {data.protocol_description&&<div style={{padding:'10px 14px',borderRadius:10,background:C.s2,border:'1px solid '+C.brd,fontSize:12,color:C.tx,lineHeight:1.6,marginBottom:8}}>{data.protocol_description}</div>}
+                  {data.protocol_description&&<div style={{padding:'10px 14px',borderRadius:4,background:C.s2,border:'1px solid '+C.brd,fontSize:12,color:C.tx,lineHeight:1.6,marginBottom:8}}>{data.protocol_description}</div>}
                   {data.results_structured?.metrics?.length>0&&(<div style={{marginTop:8}}>
                     <div style={{fontSize:10,fontWeight:700,color:C.tx3,textTransform:'uppercase',marginBottom:6}}>Résultats</div>
                     {data.results_structured.metrics.map((m,i)=>(

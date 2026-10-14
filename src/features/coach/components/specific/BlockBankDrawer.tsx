@@ -15,7 +15,7 @@ import type { EnergyStep } from "@/types/energy";
 import type { SessionBlock, SpecificBlockRow } from "@/types/specific";
 
 const ORANGE = "#F5A623";
-const GREEN  = "#9DB06A";
+const GREEN  = "#66F03C";
 
 /** Clone récursif d'EnergyStep[] avec nouveaux ids. */
 function cloneSteps(steps: EnergyStep[]): EnergyStep[] {
@@ -84,6 +84,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
         return {
           id: genId(),
           title: b.content.title || b.name,
+          instructions: b.content.instructions,
           kind: "wod" as const,
           sourceBlockId: b.id,
           steps: cloneSteps(b.content.steps ?? []),
@@ -92,6 +93,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
       return {
         id: genId(),
         title: b.content.title || b.name,
+        instructions: b.content.instructions,
         sourceBlockId: b.id,
         items: (b.content.items ?? []).map((i) => ({ ...i, id: genId() })),
       };
@@ -120,7 +122,6 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
         width: "min(480px, 96vw)",
         background: C.bg, borderLeft: `1px solid ${C.brdL}`,
         display: "flex", flexDirection: "column",
-        boxShadow: "-8px 0 32px rgba(0,0,0,0.5)",
       }}>
         {/* Header */}
         <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${C.brd}`, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
@@ -130,7 +131,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 30, height: 30, borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <X size={14} />
           </button>
@@ -154,7 +155,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
             onChange={(id) => setQualityFilter(id ?? "all")}
             onCreate={async (n) => user?.id ? await createQuality.mutateAsync({ name: n, coachId: user.id }) : undefined}
             width={160}
-            accent="#C9A14A"
+            accent="#FFC933"
           />
           <input
             value={search}
@@ -162,7 +163,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
             placeholder="Rechercher…"
             style={{
               flex: 1, minWidth: 120, background: C.s2, border: `1px solid ${C.brd}`,
-              borderRadius: 8, color: C.tx, fontSize: 12, padding: "5px 10px",
+              borderRadius: 4, color: C.tx, fontSize: 12, padding: "5px 10px",
               fontFamily: "inherit", outline: "none", height: 30, boxSizing: "border-box",
             }}
           />
@@ -174,7 +175,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
             <div style={{ textAlign: "center", padding: "30px 0", color: C.tx3, fontSize: 12 }}>Chargement…</div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 12px", color: C.tx3 }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>🧱</div>
+              <div style={{ fontSize: 28, marginBottom: 10 }}></div>
               <div style={{ fontSize: 13, fontWeight: 600, color: C.tx2, marginBottom: 4 }}>
                 {blocks.length === 0 ? "Banque vide" : "Aucun bloc pour ces filtres"}
               </div>
@@ -200,7 +201,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
                     style={{
                       border: `1px solid ${isSel ? ORANGE : C.brdL}`,
                       background: isSel ? ORANGE + "0D" : C.s1,
-                      borderRadius: 10, padding: "10px 12px",
+                      borderRadius: 4, padding: "10px 12px",
                       cursor: "pointer", transition: "all 150ms",
                     }}
                   >
@@ -268,7 +269,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
                         </span>
                       )}
                       {quality && (
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "#C9A14A20", color: "#C9A14A" }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "#FFC93320", color: "#FFC933" }}>
                           {quality.name}
                         </span>
                       )}
@@ -289,7 +290,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
         <div style={{ padding: "12px 20px", borderTop: `1px solid ${C.brd}`, display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0 }}>
           <button
             onClick={onClose}
-            style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "8px 14px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
           >
             Annuler
           </button>
@@ -297,7 +298,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
             onClick={handleInsert}
             disabled={selected.size === 0}
             style={{
-              padding: "8px 16px", borderRadius: 8, border: "none",
+              padding: "8px 16px", borderRadius: 4, border: "none",
               background: selected.size > 0 ? ORANGE : C.s2,
               color: selected.size > 0 ? "#1a1204" : C.tx3,
               fontSize: 12, fontWeight: 700, cursor: selected.size > 0 ? "pointer" : "default",

@@ -52,10 +52,10 @@ const PREDEFINED_KEYS = new Set(METRICS.map((m) => m.key));
 
 const CATEGORY_COLOR: Record<Category, string> = {
   cardio:    "#EF4444",
-  vitesse:   "#7E9CA8",
+  vitesse:   "#33B5FF",
   puissance: "#F59E0B",
   corpo:     "#10B981",
-  custom:    "#C9A14A",
+  custom:    "#FFC933",
 };
 
 // ── Zone FC computations ──────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ function MetricCard({
   return (
     <div
       style={{
-        background: C.s1, border: "1px solid " + C.brd, borderRadius: 12,
+        background: C.s1, border: "1px solid " + C.brd, borderRadius: 6,
         padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8,
         transition: "border-color 150ms",
       }}
@@ -291,16 +291,16 @@ function MetricCard({
             autoFocus
             onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setEditing(false); }}
             style={{
-              flex: 1, padding: "7px 10px", borderRadius: 8,
+              flex: 1, padding: "7px 10px", borderRadius: 4,
               border: "1px solid " + color + "60", background: C.s2,
               color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none",
             }}
           />
           <span style={{ fontSize: 12, color: C.tx3 }}>{metric.unit}</span>
-          <button onClick={handleSave} disabled={saving} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={handleSave} disabled={saving} style={{ padding: "7px 12px", borderRadius: 4, border: "none", background: color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             <Check size={13} />
           </button>
-          <button onClick={() => setEditing(false)} style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={() => setEditing(false)} style={{ padding: "7px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
             <X size={13} />
           </button>
         </div>
@@ -356,7 +356,7 @@ function WeightDerivedCard({ athleteId, strategy }: { athleteId: string; strateg
   return (
     <div
       style={{
-        background: C.s1, border: "1px solid " + C.brd, borderRadius: 12,
+        background: C.s1, border: "1px solid " + C.brd, borderRadius: 6,
         padding: "16px", display: "flex", flexDirection: "column", gap: 12,
         alignItems: "center", justifyContent: "center", textAlign: "center",
         opacity: isLoading ? 0.6 : 1,
@@ -395,7 +395,7 @@ function WeightDerivedCard({ athleteId, strategy }: { athleteId: string; strateg
           <span style={{
             fontSize: 12, fontWeight: 700, color: STRATEGY_COLOR[strategy],
             background: STRATEGY_COLOR[strategy] + "1A", border: "1px solid " + STRATEGY_COLOR[strategy] + "40",
-            padding: "4px 12px", borderRadius: 20,
+            padding: "4px 12px", borderRadius: 6,
           }}>
             {STRATEGY_LABEL[strategy]}
           </span>
@@ -416,7 +416,7 @@ function VraDerivedCard({ vmax, vma }: { vmax?: number; vma?: number }) {
   return (
     <div
       style={{
-        background: C.s1, border: "1px solid " + C.brd, borderRadius: 12,
+        background: C.s1, border: "1px solid " + C.brd, borderRadius: 6,
         padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8,
       }}
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + "50")}
@@ -498,7 +498,7 @@ function FcZoneEditor({
   const prevMax = (i: number) => i === 0 ? displayZ0 : displayVals[i - 1];
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
       {/* Header */}
       <div style={{ padding: "10px 14px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
@@ -614,7 +614,7 @@ function FcZoneEditor({
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: C.ac, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
           >
             {saving ? "…" : "Enregistrer les zones"}
           </button>
@@ -655,7 +655,7 @@ function CustomMetricForm({ onSave, saving }: { onSave: (name: string, value: nu
       onClick={() => setOpen(true)}
       style={{
         display: "flex", alignItems: "center", gap: 6,
-        padding: "8px 16px", borderRadius: 9, width: "100%",
+        padding: "8px 16px", borderRadius: 4, width: "100%",
         border: "1px dashed " + C.brdL, background: "transparent",
         color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
         justifyContent: "center", transition: "all 150ms",
@@ -669,7 +669,7 @@ function CustomMetricForm({ onSave, saving }: { onSave: (name: string, value: nu
   );
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + CATEGORY_COLOR.custom + "50", borderRadius: 12, padding: "16px" }}>
+    <div style={{ background: C.s1, border: "1px solid " + CATEGORY_COLOR.custom + "50", borderRadius: 6, padding: "16px" }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: CATEGORY_COLOR.custom, marginBottom: 12 }}>Nouvelle donnée</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
         <div>
@@ -731,7 +731,7 @@ function ZoneTableSimple({ title, rows }: {
   rows: Array<{ label: string; range?: string; min?: string; max?: string; color: string }>;
 }) {
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
       <div style={{ padding: "10px 14px", borderBottom: "1px solid " + C.brd, fontSize: 12, fontWeight: 700, color: C.tx }}>
         {title}
       </div>
@@ -801,7 +801,7 @@ export default function ProfilSportifPage() {
       {isLoading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} style={{ height: 90, background: C.s1, borderRadius: 12, border: "1px solid " + C.brd }} />
+            <div key={i} style={{ height: 90, background: C.s1, borderRadius: 6, border: "1px solid " + C.brd }} />
           ))}
         </div>
       ) : (
@@ -831,8 +831,8 @@ export default function ProfilSportifPage() {
                       onSaveZones={saveZones}
                       saving={upsert.isPending}
                     />
-                    <div style={{ padding: "10px 14px", borderRadius: 10, background: C.ac + "10", border: "1px solid " + C.ac + "30", fontSize: 11, color: C.tx2 }}>
-                      💡 Les zones FC personnalisées s'appliquent dans l'aperçu de séance et le calendrier planning. Les bornes définissent l'interpolation d'intensité pour les cibles en bpm.
+                    <div style={{ padding: "10px 14px", borderRadius: 4, background: C.ac + "10", border: "1px solid " + C.ac + "30", fontSize: 11, color: C.tx2 }}>
+                      Les zones FC personnalisées s'appliquent dans l'aperçu de séance et le calendrier planning. Les bornes définissent l'interpolation d'intensité pour les cibles en bpm.
                     </div>
                   </>
                 )}
@@ -871,7 +871,7 @@ export default function ProfilSportifPage() {
                   <WeightDerivedCard athleteId={athleteId!} strategy={nutritionStrategy?.strategy ?? null} />
                 </div>
               </div>
-              <div style={{ flex: "3 1 320px", minWidth: 300, background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, padding: 14 }}>
+              <div style={{ flex: "3 1 320px", minWidth: 300, background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: CATEGORY_COLOR.corpo, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
                   Évolution du poids
                 </div>
@@ -939,7 +939,7 @@ export default function ProfilSportifPage() {
 
 function Panel({ title, color, children }: { title: string; color: string; children: ReactNode }) {
   return (
-    <section style={{ border: "1px solid " + C.brd, borderRadius: 16, overflow: "hidden" }}>
+    <section style={{ border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
       <div style={{ padding: "13px 18px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", gap: 10, background: color + "14" }}>
         <div style={{ width: 4, height: 18, borderRadius: 2, background: color, flexShrink: 0 }} />
         <span style={{ fontSize: 13, fontWeight: 800, color: C.tx, textTransform: "uppercase", letterSpacing: "0.06em" }}>{title}</span>

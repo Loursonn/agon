@@ -105,21 +105,21 @@ function CascadeModal({
         position: "fixed", top: "50%", left: "50%", zIndex: 71,
         transform: "translate(-50%,-50%)",
         width: 360, maxWidth: "92vw",
-        background: C.s1, borderRadius: 14, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 22px",
       }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>⚠ Adapter le planning ?</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>Adapter le planning ?</div>
         <div style={{ fontSize: 13, color: C.tx2, marginBottom: 18, lineHeight: 1.5 }}>
           Modifier ce mésocycle va décaler <strong style={{ color: C.coach }}>{count} {level}{count > 1 ? "s" : ""}</strong> suivant{count > 1 ? "s" : ""}.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: C.coach, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Bouger tout le planning
           </button>
-          <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Uniquement ce mésocycle (fin ajustée)
           </button>
-          <button onClick={onCancel} style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none", background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCancel} style={{ width: "100%", padding: "8px 0", borderRadius: 4, border: "none", background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
             Annuler
           </button>
         </div>
@@ -312,7 +312,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
                     <input
                       type="date" value={val}
                       onChange={(e) => fn(e.target.value)}
-                      style={{ width: "100%", padding: "7px 9px", borderRadius: 8, border: "1px solid " + C.coach + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }}
+                      style={{ width: "100%", padding: "7px 9px", borderRadius: 4, border: "1px solid " + C.coach + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }}
                     />
                   </div>
                 ))}
@@ -339,7 +339,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
                 { label: "Fin",   val: format(parseISO(endDate),   "d MMM", { locale: fr }) },
                 { label: "Durée", val: `${numWeeksLocal} sem.` },
               ].map(({ label, val }) => (
-                <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 8, padding: "8px 10px" }}>
+                <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
                   <div style={{ fontSize: 9, color: C.tx3 }}>{label}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{val}</div>
                 </div>
@@ -372,7 +372,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
               <select
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
-                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid " + C.coach + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 4, border: "1px solid " + C.coach + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit" }}
               >
                 {allMacros.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -381,7 +381,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
                 ))}
               </select>
             ) : (
-              <div style={{ background: C.s2, borderRadius: 8, padding: "8px 10px", fontSize: 12, color: C.tx }}>
+              <div style={{ background: C.s2, borderRadius: 4, padding: "8px 10px", fontSize: 12, color: C.tx }}>
                 {allMacros.find((m) => m.id === parentId)?.name ?? "—"}
               </div>
             )}
@@ -393,7 +393,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
           <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Volume</div>
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
             {VOLUME_TYPES.map(({ value, label }) => (
-              <button key={value} onClick={() => setVolumeType(value)} style={{ padding: "5px 11px", borderRadius: 8, border: "1px solid " + (volumeType === value ? C.coach + "60" : C.brdL), background: volumeType === value ? C.coachS : "transparent", color: volumeType === value ? C.coach : C.tx3, fontSize: 11, fontWeight: volumeType === value ? 700 : 400, cursor: "pointer", fontFamily: "inherit", transition: "all 120ms" }}>
+              <button key={value} onClick={() => setVolumeType(value)} style={{ padding: "5px 11px", borderRadius: 4, border: "1px solid " + (volumeType === value ? C.coach + "60" : C.brdL), background: volumeType === value ? C.coachS : "transparent", color: volumeType === value ? C.coach : C.tx3, fontSize: 11, fontWeight: volumeType === value ? 700 : 400, cursor: "pointer", fontFamily: "inherit", transition: "all 120ms" }}>
                 {label}
               </button>
             ))}
@@ -430,7 +430,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
             {ZONES.map((z) => {
               const active = zones.includes(z);
               return (
-                <button key={z} onClick={() => setZones((p) => active ? p.filter((x) => x !== z) : [...p, z])} style={{ width: 40, height: 34, borderRadius: 8, border: "1px solid " + (active ? C.ac + "60" : C.brdL), background: active ? C.acS : "transparent", color: active ? C.ac : C.tx3, fontSize: 11, fontWeight: active ? 700 : 400, cursor: "pointer", fontFamily: "inherit", transition: "all 120ms" }}>
+                <button key={z} onClick={() => setZones((p) => active ? p.filter((x) => x !== z) : [...p, z])} style={{ width: 40, height: 34, borderRadius: 4, border: "1px solid " + (active ? C.ac + "60" : C.brdL), background: active ? C.acS : "transparent", color: active ? C.ac : C.tx3, fontSize: 11, fontWeight: active ? 700 : 400, cursor: "pointer", fontFamily: "inherit", transition: "all 120ms" }}>
                   {z}
                 </button>
               );
@@ -445,7 +445,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-              <button key={n} onClick={() => setFrequency(n)} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid " + (frequency === n ? C.ac + "60" : C.brdL), background: frequency === n ? C.acS : "transparent", color: frequency === n ? C.ac : C.tx3, fontSize: 12, fontWeight: frequency === n ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}>
+              <button key={n} onClick={() => setFrequency(n)} style={{ width: 34, height: 34, borderRadius: 4, border: "1px solid " + (frequency === n ? C.ac + "60" : C.brdL), background: frequency === n ? C.acS : "transparent", color: frequency === n ? C.ac : C.tx3, fontSize: 12, fontWeight: frequency === n ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}>
                 {n}
               </button>
             ))}
@@ -457,7 +457,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
           <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>Semaine deload</div>
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
             {Array.from({ length: numWeeks }, (_, i) => i + 1).map((w) => (
-              <button key={w} onClick={() => setDeloadWeek(w === deloadWeek ? 0 : w)} style={{ width: 40, height: 34, borderRadius: 8, border: "1px solid " + (deloadWeek === w ? C.b + "60" : C.brdL), background: deloadWeek === w ? C.bS : "transparent", color: deloadWeek === w ? C.b : C.tx3, fontSize: 11, fontWeight: deloadWeek === w ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}>
+              <button key={w} onClick={() => setDeloadWeek(w === deloadWeek ? 0 : w)} style={{ width: 40, height: 34, borderRadius: 4, border: "1px solid " + (deloadWeek === w ? C.b + "60" : C.brdL), background: deloadWeek === w ? C.bS : "transparent", color: deloadWeek === w ? C.b : C.tx3, fontSize: 11, fontWeight: deloadWeek === w ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}>
                 S{w}
               </button>
             ))}
@@ -467,7 +467,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
         {/* Save config */}
         <button
           onClick={save} disabled={saving}
-          style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: saving ? C.s2 : C.coach, color: saving ? C.tx3 : "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 6, border: "none", background: saving ? C.s2 : C.coach, color: saving ? C.tx3 : "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
         >
           {saving ? "Enregistrement..." : "Enregistrer config"}
         </button>

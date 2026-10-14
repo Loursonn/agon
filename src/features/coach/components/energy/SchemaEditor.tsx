@@ -31,7 +31,7 @@ const TOOLS: { value: ToolType; label: string }[] = [
 ];
 
 const S = {
-  bg: "#15120F", card: "#15120F", card2: "#26252A",
+  bg: "#0E0C0A", card: "#0E0C0A", card2: "#26252A",
   border: "#2E2D33", txt: "#F2F1F5", muted: "#8B8A92", accent: "#F5A623",
 } as const;
 
@@ -391,12 +391,12 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-[95vw] w-full sm:max-w-[560px] p-0 border-0 bg-transparent"
-        style={{ borderRadius: 16 }}
+        style={{ borderRadius: 6 }}
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">Éditeur de schéma</DialogTitle>
         <div style={{
-          background: S.bg, borderRadius: 16, padding: "16px",
+          background: S.bg, borderRadius: 6, padding: "16px",
           border: `1px solid ${S.border}`, maxHeight: "90vh", overflowY: "auto",
         }}>
           {/* ── Toolbar ── */}
@@ -406,7 +406,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               onChange={(e) => setField(e.target.value as FieldType)}
               style={{
                 background: S.card, border: `1px solid ${S.border}`, color: S.txt,
-                fontSize: 12, padding: "8px 10px", borderRadius: 9, outline: "none",
+                fontSize: 12, padding: "8px 10px", borderRadius: 4, outline: "none",
               }}
             >
               {FIELD_OPTIONS.map(f => (
@@ -422,7 +422,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
                   border: `1px solid ${tool === t.value ? S.accent : S.border}`,
                   color: tool === t.value ? S.accent : S.muted,
                   fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                  borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+                  borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                 }}
               >
                 {t.label}
@@ -461,14 +461,14 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
           )}
 
           {/* ── SVG Canvas ── */}
-          <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1px solid ${S.border}` }}>
+          <div style={{ position: "relative", borderRadius: 6, overflow: "hidden", border: `1px solid ${S.border}` }}>
             {/* Text bubble */}
             {bubble && (
               <div style={{
                 position: "absolute", left: bubble.x, top: bubble.y,
                 display: "flex", gap: 6,
                 background: S.card, border: `1px solid ${S.accent}`,
-                borderRadius: 10, padding: 6, zIndex: 10,
+                borderRadius: 4, padding: 6, zIndex: 10,
               }}>
                 <input
                   ref={bubbleInputRef}
@@ -532,9 +532,9 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               onClick={finishPoly}
               style={{
                 marginTop: 6, background: "none",
-                border: `1px solid #9DB06A`, color: "#9DB06A",
+                border: `1px solid #66F03C`, color: "#66F03C",
                 fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+                borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
               }}
             >
               ✓ Terminer le tracé
@@ -549,20 +549,20 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
                 style={{
                   background: "none", border: `1px solid #E5484D`, color: "#E5484D",
                   fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                  borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+                  borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                 }}
               >
-                🗑 Supprimer
+                Supprimer
               </button>
               <button
                 onClick={recolorSel}
                 style={{
                   background: "none", border: `1px solid ${S.border}`, color: S.muted,
                   fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                  borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+                  borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                 }}
               >
-                🎨 Couleur active
+                Couleur active
               </button>
               {selEl?.type === "text" && (
                 <button
@@ -570,10 +570,10 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
                   style={{
                     background: "none", border: `1px solid ${S.border}`, color: S.muted,
                     fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                    borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+                    borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
-                  ✎ Modifier texte
+                  Modifier texte
                 </button>
               )}
             </div>
@@ -598,7 +598,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               onClick={undo}
               style={{
                 background: "none", border: `1px solid ${S.border}`, color: S.muted,
-                borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600,
+                borderRadius: 4, padding: "10px 14px", fontSize: 13, fontWeight: 600,
                 cursor: "pointer", fontFamily: "inherit",
               }}
             >
@@ -608,7 +608,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               onClick={clearAll}
               style={{
                 background: "none", border: `1px solid ${S.border}`, color: S.muted,
-                borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600,
+                borderRadius: 4, padding: "10px 14px", fontSize: 13, fontWeight: 600,
                 cursor: "pointer", fontFamily: "inherit",
               }}
             >
@@ -618,7 +618,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               onClick={handleSave}
               style={{
                 background: S.accent, color: "#1a1204", border: "none",
-                borderRadius: 10, padding: "10px", fontSize: 14, fontWeight: 700,
+                borderRadius: 4, padding: "10px", fontSize: 14, fontWeight: 700,
                 cursor: "pointer", fontFamily: "inherit",
               }}
             >

@@ -51,7 +51,7 @@ export default function AthletesListPage() {
       {/* Code coach */}
       <div
         style={{
-          background: C.s1, borderRadius: 12, padding: "14px 16px",
+          background: C.s1, borderRadius: 6, padding: "14px 16px",
           border: "1px solid " + C.brd, marginBottom: 20,
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}
@@ -67,7 +67,7 @@ export default function AthletesListPage() {
         <button
           onClick={handleCopyCode}
           style={{
-            padding: "6px 14px", borderRadius: 8,
+            padding: "6px 14px", borderRadius: 4,
             border: "1px solid " + C.coach + "50", background: C.coachS,
             color: C.coach, fontSize: 12, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
@@ -81,8 +81,8 @@ export default function AthletesListPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {loading ? (
           <>
-            <Skeleton style={{ height: 64, borderRadius: 12, background: C.s1 }} />
-            <Skeleton style={{ height: 64, borderRadius: 12, background: C.s1 }} />
+            <Skeleton style={{ height: 64, borderRadius: 6, background: C.s1 }} />
+            <Skeleton style={{ height: 64, borderRadius: 6, background: C.s1 }} />
           </>
         ) : (
           <>
@@ -90,7 +90,7 @@ export default function AthletesListPage() {
               <div
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
-                  padding: "12px 16px", borderRadius: 12,
+                  padding: "12px 16px", borderRadius: 6,
                   border: "1px solid " + C.ac + "40", background: C.acS,
                 }}
               >
@@ -133,7 +133,7 @@ export default function AthletesListPage() {
                   onClick={() => navigate(`/coach/athletes/${a.id}/planning`)}
                   style={{
                     flex: 1, display: "flex", alignItems: "center", gap: 12,
-                    padding: "12px 16px", borderRadius: 12,
+                    padding: "12px 16px", borderRadius: 6,
                     border: "1px solid " + C.brdL, background: C.s1,
                     cursor: "pointer", fontFamily: "inherit", textAlign: "left",
                     transition: "border-color 150ms",
@@ -165,7 +165,7 @@ export default function AthletesListPage() {
                   onClick={() => setConfirmRemove(a.id)}
                   title="Retirer"
                   style={{
-                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    width: 36, height: 36, borderRadius: 4, flexShrink: 0,
                     border: "1px solid " + C.r + "40", background: "rgba(239,75,75,0.08)",
                     color: C.r, fontSize: 16, cursor: "pointer", fontFamily: "inherit",
                     display: "flex", alignItems: "center", justifyContent: "center",
@@ -202,7 +202,7 @@ export default function AthletesListPage() {
           >
             <div
               style={{
-                background: C.s1, borderRadius: 16, padding: 24,
+                background: C.s1, borderRadius: 6, padding: 24,
                 maxWidth: 340, width: "100%", border: "1px solid " + C.brd,
               }}
               onClick={(e) => e.stopPropagation()}
@@ -218,7 +218,7 @@ export default function AthletesListPage() {
                   onClick={() => setConfirmRemove(null)}
                   disabled={removing}
                   style={{
-                    flex: 1, padding: "12px 0", borderRadius: 10,
+                    flex: 1, padding: "12px 0", borderRadius: 4,
                     border: "1px solid " + C.brdL, background: "transparent",
                     color: C.tx2, fontSize: 13, fontWeight: 600,
                     cursor: removing ? "default" : "pointer", fontFamily: "inherit",
@@ -230,7 +230,7 @@ export default function AthletesListPage() {
                   onClick={() => handleRemoveAthlete(confirmRemove)}
                   disabled={removing}
                   style={{
-                    flex: 1, padding: "12px 0", borderRadius: 10,
+                    flex: 1, padding: "12px 0", borderRadius: 4,
                     border: "none", background: removing ? C.s2 : C.r,
                     color: removing ? C.tx3 : "#fff", fontSize: 13, fontWeight: 700,
                     cursor: removing ? "default" : "pointer", fontFamily: "inherit",

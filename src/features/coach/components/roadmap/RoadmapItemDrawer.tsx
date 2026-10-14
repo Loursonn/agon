@@ -48,7 +48,7 @@ function BtnGroup<T extends string>({
             type="button"
             onClick={() => onChange(o.value)}
             style={{
-              padding: "5px 12px", borderRadius: 20, cursor: "pointer",
+              padding: "5px 12px", borderRadius: 6, cursor: "pointer",
               border: `1px solid ${active ? color : C.brdL}`,
               background: active ? `${color}20` : "transparent",
               color: active ? color : C.tx3,
@@ -77,7 +77,7 @@ const statOptions = STATUSES.map((s)   => ({ value: s,  label: ITEM_STATUS_LABEL
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", borderRadius: 8,
+  width: "100%", padding: "8px 10px", borderRadius: 4,
   border: `1px solid ${C.brdL}`, background: C.s2,
   color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
   boxSizing: "border-box",
@@ -155,10 +155,9 @@ export function RoadmapItemDrawer({ item, phases, isAdmin, onClose, defaultPhase
         position: "fixed", top: "50%", left: "50%", zIndex: 91,
         transform: "translate(-50%, -50%)",
         width: "min(96vw, 540px)", maxHeight: "90vh",
-        background: C.s1, borderRadius: 16,
+        background: C.s1, borderRadius: 6,
         border: `1px solid ${C.brd}`,
         display: "flex", flexDirection: "column",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
       }}>
         {/* Header */}
         <div style={{
@@ -181,7 +180,7 @@ export function RoadmapItemDrawer({ item, phases, isAdmin, onClose, defaultPhase
         >
           {/* Coach info banner */}
           {!isAdmin && (
-            <div style={{ padding: "8px 12px", borderRadius: 8, background: `${C.ac}15`, border: `1px solid ${C.ac}30`, fontSize: 12, color: C.tx2 }}>
+            <div style={{ padding: "8px 12px", borderRadius: 4, background: `${C.ac}15`, border: `1px solid ${C.ac}30`, fontSize: 12, color: C.tx2 }}>
               Votre suggestion sera soumise à l'équipe avec le statut "Idée".
             </div>
           )}
@@ -270,7 +269,7 @@ export function RoadmapItemDrawer({ item, phases, isAdmin, onClose, defaultPhase
             <button
               type="button" onClick={onClose}
               style={{
-                flex: 1, padding: "9px 0", borderRadius: 8,
+                flex: 1, padding: "9px 0", borderRadius: 4,
                 border: `1px solid ${C.brdL}`, background: "transparent",
                 color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
               }}
@@ -280,7 +279,7 @@ export function RoadmapItemDrawer({ item, phases, isAdmin, onClose, defaultPhase
             <button
               type="submit" disabled={busy}
               style={{
-                flex: 2, padding: "9px 0", borderRadius: 8,
+                flex: 2, padding: "9px 0", borderRadius: 4,
                 border: "none", background: C.ac,
                 color: "#fff", fontSize: 13, fontWeight: 700,
                 cursor: busy ? "not-allowed" : "pointer",

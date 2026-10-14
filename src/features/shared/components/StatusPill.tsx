@@ -8,33 +8,33 @@ const CONFIG: Record<
 > = {
   planned: {
     label: "Planifiée",
-    bg:    "rgba(124,116,128,0.18)",
+    bg:    "rgba(231,211,168,0.18)",
     color: "#7D7468",
     dot:   "#7D7468",
   },
   "in-progress": {
     label: "En cours",
-    bg:    "rgba(201,161,74,0.18)",
-    color: "#C9A14A",
-    dot:   "#C9A14A",
+    bg:    "rgba(255,201,51,0.18)",
+    color: "#FFC933",
+    dot:   "#FFC933",
   },
   completed: {
     label: "Terminée",
     bg:    "rgba(34,201,147,0.15)",
-    color: "#9DB06A",
-    dot:   "#9DB06A",
+    color: "#66F03C",
+    dot:   "#66F03C",
   },
   missed: {
     label: "Manquée",
     bg:    "rgba(251,146,60,0.15)",
-    color: "#D99A3E",
-    dot:   "#D99A3E",
+    color: "#FF9500",
+    dot:   "#FF9500",
   },
   skipped: {
     label: "Ignorée",
     bg:    "rgba(244,114,182,0.15)",
-    color: "#C9A14A",
-    dot:   "#C9A14A",
+    color: "#FFC933",
+    dot:   "#FFC933",
   },
 };
 
@@ -56,7 +56,7 @@ export function StatusPill({ status, label, size = "md" }: StatusPillProps) {
         alignItems: "center",
         gap: 5,
         padding: size === "sm" ? "2px 7px" : "3px 9px",
-        borderRadius: 20,
+        borderRadius: 6,
         background: cfg.bg,
         color: cfg.color,
         fontSize: fs,

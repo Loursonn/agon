@@ -120,7 +120,7 @@ function VariableRow({
           style={{
             width: 30, height: 30, borderRadius: 6, border: 'none',
             background: total <= 1 ? 'transparent' : 'rgba(239,75,75,0.12)',
-            color: total <= 1 ? C.tx3 : '#D9705A',
+            color: total <= 1 ? C.tx3 : '#FF5A33',
             cursor: total <= 1 ? 'default' : 'pointer', fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
@@ -185,7 +185,7 @@ function TestCard({
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 12, border: '1px solid ' + C.brd,
+      background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd,
       overflow: 'hidden', transition: 'border-color 150ms ease-out',
     }}>
       {/* Header */}
@@ -194,8 +194,8 @@ function TestCard({
         cursor: 'pointer',
       }} onClick={() => setExpanded(e => !e)}>
         <div style={{
-          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-          background: test.kind === 'preset' ? 'rgba(201,161,74,0.12)' : 'rgba(245,166,35,0.12)',
+          width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+          background: test.kind === 'preset' ? 'rgba(255,201,51,0.12)' : 'rgba(245,166,35,0.12)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <FlaskConical size={16} color={test.kind === 'preset' ? C.ac : '#F5A623'} />
@@ -230,12 +230,12 @@ function TestCard({
             background: C.s2, color: test.fill_mode === 'coach' ? C.o : C.tx3,
             border: '1px solid ' + C.brdL, whiteSpace: 'nowrap',
           }} title={test.fill_mode === 'coach' ? 'Rempli par le coach (vidéo à envoyer)' : 'Rempli par l’athlète'}>
-            {test.fill_mode === 'coach' ? '🎬 Coach' : '🧍 Athlète'}
+            {test.fill_mode === 'coach' ? 'Coach' : 'Athlète'}
           </span>
           {test.kind === 'preset' && (
             <span style={{
               fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-              background: 'rgba(201,161,74,0.12)', color: C.ac, textTransform: 'uppercase',
+              background: 'rgba(255,201,51,0.12)', color: C.ac, textTransform: 'uppercase',
               letterSpacing: '0.4px',
             }}>
               Preset
@@ -249,7 +249,7 @@ function TestCard({
               {confirmDelete ? (
                 <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
                   <button onClick={onDelete} style={{
-                    ...iconBtnStyle, background: 'rgba(239,75,75,0.15)', color: '#D9705A',
+                    ...iconBtnStyle, background: 'rgba(239,75,75,0.15)', color: '#FF5A33',
                     padding: '4px 10px', fontSize: 11, width: 'auto', borderRadius: 6,
                   }}>
                     Confirmer
@@ -279,7 +279,7 @@ function TestCard({
           )}
           {test.protocol?.text && (
             <div style={{
-              background: C.s2, borderRadius: 8, padding: '10px 14px',
+              background: C.s2, borderRadius: 4, padding: '10px 14px',
               border: '1px solid ' + C.brdL, marginBottom: 12,
             }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>
@@ -296,12 +296,12 @@ function TestCard({
             {test.test_variables.map(v => (
               <div key={v.id} style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 10px', borderRadius: 8,
+                padding: '5px 10px', borderRadius: 4,
                 background: C.s2, border: '1px solid ' + C.brdL,
               }}>
                 {v.better_when === 'higher'
                   ? <TrendingUp size={12} color={C.g} />
-                  : <TrendingDown size={12} color='#D9705A' />
+                  : <TrendingDown size={12} color='#FF5A33' />
                 }
                 <span style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{v.label}</span>
                 <span style={{ fontSize: 11, color: C.tx3 }}>{v.unit}</span>
@@ -339,7 +339,7 @@ function TestFormPanel({
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 14, border: '1px solid ' + C.ac + '40',
+      background: C.s1, borderRadius: 6, border: '1px solid ' + C.ac + '40',
       padding: '20px', display: 'flex', flexDirection: 'column', gap: 16,
     }}>
       <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>
@@ -458,7 +458,7 @@ function TestFormPanel({
         <button
           onClick={addVar}
           style={{
-            marginTop: 10, width: '100%', padding: '8px 0', borderRadius: 8,
+            marginTop: 10, width: '100%', padding: '8px 0', borderRadius: 4,
             border: '1px dashed ' + C.brdL, background: 'transparent',
             color: C.tx3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
             transition: 'color 150ms ease-out',
@@ -479,7 +479,7 @@ function TestFormPanel({
           onClick={() => onSave(form)}
           disabled={!isValid || saving}
           style={{
-            padding: '9px 22px', borderRadius: 9, border: 'none', fontFamily: 'inherit',
+            padding: '9px 22px', borderRadius: 4, border: 'none', fontFamily: 'inherit',
             background: isValid && !saving ? C.ac : C.s2,
             color: isValid && !saving ? '#fff' : C.tx3,
             fontSize: 13, fontWeight: 700,
@@ -572,8 +572,8 @@ export default function CoachTestsBankPage() {
             onClick={() => setMode('create')}
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              padding: '8px 16px', borderRadius: 9, border: 'none',
-              background: C.ac, color: '#fff', fontSize: 12, fontWeight: 700,
+              padding: '8px 16px', borderRadius: 4, border: 'none',
+              background: C.acV, color: '#0E0C0A', fontSize: 12, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
               transition: 'opacity 150ms ease-out',
             }}
@@ -702,7 +702,7 @@ export default function CoachTestsBankPage() {
 // ── Styles partagés ───────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 11px', borderRadius: 8,
+  width: '100%', padding: '8px 11px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
   background: 'rgba(255,255,255,0.04)',
   color: '#E8E6EA', fontSize: 12, fontFamily: 'inherit',
@@ -726,7 +726,7 @@ const iconBtnStyle: React.CSSProperties = {
 };
 
 const cancelBtnStyle: React.CSSProperties = {
-  padding: '9px 18px', borderRadius: 9,
+  padding: '9px 18px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
   background: 'transparent', color: '#7D7468',
   fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',

@@ -40,11 +40,11 @@ const STATUS_COLOR: Record<AssignmentStatus, string> = {
 };
 
 const STATUS_BG: Record<AssignmentStatus, string> = {
-  planned:     "rgba(124,116,128,0.15)",
+  planned:     "rgba(231,211,168,0.15)",
   in_progress: "rgba(251,146,60,0.1)",
   completed:   "rgba(34,201,147,0.1)",
   missed:      "rgba(239,75,75,0.1)",
-  skipped:     "rgba(124,116,128,0.15)",
+  skipped:     "rgba(231,211,168,0.15)",
 };
 
 function StatusBadge({ status }: { status: AssignmentStatus }) {
@@ -53,7 +53,7 @@ function StatusBadge({ status }: { status: AssignmentStatus }) {
       style={{
         display: "inline-block",
         padding: "2px 10px",
-        borderRadius: 20,
+        borderRadius: 6,
         fontSize: 11,
         fontWeight: 600,
         color: STATUS_COLOR[status],
@@ -105,7 +105,7 @@ function ActionBtn({
       style={{
         width: "100%",
         padding: "10px 14px",
-        borderRadius: 10,
+        borderRadius: 4,
         border: `1px solid ${danger ? C.r + "50" : C.brdL}`,
         background: danger ? "rgba(239,75,75,0.08)" : C.s2,
         color: danger ? C.r : C.tx,
@@ -237,7 +237,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
               <div
                 style={{
                   background: C.s2,
-                  borderRadius: 10,
+                  borderRadius: 4,
                   padding: 12,
                   border: `1px solid ${C.brd}`,
                 }}
@@ -253,7 +253,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
             <div
               style={{
                 background: C.s2,
-                borderRadius: 10,
+                borderRadius: 4,
                 border: `1px solid ${C.brd}`,
                 overflow: "hidden",
               }}
@@ -274,7 +274,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
               <div
                 style={{
                   background: C.s2,
-                  borderRadius: 10,
+                  borderRadius: 4,
                   padding: "10px 14px",
                   border: `1px solid ${C.brd}`,
                   color: C.tx2,
@@ -293,7 +293,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
 
             {/* Reschedule */}
             <ActionBtn onClick={() => setShowReschedule((v) => !v)}>
-              📅 Changer la date
+              Changer la date
             </ActionBtn>
             {showReschedule && (
               <div
@@ -312,7 +312,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
                     flex: 1,
                     background: C.s2,
                     border: `1px solid ${C.brdL}`,
-                    borderRadius: 8,
+                    borderRadius: 4,
                     color: C.tx,
                     padding: "8px 10px",
                     fontSize: 13,
@@ -325,7 +325,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
                   disabled={!rescheduleDate || updateMut.isPending}
                   style={{
                     padding: "8px 14px",
-                    borderRadius: 8,
+                    borderRadius: 4,
                     background: C.ac,
                     color: "#fff",
                     border: "none",
@@ -343,7 +343,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
 
             {/* Duplicate */}
             <ActionBtn onClick={() => setShowDuplicate((v) => !v)}>
-              📋 Dupliquer
+              Dupliquer
             </ActionBtn>
             {showDuplicate && (
               <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 0" }}>
@@ -355,7 +355,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
                     flex: 1,
                     background: C.s2,
                     border: `1px solid ${C.brdL}`,
-                    borderRadius: 8,
+                    borderRadius: 4,
                     color: C.tx,
                     padding: "8px 10px",
                     fontSize: 13,
@@ -368,7 +368,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
                   disabled={!duplicateDate || assignMut.isPending}
                   style={{
                     padding: "8px 14px",
-                    borderRadius: 8,
+                    borderRadius: 4,
                     background: C.ac,
                     color: "#fff",
                     border: "none",
@@ -386,7 +386,7 @@ export function EnergyAssignmentDrawer({ assignment, open, onOpenChange, athlete
 
             {/* Delete */}
             <ActionBtn danger onClick={handleDelete} disabled={unassignMut.isPending}>
-              🗑 Supprimer
+              Supprimer
             </ActionBtn>
           </div>
         </div>

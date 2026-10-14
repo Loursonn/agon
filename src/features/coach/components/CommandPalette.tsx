@@ -86,7 +86,7 @@ export function CommandPalette() {
                 <CommandItem
                   key={a.id}
                   value={a.full_name}
-                  onSelect={() => go(`/coach/athletes/${a.id}/planning`, a.full_name, "👤")}
+                  onSelect={() => go(`/coach/athletes/${a.id}/planning`, a.full_name, "athlete")}
                 >
                   <span
                     style={{

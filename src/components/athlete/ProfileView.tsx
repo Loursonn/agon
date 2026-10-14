@@ -1,11 +1,11 @@
 import { Profile } from "@/hooks/useAuth";
 
 const C = {
-  bg: "#15120F", s1: "#1E1A16", s2: "#27221D",
+  bg: "#0E0C0A", s1: "#1E1A16", s2: "#27221D",
   brd: "rgba(255,255,255,0.06)", brdL: "rgba(255,255,255,0.1)",
   tx: "#F2F2F4", tx2: "#9194A0", tx3: "#555866",
-  ac: "#C9A14A", acS: "rgba(123,111,255,0.12)",
-  g: "#9DB06A",
+  ac: "#FFC933", acS: "rgba(123,111,255,0.12)",
+  g: "#66F03C",
 };
 
 interface Props {
@@ -34,7 +34,7 @@ export default function ProfileView({ profile, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        style={{ width: "100%", maxWidth: 480, background: C.s1, borderRadius: "16px 16px 0 0", padding: "20px 20px 40px", maxHeight: "85vh", overflowY: "auto" }}
+        style={{ width: "100%", maxWidth: 480, background: C.s1, borderRadius: "6px 6px 0 0", padding: "20px 20px 40px", maxHeight: "85vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -42,7 +42,7 @@ export default function ProfileView({ profile, onClose }: Props) {
           <div style={{ fontSize: 16, fontWeight: 700, color: C.tx }}>Mon profil</div>
           <button
             onClick={onClose}
-            style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 18, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 30, height: 30, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 18, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             ×
           </button>
@@ -58,7 +58,7 @@ export default function ProfileView({ profile, onClose }: Props) {
         </div>
 
         {/* Données */}
-        <div style={{ background: C.s2, borderRadius: 12, padding: "0 16px", border: "1px solid " + C.brd }}>
+        <div style={{ background: C.s2, borderRadius: 6, padding: "0 16px", border: "1px solid " + C.brd }}>
           <Row label="Prénom" value={profile.first_name} />
           <Row label="Nom" value={profile.last_name} />
           <Row label="Âge" value={profile.age} unit="ans" />
@@ -74,14 +74,14 @@ export default function ProfileView({ profile, onClose }: Props) {
         </div>
 
         {!profile.first_name && !profile.age && !profile.height_cm && (
-          <div style={{ marginTop: 16, padding: "12px", borderRadius: 10, background: C.acS, border: "1px solid " + C.ac + "30", fontSize: 13, color: C.tx2, textAlign: "center" }}>
+          <div style={{ marginTop: 16, padding: "12px", borderRadius: 4, background: C.acS, border: "1px solid " + C.ac + "30", fontSize: 13, color: C.tx2, textAlign: "center" }}>
             Ton coach n'a pas encore rempli ton profil.
           </div>
         )}
 
         <button
           onClick={onClose}
-          style={{ width: "100%", marginTop: 20, padding: "12px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ width: "100%", marginTop: 20, padding: "12px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
         >
           Fermer
         </button>

@@ -10,7 +10,7 @@ import { localISO } from "@/lib/date";
 const db = supabase as any;
 
 const WELL_COLOR = (s: number) =>
-  s >= 70 ? "#9DB06A" : s >= 50 ? "#F5A623" : "#D9705A";
+  s >= 70 ? "#66F03C" : s >= 50 ? "#F5A623" : "#FF5A33";
 
 export type SessionStatus = "planned" | "in_progress" | "completed" | "missed" | "skipped";
 

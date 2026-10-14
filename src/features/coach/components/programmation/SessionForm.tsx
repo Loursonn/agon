@@ -2,7 +2,7 @@ import { useState } from "react"
 import { C } from "@/lib/theme"
 import type { ProgSession } from "./types"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
@@ -14,7 +14,7 @@ interface SessionFormProps {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", borderRadius: 8,
+  width: "100%", padding: "8px 10px", borderRadius: 4,
   border: "1px solid " + C.brdL, background: C.s2,
   color: C.tx, fontSize: 13, fontFamily: "inherit",
   outline: "none", boxSizing: "border-box",
@@ -64,7 +64,7 @@ export function SessionForm({ initial, onSubmit, onCancel }: SessionFormProps) {
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 12, border: "1px solid " + C.brdL,
+      background: C.s1, borderRadius: 6, border: "1px solid " + C.brdL,
       padding: "16px 18px", marginBottom: 12,
     }}>
       {/* Nom */}
@@ -147,13 +147,13 @@ export function SessionForm({ initial, onSubmit, onCancel }: SessionFormProps) {
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <button
           onClick={onCancel}
-          style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ padding: "8px 16px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
         >
           Annuler
         </button>
         <button
           onClick={handleSubmit}
-          style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ padding: "8px 20px", borderRadius: 4, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
         >
           Valider
         </button>

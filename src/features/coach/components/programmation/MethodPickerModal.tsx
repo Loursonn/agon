@@ -3,7 +3,7 @@ import { C } from "@/lib/theme"
 import { X } from "lucide-react"
 import type { TrainingMethod } from "@/types/trainingMethods"
 
-const VIOLET = "#C9A14A"
+const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 interface MethodPickerModalProps {
@@ -59,7 +59,7 @@ export function MethodPickerModal({ methods, selectedId, onSelect, onClose }: Me
       <div
         style={{
           width: "100%", maxWidth: 640,
-          background: C.s1, borderRadius: "16px 16px 0 0",
+          background: C.s1, borderRadius: "6px 6px 0 0",
           padding: "0 0 24px",
           maxHeight: "80vh", display: "flex", flexDirection: "column",
         }}
@@ -89,7 +89,7 @@ export function MethodPickerModal({ methods, selectedId, onSelect, onClose }: Me
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
-              width: "100%", padding: "8px 12px", borderRadius: 8,
+              width: "100%", padding: "8px 12px", borderRadius: 4,
               border: "1px solid " + C.brdL, background: C.s2, color: C.tx,
               fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
             }}
@@ -125,7 +125,7 @@ export function MethodPickerModal({ methods, selectedId, onSelect, onClose }: Me
                         onClick={() => { onSelect(m); onClose() }}
                         style={{
                           width: "100%", textAlign: "left",
-                          padding: "10px 12px", borderRadius: 9,
+                          padding: "10px 12px", borderRadius: 4,
                           border: "1px solid " + (isSelected ? cfg.color : C.brdL),
                           background: isSelected ? cfg.colorS : C.s2,
                           cursor: "pointer", fontFamily: "inherit",

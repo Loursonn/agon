@@ -24,7 +24,7 @@ const FILTER_TABS: { value: FilterTab; label: string }[] = [
 
 function SkeletonCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 12, overflow: "hidden" }}>
+    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
       <div style={{ height: 3, background: C.s2 }} />
       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ height: 13, width: "60%", background: C.s2, borderRadius: 4 }} />
@@ -144,7 +144,7 @@ export default function SpecificCatalog() {
         display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
         padding: "14px 0 16px", borderBottom: `1px solid ${C.brd}`, marginBottom: 0,
       }}>
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 8, padding: 2 }}>
+        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
           {FILTER_TABS.map((t) => (
             <button
               key={t.value}
@@ -183,7 +183,7 @@ export default function SpecificCatalog() {
         <button
           onClick={() => navigate("/coach/energy-library/new?kind=specifique")}
           style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 8, border: "none",
+            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
             background: ORANGE, color: "#1a1204", fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
@@ -206,7 +206,7 @@ export default function SpecificCatalog() {
             onClick={() => selectSport("all")}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              padding: "7px 10px", borderRadius: 8, border: "none",
+              padding: "7px 10px", borderRadius: 4, border: "none",
               background: selectedSport === "all" ? ORANGE + "18" : "transparent",
               color: selectedSport === "all" ? ORANGE : C.tx2,
               fontSize: 12, fontWeight: selectedSport === "all" ? 700 : 500,
@@ -227,7 +227,7 @@ export default function SpecificCatalog() {
                 onClick={() => selectSport(sport.id)}
                 style={{
                   display: "flex", alignItems: "center", gap: 8,
-                  padding: "7px 10px", borderRadius: 8, border: "none",
+                  padding: "7px 10px", borderRadius: 4, border: "none",
                   background: active ? color + "18" : "transparent",
                   color: active ? color : count > 0 ? C.tx2 : C.tx3,
                   fontSize: 12, fontWeight: active ? 700 : 500,
@@ -246,7 +246,7 @@ export default function SpecificCatalog() {
               onClick={() => selectSport("__none__")}
               style={{
                 display: "flex", alignItems: "center", gap: 8,
-                padding: "7px 10px", borderRadius: 8, border: "none",
+                padding: "7px 10px", borderRadius: 4, border: "none",
                 background: selectedSport === "__none__" ? C.s2 : "transparent",
                 color: selectedSport === "__none__" ? C.tx : C.tx3,
                 fontSize: 12, fontWeight: selectedSport === "__none__" ? 700 : 500,
@@ -269,7 +269,7 @@ export default function SpecificCatalog() {
                 Toutes
               </button>
               {qualitiesInSport.map((q) => (
-                <button key={q.id} onClick={() => setSelectedQuality(q.id)} style={chip(selectedQuality === q.id, "#C9A14A")}>
+                <button key={q.id} onClick={() => setSelectedQuality(q.id)} style={chip(selectedQuality === q.id, "#FFC933")}>
                   {q.name}
                 </button>
               ))}
@@ -287,7 +287,7 @@ export default function SpecificCatalog() {
             </div>
           ) : visible.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: C.tx3 }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🎯</div>
+              <div style={{ fontSize: 36, marginBottom: 12 }}></div>
               <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>
                 {specificSessions.length === 0 ? "Aucune séance spécifique" : "Aucune séance ici"}
               </div>
@@ -299,7 +299,7 @@ export default function SpecificCatalog() {
               <button
                 onClick={() => navigate("/coach/energy-library/new?kind=specifique")}
                 style={{
-                  padding: "9px 20px", borderRadius: 8, border: "none",
+                  padding: "9px 20px", borderRadius: 4, border: "none",
                   background: ORANGE, color: "#1a1204", fontSize: 13,
                   fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                 }}

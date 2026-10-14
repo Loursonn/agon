@@ -96,9 +96,8 @@ export function SessionWeekDrawer({
       {/* Panel */}
       <div style={{
         position: "relative", width: "100%", maxHeight: "92vh",
-        background: C.bg, borderRadius: "20px 20px 0 0",
+        background: C.bg, borderRadius: "6px 6px 0 0",
         display: "flex", flexDirection: "column",
-        boxShadow: "0 -8px 40px rgba(0,0,0,0.4)",
         overflow: "hidden",
       }}>
         {/* Header */}
@@ -130,7 +129,7 @@ export function SessionWeekDrawer({
                   onClick={confirmRename}
                   style={{
                     width: 26, height: 26, borderRadius: 6, border: "none",
-                    background: C.coach, color: "#fff", cursor: "pointer",
+                    background: C.acV, color: "#0E0C0A", cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   }}
                 ><Check size={13} /></button>
@@ -176,7 +175,7 @@ export function SessionWeekDrawer({
           <button
             onClick={onClose}
             style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 4,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -206,7 +205,7 @@ export function SessionWeekDrawer({
                     onDayChange(idx);
                   }}
                   style={{
-                    padding: "8px 2px", borderRadius: 8,
+                    padding: "8px 2px", borderRadius: 4,
                     border: "1px solid " + (currentDay === idx ? C.coach : C.brdL),
                     background: currentDay === idx ? C.coachS : "transparent",
                     color: currentDay === idx ? C.coach : C.tx2,
@@ -249,7 +248,7 @@ export function SessionWeekDrawer({
         {/* S-1 lecture seule — badge */}
         {tab === "prev" && (
           <div style={{
-            margin: "8px 16px 0", padding: "6px 12px", borderRadius: 8,
+            margin: "8px 16px 0", padding: "6px 12px", borderRadius: 4,
             background: C.oS, border: "1px solid " + C.o + "40",
             fontSize: 10, color: C.o, fontWeight: 600, flexShrink: 0,
           }}>

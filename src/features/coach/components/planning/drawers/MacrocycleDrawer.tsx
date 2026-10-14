@@ -50,7 +50,7 @@ function ChartTooltip({ active, payload, label }: {
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 8, padding: "8px 12px" }}>
+    <div style={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 4, padding: "8px 12px" }}>
       <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>{label}</div>
       {payload.map((p) => (
         <div key={p.name} style={{ fontSize: 12, fontWeight: 600, color: p.color }}>
@@ -78,21 +78,21 @@ function CascadeModal({
         position: "fixed", top: "50%", left: "50%", zIndex: 71,
         transform: "translate(-50%,-50%)",
         width: 360, maxWidth: "92vw",
-        background: C.s1, borderRadius: 14, border: "1px solid " + C.brd,
+        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
         padding: "20px 22px",
       }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>⚠ Adapter le planning ?</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 8 }}>Adapter le planning ?</div>
         <div style={{ fontSize: 13, color: C.tx2, marginBottom: 18, lineHeight: 1.5 }}>
           Modifier ce macrocycle va décaler <strong style={{ color: C.ac }}>{count} macrocycle{count > 1 ? "s" : ""}</strong> suivant{count > 1 ? "s" : ""}.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: C.ac, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Bouger tout le planning
           </button>
-          <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Uniquement ce macrocycle (fin ajustée)
           </button>
-          <button onClick={onCancel} style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none", background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCancel} style={{ width: "100%", padding: "8px 0", borderRadius: 4, border: "none", background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
             Annuler
           </button>
         </div>
@@ -270,7 +270,7 @@ export function MacrocycleDrawer({ macro, siblings, athleteId, rangeStart, range
                     <input
                       type="date" value={val}
                       onChange={(e) => fn(e.target.value)}
-                      style={{ width: "100%", padding: "7px 9px", borderRadius: 8, border: "1px solid " + C.ac + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }}
+                      style={{ width: "100%", padding: "7px 9px", borderRadius: 4, border: "1px solid " + C.ac + "60", background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", boxSizing: "border-box" }}
                     />
                   </div>
                 ))}
@@ -300,7 +300,7 @@ export function MacrocycleDrawer({ macro, siblings, athleteId, rangeStart, range
                 { label: "Début", val: format(parseISO(startDate), "d MMM yyyy", { locale: fr }) },
                 { label: "Fin",   val: format(parseISO(endDate),   "d MMM yyyy", { locale: fr }) },
               ].map(({ label, val }) => (
-                <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 10, padding: "10px 12px" }}>
+                <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 4, padding: "10px 12px" }}>
                   <div style={{ fontSize: 9, color: C.tx3 }}>{label}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{val}</div>
                 </div>
@@ -328,10 +328,10 @@ export function MacrocycleDrawer({ macro, siblings, athleteId, rangeStart, range
               onChange={(e) => setObjective(e.target.value)}
               rows={3}
               autoFocus
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid " + C.ac + "60", background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.ac + "60", background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box" }}
             />
           ) : (
-            <div style={{ background: objective ? C.acS : C.s2, borderRadius: 10, padding: "12px 14px", border: "1px solid " + (objective ? C.ac + "30" : C.brd), fontSize: 13, color: objective ? C.tx : C.tx3 }}>
+            <div style={{ background: objective ? C.acS : C.s2, borderRadius: 4, padding: "12px 14px", border: "1px solid " + (objective ? C.ac + "30" : C.brd), fontSize: 13, color: objective ? C.tx : C.tx3 }}>
               {objective || "Aucun objectif défini"}
             </div>
           )}
