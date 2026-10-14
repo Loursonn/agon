@@ -6,12 +6,13 @@ import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
 import SessionPreview from "./SessionPreview";
 import type { EnergySessionRow, EnergyGroup, SessionKind } from "@/types/energy";
-import { useVerifyEnergySession, useDeleteEnergySession, useCreateEnergySession } from "@/features/shared/hooks/useEnergySessions";
+import { useVerifyEnergySession, useCreateEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useAssignEnergySession } from "@/features/shared/hooks/useEnergyAssignments";
 import { useAuth } from "@/hooks/useAuth";
 import { formatSLong } from "@/lib/energy/formatTarget";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 import { makeRootGroup } from "@/lib/energy/treeUtils";
+import { DeleteEnergySessionDialog } from "./DeleteEnergySessionButton";
 
 // ── Kind badge colors ─────────────────────────────────────────────────────────
 
@@ -100,10 +101,10 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
   const navigate = useNavigate();
   const { athletes } = useAuth();
   const verifyMutation  = useVerifyEnergySession();
-  const deleteMutation  = useDeleteEnergySession();
   const createMutation  = useCreateEnergySession();
   const assignMutation  = useAssignEnergySession();
   const [showAssign, setShowAssign] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [assignAthleteId, setAssignAthleteId] = useState("");
   const [assignDate, setAssignDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -223,7 +224,7 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
               <DotMenu
                 onAssign={() => setShowAssign(true)}
                 onDuplicate={handleDuplicate}
-                onDelete={() => deleteMutation.mutate(session.id)}
+                onDelete={() => setShowConfirmDelete(true)}
               />
             )}
           </div>
@@ -253,6 +254,10 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
           )}
         </div>
       </div>
+
+      {showConfirmDelete && (
+        <DeleteEnergySessionDialog sessionId={session.id} sessionName={session.name} onClose={() => setShowConfirmDelete(false)} />
+      )}
 
       {/* Assign modal */}
       {showAssign && (

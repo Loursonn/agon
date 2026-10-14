@@ -16,6 +16,7 @@ import type { Session } from "@/features/shared/types/athlete";
 import { useEnergySessions, useCreateEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import type { EnergySessionRow } from "@/types/energy";
 import { SessionPreviewModal, KIND_COLOR, KIND_LABEL } from "@/features/coach/components/energy/SessionPreviewModal";
+import { DeleteEnergySessionButton } from "@/features/coach/components/energy/DeleteEnergySessionButton";
 import BlockHistoryViewer from "@/features/coach/components/BlockHistoryViewer";
 import { useCreateCycleFromBloc } from "@/features/shared/hooks/useCreateCycleFromBloc";
 import { ProgrammationView } from "@/features/coach/components/programmation/ProgrammationView";
@@ -164,7 +165,8 @@ function AddMuscuSessionModal({ onAdd, onClose }: {
 type PickerTab = "generale" | "perso" | "athletes";
 
 function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; athleteId?: string; onClose: () => void }) {
-  const { athletes } = useAuth();
+  const { athletes, profile } = useAuth();
+  const isAdmin = !!profile?.is_admin;
   const { data: allSessions = [], isLoading } = useEnergySessions();
   const createMutation = useCreateEnergySession();
   const [search, setSearch] = useState("");
@@ -351,6 +353,9 @@ function BankPickerModal({ coachId, athleteId, onClose }: { coachId: string; ath
                     <span style={{ fontSize: 11, color: C.tx3, flexShrink: 0 }}>
                       {isCopying ? "Import…" : "+ Importer"}
                     </span>
+                    {tab !== "athletes" && (s.created_by === coachId || isAdmin) && (
+                      <DeleteEnergySessionButton sessionId={s.id} sessionName={s.name} />
+                    )}
                   </div>
                 );
               })}
@@ -570,6 +575,7 @@ function EnergyPanel({ coachId, athleteId, onNew, onImportText, onEdit }: Energy
                     )}
                   </div>
                 </div>
+                <DeleteEnergySessionButton sessionId={s.id} sessionName={s.name} />
                 <ChevronRight size={14} style={{ color: C.tx3, flexShrink: 0 }} />
               </div>
             );
@@ -734,7 +740,8 @@ function SpecifiquePanel({ coachId, athleteId, onNew, onImportText, onEdit }: En
                   )}
                 </div>
               </div>
-              <ChevronRight size={14} style={{ color: C.tx3, flexShrink: 0 }} />
+              <DeleteEnergySessionButton sessionId={s.id} sessionName={s.name} />
+                <ChevronRight size={14} style={{ color: C.tx3, flexShrink: 0 }} />
             </div>
           ))}
         </div>

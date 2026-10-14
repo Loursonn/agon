@@ -33,6 +33,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-14-suppression-seances",
+    date: "2026-10-14",
+    title: "Supprimer une séance de tes banques",
+    summary: "Musculation, énergétique ou spécifique : tu peux maintenant retirer n'importe quelle séance de tes banques, même déjà programmée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Icône corbeille sur chaque séance : Programmation de l'athlète (Énergie et Spécifique), fenêtres « Depuis la banque » et « Importer une séance », et menu ⋯ de la Bibliothèque.",
+          "Une séance déjà programmée chez un athlète pouvait être impossible à supprimer (message d'erreur) : c'est corrigé.",
+          "Rien n'est perdu côté athlète : une séance déjà programmée reste dans son calendrier, avec ses retours (RPE, ressentis). Elle disparaît seulement de tes banques.",
+          "Une confirmation est toujours demandée avant de supprimer.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-14-import-mode-emploi",
     date: "2026-10-14",
     title: "Mode d'emploi : importer une séance écrite",

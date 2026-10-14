@@ -8,7 +8,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { C } from "@/lib/theme"
-import { Plus, Pencil, X, ChevronDown, ChevronUp, BarChart2, Copy, Library } from "lucide-react"
+import { Plus, Pencil, X, ChevronDown, ChevronUp, BarChart2, Copy, Library, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useProgrammation } from "./hooks/useProgrammation"
 import { useUpdateProgrammation } from "./hooks/useUpdateProgrammation"
@@ -17,7 +17,7 @@ import ImportReportPanel from "../import/ImportReportPanel"
 import { scrollToStep } from "../import/ImportIssueList"
 import type { ImportIssue } from "@/lib/import/yoxx/common"
 import { useDuplicateProgSession } from "./hooks/useDuplicateProgSession"
-import { useSessionBank } from "./hooks/useSessionBank"
+import { useSessionBank, useUpdateSessionBank } from "./hooks/useSessionBank"
 import { prepareSession } from "./bankUtils"
 import { usePlaceSession } from "@/features/shared/hooks/usePlaceSession"
 import { useAuth } from "@/hooks/useAuth"
@@ -344,6 +344,8 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
   const [bankTemplate, setBankTemplate] = useState<ProgSession | null>(null)
   const { user } = useAuth()
   const { data: bankSessions = [] } = useSessionBank(user?.id)
+  const updateBank = useUpdateSessionBank(user?.id)
+  const [confirmBankDeleteId, setConfirmBankDeleteId] = useState<string | null>(null)
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
   const [weekDrawerSession, setWeekDrawerSession] = useState<ProgSession | null>(null)
@@ -521,24 +523,51 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
               {bankSessions.map(t => {
                 const nbEx = totalExercices(t)
+                const confirming = confirmBankDeleteId === t.id
                 return (
-                  <button
-                    key={t.id}
-                    onClick={() => { setBankTemplate(t); setShowSessionBank(false); setIsAddingSession(true); setEditingSessionId(null) }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                      padding: "9px 10px", borderRadius: 4,
-                      border: "1px solid " + C.brdL, background: C.s1, color: C.tx,
-                      fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                    }}
-                  >
-                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {t.name || "Séance sans nom"}
-                    </span>
-                    <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
-                      {t.blocs.length} bloc{t.blocs.length !== 1 ? "s" : ""} · {nbEx} ex.
-                    </span>
-                  </button>
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <button
+                      onClick={() => { setBankTemplate(t); setShowSessionBank(false); setIsAddingSession(true); setEditingSessionId(null) }}
+                      style={{
+                        flex: 1, minWidth: 0,
+                        display: "flex", alignItems: "center", gap: 8, textAlign: "left",
+                        padding: "9px 10px", borderRadius: 4,
+                        border: "1px solid " + C.brdL, background: C.s1, color: C.tx,
+                        fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {t.name || "Séance sans nom"}
+                      </span>
+                      <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
+                        {t.blocs.length} bloc{t.blocs.length !== 1 ? "s" : ""} · {nbEx} ex.
+                      </span>
+                    </button>
+                    {confirming ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            updateBank.mutate(bankSessions.filter(b => b.id !== t.id))
+                            setConfirmBankDeleteId(null)
+                            toast.success(`"${t.name || "Séance"}" retirée de la banque`)
+                          }}
+                          style={{ padding: "0 10px", height: 34, borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
+                        >Supprimer</button>
+                        <button
+                          onClick={() => setConfirmBankDeleteId(null)}
+                          title="Annuler"
+                          style={{ width: 34, height: 34, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                        ><X size={12} /></button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmBankDeleteId(t.id)}
+                        title="Supprimer de la banque"
+                        aria-label={`Supprimer ${t.name || "la séance"} de la banque`}
+                        style={{ width: 34, height: 34, borderRadius: 4, border: "1px solid " + C.r + "40", background: C.rS, color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                      ><Trash2 size={12} /></button>
+                    )}
+                  </div>
                 )
               })}
             </div>
