@@ -66,7 +66,10 @@ export function useAddDocComment() {
         throw error;
       }
     },
-    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: QK.docComments(v.docId, v.athleteId) }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: QK.docComments(v.docId, v.athleteId) });
+      qc.invalidateQueries({ queryKey: QK.docComments("all", v.athleteId) });
+    },
     onError: () => toast.error("Erreur lors de l'envoi du commentaire"),
   });
 }
@@ -79,7 +82,29 @@ export function useDeleteDocComment() {
       if (error) throw error;
       if (c.image_path) await supabase.storage.from("docs").remove([c.image_path]);
     },
-    onSuccess: (_d, c) => qc.invalidateQueries({ queryKey: QK.docComments(c.doc_id, c.athlete_id) }),
+    onSuccess: (_d, c) => {
+      qc.invalidateQueries({ queryKey: QK.docComments(c.doc_id, c.athlete_id) });
+      qc.invalidateQueries({ queryKey: QK.docComments("all", c.athlete_id) });
+    },
     onError: () => toast.error("Erreur lors de la suppression"),
+  });
+}
+
+/** Coach : derniers commentaires d'un athlète, toutes fiches confondues. */
+export function useAthleteDocComments(athleteId: string | undefined | null, limit = 30) {
+  return useQuery<DocComment[]>({
+    queryKey: [...QK.docComments("all", athleteId ?? ""), limit],
+    enabled: !!athleteId,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doc_comments")
+        .select("*")
+        .eq("athlete_id", athleteId!)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as DocComment[];
+    },
   });
 }
