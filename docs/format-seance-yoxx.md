@@ -352,7 +352,7 @@ Toutes les lignes de l'énergétique (rôles, durées, matériel, cibles, `GROUP
 | **Distance** | `15m` · `1km` (ex. Sled Push 15 m) |
 | Temps | `30"` · `1'30` |
 | Calories | `15cal` |
-| Charge | `@110kg` · `@75%` (du 1RM) · `@PDC` · `@PDC+10kg` |
+| Charge | `@110kg` · `@2x24kg` (deux charges : 24 kg enregistré, détail en consigne) · `@75%` (du 1RM) · `@PDC` · `@PDC+10kg` |
 | Consigne | après `\|` |
 
 Nom et quantité : `EXO Sled Push 15m @110kg` ou, plus sûr si le nom contient des chiffres, `EXO Sled Push : 15m @110kg`.

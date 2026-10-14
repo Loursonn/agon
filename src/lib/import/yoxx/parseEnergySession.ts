@@ -426,14 +426,20 @@ function parseExerciseLine(line: string, lineNo: number, raw: string, genId: () 
   if (chargeRaw) {
     const c = norm(cleanTypography(chargeRaw)).replace(/\s+/g, "");
     const kg = c.match(/^(\d+(?:[.,]\d+)?)kg$/);
+    // « 2x24kg » : deux charges (kettlebells, haltères) → charge unitaire + détail en consigne
+    const multi = c.match(/^(\d+)x(\d+(?:[.,]\d+)?)kg$/);
     const pct = c.match(/^(\d+(?:[.,]\d+)?)%(?:1?rm)?$/);
     const bw = c.match(/^(?:pdc|bw|poidsducorps)(?:\+(\d+(?:[.,]\d+)?)kg)?$/);
     if (kg) { ex.weight_kg = parseNum(kg[1])!; ex.weight_unit = "kg"; }
+    else if (multi) {
+      ex.weight_kg = parseNum(multi[2])!; ex.weight_unit = "kg";
+      notes.push(`${multi[1]} × ${multi[2]} kg`);
+    }
     else if (pct) { ex.weight_kg = parseNum(pct[1])!; ex.weight_unit = "pct_rm"; }
     else if (bw) { ex.weight_unit = "bw"; if (bw[1]) ex.weight_kg = parseNum(bw[1])!; }
     else {
       notes.push(`Charge : ${chargeRaw}`);
-      add(lineNo, raw, "warning", `Charge « ${chargeRaw} » non reconnue → gardée dans la consigne. Formats : @110kg · @75% · @PDC · @PDC+10kg.`, id);
+      add(lineNo, raw, "warning", `Charge « ${chargeRaw} » non reconnue → gardée dans la consigne. Formats : @110kg · @2x24kg · @75% · @PDC · @PDC+10kg.`, id);
     }
   }
 

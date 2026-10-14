@@ -72,8 +72,8 @@ describe("parseSpecificSession — variantes EXO", () => {
     expect(ex("EXO Dips 10 reps @PDC+10kg").ex).toMatchObject({ weight_kg: 10, weight_unit: "bw" });
   });
   it("charge inconnue → consigne + avertissement ; quantité absente → avertissement", () => {
-    const a = ex("EXO Farmers carry 200m @2x24kg");
-    expect(a.ex.notes).toBe("Charge : 2x24kg");
+    const a = ex("EXO Farmers carry 200m @lourd");
+    expect(a.ex.notes).toBe("Charge : lourd");
     expect(a.issues.some((i) => i.level === "warning" && i.line === 4)).toBe(true);
     expect(ex("EXO Burpees").issues.some((i) => i.level === "warning")).toBe(true);
   });
@@ -98,3 +98,15 @@ describe("parseSpecificSession — robustesse", () => {
     expect(r.issues[0].message).toContain("MUSCU");
   });
 });
+
+describe("charge multiple", () => {
+  it("« @2x24kg » → 24 kg + détail en consigne", async () => {
+    const { parseSpecificSession } = await import("../parseSpecificSession");
+    const r = parseSpecificSession("SÉANCE SPÉCIFIQUE : X\nBLOC WOD : A\nEXO Farmers Carry 200m @2x24kg");
+    const json = JSON.stringify(r.session);
+    expect(json).toContain('"weight_kg":24');
+    expect(json).toContain("2 × 24 kg");
+    expect(r.issues.filter((i) => i.level !== "info")).toEqual([]);
+  });
+});
+

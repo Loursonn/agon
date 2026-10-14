@@ -21,6 +21,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-14-import-specifique",
+    date: "2026-10-14",
+    title: "Import des séances spécifiques (HYROX, CrossFit…)",
+    summary: "Les séances spécifiques s'importent aussi par texte : blocs classiques et WOD, stations en distance.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Importer un texte » est disponible sur les séances spécifiques (éditeur, catalogue Spécifique, Programmation de l'athlète) : blocs CLASSIQUE (exercices, prescriptions, repos) et WOD (course, groupes, EMOM avec départ fixe).",
+          "Dans un WOD, une étape exercice peut désormais se donner en distance ou en calories : « Sled Push 50 m », « Row 500 m », « SkiErg 20 cal ».",
+          "Charges reconnues : 24 kg, deux kettlebells (2x24kg), % du 1RM, poids du corps.",
+          "Le sport et la qualité physique écrits dans le texte sont reliés à ta liste (ou créés), et les exercices reliés à ta bibliothèque.",
+          "Les longues consignes et prescriptions s'affichent en entier dans l'éditeur et l'aperçu.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-14-import-texte",
     date: "2026-10-14",
     title: "Nouveau : importer une séance écrite",
