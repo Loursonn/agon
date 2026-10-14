@@ -10,7 +10,10 @@
     <meta name="theme-color" content="#15120F" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/brand/agon-app-icon.svg" />
+    <!-- iOS n'accepte pas le SVG pour l'icône d'écran d'accueil : PNG 180×180 obligatoire -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/agon-app-icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="Agon" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Agon">
