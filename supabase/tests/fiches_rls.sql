@@ -42,8 +42,11 @@ BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub', ca, 'role', 'authenticated')::text, true);
   EXECUTE 'SET LOCAL ROLE authenticated';
 
+  -- RETURNING comme le client (.insert().select().single())
   INSERT INTO public.docs (id, coach_id, uploaded_by, title, category, file_path)
-    VALUES (d_origin, ca, ca, 'Mobilité hanches', 'mobilite', ca || '/banque/' || d_origin || '.pdf');
+    VALUES (d_origin, ca, ca, 'Mobilité hanches', 'mobilite', ca || '/banque/' || d_origin || '.pdf')
+    RETURNING id INTO d_origin;
+  ok := ok + 1;
   INSERT INTO public.docs (id, coach_id, uploaded_by, origin_id, variant_label, title, category, file_path)
     VALUES (d_variant, ca, ca, d_origin, 'V2', 'Mobilité hanches', 'mobilite', ca || '/banque/' || d_variant || '.pdf');
   INSERT INTO public.docs (id, coach_id, athlete_id, uploaded_by, title, category, file_path)
@@ -94,7 +97,8 @@ BEGIN
   -- Ajout athlète : valide
   INSERT INTO storage.objects (bucket_id, name, owner_id) VALUES ('docs', ca || '/athletes/' || a1 || '/' || d_upload || '.webp', a1::text);
   INSERT INTO public.docs (id, coach_id, athlete_id, uploaded_by, title, kind, file_path)
-    VALUES (d_upload, ca, a1, a1, 'Capture', 'image', ca || '/athletes/' || a1 || '/' || d_upload || '.webp');
+    VALUES (d_upload, ca, a1, a1, 'Capture', 'image', ca || '/athletes/' || a1 || '/' || d_upload || '.webp')
+    RETURNING id INTO d_upload;
   ok := ok + 1;
 
   -- Ajout athlète interdit : libre-service

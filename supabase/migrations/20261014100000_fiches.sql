@@ -185,7 +185,14 @@ ALTER TABLE public.doc_comments    ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "docs_select" ON public.docs;
 CREATE POLICY "docs_select" ON public.docs
   FOR SELECT TO authenticated
-  USING (public.can_read_doc(id));
+  USING (
+    -- tests sur colonnes d'abord : can_read_doc() est STABLE et ne voit pas la
+    -- ligne en cours d'insertion (INSERT … RETURNING refusé sinon)
+    coach_id = auth.uid()
+    OR uploaded_by = auth.uid()
+    OR athlete_id = auth.uid()
+    OR public.can_read_doc(id)
+  );
 
 DROP POLICY IF EXISTS "docs_coach_insert" ON public.docs;
 CREATE POLICY "docs_coach_insert" ON public.docs
