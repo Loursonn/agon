@@ -769,6 +769,14 @@ function WorkoutPreviewDrawer({
                 </div>
                 <div style={{ background: C.s2, borderRadius: 6, overflow: "hidden" }}>
                   {bloc.exercices.map((ex, idx) => {
+                    // Superset : chaîne d'exercices liés (superset_with_next), comme en séance
+                    const prevLinked = idx > 0 && !!bloc.exercices[idx - 1].superset_with_next;
+                    const inSuperset = prevLinked || !!ex.superset_with_next;
+                    let chainLen = 0;
+                    if (inSuperset && !prevLinked) {
+                      chainLen = 1;
+                      while (bloc.exercices[idx + chainLen - 1]?.superset_with_next && bloc.exercices[idx + chainLen]) chainLen++;
+                    }
                     const nb = ex.params?.nb_series ?? 0;
                     const reps = ex.params?.cluster
                       ? formatClusterReps(ex.params.cluster)
@@ -776,11 +784,21 @@ function WorkoutPreviewDrawer({
                     const rir = ex.params?.rir?.mode === "global" ? ex.params.rir.value : null;
                     const tempo = ex.params?.tempo?.mode === "global" && ex.params.tempo.value ? ex.params.tempo.value : null;
                     return (
+                      <div key={ex.id}>
+                      {chainLen > 1 && (
+                        <div style={{
+                          padding: "6px 14px 0", borderTop: idx > 0 ? "1px solid " + C.brd : "none",
+                          borderLeft: "3px solid #F5A623",
+                          fontSize: 9, fontWeight: 800, color: "#F5A623", letterSpacing: "0.5px",
+                        }}>
+                          SUPERSET ×{chainLen} · ENCHAÎNÉS SANS REPOS
+                        </div>
+                      )}
                       <div
-                        key={ex.id}
                         style={{
                           padding: "10px 14px",
-                          borderTop: idx > 0 ? "1px solid " + C.brd : "none",
+                          borderTop: idx > 0 && !prevLinked && chainLen <= 1 ? "1px solid " + C.brd : "none",
+                          borderLeft: inSuperset ? "3px solid #F5A623" : "3px solid transparent",
                           display: "flex", alignItems: "center", gap: 10,
                         }}
                       >
@@ -806,6 +824,10 @@ function WorkoutPreviewDrawer({
                             )}
                           </div>
                         </div>
+                        {ex.superset_with_next && bloc.exercices[idx + 1] && (
+                          <span title="Lié à l'exercice suivant" style={{ fontSize: 12, color: "#F5A623", flexShrink: 0 }}>↓</span>
+                        )}
+                      </div>
                       </div>
                     );
                   })}
