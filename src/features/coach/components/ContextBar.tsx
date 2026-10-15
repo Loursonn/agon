@@ -64,7 +64,7 @@ export default function ContextBar() {
   const { athleteId } = useParams<{ athleteId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { athletes, user, profile } = useAuth();
+  const { athletes, user, profile, canCoachSelf } = useAuth();
   const { selectedAthlete } = useSelectedAthlete();
   const { blockConfig, currentWeek, tw } = useAthleteContext();
   const [comboOpen, setComboOpen] = useState(false);
@@ -120,10 +120,9 @@ export default function ContextBar() {
     .slice(0, 2);
 
   // Athlete list for combobox (own profile + athletes)
-  const isCoachAthlete = profile?.role === "coach" || profile?.role === "coach_athlete";
   const allOptions = [
-    ...(isCoachAthlete && profile ? [profile] : []),
-    ...athletes,
+    ...(canCoachSelf && profile ? [profile] : []),
+    ...athletes.filter((a) => a.id !== profile?.id),
   ];
 
   return (

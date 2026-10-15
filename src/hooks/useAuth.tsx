@@ -27,6 +27,8 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   athletes: Profile[];
+  /** Peut programmer pour soi-même côté coach (coach pur, ou coach-athlète auto-coaché) */
+  canCoachSelf: boolean;
   activeAthleteId: string | null;
   setActiveAthleteId: (id: string | null) => void;
   login: (email: string, password: string) => Promise<void>;
@@ -228,6 +230,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchProfile(user.id);
   }
 
+  // Coach-athlète coaché par un autre (ou sans coach) : plus d'accès à sa propre programmation
+  const canCoachSelf = !!user && !!profile && (
+    profile.role === "coach" || (profile.role === "coach_athlete" && profile.coach_id === user.id)
+  );
+
   async function logout() {
     setAthletes([]);
     setActiveAthleteId(null);
@@ -276,7 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, profile, loading,
       athletes, activeAthleteId, setActiveAthleteId,
       login, registerCoach, registerAthlete, registerAthleteWithCode,
-      linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
+      canCoachSelf, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
     }}>
       {children}
     </AuthContext.Provider>

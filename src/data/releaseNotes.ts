@@ -45,6 +45,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Page Athlètes : une croix sur ta ligne « Mon programme personnel » te retire de tes athlètes ; « + M'ajouter comme athlète » te remet quand tu veux.",
           "Ton historique et ta programmation sont conservés : un nouveau coach les retrouve tels quels.",
           "Tu n'apparais plus en double dans ta liste d'athlètes.",
+          "Dès que tu n'es plus ton propre athlète (autre coach ou aucun), ta programmation perso disparaît de ton espace coach : c'est ton coach qui la gère.",
         ],
       },
     ],
