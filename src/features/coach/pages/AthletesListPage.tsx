@@ -9,13 +9,12 @@ import { EmptyState } from "@/features/shared/components/EmptyState";
 import { Users } from "lucide-react";
 
 export default function AthletesListPage() {
-  const { profile, athletes, user, loading, removeSelfAsAthlete, becomeSelfCoach } = useAuth();
+  const { profile, athletes, user, loading, canCoachSelf, removeSelfAsAthlete, becomeSelfCoach } = useAuth();
   const navigate = useNavigate();
   const isCoachAthlete = profile?.role === "coach" || profile?.role === "coach_athlete";
   // Coach-athlète : sa ligne perso dépend de coach_id (self = son propre athlète)
   const isHybrid = profile?.role === "coach_athlete";
-  const isSelfCoached = !!user && profile?.coach_id === user.id;
-  const showSelfRow = isCoachAthlete && (!isHybrid || isSelfCoached);
+  const showSelfRow = canCoachSelf;
   const canAddSelf = isHybrid && !profile?.coach_id;
   // Le coach-athlète auto-coaché remonte aussi dans athletes : on évite le doublon
   const otherAthletes = athletes.filter((a) => a.id !== user?.id);

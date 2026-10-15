@@ -109,12 +109,12 @@ function CopyDialog({
   onPick: (targetAthleteId: string) => void;
   onClose: () => void;
 }) {
-  const { athletes, profile, user } = useAuth();
+  const { athletes, profile, user, canCoachSelf } = useAuth();
   const { athleteId } = useAthleteContext();
 
   const current = athletes.find((a) => a.id === athleteId);
-  const others  = athletes.filter((a) => a.id !== athleteId);
-  const selfAsAthlete = profile?.role === "coach_athlete" && user && user.id !== athleteId
+  const others  = athletes.filter((a) => a.id !== athleteId && a.id !== user?.id);
+  const selfAsAthlete = profile?.role === "coach_athlete" && canCoachSelf && user && user.id !== athleteId
     ? { id: user.id, full_name: (profile.full_name || "Moi") + " (moi)" }
     : null;
 

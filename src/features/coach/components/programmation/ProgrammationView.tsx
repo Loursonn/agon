@@ -59,13 +59,13 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
   const [showPlace, setShowPlace] = useState(false)
   const [showDuplicate, setShowDuplicate] = useState(false)
   const [placeDate, setPlaceDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const { user, profile, athletes } = useAuth()
+  const { user, profile, athletes, canCoachSelf } = useAuth()
   const placeSession = usePlaceSession()
   const duplicateSession = useDuplicateProgSession()
 
   // Own profile included first (coach / coach_athlete can duplicate for themselves), same pattern as ContextBar
   const targetAthletes = [
-    ...(profile && (profile.role === "coach" || profile.role === "coach_athlete") ? [profile] : []),
+    ...(profile && canCoachSelf ? [profile] : []),
     ...athletes.filter(a => a.id !== profile?.id),
   ].filter(a => a.id !== athleteId)
 

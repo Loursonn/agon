@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Outlet } from "react-router-dom";
+import { useParams, Outlet, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AthleteProvider } from "@/features/shared/context/AthleteContext";
 import { SelectedAthleteProvider } from "@/features/coach/context/SelectedAthleteContext";
@@ -13,12 +13,13 @@ import AthleteProfileForm from "@/components/coach/AthleteProfileForm";
  */
 export default function CoachAthleteArea() {
   const { athleteId } = useParams<{ athleteId: string }>();
-  const { user, profile, athletes } = useAuth();
+  const { user, profile, athletes, canCoachSelf } = useAuth();
   const [editProfileTab, setEditProfileTab] = useState<"profil" | "nutrition" | null>(null);
 
   if (!athleteId || !user) return null;
 
   const isOwnView = athleteId === user.id;
+  if (isOwnView && profile && !canCoachSelf) return <Navigate to="/coach" replace />;
   const selectedAthlete = isOwnView
     ? profile
     : (athletes.find((a) => a.id === athleteId) ?? null);

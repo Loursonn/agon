@@ -22,9 +22,13 @@ export interface ReleaseNoteResource {
   filename?: string;
 }
 
+/** feature = nouvelle fonctionnalité, fix = correction de bug */
+export type ReleaseNoteKind = "feature" | "fix";
+
 export interface ReleaseNote {
   id: string;
   date: string; // yyyy-MM-dd
+  kind: ReleaseNoteKind;
   title: string;
   summary: string;
   sections: ReleaseNoteSection[];
@@ -35,6 +39,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-10-15-coach-athlete-se-retirer",
     date: "2026-10-15",
+    kind: "fix",
     title: "Coach-athlète : changer de coach librement",
     summary: "Tu te coaches toi-même ? Tu peux maintenant rejoindre un autre coach, ou te retirer de tes propres athlètes.",
     sections: [
@@ -45,6 +50,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Page Athlètes : une croix sur ta ligne « Mon programme personnel » te retire de tes athlètes ; « + M'ajouter comme athlète » te remet quand tu veux.",
           "Ton historique et ta programmation sont conservés : un nouveau coach les retrouve tels quels.",
           "Tu n'apparais plus en double dans ta liste d'athlètes.",
+          "Dès que tu n'es plus ton propre athlète (autre coach ou aucun), ta programmation perso disparaît de ton espace coach : c'est ton coach qui la gère.",
         ],
       },
     ],
@@ -52,6 +58,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-10-14-suppression-seances",
     date: "2026-10-14",
+    kind: "feature",
     title: "Supprimer une séance de tes banques",
     summary: "Musculation, énergétique ou spécifique : tu peux maintenant retirer n'importe quelle séance de tes banques, même déjà programmée.",
     sections: [
@@ -69,6 +76,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-10-14-import-mode-emploi",
     date: "2026-10-14",
+    kind: "feature",
     title: "Mode d'emploi : importer une séance écrite",
     summary: "Tu écris tes séances dans tes notes, sur Word ou sur papier ? Une IA les met au bon format et Agon les crée pour toi, en 5 minutes.",
     sections: [
@@ -114,6 +122,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-10-14-import-specifique",
     date: "2026-10-14",
+    kind: "feature",
     title: "Import des séances spécifiques (HYROX, CrossFit…)",
     summary: "Les séances spécifiques s'importent aussi par texte : blocs classiques et WOD, stations en distance.",
     sections: [
@@ -132,6 +141,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-10-14-import-texte",
     date: "2026-10-14",
+    kind: "feature",
     title: "Nouveau : importer une séance écrite",
     summary: "Colle une séance rédigée au format texte YOXX : elle est créée automatiquement, en musculation comme en énergétique.",
     sections: [
@@ -156,6 +166,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-10-14-ameliorations",
     date: "2026-10-14",
+    kind: "fix",
     title: "Séances plus claires et corrections",
     summary: "Supersets visibles partout, commentaires sur tous les exercices, annulation de validation fiable.",
     sections: [
@@ -181,6 +192,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: "2026-10-14-fiches",
     date: "2026-10-14",
+    kind: "feature",
     title: "Nouveau : les Fiches",
     summary: "Une banque de PDF et d'images (mobilité, pacing, nutrition…) à rattacher aux séances et à partager avec tes athlètes.",
     sections: [

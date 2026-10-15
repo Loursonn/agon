@@ -102,7 +102,7 @@ function Avatar({ name, color }: { name: string; color?: string }) {
 
 export default function CoachHomePage() {
   const navigate  = useNavigate();
-  const { profile, athletes, user } = useAuth();
+  const { profile, athletes, user, canCoachSelf } = useAuth();
   const isCoachAthlete = profile?.role === "coach_athlete";
 
   const { todayAthletes, missedSessions, upcomingTests, isLoadingToday, isLoadingMissed, isLoadingTests } = useCoachDashboard();
@@ -114,8 +114,8 @@ export default function CoachHomePage() {
   // Séances travaillées mais jamais clôturées par l'athlète : les données sont
   // là, mais le statut "planned" les exclut de l'historique et des stats.
   const athleteIds = useMemo(
-    () => [...athletes.map((a) => a.id), ...(isCoachAthlete && user ? [user.id] : [])],
-    [athletes, isCoachAthlete, user],
+    () => [...new Set([...athletes.map((a) => a.id), ...(isCoachAthlete && canCoachSelf && user ? [user.id] : [])])],
+    [athletes, isCoachAthlete, canCoachSelf, user],
   );
   const { data: unfinished = [] } = useUnfinishedWorkouts(athleteIds);
   const athleteNameById = useMemo(
@@ -140,7 +140,7 @@ export default function CoachHomePage() {
           </h1>
           <p className="text-[12px] mt-1 capitalize" style={{ color: C.tx3 }}>
             {todayLabel} · {athletes.length} athlète{athletes.length !== 1 ? "s" : ""}
-            {isCoachAthlete ? " · ton programme inclus" : ""}
+            {isCoachAthlete && canCoachSelf ? " · ton programme inclus" : ""}
           </p>
         </motion.div>
 
@@ -391,7 +391,7 @@ export default function CoachHomePage() {
           </motion.div>
 
           {/* Self as athlete shortcut */}
-          {isCoachAthlete && user && (
+          {isCoachAthlete && canCoachSelf && user && (
             <motion.div variants={fadeUp}>
               <SectionTitle icon={<Dumbbell size={11} style={{ color: "#7D7468" }} />}>Mon programme</SectionTitle>
               <button
