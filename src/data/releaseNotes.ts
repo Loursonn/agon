@@ -33,6 +33,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-15-coach-athlete-se-retirer",
+    date: "2026-10-15",
+    title: "Coach-athlète : changer de coach librement",
+    summary: "Tu te coaches toi-même ? Tu peux maintenant rejoindre un autre coach, ou te retirer de tes propres athlètes.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Mode athlète, Profil → « Mon coach » : nouveaux boutons « Rejoindre un autre coach » (avec son code) et « Ne plus me coacher ».",
+          "Page Athlètes : une croix sur ta ligne « Mon programme personnel » te retire de tes athlètes ; « + M'ajouter comme athlète » te remet quand tu veux.",
+          "Ton historique et ta programmation sont conservés : un nouveau coach les retrouve tels quels.",
+          "Tu n'apparais plus en double dans ta liste d'athlètes.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-14-suppression-seances",
     date: "2026-10-14",
     title: "Supprimer une séance de tes banques",

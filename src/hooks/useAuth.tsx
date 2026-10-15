@@ -136,6 +136,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: isCoachAthlete ? "coach_athlete" : "coach",
       full_name: fullName,
       coach_code: code,
+      // Coach-athlète : son propre coach par défaut (apparaît dans ses athlètes)
+      ...(isCoachAthlete ? { coach_id: data.user.id } : {}),
     });
     if (profileError) throw new Error(profileError.message);
   }

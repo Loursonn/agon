@@ -405,12 +405,12 @@ function GoalsZoomContent() {
 // ── Gestion du coach ─────────────────────────────────────────────────────────
 
 function CoachSection() {
-  const { user, profile, linkToCoach, unlinkFromCoach, becomeSelfCoach } = useAuth();
+  const { user, profile, linkToCoach, unlinkFromCoach, becomeSelfCoach, removeSelfAsAthlete } = useAuth();
   const [showJoin, setShowJoin] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
-  const [confirmAction, setConfirmAction] = useState<"quit" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"quit" | "stopSelf" | null>(null);
 
   if (!user || !profile) return null;
 
@@ -471,6 +471,20 @@ function CoachSection() {
     }
   }
 
+  async function handleStopSelfCoaching() {
+    setLoading(true);
+    try {
+      await removeSelfAsAthlete();
+      setMsg({ text: "Tu ne te coaches plus", ok: true });
+      setConfirmAction(null);
+      setTimeout(() => setMsg(null), 2000);
+    } catch (e: unknown) {
+      setMsg({ text: (e as Error).message || "Erreur", ok: false });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const joinInput = (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ fontSize: 11, color: C.tx3 }}>{hasExternalCoach ? "Code du nouveau coach" : "Entre le code de ton coach"}</div>
@@ -497,7 +511,33 @@ function CoachSection() {
 
         {/* ── État 1 : coach_athlete se coache lui-même (coach_id = self) ── */}
         {isSelfCoached && isCoachAthlete && (
-          <div style={{ fontSize: 12, color: C.tx2 }}>Tu es ton propre coach.</div>
+          <>
+            <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Tu es ton propre coach.</div>
+            {showJoin ? joinInput : confirmAction === "stopSelf" ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: 11, color: C.r, fontWeight: 600 }}>
+                  Tu n'apparaîtras plus dans tes athlètes et n'auras plus de coach. Continuer ?
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={handleStopSelfCoaching} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                    {loading ? "…" : "Confirmer"}
+                  </button>
+                  <button onClick={() => setConfirmAction(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <button onClick={() => { setShowJoin(true); setMsg(null); }} style={{ width: "100%", padding: "10px 0", borderRadius: 4, border: "1px solid " + C.ac + "50", background: C.acS, color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Rejoindre un autre coach
+                </button>
+                <button onClick={() => { setConfirmAction("stopSelf"); setMsg(null); }} style={{ width: "100%", padding: "9px 0", borderRadius: 4, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Ne plus me coacher
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* ── État 2 : pas de coach (coach_id = null) ── */}
