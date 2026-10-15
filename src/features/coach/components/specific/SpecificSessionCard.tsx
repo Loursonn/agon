@@ -9,7 +9,8 @@ import SessionPreview from "../energy/SessionPreview";
 import type { EnergySessionRow, EnergyGroup } from "@/types/energy";
 import type { SpecificSport, PhysicalQuality } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
-import { useDeleteEnergySession, useCreateEnergySession, useVerifyEnergySession } from "@/features/shared/hooks/useEnergySessions";
+import { useCreateEnergySession, useVerifyEnergySession } from "@/features/shared/hooks/useEnergySessions";
+import { DeleteEnergySessionDialog } from "../energy/DeleteEnergySessionButton";
 import { useAssignEnergySession } from "@/features/shared/hooks/useEnergyAssignments";
 import { useAuth } from "@/hooks/useAuth";
 import { formatSLong } from "@/lib/energy/formatTarget";
@@ -29,7 +30,6 @@ interface Props {
 export default function SpecificSessionCard({ session, sport, quality, canEdit, canVerify, canDelete }: Props) {
   const navigate = useNavigate();
   const { athletes, profile } = useAuth();
-  const deleteMutation = useDeleteEnergySession();
   const createMutation = useCreateEnergySession();
   const verifyMutation = useVerifyEnergySession();
   const assignMutation = useAssignEnergySession();
@@ -246,31 +246,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
 
       {/* Confirm delete */}
       {showConfirmDelete && (
-        <div
-          onClick={(e) => { e.stopPropagation(); setShowConfirmDelete(false); }}
-          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 6, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Supprimer la séance ?</div>
-            <div style={{ fontSize: 12, color: C.tx3, marginBottom: 18 }}>
-              « {session.name} » sera définitivement supprimée.
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button
-                onClick={() => setShowConfirmDelete(false)}
-                style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => { deleteMutation.mutate(session.id); setShowConfirmDelete(false); }}
-                style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteEnergySessionDialog sessionId={session.id} sessionName={session.name} onClose={() => setShowConfirmDelete(false)} />
       )}
 
       {/* Assign modal */}

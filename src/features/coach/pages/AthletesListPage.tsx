@@ -9,9 +9,16 @@ import { EmptyState } from "@/features/shared/components/EmptyState";
 import { Users } from "lucide-react";
 
 export default function AthletesListPage() {
-  const { profile, athletes, user, loading } = useAuth();
+  const { profile, athletes, user, loading, removeSelfAsAthlete, becomeSelfCoach } = useAuth();
   const navigate = useNavigate();
   const isCoachAthlete = profile?.role === "coach" || profile?.role === "coach_athlete";
+  // Coach-athlète : sa ligne perso dépend de coach_id (self = son propre athlète)
+  const isHybrid = profile?.role === "coach_athlete";
+  const isSelfCoached = !!user && profile?.coach_id === user.id;
+  const showSelfRow = isCoachAthlete && (!isHybrid || isSelfCoached);
+  const canAddSelf = isHybrid && !profile?.coach_id;
+  // Le coach-athlète auto-coaché remonte aussi dans athletes : on évite le doublon
+  const otherAthletes = athletes.filter((a) => a.id !== user?.id);
 
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -20,6 +27,11 @@ export default function AthletesListPage() {
     if (removing) return;
     setRemoving(true);
     try {
+      if (athleteId === user?.id) {
+        await removeSelfAsAthlete();
+        toast.success("Tu ne fais plus partie de tes athlètes");
+        return;
+      }
       await supabase.rpc("unlink_athlete", { athlete_id: athleteId });
       toast.success("Athlète retiré");
       window.location.reload();
@@ -28,6 +40,15 @@ export default function AthletesListPage() {
     } finally {
       setRemoving(false);
       setConfirmRemove(null);
+    }
+  }
+
+  async function handleAddSelf() {
+    try {
+      await becomeSelfCoach();
+      toast.success("Tu fais partie de tes athlètes");
+    } catch {
+      toast.error("Erreur");
     }
   }
 
@@ -43,7 +64,7 @@ export default function AthletesListPage() {
         <div>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.tx }}>Athlètes</div>
           <div style={{ fontSize: 12, color: C.tx3, marginTop: 2 }}>
-            {athletes.length} athlète{athletes.length > 1 ? "s" : ""} liés à ton compte
+            {otherAthletes.length} athlète{otherAthletes.length > 1 ? "s" : ""} liés à ton compte
           </div>
         </div>
       </div>
@@ -86,7 +107,21 @@ export default function AthletesListPage() {
           </>
         ) : (
           <>
-            {isCoachAthlete && user && profile && (
+            {canAddSelf && (
+              <button
+                onClick={handleAddSelf}
+                style={{
+                  padding: "12px 16px", borderRadius: 6,
+                  border: "1px dashed " + C.ac + "60", background: "transparent",
+                  color: C.ac, fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                }}
+              >
+                + M'ajouter comme athlète
+              </button>
+            )}
+
+            {showSelfRow && user && profile && (
               <div
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
@@ -119,10 +154,24 @@ export default function AthletesListPage() {
                     <div style={{ fontSize: 11, color: C.ac }}>Mon programme personnel</div>
                   </div>
                 </button>
+                {isHybrid && (
+                  <button
+                    onClick={() => setConfirmRemove(user.id)}
+                    title="Me retirer de mes athlètes"
+                    style={{
+                      width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+                      border: "1px solid " + C.r + "40", background: "rgba(239,75,75,0.08)",
+                      color: C.r, fontSize: 16, cursor: "pointer", fontFamily: "inherit",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             )}
 
-            {athletes.map((a) => (
+            {otherAthletes.map((a) => (
               <div
                 key={a.id}
                 style={{
@@ -177,7 +226,7 @@ export default function AthletesListPage() {
               </div>
             ))}
 
-            {athletes.length === 0 && !isCoachAthlete && (
+            {otherAthletes.length === 0 && !isCoachAthlete && (
               <EmptyState
                 icon={Users}
                 title="Aucun athlète pour l'instant"
@@ -190,7 +239,8 @@ export default function AthletesListPage() {
 
       {/* Confirm remove modal */}
       {confirmRemove && (() => {
-        const a = athletes.find((x) => x.id === confirmRemove);
+        const isSelf = confirmRemove === user?.id;
+        const a = isSelf ? profile : athletes.find((x) => x.id === confirmRemove);
         return (
           <div
             style={{
@@ -208,10 +258,12 @@ export default function AthletesListPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>
-                Retirer l'athlète ?
+                {isSelf ? "Te retirer de tes athlètes ?" : "Retirer l'athlète ?"}
               </div>
               <div style={{ fontSize: 13, color: C.tx3, marginBottom: 20 }}>
-                <strong style={{ color: C.tx }}>{a?.full_name}</strong> sera dissocié de ton compte.
+                {isSelf
+                  ? "Tu ne seras plus ton propre coach. Ton historique est conservé, tu pourras te rajouter à tout moment."
+                  : <><strong style={{ color: C.tx }}>{a?.full_name}</strong> sera dissocié de ton compte.</>}
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button

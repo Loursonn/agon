@@ -192,6 +192,8 @@ export interface EnergySessionRow {
   created_by?: string | null;
   athlete_id?: string | null;
   parent_session_id?: string | null;
+  /** Retirée de la banque mais encore programmée chez un athlète */
+  archived_at?: string | null;
   is_public: boolean;
   is_verified: boolean;
   verified_by?: string | null;

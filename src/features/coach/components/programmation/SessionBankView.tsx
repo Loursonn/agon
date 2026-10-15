@@ -89,6 +89,9 @@ export function SessionBankView() {
   }
 
   function deleteSession(id: string) {
+    // Annule une sauvegarde différée en attente : elle réécrirait la séance supprimée
+    clearTimeout(saveTimer.current)
+    hasPendingSave.current = false
     const next = sessions.filter(s => s.id !== id)
     setSessions(next)
     updateMutation.mutate(next)

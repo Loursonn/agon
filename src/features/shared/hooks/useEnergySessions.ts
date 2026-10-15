@@ -46,6 +46,7 @@ async function fetchEnergySessions(filters?: EnergySessionFilters): Promise<Ener
   let q = supabase
     .from('energy_sessions')
     .select('*')
+    .is('archived_at', null)
     .order('created_at', { ascending: false });
 
   if (filters?.session_kind) q = q.eq('session_kind', filters.session_kind);
@@ -190,16 +191,20 @@ export function useUpdateEnergySession() {
   });
 }
 
+/**
+ * Supprime une séance de la banque (RPC delete_energy_session) :
+ * jamais programmée → supprimée ; déjà programmée chez un athlète → archivée
+ * (masquée des banques, les séances programmées et leur historique restent).
+ */
 export function useDeleteEnergySession() {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('energy_sessions')
-        .delete()
-        .eq('id', id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC absente des types générés
+      const { data, error } = await (supabase as any).rpc('delete_energy_session', { p_session_id: id });
       if (error) throw error;
+      return data as 'deleted' | 'archived' | 'not_found';
     },
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: QK.energySessions });
@@ -213,9 +218,11 @@ export function useDeleteEnergySession() {
       if (ctx?.previous !== undefined) qc.setQueryData(QK.energySessions, ctx.previous);
       toast.error("Erreur lors de la suppression de la séance");
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: QK.energySessions });
-      toast.success("Séance supprimée");
+      toast.success(result === 'archived'
+        ? "Séance retirée de la banque — les séances déjà programmées restent dans le calendrier"
+        : "Séance supprimée");
     },
   });
 }
