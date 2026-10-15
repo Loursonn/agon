@@ -8,6 +8,7 @@ import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppUpdates, useAppUpdateStats, useMarkAppUpdateSeen } from "@/features/shared/hooks/useAppUpdates";
 import { ReleaseNoteContent } from "../components/updates/ReleaseNoteContent";
+import { ReleaseNoteKindBadge } from "../components/updates/ReleaseNoteKindBadge";
 
 function fmtDate(iso: string) {
   return new Date(iso.length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -50,6 +51,7 @@ export default function CoachUpdatesPage() {
           return (
             <article key={note.id} style={{ background: C.s1, border: "1px solid " + (seenAt ? C.brd : C.ac + "50"), borderRadius: 6, padding: "16px 18px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                <ReleaseNoteKindBadge kind={note.kind} />
                 <span style={{ fontSize: 11, color: C.tx3 }}>{fmtDate(note.date)}</span>
                 {seenAt ? (
                   <span style={{ fontSize: 11, color: C.g }}>· Vue le {fmtDate(seenAt)}</span>

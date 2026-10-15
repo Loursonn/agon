@@ -8,6 +8,7 @@ import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppUpdates, useMarkAppUpdateSeen } from "@/features/shared/hooks/useAppUpdates";
 import { ReleaseNoteContent } from "./ReleaseNoteContent";
+import { ReleaseNoteKindBadge } from "./ReleaseNoteKindBadge";
 
 function fmtDate(iso: string) {
   return new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
@@ -32,9 +33,7 @@ export function CoachUpdatesCard() {
             border: "1px solid " + C.ac + "40", borderRadius: 6, padding: "14px 16px",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#0E0C0A", background: C.ac, borderRadius: 3, padding: "2px 6px" }}>
-                NOUVEAUTÉ
-              </span>
+              <ReleaseNoteKindBadge kind={note.kind} />
               <span style={{ fontSize: 11, color: C.tx3 }}>{fmtDate(note.date)}</span>
             </div>
             <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 4 }}>{note.title}</div>
