@@ -1,11 +1,9 @@
-import { Trophy, X, MapPin, MessageSquare } from "lucide-react";
+import { Trophy, X, MapPin } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { C } from "@/lib/theme";
 import { EmptyState } from "@/features/shared/components/EmptyState";
-import { useUpdateCompetitionComment } from "@/features/shared/hooks/retoursComments.mutations";
 import type { CompetitionDetail } from "@/features/shared/types/retours.types";
-import { useState } from "react";
 
 interface CompetitionsDetailViewProps {
   competitions: CompetitionDetail[];
@@ -15,17 +13,6 @@ interface CompetitionsDetailViewProps {
 const PRIORITY_COLORS: Record<string, string> = { A: C.r, B: C.o, C: C.y };
 
 function CompCard({ comp }: { comp: CompetitionDetail }) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(comp.athlete_comment ?? "");
-  const update = useUpdateCompetitionComment();
-
-  const save = () => {
-    update.mutate(
-      { competitionId: comp.id, athleteComment: text },
-      { onSuccess: () => setEditing(false) }
-    );
-  };
-
   return (
     <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
       {/* Header */}
@@ -60,47 +47,14 @@ function CompCard({ comp }: { comp: CompetitionDetail }) {
         </div>
       )}
 
-      {/* Athlete comment */}
-      {comp.athlete_comment && !editing && (
-        <div style={{ background: C.acS, borderRadius: 4, padding: "8px 10px", marginBottom: 8 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3 }}>Commentaire athlète</div>
-          <div style={{ fontSize: 12, color: C.tx2 }}>{comp.athlete_comment}</div>
+      {/* Retour de l'athlète (lecture seule) */}
+      {comp.athlete_comment ? (
+        <div style={{ background: C.acS, borderRadius: 4, padding: "8px 10px" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3 }}>Retour de l'athlète</div>
+          <div style={{ fontSize: 12, color: C.tx2, whiteSpace: "pre-wrap" }}>{comp.athlete_comment}</div>
         </div>
-      )}
-
-      {/* Edit button */}
-      {!editing && (
-        <button
-          onClick={() => setEditing(true)}
-          style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 10, cursor: "pointer", fontFamily: "inherit" }}
-        >
-          <MessageSquare size={10} />
-          {comp.athlete_comment ? "Modifier" : "Ajouter commentaire"}
-        </button>
-      )}
-
-      {/* Edit form */}
-      {editing && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <textarea
-            autoFocus
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            placeholder="Commentaire de l'athlète sur sa performance…"
-            style={{ width: "100%", background: C.s1, border: "1px solid " + C.brdL, borderRadius: 4, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
-          />
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={save} disabled={update.isPending}
-              style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-              Enregistrer
-            </button>
-            <button onClick={() => { setEditing(false); setText(comp.athlete_comment ?? ""); }}
-              style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
-              Annuler
-            </button>
-          </div>
-        </div>
+      ) : (
+        <div style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>Pas encore de retour de l'athlète</div>
       )}
     </div>
   );

@@ -86,6 +86,22 @@ describe("attendance", () => {
     );
     expect(a).toEqual({ done: 1, planned: 2, pct: 50 });
   });
+
+  it("ignore les séances retirées (skipped) et celles du jour pas encore faites", () => {
+    const w = { start: "2026-10-01", end: "2026-10-07" };
+    const a = attendance(
+      [
+        { scheduled_date: "2026-10-02", status: "completed" },
+        { scheduled_date: "2026-10-03", status: "skipped" },   // retirée : pas prescrite
+        { scheduled_date: "2026-10-04", status: "missed" },    // prescrite, ratée
+        { scheduled_date: "2026-10-07", status: "planned" },   // aujourd'hui, pas encore due
+        { scheduled_date: "2026-10-07", status: "completed" }, // aujourd'hui, faite
+      ],
+      w,
+      "2026-10-07",
+    );
+    expect(a).toEqual({ done: 2, planned: 3, pct: 67 });
+  });
 });
 
 describe("ruleInsights", () => {

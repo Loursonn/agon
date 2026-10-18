@@ -15,6 +15,7 @@ import {
 import { RpeSheet } from "@/features/athlete/components/RpeSheet";
 import type { EnergySessionAssignmentRow, EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
 import { localISO } from "@/lib/date";
+import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
 
 const KIND_COLOR: Record<string, string> = {
   vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
@@ -79,7 +80,7 @@ interface EnergySessionCardProps {
 
 function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCardProps) {
   const es = (a as Record<string, unknown>).energy_sessions as {
-    name: string; session_kind: string; total_duration_s?: number | null; intervals?: EnergyStep[];
+    name: string; session_kind: string; total_duration_s?: number | null; total_distance_m?: number | null; intervals?: EnergyStep[];
   } | null;
 
   const kind = es?.session_kind ?? "";
@@ -111,6 +112,14 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
     return "";
   });
 
+  const [runDist, setRunDist] = useState<RunDistanceValue>(() => {
+    const ar = a as unknown as Record<string, unknown>;
+    if (ar.activity_type) {
+      return { activity: ar.activity_type as RunDistanceValue["activity"], km: ar.distance_km != null ? String(ar.distance_km) : "" };
+    }
+    return initialRunDistance(es?.total_distance_m);
+  });
+
   const complete = useCompleteEnergyAssignment();
   const updateAssignment = useUpdateEnergyAssignment();
 
@@ -129,6 +138,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
         notes: globalNote || undefined,
         actual_duration_min: durationMin && !isNaN(durationMin) ? durationMin : undefined,
         activity_url: activityUrl.trim() || undefined,
+        ...runDistancePayload(runDist),
       },
       { onSuccess: () => onRpeDone(a.id) },
     );
@@ -287,6 +297,11 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               resize: "none", boxSizing: "border-box",
             }}
           />
+
+          {/* Activité + km (volume de course) */}
+          <div style={{ marginTop: 12 }}>
+            <RunDistanceInput value={runDist} onChange={setRunDist} />
+          </div>
 
           {/* Lien Strava / Garmin */}
           <input

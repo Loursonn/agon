@@ -535,7 +535,10 @@ function CreateModal({
       case "cycle": {
         const { data: newCycle, error: cycleErr } = await supabase
           .from("cycles")
-          .insert({ mesocycle_id: selectedParentId, name: name.trim(), start_date: sDate, end_date: eDate })
+          .insert({
+            mesocycle_id: selectedParentId, athlete_id: athleteId, coach_id: coachId,
+            name: name.trim(), start_date: sDate, end_date: eDate,
+          })
           .select("id")
           .single();
         error = cycleErr;

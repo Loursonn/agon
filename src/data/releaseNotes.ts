@@ -37,6 +37,115 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-18-deconnexion-appareil",
+    date: "2026-10-18",
+    kind: "fix",
+    title: "Déconnexion limitée à l'appareil utilisé",
+    summary: "Se déconnecter sur un appareil ne te déconnecte plus de tous les autres (téléphone, ordinateur…).",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bouton Déconnexion (coach et athlète) ne ferme que la session de l'appareil sur lequel tu cliques.",
+          "Après un changement de mot de passe, toutes les sessions restent fermées par sécurité.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-18-accueil-assiduite-evenements",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "Accueil personnalisable, assiduité juste, événements visibles",
+    summary: "Choisis ce que chaque athlète voit sur son accueil, l'assiduité compte enfin toutes les séances prescrites, et les événements de l'athlète s'affichent quand tu ouvres un jour du planning.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Profil athlète → Général → « Accueil de l'athlète » : coche les sections visibles sur sa page Aujourd'hui. Masquer ne supprime rien. Par défaut tout est affiché sauf l'Alimentation.",
+          "Séance du jour, Message du coach et Jour de compétition restent toujours visibles.",
+          "Assiduité (7 j / 30 j / 3 mois) = séances réalisées / séances prescrites, muscu ET énergie / spécifique. Les séances retirées ou déplacées ne comptent plus comme manquées, et la séance du jour ne compte qu'une fois faite.",
+          "Planification → Mois : en cliquant sur un jour, les événements de l'athlète (déplacement, vacances, horaires…) apparaissent en haut du détail.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-18-profil-athlete-volume-course",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "Profil athlète refait + volume de course à pied",
+    summary: "Antécédents médicaux détaillés avec photos et PDF, km de course calculés chaque semaine, et un tuto pour récupérer les données Strava de tes athlètes.",
+    sections: [
+      {
+        title: "Antécédents médicaux",
+        points: [
+          "Chaque antécédent a sa fiche : type, zone, date, diagnostic du médecin, traitement, statut (guéri / en cours) et notes.",
+          "Photos (radio, IRM, ordonnance) compressées automatiquement et comptes rendus PDF, 10 Mo max par fichier.",
+          "Tu peux aussi les ajouter ou les corriger : Profil athlète → Général.",
+        ],
+      },
+      {
+        title: "Volume de course à pied",
+        points: [
+          "En fin de séance énergie ou spécifique, l'athlète indique l'activité faite et les km courus (pré-remplis avec la distance prévue).",
+          "En fin de séance de muscu, un champ facultatif « J'ai couru pendant la séance » ; les activités libres « Course » comptent aussi.",
+          "Km de la semaine, des 7 derniers jours et graphique des 8 dernières semaines : dans le profil de l'athlète, dans Profil athlète → Général, et une tuile « Course à pied » dans Retours.",
+        ],
+      },
+      {
+        title: "Profil côté athlète",
+        points: [
+          "Identité modifiable, poids avec les 3 dernières pesées et ton poids cible en repère.",
+          "Vidéo + étapes pour télécharger ses données Strava et te transférer l'e-mail reçu (ton adresse est affichée avec un bouton copier).",
+          "Les cartes Volume programme, Wellness, Poids 30 jours et Records ont été retirées du profil.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-18-competition-dans-le-planning",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "La compétition devient un jour du planning",
+    summary: "Ajoute une compétition directement sur un jour : elle s'affiche comme un jour de compétition, chez toi comme chez l'athlète, et il y laisse son bilan.",
+    sections: [
+      {
+        title: "Côté coach",
+        points: [
+          "Planification → Mois : clique sur un jour → « Ajouter une compétition ce jour » (date déjà remplie).",
+          "Le jour de compétition ressort en rouge dans le calendrier, avec le nom de la compétition en tête du jour.",
+          "En ouvrant le jour, tu vois la compétition en haut, les séances éventuelles dessous, et le bilan de l'athlète dès qu'il l'a rempli (lecture seule).",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "« Cette semaine » et Programme : le jour est marqué « Jour de compétition », avec la compétition en tête du jour.",
+          "L'athlète peut aussi poser lui-même une compétition depuis Programme (bouton « Compétition » sur chaque jour).",
+          "Le bilan se remplit dès le jour J. Tant qu'il n'est pas rempli, la compétition reste affichée « Compétition à commenter » sur Aujourd'hui.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-18-bilan-competition",
+    date: "2026-10-18",
+    kind: "fix",
+    title: "Bilans de compétition : enregistrés et lisibles",
+    summary: "Tes athlètes peuvent de nouveau enregistrer leur retour après une compétition, et tu le retrouves directement dans leur planification.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Côté athlète : le retour sur une compétition passée s'enregistre sans « Erreur lors de l'enregistrement ».",
+          "Planification de l'athlète → Compétitions : le retour de l'athlète s'affiche sous chaque compétition passée (ou « Pas encore de retour »).",
+          "Dans la timeline, cliquer sur une compétition affiche aussi le retour de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-15-coach-athlete-se-retirer",
     date: "2026-10-15",
     kind: "fix",

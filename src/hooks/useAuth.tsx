@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function logout() {
     setAthletes([]);
     setActiveAthleteId(null);
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
   }
 
   async function updateAthleteProfile(athleteId: string, fields: {

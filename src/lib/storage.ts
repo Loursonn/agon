@@ -58,6 +58,28 @@ export async function sLoad<T>(k: string, fb: T, aid: string | null | undefined)
   }
 }
 
+/**
+ * Comme sLoad, mais distingue « erreur » (ok=false) de « clé absente »
+ * (ok=true, value=undefined). À utiliser avant toute réécriture dérivée d'une
+ * lecture : une erreur réseau / auth ne doit jamais devenir une valeur par défaut
+ * réécrite en base.
+ */
+export async function sLoadResult<T>(k: string, aid: string | null | undefined): Promise<{ ok: boolean; value?: T }> {
+  if (!aid) return { ok: false };
+  try {
+    const { data, error } = await db
+      .from("app_data")
+      .select("value")
+      .eq("athlete_id", aid)
+      .eq("key", k)
+      .maybeSingle();
+    if (error) return { ok: false };
+    return { ok: true, value: data ? (data.value as T) : undefined };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export async function sSave(k: string, v: unknown, aid: string | null | undefined): Promise<void> {
   if (!aid) return;
   if (v === null || v === undefined) return;

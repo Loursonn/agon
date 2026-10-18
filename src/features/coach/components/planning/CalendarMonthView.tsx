@@ -9,7 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { BlockConfig, Session, WellnessData } from "@/features/shared/types/athlete";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Target, Ruler, X as XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Target, Ruler, Trophy, X as XIcon } from "lucide-react";
+import { competitionDayLabel } from "@/types/planning";
 import {
   DndContext,
   DragOverlay,
@@ -337,6 +338,8 @@ function DroppableDay({
 
   const today     = isToday(date);
   const maxVisible = 3;
+  const comps     = events.filter((e) => e.type === "competition");
+  const isCompDay = comps.length > 0;
 
   return (
     <div
@@ -347,12 +350,14 @@ function DroppableDay({
         overflow: "hidden",
         background: isOver
           ? C.acS
+          : isCompDay
+          ? C.rS
           : today
           ? C.s2
           : isActive
           ? C.s2 + "80"
           : "transparent",
-        border: "1px solid " + (today ? C.ac + "40" : isOver ? C.ac + "60" : C.brd),
+        border: "1px solid " + (isOver ? C.ac + "60" : isCompDay ? C.r + "70" : today ? C.ac + "40" : C.brd),
         borderRadius: 4,
         padding: "6px 7px",
         cursor: "pointer",
@@ -379,6 +384,24 @@ function DroppableDay({
         {format(date, "d")}
       </div>
 
+      {/* Jour de compétition — bandeau en tête du jour */}
+      {comps.map((cp) => (
+        <div
+          key={cp.id}
+          title={competitionDayLabel(cp.raw?.type as string | undefined) + " — " + cp.title}
+          style={{
+            background: C.r, color: "#fff",
+            borderRadius: 3, padding: "1px 5px",
+            fontSize: 9, fontWeight: 700, lineHeight: "15px",
+            display: "flex", alignItems: "center", gap: 4,
+            whiteSpace: "nowrap", overflow: "hidden", flexShrink: 0,
+          }}
+        >
+          <Trophy size={9} style={{ flexShrink: 0 }} />
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{cp.title}</span>
+        </div>
+      ))}
+
       {/* Life events — subtle informational bands */}
       {events.filter((e) => e.type === "life_event").map((le) => (
         <div
@@ -404,7 +427,7 @@ function DroppableDay({
 
       {/* Events */}
       {(() => {
-        const regularEvents = events.filter((e) => e.type !== "life_event");
+        const regularEvents = events.filter((e) => e.type !== "life_event" && e.type !== "competition");
         const lifeCount = events.length - regularEvents.length;
         const maxAfterLife = Math.max(1, maxVisible - lifeCount);
         const overflow = Math.max(0, regularEvents.length - maxAfterLife);

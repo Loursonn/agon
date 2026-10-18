@@ -23,18 +23,28 @@ export function useAthleteTrends(days: number): { summary: TrendSummary; ready: 
   const { cur, prev } = windows(days);
 
   const { data: logs = NO_LOGS, isSuccess: logsReady } = useQuery({
-    queryKey: ["athlete-trend-workouts", athleteId, prev.start, cur.end],
+    queryKey: ["athlete-trend-sessions", athleteId, prev.start, cur.end],
     enabled: !!athleteId,
     staleTime: 60_000,
     queryFn: async (): Promise<WorkoutRow[]> => {
-      const { data, error } = await supabase
-        .from("workout_logs")
-        .select("scheduled_date, status")
-        .eq("athlete_id", athleteId)
-        .gte("scheduled_date", prev.start)
-        .lte("scheduled_date", cur.end);
-      if (error) throw error;
-      return (data ?? []) as WorkoutRow[];
+      // Muscu + énergie / spécifique : toutes les séances prescrites
+      const [workouts, energy] = await Promise.all([
+        supabase
+          .from("workout_logs")
+          .select("scheduled_date, status")
+          .eq("athlete_id", athleteId)
+          .gte("scheduled_date", prev.start)
+          .lte("scheduled_date", cur.end),
+        supabase
+          .from("energy_session_assignments")
+          .select("scheduled_date, status")
+          .eq("athlete_id", athleteId)
+          .gte("scheduled_date", prev.start)
+          .lte("scheduled_date", cur.end),
+      ]);
+      if (workouts.error) throw workouts.error;
+      if (energy.error) throw energy.error;
+      return [...(workouts.data ?? []), ...(energy.data ?? [])] as WorkoutRow[];
     },
   });
 

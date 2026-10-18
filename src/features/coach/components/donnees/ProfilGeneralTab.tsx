@@ -9,17 +9,19 @@
  */
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { User, Flame, Moon, ListChecks, Award, Zap } from "lucide-react";
+import { User, Flame, Moon, ListChecks, Award, Zap, Footprints, LayoutDashboard, Lock } from "lucide-react";
+import { HOME_LOCKED_SECTIONS, HOME_SECTIONS, useHomeHiddenSections, useSetHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachPerfNotification from "@/components/coach/CoachPerfNotification";
 import type { Profile } from "@/hooks/useAuth";
 import type { Goals, Habit } from "@/features/shared/types/athlete";
-import { useMedicalHistory } from "@/features/shared/hooks/useMedicalHistory";
 import { useHyroxFlag } from "@/features/shared/hooks/hyrox/useHyroxFlag";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { formatMmSs } from "@/lib/time";
-import { MedicalReadOnly } from "@/features/athlete/pages/ProfilPage";
+import { MedicalEntriesSection } from "@/features/shared/components/medical/MedicalEntriesSection";
+import { RunningVolumeCard } from "@/features/shared/components/RunningVolumeCard";
+import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { localISO } from "@/lib/date";
 
 // ── Palette des blocs ─────────────────────────────────────────────────────────
@@ -220,12 +222,13 @@ export function ProfilGeneralTab() {
     athleteId, athleteProfile, onEditProfile,
     nutritionStrategy, goals, setGoals,
     habits, habitLogs, habitEnabled, habitToggling, habitToggleErr, toggleHabitEnabled,
+    freeSessions,
   } = useAthleteContext();
 
   const navigate = useNavigate();
   const { athleteId: urlAthleteId } = useParams<{ athleteId: string }>();
   const ap = athleteProfile as Profile | null;
-  const { data: medicalData } = useMedicalHistory(athleteId);
+  const { volume: runVolume, isLoading: runLoading } = useRunningVolume(athleteId ?? undefined, freeSessions);
   const { enabled: hyroxEnabled, toggling: hyroxToggling, toggle: toggleHyrox } = useHyroxFlag(athleteId);
   const { data: hyroxRaces = [] } = useHyroxResults(hyroxEnabled ? athleteId : undefined);
 
@@ -234,7 +237,6 @@ export function ProfilGeneralTab() {
         .split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
     : "?";
 
-  const hasMedical = !!(medicalData && (medicalData.conditions || medicalData.allergies || medicalData.surgeries.length > 0 || medicalData.past_injuries.length > 0 || medicalData.current_treatments || medicalData.medical_notes));
 
   const ns = nutritionStrategy;
   const SC: Record<string, string> = { maintenance: C.b, seche: C.r, prise_de_masse: C.g };
@@ -276,14 +278,22 @@ export function ProfilGeneralTab() {
         {/* Antécédents médicaux */}
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.brd}` }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-            Antécédents médicaux <span style={{ fontWeight: 400, textTransform: "none" }}>— renseignés par l'athlète</span>
+            Antécédents médicaux <span style={{ fontWeight: 400, textTransform: "none" }}>— modifiables par l'athlète et par toi</span>
           </div>
-          {hasMedical ? (
-            <MedicalReadOnly medical={medicalData!} />
-          ) : (
-            <div style={{ fontSize: 12, color: C.tx3 }}>Aucun antécédent renseigné</div>
-          )}
+          {athleteId && <MedicalEntriesSection athleteId={athleteId} canEdit />}
         </div>
+      </Section>
+
+      {/* ── 1a. Accueil de l'athlète (sections visibles) ── */}
+      {athleteId && (
+        <Section icon={LayoutDashboard} title="Accueil de l'athlète" subtitle="Sections visibles sur sa page Aujourd'hui — masquer ne supprime rien" color={C.ac}>
+          <HomeSectionsEditor athleteId={athleteId} />
+        </Section>
+      )}
+
+      {/* ── 1b. Volume de course à pied ── */}
+      <Section icon={Footprints} title="Volume de course à pied" subtitle="Km réalisés : semaine, 7 jours glissants, 8 dernières semaines" color={C.ac}>
+        <RunningVolumeCard volume={runVolume} isLoading={runLoading} />
       </Section>
 
       {/* ── 2. Composition & Nutrition ── */}
@@ -413,6 +423,56 @@ export function ProfilGeneralTab() {
       <Section icon={Award} title="Validations de performances" subtitle="Performances déclarées par l'athlète à valider" color={COL.perfs}>
         <CoachPerfNotification coachId={athleteId} athleteId={athleteId} C={C} />
       </Section>
+    </div>
+  );
+}
+
+// ── Accueil de l'athlète : sections visibles ──────────────────────────────────
+
+function HomeSectionsEditor({ athleteId }: { athleteId: string }) {
+  const { hidden } = useHomeHiddenSections(athleteId);
+  const setHidden = useSetHomeHiddenSections(athleteId);
+
+  const toggle = (key: string) =>
+    setHidden.mutate(hidden.includes(key) ? hidden.filter((k) => k !== key) : [...hidden, key]);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 6 }}>
+      {HOME_LOCKED_SECTIONS.map((label) => (
+        <div
+          key={label}
+          title="Toujours visible"
+          style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 4,
+            background: C.s2, border: `1px solid ${C.brd}`, color: C.tx3, fontSize: 12,
+          }}
+        >
+          <Lock size={13} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{label}</span>
+          <span style={{ fontSize: 10 }}>toujours</span>
+        </div>
+      ))}
+      {HOME_SECTIONS.map(({ key, label }) => {
+        const visible = !hidden.includes(key);
+        return (
+          <label
+            key={key}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 4,
+              background: visible ? C.acS : C.s2, border: `1px solid ${visible ? C.ac + "50" : C.brd}`,
+              color: visible ? C.tx : C.tx3, fontSize: 12, cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={visible}
+              onChange={() => toggle(key)}
+              style={{ accentColor: C.ac, width: 15, height: 15, flexShrink: 0, cursor: "pointer" }}
+            />
+            <span style={{ flex: 1 }}>{label}</span>
+          </label>
+        );
+      })}
     </div>
   );
 }

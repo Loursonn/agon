@@ -9,7 +9,7 @@ export default function SettingsPage() {
   const [showLogout, setShowLogout] = useState(false);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     window.location.href = "/login";
   }
 

@@ -21,17 +21,19 @@ interface Props {
   athleteId: string;
   coachId: string;
   existing?: Competition | null;
+  /** Date pré-remplie (yyyy-MM-dd) quand on ajoute depuis un jour du planning */
+  initialDate?: string;
   onClose: () => void;
 }
 
-export function CompetitionFormModal({ athleteId, coachId, existing, onClose }: Props) {
+export function CompetitionFormModal({ athleteId, coachId, existing, initialDate, onClose }: Props) {
   const isEdit = !!existing;
   const { mutate: create, isPending: creating } = useCreateCompetition();
   const { mutate: update, isPending: updating } = useUpdateCompetition();
   const isPending = creating || updating;
 
   const [name,     setName]     = useState(existing?.name     ?? "");
-  const [date,     setDate]     = useState(existing?.date     ?? "");
+  const [date,     setDate]     = useState(existing?.date     ?? initialDate ?? "");
   const [location, setLocation] = useState(existing?.location ?? "");
   const [priority, setPriority] = useState<CompetitionPriority>(existing?.priority ?? "A");
   const [type,     setType]     = useState<CompetitionType>(existing?.type ?? "competition");

@@ -65,11 +65,23 @@ export interface TestBrief {
   results_note: string | null;
 }
 
+/** Compétition posée sur un jour (comme une séance, en tête du jour) */
+export interface CompetitionBrief {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+  location: string | null;
+  priority: "A" | "B" | "C" | null;
+  athlete_comment: string | null;
+}
+
 export interface WeekDay {
   date: string;   // ISO yyyy-MM-dd
   dow: number;    // 0=Mon … 6=Sun
   sessions: WeekSession[];
   tests: TestBrief[];
+  competitions: CompetitionBrief[];
 }
 
 /** Cycle terminé (fin < aujourd'hui) — pour l'historique côté athlète. */
@@ -269,7 +281,7 @@ export function useActivePlan(athleteId: string, weekOffset = 0) {
       );
 
       // ── 4. Current week: workout_logs + energy_assignments + tests (parallel) ─
-      const [{ data: wLogs }, { data: eAssigns }, { data: tSessions }] = await Promise.all([
+      const [{ data: wLogs }, { data: eAssigns }, { data: tSessions }, { data: comps }] = await Promise.all([
         supabase
           .from("workout_logs")
           .select("id, session_id, session_name, scheduled_date, status, original_scheduled_date, rescheduled_by_athlete, coach_alert")
@@ -294,11 +306,24 @@ export function useActivePlan(athleteId: string, weekOffset = 0) {
           .gte("date", mondayISO)
           .lte("date", sundayISO)
           .order("date"),
+
+        supabase
+          .from("competitions")
+          .select("id, name, type, date, location, priority, athlete_comment")
+          .eq("athlete_id", athleteId)
+          .gte("date", mondayISO)
+          .lte("date", sundayISO)
+          .order("date"),
       ]);
 
       // ── 5. Build sessions + tests by date ─────────────────────────────────
       const byDate = new Map<string, WeekSession[]>();
       const testsByDate = new Map<string, TestBrief[]>();
+      const compsByDate = new Map<string, CompetitionBrief[]>();
+
+      for (const c of (comps ?? []) as CompetitionBrief[]) {
+        compsByDate.set(c.date, [...(compsByDate.get(c.date) ?? []), c]);
+      }
 
       for (const t of tSessions ?? []) {
         const arr = testsByDate.get(t.date) ?? [];
@@ -352,7 +377,12 @@ export function useActivePlan(athleteId: string, weekOffset = 0) {
         const d = new Date(monDate);
         d.setDate(monDate.getDate() + i);
         const iso = localISO(d);
-        return { date: iso, dow: i, sessions: byDate.get(iso) ?? [], tests: testsByDate.get(iso) ?? [] };
+        return {
+          date: iso, dow: i,
+          sessions: byDate.get(iso) ?? [],
+          tests: testsByDate.get(iso) ?? [],
+          competitions: compsByDate.get(iso) ?? [],
+        };
       });
 
       // ── 7. Week session count (planned + completed, all types) ────────────

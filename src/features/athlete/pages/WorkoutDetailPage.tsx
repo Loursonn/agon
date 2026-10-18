@@ -1,4 +1,6 @@
 import { Fragment, useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { parseKm } from "@/features/shared/components/RunDistanceInput";
+import { runningVolumeKey } from "@/features/shared/hooks/useRunningVolume";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -1761,6 +1763,9 @@ interface FinishDialogProps {
   sessionForme: number | undefined;
   onCommentChange: (c: string) => void;
   onFormeChange: (f: number) => void;
+  /** Km courus pendant la séance (facultatif, saisie brute) */
+  runKm: string;
+  onRunKmChange: (v: string) => void;
   onConfirm: () => void;
   onClose: () => void;
   completing: boolean;
@@ -1773,6 +1778,8 @@ function FinishDialog({
   sessionForme,
   onCommentChange,
   onFormeChange,
+  runKm,
+  onRunKmChange,
   onConfirm,
   onClose,
   completing,
@@ -1933,6 +1940,24 @@ function FinishDialog({
             marginBottom: 12,
           }}
         />
+
+        {/* Km courus (échauffement, finisher…) → volume de course */}
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <span style={{ fontSize: 12, color: C.tx2, flex: 1 }}>J'ai couru pendant la séance <span style={{ color: C.tx3 }}>(facultatif)</span></span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={runKm}
+            onChange={(e) => onRunKmChange(e.target.value)}
+            placeholder="0"
+            style={{
+              width: 70, padding: "8px 10px", borderRadius: 4, textAlign: "right",
+              border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx,
+              fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none",
+            }}
+          />
+          <span style={{ fontSize: 12, color: C.tx3 }}>km</span>
+        </label>
 
         <div style={{ display: "flex", gap: 8 }}>
           <button
@@ -2636,6 +2661,7 @@ export default function WorkoutDetailPage() {
   });
 
   // ── Complete workout ─────────────────────────────────────────────────────
+  const [runKm, setRunKm] = useState("");
   const { mutate: completeWorkout, isPending: completing } = useMutation({
     mutationFn: async () => {
       if (!id) return;
@@ -2646,13 +2672,15 @@ export default function WorkoutDetailPage() {
           status: "completed",
           completed_at: new Date().toISOString(),
           athlete_modifications: finalMods,
-        })
+          run_distance_km: parseKm(runKm),
+        } as never)
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       localStorage.removeItem("activeWorkoutSession");
       invalidateSessionStatus(qc, athleteId, id);
+      if (athleteId) qc.invalidateQueries({ queryKey: runningVolumeKey(athleteId) });
       setShowFinish(false);
       setShowRpe(true);
       toast.success("Séance complétée ! ");
@@ -3358,6 +3386,8 @@ export default function WorkoutDetailPage() {
           sessionForme={localMods.sessionForme}
           onCommentChange={updateSessionComment}
           onFormeChange={updateForme}
+          runKm={runKm}
+          onRunKmChange={setRunKm}
           onConfirm={() => completeWorkout()}
           onClose={() => setShowFinish(false)}
           completing={completing}

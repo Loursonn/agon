@@ -21,6 +21,7 @@ import { useSpecificExecution } from "@/features/athlete/hooks/useSpecificExecut
 import StepTimeline from "@/features/athlete/components/specific/StepTimeline";
 import ExecutionCard from "@/features/athlete/components/specific/ExecutionCard";
 import SessionEndForm from "@/features/athlete/components/specific/SessionEndForm";
+import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
 import type { EnergySessionAssignmentRow, EnergyStep, BlockLogs } from "@/types/energy";
 import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
@@ -203,6 +204,8 @@ export default function SpecificExecutionPage() {
   const session = assignment?.energy_sessions;
 
   const completeMutation = useCompleteEnergyAssignment();
+  // Km courus pendant la séance (runs HYROX…) → volume de course
+  const [runDist, setRunDist] = useState<RunDistanceValue>(initialRunDistance());
   const rpeMutation = useUpsertEnergyRpe();
 
   // ── Format detection ────────────────────────────────────────────────────
@@ -307,6 +310,7 @@ export default function SpecificExecutionPage() {
         block_logs: blockLogsOut,
         notes,
         actual_duration_min: dur ?? null,
+        ...runDistancePayload(runDist),
       });
       await rpeMutation.mutateAsync({
         id: assignment.id,
@@ -544,6 +548,9 @@ export default function SpecificExecutionPage() {
             }}>
               Fin de séance — retour athlète
             </h2>
+            <div style={{ marginBottom: 14 }}>
+              <RunDistanceInput value={runDist} onChange={setRunDist} />
+            </div>
             <SessionEndForm
               onSubmit={handleEndSubmit}
               isPending={completeMutation.isPending || rpeMutation.isPending}

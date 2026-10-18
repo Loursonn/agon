@@ -29,6 +29,7 @@ export interface Microcycle {
 export interface Competition {
   id: string; name: string; date: string;
   priority?: string | null; location?: string | null; notes?: string | null;
+  athlete_comment?: string | null;
   coach_id?: string; athlete_id?: string;
   type?: string | null; season_id?: string | null;
 }
@@ -63,7 +64,7 @@ export function useTimelineData(athleteId: string, range: { start: Date; end: Da
       const [macroRes, compRes, testRes] = await Promise.all([
         supabase.from("macrocycles").select("*").eq("athlete_id", athleteId)
           .or(`start_date.lte.${end},end_date.gte.${start}`).order("start_date"),
-        supabase.from("competitions").select("id,name,date,priority,location,notes")
+        supabase.from("competitions").select("id,name,date,priority,location,notes,athlete_comment")
           .eq("athlete_id", athleteId).gte("date", start).lte("date", end).order("date"),
         supabase.from("test_sessions").select("id,title,date,type,completed")
           .eq("athlete_id", athleteId).gte("date", start).lte("date", end).order("date"),

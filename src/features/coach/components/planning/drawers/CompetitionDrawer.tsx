@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { format, isPast, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MapPin, Trophy } from "lucide-react";
 import { C } from "@/lib/theme";
@@ -57,6 +57,16 @@ export function CompetitionDrawer({ comp, onEdit, onDelete }: Props) {
           <div style={{ fontSize: 9, color: C.tx3, marginBottom: 4 }}>Notes</div>
           <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5 }}>{comp.notes}</div>
         </div>
+      )}
+
+      {/* Bilan de l'athlète */}
+      {comp.athlete_comment ? (
+        <div style={{ background: C.acS, borderRadius: 4, padding: "12px 14px", border: "1px solid " + C.ac + "30" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.4px" }}>Retour de l'athlète</div>
+          <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{comp.athlete_comment}</div>
+        </div>
+      ) : isPast(parseISO(comp.date)) && (
+        <div style={{ fontSize: 12, color: C.tx3, fontStyle: "italic" }}>Pas encore de retour de l'athlète</div>
       )}
 
       {/* Actions */}

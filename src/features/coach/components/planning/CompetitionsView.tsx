@@ -3,7 +3,8 @@
  * avec création / édition / suppression via CompetitionFormModal.
  */
 import { useState } from "react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useDeleteCompetition } from "@/hooks/useCompetitions";
 import { format, parseISO, isFuture, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -25,6 +26,7 @@ interface Comp {
   notes: string | null;
   priority: string;
   macrocycle_id: string | null;
+  athlete_comment: string | null;
   created_at: string;
 }
 
@@ -54,22 +56,6 @@ function useComps(athleteId: string) {
   });
 }
 
-function useDeleteComp() {
-  const qc = useQueryClient();
-  return useMutation<void, Error, { id: string; athlete_id: string }>({
-    mutationFn: async ({ id }) => {
-      const { error } = await supabase
-        .from("competitions")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["competitions", vars.athlete_id] });
-    },
-  });
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -79,7 +65,7 @@ interface Props {
 
 export function CompetitionsView({ athleteId, coachId }: Props) {
   const { data: competitions = [], isLoading } = useComps(athleteId);
-  const { mutate: deleteComp } = useDeleteComp();
+  const { mutate: deleteComp } = useDeleteCompetition();
   const [formComp,   setFormComp]   = useState<Comp | null | "new">(null);
   const [delConfirm, setDelConfirm] = useState<string | null>(null);
 
@@ -234,9 +220,13 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
   return (
     <div
       style={{
-        display: "flex", alignItems: "center", gap: 12,
         padding: "12px 16px", borderRadius: 4,
         background: C.s1, border: "1px solid " + C.brd,
+      }}
+    >
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 12,
         opacity: dimmed ? 0.7 : 1,
         transition: "opacity 150ms",
       }}
@@ -312,6 +302,21 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
           >
             <Trash2 size={13} />
           </button>
+        </div>
+      )}
+    </div>
+
+      {/* Bilan de l'athlète (compétitions passées) */}
+      {comp.athlete_comment ? (
+        <div style={{ marginTop: 10, background: C.acS, borderRadius: 4, padding: "8px 10px" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+            Retour de l'athlète
+          </div>
+          <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{comp.athlete_comment}</div>
+        </div>
+      ) : dimmed && (
+        <div style={{ marginTop: 8, fontSize: 11, color: C.tx3, fontStyle: "italic" }}>
+          Pas encore de retour de l'athlète
         </div>
       )}
     </div>
