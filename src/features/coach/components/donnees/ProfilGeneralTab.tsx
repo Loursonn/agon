@@ -9,7 +9,8 @@
  */
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { User, Flame, Moon, ListChecks, Award, Zap, Footprints } from "lucide-react";
+import { User, Flame, Moon, ListChecks, Award, Zap, Footprints, LayoutDashboard, Lock } from "lucide-react";
+import { HOME_LOCKED_SECTIONS, HOME_SECTIONS, useHomeHiddenSections, useSetHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachPerfNotification from "@/components/coach/CoachPerfNotification";
@@ -283,6 +284,13 @@ export function ProfilGeneralTab() {
         </div>
       </Section>
 
+      {/* ── 1a. Accueil de l'athlète (sections visibles) ── */}
+      {athleteId && (
+        <Section icon={LayoutDashboard} title="Accueil de l'athlète" subtitle="Sections visibles sur sa page Aujourd'hui — masquer ne supprime rien" color={C.ac}>
+          <HomeSectionsEditor athleteId={athleteId} />
+        </Section>
+      )}
+
       {/* ── 1b. Volume de course à pied ── */}
       <Section icon={Footprints} title="Volume de course à pied" subtitle="Km réalisés : semaine, 7 jours glissants, 8 dernières semaines" color={C.ac}>
         <RunningVolumeCard volume={runVolume} isLoading={runLoading} />
@@ -415,6 +423,56 @@ export function ProfilGeneralTab() {
       <Section icon={Award} title="Validations de performances" subtitle="Performances déclarées par l'athlète à valider" color={COL.perfs}>
         <CoachPerfNotification coachId={athleteId} athleteId={athleteId} C={C} />
       </Section>
+    </div>
+  );
+}
+
+// ── Accueil de l'athlète : sections visibles ──────────────────────────────────
+
+function HomeSectionsEditor({ athleteId }: { athleteId: string }) {
+  const { hidden } = useHomeHiddenSections(athleteId);
+  const setHidden = useSetHomeHiddenSections(athleteId);
+
+  const toggle = (key: string) =>
+    setHidden.mutate(hidden.includes(key) ? hidden.filter((k) => k !== key) : [...hidden, key]);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 6 }}>
+      {HOME_LOCKED_SECTIONS.map((label) => (
+        <div
+          key={label}
+          title="Toujours visible"
+          style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 4,
+            background: C.s2, border: `1px solid ${C.brd}`, color: C.tx3, fontSize: 12,
+          }}
+        >
+          <Lock size={13} style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{label}</span>
+          <span style={{ fontSize: 10 }}>toujours</span>
+        </div>
+      ))}
+      {HOME_SECTIONS.map(({ key, label }) => {
+        const visible = !hidden.includes(key);
+        return (
+          <label
+            key={key}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 4,
+              background: visible ? C.acS : C.s2, border: `1px solid ${visible ? C.ac + "50" : C.brd}`,
+              color: visible ? C.tx : C.tx3, fontSize: 12, cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={visible}
+              onChange={() => toggle(key)}
+              style={{ accentColor: C.ac, width: 15, height: 15, flexShrink: 0, cursor: "pointer" }}
+            />
+            <span style={{ flex: 1 }}>{label}</span>
+          </label>
+        );
+      })}
     </div>
   );
 }

@@ -975,6 +975,7 @@ export function DayDetailsDrawer({
   const competitions = dayEvents.filter((e) => e.type === "competition");
   const energyEvents = dayEvents.filter((e) => e.type === "energy");
   const freeEvents   = dayEvents.filter((e) => e.type === "free_activity");
+  const lifeEvents   = dayEvents.filter((e) => e.type === "life_event");
 
   const wKey = dateStr.replace(/-/g, "");
   const wellnessDay = (wellnessHistory?.[wKey] ?? wellnessHistory?.[dateStr]) ?? null;
@@ -1039,7 +1040,7 @@ export function DayDetailsDrawer({
                 ? format(day, "d MMMM yyyy", { locale: fr })
                 : dayEvents.length === 0
                   ? "Aucun événement"
-                  : `${workouts.length + energyEvents.length + freeEvents.length + tests.length + competitions.length} événement${dayEvents.length > 1 ? "s" : ""}`}
+                  : `${dayEvents.length} événement${dayEvents.length > 1 ? "s" : ""}`}
             </div>
           </div>
           <button
@@ -1117,6 +1118,30 @@ export function DayDetailsDrawer({
                   )}
                 </button>
               ))}
+
+              {/* Événements de vie (renseignés par l'athlète) */}
+              {lifeEvents.map((e) => {
+                const ds = String(e.raw?.date_start ?? e.date);
+                const de = String(e.raw?.date_end ?? ds);
+                const fmt = (d: string) => format(new Date(d + "T12:00:00"), "d MMM", { locale: fr });
+                return (
+                  <div
+                    key={e.id}
+                    style={{
+                      borderRadius: 6, border: "1px solid " + C.brdL, background: C.s2,
+                      borderLeft: "3px solid " + C.tx3, padding: "10px 14px",
+                    }}
+                  >
+                    <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      Événement de l'athlète
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginTop: 1 }}>{e.title}</div>
+                    <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
+                      {ds === de ? fmt(ds) : `Du ${fmt(ds)} au ${fmt(de)}`}
+                    </div>
+                  </div>
+                );
+              })}
 
               {dayEvents.length === 0 && (
                 <div style={{ textAlign: "center", padding: "40px 0", color: C.tx3, fontSize: 13 }}>

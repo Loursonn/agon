@@ -37,6 +37,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-18-accueil-assiduite-evenements",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "Accueil personnalisable, assiduité juste, événements visibles",
+    summary: "Choisis ce que chaque athlète voit sur son accueil, l'assiduité compte enfin toutes les séances prescrites, et les événements de l'athlète s'affichent quand tu ouvres un jour du planning.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Profil athlète → Général → « Accueil de l'athlète » : coche les sections visibles sur sa page Aujourd'hui. Masquer ne supprime rien. Par défaut tout est affiché sauf l'Alimentation.",
+          "Séance du jour, Message du coach et Jour de compétition restent toujours visibles.",
+          "Assiduité (7 j / 30 j / 3 mois) = séances réalisées / séances prescrites, muscu ET énergie / spécifique. Les séances retirées ou déplacées ne comptent plus comme manquées, et la séance du jour ne compte qu'une fois faite.",
+          "Planification → Mois : en cliquant sur un jour, les événements de l'athlète (déplacement, vacances, horaires…) apparaissent en haut du détail.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-18-profil-athlete-volume-course",
     date: "2026-10-18",
     kind: "feature",

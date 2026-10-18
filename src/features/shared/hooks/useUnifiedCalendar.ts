@@ -259,10 +259,12 @@ export function useUnifiedCalendar(
 
       // Expand multi-day life events into one event per day
       for (const le of lifeEvents) {
-        const ds = new Date(le.date_start + "T00:00:00");
-        const de = new Date(le.date_end + "T00:00:00");
+        // Midi local + date locale : toISOString() sur minuit local décale
+        // d'un jour en UTC+1/+2
+        const ds = new Date(le.date_start + "T12:00:00");
+        const de = new Date((le.date_end ?? le.date_start) + "T12:00:00");
         for (let d = new Date(ds); d <= de; d.setDate(d.getDate() + 1)) {
-          const iso = d.toISOString().slice(0, 10);
+          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
           if (iso < start || iso > end) continue;
           events.push({
             id:      le.id + "_" + iso,

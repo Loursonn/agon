@@ -156,13 +156,22 @@ export function recentProgress(prs: PRRow[], days: number, today = new Date()): 
   return out.sort((a, b) => ((b.gain ?? 0) / (b.prevKg || 1)) - ((a.gain ?? 0) / (a.prevKg || 1)) || (a.date < b.date ? 1 : -1));
 }
 
-// ── Assiduité : séances faites / séances prévues jusqu'à aujourd'hui ──────────
+// ── Assiduité : séances réalisées / séances prescrites ───────────────────────
+// Séances prescrites = muscu (workout_logs) + énergie / spécifique
+// (energy_session_assignments) de la période, hors « skipped » (séance retirée
+// ou déplacée par le coach / l'athlète : plus prescrite à cette date).
+// Une séance du jour pas encore faite n'est pas encore due : comptée seulement
+// une fois réalisée.
 
 export interface WorkoutRow { scheduled_date: string; status: string }
 export interface Attendance { done: number; planned: number; pct: number | null }
 
-export function attendance(logs: WorkoutRow[], w: Window): Attendance {
-  const inP = logs.filter(l => l.scheduled_date && inWin(l.scheduled_date, w));
+export function attendance(logs: WorkoutRow[], w: Window, today = localISO(new Date())): Attendance {
+  const inP = logs.filter(l =>
+    l.scheduled_date && inWin(l.scheduled_date, w)
+    && l.status !== "skipped"
+    && (l.scheduled_date < today || l.status === "completed"),
+  );
   const done = inP.filter(l => l.status === "completed").length;
   const planned = inP.length;
   return { done, planned, pct: planned ? Math.round((done / planned) * 100) : null };

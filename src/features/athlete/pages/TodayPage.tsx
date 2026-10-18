@@ -25,6 +25,7 @@ import { MensurationsDrawer } from "@/features/athlete/components/MensurationsDr
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { COMPETITION_META } from "@/types/planning";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
+import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
 import type { DayProgram } from "@/features/shared/hooks/useWeekProgram";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
@@ -770,6 +771,8 @@ export default function TodayPage() {
   const { data: lifeEvents = [] } = useLifeEvents(athleteId ?? "");
   const { mutate: deleteLifeEvent } = useDeleteLifeEvent();
   const myCoachId = profile?.coach_id;
+  // Sections de l'accueil masquées par le coach
+  const { isVisible: show } = useHomeHiddenSections(athleteId);
 
   // `wellnessHistory` est écrit par saveWellness() avec la clé compacte de
   // todayKey() ("20260817"), alors que tout TodayPage raisonne en ISO à tirets.
@@ -954,9 +957,11 @@ export default function TodayPage() {
             Bonjour, {athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlete"}
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <CitationDuJour />
-          </div>
+          {show("quote") && (
+            <div style={{ marginBottom: 16 }}>
+              <CitationDuJour />
+            </div>
+          )}
 
           {unreadRetours.length > 0 && (
             <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -973,6 +978,7 @@ export default function TodayPage() {
             </div>
           )}
 
+          {show("wellness") && (<>
           {readiness ? (
             <div
               style={{
@@ -1029,6 +1035,7 @@ export default function TodayPage() {
               Modifier
             </button>
           )}
+          </>)}
         </div>
 
         {/* Section 1a — Message du coach */}
@@ -1058,7 +1065,7 @@ export default function TodayPage() {
         )}
 
         {/* Section 1b — Nutrition du jour */}
-        {todayNutrition && (() => {
+        {show("nutrition") && todayNutrition && (() => {
           const { consumed, ev, zone, meta, log: nl } = todayNutrition;
           const statusC = ev ? (ev.status === "ok" ? C.g : ev.status === "close" ? C.o : C.r) : null;
           const zoneLabel = zone
@@ -1128,7 +1135,7 @@ export default function TodayPage() {
         })()}
 
         {/* Section 1b — Test / biométrie du jour (au-dessus de la séance) */}
-        {todayTests.length > 0 && (
+        {show("test") && todayTests.length > 0 && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
               {todayTests.length > 1 ? "Tests du jour" : "Test du jour"}
@@ -1340,6 +1347,7 @@ export default function TodayPage() {
         )}
 
         {/* Section 3 — Planning semaine horizontal */}
+        {show("week") && (<>
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
             Cette semaine
@@ -1443,9 +1451,10 @@ export default function TodayPage() {
             })}
           </div>
         </div>
+        </>)}
 
         {/* Section 4 — Récap hier */}
-        {(yesterdayWellness || yesterdaySessName) && (
+        {show("yesterday") && (yesterdayWellness || yesterdaySessName) && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
               Hier
@@ -1480,6 +1489,7 @@ export default function TodayPage() {
         )}
 
         {/* Section 4 — Prochaine compétition */}
+        {show("next_comp") && (<>
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -1541,6 +1551,7 @@ export default function TodayPage() {
             </div>
           )}
         </div>
+        </>)}
 
         {/* Section 4b — Compétitions à commenter (jusqu'à ce que le bilan soit rempli) */}
         {uncommentedComps.length > 0 && (
@@ -1557,6 +1568,7 @@ export default function TodayPage() {
         )}
 
         {/* Section 4c — Mes événements (life events) */}
+        {show("events") && (<>
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -1611,9 +1623,10 @@ export default function TodayPage() {
             );
           })()}
         </div>
+        </>)}
 
         {/* Section 5 — Tendance de forme */}
-        {wellnessTrendHasData && (
+        {show("trend") && wellnessTrendHasData && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
