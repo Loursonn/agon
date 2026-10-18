@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { SKEYS, sLoad, sSave, cycleKey, sSaveCycle } from "@/lib/storage";
+import { SKEYS, sLoad, sLoadResult, sSave, cycleKey, sSaveCycle } from "@/lib/storage";
 import { DEF_SESSIONS, DEF_BLOCK_CONFIG } from "@/lib/exercises";
 import { getNutritionStrategy } from "@/lib/nutrition";
 import { todayKey } from "@/lib/date";
@@ -116,8 +116,10 @@ export function useAthletePersistedState(athleteId: string) {
 
       // ── Cycle ouvert + migration legacy → par-cycle (une seule fois) ────────
       const activeCycleId = await determineActiveCycleId(athleteId);
-      const migrated = await load<boolean>("asp:percycle_migrated", false);
-      if (!migrated) {
+      // Lecture en erreur (réseau, session expirée) ≠ « pas encore migré » :
+      // dans le doute on ne migre pas, on réessaiera au prochain chargement.
+      const migratedRes = await sLoadResult<boolean>("asp:percycle_migrated", athleteId);
+      if (migratedRes.ok && !migratedRes.value) {
         // Le drapeau "migré" ne doit être posé QUE si les recopies ont réussi.
         // Sinon une écriture ratée (réseau) marquait la migration faite alors
         // que le cycle restait vide : programme et séances perdus définitivement.
@@ -126,8 +128,10 @@ export function useAthletePersistedState(athleteId: string) {
           // Garde-fou : ne recopier le legacy QUE si le cycle actif n'a pas déjà
           // ses propres données scopées (sinon on écraserait un cycle créé via
           // le nouvel assistant). Le blob legacy appartenait au cycle actif.
-          const alreadyScoped = await sLoad<ExosMap | null>(cycleKey(SKEYS.exos, activeCycleId), null, athleteId);
-          if (alreadyScoped === null) {
+          const scopedRes = await sLoadResult<ExosMap>(cycleKey(SKEYS.exos, activeCycleId), athleteId);
+          if (!scopedRes.ok) {
+            copiesOk = false; // impossible de savoir : ne surtout pas écraser
+          } else if (scopedRes.value === undefined) {
             try {
               const [le, lsess, lcs] = await Promise.all([
                 load<ExosMap | null>(SKEYS.exos, null),
@@ -164,28 +168,30 @@ export function useAthletePersistedState(athleteId: string) {
       const seKey = id ? cycleKey(SKEYS.sessions, id)  : SKEYS.sessions;
       const csKey = id ? cycleKey(SKEYS.completed, id) : SKEYS.completed;
       const [e, sess, cs] = await Promise.all([
-        load<ExosMap>(exKey, {}),
-        load<Session[]>(seKey, DEF_SESSIONS as Session[]),
-        load<Record<number, string[]>>(csKey, {}),
+        sLoadResult<ExosMap>(exKey, athleteId),
+        sLoadResult<Session[]>(seKey, athleteId),
+        sLoadResult<Record<number, string[]>>(csKey, athleteId),
       ]);
       if (cancelled) return;
       openCycleRef.current = id;
-      const exosVal = e || {};
-      const sessVal = sess && sess.length ? sess : (DEF_SESSIONS as Session[]);
-      const compVal = cs || {};
+      const exosVal = e.value || {};
+      const sessVal = sess.value && sess.value.length ? sess.value : (DEF_SESSIONS as Session[]);
+      const compVal = cs.value || {};
       setExosRaw(exosVal);
       setSessionsRaw(sessVal);
       setCompletedSessionsRaw(compVal);
       // Miroir legacy : les vues coach (overview, retours, missed) lisent encore
       // les clés globales. On les aligne sur le cycle ouvert pour ne rien régresser.
+      // Uniquement les valeurs réellement lues en base : jamais un défaut issu
+      // d'une erreur de lecture (réseau, session expirée…), qui écraserait les données.
       if (id) {
-        save(SKEYS.exos, exosVal).catch(() => {});
-        save(SKEYS.sessions, sessVal).catch(() => {});
-        save(SKEYS.completed, compVal).catch(() => {});
+        if (e.ok && e.value !== undefined)       save(SKEYS.exos, e.value).catch(() => {});
+        if (sess.ok && sess.value?.length)       save(SKEYS.sessions, sess.value).catch(() => {});
+        if (cs.ok && cs.value !== undefined)     save(SKEYS.completed, cs.value).catch(() => {});
       }
     })();
     return () => { cancelled = true; };
-  }, [openCycleId, athleteId, load, save]);
+  }, [openCycleId, athleteId, save]);
 
   // ── Visibility settings + test sessions from Supabase ────────────────────
   useEffect(() => {
