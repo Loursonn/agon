@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import {
-  format, addMonths, subMonths, startOfMonth,
-  addWeeks, subWeeks, startOfWeek,
+  format, addMonths, subMonths, startOfMonth, endOfMonth,
+  addWeeks, subWeeks, startOfWeek, addDays,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare, Footprints } from "lucide-react";
+import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { C } from "@/lib/theme";
 import { MuscleVolumeCard } from "@/components/athlete/StatsViews";
 import { stC, ALL_BZ } from "@/lib/muscles";
@@ -30,7 +31,7 @@ type DetailView = "wellness" | "workouts" | "tests" | "competitions" | "nutritio
 
 export default function RetoursPage() {
   const { athleteId } = useParams<{ athleteId: string }>();
-  const { goals, exos, exMeta, sets, sessions, weeksArr, tw, currentWeek, injuries, activeInjuries } = useAthleteContext();
+  const { goals, exos, exMeta, sets, sessions, weeksArr, tw, currentWeek, injuries, activeInjuries, freeSessions } = useAthleteContext();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [selectedWeek, setSelectedWeek]   = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -113,6 +114,12 @@ export default function RetoursPage() {
   const testsVal = kpiData?.tests_completed
     ?? (weekCurrent ? weekCurrent.test_sessions.filter(t => t.completed).length : null);
 
+  // Km de course sur la période affichée (semaine ou mois)
+  const periodStart = format(viewMode === "month" ? selectedMonth : selectedWeek, "yyyy-MM-dd");
+  const periodEnd   = format(viewMode === "month" ? endOfMonth(selectedMonth) : addDays(selectedWeek, 6), "yyyy-MM-dd");
+  const { kmBetween } = useRunningVolume(athleteId, freeSessions, periodStart);
+  const runKm = kmBetween(periodStart, periodEnd);
+
   const compsVal = kpiData?.competitions.length
     ?? (weekCurrent ? weekCurrent.competitions.length : null);
 
@@ -179,11 +186,12 @@ export default function RetoursPage() {
       </div>
 
       {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 140px)", justifyContent: "center", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, 140px)", justifyContent: "center", gap: 10, marginBottom: 16 }}>
         {[
           { icon: <Heart size={14} style={{ color: "#66F03C" }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
           { icon: <Dumbbell size={14} style={{ color: C.ac }} />,            title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate}%` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
           { icon: <FlaskConical size={14} style={{ color: C.b }} />,         title: "Tests",           value: testsVal,    subtitle: undefined,                                                onClick: () => setDetailView("tests")        },
+          { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km" },
           { icon: <Trophy size={14} style={{ color: "#F5A623" }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
           { icon: <UtensilsCrossed size={14} style={{ color: "#F59E0B" }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
         ].map((kpi) => (

@@ -37,6 +37,39 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-18-profil-athlete-volume-course",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "Profil athlète refait + volume de course à pied",
+    summary: "Antécédents médicaux détaillés avec photos et PDF, km de course calculés chaque semaine, et un tuto pour récupérer les données Strava de tes athlètes.",
+    sections: [
+      {
+        title: "Antécédents médicaux",
+        points: [
+          "Chaque antécédent a sa fiche : type, zone, date, diagnostic du médecin, traitement, statut (guéri / en cours) et notes.",
+          "Photos (radio, IRM, ordonnance) compressées automatiquement et comptes rendus PDF, 10 Mo max par fichier.",
+          "Tu peux aussi les ajouter ou les corriger : Profil athlète → Général.",
+        ],
+      },
+      {
+        title: "Volume de course à pied",
+        points: [
+          "En fin de séance énergie ou spécifique, l'athlète indique l'activité faite et les km courus (pré-remplis avec la distance prévue).",
+          "En fin de séance de muscu, un champ facultatif « J'ai couru pendant la séance » ; les activités libres « Course » comptent aussi.",
+          "Km de la semaine, des 7 derniers jours et graphique des 8 dernières semaines : dans le profil de l'athlète, dans Profil athlète → Général, et une tuile « Course à pied » dans Retours.",
+        ],
+      },
+      {
+        title: "Profil côté athlète",
+        points: [
+          "Identité modifiable, poids avec les 3 dernières pesées et ton poids cible en repère.",
+          "Vidéo + étapes pour télécharger ses données Strava et te transférer l'e-mail reçu (ton adresse est affichée avec un bouton copier).",
+          "Les cartes Volume programme, Wellness, Poids 30 jours et Records ont été retirées du profil.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-18-competition-dans-le-planning",
     date: "2026-10-18",
     kind: "feature",

@@ -9,17 +9,18 @@
  */
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { User, Flame, Moon, ListChecks, Award, Zap } from "lucide-react";
+import { User, Flame, Moon, ListChecks, Award, Zap, Footprints } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachPerfNotification from "@/components/coach/CoachPerfNotification";
 import type { Profile } from "@/hooks/useAuth";
 import type { Goals, Habit } from "@/features/shared/types/athlete";
-import { useMedicalHistory } from "@/features/shared/hooks/useMedicalHistory";
 import { useHyroxFlag } from "@/features/shared/hooks/hyrox/useHyroxFlag";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { formatMmSs } from "@/lib/time";
-import { MedicalReadOnly } from "@/features/athlete/pages/ProfilPage";
+import { MedicalEntriesSection } from "@/features/shared/components/medical/MedicalEntriesSection";
+import { RunningVolumeCard } from "@/features/shared/components/RunningVolumeCard";
+import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { localISO } from "@/lib/date";
 
 // ── Palette des blocs ─────────────────────────────────────────────────────────
@@ -220,12 +221,13 @@ export function ProfilGeneralTab() {
     athleteId, athleteProfile, onEditProfile,
     nutritionStrategy, goals, setGoals,
     habits, habitLogs, habitEnabled, habitToggling, habitToggleErr, toggleHabitEnabled,
+    freeSessions,
   } = useAthleteContext();
 
   const navigate = useNavigate();
   const { athleteId: urlAthleteId } = useParams<{ athleteId: string }>();
   const ap = athleteProfile as Profile | null;
-  const { data: medicalData } = useMedicalHistory(athleteId);
+  const { volume: runVolume, isLoading: runLoading } = useRunningVolume(athleteId ?? undefined, freeSessions);
   const { enabled: hyroxEnabled, toggling: hyroxToggling, toggle: toggleHyrox } = useHyroxFlag(athleteId);
   const { data: hyroxRaces = [] } = useHyroxResults(hyroxEnabled ? athleteId : undefined);
 
@@ -234,7 +236,6 @@ export function ProfilGeneralTab() {
         .split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
     : "?";
 
-  const hasMedical = !!(medicalData && (medicalData.conditions || medicalData.allergies || medicalData.surgeries.length > 0 || medicalData.past_injuries.length > 0 || medicalData.current_treatments || medicalData.medical_notes));
 
   const ns = nutritionStrategy;
   const SC: Record<string, string> = { maintenance: C.b, seche: C.r, prise_de_masse: C.g };
@@ -276,14 +277,15 @@ export function ProfilGeneralTab() {
         {/* Antécédents médicaux */}
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.brd}` }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-            Antécédents médicaux <span style={{ fontWeight: 400, textTransform: "none" }}>— renseignés par l'athlète</span>
+            Antécédents médicaux <span style={{ fontWeight: 400, textTransform: "none" }}>— modifiables par l'athlète et par toi</span>
           </div>
-          {hasMedical ? (
-            <MedicalReadOnly medical={medicalData!} />
-          ) : (
-            <div style={{ fontSize: 12, color: C.tx3 }}>Aucun antécédent renseigné</div>
-          )}
+          {athleteId && <MedicalEntriesSection athleteId={athleteId} canEdit />}
         </div>
+      </Section>
+
+      {/* ── 1b. Volume de course à pied ── */}
+      <Section icon={Footprints} title="Volume de course à pied" subtitle="Km réalisés : semaine, 7 jours glissants, 8 dernières semaines" color={C.ac}>
+        <RunningVolumeCard volume={runVolume} isLoading={runLoading} />
       </Section>
 
       {/* ── 2. Composition & Nutrition ── */}

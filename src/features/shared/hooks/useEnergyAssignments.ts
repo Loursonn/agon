@@ -8,6 +8,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
+import { runningVolumeKey } from "@/features/shared/hooks/useRunningVolume";
+import type { ActivityType } from "@/features/shared/components/RunDistanceInput";
 import { syncDocAssignmentsFromEnergy } from "./fiches/syncDocAssignments";
 import { invalidateSessionStatus } from "./invalidateSessionStatus";
 import type {
@@ -193,7 +195,15 @@ export function useCompleteEnergyAssignment() {
       notes,
       actual_duration_min,
       activity_url,
-    }: { id: string; athleteId: string; block_logs: BlockLogs; notes?: string; actual_duration_min?: number | null; activity_url?: string | null }) => {
+      activity_type,
+      distance_km,
+    }: {
+      id: string; athleteId: string; block_logs: BlockLogs; notes?: string;
+      actual_duration_min?: number | null; activity_url?: string | null;
+      /** Activité réellement faite (volume de course si « course ») */
+      activity_type?: ActivityType | null;
+      distance_km?: number | null;
+    }) => {
       const patch: Record<string, unknown> = {
         status: "completed",
         block_logs,
@@ -202,6 +212,8 @@ export function useCompleteEnergyAssignment() {
       if (notes != null) patch.notes = notes;
       if (actual_duration_min != null) patch.actual_duration_min = actual_duration_min;
       if (activity_url != null) patch.activity_url = activity_url;
+      if (activity_type !== undefined) patch.activity_type = activity_type;
+      if (distance_km !== undefined) patch.distance_km = distance_km;
       const { error } = await supabase
         .from("energy_session_assignments")
         .update(patch)
@@ -225,6 +237,7 @@ export function useCompleteEnergyAssignment() {
       qc.invalidateQueries({ queryKey: ["cal", athleteId] });
       qc.invalidateQueries({ queryKey: QK.weeklyRetours() });
       qc.invalidateQueries({ queryKey: QK.monthlyRetours() });
+      qc.invalidateQueries({ queryKey: runningVolumeKey(athleteId) });
       toast.success("Séance validée !");
     },
     onError: (err) => {

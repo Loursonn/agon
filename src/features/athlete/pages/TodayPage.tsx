@@ -25,6 +25,7 @@ import { MensurationsDrawer } from "@/features/athlete/components/MensurationsDr
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { COMPETITION_META } from "@/types/planning";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
+import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
 import type { DayProgram } from "@/features/shared/hooks/useWeekProgram";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
@@ -453,6 +454,7 @@ function EnergyPreviewOverlay({
   const [localBlocks, setLocalBlocks]   = useState<BlockLogs>({});
   const [globalNote, setGlobalNote]     = useState("");
   const [actualDuration, setActualDuration] = useState<string>("");
+  const [runDist, setRunDist]           = useState<RunDistanceValue>(initialRunDistance());
   const [rpeSelected, setRpeSelected]   = useState<number | null>(null);
 
   const { data: session, isLoading, isError } = useEnergySession(sessionId);
@@ -473,6 +475,7 @@ function EnergyPreviewOverlay({
     }
     if (session.total_duration_s != null)
       setActualDuration(String(Math.round(session.total_duration_s / 60)));
+    setRunDist(initialRunDistance(session.total_distance_m));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id]);
 
@@ -484,6 +487,7 @@ function EnergyPreviewOverlay({
       block_logs: logs,
       notes: globalNote || undefined,
       actual_duration_min: durationMin && !isNaN(durationMin) ? durationMin : undefined,
+      ...runDistancePayload(runDist),
     });
   }
 
@@ -667,6 +671,10 @@ function EnergyPreviewOverlay({
                   boxSizing: "border-box",
                 }}
               />
+            </div>
+            {/* Activité + km (volume de course) */}
+            <div style={{ marginTop: 16 }}>
+              <RunDistanceInput value={runDist} onChange={setRunDist} />
             </div>
             {/* Note globale */}
             <textarea
