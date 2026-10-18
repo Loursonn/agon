@@ -398,7 +398,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
             <div style={{ fontSize: 13, color: C.tx3, marginBottom: 20 }}>Êtes-vous sûr de vouloir vous déconnecter ?</div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowLogoutConfirm(false)} style={{ flex: 1, padding: "12px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-              <button onClick={async () => { const { supabase } = await import("@/integrations/supabase/client"); await supabase.auth.signOut(); window.location.href = "/login"; }} style={{ flex: 1, padding: "12px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Déconnecter</button>
+              <button onClick={async () => { const { supabase } = await import("@/integrations/supabase/client"); await supabase.auth.signOut({ scope: "local" }); window.location.href = "/login"; }} style={{ flex: 1, padding: "12px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Déconnecter</button>
             </div>
           </div>
         </div>

@@ -37,6 +37,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-18-deconnexion-appareil",
+    date: "2026-10-18",
+    kind: "fix",
+    title: "Déconnexion limitée à l'appareil utilisé",
+    summary: "Se déconnecter sur un appareil ne te déconnecte plus de tous les autres (téléphone, ordinateur…).",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bouton Déconnexion (coach et athlète) ne ferme que la session de l'appareil sur lequel tu cliques.",
+          "Après un changement de mot de passe, toutes les sessions restent fermées par sécurité.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-18-accueil-assiduite-evenements",
     date: "2026-10-18",
     kind: "feature",

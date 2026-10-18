@@ -277,7 +277,7 @@ export default function ProfileDrawer({ onClose }: Props) {
 
         {/* Déconnexion */}
         <div style={{ marginTop: "auto", paddingTop: 8 }}>
-          <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }} style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <button onClick={async () => { await supabase.auth.signOut({ scope: "local" }); window.location.href = "/login"; }} style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <span>⏻</span><span>Déconnexion</span>
           </button>
         </div>
