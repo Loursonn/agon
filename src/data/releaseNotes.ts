@@ -37,6 +37,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-18-bilan-competition",
+    date: "2026-10-18",
+    kind: "fix",
+    title: "Bilans de compétition : enregistrés et lisibles",
+    summary: "Tes athlètes peuvent de nouveau enregistrer leur retour après une compétition, et tu le retrouves directement dans leur planification.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Côté athlète : le retour sur une compétition passée s'enregistre sans « Erreur lors de l'enregistrement ».",
+          "Planification de l'athlète → Compétitions : le retour de l'athlète s'affiche sous chaque compétition passée (ou « Pas encore de retour »).",
+          "Dans la timeline, cliquer sur une compétition affiche aussi le retour de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-15-coach-athlete-se-retirer",
     date: "2026-10-15",
     kind: "fix",
