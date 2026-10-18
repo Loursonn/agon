@@ -63,6 +63,12 @@ export default function RetoursPage() {
   }, [weekStartStr]);
 
   const isLoading = viewMode === "month" ? monthLoading : weekLoading;
+  // Km de course sur la période affichée (semaine ou mois) — hook avant tout return anticipé
+  const periodStart = format(viewMode === "month" ? selectedMonth : selectedWeek, "yyyy-MM-dd");
+  const periodEnd   = format(viewMode === "month" ? endOfMonth(selectedMonth) : addDays(selectedWeek, 6), "yyyy-MM-dd");
+  const { kmBetween } = useRunningVolume(athleteId, freeSessions, periodStart);
+  const runKm = kmBetween(periodStart, periodEnd);
+
   if (isLoading) return <PageSkeleton />;
 
   // ── Labels ────────────────────────────────────────────────────────────────
@@ -113,12 +119,6 @@ export default function RetoursPage() {
 
   const testsVal = kpiData?.tests_completed
     ?? (weekCurrent ? weekCurrent.test_sessions.filter(t => t.completed).length : null);
-
-  // Km de course sur la période affichée (semaine ou mois)
-  const periodStart = format(viewMode === "month" ? selectedMonth : selectedWeek, "yyyy-MM-dd");
-  const periodEnd   = format(viewMode === "month" ? endOfMonth(selectedMonth) : addDays(selectedWeek, 6), "yyyy-MM-dd");
-  const { kmBetween } = useRunningVolume(athleteId, freeSessions, periodStart);
-  const runKm = kmBetween(periodStart, periodEnd);
 
   const compsVal = kpiData?.competitions.length
     ?? (weekCurrent ? weekCurrent.competitions.length : null);
