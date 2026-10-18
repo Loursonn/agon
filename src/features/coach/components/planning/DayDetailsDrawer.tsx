@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { X, Trash2, Plus, ChevronLeft, Pencil, ChevronDown, ChevronUp, Check, Minus } from "lucide-react";
+import { X, Trash2, Plus, ChevronLeft, Pencil, ChevronDown, ChevronUp, Check, Minus, Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { C } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
@@ -10,7 +10,7 @@ import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalend
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import type { Competition } from "@/types/planning";
+import { competitionDayLabel, type Competition } from "@/types/planning";
 import type { WellnessData, AthleteModifications } from "@/features/shared/types/athlete";
 import type { NutritionDailyLog } from "@/lib/nutrition";
 import { CompetitionFormModal } from "./CompetitionFormModal";
@@ -951,6 +951,7 @@ export function DayDetailsDrawer({
 }: DayDetailsDrawerProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(initialSelectedEvent ?? null);
   const [editingComp,   setEditingComp]   = useState<Competition | null>(null);
+  const [creatingComp,  setCreatingComp]  = useState(false);
   const [overrideLogId, setOverrideLogId] = useState<string | null>(null);
   const [energyPreview, setEnergyPreview] = useState<CalEvent | null>(null);
   const { user } = useAuth();
@@ -1074,21 +1075,24 @@ export function DayDetailsDrawer({
             )
           ) : (
             <>
-              {/* Competition banner — clickable to edit */}
+              {/* Jour de compétition — en tête du jour, cliquable pour modifier */}
               {competitions.map((e) => (
                 <button
                   key={e.id}
                   onClick={() => setEditingComp(e.raw as unknown as Competition)}
                   style={{
                     width: "100%", borderRadius: 6, overflow: "hidden",
-                    border: "1px solid " + C.coach + "40",
-                    background: "linear-gradient(135deg, rgba(244,114,182,0.12) 0%, rgba(244,114,182,0.05) 100%)",
+                    border: "1px solid " + C.r + "60", background: C.rS,
                     cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
+                    padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8,
                   }}
                 >
-                  <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 22, flexShrink: 0 }}></span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Trophy size={20} color={C.r} style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        {competitionDayLabel(e.raw?.type as string | undefined)}
+                      </div>
                       <div style={{ fontSize: 14, fontWeight: 800, color: C.tx }}>{e.title}</div>
                       {e.raw?.location && (
                         <div style={{ fontSize: 11, color: C.tx3, marginTop: 1 }}>{String(e.raw.location)}</div>
@@ -1097,13 +1101,20 @@ export function DayDetailsDrawer({
                     {e.raw?.priority && (
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-                        background: "#F5A62320", color: "#F5A623",
+                        background: C.r + "20", color: C.r, flexShrink: 0,
                       }}>
                         Priorité {String(e.raw.priority)}
                       </span>
                     )}
-                    <span style={{ fontSize: 11, color: C.tx3 }}></span>
                   </div>
+                  {e.raw?.athlete_comment ? (
+                    <div style={{ background: C.s1, borderRadius: 4, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.4px" }}>Retour de l'athlète</div>
+                      <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{String(e.raw.athlete_comment)}</div>
+                    </div>
+                  ) : dateStr <= format(new Date(), "yyyy-MM-dd") && (
+                    <div style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>Pas encore de retour de l'athlète</div>
+                  )}
                 </button>
               ))}
 
@@ -1198,9 +1209,34 @@ export function DayDetailsDrawer({
               <Plus size={15} />
               Ajouter séance / test
             </button>
+            {competitions.length === 0 && (
+              <button
+                onClick={() => setCreatingComp(true)}
+                style={{
+                  width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 6,
+                  border: "1px solid " + C.r + "40", background: C.rS,
+                  color: C.r, fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                }}
+              >
+                <Trophy size={14} />
+                Ajouter une compétition ce jour
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {/* Ajout d'une compétition sur ce jour */}
+      {creatingComp && (
+        <CompetitionFormModal
+          athleteId={athleteId}
+          coachId={user?.id ?? coachId}
+          initialDate={dateStr}
+          onClose={() => setCreatingComp(false)}
+        />
+      )}
 
       {/* Competition edit modal */}
       {editingComp && (

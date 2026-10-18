@@ -3,7 +3,8 @@
  * avec création / édition / suppression via CompetitionFormModal.
  */
 import { useState } from "react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useDeleteCompetition } from "@/hooks/useCompetitions";
 import { format, parseISO, isFuture, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -55,22 +56,6 @@ function useComps(athleteId: string) {
   });
 }
 
-function useDeleteComp() {
-  const qc = useQueryClient();
-  return useMutation<void, Error, { id: string; athlete_id: string }>({
-    mutationFn: async ({ id }) => {
-      const { error } = await supabase
-        .from("competitions")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["competitions", vars.athlete_id] });
-    },
-  });
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -80,7 +65,7 @@ interface Props {
 
 export function CompetitionsView({ athleteId, coachId }: Props) {
   const { data: competitions = [], isLoading } = useComps(athleteId);
-  const { mutate: deleteComp } = useDeleteComp();
+  const { mutate: deleteComp } = useDeleteCompetition();
   const [formComp,   setFormComp]   = useState<Comp | null | "new">(null);
   const [delConfirm, setDelConfirm] = useState<string | null>(null);
 

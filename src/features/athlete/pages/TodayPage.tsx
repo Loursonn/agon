@@ -24,7 +24,7 @@ import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import { MensurationsDrawer } from "@/features/athlete/components/MensurationsDrawer";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { COMPETITION_META } from "@/types/planning";
-import { AthleteCompetitionCard } from "@/features/athlete/components/AthleteCompetitionCard";
+import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
 import type { DayProgram } from "@/features/shared/hooks/useWeekProgram";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
@@ -36,7 +36,7 @@ import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
 import { LifeEventFormModal } from "@/features/athlete/components/LifeEventFormModal";
 import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
-import { Plus, Trash2, CalendarDays } from "lucide-react";
+import { Plus, Trash2, CalendarDays, Trophy } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -120,10 +120,11 @@ interface DayPreviewSheetProps {
   onAddActivity: (date: string) => void;
   onEditActivity: (session: FreeSession) => void;
   onTestPress: (id: string) => void;
+  competitionsByDate: Map<string, CompetitionDayCardData[]>;
   viewOnly?: boolean;
 }
 
-function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, viewOnly }: DayPreviewSheetProps) {
+function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly }: DayPreviewSheetProps) {
   if (!day) return null;
   const date = new Date(day.date + "T12:00:00");
   const dateLabel = `${DAYS_FULL_FR[day.dow]} ${date.getDate()} ${MONTHS_FR[date.getMonth()]}`;
@@ -132,7 +133,8 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
   const isPast  = day.date < todayISO;
   const isFuture = day.date > todayISO;
   const dayEnergySessions = energyByDate.get(day.date) ?? [];
-  const empty   = day.sessions.length === 0 && day.tests.length === 0 && dayEnergySessions.length === 0;
+  const dayComps = competitionsByDate.get(day.date) ?? [];
+  const empty   = day.sessions.length === 0 && day.tests.length === 0 && dayEnergySessions.length === 0 && dayComps.length === 0;
   const dayFreeActivities = freeSessions.filter((f) => f.date === day.date && f.sport);
 
   const ENERGY_KIND_COLOR: Record<string, string> = {
@@ -165,6 +167,11 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
             </div>
           ) : (
             <>
+              {/* Jour de compétition — en tête du jour */}
+              {dayComps.map((c) => (
+                <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
+              ))}
+
               {/* Sessions */}
               {day.sessions.map(({ session, exercises, isCompleted }) => (
                 <div
@@ -839,11 +846,24 @@ export default function TodayPage() {
     .find((s) => s.kind === "workout")
     ?.id ? null : null; // No coach_id available in WeekSession — use null
 
-  // ── Compétitions passées sans commentaire (7 derniers jours) ─────────────
-  const sevenDaysAgo = localISO(new Date(Date.now() - 7 * 86400000));
-  const uncommentedComps = allCompetitions.filter(
-    (c) => c.date < today && c.date >= sevenDaysAgo && !c.athlete_comment
-  );
+  // ── Compétitions par jour (posées dans le planning comme une séance) ─────
+  const competitionsByDate = useMemo(() => {
+    const m = new Map<string, CompetitionDayCardData[]>();
+    for (const c of allCompetitions) {
+      m.set(c.date, [...(m.get(c.date) ?? []), {
+        id: c.id, name: c.name, type: c.type, date: c.date,
+        location: c.location, priority: c.priority,
+        athlete_comment: c.athlete_comment ?? null,
+      }]);
+    }
+    return m;
+  }, [allCompetitions]);
+  const todayComps = competitionsByDate.get(today) ?? [];
+
+  // ── Compétitions passées sans bilan : restent « à commenter » jusqu'au bilan
+  const uncommentedComps = allCompetitions
+    .filter((c) => c.date < today && !c.athlete_comment)
+    .map((c) => competitionsByDate.get(c.date)!.find((x) => x.id === c.id)!);
 
   // ── Yesterday's recap ─────────────────────────────────────────────────────
   const yesterdayISO = localISO(new Date(Date.now() - 86400000));
@@ -1131,6 +1151,15 @@ export default function TodayPage() {
           </div>
         )}
 
+        {/* Section 1b — Jour de compétition (en tête, séances éventuelles dessous) */}
+        {todayComps.length > 0 && (
+          <div style={{ marginBottom: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+            {todayComps.map((c) => (
+              <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
+            ))}
+          </div>
+        )}
+
         {/* Section 2 — Séance du jour */}
         {(() => {
           const EKC: Record<string, string> = { vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B", footing: "#10B981", fartlek: "#EF4444", specifique: "#F5A623", autre: "#6B7280", custom: "#6B7280" };
@@ -1142,7 +1171,7 @@ export default function TodayPage() {
           const hasPending      = pendingWorkouts.length > 0 || pendingEnergy.length > 0;
 
           // Jour avec uniquement test/biométrie : la section test suffit
-          if (totalToday === 0 && todayTests.length > 0) return null;
+          if (totalToday === 0 && (todayTests.length > 0 || todayComps.length > 0)) return null;
 
           return (
             <div style={{ marginBottom: 20 }}>
@@ -1321,6 +1350,7 @@ export default function TodayPage() {
               const dayEnergy = energyByDate.get(day.date) ?? [];
               const dayFree = freeSessions.filter((f) => f.date === day.date && f.sport);
               const allDone = hasSess && day.sessions.every(s => s.isCompleted);
+              const isCompDay = competitionsByDate.has(day.date);
               const DOW_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
               return (
                 <button
@@ -1331,8 +1361,8 @@ export default function TodayPage() {
                     minWidth: 40,
                     padding: "8px 4px",
                     borderRadius: 6,
-                    border: "1px solid " + (isToday ? C.coach + "60" : C.brd),
-                    background: isToday ? C.coachS : C.s1,
+                    border: "1px solid " + (isCompDay ? C.r + "80" : isToday ? C.coach + "60" : C.brd),
+                    background: isCompDay ? C.rS : isToday ? C.coachS : C.s1,
                     cursor: "pointer", fontFamily: "inherit",
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                   }}
@@ -1392,8 +1422,10 @@ export default function TodayPage() {
                       />
                     ))}
                   </div>
-                  {/* "Repos" label or done check */}
-                  {allDone ? (
+                  {/* Compétition / "Repos" label / done check */}
+                  {isCompDay ? (
+                    <Trophy size={10} color={C.r} />
+                  ) : allDone ? (
                     <div style={{ fontSize: 8, color: "#66F03C", fontWeight: 700 }}>✓</div>
                   ) : !hasSess && !hasTest && dayFree.length === 0 ? (
                     <div style={{ fontSize: 8, color: C.tx3 }}>—</div>
@@ -1502,26 +1534,15 @@ export default function TodayPage() {
           )}
         </div>
 
-        {/* Section 4b — Compétitions passées à commenter */}
+        {/* Section 4b — Compétitions à commenter (jusqu'à ce que le bilan soit rempli) */}
         {uncommentedComps.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-              Compétitions passées à commenter
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
+              {uncommentedComps.length > 1 ? "Compétitions à commenter" : "Compétition à commenter"}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {uncommentedComps.map((comp) => (
-                <AthleteCompetitionCard
-                  key={comp.id}
-                  competition={{
-                    id: comp.id,
-                    name: comp.name,
-                    type: comp.type,
-                    date: comp.date,
-                    location: comp.location,
-                    athlete_comment: comp.athlete_comment ?? null,
-                    priority: comp.priority,
-                  }}
-                />
+                <CompetitionDayCard key={comp.id} competition={comp} viewOnly={viewOnly} showDate />
               ))}
             </div>
           </div>
@@ -1713,6 +1734,7 @@ export default function TodayPage() {
           }
         }}
         viewOnly={viewOnly}
+        competitionsByDate={competitionsByDate}
         onAddActivity={(date) => setActivityDate(date)}
         onEditActivity={(f) => setEditActivity(f)}
         onTestPress={openTest}

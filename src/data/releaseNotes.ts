@@ -37,6 +37,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-18-competition-dans-le-planning",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "La compétition devient un jour du planning",
+    summary: "Ajoute une compétition directement sur un jour : elle s'affiche comme un jour de compétition, chez toi comme chez l'athlète, et il y laisse son bilan.",
+    sections: [
+      {
+        title: "Côté coach",
+        points: [
+          "Planification → Mois : clique sur un jour → « Ajouter une compétition ce jour » (date déjà remplie).",
+          "Le jour de compétition ressort en rouge dans le calendrier, avec le nom de la compétition en tête du jour.",
+          "En ouvrant le jour, tu vois la compétition en haut, les séances éventuelles dessous, et le bilan de l'athlète dès qu'il l'a rempli (lecture seule).",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "« Cette semaine » et Programme : le jour est marqué « Jour de compétition », avec la compétition en tête du jour.",
+          "L'athlète peut aussi poser lui-même une compétition depuis Programme (bouton « Compétition » sur chaque jour).",
+          "Le bilan se remplit dès le jour J. Tant qu'il n'est pas rempli, la compétition reste affichée « Compétition à commenter » sur Aujourd'hui.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-18-bilan-competition",
     date: "2026-10-18",
     kind: "fix",

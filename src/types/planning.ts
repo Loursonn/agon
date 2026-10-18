@@ -13,10 +13,20 @@ export interface Competition {
   location: string | null;
   notes: string | null;
   priority: CompetitionPriority;
+  athlete_comment?: string | null;
   created_at: string;
 }
 
-export type CompetitionInsert = Omit<Competition, 'id' | 'created_at'>;
+export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'athlete_comment'>;
+
+/** Libellé du jour dans le planning (« Jour de compétition », « Jour de match »…) */
+export function competitionDayLabel(type: string | null | undefined): string {
+  if (type === 'match') return 'Jour de match';
+  if (type === 'stage') return 'Stage';
+  if (type === 'off') return 'Récup / Off';
+  if (type === 'autre') return 'Événement';
+  return 'Jour de compétition';
+}
 
 export const COMPETITION_META: Record<CompetitionType, { emoji: string; label: string; color: string }> = {
   competition: { emoji: 'CP', label: 'Compétition', color: '#F5A623' },

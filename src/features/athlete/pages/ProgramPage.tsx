@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, X, Zap } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, Trophy, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
@@ -16,6 +16,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
+import { CompetitionDayCard } from "@/features/athlete/components/CompetitionDayCard";
+import { competitionDayLabel } from "@/types/planning";
+import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
 import type { EnergyStep, EnergySessionRow } from "@/types/energy";
 import type { FreeSession } from "@/features/shared/types/athlete";
@@ -1021,7 +1024,7 @@ function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPres
 
 function DayRow({
   day, today, onSessionPress, onReschedule, onTestPress,
-  freeActivities, onAddActivity, onEditActivity, viewOnly,
+  freeActivities, onAddActivity, onEditActivity, onAddCompetition, viewOnly,
 }: {
   day: WeekDay;
   today: string;
@@ -1031,19 +1034,22 @@ function DayRow({
   freeActivities: FreeSession[];
   onAddActivity: (date: string) => void;
   onEditActivity: (f: FreeSession) => void;
+  /** null = l'athlète n'a pas de coach (compétition impossible à rattacher) */
+  onAddCompetition: ((date: string) => void) | null;
   viewOnly: boolean;
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
   const d       = new Date(day.date + "T12:00:00");
   const dateNum = d.getDate();
+  const isCompDay = day.competitions.length > 0;
   const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0;
 
   return (
     <div style={{
       background: C.s1,
       borderRadius: 6,
-      border: "1px solid " + (isToday ? C.ac + "50" : C.brdL),
+      border: "1px solid " + (isCompDay ? C.r + "70" : isToday ? C.ac + "50" : C.brdL),
       overflow: "hidden",
     }}>
       {/* Day header */}
@@ -1070,11 +1076,17 @@ function DayRow({
               Aujourd'hui
             </div>
           )}
-          <div style={{ fontSize: 12, fontWeight: isEmpty ? 400 : 600, color: isEmpty ? C.tx3 : C.tx }}>
-            {isEmpty
-              ? (isPast ? "Repos" : "Aucune séance")
-              : `${day.sessions.length} séance${day.sessions.length > 1 ? "s" : ""}`}
-          </div>
+          {isCompDay ? (
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.r }}>
+              {competitionDayLabel(day.competitions[0].type)}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, fontWeight: isEmpty ? 400 : 600, color: isEmpty ? C.tx3 : C.tx }}>
+              {isEmpty
+                ? (isPast ? "Repos" : "Aucune séance")
+                : `${day.sessions.length} séance${day.sessions.length > 1 ? "s" : ""}`}
+            </div>
+          )}
         </div>
         {day.sessions.length > 0 && (
           <div style={{ display: "flex", gap: 4 }}>
@@ -1087,6 +1099,15 @@ function DayRow({
           </div>
         )}
       </div>
+
+      {/* Jour de compétition — en tête, séances éventuelles dessous */}
+      {isCompDay && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "6px 14px 4px" }}>
+          {day.competitions.map(c => (
+            <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
+          ))}
+        </div>
+      )}
 
       {/* Session list */}
       {day.sessions.length > 0 && (
@@ -1120,13 +1141,13 @@ function DayRow({
         </div>
       )}
 
-      {/* Add activity button */}
+      {/* Add activity / competition buttons */}
       {!viewOnly && (
-        <div style={{ padding: "4px 14px 8px" }}>
+        <div style={{ padding: "4px 14px 8px", display: "flex", gap: 6 }}>
           <button
             onClick={() => { haptic(); onAddActivity(day.date); }}
             style={{
-              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               padding: "8px 0", borderRadius: 6,
               border: "1px dashed " + C.brdL, background: "transparent",
               color: C.tx3, fontSize: 11, fontWeight: 600,
@@ -1136,6 +1157,21 @@ function DayRow({
             <Plus size={12} />
             Activité libre
           </button>
+          {onAddCompetition && !isCompDay && (
+            <button
+              onClick={() => { haptic(); onAddCompetition(day.date); }}
+              style={{
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "8px 0", borderRadius: 6,
+                border: "1px dashed " + C.r + "60", background: "transparent",
+                color: C.r, fontSize: 11, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              <Trophy size={12} />
+              Compétition
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -1171,7 +1207,8 @@ const weekNavBtn: React.CSSProperties = {
 function ProgramSessionsView() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
-  const { athleteId, viewOnly, freeSessions, setFreeSessions } = useAthleteContext();
+  const { athleteId, viewOnly, freeSessions, setFreeSessions, athleteProfile } = useAthleteContext();
+  const myCoachId = athleteProfile?.coach_id ?? null;
   const [weekOffset, setWeekOffset] = useState(0);
   const { data, isLoading, isPlaceholderData } = useActivePlan(athleteId ?? "", weekOffset);
 
@@ -1181,6 +1218,7 @@ function ProgramSessionsView() {
   const [testPreviewId,    setTestPreviewId]    = useState<string | null>(null);
   const [activityDate,     setActivityDate]     = useState<string | null>(null);
   const [editActivity,     setEditActivity]     = useState<FreeSession | null>(null);
+  const [compDate,         setCompDate]         = useState<string | null>(null);
 
   const today         = useMemo(() => {
     const d = new Date();
@@ -1362,6 +1400,7 @@ function ProgramSessionsView() {
                     freeActivities={freeSessions.filter(f => f.date === day.date && f.sport)}
                     onAddActivity={setActivityDate}
                     onEditActivity={setEditActivity}
+                    onAddCompetition={myCoachId ? setCompDate : null}
                     viewOnly={viewOnly}
                   />
                 ))}
@@ -1446,6 +1485,16 @@ function ProgramSessionsView() {
         athleteId={athleteId ?? ""}
         onClose={() => setTestPreviewId(null)}
       />
+
+      {/* Compétition posée sur un jour par l'athlète */}
+      {compDate && myCoachId && (
+        <CompetitionFormModal
+          athleteId={athleteId ?? ""}
+          coachId={myCoachId}
+          initialDate={compDate}
+          onClose={() => setCompDate(null)}
+        />
+      )}
 
       {/* Free activity create modal */}
       <FreeActivityModal

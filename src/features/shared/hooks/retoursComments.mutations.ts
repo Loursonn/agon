@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
+import { calBaseKey } from "@/features/shared/hooks/useUnifiedCalendar";
 import { toast } from "sonner";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,10 +89,13 @@ export function useUpdateCompetitionComment() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data: { athlete_id: string }) => {
       queryClient.invalidateQueries({ queryKey: QK.weeklyRetours() });
       queryClient.invalidateQueries({ queryKey: QK.competitions() });
-      toast.success("Commentaire enregistré");
+      // Le bilan s'affiche aussi sur le jour de compétition (semaine / Programme)
+      queryClient.invalidateQueries({ queryKey: QK.activePlan(data.athlete_id) });
+      queryClient.invalidateQueries({ queryKey: calBaseKey(data.athlete_id) });
+      toast.success("Bilan enregistré");
     },
     onError: () => {
       toast.error("Erreur lors de l'enregistrement");

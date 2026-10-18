@@ -101,7 +101,7 @@ export function useUnifiedCalendar(
 
         supabase
           .from("competitions")
-          .select("id, name, date, priority, location, notes")
+          .select("id, coach_id, athlete_id, name, type, date, priority, location, notes, athlete_comment")
           .eq("athlete_id", athleteId)
           .gte("date", start)
           .lte("date", end)
