@@ -23,7 +23,7 @@ import { AgonIcon } from "@/components/ui/AgonIcon";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import { MensurationsDrawer } from "@/features/athlete/components/MensurationsDrawer";
 import { useCompetitions } from "@/hooks/useCompetitions";
-import { COMPETITION_META } from "@/types/planning";
+import { COMPETITION_META, priorityLabel } from "@/types/planning";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
 import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
@@ -37,6 +37,7 @@ import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
 import { LifeEventFormModal } from "@/features/athlete/components/LifeEventFormModal";
+import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
 import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
 import { Plus, Trash2, CalendarDays, Trophy } from "lucide-react";
 
@@ -744,6 +745,7 @@ export default function TodayPage() {
   const [mensuOpen, setMensuOpen] = useState(false);
   const [showLifeEventForm, setShowLifeEventForm] = useState(false);
   const [showCompForm, setShowCompForm] = useState(false);
+  const [showAllComps, setShowAllComps] = useState(false);
 
   const {
     athleteId, athleteProfile, wellnessHistory,
@@ -1495,21 +1497,33 @@ export default function TodayPage() {
             <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
               Prochaine compétition
             </div>
-            {myCoachId && (
-              <button
-                onClick={() => setShowCompForm(true)}
-                style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 3 }}
-              >
-                <Plus size={12} /> Ajouter
-              </button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              {allCompetitions.length > 0 && (
+                <button
+                  onClick={() => setShowAllComps(true)}
+                  style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, fontWeight: 700 }}
+                >
+                  Toutes ({allCompetitions.length}) →
+                </button>
+              )}
+              {myCoachId && (
+                <button
+                  onClick={() => setShowCompForm(true)}
+                  style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 3 }}
+                >
+                  <Plus size={12} /> Ajouter
+                </button>
+              )}
+            </div>
           </div>
           {nextComp ? (
             <div
+              onClick={() => setShowAllComps(true)}
               style={{
                 background: C.s1, borderRadius: 6, padding: 16,
                 border: "1px solid " + C.coach + "40",
                 display: "flex", alignItems: "center", gap: 14,
+                cursor: "pointer",
               }}
             >
               <div style={{ width: 36, height: 36, borderRadius: 4, background: C.coachS, display: "flex", alignItems: "center", justifyContent: "center" }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={C.coach} strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter"><path d="M6 9V2H18V9A6 6 0 0 1 6 9ZM4 2H6M18 2H20M12 15V19M8 22H16M8 19H16"/></svg></div>
@@ -1524,7 +1538,7 @@ export default function TodayPage() {
                       color: nextComp.priority === "A" ? C.coach : C.o,
                     }}
                   >
-                    {nextComp.priority}
+                    {priorityLabel(nextComp.priority)}
                   </span>
                 </div>
                 <div style={{ fontSize: 11, color: C.tx3 }}>
@@ -1808,6 +1822,15 @@ export default function TodayPage() {
         <LifeEventFormModal
           athleteId={athleteId ?? ""}
           onClose={() => setShowLifeEventForm(false)}
+        />
+      )}
+
+      {/* Toutes les compétitions */}
+      {showAllComps && (
+        <AllCompetitionsSheet
+          competitions={allCompetitions}
+          viewOnly={viewOnly}
+          onClose={() => setShowAllComps(false)}
         />
       )}
 

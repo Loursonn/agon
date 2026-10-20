@@ -18,6 +18,7 @@ interface MonthCalendarViewProps {
   workouts?: WorkoutDetail[];
   energySessions?: EnergySessionDetail[];
   freeActivities?: FreeActivityDetail[];
+  athleteId?: string;
 }
 
 const DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -28,7 +29,7 @@ function wellnessColor(score: number): string {
   return C.r;
 }
 
-export function MonthCalendarView({ month, dailyData, energyByDate = {}, workouts = [], energySessions = [], freeActivities = [] }: MonthCalendarViewProps) {
+export function MonthCalendarView({ month, dailyData, energyByDate = {}, workouts = [], energySessions = [], freeActivities = [], athleteId }: MonthCalendarViewProps) {
   const [panelDate, setPanelDate]         = useState<string | null>(null);
   const [panelWellness, setPanelWellness] = useState<WellnessDay | null>(null);
 
@@ -206,6 +207,7 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
           workouts={workoutsByDate[panelDate] ?? []}
           energySessions={energyByDateFull[panelDate] ?? []}
           freeActivities={freeByDate[panelDate] ?? []}
+          athleteId={athleteId}
           onClose={() => { setPanelDate(null); setPanelWellness(null); }}
         />
       )}

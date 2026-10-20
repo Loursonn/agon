@@ -5,7 +5,7 @@ import { C } from "@/lib/theme";
 import type { Competition } from "../hooks/useTimelineData";
 
 const PRIORITY_COLOR: Record<string, string> = { A: C.coach, B: C.ac, C: C.tx3 };
-const PRIORITY_LABEL: Record<string, string> = { A: "Priorité A", B: "Priorité B", C: "Priorité C" };
+const PRIORITY_LABEL: Record<string, string> = { A: "Importance A", B: "Importance B", C: "Importance C" };
 
 interface Props {
   comp: Competition;

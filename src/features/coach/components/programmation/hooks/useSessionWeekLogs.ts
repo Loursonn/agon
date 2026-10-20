@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import type { AthleteModifications } from "@/features/shared/types/athlete"
+import { computeOccurrences } from "@/lib/sessionOccurrence"
+import { localISO } from "@/lib/date"
 
 export interface SessionWeekLog {
   id: string
@@ -13,33 +15,10 @@ export interface SessionWeekLog {
   notes: string | null
 }
 
-export interface MicrocycleInfo {
-  id: string
-  week_number: number
-  start_date: string
-  end_date: string
-  is_deload: boolean
-}
-
 export function useSessionWeekLogs(
   athleteId: string | undefined,
   sessionId: string,
-  cycleId: string | undefined,
 ) {
-  const { data: microcycles = [] } = useQuery<MicrocycleInfo[]>({
-    queryKey: ["microcycles-weeks", cycleId],
-    enabled: !!cycleId,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("microcycles")
-        .select("id, week_number, start_date, end_date, is_deload")
-        .eq("cycle_id", cycleId!)
-        .order("week_number")
-      return (data ?? []) as MicrocycleInfo[]
-    },
-  })
-
   const { data: rawLogs = [], isLoading } = useQuery({
     queryKey: ["session-week-logs", athleteId, sessionId],
     enabled: !!athleteId && !!sessionId,
@@ -56,11 +35,10 @@ export function useSessionWeekLogs(
     },
   })
 
-  const microMap = new Map<string, number>(
-    microcycles.map(m => [m.id, m.week_number])
-  )
-
-  // Assign week numbers: prefer microcycle mapping, fallback to sequential order
+  // Occurrence = rang chronologique parmi les logs non « skipped » de la séance
+  // (1re fois planifiée = 1, 2e = 2…), tous cycles confondus — même règle que
+  // côté athlète (fetchSessionOccurrence).
+  const occ = computeOccurrences(rawLogs.map(l => ({ ...l, session_id: sessionId })))
   const logsWithWeek = rawLogs.map(log => ({
     id:                   log.id,
     scheduledDate:        log.scheduled_date,
@@ -68,24 +46,9 @@ export function useSessionWeekLogs(
     rpeScore:             log.rpe_score,
     athleteModifications: log.athlete_modifications as AthleteModifications | null,
     microcycleId:         log.microcycle_id,
-    weekNumber:           log.microcycle_id ? (microMap.get(log.microcycle_id) ?? null) : null,
+    weekNumber:           occ.get(log.id) ?? null,
     notes:                log.notes,
   }))
-
-  // For logs without microcycle mapping, assign week numbers by date order
-  const unmapped = logsWithWeek.filter(l => l.weekNumber === null)
-  if (unmapped.length > 0) {
-    const mappedWeeks = new Set(logsWithWeek.filter(l => l.weekNumber !== null).map(l => l.weekNumber!))
-    // Sort by date ascending for sequential assignment
-    const sorted = [...unmapped].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
-    let nextWeek = 1
-    for (const log of sorted) {
-      while (mappedWeeks.has(nextWeek)) nextWeek++
-      log.weekNumber = nextWeek
-      mappedWeeks.add(nextWeek)
-      nextWeek++
-    }
-  }
 
   const logs: SessionWeekLog[] = logsWithWeek
 
@@ -98,8 +61,10 @@ export function useSessionWeekLogs(
     if (!log) return null
     if (log.status === "completed") return "completed"
     if (log.status === "missed")    return "missed"
+    // Planifiée mais date passée sans validation = manquée (comme le calendrier)
+    if (log.scheduledDate < localISO(new Date())) return "missed"
     return "planned"
   }
 
-  return { logs, getLogForWeek, getStatusForWeek, microcycles, isLoading }
+  return { logs, getLogForWeek, getStatusForWeek, isLoading }
 }

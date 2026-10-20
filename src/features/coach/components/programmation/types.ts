@@ -37,6 +37,15 @@ export interface Exercice {
   superset_with_next?: boolean  // Linked to the next exercise in the bloc (chain of 2+ = superset; rest after each full round)
   // If multi_semaine active (session OR exercise level): Record<weekNumber, ExerciceParams>; else ExerciceParams
   params: ExerciceParams | Record<string, ExerciceParams>
+  /** Retour vidéo demandé, par n° de séance (une valeur vaut jusqu'à la suivante) */
+  video_request?: Record<string, VideoRequest>
+}
+
+/** Demande de retour vidéo du coach sur un exercice. */
+export interface VideoRequest {
+  requested: boolean
+  /** Consigne optionnelle (ex. « dernière série, vue de profil ») */
+  note?: string
 }
 
 export const BLOC_CATEGORIES = ['Echauffement', 'Force', 'Hypertrophie', 'Explo/vitesse', 'Mixte', 'Cardio'] as const

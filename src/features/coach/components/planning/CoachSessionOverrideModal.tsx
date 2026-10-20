@@ -13,39 +13,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { SessionBlocEditor } from "@/features/coach/components/programmation/SessionBlocEditor";
 import { defaultExerciceParams } from "@/features/coach/components/programmation/types";
-import type { Bloc, Exercice, ExerciceParams, ProgSession } from "@/features/coach/components/programmation/types";
+import type { Bloc, ProgSession } from "@/features/coach/components/programmation/types";
 import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride";
 import type { AthleteModifications } from "@/features/shared/types/athlete";
 import { flattenFichesToWeek } from "@/features/shared/types/fiches";
+import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence";
+import { useSessionOccurrence } from "@/features/shared/hooks/useSessionOccurrence";
 
-// ── Param flattening (mirror of ProgSessionWeekDrawer.resolveParams) ───────────
-
-function resolveParams(
-  exercice: Exercice,
-  week: number,
-  sessionMultiSemaine: boolean,
-): ExerciceParams | null {
-  const p = exercice.params;
-  if (!p || typeof p !== "object") return null;
-  const isFlat = !Object.keys(p as object).some((k) => /^\d+$/.test(k));
-  const multi = sessionMultiSemaine || (exercice.multi_semaine ?? false);
-  if (!multi || isFlat) {
-    return isFlat
-      ? (p as ExerciceParams)
-      : (Object.values(p as Record<string, ExerciceParams>)[0] ?? null);
-  }
-  return (p as Record<string, ExerciceParams>)[String(week)] ?? null;
-}
+// ── Param flattening ─────────────────────────────────────────────────────────
 
 /** Deep-clones blocs and collapses per-week params to a single flat week. */
-function flattenBlocsToWeek(blocs: Bloc[], week: number, multi: boolean): Bloc[] {
+function flattenBlocsToWeek(blocs: Bloc[], week: number): Bloc[] {
   return (structuredClone(blocs) as Bloc[]).map((b) => ({
     ...b,
     ...(b.fiches ? { fiches: flattenFichesToWeek(b.fiches, week) } : {}),
     exercices: b.exercices.map((ex) => ({
       ...ex,
       multi_semaine: false,
-      params: resolveParams(ex, week, multi) ?? defaultExerciceParams(),
+      params: resolveExerciceParams(ex.params, week) ?? defaultExerciceParams(),
+      // Demande de retour vidéo de ce jour, figée
+      video_request: (() => {
+        const v = resolveVideoRequest(ex, week);
+        return v ? { "1": v } : undefined;
+      })(),
     })),
   }));
 }
@@ -66,7 +56,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
     queryFn: async () => {
       const { data } = await supabase
         .from("workout_logs")
-        .select("id, session_id, session_name, week_number, athlete_modifications")
+        .select("id, session_id, session_name, scheduled_date, athlete_modifications")
         .eq("id", workoutLogId)
         .maybeSingle();
       return data;
@@ -74,6 +64,10 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
   });
 
   const { data: progSessions = [], isLoading: loadingSessions } = useProgrammation(athleteId);
+  // Occurrence de ce jour (n-ième fois que la séance est planifiée)
+  const { data: occurrence, isLoading: loadingOcc } = useSessionOccurrence(
+    athleteId, wlog?.session_id ?? undefined, wlog?.scheduled_date ?? undefined,
+  );
 
   const sourceSession = useMemo<ProgSession | undefined>(
     () => progSessions.find((s) => s.id === wlog?.session_id),
@@ -90,16 +84,16 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
 
   useEffect(() => {
     if (session) return; // seed once
-    if (loadingLog || loadingSessions) return;
+    if (loadingLog || loadingSessions || (!!wlog?.session_id && loadingOcc)) return;
 
-    const weekNumber = wlog?.week_number ?? 1;
+    const weekNumber = occurrence ?? 1;
     const name = sourceSession?.name ?? wlog?.session_name ?? "Séance";
 
     let blocs: Bloc[];
     if (existingOverride?.blocs?.length) {
       blocs = structuredClone(existingOverride.blocs) as Bloc[];
     } else if (sourceSession) {
-      blocs = flattenBlocsToWeek(sourceSession.blocs, weekNumber, sourceSession.multi_semaine);
+      blocs = flattenBlocsToWeek(sourceSession.blocs, weekNumber);
     } else {
       blocs = [];
     }
@@ -118,7 +112,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
       blocs,
       ...(fiches?.length ? { fiches } : {}),
     });
-  }, [session, loadingLog, loadingSessions, wlog, sourceSession, existingOverride]);
+  }, [session, loadingLog, loadingSessions, loadingOcc, occurrence, wlog, sourceSession, existingOverride]);
 
   const loading = loadingLog || loadingSessions || !session;
   const canEdit = !!sourceSession || !!existingOverride;

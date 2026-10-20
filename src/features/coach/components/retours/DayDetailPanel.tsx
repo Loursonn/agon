@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { X, Moon, Sunrise, CheckCircle2, Zap, ChevronDown, ChevronUp, Footprints } from "lucide-react";
+import { X, Moon, Sunrise, CheckCircle2, Zap, ChevronDown, ChevronUp, Footprints, BarChart2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { C } from "@/lib/theme";
+import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
+import { VideoRequestsList } from "./VideoRequestsList";
 import type { WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
 const FREE_COLOR = "#0D9488";
@@ -14,6 +16,8 @@ interface DayDetailPanelProps {
   energySessions?: EnergySessionDetail[];
   freeActivities?: FreeActivityDetail[];
   onClose: () => void;
+  /** Pour ouvrir la vue évolutive (Prévu / Réalisé / Séance +1) */
+  athleteId?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -193,7 +197,7 @@ function fmtDuration(s: number | null): string | null {
   return `${Math.floor(m / 60)}h${m % 60 > 0 ? String(m % 60).padStart(2, "0") : ""}`;
 }
 
-function WorkoutCard({ w }: { w: WorkoutDetail }) {
+function WorkoutCard({ w, onOpenEvolution }: { w: WorkoutDetail; onOpenEvolution?: () => void }) {
   const dur = fmtDuration(w.duration_s);
 
   const exIds = [...new Set([
@@ -208,6 +212,9 @@ function WorkoutCard({ w }: { w: WorkoutDetail }) {
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <CheckCircle2 size={13} color={w.status === "completed" ? C.g : C.tx3} />
           <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{w.session_name}</span>
+          {w.occurrence != null && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3 }}>Séance n°{w.occurrence}</span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {dur && <span style={{ fontSize: 10, color: C.tx3 }}>{dur}</span>}
@@ -216,8 +223,21 @@ function WorkoutCard({ w }: { w: WorkoutDetail }) {
               RPE {w.rpe_score}
             </span>
           )}
+          {onOpenEvolution && (
+            <button
+              onClick={onOpenEvolution}
+              title="Prévu / Réalisé / Séance +1"
+              style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 4, border: "1px solid " + C.ac + "60", background: C.ac + "14", color: C.ac, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              <BarChart2 size={11} /> Évolution
+            </button>
+          )}
         </div>
       </div>
+
+      {w.video_requests?.length > 0 && (
+        <div style={{ marginBottom: 10 }}><VideoRequestsList requests={w.video_requests} /></div>
+      )}
 
       {/* Exercises: planned target + actual sets merged */}
       {exIds.length > 0 && (
@@ -457,7 +477,8 @@ function FreeActivityCard({ f }: { f: FreeActivityDetail }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export function DayDetailPanel({ date, wellness, workouts = [], energySessions = [], freeActivities = [], onClose }: DayDetailPanelProps) {
+export function DayDetailPanel({ date, wellness, workouts = [], energySessions = [], freeActivities = [], onClose, athleteId }: DayDetailPanelProps) {
+  const [evolutionWorkout, setEvolutionWorkout] = useState<WorkoutDetail | null>(null);
   const dateLabel = format(parseISO(date), "EEEE d MMMM", { locale: fr });
   const titleCase = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
   const scoreCol  = wellness ? scoreColor(wellness.score, 100) : C.tx3;
@@ -465,6 +486,7 @@ export function DayDetailPanel({ date, wellness, workouts = [], energySessions =
   const completedWorkouts = workouts.filter((w) => w.status === "completed");
 
   return (
+    <>
     <div style={overlayStyle} onClick={onClose}>
       <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
 
@@ -535,7 +557,13 @@ export function DayDetailPanel({ date, wellness, workouts = [], energySessions =
             <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>
               Séances réalisées
             </div>
-            {completedWorkouts.map((w) => <WorkoutCard key={w.id} w={w} />)}
+            {completedWorkouts.map((w) => (
+              <WorkoutCard
+                key={w.id}
+                w={w}
+                onOpenEvolution={athleteId && w.session_id ? () => setEvolutionWorkout(w) : undefined}
+              />
+            ))}
             {energySessions.map((e) => <EnergyCard key={e.id} e={e} />)}
             {freeActivities.map((f) => <FreeActivityCard key={f.id} f={f} />)}
           </div>
@@ -543,6 +571,17 @@ export function DayDetailPanel({ date, wellness, workouts = [], energySessions =
 
       </div>
     </div>
+
+    {/* Vue évolutive : Prévu / Réalisé / Séance +1 */}
+    {evolutionWorkout && athleteId && evolutionWorkout.session_id && (
+      <SessionEvolutionDrawer
+        athleteId={athleteId}
+        sessionId={evolutionWorkout.session_id}
+        occurrence={evolutionWorkout.occurrence ?? 1}
+        onClose={() => setEvolutionWorkout(null)}
+      />
+    )}
+    </>
   );
 }
 

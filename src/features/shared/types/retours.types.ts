@@ -142,6 +142,12 @@ export interface WeeklyRetourData {
     athlete_session_comment: string | null;
     athlete_exercise_comments: Record<string, string>;
     athlete_forme: number | null;
+    /** Séance de programmation (asp:prog) */
+    session_id: string | null;
+    /** Rang de la séance : n-ième fois qu'elle est planifiée (null si inconnu) */
+    occurrence: number | null;
+    /** Retours vidéo demandés par le coach sur cette séance */
+    video_requests: VideoRequestStatus[];
   }[];
 
   energy_sessions: EnergySessionDetail[];
@@ -206,6 +212,20 @@ export interface WorkoutDetail {
   athlete_session_comment: string | null;
   athlete_exercise_comments: Record<string, string>;
   athlete_forme: number | null;
+  /** Séance de programmation (asp:prog) */
+  session_id: string | null;
+  /** Rang de la séance : n-ième fois qu'elle est planifiée (null si inconnu) */
+  occurrence: number | null;
+  /** Retours vidéo demandés par le coach sur cette séance */
+  video_requests: VideoRequestStatus[];
+}
+
+/** Retour vidéo demandé sur un exercice + suivi de l'athlète. */
+export interface VideoRequestStatus {
+  exercise_id: string;
+  exercise_name: string;
+  note: string | null;
+  sent: boolean;
 }
 
 export interface TestDetail {

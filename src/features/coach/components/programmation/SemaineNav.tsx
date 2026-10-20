@@ -37,7 +37,8 @@ export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek,
     },
   })
 
-  const count = Math.max(microcycles.length || (cycleId ? 0 : weekCount ?? 0), 1)
+  // Occurrences : au moins les semaines du cycle, plus si des params existent au-delà
+  const count = Math.max(microcycles.length, weekCount ?? 0, 1)
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 8 }}>

@@ -10,7 +10,7 @@ import { fr } from "date-fns/locale";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { C } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
-import { COMPETITION_META } from "@/types/planning";
+import { priorityLabel, COMPETITION_META } from "@/types/planning";
 import { CompetitionFormModal } from "./CompetitionFormModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -240,7 +240,7 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
           fontSize: 11, fontWeight: 800, color: priColor,
         }}
       >
-        {comp.priority}
+        {priorityLabel(comp.priority)}
       </div>
 
       {/* Emoji */}

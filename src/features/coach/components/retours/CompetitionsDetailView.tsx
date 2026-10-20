@@ -1,3 +1,4 @@
+import { priorityLabel } from "@/types/planning";
 import { Trophy, X, MapPin } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -30,7 +31,7 @@ function CompCard({ comp }: { comp: CompetitionDetail }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {comp.priority && (
             <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: PRIORITY_COLORS[comp.priority] + "20", color: PRIORITY_COLORS[comp.priority] }}>
-              {comp.priority}
+              {priorityLabel(comp.priority)}
             </span>
           )}
           <span style={{ fontSize: 10, color: C.tx3 }}>
@@ -81,9 +82,9 @@ export function CompetitionsDetailView({ competitions, onClose }: CompetitionsDe
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
             {[
               { label: "Total",       value: competitions.length, color: C.ac },
-              { label: "Priorité A",  value: countA,              color: C.r  },
-              { label: "Priorité B",  value: countB,              color: C.o  },
-              { label: "Priorité C",  value: countC,              color: C.y  },
+              { label: "Importance A",  value: countA,              color: C.r  },
+              { label: "Importance B",  value: countB,              color: C.o  },
+              { label: "Importance C",  value: countC,              color: C.y  },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>

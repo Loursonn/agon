@@ -15,6 +15,7 @@ import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import type { AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
 import type { ExerciceParams, ClusterConfig } from "@/features/coach/components/programmation/types";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
+import { VideoRequestBanner, VideoRequestRow } from "@/features/athlete/components/VideoRequest";
 import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -2634,6 +2635,20 @@ export default function WorkoutDetailPage() {
     [saveWorkoutSets],
   );
 
+  // Retour vidéo : l'athlète coche une fois la vidéo envoyée (possible même séance validée)
+  const toggleVideoSent = useCallback(
+    (exId: string) => {
+      const prev = localModsRef.current;
+      const next = {
+        ...prev,
+        videoSent: { ...(prev.videoSent ?? {}), [exId]: !prev.videoSent?.[exId] },
+      };
+      setLocalMods(next);
+      saveWorkoutSets(next);
+    },
+    [saveWorkoutSets],
+  );
+
   const updateForme = useCallback(
     (forme: number) => {
       const next = { ...localModsRef.current, sessionForme: forme };
@@ -2705,6 +2720,17 @@ export default function WorkoutDetailPage() {
 
   const isCompleted = workout.status === "completed";
   const canEdit = !isCompleted && !!id;
+  const renderVideoRequest = (ex: WorkoutExerciceData, withName = false) =>
+    ex.video_request ? (
+      <VideoRequestRow
+        key={"video-" + ex.id}
+        name={withName ? ex.exercise_name : undefined}
+        note={ex.video_request.note}
+        sent={!!localMods.videoSent?.[ex.id]}
+        canToggle={!!id}
+        onToggle={() => toggleVideoSent(ex.id)}
+      />
+    ) : null;
 
   // Toutes les séries traitées (validées ou passées) → on met en avant le bouton
   // "Terminer", moment où l'athlète oublie le plus souvent de clôturer.
@@ -2877,6 +2903,8 @@ export default function WorkoutDetailPage() {
           athleteId={athleteId}
         />
 
+        <VideoRequestBanner blocs={workout.blocs} videoSent={localMods.videoSent} />
+
         {workout.blocs.length === 0 ? (
           <div
             style={{
@@ -3036,7 +3064,7 @@ export default function WorkoutDetailPage() {
                       if (isSS && !hasComplex) {
                         const lastIdx = ch[ch.length - 1];
                         const afterEx = bloc.exercices[lastIdx + 1];
-                        return (
+                        const supersetCard = (
                           <SupersetCard
                             key={chainIds[0]}
                             groupKey={chainIds[0]}
@@ -3077,6 +3105,13 @@ export default function WorkoutDetailPage() {
                             onStopRest={stopRest}
                           />
                         );
+                        const videoRows = ch.map((j) => renderVideoRequest(bloc.exercices[j], true)).filter(Boolean);
+                        return videoRows.length ? (
+                          <Fragment key={chainIds[0]}>
+                            {supersetCard}
+                            {videoRows}
+                          </Fragment>
+                        ) : supersetCard;
                       }
 
                       // Exos seuls, ou chaîne superset avec cluster/libre → cartes individuelles
@@ -3137,6 +3172,7 @@ export default function WorkoutDetailPage() {
                           canEdit={canEdit}
                           onChange={(c) => updateExComment(ex.id, c)}
                         />
+                        {ex.video_request && <div style={{ marginTop: 6 }}>{renderVideoRequest(ex)}</div>}
                         </div>
                       );
                     }
@@ -3179,6 +3215,7 @@ export default function WorkoutDetailPage() {
                         onStartRest={(key, sec) => startRest(sec, null, key)}
                         onStopRest={stopRest}
                       />
+                      {renderVideoRequest(ex)}
                       {/* Superset connector — no rest between linked exercises */}
                       {ex.superset_with_next && nextEx && (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, margin: "-4px 0" }}>

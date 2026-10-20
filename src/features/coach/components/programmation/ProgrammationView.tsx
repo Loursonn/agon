@@ -8,7 +8,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { C } from "@/lib/theme"
-import { Plus, Pencil, X, ChevronDown, ChevronUp, BarChart2, Copy, Library, Trash2 } from "lucide-react"
+import { Plus, Pencil, X, ChevronDown, ChevronUp, CalendarPlus, Copy, Library, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useProgrammation } from "./hooks/useProgrammation"
 import { useUpdateProgrammation } from "./hooks/useUpdateProgrammation"
@@ -25,7 +25,6 @@ import type { ProgSession } from "./types"
 import { SessionForm } from "./SessionForm"
 import { SessionBlocEditor } from "./SessionBlocEditor"
 import { CardSkeleton } from "@/features/shared/components/skeletons"
-import { ProgSessionWeekDrawer } from "./ProgSessionWeekDrawer"
 
 const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
@@ -50,11 +49,10 @@ interface SessionCardProps {
   onEdit: () => void
   onDelete: () => void
   onChange: (updated: ProgSession) => void
-  onOpenWeekDrawer: () => void
   dragHandleProps?: Record<string, unknown>
 }
 
-function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, onDelete, onChange, onOpenWeekDrawer, dragHandleProps }: SessionCardProps) {
+function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, onDelete, onChange, dragHandleProps }: SessionCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showPlace, setShowPlace] = useState(false)
   const [showDuplicate, setShowDuplicate] = useState(false)
@@ -146,16 +144,10 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
           ><Pencil size={12} /></button>
 
           <button
-            onClick={onOpenWeekDrawer}
-            title="Prévu / Réalisé / S+1"
-            style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + VIOLET + "50", background: VIOLET_S, color: VIOLET, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-          ><BarChart2 size={12} /></button>
-
-          <button
             onClick={() => { setShowPlace(p => !p); setShowDuplicate(false) }}
             title="Placer dans le planning"
             style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: showPlace ? VIOLET_S : "transparent", color: showPlace ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
-          ></button>
+          ><CalendarPlus size={12} /></button>
 
           <button
             onClick={() => { setShowDuplicate(p => !p); setShowPlace(false) }}
@@ -348,7 +340,6 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
   const [confirmBankDeleteId, setConfirmBankDeleteId] = useState<string | null>(null)
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
-  const [weekDrawerSession, setWeekDrawerSession] = useState<ProgSession | null>(null)
   // Import d'une séance au format texte YOXX
   const [showTextImport, setShowTextImport] = useState(false)
   const [importReport, setImportReport] = useState<{ sessionId: string; issues: ImportIssue[] } | null>(null)
@@ -652,22 +643,12 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
                 }}
                 onDelete={() => deleteSession(session.id)}
                 onChange={updated => updateSessionContent(session.id, updated)}
-                onOpenWeekDrawer={() => setWeekDrawerSession(session)}
               />
             )
           })}
         </SortableContext>
       </DndContext>
 
-      {weekDrawerSession && (
-        <ProgSessionWeekDrawer
-          session={weekDrawerSession}
-          cycleId={cycleId}
-          athleteId={athleteId}
-          onChange={updated => updateSessionContent(weekDrawerSession.id, updated)}
-          onClose={() => setWeekDrawerSession(null)}
-        />
-      )}
     </div>
   )
 }

@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
-import type {
+import type { VideoRequestStatus,
   WeeklyRetourData, WeekComparisonData,
   PerformedExercise, PerformedSet, PlannedExercise, WellnessDay, EnergySessionDetail,
   FreeActivityDetail, NutritionStrategy, NutritionDailyLog,
 } from "@/features/shared/types/retours.types";
 import type { SetRow, Exercise, BlockConfig, ArchivedBlock, AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
-import type { ProgSession, Exercice, ExerciceParams } from "@/features/coach/components/programmation/types";
+import type { ProgSession, Exercice, Bloc } from "@/features/coach/components/programmation/types";
+import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence";
+import { fetchOccurrencesForSessions } from "./useSessionOccurrence";
 import { startOfWeek, endOfWeek, subWeeks, format, eachDayOfInterval, addDays } from "date-fns";
 import { normalizeDayMap as normalizeWH } from "@/lib/date";
 
@@ -206,6 +208,11 @@ async function fetchWeekData(
   const workoutList: any[] = workoutsRes.data ?? [];
   const workoutIds = workoutList.map((w) => w.id as string);
 
+  // Occurrence de chaque séance (1re, 2e… fois planifiée) → params prévus
+  const occurrences = await fetchOccurrencesForSessions(
+    athleteId, workoutList.map((w) => w.session_id as string), end,
+  ).catch(() => new Map<string, number>());
+
   // Exercise comments
   const { data: comments = [] } = workoutIds.length > 0
     ? await db
@@ -271,16 +278,23 @@ async function fetchWeekData(
 
     // ── Planned: try asp:prog first, fallback to legacy asp:exos ──────────
     const progSession = progSessions.find((s) => s.id === w.session_id);
-    const wkNum = w.week_number as number | undefined;
+    const wkNum = occurrences.get(w.id) ?? (w.week_number as number | undefined) ?? 1;
+    // Modif ponctuelle du coach : c'est la version que l'athlète a eue
+    const ovr = (w.athlete_modifications as AthleteModifications | null)?.coachOverride;
+    const sourceBlocs: Bloc[] = ovr?.blocs?.length ? (ovr.blocs as Bloc[]) : (progSession?.blocs ?? []);
+    // Retours vidéo demandés pour cette occurrence + suivi athlète
+    const videoSent = (w.athlete_modifications as AthleteModifications | null)?.videoSent ?? {};
+    const videoRequests: VideoRequestStatus[] = sourceBlocs.flatMap((b) => b.exercices.flatMap((ex) => {
+      const v = resolveVideoRequest(ex, wkNum);
+      return v ? [{ exercise_id: ex.id, exercise_name: ex.exercise_name, note: v.note ?? null, sent: !!videoSent[ex.id] }] : [];
+    }));
 
     let planned: PlannedExercise[];
-    if (progSession && progSession.blocs.length > 0) {
+    if (progSession && sourceBlocs.length > 0) {
       // New system: read from asp:prog
-      planned = progSession.blocs.flatMap((b) =>
+      planned = sourceBlocs.flatMap((b) =>
         b.exercices.map((ex: Exercice): PlannedExercise => {
-          const params = ex.multi_semaine && wkNum != null && typeof ex.params === "object" && !("nb_series" in ex.params)
-            ? ((ex.params as Record<string, ExerciceParams>)[String(wkNum)] ?? null)
-            : ("nb_series" in ex.params ? ex.params as ExerciceParams : null);
+          const params = resolveExerciceParams(ex.params, wkNum);
           const repsRange = params
             ? (params.reps.mode === "global"
               ? (params.reps_max?.mode === "global" && params.reps_max.value != null && params.reps_max.value !== params.reps.value
@@ -379,6 +393,9 @@ async function fetchWeekData(
       athlete_session_comment:   mods?.sessionComment ?? null,
       athlete_exercise_comments: mods?.exerciceComments ?? {},
       athlete_forme:             mods?.sessionForme ?? null,
+      session_id:                (w.session_id as string | null) ?? null,
+      occurrence:                occurrences.get(w.id) ?? null,
+      video_requests:            videoRequests,
     };
   });
 
