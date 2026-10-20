@@ -204,6 +204,7 @@ export default function RetoursPage() {
         <WeekView
           weekData={weekCurrent}
           prevWeekData={weekData?.previous_week}
+          athleteId={athleteId}
         />
       )}
 
@@ -281,6 +282,7 @@ export default function RetoursPage() {
             }, new Map<string, number>())
           )}
           freeActivities={monthData.free_activities ?? []}
+          athleteId={athleteId}
         />
       )}
 

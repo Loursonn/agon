@@ -19,6 +19,7 @@ import { useBlocBank } from "./hooks/useBlocBank"
 import { ficheWeeksFor, prepareBloc } from "./bankUtils"
 import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor"
 import { SaveToBankDialog, type SaveToBankTarget } from "./SaveToBankDialog"
+import { maxDefinedWeek, resolveExerciceParams } from "@/lib/sessionOccurrence"
 
 const VIOLET = "#FFC933"
 
@@ -33,6 +34,8 @@ interface SessionBlocEditorProps {
   bankActions?: boolean
   /** Rattachement de fiches au niveau séance. Défaut : true. */
   sessionFiches?: boolean
+  /** Masque la navigation semaine (l'occurrence est pilotée par le parent). */
+  hideWeekNav?: boolean
 }
 
 interface SortableBlocProps {
@@ -75,7 +78,7 @@ function SortableBloc({ bloc, index, athleteId, activeWeek, sessionMultiSemaine,
   )
 }
 
-export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initialWeek = 1, bankActions = true, sessionFiches = true }: SessionBlocEditorProps) {
+export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initialWeek = 1, bankActions = true, sessionFiches = true, hideWeekNav = false }: SessionBlocEditorProps) {
   const [isAddingBloc, setIsAddingBloc] = useState(false)
   const [showBankPicker, setShowBankPicker] = useState(false)
   const [saveTarget, setSaveTarget] = useState<SaveToBankTarget | null>(null)
@@ -98,11 +101,11 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
       exercices: bloc.exercices.map(ex => {
         const effectiveMulti = session.multi_semaine || (ex.multi_semaine ?? false)
         if (!effectiveMulti) return ex
-        if (typeof ex.params === 'object' && !('mode' in ex.params)) {
+        if (typeof ex.params === 'object' && !('nb_series' in ex.params)) {
           const rec = ex.params as Record<string, import("./types").ExerciceParams>
-          const thisWeekParams = rec[weekKey]
+          const thisWeekParams = rec[weekKey] ?? resolveExerciceParams(rec, activeWeek)
           if (thisWeekParams) {
-            return { ...ex, params: { ...rec, [nextWeek]: { ...thisWeekParams } } }
+            return { ...ex, params: { ...rec, [nextWeek]: structuredClone(thisWeekParams) } }
           }
         }
         return ex
@@ -156,14 +159,14 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
   return (
     <div style={{ padding: "12px 0" }}>
       {/* SemaineNav — only if session has multi_semaine */}
-      {session.multi_semaine && (
+      {session.multi_semaine && !hideWeekNav && (
         <div style={{ marginBottom: 12 }}>
           <SemaineNav
             cycleId={cycleId}
             activeWeek={activeWeek}
             onWeekChange={setActiveWeek}
             onDuplicateWeek={handleDuplicateWeek}
-            weekCount={session.nb_semaines}
+            weekCount={Math.max(session.nb_semaines ?? 1, maxDefinedWeek(session.blocs))}
           />
         </div>
       )}

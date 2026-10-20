@@ -1,17 +1,23 @@
 /**
  * ProgSessionWeekDrawer
- * Bottom-sheet : navigation semaine + 3 onglets
- *   Prévu    — paramètres planifiés (lecture seule)
+ * Bottom-sheet : navigation par occurrence (1re, 2e… fois que la séance est
+ * planifiée) + 3 colonnes
+ *   Prévu    — paramètres planifiés de l'occurrence (lecture seule)
  *   Réalisé  — séries athlète depuis workout_logs.athlete_modifications
- *   S+1 Adapter — éditeur SessionBlocEditor sur la semaine suivante
+ *   Séance +1 — éditeur SessionBlocEditor sur l'occurrence suivante ; la modif
+ *               vaut pour toutes les occurrences suivantes jusqu'à la prochaine
+ *               occurrence qui a ses propres valeurs
  */
-import { useState, useRef, useEffect, useCallback } from "react"
-import { X, Copy } from "lucide-react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { X, Copy, AlertTriangle, Video, Link2, Link2Off } from "lucide-react"
 import { C } from "@/lib/theme"
 import type { ProgSession, Exercice, ExerciceParams, Bloc } from "./types"
 import { SessionBlocEditor } from "./SessionBlocEditor"
 import { useSessionWeekLogs } from "./hooks/useSessionWeekLogs"
 import type { SessionSetLog } from "@/features/shared/types/athlete"
+import { maxDefinedWeek, resolveExerciceParams, resolveVideoRequest, toMultiWeekSession } from "@/lib/sessionOccurrence"
+import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride"
 
 const VIOLET  = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
@@ -40,32 +46,14 @@ interface Props {
   athleteId:  string | undefined
   onChange:   (updated: ProgSession) => void
   onClose:    () => void
+  /** Occurrence affichée à l'ouverture (ex. séance cliquée dans Retours). Défaut : 1. */
+  initialWeek?: number
 }
 
 // ─── Param helpers ────────────────────────────────────────────────────────────
 
-function resolveParams(
-  exercice: Exercice,
-  week: number,
-  sessionMultiSemaine: boolean,
-): ExerciceParams | null {
-  const p = exercice.params
-  if (!p || typeof p !== "object") return null
-
-  // Detect Record by presence of numeric string keys (more robust than checking 'nb_series'
-  // because mixed objects can have both — e.g. flat params accidentally spread into a Record)
-  const isFlat = !Object.keys(p as object).some((k) => /^\d+$/.test(k))
-
-  const multi = sessionMultiSemaine || (exercice.multi_semaine ?? false)
-
-  if (!multi || isFlat) {
-    return isFlat
-      ? (p as ExerciceParams)
-      : (Object.values(p as Record<string, ExerciceParams>)[0] ?? null)
-  }
-
-  const rec = p as Record<string, ExerciceParams>
-  return rec[String(week)] ?? null
+function resolveParams(exercice: Exercice, week: number): ExerciceParams | null {
+  return resolveExerciceParams(exercice.params, week)
 }
 
 function fmtReps(p: ExerciceParams): string {
@@ -116,7 +104,24 @@ function Chip({ label, value }: { label: string; value: string }) {
 
 // ─── ExercicePreview (Prévu tab) ───────────────────────────────────────────────
 
-function ExercicePreview({ exercice, params }: { exercice: Exercice; params: ExerciceParams }) {
+function VideoBadge({ note, sent }: { note?: string; sent?: boolean }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 5, marginTop: 6,
+      padding: "4px 8px", borderRadius: 4,
+      background: sent === true ? GREEN_S : AMBER_S,
+      border: "1px solid " + (sent === true ? GREEN : AMBER) + "40",
+      fontSize: 10, fontWeight: 700, color: sent === true ? GREEN : AMBER,
+    }}>
+      <Video size={11} />
+      {sent === undefined ? "Retour vidéo demandé" : sent ? "Vidéo envoyée" : "Vidéo pas envoyée"}
+      {note && <span style={{ fontWeight: 500, color: C.tx2 }}>· {note}</span>}
+    </div>
+  )
+}
+
+function ExercicePreview({ exercice, params, week }: { exercice: Exercice; params: ExerciceParams; week: number }) {
+  const video = resolveVideoRequest(exercice, week)
   return (
     <div style={{
       padding: "10px 12px", borderRadius: 4,
@@ -141,6 +146,7 @@ function ExercicePreview({ exercice, params }: { exercice: Exercice; params: Exe
           <Chip label="Tempo" value={params.tempo.value} />
         )}
       </div>
+      {video && <VideoBadge note={video.note} />}
     </div>
   )
 }
@@ -190,13 +196,16 @@ function SetRow({
 // ─── ExerciceRealise ───────────────────────────────────────────────────────────
 
 function ExerciceRealise({
-  exercice, sets, params, athleteComment,
+  exercice, sets, params, athleteComment, week, videoSent,
 }: {
   exercice: Exercice
   sets: SessionSetLog[]
   params: ExerciceParams | null
   athleteComment?: string
+  week: number
+  videoSent: boolean
 }) {
+  const video = resolveVideoRequest(exercice, week)
   const plannedReps: (number | undefined)[] = params
     ? (params.reps.mode === "par_serie"
         ? params.reps.values
@@ -246,6 +255,7 @@ function ExerciceRealise({
           {athleteComment}
         </div>
       )}
+      {video && <VideoBadge note={video.note} sent={videoSent} />}
     </div>
   )
 }
@@ -278,8 +288,11 @@ function BlocSection({ bloc, index, children }: { bloc: Bloc; index: number; chi
 
 // ─── Section header ───────────────────────────────────────────────────────────
 
-function ColHeader({ label, right, color = VIOLET }: {
+function ColHeader({ label, right, color = VIOLET, linked, onToggleLink }: {
   label: string; right?: React.ReactNode; color?: string
+  /** Défilement lié aux autres colonnes */
+  linked?: boolean
+  onToggleLink?: () => void
 }) {
   return (
     <div style={{
@@ -292,7 +305,25 @@ function ColHeader({ label, right, color = VIOLET }: {
       <span style={{ fontSize: 10, fontWeight: 800, color, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>
         {label}
       </span>
-      {right}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {right}
+        {onToggleLink && (
+          <button
+            onClick={onToggleLink}
+            title={linked ? "Défilement lié aux autres colonnes — cliquer pour défiler seule" : "Défile seule — cliquer pour relier aux autres colonnes"}
+            style={{
+              width: 22, height: 22, borderRadius: 4, flexShrink: 0,
+              border: "1px solid " + (linked ? color + "60" : C.brdL),
+              background: linked ? color + "18" : "transparent",
+              color: linked ? color : C.tx3,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", padding: 0,
+            }}
+          >
+            {linked ? <Link2 size={12} /> : <Link2Off size={12} />}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -308,26 +339,49 @@ function EmptyCol({ msg, sub }: { msg: string; sub?: string }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, onClose }: Props) {
-  const [activeWeek, setActiveWeek] = useState(1)
+export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, onClose, initialWeek = 1 }: Props) {
+  const [activeWeek, setActiveWeek] = useState(initialWeek)
+  useEffect(() => { setActiveWeek(initialWeek) }, [initialWeek])
+  const qc = useQueryClient()
+  const { mutate: saveOverride, isPending: clearingOverride } = useCoachSessionOverride()
+  // Bandeau « modif ponctuelle » masqué pour ces logs (choix « Garder »)
+  const [keptOverrides, setKeptOverrides] = useState<Set<string>>(new Set())
 
-  // Synchronized scroll across 3 columns
+  // Défilement synchronisé des colonnes liées (🔗) ; une colonne déliée défile seule
   const col1Ref = useRef<HTMLDivElement>(null)
   const col2Ref = useRef<HTMLDivElement>(null)
   const col3Ref = useRef<HTMLDivElement>(null)
-  const isSyncing = useRef(false)
+  const [linked, setLinked] = useState<[boolean, boolean, boolean]>([true, true, true])
+  const linkedRef = useRef(linked)
+  linkedRef.current = linked
+  // Colonnes déplacées par la synchro : leur prochain évènement scroll est ignoré
+  const programmatic = useRef(new Set<HTMLDivElement>())
 
   const syncScroll = useCallback((source: HTMLDivElement) => {
-    if (isSyncing.current) return
-    isSyncing.current = true
+    if (programmatic.current.delete(source)) return
+    const refs = [col1Ref, col2Ref, col3Ref]
+    const srcIdx = refs.findIndex(r => r.current === source)
+    if (srcIdx === -1 || !linkedRef.current[srcIdx]) return
     const top = source.scrollTop
-    for (const ref of [col1Ref, col2Ref, col3Ref]) {
-      if (ref.current && ref.current !== source) {
-        ref.current.scrollTop = top
-      }
-    }
-    isSyncing.current = false
+    refs.forEach((ref, i) => {
+      const col = ref.current
+      if (!col || col === source || !linkedRef.current[i]) return
+      if (Math.abs(col.scrollTop - top) < 1) return
+      const before = col.scrollTop
+      programmatic.current.add(col)
+      col.scrollTop = top
+      // Colonne déjà en butée (plus courte) : pas d'évènement scroll à ignorer
+      if (col.scrollTop === before) programmatic.current.delete(col)
+    })
   }, [])
+
+  function toggleLink(i: 0 | 1 | 2) {
+    setLinked(prev => {
+      const next = [...prev] as [boolean, boolean, boolean]
+      next[i] = !next[i]
+      return next
+    })
+  }
 
   useEffect(() => {
     const cols = [col1Ref.current, col2Ref.current, col3Ref.current]
@@ -342,47 +396,49 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
     }
   }, [syncScroll])
 
-  const { getLogForWeek, getStatusForWeek, microcycles } = useSessionWeekLogs(
-    athleteId, session.id, cycleId,
-  )
+  const { logs, getLogForWeek, getStatusForWeek, isLoading: loadingLogs } = useSessionWeekLogs(athleteId, session.id)
 
-  // Also account for exercise-level multi_semaine (session.multi_semaine may be false
-  // but individual exercises can have params keyed by week number)
-  const maxExWeek = session.blocs.reduce((max, bloc) =>
-    bloc.exercices.reduce((m, ex) => {
-      if (!ex.multi_semaine) return m
-      const p = ex.params
-      if (!p || typeof p !== "object" || "nb_series" in (p as object)) return m
-      const keys = Object.keys(p as Record<string, unknown>).map(Number).filter(n => !isNaN(n) && n > 0)
-      return keys.length > 0 ? Math.max(m, ...keys) : m
-    }, max)
-  , 1)
-  const weekCount  = Math.max(microcycles.length, session.nb_semaines ?? 1, maxExWeek, 1)
+  // Toujours au moins une occurrence de plus que la dernière connue : on peut
+  // préparer la séance suivante même si elle n'est pas encore planifiée.
+  const weekCount  = Math.max(logs.length, session.nb_semaines ?? 1, maxDefinedWeek(session.blocs), activeWeek, 1)
+  const nextWeek   = activeWeek + 1
   const currentLog = getLogForWeek(activeWeek)
+  const nextLog    = getLogForWeek(nextWeek)
   const atMods     = currentLog?.athleteModifications ?? null
-  const isLastWeek = activeWeek >= weekCount
+
+  // Modif ponctuelle (override coach) : c'est elle que l'athlète a eue / aura
+  const currentOverride = atMods?.coachOverride?.blocs?.length ? atMods.coachOverride : null
+  const prevuBlocs: Bloc[] = currentOverride ? (currentOverride.blocs as Bloc[]) : session.blocs
+  const nextOverride = nextLog?.athleteModifications?.coachOverride?.blocs?.length ? nextLog : null
+  const showOverrideBanner = !!nextOverride && !keptOverrides.has(nextOverride.id)
+
+  // Édition par occurrence : une séance « simple » passe en stockage par
+  // occurrence (sans changer son contenu) pour ne pas réécrire le passé.
+  const editableSession = useMemo(() => toMultiWeekSession(session), [session])
 
   function duplicateWeekToNext() {
-    const wk   = String(activeWeek)
-    const next = String(activeWeek + 1)
-    const updatedBlocs = session.blocs.map(bloc => ({
+    const updatedBlocs = editableSession.blocs.map(bloc => ({
       ...bloc,
       exercices: bloc.exercices.map(ex => {
-        const multi = session.multi_semaine || (ex.multi_semaine ?? false)
-        if (!multi) return ex
-        if (typeof ex.params === "object" && !("nb_series" in (ex.params as object))) {
-          const rec = ex.params as Record<string, ExerciceParams>
-          const thisWeek = rec[wk]
-          if (thisWeek) return { ...ex, params: { ...rec, [next]: { ...thisWeek } } }
-        }
-        return ex
+        const rec = ex.params as Record<string, ExerciceParams>
+        const thisWeek = resolveParams(ex, activeWeek)
+        if (!thisWeek) return ex
+        return { ...ex, params: { ...rec, [String(nextWeek)]: structuredClone(thisWeek) } }
       }),
     }))
-    onChange({ ...session, blocs: updatedBlocs })
+    onChange({ ...editableSession, blocs: updatedBlocs })
+  }
+
+  function clearNextOverride() {
+    if (!nextOverride || !athleteId) return
+    saveOverride(
+      { workoutLogId: nextOverride.id, athleteId, override: null },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: ["session-week-logs", athleteId, session.id] }) },
+    )
   }
 
   const totalExos = session.blocs.reduce((s, b) => s + b.exercices.length, 0)
-  const noRealise = session.blocs.every(b =>
+  const noRealise = prevuBlocs.every(b =>
     b.exercices.every(ex => !(atMods?.sessionSets?.[ex.id]?.length)),
   )
 
@@ -406,7 +462,7 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
             <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>{session.name}</div>
             <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
               {session.blocs.length} bloc{session.blocs.length !== 1 ? "s" : ""} · {totalExos} exercice{totalExos !== 1 ? "s" : ""}
-              {weekCount > 1 ? ` · ${weekCount} semaines` : ""}
+              {logs.length > 0 ? ` · planifiée ${logs.length} fois` : ""}
             </div>
           </div>
           <button
@@ -423,14 +479,19 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
         {/* ── Week nav ── */}
         {weekCount > 1 && (
           <div style={{ padding: "8px 16px 8px", borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 5 }}>
+              Séance n°
+            </div>
             <div style={{ display: "flex", gap: 5, overflowX: "auto" as const }}>
               {Array.from({ length: weekCount }, (_, i) => i + 1).map(week => {
                 const status = getStatusForWeek(week)
                 const active = activeWeek === week
+                const log = getLogForWeek(week)
                 return (
                   <button
                     key={week}
                     onClick={() => setActiveWeek(week)}
+                    title={log ? new Date(log.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "Pas encore planifiée"}
                     style={{
                       position: "relative" as const,
                       padding: "5px 12px", borderRadius: 7, flexShrink: 0,
@@ -441,7 +502,7 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                       cursor: "pointer", fontFamily: "inherit",
                     }}
                   >
-                    S{week}
+                    {week}
                     {status && (
                       <span style={{
                         position: "absolute" as const, top: -3, right: -3,
@@ -462,24 +523,32 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
 
           {/* ── Col 1 : PRÉVU ── */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: "1px solid " + C.brd, overflow: "hidden" }}>
-            <ColHeader label={`Prévu · S${activeWeek}`} color={VIOLET} />
+            <ColHeader
+              label={`Prévu · Séance ${activeWeek}`}
+              color={VIOLET}
+              linked={linked[0]}
+              onToggleLink={() => toggleLink(0)}
+              right={currentOverride ? (
+                <span style={{ fontSize: 9, fontWeight: 700, color: AMBER }}>Modif ponctuelle</span>
+              ) : undefined}
+            />
             <div ref={col1Ref} style={{ flex: 1, overflowY: "auto", padding: "10px 10px", paddingBottom: 32 }}>
-              {session.blocs.length === 0 ? (
+              {prevuBlocs.length === 0 ? (
                 <EmptyCol msg="Aucun bloc" />
-              ) : session.blocs.map((bloc, bi) => (
+              ) : prevuBlocs.map((bloc, bi) => (
                 <BlocSection key={bloc.id} bloc={bloc} index={bi}>
                   {bloc.exercices.map(ex => {
-                    const params = resolveParams(ex, activeWeek, session.multi_semaine)
+                    const params = resolveParams(ex, activeWeek)
                     if (!params) return (
                       <div key={ex.id} style={{
                         padding: "7px 10px", borderRadius: 4, marginBottom: 5,
                         border: "1px solid " + C.brdL, background: C.s2,
                         fontSize: 10, color: C.tx3,
                       }}>
-                        {ex.exercise_name} — pas de params S{activeWeek}
+                        {ex.exercise_name} — pas de paramètres
                       </div>
                     )
-                    return <ExercicePreview key={ex.id} exercice={ex} params={params} />
+                    return <ExercicePreview key={ex.id} exercice={ex} params={params} week={activeWeek} />
                   })}
                 </BlocSection>
               ))}
@@ -489,20 +558,26 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
           {/* ── Col 2 : RÉALISÉ ── */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: "1px solid " + C.brd, overflow: "hidden" }}>
             <ColHeader
-              label={`Réalisé · S${activeWeek}`}
+              label={`Réalisé · Séance ${activeWeek}`}
               color={GREEN}
+              linked={linked[1]}
+              onToggleLink={() => toggleLink(1)}
               right={
                 currentLog?.status === "completed" ? (
                   <span style={{ fontSize: 10, color: C.tx3 }}>
                     {currentLog.rpeScore !== null ? `RPE ${currentLog.rpeScore} · ` : ""}
-                    {new Date(currentLog.scheduledDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    {new Date(currentLog.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                   </span>
                 ) : currentLog ? (
-                  <span style={{ fontSize: 10, color: RED, fontWeight: 700 }}>
-                    {currentLog.status === "missed" ? "Manquée" : currentLog.status}
-                  </span>
+                  getStatusForWeek(activeWeek) === "missed" ? (
+                    <span style={{ fontSize: 10, color: RED, fontWeight: 700 }}>Manquée</span>
+                  ) : (
+                    <span style={{ fontSize: 10, color: C.tx3 }}>
+                      Prévue le {new Date(currentLog.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    </span>
+                  )
                 ) : (
-                  <span style={{ fontSize: 10, color: C.tx3 }}>Non réalisée</span>
+                  <span style={{ fontSize: 10, color: C.tx3 }}>{loadingLogs ? "…" : "Non réalisée"}</span>
                 )
               }
             />
@@ -536,15 +611,17 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                   )}
                 </div>
               )}
-              {noRealise && !currentLog ? (
+              {loadingLogs ? (
+                <EmptyCol msg="Chargement…" />
+              ) : noRealise && !currentLog ? (
                 <EmptyCol msg="Aucune donnée" sub="Séance non encore réalisée" />
               ) : (
-                session.blocs.map((bloc, bi) => (
+                prevuBlocs.map((bloc, bi) => (
                   <BlocSection key={bloc.id} bloc={bloc} index={bi}>
                     {bloc.exercices.map(ex => {
                       const sets = (atMods?.sessionSets?.[ex.id] ?? []) as SessionSetLog[]
-                      const params = resolveParams(ex, activeWeek, session.multi_semaine)
-                      return <ExerciceRealise key={ex.id} exercice={ex} sets={sets} params={params} athleteComment={atMods?.exerciceComments?.[ex.id]} />
+                      const params = resolveParams(ex, activeWeek)
+                      return <ExerciceRealise key={ex.id} exercice={ex} sets={sets} params={params} athleteComment={atMods?.exerciceComments?.[ex.id]} week={activeWeek} videoSent={!!atMods?.videoSent?.[ex.id]} />
                     })}
                   </BlocSection>
                 ))
@@ -552,14 +629,17 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
             </div>
           </div>
 
-          {/* ── Col 3 : S+1 ADAPTER ── */}
+          {/* ── Col 3 : SÉANCE +1 ── */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <ColHeader
-              label={isLastWeek ? "S+1 · Adapter" : `S+1 · Adapter · S${activeWeek + 1}`}
+              label={`Séance ${nextWeek} · Adapter`}
               color={AMBER}
-              right={!isLastWeek ? (
+              linked={linked[2]}
+              onToggleLink={() => toggleLink(2)}
+              right={
                 <button
                   onClick={duplicateWeekToNext}
+                  title={`Remplacer la séance ${nextWeek} par le prévu de la séance ${activeWeek}`}
                   style={{
                     display: "flex", alignItems: "center", gap: 3,
                     padding: "3px 8px", borderRadius: 5,
@@ -569,22 +649,51 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                   }}
                 >
                   <Copy size={9} />
-                  Copier S{activeWeek}
+                  Copier séance {activeWeek}
                 </button>
-              ) : undefined}
+              }
             />
+            <div style={{ padding: "6px 10px", fontSize: 10, color: C.tx3, borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
+              {nextLog
+                ? `Prévue le ${new Date(nextLog.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}`
+                : "Pas encore planifiée"}
+              {" · s'applique aussi aux séances suivantes"}
+            </div>
+            {showOverrideBanner && nextOverride && (
+              <div style={{
+                margin: "8px 10px 0", padding: "8px 10px", borderRadius: 4,
+                border: "1px solid " + AMBER + "60", background: AMBER_S,
+                display: "flex", flexDirection: "column", gap: 6, flexShrink: 0,
+              }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 11, color: C.tx }}>
+                  <AlertTriangle size={13} color={AMBER} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>
+                    La séance {nextWeek} a une modif ponctuelle (Planning) : l'athlète fera cette version,
+                    pas tes modifs ici.
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <button
+                    onClick={() => setKeptOverrides(prev => new Set(prev).add(nextOverride.id))}
+                    style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  >Garder</button>
+                  <button
+                    onClick={clearNextOverride}
+                    disabled={clearingOverride}
+                    style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: AMBER, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: clearingOverride ? 0.6 : 1 }}
+                  >{clearingOverride ? "…" : "Écraser"}</button>
+                </div>
+              </div>
+            )}
             <div ref={col3Ref} style={{ flex: 1, overflowY: "auto", paddingBottom: 32 }}>
-              {isLastWeek ? (
-                <EmptyCol msg="Dernière semaine" sub="Pas de S+1 pour ce cycle" />
-              ) : (
-                <SessionBlocEditor
-                  session={session}
-                  cycleId={cycleId}
-                  athleteId={athleteId}
-                  onChange={onChange}
-                  initialWeek={activeWeek + 1}
-                />
-              )}
+              <SessionBlocEditor
+                session={editableSession}
+                cycleId={cycleId}
+                athleteId={athleteId}
+                onChange={onChange}
+                initialWeek={nextWeek}
+                hideWeekNav
+              />
             </div>
           </div>
 

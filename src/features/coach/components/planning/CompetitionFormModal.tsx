@@ -6,9 +6,9 @@ import { useCreateCompetition, useUpdateCompetition } from "@/hooks/useCompetiti
 import { COMPETITION_META, type CompetitionType, type CompetitionPriority, type Competition } from "@/types/planning";
 
 const PRIORITIES: { value: CompetitionPriority; label: string }[] = [
-  { value: "A", label: "A — Internationale" },
-  { value: "B", label: "B — Nationale"      },
-  { value: "C", label: "C — Régionale"      },
+  { value: "A", label: "Importance A" },
+  { value: "B", label: "Importance B" },
+  { value: "C", label: "Importance C" },
 ];
 
 const TYPES = Object.entries(COMPETITION_META).map(([key, meta]) => ({
@@ -172,7 +172,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, initialDate
 
           {/* Priority */}
           <div>
-            <label style={labelStyle}>Priorité</label>
+            <label style={labelStyle}>Importance</label>
             <div style={{ display: "flex", gap: 8 }}>
               {PRIORITIES.map((p) => (
                 <button

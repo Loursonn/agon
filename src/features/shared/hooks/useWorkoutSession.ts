@@ -12,9 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { defaultExerciceParams } from "@/features/coach/components/programmation/types";
-import type { Bloc, ExerciceParams } from "@/features/coach/components/programmation/types";
+import type { Bloc, ExerciceParams, VideoRequest } from "@/features/coach/components/programmation/types";
 import type { AthleteModifications, Exercise, WeekConfig } from "../types/athlete";
 import type { FicheAttachment } from "../types/fiches";
+import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence";
+import { fetchSessionOccurrence } from "./useSessionOccurrence";
 
 export interface WorkoutExerciceData {
   id: string;
@@ -27,6 +29,8 @@ export interface WorkoutExerciceData {
   methode_id?: string;
   comment?: string;
   superset_with_next?: boolean;
+  /** Retour vidéo demandé par le coach pour cette séance (null si aucun) */
+  video_request?: VideoRequest | null;
 }
 
 export interface WorkoutBlocData {
@@ -146,7 +150,6 @@ function buildLegacyBlocs(
 function buildProgBlocs(
   progBlocs: Bloc[],
   weekNumber: number,
-  sessionMultiSemaine: boolean,
 ): WorkoutBlocData[] {
   return progBlocs.map((bloc) => {
     const nbSeriesFixed =
@@ -168,28 +171,10 @@ function buildProgBlocs(
       instructions: bloc.instructions,
       fiches: bloc.fiches,
       exercices: bloc.exercices.map((ex) => {
-        let params: ExerciceParams;
-
-        // session.multi_semaine OR ex.multi_semaine → params stored as Record<weekKey, ExerciceParams>
-        const effectiveMulti = sessionMultiSemaine || (ex.multi_semaine ?? false);
-        // Detect Record by presence of at least one numeric string key (week number).
-        const isRecord =
-          typeof ex.params === "object" &&
-          ex.params !== null &&
-          Object.keys(ex.params).some((k) => /^\d+$/.test(k));
-
-        if (effectiveMulti && isRecord) {
-          const paramsMap = ex.params as Record<string, ExerciceParams>;
-          params =
-            paramsMap[String(weekNumber)] ??
-            paramsMap["1"] ??
-            defaultExerciceParams();
-        } else if (isRecord) {
-          const paramsMap = ex.params as Record<string, ExerciceParams>;
-          params = Object.values(paramsMap)[0] ?? defaultExerciceParams();
-        } else {
-          params = ex.params as ExerciceParams;
-        }
+        // Params par occurrence (Record) ou plats ; une occurrence sans valeur
+        // propre reprend la dernière définie avant elle.
+        const params: ExerciceParams =
+          resolveExerciceParams(ex.params, weekNumber) ?? defaultExerciceParams();
 
         // Guard against incomplete/corrupt stored params
         const def = defaultExerciceParams(params.nb_series);
@@ -216,6 +201,7 @@ function buildProgBlocs(
           methode_id: ex.methode_id,
           comment: (ex as { comment?: string }).comment,
           superset_with_next: ex.superset_with_next,
+          video_request: resolveVideoRequest(ex, weekNumber),
         };
       }),
     };
@@ -279,28 +265,20 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
     },
   });
 
-  // Compute week number as the chronological rank of this log among all logs
-  // for the same (athlete, session). 1st occurrence = week 1, 2nd = week 2, etc.
-  // Only used when week_number not explicitly set and no microcycle link.
-  const needsRank = !!wlog && wlog.week_number == null && !wlog.microcycle_id;
-  const { data: sessionRank } = useQuery({
-    queryKey: ["session-rank", athleteId, wlog?.session_id, wlog?.scheduled_date],
-    enabled: needsRank,
-    staleTime: 300_000,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("workout_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("athlete_id", athleteId!)
-        .eq("session_id", wlog!.session_id)
-        .lte("scheduled_date", wlog!.scheduled_date);
-      return count ?? 1;
-    },
+  // Occurrence de la séance = rang chronologique de ce log parmi les logs non
+  // « skipped » de la même séance (1re fois = 1, 2e fois = 2…), tous cycles confondus.
+  const { data: sessionRank, isLoading: loadingRank } = useQuery({
+    queryKey: ["session-occurrence", athleteId, wlog?.session_id, wlog?.scheduled_date],
+    enabled: !!athleteId && !!wlog?.session_id && !!wlog?.scheduled_date,
+    staleTime: 30_000,
+    queryFn: () => fetchSessionOccurrence(athleteId!, wlog!.session_id, wlog!.scheduled_date),
   });
 
   return useMemo(() => {
-    const weekNumber = wlog?.week_number ?? microcycle?.week_number ?? sessionRank ?? 1;
-    const isLoading = loadingLog || loadingSessions || (needsLegacy && loadingLegacy);
+    // Legacy (asp:exos) : semaines de bloc, pas d'occurrences
+    const legacyWeek = wlog?.week_number ?? microcycle?.week_number ?? 1;
+    const weekNumber = sessionRank ?? legacyWeek;
+    const isLoading = loadingLog || loadingSessions || loadingRank || (needsLegacy && loadingLegacy);
 
     const empty: WorkoutSessionResult = {
       isLoading,
@@ -327,7 +305,6 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
       const overrideBlocs = buildProgBlocs(
         earlyMods.coachOverride.blocs as Bloc[],
         1,      // override is stored flattened to a single week
-        false,
       );
       const progSess = progSessions.find((s) => s.id === wlog.session_id);
       return {
@@ -357,7 +334,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
       }
 
       // Build from legacy exos format
-      const legacyBlocs = buildLegacyBlocs(wlog.session_id, legacyExosRows, weekNumber);
+      const legacyBlocs = buildLegacyBlocs(wlog.session_id, legacyExosRows, legacyWeek);
 
       return {
         isLoading: false,
@@ -380,7 +357,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
     const mods =
       (wlog.athlete_modifications as AthleteModifications | null) ?? null;
 
-    const blocs = buildProgBlocs(progSession.blocs, weekNumber, progSession.multi_semaine);
+    const blocs = buildProgBlocs(progSession.blocs, weekNumber);
 
     return {
       isLoading: false,
@@ -398,5 +375,5 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
       rescheduledByAthlete: wlog.rescheduled_by_athlete ?? false,
       originalScheduledDate: wlog.original_scheduled_date ?? null,
     };
-  }, [wlog, progSessions, microcycle, loadingLog, loadingSessions, needsLegacy, loadingLegacy, legacyExosRows, sessionRank]);
+  }, [wlog, progSessions, microcycle, loadingLog, loadingSessions, needsLegacy, loadingLegacy, legacyExosRows, sessionRank, loadingRank]);
 }

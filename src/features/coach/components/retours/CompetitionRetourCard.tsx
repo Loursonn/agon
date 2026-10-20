@@ -1,3 +1,4 @@
+import { priorityLabel } from "@/types/planning";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Trophy, MapPin } from "lucide-react";
@@ -33,7 +34,7 @@ export function CompetitionRetourCard({ competition }: CompetitionRetourCardProp
           <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{competition.name}</span>
           {pStyle && competition.priority && (
             <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: pStyle.bg, color: pStyle.color }}>
-              {competition.priority}
+              {priorityLabel(competition.priority)}
             </span>
           )}
         </div>

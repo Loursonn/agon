@@ -6,9 +6,10 @@ import type { WeeklyRetourData, WellnessDay } from "@/features/shared/types/reto
 interface WeekViewProps {
   weekData:     WeeklyRetourData;
   prevWeekData?: WeeklyRetourData | null;
+  athleteId?:   string;
 }
 
-export function WeekView({ weekData, prevWeekData }: WeekViewProps) {
+export function WeekView({ weekData, prevWeekData, athleteId }: WeekViewProps) {
   const weekStart = startOfWeek(new Date(weekData.start_date + "T12:00:00"), { weekStartsOn: 1 });
   const weekEnd   = endOfWeek(weekStart, { weekStartsOn: 1 });
   const days      = eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -82,6 +83,7 @@ export function WeekView({ weekData, prevWeekData }: WeekViewProps) {
               rescheduledWorkoutIds={rescheduledWorkoutIds}
               rescheduledEnergyIds={rescheduledEnergyIds}
               freeActivities={freeByDate[dateStr] ?? []}
+              athleteId={athleteId}
             />
           );
         })}

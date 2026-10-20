@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronDown, ChevronUp, MessageSquare, Heart, Check, Minus, X as XIcon } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { ChevronDown, ChevronUp, MessageSquare, Heart, Check, Minus, X as XIcon, BarChart2 } from "lucide-react";
 import { C } from "@/lib/theme";
+import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
+import { VideoRequestsList, VideoRequestsPill } from "./VideoRequestsList";
 import { StatusPill } from "@/features/shared/components/StatusPill";
 import { useUpsertExerciseComment } from "@/features/shared/hooks/retoursComments.mutations";
 import type { SessionStatus } from "@/features/shared/components/StatusPill";
@@ -11,6 +14,7 @@ import type {
   PlannedExercise,
   PerformedSet,
   WorkoutExerciseComment,
+  VideoRequestStatus,
 } from "@/features/shared/types/retours.types";
 
 // ── Colors (match programmation) ─────────────────────────────────────────────
@@ -39,6 +43,9 @@ interface WorkoutType {
   athlete_session_comment?: string | null;
   athlete_exercise_comments?: Record<string, string>;
   athlete_forme?: number | null;
+  session_id?: string | null;
+  occurrence?: number | null;
+  video_requests?: VideoRequestStatus[];
 }
 
 interface WorkoutRetourCardProps {
@@ -398,6 +405,8 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
 
 export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetourCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showEvolution, setShowEvolution] = useState(false);
+  const { athleteId } = useParams<{ athleteId: string }>();
 
   const validStatus = VALID_STATUSES.includes(workout.status) ? (workout.status as SessionStatus) : "planned";
   const isCompleted = workout.status === "completed";
@@ -438,7 +447,11 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
           <span style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {workout.session_name}
           </span>
+          {workout.occurrence != null && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, flexShrink: 0 }}>n°{workout.occurrence}</span>
+          )}
           <StatusPill status={validStatus} size="sm" />
+          <VideoRequestsPill requests={workout.video_requests} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 8 }}>
           {workout.wellness_day != null && (
@@ -455,12 +468,31 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
           <span style={{ fontSize: 10, color: C.tx3 }}>
             {format(new Date(workout.scheduled_date), "EEE d MMM", { locale: fr })}
           </span>
+          {athleteId && workout.session_id && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowEvolution(true); }}
+              title="Prévu / Réalisé / Séance +1"
+              style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 4, border: "1px solid " + C.ac + "60", background: C.ac + "14", color: C.ac, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              <BarChart2 size={11} /> Évolution
+            </button>
+          )}
           {expanded ? <ChevronUp size={13} color={C.tx3} /> : <ChevronDown size={13} color={C.tx3} />}
         </div>
       </div>
 
+      {showEvolution && athleteId && workout.session_id && (
+        <SessionEvolutionDrawer
+          athleteId={athleteId}
+          sessionId={workout.session_id}
+          occurrence={workout.occurrence ?? 1}
+          onClose={() => setShowEvolution(false)}
+        />
+      )}
+
       {expanded && (
         <div style={{ borderTop: "1px solid " + C.brd, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <VideoRequestsList requests={workout.video_requests} />
           {/* Meta + stats */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {workout.duration_s != null && (

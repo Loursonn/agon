@@ -1,3 +1,4 @@
+import { priorityLabel } from "@/types/planning";
 import { useState } from "react";
 import { Trophy } from "lucide-react";
 import { C } from "@/lib/theme";
@@ -61,7 +62,7 @@ export function CompetitionMarkers({ competitions, calc, totalRowHeight, onSelec
               >
                 {comp.name}
                 {comp.priority && (
-                  <span style={{ marginLeft: 4, opacity: 0.7 }}>· {comp.priority}</span>
+                  <span style={{ marginLeft: 4, opacity: 0.7 }}>· {priorityLabel(comp.priority)}</span>
                 )}
               </div>
             )}

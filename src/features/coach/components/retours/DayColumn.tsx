@@ -4,6 +4,8 @@ import { fr } from "date-fns/locale";
 import { Zap, Check, X, ChevronDown, ChevronUp, Hourglass } from "lucide-react";
 import { C } from "@/lib/theme";
 import { DayDetailPanel } from "./DayDetailPanel";
+import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
+import { VideoRequestsPill } from "./VideoRequestsList";
 import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
 import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import type { WeeklyRetourData, WellnessDay, EnergyStepLog, FreeActivityDetail } from "@/features/shared/types/retours.types";
@@ -27,6 +29,8 @@ interface DayColumnProps {
   rescheduledWorkoutIds?: Set<string>;
   rescheduledEnergyIds?:  Set<string>;
   freeActivities?:        FreeActivityDetail[];
+  /** Pour ouvrir la vue évolutive (Prévu / Réalisé / Séance +1) */
+  athleteId?:             string;
 }
 
 // ── Status color helper ───────────────────────────────────────────────────────
@@ -82,7 +86,7 @@ function WellnessBlock({ wellness, onClick }: { wellness: WellnessDay; onClick: 
 
 // ── Workout row ───────────────────────────────────────────────────────────────
 
-function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail }: { workout: DayWorkout; prevWorkout?: DayWorkout | null; isRescheduled?: boolean; onShowDetail: () => void }) {
+function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail, onOpenEvolution }: { workout: DayWorkout; prevWorkout?: DayWorkout | null; isRescheduled?: boolean; onShowDetail: () => void; onOpenEvolution?: () => void }) {
   const [open, setOpen] = useState(false);
   const done = workout.status === "completed";
   const cols = statusColors(workout.status, isRescheduled);
@@ -92,8 +96,9 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail }: { wor
     <div style={{ background: cols.bg, border: "1px solid " + cols.border, borderRadius: 7, overflow: "hidden" }}>
       {/* Header */}
       <div
-        onClick={done ? () => setOpen(v => !v) : undefined}
-        style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 7px", cursor: done ? "pointer" : "default" }}
+        onClick={onOpenEvolution ?? (done ? () => setOpen(v => !v) : undefined)}
+        title={onOpenEvolution ? "Prévu / Réalisé / Séance +1" : undefined}
+        style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 7px", cursor: onOpenEvolution || done ? "pointer" : "default" }}
       >
         <span style={{ fontSize: 9, color: cols.accent, flexShrink: 0 }}>
           {workout.status === "completed" ? "✓" : workout.status === "missed" ? "✗" : "–"}
@@ -101,6 +106,10 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail }: { wor
         <span style={{ flex: 1, fontSize: 10, fontWeight: 600, color: done ? C.tx : C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {workout.session_name}
         </span>
+        <VideoRequestsPill requests={workout.video_requests} />
+        {workout.occurrence != null && (
+          <span title={`Séance n°${workout.occurrence}`} style={{ fontSize: 8, fontWeight: 700, color: C.tx3, flexShrink: 0 }}>#{workout.occurrence}</span>
+        )}
         {done && perfCount > 0 && (
           <span style={{ fontSize: 8, color: C.tx3, flexShrink: 0 }}>{perfCount} exo{perfCount > 1 ? "s" : ""}</span>
         )}
@@ -110,7 +119,14 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail }: { wor
         {!done && (
           <span style={{ fontSize: 8, color: cols.accent, flexShrink: 0 }}>{cols.label}</span>
         )}
-        {done && (open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />)}
+        {done && (
+          <span
+            onClick={onOpenEvolution ? (e) => { e.stopPropagation(); setOpen(v => !v); } : undefined}
+            style={{ display: "flex", flexShrink: 0, padding: onOpenEvolution ? 2 : 0, margin: onOpenEvolution ? -2 : 0 }}
+          >
+            {open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />}
+          </span>
+        )}
       </div>
 
       {/* Expanded: summary + voir le détail */}
@@ -637,12 +653,13 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export function DayColumn({ date, workouts, energy, tests, wellness, previousWorkouts, rescheduledWorkoutIds, rescheduledEnergyIds, freeActivities = [] }: DayColumnProps) {
+export function DayColumn({ date, workouts, energy, tests, wellness, previousWorkouts, rescheduledWorkoutIds, rescheduledEnergyIds, freeActivities = [], athleteId }: DayColumnProps) {
   const today    = isToday(parseISO(date));
   const dayLabel = format(parseISO(date), "EEE", { locale: fr });
   const dayNum   = format(parseISO(date), "d");
   const [showWellness, setShowWellness] = useState(false);
   const [detailWorkout, setDetailWorkout] = useState<DayWorkout | null>(null);
+  const [evolutionWorkout, setEvolutionWorkout] = useState<DayWorkout | null>(null);
 
   return (
     <>
@@ -693,6 +710,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
                   prevWorkout={previousWorkouts?.find(pw => pw.session_name === w.session_name) ?? null}
                   isRescheduled={rescheduledWorkoutIds?.has(w.id)}
                   onShowDetail={() => setDetailWorkout(w)}
+                  onOpenEvolution={athleteId && w.session_id ? () => setEvolutionWorkout(w) : undefined}
                 />
               ))}
             </div>
@@ -737,6 +755,16 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
       {/* Wellness detail overlay */}
       {showWellness && wellness && (
         <DayDetailPanel date={date} wellness={wellness} onClose={() => setShowWellness(false)} />
+      )}
+
+      {/* Vue évolutive : Prévu / Réalisé / Séance +1 */}
+      {evolutionWorkout && athleteId && evolutionWorkout.session_id && (
+        <SessionEvolutionDrawer
+          athleteId={athleteId}
+          sessionId={evolutionWorkout.session_id}
+          occurrence={evolutionWorkout.occurrence ?? 1}
+          onClose={() => setEvolutionWorkout(null)}
+        />
       )}
 
       {/* Workout detail modal */}

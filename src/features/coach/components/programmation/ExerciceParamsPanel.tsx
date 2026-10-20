@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { C } from "@/lib/theme"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Video } from "lucide-react"
 import type { Exercice, ExerciceParams, ClusterConfig, ParamValue } from "./types"
 import { defaultExerciceParams } from "./types"
 import { ExerciceSearch } from "./ExerciceSearch"
@@ -11,6 +11,7 @@ import { useTrainingMethods } from "@/features/shared/hooks/useTrainingMethods"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 import type { TrainingMethod } from "@/types/trainingMethods"
 import { methodConfigToExerciceParams } from "@/features/coach/components/library/MethodPreview"
+import { isWeekRecord, resolveExerciceParams, resolveVideoRequest, setVideoRequest } from "@/lib/sessionOccurrence"
 
 const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
@@ -164,15 +165,8 @@ function Stepper({
 function getParams(exercice: Exercice, activeWeek: number, _multiSemaine: boolean): ExerciceParams {
   const p = exercice.params
   if (!p || typeof p !== 'object') return defaultExerciceParams()
-  const isRecord = Object.keys(p as object).some((k) => /^\d+$/.test(k))
-  let result: ExerciceParams
-  if (isRecord) {
-    const weekKey = String(activeWeek)
-    const rec = p as Record<string, ExerciceParams>
-    result = rec[weekKey] ?? rec['1'] ?? defaultExerciceParams()
-  } else {
-    result = p as ExerciceParams
-  }
+  // Occurrence sans valeur propre → reprend la dernière définie avant elle
+  const result: ExerciceParams = resolveExerciceParams(p, activeWeek) ?? defaultExerciceParams()
   // Guard against incomplete/corrupt stored params
   const def = defaultExerciceParams(result.nb_series)
   return {
@@ -187,13 +181,16 @@ function getParams(exercice: Exercice, activeWeek: number, _multiSemaine: boolea
 }
 
 function setParams(exercice: Exercice, params: ExerciceParams, activeWeek: number, multiSemaine: boolean): Exercice {
-  if (multiSemaine) {
-    const weekKey = String(activeWeek)
-    const existing = exercice.params
-    // Only keep existing as Record base if it actually has numeric week keys (not a flat ExerciceParams)
-    const isExistingRecord = typeof existing === 'object' && existing !== null && Object.keys(existing as object).some((k) => /^\d+$/.test(k))
-    const rec = isExistingRecord ? { ...(existing as Record<string, ExerciceParams>) } : {}
-    rec[weekKey] = params
+  const existing = exercice.params
+  const isExistingRecord = isWeekRecord(existing)
+  // Params déjà par occurrence : on n'écrase jamais les autres occurrences
+  if (multiSemaine || isExistingRecord) {
+    // Params plats = valables pour toutes les occurrences → deviennent l'occurrence 1
+    // (sinon l'édition d'une occurrence réécrirait aussi les précédentes)
+    const rec: Record<string, ExerciceParams> = isExistingRecord
+      ? { ...existing }
+      : existing && typeof existing === 'object' ? { '1': existing as ExerciceParams } : {}
+    rec[String(activeWeek)] = params
     return { ...exercice, params: rec }
   }
   return { ...exercice, params }
@@ -239,6 +236,9 @@ export function ExerciceParamsPanel({
 
   const multiSemaine = sessionMultiSemaine || (exercice.multi_semaine ?? false)
   const params = getParams(exercice, activeWeek, multiSemaine)
+  const videoRequest = resolveVideoRequest(exercice, activeWeek)
+  // Consigne reprise si on recoche après avoir décoché
+  const lastVideoNote = Object.values(exercice.video_request ?? {}).map(v => v.note).filter(Boolean).pop()
 
   function updateParams(partial: Partial<ExerciceParams>) {
     onChange(setParams(exercice, { ...params, ...partial }, activeWeek, multiSemaine))
@@ -715,6 +715,50 @@ export function ExerciceParamsPanel({
             boxSizing: "border-box" as const,
           }}
         />
+      </Section>
+
+      {/* 9b. Retour vidéo */}
+      <Section>
+        <button
+          type="button"
+          onClick={() => onChange(setVideoRequest(exercice, activeWeek, videoRequest
+            ? { requested: false }
+            : { requested: true, ...(lastVideoNote ? { note: lastVideoNote } : {}) }))}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, width: "100%",
+            padding: "8px 10px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
+            border: "1px solid " + (videoRequest ? VIOLET + "80" : C.brdL),
+            background: videoRequest ? VIOLET + "14" : "transparent",
+            color: videoRequest ? VIOLET : C.tx2, fontSize: 12, fontWeight: 700, textAlign: "left" as const,
+          }}
+        >
+          <span style={{
+            width: 16, height: 16, borderRadius: 3, flexShrink: 0,
+            border: "2px solid " + (videoRequest ? VIOLET : C.brdL),
+            background: videoRequest ? VIOLET : "transparent", color: "#0E0C0A",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900,
+          }}>{videoRequest ? "✓" : ""}</span>
+          <Video size={13} />
+          Retour vidéo demandé
+          {multiSemaine && (
+            <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 500, color: C.tx3 }}>
+              dès la séance {activeWeek}
+            </span>
+          )}
+        </button>
+        {videoRequest && (
+          <input
+            value={videoRequest.note ?? ""}
+            onChange={e => onChange(setVideoRequest(exercice, activeWeek, { requested: true, ...(e.target.value ? { note: e.target.value } : {}) }))}
+            placeholder="Consigne (optionnel) : ex. dernière série, vue de profil"
+            style={{
+              width: "100%", marginTop: 6, padding: "7px 10px", borderRadius: 4,
+              border: "1px solid " + C.brdL, background: C.s1,
+              color: C.tx, fontSize: 12, fontFamily: "inherit",
+              outline: "none", boxSizing: "border-box" as const,
+            }}
+          />
+        )}
       </Section>
 
       {/* 10. Synthèse */}

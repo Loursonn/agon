@@ -2,6 +2,11 @@ export type BlockType = 'macrocycle' | 'mesocycle' | 'cycle' | 'microcycle';
 export type CompetitionType = 'competition' | 'match' | 'stage' | 'off' | 'autre';
 export type CompetitionPriority = 'A' | 'B' | 'C';
 
+/** Libellé du niveau d'une compétition : « Importance A », « Importance B »… */
+export function priorityLabel(priority: string | null | undefined): string {
+  return priority ? `Importance ${priority}` : '';
+}
+
 export interface Competition {
   id: string;
   coach_id: string;

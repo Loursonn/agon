@@ -218,6 +218,8 @@ export interface AthleteModifications {
   exerciceComments?: Record<string, string>;         // key = Exercice.id
   sessionComment?: string;
   sessionForme?: number;                             // 1-5 état de forme
+  /** Retour vidéo envoyé par l'athlète (hors app), key = Exercice.id */
+  videoSent?: Record<string, boolean>;
   /** Coach's per-day adaptation of the session (see CoachSessionOverride). */
   coachOverride?: CoachSessionOverride;
 }

@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/lib/theme";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
 import { CoachUpdatesCard } from "@/features/coach/components/updates/CoachUpdatesCard";
-import { COMPETITION_META } from "@/types/planning";
+import { priorityLabel, COMPETITION_META } from "@/types/planning";
 import type { SessionStatus } from "@/features/shared/hooks/useCoachDashboard";
 
 // ── Animation variants ─────────────────────────────────────────────────────────
@@ -579,7 +579,7 @@ export default function CoachHomePage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-[12px] font-bold truncate" style={{ color: C.tx }}>{c.name}</p>
                           <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                            {c.athleteName} · {c.priority}
+                            {c.athleteName} · {priorityLabel(c.priority)}
                           </p>
                         </div>
                         <span

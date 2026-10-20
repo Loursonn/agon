@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MapPin, Trophy } from "lucide-react";
 import { C } from "@/lib/theme";
-import { competitionDayLabel } from "@/types/planning";
+import { priorityLabel, competitionDayLabel } from "@/types/planning";
 import { useUpdateCompetitionComment } from "@/features/shared/hooks/retoursComments.mutations";
 
 export interface CompetitionDayCardData {
@@ -81,7 +81,7 @@ export function CompetitionDayCard({
             fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
             background: C.r + "20", color: C.r, flexShrink: 0,
           }}>
-            {competition.priority}
+            {priorityLabel(competition.priority)}
           </span>
         )}
       </div>

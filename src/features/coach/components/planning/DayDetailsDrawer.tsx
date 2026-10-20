@@ -19,6 +19,8 @@ import { SessionPreviewModal } from "@/features/coach/components/energy/SessionP
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import type { ProgSession, Bloc, Exercice, ExerciceParams } from "@/features/coach/components/programmation/types";
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
+import { resolveExerciceParams } from "@/lib/sessionOccurrence";
+import { useSessionOccurrence } from "@/features/shared/hooks/useSessionOccurrence";
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -105,9 +107,7 @@ function buildExoRows(
 
   for (const ex of allExercices) {
     seenIds.add(ex.id);
-    const params = ex.multi_semaine && weekNumber != null && typeof ex.params === "object" && !("nb_series" in ex.params)
-      ? ((ex.params as Record<string, ExerciceParams>)[String(weekNumber)] ?? null)
-      : ("nb_series" in ex.params ? ex.params as ExerciceParams : null);
+    const params = resolveExerciceParams(ex.params, weekNumber ?? 1);
     const actual = (sessionSets?.[ex.id] ?? []) as SessionSetLog[];
     rows.push({
       id: ex.id, name: ex.exercise_name, blocName: ex.blocName, mode: ex.mode,
@@ -289,11 +289,15 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
   const sessionSets = mods?.sessionSets ?? null;
   const isCompleted = event.status === "completed";
   const sessionId = event.raw?.session_id as string | undefined;
-  const weekNumber = event.raw?.week_number as number | undefined;
+  // Occurrence de ce jour (n-ième fois que la séance est planifiée)
+  const { data: weekNumber } = useSessionOccurrence(athleteId, sessionId, event.date);
 
   const { data: progSessions = [], isLoading } = useProgrammation(athleteId);
   const progSession = progSessions.find((s: ProgSession) => s.id === sessionId);
-  const exoRows = buildExoRows(progSession, sessionSets, weekNumber);
+  // Modif ponctuelle du coach : c'est la version que l'athlète a eue
+  const ovrBlocs = mods?.coachOverride?.blocs as Bloc[] | undefined;
+  const sourceSession = progSession && ovrBlocs?.length ? { ...progSession, blocs: ovrBlocs } : progSession;
+  const exoRows = buildExoRows(sourceSession, sessionSets, weekNumber);
 
   // Stats summary
   const totalPlanned = exoRows.filter(e => e.planned).length;
@@ -1104,7 +1108,7 @@ export function DayDetailsDrawer({
                         fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
                         background: C.r + "20", color: C.r, flexShrink: 0,
                       }}>
-                        Priorité {String(e.raw.priority)}
+                        Importance {String(e.raw.priority)}
                       </span>
                     )}
                   </div>

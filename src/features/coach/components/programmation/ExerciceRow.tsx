@@ -1,11 +1,12 @@
 import { useState } from "react"
 import { C } from "@/lib/theme"
-import { GripVertical, X, Check } from "lucide-react"
+import { GripVertical, X, Check, Video } from "lucide-react"
 import type { Exercice } from "./types"
 import { SyntheseBar } from "./SyntheseBar"
 import { ExerciceParamsPanel } from "./ExerciceParamsPanel"
 import { RmDrawer } from "./RmDrawer"
 import { useExerciceRM } from "./hooks/useExerciceRM"
+import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence"
 
 const VIOLET = "#FFC933"
 
@@ -29,13 +30,7 @@ interface ExerciceRowProps {
 function getDisplayParams(exercice: Exercice, activeWeek: number, _multiSemaine: boolean) {
   const p = exercice.params
   if (!p || typeof p !== 'object') return null
-  const isRecord = Object.keys(p as object).some((k) => /^\d+$/.test(k))
-  const raw = isRecord
-    ? ((p as Record<string, import("./types").ExerciceParams>)[String(activeWeek)]
-      ?? (p as Record<string, import("./types").ExerciceParams>)['1']
-      ?? Object.values(p as Record<string, import("./types").ExerciceParams>)[0]
-      ?? null)
-    : (p as import("./types").ExerciceParams)
+  const raw = resolveExerciceParams(p, activeWeek)
   if (!raw) return null
   // Guard: at minimum reps must exist to show anything
   if (!raw.reps) return null
@@ -128,6 +123,12 @@ export function ExerciceRow({
             {exercice.mode === 'libre' && (
               <div style={{ fontSize: 8, fontWeight: 700, color: accent, background: accentSoft, padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>
                 libre
+              </div>
+            )}
+
+            {resolveVideoRequest(exercice, activeWeek) && (
+              <div title="Retour vidéo demandé" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 8, fontWeight: 700, color: accent, background: accentSoft, padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>
+                <Video size={9} /> vidéo
               </div>
             )}
 

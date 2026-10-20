@@ -37,6 +37,84 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-20-competitions-defilement",
+    date: "2026-10-20",
+    kind: "feature",
+    title: "Toutes les compétitions d'un coup d'œil + défilement libre",
+    summary: "Liste complète des compétitions depuis l'accueil athlète, niveaux renommés « Importance A/B/C », et colonnes de la vue évolutive détachables.",
+    sections: [
+      {
+        title: "Compétitions",
+        points: [
+          "Sur l'accueil athlète, « Toutes → » (ou un clic sur la prochaine compétition) ouvre la liste complète : à venir avec le compte à rebours, puis passées avec leur bilan.",
+          "Les niveaux A, B, C s'affichent désormais « Importance A », « Importance B », « Importance C » partout dans l'app.",
+        ],
+      },
+      {
+        title: "Vue Prévu / Réalisé / Séance +1",
+        points: [
+          "Les trois colonnes défilent toujours ensemble par défaut.",
+          "Clique sur l'icône 🔗 en haut d'une colonne pour la faire défiler seule ; reclique pour la relier à nouveau.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-20-retour-video",
+    date: "2026-10-20",
+    kind: "feature",
+    title: "Demander un retour vidéo sur un exercice",
+    summary: "Coche « Retour vidéo demandé » sur un exercice : l'athlète voit un bandeau dans sa séance et te confirme l'envoi.",
+    sections: [
+      {
+        title: "Côté coach",
+        points: [
+          "Dans le réglage d'un exercice (Programmation ou Séance +1 dans Retours), coche « Retour vidéo demandé » et ajoute si besoin une consigne (ex. dernière série, vue de profil).",
+          "La demande vaut à partir de la séance où tu la coches et pour les suivantes, jusqu'à ce que tu la décoches.",
+          "Dans Retours, tu vois pour chaque séance si la vidéo a été envoyée ou non.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Un bandeau « Retour vidéo demandé » s'affiche en haut de la séance, avec la consigne sous l'exercice concerné.",
+          "L'athlète t'envoie la vidéo comme d'habitude (WhatsApp, Instagram…) puis coche « Vidéo envoyée », même après avoir validé la séance.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-20-retours-evolutif",
+    date: "2026-10-20",
+    kind: "feature",
+    title: "Adapter la séance suivante depuis Retours",
+    summary: "Clique sur une séance dans Retours pour voir le prévu, le réalisé et préparer la séance d'après, sans aller dans Programmation.",
+    sections: [
+      {
+        title: "Dans Retours",
+        points: [
+          "Clique sur une séance muscu (vue semaine) ou sur « Évolution » (vue mois, détail des séances) : tu vois Prévu, Réalisé et Séance +1 côte à côte.",
+          "Ce que tu modifies dans « Séance +1 » s'applique à la prochaine fois que l'athlète fait cette séance, et aux suivantes tant que tu ne les changes pas.",
+          "Si la séance suivante a déjà une adaptation ponctuelle faite depuis le Planning, un bandeau te le signale : tu peux la garder ou l'écraser.",
+        ],
+      },
+      {
+        title: "Progression séance par séance",
+        points: [
+          "Chaque séance est numérotée selon le nombre de fois où elle est planifiée (n°1, n°2, n°3…), même si le mode multi-semaines n'est pas activé.",
+          "Une séance programmée deux fois dans la même semaine progresse donc à chaque fois, et la numérotation continue d'un cycle à l'autre.",
+        ],
+      },
+      {
+        title: "Dans Programmation",
+        points: [
+          "Le bouton « évolutif » est retiré : la vue est désormais dans Retours.",
+          "Le bouton « Placer dans le planning » a maintenant son icône calendrier (il était invisible).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-18-deconnexion-appareil",
     date: "2026-10-18",
     kind: "fix",
