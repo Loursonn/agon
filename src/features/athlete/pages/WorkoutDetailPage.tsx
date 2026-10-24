@@ -10,6 +10,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hooks/useWorkoutSession";
 import { useSaveWorkoutSets } from "@/features/shared/hooks/useSaveWorkoutSets";
+import { QK } from "@/lib/queryKeys";
 import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
 import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import type { AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
@@ -2034,6 +2035,7 @@ function RpeSheetForLog({
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["workout-log-detail", workoutLogId] });
+      if (athleteId) qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
       onClose();
     },
     onError: () => {
@@ -2188,7 +2190,7 @@ export default function WorkoutDetailPage() {
   const qc = useQueryClient();
 
   const workout = useWorkoutSession(id);
-  const { save: saveWorkoutSets, flushNow: flushWorkoutSets } = useSaveWorkoutSets(id);
+  const { save: saveWorkoutSets, flushNow: flushWorkoutSets } = useSaveWorkoutSets(id, athleteId);
 
   // ── State ────────────────────────────────────────────────────────────────
   const [sets, setSets] = useState<AllSets>({});

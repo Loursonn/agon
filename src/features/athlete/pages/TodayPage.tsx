@@ -27,7 +27,7 @@ import { COMPETITION_META, priorityLabel } from "@/types/planning";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
 import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
-import type { DayProgram } from "@/features/shared/hooks/useWeekProgram";
+import type { DayProgram, SessionPreviewItem } from "@/features/shared/hooks/useWeekProgram";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
@@ -113,10 +113,18 @@ const WELL_FIELDS: Array<{ key: string; label: string; icon: React.ReactNode; in
 
 const DAYS_FULL_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
+/** Prescription courte d'un exercice de ProgSession (« 4 × 8 »). */
+function previewDetail(it: SessionPreviewItem): string {
+  if (it.mode === "libre" || !it.params) return it.mode === "libre" ? "Libre" : "";
+  const p = it.params;
+  const reps = p.reps.mode === "global" ? String(p.reps.value) : p.reps.values.join("/");
+  return `${p.nb_series} × ${reps}`;
+}
+
 interface DayPreviewSheetProps {
   day: DayProgram | null;
   onClose: () => void;
-  onStartSession: (sess: DayProgram["sessions"][number]["session"]) => void;
+  onStartSession: (sess: DayProgram["sessions"][number]["session"], workoutLogId?: string) => void;
   freeSessions: FreeSession[];
   energyByDate: Map<string, UnifiedCalendarEvent[]>;
   onEnergyPreview: (ev: UnifiedCalendarEvent) => void;
@@ -176,7 +184,16 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
               ))}
 
               {/* Sessions */}
-              {day.sessions.map(({ session, exercises, isCompleted }) => (
+              {day.sessions.map(({ session, exercises: legacyExercises, items, isCompleted, workoutLogId }) => {
+                // ProgSession d'abord ; l'ancien asp:exos seulement à défaut
+                const exercises = items?.length
+                  ? items.map((it) => ({ id: it.id, name: it.name, detail: previewDetail(it) }))
+                  : legacyExercises.map((ex) => {
+                      const w = ex.weeks ? (Object.values(ex.weeks)[0] as { sets?: number; repsRange?: string } | undefined) : undefined;
+                      return { id: ex.id, name: ex.name, detail: w?.sets ? `${w.sets}×${w.repsRange ?? ""}` : "" };
+                    });
+                return (
+
                 <div
                   key={session.id}
                   style={{
@@ -217,10 +234,8 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
                           }}
                         >
                           <div style={{ fontSize: 11, color: C.tx, flex: 1 }}>{ex.name}</div>
-                          {ex.weeks && Object.values(ex.weeks)[0] && (
-                            <div style={{ fontSize: 10, color: C.tx3 }}>
-                              {(Object.values(ex.weeks)[0] as { sets?: number; repsRange?: string }).sets}×{(Object.values(ex.weeks)[0] as { sets?: number; repsRange?: string }).repsRange}
-                            </div>
+                          {ex.detail && (
+                            <div style={{ fontSize: 10, color: C.tx3 }}>{ex.detail}</div>
                           )}
                         </div>
                       ))}
@@ -234,7 +249,7 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
 
                   {!isCompleted && !isPast && !viewOnly && (
                     <button
-                      onClick={() => { onStartSession(session); onClose(); haptic(); }}
+                      onClick={() => { onStartSession(session, workoutLogId); onClose(); haptic(); }}
                       style={{
                         width: "100%", padding: "11px 0", borderRadius: 4,
                         border: "none", background: C.acV, color: "#0E0C0A",
@@ -246,7 +261,8 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
 
               {/* Séances énergie */}
               {dayEnergySessions.map((ev) => {
@@ -1758,7 +1774,11 @@ export default function TodayPage() {
       <DayPreviewSheet
         day={selectedDay}
         onClose={() => setSelectedDay(null)}
-        onStartSession={viewOnly ? () => {} : (sess) => navigate("/athlete/log", { state: { initialSess: sess } })}
+        onStartSession={viewOnly ? () => {} : (sess, workoutLogId) => {
+          // Écran de séance actuel ; /athlete/log (LogView legacy) seulement sans log
+          if (workoutLogId) navigate("/athlete/program/workout/" + workoutLogId);
+          else navigate("/athlete/log", { state: { initialSess: sess } });
+        }}
         freeSessions={freeSessions}
         energyByDate={energyByDate}
         onEnergyPreview={(ev) => {

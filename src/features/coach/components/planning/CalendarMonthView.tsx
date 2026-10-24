@@ -43,6 +43,8 @@ import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER } from "@
 import type { EnergySessionRow } from "@/types/energy";
 import { DayDetailsDrawer } from "./DayDetailsDrawer";
 import { QuickAddDialog } from "./QuickAddDialog";
+import { buildProjectionCoverage, isProjectionCovered } from "@/lib/planningProjection";
+import { athleteMoveTitle } from "@/lib/athleteChoices";
 
 // ── Cycle auto-detection ──────────────────────────────────────────────────────
 
@@ -175,6 +177,14 @@ function EventChip({
           <span style={{ opacity: 0.5, marginLeft: 3, fontSize: 8 }}>prévu</span>
         )}
       </span>
+      {event.type === "workout" && event.rescheduledByAthlete && (
+        <span
+          title={athleteMoveTitle(event.date, event.originalScheduledDate)}
+          style={{ flexShrink: 0, marginLeft: 2, fontSize: 8, fontWeight: 800, color: "#F59E0B" }}
+        >
+          ↷
+        </span>
+      )}
       {event.type === "workout" && !!(event.raw?.athlete_modifications as { coachOverride?: unknown } | null)?.coachOverride && (
         <span title="Séance adaptée pour ce jour" style={{ flexShrink: 0, marginLeft: 2, color: "#F59E0B" }}></span>
       )}
@@ -464,7 +474,7 @@ function DroppableDay({
             )}
             {!hasAlert && hasRescheduled && (
               <span
-                title="Séance déplacée par l'athlète"
+                title="Déplacé par l'athlète"
                 style={{
                   width: 5, height: 5, borderRadius: "50%",
                   background: "#F59E0B50",
@@ -885,11 +895,21 @@ export function CalendarMonthView({
     const activeCyc = allCycles.find((c) => c.id === blockConfig?.cycleId)
       ?? [...allCycles].sort((a, b) => b.end_date.localeCompare(a.end_date))[0];
 
-    // Build set of already-logged session_id:date to avoid duplication
-    const logged = new Set(
+    // Occurrences déjà couvertes par un vrai log (même date, même semaine
+    // d'origine ou même n° d'occurrence) : workout_logs est la source de vérité,
+    // une séance déplacée par l'athlète ne doit pas réapparaître à l'ancienne date.
+    const coverage = buildProjectionCoverage(
       enrichedRealEvents
-        .filter((e) => e.type === "workout" && e.raw?.session_id)
-        .map((e) => `${e.raw.session_id}:${e.date}`),
+        .filter((e) => e.type === "workout")
+        .map((e) => ({
+          session_id:              e.raw?.session_id as string | undefined,
+          scheduled_date:          e.date,
+          original_scheduled_date: e.raw?.original_scheduled_date as string | null | undefined,
+          // N° d'occurrence comparable seulement à l'intérieur du cycle affiché
+          week_number: activeCyc && e.date >= activeCyc.start_date && e.date <= activeCyc.end_date
+            ? (e.raw?.week_number as number | null | undefined)
+            : null,
+        })),
     );
 
     const out: CalEvent[] = [];
@@ -905,9 +925,9 @@ export function CalendarMonthView({
 
         const dateStr = format(d, "yyyy-MM-dd");
         if (activeCyc && (dateStr < activeCyc.start_date || dateStr > activeCyc.end_date)) continue;
-        if (logged.has(`${sess.id}:${dateStr}`)) continue;
-
         const weekNum = w + 1;
+        if (isProjectionCovered(coverage, sess.id, dateStr, weekNum)) continue;
+
         const todayStr = format(new Date(), "yyyy-MM-dd");
         const projStatus = dateStr < todayStr ? "missed" : "planned";
 

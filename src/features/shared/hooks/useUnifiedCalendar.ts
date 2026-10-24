@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Exercise, WeekConfig } from "@/features/shared/types/athlete";
 import { syncDocAssignmentsFromEnergy } from "./fiches/syncDocAssignments";
+import { QK } from "@/lib/queryKeys";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ export interface UnifiedCalendarEvent {
   exercises?: Exercise[];      // populated only when includeExercises = true
   rescheduledByAthlete?: boolean;
   coachAlert?: boolean;
+  /** Date prévue par le coach avant un déplacement par l'athlète */
+  originalScheduledDate?: string;
   // Test-specific
   testType?: string;
   completed?: boolean;
@@ -54,7 +57,7 @@ export interface UnifiedCalendarEvent {
 // ── Query key helpers ─────────────────────────────────────────────────────────
 
 /** Partial key — used by mutations to invalidate ALL ranges for an athlete. */
-export const calBaseKey = (athleteId: string) => ["cal", athleteId] as const;
+export const calBaseKey = (athleteId: string) => QK.cal(athleteId);
 
 /** Full key for a specific range query. */
 export const calRangeKey = (athleteId: string, start: string, end: string) =>
@@ -85,7 +88,7 @@ export function useUnifiedCalendar(
       const [wRes, tRes, cRes, eRes, fRes, leRes] = await Promise.all([
         supabase
           .from("workout_logs")
-          .select("id, session_id, session_name, scheduled_date, status, rpe_score, athlete_modifications")
+          .select("id, session_id, session_name, scheduled_date, status, rpe_score, athlete_modifications, rescheduled_by_athlete, coach_alert, original_scheduled_date, week_number")
           .eq("athlete_id", athleteId)
           .gte("scheduled_date", start)
           .lte("scheduled_date", end)
@@ -187,8 +190,9 @@ export function useUnifiedCalendar(
           rpe,
           sessionId:            w.session_id ?? undefined,
           exercises:            includeExercises ? (exercisesBySession[w.session_id ?? ""] ?? []) : undefined,
-          rescheduledByAthlete: (w as { rescheduled_by_athlete?: boolean }).rescheduled_by_athlete ?? false,
-          coachAlert:           (w as { coach_alert?: boolean }).coach_alert ?? false,
+          rescheduledByAthlete: w.rescheduled_by_athlete ?? false,
+          coachAlert:           w.coach_alert ?? false,
+          originalScheduledDate: w.original_scheduled_date ?? undefined,
           raw:                  { ...(w as Record<string, unknown>), session_id: w.session_id },
         });
       }
@@ -543,6 +547,9 @@ export interface CalEvent {
   duration?: number;
   intensity?: number;
   dateEnd?: string;
+  rescheduledByAthlete?: boolean;
+  coachAlert?: boolean;
+  originalScheduledDate?: string;
   raw: Record<string, unknown>;
 }
 
@@ -562,6 +569,9 @@ export function toCalEvent(e: UnifiedCalendarEvent): CalEvent {
     duration:        e.duration,
     intensity:       e.intensity,
     dateEnd:         e.dateEnd,
+    rescheduledByAthlete:  e.rescheduledByAthlete,
+    coachAlert:            e.coachAlert,
+    originalScheduledDate: e.originalScheduledDate,
     raw:             e.raw,
   };
 }

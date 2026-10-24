@@ -37,6 +37,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-24-planning-synchro-athlete",
+    date: "2026-10-24",
+    kind: "fix",
+    title: "Le planning montre exactement ce que voit l'athlète",
+    summary: "Fini les séances fantômes : quand l'athlète déplace ou démarre une séance un autre jour, ton planning suit, avec la mention « Choix de l'athlète ».",
+    sections: [
+      {
+        title: "Planning coach",
+        points: [
+          "Une séance déplacée par l'athlète n'apparaît plus en double à son ancienne date.",
+          "Elle porte le badge « Déplacé par l'athlète · prévu lun. 19 oct. » dans la case du jour et dans le détail.",
+          "Dans le détail d'une séance, un encart « Choix de l'athlète » regroupe les exercices ajoutés, séries en plus, séries sautées et commentaires.",
+          "« Changer de jour » sur une séance garde les séances que l'athlète a déjà déplacées et t'indique combien ont été conservées.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Faire aujourd'hui une séance prévue un autre jour de la semaine la déplace au lieu d'en créer une deuxième.",
+          "Sur l'accueil, l'aperçu d'un jour liste les vrais exercices de la séance, et « Démarrer » ouvre directement l'écran de séance.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-20-competitions-defilement",
     date: "2026-10-20",
     kind: "feature",

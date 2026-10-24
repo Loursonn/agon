@@ -39,6 +39,9 @@ export const QK = {
   activePlan:     (aid: string) => ['activePlan', aid] as const,
   // ── Workout logs (semaine) ────────────────────────────────────────────────────
   workoutLogsWeek: (aid: string, mondayISO: string) => ['workout-logs-week', aid, mondayISO] as const,
+  // ── Calendrier unifié (planning coach) — préfixe de useUnifiedCalendar ──────
+  cal:            (aid: string) => ['cal', aid] as const,
+  calAll:         ['cal'] as const,
   // ── Modifications athlète (reschedule + bonus, pour coach) ───────────────────
   athleteModifications: (aid: string) => ['athleteModifications', aid] as const,
   // ── Coach dashboard ───────────────────────────────────────────────────────────

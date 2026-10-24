@@ -21,6 +21,8 @@ import type { ProgSession, Bloc, Exercice, ExerciceParams } from "@/features/coa
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 import { resolveExerciceParams } from "@/lib/sessionOccurrence";
 import { useSessionOccurrence } from "@/features/shared/hooks/useSessionOccurrence";
+import { AthleteChoicesPanel, AthleteMoveBadge } from "./AthleteChoicesPanel";
+import { ATHLETE_CHOICE_LABEL } from "@/lib/athleteChoices";
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -197,8 +199,8 @@ function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
               </span>
             )}
             {!exo.planned && hasActual && (
-              <span style={{ fontSize: 8, marginLeft: 5, padding: "1px 5px", borderRadius: 4, background: C.acS, color: C.ac, fontWeight: 600, verticalAlign: "middle" }}>
-                Ajouté
+              <span style={{ fontSize: 8, marginLeft: 5, padding: "1px 5px", borderRadius: 4, background: "#F59E0B20", color: "#F59E0B", fontWeight: 600, verticalAlign: "middle" }}>
+                {ATHLETE_CHOICE_LABEL}
               </span>
             )}
           </div>
@@ -344,6 +346,7 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
                   RPE {event.rpe}/10
                 </span>
               )}
+              <AthleteMoveBadge event={event} />
               {mods?.sessionForme != null && (
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
@@ -418,17 +421,13 @@ function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEvent; ath
                 );
               })}
 
-              {/* Session comment */}
-              {mods?.sessionComment && (
-                <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brd, padding: "10px 12px", marginTop: 6 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
-                    Commentaire séance
-                  </div>
-                  <div style={{ fontSize: 12, color: C.tx2, fontStyle: "italic", lineHeight: 1.4 }}>
-                    « {mods.sessionComment} »
-                  </div>
-                </div>
-              )}
+              <div style={{ marginTop: 6 }}>
+                <AthleteChoicesPanel
+                  event={event}
+                  plannedExerciceIds={(sourceSession?.blocs ?? []).flatMap((b) => b.exercices.map((ex) => ex.id))}
+                />
+              </div>
+
             </>
           )}
         </div>
@@ -497,7 +496,10 @@ function WorkoutDetailView({
             Adaptée ce jour
           </span>
         )}
+        <AthleteMoveBadge event={event} />
       </div>
+
+      <AthleteChoicesPanel event={event} />
 
       {/* Edit session programme */}
       {sessionId && athleteId && (
@@ -556,11 +558,6 @@ function WorkoutDetailView({
           }}>
             {mods.sessionForme}/5
           </span>
-        </div>
-      )}
-      {isCompleted && mods?.sessionComment && (
-        <div style={{ fontSize: 12, color: C.tx2, fontStyle: "italic", background: C.s2, borderRadius: 4, padding: "8px 12px", border: "1px solid " + C.brd }}>
-          « {mods.sessionComment} »
         </div>
       )}
     </div>
@@ -646,6 +643,7 @@ function EventCard({
                 RPE {event.rpe}/10
               </span>
             )}
+            <AthleteMoveBadge event={event} />
             {event.type === "free_activity" && event.duration != null && (
               <span style={{ fontSize: 9, color: C.tx3 }}>{event.duration} min</span>
             )}
