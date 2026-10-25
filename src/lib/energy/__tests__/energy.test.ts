@@ -214,7 +214,10 @@ describe('computeTotals', () => {
 describe('targetToIntensityPct', () => {
   it('none → null', () => expect(targetToIntensityPct({ kind: 'none' })).toBeNull());
   it('text → null', () => expect(targetToIntensityPct({ kind: 'text', value: 'facile' })).toBeNull());
-  it('hr_bpm → null', () => expect(targetToIntensityPct({ kind: 'hr_bpm', min: 140, max: 160 })).toBeNull());
+  // Sans référence cardiaque, la FC est estimée sur la plage générique 100–200 bpm.
+  // moyenne 150 bpm → 20 + ((150-100)/100) * 80 = 60 %
+  it('hr_bpm sans référence → estimation sur la plage 100–200 bpm', () =>
+    expect(targetToIntensityPct({ kind: 'hr_bpm', min: 140, max: 160 })).toBe(60));
   // Sans VMA de référence, l'allure est estimée sur la plage 2:30–8:00 /km.
   // 5:00/km = 300 s/km → 30 + ((480-300)/(480-150)) * 70 ≈ 68 %
   it('pace sans VMA → estimation sur la plage typique', () =>
@@ -250,16 +253,16 @@ describe('targetToIntensityPct', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('intensityToColor', () => {
-  it('0% → vert hsl(140, 70%, 50%)', () => {
-    expect(intensityToColor(0)).toBe('hsl(140, 70%, 50%)');
+  it('0% → vert hsl(140, 75%, 50%)', () => {
+    expect(intensityToColor(0)).toBe('hsl(140, 75%, 50%)');
   });
 
-  it('100% → rouge hsl(0, 80%, 50%)', () => {
-    expect(intensityToColor(100)).toBe('hsl(0, 80%, 50%)');
+  it('100% → rouge hsl(0, 80%, 45%)', () => {
+    expect(intensityToColor(100)).toBe('hsl(0, 80%, 45%)');
   });
 
-  it('50% → milieu hsl(70, 75%, 50%)', () => {
-    expect(intensityToColor(50)).toBe('hsl(70, 75%, 50%)');
+  it('50% → milieu hsl(70, 78%, 48%)', () => {
+    expect(intensityToColor(50)).toBe('hsl(70, 78%, 48%)');
   });
 
   it('clamp < 0 → même que 0%', () => {

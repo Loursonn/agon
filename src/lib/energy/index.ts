@@ -214,7 +214,9 @@ export function computeTotals(flat: FlatInterval[], options?: EnergyCalcOptions)
  *   hr_pct         → moyenne(min, max)
  *   pace_test_pct  → moyenne(min, max)  [% de la métrique test = déjà une intensité]
  *   power_test_pct → moyenne(min, max)
- *   hr_bpm/pace/power/cadence/… → null (pas de référence commune)
+ *   hr_bpm         → estimation sur la plage générique 100–200 bpm → 20–100
+ *   pace           → estimation sur la plage typique 2:30–8:00 /km → 100–30
+ *   power/cadence/x_per_y/text/none → null (pas de référence commune)
  *
  * Avec références athlète (refs) :
  *   pace + refs.VMA (km/h)    → (speed_kmh / VMA) * 100
