@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
@@ -29,13 +29,31 @@ import { useAuth } from "@/hooks/useAuth";
 type ViewMode = "month" | "week";
 type DetailView = "wellness" | "workouts" | "tests" | "competitions" | "nutrition" | null;
 
+const DETAIL_VIEWS = ["wellness", "workouts", "tests", "competitions", "nutrition"] as const;
+
+/** `?detail=wellness` ouvre directement le détail : utilisé par les alertes de l'accueil coach. */
+function detailFromParam(raw: string | null): DetailView {
+  return DETAIL_VIEWS.includes(raw as (typeof DETAIL_VIEWS)[number]) ? (raw as DetailView) : null;
+}
+
 export default function RetoursPage() {
   const { athleteId } = useParams<{ athleteId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { goals, exos, exMeta, sets, sessions, weeksArr, tw, currentWeek, injuries, activeInjuries, freeSessions } = useAthleteContext();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [selectedWeek, setSelectedWeek]   = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [detailView, setDetailView]       = useState<DetailView>(null);
+  const [detailView, setDetailView]       = useState<DetailView>(() => detailFromParam(searchParams.get("detail")));
+
+  /** Referme le détail et retire le paramètre d'URL, pour ne pas le réouvrir au retour. */
+  const closeDetail = () => {
+    setDetailView(null);
+    if (searchParams.has("detail")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("detail");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { data: monthData, isLoading: monthLoading } = useMonthlyRetours(athleteId!, selectedMonth);
@@ -310,7 +328,7 @@ export default function RetoursPage() {
             wakeup:         goals.sleepWakeup,
             durationTarget: goals.sleepTarget,
           }}
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "workouts" && (
@@ -328,7 +346,7 @@ export default function RetoursPage() {
               ? (monthData?.energy_sessions ?? [])
               : (weekCurrent?.energy_sessions ?? [])
           }
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "tests" && (
@@ -338,7 +356,7 @@ export default function RetoursPage() {
               ? (monthData?.test_sessions ?? [])
               : (weekCurrent?.test_sessions ?? [])
           }
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "competitions" && (
@@ -348,14 +366,14 @@ export default function RetoursPage() {
               ? (monthData?.competitions ?? [])
               : (weekCurrent?.competitions ?? [])
           }
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "nutrition" && (
         <NutritionDetailView
           logs={nutritionLogs}
           strategy={nutritionStrategy}
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
 

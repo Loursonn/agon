@@ -52,6 +52,7 @@ export const QK = {
     planningMargin: (cid: string)               => ['coachDashboard', 'planningMargin', cid]       as const,
     recentRecords:  (cid: string)               => ['coachDashboard', 'recentRecords',  cid]       as const,
     upcomingTests:  (cid: string, date: string) => ['coachDashboard', 'upcomingTests',  cid, date] as const,
+    wellnessAlerts: (cid: string, date: string) => ['coachDashboard', 'wellnessAlerts', cid, date] as const,
   },
   // ── Méthodes d'entraînement ───────────────────────────────────────────────────
   trainingMethods: (filters?: object) => ['training_methods', filters ?? {}] as const,

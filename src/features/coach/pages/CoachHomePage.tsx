@@ -19,6 +19,8 @@ import { useRecentRecords } from "@/features/shared/hooks/useRecentRecords";
 import { useUpcomingCompetitions } from "@/features/shared/hooks/useUpcomingCompetitions";
 import { useRecentActivity } from "@/features/shared/hooks/useRecentActivity";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
+import { useWellnessAlerts } from "@/features/shared/hooks/useWellnessAlerts";
+import { formatAssessment } from "@/lib/wellnessBaseline";
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/lib/theme";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
@@ -110,6 +112,7 @@ export default function CoachHomePage() {
   const { records, isLoading: loadRecords }             = useRecentRecords(8);
   const { competitions, isLoading: loadCompet }         = useUpcomingCompetitions(30);
   const { activities, isLoading: loadActivity }         = useRecentActivity(8);
+  const { alerts: wellnessAlerts }                      = useWellnessAlerts();
 
   // Séances travaillées mais jamais clôturées par l'athlète : les données sont
   // là, mais le statut "planned" les exclut de l'historique et des stats.
@@ -304,6 +307,41 @@ export default function CoachHomePage() {
                     <ChevronRight size={13} style={{ color: C.tx3 }} />
                   </div>
                 ))}
+              </Card>
+            </motion.div>
+          )}
+
+          {/* ── Alertes wellness — écart à l'habitude de l'athlète ── */}
+          {wellnessAlerts.length > 0 && (
+            <motion.div variants={fadeUp}>
+              <SectionTitle icon={<Heart size={11} style={{ color: C.r }} />}>Alertes wellness</SectionTitle>
+              <Card>
+                {wellnessAlerts.map((a, i) => {
+                  const accent = a.assessment.level === "alerte" ? C.r : C.o;
+                  return (
+                    <div
+                      key={a.athleteId}
+                      onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?detail=wellness`)}
+                      className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+                      style={{
+                        borderBottom: i < wellnessAlerts.length - 1
+                          ? "1px solid rgba(231,211,168,0.1)"
+                          : undefined,
+                        borderLeft: `3px solid ${accent}`,
+                      }}
+                    >
+                      <Avatar name={a.athleteName} color={accent} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold" style={{ color: C.tx }}>{a.athleteName}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
+                          {formatAssessment(a.assessment)}
+                          {a.assessment.twoConsecutive && " · 2 saisies de suite"}
+                        </p>
+                      </div>
+                      <ChevronRight size={13} style={{ color: C.tx3 }} />
+                    </div>
+                  );
+                })}
               </Card>
             </motion.div>
           )}

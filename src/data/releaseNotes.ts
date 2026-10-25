@@ -37,6 +37,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-25-alertes-wellness",
+    date: "2026-10-25",
+    kind: "feature",
+    title: "Alertes wellness comparées à l'habitude de l'athlète",
+    summary: "L'accueil signale les athlètes qui s'écartent de leur propre habitude, au lieu d'un seuil identique pour tout le monde.",
+    sections: [
+      {
+        title: "Ce que tu vois",
+        points: [
+          "Une carte « Alertes wellness » sur l'accueil, qui n'apparaît que s'il y a quelque chose à signaler.",
+          "Un athlète par ligne, les rouges avant les orange, avec l'écart en clair : « Fraîcheur musculaire 2/5 (habitude 4,1) ».",
+          "Un clic ouvre directement le détail wellness de l'athlète dans Retours.",
+        ],
+      },
+      {
+        title: "Comment c'est calculé",
+        points: [
+          "Chaque saisie est comparée à la moyenne et à la dispersion des 28 jours précédents de ce même athlète.",
+          "Sous 7 saisies dans la fenêtre, rien n'est signalé : l'habitude n'est pas encore fiable.",
+          "Orange dès qu'un item ou le score global décroche nettement ; rouge si l'écart est franc ou s'il se répète deux saisies de suite.",
+          "Un athlète qui dort mal tous les jours n'est donc plus signalé en continu, et une baisse nette chez un athlète régulier ne passe plus inaperçue.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-25-equivalences-allure",
     date: "2026-10-25",
     kind: "feature",
