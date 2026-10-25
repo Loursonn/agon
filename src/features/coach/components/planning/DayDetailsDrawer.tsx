@@ -18,11 +18,12 @@ import { CoachSessionOverrideModal } from "./CoachSessionOverrideModal";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import type { ProgSession, Bloc, Exercice, ExerciceParams } from "@/features/coach/components/programmation/types";
-import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
 import { resolveExerciceParams } from "@/lib/sessionOccurrence";
 import { useSessionOccurrence } from "@/features/shared/hooks/useSessionOccurrence";
 import { AthleteChoicesPanel, AthleteMoveBadge } from "./AthleteChoicesPanel";
 import { ATHLETE_CHOICE_LABEL } from "@/lib/athleteChoices";
+import { formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps";
+import { IsoBadge } from "@/features/shared/components/IsoBadge";
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -71,17 +72,7 @@ type ExoRow = {
 
 /** Format planned params to readable string */
 function fmtPlanned(p: ExerciceParams): string {
-  const parts: string[] = [];
-  parts.push(`${p.nb_series}×`);
-  if (p.cluster) {
-    parts.push(formatClusterReps(p.cluster));
-  } else if (p.reps.mode === "global") {
-    const rMin = p.reps.value;
-    const rMax = p.reps_max?.mode === "global" ? p.reps_max.value : null;
-    parts.push(rMax != null && rMax !== rMin ? `${rMin}-${rMax}` : String(rMin));
-  } else {
-    parts.push(p.reps.values.join("/"));
-  }
+  const parts: string[] = [formatSetsReps(p)];
   if (p.charge.mode === "global" && p.charge.value != null) {
     parts.push(p.charge_unit === "%RM" ? `@${p.charge.value}%` : `@${p.charge.value}kg`);
   }
@@ -193,6 +184,7 @@ function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
                 Méthode
               </span>
             )}
+            {exo.planned && hasIso(exo.planned) && <IsoBadge />}
             {exo.mode === "libre" && (
               <span style={{ fontSize: 8, marginLeft: 5, padding: "1px 5px", borderRadius: 4, background: C.oS, color: C.o, fontWeight: 600, verticalAlign: "middle" }}>
                 Libre
@@ -260,7 +252,7 @@ function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.tx2 }}>
                       <span style={{ color: C.tx3, minWidth: 18, fontSize: 10, fontWeight: 600 }}>S{i + 1}</span>
                       {s.kg != null && <span style={{ fontWeight: 700, color: C.tx }}>{s.kg}kg</span>}
-                      {s.reps != null && <span>×{s.reps}</span>}
+                      {s.reps != null && <span>×{s.reps}{isIsoAt(exo.planned, i) ? " s" : ""}</span>}
                       {s.rir != null && <span style={{ color: C.tx3, fontSize: 10 }}>RIR{s.rir}</span>}
                     </div>
                   ))}

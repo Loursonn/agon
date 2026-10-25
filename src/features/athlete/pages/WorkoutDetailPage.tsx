@@ -11,6 +11,7 @@ import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hooks/useWorkoutSession";
 import { useSaveWorkoutSets } from "@/features/shared/hooks/useSaveWorkoutSets";
 import { QK } from "@/lib/queryKeys";
+import { formatRepsAt, formatSetsReps, hasIso, isAllIso, isIsoAt } from "@/lib/formatSetsReps";
 import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
 import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import type { AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
@@ -234,21 +235,16 @@ function formatPrescription(params: ExerciceParams): string {
   }
   if (params.reps.mode === "par_serie" || params.charge.mode === "par_serie") {
     const parts = Array.from({ length: nb }, (_, i) => {
-      const r = params.reps.mode === "par_serie" ? params.reps.values[i] : params.reps.value;
+      const r = formatRepsAt(params, i);
       const c = params.charge.mode === "par_serie" ? params.charge.values[i] : params.charge.value;
-      if (c != null && params.charge_unit !== "PDC") return `${r ?? "?"}@${c}${params.charge_unit}`;
-      return String(r ?? "?");
+      if (c != null && params.charge_unit !== "PDC") return `${r}@${c}${params.charge_unit}`;
+      return r;
     });
     let ps = `${nb}× ${parts.join(" / ")}`;
     const pt = params.tempo?.mode === "global" && params.tempo.value ? params.tempo.value : null;
     if (pt) ps += ` · T ${pt}`;
     return ps;
   }
-  const reps = params.reps.mode === "global" ? params.reps.value : "?";
-  const repsMax = params.reps_max?.mode === "global" ? params.reps_max.value : null;
-  const isIso = (params.reps_mode?.mode === "global" && params.reps_mode.value === "iso");
-  const repsLabel = repsMax != null && repsMax !== reps ? `${reps}-${repsMax}` : String(reps);
-  const unit = isIso ? "sec" : "";
   const chargeVal =
     params.charge_unit === "PDC"
       ? "PDC"
@@ -256,7 +252,7 @@ function formatPrescription(params: ExerciceParams): string {
       ? `${params.charge.value}${params.charge_unit}`
       : null;
   const rirVal = params.rir.mode === "global" && params.rir.value != null ? params.rir.value : null;
-  let s = `${nb}×${repsLabel}${unit ? " " + unit : ""}`;
+  let s = formatSetsReps(params);
   if (chargeVal) s += ` @ ${chargeVal}`;
   if (rirVal != null) s += ` · RIR ${rirVal}`;
   const tempoVal = params.tempo?.mode === "global" && params.tempo.value ? params.tempo.value : null;
@@ -412,7 +408,7 @@ function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, indexCo
       {!isPDC && cell("kg", state.kg)}
 
       {/* reps — en iso la valeur est une durée en secondes */}
-      {cell("reps", state.reps ? (isIso ? `${state.reps}s` : state.reps) : "")}
+      {cell("reps", state.reps ? (isIso ? `${state.reps} s` : state.reps) : "")}
 
       {/* prev perf */}
       <div
@@ -1045,7 +1041,8 @@ function ExerciceCard({
 }: ExerciceCardProps) {
   const [showComment, setShowComment] = useState(false);
   const isPDC = params.charge_unit === "PDC";
-  const isIso = params.reps_mode?.mode === "global" && params.reps_mode.value === "iso";
+  // En-tête « Durée (s) » si toutes les séries sont en iso ; l'unité suit chaque série
+  const isIso = isAllIso(params);
   const doneSets = sets.filter((s) => s.done).length;
   // For cluster: cluster.recup_sec is intra-cluster rest (shown as badge); inter-set rest = bloc rest
   const restSec = blocRestSec;
@@ -1118,6 +1115,7 @@ function ExerciceCard({
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {supersetTag && <BadgeTag label={supersetTag} color="#F5A623" />}
           <BadgeTag label={prescription} color={ACCENT} />
+          {hasIso(params) && <BadgeTag label="Iso" color={C.b} />}
           {muscle && <BadgeTag label={muscle} color={blocColor} />}
         </div>
         {/* Coach comment */}
@@ -1281,7 +1279,7 @@ function ExerciceCard({
                 state={s}
                 prevStr={prevSets[i] ?? "—"}
                 chargeUnit={params.charge_unit}
-                isIso={isIso}
+                isIso={isIsoAt(params, i)}
                 onToggle={() => onToggle(i)}
                 onOpenPad={(field) => onOpenPad(i, field)}
                 isCompleted={!canEdit}
@@ -1392,7 +1390,7 @@ interface NumPadProps {
 function NumPad({ target, value, onChange, onConfirm, onClose }: NumPadProps) {
   const baseCfg = FIELD_CFG[target.field];
   const cfg = target.field === "reps" && target.isIso
-    ? { ...baseCfg, label: "Durée", unit: "sec" }
+    ? { ...baseCfg, label: "Durée", unit: "s" }
     : baseCfg;
 
   function step(delta: number) {
@@ -3072,7 +3070,7 @@ export default function WorkoutDetailPage() {
                             groupKey={chainIds[0]}
                             members={ch.map((j) => {
                               const ex = bloc.exercices[j];
-                              const iso = ex.params.reps_mode?.mode === "global" && ex.params.reps_mode.value === "iso";
+                              const iso = isAllIso(ex.params);
                               return {
                                 id: ex.id,
                                 name: ex.exercise_name,
@@ -3209,7 +3207,7 @@ export default function WorkoutDetailPage() {
                           toggleAndPersist(ex.id, setIdx, restSec, nextInfo, bloc.timing_mode, bloc.id, bloc.exercices.map(e => e.id), ex.params.cluster?.nb_clusters, supersetIds)
                         }
                         onOpenPad={(setIdx, field) =>
-                          openPad(ex.id, setIdx, field, ex.params.charge_unit, ex.params.cluster?.nb_clusters, ex.params.reps_mode?.mode === "global" && ex.params.reps_mode.value === "iso")
+                          openPad(ex.id, setIdx, field, ex.params.charge_unit, ex.params.cluster?.nb_clusters, isIsoAt(ex.params, setIdx))
                         }
                         onAddSet={() => addBonusSet(ex.id)}
                         onRemoveSet={(setIdx) => removeBonusSet(ex.id, setIdx)}

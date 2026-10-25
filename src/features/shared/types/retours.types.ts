@@ -58,6 +58,8 @@ export interface PlannedExercise {
   exercise_name: string;
   sets: number;
   reps_range: string | null;
+  /** Isométrie : reps_range est une durée (« 30 s ») */
+  is_iso?: boolean;
   kg: number | null;
   rir: number | null;
   method: string | null;

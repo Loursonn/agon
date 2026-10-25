@@ -3,6 +3,7 @@
  * No React imports, no network access.
  */
 
+import { formatMmSs } from '@/lib/time';
 import type {
   HyroxResult, HyroxAlert, HyroxProfile, HyroxPlanTargets,
   SegmentKey, StationKey, HyroxReferenceSegment,
@@ -27,6 +28,29 @@ function getSegment(r: HyroxResult, key: SegmentKey): number | null {
 
 export function runSplits(r: HyroxResult): (number | null)[] {
   return RUN_KEYS.map(k => getSegment(r, k));
+}
+
+// ─── Affichage des runs ───────────────────────────────────────────────────────
+// Chaque run HYROX fait 1 km : on affiche un temps « par run », jamais « /km ».
+
+/** « 4:32 /run » ("—" si inconnu). */
+export function formatPerRun(s: number | null | undefined): string {
+  if (s == null || !Number.isFinite(s)) return '—';
+  return `${formatMmSs(s)} /run`;
+}
+
+/** « moy. 4:32 /run » */
+export function formatAvgPerRun(s: number | null | undefined): string {
+  return s == null || !Number.isFinite(s) ? '—' : `moy. ${formatPerRun(s)}`;
+}
+
+/** Libellé d'axe des graphiques de runs. */
+export const RUN_AXIS_UNIT = 'min/run';
+
+/** Temps moyen par run (runs saisis uniquement). */
+export function avgRunTime(r: HyroxResult): number | null {
+  const v = runSplits(r).filter((x): x is number => x != null);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 
 export function stationSplits(r: HyroxResult): Record<StationKey, number | null> {

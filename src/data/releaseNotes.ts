@@ -37,6 +37,29 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-24-iso-secondes-runs-hyrox",
+    date: "2026-10-24",
+    kind: "fix",
+    title: "Isométrie en secondes, runs HYROX en « /run »",
+    summary: "Un exercice en iso s'affiche partout « 4 × 30 s » avec un badge Iso, et les runs HYROX sont exprimés par run (1 km).",
+    sections: [
+      {
+        title: "Isométrie",
+        points: [
+          "Synthèse, détail du jour, aperçus et Retours affichent « 4 × 30 s » et un badge « Iso » au lieu de « 4 × 30 ».",
+          "Côté athlète, la saisie d'une série iso se fait en secondes (« s ») et non plus en reps.",
+          "Dans l'éditeur, le choix EC / ISO est aussi disponible quand les répétitions sont réglées série par série.",
+        ],
+      },
+      {
+        title: "HYROX",
+        points: [
+          "Chaque run fait 1 km : temps affichés « 4:32 /run », moyenne « moy. … /run » et axes des graphiques en « min/run ».",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-24-planning-synchro-athlete",
     date: "2026-10-24",
     kind: "fix",

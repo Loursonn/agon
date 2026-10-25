@@ -28,6 +28,7 @@ import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athl
 import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
 import type { DayProgram, SessionPreviewItem } from "@/features/shared/hooks/useWeekProgram";
+import { formatSetsReps, hasIso } from "@/lib/formatSetsReps";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
@@ -116,9 +117,7 @@ const DAYS_FULL_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi
 /** Prescription courte d'un exercice de ProgSession (« 4 × 8 »). */
 function previewDetail(it: SessionPreviewItem): string {
   if (it.mode === "libre" || !it.params) return it.mode === "libre" ? "Libre" : "";
-  const p = it.params;
-  const reps = p.reps.mode === "global" ? String(p.reps.value) : p.reps.values.join("/");
-  return `${p.nb_series} × ${reps}`;
+  return formatSetsReps(it.params) + (hasIso(it.params) ? " · Iso" : "");
 }
 
 interface DayPreviewSheetProps {

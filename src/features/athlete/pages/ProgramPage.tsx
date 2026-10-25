@@ -9,6 +9,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActivePlan } from "@/features/shared/hooks/useActivePlan";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useRescheduleWorkout } from "@/features/shared/hooks/useRescheduleWorkout";
+import { formatReps, hasIso, isAllIso } from "@/lib/formatSetsReps";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import { SessionPreviewModal, ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
 import { EmptyState } from "@/features/shared/components/EmptyState";
@@ -812,7 +813,7 @@ function WorkoutPreviewDrawer({
                             {ex.exercise_name}
                           </span>
                           <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {reps}{ex.params?.cluster ? "" : " reps"}</span>
+                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {ex.params ? formatReps(ex.params) : reps}{ex.params?.cluster || isAllIso(ex.params) ? "" : " reps"}{hasIso(ex.params) ? " · Iso" : ""}</span>
                             {rir != null && (
                               <span style={{ fontSize: 10, color: C.tx3 }}>· RIR {rir}</span>
                             )}

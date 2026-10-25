@@ -306,3 +306,14 @@ describe("estimateFromTests", () => {
     expect(est!.from).toHaveProperty("5km");
   });
 });
+
+describe("affichage des runs (/run)", () => {
+  it("formatPerRun / formatAvgPerRun", async () => {
+    const { formatPerRun, formatAvgPerRun, RUN_AXIS_UNIT } = await import("@/lib/hyrox/calc");
+    expect(formatPerRun(272)).toBe("4:32 /run");
+    expect(formatPerRun(null)).toBe("—");
+    expect(formatAvgPerRun(272.4)).toBe("moy. 4:32 /run");
+    expect(RUN_AXIS_UNIT).toBe("min/run");
+    expect(formatPerRun(272)).not.toContain("km");
+  });
+});

@@ -5,10 +5,10 @@ import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
 import {
   percentile, runTotal, stationsTotal, roxzoneTotal, bracketOf, typology,
-  runStats, shares, stationPriorities, type RefLookup,
+  runStats, shares, stationPriorities, formatAvgPerRun, type RefLookup,
 } from "@/lib/hyrox/calc";
 import {
-  STATION_KEYS, STATION_META, SEGMENT_LABEL, REFERENCE_DIVISION,
+  STATION_KEYS, STATION_META, SEGMENT_LABEL, REFERENCE_DIVISION, RUN_KEYS,
   type StationKey, type HyroxDivision,
 } from "@/features/shared/types/hyrox";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
@@ -255,6 +255,9 @@ export default function BilanView() {
                 <td style={{ padding: "6px 8px", color: C.tx }}>{s.label}</td>
                 <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx }}>
                   {formatMmSs(s.latestVal)}
+                  {s.key === "run_total" && s.latestVal != null && (
+                    <div style={{ fontSize: 9, color: C.tx3 }}>{formatAvgPerRun(s.latestVal / RUN_KEYS.length)}</div>
+                  )}
                 </td>
                 <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: pctColor(s.avgPct) }}>
                   Top {s.avgPct} %
