@@ -112,6 +112,32 @@ export type Database = {
           },
         ]
       }
+      app_update_reads: {
+        Row: {
+          seen_at: string
+          update_id: string
+          user_id: string
+        }
+        Insert: {
+          seen_at?: string
+          update_id: string
+          user_id: string
+        }
+        Update: {
+          seen_at?: string
+          update_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_update_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_life_events: {
         Row: {
           athlete_id: string
@@ -278,6 +304,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      citation_likes: {
+        Row: {
+          created_at: string
+          quote_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          quote_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          quote_id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      citation_stats: {
+        Row: {
+          likes: number
+          quote_id: number
+        }
+        Insert: {
+          likes?: number
+          quote_id: number
+        }
+        Update: {
+          likes?: number
+          quote_id?: number
+        }
+        Relationships: []
       }
       competitions: {
         Row: {
@@ -621,12 +680,14 @@ export type Database = {
       }
       energy_session_assignments: {
         Row: {
+          activity_type: string | null
           activity_url: string | null
           actual_duration_min: number | null
           athlete_id: string
           block_logs: Json
           coach_id: string | null
           created_at: string
+          distance_km: number | null
           energy_session_id: string
           id: string
           microcycle_id: string | null
@@ -637,12 +698,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activity_type?: string | null
           activity_url?: string | null
           actual_duration_min?: number | null
           athlete_id: string
           block_logs?: Json
           coach_id?: string | null
           created_at?: string
+          distance_km?: number | null
           energy_session_id: string
           id?: string
           microcycle_id?: string | null
@@ -653,12 +716,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activity_type?: string | null
           activity_url?: string | null
           actual_duration_min?: number | null
           athlete_id?: string
           block_logs?: Json
           coach_id?: string | null
           created_at?: string
+          distance_km?: number | null
           energy_session_id?: string
           id?: string
           microcycle_id?: string | null
@@ -701,6 +766,7 @@ export type Database = {
       }
       energy_sessions: {
         Row: {
+          archived_at: string | null
           athlete_id: string | null
           classique_structure: Json | null
           created_at: string
@@ -729,6 +795,7 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
+          archived_at?: string | null
           athlete_id?: string | null
           classique_structure?: Json | null
           created_at?: string
@@ -757,6 +824,7 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
+          archived_at?: string | null
           athlete_id?: string | null
           classique_structure?: Json | null
           created_at?: string
@@ -1493,6 +1561,154 @@ export type Database = {
           },
         ]
       }
+      medical_attachments: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          created_by: string | null
+          entry_id: string
+          file_name: string | null
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          created_by?: string | null
+          entry_id: string
+          file_name?: string | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          created_by?: string | null
+          entry_id?: string
+          file_name?: string | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_attachments_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_attachments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "medical_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_entries: {
+        Row: {
+          athlete_id: string
+          context: string | null
+          created_at: string
+          created_by: string | null
+          date: string | null
+          days_off: number | null
+          declared_by: string | null
+          diagnosed_by: string | null
+          diagnosis: string | null
+          id: string
+          injury_type: string | null
+          kind: string
+          mechanism: string | null
+          notes: string | null
+          pain_level: number | null
+          return_date: string | null
+          status: string
+          title: string
+          training_impact: string | null
+          treatment: string | null
+          updated_at: string
+          zone: string | null
+        }
+        Insert: {
+          athlete_id: string
+          context?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          days_off?: number | null
+          declared_by?: string | null
+          diagnosed_by?: string | null
+          diagnosis?: string | null
+          id?: string
+          injury_type?: string | null
+          kind?: string
+          mechanism?: string | null
+          notes?: string | null
+          pain_level?: number | null
+          return_date?: string | null
+          status?: string
+          title: string
+          training_impact?: string | null
+          treatment?: string | null
+          updated_at?: string
+          zone?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          context?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          days_off?: number | null
+          declared_by?: string | null
+          diagnosed_by?: string | null
+          diagnosis?: string | null
+          id?: string
+          injury_type?: string | null
+          kind?: string
+          mechanism?: string | null
+          notes?: string | null
+          pain_level?: number | null
+          return_date?: string | null
+          status?: string
+          title?: string
+          training_impact?: string | null
+          treatment?: string | null
+          updated_at?: string
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_entries_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medical_history: {
         Row: {
           allergies: string | null
@@ -1882,6 +2098,7 @@ export type Database = {
           gender: string | null
           habit_tracker_enabled: boolean | null
           height_cm: number | null
+          home_hidden_sections: string[]
           id: string
           is_admin: boolean
           is_certified_coach: boolean
@@ -1903,6 +2120,7 @@ export type Database = {
           gender?: string | null
           habit_tracker_enabled?: boolean | null
           height_cm?: number | null
+          home_hidden_sections?: string[]
           id: string
           is_admin?: boolean
           is_certified_coach?: boolean
@@ -1924,6 +2142,7 @@ export type Database = {
           gender?: string | null
           habit_tracker_enabled?: boolean | null
           height_cm?: number | null
+          home_hidden_sections?: string[]
           id?: string
           is_admin?: boolean
           is_certified_coach?: boolean
@@ -2727,6 +2946,7 @@ export type Database = {
           original_scheduled_date: string | null
           rescheduled_by_athlete: boolean
           rpe_score: number | null
+          run_distance_km: number | null
           scheduled_date: string
           session_id: string
           session_name: string
@@ -2749,6 +2969,7 @@ export type Database = {
           original_scheduled_date?: string | null
           rescheduled_by_athlete?: boolean
           rpe_score?: number | null
+          run_distance_km?: number | null
           scheduled_date?: string
           session_id: string
           session_name: string
@@ -2771,6 +2992,7 @@ export type Database = {
           original_scheduled_date?: string | null
           rescheduled_by_athlete?: boolean
           rpe_score?: number | null
+          run_distance_km?: number | null
           scheduled_date?: string
           session_id?: string
           session_name?: string
@@ -2923,6 +3145,7 @@ export type Database = {
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
+      can_coach_athlete: { Args: { athlete_uuid: string }; Returns: boolean }
       can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
       can_read_doc_file: { Args: { object_name: string }; Returns: boolean }
       close_unfinished_workouts: { Args: never; Returns: number }
@@ -2964,6 +3187,7 @@ export type Database = {
           }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
+      delete_energy_session: { Args: { p_session_id: string }; Returns: string }
       diag:
         | {
             Args: { msg: unknown }
@@ -2987,6 +3211,16 @@ export type Database = {
       findfuncs: { Args: { "": string }; Returns: string[] }
       finish: { Args: { exception_on_failure?: boolean }; Returns: string[] }
       format_type_string: { Args: { "": string }; Returns: string }
+      get_app_update_reads: {
+        Args: never
+        Returns: {
+          full_name: string
+          seen_at: string
+          total_coaches: number
+          update_id: string
+          user_id: string
+        }[]
+      }
       get_coach_overview: { Args: { coach_uuid: string }; Returns: Json }
       get_coaches_list: {
         Args: never
@@ -3000,6 +3234,7 @@ export type Database = {
           is_certified_coach: boolean
         }[]
       }
+      get_my_coach_email: { Args: never; Returns: string }
       has_unique: { Args: { "": string }; Returns: string }
       in_todo: { Args: never; Returns: boolean }
       is_coach_of: { Args: { athlete_uuid: string }; Returns: boolean }
@@ -3008,6 +3243,10 @@ export type Database = {
       lives_ok: { Args: { "": string }; Returns: string }
       mark_doc_seen: { Args: { doc_uuid: string }; Returns: undefined }
       mark_missed_workouts: { Args: never; Returns: number }
+      mesocycle_athlete_id: {
+        Args: { p_mesocycle_id: string }
+        Returns: string
+      }
       microcycle_for_athlete_date: {
         Args: { p_athlete_id: string; p_date?: string }
         Returns: {

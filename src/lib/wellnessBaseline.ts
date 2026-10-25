@@ -238,10 +238,27 @@ export function fmtFr(n: number): string {
   return (Number.isInteger(r) ? String(r) : r.toFixed(1)).replace(".", ",");
 }
 
-/** « Fraîcheur musculaire 2/5 (habitude 4,1) », « Score global 48/100 (habitude 72) ». */
+/**
+ * Les courbatures se lisent à l'envers de l'intitulé : l'athlète note sa
+ * « Fraîcheur musculaire », donc 2/5 veut dire beaucoup de courbatures. Le coach
+ * qui survole sa liste d'alertes n'a pas à faire cette conversion de tête.
+ */
+export function domsReading(value: number): string {
+  if (value <= 1) return "courbatures intenses";
+  if (value <= 2) return "courbatures marquées";
+  if (value <= 3) return "courbatures modérées";
+  if (value <= 4) return "courbatures légères";
+  return "aucune courbature";
+}
+
+/**
+ * « Fraîcheur musculaire 2/5 — courbatures marquées (habitude 4,1) »,
+ * « Score global 48/100 (habitude 72) ».
+ */
 export function formatDeviation(d: WellnessDeviation): string {
   const scale = d.item === "score" ? "/100" : "/5";
-  return `${d.label} ${fmtFr(d.value)}${scale} (habitude ${fmtFr(d.mean)})`;
+  const reading = d.item === "doms" ? ` — ${domsReading(d.value)}` : "";
+  return `${d.label} ${fmtFr(d.value)}${scale}${reading} (habitude ${fmtFr(d.mean)})`;
 }
 
 /** Résumé d'un athlète en une ligne : les deux écarts les plus marqués. */

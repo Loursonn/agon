@@ -5,6 +5,7 @@ import {
   shiftIso,
   daysBetween,
   assessWellness,
+  domsReading,
   fmtFr,
   formatDeviation,
   formatAssessment,
@@ -122,7 +123,7 @@ describe("assessWellness", () => {
     const dev = a.deviations.find((d) => d.item === "doms");
     expect(dev?.level).toBe("vigilance");
     expect(dev?.z).toBeCloseTo(-1.926, 2);
-    expect(formatDeviation(dev!)).toBe("Fraîcheur musculaire 2/5 (habitude 4)");
+    expect(formatDeviation(dev!)).toBe("Fraîcheur musculaire 2/5 — courbatures marquées (habitude 4)");
   });
 
   it("baisse diffuse du score global, sans item en cause", () => {
@@ -227,11 +228,20 @@ describe("formatage", () => {
     expect(fmtFr(-1.25)).toBe("-1,2");
   });
 
+  it("les courbatures sont dites en clair, l'intitulé étant orienté à l'envers", () => {
+    // L'athlète note sa fraîcheur : 1 = DOMS intenses, 5 = aucune douleur.
+    expect(domsReading(1)).toBe("courbatures intenses");
+    expect(domsReading(2)).toBe("courbatures marquées");
+    expect(domsReading(3)).toBe("courbatures modérées");
+    expect(domsReading(4)).toBe("courbatures légères");
+    expect(domsReading(5)).toBe("aucune courbature");
+  });
+
   it("un écart en une ligne lisible", () => {
     expect(formatDeviation({
       item: "doms", label: "Fraîcheur musculaire", value: 2, mean: 4.14, sd: 0.6,
       z: -2.1, level: "alerte",
-    })).toBe("Fraîcheur musculaire 2/5 (habitude 4,1)");
+    })).toBe("Fraîcheur musculaire 2/5 — courbatures marquées (habitude 4,1)");
     expect(formatDeviation({
       item: "score", label: "Score global", value: 48, mean: 72, sd: 8,
       z: -3, level: "alerte",
