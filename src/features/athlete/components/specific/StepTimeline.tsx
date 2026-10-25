@@ -5,6 +5,8 @@
 import type { EnergyStep, EnergyGroup, EnergyInterval, ExerciseInterval } from "@/types/energy";
 import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { estimateIntervalDuration } from "@/lib/energy";
+import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
+import { stepDistanceM } from "@/lib/energy/paceEquivalents";
 
 const EQUIPMENT_LABEL: Record<string, string> = {
   rameur: "Rameur", skierg: "SkiErg", bikeerg: "BikeErg", velo: "Vélo",
@@ -22,9 +24,10 @@ const ROLE_LABEL: Record<string, string> = {
   rest: "Repos", cooldown: "Retour au calme", open: "Libre",
 };
 
-function StepCard({ step, color, children }: {
+function StepCard({ step, color, vma, children }: {
   step: EnergyInterval | ExerciseInterval;
   color: string;
+  vma?: number | null;
   children?: React.ReactNode;
 }) {
   const isExercise = step.type === "exercise";
@@ -84,6 +87,14 @@ function StepCard({ step, color, children }: {
             )}
           </div>
         )}
+        {!isExercise && (
+          <PaceEquivalents
+            target={step.target}
+            repDistanceM={stepDistanceM(step.duration)}
+            vma={vma}
+            omitPrimary
+          />
+        )}
         {isExercise && step.youtube_id && (
           <a
             href={`https://www.youtube.com/watch?v=${step.youtube_id}`}
@@ -108,16 +119,16 @@ function StepCard({ step, color, children }: {
 }
 
 
-export default function StepTimeline({ steps }: { steps: EnergyStep[] }) {
+export default function StepTimeline({ steps, vma }: { steps: EnergyStep[]; vma?: number | null }) {
   return (
     <div>
       {steps.map((step, i) => {
         if (step.type === "interval") {
           const color = COLORS[step.role] ?? COLORS.open;
-          return <StepCard key={step.id ?? i} step={step} color={color} />;
+          return <StepCard key={step.id ?? i} step={step} color={color} vma={vma} />;
         }
         if (step.type === "exercise") {
-          return <StepCard key={step.id ?? i} step={step} color={COLORS.exercise} />;
+          return <StepCard key={step.id ?? i} step={step} color={COLORS.exercise} vma={vma} />;
         }
         // Group
         const group = step as EnergyGroup;
@@ -141,7 +152,7 @@ export default function StepTimeline({ steps }: { steps: EnergyStep[] }) {
               </div>
             )}
             <div style={{ marginLeft: 6 }}>
-              <StepTimeline steps={group.children} />
+              <StepTimeline steps={group.children} vma={vma} />
             </div>
           </div>
         );

@@ -4,6 +4,8 @@
  */
 import type { FlatExecStep } from "@/features/athlete/hooks/useSpecificExecution";
 import { formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
+import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
+import { stepDistanceM } from "@/lib/energy/paceEquivalents";
 
 const PHASE_COLOR: Record<string, string> = {
   warmup: "#66F03C", work: "#E5484D", recovery: "#4FA3FF",
@@ -31,9 +33,11 @@ interface Props {
   isLastStep: boolean;
   onNext: () => void;
   onSkip: () => void;
+  /** VMA de l'athlète en km/h — sans elle, pas de « % VMA » dans les équivalences. */
+  vma?: number | null;
 }
 
-export default function ExecutionCard({ current, next, secondsLeft, isLastStep, onNext, onSkip }: Props) {
+export default function ExecutionCard({ current, next, secondsLeft, isLastStep, onNext, onSkip, vma }: Props) {
   const { step, roundLabel } = current;
   const isExercise = step.type === "exercise";
   const color = isExercise ? "#FFC933" : (PHASE_COLOR[step.role] ?? "#8B8A92");
@@ -101,6 +105,17 @@ export default function ExecutionCard({ current, next, secondsLeft, isLastStep, 
               {targetStr}
             </span>
           )}
+        </div>
+      )}
+      {!isExercise && (
+        <div style={{ marginTop: 6 }}>
+          <PaceEquivalents
+            target={step.target}
+            repDistanceM={stepDistanceM(step.type === "interval" ? step.duration : null)}
+            vma={vma}
+            omitPrimary
+            align="center"
+          />
         </div>
       )}
 

@@ -37,6 +37,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-25-equivalences-allure",
+    date: "2026-10-25",
+    kind: "feature",
+    title: "Équivalences d'allure partout",
+    summary: "Sous chaque allure, la même intensité est rappelée dans les autres unités : km/h, min/km, temps sur la répétition, temps au tour, % VMA.",
+    sections: [
+      {
+        title: "Ce que tu vois",
+        points: [
+          "Sous une cible d'allure, une petite ligne grise : « 23 km/h · 2'37/km · 400 m en 1'03 · tour de piste 1'03 · 105 % VMA ».",
+          "Le « % VMA » n'apparaît que si l'athlète a une VMA en performance de référence active.",
+          "Présent côté coach (aperçu de séance, détail du déroulé) et côté athlète (déroulé, exécution pas à pas, validation d'étape).",
+        ],
+      },
+      {
+        title: "Saisie",
+        points: [
+          "Dans l'éditeur d'intervalle, le menu d'unité propose en plus « Temps au tour (400 m) » et, si l'étape est sur une distance, « Temps sur X m ».",
+          "Tu saisis le temps que tu as en tête, l'app convertit : les équivalences s'affichent en direct sous les champs.",
+          "À l'import, « chrono 1:37-1:40 » sur une étape de 400 m devient une vraie cible d'allure au lieu d'un texte libre.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-24-iso-secondes-runs-hyrox",
     date: "2026-10-24",
     kind: "fix",

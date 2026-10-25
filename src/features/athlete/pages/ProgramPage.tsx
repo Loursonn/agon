@@ -16,6 +16,9 @@ import { EmptyState } from "@/features/shared/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
+import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
+import { stepDistanceM } from "@/lib/energy/paceEquivalents";
+import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import { CompetitionDayCard } from "@/features/athlete/components/CompetitionDayCard";
 import { competitionDayLabel } from "@/types/planning";
@@ -104,10 +107,11 @@ interface StepState { status: StepStatus; comment: string; }
 // ── Step card (done / partial + comment) ──────────────────────────────────────
 
 function StepCheckRow({
-  step, state, onDone, onPartial, onComment,
+  step, state, vma, onDone, onPartial, onComment,
 }: {
   step: EnergyStep;
   state: StepState | undefined;
+  vma?: number | null;
   onDone: () => void;
   onPartial: () => void;
   onComment: (v: string) => void;
@@ -142,6 +146,13 @@ function StepCheckRow({
           {tgt && tgt !== "Libre" && (
             <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{tgt}</div>
           )}
+          <PaceEquivalents
+            target={step.target}
+            repDistanceM={stepDistanceM(step.duration)}
+            vma={vma}
+            omitPrimary
+            fontSize={9}
+          />
           {step.equipment && step.equipment !== "none" && (
             <div style={{ marginTop: 2 }}>
               <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "rgba(255,255,255,0.08)", color: C.tx2 }}>
@@ -262,14 +273,17 @@ function StepCheckRow({
 }
 
 function EnergyActiveSession({
-  session, onTerminate, onClose,
+  session, athleteId, onTerminate, onClose,
 }: {
   session: EnergySessionRow;
+  athleteId: string;
   onTerminate: (log: Map<string, StepState>) => void;
   onClose: () => void;
 }) {
   const steps = session.intervals ?? [];
   const [stepStates, setStepStates] = useState<Map<string, StepState>>(new Map());
+  const { data: refs } = useAthleteReferences(athleteId);
+  const vma = refs?.VMA ?? null;
 
   const kc = ENERGY_KIND_COLOR[session.session_kind] ?? "#6B7280";
 
@@ -343,6 +357,7 @@ function EnergyActiveSession({
                 key={id}
                 step={step}
                 state={stepStates.get(id)}
+                vma={vma}
                 onDone={() => setStatus(id, "done")}
                 onPartial={() => setStatus(id, "partial")}
                 onComment={(v) => setComment(id, v)}
@@ -438,6 +453,7 @@ function EnergyPreviewOverlay({
     return (
       <EnergyActiveSession
         session={session}
+        athleteId={athleteId}
         onTerminate={(log) => onComplete(log)}
         onClose={onClose}
       />
