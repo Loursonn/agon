@@ -1,4 +1,4 @@
-# MyPrepaPro
+# Agon
 
 App de suivi d'athlètes en préparation physique (coach + athlètes). Cible finale : mobile iOS/Android.
 

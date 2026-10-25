@@ -1,13 +1,13 @@
-# Prompt — Module HYROX pour MyPrepaPro
+# Prompt — Module HYROX pour Agon
 
-> À coller tel quel dans l'agent de code (Visual Studio Code / Copilot / Claude / Cursor) ouvert sur le repo `myprepapro`.
+> À coller tel quel dans l'agent de code (Visual Studio Code / Copilot / Claude / Cursor) ouvert sur le repo `agon`.
 > Il contient : le contexte, les contraintes du repo, le schéma SQL complet, les types, les hooks, les pages, les calculs (formules), les données de référence à seeder, les tests unitaires, la doc à écrire, et la checklist de recette.
 
 ---
 
 ## 0. Ta mission
 
-Tu es un développeur senior React / TypeScript / Supabase. Tu travailles dans le repo **MyPrepaPro** (app de suivi d'athlètes, coach + athlète). Tu dois implémenter un **module HYROX** complet, activable athlète par athlète, en respectant strictement les conventions du repo. Tu livres du code fini, typé, testé, documenté. Aucune retouche ne doit être nécessaire derrière toi.
+Tu es un développeur senior React / TypeScript / Supabase. Tu travailles dans le repo **Agon** (app de suivi d'athlètes, coach + athlète). Tu dois implémenter un **module HYROX** complet, activable athlète par athlète, en respectant strictement les conventions du repo. Tu livres du code fini, typé, testé, documenté. Aucune retouche ne doit être nécessaire derrière toi.
 
 Règle absolue du repo (voir `CLAUDE.md`) : **ne modifie rien tant que tu n'as pas 95 % de confiance** sur ce qu'il faut construire. Ce prompt est écrit pour te donner cette confiance. Si une information te manque vraiment, lis d'abord les fichiers cités ci-dessous ; ne pose une question qu'en dernier recours, et pose-la avant de commencer à coder, pas au milieu.
 

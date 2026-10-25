@@ -1,6 +1,6 @@
 # Onboarding — Nouveau développeur
 
-Bienvenue sur MyPrepaPro. Ce guide te permet d'être opérationnel en local en 15 minutes.
+Bienvenue sur Agon. Ce guide te permet d'être opérationnel en local en 15 minutes.
 
 ---
 
@@ -9,7 +9,7 @@ Bienvenue sur MyPrepaPro. Ce guide te permet d'être opérationnel en local en 1
 - Node.js v18+ (`node -v` pour vérifier)
 - Git
 - Un éditeur (VS Code recommandé)
-- Accès au repo GitHub : `https://github.com/Loursonn/myprepapro`
+- Accès au repo GitHub : `https://github.com/Loursonn/agon`
 - Accès au projet Supabase (demande à Hugo)
 
 ---
@@ -18,8 +18,8 @@ Bienvenue sur MyPrepaPro. Ce guide te permet d'être opérationnel en local en 1
 
 ```bash
 # 1. Cloner le repo
-git clone https://github.com/Loursonn/myprepapro.git
-cd myprepapro
+git clone https://github.com/Loursonn/agon.git
+cd agon
 
 # 2. Installer les dépendances
 npm install

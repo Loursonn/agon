@@ -1,4 +1,4 @@
-# DB_AUDIT.md — MyPrepaPro Supabase Schema Audit
+# DB_AUDIT.md — Agon Supabase Schema Audit
 **Date :** 2026-04-27  
 **Projet :** mxbfnkkbtmbrauvqplrt.supabase.co
 
