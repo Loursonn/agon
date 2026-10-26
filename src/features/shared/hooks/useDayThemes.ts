@@ -33,6 +33,11 @@ export interface DayTheme {
   dominante: DayThemeDominante | null;
   color: string;
   note: string;
+  /**
+   * Nature du thème, calculée par Postgres (colonne générée) : jamais écrite
+   * par le client, sinon l'insert échoue.
+   */
+  kind: "intensite" | "dominante" | "libre" | null;
   created_at: string;
   updated_at: string;
 }
@@ -125,7 +130,37 @@ export function useUpsertDayTheme() {
     onSuccess: (data) => {
       qc.setQueryData(QK.dayTheme(data.athlete_id, data.date), data);
       qc.invalidateQueries({ queryKey: QK.dayThemes(data.athlete_id) });
+      // Le thème qu'on vient de poser doit apparaître dans les raccourcis
+      // « récents » du coach, y compris pour ses autres athlètes.
+      qc.invalidateQueries({ queryKey: ["day-themes", "recent"] });
     },
+  });
+}
+
+/**
+ * Les derniers thèmes posés par le coach, tous athlètes confondus.
+ *
+ * Sert à proposer en un clic ce qu'il écrit déjà toutes les semaines. On tire
+ * large (`FETCH`) puis on déduplique côté client : la base ne sait pas que
+ * « Seuil bleu » posé lundi et mercredi sont le même raccourci.
+ */
+const RECENT_FETCH = 60;
+
+export function useRecentDayThemes(coachId: string | undefined) {
+  return useQuery<DayTheme[]>({
+    queryKey: QK.dayThemesRecent(coachId ?? ""),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("day_themes")
+        .select("*")
+        .eq("coach_id", coachId!)
+        .order("updated_at", { ascending: false })
+        .limit(RECENT_FETCH);
+      if (error) throw error;
+      return (data ?? []) as DayTheme[];
+    },
+    enabled: !!coachId,
+    staleTime: 5 * 60_000,
   });
 }
 

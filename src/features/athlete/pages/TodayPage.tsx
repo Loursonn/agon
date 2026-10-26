@@ -5,7 +5,13 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { C } from "@/lib/theme";
 import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
 import { DayThemeBanner } from "@/features/shared/components/DayThemePill";
-import { indexDayThemesByDate, type DayThemeLike } from "@/lib/dayTheme";
+import {
+  dayThemeColors,
+  dayThemeFullLabel,
+  indexDayThemesByDate,
+  isDayThemeEmpty,
+  type DayThemeLike,
+} from "@/lib/dayTheme";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useTodayWellness } from "@/features/shared/hooks/useTodayWellness";
@@ -1409,11 +1415,20 @@ export default function TodayPage() {
               const allDone = hasSess && day.sessions.every(s => s.isCompleted);
               const isCompDay = competitionsByDate.has(day.date);
               const DOW_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
+              // Thème du jour : la case fait 40 px de large, aucun libellé n'y
+              // tient. On pose donc un bandeau de couleur sur l'arête haute et
+              // on met le texte dans le title — la couleur suffit à repérer les
+              // jours durs d'un coup d'œil, le détail est à un tap.
+              const dayTheme = dayThemesByDate[day.date] ?? null;
+              const showTheme = !isDayThemeEmpty(dayTheme);
               return (
                 <button
                   key={day.date}
                   onClick={() => { setSelectedDay(day); haptic(); }}
+                  title={showTheme ? dayThemeFullLabel(dayTheme) : undefined}
                   style={{
+                    position: "relative",
+                    overflow: "hidden",
                     flex: "1 0 0",
                     minWidth: 40,
                     padding: "8px 4px",
@@ -1424,6 +1439,15 @@ export default function TodayPage() {
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                   }}
                 >
+                  {showTheme && (
+                    <div
+                      aria-hidden
+                      style={{
+                        position: "absolute", top: 0, left: 0, right: 0, height: 3,
+                        background: dayThemeColors(dayTheme).bg,
+                      }}
+                    />
+                  )}
                   {/* Day letter */}
                   <div style={{ fontSize: 9, fontWeight: 600, color: isToday ? C.coach : C.tx3 }}>
                     {DOW_SHORT[day.dow]}

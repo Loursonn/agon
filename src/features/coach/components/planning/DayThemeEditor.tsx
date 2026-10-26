@@ -10,7 +10,7 @@
  * coach n'a pas choisi la sienne : un thème « Hard » qu'on a mis en bleu doit
  * rester bleu.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2, Check } from "lucide-react";
 import { C } from "@/lib/theme";
 import {
@@ -22,17 +22,22 @@ import {
   DAY_THEME_INTENSITY_LABEL,
   DAY_THEME_LABEL_MAX,
   DAY_THEME_PALETTE,
+  dayThemeChipLabel,
   isDayThemeDominante,
   isDayThemeIntensity,
   normalizeDayThemeLabel,
+  normalizeHexColor,
+  recentDayThemeSuggestions,
   safeThemeColor,
   textColorOn,
   type DayThemeDominante,
   type DayThemeIntensity,
+  type DayThemeSuggestion,
 } from "@/lib/dayTheme";
 import {
   useDayTheme,
   useDeleteDayTheme,
+  useRecentDayThemes,
   useUpsertDayTheme,
 } from "@/features/shared/hooks/useDayThemes";
 import { DayThemeBanner } from "@/features/shared/components/DayThemePill";
@@ -50,6 +55,7 @@ export function DayThemeEditor({
   date: string;
 }) {
   const { data: theme } = useDayTheme(athleteId, date);
+  const { data: recentRows } = useRecentDayThemes(coachId);
   const { mutate: upsert, isPending: saving } = useUpsertDayTheme();
   const { mutate: remove, isPending: removing } = useDeleteDayTheme();
 
@@ -77,10 +83,25 @@ export function DayThemeEditor({
   const draft = { label, intensity, dominante, color, note };
   const hasContent = normalizeDayThemeLabel(label) !== "" || !!intensity || !!dominante;
 
+  const recent = useMemo(() => recentDayThemeSuggestions(recentRows), [recentRows]);
+  /** La couleur courante sort-elle de la palette ? Alors c'est une couleur perso. */
+  const isCustomColor = !(DAY_THEME_PALETTE as readonly string[]).includes(color);
+
   function pickIntensity(k: DayThemeIntensity) {
     const next = intensity === k ? null : k;
     setIntensity(next);
     if (next && !colorTouched) setColor(DAY_THEME_INTENSITY_COLOR[next]);
+  }
+
+  /** Rejoue un thème déjà posé : contenu repris tel quel, date inchangée. */
+  function applySuggestion(s: DayThemeSuggestion) {
+    setLabel(s.label);
+    setIntensity(s.intensity);
+    setDominante(s.dominante);
+    setColor(s.color);
+    // La couleur vient du thème rejoué : un raccourci d'intensité ne doit pas
+    // l'écraser derrière le dos du coach.
+    setColorTouched(true);
   }
 
   function handleSave() {
@@ -136,6 +157,36 @@ export function DayThemeEditor({
       }}>
         {/* Aperçu : le coach voit ce que l'athlète lira, contraste compris. */}
         {hasContent && <DayThemeBanner theme={draft} />}
+
+        {/* Récents en premier : ce qu'il repose chaque semaine, en un clic. */}
+        {recent.length > 0 && (
+          <div>
+            <div style={fieldLabelStyle}>Tes thèmes récents</div>
+            <div style={chipRowStyle}>
+              {recent.map((s, i) => (
+                <button
+                  key={`${s.label}|${s.intensity}|${s.dominante}|${s.color}|${i}`}
+                  onClick={() => applySuggestion(s)}
+                  title="Reprendre ce thème"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    fontSize: 11, fontWeight: 500,
+                    padding: "4px 9px", borderRadius: 5,
+                    cursor: "pointer", fontFamily: "inherit",
+                    background: C.s1, color: C.tx2,
+                    border: "1px solid " + C.brd, whiteSpace: "nowrap",
+                  }}
+                >
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: s.color, flexShrink: 0,
+                  }} />
+                  {dayThemeChipLabel(s)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label style={fieldLabelStyle} htmlFor="day-theme-label">
@@ -202,6 +253,43 @@ export function DayThemeEditor({
                 {color === c && <Check size={13} />}
               </button>
             ))}
+
+            {/*
+              Couleur perso : un `input[type=color]` natif, donc le sélecteur du
+              système plutôt qu'une roue maison. La pastille montre la couleur
+              courante dès qu'elle sort de la palette, pour que le coach voie
+              qu'il est en perso sans ouvrir le sélecteur.
+            */}
+            <label
+              title="Couleur personnalisée"
+              style={{
+                position: "relative",
+                width: 24, height: 24, borderRadius: 5, cursor: "pointer",
+                background: isCustomColor
+                  ? color
+                  : "conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#ec4899,#ef4444)",
+                border: isCustomColor ? "2px solid " + C.tx : "1px solid " + C.brd,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: textColorOn(color), boxSizing: "border-box",
+              }}
+            >
+              {isCustomColor && <Check size={13} />}
+              <input
+                type="color"
+                value={color}
+                aria-label="Couleur personnalisée"
+                onChange={(e) => {
+                  const next = normalizeHexColor(e.target.value);
+                  if (!next) return;
+                  setColor(next);
+                  setColorTouched(true);
+                }}
+                style={{
+                  position: "absolute", width: 0, height: 0,
+                  opacity: 0, pointerEvents: "none",
+                }}
+              />
+            </label>
           </div>
         </div>
 

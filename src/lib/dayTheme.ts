@@ -262,3 +262,97 @@ export function indexDayThemesByDate<T extends { date: string }>(
   for (const t of themes ?? []) out[t.date] = t;
   return out;
 }
+
+// ── Nature du thème ──────────────────────────────────────────────────────────
+
+/**
+ * De quoi le thème tire son sens : un raccourci d'intensité, un raccourci de
+ * dominante, ou le texte libre du coach.
+ *
+ * C'est une **lecture** de l'état, pas un quatrième champ à saisir. La colonne
+ * `day_themes.kind` est générée par Postgres avec exactement la même règle, pour
+ * que la base et l'écran ne puissent pas raconter deux histoires.
+ */
+export const DAY_THEME_KINDS = ["intensite", "dominante", "libre"] as const;
+
+export type DayThemeKind = (typeof DAY_THEME_KINDS)[number];
+
+export const DAY_THEME_KIND_LABEL: Record<DayThemeKind, string> = {
+  intensite: "Intensité",
+  dominante: "Dominante",
+  libre: "Texte libre",
+};
+
+export function isDayThemeKind(v: unknown): v is DayThemeKind {
+  return typeof v === "string" && (DAY_THEME_KINDS as readonly string[]).includes(v);
+}
+
+/**
+ * Nature d'un thème, `null` s'il est vide.
+ *
+ * Même ordre de priorité que {@link dayThemeChipLabel} : le texte que le coach
+ * a tapé l'emporte, parce que c'est lui qui s'affichera. Deux fonctions qui
+ * classeraient différemment finiraient par étiqueter « Dominante » une pastille
+ * où l'athlète lit « Jambes lourdes ».
+ */
+export function dayThemeKind(theme: DayThemeLike | null | undefined): DayThemeKind | null {
+  if (!theme) return null;
+  if (normalizeDayThemeLabel(theme.label) !== "") return "libre";
+  if (isDayThemeDominante(theme.dominante)) return "dominante";
+  if (isDayThemeIntensity(theme.intensity)) return "intensite";
+  return null;
+}
+
+// ── Thèmes récents ───────────────────────────────────────────────────────────
+
+/** Ce qu'on rejoue d'un thème passé : son contenu, jamais sa date. */
+export interface DayThemeSuggestion {
+  label: string;
+  intensity: DayThemeIntensity | null;
+  dominante: DayThemeDominante | null;
+  color: string;
+}
+
+/** Deux thèmes se valent s'ils diraient la même chose à l'athlète. */
+function suggestionKey(s: DayThemeSuggestion): string {
+  return [s.label.toLowerCase(), s.intensity ?? "", s.dominante ?? "", s.color].join("|");
+}
+
+export const DAY_THEME_RECENT_LIMIT = 6;
+
+/**
+ * Les thèmes récents du coach, les plus récents d'abord, sans doublon.
+ *
+ * L'appelant passe les lignes déjà triées par la base (`updated_at` décroissant) :
+ * on garde cet ordre tel quel et on ne conserve que la première occurrence de
+ * chaque contenu. Un coach qui a posé « Seuil » quinze fois le voit une fois.
+ *
+ * Les thèmes vides sont écartés : ils ne s'affichent nulle part, les proposer
+ * en raccourci reviendrait à offrir un bouton qui ne fait rien.
+ */
+export function recentDayThemeSuggestions(
+  rows: DayThemeLike[] | null | undefined,
+  limit: number = DAY_THEME_RECENT_LIMIT,
+): DayThemeSuggestion[] {
+  const out: DayThemeSuggestion[] = [];
+  const seen = new Set<string>();
+
+  for (const row of rows ?? []) {
+    if (out.length >= limit) break;
+    if (isDayThemeEmpty(row)) continue;
+
+    const suggestion: DayThemeSuggestion = {
+      label: normalizeDayThemeLabel(row.label),
+      intensity: isDayThemeIntensity(row.intensity) ? row.intensity : null,
+      dominante: isDayThemeDominante(row.dominante) ? row.dominante : null,
+      color: safeThemeColor(row.color),
+    };
+
+    const key = suggestionKey(suggestion);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(suggestion);
+  }
+
+  return out;
+}

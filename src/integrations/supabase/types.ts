@@ -486,6 +486,7 @@ export type Database = {
           dominante: string | null
           id: string
           intensity: string | null
+          kind: string | null
           label: string
           note: string
           updated_at: string
@@ -499,6 +500,7 @@ export type Database = {
           dominante?: string | null
           id?: string
           intensity?: string | null
+          kind?: string | null
           label?: string
           note?: string
           updated_at?: string
@@ -512,6 +514,7 @@ export type Database = {
           dominante?: string | null
           id?: string
           intensity?: string | null
+          kind?: string | null
           label?: string
           note?: string
           updated_at?: string

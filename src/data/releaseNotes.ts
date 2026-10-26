@@ -37,6 +37,30 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-26-theme-du-jour-raccourcis",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Thème du jour : tes thèmes récents en un clic, et ta propre couleur",
+    summary: "Repose « Seuil » ou « Jambes lourdes » sans le retaper, choisis une couleur hors palette, et retrouve la couleur du jour dans la barre de semaine de l'athlète.",
+    sections: [
+      {
+        title: "Ce qui change dans l'éditeur",
+        points: [
+          "« Tes thèmes récents » en haut du formulaire : tes derniers thèmes, tous athlètes confondus, sans doublon. Un clic reprend le libellé, les raccourcis et la couleur.",
+          "Une 11e pastille ouvre le sélecteur de couleur du téléphone : tu n'es plus limité aux 10 couleurs proposées.",
+          "Une couleur reprise d'un thème récent ne se fait plus écraser si tu cliques ensuite sur une intensité.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Dans sa barre « Cette semaine », chaque jour qui a un thème porte un liseré de ta couleur : il repère ses jours durs d'un coup d'œil.",
+          "Le libellé complet reste à un tap, dans la fiche du jour.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-26-point-hebdo-reservation",
     date: "2026-10-26",
     kind: "feature",

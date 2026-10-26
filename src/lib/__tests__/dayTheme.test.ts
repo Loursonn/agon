@@ -10,17 +10,22 @@ import {
   DAY_THEME_PALETTE,
   DAY_THEME_TEXT_DARK,
   DAY_THEME_TEXT_LIGHT,
+  DAY_THEME_KINDS,
+  DAY_THEME_KIND_LABEL,
   dayThemeChipLabel,
   dayThemeColors,
   dayThemeFullLabel,
+  dayThemeKind,
   contrastRatio,
   indexDayThemesByDate,
   isDayThemeDominante,
   isDayThemeEmpty,
   isDayThemeIntensity,
+  isDayThemeKind,
   isHexColor,
   normalizeDayThemeLabel,
   normalizeHexColor,
+  recentDayThemeSuggestions,
   relativeLuminance,
   safeThemeColor,
   textColorOn,
@@ -247,5 +252,132 @@ describe("indexDayThemesByDate", () => {
       { date: "2026-03-01", label: "récent" },
     ]);
     expect(idx["2026-03-01"].label).toBe("récent");
+  });
+});
+
+describe("dayThemeKind", () => {
+  it("couvre les trois natures prévues", () => {
+    expect([...DAY_THEME_KINDS]).toEqual(["intensite", "dominante", "libre"]);
+    for (const k of DAY_THEME_KINDS) expect(DAY_THEME_KIND_LABEL[k]).toBeTruthy();
+  });
+
+  it("reconnaît un code de nature valide", () => {
+    expect(isDayThemeKind("libre")).toBe(true);
+    expect(isDayThemeKind("intensite")).toBe(true);
+    expect(isDayThemeKind("intensité")).toBe(false);
+    expect(isDayThemeKind(null)).toBe(false);
+  });
+
+  it("rend null sur un thème vide ou absent", () => {
+    expect(dayThemeKind(null)).toBeNull();
+    expect(dayThemeKind(undefined)).toBeNull();
+    expect(dayThemeKind({})).toBeNull();
+    expect(dayThemeKind({ label: "   ", color: "#ef4444" })).toBeNull();
+    // Une note seule ne suffit pas : le thème reste invisible.
+    expect(dayThemeKind({ note: "pense aux étirements" })).toBeNull();
+  });
+
+  it("classe « libre » dès qu'un libellé existe", () => {
+    expect(dayThemeKind({ label: "Jambes lourdes" })).toBe("libre");
+  });
+
+  it("classe « dominante » puis « intensite » quand il n'y a pas de libellé", () => {
+    expect(dayThemeKind({ dominante: "seuil" })).toBe("dominante");
+    expect(dayThemeKind({ intensity: "hard" })).toBe("intensite");
+    // Dominante avant intensité, comme pour la pastille.
+    expect(dayThemeKind({ intensity: "hard", dominante: "seuil" })).toBe("dominante");
+  });
+
+  it("suit exactement la priorité de la pastille affichée", () => {
+    // Le libellé l'emporte partout : sinon on étiquetterait « Dominante » une
+    // pastille où l'athlète lit « Jambes lourdes ».
+    const theme = { label: "Jambes lourdes", intensity: "hard", dominante: "seuil" };
+    expect(dayThemeKind(theme)).toBe("libre");
+    expect(dayThemeChipLabel(theme)).toBe("Jambes lourdes");
+  });
+
+  it("ignore un code d'intensité ou de dominante inconnu", () => {
+    expect(dayThemeKind({ intensity: "brutal" })).toBeNull();
+    expect(dayThemeKind({ dominante: "cardio" })).toBeNull();
+  });
+});
+
+describe("recentDayThemeSuggestions", () => {
+  it("tolère null et une liste vide", () => {
+    expect(recentDayThemeSuggestions(null)).toEqual([]);
+    expect(recentDayThemeSuggestions([])).toEqual([]);
+  });
+
+  it("garde l'ordre fourni par la base, du plus récent au plus ancien", () => {
+    const out = recentDayThemeSuggestions([
+      { label: "Seuil", color: "#3b82f6" },
+      { label: "Récup", color: "#22c55e" },
+    ]);
+    expect(out.map((s) => s.label)).toEqual(["Seuil", "Récup"]);
+  });
+
+  it("déduplique les contenus identiques en gardant le plus récent", () => {
+    const out = recentDayThemeSuggestions([
+      { label: "Seuil", color: "#3b82f6" },
+      { label: "Récup", color: "#22c55e" },
+      { label: "seuil", color: "#3b82f6" },
+      { label: "Seuil", color: "#3b82f6" },
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out.map((s) => s.label)).toEqual(["Seuil", "Récup"]);
+  });
+
+  it("distingue deux thèmes de même libellé mais de couleur différente", () => {
+    const out = recentDayThemeSuggestions([
+      { label: "Seuil", color: "#3b82f6" },
+      { label: "Seuil", color: "#ef4444" },
+    ]);
+    expect(out).toHaveLength(2);
+  });
+
+  it("distingue deux thèmes de même couleur mais de raccourcis différents", () => {
+    const out = recentDayThemeSuggestions([
+      { intensity: "hard", color: "#ef4444" },
+      { dominante: "force", color: "#ef4444" },
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out[0].intensity).toBe("hard");
+    expect(out[1].dominante).toBe("force");
+  });
+
+  it("écarte les thèmes vides : un raccourci qui ne fait rien n'a rien à faire là", () => {
+    const out = recentDayThemeSuggestions([
+      { label: "   ", color: "#ef4444" },
+      { note: "une note seule", color: "#ef4444" },
+      { label: "Seuil", color: "#3b82f6" },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].label).toBe("Seuil");
+  });
+
+  it("normalise ce qu'il rejoue : libellé propre, codes validés, couleur sûre", () => {
+    const out = recentDayThemeSuggestions([
+      { label: "  Jambes   lourdes  ", intensity: "brutal", dominante: "seuil", color: "#ABC" },
+    ]);
+    expect(out[0]).toEqual({
+      label: "Jambes lourdes",
+      intensity: null,
+      dominante: "seuil",
+      color: "#aabbcc",
+    });
+  });
+
+  it("retombe sur la couleur par défaut si la ligne n'en a pas", () => {
+    const out = recentDayThemeSuggestions([{ label: "Seuil" }]);
+    expect(out[0].color).toBe(DAY_THEME_DEFAULT_COLOR);
+  });
+
+  it("coupe à la limite demandée, après déduplication", () => {
+    const rows = [
+      { label: "A" }, { label: "A" }, { label: "B" },
+      { label: "C" }, { label: "D" },
+    ];
+    expect(recentDayThemeSuggestions(rows, 2).map((s) => s.label)).toEqual(["A", "B"]);
+    expect(recentDayThemeSuggestions(rows, 10)).toHaveLength(4);
   });
 });
