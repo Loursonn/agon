@@ -37,6 +37,40 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-30-vue-sorties-enregistrees",
+    date: "2026-10-30",
+    kind: "feature",
+    title: "Les sorties de montre s'affichent, avec la provenance de chaque chiffre",
+    summary:
+      "Les sorties remontées par une montre ou importées depuis un fichier étaient enregistrées mais invisibles. Elles apparaissent maintenant dans l'onglet Historique de chaque athlète, et dans son profil côté athlète : durée, distance, allure, dénivelé, fréquence cardiaque, calories.",
+    sections: [
+      {
+        title: "Ce que ça change pour toi",
+        points: [
+          "Onglet Historique d'un athlète : la liste de ses sorties réelles arrive au-dessus de ses séances programmées. Tu vois ce qu'il a fait, pas seulement ce qui était prévu.",
+          "Un récapitulatif des quatre dernières semaines par sport — nombre de sorties, temps total, distance totale. Trois chiffres, pas un graphique de plus.",
+          "Les sorties réelles et les séances programmées restent deux blocs séparés. Un écart entre les deux n'est pas une erreur : la montre enregistre ce qui a été fait, le programme dit ce qui était demandé.",
+        ],
+      },
+      {
+        title: "D'où viennent les chiffres",
+        points: [
+          "Chaque sortie s'ouvre d'un clic sur l'origine de ses mesures : lue dans le fichier, ou reconstituée — et comment.",
+          "Un GPX n'a ni durée de mouvement ni dénivelé mesuré : la ligne dépliée le dit, au lieu de laisser croire qu'Agon se trompe face à l'application du fabricant.",
+          "Les sauts de GPS écartés du calcul de distance sont indiqués : c'est souvent ce qui explique quelques centaines de mètres d'écart.",
+          "Une mesure absente affiche un tiret, jamais un zéro. Une allure à 0:00 aurait le même poids visuel qu'une vraie mesure, alors qu'elle ne mesure rien.",
+        ],
+      },
+      {
+        title: "À savoir",
+        points: [
+          "Tu peux voir une liste plus courte que ton athlète, sans message d'erreur : une source dont il a retiré le consentement disparaît immédiatement de ton côté. C'est voulu.",
+          "Les sports inconnus d'Agon s'affichent quand même, avec le nom que la montre a transmis — rien n'est rangé dans « Autre ».",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-29-import-fichiers-activite",
     date: "2026-10-29",
     kind: "feature",

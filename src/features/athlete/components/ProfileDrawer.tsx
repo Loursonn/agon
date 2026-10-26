@@ -19,6 +19,7 @@ import { TrendCard } from "@/features/athlete/components/profile/TrendCard";
 import { AppFeedbackSection } from "@/features/athlete/components/profile/AppFeedbackSection";
 import { PrivacySection } from "@/features/shared/components/PrivacySection";
 import { ConnectedServicesSection } from "@/features/shared/components/ConnectedServicesSection";
+import { ProviderActivityList } from "@/features/shared/components/ProviderActivityList";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useAthleteRetours } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import type { TrendSummary } from "@/lib/athleteTrends";
@@ -322,6 +323,18 @@ export default function ProfileDrawer({ onClose }: Props) {
 
         {/* ── Retour sur l'app ── */}
         {!viewOnly && <AppFeedbackSection />}
+
+        {/* ── Sorties enregistrées (montre ou fichier importé) ──
+            Visible aussi en `viewOnly`, contrairement aux deux blocs suivants :
+            la liste ne fait que lire, et un coach qui consulte le profil doit
+            voir les mêmes sorties que son athlète. Ce que la base lui refuse,
+            elle le refuse ici aussi — la liste peut donc être plus courte pour
+            lui, sans message d'erreur. C'est le comportement voulu. */}
+        {athleteId && (
+          <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px" }}>
+            <ProviderActivityList athleteId={athleteId} limit={20} />
+          </div>
+        )}
 
         {/* ── Montres & services connectés ──
             Même raison de masquage qu'en dessous : connecter ou débrancher un

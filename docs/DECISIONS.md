@@ -885,4 +885,84 @@ l'autre qu'ils font doublon.
 
 ---
 
+## 2026-10 — Un seul composant et un seul hook de sorties pour l'athlète et pour son coach
+
+**Décision** : `ProviderActivityList` et `useProviderActivities` sont montés tels
+quels des deux côtés. Aucun filtre de visibilité n'est écrit en TypeScript ; la
+requête est identique et c'est RLS qui tranche.
+
+**Pourquoi** : côté coach, trois conditions doivent être réunies — être le coach
+de cet athlète, que les conditions du fournisseur autorisent l'affichage à un
+tiers (`coach_visible`), et que l'athlète ait consenti à la synchronisation de
+cette source. Les réécrire dans le client donnerait deux règles à maintenir dont
+une seule protège vraiment, et celle du client serait contournable. Deux
+composants divergeraient aussi avec le temps, et l'athlète finirait par ne plus
+savoir ce que son coach voit.
+
+**Conséquence assumée** : un coach peut voir une liste plus courte que son
+athlète, sans message d'erreur. C'est le comportement voulu — un retrait de
+consentement doit agir tout de suite, pas après un nettoyage qu'on penserait à
+faire.
+
+**Exception au masquage en `viewOnly`** : dans le profil athlète, les blocs
+« Montres & services connectés » et « Confidentialité » sont cachés au coach
+parce qu'ils engagent l'athlète auprès d'un tiers. La liste des sorties, elle,
+reste visible : elle ne fait que lire, et la base limite déjà ce qu'elle rend.
+
+---
+
+## 2026-10 — La provenance des chiffres est affichée, pas seulement stockée
+
+**Décision** : chaque ligne de sortie se déplie sur les mentions de provenance
+écrites par les décodeurs (`distanceSource`, `durationSource`,
+`elevationSource`, `avgHrSource`, `localDateSource`, `skippedLegs`), rendues
+telles quelles. Un FIT, dont les valeurs sont lues et non calculées, affiche à la
+place une phrase unique disant exactement cela.
+
+**Pourquoi** : un GPX n'a ni durée de mouvement ni dénivelé mesuré. L'écart avec
+l'application du fabricant est donc inévitable, et sans explication la seule
+conclusion possible pour l'athlète est « Agon se trompe ». C'est la partie de
+l'interface qui paraît superflue et qui ne l'est pas.
+
+**Pourquoi ne pas retraduire les mentions côté affichage** : les décodeurs les
+écrivent déjà en français lisible. Les reformuler ici créerait une deuxième
+version du même texte, qui cesserait de correspondre à la première dès la
+prochaine modification d'un décodeur.
+
+---
+
+## 2026-10 — Une mesure absente affiche un tiret, jamais zéro, et seules les mesures présentes sont affichées
+
+**Décision** : les formateurs de `activityDisplay.ts` rendent « — » pour `null`,
+`undefined`, `NaN` et — pour une durée ou une allure — pour zéro. La liste ne
+construit la rangée de mesures qu'avec les champs qui ont une valeur.
+
+**Pourquoi** : une allure à 0:00 posée à côté de vraies mesures a le même poids
+visuel qu'elles alors qu'elle ne mesure rien, et `distance_m / 1000` rendrait
+`NaN` sans la conversion des `numeric` que PostgREST sérialise en texte — le
+symptôme serait une colonne vide, pas une erreur. Inversement, afficher
+systématiquement les six mesures donnerait des rangées de tirets : une case vide
+en dit plus qu'un zéro, mais quatre cases vides ne disent rien. Les mesures
+disponibles dépendent de ce que le fichier contient, pas du sport — une
+« natation » sans distance et un renforcement avec cardio existent tous les deux.
+
+**Cas voisin** : `+0 m` de dénivelé est conservé, parce que c'est une vraie
+mesure sur du plat.
+
+---
+
+## 2026-10 — Les sorties réelles et les séances programmées restent deux blocs séparés
+
+**Décision** : dans l'onglet Historique, la liste des sorties de montre est
+placée au-dessus de l'historique des séances, dans son propre cadre. Le
+récapitulatif par sport se limite à trois chiffres et ne produit aucun graphique.
+
+**Pourquoi** : ce que la montre a enregistré n'est pas ce que le coach avait
+programmé. Un graphique de plus à côté de ceux du suivi inviterait à comparer
+deux séries qui ne mesurent pas la même chose, et un écart serait lu comme une
+erreur de l'application. L'ordre reflète la question que le coach se pose en
+ouvrant l'onglet : ce que l'athlète a réellement fait.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*
