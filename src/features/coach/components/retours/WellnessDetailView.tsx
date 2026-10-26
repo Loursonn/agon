@@ -7,6 +7,7 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend, Cell,
 } from "recharts";
 import { C } from "@/lib/theme";
+import { domsReading } from "@/lib/wellnessBaseline";
 import type { DailyData } from "@/features/shared/types/retours.types";
 
 interface SleepGoals {
@@ -120,6 +121,8 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
     sommeil: d.wellness!.sommeil,
     stress:  d.wellness!.stress,
     energie: d.wellness!.energie,
+    // Cinquième item de la saisie : il manquait à l'affichage côté coach.
+    doms:    d.wellness!.doms,
   }));
 
   // ── Sleep tunnel (Garmin-style) ──────────────────────────────────────────
@@ -184,6 +187,7 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
   const avgSommeil = avg(entries.map((d) => d.wellness!.sommeil));
   const avgStress  = avg(entries.map((d) => d.wellness!.stress));
   const avgEnergie = avg(entries.map((d) => d.wellness!.energie));
+  const avgDoms    = avg(entries.map((d) => d.wellness!.doms));
 
   return (
     <div style={overlayStyle}>
@@ -198,20 +202,29 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))", gap: 8, marginBottom: 20 }}>
           {[
             { label: "Score moy.", value: avgWellness, unit: "/100", color: C.ac },
             { label: "Fatigue",    value: avgFatigue,  unit: "/5",   color: C.o  },
             { label: "Sommeil",    value: avgSommeil,  unit: "/5",   color: C.b  },
             { label: "Stress",     value: avgStress,   unit: "/5",   color: C.r  },
             { label: "Énergie",    value: avgEnergie,  unit: "/5",   color: C.g  },
-          ].map(({ label, value, unit, color }) => (
+            // L'athlète note sa fraîcheur (1 = DOMS intenses, 5 = aucune douleur) :
+            // on redit la moyenne en courbatures pour éviter la lecture à l'envers.
+            {
+              label: "Fraîcheur musc.", value: avgDoms, unit: "/5", color: C.y,
+              sub: avgDoms != null ? domsReading(avgDoms) : null,
+            },
+          ].map(({ label, value, unit, color, sub }: {
+            label: string; value: number | null; unit: string; color: string; sub?: string | null;
+          }) => (
             <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>
                 {value ?? "—"}
               </div>
               <div style={{ fontSize: 9, color: C.tx3 }}>{unit}</div>
+              {sub && <div style={{ fontSize: 9, color, marginTop: 2 }}>{sub}</div>}
             </div>
           ))}
         </div>
@@ -262,6 +275,7 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
               <Line type="monotone" dataKey="sommeil" stroke={C.b} strokeWidth={2} dot={false} name="Sommeil" />
               <Line type="monotone" dataKey="stress"  stroke={C.r} strokeWidth={2} dot={false} name="Stress" />
               <Line type="monotone" dataKey="energie" stroke={C.g} strokeWidth={2} dot={false} name="Énergie" />
+              <Line type="monotone" dataKey="doms"    stroke={C.y} strokeWidth={2} dot={false} name="Fraîcheur musc." />
             </LineChart>
           </ResponsiveContainer>
         )}

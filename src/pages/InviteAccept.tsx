@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { errorMessage } from "@/lib/errors";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,8 @@ export default function InviteAccept() {
         token!
       );
       navigate("/");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }

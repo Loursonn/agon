@@ -5,6 +5,50 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Formes des données envoyées par le client. Le corps de requête sort de
+ * `req.json()` donc non typé : on déclare ici les seuls champs réellement lus,
+ * pour que `s.name` ou `f.mimeType` soient vérifiés plutôt que silencieux.
+ */
+interface SessionInfo {
+  id: string;
+  name?: string;
+  short?: string;
+}
+
+/** Un tour de conversation, en mode `chat_edit`. */
+interface HistoryMessage {
+  role: string;
+  content: string;
+}
+
+/** Fichier joint, encodé en base64 par le client. */
+interface FileData {
+  name?: string;
+  mimeType?: string;
+  data?: string;
+  sessionTags?: string[];
+}
+
+/** Fragment de requête Gemini : du texte, ou un fichier inline. */
+type GeminiPart =
+  | { text: string }
+  | { inline_data: { mime_type?: string; data?: string } };
+
+/**
+ * Message d'une erreur attrapée.
+ *
+ * Le contrôle de flux ci-dessous compare ce message aux sentinelles
+ * `__503__` / `__429__` / `__json_invalid__` levées par `callGemini` : il doit
+ * rendre une string même si ce qui remonte n'est pas une `Error`, sinon une
+ * panne réseau inattendue ferait planter la branche de retry elle-même.
+ */
+function errMessage(err: unknown, fallback = "unknown"): string {
+  if (err instanceof Error) return err.message || fallback;
+  if (typeof err === "string") return err || fallback;
+  return fallback;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -15,21 +59,21 @@ serve(async (req) => {
     const body = await req.json();
     const { mode, prompt, imageBase64, filesData, sessions, targetSessions, currentProgram, conversationHistory, message } = body;
 
-    const sessionsList = sessions && Array.isArray(sessions) && sessions.length > 0
+    const sessionsList: SessionInfo[] = sessions && Array.isArray(sessions) && sessions.length > 0
       ? sessions
       : [{ id: "s1", name: "Séance 1", short: "S1" }];
 
     // Si targetSessions est défini, restreindre la génération à ces sessions uniquement
     const targetList = targetSessions && Array.isArray(targetSessions) && targetSessions.length > 0
-      ? sessionsList.filter((s: any) => targetSessions.includes(s.id))
+      ? sessionsList.filter((s: SessionInfo) => targetSessions.includes(s.id))
       : sessionsList;
     const generateList = targetList.length > 0 ? targetList : sessionsList;
 
-    const sessIds = sessionsList.map((s: any) => s.id).join(", ");
-    const sessDesc = sessionsList.map((s: any) => `${s.id} (${s.name})`).join(", ");
-    const genIds = generateList.map((s: any) => s.id).join(", ");
-    const genDesc = generateList.map((s: any) => `${s.id} (${s.name})`).join(", ");
-    const sessKeysExample = generateList.map((s: any) => `"${s.id}":[...]`).join(",");
+    const sessIds = sessionsList.map((s: SessionInfo) => s.id).join(", ");
+    const sessDesc = sessionsList.map((s: SessionInfo) => `${s.id} (${s.name})`).join(", ");
+    const genIds = generateList.map((s: SessionInfo) => s.id).join(", ");
+    const genDesc = generateList.map((s: SessionInfo) => `${s.id} (${s.name})`).join(", ");
+    const sessKeysExample = generateList.map((s: SessionInfo) => `"${s.id}":[...]`).join(",");
 
     const SESSIONS_INFO = `SESSIONS DU PROGRAMME (toutes): ${sessDesc}
 SESSIONS A GENERER (uniquement celles-ci): ${genDesc}
@@ -57,7 +101,7 @@ REGLES:
       userPrompt = prompt;
     } else if (mode === "chat_edit") {
       const limitedHistory = (conversationHistory || []).slice(-6);
-      const historyText = limitedHistory.map((m: any) =>
+      const historyText = limitedHistory.map((m: HistoryMessage) =>
         `${m.role === "user" ? "Coach" : "IA"}: ${m.content}`
       ).join("\n");
       userPrompt = `PROGRAMME ACTUEL:
@@ -68,12 +112,12 @@ ${historyText ? `HISTORIQUE:\n${historyText}\n\n` : ""}DEMANDE: ${message}
 Retourne UNIQUEMENT les sessions modifiees dans {"sessions":{...},"rationale":"..."}. N'inclus PAS les sessions non modifiees — elles seront conservees automatiquement cote client. Exemple: si seule la session "s1" change, retourne {"sessions":{"s1":[...]},"rationale":"..."}.`;
     } else {
       const fileCount = (filesData?.length || 0) + (imageBase64 ? 1 : 0);
-      const hasTaggedFiles = filesData?.some((f: any) => f.sessionTags?.length > 0);
+      const hasTaggedFiles = filesData?.some((f: FileData) => (f.sessionTags?.length ?? 0) > 0);
 
-      const getSessionsLabel = (sessionTags: string[]) => {
+      const getSessionsLabel = (sessionTags: string[] | undefined) => {
         if (!sessionTags?.length) return null;
         return sessionTags.map((id: string) => {
-          const s = sessionsList.find((x: any) => x.id === id);
+          const s = sessionsList.find((x: SessionInfo) => x.id === id);
           return s ? `"${s.name}" (${id})` : id;
         }).join(" + ");
       };
@@ -81,14 +125,14 @@ Retourne UNIQUEMENT les sessions modifiees dans {"sessions":{...},"rationale":".
       let fileContext = "";
       if (fileCount > 1) {
         if (hasTaggedFiles) {
-          const taggedDesc = filesData?.map((f: any, i: number) => {
+          const taggedDesc = filesData?.map((f: FileData, i: number) => {
             const label = getSessionsLabel(f.sessionTags);
             const dest = label ? `sessions ${label} UNIQUEMENT` : "contexte general (repartir intelligemment)";
             return `  - Fichier ${i + 1}: "${f.name || "sans nom"}" → ${dest}`;
           }).join("\n") || "";
           fileContext = `\nATTENTION: ${fileCount} fichiers joints avec affectations:\n${taggedDesc}\nREGLE CRITIQUE: pour chaque fichier ayant des sessions cibles, placer SES exercices EXCLUSIVEMENT dans ces sessions (et les y repartir equitablement si plusieurs). Pour les fichiers "contexte general", repartir librement sur toutes les sessions.`;
         } else {
-          const fileNames = filesData?.map((f: any, i: number) => `fichier ${i + 1}: "${f.name || "sans nom"}"`).join(", ") || "";
+          const fileNames = filesData?.map((f: FileData, i: number) => `fichier ${i + 1}: "${f.name || "sans nom"}"`).join(", ") || "";
           fileContext = `\nATTENTION: ${fileCount} fichiers sont joints (${fileNames}). OBLIGATION: lire et extraire les exercices de CHAQUE fichier. Chaque fichier peut representer une seance differente ou une partie du programme. Combine TOUT le contenu pour creer un programme complet.`;
         }
       } else if (fileCount === 1) {
@@ -109,7 +153,7 @@ ${hasText ? prompt : fileCount > 1 ? "Programme reparti sur les fichiers joints 
     }
 
     // Build Gemini request parts — text first, then files
-    const parts: any[] = [{ text: systemPrompt + "\n\n" + userPrompt }];
+    const parts: GeminiPart[] = [{ text: systemPrompt + "\n\n" + userPrompt }];
 
     // Support multi-file (new format) or legacy single image
     if (filesData && Array.isArray(filesData) && filesData.length > 0) {
@@ -118,7 +162,7 @@ ${hasText ? prompt : fileCount > 1 ? "Programme reparti sur les fichiers joints 
         // Label indiquant le fichier et ses sessions assignées
         const tags: string[] = f.sessionTags || [];
         const dest = tags.length > 0
-          ? `→ SESSIONS ${tags.map((id: string) => { const s = sessionsList.find((x: any) => x.id === id); return s ? `"${s.name}"` : id; }).join(" + ")} UNIQUEMENT`
+          ? `→ SESSIONS ${tags.map((id: string) => { const s = sessionsList.find((x: SessionInfo) => x.id === id); return s ? `"${s.name}"` : id; }).join(" + ")} UNIQUEMENT`
           : `→ contexte général`;
         parts.push({ text: `[Fichier ${i + 1}/${filesData.length}: ${f.name || "sans nom"} ${dest}]` });
         parts.push({ inline_data: { mime_type: f.mimeType, data: f.data } });
@@ -189,35 +233,35 @@ ${hasText ? prompt : fileCount > 1 ? "Programme reparti sur les fichiers joints 
     const fallbackModel = "gemini-2.0-flash";
 
     // Attempt 1
-    let parsed: any;
+    let parsed: unknown;
     let attempt1Error = "";
     try {
       parsed = await callGemini(0.3, primaryModel);
-    } catch (e: any) {
-      if (e.message === "__503__" && primaryModel !== fallbackModel) {
+    } catch (e) {
+      if (errMessage(e) === "__503__" && primaryModel !== fallbackModel) {
         // 503 on premium model → switch immediately to fallback model (no wait)
         console.warn(`503 on ${primaryModel}, switching to fallback ${fallbackModel}...`);
         try {
           parsed = await callGemini(0.3, fallbackModel);
-        } catch (e2: any) {
-          attempt1Error = e2.message || "unknown";
+        } catch (e2) {
+          attempt1Error = errMessage(e2);
         }
-      } else if (e.message === "__429__") {
+      } else if (errMessage(e) === "__429__") {
         // Rate limited: wait 22s and retry
         console.warn("Rate limited (429), waiting 22s before retry...");
         await sleep(22000);
         try {
           parsed = await callGemini(0.3, primaryModel);
-        } catch (e2: any) {
-          if (e2.message === "__429__") {
+        } catch (e2) {
+          if (errMessage(e2) === "__429__") {
             return new Response(JSON.stringify({ error: "Trop de requetes. Attends 30 secondes et reessaie." }), {
               status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
-          attempt1Error = e2.message || "unknown";
+          attempt1Error = errMessage(e2);
         }
       } else {
-        attempt1Error = e.message || "unknown";
+        attempt1Error = errMessage(e);
       }
 
       if (!parsed && attempt1Error) {
@@ -225,8 +269,8 @@ ${hasText ? prompt : fileCount > 1 ? "Programme reparti sur les fichiers joints 
         console.warn("Tentative 1 echouee (" + attempt1Error.slice(0, 120) + "), retry temp 0.1 model " + retryModel + "...");
         try {
           parsed = await callGemini(0.1, retryModel);
-        } catch (e3: any) {
-          if (e3.message === "__429__") {
+        } catch (e3) {
+          if (errMessage(e3) === "__429__") {
             await sleep(22000);
             try {
               parsed = await callGemini(0.1, retryModel);
@@ -235,7 +279,7 @@ ${hasText ? prompt : fileCount > 1 ? "Programme reparti sur les fichiers joints 
                 status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
               });
             }
-          } else if (e3.message === "__503__") {
+          } else if (errMessage(e3) === "__503__") {
             return new Response(JSON.stringify({ error: "Les modeles Gemini sont surchargés. Reessaie dans quelques secondes." }), {
               status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });

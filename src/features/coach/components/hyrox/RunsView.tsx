@@ -3,7 +3,7 @@ import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
-import { runStats, runSplits, roxzoneTotal, bracketOf, type RefLookup } from "@/lib/hyrox/calc";
+import { runStats, runSplits, roxzoneTotal, bracketOf, formatPerRun, formatAvgPerRun, RUN_AXIS_UNIT, type RefLookup } from "@/lib/hyrox/calc";
 import { RUN_KEYS, REFERENCE_DIVISION, SEGMENT_LABEL, STATION_META, type HyroxDivision } from "@/features/shared/types/hyrox";
 import { formatMmSs, formatDelta } from "@/lib/time";
 import {
@@ -81,15 +81,16 @@ export default function RunsView() {
           <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={C.brd} />
             <XAxis dataKey="name" tick={{ fill: C.tx3, fontSize: 10 }} />
-            <YAxis domain={[150, 'auto']} tick={{ fill: C.tx3, fontSize: 10 }} tickFormatter={v => formatMmSs(v)} />
+            <YAxis domain={[150, 'auto']} tick={{ fill: C.tx3, fontSize: 10 }} tickFormatter={v => formatMmSs(v)}
+              label={{ value: RUN_AXIS_UNIT, angle: -90, position: "insideLeft", offset: 18, fill: C.tx3, fontSize: 9 }} />
             <Tooltip
               contentStyle={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 4, fontSize: 11, color: C.tx }}
-              formatter={(v: number) => formatMmSs(v)}
+              formatter={(v: number) => formatPerRun(v)}
             />
             <Line type="monotone" dataKey="athlete" stroke={C.ac} strokeWidth={2} dot={{ r: 3, fill: C.ac }} name="Athlète" />
             <Line type="monotone" dataKey="reference" stroke={C.tx3} strokeWidth={1.5} strokeDasharray="5 5" dot={false} name="Référence" />
             {stats.avg27 != null && (
-              <ReferenceLine y={stats.avg27} stroke={C.b} strokeDasharray="3 3" label={{ value: `Moy. R2-7 ${formatMmSs(stats.avg27)}`, fill: C.b, fontSize: 10 }} />
+              <ReferenceLine y={stats.avg27} stroke={C.b} strokeDasharray="3 3" label={{ value: `R2-7 ${formatAvgPerRun(stats.avg27)}`, fill: C.b, fontSize: 10 }} />
             )}
           </LineChart>
         </ResponsiveContainer>
@@ -98,19 +99,19 @@ export default function RunsView() {
       {/* Runs 2-7 analysis (core — same distance, comparable) */}
       <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2, marginBottom: 6 }}>Analyse Runs 2 à 7 <span style={{ fontWeight: 400, color: C.tx3 }}>(distance identique, comparable)</span></div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
-        <StatCard label="Moyenne R2-7" value={stats.avg27 != null ? formatMmSs(stats.avg27) : "—"} color={C.ac} />
+        <StatCard label="Moyenne R2-7" value={stats.avg27 != null ? formatAvgPerRun(stats.avg27) : "—"} color={C.ac} />
         <StatCard label="Fade (R2→R7)" value={stats.fade27 != null ? formatDelta(stats.fade27) : "—"} color={stats.fade27 != null && stats.fade27 > 60 ? C.r : C.tx} />
         <StatCard label="Fade index R2-7" value={stats.fadeIndex27Pct != null ? stats.fadeIndex27Pct + " %" : "—"} color={stats.fadeIndex27Pct != null && stats.fadeIndex27Pct > 15 ? C.o : C.tx} />
-        <StatCard label="Meilleur (R2-7)" value={stats.best27 ? `Run ${stats.best27.index + 1} (${formatMmSs(stats.best27.s)})` : "—"} color={C.g} />
-        <StatCard label="Pire (R2-7)" value={stats.worst27 ? `Run ${stats.worst27.index + 1} (${formatMmSs(stats.worst27.s)})` : "—"} color={C.r} />
+        <StatCard label="Meilleur (R2-7)" value={stats.best27 ? `Run ${stats.best27.index + 1} (${formatPerRun(stats.best27.s)})` : "—"} color={C.g} />
+        <StatCard label="Pire (R2-7)" value={stats.worst27 ? `Run ${stats.worst27.index + 1} (${formatPerRun(stats.worst27.s)})` : "—"} color={C.r} />
         <StatCard label="Δ mi-courses" value={stats.halvesDelta != null ? formatDelta(stats.halvesDelta) : "—"} color={stats.halvesDelta != null && stats.halvesDelta > 20 ? C.o : C.tx} />
       </div>
 
       {/* Runs 1 & 8 apart (course-dependent distance) */}
       <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2, marginBottom: 6 }}>Runs 1 et 8 <span style={{ fontWeight: 400, color: C.tx3 }}>(distance variable selon le parcours)</span></div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
-        <StatCard label="Run 1" value={splits[0] != null ? formatMmSs(splits[0]) : "—"} color={C.tx} />
-        <StatCard label="Run 8" value={splits[7] != null ? formatMmSs(splits[7]) : "—"} color={C.tx} />
+        <StatCard label="Run 1" value={formatPerRun(splits[0])} color={C.tx} />
+        <StatCard label="Run 8" value={formatPerRun(splits[7])} color={C.tx} />
         <StatCard label="Drop (R1→R2)" value={stats.drop12 != null ? formatDelta(stats.drop12) : "—"} color={stats.drop12 != null && stats.drop12 > 60 ? C.o : C.tx} />
       </div>
 
@@ -134,8 +135,8 @@ export default function RunsView() {
                     {SEGMENT_LABEL[k]}
                     {isEdge && <span style={{ fontSize: 9, color: C.tx3, fontWeight: 400, marginLeft: 4 }}>*</span>}
                   </td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx }}>{formatMmSs(splits[i])}</td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx3 }}>{formatMmSs(refRuns[i])}</td>
+                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx }}>{formatPerRun(splits[i])}</td>
+                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx3 }}>{formatPerRun(refRuns[i])}</td>
                   <td style={{ padding: "6px 8px", color: C.tx3 }}>{PRECEDING_STATION[i]}</td>
                 </tr>
               );

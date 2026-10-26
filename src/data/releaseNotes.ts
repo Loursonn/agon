@@ -37,6 +37,229 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-26-fiabilite-profil-athlete",
+    date: "2026-10-26",
+    kind: "fix",
+    title: "Le profil de l'athlète ne recharge plus le nom de son coach en boucle",
+    summary: "Dans « Mon profil » côté athlète, le bloc « Mon coach » relançait une requête à chaque rafraîchissement de l'écran. Corrigé : le nom est lu une seule fois.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bloc « Mon coach » du profil athlète ne déclenche plus de requête répétée : l'app est plus légère sur les connexions mobiles lentes.",
+          "Rien à faire de ton côté, et rien ne change à l'écran : seul le comportement interne est corrigé.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-26-theme-du-jour-raccourcis",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Thème du jour : tes thèmes récents en un clic, et ta propre couleur",
+    summary: "Repose « Seuil » ou « Jambes lourdes » sans le retaper, choisis une couleur hors palette, et retrouve la couleur du jour dans la barre de semaine de l'athlète.",
+    sections: [
+      {
+        title: "Ce qui change dans l'éditeur",
+        points: [
+          "« Tes thèmes récents » en haut du formulaire : tes derniers thèmes, tous athlètes confondus, sans doublon. Un clic reprend le libellé, les raccourcis et la couleur.",
+          "Une 11e pastille ouvre le sélecteur de couleur du téléphone : tu n'es plus limité aux 10 couleurs proposées.",
+          "Une couleur reprise d'un thème récent ne se fait plus écraser si tu cliques ensuite sur une intensité.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Dans sa barre « Cette semaine », chaque jour qui a un thème porte un liseré de ta couleur : il repère ses jours durs d'un coup d'œil.",
+          "Le libellé complet reste à un tap, dans la fiche du jour.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-26-point-hebdo-reservation",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Tes athlètes réservent leur point hebdo sans passer par toi",
+    summary: "Colle ton lien Calendly une fois dans tes réglages : chaque athlète voit « Réserver mon point hebdo » dans son profil et choisit son créneau dans tes disponibilités.",
+    sections: [
+      {
+        title: "À faire une seule fois",
+        points: [
+          "Paramètres → « Lien de réservation du point hebdo » : colle l'adresse de ta page Calendly, par exemple https://calendly.com/ton-compte/30min, puis Enregistre.",
+          "Tant que le champ est vide, l'entrée reste invisible chez tes athlètes : rien ne s'affiche avant que tu sois prêt.",
+          "Pour retirer la réservation, vide le champ et enregistre.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Son profil affiche « Réserver mon point hebdo » ; il choisit son créneau sans quitter l'app.",
+          "Son nom et son e-mail sont déjà remplis : deux taps et c'est réservé.",
+          "Dès la réservation, il reçoit l'invitation avec le lien Meet par mail — et toi aussi, via Calendly.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-26-theme-du-jour",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Donne un thème à une journée, l'athlète le lit avant sa séance",
+    summary: "« Jambes lourdes », « Seuil », « Repos complet » : une intention posée sur une date, visible dans ton calendrier et sur l'accueil de l'athlète.",
+    sections: [
+      {
+        title: "Comment le poser",
+        points: [
+          "Dans le planning, clique un jour : « Thème du jour » est en tête du détail, avant les séances.",
+          "Un libellé libre de 40 caractères max, et deux séries de raccourcis si tu veux aller vite : intensité (Hard, Moyen, Easy, Récup active, Repos) et dominante (Force, Puissance-vitesse, Volume, Aérobie, Seuil, Spécifique HYROX, Technique, Mixte).",
+          "Dix couleurs au choix. Cliquer une intensité en propose une, mais ta couleur reste la tienne si tu l'as déjà choisie.",
+          "Une note facultative pour ce que l'athlète doit garder en tête ce jour-là.",
+        ],
+      },
+      {
+        title: "Où il apparaît",
+        points: [
+          "Dans ton calendrier mensuel : une pastille colorée à côté du numéro du jour, sans rien chasser de la case.",
+          "Chez l'athlète : un bandeau sur son accueil, dans la fiche d'une journée, et une pastille sur chaque jour de sa semaine.",
+          "Les jours de repos aussi : « Repos complet » est une consigne, pas une absence de consigne.",
+          "La couleur du texte s'adapte au fond choisi, pour que la pastille reste lisible même en jaune.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-26-blessures-detaillees",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Blessures détaillées, déclarables par l'athlète comme par toi",
+    summary: "Une gêne se déclare en dix secondes depuis le profil de l'athlète, et tu vois ce qui change la séance de demain : douleur, impact, mécanisme.",
+    sections: [
+      {
+        title: "Ce que l'athlète peut faire",
+        points: [
+          "« Déclarer une gêne ou une blessure » dans son profil : un nom suffit, tout le reste est facultatif.",
+          "Un encart lui explique qu'une petite gêne compte et que la déclarer ne veut pas dire tout changer au programme.",
+          "Il peut préciser s'il le souhaite : douleur sur 10, impact sur l'entraînement, type, mécanisme, contexte, jours d'arrêt, avis médical, retour prévu.",
+        ],
+      },
+      {
+        title: "Ce que tu vois",
+        points: [
+          "Les mêmes champs dans les antécédents du profil athlète : tu peux déclarer et compléter toi aussi.",
+          "La mention « Déclarée par l'athlète » ou « par le coach » sur chaque ligne, pour savoir d'où vient l'info.",
+          "Le détail affiché dans Retours, sous le bloc Blessures, avec le statut en cours ou guéri.",
+        ],
+      },
+      {
+        title: "Un seul endroit, une seule vérité",
+        points: [
+          "Les badges « blessure active » (en-tête athlète, profil, Retours) lisent désormais les mêmes blessures déclarées que la fiche.",
+          "Fini le badge qui dit une chose et la fiche une autre : seule une blessure au statut « en cours » l'allume.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-25-alertes-wellness",
+    date: "2026-10-25",
+    kind: "feature",
+    title: "Alertes wellness comparées à l'habitude de l'athlète",
+    summary: "L'accueil signale les athlètes qui s'écartent de leur propre habitude, au lieu d'un seuil identique pour tout le monde.",
+    sections: [
+      {
+        title: "Ce que tu vois",
+        points: [
+          "Une carte « Alertes wellness » sur l'accueil, qui n'apparaît que s'il y a quelque chose à signaler.",
+          "Un athlète par ligne, les rouges avant les orange, avec l'écart en clair : « Fraîcheur musculaire 2/5 (habitude 4,1) ».",
+          "Un clic ouvre directement le détail wellness de l'athlète dans Retours.",
+        ],
+      },
+      {
+        title: "Comment c'est calculé",
+        points: [
+          "Chaque saisie est comparée à la moyenne et à la dispersion des 28 jours précédents de ce même athlète.",
+          "Sous 7 saisies dans la fenêtre, rien n'est signalé : l'habitude n'est pas encore fiable.",
+          "Orange dès qu'un item ou le score global décroche nettement ; rouge si l'écart est franc ou s'il se répète deux saisies de suite.",
+          "Un athlète qui dort mal tous les jours n'est donc plus signalé en continu, et une baisse nette chez un athlète régulier ne passe plus inaperçue.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-25-equivalences-allure",
+    date: "2026-10-25",
+    kind: "feature",
+    title: "Équivalences d'allure partout",
+    summary: "Sous chaque allure, la même intensité est rappelée dans les autres unités : km/h, min/km, temps sur la répétition, temps au tour, % VMA.",
+    sections: [
+      {
+        title: "Ce que tu vois",
+        points: [
+          "Sous une cible d'allure, une petite ligne grise : « 23 km/h · 2'37/km · 400 m en 1'03 · tour de piste 1'03 · 105 % VMA ».",
+          "Le « % VMA » n'apparaît que si l'athlète a une VMA en performance de référence active.",
+          "Présent côté coach (aperçu de séance, détail du déroulé) et côté athlète (déroulé, exécution pas à pas, validation d'étape).",
+        ],
+      },
+      {
+        title: "Saisie",
+        points: [
+          "Dans l'éditeur d'intervalle, le menu d'unité propose en plus « Temps au tour (400 m) » et, si l'étape est sur une distance, « Temps sur X m ».",
+          "Tu saisis le temps que tu as en tête, l'app convertit : les équivalences s'affichent en direct sous les champs.",
+          "À l'import, « chrono 1:37-1:40 » sur une étape de 400 m devient une vraie cible d'allure au lieu d'un texte libre.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-24-iso-secondes-runs-hyrox",
+    date: "2026-10-24",
+    kind: "fix",
+    title: "Isométrie en secondes, runs HYROX en « /run »",
+    summary: "Un exercice en iso s'affiche partout « 4 × 30 s » avec un badge Iso, et les runs HYROX sont exprimés par run (1 km).",
+    sections: [
+      {
+        title: "Isométrie",
+        points: [
+          "Synthèse, détail du jour, aperçus et Retours affichent « 4 × 30 s » et un badge « Iso » au lieu de « 4 × 30 ».",
+          "Côté athlète, la saisie d'une série iso se fait en secondes (« s ») et non plus en reps.",
+          "Dans l'éditeur, le choix EC / ISO est aussi disponible quand les répétitions sont réglées série par série.",
+        ],
+      },
+      {
+        title: "HYROX",
+        points: [
+          "Chaque run fait 1 km : temps affichés « 4:32 /run », moyenne « moy. … /run » et axes des graphiques en « min/run ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-24-planning-synchro-athlete",
+    date: "2026-10-24",
+    kind: "fix",
+    title: "Le planning montre exactement ce que voit l'athlète",
+    summary: "Fini les séances fantômes : quand l'athlète déplace ou démarre une séance un autre jour, ton planning suit, avec la mention « Choix de l'athlète ».",
+    sections: [
+      {
+        title: "Planning coach",
+        points: [
+          "Une séance déplacée par l'athlète n'apparaît plus en double à son ancienne date.",
+          "Elle porte le badge « Déplacé par l'athlète · prévu lun. 19 oct. » dans la case du jour et dans le détail.",
+          "Dans le détail d'une séance, un encart « Choix de l'athlète » regroupe les exercices ajoutés, séries en plus, séries sautées et commentaires.",
+          "« Changer de jour » sur une séance garde les séances que l'athlète a déjà déplacées et t'indique combien ont été conservées.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Faire aujourd'hui une séance prévue un autre jour de la semaine la déplace au lieu d'en créer une deuxième.",
+          "Sur l'accueil, l'aperçu d'un jour liste les vrais exercices de la séance, et « Démarrer » ouvre directement l'écran de séance.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-20-competitions-defilement",
     date: "2026-10-20",
     kind: "feature",

@@ -20,6 +20,8 @@ export interface Profile {
   is_admin: boolean;
   is_certified_coach: boolean;
   is_hyrox_athlete: boolean;
+  /** Lien Calendly du coach pour le point hebdo (null = aucune réservation proposée) */
+  booking_url: string | null;
 }
 
 interface AuthContextType {
@@ -78,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let p = data as Profile | null;
     // Auto-generate coach_code for existing coaches who don't have one
     if (p && (p.role === "coach" || p.role === "coach_athlete") && !p.coach_code) {
-      let code = generateCoachCode();
+      const code = generateCoachCode();
       await supabase.from("profiles").update({ coach_code: code }).eq("id", userId);
       p = { ...p, coach_code: code };
     }

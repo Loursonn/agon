@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
@@ -10,7 +10,6 @@ import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, Utens
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { C } from "@/lib/theme";
 import { MuscleVolumeCard } from "@/components/athlete/StatsViews";
-import { stC, ALL_BZ } from "@/lib/muscles";
 import { PageSkeleton } from "@/features/shared/components/skeletons";
 import { KPICard } from "@/features/coach/components/KPICard";
 import { useMonthlyRetours } from "@/features/shared/hooks/useMonthlyRetours";
@@ -25,17 +24,43 @@ import { CompetitionsDetailView } from "../components/retours/CompetitionsDetail
 import { NutritionDetailView } from "../components/retours/NutritionDetailView";
 import { useWeeklyCoachRetour, useUpsertWeeklyRetour, reactionEmoji } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { useAuth } from "@/hooks/useAuth";
+import { useMedicalEntries } from "@/features/shared/hooks/useMedicalEntries";
+import { activeInjuries, fmtInjuryDate, injuryFacts, injurySummary } from "@/lib/injuryDetails";
+import { DECLARED_BY_LABEL, MEDICAL_STATUS_LABEL } from "@/features/shared/types/medical";
 
 type ViewMode = "month" | "week";
 type DetailView = "wellness" | "workouts" | "tests" | "competitions" | "nutrition" | null;
 
+const DETAIL_VIEWS = ["wellness", "workouts", "tests", "competitions", "nutrition"] as const;
+
+/** `?detail=wellness` ouvre directement le détail : utilisé par les alertes de l'accueil coach. */
+function detailFromParam(raw: string | null): DetailView {
+  return DETAIL_VIEWS.includes(raw as (typeof DETAIL_VIEWS)[number]) ? (raw as DetailView) : null;
+}
+
 export default function RetoursPage() {
   const { athleteId } = useParams<{ athleteId: string }>();
-  const { goals, exos, exMeta, sets, sessions, weeksArr, tw, currentWeek, injuries, activeInjuries, freeSessions } = useAthleteContext();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { goals, exos, exMeta, sets, sessions, weeksArr, tw, currentWeek, freeSessions } = useAthleteContext();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [selectedWeek, setSelectedWeek]   = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [detailView, setDetailView]       = useState<DetailView>(null);
+  const [detailView, setDetailView]       = useState<DetailView>(() => detailFromParam(searchParams.get("detail")));
+
+  /** Referme le détail et retire le paramètre d'URL, pour ne pas le réouvrir au retour. */
+  const closeDetail = () => {
+    setDetailView(null);
+    if (searchParams.has("detail")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("detail");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  // Blessures déclarées, en cours d'abord (l'ordre vient déjà de la requête).
+  const { data: medicalEntries = [] } = useMedicalEntries(athleteId);
+  const injuries = medicalEntries.filter((e) => e.kind === "blessure");
+  const activeCount = activeInjuries(injuries).length;
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { data: monthData, isLoading: monthLoading } = useMonthlyRetours(athleteId!, selectedMonth);
@@ -310,7 +335,7 @@ export default function RetoursPage() {
             wakeup:         goals.sleepWakeup,
             durationTarget: goals.sleepTarget,
           }}
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "workouts" && (
@@ -328,7 +353,7 @@ export default function RetoursPage() {
               ? (monthData?.energy_sessions ?? [])
               : (weekCurrent?.energy_sessions ?? [])
           }
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "tests" && (
@@ -338,7 +363,7 @@ export default function RetoursPage() {
               ? (monthData?.test_sessions ?? [])
               : (weekCurrent?.test_sessions ?? [])
           }
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "competitions" && (
@@ -348,14 +373,14 @@ export default function RetoursPage() {
               ? (monthData?.competitions ?? [])
               : (weekCurrent?.competitions ?? [])
           }
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
       {detailView === "nutrition" && (
         <NutritionDetailView
           logs={nutritionLogs}
           strategy={nutritionStrategy}
-          onClose={() => setDetailView(null)}
+          onClose={closeDetail}
         />
       )}
 
@@ -446,17 +471,40 @@ export default function RetoursPage() {
       </div>
 
       {/* ── Blessures ── */}
+      {/* Lues dans `medical_entries` : ce que le coach voit ici est exactement ce
+          que l'athlète a déclaré, détail compris. */}
       <div style={{ marginTop: 16 }}>
         {injuries.length > 0 ? (
           <div style={{ background: C.s1, borderRadius: 6, padding: 14, border: "1px solid " + C.r + "30" }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.r, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 10 }}>Blessures ({activeInjuries.length} active{activeInjuries.length > 1 ? "s" : ""})</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.r, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 10 }}>
+              Blessures ({activeCount} active{activeCount > 1 ? "s" : ""})
+            </div>
             {injuries.map(inj => {
-              const sc = stC(inj.status);
-              const zn = ALL_BZ.filter((z: { id: string; label: string }) => inj.zones.includes(z.id)).map((z: { label: string }) => z.label).join(", ") || "Zone non précisée";
+              const ongoing = inj.status === "en_cours";
+              const sc = ongoing ? C.r : C.g;
               return (
-                <div key={inj.id} style={{ padding: "8px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + sc + "30", marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div><div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{zn}</div><div style={{ fontSize: 10, color: C.tx3 }}>{inj.type || "Type non précisé"} - Intensité {inj.intensity}/10</div></div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: sc, padding: "2px 8px", borderRadius: 5, background: sc + "15" }}>{inj.status}</span>
+                <div key={inj.id} style={{ padding: "8px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + sc + "30", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{inj.title}</div>
+                      <div style={{ fontSize: 10, color: C.tx3 }}>
+                        {[injurySummary(inj), fmtInjuryDate(inj.date), inj.declared_by ? DECLARED_BY_LABEL[inj.declared_by] : null]
+                          .filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: sc, padding: "2px 8px", borderRadius: 5, background: sc + "15", flexShrink: 0 }}>
+                      {MEDICAL_STATUS_LABEL[inj.status]}
+                    </span>
+                  </div>
+                  {injuryFacts(inj).length > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                      {injuryFacts(inj).map(({ l, v }) => (
+                        <span key={l} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: C.s1, border: "1px solid " + C.brd, color: C.tx2 }}>
+                          {l} : {v}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}

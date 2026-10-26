@@ -5,16 +5,23 @@ import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, Tr
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
+import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
+import { DayThemePill } from "@/features/shared/components/DayThemePill";
+import { dayThemeFullLabel, indexDayThemesByDate, isDayThemeEmpty, type DayThemeLike } from "@/lib/dayTheme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActivePlan } from "@/features/shared/hooks/useActivePlan";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useRescheduleWorkout } from "@/features/shared/hooks/useRescheduleWorkout";
+import { formatReps, hasIso, isAllIso } from "@/lib/formatSetsReps";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import { SessionPreviewModal, ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
+import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
+import { stepDistanceM } from "@/lib/energy/paceEquivalents";
+import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import { CompetitionDayCard } from "@/features/athlete/components/CompetitionDayCard";
 import { competitionDayLabel } from "@/types/planning";
@@ -103,10 +110,11 @@ interface StepState { status: StepStatus; comment: string; }
 // ── Step card (done / partial + comment) ──────────────────────────────────────
 
 function StepCheckRow({
-  step, state, onDone, onPartial, onComment,
+  step, state, vma, onDone, onPartial, onComment,
 }: {
   step: EnergyStep;
   state: StepState | undefined;
+  vma?: number | null;
   onDone: () => void;
   onPartial: () => void;
   onComment: (v: string) => void;
@@ -141,6 +149,13 @@ function StepCheckRow({
           {tgt && tgt !== "Libre" && (
             <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{tgt}</div>
           )}
+          <PaceEquivalents
+            target={step.target}
+            repDistanceM={stepDistanceM(step.duration)}
+            vma={vma}
+            omitPrimary
+            fontSize={9}
+          />
           {step.equipment && step.equipment !== "none" && (
             <div style={{ marginTop: 2 }}>
               <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "rgba(255,255,255,0.08)", color: C.tx2 }}>
@@ -261,14 +276,17 @@ function StepCheckRow({
 }
 
 function EnergyActiveSession({
-  session, onTerminate, onClose,
+  session, athleteId, onTerminate, onClose,
 }: {
   session: EnergySessionRow;
+  athleteId: string;
   onTerminate: (log: Map<string, StepState>) => void;
   onClose: () => void;
 }) {
   const steps = session.intervals ?? [];
   const [stepStates, setStepStates] = useState<Map<string, StepState>>(new Map());
+  const { data: refs } = useAthleteReferences(athleteId);
+  const vma = refs?.VMA ?? null;
 
   const kc = ENERGY_KIND_COLOR[session.session_kind] ?? "#6B7280";
 
@@ -342,6 +360,7 @@ function EnergyActiveSession({
                 key={id}
                 step={step}
                 state={stepStates.get(id)}
+                vma={vma}
                 onDone={() => setStatus(id, "done")}
                 onPartial={() => setStatus(id, "partial")}
                 onComment={(v) => setComment(id, v)}
@@ -437,6 +456,7 @@ function EnergyPreviewOverlay({
     return (
       <EnergyActiveSession
         session={session}
+        athleteId={athleteId}
         onTerminate={(log) => onComplete(log)}
         onClose={onClose}
       />
@@ -812,7 +832,7 @@ function WorkoutPreviewDrawer({
                             {ex.exercise_name}
                           </span>
                           <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {reps}{ex.params?.cluster ? "" : " reps"}</span>
+                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {ex.params ? formatReps(ex.params) : reps}{ex.params?.cluster || isAllIso(ex.params) ? "" : " reps"}{hasIso(ex.params) ? " · Iso" : ""}</span>
                             {rir != null && (
                               <span style={{ fontSize: 10, color: C.tx3 }}>· RIR {rir}</span>
                             )}
@@ -1025,6 +1045,7 @@ function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPres
 function DayRow({
   day, today, onSessionPress, onReschedule, onTestPress,
   freeActivities, onAddActivity, onEditActivity, onAddCompetition, viewOnly,
+  dayTheme,
 }: {
   day: WeekDay;
   today: string;
@@ -1037,6 +1058,7 @@ function DayRow({
   /** null = l'athlète n'a pas de coach (compétition impossible à rattacher) */
   onAddCompetition: ((date: string) => void) | null;
   viewOnly: boolean;
+  dayTheme?: DayThemeLike | null;
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
@@ -1085,6 +1107,13 @@ function DayRow({
               {isEmpty
                 ? (isPast ? "Repos" : "Aucune séance")
                 : `${day.sessions.length} séance${day.sessions.length > 1 ? "s" : ""}`}
+            </div>
+          )}
+          {/* Thème du coach, sous le décompte : il qualifie la journée même
+              quand aucune séance n'y est posée. */}
+          {!isDayThemeEmpty(dayTheme) && (
+            <div style={{ marginTop: 3, display: "flex" }}>
+              <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />
             </div>
           )}
         </div>
@@ -1225,6 +1254,18 @@ function ProgramSessionsView() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   }, []);
   const weekMondayISO = useMemo(localMonday, []);
+
+  // Thèmes du coach sur la semaine réellement affichée : les bornes viennent de
+  // `weekDays`, pas du lundi courant, sinon la navigation ±1 semaine montrerait
+  // les thèmes de la semaine en cours sur une autre semaine.
+  const weekBounds = useMemo(() => {
+    const dates = (data?.weekDays ?? []).map((d) => d.date).sort();
+    return dates.length ? { start: dates[0], end: dates[dates.length - 1] } : null;
+  }, [data?.weekDays]);
+  const { data: dayThemeRows = [] } = useDayThemesRange(
+    athleteId ?? undefined, weekBounds?.start, weekBounds?.end,
+  );
+  const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -1402,6 +1443,7 @@ function ProgramSessionsView() {
                     onEditActivity={setEditActivity}
                     onAddCompetition={myCoachId ? setCompDate : null}
                     viewOnly={viewOnly}
+                    dayTheme={dayThemesByDate[day.date] ?? null}
                   />
                 ))}
               </div>

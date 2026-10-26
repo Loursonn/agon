@@ -2,9 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Macrocycle, Mesocycle, Cycle, Microcycle } from "./useTimelineData";
 
-export interface SummaryMicrocycle extends Microcycle {
-  // raw, stats computed separately
-}
+/** Microcycle brut : les stats sont calculées séparément. */
+export type SummaryMicrocycle = Microcycle;
 
 export interface SummaryCycle extends Cycle {
   microcycles: SummaryMicrocycle[];

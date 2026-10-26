@@ -41,8 +41,13 @@ import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalend
 import { useTestDefinitions } from "@/features/shared/hooks/tests/useTestDefinitions";
 import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER } from "@/features/shared/types/tests";
 import type { EnergySessionRow } from "@/types/energy";
+import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
+import { DayThemePill } from "@/features/shared/components/DayThemePill";
+import { dayThemeFullLabel, indexDayThemesByDate, type DayThemeLike } from "@/lib/dayTheme";
 import { DayDetailsDrawer } from "./DayDetailsDrawer";
 import { QuickAddDialog } from "./QuickAddDialog";
+import { buildProjectionCoverage, isProjectionCovered } from "@/lib/planningProjection";
+import { athleteMoveTitle } from "@/lib/athleteChoices";
 
 // ── Cycle auto-detection ──────────────────────────────────────────────────────
 
@@ -175,6 +180,14 @@ function EventChip({
           <span style={{ opacity: 0.5, marginLeft: 3, fontSize: 8 }}>prévu</span>
         )}
       </span>
+      {event.type === "workout" && event.rescheduledByAthlete && (
+        <span
+          title={athleteMoveTitle(event.date, event.originalScheduledDate)}
+          style={{ flexShrink: 0, marginLeft: 2, fontSize: 8, fontWeight: 800, color: "#F59E0B" }}
+        >
+          ↷
+        </span>
+      )}
       {event.type === "workout" && !!(event.raw?.athlete_modifications as { coachOverride?: unknown } | null)?.coachOverride && (
         <span title="Séance adaptée pour ce jour" style={{ flexShrink: 0, marginLeft: 2, color: "#F59E0B" }}></span>
       )}
@@ -321,6 +334,7 @@ function DroppableDay({
   coachId,
   wellnessLogged,
   nutritionLogged,
+  dayTheme,
 }: {
   date: Date;
   events: CalEvent[];
@@ -332,6 +346,7 @@ function DroppableDay({
   coachId: string;
   wellnessLogged: boolean;
   nutritionLogged: boolean;
+  dayTheme?: DayThemeLike | null;
 }) {
   const dateStr = format(date, "yyyy-MM-dd");
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
@@ -369,19 +384,25 @@ function DroppableDay({
         opacity: 1,
       }}
     >
-      {/* Day number */}
-      <div
-        style={{
-          width: 24, height: 24, borderRadius: "50%",
-          background: today ? C.ac : "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 11, fontWeight: today ? 800 : 500,
-          color: today ? "#fff" : isCurrentMonth ? C.tx2 : C.tx3,
-          alignSelf: "flex-start",
-          flexShrink: 0,
-        }}
-      >
-        {format(date, "d")}
+      {/* Numéro du jour + thème du jour.
+          La pastille partage la ligne du numéro : la case fait 110 px en
+          `overflow: hidden`, une ligne de plus chasserait un événement. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        <div
+          style={{
+            width: 24, height: 24, borderRadius: "50%",
+            background: today ? C.ac : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: today ? 800 : 500,
+            color: today ? "#fff" : isCurrentMonth ? C.tx2 : C.tx3,
+            flexShrink: 0,
+          }}
+        >
+          {format(date, "d")}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />
+        </div>
       </div>
 
       {/* Jour de compétition — bandeau en tête du jour */}
@@ -464,7 +485,7 @@ function DroppableDay({
             )}
             {!hasAlert && hasRescheduled && (
               <span
-                title="Séance déplacée par l'athlète"
+                title="Déplacé par l'athlète"
                 style={{
                   width: 5, height: 5, borderRadius: "50%",
                   background: "#F59E0B50",
@@ -793,6 +814,9 @@ export function CalendarMonthView({
 
   const qc = useQueryClient();
   const { data: rawEvents = [], isLoading } = useUnifiedCalendar(athleteId, monthRange);
+  // Un seul appel pour toute la grille, indexé par date : la case ne requête pas.
+  const { data: dayThemeRows = [] } = useDayThemesRange(athleteId, monthRange.start, monthRange.end);
+  const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
   const realEvents = useMemo(() => rawEvents.map(toCalEvent), [rawEvents]);
   const { mutate: assignWorkout }       = useAssignWorkout();
   const { mutate: reschedule }          = useRescheduleWorkout();
@@ -885,11 +909,21 @@ export function CalendarMonthView({
     const activeCyc = allCycles.find((c) => c.id === blockConfig?.cycleId)
       ?? [...allCycles].sort((a, b) => b.end_date.localeCompare(a.end_date))[0];
 
-    // Build set of already-logged session_id:date to avoid duplication
-    const logged = new Set(
+    // Occurrences déjà couvertes par un vrai log (même date, même semaine
+    // d'origine ou même n° d'occurrence) : workout_logs est la source de vérité,
+    // une séance déplacée par l'athlète ne doit pas réapparaître à l'ancienne date.
+    const coverage = buildProjectionCoverage(
       enrichedRealEvents
-        .filter((e) => e.type === "workout" && e.raw?.session_id)
-        .map((e) => `${e.raw.session_id}:${e.date}`),
+        .filter((e) => e.type === "workout")
+        .map((e) => ({
+          session_id:              e.raw?.session_id as string | undefined,
+          scheduled_date:          e.date,
+          original_scheduled_date: e.raw?.original_scheduled_date as string | null | undefined,
+          // N° d'occurrence comparable seulement à l'intérieur du cycle affiché
+          week_number: activeCyc && e.date >= activeCyc.start_date && e.date <= activeCyc.end_date
+            ? (e.raw?.week_number as number | null | undefined)
+            : null,
+        })),
     );
 
     const out: CalEvent[] = [];
@@ -905,9 +939,9 @@ export function CalendarMonthView({
 
         const dateStr = format(d, "yyyy-MM-dd");
         if (activeCyc && (dateStr < activeCyc.start_date || dateStr > activeCyc.end_date)) continue;
-        if (logged.has(`${sess.id}:${dateStr}`)) continue;
-
         const weekNum = w + 1;
+        if (isProjectionCovered(coverage, sess.id, dateStr, weekNum)) continue;
+
         const todayStr = format(new Date(), "yyyy-MM-dd");
         const projStatus = dateStr < todayStr ? "missed" : "planned";
 
@@ -1232,6 +1266,7 @@ export function CalendarMonthView({
                       coachId={coachId}
                       wellnessLogged={wLogged}
                       nutritionLogged={nLogged}
+                      dayTheme={dayThemesByDate[dateStr] ?? null}
                     />
                   );
                 })}

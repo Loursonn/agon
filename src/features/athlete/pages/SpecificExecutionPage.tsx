@@ -18,6 +18,7 @@ import {
   useUpsertEnergyRpe,
 } from "@/features/shared/hooks/useEnergyAssignments";
 import { useSpecificExecution } from "@/features/athlete/hooks/useSpecificExecution";
+import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 import StepTimeline from "@/features/athlete/components/specific/StepTimeline";
 import ExecutionCard from "@/features/athlete/components/specific/ExecutionCard";
 import SessionEndForm from "@/features/athlete/components/specific/SessionEndForm";
@@ -84,7 +85,7 @@ function ClassiqueBlockPreview({ block }: { block: ClassiqueBlock }) {
   );
 }
 
-function WodBlockPreview({ block }: { block: WodBlock }) {
+function WodBlockPreview({ block, vma }: { block: WodBlock; vma?: number | null }) {
   return (
     <div style={{
       border: `1px dashed ${C.orange}`,
@@ -107,7 +108,7 @@ function WodBlockPreview({ block }: { block: WodBlock }) {
         </div>
       )}
       <div style={{ marginLeft: 6 }}>
-        <StepTimeline steps={block.steps} />
+        <StepTimeline steps={block.steps} vma={vma} />
       </div>
     </div>
   );
@@ -200,6 +201,8 @@ export default function SpecificExecutionPage() {
   const navigate = useNavigate();
 
   const { data: assignments = [] } = useEnergyAssignments(user?.id);
+  const { data: refs } = useAthleteReferences(user?.id);
+  const vma = refs?.VMA ?? null;
   const assignment = assignments.find((a: EnergySessionAssignmentRow) => a.id === assignmentId);
   const session = assignment?.energy_sessions;
 
@@ -415,11 +418,11 @@ export default function SpecificExecutionPage() {
             {isClassique ? (
               blocks.map((b) =>
                 isWodBlock(b)
-                  ? <WodBlockPreview key={b.id} block={b} />
+                  ? <WodBlockPreview key={b.id} block={b} vma={vma} />
                   : <ClassiqueBlockPreview key={b.id} block={b} />,
               )
             ) : (
-              <StepTimeline steps={allIntervals} />
+              <StepTimeline steps={allIntervals} vma={vma} />
             )}
 
             {/* Sticky start button */}
@@ -495,6 +498,7 @@ export default function SpecificExecutionPage() {
                       isLastStep={exec.isLastStep}
                       onNext={exec.next}
                       onSkip={exec.skip}
+                      vma={vma}
                     />
                   </div>
                 )}
@@ -532,6 +536,7 @@ export default function SpecificExecutionPage() {
                     isLastStep={exec.isLastStep}
                     onNext={exec.next}
                     onSkip={exec.skip}
+                    vma={vma}
                   />
                 </>
               )

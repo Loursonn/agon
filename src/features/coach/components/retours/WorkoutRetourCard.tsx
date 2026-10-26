@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatPlannedSetsReps } from "@/lib/formatSetsReps";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useParams } from "react-router-dom";
@@ -141,7 +142,7 @@ function PlannedChips({ planned }: { planned: PlannedExercise }) {
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
       <Chip label="Séries" value={String(planned.sets)} />
-      <Chip label="Reps" value={planned.reps_range ?? "—"} />
+      <Chip label={planned.is_iso ? "Durée" : "Reps"} value={planned.reps_range ?? "—"} />
       {planned.kg != null && <Chip label="Charge" value={`${planned.kg}kg`} />}
       {planned.rir != null && <Chip label="RIR" value={String(planned.rir)} />}
       {planned.method && <Chip label="Méthode" value={planned.method} />}
@@ -165,21 +166,22 @@ function exoSummary(
       const avgReps = reps.length ? Math.round(reps.reduce((a, b) => a + b, 0) / reps.length) : null;
       const plannedSets = planned?.sets ?? performed.sets.length;
       const parts: string[] = [`${doneSets.length}/${plannedSets} séries`];
-      if (maxKg != null && avgReps != null) parts.push(`${maxKg}kg × ${avgReps}`);
+      const u = planned?.is_iso ? " s" : "";
+      if (maxKg != null && avgReps != null) parts.push(`${maxKg}kg × ${avgReps}${u}`);
       else if (maxKg != null) parts.push(`${maxKg}kg`);
-      else if (avgReps != null) parts.push(`${avgReps} reps`);
+      else if (avgReps != null) parts.push(planned?.is_iso ? `${avgReps} s` : `${avgReps} reps`);
       return { text: parts.join(" · "), color: doneSets.length >= plannedSets ? GREEN : AMBER };
     }
     // All sets not done
-    const p = planned ? ` · ${planned.sets}×${planned.reps_range ?? "—"}` : "";
+    const p = planned ? ` · ${formatPlannedSetsReps(planned.sets, planned.reps_range)}` : "";
     return { text: `Non réalisé${p}`, color: RED };
   }
   if (isCompleted) {
-    const p = planned ? ` · ${planned.sets}×${planned.reps_range ?? "—"}` : "";
+    const p = planned ? ` · ${formatPlannedSetsReps(planned.sets, planned.reps_range)}` : "";
     return { text: `Non réalisé${p}`, color: RED };
   }
   if (planned) {
-    return { text: `${planned.sets}×${planned.reps_range ?? "—"}${planned.kg != null ? ` @${planned.kg}kg` : ""}`, color: C.tx3 };
+    return { text: `${formatPlannedSetsReps(planned.sets, planned.reps_range)}${planned.kg != null ? ` @${planned.kg}kg` : ""}`, color: C.tx3 };
   }
   return { text: "—", color: C.tx3 };
 }

@@ -39,6 +39,9 @@ export const QK = {
   activePlan:     (aid: string) => ['activePlan', aid] as const,
   // ── Workout logs (semaine) ────────────────────────────────────────────────────
   workoutLogsWeek: (aid: string, mondayISO: string) => ['workout-logs-week', aid, mondayISO] as const,
+  // ── Calendrier unifié (planning coach) — préfixe de useUnifiedCalendar ──────
+  cal:            (aid: string) => ['cal', aid] as const,
+  calAll:         ['cal'] as const,
   // ── Modifications athlète (reschedule + bonus, pour coach) ───────────────────
   athleteModifications: (aid: string) => ['athleteModifications', aid] as const,
   // ── Coach dashboard ───────────────────────────────────────────────────────────
@@ -49,6 +52,7 @@ export const QK = {
     planningMargin: (cid: string)               => ['coachDashboard', 'planningMargin', cid]       as const,
     recentRecords:  (cid: string)               => ['coachDashboard', 'recentRecords',  cid]       as const,
     upcomingTests:  (cid: string, date: string) => ['coachDashboard', 'upcomingTests',  cid, date] as const,
+    wellnessAlerts: (cid: string, date: string) => ['coachDashboard', 'wellnessAlerts', cid, date] as const,
   },
   // ── Méthodes d'entraînement ───────────────────────────────────────────────────
   trainingMethods: (filters?: object) => ['training_methods', filters ?? {}] as const,
@@ -84,4 +88,17 @@ export const QK = {
   // ── Nouveautés de l'app (vue coach) ───────────────────────────────────────────
   appUpdateReads:  (uid: string) => ['app-update-reads', uid] as const,
   appUpdateStats:  ['app-update-stats'] as const,
+  // ── Thème du jour ─────────────────────────────────────────────────────────────
+  // Deux granularités : une fenêtre (vues calendrier) et un jour (drawer,
+  // bandeau athlète). Le préfixe commun rend l'invalidation globale possible
+  // après une écriture, sans connaître la fenêtre affichée.
+  dayThemesAll:   ['day-themes'] as const,
+  dayThemes:      (aid: string) => ['day-themes', aid] as const,
+  dayThemesRange: (aid: string, from: string, to: string) =>
+    ['day-themes', aid, 'range', from, to] as const,
+  dayTheme:       (aid: string, date: string) => ['day-themes', aid, 'day', date] as const,
+  /** Derniers thèmes posés par un coach, tous athlètes confondus (raccourcis). */
+  dayThemesRecent: (coachId: string) => ['day-themes', 'recent', coachId] as const,
+  // ── Point hebdo : lien de réservation du coach ─────────────────────────────────
+  coachBooking:   (coachId: string) => ['coach-booking', coachId] as const,
 } as const;

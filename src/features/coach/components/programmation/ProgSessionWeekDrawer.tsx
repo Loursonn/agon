@@ -17,6 +17,8 @@ import { SessionBlocEditor } from "./SessionBlocEditor"
 import { useSessionWeekLogs } from "./hooks/useSessionWeekLogs"
 import type { SessionSetLog } from "@/features/shared/types/athlete"
 import { maxDefinedWeek, resolveExerciceParams, resolveVideoRequest, toMultiWeekSession } from "@/lib/sessionOccurrence"
+import { formatReps, formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps"
+import { IsoBadge } from "@/features/shared/components/IsoBadge"
 import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride"
 
 const VIOLET  = "#FFC933"
@@ -54,19 +56,6 @@ interface Props {
 
 function resolveParams(exercice: Exercice, week: number): ExerciceParams | null {
   return resolveExerciceParams(exercice.params, week)
-}
-
-function fmtReps(p: ExerciceParams): string {
-  if (!p.reps) return "?"
-  if (p.reps.mode === "par_serie") {
-    return p.reps.values.map((v, i) => {
-      const mx = p.reps_max?.mode === "par_serie" ? p.reps_max.values[i] : (p.reps_max?.mode === "global" ? p.reps_max.value : null)
-      return mx != null && mx !== v ? `${v}-${mx}` : String(v)
-    }).join(" / ")
-  }
-  const mx = p.reps_max?.mode === "global" ? p.reps_max.value : null
-  if (mx != null && mx !== p.reps.value) return `${p.reps.value}-${mx}`
-  return String(p.reps.value)
 }
 
 function fmtCharge(p: ExerciceParams): string {
@@ -136,10 +125,11 @@ function ExercicePreview({ exercice, params, week }: { exercice: Exercice; param
             MÉTHODE
           </span>
         )}
+        {hasIso(params) && <IsoBadge size={9} />}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
         <Chip label="Séries"  value={String(params.nb_series)} />
-        <Chip label="Reps"    value={fmtReps(params)} />
+        <Chip label={hasIso(params) ? "Durée" : "Reps"} value={formatReps(params)} />
         <Chip label="Charge"  value={fmtCharge(params)} />
         <Chip label="RIR"     value={fmtRIR(params)} />
         {params.tempo?.mode === "global" && params.tempo.value && (
@@ -154,11 +144,13 @@ function ExercicePreview({ exercice, params, week }: { exercice: Exercice; param
 // ─── SetRow (Réalisé tab) ─────────────────────────────────────────────────────
 
 function SetRow({
-  index, set, plannedReps,
+  index, set, plannedReps, iso = false,
 }: {
   index: number
   set: SessionSetLog
   plannedReps?: number
+  /** Série en isométrie : reps = secondes */
+  iso?: boolean
 }) {
   const ok = set.done && (plannedReps === undefined || (set.reps !== undefined && set.reps >= plannedReps))
   const color = !set.done ? RED : ok ? GREEN : AMBER
@@ -177,7 +169,7 @@ function SetRow({
             <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{set.kg} kg</span>
           )}
           {set.reps !== undefined && (
-            <span style={{ fontSize: 12, color: C.tx }}>× {set.reps}</span>
+            <span style={{ fontSize: 12, color: C.tx }}>× {set.reps}{iso ? " s" : ""}</span>
           )}
           {set.rir !== null && set.rir !== undefined && (
             <span style={{ fontSize: 11, color: C.tx3 }}>RIR {set.rir}</span>
@@ -236,13 +228,13 @@ function ExerciceRealise({
               background: C.s1, border: "1px dashed " + C.brdL,
               fontSize: 10, color: C.tx3,
             }}>
-              Prévu : {params.nb_series}× {fmtReps(params)} · {fmtCharge(params)} · {fmtRIR(params)}
+              Prévu : {formatSetsReps(params)} · {fmtCharge(params)} · {fmtRIR(params)}
             </div>
           )}
         </div>
       ) : (
         sets.map((set, i) => (
-          <SetRow key={i} index={i} set={set} plannedReps={plannedReps[i]} />
+          <SetRow key={i} index={i} set={set} plannedReps={plannedReps[i]} iso={isIsoAt(params, i)} />
         ))
       )}
 

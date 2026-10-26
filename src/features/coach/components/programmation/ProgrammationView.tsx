@@ -302,9 +302,8 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
   )
 }
 
-interface SortableSessionCardProps extends SessionCardProps {
-  // inherits all from SessionCardProps
-}
+/** Même contrat que `SessionCardProps` : le tri n'ajoute aucune prop. */
+type SortableSessionCardProps = SessionCardProps;
 
 function SortableSessionCard(props: SortableSessionCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.session.id })

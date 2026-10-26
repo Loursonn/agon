@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { formatReps, hasIso } from "@/lib/formatSetsReps";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import type { VideoRequestStatus,
@@ -295,19 +296,15 @@ async function fetchWeekData(
       planned = sourceBlocs.flatMap((b) =>
         b.exercices.map((ex: Exercice): PlannedExercise => {
           const params = resolveExerciceParams(ex.params, wkNum);
-          const repsRange = params
-            ? (params.reps.mode === "global"
-              ? (params.reps_max?.mode === "global" && params.reps_max.value != null && params.reps_max.value !== params.reps.value
-                ? `${params.reps.value}-${params.reps_max.value}`
-                : String(params.reps.value))
-              : params.reps.values.join("/"))
-            : null;
+          // Formateur unique : « 30 s » en iso, « 8-10 » sinon
+          const repsRange = params ? formatReps(params) : null;
           const charge = params?.charge?.mode === "global" ? params.charge.value : null;
           return {
             exercise_id:   ex.id,
             exercise_name: ex.exercise_name,
             sets:          params?.nb_series ?? 0,
             reps_range:    repsRange,
+            is_iso:        hasIso(params),
             kg:            typeof charge === "number" ? charge : null,
             rir:           params?.rir?.mode === "global" ? (params.rir.value ?? null) : null,
             method:        ex.mode === "methode" ? (ex.methode_id ?? "méthode") : null,

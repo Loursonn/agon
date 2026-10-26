@@ -262,7 +262,7 @@ function WorkoutCard({ w, onOpenEvolution }: { w: WorkoutDetail; onOpenEvolution
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
                     {[
                       { l: "Séries", v: String(planned.sets) },
-                      { l: "Reps", v: planned.reps_range ?? "—" },
+                      { l: planned.is_iso ? "Durée" : "Reps", v: planned.reps_range ?? "—" },
                       ...(planned.kg != null ? [{ l: "Charge", v: `${planned.kg}kg` }] : []),
                       ...(planned.rir != null ? [{ l: "RIR", v: String(planned.rir) }] : []),
                     ].map(({ l, v }) => (

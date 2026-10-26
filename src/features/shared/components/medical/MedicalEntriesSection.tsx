@@ -14,6 +14,7 @@ import {
 } from "@/features/shared/hooks/useMedicalEntries";
 import { useMedicalHistory, useUpsertMedicalHistory } from "@/features/shared/hooks/useMedicalHistory";
 import {
+  DECLARED_BY_LABEL,
   MEDICAL_KIND_LABEL,
   MEDICAL_STATUS_LABEL,
   type MedicalAttachment,
@@ -22,36 +23,16 @@ import {
   type MedicalEntryKind,
   type MedicalEntryStatus,
 } from "@/features/shared/types/medical";
-
-// ── Styles ──────────────────────────────────────────────────────────────────
-
-const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 12px", borderRadius: 4,
-  border: "1px solid " + C.brd, background: C.s2, color: C.tx,
-  fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
-};
-const labelStyle: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase",
-  letterSpacing: "0.4px", marginBottom: 4, display: "block",
-};
-const card: React.CSSProperties = {
-  background: C.s1, borderRadius: 6, padding: 14, border: "1px solid " + C.brd,
-};
-const ghostBtn: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 4,
-  border: "1px solid " + C.brdL, background: "transparent", color: C.tx3,
-  fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-};
-const primaryBtn: React.CSSProperties = {
-  padding: "9px 18px", borderRadius: 4, border: "none", background: C.acV,
-  color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-};
-
-const MONTHS_FR = ["jan", "fév", "mar", "avr", "mai", "jun", "jul", "aoû", "sep", "oct", "nov", "déc"];
-const fmtDate = (d: string) => {
-  const x = new Date(d + "T12:00:00");
-  return `${x.getDate()} ${MONTHS_FR[x.getMonth()]} ${x.getFullYear()}`;
-};
+import {
+  fmtInjuryDate,
+  injuryDetailForSave,
+  injuryDetailOf,
+  injuryFacts,
+  type InjuryDetail,
+} from "@/lib/injuryDetails";
+import { InjuryDetailFields, InjuryIntro } from "./InjuryDetailFields";
+import { card, ghostBtn, inputStyle, labelStyle, primaryBtn } from "./medicalStyles";
+import { Chip } from "./medicalUi";
 
 // ── Section ─────────────────────────────────────────────────────────────────
 
@@ -124,7 +105,13 @@ function EntryCard({ entry, athleteId, canEdit, onEdit }: {
           </div>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>{entry.title}</div>
           <div style={{ fontSize: 11, color: C.tx3, marginTop: 1 }}>
-            {[entry.zone, entry.date ? fmtDate(entry.date) : null].filter(Boolean).join(" · ") || "—"}
+            {[
+              entry.zone,
+              fmtInjuryDate(entry.date),
+              // Qui a déclaré change la lecture : une gêne remontée par l'athlète
+              // n'a pas le même poids qu'une ligne saisie par le coach.
+              entry.declared_by ? DECLARED_BY_LABEL[entry.declared_by] : null,
+            ].filter(Boolean).join(" · ") || "—"}
           </div>
         </div>
         {canEdit && (
@@ -141,6 +128,20 @@ function EntryCard({ entry, athleteId, canEdit, onEdit }: {
           </div>
         )}
       </div>
+
+      {injuryFacts(entry).length > 0 && (
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+          gap: 8, marginTop: 10,
+        }}>
+          {injuryFacts(entry).map(({ l, v }) => (
+            <div key={l} style={{ background: C.s2, borderRadius: 4, padding: "6px 8px" }}>
+              <div style={{ ...labelStyle, marginBottom: 2 }}>{l}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: C.tx2 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {[
         { l: "Diagnostic du médecin", v: entry.diagnosis },
@@ -288,7 +289,12 @@ function EntryForm({ athleteId, existing, onDone }: { athleteId: string; existin
   const [diagnosis, setDiagnosis] = useState(existing?.diagnosis ?? "");
   const [treatment, setTreatment] = useState(existing?.treatment ?? "");
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [detail, setDetail] = useState<InjuryDetail>(() => injuryDetailOf(existing));
   const [files, setFiles] = useState<File[]>([]);
+
+  const isInjury = kind === "blessure";
+  // En modification, on n'ouvre les précisions que si elles ont déjà servi.
+  const detailStartOpen = !!existing && injuryFacts(existing).length > 0;
 
   const submit = async () => {
     if (!title.trim()) { toast.error("Donne un nom à l'antécédent"); return; }
@@ -300,6 +306,7 @@ function EntryForm({ athleteId, existing, onDone }: { athleteId: string; existin
       diagnosis: diagnosis.trim() || null,
       treatment: treatment.trim() || null,
       notes: notes.trim() || null,
+      ...injuryDetailForSave(kind, detail),
     };
     try {
       const entry = await save.mutateAsync({ id: existing?.id, input });
@@ -318,6 +325,8 @@ function EntryForm({ athleteId, existing, onDone }: { athleteId: string; existin
       <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>
         {existing ? "Modifier l'antécédent" : "Nouvel antécédent"}
       </div>
+
+      {isInjury && <InjuryIntro />}
 
       <div>
         <span style={labelStyle}>Type</span>
@@ -352,6 +361,10 @@ function EntryForm({ athleteId, existing, onDone }: { athleteId: string; existin
           ))}
         </div>
       </div>
+
+      {isInjury && (
+        <InjuryDetailFields value={detail} onChange={setDetail} startOpen={detailStartOpen} />
+      )}
 
       <div>
         <label style={labelStyle}>Diagnostic du médecin</label>
@@ -391,21 +404,6 @@ function EntryForm({ athleteId, existing, onDone }: { athleteId: string; existin
         </button>
       </div>
     </div>
-  );
-}
-
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "6px 12px", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-        border: "1px solid " + (active ? C.ac : C.brdL), background: active ? C.acS : "transparent",
-        color: active ? C.ac : C.tx3,
-      }}
-    >
-      {children}
-    </button>
   );
 }
 

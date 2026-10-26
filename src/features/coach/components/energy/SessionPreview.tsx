@@ -20,6 +20,7 @@ import type { EnergyGroup } from "@/types/energy";
 import HatchPattern from "./HatchPattern";
 import { formatTarget, formatS, formatSLong, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
+import { formatTargetPaceEquivalents } from "@/lib/energy/paceEquivalents";
 
 // ── Zone colors (anchors) ─────────────────────────────────────────────────────
 const ZONE_COLORS = {
@@ -49,6 +50,8 @@ interface TooltipState {
   role: string;
   duration: string;
   target: string;
+  /** Équivalences d'allure, quand la cible exprime une vitesse. */
+  equivalents?: string;
   equipment?: string;
   notes?: string;
 }
@@ -201,6 +204,11 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
                       : p <= 85 ? "Zone 4"
                       : "Zone 5";
                     const targetStr = formatTarget(fi.interval.target);
+                    const dura = fi.interval.duration;
+                    const equivalents = formatTargetPaceEquivalents(fi.interval.target, {
+                      repDistanceM: dura?.kind === "distance" ? dura.value : null,
+                      vma: refs?.VMA ?? null,
+                    });
                     const pctLabel = ` ${Math.round(p)}%${isFallback ? " (estimé)" : ""}`;
                     const eq = fi.interval.type === "interval" && fi.interval.equipment && fi.interval.equipment !== "none"
                       ? (EQUIPMENT_LABEL[fi.interval.equipment] ?? fi.interval.equipment) : undefined;
@@ -210,6 +218,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
                       role: ROLE_LABEL[fi.interval.role] ?? fi.interval.role,
                       duration: formatS(dur),
                       target: `${zone}${pctLabel}${targetStr && targetStr !== "Libre" ? ` · ${targetStr}` : ""}`,
+                      equivalents,
                       equipment: eq,
                       notes: fi.interval.notes,
                     });
@@ -314,6 +323,9 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
           <div style={{ color: C.tx2 }}>Durée : <strong style={{ color: C.tx }}>{tooltip.duration}</strong></div>
           {tooltip.target && tooltip.target !== "Libre" && (
             <div style={{ color: C.tx2 }}>Cible : <strong style={{ color: C.tx }}>{tooltip.target}</strong></div>
+          )}
+          {tooltip.equivalents && (
+            <div style={{ color: C.tx3, fontSize: 10 }}>{tooltip.equivalents}</div>
           )}
           {tooltip.equipment && (
             <div style={{ color: C.tx2 }}>Matériel : <strong style={{ color: C.tx }}>{tooltip.equipment}</strong></div>

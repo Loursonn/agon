@@ -65,5 +65,5 @@ Quand l'utilisateur dit **"PR"**, exécute exactement ces étapes dans l'ordre :
   winget install --id GitHub.cli
   ```
 ## COMMANDE : Récup :
-Récupère la branche mise à jour de : https://github.com/Loursonn/myprepapro pour que je puisse coder à partir de cette version mise à jour.
+Récupère la branche mise à jour de : https://github.com/Loursonn/agon pour que je puisse coder à partir de cette version mise à jour.
 Affiche aussi le commit pour savoir ce que mon associé à changé

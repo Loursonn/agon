@@ -3,6 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { C } from "@/lib/theme";
+import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
+import { DayThemeBanner } from "@/features/shared/components/DayThemePill";
+import {
+  dayThemeColors,
+  dayThemeFullLabel,
+  indexDayThemesByDate,
+  isDayThemeEmpty,
+  type DayThemeLike,
+} from "@/lib/dayTheme";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useTodayWellness } from "@/features/shared/hooks/useTodayWellness";
@@ -27,7 +36,8 @@ import { COMPETITION_META, priorityLabel } from "@/types/planning";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
 import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
-import type { DayProgram } from "@/features/shared/hooks/useWeekProgram";
+import type { DayProgram, SessionPreviewItem } from "@/features/shared/hooks/useWeekProgram";
+import { formatSetsReps, hasIso } from "@/lib/formatSetsReps";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
@@ -113,10 +123,16 @@ const WELL_FIELDS: Array<{ key: string; label: string; icon: React.ReactNode; in
 
 const DAYS_FULL_FR = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
+/** Prescription courte d'un exercice de ProgSession (« 4 × 8 »). */
+function previewDetail(it: SessionPreviewItem): string {
+  if (it.mode === "libre" || !it.params) return it.mode === "libre" ? "Libre" : "";
+  return formatSetsReps(it.params) + (hasIso(it.params) ? " · Iso" : "");
+}
+
 interface DayPreviewSheetProps {
   day: DayProgram | null;
   onClose: () => void;
-  onStartSession: (sess: DayProgram["sessions"][number]["session"]) => void;
+  onStartSession: (sess: DayProgram["sessions"][number]["session"], workoutLogId?: string) => void;
   freeSessions: FreeSession[];
   energyByDate: Map<string, UnifiedCalendarEvent[]>;
   onEnergyPreview: (ev: UnifiedCalendarEvent) => void;
@@ -125,9 +141,10 @@ interface DayPreviewSheetProps {
   onTestPress: (id: string) => void;
   competitionsByDate: Map<string, CompetitionDayCardData[]>;
   viewOnly?: boolean;
+  dayTheme?: DayThemeLike | null;
 }
 
-function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly }: DayPreviewSheetProps) {
+function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly, dayTheme }: DayPreviewSheetProps) {
   if (!day) return null;
   const date = new Date(day.date + "T12:00:00");
   const dateLabel = `${DAYS_FULL_FR[day.dow]} ${date.getDate()} ${MONTHS_FR[date.getMonth()]}`;
@@ -164,6 +181,10 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
         </DrawerHeader>
 
         <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* Hors du test `empty` : un jour sans séance peut très bien porter un
+              thème (« Repos complet »), et c'est justement là qu'il informe. */}
+          <DayThemeBanner theme={dayTheme} />
+
           {empty ? (
             <div style={{ textAlign: "center", padding: "24px 0", color: C.tx3, fontSize: 13 }}>
               Jour de repos — rien de prévu
@@ -176,7 +197,16 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
               ))}
 
               {/* Sessions */}
-              {day.sessions.map(({ session, exercises, isCompleted }) => (
+              {day.sessions.map(({ session, exercises: legacyExercises, items, isCompleted, workoutLogId }) => {
+                // ProgSession d'abord ; l'ancien asp:exos seulement à défaut
+                const exercises = items?.length
+                  ? items.map((it) => ({ id: it.id, name: it.name, detail: previewDetail(it) }))
+                  : legacyExercises.map((ex) => {
+                      const w = ex.weeks ? (Object.values(ex.weeks)[0] as { sets?: number; repsRange?: string } | undefined) : undefined;
+                      return { id: ex.id, name: ex.name, detail: w?.sets ? `${w.sets}×${w.repsRange ?? ""}` : "" };
+                    });
+                return (
+
                 <div
                   key={session.id}
                   style={{
@@ -217,10 +247,8 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
                           }}
                         >
                           <div style={{ fontSize: 11, color: C.tx, flex: 1 }}>{ex.name}</div>
-                          {ex.weeks && Object.values(ex.weeks)[0] && (
-                            <div style={{ fontSize: 10, color: C.tx3 }}>
-                              {(Object.values(ex.weeks)[0] as { sets?: number; repsRange?: string }).sets}×{(Object.values(ex.weeks)[0] as { sets?: number; repsRange?: string }).repsRange}
-                            </div>
+                          {ex.detail && (
+                            <div style={{ fontSize: 10, color: C.tx3 }}>{ex.detail}</div>
                           )}
                         </div>
                       ))}
@@ -234,7 +262,7 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
 
                   {!isCompleted && !isPast && !viewOnly && (
                     <button
-                      onClick={() => { onStartSession(session); onClose(); haptic(); }}
+                      onClick={() => { onStartSession(session, workoutLogId); onClose(); haptic(); }}
                       style={{
                         width: "100%", padding: "11px 0", borderRadius: 4,
                         border: "none", background: C.acV, color: "#0E0C0A",
@@ -246,7 +274,8 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
 
               {/* Séances énergie */}
               {dayEnergySessions.map((ev) => {
@@ -804,6 +833,12 @@ export default function TodayPage() {
     { start: mondayISO, end: sundayISO },
   );
 
+  // Thèmes du jour posés par le coach, sur la semaine affichée : le bandeau
+  // d'aujourd'hui et la fiche d'un jour quelconque lisent le même index.
+  const { data: dayThemeRows = [] } = useDayThemesRange(athleteId ?? undefined, mondayISO, sundayISO);
+  const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
+  const todayTheme = dayThemesByDate[today] ?? null;
+
   const energyByDate = useMemo(() => {
     const m = new Map<string, UnifiedCalendarEvent[]>();
     for (const ev of calEvents) {
@@ -937,9 +972,9 @@ export default function TodayPage() {
   const recentFb = useMemo(() => {
     if (!coachFeedbacks) return null;
     return Object.entries(coachFeedbacks)
-      .map(([w, fb]: [string, any]) => ({ week: Number(w), ...fb }))
-      .filter((fb: any) => fb.note && fb.date && Date.now() - new Date(fb.date).getTime() <= 14 * 86_400_000)
-      .sort((a: any, b: any) => (a.date < b.date ? 1 : -1))[0] ?? null;
+      .map(([w, fb]) => ({ week: Number(w), ...fb }))
+      .filter((fb) => fb.note && fb.date && Date.now() - new Date(fb.date).getTime() <= 14 * 86_400_000)
+      .sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1))[0] ?? null;
   }, [coachFeedbacks]);
 
   return (
@@ -1177,6 +1212,16 @@ export default function TodayPage() {
           </div>
         )}
 
+        {/* Thème du jour posé par le coach : il cadre la journée, donc il passe
+            avant la séance. Hors de la section « Séance du jour », qui se
+            court-circuite les jours de test ou de compétition — le thème, lui,
+            vaut tous les jours, repos compris. */}
+        {todayTheme && (
+          <div style={{ marginBottom: 20 }}>
+            <DayThemeBanner theme={todayTheme} />
+          </div>
+        )}
+
         {/* Section 2 — Séance du jour */}
         {(() => {
           const EKC: Record<string, string> = { vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B", footing: "#10B981", fartlek: "#EF4444", specifique: "#F5A623", autre: "#6B7280", custom: "#6B7280" };
@@ -1370,11 +1415,20 @@ export default function TodayPage() {
               const allDone = hasSess && day.sessions.every(s => s.isCompleted);
               const isCompDay = competitionsByDate.has(day.date);
               const DOW_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
+              // Thème du jour : la case fait 40 px de large, aucun libellé n'y
+              // tient. On pose donc un bandeau de couleur sur l'arête haute et
+              // on met le texte dans le title — la couleur suffit à repérer les
+              // jours durs d'un coup d'œil, le détail est à un tap.
+              const dayTheme = dayThemesByDate[day.date] ?? null;
+              const showTheme = !isDayThemeEmpty(dayTheme);
               return (
                 <button
                   key={day.date}
                   onClick={() => { setSelectedDay(day); haptic(); }}
+                  title={showTheme ? dayThemeFullLabel(dayTheme) : undefined}
                   style={{
+                    position: "relative",
+                    overflow: "hidden",
                     flex: "1 0 0",
                     minWidth: 40,
                     padding: "8px 4px",
@@ -1385,6 +1439,15 @@ export default function TodayPage() {
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                   }}
                 >
+                  {showTheme && (
+                    <div
+                      aria-hidden
+                      style={{
+                        position: "absolute", top: 0, left: 0, right: 0, height: 3,
+                        background: dayThemeColors(dayTheme).bg,
+                      }}
+                    />
+                  )}
                   {/* Day letter */}
                   <div style={{ fontSize: 9, fontWeight: 600, color: isToday ? C.coach : C.tx3 }}>
                     {DOW_SHORT[day.dow]}
@@ -1758,7 +1821,11 @@ export default function TodayPage() {
       <DayPreviewSheet
         day={selectedDay}
         onClose={() => setSelectedDay(null)}
-        onStartSession={viewOnly ? () => {} : (sess) => navigate("/athlete/log", { state: { initialSess: sess } })}
+        onStartSession={viewOnly ? () => {} : (sess, workoutLogId) => {
+          // Écran de séance actuel ; /athlete/log (LogView legacy) seulement sans log
+          if (workoutLogId) navigate("/athlete/program/workout/" + workoutLogId);
+          else navigate("/athlete/log", { state: { initialSess: sess } });
+        }}
         freeSessions={freeSessions}
         energyByDate={energyByDate}
         onEnergyPreview={(ev) => {
@@ -1773,6 +1840,7 @@ export default function TodayPage() {
         onAddActivity={(date) => setActivityDate(date)}
         onEditActivity={(f) => setEditActivity(f)}
         onTestPress={openTest}
+        dayTheme={selectedDay ? dayThemesByDate[selectedDay.date] ?? null : null}
       />
 
       {/* Energy session preview overlay */}

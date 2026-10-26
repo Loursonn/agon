@@ -18,7 +18,9 @@ function getSavedTab(): Tab {
   try {
     const v = localStorage.getItem(TAB_KEY) as Tab | null;
     if (v === "workout" || v === "energy" || v === "test") return v;
-  } catch {}
+  } catch {
+    /* localStorage indisponible (navigation privée) : on retombe sur le défaut. */
+  }
   return "workout";
 }
 
@@ -118,7 +120,11 @@ export function QuickAddDialog({
 
   function switchTab(t: Tab) {
     setTab(t);
-    try { localStorage.setItem(TAB_KEY, t); } catch {}
+    try {
+      localStorage.setItem(TAB_KEY, t);
+    } catch {
+      /* localStorage indisponible : l'onglet ne sera pas mémorisé, sans plus. */
+    }
   }
 
   function handleClose() {

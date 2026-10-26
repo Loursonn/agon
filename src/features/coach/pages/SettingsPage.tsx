@@ -1,12 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { C } from "@/lib/theme";
 import { toast } from "sonner";
+import { bookingUrlError, normalizeBookingUrl } from "@/lib/booking";
 
 export default function SettingsPage() {
   const { profile } = useAuth();
   const [showLogout, setShowLogout] = useState(false);
+  const [bookingUrl, setBookingUrl] = useState("");
+  // Référence locale de ce qui est en base : le contexte useAuth ne se recharge
+  // pas après l'update, donc comparer à profile.booking_url laisserait le bouton
+  // actif en permanence.
+  const [savedBookingUrl, setSavedBookingUrl] = useState("");
+  const [savingBooking, setSavingBooking] = useState(false);
+
+  // Le profil arrive après un tick : on ne pré-remplit qu'une fois chargé.
+  useEffect(() => {
+    setBookingUrl(profile?.booking_url ?? "");
+    setSavedBookingUrl(profile?.booking_url ?? "");
+  }, [profile?.booking_url]);
+
+  const bookingError = bookingUrlError(bookingUrl);
+  const bookingDirty = bookingUrl.trim() !== savedBookingUrl;
 
   async function handleLogout() {
     await supabase.auth.signOut({ scope: "local" });
@@ -17,6 +33,29 @@ export default function SettingsPage() {
     if (!profile?.coach_code) return;
     await navigator.clipboard.writeText(profile.coach_code);
     toast.success("Code copié");
+  }
+
+  async function handleSaveBooking() {
+    if (!profile?.id || bookingError) return;
+    // Champ vidé = le coach retire la réservation → NULL, pas chaîne vide
+    // (la contrainte SQL refuserait '' et l'athlète verrait une entrée morte).
+    const value = bookingUrl.trim() === "" ? null : normalizeBookingUrl(bookingUrl);
+    if (bookingUrl.trim() !== "" && !value) return;
+
+    setSavingBooking(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ booking_url: value })
+      .eq("id", profile.id);
+    setSavingBooking(false);
+
+    if (error) {
+      toast.error("Échec de l'enregistrement");
+      return;
+    }
+    setBookingUrl(value ?? "");
+    setSavedBookingUrl(value ?? "");
+    toast.success(value ? "Lien de réservation enregistré" : "Lien de réservation retiré");
   }
 
   return (
@@ -86,6 +125,54 @@ export default function SettingsPage() {
         <div style={{ fontSize: 11, color: C.tx3, marginTop: 6 }}>
           Donne ce code à tes athlètes lors de leur inscription.
         </div>
+      </div>
+
+      {/* Point hebdo — lien Calendly, visible par les athlètes dans leur profil */}
+      <div
+        style={{
+          background: C.s1, borderRadius: 6, padding: 16,
+          border: "1px solid " + C.brd, marginBottom: 16,
+        }}
+      >
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
+          Lien de réservation du point hebdo
+        </div>
+        <input
+          type="url"
+          inputMode="url"
+          value={bookingUrl}
+          onChange={(e) => setBookingUrl(e.target.value)}
+          placeholder="https://calendly.com/ton-compte/30min"
+          style={{
+            width: "100%", boxSizing: "border-box",
+            padding: "10px 12px", borderRadius: 4,
+            border: "1px solid " + (bookingError ? C.r : C.brdL),
+            background: C.s2, color: C.tx,
+            fontSize: 13, fontFamily: "inherit", outline: "none",
+          }}
+        />
+        {bookingError ? (
+          <div style={{ fontSize: 11, color: C.r, marginTop: 6 }}>{bookingError}</div>
+        ) : (
+          <div style={{ fontSize: 11, color: C.tx3, marginTop: 6 }}>
+            Tes athlètes verront « Réserver mon point hebdo » dans leur profil. Laisse vide pour le retirer.
+          </div>
+        )}
+        <button
+          onClick={handleSaveBooking}
+          disabled={!!bookingError || !bookingDirty || savingBooking}
+          style={{
+            marginTop: 10, padding: "8px 16px", borderRadius: 4,
+            border: "1px solid " + C.coach + "50",
+            background: !bookingError && bookingDirty ? C.coachS : "transparent",
+            color: !bookingError && bookingDirty ? C.coach : C.tx3,
+            fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+            cursor: !bookingError && bookingDirty && !savingBooking ? "pointer" : "default",
+            opacity: !bookingError && bookingDirty ? 1 : 0.5,
+          }}
+        >
+          {savingBooking ? "Enregistrement…" : "Enregistrer"}
+        </button>
       </div>
 
       {/* Danger zone */}

@@ -21,6 +21,8 @@ import BlockHistoryViewer from "@/features/coach/components/BlockHistoryViewer";
 import { useCreateCycleFromBloc } from "@/features/shared/hooks/useCreateCycleFromBloc";
 import { ProgrammationView } from "@/features/coach/components/programmation/ProgrammationView";
 import { localISO } from "@/lib/date";
+import { QK } from "@/lib/queryKeys";
+import { planDayChange } from "@/lib/planningProjection";
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -849,31 +851,44 @@ export default function ProgrammationPage() {
   const sortedSessions = [...sessions].sort((a, b) => (a.day_of_week ?? 7) - (b.day_of_week ?? 7));
 
   async function rescheduleWorkoutLogs(sessId: string, newDay: number) {
+    if (!athleteId) return;
     const today = localISO();
     const { data: logs } = await supabase
       .from("workout_logs")
-      .select("id, microcycle_id, microcycles(start_date)")
+      .select("id, status, rescheduled_by_athlete, microcycle_id, microcycles(start_date)")
+      .eq("athlete_id", athleteId)
       .eq("session_id", sessId)
       .gte("scheduled_date", today);
 
     if (!logs?.length) return;
 
-    const updates = (logs as Array<{ id: string; microcycles: { start_date: string } | null }>)
-      .filter(l => l.microcycles?.start_date)
-      .map(l => {
-        const monday = new Date(l.microcycles!.start_date + "T12:00:00");
-        monday.setDate(monday.getDate() + newDay);
-        return { id: l.id, scheduled_date: localISO(monday) };
-      });
+    // Les séances déplacées par l'athlète (et celles déjà faites) gardent leur date
+    const { updates, keptByAthlete } = planDayChange(
+      (logs as Array<{ id: string; status: string; rescheduled_by_athlete: boolean; microcycles: { start_date: string } | null }>)
+        .map((l) => ({
+          id: l.id,
+          status: l.status,
+          rescheduled_by_athlete: l.rescheduled_by_athlete,
+          week_start: l.microcycles?.start_date ?? null,
+        })),
+      newDay,
+    );
 
-    await Promise.all(updates.map(u =>
+    const results = await Promise.all(updates.map(u =>
       supabase.from("workout_logs").update({ scheduled_date: u.scheduled_date }).eq("id", u.id)
     ));
+    const failed = results.filter((r) => r.error).length;
 
-    qc.invalidateQueries({ queryKey: ["cal-range"] });
+    qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
     qc.invalidateQueries({ queryKey: ["timeline-data"] });
     qc.invalidateQueries({ queryKey: ["micro-days"] });
-    toast.success("Jour modifié — calendrier mis à jour");
+    qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
+    qc.invalidateQueries({ queryKey: QK.activePlan(athleteId) });
+    const kept = keptByAthlete > 0
+      ? ` · ${keptByAthlete} séance${keptByAthlete > 1 ? "s" : ""} déplacée${keptByAthlete > 1 ? "s" : ""} par l'athlète conservée${keptByAthlete > 1 ? "s" : ""}`
+      : "";
+    if (failed > 0) toast.error(`${failed} séance${failed > 1 ? "s" : ""} non déplacée${failed > 1 ? "s" : ""} (conflit de date)${kept}`);
+    else toast.success(`Jour modifié — calendrier mis à jour${kept}`, { duration: keptByAthlete > 0 ? 6000 : 4000 });
   }
 
   if (!loaded) {

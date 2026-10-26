@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { AthleteModifications } from "../types/athlete";
+import { QK } from "@/lib/queryKeys";
 
 const DEBOUNCE_MS = 600;
 
@@ -21,7 +22,7 @@ export interface SaveWorkoutSets {
   flushNow: (modifications?: AthleteModifications) => void;
 }
 
-export function useSaveWorkoutSets(workoutLogId: string | undefined): SaveWorkoutSets {
+export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?: string | null): SaveWorkoutSets {
   const qc = useQueryClient();
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const pendingRef = useRef<AthleteModifications | null>(null);
@@ -29,6 +30,8 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined): SaveWorkou
   // doit viser la séance d'origine. Sans ça, naviguer d'une séance à l'autre
   // en moins de 600 ms faisait atterrir les séries de la séance A sur l'id B.
   const idRef = useRef(workoutLogId);
+  const athleteRef = useRef(athleteId);
+  athleteRef.current = athleteId;
 
   // Écriture volontairement hors `useMutation` : `flushNow` est appelé pendant
   // le démontage, moment où l'observateur React Query est déjà détaché et où
@@ -50,6 +53,12 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined): SaveWorkou
         return;
       }
       qc.invalidateQueries({ queryKey: ["workout-log-detail", id] });
+      // Le planning coach lit athlete_modifications (séries, ajouts, commentaires)
+      const aid = athleteRef.current;
+      if (aid) {
+        qc.invalidateQueries({ queryKey: QK.cal(aid) });
+        qc.invalidateQueries({ queryKey: QK.athleteModifications(aid) });
+      }
     },
     [qc],
   );

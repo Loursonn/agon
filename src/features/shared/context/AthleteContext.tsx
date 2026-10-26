@@ -79,7 +79,7 @@ export interface AthleteContextValue {
   weeklyTarget: Record<number, number>; currentWeek: number;
   totalTarget: number; streak: number; weekAdherence: number;
   prs: Record<string, unknown>; muscSets: unknown;
-  combinedData: unknown[]; totalDone: number; activeInjuries: Injury[];
+  combinedData: unknown[]; totalDone: number;
   wScore: number; wReco: { c: string; label: string; desc: string };
 
   // Timer

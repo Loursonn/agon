@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type React from "react";
+import { HeartPulse, CalendarClock } from "lucide-react";
+import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
+import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
+import { DeclareInjurySheet } from "@/features/shared/components/medical/DeclareInjurySheet";
+import { injurySummary } from "@/lib/injuryDetails";
 import { useNavigate } from "react-router-dom";
 import PerformanceProfile from "@/components/athlete/PerformanceProfile";
 import { WeightChart, SleepTunnel } from "@/components/athlete/StatsCharts";
 import { getWellnessChartData } from "@/lib/calculations";
 import { getReco } from "@/lib/wellness";
-import { ALL_BZ } from "@/lib/muscles";
-import { stC } from "@/lib/muscles";
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { todayKey } from "@/lib/date";
 import { useAthleteTrends, useAthleteInsights } from "@/features/shared/hooks/useAthleteTrends";
@@ -20,6 +23,8 @@ import type { TrendSummary } from "@/lib/athleteTrends";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Profile } from "@/hooks/useAuth";
+import { useCoachBooking } from "@/features/shared/hooks/useCoachBooking";
+import BookingPanel from "@/features/athlete/components/BookingPanel";
 
 interface Props {
   onClose: () => void;
@@ -32,8 +37,12 @@ const fmtDay = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("
 const sectionTitle: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" };
 
 export default function ProfileDrawer({ onClose }: Props) {
-  const { athleteId, athleteProfile, viewOnly, activeInjuries, wellness, wScore, wReco, weightLog, weightMilestones, bodyWeight, wellnessHistory, nutritionStrategy, coachFeedbacks, goals, streak } = useAthleteContext();
+  const { athleteId, athleteProfile, viewOnly, wellness, wScore, wReco, weightLog, weightMilestones, bodyWeight, wellnessHistory, nutritionStrategy, coachFeedbacks, goals, streak } = useAthleteContext();
   const navigate = useNavigate();
+  // Les blessures viennent de `medical_entries` : la même source que les
+  // antécédents du profil, donc la même vérité que ce que voit le coach.
+  const { injuries: activeInjuries } = useActiveInjuries(athleteId ?? undefined);
+  const [declareInjury, setDeclareInjury] = useState(false);
   const [drawerSportOpen, setDrawerSportOpen] = useState(false);
   const [drawerInjOpen, setDrawerInjOpen] = useState(true);
   const [drawerZoom, setDrawerZoom] = useState<string | null>(null);
@@ -125,10 +134,44 @@ export default function ProfileDrawer({ onClose }: Props) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.r }} /><div style={{ fontSize: 12, fontWeight: 600, color: C.r, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>Blessures actives ({activeInjuries.length})</div></div>
               <span style={{ fontSize: 12, color: C.tx3, display: "inline-block", transition: "transform 0.2s", transform: drawerInjOpen ? "rotate(180deg)" : "none" }}>∨</span>
             </button>
-            {drawerInjOpen && (<div style={{ borderTop: "1px solid " + C.r + "30", padding: "8px 16px" }}>
-              {activeInjuries.map(inj => { const sc = stC(inj.status); const zn = ALL_BZ.filter((z: { id: string; label: string }) => inj.zones.includes(z.id)).map((z: { label: string }) => z.label).join(", ") || "Zone non précisée"; return (<div key={inj.id} style={{ padding: "8px 10px", borderRadius: 4, background: C.s2, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div><div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{zn}</div><div style={{ fontSize: 10, color: C.tx3 }}>Intensité {inj.intensity}/10</div></div><span style={{ fontSize: 10, fontWeight: 700, color: sc, padding: "2px 8px", borderRadius: 5, background: sc + "15" }}>{inj.status}</span></div>); })}
-            </div>)}
+            {drawerInjOpen && (
+              <div style={{ borderTop: "1px solid " + C.r + "30", padding: "8px 16px" }}>
+                {activeInjuries.map(inj => (
+                  <div key={inj.id} style={{ padding: "8px 10px", borderRadius: 4, background: C.s2, marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{inj.title}</div>
+                    <div style={{ fontSize: 10, color: C.tx3 }}>{injurySummary(inj)}</div>
+                  </div>
+                ))}
+                <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
+                  Le détail se complète depuis l'onglet Profil, section Antécédents.
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* ── Déclarer une gêne ── */}
+        {/* Hors mode observation : le coach qui regarde le profil d'un athlète ne
+            déclare pas à sa place depuis cet écran. */}
+        {!viewOnly && athleteId && (
+          <button
+            onClick={() => setDeclareInjury(true)}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left",
+              background: C.s1, borderRadius: 6, border: "1px solid " + C.o + "40",
+              padding: "12px 16px", cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <HeartPulse size={16} style={{ color: C.o, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.tx }}>Déclarer une gêne ou une blessure</div>
+              <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>Même une petite gêne compte — 10 secondes</div>
+            </div>
+            <span style={{ fontSize: 12, color: C.tx3 }}>&gt;</span>
+          </button>
+        )}
+        {declareInjury && athleteId && (
+          <DeclareInjurySheet athleteId={athleteId} onClose={() => setDeclareInjury(false)} />
         )}
 
         {/* ── Mes tendances ── */}
@@ -259,6 +302,9 @@ export default function ProfileDrawer({ onClose }: Props) {
           <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>Objectifs</div>
           <span style={{ fontSize: 11, color: C.tx3 }}>→</span>
         </button>
+
+        {/* ── Réserver mon point hebdo (si le coach a posé un lien) ── */}
+        {!viewOnly && <BookingSection />}
 
         {/* ── Mon coach ── */}
         {!viewOnly && <CoachSection />}
@@ -402,6 +448,73 @@ function GoalsZoomContent() {
   );
 }
 
+// ── Point hebdo ──────────────────────────────────────────────────────────────
+
+/**
+ * Entrée « Réserver mon point hebdo ».
+ * Invisible tant que le coach n'a pas renseigné de lien Calendly : pas de
+ * fausse promesse à l'athlète.
+ */
+function BookingSection() {
+  const { user, profile } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  // Un coach auto-coaché n'a pas de point hebdo à réserver avec lui-même.
+  const coachId = profile?.coach_id && profile.coach_id !== user?.id ? profile.coach_id : null;
+  const { data } = useCoachBooking(coachId);
+
+  const bookingUrl = data?.bookingUrl ?? null;
+  if (!bookingUrl) return null;
+
+  const athleteName =
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") ||
+    profile?.full_name ||
+    "";
+
+  function handleScheduled() {
+    setOpen(false);
+    toast.success("Point réservé ✓ Tu reçois l'invitation avec le lien Meet par mail");
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          width: "100%", minHeight: 48, background: C.s1, borderRadius: 6,
+          padding: "14px 16px", border: "1px solid " + C.coach + "40",
+          textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <CalendarClock size={14} color={C.coach} style={{ flexShrink: 0 }} />
+          <span
+            style={{
+              fontSize: 12, fontWeight: 600, color: C.coach,
+              textTransform: "uppercase" as const, letterSpacing: "0.5px",
+            }}
+          >
+            Réserver mon point hebdo
+          </span>
+        </div>
+        <span style={{ fontSize: 11, color: C.coach, flexShrink: 0 }}>→</span>
+      </button>
+
+      {open && (
+        <BookingPanel
+          bookingUrl={bookingUrl}
+          coachName={data?.coachName ?? "ton coach"}
+          athleteName={athleteName}
+          athleteEmail={user?.email ?? null}
+          onClose={() => setOpen(false)}
+          onScheduled={handleScheduled}
+        />
+      )}
+    </>
+  );
+}
+
 // ── Gestion du coach ─────────────────────────────────────────────────────────
 
 function CoachSection() {
@@ -411,6 +524,44 @@ function CoachSection() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [confirmAction, setConfirmAction] = useState<"quit" | "stopSelf" | null>(null);
+  const [coachName, setCoachName] = useState<string | null>(null);
+
+  /**
+   * Identifiant du coach externe, ou `null` si l'athlète n'en a pas (ou s'il est
+   * son propre coach). Dérivé avant tout `return` anticipé : les hooks doivent
+   * s'exécuter dans le même ordre à chaque rendu.
+   */
+  const coachId =
+    user && profile && profile.coach_id && profile.coach_id !== user.id
+      ? profile.coach_id
+      : null;
+
+  // Le nom du coach n'est affiché nulle part ailleurs : on le lit ici, dans un
+  // effet. Le drapeau `cancelled` évite d'écrire dans un composant démonté ou
+  // de faire gagner une réponse obsolète si `coachId` change entre-temps.
+  useEffect(() => {
+    if (!coachId) {
+      setCoachName(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("full_name, first_name, last_name")
+      .eq("id", coachId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setCoachName(
+          [data.first_name, data.last_name].filter(Boolean).join(" ") ||
+            data.full_name ||
+            "Coach",
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [coachId]);
 
   if (!user || !profile) return null;
 
@@ -418,15 +569,6 @@ function CoachSection() {
   const isSelfCoached = profile.coach_id === user.id; // coach_id = self
   const hasExternalCoach = !!profile.coach_id && profile.coach_id !== user.id;
   const noCoach = !profile.coach_id; // coach_id = null
-
-  // Fetch coach name for display
-  const [coachName, setCoachName] = useState<string | null>(null);
-  if (hasExternalCoach && !coachName) {
-    supabase.from("profiles").select("full_name, first_name, last_name").eq("id", profile.coach_id!).maybeSingle()
-      .then(({ data }) => {
-        if (data) setCoachName([data.first_name, data.last_name].filter(Boolean).join(" ") || data.full_name || "Coach");
-      });
-  }
 
   async function handleJoin() {
     if (!code.trim() || loading) return;

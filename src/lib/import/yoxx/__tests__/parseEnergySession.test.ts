@@ -64,6 +64,12 @@ describe("parseTarget", () => {
     expect(parseTarget("90%").kind).toBe("error");
     expect(parseTarget("90% XYZ").kind).toBe("error");
     expect(parseTarget("chrono vite").kind).toBe("error");
+    // Sans distance connue, le chrono reste du texte libre.
+    expect(parseTarget("chrono 1:37-1:40")).toEqual({ kind: "ok", target: { kind: "text", value: "1:37-1:40" } });
+    expect(parseTarget("chrono 1:37-1:40", 400)).toEqual({
+      kind: "ok",
+      target: { kind: "pace", unit: "min_per_km", min_s_per_unit: 243, max_s_per_unit: 250 },
+    });
   });
 });
 
@@ -106,8 +112,10 @@ describe("parseEnergySession — séance de la capture", () => {
     const g = session.intervals[2] as EnergyGroup;
     expect(g.repeat).toBe(6);
     expect(g.children).toHaveLength(2);
+    // « chrono 1:37-1:40 » sur 400 m est une allure : 97 s → 243 s/km, 100 s → 250 s/km.
     expect(g.children[0]).toMatchObject({
-      role: "work", equipment: "course", duration: { kind: "distance", value: 400 }, target: { kind: "text", value: "1:37-1:40" },
+      role: "work", equipment: "course", duration: { kind: "distance", value: 400 },
+      target: { kind: "pace", unit: "min_per_km", min_s_per_unit: 243, max_s_per_unit: 250 },
     });
     expect(g.children[1]).toMatchObject({
       role: "recovery", duration: { kind: "time", value: 60 }, target: { kind: "pace", min_s_per_unit: 360, max_s_per_unit: 420 },

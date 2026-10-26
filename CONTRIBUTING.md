@@ -1,4 +1,4 @@
-# CONTRIBUTING — Conventions MyPrepaPro
+# CONTRIBUTING — Conventions Agon
 
 ## Stack
 

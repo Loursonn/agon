@@ -409,7 +409,7 @@ export function ExerciceParamsPanel({
       <Section>
         {/* Label row — always one line */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <InlineLabel>{currentRepsMode === 'iso' ? "Durée (sec)" : "Répétitions"}</InlineLabel>
+          <InlineLabel>{currentRepsMode === 'iso' ? "Durée (s)" : "Répétitions"}</InlineLabel>
 
           {/* Inline value when global + no cluster */}
           {!params.cluster && params.reps.mode === 'global' && (
@@ -431,7 +431,13 @@ export function ExerciceParamsPanel({
                   8–12
                 </button>
               )}
-              {currentRepsMode === 'iso' && <span style={{ fontSize: 10, color: C.tx3, fontWeight: 600 }}>sec</span>}
+              {currentRepsMode === 'iso' && <span style={{ fontSize: 10, color: C.tx3, fontWeight: 600 }}>s</span>}
+            </>
+          )}
+
+          {/* EC / ISO — aussi en mode « par série » ; enregistré pour l'occurrence éditée */}
+          {!params.cluster && (
+            <>
               <button onClick={() => updateParams({ reps_mode: { mode: 'global', value: 'EC' } })} style={pillSmall(currentRepsMode === 'EC')}>EC</button>
               <button onClick={() => updateParams({ reps_mode: { mode: 'global', value: 'iso' } })} style={pillSmall(currentRepsMode === 'iso')}>ISO</button>
             </>

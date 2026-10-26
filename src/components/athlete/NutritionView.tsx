@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { errorMessage } from "@/lib/errors";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { EmojiIcon } from "@/components/ui/AgonIcon";
@@ -85,8 +86,8 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
       await upsertDailyLog(athleteId, today, logToSave);
       onLogSaved?.(today, logToSave);
       toast.success("Journée enregistrée !");
-    } catch (e: any) {
-      toast.error(e.message || "Erreur lors de l'enregistrement");
+    } catch (e) {
+      toast.error(errorMessage(e, "Erreur lors de l'enregistrement"));
     } finally {
       setSaving(false);
     }

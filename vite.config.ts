@@ -17,4 +17,13 @@ export default defineConfig(() => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
+  test: {
+    environment: "jsdom",
+    // Requis par @testing-library/jest-dom, qui appelle expect.extend au chargement.
+    globals: true,
+    setupFiles: ["./src/test/setup.ts"],
+    // Les worktrees Claude contiennent une copie du repo : sans exclusion,
+    // chaque test tourne deux fois.
+    exclude: ["**/node_modules/**", "**/dist/**", ".claude/**"],
+  },
 }));

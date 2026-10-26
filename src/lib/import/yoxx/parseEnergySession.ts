@@ -38,6 +38,7 @@ import {
   type ImportIssue,
   type ImportIssueLevel,
 } from "./common";
+import { paceFromTimeOverDistance } from "@/lib/energy/paceEquivalents";
 
 // ── Résultat ─────────────────────────────────────────────────────────────────
 
@@ -499,7 +500,7 @@ function parseStepLine(
   // Cible
   let target: EnergyTarget = { kind: "none" };
   if (targetRaw !== null) {
-    const t = parseTarget(targetRaw);
+    const t = parseTarget(targetRaw, duration.kind === "distance" ? duration.value : null);
     if (t.kind === "rpe") {
       noteParts.unshift(t.label);
       add(lineNo, raw, "info", `${t.label} placé dans la consigne de l'étape (pas de cible RPE en énergétique).`, id);
@@ -549,7 +550,12 @@ type TargetParse =
   | { kind: "loose" }
   | { kind: "error"; message: string };
 
-export function parseTarget(raw: string): TargetParse {
+/**
+ * `distanceM` : distance de l'étape, quand elle est connue. Un « chrono » sur une
+ * distance est une allure déguisée — on le convertit en cible exploitable plutôt
+ * que de le laisser en texte libre.
+ */
+export function parseTarget(raw: string, distanceM?: number | null): TargetParse {
   const t = cleanTypography(raw).trim();
   if (!t) return { kind: "ok", target: { kind: "none" } };
 
@@ -569,7 +575,15 @@ export function parseTarget(raw: string): TargetParse {
 
   if (n.startsWith("chrono")) {
     const v = t.replace(/^chrono\s*:?\s*/i, "").trim();
-    if (!parseTimeRange(v)) return { kind: "error", message: `Chrono « ${v} » illisible (écris par ex. « chrono 1:37-1:40 » ou « chrono 46"-48" »)` };
+    const r = parseTimeRange(v);
+    if (!r) return { kind: "error", message: `Chrono « ${v} » illisible (écris par ex. « chrono 1:37-1:40 » ou « chrono 46"-48" »)` };
+    if (distanceM && distanceM > 0 && r.min > 0 && r.max > 0) {
+      return { kind: "ok", target: {
+        kind: "pace", unit: "min_per_km",
+        min_s_per_unit: paceFromTimeOverDistance(r.min, distanceM),
+        max_s_per_unit: paceFromTimeOverDistance(r.max, distanceM),
+      } };
+    }
     return { kind: "ok", target: { kind: "text", value: v } };
   }
 

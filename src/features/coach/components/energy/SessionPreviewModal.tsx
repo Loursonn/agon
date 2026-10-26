@@ -8,6 +8,9 @@ import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 import { formatTarget, formatS, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
+import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
+import { stepDistanceM } from "@/lib/energy/paceEquivalents";
+import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 
 // ── Shared constants ──────────────────────────────────────────────────────────
 
@@ -50,7 +53,7 @@ const EQUIPMENT_LABEL: Record<string, string> = {
 
 // ── StepTree ──────────────────────────────────────────────────────────────────
 
-export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: number }) {
+export function StepTree({ steps, depth = 0, vma }: { steps: EnergyStep[]; depth?: number; vma?: number | null }) {
   return (
     <>
       {steps.map((step, i) => {
@@ -85,6 +88,15 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
                   {tgt}
                 </span>
               )}
+              <div style={{ flexBasis: "100%", paddingLeft: 11 }}>
+                <PaceEquivalents
+                  target={step.target}
+                  repDistanceM={stepDistanceM(step.duration)}
+                  vma={vma}
+                  omitPrimary
+                  fontSize={9}
+                />
+              </div>
               {step.equipment && step.equipment !== "none" && (
                 <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "rgba(255,255,255,0.08)", color: C.tx2, flexShrink: 0 }}>
                   {EQUIPMENT_LABEL[step.equipment] ?? step.equipment}
@@ -147,10 +159,10 @@ export function StepTree({ steps, depth = 0 }: { steps: EnergyStep[]; depth?: nu
                 {step.instructions}
               </div>
             )}
-            <StepTree steps={step.children} depth={depth + 1} />
+            <StepTree steps={step.children} depth={depth + 1} vma={vma} />
             {step.rest_between && (
               <div style={{ marginLeft: (depth + 1) * 14 }}>
-                <StepTree steps={[step.rest_between]} depth={depth + 1} />
+                <StepTree steps={[step.rest_between]} depth={depth + 1} vma={vma} />
               </div>
             )}
           </div>
@@ -203,7 +215,7 @@ function ClassiqueBlockView({ block }: { block: ClassiqueBlock }) {
   );
 }
 
-function WodBlockView({ block }: { block: WodBlock }) {
+function WodBlockView({ block, vma }: { block: WodBlock; vma?: number | null }) {
   return (
     <div style={{
       border: "1px dashed #F5A623",
@@ -222,18 +234,18 @@ function WodBlockView({ block }: { block: WodBlock }) {
         </div>
       )}
       <div style={{ marginLeft: 4 }}>
-        <StepTree steps={block.steps} />
+        <StepTree steps={block.steps} vma={vma} />
       </div>
     </div>
   );
 }
 
-function BlockList({ blocks }: { blocks: SessionBlock[] }) {
+function BlockList({ blocks, vma }: { blocks: SessionBlock[]; vma?: number | null }) {
   return (
     <>
       {blocks.map((b) =>
         isWodBlock(b)
-          ? <WodBlockView key={b.id} block={b} />
+          ? <WodBlockView key={b.id} block={b} vma={vma} />
           : <ClassiqueBlockView key={b.id} block={b} />,
       )}
     </>
@@ -266,6 +278,8 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
   const rootGroup = buildRootGroup(session);
   const isClassique = session.format === "classique";
   const blocks = isClassique ? session.classique_structure?.blocks ?? [] : [];
+  const { data: refs } = useAthleteReferences(athleteId);
+  const vma = refs?.VMA ?? null;
 
   return (
     <>
@@ -344,13 +358,13 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
           )}
 
           {/* Images / Illustrations */}
-          {((session as any).images as SessionImage[] | null)?.length ? (
+          {session.images?.length ? (
             <div style={{ margin: "0 18px 12px" }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
                 Illustrations
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {((session as any).images as SessionImage[]).map((img: SessionImage, i: number) => (
+                {(session.images ?? []).map((img: SessionImage, i: number) => (
                   <div key={i}
                     onClick={() => setLightboxUrl(img.url)}
                     style={{ width: 100, height: 100, borderRadius: 4, overflow: "hidden", border: "1px solid " + C.brd, cursor: "pointer" }}>
@@ -367,9 +381,9 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
               {isClassique ? "Contenu de la séance" : "Déroulé de la séance"}
             </div>
             {isClassique ? (
-              <BlockList blocks={blocks} />
+              <BlockList blocks={blocks} vma={vma} />
             ) : (
-              <StepTree steps={session.intervals ?? []} />
+              <StepTree steps={session.intervals ?? []} vma={vma} />
             )}
           </div>
         </div>

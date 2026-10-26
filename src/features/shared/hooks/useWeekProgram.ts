@@ -2,8 +2,20 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { supabase } from "@/integrations/supabase/client";
-import type { Session, Exercise } from "../types/athlete";
+import type { Session, Exercise, AthleteModifications } from "../types/athlete";
 import { localISO } from "@/lib/date";
+import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
+import type { Bloc, ExerciceParams } from "@/features/coach/components/programmation/types";
+import { resolveExerciceParams } from "@/lib/sessionOccurrence";
+import { fetchOccurrencesForSessions } from "./useSessionOccurrence";
+
+/** Exercice prévu, lu dans la ProgSession (asp:prog) à l'occurrence du jour. */
+export interface SessionPreviewItem {
+  id: string;
+  name: string;
+  mode: "classique" | "methode" | "libre";
+  params: ExerciceParams | null;
+}
 
 export interface TestSess {
   id: string;
@@ -23,6 +35,8 @@ export interface DayProgram {
     exercises: Exercise[];
     isCompleted: boolean;
     workoutLogId?: string;
+    /** Exercices de la ProgSession (vide si la séance n'y est pas) */
+    items?: SessionPreviewItem[];
   }>;
   tests: TestSess[];
 }
@@ -58,14 +72,22 @@ export function useWeekProgram(weekStart: string | null): DayProgram[] {
     queryFn: async () => {
       const { data } = await supabase
         .from("workout_logs")
-        .select("id, session_id, session_name, scheduled_date, status")
+        .select("id, session_id, session_name, scheduled_date, status, athlete_modifications")
         .eq("athlete_id", athleteId)
         .neq("status", "skipped")
         .gte("scheduled_date", mondayISO)
         .lte("scheduled_date", sundayISO);
-      return data ?? [];
+      const logs = data ?? [];
+      // Occurrence de chaque log : les params multi-semaines en dépendent
+      let occ = new Map<string, number>();
+      try {
+        occ = await fetchOccurrencesForSessions(athleteId!, logs.map((l) => l.session_id), sundayISO);
+      } catch { /* aperçu : occurrence 1 par défaut */ }
+      return logs.map((l) => ({ ...l, occurrence: occ.get(l.id) ?? 1 }));
     },
   });
+
+  const { data: progSessions = [] } = useProgrammation(athleteId ?? undefined);
 
   return useMemo(() => {
     // Index workout_logs by date
@@ -114,11 +136,22 @@ export function useWeekProgram(weekStart: string | null): DayProgram[] {
               short: wl.session_name.slice(0, 3).toUpperCase(),
               day_of_week: dow,
             };
+            // Exercices : ProgSession (ou adaptation du coach pour ce jour)
+            const prog = progSessions.find((p) => p.id === wl.session_id);
+            const ovr = (wl.athlete_modifications as AthleteModifications | null)?.coachOverride?.blocs as Bloc[] | undefined;
+            const blocs: Bloc[] = ovr?.length ? ovr : prog?.blocs ?? [];
+            const items: SessionPreviewItem[] = blocs.flatMap((b) => b.exercices.map((ex) => ({
+              id: ex.id,
+              name: ex.exercise_name,
+              mode: ex.mode,
+              params: ex.mode === "libre" ? null : resolveExerciceParams(ex.params, wl.occurrence),
+            })));
             return {
               session,
               exercises,
               isCompleted: wl.status === "completed",
               workoutLogId: wl.id,
+              items,
             };
           });
       } else {
@@ -130,5 +163,5 @@ export function useWeekProgram(weekStart: string | null): DayProgram[] {
 
       return { date: isoDate, dow, sessions: daySessions, tests: dayTests };
     });
-  }, [sessions, exos, completedSessions, currentWeek, blockConfig, monday, testSessions, workoutLogs]);
+  }, [sessions, exos, completedSessions, currentWeek, blockConfig, monday, testSessions, workoutLogs, progSessions]);
 }

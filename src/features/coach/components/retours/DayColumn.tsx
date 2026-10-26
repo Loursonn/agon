@@ -538,7 +538,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {[
                         { l: "Séries", v: String(planned.sets) },
-                        { l: "Reps", v: planned.reps_range ?? "—" },
+                        { l: planned.is_iso ? "Durée" : "Reps", v: planned.reps_range ?? "—" },
                         ...(planned.kg != null ? [{ l: "Charge", v: `${planned.kg}kg` }] : []),
                         ...(planned.rir != null ? [{ l: "RIR", v: String(planned.rir) }] : []),
                       ].map(({ l, v }) => (

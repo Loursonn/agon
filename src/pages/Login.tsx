@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { errorMessage } from "@/lib/errors";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,8 +32,8 @@ export default function Login() {
     try {
       await login(form.get("email") as string, form.get("password") as string);
       navigate("/");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -66,8 +67,8 @@ export default function Login() {
     try {
       await registerCoach(form.get("email") as string, password, form.get("fullName") as string, isCoachAthlete);
       setRegistered(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -93,8 +94,8 @@ export default function Login() {
         form.get("coachCode") as string,
       );
       setRegistered(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }

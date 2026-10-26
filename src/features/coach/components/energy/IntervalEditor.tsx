@@ -12,6 +12,11 @@ import { C } from "@/lib/theme";
 import type { EnergyInterval, IntervalRole, EnergyDuration, EnergyTarget } from "@/types/energy";
 import { genId } from "@/lib/energy/treeUtils";
 import { paceBounds } from "@/lib/energy/paceCompat";
+import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
+import { paceFromTimeOverDistance, timeForDistance, LAP_M } from "@/lib/energy/paceEquivalents";
+
+/** Unités de saisie d'une allure dans l'éditeur. Toutes stockées en s/km. */
+type PaceInputUnit = "min_per_km" | "kmh" | "lap_400" | "rep_distance";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -126,6 +131,34 @@ function RangeInputs({
   );
 }
 
+/** Saisie d'un temps sur une distance connue, converti en secondes par km. */
+function TimeRangeInputs({
+  min, max, meters, unit, onMin, onMax,
+}: {
+  min: number; max: number; meters: number; unit: string;
+  onMin: (v: number) => void; onMax: (v: number) => void;
+}) {
+  const toText = (sPerKm: number) => (sPerKm > 0 ? toMMSS(timeForDistance(sPerKm, meters)) : "");
+  const fromText = (raw: string) =>
+    meters === 1000 ? parseMMSS(raw) : paceFromTimeOverDistance(parseMMSS(raw), meters);
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <input
+        type="text" style={{ ...inp.base, width: 80 }}
+        value={toText(min)} onChange={(e) => onMin(fromText(e.target.value))}
+        placeholder="4:00"
+      />
+      <span style={{ color: C.tx3, fontSize: 12 }}>–</span>
+      <input
+        type="text" style={{ ...inp.base, width: 80 }}
+        value={toText(max)} onChange={(e) => onMax(fromText(e.target.value))}
+        placeholder="5:00"
+      />
+      <span style={{ color: C.tx3, fontSize: 12 }}>{unit}</span>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -149,7 +182,9 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
   const [hrZone, setHrZone] = useState<1|2|3|4|5>(3);
   const [rangeMin, setRangeMin] = useState(0);
   const [rangeMax, setRangeMax] = useState(0);
-  const [paceUnit, setPaceUnit] = useState<"min_per_km"|"kmh">("min_per_km");
+  // Unité de *saisie*. « tour » et « distance de la rép. » ne sont que des vues :
+  // tout est converti en secondes par km avant stockage.
+  const [paceUnit, setPaceUnit] = useState<PaceInputUnit>("min_per_km");
   const [cadenceUnit, setCadenceUnit] = useState<"spm"|"rpm">("spm");
   const [testMetric, setTestMetric] = useState("VMA");
   const [textValue, setTextValue] = useState("");
@@ -187,6 +222,10 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
     if (t.kind === "text") setTextValue(t.value);
   }, [interval, open]);
 
+  const repDistanceM = durKind === "distance" ? Number(durValue) || null : null;
+  // Le coach peut retirer la distance après avoir choisi « temps sur la distance ».
+  const paceInput: PaceInputUnit = paceUnit === "rep_distance" && !repDistanceM ? "min_per_km" : paceUnit;
+
   function buildDuration(): EnergyDuration {
     if (durKind === "time") return { kind: "time", value: parseMMSS(durValue) };
     if (durKind === "lap_button") return { kind: "lap_button" };
@@ -198,7 +237,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
       case "hr_zone": return { kind: "hr_zone", zone: hrZone };
       case "hr_pct":  return { kind: "hr_pct", min: rangeMin, max: rangeMax };
       case "hr_bpm":  return { kind: "hr_bpm", min: rangeMin, max: rangeMax };
-      case "pace":    return { kind: "pace", min_s_per_unit: rangeMin, max_s_per_unit: rangeMax, unit: paceUnit };
+      case "pace":    return { kind: "pace", min_s_per_unit: rangeMin, max_s_per_unit: rangeMax, unit: paceInput === "kmh" ? "kmh" : "min_per_km" };
       case "pace_test_pct":  return { kind: "pace_test_pct", test_metric: testMetric, min: rangeMin, max: rangeMax };
       case "power":          return { kind: "power", min: rangeMin, max: rangeMax };
       case "power_test_pct": return { kind: "power_test_pct", test_metric: testMetric, min: rangeMin, max: rangeMax };
@@ -339,35 +378,38 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
           )}
           {targetKind === "pace" && (
             <>
-              <Select value={paceUnit} onValueChange={(v) => setPaceUnit(v as "min_per_km"|"kmh")} >
+              <Select value={paceInput} onValueChange={(v) => setPaceUnit(v as PaceInputUnit)} >
                 <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx, marginBottom: 6 }}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="min_per_km">min/km</SelectItem>
                   <SelectItem value="kmh">km/h</SelectItem>
+                  <SelectItem value="lap_400">Temps au tour (400 m)</SelectItem>
+                  {repDistanceM ? (
+                    <SelectItem value="rep_distance">Temps sur {repDistanceM} m</SelectItem>
+                  ) : null}
                 </SelectContent>
               </Select>
-              {paceUnit === "min_per_km" ? (
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    type="text" style={{ ...inp.base, width: 80 }}
-                    value={toMMSS(rangeMin)}
-                    onChange={(e) => setRangeMin(parseMMSS(e.target.value))}
-                    placeholder="4:00"
-                  />
-                  <span style={{ color: C.tx3, fontSize: 12 }}>–</span>
-                  <input
-                    type="text" style={{ ...inp.base, width: 80 }}
-                    value={toMMSS(rangeMax)}
-                    onChange={(e) => setRangeMax(parseMMSS(e.target.value))}
-                    placeholder="5:00"
-                  />
-                  <span style={{ color: C.tx3, fontSize: 12 }}>min/km</span>
-                </div>
-              ) : (
+              {paceInput === "kmh" ? (
                 <RangeInputs min={rangeMin} max={rangeMax} unit="km/h" onMin={setRangeMin} onMax={setRangeMax} />
+              ) : (
+                <TimeRangeInputs
+                  min={rangeMin}
+                  max={rangeMax}
+                  meters={paceInput === "lap_400" ? LAP_M : paceInput === "rep_distance" ? repDistanceM! : 1000}
+                  unit={paceInput === "min_per_km" ? "min/km" : paceInput === "lap_400" ? "au tour" : `sur ${repDistanceM} m`}
+                  onMin={setRangeMin}
+                  onMax={setRangeMax}
+                />
               )}
+              <div style={{ marginTop: 6 }}>
+                <PaceEquivalents
+                  target={{ kind: "pace", min_s_per_unit: rangeMin, max_s_per_unit: rangeMax, unit: paceInput === "kmh" ? "kmh" : "min_per_km" }}
+                  repDistanceM={repDistanceM}
+                  fontSize={10}
+                />
+              </div>
             </>
           )}
           {(targetKind === "pace_test_pct" || targetKind === "power_test_pct") && (

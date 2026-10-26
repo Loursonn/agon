@@ -1,4 +1,4 @@
-# PROGRESS.md - Refonte MyPrepaPro
+# PROGRESS.md - Refonte Agon
 
 Coche [x] au fur et à mesure. Ne coche QUE ce qui est 100% terminé et testé.
 

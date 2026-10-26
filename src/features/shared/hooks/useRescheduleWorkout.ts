@@ -99,6 +99,9 @@ export function useRescheduleWorkout() {
     onSuccess: ({ coachAlert }, { athleteId, weekMondayISO }) => {
       qc.invalidateQueries({ queryKey: QK.activePlan(athleteId) });
       qc.invalidateQueries({ queryKey: QK.workoutLogsWeek(athleteId, weekMondayISO) });
+      // Planning coach + Retours : le déplacement doit y apparaître tout de suite
+      qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
+      qc.invalidateQueries({ queryKey: QK.athleteModifications(athleteId) });
       if (coachAlert) {
         toast.warning("Séance déplacée — ton coach sera notifié", { duration: 4000 });
       } else {
