@@ -37,6 +37,39 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-27-conformite-donnees-sante",
+    date: "2026-10-27",
+    kind: "feature",
+    title: "Agon se met en règle pour brancher les montres Garmin et COROS",
+    summary: "Politique de confidentialité, CGU, consentement explicite au traitement des données de santé : les fondations exigées par Garmin et COROS avant d'accepter notre demande d'accès à leurs API.",
+    sections: [
+      {
+        title: "Pourquoi maintenant",
+        points: [
+          "Garmin et COROS n'ouvrent leur API qu'aux applications qui publient une politique de confidentialité et recueillent un consentement explicite : sans ça, la demande est refusée d'office.",
+          "Les données d'entraînement et de wellness sont des données de santé au sens du RGPD : leur traitement exige un consentement explicite, distinct et révocable. C'est ce qui est mis en place.",
+        ],
+      },
+      {
+        title: "Ce que tu verras",
+        points: [
+          "Trois pages publiques accessibles sans compte : Politique de confidentialité, CGU, Mentions légales.",
+          "À l'inscription, une case à cocher pour accepter les CGU et la politique de confidentialité — obligatoire pour créer le compte.",
+          "À la première connexion après cette mise à jour, un écran demande ton consentement au traitement des données de santé et, séparément, aux suggestions par IA. Tu peux refuser l'IA et continuer à utiliser Agon normalement.",
+          "Si nos conditions évoluent, l'écran revient pour recueillir un consentement à jour : un accord donné sur une ancienne version ne vaut pas pour la nouvelle.",
+        ],
+      },
+      {
+        title: "Ce qui change sous le capot",
+        points: [
+          "La suppression de compte efface réellement toutes les données associées, y compris les fichiers déposés. Auparavant, le compte était désactivé mais les données restaient en base.",
+          "Un coach qui part ne détruit plus les programmes de ses athlètes : les plans sont conservés, seule l'attribution au coach est retirée.",
+          "Les fonctions d'IA refusent désormais les appels non authentifiés : notre quota Gemini n'est plus consommable depuis l'extérieur.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-26-fiabilite-profil-athlete",
     date: "2026-10-26",
     kind: "fix",

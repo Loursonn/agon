@@ -1,6 +1,7 @@
 // athlete-insights — 3-4 phrases de synthèse sur les tendances d'un athlète (Mon profil).
 // Reçoit uniquement des agrégats chiffrés (aucune donnée d'identité). Appelé 1×/jour/athlète max (cache client).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { hasConsent, requireUser } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +15,19 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    /*
+      Identité vérifiée avant toute autre chose, et notamment avant le moindre
+      appel à Gemini : sans cela la fonction était ouverte à l'internet et son
+      quota consommable par n'importe qui.
+    */
+    const user = await requireUser(req);
+
+    // Le consentement au traitement par IA doit avoir un effet côté serveur,
+    // sinon la case décochée dans l'interface ne protège de rien.
+    if (!(await hasConsent(user.id, "ai_programming"))) {
+      return json({ error: "consentement_ia_absent", insights: [] }, 403);
+    }
+
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) return json({ error: "GEMINI_API_KEY is not configured" }, 500);
 
@@ -55,7 +69,11 @@ Réponds uniquement en JSON : {"insights": ["...", "..."]}`;
       : [];
     return json({ insights });
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    // Un refus d'authentification doit répondre 401, pas 500 : le client doit
+    // pouvoir distinguer « reconnecte-toi » de « le serveur est en panne ».
+    if (msg === "Non autorisé") return json({ error: msg }, 401);
     console.error("athlete-insights:", e);
-    return json({ error: String(e) }, 500);
+    return json({ error: msg }, 500);
   }
 });

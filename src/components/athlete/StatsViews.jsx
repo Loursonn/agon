@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { functionAuthHeaders } from "@/lib/functionAuth";
 import { C } from "@/lib/theme";
 import { e1rm, parseReps, normalizeExName } from "@/lib/exercises";
 import { MTREE, getMC, mL, normPrimary, stC, ALL_BZ, INJ_STATUS } from "@/lib/muscles";
@@ -307,7 +308,7 @@ function AIChatBar({exos,sessions,chatHistory,setChatHistory,onApply,onOpenChang
     const newHistory=[...chatHistory,{role:"user",content:msg}];
     setChatHistory(newHistory);
     try{
-      const resp=await fetch(CHAT_AI_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({mode:"chat_edit",currentProgram:exos,sessions,message:msg,conversationHistory:chatHistory})});
+      const resp=await fetch(CHAT_AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify({mode:"chat_edit",currentProgram:exos,sessions,message:msg,conversationHistory:chatHistory})});
       const data=await resp.json();
       if(!resp.ok)throw new Error(data.error||"Erreur serveur");
       if(!data.sessions)throw new Error("Reponse invalide");

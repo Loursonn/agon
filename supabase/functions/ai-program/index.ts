@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { requireUser } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +54,19 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    /*
+      Vérification d'identité en tête, avant toute dépense. La fonction était
+      jusqu'ici appelable sans compte : la clé anonyme suffisait, et elle est
+      publique par nature puisqu'elle figure dans le bundle JavaScript. Le
+      quota Gemini était donc consommable par n'importe qui.
+
+      Le consentement `ai_programming` n'est pas exigé ici : l'appelant est le
+      coach, alors que les données traitées sont celles de l'athlète. Vérifier
+      le consentement du coach n'aurait aucun sens. Le filtrage par athlète est
+      traité en amont, côté client, au moment de la constitution du prompt.
+    */
+    await requireUser(req);
+
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
@@ -297,8 +311,16 @@ ${hasText ? prompt : fileCount > 1 ? "Programme reparti sur les fichiers joints 
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    const msg = errMessage(e, "Erreur inconnue");
+    // 401 pour un refus d'authentification : le client doit pouvoir distinguer
+    // « reconnecte-toi » d'une panne serveur.
+    if (msg === "Non autorisé") {
+      return new Response(JSON.stringify({ error: msg }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     console.error("ai-program error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erreur inconnue" }), {
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

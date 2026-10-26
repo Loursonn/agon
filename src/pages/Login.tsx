@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { errorMessage } from "@/lib/errors";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { LEGAL_ROUTES } from "@/lib/legal";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,14 @@ export default function Login() {
   const [isCoachAthlete, setIsCoachAthlete] = useState(false);
   const [forgot, setForgot] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  /*
+    Acceptation contractuelle des CGU et de la politique. Distincte du
+    consentement au traitement des données de santé (art. 9 RGPD), qui est
+    recueilli par ConsentGate à la première connexion : avant la confirmation
+    de l'email il n'existe pas encore d'identifiant utilisateur auquel
+    rattacher un consentement horodaté.
+  */
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -116,6 +125,20 @@ export default function Login() {
     fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
   };
   const labelStyle: React.CSSProperties = { fontSize: 12, color: S.tx2, marginBottom: 4, display: "block" };
+  /** Case d'acceptation des documents légaux, commune aux deux formulaires. */
+  const TermsCheckbox = () => (
+    <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+      <input type="checkbox" checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)}
+        style={{ width: 16, height: 16, accentColor: S.ac, cursor: "pointer", marginTop: 1, flexShrink: 0 }} />
+      <span style={{ fontSize: 11, color: S.tx2, lineHeight: 1.5 }}>
+        J'ai lu et j'accepte les{" "}
+        <Link to={LEGAL_ROUTES.terms} target="_blank" style={{ color: S.ac }}>CGU</Link>
+        {" "}et la{" "}
+        <Link to={LEGAL_ROUTES.privacy} target="_blank" style={{ color: S.ac }}>politique de confidentialité</Link>.
+      </span>
+    </label>
+  );
+
   const btnPrimary = (color = S.ac): React.CSSProperties => ({
     width: "100%", padding: "12px 0", borderRadius: 4, border: "none",
     background: color, color: "#fff", fontSize: 14, fontWeight: 700,
@@ -270,8 +293,9 @@ export default function Login() {
                   <div style={{ fontSize: 11, color: S.tx3 }}>Tu pourras aussi utiliser la vue athlète pour toi-même</div>
                 </div>
               </label>
+              <TermsCheckbox />
               {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
-              <button type="submit" style={btnPrimary(S.coach)} disabled={loading}>
+              <button type="submit" style={{ ...btnPrimary(S.coach), opacity: !acceptTerms || loading ? 0.5 : 1, cursor: !acceptTerms || loading ? "not-allowed" : "pointer" }} disabled={loading || !acceptTerms}>
                 {loading ? "Création…" : "Créer mon compte coach"}
               </button>
             </form>
@@ -307,13 +331,21 @@ export default function Login() {
                 <label style={labelStyle}>Confirmer le mot de passe</label>
                 <PasswordInput name="confirm" iconColor={S.tx2} required placeholder="••••••••" minLength={6} style={inputStyle} />
               </div>
+              <TermsCheckbox />
               {error && <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15" }}>{error}</div>}
-              <button type="submit" style={btnPrimary()} disabled={loading}>
+              <button type="submit" style={{ ...btnPrimary(), opacity: !acceptTerms || loading ? 0.5 : 1, cursor: !acceptTerms || loading ? "not-allowed" : "pointer" }} disabled={loading || !acceptTerms}>
                 {loading ? "Création…" : "Rejoindre mon coach"}
               </button>
             </form>
           )}
 
+        </div>
+
+        {/* Liens légaux — obligatoires et attendus par les programmes partenaires */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 20, fontSize: 11 }}>
+          <Link to={LEGAL_ROUTES.privacy} style={{ color: S.tx3, textDecoration: "none" }}>Confidentialité</Link>
+          <Link to={LEGAL_ROUTES.terms} style={{ color: S.tx3, textDecoration: "none" }}>CGU</Link>
+          <Link to={LEGAL_ROUTES.notice} style={{ color: S.tx3, textDecoration: "none" }}>Mentions légales</Link>
         </div>
       </div>
     </div>

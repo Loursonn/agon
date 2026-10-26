@@ -3,6 +3,7 @@ const MethodPickerDialog = lazy(() => import("@/features/coach/components/librar
 import { methodConfigToWeekFields } from "@/features/coach/components/library/MethodPreview";
 import { usePRsByRef } from "@/features/shared/hooks/usePRLogs";
 import { effectiveRmRef } from "@/features/shared/hooks/useAutoComputePRs";
+import { functionAuthHeaders } from "@/lib/functionAuth";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
 import { PDFDocument } from "pdf-lib";
@@ -142,7 +143,7 @@ function AIGeneratorModal({onGenerate,onClose,allMethods,existingExos,sessions:S
     try{
       const history=convMsgs.map(m=>({role:m.role==="user"?"user":"assistant",content:m.content}));
       const payload={mode:"chat_edit",message:msg,currentProgram:preview.sessions,conversationHistory:history,sessions:SESSIONS};
-      const resp=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(payload)});
+      const resp=await fetch(AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify(payload)});
       const data=await resp.json();
       if(resp.status===429){setConvCooldown(30);throw new Error(data.error||"Trop de requetes");}
       if(!resp.ok)throw new Error(data.error||"Erreur serveur");
@@ -190,7 +191,7 @@ PROFIL DETAILLE DE L ATHLETE:
 ${detailsBlock||"Aucun detail supplementaire fourni"}`;
 
     try{
-      const resp=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({mode:"generate",prompt,sessions:SESSIONS})});
+      const resp=await fetch(AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify({mode:"generate",prompt,sessions:SESSIONS})});
       const data=await resp.json();
       if(!resp.ok)throw new Error(data.error||"Erreur serveur");
       setPreview(data);setStep(1);
@@ -270,7 +271,7 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
       }
       // Restreindre l'IA aux sessions ciblées si précisées
       if(targetIds.length>0)payload.targetSessions=targetIds;
-      const resp=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(payload)});
+      const resp=await fetch(AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify(payload)});
       const data=await resp.json();
       if(!resp.ok)throw new Error(data.error||"Erreur serveur");
       setPreview(data);setStep(1);
