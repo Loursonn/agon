@@ -37,6 +37,47 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-28-socle-montres-connectees",
+    date: "2026-10-28",
+    kind: "feature",
+    title: "Le socle technique des montres connectées est posé",
+    summary: "Rien de visible encore : c'est la plomberie qui recevra les séances Garmin et COROS. Elle est construite pour que les promesses faites à l'athlète soient tenues par la base de données elle-même, pas par la vigilance du code.",
+    sections: [
+      {
+        title: "Ce que ça prépare",
+        points: [
+          "Les tables qui accueilleront les activités (durée, distance, fréquence cardiaque, allure, dénivelé) et les données quotidiennes (sommeil, VFC, fréquence cardiaque de repos, pas).",
+          "Tu verras l'état de la montre de chaque athlète : connectée, à reconnecter, ou déconnectée. Sans ça, un athlète dont l'autorisation a expiré ressemble à un athlète qui a décroché.",
+          "L'historique est prévu dès le départ : à la connexion d'une montre COROS, on peut remonter les semaines passées, pas seulement enregistrer les suivantes.",
+        ],
+      },
+      {
+        title: "Ce qui est garanti par construction",
+        points: [
+          "Un athlète qui retire son accord disparaît du tableau de bord immédiatement, sans aucune manipulation de notre part — la base revérifie son accord à chaque consultation.",
+          "Une montre ne peut pas être connectée sans accord : la base refuse l'opération, même si un bout de code oubliait de vérifier.",
+          "Retirer son accord coupe la synchronisation tout de suite, même si le fabricant de la montre est injoignable à cet instant.",
+          "Les autorisations d'accès aux montres sont stockées chiffrées dans un coffre séparé, illisible depuis l'application.",
+        ],
+      },
+      {
+        title: "Et l'IA",
+        points: [
+          "Chaque donnée importée sait si les conditions de son fabricant permettent de l'envoyer à une IA. Celles de COROS sont marquées « non » en attendant une relecture de leurs conditions.",
+          "Une donnée venant d'une source dont les règles ne sont pas encore tranchées est traitée comme interdite, jamais comme autorisée par défaut.",
+        ],
+      },
+      {
+        title: "Ce qu'il reste avant la vraie connexion",
+        points: [
+          "COROS : l'autorisation se code sans dossier à déposer, c'est le prochain chantier.",
+          "Garmin : le dossier est prêt, il attend la publication de nos mentions légales complètes.",
+          "Strava : abandonné côté API — leurs conditions interdisent de montrer les données d'un athlète à son coach. L'import de fichiers prendra le relais.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-27-conformite-donnees-sante",
     date: "2026-10-27",
     kind: "feature",

@@ -63,9 +63,9 @@ approbation humaine dans la boucle.
 > **`token_endpoint_auth_method: "none"` — client public, pas de secret.**
 > COROS ne délivre pas de `client_secret`. Donc :
 >
-> - `COROS_CLIENT_SECRET` dans `.env.example` est **inutile** : à retirer quand
->   le chantier COROS sera livré, pour ne pas laisser croire qu'il manque un
->   secret à configurer.
+> - `COROS_CLIENT_SECRET` a été **retiré de `.env.example`** : le laisser ferait
+>   croire qu'il manque un secret à configurer, et chercher pendant une heure
+>   quelque chose qui n'existe pas.
 > - La sécurité de l'échange repose **entièrement** sur PKCE et sur la
 >   vérification stricte du `redirect_uri`. Le `code_verifier` ne doit jamais
 >   transiter par le navigateur ni être stocké côté client : il est généré et
