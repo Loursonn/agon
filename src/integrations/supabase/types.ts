@@ -3183,6 +3183,7 @@ export type Database = {
           granted: boolean
           id: string
           purpose: Database["public"]["Enums"]["consent_purpose"]
+          seq: number
           statement: string
           user_id: string
         }
@@ -3192,6 +3193,7 @@ export type Database = {
           granted: boolean
           id?: string
           purpose: Database["public"]["Enums"]["consent_purpose"]
+          seq?: number
           statement: string
           user_id: string
         }
@@ -3201,6 +3203,7 @@ export type Database = {
           granted?: boolean
           id?: string
           purpose?: Database["public"]["Enums"]["consent_purpose"]
+          seq?: number
           statement?: string
           user_id?: string
         }
@@ -3437,6 +3440,136 @@ export type Database = {
       }
     }
     Views: {
+      ai_provider_activities: {
+        Row: {
+          athlete_id: string | null
+          avg_hr: number | null
+          avg_pace_s_per_km: number | null
+          calories: number | null
+          distance_m: number | null
+          duration_s: number | null
+          elevation_gain_m: number | null
+          external_id: string | null
+          id: string | null
+          imported_at: string | null
+          local_date: string | null
+          max_hr: number | null
+          source: Database["public"]["Enums"]["data_source"] | null
+          sport: string | null
+          started_at: string | null
+        }
+        Insert: {
+          athlete_id?: string | null
+          avg_hr?: number | null
+          avg_pace_s_per_km?: number | null
+          calories?: number | null
+          distance_m?: number | null
+          duration_s?: number | null
+          elevation_gain_m?: number | null
+          external_id?: string | null
+          id?: string | null
+          imported_at?: string | null
+          local_date?: string | null
+          max_hr?: number | null
+          source?: Database["public"]["Enums"]["data_source"] | null
+          sport?: string | null
+          started_at?: string | null
+        }
+        Update: {
+          athlete_id?: string | null
+          avg_hr?: number | null
+          avg_pace_s_per_km?: number | null
+          calories?: number | null
+          distance_m?: number | null
+          duration_s?: number | null
+          elevation_gain_m?: number | null
+          external_id?: string | null
+          id?: string | null
+          imported_at?: string | null
+          local_date?: string | null
+          max_hr?: number | null
+          source?: Database["public"]["Enums"]["data_source"] | null
+          sport?: string | null
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_activities_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_provider_dailies: {
+        Row: {
+          athlete_id: string | null
+          body_battery_max: number | null
+          body_battery_min: number | null
+          day: string | null
+          hrv_ms: number | null
+          id: string | null
+          imported_at: string | null
+          resting_hr: number | null
+          sleep_deep_min: number | null
+          sleep_rem_min: number | null
+          sleep_score: number | null
+          sleep_total_min: number | null
+          source: Database["public"]["Enums"]["data_source"] | null
+          steps: number | null
+          stress_avg: number | null
+          training_load: number | null
+          vo2max: number | null
+        }
+        Insert: {
+          athlete_id?: string | null
+          body_battery_max?: number | null
+          body_battery_min?: number | null
+          day?: string | null
+          hrv_ms?: number | null
+          id?: string | null
+          imported_at?: string | null
+          resting_hr?: number | null
+          sleep_deep_min?: number | null
+          sleep_rem_min?: number | null
+          sleep_score?: number | null
+          sleep_total_min?: number | null
+          source?: Database["public"]["Enums"]["data_source"] | null
+          steps?: number | null
+          stress_avg?: number | null
+          training_load?: number | null
+          vo2max?: number | null
+        }
+        Update: {
+          athlete_id?: string | null
+          body_battery_max?: number | null
+          body_battery_min?: number | null
+          day?: string | null
+          hrv_ms?: number | null
+          id?: string | null
+          imported_at?: string | null
+          resting_hr?: number | null
+          sleep_deep_min?: number | null
+          sleep_rem_min?: number | null
+          sleep_score?: number | null
+          sleep_total_min?: number | null
+          source?: Database["public"]["Enums"]["data_source"] | null
+          steps?: number | null
+          stress_avg?: number | null
+          training_load?: number | null
+          vo2max?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_dailies_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_current_values: {
         Row: {
           athlete_id: string | null
@@ -3526,6 +3659,10 @@ export type Database = {
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
+      ai_eligible_sources: {
+        Args: { p_athlete: string }
+        Returns: Database["public"]["Enums"]["data_source"][]
+      }
       can_coach_athlete: { Args: { athlete_uuid: string }; Returns: boolean }
       can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
       can_read_doc_file: { Args: { object_name: string }; Returns: boolean }

@@ -37,6 +37,38 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-28-garde-fou-ia-et-retrait-consentement",
+    date: "2026-10-28",
+    kind: "fix",
+    title: "Un retrait d'accord pouvait rester sans effet",
+    summary: "Correction d'un défaut du registre des consentements : dans certains cas, retirer un accord ne changeait rien. Et l'IA ne reçoit plus que des champs décidés par le serveur.",
+    sections: [
+      {
+        title: "Ce qui ne marchait pas",
+        points: [
+          "Le registre retenait la décision la plus récente d'après son horodatage. Deux décisions enregistrées dans la même opération portaient la même heure à la microseconde près, et la plus récente devenait indéterminable.",
+          "Conséquence : un accord retiré juste après avoir été donné pouvait rester considéré comme accordé. Le sens de l'erreur était le plus gênant possible, puisque c'est le refus qui pouvait être ignoré.",
+          "Corrigé : le registre est désormais ordonné par ordre d'arrivée et non par l'heure. Un retrait prend effet, toujours.",
+        ],
+      },
+      {
+        title: "L'IA ne reçoit plus que ce que le serveur a validé",
+        points: [
+          "Les phrases de synthèse de « Mon profil » envoyaient à l'IA ce que le navigateur lui transmettait, sans contrôle. Désormais le serveur ne laisse passer qu'une liste fixe de chiffres connus.",
+          "Une valeur impossible (un poids de 900 kg, une fatigue de 42 sur 5) est écartée au lieu d'être transmise : une donnée fausse envoyée à l'IA ressort en conseil faux.",
+          "Une valeur manquante reste manquante et ne devient pas zéro — plus de « ton sommeil est tombé à 0 h » sur une donnée simplement absente.",
+        ],
+      },
+      {
+        title: "Pour la suite des montres",
+        points: [
+          "Les données de montre ne pourront atteindre l'IA que par une porte unique, qui vérifie à la fois les conditions du fabricant et ton accord. Sans accord, rien ne part — et en cas de doute technique, rien ne part non plus.",
+          "Les réponses brutes des fabricants ne sont jamais transmises à l'IA : seuls des champs identifiés un par un le sont, pour ne pas envoyer des données qu'on n'a pas demandées.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-28-socle-montres-connectees",
     date: "2026-10-28",
     kind: "feature",

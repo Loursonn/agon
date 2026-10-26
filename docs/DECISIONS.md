@@ -251,4 +251,90 @@ reste vrai même si un futur chemin de code oublie de le vérifier.
 
 ---
 
+## 2026-10 — Le chemin IA ne lit que des vues filtrées, et jamais `raw`
+
+**Décision** : les constructeurs de prompt lisent `ai_provider_activities` et
+`ai_provider_dailies` (vues en `security_invoker`, filtrées sur `ai_allowed`),
+jamais `provider_activities` / `provider_dailies` directement. Les colonnes
+`raw` et `details` sont **absentes** de ces vues.
+
+**Pourquoi des vues plutôt qu'un `WHERE ai_allowed`** : parce qu'un `WHERE`
+s'oublie. On ne cherche pas à ce que le filtre soit écrit correctement à chaque
+fois, on retire la possibilité de l'omettre — la surface de lecture du chemin
+IA ne contient pas les lignes interdites.
+
+**Pourquoi exclure `raw`** : ce ne sont pas des colonnes de confort mais des
+charges utiles de fournisseur, dont on ne contrôle ni le contenu ni son
+évolution. Les transmettre à un modèle, c'est envoyer des champs qu'on n'a
+jamais inventoriés — y compris des données de cycle menstruel si COROS décidait
+d'en inclure dans une réponse qu'on ne lui a pas demandée. On expose des
+colonnes nommées, pas un sac.
+
+**`ai_eligible_sources(athlete)`** combine les deux conditions nécessaires :
+la règle contractuelle du fournisseur (`data_source_policies.ai_allowed`) et le
+consentement personnel (`ai_programming`). Aucune ne rachète l'autre — le
+consentement de l'athlète ne nous autorise pas à violer les conditions de
+Garmin, et les conditions de Garmin ne consentent pas à sa place. Sans
+consentement, le résultat est un tableau vide, et c'est aussi le résultat en
+cas d'erreur : si on ne peut pas établir qu'une transmission est permise, elle
+ne l'est pas.
+
+---
+
+## 2026-10 — Le serveur décide de ce qui part chez Gemini, pas le client
+
+**Décision** : `athlete-insights` filtre le corps de requête par liste blanche
+(`sanitizeTrendStats`) avant de construire son prompt. Seuls des champs connus,
+retypés et bornés franchissent la frontière.
+
+**Pourquoi** : le prompt interpolait `JSON.stringify(await req.json())` sur
+4 000 caractères. Le serveur ne décidait donc pas de ce qu'il envoyait — le
+client pouvait y placer n'importe quel champ et n'importe quel texte, payé par
+notre quota et inséré dans les instructions du modèle. Un consentement au
+traitement par IA ne porte que sur des données d'entraînement : il ne couvre
+pas du texte arbitraire.
+
+**Les bornes ne sont pas de la méfiance** mais les plages où une valeur a un
+sens physiologique. Hors de là on renvoie `null` et non `0` : un zéro inventé
+est une donnée fausse, que le modèle commenterait comme vraie (« ton sommeil
+est tombé à 0 h »).
+
+**Effet de cliquet voulu** : quand les données de montre arriveront, elles ne
+pourront entrer dans ce prompt qu'en ajoutant explicitement un champ à
+`SafeTrendStats` — l'occasion forcée de vérifier `ai_eligible_sources`.
+
+**Limite connue, non traitée** : `ai-program` reçoit du coach un prompt en
+texte libre, construit depuis des champs qu'il a saisis lui-même, et sans
+identifiant d'athlète dans le corps de requête. Impossible d'y vérifier le
+consentement `ai_programming` de l'athlète concerné sans changer le contrat
+d'appel côté client. À traiter séparément.
+
+---
+
+## 2026-10 — Le journal de consentement est ordonné par séquence, pas par horodatage
+
+**Décision** : `user_consents` reçoit une colonne `seq` (identité, `NOT NULL`,
+`UNIQUE`), et `current_consents` ordonne par `seq DESC` au lieu de
+`created_at DESC`.
+
+**Pourquoi** : `created_at` vaut `now()`, qui est l'heure de *début de
+transaction*. Deux décisions écrites dans la même transaction partagent donc
+le même horodatage, et le `DISTINCT ON` n'avait aucun départageur : laquelle
+est « la courante » devenait l'ordre physique des lignes, c'est-à-dire
+indéterminé.
+
+Découvert en testant le retrait du consentement IA — un retrait écrit juste
+après un accord restait sans effet une fois sur deux.
+
+**Ce n'est pas un détail de test.** L'article 7.1 demande de pouvoir *prouver*
+le consentement. Un journal dont on ne peut pas dire avec certitude quelle est
+la dernière décision ne prouve rien, et le sens de l'erreur est le pire
+possible : c'est le **retrait** qui peut rester sans effet. Un `bigserial` est
+exactement ce dont un journal en écriture seule a besoin — un ordre d'arrivée,
+indépendant de l'horloge et du découpage en transactions. `created_at` reste la
+donnée métier (quand la personne a décidé), `seq` devient la clé d'ordre (dans
+quel ordre elle a décidé).
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

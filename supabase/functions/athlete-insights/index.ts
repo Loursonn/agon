@@ -2,6 +2,7 @@
 // Reçoit uniquement des agrégats chiffrés (aucune donnée d'identité). Appelé 1×/jour/athlète max (cache client).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { hasConsent, requireUser } from "../_shared/auth.ts";
+import { sanitizeTrendStats } from "../_shared/aiGuard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,9 +32,20 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) return json({ error: "GEMINI_API_KEY is not configured" }, 500);
 
-    const stats = await req.json();
-    const prompt = `Tu es un préparateur physique bienveillant. Voici les données agrégées d'un athlète sur les ${stats?.periode_jours ?? 30} derniers jours, comparées à la période précédente (JSON) :
-${JSON.stringify(stats).slice(0, 4000)}
+    /*
+      Le corps de requête est filtré avant d'approcher le prompt. Il était
+      jusqu'ici interpolé tel quel : c'est le client qui décidait du contenu
+      envoyé à Gemini, donc n'importe quel champ et jusqu'à 4 000 caractères de
+      texte libre, à notre charge et dans les instructions du modèle.
+
+      Conséquence voulue pour la suite : quand les données de montre
+      arriveront, elles ne pourront entrer dans ce prompt qu'en ajoutant
+      explicitement un champ à `SafeTrendStats` — l'occasion forcée de vérifier
+      `aiEligibleSources` pour l'athlète concerné.
+    */
+    const stats = sanitizeTrendStats(await req.json());
+    const prompt = `Tu es un préparateur physique bienveillant. Voici les données agrégées d'un athlète sur les ${stats.periode_jours} derniers jours, comparées à la période précédente (JSON) :
+${JSON.stringify(stats)}
 
 Rédige 3 ou 4 phrases courtes (max 140 caractères chacune), en français, en tutoyant l'athlète.
 - Chaque phrase s'appuie sur un chiffre précis des données.
