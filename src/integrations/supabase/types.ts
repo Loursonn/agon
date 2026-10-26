@@ -2147,6 +2147,7 @@ export type Database = {
           base_metabolism: number | null
           birth_date: string | null
           body_fat_pct: number | null
+          booking_url: string | null
           coach_code: string | null
           coach_id: string | null
           created_at: string | null
@@ -2169,6 +2170,7 @@ export type Database = {
           base_metabolism?: number | null
           birth_date?: string | null
           body_fat_pct?: number | null
+          booking_url?: string | null
           coach_code?: string | null
           coach_id?: string | null
           created_at?: string | null
@@ -2191,6 +2193,7 @@ export type Database = {
           base_metabolism?: number | null
           birth_date?: string | null
           body_fat_pct?: number | null
+          booking_url?: string | null
           coach_code?: string | null
           coach_id?: string | null
           created_at?: string | null

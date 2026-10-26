@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type React from "react";
-import { HeartPulse } from "lucide-react";
+import { HeartPulse, CalendarClock } from "lucide-react";
+import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
@@ -22,6 +23,8 @@ import type { TrendSummary } from "@/lib/athleteTrends";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Profile } from "@/hooks/useAuth";
+import { useCoachBooking } from "@/features/shared/hooks/useCoachBooking";
+import BookingPanel from "@/features/athlete/components/BookingPanel";
 
 interface Props {
   onClose: () => void;
@@ -300,6 +303,9 @@ export default function ProfileDrawer({ onClose }: Props) {
           <span style={{ fontSize: 11, color: C.tx3 }}>→</span>
         </button>
 
+        {/* ── Réserver mon point hebdo (si le coach a posé un lien) ── */}
+        {!viewOnly && <BookingSection />}
+
         {/* ── Mon coach ── */}
         {!viewOnly && <CoachSection />}
 
@@ -439,6 +445,73 @@ function GoalsZoomContent() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Point hebdo ──────────────────────────────────────────────────────────────
+
+/**
+ * Entrée « Réserver mon point hebdo ».
+ * Invisible tant que le coach n'a pas renseigné de lien Calendly : pas de
+ * fausse promesse à l'athlète.
+ */
+function BookingSection() {
+  const { user, profile } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  // Un coach auto-coaché n'a pas de point hebdo à réserver avec lui-même.
+  const coachId = profile?.coach_id && profile.coach_id !== user?.id ? profile.coach_id : null;
+  const { data } = useCoachBooking(coachId);
+
+  const bookingUrl = data?.bookingUrl ?? null;
+  if (!bookingUrl) return null;
+
+  const athleteName =
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") ||
+    profile?.full_name ||
+    "";
+
+  function handleScheduled() {
+    setOpen(false);
+    toast.success("Point réservé ✓ Tu reçois l'invitation avec le lien Meet par mail");
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          width: "100%", minHeight: 48, background: C.s1, borderRadius: 6,
+          padding: "14px 16px", border: "1px solid " + C.coach + "40",
+          textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <CalendarClock size={14} color={C.coach} style={{ flexShrink: 0 }} />
+          <span
+            style={{
+              fontSize: 12, fontWeight: 600, color: C.coach,
+              textTransform: "uppercase" as const, letterSpacing: "0.5px",
+            }}
+          >
+            Réserver mon point hebdo
+          </span>
+        </div>
+        <span style={{ fontSize: 11, color: C.coach, flexShrink: 0 }}>→</span>
+      </button>
+
+      {open && (
+        <BookingPanel
+          bookingUrl={bookingUrl}
+          coachName={data?.coachName ?? "ton coach"}
+          athleteName={athleteName}
+          athleteEmail={user?.email ?? null}
+          onClose={() => setOpen(false)}
+          onScheduled={handleScheduled}
+        />
+      )}
+    </>
   );
 }
 

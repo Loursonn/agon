@@ -37,6 +37,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-26-point-hebdo-reservation",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Tes athlètes réservent leur point hebdo sans passer par toi",
+    summary: "Colle ton lien Calendly une fois dans tes réglages : chaque athlète voit « Réserver mon point hebdo » dans son profil et choisit son créneau dans tes disponibilités.",
+    sections: [
+      {
+        title: "À faire une seule fois",
+        points: [
+          "Paramètres → « Lien de réservation du point hebdo » : colle l'adresse de ta page Calendly, par exemple https://calendly.com/ton-compte/30min, puis Enregistre.",
+          "Tant que le champ est vide, l'entrée reste invisible chez tes athlètes : rien ne s'affiche avant que tu sois prêt.",
+          "Pour retirer la réservation, vide le champ et enregistre.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Son profil affiche « Réserver mon point hebdo » ; il choisit son créneau sans quitter l'app.",
+          "Son nom et son e-mail sont déjà remplis : deux taps et c'est réservé.",
+          "Dès la réservation, il reçoit l'invitation avec le lien Meet par mail — et toi aussi, via Calendly.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-26-theme-du-jour",
     date: "2026-10-26",
     kind: "feature",

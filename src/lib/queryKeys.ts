@@ -97,4 +97,6 @@ export const QK = {
   dayThemesRange: (aid: string, from: string, to: string) =>
     ['day-themes', aid, 'range', from, to] as const,
   dayTheme:       (aid: string, date: string) => ['day-themes', aid, 'day', date] as const,
+  // ── Point hebdo : lien de réservation du coach ─────────────────────────────────
+  coachBooking:   (coachId: string) => ['coach-booking', coachId] as const,
 } as const;

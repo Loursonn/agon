@@ -20,6 +20,8 @@ export interface Profile {
   is_admin: boolean;
   is_certified_coach: boolean;
   is_hyrox_athlete: boolean;
+  /** Lien Calendly du coach pour le point hebdo (null = aucune réservation proposée) */
+  booking_url: string | null;
 }
 
 interface AuthContextType {
