@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { C } from "@/lib/theme";
+import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
+import { DayThemeBanner } from "@/features/shared/components/DayThemePill";
+import { indexDayThemesByDate, type DayThemeLike } from "@/lib/dayTheme";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useTodayWellness } from "@/features/shared/hooks/useTodayWellness";
@@ -132,9 +135,10 @@ interface DayPreviewSheetProps {
   onTestPress: (id: string) => void;
   competitionsByDate: Map<string, CompetitionDayCardData[]>;
   viewOnly?: boolean;
+  dayTheme?: DayThemeLike | null;
 }
 
-function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly }: DayPreviewSheetProps) {
+function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly, dayTheme }: DayPreviewSheetProps) {
   if (!day) return null;
   const date = new Date(day.date + "T12:00:00");
   const dateLabel = `${DAYS_FULL_FR[day.dow]} ${date.getDate()} ${MONTHS_FR[date.getMonth()]}`;
@@ -171,6 +175,10 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
         </DrawerHeader>
 
         <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* Hors du test `empty` : un jour sans séance peut très bien porter un
+              thème (« Repos complet »), et c'est justement là qu'il informe. */}
+          <DayThemeBanner theme={dayTheme} />
+
           {empty ? (
             <div style={{ textAlign: "center", padding: "24px 0", color: C.tx3, fontSize: 13 }}>
               Jour de repos — rien de prévu
@@ -819,6 +827,12 @@ export default function TodayPage() {
     { start: mondayISO, end: sundayISO },
   );
 
+  // Thèmes du jour posés par le coach, sur la semaine affichée : le bandeau
+  // d'aujourd'hui et la fiche d'un jour quelconque lisent le même index.
+  const { data: dayThemeRows = [] } = useDayThemesRange(athleteId ?? undefined, mondayISO, sundayISO);
+  const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
+  const todayTheme = dayThemesByDate[today] ?? null;
+
   const energyByDate = useMemo(() => {
     const m = new Map<string, UnifiedCalendarEvent[]>();
     for (const ev of calEvents) {
@@ -1189,6 +1203,16 @@ export default function TodayPage() {
             {todayComps.map((c) => (
               <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
             ))}
+          </div>
+        )}
+
+        {/* Thème du jour posé par le coach : il cadre la journée, donc il passe
+            avant la séance. Hors de la section « Séance du jour », qui se
+            court-circuite les jours de test ou de compétition — le thème, lui,
+            vaut tous les jours, repos compris. */}
+        {todayTheme && (
+          <div style={{ marginBottom: 20 }}>
+            <DayThemeBanner theme={todayTheme} />
           </div>
         )}
 
@@ -1792,6 +1816,7 @@ export default function TodayPage() {
         onAddActivity={(date) => setActivityDate(date)}
         onEditActivity={(f) => setEditActivity(f)}
         onTestPress={openTest}
+        dayTheme={selectedDay ? dayThemesByDate[selectedDay.date] ?? null : null}
       />
 
       {/* Energy session preview overlay */}

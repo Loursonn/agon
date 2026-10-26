@@ -24,6 +24,7 @@ import { AthleteChoicesPanel, AthleteMoveBadge } from "./AthleteChoicesPanel";
 import { ATHLETE_CHOICE_LABEL } from "@/lib/athleteChoices";
 import { formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps";
 import { IsoBadge } from "@/features/shared/components/IsoBadge";
+import { DayThemeEditor } from "./DayThemeEditor";
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -1142,6 +1143,9 @@ export function DayDetailsDrawer({
                   Journée libre
                 </div>
               )}
+
+              {/* Thème du jour — l'intention du coach, avant le détail des séances */}
+              <DayThemeEditor athleteId={athleteId} coachId={coachId} date={dateStr} />
 
               {workouts.length > 0 && (
                 <section>

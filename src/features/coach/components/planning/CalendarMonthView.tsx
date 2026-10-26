@@ -41,6 +41,9 @@ import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalend
 import { useTestDefinitions } from "@/features/shared/hooks/tests/useTestDefinitions";
 import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER } from "@/features/shared/types/tests";
 import type { EnergySessionRow } from "@/types/energy";
+import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
+import { DayThemePill } from "@/features/shared/components/DayThemePill";
+import { dayThemeFullLabel, indexDayThemesByDate, type DayThemeLike } from "@/lib/dayTheme";
 import { DayDetailsDrawer } from "./DayDetailsDrawer";
 import { QuickAddDialog } from "./QuickAddDialog";
 import { buildProjectionCoverage, isProjectionCovered } from "@/lib/planningProjection";
@@ -331,6 +334,7 @@ function DroppableDay({
   coachId,
   wellnessLogged,
   nutritionLogged,
+  dayTheme,
 }: {
   date: Date;
   events: CalEvent[];
@@ -342,6 +346,7 @@ function DroppableDay({
   coachId: string;
   wellnessLogged: boolean;
   nutritionLogged: boolean;
+  dayTheme?: DayThemeLike | null;
 }) {
   const dateStr = format(date, "yyyy-MM-dd");
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
@@ -379,19 +384,25 @@ function DroppableDay({
         opacity: 1,
       }}
     >
-      {/* Day number */}
-      <div
-        style={{
-          width: 24, height: 24, borderRadius: "50%",
-          background: today ? C.ac : "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 11, fontWeight: today ? 800 : 500,
-          color: today ? "#fff" : isCurrentMonth ? C.tx2 : C.tx3,
-          alignSelf: "flex-start",
-          flexShrink: 0,
-        }}
-      >
-        {format(date, "d")}
+      {/* Numéro du jour + thème du jour.
+          La pastille partage la ligne du numéro : la case fait 110 px en
+          `overflow: hidden`, une ligne de plus chasserait un événement. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        <div
+          style={{
+            width: 24, height: 24, borderRadius: "50%",
+            background: today ? C.ac : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: today ? 800 : 500,
+            color: today ? "#fff" : isCurrentMonth ? C.tx2 : C.tx3,
+            flexShrink: 0,
+          }}
+        >
+          {format(date, "d")}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />
+        </div>
       </div>
 
       {/* Jour de compétition — bandeau en tête du jour */}
@@ -803,6 +814,9 @@ export function CalendarMonthView({
 
   const qc = useQueryClient();
   const { data: rawEvents = [], isLoading } = useUnifiedCalendar(athleteId, monthRange);
+  // Un seul appel pour toute la grille, indexé par date : la case ne requête pas.
+  const { data: dayThemeRows = [] } = useDayThemesRange(athleteId, monthRange.start, monthRange.end);
+  const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
   const realEvents = useMemo(() => rawEvents.map(toCalEvent), [rawEvents]);
   const { mutate: assignWorkout }       = useAssignWorkout();
   const { mutate: reschedule }          = useRescheduleWorkout();
@@ -1252,6 +1266,7 @@ export function CalendarMonthView({
                       coachId={coachId}
                       wellnessLogged={wLogged}
                       nutritionLogged={nLogged}
+                      dayTheme={dayThemesByDate[dateStr] ?? null}
                     />
                   );
                 })}

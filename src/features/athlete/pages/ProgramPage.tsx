@@ -5,6 +5,9 @@ import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, Tr
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
+import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
+import { DayThemePill } from "@/features/shared/components/DayThemePill";
+import { dayThemeFullLabel, indexDayThemesByDate, isDayThemeEmpty, type DayThemeLike } from "@/lib/dayTheme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActivePlan } from "@/features/shared/hooks/useActivePlan";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
@@ -1042,6 +1045,7 @@ function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPres
 function DayRow({
   day, today, onSessionPress, onReschedule, onTestPress,
   freeActivities, onAddActivity, onEditActivity, onAddCompetition, viewOnly,
+  dayTheme,
 }: {
   day: WeekDay;
   today: string;
@@ -1054,6 +1058,7 @@ function DayRow({
   /** null = l'athlète n'a pas de coach (compétition impossible à rattacher) */
   onAddCompetition: ((date: string) => void) | null;
   viewOnly: boolean;
+  dayTheme?: DayThemeLike | null;
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
@@ -1102,6 +1107,13 @@ function DayRow({
               {isEmpty
                 ? (isPast ? "Repos" : "Aucune séance")
                 : `${day.sessions.length} séance${day.sessions.length > 1 ? "s" : ""}`}
+            </div>
+          )}
+          {/* Thème du coach, sous le décompte : il qualifie la journée même
+              quand aucune séance n'y est posée. */}
+          {!isDayThemeEmpty(dayTheme) && (
+            <div style={{ marginTop: 3, display: "flex" }}>
+              <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />
             </div>
           )}
         </div>
@@ -1242,6 +1254,18 @@ function ProgramSessionsView() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   }, []);
   const weekMondayISO = useMemo(localMonday, []);
+
+  // Thèmes du coach sur la semaine réellement affichée : les bornes viennent de
+  // `weekDays`, pas du lundi courant, sinon la navigation ±1 semaine montrerait
+  // les thèmes de la semaine en cours sur une autre semaine.
+  const weekBounds = useMemo(() => {
+    const dates = (data?.weekDays ?? []).map((d) => d.date).sort();
+    return dates.length ? { start: dates[0], end: dates[dates.length - 1] } : null;
+  }, [data?.weekDays]);
+  const { data: dayThemeRows = [] } = useDayThemesRange(
+    athleteId ?? undefined, weekBounds?.start, weekBounds?.end,
+  );
+  const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -1419,6 +1443,7 @@ function ProgramSessionsView() {
                     onEditActivity={setEditActivity}
                     onAddCompetition={myCoachId ? setCompDate : null}
                     viewOnly={viewOnly}
+                    dayTheme={dayThemesByDate[day.date] ?? null}
                   />
                 ))}
               </div>

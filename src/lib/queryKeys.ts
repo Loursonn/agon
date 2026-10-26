@@ -88,4 +88,13 @@ export const QK = {
   // ── Nouveautés de l'app (vue coach) ───────────────────────────────────────────
   appUpdateReads:  (uid: string) => ['app-update-reads', uid] as const,
   appUpdateStats:  ['app-update-stats'] as const,
+  // ── Thème du jour ─────────────────────────────────────────────────────────────
+  // Deux granularités : une fenêtre (vues calendrier) et un jour (drawer,
+  // bandeau athlète). Le préfixe commun rend l'invalidation globale possible
+  // après une écriture, sans connaître la fenêtre affichée.
+  dayThemesAll:   ['day-themes'] as const,
+  dayThemes:      (aid: string) => ['day-themes', aid] as const,
+  dayThemesRange: (aid: string, from: string, to: string) =>
+    ['day-themes', aid, 'range', from, to] as const,
+  dayTheme:       (aid: string, date: string) => ['day-themes', aid, 'day', date] as const,
 } as const;

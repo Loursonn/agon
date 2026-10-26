@@ -476,6 +476,63 @@ export type Database = {
           },
         ]
       }
+      day_themes: {
+        Row: {
+          athlete_id: string
+          coach_id: string
+          color: string
+          created_at: string
+          date: string
+          dominante: string | null
+          id: string
+          intensity: string | null
+          label: string
+          note: string
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          coach_id: string
+          color?: string
+          created_at?: string
+          date: string
+          dominante?: string | null
+          id?: string
+          intensity?: string | null
+          label?: string
+          note?: string
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          coach_id?: string
+          color?: string
+          created_at?: string
+          date?: string
+          dominante?: string | null
+          id?: string
+          intensity?: string | null
+          label?: string
+          note?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "day_themes_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "day_themes_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doc_assignments: {
         Row: {
           assigned_by: string | null

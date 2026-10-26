@@ -37,6 +37,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-26-theme-du-jour",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Donne un thème à une journée, l'athlète le lit avant sa séance",
+    summary: "« Jambes lourdes », « Seuil », « Repos complet » : une intention posée sur une date, visible dans ton calendrier et sur l'accueil de l'athlète.",
+    sections: [
+      {
+        title: "Comment le poser",
+        points: [
+          "Dans le planning, clique un jour : « Thème du jour » est en tête du détail, avant les séances.",
+          "Un libellé libre de 40 caractères max, et deux séries de raccourcis si tu veux aller vite : intensité (Hard, Moyen, Easy, Récup active, Repos) et dominante (Force, Puissance-vitesse, Volume, Aérobie, Seuil, Spécifique HYROX, Technique, Mixte).",
+          "Dix couleurs au choix. Cliquer une intensité en propose une, mais ta couleur reste la tienne si tu l'as déjà choisie.",
+          "Une note facultative pour ce que l'athlète doit garder en tête ce jour-là.",
+        ],
+      },
+      {
+        title: "Où il apparaît",
+        points: [
+          "Dans ton calendrier mensuel : une pastille colorée à côté du numéro du jour, sans rien chasser de la case.",
+          "Chez l'athlète : un bandeau sur son accueil, dans la fiche d'une journée, et une pastille sur chaque jour de sa semaine.",
+          "Les jours de repos aussi : « Repos complet » est une consigne, pas une absence de consigne.",
+          "La couleur du texte s'adapte au fond choisi, pour que la pastille reste lisible même en jaune.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-26-blessures-detaillees",
     date: "2026-10-26",
     kind: "feature",
