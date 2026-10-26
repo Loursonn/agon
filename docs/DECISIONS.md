@@ -315,10 +315,21 @@ la protection silencieusement caduque le jour où un appelant oublie le champ.
 `hasConsent()` ensuite. Un identifiant transmis par le client n'est qu'une
 déclaration ; sans contrôle, il suffirait d'envoyer celui d'un athlète
 consentant pour contourner le refus d'un autre. L'appelant doit donc être
-l'athlète lui-même ou son coach. La relation coach/athlète n'est pas réécrite
-dans la fonction : on appelle `is_coach_of()` avec le jeton de l'appelant, donc
-sous ses propres droits — la définition reste celle qui sert déjà aux
-politiques RLS, et il n'y en a pas deux à maintenir.
+l'athlète lui-même ou son coach.
+
+**Pourquoi `canActForAthlete()` lit `profiles` au lieu d'appeler
+`is_coach_of()`**, qui exprime pourtant déjà cette relation : la fonction SQL
+est en `SECURITY INVOKER` et repose sur `auth.uid()`. L'appeler depuis une Edge
+Function suppose un client portant le jeton de l'appelant, donc une clé
+publiable disponible côté serveur. Or le projet est passé aux clés
+`sb_publishable_…`, et la présence de l'ancienne `SUPABASE_ANON_KEY` dans
+l'environnement des fonctions n'est pas vérifiable sans session réelle. Une
+règle d'autorisation adossée à une variable incertaine ne tombe pas en panne
+franchement : elle refuse tout le monde, et le message ment — « tu n'es pas le
+coach de cet athlète » pour une clé absente. On préfère ici une comparaison de
+colonne en `service_role`, déterministe, comme le fait déjà `unlink-athlete`.
+Le prix est une duplication de la règle ; il est payé consciemment contre un
+mode de panne trompeur sur un chemin d'autorisation.
 
 **Ce que ça ne couvre pas** : le prompt reste du texte libre saisi par le
 coach. On vérifie *qui* peut déclencher un traitement et *pour qui*, pas ce que
