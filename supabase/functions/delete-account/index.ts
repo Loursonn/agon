@@ -127,16 +127,20 @@ serve(async (req) => {
     const revocationErrors: string[] = [];
     const { data: connections, error: connError } = await admin
       .from("provider_connections")
+      // `athlete_id`, et non `user_id` : la colonne porte ce nom dans
+      // `provider_connections`. Écrit `user_id` ici, la requête échouait en
+      // 42703 et aucune révocation n'avait jamais lieu — un jeton fournisseur
+      // survivait à la suppression du compte, sans que rien ne le signale
+      // autrement qu'un avertissement dans la réponse.
       .select("provider")
-      .eq("user_id", user.id);
+      .eq("athlete_id", user.id);
 
     /*
-      La table n'existe pas encore tant que l'intégration des montres n'est pas
-      livrée (code 42P01). C'est un état attendu, pas une anomalie : on
-      n'encombre pas l'utilisateur d'un avertissement. Toute autre erreur est
-      signalée — « aucune connexion » et « je n'ai pas pu lire les connexions »
-      ne doivent pas se confondre, sinon un jeton resterait actif sans que
-      personne ne le sache.
+      Avant la livraison de l'intégration des montres, la table n'existait pas
+      (code 42P01) : la tolérance est conservée pour les environnements qui
+      n'ont pas encore la migration. Toute autre erreur est signalée — « aucune
+      connexion » et « je n'ai pas pu lire les connexions » ne doivent pas se
+      confondre, sinon un jeton resterait actif sans que personne ne le sache.
     */
     if (connError && connError.code !== "42P01") {
       revocationErrors.push(`lecture des connexions: ${connError.message}`);

@@ -337,4 +337,190 @@ quel ordre elle a décidé).
 
 ---
 
+## 2026-10 — Le code d'autorisation COROS revient sur une Edge Function, pas sur une page React
+
+**Décision** : le `redirect_uri` déclaré à COROS est
+`{SUPABASE_URL}/functions/v1/provider-coros-callback`, une fonction déployée en
+`verify_jwt = false`. Ce qui l'authentifie est le paramètre `state` : 256 bits
+d'aléatoire que nous seuls avons émis, stockés côté serveur, consommés une
+seule fois par `consume_oauth_state()` (un `DELETE ... RETURNING`), valables
+dix minutes.
+
+**Pourquoi** : COROS enregistre les clients en
+`token_endpoint_auth_method: "none"`. Il n'y a donc aucun `client_secret`, et
+toute la sécurité de l'échange tient au `code_verifier` PKCE. Si le retour se
+faisait sur une page de l'application, il faudrait soit envoyer le `verifier`
+au navigateur — ce qui annule PKCE, dont le principe est précisément que
+personne d'autre que l'initiateur ne le connaisse — soit renvoyer le `code`
+vers le serveur depuis le JavaScript, en le faisant au passage transiter par
+l'URL d'une page, l'historique du navigateur et tout outil de mesure
+d'audience présent.
+
+En faisant atterrir le `code` directement sur la fonction, ni le `code` ni le
+`verifier` ne touchent jamais notre code client. Le navigateur ne repart
+qu'avec une redirection et un mot sur le résultat.
+
+**Le prix à payer, et pourquoi il est acceptable** : la fonction est publique.
+D'où le `state` consommé en une seule opération SQL plutôt qu'un `select` suivi
+d'un `delete` — les Edge Functions sont sans état et concurrentes, et la
+version en deux temps laisse une fenêtre où deux callbacks simultanés
+réussissent tous les deux. Un appel sans `state` valide ne fait rien d'autre
+que rediriger vers l'interface, et les trois cas « inconnu », « déjà
+consommé » et « expiré » reçoivent volontairement la même réponse : les
+distinguer renseignerait quelqu'un qui tâtonne.
+
+---
+
+## 2026-10 — `provider-disconnect` ne croit le `userId` du corps que sur présentation de la clé service_role
+
+**Décision** : la fonction accepte deux appelants. L'athlète avec son jeton de
+session, et `delete-account` avec la clé `service_role`. Le `userId` transmis
+dans le corps n'est retenu que si le porteur est exactement
+`SUPABASE_SERVICE_ROLE_KEY` ; sinon l'identité déconnectée est celle du JWT et
+le corps est ignoré.
+
+**Pourquoi** : `delete-account` appelait déjà `provider-disconnect` avec
+`{ userId, provider, internal: true }`. Lire `userId` sans condition aurait
+donné à n'importe qui le pouvoir de déconnecter la montre de n'importe qui, la
+clé publiable suffisant à atteindre une Edge Function — exactement le trou
+qu'avaient `ai-program` et `athlete-insights` avant d'être bouchés. Et le
+drapeau `internal: true` n'entre pas dans la décision : une requête qui se
+déclare interne ne l'est pas pour autant.
+
+**Vérifié après déploiement** : un POST portant la clé publiable et
+`userId: "00000000-…"` répond 401.
+
+**Au passage** : `delete-account` lisait `provider_connections.user_id`, colonne
+qui n'existe pas — elle s'appelle `athlete_id`. La requête échouait en 42703,
+donc aucune révocation n'avait jamais lieu et un jeton fournisseur survivait à
+la suppression du compte. Corrigé. Une erreur tolérée « au cas où la table
+n'existe pas encore » masquait une erreur de nom : la tolérance au cas attendu
+avalait le cas anormal.
+
+---
+
+## 2026-10 — Les métadonnées OAuth de COROS sont vérifiées, pas seulement lues
+
+**Décision** : `fetchMetadata()` refuse de rendre un document dont l'`issuer`
+diffère de l'hôte appelé, dont un endpoint sort de cette origine, ou qui
+n'annonce pas `S256`.
+
+**Pourquoi** : `mcp.coros.com` est un routeur. Interrogé depuis l'Europe il
+renvoie des métadonnées dont l'`issuer` vaut `https://mcpeu.coros.com`, et
+plusieurs clients MCP rejettent la connexion pour « origin mismatch ». Le
+contrôle d'`issuer` transforme ce piège en message explicite au lieu d'un 401
+inexplicable. Le contrôle d'origine des endpoints empêche un document altéré de
+nous faire envoyer le `code` ailleurs. Et l'exigence de `S256` doit échouer
+bruyamment : se rabattre sur `plain` reviendrait à désactiver la seule
+protection d'un client sans secret.
+
+La région est celle **du compte de l'athlète**, pas la nôtre, et rien ne permet
+de la deviner avant qu'il se soit authentifié. Elle est donc demandée dans
+l'interface (Europe par défaut) et conservée dans `provider_connections.api_host`.
+Se tromper ne casse rien de définitif — l'autorisation échoue, on recommence.
+
+---
+
+## 2026-10 — Le `client_id` COROS vit en base, pas en variable d'environnement
+
+**Décision** : un client enregistré par hôte régional via l'enregistrement
+dynamique (RFC 7591), conservé dans `provider_oauth_clients`, créé à la volée
+au premier athlète qui se connecte sur cette région. `COROS_CLIENT_ID` a été
+retiré de `.env.example`.
+
+**Pourquoi** : il n'y a pas *un* `client_id`. Il y en a un par hôte (`mcpeu`,
+`mcpus`, `mcpcn`), et en faire des variables d'environnement obligerait à en
+gérer trois et à redéployer pour ajouter une région. À l'inverse,
+réenregistrer à chaque autorisation — ce que COROS accepte — créerait un client
+par connexion, sans moyen de savoir lequel appartient à qui le jour où il faut
+en révoquer un.
+
+Pas de colonne pour un secret dans cette table, et c'est volontaire : COROS
+n'en délivre pas. Prévoir la colonne laisserait croire le contraire.
+
+---
+
+## 2026-10 — Le consentement montre est demandé au moment de la connexion, pas à l'inscription
+
+**Décision** : le panneau « Montres & services connectés » demande l'accord
+`coros_sync` juste avant la redirection, avec le libellé exact archivé dans
+`user_consents.statement`, et l'enregistre **avant** de partir — la redirection
+n'a lieu qu'en cas de succès. `PrivacySection` n'affiche l'interrupteur
+`coros_sync` que si une décision existe déjà.
+
+**Pourquoi** : une case « synchroniser ma montre COROS » cochée à
+l'inscription, alors que l'athlète n'a aucun compte COROS relié, n'est pas un
+consentement éclairé — il ne sait ni ce qu'il autorise ni quand. Et dans
+l'ordre inverse (autoriser chez COROS puis enregistrer l'accord), le
+déclencheur `require_sync_consent` refuserait l'insertion au retour, laissant
+l'athlète avec une autorisation accordée chez COROS et un échec incompréhensible
+chez nous.
+
+**Ce que la déconnexion n'efface pas** : les activités déjà importées. Ce sont
+les données d'entraînement de l'athlète, pas celles du fournisseur. Les
+supprimer parce qu'il débranche sa montre lui ferait perdre son historique sans
+qu'il l'ait demandé — pour tout effacer, il y a la suppression de compte.
+L'interface le dit explicitement plutôt que de laisser deviner.
+
+Et quand COROS ne confirme pas la révocation, l'interface le dit aussi :
+« déconnecté côté Agon » n'est pas « l'accès est coupé », et masquer la
+différence donnerait à l'athlète une certitude qu'on n'a pas.
+
+---
+
+## 2026-10 — Les chiffres COROS viendront des fichiers FIT, pas des réponses MCP
+
+**Décision** : la synchronisation COROS lira les binaires FIT obtenus par
+`queryActivityFitFileDownloadUrls`. Les réponses des autres outils MCP sont
+stockées telles quelles dans `raw` et ne servent pas de source de vérité
+chiffrée. Conséquence sur l'ordre des chantiers : le parseur FIT devient une
+dépendance de la synchronisation, pas un chantier parallèle.
+
+**Pourquoi** : les outils MCP de COROS répondent **en prose**, pas en JSON.
+`querySportRecords` rend des lignes du genre
+`1. Sport(9807) — 2026-10-03 / Duration: 2:12:38 | Distance: 12.03 km`, et
+`getActivityDetail` rend ses métriques en texte sans identifiant ni date. Ce
+sont des réponses conçues pour être lues par un modèle de langage dans une
+conversation. Parser « 12.03 km » marche aujourd'hui et casse silencieusement
+le jour où un séparateur, une unité ou une traduction change. Un FIT est un
+format binaire versionné : il casse franchement ou pas du tout.
+
+`queryActivityFitFileDownloadUrls` accepte une plage de dates sans exiger
+d'identifiant d'activité, donc l'ingestion peut être pilotée par des URL — des
+jetons non ambigus — au lieu d'extraire des identifiants d'une phrase.
+
+**Contrainte à intégrer dans la conception, pas à découvrir après** : 50
+fichiers par utilisateur et par 24 h, 10 par appel. Un an d'historique
+représente plusieurs jours de rattrapage par lots. Le rattrapage doit donc être
+une tâche de fond reprenable qui retient où elle s'est arrêtée
+(`synced_through`), et l'athlète doit voir son historique se remplir
+progressivement plutôt que conclure que l'intégration ne marche pas.
+
+Les données quotidiennes (sommeil, VFC, FC de repos, stress) n'ont pas
+d'équivalent FIT et resteront en prose : raison supplémentaire de laisser
+`data_source_policies.ai_allowed = false` pour `coros`. On ne veut pas qu'un
+chiffre extrait d'une phrase par heuristique serve de base à un conseil.
+
+*Réserve* : ces formats viennent de la documentation (`coroslab/COROS-MCP`),
+pas d'une réponse observée — `/mcp` exige un jeton et aucun athlète n'est
+encore connecté. À confronter au réel dès la première connexion.
+
+---
+
+## 2026-10 — `provider-coros-connect` refuse de démarrer sans `APP_URL`
+
+**Décision** : si `APP_URL` n'est pas configuré, la fonction répond 503 avec un
+message lisible au lieu de construire l'URL d'autorisation.
+
+**Pourquoi** : `APP_URL` est l'adresse vers laquelle la fonction de retour
+renvoie l'athlète, et elle vient de la configuration du serveur — jamais d'un
+paramètre de requête, sous peine de faire de la fonction de retour une
+redirection ouverte. Sans elle, l'athlète s'authentifierait chez COROS,
+accorderait l'accès, puis atterrirait sur une adresse morte : autorisation bien
+accordée côté COROS, aucune trace visible côté Agon, aucune idée de ce qui a
+échoué. Refuser de partir est le seul comportement honnête — un bouton qui
+explique qu'il ne marche pas vaut mieux qu'un aller sans retour.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

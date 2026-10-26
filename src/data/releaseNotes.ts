@@ -37,6 +37,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-28-connexion-montre-coros",
+    date: "2026-10-28",
+    kind: "feature",
+    title: "Connexion d'une montre COROS",
+    summary: "Tes athlètes peuvent relier leur compte COROS depuis leur profil. La connexion, l'accord et la déconnexion sont en place ; la récupération automatique des séances suit.",
+    sections: [
+      {
+        title: "Ce que l'athlète voit",
+        points: [
+          "Un panneau « Montres & services connectés » dans son profil, avec un bouton pour relier son compte COROS.",
+          "Il choisit la région de son compte COROS (Europe par défaut). Se tromper n'a aucune conséquence : l'autorisation échoue et il recommence.",
+          "Il donne son accord au moment de la connexion, avec le texte exact de ce qu'il autorise — pas une case cochée des semaines plus tôt pour une montre qu'il n'avait pas encore reliée.",
+          "Il peut se déconnecter au même endroit, en un clic. L'accès est révoqué chez COROS, et ses séances déjà importées restent dans son historique.",
+        ],
+      },
+      {
+        title: "Ce qui reste à venir",
+        points: [
+          "La récupération automatique des séances arrive ensuite : elle lira les fichiers d'activité de la montre, pas les résumés en texte de COROS, pour que les chiffres ne dépendent pas d'une phrase qui peut changer de formulation.",
+          "COROS limite les téléchargements à 50 fichiers par athlète et par jour. Un historique d'un an se remplira donc sur plusieurs jours, progressivement.",
+          "Les données COROS ne sont pas transmises à l'IA pour l'instant : leurs conditions d'utilisation doivent encore être relues sur ce point précis.",
+          "Garmin suit la même mécanique, dès que leur programme développeur valide notre dossier.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-28-garde-fou-ia-et-retrait-consentement",
     date: "2026-10-28",
     kind: "fix",

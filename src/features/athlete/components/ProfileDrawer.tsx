@@ -18,6 +18,7 @@ import { useAthleteTrends, useAthleteInsights } from "@/features/shared/hooks/us
 import { TrendCard } from "@/features/athlete/components/profile/TrendCard";
 import { AppFeedbackSection } from "@/features/athlete/components/profile/AppFeedbackSection";
 import { PrivacySection } from "@/features/shared/components/PrivacySection";
+import { ConnectedServicesSection } from "@/features/shared/components/ConnectedServicesSection";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useAthleteRetours } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import type { TrendSummary } from "@/lib/athleteTrends";
@@ -321,6 +322,12 @@ export default function ProfileDrawer({ onClose }: Props) {
 
         {/* ── Retour sur l'app ── */}
         {!viewOnly && <AppFeedbackSection />}
+
+        {/* ── Montres & services connectés ──
+            Même raison de masquage qu'en dessous : connecter ou débrancher un
+            compte COROS engage l'athlète auprès d'un tiers, et un coach ne
+            peut pas consentir à sa place. */}
+        {!viewOnly && <ConnectedServicesSection />}
 
         {/* ── Confidentialité & données (consentements, export, suppression) ──
             Masqué en `viewOnly` : le coach qui consulte le profil d'un athlète

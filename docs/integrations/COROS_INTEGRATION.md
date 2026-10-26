@@ -123,16 +123,66 @@ Deux points de conception :
 - **Pull, pas push.** Contrairement à Garmin Starter, on interroge quand on
   veut. Un cron quotidien suffit : interroger plus souvent n'apporte rien à un
   coach qui regarde son tableau de bord le matin, et consomme du quota.
-- **L'historique est accessible** (`getActivityList` accepte une plage de
+- **L'historique est accessible** (`querySportRecords` accepte une plage de
   dates, défaut 7 jours). Contrairement à Garmin, on peut remonter le passé
-  d'un athlète dès sa connexion. Le téléchargement de FIT est plafonné à
-  10 fichiers par appel — donc un rattrapage d'historique se fait par lots
-  étalés, pas en une rafale.
+  d'un athlète dès sa connexion.
 
 Les cycles menstruels sont accessibles. **Ne pas les récupérer** : aucune
 fonctionnalité d'Agon ne s'en sert, et collecter une donnée de santé dont on
 n'a pas l'usage est exactement ce que la minimisation interdit. Si la donnée
 n'est pas demandée, elle n'a pas à être protégée.
+
+---
+
+## Ce que les outils renvoient réellement — et pourquoi ça change le plan
+
+Lecture de `docs/en/tools.md` du dépôt `coroslab/COROS-MCP`. Le nom des outils
+a d'abord été noté de travers ici : l'outil de liste s'appelle
+**`querySportRecords`**, pas `getActivityList`. Corrigé.
+
+Mais la vraie découverte est ailleurs : **les outils MCP répondent en prose,
+pas en JSON.** `querySportRecords` renvoie des lignes de la forme
+
+```
+1. Sport(9807) — 2026-10-03
+   Duration: 2:12:38 | Distance: 12.03 km
+```
+
+et `getActivityDetail` renvoie ses métriques en texte, **sans identifiant ni
+date**. Ce sont des réponses conçues pour être lues par un modèle de langage
+dans une conversation, pas parsées par un programme.
+
+Trois conséquences, dont une qui réordonne les chantiers :
+
+1. **Les chiffres doivent venir des fichiers FIT, pas du texte.** Parser
+   « 12.03 km » marche aujourd'hui et casse silencieusement le jour où COROS
+   change un séparateur, une unité ou une traduction. Un FIT est un format
+   binaire versionné : il casse franchement ou pas du tout.
+   `queryActivityFitFileDownloadUrls` accepte une plage de dates sans exiger
+   d'identifiant d'activité, donc l'ingestion peut être pilotée par les URL de
+   FIT — des jetons non ambigus — au lieu d'extraire des identifiants d'une
+   phrase.
+2. **Le parseur FIT (chantier J) devient une dépendance de la synchronisation
+   COROS**, et non un chantier parallèle. L'ordre change : J avant la moitié
+   « sync » de H. La moitié « OAuth » (connect, callback, disconnect) ne dépend
+   de rien et passe d'abord.
+3. **Quota : 50 fichiers par utilisateur et par 24 h**, 10 par appel. Un an
+   d'historique représente donc plusieurs jours de rattrapage par lots, pas une
+   rafale au moment de la connexion. Le rattrapage doit être une tâche de fond
+   reprenable, qui retient où elle s'est arrêtée (`synced_through`), et l'athlète
+   doit voir que son historique se remplit progressivement plutôt que de
+   conclure que l'intégration ne marche pas.
+
+Les données quotidiennes (sommeil, VFC, FC de repos, stress) **n'ont pas
+d'équivalent FIT** : elles ne sont disponibles qu'en prose. On les stockera
+telles quelles dans `provider_dailies.raw`, et c'est une raison de plus de
+laisser `data_source_policies.ai_allowed = false` pour `coros` : on ne veut pas
+qu'un chiffre extrait d'une phrase par heuristique serve de base à un conseil.
+
+> Réserve honnête : ces formats viennent de la documentation, pas d'une réponse
+> observée. `/mcp` exige un jeton, et aucun athlète n'est encore connecté. À
+> confronter au réel dès la première connexion — et si la prose s'avère être du
+> JSON, tant mieux, mais le plan ne doit pas en dépendre.
 
 ---
 
