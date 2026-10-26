@@ -37,6 +37,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-31-refus-ia-respecte-generateur",
+    date: "2026-10-31",
+    kind: "fix",
+    title: "Le refus de l'IA par un athlète bloque vraiment le générateur",
+    summary:
+      "Un athlète qui avait refusé le traitement de ses données par l'IA pouvait quand même voir un programme généré pour lui. Sa décision est maintenant vérifiée au moment de la génération, et plus seulement affichée dans son profil.",
+    sections: [
+      {
+        title: "Ce qui ne marchait pas",
+        points: [
+          "Le générateur IA et l'édition par conversation ne regardaient pas si l'athlète concerné avait accepté le traitement par IA. La case décochée dans son profil n'empêchait rien.",
+          "Corrigé : chaque demande indique désormais de quel athlète il s'agit, et elle est refusée s'il n'a pas donné son accord.",
+        ],
+      },
+      {
+        title: "Ce que tu verras",
+        points: [
+          "Si l'athlète a refusé, un message te le dit en clair et t'indique où il peut l'activer : son profil, section Confidentialité, « Programmation assistée par IA ». Tu n'as pas à deviner la cause.",
+          "Un accord donné puis retiré reprend effet immédiatement sur le générateur — aucune génération ne part entre-temps.",
+          "Lance le générateur depuis la fiche de l'athlète concerné : sans athlète sélectionné, la demande est refusée plutôt que traitée au hasard.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-30-vue-sorties-enregistrees",
     date: "2026-10-30",
     kind: "feature",

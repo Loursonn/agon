@@ -303,11 +303,28 @@ est tombé à 0 h »).
 pourront entrer dans ce prompt qu'en ajoutant explicitement un champ à
 `SafeTrendStats` — l'occasion forcée de vérifier `ai_eligible_sources`.
 
-**Limite connue, non traitée** : `ai-program` reçoit du coach un prompt en
-texte libre, construit depuis des champs qu'il a saisis lui-même, et sans
-identifiant d'athlète dans le corps de requête. Impossible d'y vérifier le
-consentement `ai_programming` de l'athlète concerné sans changer le contrat
-d'appel côté client. À traiter séparément.
+**Suite, sur `ai-program`** : la fonction recevait du coach un prompt en texte
+libre et aucun identifiant d'athlète. Elle ne pouvait donc vérifier aucun
+consentement — un coach générait un programme par IA pour un athlète qui avait
+refusé, et la case décochée ne protégeait de rien. Le contrat d'appel a été
+changé : `athleteId` est désormais obligatoire dans le corps de requête, et un
+identifiant absent vaut refus (400). Laisser passer en son absence aurait rendu
+la protection silencieusement caduque le jour où un appelant oublie le champ.
+
+**Pourquoi la vérification est en deux temps** : `canActForAthlete()` d'abord,
+`hasConsent()` ensuite. Un identifiant transmis par le client n'est qu'une
+déclaration ; sans contrôle, il suffirait d'envoyer celui d'un athlète
+consentant pour contourner le refus d'un autre. L'appelant doit donc être
+l'athlète lui-même ou son coach. La relation coach/athlète n'est pas réécrite
+dans la fonction : on appelle `is_coach_of()` avec le jeton de l'appelant, donc
+sous ses propres droits — la définition reste celle qui sert déjà aux
+politiques RLS, et il n'y en a pas deux à maintenir.
+
+**Ce que ça ne couvre pas** : le prompt reste du texte libre saisi par le
+coach. On vérifie *qui* peut déclencher un traitement et *pour qui*, pas ce que
+le coach choisit d'y écrire. Le filtrage par liste blanche d'`athlete-insights`
+n'a pas d'équivalent ici, parce que la consigne de programmation est, par
+nature, rédigée.
 
 ---
 

@@ -17,6 +17,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 export interface AuthedUser {
   id: string;
   email?: string;
+  /** Jeton de session présenté, requis pour rejouer les règles RLS en son nom. */
+  token: string;
 }
 
 /**
@@ -42,7 +44,38 @@ export async function requireUser(req: Request): Promise<AuthedUser> {
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user) throw new Error("Non autorisé");
 
-  return { id: data.user.id, email: data.user.email ?? undefined };
+  return { id: data.user.id, email: data.user.email ?? undefined, token };
+}
+
+/**
+ * Vrai si l'appelant a le droit d'agir pour cet athlète : lui-même, ou son
+ * coach.
+ *
+ * Sans cette vérification, un identifiant d'athlète transmis dans le corps de
+ * requête n'est qu'une déclaration : il suffirait d'y mettre celui d'un athlète
+ * consentant pour contourner le refus d'un autre.
+ *
+ * La règle « est le coach de » n'est pas réécrite ici. On appelle
+ * `is_coach_of()` avec le jeton de l'appelant, donc sous ses propres droits :
+ * la seule définition de la relation coach/athlète reste celle du schéma, et
+ * c'est elle qui sert déjà aux politiques RLS.
+ */
+export async function canActForAthlete(user: AuthedUser, athleteId: string): Promise<boolean> {
+  if (athleteId === user.id) return true;
+
+  const asCaller = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: `Bearer ${user.token}` } } },
+  );
+
+  const { data, error } = await asCaller.rpc("is_coach_of", { athlete_uuid: athleteId });
+  if (error) {
+    // Un identifiant malformé ou une panne de lecture ne vaut pas autorisation.
+    console.error("is_coach_of:", error.message);
+    return false;
+  }
+  return data === true;
 }
 
 /**

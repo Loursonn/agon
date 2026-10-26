@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { functionAuthHeaders } from "@/lib/functionAuth";
+import { aiProgramError } from "@/lib/aiProgramError";
 import { C } from "@/lib/theme";
 import { e1rm, parseReps, normalizeExName } from "@/lib/exercises";
 import { MTREE, getMC, mL, normPrimary, stC, ALL_BZ, INJ_STATUS } from "@/lib/muscles";
@@ -292,7 +293,7 @@ function WeeklyVolumeCard({exos,sets,sessions,weeksArr,tw,C}){
 
 const CHAT_AI_URL=`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-program`;
 
-function AIChatBar({exos,sessions,chatHistory,setChatHistory,onApply,onOpenChange,C}){
+function AIChatBar({exos,sessions,chatHistory,setChatHistory,onApply,onOpenChange,C,athleteId}){
   const[open,setOpen]=useState(false);
   useEffect(()=>{onOpenChange?.(open);},[open]);
   const[input,setInput]=useState("");
@@ -308,9 +309,9 @@ function AIChatBar({exos,sessions,chatHistory,setChatHistory,onApply,onOpenChang
     const newHistory=[...chatHistory,{role:"user",content:msg}];
     setChatHistory(newHistory);
     try{
-      const resp=await fetch(CHAT_AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify({mode:"chat_edit",currentProgram:exos,sessions,message:msg,conversationHistory:chatHistory})});
+      const resp=await fetch(CHAT_AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify({mode:"chat_edit",athleteId,currentProgram:exos,sessions,message:msg,conversationHistory:chatHistory})});
       const data=await resp.json();
-      if(!resp.ok)throw new Error(data.error||"Erreur serveur");
+      if(!resp.ok)throw aiProgramError(data.error);
       if(!data.sessions)throw new Error("Reponse invalide");
       const reply=data.rationale||"Modifications appliquées. Confirmez pour appliquer.";
       setChatHistory([...newHistory,{role:"assistant",content:reply}]);

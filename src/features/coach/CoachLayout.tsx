@@ -30,7 +30,7 @@ export default function CoachLayout({ onSwitchMode, children }: CoachLayoutProps
     showNewBlock, setShowNewBlock, showBlockHistory, setShowBlockHistory,
     blockHistory, setBlockHistory,
     archiveAndNewBlock, sessions, chatHistory, setChatHistory,
-    applyAIEdit, aiChatOpen, setAiChatOpen, exos,
+    applyAIEdit, aiChatOpen, setAiChatOpen, exos, athleteId,
   } = useAthleteContext();
 
   // Derive active tab from URL
@@ -132,7 +132,7 @@ export default function CoachLayout({ onSwitchMode, children }: CoachLayoutProps
         />
       )}
       {activeTab === "prog" && sessions.length > 0 && (
-        <AIChatBar exos={exos} sessions={sessions} chatHistory={chatHistory} setChatHistory={setChatHistory} onApply={applyAIEdit} onOpenChange={setAiChatOpen} C={C} />
+        <AIChatBar exos={exos} sessions={sessions} chatHistory={chatHistory} setChatHistory={setChatHistory} onApply={applyAIEdit} onOpenChange={setAiChatOpen} C={C} athleteId={athleteId} />
       )}
     </>
   );

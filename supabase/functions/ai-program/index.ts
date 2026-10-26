@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { requireUser } from "../_shared/auth.ts";
+import { canActForAthlete, hasConsent, requireUser } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 /**
  * Formes des données envoyées par le client. Le corps de requête sort de
@@ -59,19 +62,36 @@ serve(async (req) => {
       jusqu'ici appelable sans compte : la clé anonyme suffisait, et elle est
       publique par nature puisqu'elle figure dans le bundle JavaScript. Le
       quota Gemini était donc consommable par n'importe qui.
-
-      Le consentement `ai_programming` n'est pas exigé ici : l'appelant est le
-      coach, alors que les données traitées sont celles de l'athlète. Vérifier
-      le consentement du coach n'aurait aucun sens. Le filtrage par athlète est
-      traité en amont, côté client, au moment de la constitution du prompt.
     */
-    await requireUser(req);
+    const user = await requireUser(req);
+
+    const body = await req.json();
+    const { mode, prompt, imageBase64, filesData, sessions, targetSessions, currentProgram, conversationHistory, message, athleteId } = body;
+
+    /*
+      Le consentement porte sur l'athlète dont on traite les données, pas sur
+      le coach qui tape la demande. D'où `athleteId` dans le corps : sans lui,
+      la fonction n'avait personne à qui demander, et la case décochée dans
+      l'interface ne protégeait de rien côté serveur.
+
+      Un identifiant absent est un refus, pas un cas à laisser passer : sinon
+      le jour où un appelant oublie le champ, le refus de l'athlète
+      redevient décoratif sans que personne ne le remarque.
+    */
+    if (typeof athleteId !== "string" || !athleteId) {
+      return json({ error: "athlete_absent" }, 400);
+    }
+    // Vérifié avant le consentement : un identifiant qu'on ne peut pas réclamer
+    // serait sinon un moyen d'emprunter celui d'un athlète consentant.
+    if (!(await canActForAthlete(user, athleteId))) {
+      return json({ error: "athlete_non_autorise" }, 403);
+    }
+    if (!(await hasConsent(athleteId, "ai_programming"))) {
+      return json({ error: "consentement_ia_absent" }, 403);
+    }
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
-
-    const body = await req.json();
-    const { mode, prompt, imageBase64, filesData, sessions, targetSessions, currentProgram, conversationHistory, message } = body;
 
     const sessionsList: SessionInfo[] = sessions && Array.isArray(sessions) && sessions.length > 0
       ? sessions
