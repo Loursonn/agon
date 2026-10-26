@@ -13,6 +13,7 @@ import {
   useConnectCoros,
   useDisconnectProvider,
   useProviderConnections,
+  useSyncCoros,
   type CorosRegion,
   type ProviderConnection,
 } from "@/features/shared/hooks/useProviderConnections";
@@ -84,12 +85,16 @@ const OUTCOMES: Record<string, { kind: "success" | "warning" | "error"; title: s
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
+/*
+  Les quatre états de `provider_status`, et rien d'autre. La version précédente
+  inventait `expired` et `error` et oubliait `needs_reauth` — donc le seul état
+  qui demande une action de l'athlète s'affichait comme « undefined ».
+*/
 const STATUS_COPY: Record<ProviderConnection["status"], { label: string; tone: "ok" | "warn" | "bad" }> = {
   active: { label: "Connecté", tone: "ok" },
-  expired: { label: "Autorisation expirée", tone: "warn" },
-  revoked: { label: "Accès révoqué", tone: "bad" },
+  needs_reauth: { label: "Reconnexion nécessaire", tone: "warn" },
   consent_withdrawn: { label: "Accord retiré", tone: "bad" },
-  error: { label: "En erreur", tone: "bad" },
+  revoked: { label: "Accès révoqué", tone: "bad" },
 };
 
 export function ConnectedServicesSection() {
@@ -165,12 +170,44 @@ export function ConnectedServicesSection() {
   );
 }
 
-/** Ligne COROS : connecter, surveiller, déconnecter. */
+/** Choix de la région du compte COROS, à la connexion comme à la reconnexion. */
+function RegionPicker({
+  region,
+  onChange,
+}: {
+  region: CorosRegion;
+  onChange: (r: CorosRegion) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor="coros-region" style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 6 }}>
+        Région de ton compte COROS
+      </label>
+      <select
+        id="coros-region"
+        value={region}
+        onChange={(e) => onChange(e.target.value as CorosRegion)}
+        style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit" }}
+      >
+        {COROS_REGIONS.map((r) => (
+          <option key={r.value} value={r.value}>{r.label}</option>
+        ))}
+      </select>
+      <div style={{ fontSize: 11, color: C.tx3, marginTop: 6, lineHeight: 1.45 }}>
+        Celle où tu as créé ton compte COROS. En cas d'erreur, l'autorisation échoue sans
+        conséquence et tu peux recommencer.
+      </div>
+    </div>
+  );
+}
+
+/** Ligne COROS : connecter, surveiller, synchroniser, déconnecter. */
 function CorosRow({ connection }: { connection: ProviderConnection | undefined }) {
   const { data: consents } = useConsents();
   const setConsent = useSetConsent();
   const connect = useConnectCoros();
   const disconnect = useDisconnectProvider();
+  const sync = useSyncCoros();
 
   const [region, setRegion] = useState<CorosRegion>("eu");
   const [accepte, setAccepte] = useState(false);
@@ -206,6 +243,41 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
       return;
     }
     demarrer();
+  };
+
+  /*
+    Le compte rendu est affiché tel quel, refus compris. « 12 activités
+    importées » sans mention des 3 fichiers illisibles laisse croire à un
+    succès complet, et l'athlète cherche ensuite pourquoi une sortie manque.
+  */
+  const synchroniser = () => {
+    sync.mutate(undefined, {
+      onSuccess: (r) => {
+        if (!r) {
+          toast.success("Synchronisation lancée");
+          return;
+        }
+        if (r.error) {
+          toast.error("Synchronisation interrompue", { description: r.error });
+          return;
+        }
+
+        const parts: string[] = [];
+        if (r.imported > 0) parts.push(`${r.imported} activité${r.imported > 1 ? "s" : ""} importée${r.imported > 1 ? "s" : ""}`);
+        if (r.duplicates > 0) parts.push(`${r.duplicates} déjà connue${r.duplicates > 1 ? "s" : ""}`);
+        if (r.dailies > 0) parts.push(`${r.dailies} journée${r.dailies > 1 ? "s" : ""} de données de santé`);
+        if (r.rejected.length > 0) parts.push(`${r.rejected.length} fichier${r.rejected.length > 1 ? "s" : ""} non lu${r.rejected.length > 1 ? "s" : ""}`);
+
+        if (parts.length === 0) {
+          toast.success("Déjà à jour", { description: "Aucune nouvelle activité chez COROS." });
+          return;
+        }
+        toast[r.rejected.length > 0 ? "warning" : "success"]("Synchronisation terminée", {
+          description: parts.join(" · "),
+        });
+      },
+      onError: (e) => toast.error("Synchronisation impossible", { description: e.message }),
+    });
   };
 
   const couper = () => {
@@ -256,6 +328,49 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
           </div>
         )}
 
+        {connection.status !== "active" && (
+          /*
+            Le choix de région est reproposé à la reconnexion. L'interface ne lit
+            pas `api_host` — l'athlète n'a rien à faire d'un hôte régional — donc
+            au moment de reconnecter, rien ne dit où est son compte. Garder le
+            défaut européen en silence ferait échouer chaque reconnexion d'un
+            athlète américain, sans que la cause soit visible nulle part.
+          */
+          <RegionPicker region={region} onChange={setRegion} />
+        )}
+
+        {connection.status === "active" ? (
+          <>
+            <button
+              onClick={synchroniser}
+              disabled={sync.isPending}
+              style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.g + "40", background: C.gS, color: C.g, fontSize: 12, fontWeight: 600, cursor: sync.isPending ? "wait" : "pointer", fontFamily: "inherit" }}
+            >
+              {sync.isPending ? "Synchronisation…" : "Synchroniser maintenant"}
+            </button>
+            <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+              La synchronisation a lieu automatiquement chaque nuit. COROS limite le nombre de
+              fichiers téléchargeables par jour : un historique long se remplit donc sur plusieurs
+              jours, par tranches.
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={lancer}
+              disabled={busy}
+              style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.o + "40", background: C.s2, color: C.o, fontSize: 12, fontWeight: 600, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}
+            >
+              {busy ? "Redirection vers COROS…" : "Reconnecter mon compte COROS"}
+            </button>
+            <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+              {connection.status === "consent_withdrawn"
+                ? "Tu as retiré ton accord : la synchronisation est arrêtée. La reconnecter le redonnera."
+                : "COROS n'accepte plus notre autorisation. Reconnecter ton compte relance la synchronisation là où elle s'est arrêtée."}
+            </div>
+          </>
+        )}
+
         <button
           onClick={couper}
           disabled={disconnect.isPending}
@@ -278,25 +393,7 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
         indicateurs de récupération, et les partage avec ton coach.
       </div>
 
-      <div>
-        <label htmlFor="coros-region" style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 6 }}>
-          Région de ton compte COROS
-        </label>
-        <select
-          id="coros-region"
-          value={region}
-          onChange={(e) => setRegion(e.target.value as CorosRegion)}
-          style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit" }}
-        >
-          {COROS_REGIONS.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
-        <div style={{ fontSize: 11, color: C.tx3, marginTop: 6, lineHeight: 1.45 }}>
-          Celle où tu as créé ton compte COROS. En cas d'erreur, l'autorisation échoue sans
-          conséquence et tu peux recommencer.
-        </div>
-      </div>
+      <RegionPicker region={region} onChange={setRegion} />
 
       {/* ── Accord, demandé au moment où il sert ── */}
       {!consentGranted && (

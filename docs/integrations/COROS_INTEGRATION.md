@@ -186,6 +186,59 @@ qu'un chiffre extrait d'une phrase par heuristique serve de base à un conseil.
 
 ---
 
+## Ce qui est implémenté
+
+| Pièce | Rôle |
+|---|---|
+| `_shared/coros.ts` | protocole COROS : hôtes régionaux, métadonnées vérifiées, PKCE, DCR, jetons, révocation, noms d'outils, quotas, fenêtres de dates |
+| `_shared/mcp.ts` | transport MCP « streamable HTTP » : JSON-RPC, session par en-tête, corps JSON **ou** SSE |
+| `_shared/activityFiles/` | décodeur FIT sans dépendance, partagé avec le navigateur via l'alias `@shared` |
+| `provider-coros-connect` | construit l'URL d'autorisation ; refuse sans `APP_URL` |
+| `provider-coros-callback` | reçoit le code, échange, écrit les jetons ; `verify_jwt = false` |
+| `provider-coros-sync` | rafraîchit le jeton, liste les FIT, télécharge, décode, insère ; stocke la santé en prose |
+| `provider-disconnect` | révoque chez COROS puis supprime la connexion |
+| `trigger_coros_sync()` + cron `coros-sync` | déclenche la synchronisation à 3 h 40 |
+
+### Le transport MCP, et ses deux pièges
+
+`/mcp` parle JSON-RPC 2.0, pas REST. Deux choses qu'un client naïf rate :
+
+1. **La réponse peut être du JSON ou du SSE** — le serveur choisit. Un client
+   qui se contente de `res.json()` marche en test et casse le jour où le serveur
+   décide de streamer. Il faut aussi annoncer les deux dans `Accept`, sous peine
+   de 406 sur certaines implémentations.
+2. **La session est portée par l'en-tête `Mcp-Session-Id`**, émis par
+   `initialize` et à renvoyer sur chaque appel suivant. Sans lui, 404 sur une
+   session que le serveur ne reconnaît plus. Et `notifications/initialized` doit
+   être envoyée après `initialize`, sans `id` — lui en donner un ferait attendre
+   une réponse qui ne vient jamais.
+
+### Le rattrapage d'historique
+
+Le quota (50 fichiers / athlète / 24 h, 10 par appel) impose d'avancer par
+fenêtres datées : 30 jours, resserrées par moitié jusqu'à tenir dans le budget
+restant, et `synced_through` n'avance que si la fenêtre a été traitée en entier.
+Lister est gratuit, télécharger est compté — d'où le choix de relister plus
+étroit plutôt que de tronquer une liste d'URL dont on ne connaît pas les dates.
+Détail du raisonnement dans `docs/DECISIONS.md`.
+
+### Réserve toujours ouverte
+
+Les noms d'outils et le format de leurs réponses viennent encore de la
+documentation, pas d'une réponse observée : `/mcp` exige un jeton et aucun
+athlète n'est connecté. D'où la résolution des noms contre `tools/list` à chaque
+exécution, et la journalisation de la liste obtenue. **À la première connexion
+réelle, relire ces journaux et remplacer cette section par ce qui a été vu.**
+La documentation s'est déjà révélée fausse une fois (`getActivityList` au lieu
+de `querySportRecords`) avant même la première requête.
+
+Restent non vérifiés en particulier : le nom de l'outil de données quotidiennes
+(`queryDailyActivity` est une hypothèse, rattrapée par le motif `/daily|sleep/`),
+les noms des paramètres de plage de dates (`startDate` / `endDate`), et la forme
+exacte des URL de téléchargement.
+
+---
+
 ## Conditions d'utilisation
 
 À lire avant de livrer : <https://coros.com/terms> et

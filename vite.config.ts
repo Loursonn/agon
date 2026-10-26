@@ -21,9 +21,9 @@ export default defineConfig(() => ({
       // l'écart entre un import manuel et une synchronisation automatique du
       // *même* fichier qui devient impossible à expliquer.
       //
-      // Seul `activityFiles/` est portable. Les autres modules de `_shared`
-      // (`coros.ts`, `auth.ts`) s'appuient sur `Deno` : joignables par cet
-      // alias, mais ils casseraient au build.
+      // `activityFiles/`, `coros.ts` et `mcp.ts` sont sans dépendance, donc
+      // portables. `auth.ts` importe depuis esm.sh et s'appuie sur `Deno` :
+      // joignable par cet alias, mais il casserait au build.
       "@shared": path.resolve(__dirname, "./supabase/functions/_shared"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],

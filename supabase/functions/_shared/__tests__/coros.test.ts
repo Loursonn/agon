@@ -12,11 +12,15 @@ import {
   COROS_HOSTS,
   COROS_SCOPES,
   createPkce,
+  daysBetween,
   exchangeCode,
+  extractFitUrls,
   fetchMetadata,
+  planFitWindow,
   randomToken,
   resolveRegion,
   revokeToken,
+  shiftDay,
 } from "../coros";
 
 const EU = COROS_HOSTS.eu;
@@ -241,5 +245,128 @@ describe("revokeToken", () => {
     const sansRevoke = metadata({ revocation_endpoint: undefined });
     expect(await revokeToken(sansRevoke, { token: "t", clientId: "c" })).toBe(false);
     expect(fn).not.toHaveBeenCalled();
+  });
+});
+
+// ───────────────────────── Arithmétique des jours ────────────────────────────
+
+describe("shiftDay / daysBetween", () => {
+  it("avance et recule d'un jour", () => {
+    expect(shiftDay("2026-10-26", 1)).toBe("2026-10-27");
+    expect(shiftDay("2026-10-26", -1)).toBe("2026-10-25");
+  });
+
+  it("franchit un changement de mois et une année bissextile", () => {
+    expect(shiftDay("2026-10-31", 1)).toBe("2026-11-01");
+    expect(shiftDay("2024-02-28", 1)).toBe("2024-02-29");
+    expect(shiftDay("2026-01-01", -1)).toBe("2025-12-31");
+  });
+
+  it("ne bouge pas sur un changement d'heure", () => {
+    /*
+      Le passage à l'heure d'hiver en Europe a lieu dans la nuit du 25 octobre
+      2026. Calculer ces dates en heure locale ferait tomber un décalage de
+      « un jour » sur 23 ou 25 heures, et un curseur de synchronisation
+      reculerait ou sauterait une journée une fois par an. Tout est en UTC.
+    */
+    expect(shiftDay("2026-10-24", 1)).toBe("2026-10-25");
+    expect(shiftDay("2026-10-25", 1)).toBe("2026-10-26");
+    expect(daysBetween("2026-10-24", "2026-10-26")).toBe(2);
+  });
+
+  it("compte les jours dans les deux sens", () => {
+    expect(daysBetween("2026-10-01", "2026-10-31")).toBe(30);
+    expect(daysBetween("2026-10-31", "2026-10-01")).toBe(-30);
+    expect(daysBetween("2026-10-26", "2026-10-26")).toBe(0);
+  });
+});
+
+describe("planFitWindow", () => {
+  it("borne la fenêtre à la largeur demandée", () => {
+    // 30 jours à partir du 1er, donc jusqu'au 30 inclus — pas au 31.
+    expect(planFitWindow("2026-01-01", "2026-12-31", 30)).toEqual({
+      from: "2026-01-01",
+      to: "2026-01-30",
+    });
+  });
+
+  it("ne dépasse jamais aujourd'hui", () => {
+    expect(planFitWindow("2026-10-20", "2026-10-26", 30)).toEqual({
+      from: "2026-10-20",
+      to: "2026-10-26",
+    });
+  });
+
+  it("accepte une fenêtre d'un seul jour", () => {
+    expect(planFitWindow("2026-10-26", "2026-10-26", 30)).toEqual({
+      from: "2026-10-26",
+      to: "2026-10-26",
+    });
+    expect(planFitWindow("2026-10-01", "2026-12-31", 1)).toEqual({
+      from: "2026-10-01",
+      to: "2026-10-01",
+    });
+  });
+
+  it("rend null quand le curseur a dépassé aujourd'hui", () => {
+    // Le cas normal d'une synchronisation à jour : il n'y a rien à demander, et
+    // surtout pas une plage dans le futur.
+    expect(planFitWindow("2026-10-27", "2026-10-26", 30)).toBeNull();
+  });
+});
+
+describe("extractFitUrls", () => {
+  it("trouve les URL dans de la prose", () => {
+    const text = [
+      "Voici les fichiers disponibles :",
+      "1. Sport(9807) — 2026-10-03 : https://s3.coros.com/fit/abc123.fit",
+      "2. Sport(100) — 2026-10-05 : https://s3.coros.com/fit/def456.fit",
+    ].join("\n");
+    expect(extractFitUrls(text)).toEqual([
+      "https://s3.coros.com/fit/abc123.fit",
+      "https://s3.coros.com/fit/def456.fit",
+    ]);
+  });
+
+  it("détache la ponctuation finale de la phrase", () => {
+    // Dans un texte destiné à être lu, l'URL est suivie d'un point. Le garder
+    // produirait un 404 sur chaque fichier.
+    expect(extractFitUrls("Télécharge https://x.coros.com/a.fit.")).toEqual([
+      "https://x.coros.com/a.fit",
+    ]);
+  });
+
+  it("déduplique en conservant l'ordre", () => {
+    /*
+      Une même activité peut apparaître dans un résumé puis dans une liste.
+      Télécharger deux fois le même fichier consommerait deux unités d'un quota
+      de 50 par jour.
+    */
+    const text = "https://x.coros.com/b.fit et https://x.coros.com/a.fit et https://x.coros.com/b.fit";
+    expect(extractFitUrls(text)).toEqual([
+      "https://x.coros.com/b.fit",
+      "https://x.coros.com/a.fit",
+    ]);
+  });
+
+  it("garde les URL présignées avec paramètres de requête", () => {
+    const url = "https://s3.eu.amazonaws.com/coros/fit/9807.fit?X-Amz-Signature=deadbeef&X-Amz-Expires=3600";
+    expect(extractFitUrls(`Lien : ${url}`)).toEqual([url]);
+  });
+
+  it("écarte les liens qui ne concernent pas un fichier", () => {
+    // La documentation et les pages d'aide se retrouvent dans les réponses des
+    // outils : les télécharger gâcherait du quota.
+    expect(extractFitUrls("Voir https://support.coros.com/aide pour en savoir plus")).toEqual([]);
+  });
+
+  it("rend une liste vide sur un texte sans URL", () => {
+    expect(extractFitUrls("Aucune activité sur cette période.")).toEqual([]);
+  });
+
+  it("ne confond pas une URL avec le texte qui la suit entre parenthèses", () => {
+    expect(extractFitUrls("Fichier (https://x.coros.com/a.fit) du 3 octobre")).toEqual([
+      "https://x.coros.com/a.fit",
+    ]);
   });
 });

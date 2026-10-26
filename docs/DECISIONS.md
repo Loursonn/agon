@@ -523,4 +523,204 @@ explique qu'il ne marche pas vaut mieux qu'un aller sans retour.
 
 ---
 
+## 2026-10 — Le décodeur FIT est écrit à la main, et partagé entre navigateur et Deno
+
+**Décision** : un décodeur FIT sans dépendance dans
+`supabase/functions/_shared/activityFiles/`, atteignable depuis `src/` par
+l'alias `@shared`. Pas de bibliothèque npm, pas de copie côté client.
+
+**Pourquoi** : le même format doit être lu à deux endroits — l'import manuel
+d'un dossier d'activités par l'athlète, dans le navigateur, et la
+synchronisation COROS, dans une Edge Function. Deux parseurs du même format
+divergent toujours, et c'est alors l'écart entre un import manuel et une
+synchronisation automatique du *même fichier* qui devient impossible à
+expliquer. Les bibliothèques npm existantes ciblent Node et embarquent les
+tables de profil Garmin, soit plusieurs mégaoctets pour lire quatre types de
+messages.
+
+Le dossier vit sous `supabase/functions/` et non dans `src/` parce que
+`supabase functions deploy` ne met en paquet que ce répertoire : l'inverse
+aurait obligé à dupliquer le fichier au déploiement. Seul `activityFiles/` est
+portable et typé par `tsconfig.app.json` ; `auth.ts` importe depuis esm.sh et
+resterait cassé au build.
+
+**Pièges du format, pour ne pas les réapprendre** : le numéro de type de base
+tient sur les bits 0-4, donc `& 0x1f` et non `& 0x0f` — sinon `uint64z` (0x10)
+se lit comme `enum`. Les sentinelles d'invalidité (0xFF, 0xFFFF, 0x7FFF…)
+deviennent `null` et jamais `0` : une fréquence cardiaque absente affichée à
+zéro est un chiffre faux, pas une donnée manquante. `total_timer_time` est
+préféré à `total_elapsed_time`, parce que les pauses faussent l'allure sur du
+fractionné. Et le décalage UTC vient de l'écart entre `timestamp` et
+`local_timestamp` du message `activity` — donc avec le bon changement d'heure,
+ce qu'aucun calcul depuis le fuseau actuel de l'athlète ne donnerait.
+
+**Tests** : un encodeur FIT conforme à la spec construit les octets attendus,
+plutôt qu'un fichier binaire déposé en fixture. Un fixture opaque ne prouve que
+l'absence de régression ; un encodeur prouve la conformité au format.
+
+---
+
+## 2026-10 — Les URL de fichiers FIT sont cherchées dans de la prose, les chiffres jamais
+
+**Décision** : `extractFitUrls` cherche des URL par expression régulière dans
+la réponse textuelle des outils MCP. Aucune autre valeur n'est extraite d'un
+texte COROS : les métriques viennent du binaire FIT, et les données
+quotidiennes sont stockées telles quelles dans `provider_dailies.raw`, colonnes
+typées laissées vides.
+
+**Pourquoi** : les outils MCP de COROS répondent en prose, conçue pour être lue
+par un modèle de langage. Chercher dans du texte est donc inévitable quelque
+part ; la question est de savoir quoi. Une URL est un jeton non ambigu : elle
+est présente ou absente, et un lien mal découpé donne un 404 immédiat, pas un
+chiffre faux. « 12.03 km » dépend d'un séparateur décimal, d'une unité et d'une
+traduction — remplir `distance_m` à partir de là marcherait aujourd'hui et
+casserait silencieusement le jour où COROS change une virgule.
+
+Même raisonnement pour la santé : sommeil, VFC et FC de repos n'ont pas
+d'équivalent FIT. Plutôt que de deviner `hrv_ms` depuis une phrase, le texte est
+conservé brut. Un nombre extrait par heuristique aurait l'apparence d'une mesure
+et serait affiché à côté de vraies mesures, indistinguable d'elles. C'est aussi
+une raison de plus de laisser `data_source_policies.ai_allowed = false` pour
+`coros` : on ne veut pas qu'un conseil s'appuie sur un chiffre deviné.
+
+---
+
+## 2026-10 — Le rattrapage d'historique avance par fenêtres de dates, jamais par sous-ensemble d'URL
+
+**Décision** : la synchronisation demande les URL FIT sur une fenêtre de dates
+(30 jours au départ), resserre la fenêtre — en divisant sa largeur — jusqu'à ce
+que le nombre d'URL tienne dans le budget restant, et n'avance
+`synced_through` que si la fenêtre a été traitée en entier.
+
+**Pourquoi** : COROS limite à 50 téléchargements par athlète et par 24 h, 10 par
+appel. Une plage d'un an renverrait des centaines d'URL dont on ne pourrait
+traiter que quelques dizaines — et il faudrait alors choisir lesquelles. Comme
+les URL ne portent pas de date (la date n'apparaît qu'après décodage du
+fichier), tout choix arbitraire créerait des trous dans l'historique dont
+personne ne saurait plus la cause. Avancer par fenêtres datées garantit qu'il
+n'y a jamais de trou, seulement un bord qui progresse.
+
+Lister est gratuit, télécharger est compté : relister une fenêtre plus étroite
+coûte un appel et ne consomme aucun quota. C'est pour cela que la boucle
+resserre au lieu de tronquer.
+
+Conséquence assumée : un historique long se remplit sur plusieurs jours, et
+l'interface le dit explicitement — sinon l'athlète conclut que l'intégration ne
+marche pas.
+
+---
+
+## 2026-10 — Le budget de fichiers est plus étroit pour l'athlète que pour le cron
+
+**Décision** : le cron (clé `service_role`) dispose des 50 fichiers quotidiens ;
+un appel authentifié par un jeton de session en obtient 10. La distinction est
+appliquée par le serveur, pas par l'interface.
+
+**Pourquoi** : le quota est par athlète et par 24 h, et il est partagé entre le
+bouton « synchroniser maintenant » et le rattrapage automatique. Laisser le
+quota entier au bouton permettrait de l'épuiser en trois clics, puis de bloquer
+le cron de la nuit suivante — l'athlète impatient se punirait lui-même, sans
+rien voir. Le bouton est un complément, le cron est le rattrapage.
+
+Côté interface, le même raisonnement se lit dans le compte rendu affiché : les
+refus y figurent à côté des réussites. « 12 activités importées » sans mention
+des 3 fichiers illisibles laisse croire à un succès complet, et l'athlète
+cherche ensuite pourquoi une sortie manque.
+
+---
+
+## 2026-10 — Les noms d'outils MCP sont résolus contre la liste publiée par le serveur
+
+**Décision** : à chaque exécution, la synchronisation appelle `tools/list`,
+journalise les noms obtenus, et résout chaque outil dont elle a besoin par nom
+exact, puis par casse, puis par motif. `resolveTool` renvoie `null` plutôt que
+de deviner, et l'absence est remontée comme un refus explicite.
+
+**Pourquoi** : nos noms d'outils viennent de la documentation, pas d'une réponse
+observée — `/mcp` exige un jeton, et il a fallu écrire la synchronisation avant
+qu'un athlète soit connecté. Le premier essai avait déjà noté `getActivityList`
+là où l'outil s'appelle `querySportRecords` : la documentation s'était révélée
+fausse une fois avant même la première requête. Un nom erroné produit une erreur
+MCP opaque, qu'on passe une nuit à chercher du côté du serveur.
+
+Le motif n'est pas là pour masquer un problème mais pour survivre à un
+renommage tout en le rendant visible dans les journaux. Et la liste
+journalisée est ce qui permettra enfin de remplacer, dans
+`COROS_INTEGRATION.md`, une réserve documentaire par une observation.
+
+---
+
+## 2026-10 — Le doublon inter-sources est refusé à l'insertion, pas toléré
+
+**Décision** : avant d'insérer une activité, la synchronisation vérifie
+l'absence d'`external_id` identique pour cet athlète **toutes sources
+confondues**, et non seulement pour `coros`.
+
+**Pourquoi** : `external_id` est l'empreinte SHA-256 du contenu du fichier, et
+la contrainte d'unicité porte sur `(athlete_id, source, external_id)`. Un
+athlète qui importe son archive Strava *puis* connecte sa montre fournit donc
+deux fois les mêmes octets sous deux sources : même empreinte, deux lignes, une
+sortie affichée en double. La contrainte ne peut pas l'empêcher sans perdre la
+capacité de distinguer les provenances, qui sert au contrôle `ai_allowed`. Le
+contrôle explicite coûte une requête et évite un doublon visible que personne ne
+saurait expliquer.
+
+L'erreur 23505 reste traitée comme un doublon et non comme un échec : deux
+exécutions concurrentes atteignent le résultat voulu.
+
+---
+
+## 2026-10 — Le cron appelle l'Edge Function avec la clé service_role lue dans le Vault
+
+**Décision** : `trigger_coros_sync()` lit `project_url` et `service_role_key`
+dans Supabase Vault et appelle la fonction par `net.http_post`. Les secrets ne
+sont pas écrits dans la migration, et la fonction avertit puis ne fait rien s'ils
+sont absents.
+
+**Pourquoi** : une migration est versionnée, donc un secret écrit dedans est un
+secret public. Le Vault est déjà en place pour les jetons fournisseurs ; l'y
+ajouter n'élargit pas la surface — quiconque peut lire le Vault détient déjà les
+jetons OAuth des athlètes.
+
+**Alternative écartée** : un `CRON_SECRET` dédié, dont la fuite coûterait moins
+cher que celle de la clé `service_role`. Il aurait fallu passer la fonction en
+`verify_jwt = false`, un secret quelconque n'étant pas un JWT et la passerelle
+Supabase le rejetant avant d'atteindre notre code. Pour une fonction capable
+d'agir sur n'importe quel athlète, garder la vérification de jeton de la
+passerelle vaut mieux qu'un secret plus étroit mais sans rempart devant.
+
+Le choix de ne rien envoyer quand les secrets manquent est volontaire : un appel
+vers `null/functions/v1/...` échouerait de façon illisible, alors qu'un
+avertissement nommé se retrouve dans les journaux de pg_cron.
+
+L'appel est asynchrone. Plusieurs athlètes, chacun avec des téléchargements de
+fichiers, dépassent largement le temps qu'un travail cron doit passer à tenir
+une transaction ouverte. Le vrai journal de ce qui s'est passé est
+`provider_connections.last_sync_at` / `last_error`, pas le code de retour HTTP.
+
+---
+
+## 2026-10 — Le consentement montre est revérifié à chaque synchronisation
+
+**Décision** : `syncConnection` appelle `hasConsent(..., "coros_sync")` avant de
+parler à COROS. S'il est absent, la connexion passe en `consent_withdrawn` et la
+synchronisation s'arrête.
+
+**Pourquoi** : le jeton d'accès reste techniquement valide après un retrait de
+consentement — c'est le choix documenté en 2026-10 de ne pas révoquer en SQL. Si
+le cron continuait à puiser chez COROS avec ce jeton, la case décochée ne serait
+qu'un affichage. Le contrôle à la connexion ne suffit pas : il protège le
+premier accès, pas les trois cents suivants.
+
+Au passage, l'énumération `provider_status` de l'interface avait été écrite de
+mémoire, avec un `expired` et un `error` qui n'existent pas, et sans
+`needs_reauth` qui existe — donc le seul état demandant une action de l'athlète
+s'affichait comme `undefined`. Les quatre valeurs sont désormais reprises à
+l'identique de la base, et distinctes exprès : `needs_reauth` est un refus du
+fournisseur, `consent_withdrawn` une décision de l'athlète, et les confondre
+ferait afficher « reconnecte ta montre » à quelqu'un qui vient justement de
+retirer son accord.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

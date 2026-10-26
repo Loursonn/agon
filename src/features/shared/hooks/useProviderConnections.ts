@@ -25,10 +25,28 @@ export const COROS_REGIONS = [
 
 export type CorosRegion = (typeof COROS_REGIONS)[number]["value"];
 
+/**
+ * États possibles d'une connexion, repris à l'identique de l'énumération
+ * `provider_status` en base.
+ *
+ * Écrit de mémoire la première fois, avec un `expired` et un `error` qui
+ * n'existent pas et sans `needs_reauth` qui existe : l'interface ne pouvait
+ * donc pas réagir au seul état qui demande une action de l'athlète. Les quatre
+ * valeurs sont distinctes exprès — `needs_reauth` est un refus du fournisseur,
+ * `consent_withdrawn` une décision de l'athlète, et les confondre ferait
+ * afficher « reconnecte ta montre » à quelqu'un qui vient justement de retirer
+ * son accord.
+ */
+export type ProviderStatus =
+  | "active"
+  | "needs_reauth"
+  | "consent_withdrawn"
+  | "revoked";
+
 export interface ProviderConnection {
   id: string;
   provider: ProviderName;
-  status: "active" | "expired" | "revoked" | "consent_withdrawn" | "error";
+  status: ProviderStatus;
   grantedScopes: string[];
   connectedAt: string;
   lastSyncAt: string | null;
@@ -39,7 +57,7 @@ export interface ProviderConnection {
 interface ConnectionRow {
   id: string;
   provider: ProviderName;
-  status: ProviderConnection["status"];
+  status: ProviderStatus;
   granted_scopes: string[] | null;
   connected_at: string;
   last_sync_at: string | null;
@@ -113,6 +131,51 @@ export function useConnectCoros() {
       if (!data?.authorizeUrl) throw new Error("URL d'autorisation absente");
 
       window.location.assign(data.authorizeUrl);
+    },
+  });
+}
+
+export interface SyncReport {
+  athleteId: string;
+  imported: number;
+  duplicates: number;
+  rejected: Array<{ name: string; reason: string }>;
+  dailies: number;
+  syncedThrough: string | null;
+  error?: string;
+}
+
+/**
+ * Synchronise maintenant, sans attendre le cron de la nuit.
+ *
+ * Le budget de fichiers est volontairement plus étroit que celui du cron :
+ * COROS limite à 50 téléchargements par athlète et par 24 h, et laisser ce
+ * quota entier à un bouton permettrait de l'épuiser en trois clics, puis de
+ * bloquer le rattrapage automatique du lendemain. Le bouton est un complément,
+ * pas un rattrapage — c'est le serveur qui applique cette distinction, pas
+ * l'interface.
+ */
+export function useSyncCoros() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation<SyncReport | undefined, Error, void>({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke<{ reports?: SyncReport[] }>(
+        "provider-coros-sync",
+        { body: {} },
+      );
+      if (error) throw new Error(error.message);
+      return data?.reports?.[0];
+    },
+    onSuccess: () => {
+      /*
+        Les activités importées changent aussi, mais leur clé de requête
+        dépend de la page qui les lit : invalider la connexion suffit pour que
+        « dernière synchro » et « historique jusqu'au » soient à jour, et le
+        reste se rafraîchira à la navigation.
+      */
+      qc.invalidateQueries({ queryKey: QK.providerConnections(user?.id ?? "none") });
     },
   });
 }

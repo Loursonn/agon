@@ -37,6 +37,42 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-28-recuperation-automatique-coros",
+    date: "2026-10-28",
+    kind: "feature",
+    title: "Les séances COROS remontent automatiquement",
+    summary: "Chaque nuit, Agon récupère les séances des athlètes qui ont relié leur montre COROS : durée, distance, dénivelé, fréquence cardiaque, allure, calories. L'athlète peut aussi déclencher la récupération à la main.",
+    sections: [
+      {
+        title: "Ce que ça change pour toi",
+        points: [
+          "Les sorties de tes athlètes apparaissent sans qu'ils aient à saisir quoi que ce soit, le lendemain matin au plus tard.",
+          "Les chiffres sont lus dans le fichier d'activité de la montre, pas dans un résumé en texte : une durée est une durée, pas une phrase interprétée.",
+          "La durée retenue exclut les pauses. Sur du fractionné, c'est ce qui donne une allure juste plutôt qu'une moyenne diluée par les temps d'arrêt.",
+          "Le jour d'une séance est son jour local : une sortie à 23 h le lundi reste au lundi, et s'aligne donc sur la séance que tu avais programmée.",
+        ],
+      },
+      {
+        title: "Ce que l'athlète voit",
+        points: [
+          "Dans son profil : la date de dernière synchronisation, et jusqu'où son historique a été récupéré.",
+          "Un bouton « Synchroniser maintenant » s'il ne veut pas attendre la nuit.",
+          "Un compte rendu honnête après chaque synchronisation : les séances importées, celles déjà connues, et les fichiers qui n'ont pas pu être lus. Pas de « tout va bien » quand il manque quelque chose.",
+          "Si COROS cesse d'accepter l'autorisation, il voit « Reconnexion nécessaire » et un bouton pour la rétablir — au lieu d'une synchronisation qui s'arrête en silence.",
+        ],
+      },
+      {
+        title: "Les limites, dites franchement",
+        points: [
+          "COROS n'autorise que 50 fichiers par athlète et par 24 h. Un athlète qui relie sa montre avec un an d'historique le verra se remplir sur plusieurs jours, par tranches, en remontant le temps.",
+          "Le sommeil, la VFC et la fréquence cardiaque de repos sont conservés tels que COROS les formule, sans en extraire de chiffre : deviner un nombre dans une phrase donnerait une valeur d'apparence fiable, impossible à distinguer d'une vraie mesure.",
+          "Les données COROS ne sont toujours pas transmises à l'IA : leurs conditions d'utilisation doivent encore être relues sur ce point.",
+          "Si un athlète retire son accord, la récupération s'arrête dès la nuit suivante — l'accord est revérifié à chaque passage, pas seulement au moment où il relie sa montre.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-28-connexion-montre-coros",
     date: "2026-10-28",
     kind: "feature",

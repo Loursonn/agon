@@ -273,6 +273,118 @@ export function refreshTokens(
   });
 }
 
+// ───────────────────────────── Outils MCP ────────────────────────────────────
+
+/*
+  Les noms d'outils, tels que documentés dans `coroslab/COROS-MCP`
+  (`docs/en/tools.md`). Rassemblés ici parce qu'une faute de frappe dans un nom
+  d'outil se manifeste par une erreur MCP opaque, et qu'un nom écrit deux fois
+  dans le code finit par être corrigé une fois sur deux. Le premier essai avait
+  d'ailleurs noté `getActivityList`, qui n'existe pas.
+*/
+export const COROS_TOOLS = {
+  /** Liste d'activités, en prose. Utilisé seulement pour le diagnostic. */
+  sportRecords: "querySportRecords",
+  /** URL de téléchargement de fichiers FIT sur une plage de dates. */
+  fitUrls: "queryActivityFitFileDownloadUrls",
+  /** Données quotidiennes (sommeil, VFC, FC de repos, stress), en prose. */
+  dailies: "queryDailyActivity",
+} as const;
+
+/*
+  Quota de téléchargement de fichiers FIT, côté COROS : 50 par utilisateur et
+  par 24 h, 10 par appel. Ce n'est pas un réglage de confort — le dépasser fait
+  échouer les appels suivants, donc le rattrapage d'un historique d'un an est
+  nécessairement étalé sur plusieurs jours.
+*/
+export const COROS_FIT_LIMITS = {
+  perCall: 10,
+  perDay: 50,
+} as const;
+
+/** Jour ISO (`YYYY-MM-DD`) d'une date, en UTC. */
+export function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** Décale un jour ISO de `days` jours. */
+export function shiftDay(day: string, days: number): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return ymd(d);
+}
+
+/** Nombre de jours entre deux jours ISO (`b - a`). */
+export function daysBetween(a: string, b: string): number {
+  return Math.round(
+    (Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000,
+  );
+}
+
+/**
+ * Extrait les URL de fichiers FIT d'une réponse d'outil.
+ *
+ * Les outils MCP répondent en prose : il n'y a pas de champ à lire, seulement
+ * un texte qui contient les URL. C'est le seul endroit où on se résout à
+ * chercher dans du texte, et c'est acceptable ici précisément parce qu'une URL
+ * est un jeton non ambigu — contrairement à « 12.03 km », dont le sens dépend
+ * d'un séparateur, d'une unité et d'une langue.
+ *
+ * Les URL sont dédupliquées en conservant l'ordre : une même activité peut
+ * apparaître deux fois si la réponse la mentionne dans un résumé puis dans une
+ * liste, et télécharger deux fois le même fichier consommerait deux unités de
+ * quota pour rien.
+ */
+export function extractFitUrls(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const match of text.matchAll(/https?:\/\/[^\s"'<>)\]}]+/g)) {
+    // La ponctuation finale d'une phrase se colle à l'URL dans de la prose.
+    const url = match[0].replace(/[.,;:!?]+$/, "");
+    /*
+      Filtre volontairement large : `.fit`, `.fit.gz`, ou un chemin qui
+      mentionne `fit` (les URL présignées portent souvent le nom de fichier en
+      paramètre de requête). Trop strict, on raterait des fichiers valides et
+      l'athlète verrait son historique s'arrêter sans explication ; trop large,
+      on télécharge une page HTML qui sera simplement rejetée par le décodeur,
+      faute de signature `.FIT`.
+    */
+    if (!/fit/i.test(url)) continue;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    out.push(url);
+  }
+
+  return out;
+}
+
+export interface FitWindow {
+  from: string;
+  to: string;
+}
+
+/**
+ * Fenêtre de dates à demander ensuite, à partir d'où la synchronisation s'est
+ * arrêtée.
+ *
+ * La fenêtre est bornée par `span` jours *et* par aujourd'hui. Demander une
+ * plage ouverte serait plus simple, mais le quota est par fichier : une plage
+ * d'un an renverrait trois cents URL dont on ne pourrait traiter que dix, et
+ * il faudrait alors choisir lesquelles — c'est-à-dire créer des trous dans
+ * l'historique dont personne ne saurait plus la cause. Avancer par fenêtres
+ * datées garantit qu'il n'y a jamais de trou : seulement un bord qui progresse.
+ */
+export function planFitWindow(
+  cursor: string,
+  today: string,
+  span: number,
+): FitWindow | null {
+  if (daysBetween(cursor, today) < 0) return null;
+  const end = shiftDay(cursor, span - 1);
+  return { from: cursor, to: daysBetween(end, today) < 0 ? today : end };
+}
+
 /**
  * Révoque un jeton chez COROS.
  *
