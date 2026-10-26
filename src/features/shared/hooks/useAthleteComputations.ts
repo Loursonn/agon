@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { DEF_METHODS } from "@/lib/exercises";
 import { getAllPRs, getMuscSets, getCombinedData } from "@/lib/calculations";
 import { getReco } from "@/lib/wellness";
-import type { ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData, Injury } from "../types/athlete";
+import type { ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData } from "../types/athlete";
 
 interface ComputationInput {
   exos: ExosMap;
@@ -15,13 +15,12 @@ interface ComputationInput {
   customMethods: unknown[];
   wellness: WellnessData | null;
   wellnessHistory: Record<string, WellnessData>;
-  injuries: Injury[];
 }
 
 export function useAthleteComputations(s: ComputationInput) {
   const {
     exos, exMeta, sets, sessions, blockConfig, goals,
-    completedSessions, customMethods, wellness, wellnessHistory, injuries,
+    completedSessions, customMethods, wellness, wellnessHistory,
   } = s;
 
   const tw = blockConfig.totalWeeks || 6;
@@ -78,7 +77,10 @@ export function useAthleteComputations(s: ComputationInput) {
   const muscSets = useMemo(() => getMuscSets(exos, exMeta), [exos, exMeta]);
   const combinedData = useMemo(() => getCombinedData(exos, sets, wellnessHistory, tw), [exos, sets, wellnessHistory, tw]);
   const totalDone = useMemo(() => Object.values(completedSessions).flat().length, [completedSessions]);
-  const activeInjuries = useMemo(() => injuries.filter(i => i.status !== "Guerie"), [injuries]);
+  // Les blessures actives ne se déduisent plus d'ici : elles viennent de
+  // `medical_entries` via `useActiveInjuries`, la même source que les
+  // antécédents du profil. Un badge « blessure active » et une fiche blessure
+  // qui se contredisent, c'est un badge qu'on arrête de croire.
 
   const wScore = wellness?.score || 50;
   const wReco = useMemo(() => getReco(wScore), [wScore]);
@@ -86,6 +88,6 @@ export function useAthleteComputations(s: ComputationInput) {
   return {
     tw, dw, allMethods, weeksArr, isDeload, weeklyTarget, currentWeek,
     totalTarget, streak, weekAdherence, prs, muscSets, combinedData,
-    totalDone, activeInjuries, wScore, wReco,
+    totalDone, wScore, wReco,
   };
 }

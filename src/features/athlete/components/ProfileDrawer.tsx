@@ -1,14 +1,16 @@
 import { useState } from "react";
 import type React from "react";
+import { HeartPulse } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
+import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
+import { DeclareInjurySheet } from "@/features/shared/components/medical/DeclareInjurySheet";
+import { injurySummary } from "@/lib/injuryDetails";
 import { useNavigate } from "react-router-dom";
 import PerformanceProfile from "@/components/athlete/PerformanceProfile";
 import { WeightChart, SleepTunnel } from "@/components/athlete/StatsCharts";
 import { getWellnessChartData } from "@/lib/calculations";
 import { getReco } from "@/lib/wellness";
-import { ALL_BZ } from "@/lib/muscles";
-import { stC } from "@/lib/muscles";
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { todayKey } from "@/lib/date";
 import { useAthleteTrends, useAthleteInsights } from "@/features/shared/hooks/useAthleteTrends";
@@ -32,8 +34,12 @@ const fmtDay = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("
 const sectionTitle: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" };
 
 export default function ProfileDrawer({ onClose }: Props) {
-  const { athleteId, athleteProfile, viewOnly, activeInjuries, wellness, wScore, wReco, weightLog, weightMilestones, bodyWeight, wellnessHistory, nutritionStrategy, coachFeedbacks, goals, streak } = useAthleteContext();
+  const { athleteId, athleteProfile, viewOnly, wellness, wScore, wReco, weightLog, weightMilestones, bodyWeight, wellnessHistory, nutritionStrategy, coachFeedbacks, goals, streak } = useAthleteContext();
   const navigate = useNavigate();
+  // Les blessures viennent de `medical_entries` : la même source que les
+  // antécédents du profil, donc la même vérité que ce que voit le coach.
+  const { injuries: activeInjuries } = useActiveInjuries(athleteId ?? undefined);
+  const [declareInjury, setDeclareInjury] = useState(false);
   const [drawerSportOpen, setDrawerSportOpen] = useState(false);
   const [drawerInjOpen, setDrawerInjOpen] = useState(true);
   const [drawerZoom, setDrawerZoom] = useState<string | null>(null);
@@ -125,10 +131,44 @@ export default function ProfileDrawer({ onClose }: Props) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.r }} /><div style={{ fontSize: 12, fontWeight: 600, color: C.r, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>Blessures actives ({activeInjuries.length})</div></div>
               <span style={{ fontSize: 12, color: C.tx3, display: "inline-block", transition: "transform 0.2s", transform: drawerInjOpen ? "rotate(180deg)" : "none" }}>∨</span>
             </button>
-            {drawerInjOpen && (<div style={{ borderTop: "1px solid " + C.r + "30", padding: "8px 16px" }}>
-              {activeInjuries.map(inj => { const sc = stC(inj.status); const zn = ALL_BZ.filter((z: { id: string; label: string }) => inj.zones.includes(z.id)).map((z: { label: string }) => z.label).join(", ") || "Zone non précisée"; return (<div key={inj.id} style={{ padding: "8px 10px", borderRadius: 4, background: C.s2, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div><div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{zn}</div><div style={{ fontSize: 10, color: C.tx3 }}>Intensité {inj.intensity}/10</div></div><span style={{ fontSize: 10, fontWeight: 700, color: sc, padding: "2px 8px", borderRadius: 5, background: sc + "15" }}>{inj.status}</span></div>); })}
-            </div>)}
+            {drawerInjOpen && (
+              <div style={{ borderTop: "1px solid " + C.r + "30", padding: "8px 16px" }}>
+                {activeInjuries.map(inj => (
+                  <div key={inj.id} style={{ padding: "8px 10px", borderRadius: 4, background: C.s2, marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{inj.title}</div>
+                    <div style={{ fontSize: 10, color: C.tx3 }}>{injurySummary(inj)}</div>
+                  </div>
+                ))}
+                <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
+                  Le détail se complète depuis l'onglet Profil, section Antécédents.
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* ── Déclarer une gêne ── */}
+        {/* Hors mode observation : le coach qui regarde le profil d'un athlète ne
+            déclare pas à sa place depuis cet écran. */}
+        {!viewOnly && athleteId && (
+          <button
+            onClick={() => setDeclareInjury(true)}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left",
+              background: C.s1, borderRadius: 6, border: "1px solid " + C.o + "40",
+              padding: "12px 16px", cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            <HeartPulse size={16} style={{ color: C.o, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.tx }}>Déclarer une gêne ou une blessure</div>
+              <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>Même une petite gêne compte — 10 secondes</div>
+            </div>
+            <span style={{ fontSize: 12, color: C.tx3 }}>&gt;</span>
+          </button>
+        )}
+        {declareInjury && athleteId && (
+          <DeclareInjurySheet athleteId={athleteId} onClose={() => setDeclareInjury(false)} />
         )}
 
         {/* ── Mes tendances ── */}

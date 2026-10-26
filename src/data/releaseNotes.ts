@@ -37,6 +37,38 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-26-blessures-detaillees",
+    date: "2026-10-26",
+    kind: "feature",
+    title: "Blessures détaillées, déclarables par l'athlète comme par toi",
+    summary: "Une gêne se déclare en dix secondes depuis le profil de l'athlète, et tu vois ce qui change la séance de demain : douleur, impact, mécanisme.",
+    sections: [
+      {
+        title: "Ce que l'athlète peut faire",
+        points: [
+          "« Déclarer une gêne ou une blessure » dans son profil : un nom suffit, tout le reste est facultatif.",
+          "Un encart lui explique qu'une petite gêne compte et que la déclarer ne veut pas dire tout changer au programme.",
+          "Il peut préciser s'il le souhaite : douleur sur 10, impact sur l'entraînement, type, mécanisme, contexte, jours d'arrêt, avis médical, retour prévu.",
+        ],
+      },
+      {
+        title: "Ce que tu vois",
+        points: [
+          "Les mêmes champs dans les antécédents du profil athlète : tu peux déclarer et compléter toi aussi.",
+          "La mention « Déclarée par l'athlète » ou « par le coach » sur chaque ligne, pour savoir d'où vient l'info.",
+          "Le détail affiché dans Retours, sous le bloc Blessures, avec le statut en cours ou guéri.",
+        ],
+      },
+      {
+        title: "Un seul endroit, une seule vérité",
+        points: [
+          "Les badges « blessure active » (en-tête athlète, profil, Retours) lisent désormais les mêmes blessures déclarées que la fiche.",
+          "Fini le badge qui dit une chose et la fiche une autre : seule une blessure au statut « en cours » l'allume.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-25-alertes-wellness",
     date: "2026-10-25",
     kind: "feature",

@@ -7,6 +7,8 @@ import { WELL_ITEMS } from "@/lib/wellness";
 import { evaluateNutritionDay } from "@/lib/nutrition";
 import { ALL_BZ } from "@/lib/muscles";
 import { useWeeklyDistances } from "@/features/shared/hooks/useWeeklyDistances";
+import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
+import { injurySummary } from "@/lib/injuryDetails";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -15,12 +17,14 @@ export default function DashboardPage() {
     completedSessions, weekSchedule, setWeekSchedule, wellnessHistory,
     weightLog, sessionLogs, nutritionLog, energySessions, energyWeekPlan,
     energyDayPlan, testSessions, visibilitySettings, wellness, wScore, wReco,
-    setShowWellness, activeInjuries, nutritionStrategy, athleteProfile,
+    setShowWellness, nutritionStrategy, athleteProfile,
     habits, setHabits, habitLogs, toggleHabitLog, habitEnabled, athleteId,
     goals, freeSessions,
   } = useAthleteContext();
 
   const weekDistances = useWeeklyDistances(athleteId, freeSessions);
+  // Bandeau blessures : lu dans `medical_entries`, comme le badge du header.
+  const { injuries: activeInjuries } = useActiveInjuries(athleteId ?? undefined);
 
   const todayDow = (new Date().getDay() + 6) % 7;
   const doneNow = completedSessions[currentWeek] || [];
@@ -47,7 +51,7 @@ export default function DashboardPage() {
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.r, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.r }}>{activeInjuries.length} blessure(s) en cours</div>
-            <div style={{ fontSize: 10, color: C.r + "90" }}>{activeInjuries.map(i => ALL_BZ.filter((z: { id: string; label: string }) => i.zones.includes(z.id)).map((z: { label: string }) => z.label).join(", ") || "Zone non précisée").join(" | ")}</div>
+            <div style={{ fontSize: 10, color: C.r + "90" }}>{activeInjuries.map(injurySummary).join(" | ")}</div>
           </div>
           <span style={{ fontSize: 12, color: C.r }}>&gt;</span>
         </button>

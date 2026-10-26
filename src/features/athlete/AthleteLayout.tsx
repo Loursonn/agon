@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { AgonIcon } from "@/components/ui/AgonIcon";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
+import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
 import ProfileDrawer from "./components/ProfileDrawer";
 import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
@@ -47,7 +48,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
   const {
     athleteId, athleteProfile,
-    viewOnly, saveStatus, activeInjuries,
+    viewOnly, saveStatus,
     showWellness, setShowWellness, showAppFeedback, setShowAppFeedback,
     showBilan, setShowBilan, showNewBlock, setShowNewBlock,
     weekJustCompleted, tw, milestoneNotif,
@@ -57,6 +58,10 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
     saveWellness, addInjury, goals, wellness, weightLog, archiveAndNewBlock,
     freeSessions,
   } = useAthleteContext();
+
+  // Badge « blessure » : `medical_entries` est la seule source, pour qu'il dise
+  // la même chose que la fiche blessure du profil.
+  const { injuries: activeInjuries } = useActiveInjuries(athleteId ?? undefined);
 
   // Séance passée avec des saisies mais jamais clôturée → bandeau de rappel
   const { data: unfinishedWorkouts = [] } = useUnfinishedWorkouts(viewOnly ? null : athleteId);

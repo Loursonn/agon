@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { compressFicheImage } from '@/lib/compressImage';
+import { activeInjuries } from '@/lib/injuryDetails';
 import type { MedicalAttachment, MedicalEntry, MedicalEntryInput } from '@/features/shared/types/medical';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,14 +36,31 @@ export function useMedicalEntries(athleteId: string | undefined) {
   });
 }
 
+/**
+ * Blessures en cours d'un athlète — la seule source des badges « blessure
+ * active » (header athlète, profil, retours coach). Partage le cache de
+ * `useMedicalEntries` : aucune requête de plus.
+ */
+export function useActiveInjuries(athleteId: string | undefined) {
+  const { data = [], isLoading } = useMedicalEntries(athleteId);
+  const injuries = useMemo(() => activeInjuries(data), [data]);
+  return { injuries, isLoading };
+}
+
 export function useSaveMedicalEntry(athleteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, input }: { id?: string; input: MedicalEntryInput }): Promise<MedicalEntry> => {
       const { data: auth } = await supabase.auth.getUser();
+      // `declared_by` n'est pas un choix de formulaire : on sait qui saisit.
+      // Posé à la création seulement, pour qu'une relecture du coach ne réécrive
+      // pas l'origine d'une déclaration faite par l'athlète.
+      const declared_by = auth.user?.id === athleteId ? 'athlete' : 'coach';
       const q = id
         ? db.from('medical_entries').update(input).eq('id', id)
-        : db.from('medical_entries').insert({ ...input, athlete_id: athleteId, created_by: auth.user?.id ?? null });
+        : db.from('medical_entries').insert({
+            ...input, athlete_id: athleteId, declared_by, created_by: auth.user?.id ?? null,
+          });
       const { data, error } = await q.select('*, medical_attachments(*)').single();
       if (error) throw error;
       return data as MedicalEntry;
