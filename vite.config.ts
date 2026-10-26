@@ -14,6 +14,17 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Les décodeurs de fichiers d'activité vivent sous `supabase/functions/`
+      // parce que `supabase functions deploy` ne met en paquet que ce dossier.
+      // Le navigateur les lit depuis là plutôt que d'en garder une copie :
+      // deux parseurs du même format divergent toujours, et c'est alors
+      // l'écart entre un import manuel et une synchronisation automatique du
+      // *même* fichier qui devient impossible à expliquer.
+      //
+      // Seul `activityFiles/` est portable. Les autres modules de `_shared`
+      // (`coros.ts`, `auth.ts`) s'appuient sur `Deno` : joignables par cet
+      // alias, mais ils casseraient au build.
+      "@shared": path.resolve(__dirname, "./supabase/functions/_shared"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
