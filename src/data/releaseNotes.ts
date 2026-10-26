@@ -37,6 +37,41 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-29-import-fichiers-activite",
+    date: "2026-10-29",
+    kind: "feature",
+    title: "Tes athlètes peuvent importer leur historique de montre",
+    summary:
+      "Un athlète dépose l'archive de son export Strava ou Garmin — ou simplement des fichiers .fit, .tcx et .gpx — et ses sorties entrent dans Agon : durée, distance, dénivelé, fréquence cardiaque, allure. C'est le seul moyen de récupérer un historique ancien : les montres connectées ne donnent que les dernières semaines.",
+    sections: [
+      {
+        title: "Ce que ça change pour toi",
+        points: [
+          "Un nouvel athlète arrive avec son passé : plusieurs années de sorties peuvent entrer en une fois, au lieu de repartir d'une page blanche.",
+          "Une montre non reliée n'est plus un trou dans le suivi — Polar, Suunto, Apple Watch, Decathlon : tout ce qui sait exporter un fichier d'activité est lisible.",
+          "Les chiffres viennent du fichier de la montre, pas d'une saisie à la main : même source, même traitement et mêmes règles que pour la synchronisation COROS.",
+        ],
+      },
+      {
+        title: "Ce que l'athlète voit",
+        points: [
+          "Dans son profil, section « Montres & services connectés » : une zone où glisser son archive ou ses fichiers.",
+          "L'avancement fichier par fichier — une archive de plusieurs centaines de sorties prend un moment, et l'écran le dit au lieu de paraître figé.",
+          "Un compte rendu complet : les sorties ajoutées, celles déjà connues, et le détail des fichiers qui n'ont pas pu être lus, avec la raison. Pas de « tout va bien » quand il manque quelque chose.",
+          "Une sortie déjà remontée par sa montre n'est pas dupliquée, même si le fichier déposé est d'un autre format — c'est l'heure de départ et le sport qui font le rapprochement, pas le nom du fichier.",
+        ],
+      },
+      {
+        title: "Les limites, dites franchement",
+        points: [
+          "Un GPX ne contient ni durée de mouvement ni dénivelé mesuré : la durée inclut alors les pauses et le dénivelé est reconstitué à partir des altitudes. L'écart avec l'application d'origine est normal, et chaque chiffre indique d'où il vient.",
+          "Un fichier qui n'a jamais été enregistré pendant une sortie — un parcours préparé à l'avance, sans horodatage — est refusé : le compter comme une séance fausserait la charge d'entraînement.",
+          "Les fichiers sont lus sur l'appareil de l'athlète et ne sont pas conservés : seules les valeurs des sorties sont enregistrées.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-28-recuperation-automatique-coros",
     date: "2026-10-28",
     kind: "feature",

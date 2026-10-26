@@ -723,4 +723,166 @@ retirer son accord.
 
 ---
 
+## 2026-10 — Les décodeurs de fichiers d'activité sont partagés navigateur / Deno, et écrits à la main
+
+**Décision** : FIT, TCX, GPX et la lecture d'archive vivent dans
+`supabase/functions/_shared/activityFiles/`, sans aucune dépendance, et sont
+importés par le navigateur via l'alias `@shared`. Le XML est analysé par un
+scanner en flux écrit pour l'occasion, pas par `DOMParser` ni par une librairie.
+
+**Pourquoi une seule implémentation** : `supabase functions deploy` ne met en
+paquet que `supabase/functions/`, donc le code partagé doit y vivre ; le
+navigateur le lit depuis là plutôt que d'en garder une copie. Deux parseurs du
+même format divergent toujours, et l'écart apparaîtrait comme une différence
+inexplicable entre l'import manuel et la synchronisation automatique du *même*
+fichier.
+
+**Pourquoi pas `DOMParser`** : il n'existe pas dans Deno, dont la bibliothèque
+par défaut n'a aucun type DOM — `deno check` échouerait. Un parseur DOM coûte
+par ailleurs des dizaines de mégaoctets de mémoire de pointe pour un GPX de
+50 000 points, sur un téléphone, afin d'en extraire huit nombres. Le scanner
+calcule les agrégats point par point.
+
+**Pourquoi réduire les noms qualifiés au nom local** : Garmin écrit `ns3:TPX`,
+d'autres `tpx:TPX`, Strava `gpxtpx:hr`. Le préfixe n'a aucune valeur
+sémantique ; s'y fier ferait perdre la fréquence cardiaque selon l'exportateur,
+sans erreur visible.
+
+---
+
+## 2026-10 — Chaque agrégat reconstitué nomme sa source dans `details`
+
+**Décision** : `details` porte `distanceSource`, `durationSource`,
+`avgHrSource`, `elevationSource` et `localDateSource`. Les agrégats sont pris
+dans le fichier quand il les donne, et calculés sinon.
+
+**Pourquoi** : les trois formats ne disent pas la même chose. Un FIT porte
+`total_distance`, `total_ascent` et `total_timer_time` ; un TCX n'a que la
+distance ; un GPX n'a rien. La durée d'un GPX est donc du temps écoulé, pauses
+comprises, et son dénivelé est reconstruit. L'écart avec l'application du
+fabricant est inévitable — ce qui est évitable, c'est qu'il soit inexplicable.
+
+**Alternative écartée** : détecter les pauses d'un GPX par les trous entre
+points. L'enregistrement intelligent laisse légitimement trente secondes entre
+deux points en mouvement : la « correction » retirerait du temps réellement
+couru.
+
+**`Z` n'est pas le fuseau 0** : `Z` dit que l'instant est en UTC, pas que
+l'athlète était à Greenwich. Le jour local retombe alors sur UTC, et
+`localDateSource` le dit. Utiliser le fuseau de l'appareil qui importe a été
+écarté : il est faux en voyage et, pire, il diffère entre le navigateur et une
+Edge Function — soit deux jours locaux pour un seul fichier.
+
+---
+
+## 2026-10 — Garde-fous contre les nombres plausibles mais faux
+
+**Décision** : position exactement (0, 0) ignorée, segments jamais pontés,
+vitesse implicite au-delà de 40 m/s traitée comme un saut GPS, dénivelé calculé
+avec une hystérésis de 3 m.
+
+**Pourquoi** : chacun de ces cas produit un nombre d'apparence normale. (0, 0)
+est la sentinelle d'absence de fix, dans le golfe de Guinée : la prendre pour
+une position fait afficher un 10 km à 420 km. Sommer naïvement les écarts
+d'altitude positifs fait du bruit barométrique le dénivelé lui-même sur 50 000
+points. Et une frontière de `<trkseg>` ou de `<Track>` est une interruption
+d'enregistrement : la corde droite qui la franchit n'a jamais été parcourue.
+
+---
+
+## 2026-10 — L'index du zip est lu depuis le répertoire central, par tranches
+
+**Décision** : `listZipEntries` cherche l'EOCD en fin de fichier (ZIP64
+compris) et lit l'index central ; les membres sont extraits par
+`ByteSource.slice()`. La décompression est bornée pendant la lecture.
+
+**Pourquoi le répertoire central** : les en-têtes locaux portent des zéros
+quand le membre a été écrit en flux (descripteur de données différé). L'index
+en fin de fichier est la seule source fiable — et c'est aussi ce qui autorise
+la lecture ciblée.
+
+**Pourquoi par tranches** : `Blob.slice()` ne lit que la plage demandée, donc
+une archive plus grosse que la mémoire disponible reste traitable. Sur un
+téléphone, avec un export de plusieurs centaines de mégaoctets, ce n'est pas un
+cas théorique.
+
+**Pourquoi la borne est vérifiée pendant la décompression** : un flux piégé ne
+déclare pas sa taille. Attendre la fin pour s'apercevoir qu'elle dépasse la
+mémoire disponible revient à ne pas la vérifier.
+
+**Aucune dépendance** : `DecompressionStream` est dans la plateforme
+(navigateur, Deno, Node 18+). Ajouter JSZip ou fflate aurait aussi signifié le
+faire fonctionner sous Deno, pour un service déjà rendu.
+
+---
+
+## 2026-10 — L'aiguillage se fait sur le contenu, et les métadonnées sont comptées, pas refusées
+
+**Décision** : `parseActivityFile` déplie `.gz` par suffixe *ou* par octets
+magiques, puis reconnaît FIT, TCX et GPX à leur signature. Les membres
+d'archive non exploitables (profil, flux, médias, `__MACOSX`) sont comptés dans
+`ignored`, pas listés dans `rejected`.
+
+**Pourquoi le contenu** : un athlète renomme, le système ajoute « (1) », un
+exportateur écrit `.gpx` dans un fichier qui est un TCX. Décider sur
+l'extension donne alors une erreur de décodage incompréhensible, là où une
+signature donne une réponse juste ou un refus clair — « racine `<gpx>` : ce
+fichier est un GPX, pas un TCX ».
+
+**Pourquoi compter sans refuser** : un export Strava contient une vingtaine de
+fichiers de métadonnées. Les lister comme « refusés » noierait les vrais refus,
+ceux dont l'athlète doit s'inquiéter. Pour la même raison, un membre illisible
+n'interrompt pas l'archive : sur quatre cents sorties, une seule abîmée
+annulerait tout l'import sans que personne sache laquelle retirer.
+
+---
+
+## 2026-10 — L'import de fichiers se fait entièrement dans le navigateur
+
+**Décision** : l'athlète dépose ses fichiers, le navigateur les décode et
+n'envoie que les lignes `provider_activities` (`source = 'file_import'`). Les
+octets ne quittent pas l'appareil et ne sont pas conservés. Les décodeurs sont
+chargés en `import()` dynamique.
+
+**Pourquoi** : une archive d'export pèse couramment plusieurs centaines de
+mégaoctets. La téléverser pour en extraire huit nombres par sortie coûterait à
+l'athlète son forfait mobile pour un résultat identique — et se heurterait aux
+limites de taille de requête et de durée d'une Edge Function. Accessoirement,
+ne rien stocker est la position la plus simple à tenir vis-à-vis du RGPD : il
+n'y a pas de fichier à effacer.
+
+**Pourquoi le chargement différé** : les quatre formats réunis pèsent plus que
+l'écran de séance (26 ko de paquet), et la quasi-totalité des ouvertures de
+l'application n'importe aucun fichier. L'import est déjà un geste long,
+quelques centaines de millisecondes y sont invisibles ; un démarrage alourdi,
+non.
+
+---
+
+## 2026-10 — Deux enregistrements d'une même sortie sont rapprochés sur l'heure de départ et le sport
+
+**Décision** : au-delà du contrôle d'empreinte, une activité dont le départ
+tombe à moins de deux minutes d'une activité déjà en base est comptée comme
+déjà connue — sauf si les deux sports sont connus et différents.
+
+**Pourquoi** : `external_id` est l'empreinte du *contenu*. Le FIT et le GPX
+d'une même sortie ont des octets différents, donc des empreintes différentes, et
+la contrainte d'unicité ne peut rien y voir. Strava exporte parfois les deux : un
+athlète qui dépose « tout » aurait chaque sortie en double sans qu'aucun chiffre
+ne l'explique.
+
+**Pourquoi deux minutes et pas dix** : un export GPX perd les secondes
+antérieures à la première position GPS, donc son début arrive après celui du
+FIT, mais jamais de beaucoup. **Pourquoi le contrôle du sport** : sans lui, la
+transition d'un triathlon — natation puis vélo démarrés à une minute
+d'intervalle — ferait disparaître une discipline entière. L'erreur à éviter en
+priorité est celle-là : un doublon affiché se voit et s'efface, une sortie
+avalée disparaît du suivi sans message.
+
+Le rapprochement s'applique aussi à l'intérieur d'un même dépôt : les deux
+fichiers sont alors nouveaux vis-à-vis de la base, et c'est l'un par rapport à
+l'autre qu'ils font doublon.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

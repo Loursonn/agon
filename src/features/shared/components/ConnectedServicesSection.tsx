@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
+import { ActivityFileImport } from "@/features/shared/components/ActivityFileImport";
 import {
   CONSENT_COPY,
   isGranted,
@@ -158,9 +159,21 @@ export function ConnectedServicesSection() {
                 <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
                 <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5, marginTop: 4 }}>
                   En attente de validation du programme développeur Garmin. Dès l'accord, la
-                  connexion se fera exactement comme pour COROS. En attendant, tu peux importer tes
-                  fichiers d'activité à la main.
+                  connexion se fera exactement comme pour COROS. En attendant, l'import de fichiers
+                  ci-dessous récupère le même contenu.
                 </div>
+              </div>
+
+              {/*
+                L'import de fichiers vit dans ce panneau et non dans une page à
+                part : c'est ici qu'on vient quand on veut que ses données
+                entrent dans Agon, qu'elles arrivent par une montre connectée ou
+                par une archive. Et c'est aussi le seul moyen de récupérer un
+                historique ancien — Garmin n'expose que quatre-vingt-dix jours,
+                COROS limite les téléchargements quotidiens.
+              */}
+              <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14 }}>
+                <ActivityFileImport />
               </div>
             </>
           )}
