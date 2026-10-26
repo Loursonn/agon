@@ -2470,6 +2470,71 @@ export type Database = {
           },
         ]
       }
+      provider_oauth_clients: {
+        Row: {
+          api_host: string
+          client_id: string
+          provider: Database["public"]["Enums"]["data_source"]
+          registered_at: string
+          scope: string
+        }
+        Insert: {
+          api_host: string
+          client_id: string
+          provider: Database["public"]["Enums"]["data_source"]
+          registered_at?: string
+          scope: string
+        }
+        Update: {
+          api_host?: string
+          client_id?: string
+          provider?: Database["public"]["Enums"]["data_source"]
+          registered_at?: string
+          scope?: string
+        }
+        Relationships: []
+      }
+      provider_oauth_states: {
+        Row: {
+          api_host: string
+          athlete_id: string
+          code_verifier: string
+          created_at: string
+          expires_at: string
+          provider: Database["public"]["Enums"]["data_source"]
+          redirect_uri: string
+          state: string
+        }
+        Insert: {
+          api_host: string
+          athlete_id: string
+          code_verifier: string
+          created_at?: string
+          expires_at?: string
+          provider: Database["public"]["Enums"]["data_source"]
+          redirect_uri: string
+          state: string
+        }
+        Update: {
+          api_host?: string
+          athlete_id?: string
+          code_verifier?: string
+          created_at?: string
+          expires_at?: string
+          provider?: Database["public"]["Enums"]["data_source"]
+          redirect_uri?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_oauth_states_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_tokens: {
         Row: {
           access_expires_at: string | null
@@ -3703,6 +3768,16 @@ export type Database = {
             }
             Returns: string
           }
+      consume_oauth_state: {
+        Args: { p_state: string }
+        Returns: {
+          api_host: string
+          athlete_id: string
+          code_verifier: string
+          provider: Database["public"]["Enums"]["data_source"]
+          redirect_uri: string
+        }[]
+      }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
       delete_energy_session: { Args: { p_session_id: string }; Returns: string }
@@ -3810,6 +3885,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      purge_expired_oauth_states: { Args: never; Returns: number }
       react_weekly_retour: {
         Args: { p_reaction: string; p_retour_id: string }
         Returns: undefined
