@@ -20,6 +20,7 @@
  * risque les milliers de messages `record` par seconde dont nous ne faisons
  * rien.
  */
+import { sportFromFitCode } from "./sports.ts";
 import {
   contentFingerprint,
   localDateOf,
@@ -214,44 +215,6 @@ function decodeMessages(bytes: Uint8Array): Map<number, Fields[]> {
   return collected;
 }
 
-/*
-  Sports FIT, limités à ce qu'un athlète en préparation physique est
-  susceptible d'enregistrer. Les slugs sont en anglais et volontairement les
-  mêmes que ceux des fournisseurs : une valeur inconnue passe en
-  `sport_<n>` plutôt que de devenir `null`, parce que « sport non reconnu, code
-  62 » se corrige en ajoutant une ligne ici, alors que `null` ne dit rien.
-*/
-const SPORTS: Record<number, string> = {
-  0: "generic",
-  1: "running",
-  2: "cycling",
-  4: "fitness_equipment",
-  5: "swimming",
-  10: "training",
-  11: "walking",
-  12: "cross_country_skiing",
-  13: "alpine_skiing",
-  15: "rowing",
-  16: "mountaineering",
-  17: "hiking",
-  18: "multisport",
-  19: "paddling",
-  21: "e_biking",
-  30: "inline_skating",
-  31: "rock_climbing",
-  35: "snowshoeing",
-  37: "stand_up_paddleboarding",
-  41: "kayaking",
-  47: "boxing",
-  48: "floor_climbing",
-  53: "diving",
-  62: "hiit",
-  64: "racket",
-  65: "wheelchair_push_walk",
-  66: "wheelchair_push_run",
-  67: "meditation",
-};
-
 /** Champs du message `session` (global 18) que nous lisons. */
 const SESSION = {
   timestamp: 253,
@@ -360,9 +323,7 @@ export async function parseFit(bytes: Uint8Array, name = "activité.fit"): Promi
       externalId: sessions.length > 1 ? `${externalId}#${index + 1}` : externalId,
       startedAt: new Date(startedAtMs).toISOString(),
       localDate: localDateOf(startedAtMs, offsetS),
-      sport: sportCode === null || sportCode === undefined
-        ? null
-        : SPORTS[sportCode] ?? `sport_${sportCode}`,
+      sport: sportFromFitCode(sportCode),
       // La contrainte en base refuse une durée nulle ou négative : on écarte
       // ici plutôt que de laisser l'insertion échouer sur tout le lot.
       durationS: durationS !== null && durationS > 0 ? durationS : null,
