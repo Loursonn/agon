@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { C } from "@/lib/theme";
 import { toast } from "sonner";
 import { bookingUrlError, normalizeBookingUrl } from "@/lib/booking";
+import { PrivacySection } from "@/features/shared/components/PrivacySection";
 
 export default function SettingsPage() {
   const { profile } = useAuth();
@@ -173,6 +174,11 @@ export default function SettingsPage() {
         >
           {savingBooking ? "Enregistrement…" : "Enregistrer"}
         </button>
+      </div>
+
+      {/* Confidentialité & données — mêmes droits RGPD que côté athlète */}
+      <div style={{ marginTop: 24 }}>
+        <PrivacySection />
       </div>
 
       {/* Danger zone */}

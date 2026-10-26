@@ -60,6 +60,15 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         ],
       },
       {
+        title: "Un panneau « Confidentialité & données »",
+        points: [
+          "Dans tes paramètres (et dans le profil de l'athlète) : un endroit unique pour gérer tes accords, récupérer tes données et supprimer ton compte.",
+          "« Télécharger toutes mes données » produit un fichier JSON contenant tout ce qu'Agon détient à ton sujet, réutilisable ailleurs.",
+          "Un accord facultatif se retire d'un seul clic, aussi simplement qu'il a été donné — c'est ce qu'exige le RGPD.",
+          "La suppression de compte demande de taper SUPPRIMER : elle efface les données, les fichiers déposés et révoque les accès aux montres connectées.",
+        ],
+      },
+      {
         title: "Ce qui change sous le capot",
         points: [
           "La suppression de compte efface réellement toutes les données associées, y compris les fichiers déposés. Auparavant, le compte était désactivé mais les données restaient en base.",

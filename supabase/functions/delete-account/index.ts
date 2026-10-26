@@ -125,10 +125,22 @@ serve(async (req) => {
       durée de vie limitée clôt l'accès résiduel.
     */
     const revocationErrors: string[] = [];
-    const { data: connections } = await admin
+    const { data: connections, error: connError } = await admin
       .from("provider_connections")
       .select("provider")
       .eq("user_id", user.id);
+
+    /*
+      La table n'existe pas encore tant que l'intégration des montres n'est pas
+      livrée (code 42P01). C'est un état attendu, pas une anomalie : on
+      n'encombre pas l'utilisateur d'un avertissement. Toute autre erreur est
+      signalée — « aucune connexion » et « je n'ai pas pu lire les connexions »
+      ne doivent pas se confondre, sinon un jeton resterait actif sans que
+      personne ne le sache.
+    */
+    if (connError && connError.code !== "42P01") {
+      revocationErrors.push(`lecture des connexions: ${connError.message}`);
+    }
 
     for (const c of (connections ?? []) as Array<{ provider: string }>) {
       try {

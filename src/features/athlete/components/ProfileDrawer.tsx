@@ -17,6 +17,7 @@ import { todayKey } from "@/lib/date";
 import { useAthleteTrends, useAthleteInsights } from "@/features/shared/hooks/useAthleteTrends";
 import { TrendCard } from "@/features/athlete/components/profile/TrendCard";
 import { AppFeedbackSection } from "@/features/athlete/components/profile/AppFeedbackSection";
+import { PrivacySection } from "@/features/shared/components/PrivacySection";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useAthleteRetours } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import type { TrendSummary } from "@/lib/athleteTrends";
@@ -320,6 +321,12 @@ export default function ProfileDrawer({ onClose }: Props) {
 
         {/* ── Retour sur l'app ── */}
         {!viewOnly && <AppFeedbackSection />}
+
+        {/* ── Confidentialité & données (consentements, export, suppression) ──
+            Masqué en `viewOnly` : le coach qui consulte le profil d'un athlète
+            ne doit pas pouvoir retirer ses consentements ni supprimer son
+            compte — ce sont des droits strictement personnels. */}
+        {!viewOnly && <PrivacySection />}
 
         {/* Déconnexion */}
         <div style={{ marginTop: "auto", paddingTop: 8 }}>
