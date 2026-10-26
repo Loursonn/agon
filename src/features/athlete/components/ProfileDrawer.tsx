@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type React from "react";
 import { HeartPulse, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
@@ -524,6 +524,44 @@ function CoachSection() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [confirmAction, setConfirmAction] = useState<"quit" | "stopSelf" | null>(null);
+  const [coachName, setCoachName] = useState<string | null>(null);
+
+  /**
+   * Identifiant du coach externe, ou `null` si l'athlète n'en a pas (ou s'il est
+   * son propre coach). Dérivé avant tout `return` anticipé : les hooks doivent
+   * s'exécuter dans le même ordre à chaque rendu.
+   */
+  const coachId =
+    user && profile && profile.coach_id && profile.coach_id !== user.id
+      ? profile.coach_id
+      : null;
+
+  // Le nom du coach n'est affiché nulle part ailleurs : on le lit ici, dans un
+  // effet. Le drapeau `cancelled` évite d'écrire dans un composant démonté ou
+  // de faire gagner une réponse obsolète si `coachId` change entre-temps.
+  useEffect(() => {
+    if (!coachId) {
+      setCoachName(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("full_name, first_name, last_name")
+      .eq("id", coachId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setCoachName(
+          [data.first_name, data.last_name].filter(Boolean).join(" ") ||
+            data.full_name ||
+            "Coach",
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [coachId]);
 
   if (!user || !profile) return null;
 
@@ -531,15 +569,6 @@ function CoachSection() {
   const isSelfCoached = profile.coach_id === user.id; // coach_id = self
   const hasExternalCoach = !!profile.coach_id && profile.coach_id !== user.id;
   const noCoach = !profile.coach_id; // coach_id = null
-
-  // Fetch coach name for display
-  const [coachName, setCoachName] = useState<string | null>(null);
-  if (hasExternalCoach && !coachName) {
-    supabase.from("profiles").select("full_name, first_name, last_name").eq("id", profile.coach_id!).maybeSingle()
-      .then(({ data }) => {
-        if (data) setCoachName([data.first_name, data.last_name].filter(Boolean).join(" ") || data.full_name || "Coach");
-      });
-  }
 
   async function handleJoin() {
     if (!code.trim() || loading) return;

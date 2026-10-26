@@ -301,7 +301,7 @@ export default function EnergySessionEditorPage() {
       setRoot(rootG);
       setFieldSchema(existingSession.schema ?? null);
       setNotes(existingSession.notes ?? "");
-      setImages(((existingSession as any).images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
+      setImages((existingSession.images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
       setFiches(existingSession.fiches ?? []);
       setSportId(existingSession.sport_id ?? null);
       setQualityId(existingSession.quality_id ?? null);
@@ -324,7 +324,7 @@ export default function EnergySessionEditorPage() {
     });
     setSportId(session.sport_id ?? null);
     setQualityId(session.quality_id ?? null);
-    setImages(((session as any).images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
+    setImages((session.images ?? []).filter((img: SessionImage) => !img.url.startsWith("blob:")));
     setFiches(session.fiches ?? []);
     setFormat(session.format ?? "wod");
     setClassiqueBlocks(

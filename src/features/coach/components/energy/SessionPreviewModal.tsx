@@ -358,13 +358,13 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
           )}
 
           {/* Images / Illustrations */}
-          {((session as any).images as SessionImage[] | null)?.length ? (
+          {session.images?.length ? (
             <div style={{ margin: "0 18px 12px" }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
                 Illustrations
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {((session as any).images as SessionImage[]).map((img: SessionImage, i: number) => (
+                {(session.images ?? []).map((img: SessionImage, i: number) => (
                   <div key={i}
                     onClick={() => setLightboxUrl(img.url)}
                     style={{ width: 100, height: 100, borderRadius: 4, overflow: "hidden", border: "1px solid " + C.brd, cursor: "pointer" }}>

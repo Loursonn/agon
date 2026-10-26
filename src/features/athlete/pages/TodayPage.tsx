@@ -972,9 +972,9 @@ export default function TodayPage() {
   const recentFb = useMemo(() => {
     if (!coachFeedbacks) return null;
     return Object.entries(coachFeedbacks)
-      .map(([w, fb]: [string, any]) => ({ week: Number(w), ...fb }))
-      .filter((fb: any) => fb.note && fb.date && Date.now() - new Date(fb.date).getTime() <= 14 * 86_400_000)
-      .sort((a: any, b: any) => (a.date < b.date ? 1 : -1))[0] ?? null;
+      .map(([w, fb]) => ({ week: Number(w), ...fb }))
+      .filter((fb) => fb.note && fb.date && Date.now() - new Date(fb.date).getTime() <= 14 * 86_400_000)
+      .sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1))[0] ?? null;
   }, [coachFeedbacks]);
 
   return (

@@ -2,7 +2,7 @@
  * Tests Vitest — §8
  * Couverture :
  * - Détection chevauchement même-type
- * - useEffectiveParents (logique pure)
+ * - effectiveParents (logique pure)
  * - Snap au lundi
  * - Cascade auto-shift
  */
@@ -12,8 +12,8 @@ import {
   snapMonday, snapSunday, chainNextStart, endFromWeeks, computeCascade,
 } from "@/features/coach/components/planning/utils/planningHelpers";
 import {
-  useEffectiveParentsMeso, useEffectiveParentsCycle,
-} from "@/features/coach/components/planning/hooks/useEffectiveParents";
+  effectiveParentsMeso, effectiveParentsCycle,
+} from "@/features/coach/components/planning/hooks/effectiveParents";
 import type { TimelineData } from "@/features/coach/components/planning/hooks/useTimelineData";
 import { PERIOD_DEFAULTS } from "@/types/planning";
 
@@ -63,7 +63,7 @@ describe("overlap detection (same-type)", () => {
   });
 });
 
-// ── §3 — useEffectiveParents ──────────────────────────────────────────────────
+// ── §3 — effectiveParents ──────────────────────────────────────────────────
 
 const mockData: TimelineData = {
   macrocycles: [
@@ -84,30 +84,30 @@ const mockData: TimelineData = {
   tests: [],
 };
 
-describe("useEffectiveParentsMeso", () => {
+describe("effectiveParentsMeso", () => {
   it("returns primary macrocycle for a standard meso", () => {
-    const result = useEffectiveParentsMeso("meso1", mockData);
+    const result = effectiveParentsMeso("meso1", mockData);
     expect(result.primary?.id).toBe("macro1");
     expect(result.secondary).toHaveLength(0);
   });
 
   it("detects secondary parent when meso overflows into adjacent macro", () => {
-    const result = useEffectiveParentsMeso("meso3", mockData);
+    const result = effectiveParentsMeso("meso3", mockData);
     expect(result.primary?.id).toBe("macro1");
     // meso3 ends 2027-01-25 which overlaps macro2 (2027-01-04 → 2027-06-27)
     expect(result.secondary.some((m) => m.id === "macro2")).toBe(true);
   });
 
   it("returns null primary for unknown id", () => {
-    const result = useEffectiveParentsMeso("unknown", mockData);
+    const result = effectiveParentsMeso("unknown", mockData);
     expect(result.primary).toBeNull();
     expect(result.secondary).toHaveLength(0);
   });
 });
 
-describe("useEffectiveParentsCycle", () => {
+describe("effectiveParentsCycle", () => {
   it("returns primary meso for a standard cycle", () => {
-    const result = useEffectiveParentsCycle("cycle1", mockData);
+    const result = effectiveParentsCycle("cycle1", mockData);
     expect(result.primary?.id).toBe("meso1");
   });
 });

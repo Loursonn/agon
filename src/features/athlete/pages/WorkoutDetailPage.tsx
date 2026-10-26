@@ -2293,7 +2293,7 @@ export default function WorkoutDetailPage() {
           if (s.done || s.skipped) return s;
           const prevStr = prevEx[i] ?? "";
           if (!prevStr) return s;
-          let newS = { ...s };
+          const newS = { ...s };
           let dirty = false;
           if (!newS.kg) {
             const v = parsePrevVal(prevStr, "kg");

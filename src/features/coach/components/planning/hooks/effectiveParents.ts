@@ -1,5 +1,5 @@
 /**
- * useEffectiveParents — §3
+ * effectiveParents — §3
  * Calcule les parents effectifs d'une période (primary + secondary[]).
  * Le 2nd parent est calculé à la volée sans table de jonction :
  * si la période déborde de son parent FK, on cherche les autres
@@ -16,7 +16,7 @@ export interface EffectiveParents<T> {
 }
 
 /** Pour un mésocycle : parent = macrocycle */
-export function useEffectiveParentsMeso(
+export function effectiveParentsMeso(
   mesoId: string,
   data: TimelineData | undefined,
 ): EffectiveParents<TimelineData["macrocycles"][number]> {
@@ -40,7 +40,7 @@ export function useEffectiveParentsMeso(
 }
 
 /** Pour un cycle : parent = mésocycle */
-export function useEffectiveParentsCycle(
+export function effectiveParentsCycle(
   cycleId: string,
   data: TimelineData | undefined,
 ): EffectiveParents<TimelineData["mesocycles"][number]> {
@@ -64,7 +64,7 @@ export function useEffectiveParentsCycle(
 }
 
 /** Pour un microcycle : parent = cycle */
-export function useEffectiveParentsMicro(
+export function effectiveParentsMicro(
   microId: string,
   data: TimelineData | undefined,
 ): EffectiveParents<TimelineData["cycles"][number]> {
@@ -89,12 +89,12 @@ export function useEffectiveParentsMicro(
  * Generic overload — retourne { primary, secondary[] } pour n'importe quelle période.
  * Détecte automatiquement le type selon les données disponibles.
  */
-export function useEffectiveParents(
+export function effectiveParents(
   period: { id: string; start_date: string; end_date: string },
   kind: "mesocycle" | "cycle" | "microcycle",
   data: TimelineData | undefined,
 ): EffectiveParents<TimelineData["macrocycles"][number] | TimelineData["mesocycles"][number] | TimelineData["cycles"][number]> {
-  if (kind === "mesocycle") return useEffectiveParentsMeso(period.id, data) as EffectiveParents<TimelineData["macrocycles"][number]>;
-  if (kind === "cycle")     return useEffectiveParentsCycle(period.id, data) as EffectiveParents<TimelineData["mesocycles"][number]>;
-  return useEffectiveParentsMicro(period.id, data) as EffectiveParents<TimelineData["cycles"][number]>;
+  if (kind === "mesocycle") return effectiveParentsMeso(period.id, data) as EffectiveParents<TimelineData["macrocycles"][number]>;
+  if (kind === "cycle")     return effectiveParentsCycle(period.id, data) as EffectiveParents<TimelineData["mesocycles"][number]>;
+  return effectiveParentsMicro(period.id, data) as EffectiveParents<TimelineData["cycles"][number]>;
 }

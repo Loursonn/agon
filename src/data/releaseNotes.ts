@@ -37,6 +37,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-26-fiabilite-profil-athlete",
+    date: "2026-10-26",
+    kind: "fix",
+    title: "Le profil de l'athlète ne recharge plus le nom de son coach en boucle",
+    summary: "Dans « Mon profil » côté athlète, le bloc « Mon coach » relançait une requête à chaque rafraîchissement de l'écran. Corrigé : le nom est lu une seule fois.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bloc « Mon coach » du profil athlète ne déclenche plus de requête répétée : l'app est plus légère sur les connexions mobiles lentes.",
+          "Rien à faire de ton côté, et rien ne change à l'écran : seul le comportement interne est corrigé.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-26-theme-du-jour-raccourcis",
     date: "2026-10-26",
     kind: "feature",

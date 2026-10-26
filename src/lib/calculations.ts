@@ -1,13 +1,35 @@
 import { normalizeExName, e1rm, parseReps } from "@/lib/exercises";
 import { normPrimary } from "@/lib/muscles";
 
+/**
+ * Formes minimales des données héritées de `app_data` (JSONB non typé).
+ *
+ * Les exercices eux-mêmes restent `any` — leur schéma varie d'une version de
+ * l'app à l'autre et les signatures portent déjà un `eslint-disable`. Mais les
+ * deux feuilles qu'on lit réellement, la config d'une semaine et une série
+ * saisie, ont un contrat stable : on le déclare pour que les champs typés
+ * ci-dessous (`kg`, `reps`, `sets`…) soient vérifiés au lieu d'être `any`.
+ */
+interface WeekConfig {
+  kg?: number;
+  repsRange?: string;
+  sets?: number;
+  rir?: number;
+}
+
+/** Une série loguée par l'athlète. */
+interface LoggedSet {
+  done?: boolean;
+  reps?: number;
+}
+
 /** Tous les PRs (1RM estimés) extraits des données d'exercices. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getAllPRs = (exos: Record<string, any[]>) => {
   const p: Record<string, { kg:number; reps:number; est:number; week:number; name:string }> = {};
   Object.values(exos).flat().forEach((ex) => {
     const norm = normalizeExName(ex.name);
-    Object.entries(ex.weeks || {}).forEach(([wk, w]: [string, any]) => {
+    Object.entries(ex.weeks || {}).forEach(([wk, w]: [string, WeekConfig]) => {
       if (!w?.kg) return;
       const est = e1rm(w.kg, parseReps(w.repsRange) || 1);
       if (!p[norm] || est > p[norm].est)
@@ -47,7 +69,7 @@ export const get1rmByWeek = (exos: Record<string, any[]>, name: string, tw: numb
   Object.values(exos).flat()
     .filter((e) => normalizeExName(e.name).toLowerCase() === normTarget)
     .forEach((ex) => {
-      Object.entries(ex.weeks || {}).forEach(([wk, w]: [string, any]) => {
+      Object.entries(ex.weeks || {}).forEach(([wk, w]: [string, WeekConfig]) => {
         if (!w?.kg) return;
         const est = e1rm(w.kg, parseReps(w.repsRange) || 1);
         if (!b[+wk] || est > b[+wk]) b[+wk] = est;
@@ -74,7 +96,7 @@ export const getCombinedData = (exos: Record<string, any[]>, sets: any, wh: any,
     }, 0);
     const hasData = all.some((ex) => (sets[ex.id + "_" + w] || []).length > 0);
     const volReal = hasData
-      ? all.reduce((a, ex) => (sets[ex.id + "_" + w] || []).filter((s: any) => s.done).reduce((b: number, s: any) => b + (s.reps || 0), a), 0)
+      ? all.reduce((a, ex) => (sets[ex.id + "_" + w] || []).filter((s: LoggedSet) => s.done).reduce((b: number, s: LoggedSet) => b + (s.reps || 0), a), 0)
       : null;
     const intensity = parseFloat(
       all.reduce((a, ex) => {

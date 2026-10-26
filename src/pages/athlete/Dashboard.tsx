@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { errorMessage } from "@/lib/errors";
 import { useAuth } from "@/hooks/useAuth";
 import WeightliftingTracker from "@/components/WeightliftingTracker.jsx";
 
@@ -28,8 +29,8 @@ export default function AthleteDashboard() {
       setMsg("Coach rejoint !");
       setCode("");
       setTimeout(() => setShowChangeCoach(false), 1500);
-    } catch (e: any) {
-      setMsg(e.message || "Code invalide");
+    } catch (e) {
+      setMsg(errorMessage(e, "Code invalide"));
     } finally {
       setLoading(false);
     }
