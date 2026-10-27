@@ -43,9 +43,9 @@ export const CONSENT_COPY: Record<
   },
   ai_programming: {
     label:
-      "J'accepte que mon historique d'entraînement soit transmis à l'API Google Gemini lorsque mon coach demande la génération d'un programme.",
+      "J'accepte que mes données d'entraînement soient transmises à l'API Google Gemini pour en produire des analyses, des synthèses écrites et des visualisations, ainsi que des pistes de programme que mon coach retravaille.",
     detail:
-      "Facultatif. Ces données ne servent pas à entraîner les modèles de Google. Si tu refuses, ton coach construira tes programmes manuellement.",
+      "Facultatif, et révocable à tout moment. Ces données ne servent pas à entraîner les modèles de Google. Tes programmes restent décidés et écrits par ton coach : l'IA ne fait que lui préparer de la matière. Si tu refuses, tu gardes tes statistiques et tes graphiques, sans analyse rédigée par l'IA.",
     required: false,
   },
   garmin_sync: {

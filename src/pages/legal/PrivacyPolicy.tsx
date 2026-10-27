@@ -240,8 +240,9 @@ export default function PrivacyPolicy() {
           ])}
         />
         <P>
-          Concernant l'intelligence artificielle : lorsque votre coach demande la génération d'un
-          programme, les données nécessaires sont transmises à l'API Google Gemini. Ces données{" "}
+          Concernant l'intelligence artificielle : lorsqu'une analyse, une synthèse ou une
+          proposition de programme est demandée, les données nécessaires sont transmises à l'API
+          Google Gemini. Ces données{" "}
           <strong>ne sont pas utilisées pour entraîner les modèles de Google</strong>, conformément
           aux conditions de l'API payante. Aucune donnée issue d'un service tiers dont les
           conditions l'interdisent n'est transmise à ce traitement.

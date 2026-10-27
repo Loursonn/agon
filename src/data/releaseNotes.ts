@@ -80,7 +80,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       {
         title: "Ce que tu verras",
         points: [
-          "Si l'athlète a refusé, un message te le dit en clair et t'indique où il peut l'activer : son profil, section Confidentialité, « Programmation assistée par IA ». Tu n'as pas à deviner la cause.",
+          "Si l'athlète a refusé, un message te le dit en clair et t'indique où il peut l'activer : son profil, section Confidentialité, sur l'accord qui mentionne l'API Google Gemini. Tu n'as pas à deviner la cause.",
           "Un accord donné puis retiré reprend effet immédiatement sur le générateur — aucune génération ne part entre-temps.",
           "Lance le générateur depuis la fiche de l'athlète concerné : sans athlète sélectionné, la demande est refusée plutôt que traitée au hasard.",
         ],

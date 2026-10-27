@@ -133,7 +133,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
   {
     name: "Google Ireland Ltd. (Gemini API)",
     purpose:
-      "Génération assistée de programmes d'entraînement à la demande du coach. Traitement par intelligence artificielle.",
+      "Analyses, synthèses et visualisations des données d'entraînement, et génération assistée de programmes. Traitement par intelligence artificielle.",
     location: "Union européenne / États-Unis",
     transferMechanism: "Clauses contractuelles types",
     role: "subprocessor",
