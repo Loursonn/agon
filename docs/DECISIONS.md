@@ -1032,4 +1032,39 @@ n'ont pas été relues sur ce point.
 
 ---
 
+## 2026-10 — La Training API est demandée à Garmin avant d'être codée, et le dossier le dit
+
+**Décision** : le dossier Garmin demande trois APIs — Activity, Health et
+**Training** — au lieu des deux initialement prévues. Courses et Women's Health
+restent écartées.
+
+**Pourquoi Training** : elle publie une séance vers le calendrier Garmin
+Connect de l'athlète, qui la synchronise sur sa montre. C'est le seul sens
+Agon → appareil qu'offre le palier Starter, et il correspond au cœur du
+produit : mettre la prescription du coach sous les yeux de l'athlète au moment
+où il s'entraîne. Aujourd'hui cela veut dire lire son téléphone entre deux
+séries.
+
+**Pourquoi la demander maintenant alors qu'elle n'est pas codée** : trois voies
+existaient, deux étaient mauvaises. L'ajouter après coup suppose de redéposer
+une demande et de repasser une revue. La demander en laissant croire qu'elle
+est implémentée est une fausse déclaration. Reste la troisième : la demander en
+écrivant qu'elle est à construire, ce que fait le §4. Un périmètre annoncé
+comme futur et décrit précisément se défend ; un périmètre non décrit se lit
+comme une prise de scope.
+
+**Ce que ça ajoute au travail d'après approbation** : traduire une séance Agon
+en *workout* Garmin, et tenir la mise à jour et la suppression. Une séance
+modifiée par le coach doit l'être aussi dans le calendrier de l'athlète, sinon
+il s'entraîne sur une version périmée — c'est le bogue qui ferait perdre
+confiance le plus vite. Le rendu dépend du modèle de montre : une séance de
+course structurée passe bien, une séance de force détaillée moins.
+
+**Pourquoi pas Courses ni Women's Health** : Agon ne planifie pas d'itinéraire.
+Les données de cycle menstruel relèvent de l'article 9 du RGPD — consentement
+explicite distinct, analyse d'impact, conservation propre. C'est un chantier de
+conformité entier, pas une case à cocher.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

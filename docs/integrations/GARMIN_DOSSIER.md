@@ -22,20 +22,28 @@ Réponses prêtes à coller, champ par champ. Tout ce qui est entre `[...]` doit
 | §2–4 Description et usage des APIs | Rédigés |
 | §5 Modèle économique | Gratuit, sans offre payante — arbitré le 27/10/2026 |
 | §6 Tiers | Supabase, Vercel, Gemini — avec exclusion vérifiable des données Garmin |
-| §7 APIs | Activity + Health uniquement |
+| §7 APIs | Activity + Health + Training |
 | §8 Volumétrie | 10–50 aujourd'hui, 300 maximum à 12 mois |
 | §9 Contact antérieur | Aucun |
 | `agon-training.com` | Répond en production, pages légales publiques sans compte |
 
 Il reste à **copier-coller dans le formulaire**, section par section.
 
-**Après approbation, pas avant** : le palier Starter est *push only*, donc
-Garmin enverra les données vers un webhook public permanent. Cette fonction
-n'existe pas encore (`supabase/functions/` n'a que les fonctions COROS). Ce
-n'est pas un champ du formulaire et ça ne bloque pas le dépôt — mais l'URL
-devra être configurée dans le portail développeur avant la première connexion
-d'un athlète, et le schéma `provider_activities` est déjà commun aux deux
-fournisseurs, donc ce travail ne repart pas de zéro.
+**Après approbation, pas avant** — deux chantiers, aucun ne bloque le dépôt :
+
+1. **Le webhook entrant.** Le palier Starter est *push only*, donc Garmin
+   enverra les données vers un endpoint public permanent. Cette fonction
+   n'existe pas (`supabase/functions/` n'a que les fonctions COROS). L'URL
+   devra être configurée dans le portail développeur avant la première
+   connexion d'un athlète. Le schéma `provider_activities` est déjà commun aux
+   deux fournisseurs, donc ce travail ne repart pas de zéro.
+
+2. **La publication des séances (Training API).** Demandée dans ce dossier,
+   pas encore codée. Il faut traduire une séance Agon en *workout* Garmin, et
+   tenir la mise à jour et la suppression — une séance modifiée par le coach
+   doit l'être aussi dans le calendrier de l'athlète, sans quoi il s'entraîne
+   sur une version périmée. Le rendu sur la montre dépend du modèle : une
+   séance de course structurée passe bien, une séance de force détaillée moins.
 
 ---
 
@@ -143,9 +151,23 @@ lira sur les pages légales.
 > compares planned versus executed: intended pace versus actual pace, intended
 > intensity versus heart-rate response.
 >
-> We do not request the Courses, Training or Women's Health APIs. Agon does not
-> push content to devices and does not process menstrual-cycle data. We will
-> apply again if that changes, rather than request scopes we have no use for.
+> **Training API** — publishing the session a coach has programmed to the
+> athlete's Garmin Connect calendar, so that it reaches his watch. Agon's
+> purpose is to put a coach's prescription in front of the athlete at the
+> moment he trains; today that means reading it on a phone screen between sets.
+> The athlete would start his watch and find the prescribed work on it —
+> intervals, targets, rest — instead of switching back and forth.
+>
+> This is the one capability we are requesting ahead of its implementation. We
+> state that plainly rather than describe it as existing: the data model is in
+> place and the mapping from an Agon session to a Garmin workout is the
+> remaining work. A session published this way stays under the athlete's
+> control — it lands in his own Garmin Connect calendar, and he may delete it
+> there like any other entry.
+>
+> We do not request the Courses or Women's Health APIs. Agon does not plan
+> routes, and does not process menstrual-cycle data. We would rather apply
+> again if that changes than request scopes we have no use for.
 >
 > **Garmin data is excluded from AI processing.** Agon does use a third-party
 > AI service elsewhere in the product (see section 6), but data obtained
@@ -219,9 +241,15 @@ Implémentation : `20261027130000_provider_schema.sql` (table et trigger),
 
 - [x] Activity
 - [x] Health
+- [x] Training
 - [ ] Courses
-- [ ] Training
 - [ ] Women's Health
+
+*Training est demandée avant d'être codée — c'est assumé et dit tel quel au
+§4. L'ajouter après coup supposerait de redéposer une demande et de repasser
+une revue ; la demander maintenant sans la décrire aurait l'air d'une prise de
+périmètre. La troisième voie, la seule tenable, est de la demander en disant
+qu'elle est à construire.*
 
 ---
 
