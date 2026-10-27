@@ -12,6 +12,30 @@ Réponses prêtes à coller, champ par champ. Tout ce qui est entre `[...]` doit
 
 ---
 
+## Ce qu'il reste à fournir avant de déposer
+
+Trois réponses que seul Hugo peut donner, et une condition technique.
+
+| # | Quoi | Où | Pourquoi personne d'autre ne peut répondre |
+|---|---|---|---|
+| §5 | Modèle économique | ci-dessous | Garmin veut savoir si ses données servent d'argument commercial. Une réponse inventée engage. |
+| §8 | Nombre d'athlètes aujourd'hui + projection 12 mois | ci-dessous | Chiffre réel. Gonfler attire l'attention au mauvais endroit. |
+| §9 | Contact antérieur avec Garmin | ci-dessous | Fait personnel. |
+| — | `agon-training.com` doit répondre | DNS Vercel + mise en production | Garmin ouvre les deux URL pendant la revue. |
+
+Tout le reste du dossier est prêt : identité (§1), description (§2–4), tiers
+déclarés (§6), APIs demandées (§7).
+
+**Après approbation, pas avant** : le palier Starter est *push only*, donc
+Garmin enverra les données vers un webhook public permanent. Cette fonction
+n'existe pas encore (`supabase/functions/` n'a que les fonctions COROS). Ce
+n'est pas un champ du formulaire et ça ne bloque pas le dépôt — mais l'URL
+devra être configurée dans le portail développeur avant la première connexion
+d'un athlète, et le schéma `provider_activities` est déjà commun aux deux
+fournisseurs, donc ce travail ne repart pas de zéro.
+
+---
+
 ## Ce que donne le palier Starter
 
 Vérifié le 26 octobre 2026 :
@@ -37,19 +61,35 @@ par là.
 
 ## 1. Company & contact
 
+Valeurs tirées de `src/lib/legal.ts` — ne pas les ressaisir à la main ici, les
+recopier depuis le fichier pour qu'elles restent identiques à ce que Garmin
+lira sur les pages légales.
+
 | Champ | Réponse |
 |---|---|
-| Company name | `[Nom légal exact — cf. src/lib/legal.ts]` |
-| Website URL | `[https://… — cf. README.md de ce dossier]` |
-| Privacy Policy URL | `[URL du site]/confidentialite` |
-| Contact name | `[Prénom NOM]` |
+| Company name | Hugo TANGUY — *sole proprietorship (Entrepreneur individuel), SIREN 940221187* |
+| Website URL | https://agon-training.com |
+| Privacy Policy URL | https://agon-training.com/confidentialite |
+| Contact name | Hugo TANGUY |
 | Job title | Founder |
 | Email | prep.hugoo@gmail.com |
-| Company address | `[adresse postale complète]` |
+| Company address | 36 Chemin de Charlemagne, 33133 Galgon, France |
 
-> Garmin ouvre réellement la Privacy Policy URL. Elle doit répondre sans
-> compte, et mentionner Garmin nommément — c'est fait, au §4.3 de la politique
-> (« responsables indépendants »).
+> **Company name en entreprise individuelle** : il n'y a pas de personne morale
+> distincte, donc le nom légal *est* le nom de la personne physique. Déclarer
+> « Agon » seul créerait un écart avec les mentions légales que Garmin ouvrira
+> — et un écart entre deux documents du même dossier est précisément ce qu'un
+> relecteur cherche. Mentionner « Agon » comme nom commercial à côté, pas à la
+> place.
+
+> Garmin ouvre réellement la Privacy Policy URL. Elle doit répondre **sans
+> compte** — c'est le cas, les trois routes légales sont hors `ProtectedRoute`
+> dans `src/App.tsx` — et mentionner Garmin nommément : c'est fait, Garmin est
+> déclaré comme responsable de traitement indépendant dans `SUBPROCESSORS`.
+>
+> Les deux URL doivent répondre **au moment du dépôt**. Tant que
+> `agon-training.com` ne pointe pas sur la production, déclarer ce domaine vaut
+> moins qu'un sous-domaine `vercel.app` qui répond.
 
 ---
 
@@ -137,11 +177,22 @@ après approbation coûte l'accès.
 > We use no advertising, tracking or analytics SDK. No machine-learning model
 > is trained on Garmin data.
 
-> **À faire avant de cocher quoi que ce soit ici** : le drapeau `ai_allowed`
-> par source de données (chantier G) n'est pas encore en place. Il garantit
-> techniquement qu'une donnée issue d'un fournisseur dont les conditions
-> l'interdisent ne puisse pas atteindre Gemini. Déclarer cette garantie à
-> Garmin avant de l'avoir codée serait un engagement en l'air.
+> **La garantie annoncée ici est désormais codée**, ce qui permet de la
+> déclarer sans mentir :
+>
+> - `data_source_policies` porte un drapeau `ai_allowed` par source
+>   (`20261027130000_provider_schema.sql`). Garmin y est à `true`, au titre de
+>   la clause 4.1(b) ; COROS est à `false` tant que ses conditions n'ont pas
+>   été relues sur ce point.
+> - Le drapeau est posé sur chaque ligne par un trigger `BEFORE INSERT`, pas
+>   par le client : une application compromise ne peut pas le contourner.
+> - Les vues qui alimentent Gemini filtrent sur `WHERE ai_allowed`
+>   (`20261028090000_ai_source_guard.sql`), et le consentement `ai_programming`
+>   de l'athlète est vérifié côté serveur dans `ai-program` avant l'appel.
+>
+> Autrement dit, la phrase « Consent is checked server-side before the call is
+> made » du tableau ci-dessus est vérifiable dans le code, et pas seulement
+> promise.
 
 ---
 
