@@ -53,15 +53,18 @@ export const COMPANY = {
   /** Forme juridique. */
   legalForm: "Entrepreneur individuel (EI)",
   /** Nom et prénom de l'entrepreneur — obligatoire en EI (art. R.123-237 C. com.). */
-  legalName: `${TODO} Prénom NOM de l'entrepreneur`,
-  /** Numéro SIREN à 9 chiffres. */
-  siren: `${TODO} 9 chiffres`,
+  legalName: "Hugo TANGUY",
+  /**
+   * Numéro SIREN à 9 chiffres, groupés par trois comme l'imprime l'INSEE.
+   * Les formulaires qui n'acceptent que des chiffres attendent `940221187`.
+   */
+  siren: "940 221 187",
   /** Adresse du siège — obligatoire en mentions légales. */
-  address: `${TODO} adresse postale complète`,
+  address: "36 Chemin de Charlemagne, 33133 Galgon, France",
   /** Email de contact pour l'exercice des droits RGPD. */
   contactEmail: "prep.hugoo@gmail.com",
   /** Site web public — champ obligatoire du formulaire Garmin. */
-  websiteUrl: `${TODO} https://…`,
+  websiteUrl: "https://agon-training.com",
   /** Numéro de TVA intracommunautaire, ou mention de franchise. */
   vat: "Non assujetti à la TVA (franchise en base, art. 293 B du CGI)",
 } as const;
