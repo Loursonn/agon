@@ -9,6 +9,7 @@ revérifier avant de déposer quoi que ce soit.
 |---|---|---|---|
 | **COROS** | MCP officiel, OAuth 2.0 | **Aucune** — libre-service | Prêt à coder |
 | **Garmin** | Connect Developer Program, palier *Starter* | Formulaire à déposer | Dossier prêt, bloqué par le domaine et la mise en production |
+| **WHOOP** | API v2, OAuth 2.0 | Sandbox libre-service (10 membres), paliers au-delà | **Étudié, pas lancé** — la clause 4.2(b) interdit la conservation en base. Voir `WHOOP_INTEGRATION.md` |
 | **Strava** | — | Abandonné | Voir `docs/DECISIONS.md` |
 
 ## Ce qui bloque le dépôt Garmin

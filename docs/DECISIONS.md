@@ -993,4 +993,78 @@ ouvrant l'onglet : ce que l'athlète a réellement fait.
 
 ---
 
+## 2026-10 — Les données Garmin sont exclues de tout traitement par IA, sans y être obligées
+
+**Décision** : `data_source_policies.ai_allowed` passe à `false` pour `garmin`
+(migration `20261029100000_garmin_ai_opt_out.sql`). Gemini reste déclaré comme
+sous-traitant dans le dossier Garmin et dans la politique de confidentialité —
+il est toujours utilisé pour la rédaction assistée de programmes, la barre de
+chat du coach et les insights d'athlète — mais aucune donnée issue de l'API
+Garmin ne l'atteint.
+
+**Pourquoi, alors que rien ne l'impose** : la clause 4.1(b) du Connect
+Developer Program Agreement autorise l'affichage à un tiers avec le
+consentement de l'utilisateur et ne dit rien de l'IA. Le champ « tiers qui
+traitent les données de l'appareil » du formulaire est celui qui fait refuser
+les dossiers, et il appelle une réponse qu'un relecteur puisse contrôler.
+Déclarer « Gemini est utilisé, mais pas sur vos données » n'a de valeur que si
+c'est le schéma qui l'empêche, et pas la discipline du code applicatif. Le
+trigger `apply_source_ai_policy` écrase ce que l'appelant a posé : un client
+compromis ne peut pas marquer une donnée Garmin comme transmissible.
+
+**Ce qui a motivé la vérification** : la fonctionnalité IA était crue
+abandonnée. Elle ne l'est pas — trois surfaces sont montées et actives
+(`CoachProgramEditor`, `AIChatBar` dans `CoachLayout`, `athlete-insights` via
+`useAthleteTrends`). Déclarer à Garmin l'absence de traitement IA aurait été
+une fausse déclaration, et une fausse déclaration découverte après approbation
+coûte l'accès. D'où la règle : on vérifie dans le code avant de déclarer, même
+quand on est à peu près sûr.
+
+**Conséquence assumée** : le consentement `ai_programming` de l'athlète ne
+lève pas cette exclusion. Un athlète qui accepte le traitement par IA verra
+quand même ses données Garmin en être écartées. L'inverse lui ferait porter une
+décision qui est la nôtre, prise vis-à-vis d'un fournisseur.
+
+**Pour revenir en arrière** : il ne suffit pas de repasser la ligne à `true`.
+L'exclusion est déclarée dans le dossier, donc le changement doit être annoncé
+à Garmin. `coros` reste à `false` pour une raison différente — ses conditions
+n'ont pas été relues sur ce point.
+
+---
+
+## 2026-10 — La Training API est demandée à Garmin avant d'être codée, et le dossier le dit
+
+**Décision** : le dossier Garmin demande trois APIs — Activity, Health et
+**Training** — au lieu des deux initialement prévues. Courses et Women's Health
+restent écartées.
+
+**Pourquoi Training** : elle publie une séance vers le calendrier Garmin
+Connect de l'athlète, qui la synchronise sur sa montre. C'est le seul sens
+Agon → appareil qu'offre le palier Starter, et il correspond au cœur du
+produit : mettre la prescription du coach sous les yeux de l'athlète au moment
+où il s'entraîne. Aujourd'hui cela veut dire lire son téléphone entre deux
+séries.
+
+**Pourquoi la demander maintenant alors qu'elle n'est pas codée** : trois voies
+existaient, deux étaient mauvaises. L'ajouter après coup suppose de redéposer
+une demande et de repasser une revue. La demander en laissant croire qu'elle
+est implémentée est une fausse déclaration. Reste la troisième : la demander en
+écrivant qu'elle est à construire, ce que fait le §4. Un périmètre annoncé
+comme futur et décrit précisément se défend ; un périmètre non décrit se lit
+comme une prise de scope.
+
+**Ce que ça ajoute au travail d'après approbation** : traduire une séance Agon
+en *workout* Garmin, et tenir la mise à jour et la suppression. Une séance
+modifiée par le coach doit l'être aussi dans le calendrier de l'athlète, sinon
+il s'entraîne sur une version périmée — c'est le bogue qui ferait perdre
+confiance le plus vite. Le rendu dépend du modèle de montre : une séance de
+course structurée passe bien, une séance de force détaillée moins.
+
+**Pourquoi pas Courses ni Women's Health** : Agon ne planifie pas d'itinéraire.
+Les données de cycle menstruel relèvent de l'article 9 du RGPD — consentement
+explicite distinct, analyse d'impact, conservation propre. C'est un chantier de
+conformité entier, pas une case à cocher.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

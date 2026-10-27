@@ -12,6 +12,41 @@ Réponses prêtes à coller, champ par champ. Tout ce qui est entre `[...]` doit
 
 ---
 
+## Ce qu'il reste à fournir avant de déposer
+
+**Plus rien.** Le dossier est complet et le site répond.
+
+| Point | État |
+|---|---|
+| §1 Identité | Renseignée depuis `src/lib/legal.ts` |
+| §2–4 Description et usage des APIs | Rédigés |
+| §5 Modèle économique | Gratuit, sans offre payante — arbitré le 27/10/2026 |
+| §6 Tiers | Supabase, Vercel, Gemini — avec exclusion vérifiable des données Garmin |
+| §7 APIs | Activity + Health + Training |
+| §8 Volumétrie | 10–50 aujourd'hui, 300 maximum à 12 mois |
+| §9 Contact antérieur | Aucun |
+| `agon-training.com` | Répond en production, pages légales publiques sans compte |
+
+Il reste à **copier-coller dans le formulaire**, section par section.
+
+**Après approbation, pas avant** — deux chantiers, aucun ne bloque le dépôt :
+
+1. **Le webhook entrant.** Le palier Starter est *push only*, donc Garmin
+   enverra les données vers un endpoint public permanent. Cette fonction
+   n'existe pas (`supabase/functions/` n'a que les fonctions COROS). L'URL
+   devra être configurée dans le portail développeur avant la première
+   connexion d'un athlète. Le schéma `provider_activities` est déjà commun aux
+   deux fournisseurs, donc ce travail ne repart pas de zéro.
+
+2. **La publication des séances (Training API).** Demandée dans ce dossier,
+   pas encore codée. Il faut traduire une séance Agon en *workout* Garmin, et
+   tenir la mise à jour et la suppression — une séance modifiée par le coach
+   doit l'être aussi dans le calendrier de l'athlète, sans quoi il s'entraîne
+   sur une version périmée. Le rendu sur la montre dépend du modèle : une
+   séance de course structurée passe bien, une séance de force détaillée moins.
+
+---
+
 ## Ce que donne le palier Starter
 
 Vérifié le 26 octobre 2026 :
@@ -37,19 +72,35 @@ par là.
 
 ## 1. Company & contact
 
+Valeurs tirées de `src/lib/legal.ts` — ne pas les ressaisir à la main ici, les
+recopier depuis le fichier pour qu'elles restent identiques à ce que Garmin
+lira sur les pages légales.
+
 | Champ | Réponse |
 |---|---|
-| Company name | `[Nom légal exact — cf. src/lib/legal.ts]` |
-| Website URL | `[https://… — cf. README.md de ce dossier]` |
-| Privacy Policy URL | `[URL du site]/confidentialite` |
-| Contact name | `[Prénom NOM]` |
+| Company name | Hugo TANGUY — *sole proprietorship (Entrepreneur individuel), SIREN 940221187* |
+| Website URL | https://agon-training.com |
+| Privacy Policy URL | https://agon-training.com/confidentialite |
+| Contact name | Hugo TANGUY |
 | Job title | Founder |
 | Email | prep.hugoo@gmail.com |
-| Company address | `[adresse postale complète]` |
+| Company address | 36 Chemin de Charlemagne, 33133 Galgon, France |
 
-> Garmin ouvre réellement la Privacy Policy URL. Elle doit répondre sans
-> compte, et mentionner Garmin nommément — c'est fait, au §4.3 de la politique
-> (« responsables indépendants »).
+> **Company name en entreprise individuelle** : il n'y a pas de personne morale
+> distincte, donc le nom légal *est* le nom de la personne physique. Déclarer
+> « Agon » seul créerait un écart avec les mentions légales que Garmin ouvrira
+> — et un écart entre deux documents du même dossier est précisément ce qu'un
+> relecteur cherche. Mentionner « Agon » comme nom commercial à côté, pas à la
+> place.
+
+> Garmin ouvre réellement la Privacy Policy URL. Elle doit répondre **sans
+> compte** — c'est le cas, les trois routes légales sont hors `ProtectedRoute`
+> dans `src/App.tsx` — et mentionner Garmin nommément : c'est fait, Garmin est
+> déclaré comme responsable de traitement indépendant dans `SUBPROCESSORS`.
+>
+> Les deux URL doivent répondre **au moment du dépôt**. Tant que
+> `agon-training.com` ne pointe pas sur la production, déclarer ce domaine vaut
+> moins qu'un sous-domaine `vercel.app` qui répond.
 
 ---
 
@@ -100,24 +151,46 @@ par là.
 > compares planned versus executed: intended pace versus actual pace, intended
 > intensity versus heart-rate response.
 >
-> We do not request the Courses, Training or Women's Health APIs. Agon does not
-> push content to devices and does not process menstrual-cycle data. We will
-> apply again if that changes, rather than request scopes we have no use for.
+> **Training API** — publishing the session a coach has programmed to the
+> athlete's Garmin Connect calendar, so that it reaches his watch. Agon's
+> purpose is to put a coach's prescription in front of the athlete at the
+> moment he trains; today that means reading it on a phone screen between sets.
+> The athlete would start his watch and find the prescribed work on it —
+> intervals, targets, rest — instead of switching back and forth.
+>
+> This is the one capability we are requesting ahead of its implementation. We
+> state that plainly rather than describe it as existing: the data model is in
+> place and the mapping from an Agon session to a Garmin workout is the
+> remaining work. A session published this way stays under the athlete's
+> control — it lands in his own Garmin Connect calendar, and he may delete it
+> there like any other entry.
+>
+> We do not request the Courses or Women's Health APIs. Agon does not plan
+> routes, and does not process menstrual-cycle data. We would rather apply
+> again if that changes than request scopes we have no use for.
+>
+> **Garmin data is excluded from AI processing.** Agon does use a third-party
+> AI service elsewhere in the product (see section 6), but data obtained
+> through the Garmin APIs is never part of it. This is enforced in the database
+> schema rather than left to application code: see section 6 for how.
 
 ---
 
 ## 5. Business model
 
-> `[À ARBITRER — réponse honnête obligatoire. Garmin demande ce champ pour
-> savoir si les données Garmin servent d'argument commercial.]`
+*Arbitré : l'accès est entièrement gratuit pour les coachs, sans modèle payant
+arrêté à ce jour. La réponse ci-dessous le dit sans promettre un modèle
+économique qui n'existe pas encore — annoncer un abonnement non décidé serait
+une déclaration à corriger plus tard.*
+
+> Agon is provided free of charge. Coaches and athletes pay nothing to use it,
+> and there is currently no paid tier, no trial conversion and no commercial
+> offer attached to it.
 >
-> Si c'est encore gratuit / en test privé, le dire tel quel :
->
-> > Agon is currently operated at no charge for a small number of coaches while
-> > the product is being validated. The intended model is a subscription paid
-> > by the coach, priced per athlete monitored. Garmin data is never sold,
-> > resold, licensed, or used for advertising, and is not aggregated into any
-> > dataset offered to third parties.
+> Garmin data is never sold, resold, licensed, sub-licensed or used for
+> advertising, and is never aggregated into any dataset offered to third
+> parties. It is used solely to display an athlete's own recorded training to
+> that athlete and to the coach he has explicitly connected himself to.
 
 ---
 
@@ -132,16 +205,35 @@ après approbation coûte l'accès.
 > |---|---|---|---|
 > | Supabase (AWS) | Database, authentication, serverless functions — sub-processor | EU (Frankfurt) | Stores all application data, including data received from Garmin |
 > | Vercel | Static front-end hosting — sub-processor | EU edge | Serves the application; does not store Garmin data |
-> | Google Gemini API | AI-assisted program drafting — sub-processor | — | Receives training history **only** when a coach explicitly requests program generation for one athlete, and **only** if that athlete has separately consented to AI processing. Not used to train Google's models. Consent is checked server-side before the call is made. |
+> | Google Gemini API | AI-assisted program drafting, elsewhere in the product — sub-processor | EU / US, standard contractual clauses | **Never receives Garmin data.** Garmin-sourced records are flagged as ineligible for AI processing in the database itself, so they are excluded from every query that feeds the AI service. Gemini receives only data entered manually in Agon or imported by the athlete from his own files. No model is trained on any of it. |
 >
 > We use no advertising, tracking or analytics SDK. No machine-learning model
-> is trained on Garmin data.
+> is trained on Garmin data, and no Garmin data is sent to any AI service.
+>
+> **How the exclusion is enforced.** Each data source carries an `ai_allowed`
+> flag in a dedicated policy table. Garmin is set to `false`. The flag is
+> written onto every row by a database trigger that reads that table and
+> overwrites whatever the caller supplied, so application code — or a
+> compromised client — cannot mark Garmin data as eligible. Every query that
+> builds a prompt filters on that flag. A source with no policy row fails the
+> insert outright: an unknown source is treated as forbidden, not as allowed by
+> default.
 
-> **À faire avant de cocher quoi que ce soit ici** : le drapeau `ai_allowed`
-> par source de données (chantier G) n'est pas encore en place. Il garantit
-> techniquement qu'une donnée issue d'un fournisseur dont les conditions
-> l'interdisent ne puisse pas atteindre Gemini. Déclarer cette garantie à
-> Garmin avant de l'avoir codée serait un engagement en l'air.
+*Pour nous, pas pour Garmin :* la clause 4.1(b) **n'impose pas** cette
+exclusion — elle autorise l'affichage au coach avec le consentement de
+l'utilisateur et ne dit rien de l'IA. C'est une restriction qu'on se donne,
+décidée le 27/10/2026, pour pouvoir déclarer une garantie vérifiable au lieu
+d'une intention. Migration `20261029100000_garmin_ai_opt_out.sql`, appliquée.
+
+Conséquence à connaître avant d'y revenir : **le consentement de l'athlète ne
+lève pas cette exclusion.** Un athlète qui accepte le traitement par IA verra
+quand même ses données Garmin en être écartées — l'inverse lui ferait porter
+une décision qui n'est pas la sienne. Repasser `garmin` à `true` suppose d'en
+informer Garmin, pas seulement de modifier une ligne.
+
+Implémentation : `20261027130000_provider_schema.sql` (table et trigger),
+`20261028090000_ai_source_guard.sql` (filtrage des vues et
+`ai_eligible_sources`), `20261029100000_garmin_ai_opt_out.sql` (bascule).
 
 ---
 
@@ -149,28 +241,44 @@ après approbation coûte l'accès.
 
 - [x] Activity
 - [x] Health
+- [x] Training
 - [ ] Courses
-- [ ] Training
 - [ ] Women's Health
+
+*Training est demandée avant d'être codée — c'est assumé et dit tel quel au
+§4. L'ajouter après coup supposerait de redéposer une demande et de repasser
+une revue ; la demander maintenant sans la décrire aurait l'air d'une prise de
+périmètre. La troisième voie, la seule tenable, est de la demander en disant
+qu'elle est à construire.*
 
 ---
 
 ## 8. Expected users in the next 12 months
 
-> `[CHIFFRE RÉEL — nombre d'athlètes suivis aujourd'hui, et projection à
-> 12 mois.]`
+*Arbitré : entre 10 et 50 athlètes aujourd'hui, 300 grand maximum à 12 mois.
+Si le formulaire exige un nombre entier plutôt qu'une fourchette, donner le
+chiffre exact du jour — il est vérifiable, autant qu'il soit juste.*
+
+> Between 10 and 50 athletes are currently monitored on the platform. We expect
+> at most 300 within the next twelve months.
 >
-> Ne pas gonfler. Le palier Starter plafonne à 1 000 utilisateurs et un chiffre
-> invraisemblable pour une entreprise individuelle attire l'attention au
-> mauvais endroit. Une réponse du type « 15 aujourd'hui, 50 à 100 d'ici
-> 12 mois » est crédible et suffisante.
+> This is an upper bound rather than a growth target: Agon is operated by a
+> single person, is free of charge, and grows only through coaches who adopt
+> it directly. We would rather state a ceiling we are confident we will stay
+> under than a projection we would have to revise.
+
+Le palier Starter plafonne à 1 000 utilisateurs connectés : 300 reste
+confortablement en dessous, donc aucune demande de passage à Enterprise n'est
+à anticiper dans le dossier.
 
 ---
 
 ## 9. Prior contact with Garmin or a Garmin distributor
 
-> `[Non, sauf si Hugo a déjà échangé avec quelqu'un chez Garmin — dans ce cas,
-> donner le nom : le formulaire le demande explicitement.]`
+*Arbitré : aucun contact antérieur.*
+
+> No. We have had no prior contact with Garmin or with any Garmin distributor,
+> and no existing commercial relationship.
 
 ---
 
