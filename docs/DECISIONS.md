@@ -993,4 +993,43 @@ ouvrant l'onglet : ce que l'athlète a réellement fait.
 
 ---
 
+## 2026-10 — Les données Garmin sont exclues de tout traitement par IA, sans y être obligées
+
+**Décision** : `data_source_policies.ai_allowed` passe à `false` pour `garmin`
+(migration `20261029100000_garmin_ai_opt_out.sql`). Gemini reste déclaré comme
+sous-traitant dans le dossier Garmin et dans la politique de confidentialité —
+il est toujours utilisé pour la rédaction assistée de programmes, la barre de
+chat du coach et les insights d'athlète — mais aucune donnée issue de l'API
+Garmin ne l'atteint.
+
+**Pourquoi, alors que rien ne l'impose** : la clause 4.1(b) du Connect
+Developer Program Agreement autorise l'affichage à un tiers avec le
+consentement de l'utilisateur et ne dit rien de l'IA. Le champ « tiers qui
+traitent les données de l'appareil » du formulaire est celui qui fait refuser
+les dossiers, et il appelle une réponse qu'un relecteur puisse contrôler.
+Déclarer « Gemini est utilisé, mais pas sur vos données » n'a de valeur que si
+c'est le schéma qui l'empêche, et pas la discipline du code applicatif. Le
+trigger `apply_source_ai_policy` écrase ce que l'appelant a posé : un client
+compromis ne peut pas marquer une donnée Garmin comme transmissible.
+
+**Ce qui a motivé la vérification** : la fonctionnalité IA était crue
+abandonnée. Elle ne l'est pas — trois surfaces sont montées et actives
+(`CoachProgramEditor`, `AIChatBar` dans `CoachLayout`, `athlete-insights` via
+`useAthleteTrends`). Déclarer à Garmin l'absence de traitement IA aurait été
+une fausse déclaration, et une fausse déclaration découverte après approbation
+coûte l'accès. D'où la règle : on vérifie dans le code avant de déclarer, même
+quand on est à peu près sûr.
+
+**Conséquence assumée** : le consentement `ai_programming` de l'athlète ne
+lève pas cette exclusion. Un athlète qui accepte le traitement par IA verra
+quand même ses données Garmin en être écartées. L'inverse lui ferait porter une
+décision qui est la nôtre, prise vis-à-vis d'un fournisseur.
+
+**Pour revenir en arrière** : il ne suffit pas de repasser la ligne à `true`.
+L'exclusion est déclarée dans le dossier, donc le changement doit être annoncé
+à Garmin. `coros` reste à `false` pour une raison différente — ses conditions
+n'ont pas été relues sur ce point.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

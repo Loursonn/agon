@@ -37,6 +37,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-01-garmin-hors-ia",
+    date: "2026-11-01",
+    kind: "feature",
+    title: "Les données des montres Garmin ne passeront jamais par l'IA",
+    summary:
+      "En préparation du dépôt du dossier Garmin, les données venant d'une montre Garmin sont désormais écartées de tout traitement par intelligence artificielle. Rien ne nous y obligeait : c'est une garantie que nous nous donnons pour pouvoir l'annoncer à Garmin de façon vérifiable.",
+    sections: [
+      {
+        title: "Ce que ça change concrètement",
+        points: [
+          "Le générateur de programme, la barre de chat et les analyses automatiques continuent de fonctionner exactement comme avant.",
+          "Ils s'appuient sur ce qui est saisi dans Agon et sur les fichiers que l'athlète importe lui-même — plus sur ce qu'une montre Garmin remonte.",
+          "Tu continues de voir toutes les données Garmin dans l'app : l'exclusion porte sur l'IA, pas sur l'affichage.",
+        ],
+      },
+      {
+        title: "Pourquoi se restreindre sans y être obligé",
+        points: [
+          "Le formulaire Garmin demande la liste des tiers qui traitent les données de la montre, l'IA comprise. C'est le champ qui fait refuser les dossiers.",
+          "Promettre un usage raisonnable ne vaut rien si rien ne l'empêche. Ici c'est la base de données elle-même qui bloque : une donnée Garmin ne peut pas être marquée comme utilisable par l'IA, même par erreur de programmation.",
+          "Un athlète qui a accepté l'IA ne lève pas cette règle non plus. C'est une décision que nous prenons vis-à-vis de Garmin, pas la sienne à porter.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-31-refus-ia-respecte-generateur",
     date: "2026-10-31",
     kind: "fix",
