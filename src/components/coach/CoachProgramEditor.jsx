@@ -3,6 +3,8 @@ const MethodPickerDialog = lazy(() => import("@/features/coach/components/librar
 import { methodConfigToWeekFields } from "@/features/coach/components/library/MethodPreview";
 import { usePRsByRef } from "@/features/shared/hooks/usePRLogs";
 import { effectiveRmRef } from "@/features/shared/hooks/useAutoComputePRs";
+import { functionAuthHeaders } from "@/lib/functionAuth";
+import { aiProgramError } from "@/lib/aiProgramError";
 import { supabase } from "@/integrations/supabase/client";
 import * as XLSX from "xlsx";
 import { PDFDocument } from "pdf-lib";
@@ -45,7 +47,7 @@ function MethodParamsForm({method,params,onChange,exosInSession,currentExId,plan
   </div>);
 }
 
-function AIGeneratorModal({onGenerate,onClose,allMethods,existingExos,sessions:SESSIONS}){
+function AIGeneratorModal({onGenerate,onClose,allMethods,existingExos,sessions:SESSIONS,athleteId}){
   const[loading,setLoading]=useState(false);const[error,setError]=useState(null);
   const[step,setStep]=useState(0); // 0=form, 1=preview
   const[preview,setPreview]=useState(null);
@@ -141,11 +143,11 @@ function AIGeneratorModal({onGenerate,onClose,allMethods,existingExos,sessions:S
     setTimeout(()=>convEndRef.current?.scrollIntoView({behavior:"smooth"}),50);
     try{
       const history=convMsgs.map(m=>({role:m.role==="user"?"user":"assistant",content:m.content}));
-      const payload={mode:"chat_edit",message:msg,currentProgram:preview.sessions,conversationHistory:history,sessions:SESSIONS};
-      const resp=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(payload)});
+      const payload={mode:"chat_edit",athleteId,message:msg,currentProgram:preview.sessions,conversationHistory:history,sessions:SESSIONS};
+      const resp=await fetch(AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify(payload)});
       const data=await resp.json();
       if(resp.status===429){setConvCooldown(30);throw new Error(data.error||"Trop de requetes");}
-      if(!resp.ok)throw new Error(data.error||"Erreur serveur");
+      if(!resp.ok)throw aiProgramError(data.error);
       setPreview(prev=>({sessions:{...prev.sessions,...data.sessions},rationale:data.rationale}));
       setConvMsgs(prev=>[...prev,{role:"ai",content:data.rationale||"Programme mis à jour."}]);
       setConvCooldown(8);// cooldown entre chaque message
@@ -190,11 +192,11 @@ PROFIL DETAILLE DE L ATHLETE:
 ${detailsBlock||"Aucun detail supplementaire fourni"}`;
 
     try{
-      const resp=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({mode:"generate",prompt,sessions:SESSIONS})});
+      const resp=await fetch(AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify({mode:"generate",athleteId,prompt,sessions:SESSIONS})});
       const data=await resp.json();
-      if(!resp.ok)throw new Error(data.error||"Erreur serveur");
+      if(!resp.ok)throw aiProgramError(data.error);
       setPreview(data);setStep(1);
-    }catch(e){setError("Erreur de generation: "+e.message);}
+    }catch(e){setError(e.known?e.message:"Erreur de generation: "+e.message);}
     setLoading(false);
   };
 
@@ -254,7 +256,7 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
     if(!importText.trim()&&!importFiles.length){setError("Colle un texte ou ajoute au moins un fichier.");return;}
     setLoading(true);setError(null);
     try{
-      const payload={mode:"import",prompt:importText||(importFiles.length?"Programme dans les fichiers ci-joints":""),sessions:SESSIONS};
+      const payload={mode:"import",athleteId,prompt:importText||(importFiles.length?"Programme dans les fichiers ci-joints":""),sessions:SESSIONS};
       const binaryFiles=importFiles.filter(f=>f.data!==null);
       // Collecter les sessions explicitement ciblées (tous fichiers confondus)
       const targetIds=[...new Set(importFiles.flatMap(f=>f.sessionTags||[]))];
@@ -270,11 +272,11 @@ ${detailsBlock||"Aucun detail supplementaire fourni"}`;
       }
       // Restreindre l'IA aux sessions ciblées si précisées
       if(targetIds.length>0)payload.targetSessions=targetIds;
-      const resp=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(payload)});
+      const resp=await fetch(AI_URL,{method:"POST",headers:await functionAuthHeaders(),body:JSON.stringify(payload)});
       const data=await resp.json();
-      if(!resp.ok)throw new Error(data.error||"Erreur serveur");
+      if(!resp.ok)throw aiProgramError(data.error);
       setPreview(data);setStep(1);
-    }catch(e){setError("Erreur d'import: "+e.message);}
+    }catch(e){setError(e.known?e.message:"Erreur d'import: "+e.message);}
     setLoading(false);
   };
 
@@ -713,7 +715,7 @@ function CoachProgramEditor({exos,setExos,sessions,setSessions,athleteNotes,allM
       </div>);
     })()}
 
-    {!lockedSessId&&showAI&&<AIGeneratorModal onGenerate={applyAI} onClose={()=>setShowAI(false)} allMethods={allMethods} existingExos={exos} sessions={safeSessions}/>}
+    {!lockedSessId&&showAI&&<AIGeneratorModal onGenerate={applyAI} onClose={()=>setShowAI(false)} allMethods={allMethods} existingExos={exos} sessions={safeSessions} athleteId={athleteId}/>}
     {!lockedSessId&&<button onClick={()=>setShowAI(true)} style={{width:"100%",padding:"11px 0",borderRadius:4,border:"1.5px dashed "+C.coach+"60",background:C.coachS,color:C.coach,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
       <span style={{fontSize:14}}>*</span> Generer une base avec l IA
     </button>}

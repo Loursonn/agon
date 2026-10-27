@@ -1,10 +1,11 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import ConsentGate from "@/components/ConsentGate";
 
 // Redirige vers /login si non connecté
 // Redirige vers /coach ou /athlete selon le rôle une fois connecté
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -16,7 +17,13 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (!user) return <Navigate to="/login" replace />;
 
-  return <>{children}</>;
+  /*
+    Le consentement est vérifié ici et non dans chaque page : les données de
+    santé relèvent de l'article 9 du RGPD, donc aucune route authentifiée ne
+    doit pouvoir s'afficher sans base légale. Un oubli dans une page isolée
+    suffirait à créer un traitement illicite.
+  */
+  return <ConsentGate>{children}</ConsentGate>;
 }
 
 // Redirige selon le rôle depuis la page d'accueil "/"

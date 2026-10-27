@@ -37,6 +37,278 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-31-refus-ia-respecte-generateur",
+    date: "2026-10-31",
+    kind: "fix",
+    title: "Le refus de l'IA par un athlète bloque vraiment le générateur",
+    summary:
+      "Un athlète qui avait refusé le traitement de ses données par l'IA pouvait quand même voir un programme généré pour lui. Sa décision est maintenant vérifiée au moment de la génération, et plus seulement affichée dans son profil.",
+    sections: [
+      {
+        title: "Ce qui ne marchait pas",
+        points: [
+          "Le générateur IA et l'édition par conversation ne regardaient pas si l'athlète concerné avait accepté le traitement par IA. La case décochée dans son profil n'empêchait rien.",
+          "Corrigé : chaque demande indique désormais de quel athlète il s'agit, et elle est refusée s'il n'a pas donné son accord.",
+        ],
+      },
+      {
+        title: "Ce que tu verras",
+        points: [
+          "Si l'athlète a refusé, un message te le dit en clair et t'indique où il peut l'activer : son profil, section Confidentialité, « Programmation assistée par IA ». Tu n'as pas à deviner la cause.",
+          "Un accord donné puis retiré reprend effet immédiatement sur le générateur — aucune génération ne part entre-temps.",
+          "Lance le générateur depuis la fiche de l'athlète concerné : sans athlète sélectionné, la demande est refusée plutôt que traitée au hasard.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-30-vue-sorties-enregistrees",
+    date: "2026-10-30",
+    kind: "feature",
+    title: "Les sorties de montre s'affichent, avec la provenance de chaque chiffre",
+    summary:
+      "Les sorties remontées par une montre ou importées depuis un fichier étaient enregistrées mais invisibles. Elles apparaissent maintenant dans l'onglet Historique de chaque athlète, et dans son profil côté athlète : durée, distance, allure, dénivelé, fréquence cardiaque, calories.",
+    sections: [
+      {
+        title: "Ce que ça change pour toi",
+        points: [
+          "Onglet Historique d'un athlète : la liste de ses sorties réelles arrive au-dessus de ses séances programmées. Tu vois ce qu'il a fait, pas seulement ce qui était prévu.",
+          "Un récapitulatif des quatre dernières semaines par sport — nombre de sorties, temps total, distance totale. Trois chiffres, pas un graphique de plus.",
+          "Les sorties réelles et les séances programmées restent deux blocs séparés. Un écart entre les deux n'est pas une erreur : la montre enregistre ce qui a été fait, le programme dit ce qui était demandé.",
+        ],
+      },
+      {
+        title: "D'où viennent les chiffres",
+        points: [
+          "Chaque sortie s'ouvre d'un clic sur l'origine de ses mesures : lue dans le fichier, ou reconstituée — et comment.",
+          "Un GPX n'a ni durée de mouvement ni dénivelé mesuré : la ligne dépliée le dit, au lieu de laisser croire qu'Agon se trompe face à l'application du fabricant.",
+          "Les sauts de GPS écartés du calcul de distance sont indiqués : c'est souvent ce qui explique quelques centaines de mètres d'écart.",
+          "Une mesure absente affiche un tiret, jamais un zéro. Une allure à 0:00 aurait le même poids visuel qu'une vraie mesure, alors qu'elle ne mesure rien.",
+        ],
+      },
+      {
+        title: "À savoir",
+        points: [
+          "Tu peux voir une liste plus courte que ton athlète, sans message d'erreur : une source dont il a retiré le consentement disparaît immédiatement de ton côté. C'est voulu.",
+          "Les sports inconnus d'Agon s'affichent quand même, avec le nom que la montre a transmis — rien n'est rangé dans « Autre ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-29-import-fichiers-activite",
+    date: "2026-10-29",
+    kind: "feature",
+    title: "Tes athlètes peuvent importer leur historique de montre",
+    summary:
+      "Un athlète dépose l'archive de son export Strava ou Garmin — ou simplement des fichiers .fit, .tcx et .gpx — et ses sorties entrent dans Agon : durée, distance, dénivelé, fréquence cardiaque, allure. C'est le seul moyen de récupérer un historique ancien : les montres connectées ne donnent que les dernières semaines.",
+    sections: [
+      {
+        title: "Ce que ça change pour toi",
+        points: [
+          "Un nouvel athlète arrive avec son passé : plusieurs années de sorties peuvent entrer en une fois, au lieu de repartir d'une page blanche.",
+          "Une montre non reliée n'est plus un trou dans le suivi — Polar, Suunto, Apple Watch, Decathlon : tout ce qui sait exporter un fichier d'activité est lisible.",
+          "Les chiffres viennent du fichier de la montre, pas d'une saisie à la main : même source, même traitement et mêmes règles que pour la synchronisation COROS.",
+        ],
+      },
+      {
+        title: "Ce que l'athlète voit",
+        points: [
+          "Dans son profil, section « Montres & services connectés » : une zone où glisser son archive ou ses fichiers.",
+          "L'avancement fichier par fichier — une archive de plusieurs centaines de sorties prend un moment, et l'écran le dit au lieu de paraître figé.",
+          "Un compte rendu complet : les sorties ajoutées, celles déjà connues, et le détail des fichiers qui n'ont pas pu être lus, avec la raison. Pas de « tout va bien » quand il manque quelque chose.",
+          "Une sortie déjà remontée par sa montre n'est pas dupliquée, même si le fichier déposé est d'un autre format — c'est l'heure de départ et le sport qui font le rapprochement, pas le nom du fichier.",
+        ],
+      },
+      {
+        title: "Les limites, dites franchement",
+        points: [
+          "Un GPX ne contient ni durée de mouvement ni dénivelé mesuré : la durée inclut alors les pauses et le dénivelé est reconstitué à partir des altitudes. L'écart avec l'application d'origine est normal, et chaque chiffre indique d'où il vient.",
+          "Un fichier qui n'a jamais été enregistré pendant une sortie — un parcours préparé à l'avance, sans horodatage — est refusé : le compter comme une séance fausserait la charge d'entraînement.",
+          "Les fichiers sont lus sur l'appareil de l'athlète et ne sont pas conservés : seules les valeurs des sorties sont enregistrées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-28-recuperation-automatique-coros",
+    date: "2026-10-28",
+    kind: "feature",
+    title: "Les séances COROS remontent automatiquement",
+    summary: "Chaque nuit, Agon récupère les séances des athlètes qui ont relié leur montre COROS : durée, distance, dénivelé, fréquence cardiaque, allure, calories. L'athlète peut aussi déclencher la récupération à la main.",
+    sections: [
+      {
+        title: "Ce que ça change pour toi",
+        points: [
+          "Les sorties de tes athlètes apparaissent sans qu'ils aient à saisir quoi que ce soit, le lendemain matin au plus tard.",
+          "Les chiffres sont lus dans le fichier d'activité de la montre, pas dans un résumé en texte : une durée est une durée, pas une phrase interprétée.",
+          "La durée retenue exclut les pauses. Sur du fractionné, c'est ce qui donne une allure juste plutôt qu'une moyenne diluée par les temps d'arrêt.",
+          "Le jour d'une séance est son jour local : une sortie à 23 h le lundi reste au lundi, et s'aligne donc sur la séance que tu avais programmée.",
+        ],
+      },
+      {
+        title: "Ce que l'athlète voit",
+        points: [
+          "Dans son profil : la date de dernière synchronisation, et jusqu'où son historique a été récupéré.",
+          "Un bouton « Synchroniser maintenant » s'il ne veut pas attendre la nuit.",
+          "Un compte rendu honnête après chaque synchronisation : les séances importées, celles déjà connues, et les fichiers qui n'ont pas pu être lus. Pas de « tout va bien » quand il manque quelque chose.",
+          "Si COROS cesse d'accepter l'autorisation, il voit « Reconnexion nécessaire » et un bouton pour la rétablir — au lieu d'une synchronisation qui s'arrête en silence.",
+        ],
+      },
+      {
+        title: "Les limites, dites franchement",
+        points: [
+          "COROS n'autorise que 50 fichiers par athlète et par 24 h. Un athlète qui relie sa montre avec un an d'historique le verra se remplir sur plusieurs jours, par tranches, en remontant le temps.",
+          "Le sommeil, la VFC et la fréquence cardiaque de repos sont conservés tels que COROS les formule, sans en extraire de chiffre : deviner un nombre dans une phrase donnerait une valeur d'apparence fiable, impossible à distinguer d'une vraie mesure.",
+          "Les données COROS ne sont toujours pas transmises à l'IA : leurs conditions d'utilisation doivent encore être relues sur ce point.",
+          "Si un athlète retire son accord, la récupération s'arrête dès la nuit suivante — l'accord est revérifié à chaque passage, pas seulement au moment où il relie sa montre.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-28-connexion-montre-coros",
+    date: "2026-10-28",
+    kind: "feature",
+    title: "Connexion d'une montre COROS",
+    summary: "Tes athlètes peuvent relier leur compte COROS depuis leur profil. La connexion, l'accord et la déconnexion sont en place ; la récupération automatique des séances suit.",
+    sections: [
+      {
+        title: "Ce que l'athlète voit",
+        points: [
+          "Un panneau « Montres & services connectés » dans son profil, avec un bouton pour relier son compte COROS.",
+          "Il choisit la région de son compte COROS (Europe par défaut). Se tromper n'a aucune conséquence : l'autorisation échoue et il recommence.",
+          "Il donne son accord au moment de la connexion, avec le texte exact de ce qu'il autorise — pas une case cochée des semaines plus tôt pour une montre qu'il n'avait pas encore reliée.",
+          "Il peut se déconnecter au même endroit, en un clic. L'accès est révoqué chez COROS, et ses séances déjà importées restent dans son historique.",
+        ],
+      },
+      {
+        title: "Ce qui reste à venir",
+        points: [
+          "La récupération automatique des séances arrive ensuite : elle lira les fichiers d'activité de la montre, pas les résumés en texte de COROS, pour que les chiffres ne dépendent pas d'une phrase qui peut changer de formulation.",
+          "COROS limite les téléchargements à 50 fichiers par athlète et par jour. Un historique d'un an se remplira donc sur plusieurs jours, progressivement.",
+          "Les données COROS ne sont pas transmises à l'IA pour l'instant : leurs conditions d'utilisation doivent encore être relues sur ce point précis.",
+          "Garmin suit la même mécanique, dès que leur programme développeur valide notre dossier.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-28-garde-fou-ia-et-retrait-consentement",
+    date: "2026-10-28",
+    kind: "fix",
+    title: "Un retrait d'accord pouvait rester sans effet",
+    summary: "Correction d'un défaut du registre des consentements : dans certains cas, retirer un accord ne changeait rien. Et l'IA ne reçoit plus que des champs décidés par le serveur.",
+    sections: [
+      {
+        title: "Ce qui ne marchait pas",
+        points: [
+          "Le registre retenait la décision la plus récente d'après son horodatage. Deux décisions enregistrées dans la même opération portaient la même heure à la microseconde près, et la plus récente devenait indéterminable.",
+          "Conséquence : un accord retiré juste après avoir été donné pouvait rester considéré comme accordé. Le sens de l'erreur était le plus gênant possible, puisque c'est le refus qui pouvait être ignoré.",
+          "Corrigé : le registre est désormais ordonné par ordre d'arrivée et non par l'heure. Un retrait prend effet, toujours.",
+        ],
+      },
+      {
+        title: "L'IA ne reçoit plus que ce que le serveur a validé",
+        points: [
+          "Les phrases de synthèse de « Mon profil » envoyaient à l'IA ce que le navigateur lui transmettait, sans contrôle. Désormais le serveur ne laisse passer qu'une liste fixe de chiffres connus.",
+          "Une valeur impossible (un poids de 900 kg, une fatigue de 42 sur 5) est écartée au lieu d'être transmise : une donnée fausse envoyée à l'IA ressort en conseil faux.",
+          "Une valeur manquante reste manquante et ne devient pas zéro — plus de « ton sommeil est tombé à 0 h » sur une donnée simplement absente.",
+        ],
+      },
+      {
+        title: "Pour la suite des montres",
+        points: [
+          "Les données de montre ne pourront atteindre l'IA que par une porte unique, qui vérifie à la fois les conditions du fabricant et ton accord. Sans accord, rien ne part — et en cas de doute technique, rien ne part non plus.",
+          "Les réponses brutes des fabricants ne sont jamais transmises à l'IA : seuls des champs identifiés un par un le sont, pour ne pas envoyer des données qu'on n'a pas demandées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-28-socle-montres-connectees",
+    date: "2026-10-28",
+    kind: "feature",
+    title: "Le socle technique des montres connectées est posé",
+    summary: "Rien de visible encore : c'est la plomberie qui recevra les séances Garmin et COROS. Elle est construite pour que les promesses faites à l'athlète soient tenues par la base de données elle-même, pas par la vigilance du code.",
+    sections: [
+      {
+        title: "Ce que ça prépare",
+        points: [
+          "Les tables qui accueilleront les activités (durée, distance, fréquence cardiaque, allure, dénivelé) et les données quotidiennes (sommeil, VFC, fréquence cardiaque de repos, pas).",
+          "Tu verras l'état de la montre de chaque athlète : connectée, à reconnecter, ou déconnectée. Sans ça, un athlète dont l'autorisation a expiré ressemble à un athlète qui a décroché.",
+          "L'historique est prévu dès le départ : à la connexion d'une montre COROS, on peut remonter les semaines passées, pas seulement enregistrer les suivantes.",
+        ],
+      },
+      {
+        title: "Ce qui est garanti par construction",
+        points: [
+          "Un athlète qui retire son accord disparaît du tableau de bord immédiatement, sans aucune manipulation de notre part — la base revérifie son accord à chaque consultation.",
+          "Une montre ne peut pas être connectée sans accord : la base refuse l'opération, même si un bout de code oubliait de vérifier.",
+          "Retirer son accord coupe la synchronisation tout de suite, même si le fabricant de la montre est injoignable à cet instant.",
+          "Les autorisations d'accès aux montres sont stockées chiffrées dans un coffre séparé, illisible depuis l'application.",
+        ],
+      },
+      {
+        title: "Et l'IA",
+        points: [
+          "Chaque donnée importée sait si les conditions de son fabricant permettent de l'envoyer à une IA. Celles de COROS sont marquées « non » en attendant une relecture de leurs conditions.",
+          "Une donnée venant d'une source dont les règles ne sont pas encore tranchées est traitée comme interdite, jamais comme autorisée par défaut.",
+        ],
+      },
+      {
+        title: "Ce qu'il reste avant la vraie connexion",
+        points: [
+          "COROS : l'autorisation se code sans dossier à déposer, c'est le prochain chantier.",
+          "Garmin : le dossier est prêt, il attend la publication de nos mentions légales complètes.",
+          "Strava : abandonné côté API — leurs conditions interdisent de montrer les données d'un athlète à son coach. L'import de fichiers prendra le relais.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-10-27-conformite-donnees-sante",
+    date: "2026-10-27",
+    kind: "feature",
+    title: "Agon se met en règle pour brancher les montres Garmin et COROS",
+    summary: "Politique de confidentialité, CGU, consentement explicite au traitement des données de santé : les fondations exigées par Garmin et COROS avant d'accepter notre demande d'accès à leurs API.",
+    sections: [
+      {
+        title: "Pourquoi maintenant",
+        points: [
+          "Garmin et COROS n'ouvrent leur API qu'aux applications qui publient une politique de confidentialité et recueillent un consentement explicite : sans ça, la demande est refusée d'office.",
+          "Les données d'entraînement et de wellness sont des données de santé au sens du RGPD : leur traitement exige un consentement explicite, distinct et révocable. C'est ce qui est mis en place.",
+        ],
+      },
+      {
+        title: "Ce que tu verras",
+        points: [
+          "Trois pages publiques accessibles sans compte : Politique de confidentialité, CGU, Mentions légales.",
+          "À l'inscription, une case à cocher pour accepter les CGU et la politique de confidentialité — obligatoire pour créer le compte.",
+          "À la première connexion après cette mise à jour, un écran demande ton consentement au traitement des données de santé et, séparément, aux suggestions par IA. Tu peux refuser l'IA et continuer à utiliser Agon normalement.",
+          "Si nos conditions évoluent, l'écran revient pour recueillir un consentement à jour : un accord donné sur une ancienne version ne vaut pas pour la nouvelle.",
+        ],
+      },
+      {
+        title: "Un panneau « Confidentialité & données »",
+        points: [
+          "Dans tes paramètres (et dans le profil de l'athlète) : un endroit unique pour gérer tes accords, récupérer tes données et supprimer ton compte.",
+          "« Télécharger toutes mes données » produit un fichier JSON contenant tout ce qu'Agon détient à ton sujet, réutilisable ailleurs.",
+          "Un accord facultatif se retire d'un seul clic, aussi simplement qu'il a été donné — c'est ce qu'exige le RGPD.",
+          "La suppression de compte demande de taper SUPPRIMER : elle efface les données, les fichiers déposés et révoque les accès aux montres connectées.",
+        ],
+      },
+      {
+        title: "Ce qui change sous le capot",
+        points: [
+          "La suppression de compte efface réellement toutes les données associées, y compris les fichiers déposés. Auparavant, le compte était désactivé mais les données restaient en base.",
+          "Un coach qui part ne détruit plus les programmes de ses athlètes : les plans sont conservés, seule l'attribution au coach est retirée.",
+          "Les fonctions d'IA refusent désormais les appels non authentifiés : notre quota Gemini n'est plus consommable depuis l'extérieur.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-10-26-fiabilite-profil-athlete",
     date: "2026-10-26",
     kind: "fix",

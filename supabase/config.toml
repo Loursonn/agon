@@ -1,1 +1,24 @@
-project_id = "fthhdylcwmltxkojzsdt"
+# Le projet réel, celui que `VITE_SUPABASE_URL` désigne et vers lequel le CLI
+# est lié. La valeur précédente (`fthhdylcwmltxkojzsdt`) ne correspondait à
+# aucun projet existant : inoffensive tant qu'on passe `--linked`, mais un
+# `supabase link` lancé depuis ce fichier aurait visé le vide.
+project_id = "mxbfnkkbtmbrauvqplrt"
+
+# ---------------------------------------------------------------------------
+# Edge Functions
+#
+# Par défaut, Supabase exige un JWT valide sur chaque fonction. C'est le bon
+# réglage et il ne doit pas être desserré sans raison écrite.
+# ---------------------------------------------------------------------------
+
+[functions.provider-coros-callback]
+# Appelée par le NAVIGATEUR, redirigé par COROS après autorisation. Une
+# redirection HTTP ne porte pas d'en-tête `Authorization` : exiger un JWT ici
+# ferait échouer tous les retours d'autorisation.
+#
+# Ce qui tient lieu d'authentification à la place : le paramètre `state`, une
+# valeur aléatoire de 256 bits que nous seuls avons émise, conservée côté
+# serveur dans `provider_oauth_states`, consommée en une seule opération SQL et
+# valable dix minutes. Un appel sans `state` valide ne fait rien d'autre que
+# rediriger vers l'interface.
+verify_jwt = false

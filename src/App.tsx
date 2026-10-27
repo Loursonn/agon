@@ -14,6 +14,14 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import InviteAccept from "./pages/InviteAccept.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
+// Pages légales publiques (lazy — rarement ouvertes, mais doivent rester
+// accessibles sans authentification : les programmes partenaires Garmin et
+// COROS exigent une URL de politique de confidentialité consultable par leur
+// équipe de validation, qui n'a pas de compte).
+const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy.tsx"));
+const Terms         = lazy(() => import("./pages/legal/Terms.tsx"));
+const LegalNotice   = lazy(() => import("./pages/legal/LegalNotice.tsx"));
+
 // Layouts (lazy — chargés après auth)
 const AthleteApp       = lazy(() => import("./pages/athlete/AthleteApp.tsx"));
 const CoachShell       = lazy(() => import("./features/coach/CoachShell.tsx"));
@@ -93,6 +101,14 @@ function AnimatedRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/invite/:token" element={<InviteAccept />} />
+
+          {/* Documents légaux — publics par obligation */}
+          <Route path="/confidentialite"  element={<PrivacyPolicy />} />
+          <Route path="/cgu"              element={<Terms />} />
+          <Route path="/mentions-legales" element={<LegalNotice />} />
+          {/* Alias anglais : les formulaires partenaires et les robots les attendent souvent */}
+          <Route path="/privacy" element={<Navigate to="/confidentialite" replace />} />
+          <Route path="/terms"   element={<Navigate to="/cgu" replace />} />
 
           {/* Redirection selon le rôle */}
           <Route path="/" element={<ProtectedRoute><RoleRedirect /></ProtectedRoute>} />
