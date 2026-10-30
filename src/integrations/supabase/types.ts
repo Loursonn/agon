@@ -365,6 +365,153 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_api_access_log: {
+        Row: {
+          athlete_id: string | null
+          coach_id: string
+          created_at: string
+          id: number
+          key_id: string | null
+          route: string
+        }
+        Insert: {
+          athlete_id?: string | null
+          coach_id: string
+          created_at?: string
+          id?: number
+          key_id?: string | null
+          route: string
+        }
+        Update: {
+          athlete_id?: string | null
+          coach_id?: string
+          created_at?: string
+          id?: number
+          key_id?: string | null
+          route?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_access_log_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_api_drafts: {
+        Row: {
+          athlete_id: string
+          base_hash: string | null
+          body: string
+          coach_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          key_id: string | null
+          kind: string
+          ops: Json
+          status: string
+          title: string
+        }
+        Insert: {
+          athlete_id: string
+          base_hash?: string | null
+          body?: string
+          coach_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          key_id?: string | null
+          kind: string
+          ops?: Json
+          status?: string
+          title: string
+        }
+        Update: {
+          athlete_id?: string
+          base_hash?: string | null
+          body?: string
+          coach_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          key_id?: string | null
+          kind?: string
+          ops?: Json
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_drafts_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_api_keys: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
+      coach_api_rate: {
+        Row: {
+          hits: number
+          key_id: string
+          window_start: string
+        }
+        Insert: {
+          hits?: number
+          key_id: string
+          window_start: string
+        }
+        Update: {
+          hits?: number
+          key_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_rate_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitions: {
         Row: {
           athlete_comment: string | null
@@ -3732,6 +3879,7 @@ export type Database = {
       can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
       can_read_doc_file: { Args: { object_name: string }; Returns: boolean }
       close_unfinished_workouts: { Args: never; Returns: number }
+      coach_api_hit: { Args: { p_key: string }; Returns: number }
       col_is_null:
         | {
             Args: {
@@ -3936,6 +4084,7 @@ export type Database = {
         Args: { p_certified: boolean; p_target_id: string }
         Returns: undefined
       }
+      trigger_coros_sync: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
       workout_log_has_entries: { Args: { mods: Json }; Returns: boolean }
     }

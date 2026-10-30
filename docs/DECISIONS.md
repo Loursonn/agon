@@ -1065,6 +1065,74 @@ Les données de cycle menstruel relèvent de l'article 9 du RGPD — consentemen
 explicite distinct, analyse d'impact, conservation propre. C'est un chantier de
 conformité entier, pas une case à cocher.
 
+
+## 2026-10 — L'assistant IA du coach lit par une API et propose, il n'écrit pas
+
+**Contexte** : un coach veut que son assistant IA personnel (Claude, sur son
+ordinateur) lise les données de ses athlètes pour en faire des analyses et des
+synthèses, et lui propose des axes de travail ou des modifications. Modèle
+repris d'une autre app (Polaris), adapté à ce qui diffère ici : des données de
+santé, et plusieurs personnes autour d'un même athlète.
+
+**Décision** : Edge Function `coach-api`, clé `agon_…` réservée aux coachs
+(hash SHA-256 seul en base), lecture des athlètes consentants, et dépôt de
+propositions dans `coach_api_drafts` que le coach applique ou écarte dans Agon.
+
+**Pourquoi des propositions et pas des écritures** : deux raisons, chacune
+suffisante.
+- Le front charge chaque clé `app_data` entière et la réécrit entière à la
+  sauvegarde suivante. Une écriture serveur faite pendant qu'un onglet est
+  ouvert serait écrasée sans bruit. Polaris règle ce problème par une file
+  d'opérations rejouée automatiquement ; ici le rejeu est un clic du coach, et
+  il passe par la même mutation que l'éditeur.
+- Le texte de consentement dit à l'athlète que son coach « relit tout ». Une
+  écriture directe le rendrait faux.
+
+**Pourquoi un module d'opérations partagé** (`_shared/coachApiOps.ts`) : le
+serveur valide la proposition, l'app l'applique. Avec deux définitions, une
+proposition acceptée par l'un pourrait être appliquée autrement par l'autre.
+L'id d'un exercice ajouté est fixé à la validation, donc l'application est
+déterministe. Une modification de paramètres exige `a_partir_de` (numéro
+d'occurrence de la séance) : sans lui, elle réécrirait aussi les séances déjà
+faites, comme le rappelle `toMultiWeekSession`.
+
+**Pourquoi une empreinte de contenu et pas `updated_at`** : pour prévenir le
+coach qu'un programme a changé depuis la proposition. `app_data.updated_at`
+n'est écrit que par `sSave`, pas par `useUpdateProgrammation`, et aucun trigger
+ne le tient à jour. Le faire bouger à chaque édition aurait changé les fils
+d'activité qui le lisent. La proposition garde le SHA-256 du JSON visé ; l'app
+le recalcule avant d'appliquer.
+
+**Consentement** : une seule case IA (`ai_programming`), élargie pour nommer
+Google Gemini (via Agon) et l'assistant Claude du coach. Choix du propriétaire,
+contre une case séparée par destinataire comme pour Garmin et COROS. Le texte
+reste exact sur ce qui diffère : Agon peut garantir que Gemini n'entraîne pas
+ses modèles avec ces données (API payante), pas Claude, qui passe par le compte
+personnel du coach. Un accord donné sous l'ancien texte ne vaut pas pour
+Claude : le serveur exige `doc_version >= AI_ASSISTANT_SINCE`, et
+`LEGAL_VERSION` passe au 30 octobre pour re-solliciter tout le monde.
+
+**Ce qui ne sort pas** : le texte libre écrit par l'athlète (ressenti,
+commentaires de séance, notes de sommeil ou de blessure) — c'est là qu'un
+diagnostic ou un traitement peut se glisser. Le nom de famille. Les données
+Garmin (les vues `ai_provider_*` les excluent déjà). Un athlète qui n'a pas
+consenti n'apparaît pas du tout, et « pas ton athlète » et « pas d'accord »
+renvoient la même 404 : la différence révélerait sa décision.
+
+**Traçabilité** : chaque lecture est écrite dans `coach_api_access_log` avant
+d'être servie ; si l'écriture échoue, rien n'est servi. C'est ce qui permet de
+répondre à l'art. 15.1.c (à qui ses données ont été communiquées) avec des
+faits.
+
+**Limites connues** :
+- L'athlète ne voit pas lui-même ce journal : il faut le lui fournir sur
+  demande.
+- Si le coach applique une proposition pendant que l'éditeur de programmation
+  a une sauvegarde différée en cours (800 ms), cette sauvegarde peut l'écraser.
+  Fenêtre étroite, non traitée.
+- Une proposition d'objectifs est marquée appliquée avant que `setGoals` ait
+  fini d'écrire ; une panne d'écriture à ce moment laisse le statut faux.
+
 ---
 
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

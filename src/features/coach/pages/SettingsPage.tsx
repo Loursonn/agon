@@ -5,6 +5,7 @@ import { C } from "@/lib/theme";
 import { toast } from "sonner";
 import { bookingUrlError, normalizeBookingUrl } from "@/lib/booking";
 import { PrivacySection } from "@/features/shared/components/PrivacySection";
+import { CoachApiKeysSection } from "@/features/coach/components/CoachApiKeysSection";
 
 export default function SettingsPage() {
   const { profile } = useAuth();
@@ -175,6 +176,9 @@ export default function SettingsPage() {
           {savingBooking ? "Enregistrement…" : "Enregistrer"}
         </button>
       </div>
+
+      {/* Clés API pour l'assistant IA personnel du coach */}
+      <CoachApiKeysSection />
 
       {/* Confidentialité & données — mêmes droits RGPD que côté athlète */}
       <div style={{ marginTop: 24 }}>

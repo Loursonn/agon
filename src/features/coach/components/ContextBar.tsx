@@ -6,6 +6,8 @@ import { useSelectedAthlete } from "@/features/coach/context/SelectedAthleteCont
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
+import { useCoachApiDrafts } from "@/features/coach/hooks/useCoachApiDrafts";
+import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
 import { C } from "@/lib/theme";
 import {
   Popover,
@@ -68,6 +70,8 @@ export default function ContextBar() {
   const { selectedAthlete } = useSelectedAthlete();
   const { blockConfig, currentWeek, tw } = useAthleteContext();
   const [comboOpen, setComboOpen] = useState(false);
+  const [draftsOpen, setDraftsOpen] = useState(false);
+  const { data: claudeDrafts = [] } = useCoachApiDrafts(athleteId);
 
   // Badge modifications athlète (reschedule + bonus sets)
   const { data: modifCount = 0 } = useQuery({
@@ -193,6 +197,27 @@ export default function ContextBar() {
           >
             {modifCount}
           </button>
+        )}
+
+        {/* Propositions de l'assistant IA du coach, en attente de décision */}
+        {claudeDrafts.length > 0 && (
+          <button
+            onClick={() => setDraftsOpen(true)}
+            title="Propositions de Claude en attente"
+            style={{
+              display: "flex", alignItems: "center", gap: 4,
+              padding: "3px 8px", borderRadius: 6,
+              border: "1px solid " + C.coach + "50",
+              background: C.coachS,
+              color: C.coach, fontSize: 10, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+            }}
+          >
+            Claude · {claudeDrafts.length}
+          </button>
+        )}
+        {athleteId && (
+          <ClaudeDraftsSheet athleteId={athleteId} open={draftsOpen} onOpenChange={setDraftsOpen} />
         )}
 
         {/* Changer d'athlète — combobox */}

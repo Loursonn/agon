@@ -177,8 +177,8 @@ export default function PrivacyPolicy() {
               "Consentement explicite et spécifique, donné service par service (art. 9.2.a)",
             ],
             [
-              "Générer une proposition de programme assistée par intelligence artificielle, à la demande du coach",
-              "Historique d'entraînement, objectifs, contraintes et blessures déclarées",
+              "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Google Gemini utilisée par Agon, ou via l'assistant Claude de votre coach",
+              "Historique d'entraînement, bien-être, poids, objectifs, blessures déclarées, données de montre autorisées",
               "Consentement explicite (art. 9.2.a)",
             ],
             [
@@ -215,6 +215,24 @@ export default function PrivacyPolicy() {
         <P>
           Si vous mettez fin à la relation de coaching depuis votre profil, l'accès du coach à vos
           données cesse immédiatement.
+        </P>
+        <P>
+          Si vous l'avez accepté (accord « intelligence artificielle », révocable dans votre profil),
+          votre coach peut aussi faire lire vos données d'entraînement par son assistant
+          d'intelligence artificielle personnel, <strong>Claude, édité par Anthropic</strong>, au
+          moyen d'une clé qu'il génère dans Agon. Cet assistant reçoit votre prénom, vos séances et
+          charges réalisées, votre bien-être, votre poids, vos blessures déclarées (zones et dates)
+          et les données de montre autorisées — jamais vos commentaires libres. Il peut proposer à
+          votre coach des axes de travail ou des modifications de programme, que votre coach relit et
+          applique lui-même : rien ne change pour vous sans son intervention.
+        </P>
+        <P>
+          Anthropic n'est pas notre prestataire : vos données passent par le compte personnel de
+          votre coach, et leur usage — notamment pour l'entraînement des modèles — dépend des
+          réglages de ce compte, que nous ne contrôlons pas. Chaque lecture est journalisée : sur
+          simple demande, nous pouvons vous indiquer quand vos données ont été transmises à cet
+          assistant. Un accord donné avant le 30 octobre 2026, sous un texte qui ne nommait que
+          Google Gemini, ne vaut pas pour cet assistant.
         </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>

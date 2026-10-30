@@ -1,4 +1,5 @@
 import { IMPORT_PROMPT, IMPORT_PROMPT_FILENAME } from "./importPrompt";
+import { COACH_API_PROMPT, COACH_API_PROMPT_FILENAME } from "./coachApiPrompt";
 
 /**
  * Nouveautés de l'app, affichées aux coachs (accueil + page Nouveautés).
@@ -36,6 +37,46 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: "2026-11-02-assistant-ia-claude",
+    date: "2026-11-02",
+    kind: "feature",
+    title: "Branche ton assistant IA sur les données de tes athlètes",
+    summary:
+      "Ton assistant Claude peut maintenant lire les données des athlètes qui l'acceptent, t'en faire des analyses et des synthèses, et te proposer des axes de travail ou des modifications. Il ne change jamais rien seul : c'est toi qui appliques.",
+    sections: [
+      {
+        title: "Démarrer",
+        points: [
+          "Paramètres → Assistant IA (Claude) → Générer une clé. Elle ne s'affiche qu'une fois : copie-la et donne-la à ton assistant avec le mode d'emploi ci-dessous.",
+          "Une clé se révoque en un clic au même endroit ; l'assistant perd l'accès immédiatement.",
+        ],
+      },
+      {
+        title: "Ce que tu verras",
+        points: [
+          "Un badge « Claude » en haut de la fiche d'un athlète quand ton assistant a déposé des propositions. Chacune dit ce qu'elle change, en clair, avec le nom des séances et des exercices.",
+          "Appliquer ou Écarter : rien ne change pour l'athlète tant que tu n'as pas appliqué. Si le programme a bougé depuis la proposition, tu es prévenu avant.",
+          "Les axes de travail sont des textes : tu les retiens ou tu les écartes, et tu construis toi-même.",
+        ],
+      },
+      {
+        title: "Qui est concerné",
+        points: [
+          "Seuls les athlètes qui ont accepté le traitement par l'IA sous le nouveau texte sont visibles par ton assistant. Tes athlètes reverront l'écran de consentement à leur prochaine connexion : c'est normal, le texte nomme désormais ton assistant.",
+          "Ton assistant ne reçoit ni le nom de famille, ni ce que l'athlète écrit librement (ressenti, commentaires), ni les données Garmin.",
+        ],
+      },
+    ],
+    resources: [
+      {
+        label: "Mode d'emploi pour ton assistant IA",
+        description: "À ajouter une fois pour toutes dans un Projet Claude, avec ta clé.",
+        text: COACH_API_PROMPT,
+        filename: COACH_API_PROMPT_FILENAME,
+      },
+    ],
+  },
   {
     id: "2026-11-01-garmin-hors-ia",
     date: "2026-11-01",
