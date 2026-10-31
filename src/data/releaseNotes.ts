@@ -63,6 +63,14 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         ],
       },
       {
+        title: "Le planning de l'athlète, vu par le pro",
+        points: [
+          "Onglet Programme : la semaine de l'athlète en grand, chaque séance écrite en entier (blocs, exercices, séries × reps, charge, RIR, consignes). Vue Mois pour prendre du recul. Sur ordinateur, 7 colonnes ; sur téléphone, un jour sous l'autre.",
+          "Un pro qui a les fiches en écriture pose une fiche sur un ou plusieurs jours, avec une consigne (« 2 séries avant la séance »). L'athlète la voit ces jours-là dans son programme, toi dans ton planning.",
+          "Une fiche peut être faite de photos prises au téléphone : elles sont compressées, et plusieurs photos deviennent un seul PDF, une page par photo.",
+        ],
+      },
+      {
         title: "Côté athlète",
         points: [
           "Dans son profil, « Mon staff » liste chaque professionnel avec son métier et ce qu'il voit. Il est prévenu des ajouts et peut retirer un accès.",

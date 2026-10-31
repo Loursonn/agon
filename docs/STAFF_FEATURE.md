@@ -112,7 +112,7 @@ Le coach peut tout modifier, pro par pro et athlète par athlète. Les données 
 | Domaine | Tables / clés |
 |---|---|
 | `seances` | `app_data` (clé `asp:prog`, `asp:visibility`), `energy_session_assignments`, `workout_logs.athlete_modifications.coachOverride` |
-| `fiches` | `docs`, `doc_assignments`, `doc_comments` |
+| `fiches` | `docs`, `doc_assignments`, `doc_comments`, `doc_schedule` (fiche posée sur un jour) |
 | `planification` | `seasons`, `planning_blocks`, `macrocycles`, `mesocycles`, `cycles`, `microcycles`, `competitions`, `day_themes` |
 | `logs` | `workout_logs`, `workout_rpe`, `energy_workout_logs`, `exercise_pr_logs`, `performance_logs` |
 | `wellness` | `app_data` (clé `asp:wellness`), `habit_logs` |

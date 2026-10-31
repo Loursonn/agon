@@ -355,10 +355,11 @@ Rollback : `DROP FUNCTION IF EXISTS public.get_app_update_reads(); DROP TABLE IF
 - `supabase/migrations/20261031121000_staff_policies.sql` — policies `staff_*` en lecture sur les tables par domaine, écriture sur `medical_entries`/`medical_attachments`, fiches (`docs`, `doc_assignments`, `doc_comments`) ; `declared_by` accepte `'staff'` ; `can_read_doc` et `can_read_doc_file` remplacées (branches staff ajoutées).
 - `supabase/migrations/20261031122000_staff_docs_storage.sql` — dépôt / suppression de fichiers par le staff dans le bucket `docs` (banque du coach, dossier de l'athlète).
 - `supabase/migrations/20261031123000_staff_profile_fields.sql` — le pro ne lit plus la ligne `profiles` de l'athlète : policy `profiles_select_staff_athletes` retirée, RPC `staff_athlete_profiles()` qui ne renvoie que les champs permis par ses domaines (nom et coach toujours ; sexe/âge si tests, nutrition ou médical ; poids/taille/métabolisme si nutrition ; consentement exigé pour les domaines santé).
+- `supabase/migrations/20261031124000_doc_schedule.sql` — table `doc_schedule` (fiche posée sur un jour du planning d'un athlète, domaine staff `fiches`) + RPC `schedule_doc(athlete, doc, dates[], note)` en SECURITY INVOKER (la RLS s'applique) : crée l'attribution `doc_assignments` si absente puis une ligne par jour (120 jours max). Lecture : athlète, coach, staff `fiches` lecture. Ajout : staff `fiches` écriture sur une fiche visible pour l'athlète, ou le coach avec sa propre fiche. Retrait : coach, ou staff selon `staff_can_edit`.
 
 **Statut : ✅ APPLIQUÉES en prod le 2026-10-31** via `supabase db query --linked -f` (pas de `db push`).
 
-Tests : `supabase db query --linked -f supabase/tests/staff_rls.sql` — simulation des rôles (coach, athlète, 2 pros) dans une transaction annulée — 50 vérifications OK (lecture par domaine, champs du profil filtrés, consentement santé, garde des droits, usurpation d'auteur, réutilisation d'invitation, révocation). Aucune ligne laissée en base.
+Tests : `supabase db query --linked -f supabase/tests/staff_rls.sql` — simulation des rôles (coach, athlète, 2 pros) dans une transaction annulée — 61 vérifications OK (lecture par domaine, champs du profil filtrés, fiches posées sur les jours, consentement santé, garde des droits, usurpation d'auteur, réutilisation d'invitation, révocation). Aucune ligne laissée en base.
 
 Spec : `docs/STAFF_FEATURE.md`.
 
@@ -373,6 +374,9 @@ DO $$ DECLARE r record; BEGIN
   FOR r IN SELECT schemaname, tablename, policyname FROM pg_policies WHERE policyname LIKE 'staff\_%' OR policyname LIKE 'profiles_select_staff%'
   LOOP EXECUTE format('DROP POLICY %I ON %I.%I', r.policyname, r.schemaname, r.tablename); END LOOP;
 END $$;
+-- 1a. Migration 5 : fiches posées sur les jours (les lignes sont perdues)
+DROP FUNCTION IF EXISTS public.schedule_doc(uuid, uuid, date[], text);
+DROP TABLE IF EXISTS public.doc_schedule;
 -- 1b. Migration 4 : RPC du profil filtré (la policy profiles_select_staff_athletes
 --     est déjà retirée ; ne pas la recréer, elle ouvrait la ligne entière).
 DROP FUNCTION IF EXISTS public.staff_athlete_profiles();
