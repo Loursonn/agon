@@ -365,6 +365,162 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_api_access_log: {
+        Row: {
+          athlete_id: string | null
+          coach_id: string
+          created_at: string
+          id: number
+          key_id: string | null
+          route: string
+        }
+        Insert: {
+          athlete_id?: string | null
+          coach_id: string
+          created_at?: string
+          id?: number
+          key_id?: string | null
+          route: string
+        }
+        Update: {
+          athlete_id?: string | null
+          coach_id?: string
+          created_at?: string
+          id?: number
+          key_id?: string | null
+          route?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_access_log_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_api_drafts: {
+        Row: {
+          applied_via: string | null
+          athlete_id: string
+          base_hash: string | null
+          body: string
+          coach_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          key_id: string | null
+          kind: string
+          ops: Json
+          status: string
+          title: string
+          undo: Json
+          undone_at: string | null
+        }
+        Insert: {
+          applied_via?: string | null
+          athlete_id: string
+          base_hash?: string | null
+          body?: string
+          coach_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          key_id?: string | null
+          kind: string
+          ops?: Json
+          status?: string
+          title: string
+          undo?: Json
+          undone_at?: string | null
+        }
+        Update: {
+          applied_via?: string | null
+          athlete_id?: string
+          base_hash?: string | null
+          body?: string
+          coach_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          key_id?: string | null
+          kind?: string
+          ops?: Json
+          status?: string
+          title?: string
+          undo?: Json
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_drafts_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_api_keys: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
+      coach_api_rate: {
+        Row: {
+          hits: number
+          key_id: string
+          window_start: string
+        }
+        Insert: {
+          hits?: number
+          key_id: string
+          window_start: string
+        }
+        Update: {
+          hits?: number
+          key_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_rate_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitions: {
         Row: {
           athlete_comment: string | null
@@ -1179,6 +1335,7 @@ export type Database = {
           athlete_id: string
           color: string
           created_at: string | null
+          created_by: string | null
           emoji: string
           id: string
           is_active: boolean | null
@@ -1189,6 +1346,7 @@ export type Database = {
           athlete_id: string
           color?: string
           created_at?: string | null
+          created_by?: string | null
           emoji?: string
           id?: string
           is_active?: boolean | null
@@ -1199,6 +1357,7 @@ export type Database = {
           athlete_id?: string
           color?: string
           created_at?: string | null
+          created_by?: string | null
           emoji?: string
           id?: string
           is_active?: boolean | null
@@ -1206,6 +1365,13 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "habits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "habits_athlete_id_fkey"
             columns: ["athlete_id"]
@@ -1511,6 +1677,12 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      athlete_claims: {
+        Row: { athlete_id: string; created_at: string; token: string }
+        Insert: { athlete_id: string; created_at?: string; token: string }
+        Update: { athlete_id?: string; created_at?: string; token?: string }
+        Relationships: []
       }
       invitations: {
         Row: {
@@ -2199,6 +2371,7 @@ export type Database = {
           birth_date: string | null
           body_fat_pct: number | null
           booking_url: string | null
+          coach_hidden: boolean
           coach_code: string | null
           coach_id: string | null
           created_at: string | null
@@ -2211,6 +2384,7 @@ export type Database = {
           id: string
           is_admin: boolean
           is_certified_coach: boolean
+          is_pending: boolean
           is_hyrox_athlete: boolean
           last_name: string | null
           role: string
@@ -2222,6 +2396,7 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          coach_hidden?: boolean
           coach_code?: string | null
           coach_id?: string | null
           created_at?: string | null
@@ -2234,6 +2409,7 @@ export type Database = {
           id: string
           is_admin?: boolean
           is_certified_coach?: boolean
+          is_pending?: boolean
           is_hyrox_athlete?: boolean
           last_name?: string | null
           role: string
@@ -2245,6 +2421,7 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          coach_hidden?: boolean
           coach_code?: string | null
           coach_id?: string | null
           created_at?: string | null
@@ -2257,6 +2434,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           is_certified_coach?: boolean
+          is_pending?: boolean
           is_hyrox_athlete?: boolean
           last_name?: string | null
           role?: string
@@ -3732,6 +3910,7 @@ export type Database = {
       can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
       can_read_doc_file: { Args: { object_name: string }; Returns: boolean }
       close_unfinished_workouts: { Args: never; Returns: number }
+      coach_api_hit: { Args: { p_key: string }; Returns: number }
       col_is_null:
         | {
             Args: {
@@ -3936,6 +4115,15 @@ export type Database = {
         Args: { p_certified: boolean; p_target_id: string }
         Returns: undefined
       }
+      get_claim_info: {
+        Args: { p_token: string }
+        Returns: { first_name: string | null; last_name: string | null; coach_code: string | null; coach_name: string | null }[]
+      }
+      set_athlete_hidden: {
+        Args: { athlete_id: string; hidden: boolean }
+        Returns: undefined
+      }
+      trigger_coros_sync: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
       workout_log_has_entries: { Args: { mods: Json }; Returns: boolean }
     }

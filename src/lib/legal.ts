@@ -22,10 +22,10 @@
  * Les corrections purement rédactionnelles (typo, reformulation) ne doivent PAS
  * l'incrémenter, sinon on harcèle les utilisateurs pour rien.
  */
-export const LEGAL_VERSION = "2026-10-26";
+export const LEGAL_VERSION = "2026-10-30";
 
 /** Date d'entrée en vigueur affichée en tête des documents. */
-export const LEGAL_EFFECTIVE_DATE = "26 octobre 2026";
+export const LEGAL_EFFECTIVE_DATE = "30 octobre 2026";
 
 /**
  * Marqueur des champs que seul Hugo peut renseigner (données d'état civil et
@@ -133,7 +133,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
   {
     name: "Google Ireland Ltd. (Gemini API)",
     purpose:
-      "Génération assistée de programmes d'entraînement à la demande du coach. Traitement par intelligence artificielle.",
+      "Analyses, synthèses et visualisations des données d'entraînement, et génération assistée de programmes. Traitement par intelligence artificielle.",
     location: "Union européenne / États-Unis",
     transferMechanism: "Clauses contractuelles types",
     role: "subprocessor",

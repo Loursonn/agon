@@ -13,7 +13,7 @@ import AthleteProfileForm from "@/components/coach/AthleteProfileForm";
  */
 export default function CoachAthleteArea() {
   const { athleteId } = useParams<{ athleteId: string }>();
-  const { user, profile, athletes, canCoachSelf } = useAuth();
+  const { user, profile, athletes, hiddenAthletes, canCoachSelf } = useAuth();
   const [editProfileTab, setEditProfileTab] = useState<"profil" | "nutrition" | null>(null);
 
   if (!athleteId || !user) return null;
@@ -22,7 +22,7 @@ export default function CoachAthleteArea() {
   if (isOwnView && profile && !canCoachSelf) return <Navigate to="/coach" replace />;
   const selectedAthlete = isOwnView
     ? profile
-    : (athletes.find((a) => a.id === athleteId) ?? null);
+    : ([...athletes, ...hiddenAthletes].find((a) => a.id === athleteId) ?? null);
 
   return (
     <SelectedAthleteProvider>

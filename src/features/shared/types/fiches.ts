@@ -2,6 +2,7 @@
  * Module Fiches — types et helpers purs (aucun import React / réseau).
  * Voir docs/FICHES_FEATURE.md.
  */
+import { attachmentDocIds, collectDocIds, collectProgDocIds, type FicheAttachment } from "@shared/fiches.ts";
 
 export type FicheCategory =
   | 'mobilite'
@@ -83,12 +84,10 @@ export interface DocFamily {
   variants: Doc[];
 }
 
-/** Rattachement d'une fiche à une séance, un bloc ou une séance énergie (stocké dans le JSON) */
-export interface FicheAttachment {
-  id: string;                          // id local du rattachement (uuid)
-  doc_id: string;                      // fiche (ou variante) par défaut
-  weeks?: Record<number, string>;      // semaine → doc_id de la variante ; absent = doc_id partout
-}
+// Rattachements (JSON des séances) : partagés avec l'Edge Function coach-api,
+// qui synchronise les attributions avec le même calcul.
+export type { FicheAttachment };
+export { attachmentDocIds, collectDocIds, collectProgDocIds };
 
 /** Libellé d'une variante (« Originale » pour l'origine). */
 export function variantLabel(doc: Pick<Doc, 'origin_id' | 'variant_label'>): string {
@@ -103,35 +102,12 @@ export function resolveFicheForWeek(att: FicheAttachment, week: number | undefin
   return rec[String(week)] || att.doc_id;
 }
 
-/** Tous les doc_id d'un rattachement (défaut + variantes par semaine). */
-export function attachmentDocIds(att: FicheAttachment): string[] {
-  const ids = [att.doc_id, ...Object.values(att.weeks ?? {})];
-  return ids.filter(Boolean);
-}
-
-/** Ids uniques de plusieurs listes de rattachements. */
-export function collectDocIds(lists: (FicheAttachment[] | null | undefined)[]): string[] {
-  const set = new Set<string>();
-  for (const list of lists) for (const att of list ?? []) for (const id of attachmentDocIds(att)) set.add(id);
-  return [...set];
-}
-
 interface WithFiches {
   fiches?: FicheAttachment[] | null;
 }
 
 interface SessionLike extends WithFiches {
   blocs?: WithFiches[] | unknown[];
-}
-
-/** doc_id référencés par une liste de séances (niveau séance + blocs). */
-export function collectProgDocIds(sessions: SessionLike[]): string[] {
-  const lists: (FicheAttachment[] | null | undefined)[] = [];
-  for (const s of sessions) {
-    lists.push(s.fiches);
-    for (const b of (s.blocs ?? []) as WithFiches[]) lists.push(b?.fiches);
-  }
-  return collectDocIds(lists);
 }
 
 /** Aplatit les rattachements sur une semaine (override d'une occurrence, banque mono-semaine). */

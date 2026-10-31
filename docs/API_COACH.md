@@ -1,0 +1,332 @@
+# API coach — assistant IA
+
+Cette API permet à ton assistant IA (Claude, sur ton ordinateur) de lire les
+données de tes athlètes pour t'en faire des analyses, synthèses et
+visualisations, et de planifier avec toi. Il n'inscrit rien sans ton accord :
+- par défaut, il **dépose** une proposition qui t'attend dans Agon (badge
+  « Claude » en haut de la fiche de l'athlète) ; rien ne change pour
+  l'athlète tant que tu ne l'as pas appliquée ;
+- quand tu lui dis de l'inscrire directement, il **l'applique** lui-même.
+
+Dans les deux cas, tout ce qui a été inscrit **s'annule** : Agon garde l'état
+d'avant, et « Annuler » (dans le panneau Claude, ou en le demandant à
+l'assistant) remet tout comme avant. Ce que l'athlète a réalisé entre-temps
+(une séance faite) n'est jamais effacé.
+
+## Démarrer
+
+1. Dans Agon : **Paramètres → Assistant IA (Claude) → Générer une clé**.
+   La clé (`agon_…`) n'est affichée qu'une fois : copie-la.
+2. Donne à ton assistant la clé, l'adresse de base et le mode d'emploi
+   téléchargeable dans les Nouveautés. Il faut un Claude qui peut lancer des
+   commandes sur ton ordinateur (Claude Code) : Claude dans le navigateur
+   (claude.ai) ne peut pas envoyer l'en-tête d'authentification.
+
+   Adresse de base :
+
+```
+https://mxbfnkkbtmbrauvqplrt.supabase.co/functions/v1/coach-api
+```
+
+Chaque requête porte l'en-tête :
+
+```
+Authorization: Bearer agon_xxxxxxxx
+```
+
+Une clé perdue ne se récupère pas : révoque-la et génère-en une autre.
+
+## Qui est visible
+
+Seuls apparaissent les athlètes **rattachés à toi** qui ont **accepté le
+traitement de leurs données par l'IA** sous le texte qui nomme ton assistant
+(en vigueur depuis le 30 octobre 2026). Un athlète absent de la liste n'a pas
+donné cet accord, ou l'a donné sous l'ancien texte qui ne nommait que Google
+Gemini : il peut l'activer dans son profil, section Confidentialité.
+
+Ce que l'assistant reçoit : prénom, séances et charges réalisées, séances
+énergétiques (durée, distance, RPE), thèmes du jour que tu as posés,
+compétitions, tests (valeurs mesurées), événements du calendrier de l'athlète
+(dates et titre), bien-être, poids, blessures (zones, dates), records,
+objectifs, données de montre autorisées. Jamais le texte libre écrit par
+l'athlète sur ses séances, ses tests, ses compétitions ou ses blessures ;
+seul le titre de ses événements de calendrier passe, et le texte de
+consentement le lui dit.
+Les données Garmin ne sont jamais transmises à une IA.
+
+Chaque lecture est journalisée.
+
+## Routes
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/athletes` | Athlètes visibles (id, prénom) |
+| GET | `/athletes/:id/summary?from=AAAA-MM-JJ&to=AAAA-MM-JJ` | Données d'une période (28 jours par défaut, 90 max) |
+| GET | `/athletes/:id/program` | Programme en cours, avec les ids à citer dans les propositions |
+| GET | `/athletes/:id/periodisation` | Macrocycles, mésocycles, cycles et semaines, compétitions et tests, avec leurs ids |
+| GET | `/athletes/:id/fiches` | Fiches de ta banque et fiches perso de l'athlète, celles qu'il a déjà (et vues ou non), celles rattachées à ses séances |
+| GET | `/athletes/:id/habitudes` | Suivi activé ou non, habitudes et assiduité (jours cochés sur 7 et 28 jours) |
+| POST | `/fiches` | Déposer dans ta banque une fiche fabriquée par l'assistant (PDF ou image) |
+| DELETE | `/fiches/:id` | Retirer une fiche déposée par l'assistant, tant que personne ne l'a reçue |
+| POST | `/athletes/:id/drafts` | Déposer une proposition |
+| GET | `/drafts?status=pending\|applied\|rejected\|undone&athlete_id=…` | Propositions et leur sort |
+| POST | `/drafts/:id/appliquer` | Appliquer une proposition déposée |
+| POST | `/drafts/:id/annuler` | Annuler une proposition appliquée (`{ "forcer": true }` si besoin, voir plus bas) |
+| GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque |
+| GET | `/seances-energie?q=vma` | Chercher une séance énergétique dans ta banque (sans `q` : les 50 dernières) |
+| GET | `/tests?q=squat` | Chercher un test dans ta banque de tests (nom exact à reprendre dans `create_test`) |
+
+Les écritures passent toutes par une proposition, appliquée par toi ou à ta
+demande, et annulable.
+
+### Exemples
+
+```bash
+BASE=https://mxbfnkkbtmbrauvqplrt.supabase.co/functions/v1/coach-api
+KEY=agon_xxxxxxxx
+
+curl -s -H "Authorization: Bearer $KEY" $BASE/athletes
+curl -s -H "Authorization: Bearer $KEY" "$BASE/athletes/<id>/summary?from=2026-10-01&to=2026-10-28"
+curl -s -H "Authorization: Bearer $KEY" $BASE/athletes/<id>/program
+```
+
+## Propositions
+
+Le mode d'emploi demande à l'assistant de **présenter chaque proposition dans
+la discussion d'abord**, et de ne la déposer dans Agon que lorsque tu le lui
+demandes. Tu valides donc deux fois : en discussion, puis « Appliquer » dans
+Agon.
+
+Une proposition a un `kind`, un `title` (120 caractères max) et un `body`
+(4 000 max), plus des `ops` sauf pour un axe de travail. 50 opérations maximum.
+
+### Appliquer directement, annuler
+
+Ajoute `"appliquer": true` à la proposition pour qu'elle soit appliquée tout
+de suite. Le mode d'emploi demande à l'assistant de ne le faire que quand tu
+le lui dis explicitement. Si elle ne s'applique pas (une séance citée a
+disparu), rien n'est modifié et elle reste en attente dans Agon.
+
+`POST /drafts/:id/annuler` défait une proposition appliquée. Si le programme
+ou les objectifs ont été modifiés depuis, la réponse est `409
+modifie_depuis` : annuler effacerait aussi ces modifications. L'assistant te
+demande alors confirmation avant de renvoyer `{ "forcer": true }`.
+
+### Axe de travail — texte seul
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  $BASE/athletes/<id>/drafts -d '{
+    "kind": "axe",
+    "title": "Sommeil avant les séances de force",
+    "body": "Couchée après minuit 4 soirs sur 7 ce mois-ci, et RPE moyen +1,5 le lendemain. Piste : avancer le coucher les veilles de séance lourde."
+  }'
+```
+
+### Programme
+
+`GET /program` donne les ids de séance, de bloc et d'exercice, et pour chaque
+séance `prochaine_occurrence` : le numéro de la prochaine fois qu'elle aura
+lieu.
+
+| op | Champs |
+|---|---|
+| `add_exercice` | `session_id`, `bloc_id`, `position?`, `exercice: { exercise_name, mode?: "classique"\|"libre", libre_text?, comment?, params }` |
+| `update_exercice` | `session_id`, `exercice_id`, `a_partir_de` (obligatoire avec `params`), `params?`, `comment?`, `libre_text?` |
+| `remove_exercice` | `session_id`, `exercice_id` |
+| `set_bloc_instructions` | `session_id`, `bloc_id`, `instructions` |
+
+`a_partir_de` : numéro de l'occurrence de la séance à partir de laquelle la
+modification vaut — en général `prochaine_occurrence`. Elle vaut jusqu'à la
+prochaine occurrence qui a ses propres valeurs ; les séances déjà faites ne
+changent pas.
+
+`params` : `nb_series` (1–20) obligatoire ; `reps`, `reps_max`, `charge`,
+`rir`, `tempo`, `reps_mode` (`"EC"` ou `"iso"`) acceptent une valeur seule
+(identique pour toutes les séries) ou un tableau (une valeur par série) ;
+`charge_unit` : `"kg"` (défaut), `"%RM"` ou `"PDC"`.
+
+Un exercice dont le nom correspond à ta bibliothèque y est relié ; sinon il est
+ajouté hors bibliothèque, et la proposition l'indique. Les exercices en mode
+méthode se modifient dans Agon.
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  $BASE/athletes/<id>/drafts -d '{
+    "kind": "programme",
+    "title": "Squat : passer en force",
+    "body": "RIR 3 tenu sans peine sur les 3 dernières séances.",
+    "ops": [{
+      "op": "update_exercice", "session_id": "<s>", "exercice_id": "<e>",
+      "a_partir_de": 7,
+      "params": { "nb_series": 5, "reps": 3, "charge": 82.5, "charge_unit": "%RM", "rir": 2 }
+    }]
+  }'
+```
+
+### Semaine d'entraînement
+
+Une semaine se propose en une seule proposition `"kind": "semaine"` : elle
+crée des séances, les place sur des dates et pose le thème de chaque jour. Tu
+l'appliques d'un clic. Elle **ajoute** et ne supprime rien : une séance déjà
+prévue le reste. Seul le thème d'un jour qui en avait déjà un est remplacé,
+et l'aperçu montre l'ancien barré.
+
+Dates au format `AAAA-MM-JJ`, d'aujourd'hui à 56 jours plus tard. Pour voir
+ce qui est déjà prévu, l'assistant lit `GET /summary` sur la semaine à venir
+(`from` et `to` peuvent être dans le futur).
+
+| op | Champs |
+|---|---|
+| `create_session` | `ref`, `name`, `short?`, `blocs: [{ name, category?, instructions?, exercices: [exercice] }]` |
+| `place_session` | `date`, et `session_id` (séance du programme) **ou** `ref` (séance créée plus haut) |
+| `create_energy_session` | `ref`, `name`, `session_kind`, `structure_type?`, `notes?`, `intervals` |
+| `place_energy_session` | `date`, et `energy_session_id` (de ta banque) **ou** `ref` |
+| `set_day_theme` | `date`, `label?` (40 car.), `intensity?`, `dominante?`, `color?` (`#rrggbb`), `note?` |
+
+- `ref` : un nom court choisi par l'assistant (`"vma"`, `"force-a"`), pour
+  placer ensuite la séance qu'il vient de créer. Créer avant de placer.
+- Une séance de musculation créée est **ponctuelle** : elle n'a lieu qu'aux
+  dates où elle est placée. `exercice` : comme dans `add_exercice`.
+  `category` : `Echauffement`, `Force`, `Hypertrophie`, `Explo/vitesse`,
+  `Mixte` (défaut) ou `Cardio`.
+- Une séance énergétique créée est propre à l'athlète (elle n'entre pas dans
+  ta banque). `session_kind` : `vo2`, `tempo`, `seuil`, `footing`, `fartlek`,
+  `autre`. Les séances spécifiques (exercices, format classique) se
+  construisent dans Agon.
+- `intensity` : `hard`, `moyen`, `easy`, `recup_active`, `repos`.
+  `dominante` : `force`, `puissance_vitesse`, `volume`, `aerobie`, `seuil`,
+  `hyrox`, `technique`, `mixte`. Sans `color`, celle de l'intensité.
+
+`intervals` reprend la structure de l'éditeur énergie :
+
+```json
+[
+  { "type": "interval", "role": "warmup", "duration": { "kind": "time", "value": 600 },
+    "target": { "kind": "hr_zone", "zone": 2 } },
+  { "type": "group", "repeat": 6, "children": [
+    { "type": "interval", "role": "work", "duration": { "kind": "distance", "value": 400 },
+      "target": { "kind": "pace_test_pct", "test_metric": "VMA", "min": 95, "max": 100 },
+      "equipment": "course" },
+    { "type": "interval", "role": "recovery", "duration": { "kind": "time", "value": 60 } }
+  ] }
+]
+```
+
+| Champ | Valeurs |
+|---|---|
+| `role` | `warmup`, `work`, `recovery`, `rest`, `cooldown`, `open` |
+| `duration` | `{ kind: "time", value: secondes }`, `"distance"` (mètres), `"calories"`, ou `{ kind: "lap_button" }` |
+| `target` | `none` · `hr_zone` (`zone` 1–5) · `hr_pct` / `hr_bpm` / `power` (`min`, `max`) · `pace` (`min_s_per_unit`, `max_s_per_unit` en secondes par km, `unit` `min_per_km` ou `kmh`) · `pace_test_pct` (`test_metric` `VMA`, `VC`, `Allure 10K`, `Allure semi`, `Allure marathon`) · `power_test_pct` (`PMA`, `FTP`, `PC30`, `PC5`) · `cadence` (`unit` `spm` ou `rpm`) · `text` (`value`) |
+| `equipment` | `course`, `rameur`, `skierg`, `bikeerg`, `velo`, `elliptique`, `corde`, `autre` |
+| groupe | `repeat` (1–50), `children`, `rest_between?`, `departure_every_s?`, `instructions?` ; 3 niveaux au plus |
+
+Si une application est interrompue (réseau), un nouveau clic sur
+« Appliquer » termine la semaine sans rien poser en double.
+
+### Planification
+
+`"kind": "plan"` : périodiser, poser compétitions et tests, retirer ce qui ne
+tient plus, et construire des semaines, **en une seule proposition** — donc
+une seule annulation pour tout. Elle accepte toutes les opérations d'une
+semaine (mêmes règles), plus :
+
+| op | Champs |
+|---|---|
+| `create_macrocycle` | `ref?`, `name`, `start_date`, `end_date`, `objective?` |
+| `create_mesocycle` | `ref?`, `macrocycle_id` **ou** `macrocycle_ref`, `name`, `start_date`, `end_date`, `objective?`, `frequency?` (1–14), `deload_week?`, `volume_type?` (`progressive`, `ondulant`, `plateau`, `polarize`), `zones?` (`["Z2","Z4"]`) |
+| `create_cycle` | `ref?`, `mesocycle_id` **ou** `mesocycle_ref` (ou aucun : cycle seul), `name`, `start_date`, `end_date`, `objective?`, `deload_weeks?` (`[4]`) |
+| `update_macrocycle` / `update_mesocycle` / `update_cycle` | `id` et les champs à changer |
+| `delete_macrocycle` / `delete_mesocycle` / `delete_cycle` | `id` — avec tout ce qu'il contient |
+| `set_week_deload` | `cycle_id` ou `cycle_ref`, `week_number`, `is_deload` |
+| `schedule_session_in_cycle` | `session_id` ou `ref`, `cycle_id` ou `cycle_ref` |
+| `remove_placement` | `session_id`, `date` |
+| `remove_energy_placement` | `energy_session_id`, `date` |
+| `remove_day_theme` | `date` |
+| `create_competition` | `name`, `date`, `type?` (`competition`, `match`, `stage`, `off`, `autre`), `priority?` (`A`, `B`, `C`), `location?` |
+| `update_competition` / `delete_competition` | `id` (+ champs à changer) |
+| `create_test` | `title`, `date`, `type?` (`musculation`, `endurance`, `vitesse`, `puissance`, `souplesse`, `autre`), `description?` |
+| `update_test` / `delete_test` | `id` (+ champs à changer) — pas un test déjà passé |
+
+- Comme dans le planning d'Agon : une période va **du lundi au dimanche**,
+  une semaine (microcycle) est créée pour chaque semaine du cycle, deux
+  périodes sœurs ne se chevauchent pas, et un enfant tient dans les dates de
+  son parent. Dates d'un an en arrière à deux ans en avant.
+- Déplacer un cycle refait ses semaines : celles qui sortent partent avec
+  leurs séances **prévues**.
+- `schedule_session_in_cycle` place la séance chaque semaine du cycle, à son
+  jour, à partir d'aujourd'hui (comme « placer sur le cycle » dans Agon). La
+  séance doit être hebdomadaire avec un jour : dans un plan, `create_session`
+  accepte `recurrence: "weekly"` et `day_of_week` (0 = lundi … 6 = dimanche).
+- **Le réalisé reste.** Supprimer un cycle ou un macrocycle retire ses
+  séances prévues ; une séance faite, en cours ou manquée reste chez
+  l'athlète (sans semaine). `remove_placement` marque la séance « sautée »
+  (elle ne réapparaît pas). Un test passé ne se modifie ni ne se supprime.
+- Les opérations s'appliquent dans l'ordre : créer avant de citer une `ref`.
+
+#### Fiches et habitudes
+
+Dans la même planification :
+
+| op | Champs |
+|---|---|
+| `assign_fiche` | `fiche_id`, `note?` (500 caractères, affichée à l'athlète), `perso?` (`true` : la ranger dans les fiches perso de l'athlète — seulement une fiche déposée par l'assistant et donnée à personne d'autre) |
+| `unassign_fiche` | `fiche_id` — une fiche attribuée à la main |
+| `attach_fiche` | `fiche_id`, et la séance : `session_id` ou `ref` (musculation), `energy_session_id` ou `energy_ref` (séance énergétique propre à l'athlète) |
+| `detach_fiche` | `fiche_id`, `session_id` ou `energy_session_id` |
+| `create_habit` | `name` (40 caractères), `icon?`, `color?` (palette d'Agon) |
+| `update_habit` | `id`, `name?`, `icon?`, `color?` — une habitude posée par toi ou ton assistant |
+| `remove_habit` | `id` — idem ; ses jours cochés restent |
+
+- Une fiche rattachée à une séance est attribuée à l'athlète quand la séance
+  est à son planning, comme dans Agon.
+- Pas de fiche sur une séance énergétique de ta bibliothèque partagée : le
+  changement toucherait tous les athlètes qui l'ont. Rattache-la à la copie de
+  l'athlète, ou fais-le dans Agon.
+- La première habitude active le suivi des habitudes de l'athlète s'il ne
+  l'était pas (l'aperçu le dit).
+- Les habitudes que l'athlète s'est données sont à lui : l'assistant n'en
+  voit que l'assiduité, pas le nom, et ne les modifie pas.
+
+**Déposer une fiche** fabriquée par l'assistant : `POST /fiches` avec
+`{ "title", "description?", "category?", "mime_type", "content_base64" }`.
+Formats : `application/pdf`, `image/jpeg`, `image/png`, `image/webp` ; 10 Mo
+au plus. Elle arrive dans ta banque avec l'étiquette « claude » et **aucun
+athlète ne la voit** tant qu'une proposition ne l'attribue pas ou ne la
+rattache pas à une séance. Pour la retirer : `DELETE /fiches/:id` (refusé si
+elle a été donnée, a des variantes ou des commentaires), ou supprime-la dans
+Agon.
+
+**Annuler** une planification remet tout comme avant, suppressions en
+cascade comprises (périodes, séances prévues, liens des séances faites et
+du plan de course d'une compétition). Ce qui a reçu du contenu depuis
+reste : un macrocycle où tu as ajouté un mésocycle, un test passé entre-temps,
+une compétition commentée par l'athlète, une séance retirée qu'il a faite
+quand même. Une habitude créée puis cochée par l'athlète reste, et le suivi
+avec elle.
+
+### Planning
+
+`set_session_schedule` : `session_id`, `day_of_week` (0 = lundi … 6 =
+dimanche, ou `null`), `recurrence?` (`"weekly"` ou `"once"`).
+
+### Objectifs
+
+`set_goals` : `sessionsPerWeek?` (1–14), `sleepTarget?` (heures),
+`sleepBedtime?` et `sleepWakeup?` (`{ "h": 22, "m": 30 }`).
+
+## Erreurs
+
+Toutes en JSON : `{ "error": "code", "message": "explication" }`.
+
+| Statut | Code | Sens |
+|---|---|---|
+| 400 | `proposition_invalide` | Le message nomme le champ fautif |
+| 400 | `periode_invalide` | Dates mal formées ou plus de 90 jours |
+| 401 | `cle_invalide` | Clé absente, inconnue ou révoquée |
+| 403 | `compte_non_coach` | La clé appartient à un compte qui n'est plus coach |
+| 404 | `athlete_introuvable` | Pas ton athlète, ou pas d'accord IA |
+| 409 | `deja_traitee` | Proposition déjà appliquée, écartée ou annulée |
+| 409 | `ne_s_applique_plus` | Elle cite quelque chose qui n'existe plus ; rien n'est modifié |
+| 409 | `modifie_depuis` | Annulation : le contenu a changé depuis ; `forcer` pour annuler quand même |
+| 429 | `trop_de_requetes` | Plus de 60 requêtes par minute |

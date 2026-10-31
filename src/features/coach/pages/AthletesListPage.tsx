@@ -6,10 +6,11 @@ import { C } from "@/lib/theme";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { EmptyState } from "@/features/shared/components/EmptyState";
-import { Users } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Plus, Users } from "lucide-react";
+import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 
 export default function AthletesListPage() {
-  const { profile, athletes, user, loading, canCoachSelf, removeSelfAsAthlete, becomeSelfCoach } = useAuth();
+  const { profile, athletes, user, loading, canCoachSelf, removeSelfAsAthlete, becomeSelfCoach, hiddenAthletes, setAthleteHidden, createPendingAthlete, removePendingAthlete } = useAuth();
   const navigate = useNavigate();
   const isCoachAthlete = profile?.role === "coach" || profile?.role === "coach_athlete";
   // Coach-athlète : sa ligne perso dépend de coach_id (self = son propre athlète)
@@ -18,9 +19,114 @@ export default function AthletesListPage() {
   const canAddSelf = isHybrid && !profile?.coach_id;
   // Le coach-athlète auto-coaché remonte aussi dans athletes : on évite le doublon
   const otherAthletes = athletes.filter((a) => a.id !== user?.id);
+  const hiddenOthers = hiddenAthletes.filter((a) => a.id !== user?.id);
 
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+
+  const [showHidden, setShowHidden] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newFirst, setNewFirst] = useState("");
+  const [newLast, setNewLast] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  async function handleCreateAthlete(e: React.FormEvent) {
+    e.preventDefault();
+    if (creating || !newFirst.trim() || !newLast.trim()) return;
+    setCreating(true);
+    try {
+      const id = await createPendingAthlete(newFirst.trim(), newLast.trim());
+      toast.success("Athlète créé");
+      setAddOpen(false);
+      setNewFirst("");
+      setNewLast("");
+      navigate(`/coach/athletes/${id}/planning`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur lors de la création");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleToggleHidden(athleteId: string, hidden: boolean) {
+    try {
+      await setAthleteHidden(athleteId, hidden);
+      toast.success(hidden ? "Athlète masqué" : "Athlète réaffiché");
+    } catch {
+      toast.error("Erreur lors du changement de visibilité");
+    }
+  }
+
+  function renderAthleteRow(a: (typeof athletes)[number], hidden: boolean) {
+    return (
+      <div
+        key={a.id}
+        style={{ display: "flex", alignItems: "center", gap: 8, opacity: hidden ? 0.7 : 1 }}
+      >
+        <button
+          onClick={() => navigate(`/coach/athletes/${a.id}/planning`)}
+          style={{
+            flex: 1, display: "flex", alignItems: "center", gap: 12,
+            padding: "12px 16px", borderRadius: 6,
+            border: "1px solid " + C.brdL, background: C.s1,
+            cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+            transition: "border-color 150ms",
+          }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.coach + "60")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brdL)}
+        >
+          <div
+            style={{
+              width: 38, height: 38, borderRadius: "50%",
+              background: C.coach + "25", border: "1px solid " + C.coach + "40",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 15, fontWeight: 700, color: C.coach, flexShrink: 0,
+            }}
+          >
+            {a.full_name.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.tx }}>{a.full_name}</div>
+            <div style={{ fontSize: 11, color: a.is_pending ? C.b : C.tx3 }}>
+              {a.is_pending ? "En attente de première connexion" : [a.age ? `${a.age} ans` : null, a.height_cm ? `${a.height_cm} cm` : null]
+                .filter(Boolean).join(" · ") || "Profil non renseigné"}
+            </div>
+          </div>
+          <span style={{ fontSize: 16, color: C.tx3 }}>›</span>
+        </button>
+
+        <ClaimLinkButton athleteId={a.id} pending={!!a.is_pending} />
+
+        <button
+          onClick={() => handleToggleHidden(a.id, !hidden)}
+          title={hidden ? "Réafficher" : "Masquer"}
+          aria-label={hidden ? `Réafficher ${a.full_name}` : `Masquer ${a.full_name}`}
+          style={{
+            width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+            border: "1px solid " + C.brdL, background: "transparent",
+            color: C.tx3, cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          {hidden ? <Eye size={16} /> : <EyeOff size={16} />}
+        </button>
+
+        <button
+          onClick={() => setConfirmRemove(a.id)}
+          title="Retirer"
+          style={{
+            width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+            border: "1px solid " + C.r + "40", background: "rgba(239,75,75,0.08)",
+            color: C.r, fontSize: 16, cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "background 150ms",
+          }}
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
 
   async function handleRemoveAthlete(athleteId: string) {
     if (removing) return;
@@ -29,6 +135,12 @@ export default function AthletesListPage() {
       if (athleteId === user?.id) {
         await removeSelfAsAthlete();
         toast.success("Tu ne fais plus partie de tes athlètes");
+        return;
+      }
+      const target = [...athletes, ...hiddenAthletes].find((x) => x.id === athleteId);
+      if (target?.is_pending) {
+        await removePendingAthlete(athleteId);
+        toast.success("Athlète supprimé");
         return;
       }
       await supabase.rpc("unlink_athlete", { athlete_id: athleteId });
@@ -66,6 +178,19 @@ export default function AthletesListPage() {
             {otherAthletes.length} athlète{otherAthletes.length > 1 ? "s" : ""} liés à ton compte
           </div>
         </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          title="Ajouter un athlète"
+          aria-label="Ajouter un athlète"
+          style={{
+            width: 36, height: 36, borderRadius: 6, flexShrink: 0,
+            border: "1px solid " + C.coach + "50", background: C.coachS,
+            color: C.coach, cursor: "pointer", fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <Plus size={18} />
+        </button>
       </div>
 
       {/* Code coach */}
@@ -170,62 +295,41 @@ export default function AthletesListPage() {
               </div>
             )}
 
-            {otherAthletes.map((a) => (
-              <div
-                key={a.id}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                }}
-              >
-                <button
-                  onClick={() => navigate(`/coach/athletes/${a.id}/planning`)}
-                  style={{
-                    flex: 1, display: "flex", alignItems: "center", gap: 12,
-                    padding: "12px 16px", borderRadius: 6,
-                    border: "1px solid " + C.brdL, background: C.s1,
-                    cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-                    transition: "border-color 150ms",
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.coach + "60")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brdL)}
-                >
-                  <div
-                    style={{
-                      width: 38, height: 38, borderRadius: "50%",
-                      background: C.coach + "25", border: "1px solid " + C.coach + "40",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 15, fontWeight: 700, color: C.coach, flexShrink: 0,
-                    }}
-                  >
-                    {a.full_name.charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: C.tx }}>{a.full_name}</div>
-                    <div style={{ fontSize: 11, color: C.tx3 }}>
-                      {[a.age ? `${a.age} ans` : null, a.height_cm ? `${a.height_cm} cm` : null]
-                        .filter(Boolean).join(" · ") || "Profil non renseigné"}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 16, color: C.tx3 }}>›</span>
-                </button>
+            {otherAthletes.map((a) => renderAthleteRow(a, false))}
 
-                <button
-                  onClick={() => setConfirmRemove(a.id)}
-                  title="Retirer"
-                  style={{
-                    width: 36, height: 36, borderRadius: 4, flexShrink: 0,
-                    border: "1px solid " + C.r + "40", background: "rgba(239,75,75,0.08)",
-                    color: C.r, fontSize: 16, cursor: "pointer", fontFamily: "inherit",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "background 150ms",
-                  }}
-                >
-                  ×
-                </button>
+            {otherAthletes.length === 0 && hiddenOthers.length > 0 && (
+              <div style={{ fontSize: 12, color: C.tx3, padding: "4px 2px" }}>
+                Tous tes athlètes sont masqués.
               </div>
-            ))}
+            )}
 
-            {otherAthletes.length === 0 && !isCoachAthlete && (
+            {hiddenOthers.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <button
+                  onClick={() => setShowHidden((v) => !v)}
+                  aria-expanded={showHidden}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "none", border: "none", padding: "4px 2px",
+                    color: C.tx3, fontSize: 12, fontWeight: 600,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  <ChevronDown
+                    size={14}
+                    style={{ transform: showHidden ? "none" : "rotate(-90deg)", transition: "transform 150ms" }}
+                  />
+                  Masqués ({hiddenOthers.length})
+                </button>
+                {showHidden && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                    {hiddenOthers.map((a) => renderAthleteRow(a, true))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {otherAthletes.length === 0 && hiddenOthers.length === 0 && !isCoachAthlete && (
               <EmptyState
                 icon={Users}
                 title="Aucun athlète pour l'instant"
@@ -236,10 +340,85 @@ export default function AthletesListPage() {
         )}
       </div>
 
+      {/* Ajout d'un athlète avant sa première connexion */}
+      {addOpen && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 300,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+          }}
+          onClick={() => !creating && setAddOpen(false)}
+        >
+          <form
+            onSubmit={handleCreateAthlete}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: C.s1, borderRadius: 6, padding: 24,
+              maxWidth: 340, width: "100%", border: "1px solid " + C.brd,
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 6 }}>Ajouter un athlète</div>
+            <div style={{ fontSize: 12, color: C.tx3, marginBottom: 16 }}>
+              Sa page est créée tout de suite : tu peux le programmer avant sa première connexion.
+              Un lien à lui envoyer apparaîtra à côté de son nom.
+            </div>
+            {[
+              { label: "Prénom", value: newFirst, set: setNewFirst, auto: true },
+              { label: "Nom", value: newLast, set: setNewLast, auto: false },
+            ].map((f) => (
+              <label key={f.label} style={{ display: "block", marginBottom: 12 }}>
+                <span style={{ display: "block", fontSize: 12, color: C.tx2, marginBottom: 4 }}>{f.label}</span>
+                <input
+                  value={f.value}
+                  onChange={(e) => f.set(e.target.value)}
+                  autoFocus={f.auto}
+                  required
+                  maxLength={100}
+                  style={{
+                    width: "100%", padding: "10px 12px", borderRadius: 4,
+                    border: "1px solid " + C.brdL, background: C.s2, color: C.tx,
+                    fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+                  }}
+                />
+              </label>
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => setAddOpen(false)}
+                disabled={creating}
+                style={{
+                  flex: 1, padding: "12px 0", borderRadius: 4,
+                  border: "1px solid " + C.brdL, background: "transparent",
+                  color: C.tx2, fontSize: 13, fontWeight: 600,
+                  cursor: creating ? "default" : "pointer", fontFamily: "inherit",
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={creating || !newFirst.trim() || !newLast.trim()}
+                style={{
+                  flex: 1, padding: "12px 0", borderRadius: 4,
+                  border: "none", background: C.coach, color: "#000",
+                  fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+                  cursor: creating ? "default" : "pointer",
+                  opacity: creating || !newFirst.trim() || !newLast.trim() ? 0.5 : 1,
+                }}
+              >
+                {creating ? "Création…" : "Créer"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Confirm remove modal */}
       {confirmRemove && (() => {
         const isSelf = confirmRemove === user?.id;
-        const a = isSelf ? profile : athletes.find((x) => x.id === confirmRemove);
+        const a = isSelf ? profile : [...athletes, ...hiddenAthletes].find((x) => x.id === confirmRemove);
         return (
           <div
             style={{

@@ -43,9 +43,9 @@ export const CONSENT_COPY: Record<
   },
   ai_programming: {
     label:
-      "J'accepte que mon historique d'entraînement soit transmis à l'API Google Gemini lorsque mon coach demande la génération d'un programme.",
+      "J'accepte que mes données d'entraînement soient traitées par des outils d'intelligence artificielle, l'API Google Gemini utilisée par Agon et l'assistant Claude (Anthropic) de mon coach, pour en produire des analyses, des synthèses et des visualisations, et proposer à mon coach des axes de travail et de développement.",
     detail:
-      "Facultatif. Ces données ne servent pas à entraîner les modèles de Google. Si tu refuses, ton coach construira tes programmes manuellement.",
+      "Facultatif, et révocable à tout moment. Ton coach reste seul à décider de tes programmes : l'IA l'aide à t'analyser et à préparer son travail, et n'inscrit rien dans Agon sans son accord. L'assistant de ton coach voit aussi les titres des événements que tu ajoutes à ton calendrier (examens, voyages…) : n'y écris rien que tu ne veux pas partager. Via Gemini, tes données ne servent pas à entraîner les modèles de Google. Via Claude, elles passent par le compte personnel de ton coach : leur usage dépend des réglages de ce compte, qu'Agon ne contrôle pas. Si tu refuses, tu gardes tes statistiques et tes graphiques, sans analyse rédigée par l'IA.",
     required: false,
   },
   garmin_sync: {
