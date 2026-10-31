@@ -194,3 +194,24 @@ Principes :
 Tests : `src/lib/__tests__/hyroxTests.test.ts` (golden tests 1 à 3 du prompt, cas limites, sled, versions de grille). Oracle : le radar bilan YOXX (`radar-bilan.html`, fonctions `compute`, `axisScores`, `predict`, `axesPlan`, `roxPlan`), résultats identiques.
 
 Seuils sans source, seedés actifs mais marqués `to_recalibrate` : chute sled en semaine 1 (85 %), chute wall balls (75 %), écart Push / Pull (2 notes). Grille de la réserve au sled à recaler (L0 surestime la charge max réelle).
+
+### Base (PR 2) : `20261101130000_hyrox_tests.sql`
+
+| Table / colonne | Rôle | RLS |
+|---|---|---|
+| `profiles.hyrox_category` | `open` / `pro` : charges de course des tests | profil |
+| `test_definitions.battery`, `battery_session`, `battery_order` | Batterie v3 (`hyrox_v3`, séances S1-S5 + W1) ; les 10 anciens presets HYROX gardés, `hyrox_legacy` | inchangée |
+| `hyrox_test_grid_versions` | Une version = un jeu complet ; une seule `active` (index unique partiel) | lecture authentifiée, écriture admin |
+| `hyrox_test_grids` | Grilles 1-5 (4 bornes), sens, source, poids, par sexe / catégorie | idem |
+| `hyrox_test_params` | Paramètres `scoring` et `running` (jsonb) | idem |
+| `hyrox_axes_params` | Paramètres du plan de bloc (jsonb) | idem |
+| `hyrox_work_axes_rules` | Règles d'axes de travail (`condition` jsonb, `to_recalibrate`) | idem |
+| `hyrox_test_analyses` | Snapshot figé : `inputs`, `profile`, `outputs`, `algo_version`, `grid_version` ; `recalculated_from` ; `axes_validated` + `validated_at` | coach / admin ; l'athlète lit seulement une analyse validée |
+| `hyrox_test_axes_drafts` | Proposition du moteur + contexte de l'athlète (cas types, douleur, envie) | coach / admin seulement |
+| `hyrox_results.top_pct_overall`, `roxzone_rank`, `roxzone_top_pct`, `roxzone_cause` | Méthode Roxzone | inchangée |
+
+- Seed v1 généré par `seedSql(gridSetToRows(GRID_SET_V1))` (`src/lib/hyrox/tests/db.ts`) ; `hyroxTestsDb.test.ts` vérifie que la migration le contient à l'identique. `gridSetFromRows` reconstruit le `GridSet` depuis la base.
+- Trigger `hyrox_test_analyses_freeze` : entrées, profil, sorties et versions ne changent plus après création ; seuls la validation, le chrono visé et les axes validés bougent.
+- Hors staff en V1, comme les autres tables HYROX.
+- Banc local : `supabase/tests/hyrox_tests_pglite.mjs` (PGlite, sans Docker) : migrations rejouées, idempotence, seed, RLS.
+- Saisie : les séances remplies par l'athlète passent par le circuit existant (`test_sessions` → trigger → `athlete_test_results` / `athlete_test_values`) ; les noms des presets v3 sont uniques pour que le trigger les retrouve.

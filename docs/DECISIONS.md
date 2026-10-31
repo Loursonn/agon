@@ -1245,4 +1245,19 @@ crée des habitudes, et dépose une fiche qu'il a fabriquée (`POST /fiches`).
 
 ---
 
+## 2026-11 — Tests HYROX en base : snapshot figé, brouillon d'axes séparé, courses dans hyrox_results
+
+**Décision** :
+- Une analyse (`hyrox_test_analyses`) est un snapshot figé par trigger : entrées brutes, profil, sorties et versions. Recalculer avec une autre version crée une nouvelle ligne (`recalculated_from`), l'ancienne reste.
+- La proposition d'axes du moteur et le contexte de l'athlète (douleur, blessure, envie) vivent dans `hyrox_test_axes_drafts`, lisible par le coach et l'admin seulement. L'athlète lit une analyse seulement après validation (`validated_at`, qui exige `axes_validated`). La RLS n'est donc pas calquée à l'identique sur `hyrox_results` : l'athlète n'écrit pas d'analyse.
+- Pas de table `hyrox_race_results` : les courses vivent déjà dans `hyrox_results` (runs, stations, Roxzone, rang, participants) ; on y ajoute top % final, rang et top % Roxzone, cause.
+- Grilles, paramètres et règles dans 5 tables versionnées, une seule version active.
+- Seed généré depuis `GRID_SET_V1` et vérifié par un test : une seule source pour les valeurs v1.
+
+**Pourquoi** : « l'athlète ne voit que ce que le coach a validé, jamais un brouillon » ne tient pas avec une RLS par ligne si brouillon et version validée partagent la ligne. Une table de courses parallèle aurait dédoublé la saisie du coach.
+
+**Testé** : PGlite (`supabase/tests/hyrox_tests_pglite.mjs`), 29 contrôles : idempotence, seed, presets, RLS coach / athlète / autre coach / admin, gel, une seule version active, synchro des saisies.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

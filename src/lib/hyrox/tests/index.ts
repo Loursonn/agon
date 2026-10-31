@@ -20,6 +20,7 @@ export * from "./sled";
 export * from "./scores";
 export * from "./chrono";
 export * from "./insights";
+export * from "./db";
 
 export interface HyroxTestAnalysisOutputs {
   algo_version: string;
