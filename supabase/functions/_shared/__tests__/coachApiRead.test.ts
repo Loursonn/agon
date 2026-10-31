@@ -142,3 +142,26 @@ describe("buildSummary — semaine prévue et réalisée", () => {
     expect(s.seances_energie[0]).toMatchObject({ nom: null, statut: "planned", duree_prevue_min: null });
   });
 });
+
+describe("buildSummary — événements", () => {
+  it("donne compétitions, tests et événements de vie, sans texte libre de l'athlète", () => {
+    const s = buildSummary(input({
+      competitions: [
+        { date: "2026-10-10", name: "Hyrox Paris", type: "competition", priority: "A", location: "Paris" },
+        { date: "2026-12-01", name: "Hyrox Lyon", type: "competition", priority: "B", location: null },
+      ],
+      tests: [{ date: "2026-10-12", title: "Squat 1RM", type: "musculation", completed: true,
+        results_structured: { variables: { "1rm": 140, bidon: "x" }, comment: "genou douloureux" } }],
+      lifeEvents: [
+        { date_start: "2026-10-20", date_end: "2026-10-22", title: "Partiels" },
+        { date_start: "2026-11-20", date_end: "2026-11-22", title: "Hors période" },
+      ],
+    }));
+    expect(s.evenements.competitions).toEqual([{ date: "2026-10-10", nom: "Hyrox Paris", type: "competition", priorite: "A", lieu: "Paris" }]);
+    expect(s.evenements.competitions_a_venir).toEqual([{ date: "2026-12-01", nom: "Hyrox Lyon", type: "competition", priorite: "B" }]);
+    expect(s.evenements.tests).toEqual([{ date: "2026-10-12", titre: "Squat 1RM", type: "musculation", fait: true, resultats: { "1rm": 140 } }]);
+    expect(s.evenements.vie).toEqual([{ du: "2026-10-20", au: "2026-10-22", titre: "Partiels" }]);
+    expect(JSON.stringify(s)).not.toContain("genou douloureux");
+  });
+});
+

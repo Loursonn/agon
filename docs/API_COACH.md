@@ -2,10 +2,16 @@
 
 Cette API permet à ton assistant IA (Claude, sur ton ordinateur) de lire les
 données de tes athlètes pour t'en faire des analyses, synthèses et
-visualisations, et de te **proposer** des axes de travail ou des
-modifications. Il ne modifie jamais rien seul : ses propositions t'attendent
-dans Agon (badge « Claude » en haut de la fiche de l'athlète), et rien ne
-change pour l'athlète tant que tu ne les as pas appliquées.
+visualisations, et de planifier avec toi. Il n'inscrit rien sans ton accord :
+- par défaut, il **dépose** une proposition qui t'attend dans Agon (badge
+  « Claude » en haut de la fiche de l'athlète) ; rien ne change pour
+  l'athlète tant que tu ne l'as pas appliquée ;
+- quand tu lui dis de l'inscrire directement, il **l'applique** lui-même.
+
+Dans les deux cas, tout ce qui a été inscrit **s'annule** : Agon garde l'état
+d'avant, et « Annuler » (dans le panneau Claude, ou en le demandant à
+l'assistant) remet tout comme avant. Ce que l'athlète a réalisé entre-temps
+(une séance faite) n'est jamais effacé.
 
 ## Démarrer
 
@@ -40,8 +46,12 @@ Gemini : il peut l'activer dans son profil, section Confidentialité.
 
 Ce que l'assistant reçoit : prénom, séances et charges réalisées, séances
 énergétiques (durée, distance, RPE), thèmes du jour que tu as posés,
-bien-être, poids, blessures (zones, dates), records, objectifs, données de
-montre autorisées. Jamais le texte libre écrit par l'athlète (ressenti, commentaires).
+compétitions, tests (valeurs mesurées), événements du calendrier de l'athlète
+(dates et titre), bien-être, poids, blessures (zones, dates), records,
+objectifs, données de montre autorisées. Jamais le texte libre écrit par
+l'athlète sur ses séances, ses tests, ses compétitions ou ses blessures ;
+seul le titre de ses événements de calendrier passe, et le texte de
+consentement le lui dit.
 Les données Garmin ne sont jamais transmises à une IA.
 
 Chaque lecture est journalisée.
@@ -54,11 +64,14 @@ Chaque lecture est journalisée.
 | GET | `/athletes/:id/summary?from=AAAA-MM-JJ&to=AAAA-MM-JJ` | Données d'une période (28 jours par défaut, 90 max) |
 | GET | `/athletes/:id/program` | Programme en cours, avec les ids à citer dans les propositions |
 | POST | `/athletes/:id/drafts` | Déposer une proposition |
-| GET | `/drafts?status=pending\|applied\|rejected&athlete_id=…` | Propositions déposées et leur sort |
+| GET | `/drafts?status=pending\|applied\|rejected\|undone&athlete_id=…` | Propositions et leur sort |
+| POST | `/drafts/:id/appliquer` | Appliquer une proposition déposée |
+| POST | `/drafts/:id/annuler` | Annuler une proposition appliquée (`{ "forcer": true }` si besoin, voir plus bas) |
 | GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque |
 | GET | `/seances-energie?q=vma` | Chercher une séance énergétique dans ta banque (sans `q` : les 50 dernières) |
 
-Aucune route ne supprime ni n'écrit directement.
+Les écritures passent toutes par une proposition, appliquée par toi ou à ta
+demande, et annulable.
 
 ### Exemples
 
@@ -80,6 +93,18 @@ Agon.
 
 Une proposition a un `kind`, un `title` (120 caractères max) et un `body`
 (4 000 max), plus des `ops` sauf pour un axe de travail. 50 opérations maximum.
+
+### Appliquer directement, annuler
+
+Ajoute `"appliquer": true` à la proposition pour qu'elle soit appliquée tout
+de suite. Le mode d'emploi demande à l'assistant de ne le faire que quand tu
+le lui dis explicitement. Si elle ne s'applique pas (une séance citée a
+disparu), rien n'est modifié et elle reste en attente dans Agon.
+
+`POST /drafts/:id/annuler` défait une proposition appliquée. Si le programme
+ou les objectifs ont été modifiés depuis, la réponse est `409
+modifie_depuis` : annuler effacerait aussi ces modifications. L'assistant te
+demande alors confirmation avant de renvoyer `{ "forcer": true }`.
 
 ### Axe de travail — texte seul
 
@@ -214,4 +239,7 @@ Toutes en JSON : `{ "error": "code", "message": "explication" }`.
 | 401 | `cle_invalide` | Clé absente, inconnue ou révoquée |
 | 403 | `compte_non_coach` | La clé appartient à un compte qui n'est plus coach |
 | 404 | `athlete_introuvable` | Pas ton athlète, ou pas d'accord IA |
+| 409 | `deja_traitee` | Proposition déjà appliquée, écartée ou annulée |
+| 409 | `ne_s_applique_plus` | Elle cite quelque chose qui n'existe plus ; rien n'est modifié |
+| 409 | `modifie_depuis` | Annulation : le contenu a changé depuis ; `forcer` pour annuler quand même |
 | 429 | `trop_de_requetes` | Plus de 60 requêtes par minute |

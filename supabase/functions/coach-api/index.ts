@@ -1,13 +1,21 @@
 // coach-api — API de l'assistant IA personnel d'un coach (Claude).
 //
-// Lecture des données des athlètes qui l'ont accepté, et dépôt de
-// propositions que le coach applique ou écarte dans Agon. Aucune écriture
-// directe dans les données d'un athlète, aucune suppression.
+// Lecture des données des athlètes qui l'ont accepté, et propositions :
+// déposées pour que le coach les applique d'un clic dans Agon, ou appliquées
+// tout de suite quand le coach l'a demandé à son assistant. Chaque
+// application garde l'état d'avant et s'annule (POST /drafts/:id/annuler).
+//
+// Deux façons de s'authentifier :
+//  - la clé `agon_…` de l'assistant, pour toutes les routes ;
+//  - la session Supabase du coach, depuis l'app, pour appliquer et annuler
+//    seulement (l'application se fait ici, au même endroit que pour
+//    l'assistant, et le journal d'annulation n'est écrit que par le serveur).
 //
 // Documentation pour les coachs : docs/API_COACH.md.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { AI_ASSISTANT_SINCE, normName, validateDraft, type ProgSessionShape } from "../_shared/coachApiOps.ts";
+import { AI_ASSISTANT_SINCE, type DraftKind, type DraftOp, normName, validateDraft, type ProgSessionShape } from "../_shared/coachApiOps.ts";
+import { ApplyConflict, applyDraft, parseUndo, UndoConflict, undoSteps } from "../_shared/coachApiApply.ts";
 import { buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
 
 const RATE_LIMIT_PER_MINUTE = 60;
@@ -43,8 +51,10 @@ function todayParis(): string {
 }
 
 interface Caller {
-  keyId: string;
+  /** Null quand l'appel vient de l'app (session du coach). */
+  keyId: string | null;
   coachId: string;
+  via: "api" | "app";
 }
 
 interface AllowedAthlete {
@@ -92,6 +102,9 @@ async function allowedAthletes(admin: SupabaseClient, coachId: string): Promise<
  * transmission qu'on ne pourra pas déclarer à l'athlète qui le demande.
  */
 async function logAccess(admin: SupabaseClient, caller: Caller, route: string, athleteId: string | null) {
+  // Le journal trace ce que l'assistant a lu ; le coach dans l'app n'est pas
+  // un tiers.
+  if (!caller.keyId) return;
   const { error } = await admin.from("coach_api_access_log").insert({
     key_id: caller.keyId,
     coach_id: caller.coachId,
@@ -195,7 +208,7 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
 
   await logAccess(admin, caller, "GET /athletes/:id/summary", athlete.id);
 
-  const [{ values }, logs, prs, acts, days, themes, energy] = await Promise.all([
+  const [{ values }, logs, prs, acts, days, themes, energy, comps, tests, life] = await Promise.all([
     appData(admin, athlete.id, ["asp:goals", "asp:bw", "asp:wh", "asp:wlog", "asp:injuries", "asp:prog"]),
     admin.from("workout_logs")
       .select("scheduled_date, session_id, session_name, status, rpe_score, duration_s, athlete_modifications")
@@ -224,8 +237,22 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
       .select("scheduled_date, status, rpe_score, actual_duration_min, distance_km, energy_sessions(name, session_kind, total_duration_s, total_distance_m)")
       .eq("athlete_id", athlete.id).gte("scheduled_date", from).lte("scheduled_date", to)
       .order("scheduled_date").limit(500),
+    // Pas `athlete_comment` ni `notes` : texte libre.
+    admin.from("competitions")
+      .select("date, name, type, priority, location")
+      .eq("athlete_id", athlete.id).gte("date", from)
+      .order("date").limit(100),
+    // Pas `results_note` ni `description`.
+    admin.from("test_sessions")
+      .select("date, title, type, completed, results_structured")
+      .eq("athlete_id", athlete.id).gte("date", from).lte("date", to)
+      .order("date").limit(200),
+    admin.from("athlete_life_events")
+      .select("date_start, date_end, title")
+      .eq("athlete_id", athlete.id).lte("date_start", to).gte("date_end", from)
+      .order("date_start").limit(100),
   ]);
-  for (const r of [logs, prs, acts, days, themes, energy]) if (r.error) throw new Error(r.error.message);
+  for (const r of [logs, prs, acts, days, themes, energy, comps, tests, life]) if (r.error) throw new Error(r.error.message);
 
   return json(buildSummary({
     athlete,
@@ -239,6 +266,9 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
     dailies: days.data ?? [],
     dayThemes: themes.data ?? [],
     energyLogs: (energy.data ?? []) as unknown as SummaryInput["energyLogs"],
+    competitions: comps.data ?? [],
+    tests: tests.data ?? [],
+    lifeEvents: life.data ?? [],
   }));
 }
 
@@ -298,6 +328,17 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
 
   await logAccess(admin, caller, "POST /athletes/:id/drafts", athleteId);
 
+  // `appliquer: true` : le coach a demandé à son assistant d'écrire
+  // directement. Retiré avant la validation, qui n'accepte que la proposition.
+  let applyNow = false;
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && "appliquer" in raw) {
+    const r = raw as Record<string, unknown>;
+    if (typeof r.appliquer !== "boolean") return fail(400, "proposition_invalide", "appliquer : true ou false attendu");
+    applyNow = r.appliquer;
+    const { appliquer: _drop, ...rest } = r;
+    raw = rest;
+  }
+
   const kind = (raw as { kind?: unknown } | null)?.kind;
   const { values } = await appData(admin, athleteId, ["asp:prog", "asp:goals"]);
   const prog = Array.isArray(values["asp:prog"]) ? (values["asp:prog"] as ProgSessionShape[]) : [];
@@ -312,6 +353,9 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
   if (!result.ok) return fail(400, "proposition_invalide", result.error);
 
   const draft = result.value;
+  if (applyNow && draft.kind === "axe") {
+    return fail(400, "proposition_invalide", "appliquer : un axe de travail est un texte pour le coach, il ne s'applique pas");
+  }
   // Empreinte du contenu visé, pour prévenir le coach s'il a changé avant
   // qu'il applique. Pas `updated_at` : l'éditeur de programmation ne le tient
   // pas à jour (voir migration 20261030110000). Une semaine n'en a pas : elle
@@ -335,21 +379,148 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
       ops: draft.ops,
       base_hash: base,
     })
-    .select("id, kind, title, status, created_at")
+    .select("id, athlete_id, kind, title, status, created_at, ops")
     .single();
   if (error) throw new Error("coach_api_drafts: " + error.message);
 
+  if (applyNow) {
+    const applied = await applyStored(admin, caller, data as StoredDraft);
+    if (applied.status !== 200) {
+      // La proposition reste en attente : le coach peut la voir et cliquer.
+      return applied;
+    }
+    return json({ ...(await applied.json()), id: data.id, ops: draft.ops }, 201);
+  }
+
   return json({
     ...data,
-    ops: draft.ops,
     message: "Proposition déposée. Elle n'est appliquée que si le coach la valide dans Agon.",
   }, 201);
 }
 
+interface StoredDraft {
+  id: string;
+  athlete_id: string;
+  kind: DraftKind;
+  ops: DraftOp[];
+}
+
+/** L'athlète est-il encore celui de ce coach ? (et, pour l'assistant, d'accord) */
+async function canWriteFor(admin: SupabaseClient, caller: Caller, athleteId: string): Promise<boolean> {
+  if (caller.via === "api") return (await allowedAthletes(admin, caller.coachId)).has(athleteId);
+  const { data } = await admin.from("profiles").select("coach_id").eq("id", athleteId).maybeSingle();
+  return data?.coach_id === caller.coachId;
+}
+
+/**
+ * Applique une proposition en attente. Réservation atomique d'abord : deux
+ * clics, ou l'app et l'assistant en même temps, n'appliquent qu'une fois.
+ */
+async function applyStored(admin: SupabaseClient, caller: Caller, draft: StoredDraft): Promise<Response> {
+  if (!(await canWriteFor(admin, caller, draft.athlete_id))) {
+    return fail(404, "athlete_introuvable", "Athlète inconnu ou non disponible.");
+  }
+  const { data: claimed, error: cErr } = await admin
+    .from("coach_api_drafts")
+    .update({ status: "applied", decided_at: new Date().toISOString(), applied_via: caller.via })
+    .eq("id", draft.id).eq("coach_id", caller.coachId).eq("status", "pending")
+    .select("id");
+  if (cErr) throw new Error("coach_api_drafts: " + cErr.message);
+  if (!claimed || claimed.length === 0) return fail(409, "deja_traitee", "Cette proposition a déjà été appliquée, écartée ou annulée.");
+
+  if (draft.kind === "axe") return json({ status: "applied", message: "Axe de travail retenu." });
+
+  try {
+    const res = await applyDraft({
+      db: admin, athleteId: draft.athlete_id, coachId: caller.coachId, kind: draft.kind, ops: draft.ops,
+    });
+    const { error: uErr } = await admin.from("coach_api_drafts").update({ undo: res.undo }).eq("id", draft.id);
+    if (uErr) console.error("coach-api undo journal:", uErr.message);
+    return json({
+      status: "applied",
+      ...(res.goals ? { goals: res.goals } : {}),
+      message: "Appliqué dans Agon. Annulable : POST /drafts/" + draft.id + "/annuler.",
+    });
+  } catch (e) {
+    await admin.from("coach_api_drafts").update({ status: "pending", decided_at: null, applied_via: null }).eq("id", draft.id);
+    if (e instanceof ApplyConflict) {
+      return fail(409, "ne_s_applique_plus", `${e.message}. Rien n'a été modifié.`);
+    }
+    throw e;
+  }
+}
+
+async function postApply(admin: SupabaseClient, caller: Caller, draftId: string) {
+  const { data, error } = await admin
+    .from("coach_api_drafts")
+    .select("id, athlete_id, kind, ops")
+    .eq("id", draftId).eq("coach_id", caller.coachId)
+    .maybeSingle();
+  if (error) throw new Error("coach_api_drafts: " + error.message);
+  if (!data) return fail(404, "proposition_introuvable", "Proposition inconnue.");
+  await logAccess(admin, caller, "POST /drafts/:id/appliquer", data.athlete_id as string);
+  return applyStored(admin, caller, data as StoredDraft);
+}
+
+/**
+ * Annule une proposition appliquée : rejoue son journal à l'envers. Refuse
+ * (409) si le programme ou les objectifs ont changé depuis, sauf
+ * `{ "forcer": true }` — le coach l'a confirmé en connaissance de cause.
+ */
+async function postUndo(admin: SupabaseClient, caller: Caller, draftId: string, req: Request) {
+  let force = false;
+  const text = await req.text();
+  if (text.trim()) {
+    try {
+      force = (JSON.parse(text) as { forcer?: unknown })?.forcer === true;
+    } catch {
+      return fail(400, "json_invalide", "Le corps de la requête doit être du JSON.");
+    }
+  }
+  const { data, error } = await admin
+    .from("coach_api_drafts")
+    .select("id, athlete_id, kind, status, undo")
+    .eq("id", draftId).eq("coach_id", caller.coachId)
+    .maybeSingle();
+  if (error) throw new Error("coach_api_drafts: " + error.message);
+  if (!data) return fail(404, "proposition_introuvable", "Proposition inconnue.");
+  if (data.status !== "applied") return fail(409, "pas_appliquee", "Seule une proposition appliquée s'annule.");
+  if (!(await canWriteFor(admin, caller, data.athlete_id as string))) {
+    return fail(404, "athlete_introuvable", "Athlète inconnu ou non disponible.");
+  }
+  await logAccess(admin, caller, "POST /drafts/:id/annuler", data.athlete_id as string);
+
+  const { data: claimed, error: cErr } = await admin
+    .from("coach_api_drafts")
+    .update({ status: "undone", undone_at: new Date().toISOString() })
+    .eq("id", draftId).eq("status", "applied")
+    .select("id");
+  if (cErr) throw new Error("coach_api_drafts: " + cErr.message);
+  if (!claimed || claimed.length === 0) return fail(409, "pas_appliquee", "Seule une proposition appliquée s'annule.");
+
+  try {
+    const report = await undoSteps(admin, data.athlete_id as string, caller.coachId, parseUndo(data.undo), force);
+    return json({
+      status: "undone",
+      conserves: report.kept,
+      message: report.kept > 0
+        ? `Annulé. ${report.kept} élément(s) déjà réalisé(s) par l'athlète sont restés en place.`
+        : "Annulé : tout est revenu comme avant.",
+    });
+  } catch (e) {
+    await admin.from("coach_api_drafts").update({ status: "applied", undone_at: null }).eq("id", draftId);
+    if (e instanceof UndoConflict) {
+      const what = e.keys.map((k) => (k === "asp:goals" ? "les objectifs" : "le programme")).join(" et ");
+      return fail(409, "modifie_depuis", `${what} ont été modifiés depuis. Annuler effacerait ces modifications : renvoie avec { "forcer": true } si le coach le confirme.`);
+    }
+    throw e;
+  }
+}
+
 async function getDrafts(admin: SupabaseClient, caller: Caller, url: URL) {
   const status = url.searchParams.get("status");
-  if (status && !["pending", "applied", "rejected"].includes(status)) {
-    return fail(400, "statut_invalide", "status : pending, applied ou rejected");
+  if (status && !["pending", "applied", "rejected", "undone"].includes(status)) {
+    return fail(400, "statut_invalide", "status : pending, applied, rejected ou undone");
   }
   // Un athlète qui a retiré son accord sort aussi de ce qui a été proposé
   // pour lui : relire ces propositions serait encore traiter ses données.
@@ -363,7 +534,7 @@ async function getDrafts(admin: SupabaseClient, caller: Caller, url: URL) {
 
   let q = admin
     .from("coach_api_drafts")
-    .select("id, athlete_id, kind, title, body, status, created_at, decided_at")
+    .select("id, athlete_id, kind, title, body, status, applied_via, created_at, decided_at, undone_at")
     .eq("coach_id", caller.coachId)
     .in("athlete_id", ids)
     .order("created_at", { ascending: false })
@@ -382,39 +553,57 @@ serve(async (req) => {
   try {
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // ── Clé ──
-    const auth = req.headers.get("Authorization") ?? "";
-    const key = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-    if (!KEY.test(key)) {
-      return fail(401, "cle_invalide", "En-tête attendu : Authorization: Bearer agon_…");
-    }
-    const { data: k, error: kErr } = await admin
-      .from("coach_api_keys")
-      .select("id, coach_id, revoked_at")
-      .eq("key_hash", await sha256Hex(key))
-      .maybeSingle();
-    if (kErr) throw new Error("coach_api_keys: " + kErr.message);
-    if (!k || k.revoked_at) return fail(401, "cle_invalide", "Clé inconnue ou révoquée.");
-
-    // Un compte qui n'est plus coach perd l'accès, même avec une clé valide.
-    const { data: profile } = await admin.from("profiles").select("role").eq("id", k.coach_id).maybeSingle();
-    if (profile?.role !== "coach") return fail(403, "compte_non_coach", "Cette clé appartient à un compte qui n'est plus coach.");
-
-    const caller: Caller = { keyId: k.id as string, coachId: k.coach_id as string };
-
-    // ── Débit ──
-    const { data: hits, error: hErr } = await admin.rpc("coach_api_hit", { p_key: caller.keyId });
-    if (hErr) throw new Error("coach_api_hit: " + hErr.message);
-    if ((hits as number) > RATE_LIMIT_PER_MINUTE) {
-      return fail(429, "trop_de_requetes", `${RATE_LIMIT_PER_MINUTE} requêtes par minute maximum.`, { "Retry-After": "60" });
-    }
-    await admin.from("coach_api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", caller.keyId);
-
-    // ── Routage ──
     const url = new URL(req.url);
     const path = url.pathname.replace(/^.*?\/coach-api/, "").replace(/\/+$/, "") || "/";
     const seg = path.split("/").filter(Boolean);
-    const route = `${req.method} /${seg.map((s, i) => (i === 1 && seg[0] === "athletes" ? ":id" : s)).join("/")}`;
+    const route = `${req.method} /${seg.map((s, i) => (i === 1 && (seg[0] === "athletes" || seg[0] === "drafts") ? ":id" : s)).join("/")}`;
+    const appRoute = route === "POST /drafts/:id/appliquer" || route === "POST /drafts/:id/annuler";
+
+    // ── Authentification ──
+    const auth = req.headers.get("Authorization") ?? "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+    let caller: Caller;
+
+    if (KEY.test(token)) {
+      const { data: k, error: kErr } = await admin
+        .from("coach_api_keys")
+        .select("id, coach_id, revoked_at")
+        .eq("key_hash", await sha256Hex(token))
+        .maybeSingle();
+      if (kErr) throw new Error("coach_api_keys: " + kErr.message);
+      if (!k || k.revoked_at) return fail(401, "cle_invalide", "Clé inconnue ou révoquée.");
+      caller = { keyId: k.id as string, coachId: k.coach_id as string, via: "api" };
+    } else if (appRoute && token) {
+      // Depuis l'app : la session du coach connecté.
+      const { data: u, error: uErr } = await admin.auth.getUser(token);
+      if (uErr || !u?.user) return fail(401, "session_invalide", "Session expirée : reconnecte-toi.");
+      caller = { keyId: null, coachId: u.user.id, via: "app" };
+    } else {
+      return fail(401, "cle_invalide", "En-tête attendu : Authorization: Bearer agon_…");
+    }
+
+    // Un compte qui n'est plus coach perd l'accès, même avec une clé valide.
+    const { data: profile } = await admin.from("profiles").select("role").eq("id", caller.coachId).maybeSingle();
+    if (profile?.role !== "coach") return fail(403, "compte_non_coach", "Ce compte n'est pas (ou plus) un compte coach.");
+
+    // ── Débit (clé de l'assistant seulement) ──
+    if (caller.keyId) {
+      const { data: hits, error: hErr } = await admin.rpc("coach_api_hit", { p_key: caller.keyId });
+      if (hErr) throw new Error("coach_api_hit: " + hErr.message);
+      if ((hits as number) > RATE_LIMIT_PER_MINUTE) {
+        return fail(429, "trop_de_requetes", `${RATE_LIMIT_PER_MINUTE} requêtes par minute maximum.`, { "Retry-After": "60" });
+      }
+      await admin.from("coach_api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", caller.keyId);
+    }
+
+    // ── Routage ──
+    if (route === "POST /drafts/:id/appliquer" || route === "POST /drafts/:id/annuler") {
+      if (!UUID.test(seg[1])) return fail(404, "proposition_introuvable", "Proposition inconnue.");
+      return route.endsWith("appliquer")
+        ? await postApply(admin, caller, seg[1])
+        : await postUndo(admin, caller, seg[1], req);
+    }
+    if (caller.via === "app") return fail(403, "reserve_assistant", "Route réservée à la clé de l'assistant.");
 
     if (route === "GET /athletes") return await getAthletes(admin, caller);
     if (route === "GET /exercices") return await getExercices(admin, caller, url);
@@ -434,7 +623,7 @@ serve(async (req) => {
       if (route === "POST /athletes/:id/drafts") return await postDraft(admin, caller, athleteId, req);
     }
 
-    return fail(404, "route_inconnue", "Routes : GET /athletes, GET /athletes/:id/summary, GET /athletes/:id/program, POST /athletes/:id/drafts, GET /drafts, GET /exercices?q=, GET /seances-energie?q=");
+    return fail(404, "route_inconnue", "Routes : GET /athletes, GET /athletes/:id/summary, GET /athletes/:id/program, POST /athletes/:id/drafts, GET /drafts, POST /drafts/:id/appliquer, POST /drafts/:id/annuler, GET /exercices?q=, GET /seances-energie?q=");
   } catch (e) {
     console.error("coach-api:", e instanceof Error ? e.message : e);
     return fail(500, "erreur_serveur", "Erreur interne. Réessaie plus tard.");

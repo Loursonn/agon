@@ -1,22 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
-import type { Json } from "@/integrations/supabase/types";
 import type { Goals } from "@/features/shared/types/athlete";
-import type { ProgSession } from "@/features/coach/components/programmation/types";
-import { syncDocAssignmentsFromProg } from "@/features/shared/hooks/fiches/syncDocAssignments";
 import { sha256Hex } from "@/lib/coachApiKey";
-import { applyWeekDraft } from "./applyWeekDraft";
+import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 import {
-  applyGoalsOps,
-  applyProgOps,
-  type DraftKind,
-  type DraftOp,
-  type GoalsOp,
-  type PlanningOp,
-  type ProgOp,
-  type ProgSessionShape,
-} from "@shared/coachApiOps.ts";
+  syncDocAssignmentsFromEnergy,
+  syncDocAssignmentsFromProg,
+} from "@/features/shared/hooks/fiches/syncDocAssignments";
+import type { DraftKind, DraftOp } from "@shared/coachApiOps.ts";
 
 export interface CoachApiDraft {
   id: string;
@@ -25,8 +17,14 @@ export interface CoachApiDraft {
   body: string;
   ops: DraftOp[];
   base_hash: string | null;
+  status: "pending" | "applied" | "rejected" | "undone";
+  applied_via: "app" | "api" | null;
   created_at: string;
+  decided_at: string | null;
+  undone_at: string | null;
 }
+
+const COLUMNS = "id, kind, title, body, ops, base_hash, status, applied_via, created_at, decided_at, undone_at";
 
 /** Propositions en attente de l'assistant IA du coach, pour un athlète. */
 export function useCoachApiDrafts(athleteId: string | undefined) {
@@ -40,10 +38,38 @@ export function useCoachApiDrafts(athleteId: string | undefined) {
     queryFn: async (): Promise<CoachApiDraft[]> => {
       const { data, error } = await supabase
         .from("coach_api_drafts")
-        .select("id, kind, title, body, ops, base_hash, created_at")
+        .select(COLUMNS)
         .eq("athlete_id", athleteId!)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CoachApiDraft[];
+    },
+  });
+}
+
+/**
+ * Ce qui a été inscrit dans Agon par une proposition de l'assistant, les 30
+ * derniers jours — appliquée par le coach ou directement par l'assistant.
+ * C'est là que le coach annule.
+ */
+export function useCoachApiHistory(athleteId: string | undefined) {
+  return useQuery({
+    queryKey: QK.coachApiHistory(athleteId ?? ""),
+    enabled: !!athleteId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    queryFn: async (): Promise<CoachApiDraft[]> => {
+      const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+      const { data, error } = await supabase
+        .from("coach_api_drafts")
+        .select(COLUMNS)
+        .eq("athlete_id", athleteId!)
+        .in("status", ["applied", "undone"])
+        .neq("kind", "axe")
+        .gte("decided_at", since)
+        .order("decided_at", { ascending: false })
+        .limit(30);
       if (error) throw error;
       return (data ?? []) as unknown as CoachApiDraft[];
     },
@@ -73,90 +99,98 @@ export function useDraftTargetHash(athleteId: string | undefined, key: "asp:prog
   });
 }
 
+/** Erreur renvoyée par l'Edge Function : un code stable et une phrase. */
+export class CoachApiError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+  }
+}
+
 /**
- * Réserve une proposition en une seule requête : seule la première décision
- * passe, un deuxième onglet ou appareil trouve la ligne déjà décidée.
+ * Appelle `coach-api` avec la session du coach. Appliquer et annuler se font
+ * côté serveur : c'est lui qui tient le journal qui permet de revenir en
+ * arrière.
  */
-async function claim(id: string, status: "applied" | "rejected"): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("coach_api_drafts")
-    .update({ status, decided_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("status", "pending")
-    .select("id");
-  if (error) throw error;
-  return (data ?? []).length > 0;
+async function callCoachApi<T>(path: string, body?: unknown): Promise<T> {
+  const { data, error } = await supabase.functions.invoke<T>(`coach-api/${path}`, {
+    method: "POST",
+    body: body ?? {},
+  });
+  if (error) {
+    const ctx = (error as { context?: Response }).context;
+    let payload: { error?: string; message?: string } | null = null;
+    try {
+      payload = ctx ? await ctx.json() : null;
+    } catch {
+      payload = null;
+    }
+    throw new CoachApiError(payload?.error ?? "erreur", payload?.message ?? "La requête a échoué.");
+  }
+  return data as T;
 }
 
-async function release(id: string) {
-  await supabase.from("coach_api_drafts").update({ status: "pending", decided_at: null }).eq("id", id);
+/** Tout ce qu'une proposition peut avoir changé chez l'athlète. */
+function invalidateAfterWrite(qc: QueryClient, athleteId: string) {
+  qc.invalidateQueries({ queryKey: ["coach-api-drafts", athleteId] });
+  qc.invalidateQueries({ queryKey: ["asp-prog", athleteId] });
+  qc.invalidateQueries({ queryKey: ["coach-api-draft-target", athleteId] });
+  qc.invalidateQueries({ queryKey: QK.energySessions });
+  qc.invalidateQueries({ queryKey: QK.dayThemes(athleteId) });
+  qc.invalidateQueries({ queryKey: ["day-themes", "recent"] });
+  invalidateSessionStatus(qc, athleteId);
+  // Les fiches suivent le programme et les séances énergie placées.
+  void syncDocAssignmentsFromProg(athleteId, undefined, qc);
+  void syncDocAssignmentsFromEnergy(athleteId, qc);
 }
-
-export class DraftAlreadyDecided extends Error {}
 
 interface ApplyArgs {
   draft: CoachApiDraft;
-  /** Setter du contexte athlète : les objectifs passent par la sauvegarde normale. */
+  /** Setter du contexte athlète : l'écran garde les objectifs en mémoire. */
   setGoals: (v: Goals | ((p: Goals) => Goals)) => void;
-  /** Coach connecté : auteur des placements et des thèmes d'une semaine. */
-  coachId: string;
 }
 
-/**
- * Applique une proposition.
- *
- * Le programme est relu en base juste avant, pas pris dans le cache : la
- * proposition s'applique à ce qui est enregistré maintenant. Si elle ne
- * correspond plus (exercice supprimé entre-temps), `applyProgOps` lève une
- * erreur et rien n'est écrit — la proposition est remise en attente.
- */
+/** Applique une proposition en attente (ou retient un axe de travail). */
 export function useApplyCoachApiDraft(athleteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ draft, setGoals, coachId }: ApplyArgs) => {
-      if (!(await claim(draft.id, "applied"))) throw new DraftAlreadyDecided();
-      try {
-        if (draft.kind === "programme" || draft.kind === "planning") {
-          const { data, error } = await supabase
-            .from("app_data")
-            .select("value")
-            .eq("athlete_id", athleteId)
-            .eq("key", "asp:prog")
-            .maybeSingle();
-          if (error) throw error;
-          const current = (data?.value ?? []) as unknown as ProgSessionShape[];
-          const next = applyProgOps(current, draft.ops as (ProgOp | PlanningOp)[]) as unknown as ProgSession[];
-          const { error: wErr } = await supabase
-            .from("app_data")
-            .upsert({ athlete_id: athleteId, key: "asp:prog", value: next as unknown as Json });
-          if (wErr) throw wErr;
-          // Même suite que l'éditeur de programmation : les fiches rattachées
-          // aux séances suivent le programme.
-          void syncDocAssignmentsFromProg(athleteId, next, qc);
-        } else if (draft.kind === "objectifs") {
-          setGoals((g) => applyGoalsOps(g, draft.ops as GoalsOp[]) as Goals);
-        } else if (draft.kind === "semaine") {
-          await applyWeekDraft(qc, athleteId, coachId, draft.ops);
-        }
-      } catch (e) {
-        await release(draft.id);
-        throw e;
-      }
+    mutationFn: async ({ draft, setGoals }: ApplyArgs) => {
+      const res = await callCoachApi<{ goals?: Goals }>(`drafts/${draft.id}/appliquer`);
+      // Le contexte athlète a chargé les objectifs une fois : sans ça, il
+      // réécrirait l'ancienne valeur à la prochaine sauvegarde.
+      if (res?.goals) setGoals(res.goals);
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: QK.coachApiDrafts(athleteId) });
-      qc.invalidateQueries({ queryKey: ["asp-prog", athleteId] });
-      qc.invalidateQueries({ queryKey: ["coach-api-draft-target", athleteId] });
-    },
+    onSettled: () => invalidateAfterWrite(qc, athleteId),
   });
 }
+
+/**
+ * Annule une proposition appliquée. Sans `forcer`, le serveur refuse
+ * (`modifie_depuis`) si le programme ou les objectifs ont changé depuis.
+ */
+export function useUndoCoachApiDraft(athleteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, forcer = false }: { id: string; forcer?: boolean }) =>
+      callCoachApi<{ conserves: number; message: string }>(`drafts/${id}/annuler`, { forcer }),
+    onSettled: () => invalidateAfterWrite(qc, athleteId),
+  });
+}
+
+export class DraftAlreadyDecided extends Error {}
 
 /** Écarte une proposition (ou marque un axe de travail comme lu et non retenu). */
 export function useRejectCoachApiDraft(athleteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      if (!(await claim(id, "rejected"))) throw new DraftAlreadyDecided();
+      const { data, error } = await supabase
+        .from("coach_api_drafts")
+        .update({ status: "rejected", decided_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("status", "pending")
+        .select("id");
+      if (error) throw error;
+      if ((data ?? []).length === 0) throw new DraftAlreadyDecided();
     },
     onSettled: () => qc.invalidateQueries({ queryKey: QK.coachApiDrafts(athleteId) }),
   });

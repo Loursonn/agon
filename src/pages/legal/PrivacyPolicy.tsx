@@ -178,7 +178,7 @@ export default function PrivacyPolicy() {
             ],
             [
               "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Google Gemini utilisée par Agon, ou via l'assistant Claude de votre coach",
-              "Historique d'entraînement, bien-être, poids, objectifs, blessures déclarées, données de montre autorisées",
+              "Historique d'entraînement, bien-être, poids, objectifs, blessures déclarées, données de montre autorisées ; pour l'assistant Claude, également vos compétitions, tests et les titres des événements de votre calendrier",
               "Consentement explicite (art. 9.2.a)",
             ],
             [
@@ -221,10 +221,13 @@ export default function PrivacyPolicy() {
           votre coach peut aussi faire lire vos données d'entraînement par son assistant
           d'intelligence artificielle personnel, <strong>Claude, édité par Anthropic</strong>, au
           moyen d'une clé qu'il génère dans Agon. Cet assistant reçoit votre prénom, vos séances et
-          charges réalisées, votre bien-être, votre poids, vos blessures déclarées (zones et dates)
-          et les données de montre autorisées — jamais vos commentaires libres. Il peut proposer à
-          votre coach des axes de travail ou des modifications de programme, que votre coach relit et
-          applique lui-même : rien ne change pour vous sans son intervention.
+          charges réalisées, votre bien-être, votre poids, vos blessures déclarées (zones et dates),
+          vos compétitions et tests, les données de montre autorisées, ainsi que les dates et titres
+          des événements que vous ajoutez à votre calendrier (examens, voyages…) — jamais vos
+          commentaires libres sur vos séances, votre ressenti ou vos blessures. Il aide votre coach à
+          planifier et à périodiser votre entraînement, et peut l'inscrire dans Agon (séances,
+          cycles, compétitions, tests, fiches, habitudes) — uniquement à la demande de votre coach,
+          qui décide. Il ne supprime jamais ce que vous avez déjà réalisé ou renseigné.
         </P>
         <P>
           Anthropic n'est pas notre prestataire : vos données passent par le compte personnel de

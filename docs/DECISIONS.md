@@ -1134,20 +1134,43 @@ Les séances énergétiques arrivent en JSON structuré, validé côté serveur
 comme le reste, plutôt qu'en texte YOXX : les parseurs YOXX dépendent de
 `src/` et ne tournent pas dans Deno, donc l'assistant n'aurait reçu aucune
 erreur à corriger. Les écritures d'une semaine (programme, séances,
-placements, thèmes) ne sont pas atomiques : chacune est rejouable (ids fixés
-à la proposition, upserts, vérification avant insertion), et un second clic
-termine une application interrompue sans doublon.
+placements, thèmes) ne sont pas atomiques : une panne en route est défaite
+par le journal d'annulation (voir plus bas).
+
+**Écriture directe et annulation** (31/10/2026) : le coach veut que
+l'assistant inscrive lui-même ce qu'ils ont validé ensemble, sans clic de
+plus. `"appliquer": true` sur une proposition l'applique tout de suite ; le
+mode d'emploi réserve ce cas à une demande explicite du coach. Pas
+d'interrupteur par clé (choix du propriétaire, contre ma recommandation : une
+clé volée peut donc écrire). Contrepartie demandée par le propriétaire : tout
+doit pouvoir être défait. L'application se fait désormais **côté serveur**,
+pour le clic dans Agon comme pour l'assistant (l'app appelle `coach-api` avec
+la session du coach) : un seul code, et un journal d'annulation (`undo`) que
+seul le serveur écrit — il est rejoué avec la clé de service, il ne doit pas
+venir du navigateur. Le journal sert aussi de rollback : une application qui
+échoue en route est défaite avant de répondre. L'annulation ne supprime
+jamais ce que l'athlète a réalisé (séance faite, séance énergie faite), ni la
+définition d'une séance qu'il a faite ; elle refuse d'écraser un programme ou
+des objectifs modifiés depuis sans confirmation (`forcer`). La politique RLS
+ne laisse plus au coach que « écarter » depuis le navigateur.
+
+**Événements** : compétitions, tests (valeurs mesurées), et événements du
+calendrier de l'athlète **avec leur titre**, texte libre de l'athlète —
+exception assumée à la règle ci-dessus, choisie par le propriétaire et
+annoncée dans le texte de consentement.
 
 **Limites connues** :
 - L'athlète ne voit pas lui-même ce journal : il faut le lui fournir sur
   demande.
-- Une semaine interrompue en route laisse une partie posée jusqu'au clic
-  suivant ; une semaine qui cite une séance supprimée entre-temps s'arrête là.
+- Une écriture directe ne resynchronise pas les fiches (`sync_doc_assignments`
+  exige la session du coach) : c'est fait au prochain enregistrement du
+  programme, ou quand le coach applique ou annule dans Agon.
+- Si l'éditeur de programmation est ouvert pendant une écriture directe, sa
+  sauvegarde différée peut l'écraser.
+
 - Si le coach applique une proposition pendant que l'éditeur de programmation
   a une sauvegarde différée en cours (800 ms), cette sauvegarde peut l'écraser.
   Fenêtre étroite, non traitée.
-- Une proposition d'objectifs est marquée appliquée avant que `setGoals` ait
-  fini d'écrire ; une panne d'écriture à ce moment laisse le statut faux.
 
 ---
 

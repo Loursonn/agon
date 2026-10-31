@@ -55,10 +55,19 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       {
         title: "Ce que tu verras",
         points: [
-          "Tu discutes avec ton assistant : il lit les données, te montre ses analyses et ses propositions dans la discussion, et ne dépose une proposition dans Agon que quand tu le lui demandes.",
+          "Tu discutes avec ton assistant : il lit les données (y compris compétitions, tests et événements du calendrier de l'athlète), te montre ses analyses et ses propositions dans la discussion, et n'inscrit rien sans ton accord.",
+          "Dis-lui « dépose » : la proposition t'attend dans Agon, tu l'appliques d'un clic. Dis-lui « fais-le » : il l'inscrit lui-même directement.",
           "Un badge « Claude » en haut de la fiche d'un athlète quand une proposition t'attend. Chacune dit ce qu'elle change, en clair, avec le nom des séances et des exercices.",
           "Appliquer ou Écarter : rien ne change pour l'athlète tant que tu n'as pas appliqué. Si le programme a bougé depuis la proposition, tu es prévenu avant.",
           "Les axes de travail sont des textes : tu les retiens ou tu les écartes, et tu construis toi-même.",
+        ],
+      },
+      {
+        title: "Revenir en arrière",
+        points: [
+          "Tout ce que l'assistant inscrit s'annule : badge « Claude » → « Inscrit dans Agon » → Annuler. Tout revient comme avant.",
+          "Tu peux aussi lui demander d'annuler. Ce que l'athlète a déjà réalisé (une séance faite) reste toujours en place.",
+          "Si tu as retouché le programme depuis, Agon te prévient avant d'annuler : sinon tes retouches seraient effacées aussi.",
         ],
       },
       {
@@ -73,7 +82,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         title: "Qui est concerné",
         points: [
           "Seuls les athlètes qui ont accepté le traitement par l'IA sous le nouveau texte sont visibles par ton assistant. Tes athlètes reverront l'écran de consentement à leur prochaine connexion : c'est normal, le texte nomme désormais ton assistant.",
-          "Ton assistant ne reçoit ni le nom de famille, ni ce que l'athlète écrit librement (ressenti, commentaires), ni les données Garmin.",
+          "Ton assistant ne reçoit ni le nom de famille, ni ce que l'athlète écrit librement sur ses séances (ressenti, commentaires), ni les données Garmin. Il voit le titre des événements que l'athlète ajoute à son calendrier : le texte de consentement le lui dit.",
         ],
       },
     ],

@@ -6,7 +6,7 @@ import { useSelectedAthlete } from "@/features/coach/context/SelectedAthleteCont
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
-import { useCoachApiDrafts } from "@/features/coach/hooks/useCoachApiDrafts";
+import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
 import { C } from "@/lib/theme";
 import {
@@ -72,6 +72,7 @@ export default function ContextBar() {
   const [comboOpen, setComboOpen] = useState(false);
   const [draftsOpen, setDraftsOpen] = useState(false);
   const { data: claudeDrafts = [] } = useCoachApiDrafts(athleteId);
+  const { data: claudeHistory = [] } = useCoachApiHistory(athleteId);
 
   // Badge modifications athlète (reschedule + bonus sets)
   const { data: modifCount = 0 } = useQuery({
@@ -199,11 +200,12 @@ export default function ContextBar() {
           </button>
         )}
 
-        {/* Propositions de l'assistant IA du coach, en attente de décision */}
-        {claudeDrafts.length > 0 && (
+        {/* Propositions de l'assistant IA du coach : en attente, ou inscrites
+            récemment (à annuler si besoin). */}
+        {(claudeDrafts.length > 0 || claudeHistory.length > 0) && (
           <button
             onClick={() => setDraftsOpen(true)}
-            title="Propositions de Claude en attente"
+            title={claudeDrafts.length > 0 ? "Propositions de Claude en attente" : "Ce que Claude a inscrit récemment"}
             style={{
               display: "flex", alignItems: "center", gap: 4,
               padding: "3px 8px", borderRadius: 6,
@@ -213,7 +215,7 @@ export default function ContextBar() {
               cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
             }}
           >
-            Claude · {claudeDrafts.length}
+            {claudeDrafts.length > 0 ? `Claude · ${claudeDrafts.length}` : "Claude"}
           </button>
         )}
         {athleteId && (

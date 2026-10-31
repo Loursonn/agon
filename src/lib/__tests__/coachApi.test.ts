@@ -9,7 +9,9 @@ import {
   DAY_INTENSITIES,
   DAY_INTENSITY_COLOR,
 } from "@shared/coachApiOps.ts";
-import type { EnergyStepShape } from "@shared/coachApiEnergy.ts";
+import { energyTotals, type EnergyStepShape } from "@shared/coachApiEnergy.ts";
+import { computeTotals, expandIntervals } from "@/lib/energy";
+import type { EnergyGroup, EnergyStep } from "@/types/energy";
 import { API_KEY_PREFIX, generateApiKey, keyPrefix, sha256Hex } from "@/lib/coachApiKey";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { AI_ASSISTANT_SINCE, type ProgSessionShape } from "@shared/coachApiOps.ts";
@@ -119,3 +121,23 @@ describe("description d'une semaine", () => {
     ]);
   });
 });
+
+describe("totaux d'une séance énergétique côté serveur", () => {
+  it("égaux à ceux de l'éditeur", () => {
+    const steps: EnergyStepShape[] = [
+      { type: "interval", id: "1", role: "warmup", duration: { kind: "time", value: 600 }, target: { kind: "hr_zone", zone: 2 } },
+      { type: "group", id: "2", role: "work", repeat: 6, rest_between: { type: "interval", id: "r", role: "rest", duration: { kind: "time", value: 90 }, target: { kind: "none" } }, children: [
+        { type: "interval", id: "3", role: "work", duration: { kind: "distance", value: 400 }, target: { kind: "pace", unit: "min_per_km", min_s_per_unit: 200, max_s_per_unit: 210 } },
+        { type: "interval", id: "4", role: "recovery", duration: { kind: "distance", value: 200 }, target: { kind: "hr_zone", zone: 1 } },
+        { type: "group", id: "5", role: "work", repeat: 2, children: [
+          { type: "interval", id: "6", role: "work", duration: { kind: "calories", value: 15 }, target: { kind: "none" } },
+        ] },
+      ] },
+      { type: "interval", id: "7", role: "cooldown", duration: { kind: "lap_button" }, target: { kind: "none" } },
+    ];
+    const root: EnergyGroup = { type: "group", id: "root", role: "open", repeat: 1, children: steps as unknown as EnergyStep[] };
+    const app = computeTotals(expandIntervals(root));
+    expect(energyTotals(steps)).toEqual({ durationS: app.durationS, distanceM: app.distanceM });
+  });
+});
+

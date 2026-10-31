@@ -5,15 +5,17 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import {
   type CoachApiDraft,
+  CoachApiError,
   DraftAlreadyDecided,
   useApplyCoachApiDraft,
   useCoachApiDrafts,
+  useCoachApiHistory,
   useDraftTargetHash,
   useRejectCoachApiDraft,
+  useUndoCoachApiDraft,
 } from "@/features/coach/hooks/useCoachApiDrafts";
 import { describeOp, namesFrom } from "@/lib/coachApiDraftText";
-import { DraftApplyError, type ProgSessionShape } from "@shared/coachApiOps.ts";
-import { useAuth } from "@/hooks/useAuth";
+import type { ProgSessionShape } from "@shared/coachApiOps.ts";
 import { WeekDraftPreview } from "./WeekDraftPreview";
 
 const KIND_LABEL: Record<CoachApiDraft["kind"], string> = {
@@ -29,7 +31,6 @@ const fmt = (iso: string) =>
 
 function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: string }) {
   const { setGoals } = useAthleteContext();
-  const { user } = useAuth();
   const { data: prog } = useProgrammation(athleteId);
   const target = draft.kind === "objectifs" ? "asp:goals" : "asp:prog";
   // Une semaine ajoute sans rien modifier : pas d'état de départ à comparer.
@@ -47,19 +48,14 @@ function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: stri
   const stale = tracked && !!targetHash && !!draft.base_hash && targetHash !== draft.base_hash;
 
   async function handleApply() {
-    if (!user?.id) return;
     try {
-      await apply.mutateAsync({ draft, setGoals, coachId: user.id });
-      toast.success(draft.kind === "axe" ? "Axe de travail retenu" : "Proposition appliquée");
+      await apply.mutateAsync({ draft, setGoals });
+      toast.success(draft.kind === "axe" ? "Axe de travail retenu" : "Proposition appliquée — annulable dans l'historique");
     } catch (e) {
-      if (e instanceof DraftAlreadyDecided) toast.info("Cette proposition a déjà été traitée ailleurs.");
-      else if (draft.kind === "semaine") {
-        // Écritures successives : une partie a pu passer. Un nouveau clic
-        // reprend sans rien dupliquer (voir applyWeekDraft).
-        toast.error(e instanceof DraftApplyError
-          ? `Elle ne s'applique plus : ${e.message}. Une partie de la semaine a pu être posée.`
-          : "L'application s'est interrompue. Clique à nouveau sur Appliquer : rien ne sera posé en double.");
-      } else if (e instanceof DraftApplyError) toast.error(`Elle ne s'applique plus : ${e.message}. Rien n'a été modifié.`);
+      // Le serveur défait ce qu'il avait commencé à écrire : un échec ne
+      // laisse rien à moitié appliqué.
+      if (e instanceof CoachApiError && e.code === "deja_traitee") toast.info("Cette proposition a déjà été traitée ailleurs.");
+      else if (e instanceof CoachApiError && e.code === "ne_s_applique_plus") toast.error(`Elle ne s'applique plus : ${e.message}`);
       else toast.error("L'application a échoué. Rien n'a été modifié.");
     }
   }
@@ -135,6 +131,62 @@ function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: stri
   );
 }
 
+function HistoryCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: string }) {
+  const undo = useUndoCoachApiDraft(athleteId);
+  const undone = draft.status === "undone";
+
+  async function handleUndo() {
+    if (!window.confirm(`Annuler « ${draft.title} » ? Tout ce qu'elle a inscrit revient comme avant.`)) return;
+    try {
+      const res = await undo.mutateAsync({ id: draft.id });
+      toast.success(res.message);
+    } catch (e) {
+      if (e instanceof CoachApiError && e.code === "modifie_depuis") {
+        // Annuler maintenant effacerait aussi ce qui a été changé depuis.
+        const ok = window.confirm(
+          "Le programme ou les objectifs ont été modifiés depuis. Annuler effacera aussi ces modifications. Continuer ?",
+        );
+        if (!ok) return;
+        try {
+          const res = await undo.mutateAsync({ id: draft.id, forcer: true });
+          toast.success(res.message);
+        } catch {
+          toast.error("L'annulation a échoué. Rien n'a été modifié.");
+        }
+      } else {
+        toast.error(e instanceof CoachApiError ? e.message : "L'annulation a échoué. Rien n'a été modifié.");
+      }
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: "1px solid " + C.brd }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: undone ? C.tx3 : C.tx, textDecoration: undone ? "line-through" : "none" }}>
+          {draft.title}
+        </div>
+        <div style={{ fontSize: 10, color: C.tx3 }}>
+          {KIND_LABEL[draft.kind]} · {draft.applied_via === "api" ? "écrit par Claude" : "appliqué par toi"}
+          {draft.decided_at ? ` · ${fmt(draft.decided_at)}` : ""}
+          {undone ? " · annulé" : ""}
+        </div>
+      </div>
+      {!undone && (
+        <button
+          onClick={() => void handleUndo()}
+          disabled={undo.isPending}
+          style={{
+            padding: "5px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent",
+            color: C.tx2, fontSize: 11, fontWeight: 600, cursor: undo.isPending ? "wait" : "pointer", fontFamily: "inherit",
+          }}
+        >
+          {undo.isPending ? "…" : "Annuler"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /**
  * Propositions de l'assistant IA du coach pour l'athlète ouvert.
  *
@@ -147,6 +199,7 @@ export function ClaudeDraftsSheet({ athleteId, open, onOpenChange }: {
   onOpenChange: (open: boolean) => void;
 }) {
   const { data: drafts = [] } = useCoachApiDrafts(athleteId);
+  const { data: history = [] } = useCoachApiHistory(athleteId);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -160,7 +213,7 @@ export function ClaudeDraftsSheet({ athleteId, open, onOpenChange }: {
         <SheetHeader style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${C.brd}` }}>
           <SheetTitle style={{ color: C.tx, fontSize: 16, fontWeight: 700 }}>Propositions de Claude</SheetTitle>
           <div style={{ color: C.tx3, fontSize: 12, marginTop: 2, lineHeight: 1.45 }}>
-            Rien ne change pour l'athlète tant que tu n'as pas appliqué.
+            Rien ne change pour l'athlète tant que tu n'as pas appliqué. Ce qui a été inscrit s'annule ci-dessous.
           </div>
         </SheetHeader>
         <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -170,6 +223,14 @@ export function ClaudeDraftsSheet({ athleteId, open, onOpenChange }: {
             </div>
           ) : (
             drafts.map((d) => <DraftCard key={d.id} draft={d} athleteId={athleteId} />)
+          )}
+          {history.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
+                Inscrit dans Agon · 30 derniers jours
+              </div>
+              {history.map((d) => <HistoryCard key={d.id} draft={d} athleteId={athleteId} />)}
+            </div>
           )}
         </div>
       </SheetContent>

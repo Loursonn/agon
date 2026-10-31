@@ -243,3 +243,41 @@ export function parseEnergySession(raw: Obj, path: string, newId: () => string):
     intervals,
   };
 }
+
+// ── Totaux ──────────────────────────────────────────────────────────────────
+
+/**
+ * Durée (s) et distance (m) totales d'une séance, comme `computeTotals`
+ * (`src/lib/energy`) sans références athlète : c'est ce que l'éditeur
+ * enregistre dans `total_duration_s` / `total_distance_m`. Recopié parce que
+ * le serveur applique aussi les propositions ; un test compare les deux.
+ */
+export function energyTotals(steps: readonly EnergyStepShape[]): { durationS: number; distanceM: number } {
+  let durationS = 0;
+  let distanceM = 0;
+  const one = (iv: EnergyIntervalShape) => {
+    const d = iv.duration;
+    if (d.kind === "time") durationS += d.value;
+    else if (d.kind === "calories") durationS += Math.round(d.value * 6);
+    else if (d.kind === "distance") {
+      distanceM += d.value;
+      let mPerS = 4;
+      if (iv.target.kind === "pace") {
+        const avg = (iv.target.min_s_per_unit + iv.target.max_s_per_unit) / 2;
+        if (avg > 0) mPerS = 1000 / avg;
+      }
+      durationS += Math.round(d.value / mPerS);
+    }
+  };
+  const walk = (list: readonly EnergyStepShape[], repeat: number, restBetween?: EnergyIntervalShape) => {
+    for (let r = 0; r < repeat; r++) {
+      for (const st of list) {
+        if (st.type === "interval") one(st);
+        else walk(st.children, st.repeat, st.rest_between);
+      }
+      if (restBetween && r < repeat - 1) one(restBetween);
+    }
+  };
+  walk(steps, 1);
+  return { durationS, distanceM };
+}

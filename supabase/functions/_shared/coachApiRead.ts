@@ -7,7 +7,9 @@
  *
  * Exclu volontairement : tout texte libre écrit par l'athlète (ressenti,
  * commentaires de séance, note d'interruption de sommeil, commentaire de
- * blessure). Ce sont les champs où une donnée de santé non prévue peut se
+ * blessure, commentaire de compétition, note de résultat de test). Seule
+ * exception : le titre des événements de son calendrier (examens, voyages…),
+ * dont le texte de consentement le prévient. Ce sont les champs où une donnée de santé non prévue peut se
  * glisser — un diagnostic, un traitement, un cycle — et l'athlète a consenti
  * à l'analyse de ses données d'entraînement, pas de ses confidences.
  *
@@ -157,6 +159,12 @@ export interface SummaryInput {
   prs: Array<{ date: string; exercise_ref: string; kg: number }>;
   activities: Array<Record<string, unknown>>;
   dailies: Array<Record<string, unknown>>;
+  /** Compétitions à partir du début de la période (`competitions`). */
+  competitions?: Array<{ date: string; name: string | null; type: string | null; priority: string | null; location: string | null }>;
+  /** Tests planifiés (`test_sessions`). */
+  tests?: Array<{ date: string; title: string | null; type: string | null; completed: boolean | null; results_structured: unknown }>;
+  /** Événements saisis par l'athlète (`athlete_life_events`). */
+  lifeEvents?: Array<{ date_start: string; date_end: string; title: string | null }>;
   /** Thèmes du jour posés par le coach (`day_themes`). */
   dayThemes?: Array<{ date: string; label: string | null; intensity: string | null; dominante: string | null }>;
   /** Séances énergétiques planifiées (`energy_session_assignments`). */
@@ -213,6 +221,18 @@ function performedSets(mods: unknown, names: Map<string, string>) {
     });
   }
   return out;
+}
+
+/** `results_structured.variables` : nombres seulement, clés bornées. */
+function testValues(raw: unknown): Record<string, number> | null {
+  const vars = obj(obj(raw).variables);
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(vars).slice(0, 30)) {
+    const key = label(k, 40);
+    const n = num(v, -1_000_000, 1_000_000);
+    if (key && n !== null) out[key] = n;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 export function buildSummary(input: SummaryInput) {
@@ -287,6 +307,32 @@ export function buildSummary(input: SummaryInput) {
         forme: num(obj(l.athlete_modifications).sessionForme, 1, 5),
         exercices: performedSets(l.athlete_modifications, names),
       })),
+    // Événements de la période : ce qui contraint ou rythme le planning.
+    evenements: {
+      competitions: (input.competitions ?? [])
+        .filter((c) => inRange(c.date, from, to))
+        .map((c) => ({ date: c.date, nom: label(c.name, 80), type: label(c.type, 20), priorite: label(c.priority, 2), lieu: label(c.location, 80) })),
+      // Les suivantes, pour périodiser vers elles.
+      competitions_a_venir: (input.competitions ?? [])
+        .filter((c) => isIsoDate(c.date) && c.date > to)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(0, 5)
+        .map((c) => ({ date: c.date, nom: label(c.name, 80), type: label(c.type, 20), priorite: label(c.priority, 2) })),
+      tests: (input.tests ?? [])
+        .filter((t) => inRange(t.date, from, to))
+        .map((t) => ({
+          date: t.date,
+          titre: label(t.title, 80),
+          type: label(t.type, 20),
+          fait: t.completed === true,
+          // Valeurs mesurées seulement ; la note libre de l'athlète reste chez lui.
+          resultats: testValues(t.results_structured),
+        })),
+      // Titre écrit par l'athlète, transmis en clair (consentement du 30/10/2026).
+      vie: (input.lifeEvents ?? [])
+        .filter((e) => isIsoDate(e.date_start) && isIsoDate(e.date_end) && e.date_start <= to && e.date_end >= from)
+        .map((e) => ({ du: e.date_start, au: e.date_end, titre: label(e.title, 80) })),
+    },
     // Ce que le coach avait prévu pour chaque jour : à comparer avec ce qui a
     // été fait. La note du thème n'est pas transmise.
     themes_du_jour: (input.dayThemes ?? [])
