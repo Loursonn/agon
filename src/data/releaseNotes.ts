@@ -55,7 +55,8 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       {
         title: "Ce que tu verras",
         points: [
-          "Un badge « Claude » en haut de la fiche d'un athlète quand ton assistant a déposé des propositions. Chacune dit ce qu'elle change, en clair, avec le nom des séances et des exercices.",
+          "Tu discutes avec ton assistant : il lit les données, te montre ses analyses et ses propositions dans la discussion, et ne dépose une proposition dans Agon que quand tu le lui demandes.",
+          "Un badge « Claude » en haut de la fiche d'un athlète quand une proposition t'attend. Chacune dit ce qu'elle change, en clair, avec le nom des séances et des exercices.",
           "Appliquer ou Écarter : rien ne change pour l'athlète tant que tu n'as pas appliqué. Si le programme a bougé depuis la proposition, tu es prévenu avant.",
           "Les axes de travail sont des textes : tu les retiens ou tu les écartes, et tu construis toi-même.",
         ],
@@ -71,7 +72,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     resources: [
       {
         label: "Mode d'emploi pour ton assistant IA",
-        description: "À ajouter une fois pour toutes dans un Projet Claude, avec ta clé.",
+        description: "À donner à Claude Code sur ton ordinateur, avec ta clé. Claude dans le navigateur (claude.ai) ne peut pas appeler l'API.",
         text: COACH_API_PROMPT,
         filename: COACH_API_PROMPT_FILENAME,
       },

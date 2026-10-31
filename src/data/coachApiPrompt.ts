@@ -1,7 +1,9 @@
 /**
  * Instructions à donner à l'assistant IA du coach (Claude) pour qu'il utilise
  * l'API Agon. Proposées dans les Nouveautés (copier / télécharger .md), à
- * ajouter une fois pour toutes dans un Projet Claude ou comme skill.
+ * donner à Claude Code sur l'ordinateur du coach. Claude.ai dans le
+ * navigateur ne peut pas envoyer de requête avec un en-tête `Authorization` :
+ * il ne peut pas appeler cette API.
  * Garder aligné avec docs/API_COACH.md et supabase/functions/coach-api/.
  */
 
@@ -35,6 +37,8 @@ Tu aides un coach de préparation physique à analyser les données de ses athl�
 ## Proposer
 
 Tu ne modifies jamais rien directement : tu déposes une proposition avec \`POST /athletes/:id/drafts\`. Le coach la lit dans Agon et l'applique ou l'écarte. Ne dis jamais qu'une modification est faite : dis qu'elle est proposée.
+
+**Ne dépose rien sans l'accord du coach.** Présente d'abord ta proposition dans la discussion : ce qui change, pourquoi, chiffres à l'appui. Ne l'envoie à Agon que lorsque le coach te le demande explicitement (« dépose-la », « envoie »). S'il la modifie, dépose la version modifiée. Une fois déposée, dis-lui qu'elle l'attend dans la fiche de l'athlète (badge « Claude »).
 
 - Axe de travail (le plus fréquent) : \`{ "kind": "axe", "title": "…", "body": "constat chiffré, puis piste" }\`.
 - Programme : \`{ "kind": "programme", "title": "…", "body": "pourquoi", "ops": [...] }\` avec \`add_exercice\`, \`update_exercice\`, \`remove_exercice\`, \`set_bloc_instructions\`.

@@ -11,7 +11,12 @@ change pour l'athlète tant que tu ne les as pas appliquées.
 
 1. Dans Agon : **Paramètres → Assistant IA (Claude) → Générer une clé**.
    La clé (`agon_…`) n'est affichée qu'une fois : copie-la.
-2. Donne à ton assistant la clé et l'adresse de base :
+2. Donne à ton assistant la clé, l'adresse de base et le mode d'emploi
+   téléchargeable dans les Nouveautés. Il faut un Claude qui peut lancer des
+   commandes sur ton ordinateur (Claude Code) : Claude dans le navigateur
+   (claude.ai) ne peut pas envoyer l'en-tête d'authentification.
+
+   Adresse de base :
 
 ```
 https://mxbfnkkbtmbrauvqplrt.supabase.co/functions/v1/coach-api
@@ -65,6 +70,11 @@ curl -s -H "Authorization: Bearer $KEY" $BASE/athletes/<id>/program
 ```
 
 ## Propositions
+
+Le mode d'emploi demande à l'assistant de **présenter chaque proposition dans
+la discussion d'abord**, et de ne la déposer dans Agon que lorsque tu le lui
+demandes. Tu valides donc deux fois : en discussion, puis « Appliquer » dans
+Agon.
 
 Une proposition a un `kind`, un `title` (120 caractères max) et un `body`
 (4 000 max), plus des `ops` sauf pour un axe de travail. 50 opérations maximum.
