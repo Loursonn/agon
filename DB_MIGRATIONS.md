@@ -30,6 +30,15 @@ supabase db dump --file backup_$(date +%Y%m%d).sql
 
 ---
 
+## Checklist pour chaque nouvelle migration
+
+- **Nouvelle table liée à un athlète → à quel domaine staff appartient-elle ?** (`seances`, `planification`, `logs`, `wellness`, `medical`, `nutrition`, `tests`, `fiches`, `commentaires` — voir `docs/STAFF_FEATURE.md`.) Ajouter une policy `staff_<table>_select` (et écriture si besoin) appuyée sur `staff_can(athlete_id, '<domaine>', 'read'|'write')`, ou noter explicitement dans la migration que la table est hors staff.
+- Nouvelle clé `app_data` → la rattacher à un domaine dans `staff_app_data_domain()` (sinon invisible pour le staff, ce qui est le comportement sûr par défaut).
+- Nouveau chemin Storage lié à un athlète → vérifier `staff_can_path()` / `staff_can_write_docs_path()`.
+- Ne jamais réécrire `is_coach_of` / `can_coach_athlete` pour y ajouter le staff : les accès staff passent par des policies séparées préfixées `staff_` (elles s'ajoutent en OU).
+
+---
+
 ## Ordre d'exécution des migrations PROMPT 6
 
 Les migrations doivent être appliquées dans cet ordre (dépendances) :
@@ -336,3 +345,48 @@ Rollback : `DROP TABLE IF EXISTS public.citation_likes, public.citation_stats CA
 Le contenu des nouveautés est dans `src/data/releaseNotes.ts`. Sans la table, la carte d'accueil reste masquée.
 
 Rollback : `DROP FUNCTION IF EXISTS public.get_app_update_reads(); DROP TABLE IF EXISTS public.app_update_reads;`
+
+---
+
+## Migration 2026-10-31 — Staff V1 (pros autour des athlètes)
+
+**Fichiers :**
+- `supabase/migrations/20261031120000_staff_core.sql` — rôle `staff` + colonne `profiles.profession`, valeur `staff_sharing` de `consent_purpose`, tables `athlete_staff` et `staff_invitations` (+ triggers de garde), fonctions `staff_can`, `staff_can_edit`, `staff_sharing_consented`…, RPC `get_staff_invitation` (anon), `accept_staff_invitation`, `staff_apply_to_all`.
+- `supabase/migrations/20261031121000_staff_policies.sql` — policies `staff_*` en lecture sur les tables par domaine, écriture sur `medical_entries`/`medical_attachments`, fiches (`docs`, `doc_assignments`, `doc_comments`) ; `declared_by` accepte `'staff'` ; `can_read_doc` et `can_read_doc_file` remplacées (branches staff ajoutées).
+- `supabase/migrations/20261031122000_staff_docs_storage.sql` — dépôt / suppression de fichiers par le staff dans le bucket `docs` (banque du coach, dossier de l'athlète).
+
+**Statut : ✅ APPLIQUÉES en prod le 2026-10-31** via `supabase db query --linked -f` (pas de `db push`).
+
+Tests : `supabase db query --linked -f supabase/tests/staff_rls.sql` — simulation des rôles (coach, athlète, 2 pros) dans une transaction annulée — 41 vérifications OK (lecture par domaine, consentement santé, garde des droits, usurpation d'auteur, réutilisation d'invitation, révocation). Aucune ligne laissée en base.
+
+Spec : `docs/STAFF_FEATURE.md`.
+
+### Rollback
+
+Les accès staff sont des policies séparées : les supprimer suffit à couper tout accès sans toucher aux policies existantes.
+
+```sql
+BEGIN;
+-- 1. Policies staff_* (tables + storage)
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT schemaname, tablename, policyname FROM pg_policies WHERE policyname LIKE 'staff\_%' OR policyname LIKE 'profiles_select_staff%'
+  LOOP EXECUTE format('DROP POLICY %I ON %I.%I', r.policyname, r.schemaname, r.tablename); END LOOP;
+END $$;
+-- 2. can_read_doc / can_read_doc_file : rejouer leur définition d'origine
+--    (blocs CREATE OR REPLACE de supabase/migrations/20261014100000_fiches.sql).
+-- 3. Tables et fonctions
+DROP TABLE IF EXISTS public.staff_invitations, public.athlete_staff CASCADE;
+DROP FUNCTION IF EXISTS public.accept_staff_invitation(text), public.get_staff_invitation(text),
+  public.staff_apply_to_all(uuid), public.staff_can(uuid,text,text), public.staff_can_edit(uuid,text,uuid),
+  public.staff_can_path(text,text,text), public.staff_can_write_docs_path(text), public.staff_can_write_bank(uuid),
+  public.staff_can_edit_doc(uuid), public.staff_doc_for_athlete(uuid,uuid), public.staff_is_linked(uuid),
+  public.staff_profile_visible(uuid), public.staff_sharing_consented(uuid), public.staff_app_data_domain(text),
+  public.staff_default_permissions(text), public.staff_normalize_permissions(jsonb), public.staff_domains(),
+  public.workout_log_athlete_id(uuid), public.athlete_staff_before_insert(), public.athlete_staff_before_update(),
+  public.staff_invitations_before_insert();
+-- 4. Contraintes (seulement si aucun compte staff / aucune saisie staff n'existe)
+--    profiles_role_check sans 'staff', DROP COLUMN profiles.profession,
+--    medical_entries_declared_by_check sans 'staff'.
+--    La valeur d'enum consent_purpose 'staff_sharing' ne peut pas être retirée : la laisser.
+COMMIT;
+```

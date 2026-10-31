@@ -37,6 +37,48 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-31-staff-v1",
+    date: "2026-10-31",
+    kind: "feature",
+    title: "Le staff de tes athlètes : kiné, ostéo, nutritionniste… dans l'app",
+    summary:
+      "Tu peux maintenant ouvrir l'accès d'un athlète aux professionnels qui le suivent : kiné, ostéo, coach adjoint, nutritionniste, préparateur mental, médecin. Tu choisis ce que chacun voit et ce qu'il peut modifier ; tu restes le coach principal.",
+    sections: [
+      {
+        title: "Ajouter un professionnel",
+        points: [
+          "Fiche athlète → onglet Staff → « Ajouter un professionnel » : choisis le métier, les droits se pré-cochent (un kiné voit le médical et les séances, un nutritionniste la nutrition…), puis ajuste-les.",
+          "Tu obtiens un lien d'invitation à envoyer par SMS ou email. Le pro crée son compte gratuit (ou se connecte) et l'accès s'ouvre aussitôt. Le lien sert une fois et expire après 14 jours.",
+          "Case « Peut modifier mes contenus » : sinon le pro ne modifie que ce qu'il a lui-même créé.",
+          "« Appliquer à tous » recopie les droits d'un pro sur tous les athlètes qu'il suit chez toi.",
+        ],
+      },
+      {
+        title: "Ce que fait le professionnel",
+        points: [
+          "Il a son propre espace : la liste de ses athlètes avec leur coach, et pour chacun seulement les onglets que tu as ouverts.",
+          "Il peut écrire dans le médical (blessures, suivi), déposer des fiches et commenter. Ses fiches arrivent dans ta banque, à son nom.",
+          "Le reste (programme, planification, séances réalisées, tests) est en lecture seule pour l'instant.",
+          "Tu peux couper son accès à tout moment ; lui aussi peut se retirer.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Dans son profil, « Mon staff » liste chaque professionnel avec son métier et ce qu'il voit. Il est prévenu des ajouts et peut retirer un accès.",
+          "Il peut aussi inviter lui-même son kiné ou son ostéo : les droits habituels du métier s'appliquent, tu les ajustes ensuite.",
+          "Les données de santé (médical, nutrition, bien-être) ne sont partagées qu'après l'accord de l'athlète.",
+        ],
+      },
+      {
+        title: "Tu es toi-même kiné ou préparateur pour un autre coach ?",
+        points: [
+          "Accepte son invitation avec ton compte actuel : un bouton « Staff » apparaît en haut de ton espace coach pour passer de l'un à l'autre.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-01-garmin-hors-ia",
     date: "2026-11-01",
     kind: "feature",
