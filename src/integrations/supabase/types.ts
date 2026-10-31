@@ -165,6 +165,32 @@ export type Database = {
           },
         ]
       }
+      athlete_claims: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          token: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          token: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_claims_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_life_events: {
         Row: {
           athlete_id: string
@@ -2439,6 +2465,7 @@ export type Database = {
           body_fat_pct: number | null
           booking_url: string | null
           coach_code: string | null
+          coach_hidden: boolean
           coach_id: string | null
           created_at: string | null
           first_name: string | null
@@ -2451,6 +2478,7 @@ export type Database = {
           is_admin: boolean
           is_certified_coach: boolean
           is_hyrox_athlete: boolean
+          is_pending: boolean
           last_name: string | null
           profession: string | null
           role: string
@@ -2463,6 +2491,7 @@ export type Database = {
           body_fat_pct?: number | null
           booking_url?: string | null
           coach_code?: string | null
+          coach_hidden?: boolean
           coach_id?: string | null
           created_at?: string | null
           first_name?: string | null
@@ -2475,6 +2504,7 @@ export type Database = {
           is_admin?: boolean
           is_certified_coach?: boolean
           is_hyrox_athlete?: boolean
+          is_pending?: boolean
           last_name?: string | null
           profession?: string | null
           role: string
@@ -2487,6 +2517,7 @@ export type Database = {
           body_fat_pct?: number | null
           booking_url?: string | null
           coach_code?: string | null
+          coach_hidden?: boolean
           coach_id?: string | null
           created_at?: string | null
           first_name?: string | null
@@ -2499,6 +2530,7 @@ export type Database = {
           is_admin?: boolean
           is_certified_coach?: boolean
           is_hyrox_athlete?: boolean
+          is_pending?: boolean
           last_name?: string | null
           profession?: string | null
           role?: string
@@ -4128,6 +4160,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_claim_info: {
+        Args: { p_token: string }
+        Returns: {
+          coach_code: string
+          coach_name: string
+          first_name: string
+          last_name: string
+        }[]
+      }
       get_coach_overview: { Args: { coach_uuid: string }; Returns: Json }
       get_coaches_list: {
         Args: never
@@ -4233,6 +4274,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_athlete_hidden: {
+        Args: { athlete_id: string; hidden: boolean }
+        Returns: undefined
+      }
       skip:
         | { Args: { "": string }; Returns: string }
         | { Args: { how_many: number; why: string }; Returns: string }
@@ -4245,6 +4290,26 @@ export type Database = {
       }
       staff_app_data_domain: { Args: { p_key: string }; Returns: string }
       staff_apply_to_all: { Args: { p_link_id: string }; Returns: number }
+      staff_athlete_profiles: {
+        Args: never
+        Returns: {
+          age: number
+          base_metabolism: number
+          birth_date: string
+          body_fat_pct: number
+          coach_id: string
+          coach_name: string
+          first_name: string
+          full_name: string
+          gender: string
+          habit_tracker_enabled: boolean
+          height_cm: number
+          id: string
+          is_hyrox_athlete: boolean
+          last_name: string
+          weight_kg: number
+        }[]
+      }
       staff_can: {
         Args: { athlete_uuid: string; domain: string; level: string }
         Returns: boolean
@@ -4259,6 +4324,7 @@ export type Database = {
         Returns: boolean
       }
       staff_can_write_bank: { Args: { coach_uuid: string }; Returns: boolean }
+      staff_can_write_docs_path: { Args: { p_name: string }; Returns: boolean }
       staff_default_permissions: {
         Args: { p_profession: string }
         Returns: Json

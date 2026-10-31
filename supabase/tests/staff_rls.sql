@@ -12,12 +12,14 @@ SELECT a.id AS athlete, a.coach_id AS coach,
      AND p.coach_id IS DISTINCT FROM a.coach_id ORDER BY p.created_at LIMIT 1) AS staff,
   (SELECT p.id FROM profiles p WHERE p.id <> a.id AND p.id <> a.coach_id AND p.role='athlete'
      AND p.coach_id IS DISTINCT FROM a.coach_id ORDER BY p.created_at OFFSET 1 LIMIT 1) AS staff2,
-  (SELECT o.id FROM profiles o WHERE o.coach_id = a.coach_id AND o.id <> a.id AND o.id <> a.coach_id LIMIT 1) AS other_athlete
+  (SELECT o.id FROM profiles o WHERE o.coach_id = a.coach_id AND o.id <> a.id AND o.id <> a.coach_id LIMIT 1) AS other_athlete,
+  a.gender AS a_gender, a.age AS a_age, a.weight_kg AS a_weight, a.habit_tracker_enabled AS a_habit
 FROM profiles a
 WHERE a.role='athlete' AND a.coach_id IS NOT NULL AND a.coach_id <> a.id
   AND EXISTS (SELECT 1 FROM medical_entries e WHERE e.athlete_id = a.id)
   AND EXISTS (SELECT 1 FROM app_data d WHERE d.athlete_id = a.id AND d.key LIKE 'asp:wh%')
   AND EXISTS (SELECT 1 FROM workout_logs w WHERE w.athlete_id = a.id)
+  AND a.weight_kg IS NOT NULL AND a.gender IS NOT NULL AND a.habit_tracker_enabled IS NOT NULL
 LIMIT 1;
 GRANT SELECT ON ids TO authenticated;
 INSERT INTO r(k,v) SELECT 'setup ids found', (athlete IS NOT NULL AND staff IS NOT NULL AND staff2 IS NOT NULL)::text FROM ids;
@@ -41,11 +43,26 @@ INSERT INTO r(k,v) SELECT 'A1 domaines app_data visibles', coalesce(string_agg(D
 INSERT INTO r(k,v) SELECT 'A2 medical_entries sans consentement (0 attendu)', count(*)::text FROM medical_entries WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'A3 workout_logs (logs: read, >0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'A4 measurement_logs (nutrition: none, 0)', count(*)::text FROM measurement_logs WHERE athlete_id=(SELECT athlete FROM ids);
-INSERT INTO r(k,v) SELECT 'A5 profil athlète visible (1)', count(*)::text FROM profiles WHERE id=(SELECT athlete FROM ids);
+-- Profil de l'athlète : plus de lecture directe, RPC filtrée par domaine
+INSERT INTO r(k,v) SELECT 'P1 ligne profiles de l''athlète en direct (0)', count(*)::text FROM profiles WHERE id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'P2 RPC : nom + coach visibles', (count(*) = 1 AND bool_and(full_name IS NOT NULL AND coach_name IS NOT NULL))::text
+  FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'P3 kiné (nutrition none) : poids/taille/métabolisme masqués', (weight_kg IS NULL AND height_cm IS NULL AND base_metabolism IS NULL AND body_fat_pct IS NULL)::text
+  FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'P4 tests en lecture → sexe/âge visibles', (p.gender = i.a_gender AND p.age IS NOT DISTINCT FROM i.a_age)::text
+  FROM staff_athlete_profiles() p, ids i WHERE p.id = i.athlete;
+INSERT INTO r(k,v) SELECT 'P5 bien-être sans consentement : habitudes masquées', (habit_tracker_enabled IS NULL)::text
+  FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
+-- Le coach ouvre la nutrition, toujours sans consentement : le poids reste masqué
+SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', coach, 'role','authenticated')::text FROM ids), true);
+UPDATE athlete_staff SET permissions = permissions || '{"nutrition":"write"}' WHERE staff_id=(SELECT staff FROM ids);
+SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', staff, 'role','authenticated')::text FROM ids), true);
+INSERT INTO r(k,v) SELECT 'P6 nutrition ouverte sans consentement : poids masqué', (weight_kg IS NULL)::text
+  FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'A6 autre athlète du coach visible (0)', count(*)::text FROM profiles WHERE id=(SELECT other_athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'A7 profil coach visible (1)', count(*)::text FROM profiles WHERE id=(SELECT coach FROM ids);
 DO $$ BEGIN
-  UPDATE athlete_staff SET permissions = permissions || '{"nutrition":"write"}' WHERE staff_id = auth.uid();
+  UPDATE athlete_staff SET permissions = permissions || '{"seances":"write"}' WHERE staff_id = auth.uid();
   INSERT INTO r(k,v) VALUES ('A8 pro modifie ses droits', 'ACCEPTÉ (KO)');
 EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('A8 pro modifie ses droits', 'refusé (OK)'); END $$;
 DO $$ BEGIN
@@ -63,6 +80,10 @@ INSERT INTO user_consents(user_id, purpose, granted, doc_version, statement)
 SELECT athlete, 'staff_sharing', true, 'test', 'TEST RLS — annulé' FROM ids;
 SET LOCAL ROLE authenticated;
 INSERT INTO r(k,v) SELECT 'B1 medical_entries avec consentement (>0)', count(*)::text FROM medical_entries WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'P7 consentement + nutrition : poids visible', (p.weight_kg = i.a_weight)::text
+  FROM staff_athlete_profiles() p, ids i WHERE p.id = i.athlete;
+INSERT INTO r(k,v) SELECT 'P8 consentement + bien-être : habitudes visibles', (p.habit_tracker_enabled = i.a_habit)::text
+  FROM staff_athlete_profiles() p, ids i WHERE p.id = i.athlete;
 INSERT INTO r(k,v) SELECT 'B2 domaines app_data visibles', string_agg(DISTINCT staff_app_data_domain(key), ',') FROM app_data WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO medical_entries(athlete_id, kind, title, status, created_by, declared_by)
 SELECT athlete, 'blessure', 'TEST staff', 'en_cours', staff, 'staff' FROM ids;
@@ -99,7 +120,7 @@ INSERT INTO r(k,v) SELECT 'C1 athlète lit la fiche du pro', can_read_doc(d.id):
 INSERT INTO r(k,v) SELECT 'C2 athlète voit son staff (1)', count(*)::text FROM athlete_staff WHERE athlete_id = auth.uid();
 INSERT INTO r(k,v) SELECT 'C3 athlète voit le profil du pro (1)', count(*)::text FROM profiles WHERE id=(SELECT staff FROM ids);
 DO $$ BEGIN
-  UPDATE athlete_staff SET permissions = permissions || '{"nutrition":"write"}' WHERE athlete_id = auth.uid();
+  UPDATE athlete_staff SET permissions = permissions || '{"seances":"write"}' WHERE athlete_id = auth.uid();
   INSERT INTO r(k,v) VALUES ('C4 athlète modifie les droits', 'ACCEPTÉ (KO)');
 EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('C4 athlète modifie les droits', 'refusé (OK)'); END $$;
 INSERT INTO staff_invitations(athlete_id, profession, permissions, invited_by, invited_by_role)
@@ -119,6 +140,8 @@ DO $$ BEGIN
   PERFORM accept_staff_invitation(current_setting('test.tok'));
   INSERT INTO r(k,v) VALUES ('D2 réutiliser le lien', 'ACCEPTÉ (KO)');
 EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('D2 réutiliser le lien', 'refusé (OK)'); END $$;
+INSERT INTO r(k,v) SELECT 'P9 nutritionniste (tests none, nutrition write) : poids + sexe visibles', (p.weight_kg = i.a_weight AND p.gender = i.a_gender)::text
+  FROM staff_athlete_profiles() p, ids i WHERE p.id = i.athlete;
 INSERT INTO r(k,v) SELECT 'D3 2e pro ne voit pas le profil du 1er pro (0)', count(*)::text FROM profiles WHERE id=(SELECT staff FROM ids);
 WITH u AS (UPDATE medical_entries SET notes='y' WHERE created_by=(SELECT staff FROM ids) RETURNING 1)
 INSERT INTO r(k,v) SELECT 'D4 2e pro ne touche pas l''entrée du 1er (0)', count(*)::text FROM u;
@@ -144,6 +167,7 @@ UPDATE athlete_staff SET status='revoked' WHERE staff_id=(SELECT staff FROM ids)
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', staff, 'role','authenticated')::text FROM ids), true);
 INSERT INTO r(k,v) SELECT 'F1 après révocation : workout_logs (0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'F2 après révocation : profil athlète (0)', count(*)::text FROM profiles WHERE id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'F2b après révocation : RPC profil (0)', count(*)::text FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
 DO $$ BEGIN
   UPDATE athlete_staff SET status='active' WHERE staff_id = auth.uid();
   INSERT INTO r(k,v) VALUES ('F3 pro se réactive', 'ACCEPTÉ (KO)');

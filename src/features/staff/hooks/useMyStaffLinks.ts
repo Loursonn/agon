@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchStaffAthleteProfiles } from "./useStaffAthleteData";
 import { toPermissions, type StaffPermissions, type StaffProfession } from "../lib/staffPermissions";
 
 export interface MyStaffAthlete {
@@ -30,7 +31,6 @@ interface Row {
   permissions: unknown;
   can_edit_coach_content: boolean;
   created_at: string;
-  athlete: { id: string; full_name: string; first_name: string | null; last_name: string | null; coach_id: string | null } | null;
 }
 
 export function useMyStaffLinks() {
@@ -42,19 +42,17 @@ export function useMyStaffLinks() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("athlete_staff")
-        .select("id, athlete_id, profession, permissions, can_edit_coach_content, created_at, athlete:profiles!athlete_staff_athlete_id_fkey(id, full_name, first_name, last_name, coach_id)")
+        .select("id, athlete_id, profession, permissions, can_edit_coach_content, created_at")
         .eq("staff_id", user!.id)
         .eq("status", "active")
         .order("created_at", { ascending: true });
       if (error) throw error;
       const rows = (data ?? []) as unknown as Row[];
 
-      const coachIds = [...new Set(rows.map((r) => r.athlete?.coach_id).filter((x): x is string => !!x))];
-      const coachNames = new Map<string, string>();
-      if (coachIds.length) {
-        const { data: coaches } = await supabase.from("profiles").select("id, full_name").in("id", coachIds);
-        for (const c of coaches ?? []) coachNames.set(c.id, c.full_name);
-      }
+      // Identité de l'athlète et nom du coach : via la RPC filtrée (le pro n'a
+      // pas de lecture directe de la ligne profiles de l'athlète).
+      const profiles = rows.length ? await fetchStaffAthleteProfiles() : [];
+      const byId = new Map(profiles.map((p) => [p.id, p]));
 
       const consents = await Promise.all(
         rows.map(async (r) => {
@@ -64,14 +62,14 @@ export function useMyStaffLinks() {
       );
 
       return rows.map((r, i) => {
-        const a = r.athlete;
+        const a = byId.get(r.athlete_id);
         return {
           linkId: r.id,
           athleteId: r.athlete_id,
           athleteName: a ? [a.first_name, a.last_name].filter(Boolean).join(" ") || a.full_name : "Athlète",
           athleteFirstName: a?.first_name ?? null,
           coachId: a?.coach_id ?? null,
-          coachName: a?.coach_id ? coachNames.get(a.coach_id) ?? null : null,
+          coachName: a?.coach_name ?? null,
           profession: r.profession,
           permissions: toPermissions(r.permissions),
           canEditCoachContent: r.can_edit_coach_content,

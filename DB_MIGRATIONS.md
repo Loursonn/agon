@@ -354,10 +354,11 @@ Rollback : `DROP FUNCTION IF EXISTS public.get_app_update_reads(); DROP TABLE IF
 - `supabase/migrations/20261031120000_staff_core.sql` — rôle `staff` + colonne `profiles.profession`, valeur `staff_sharing` de `consent_purpose`, tables `athlete_staff` et `staff_invitations` (+ triggers de garde), fonctions `staff_can`, `staff_can_edit`, `staff_sharing_consented`…, RPC `get_staff_invitation` (anon), `accept_staff_invitation`, `staff_apply_to_all`.
 - `supabase/migrations/20261031121000_staff_policies.sql` — policies `staff_*` en lecture sur les tables par domaine, écriture sur `medical_entries`/`medical_attachments`, fiches (`docs`, `doc_assignments`, `doc_comments`) ; `declared_by` accepte `'staff'` ; `can_read_doc` et `can_read_doc_file` remplacées (branches staff ajoutées).
 - `supabase/migrations/20261031122000_staff_docs_storage.sql` — dépôt / suppression de fichiers par le staff dans le bucket `docs` (banque du coach, dossier de l'athlète).
+- `supabase/migrations/20261031123000_staff_profile_fields.sql` — le pro ne lit plus la ligne `profiles` de l'athlète : policy `profiles_select_staff_athletes` retirée, RPC `staff_athlete_profiles()` qui ne renvoie que les champs permis par ses domaines (nom et coach toujours ; sexe/âge si tests, nutrition ou médical ; poids/taille/métabolisme si nutrition ; consentement exigé pour les domaines santé).
 
 **Statut : ✅ APPLIQUÉES en prod le 2026-10-31** via `supabase db query --linked -f` (pas de `db push`).
 
-Tests : `supabase db query --linked -f supabase/tests/staff_rls.sql` — simulation des rôles (coach, athlète, 2 pros) dans une transaction annulée — 41 vérifications OK (lecture par domaine, consentement santé, garde des droits, usurpation d'auteur, réutilisation d'invitation, révocation). Aucune ligne laissée en base.
+Tests : `supabase db query --linked -f supabase/tests/staff_rls.sql` — simulation des rôles (coach, athlète, 2 pros) dans une transaction annulée — 50 vérifications OK (lecture par domaine, champs du profil filtrés, consentement santé, garde des droits, usurpation d'auteur, réutilisation d'invitation, révocation). Aucune ligne laissée en base.
 
 Spec : `docs/STAFF_FEATURE.md`.
 
@@ -372,6 +373,9 @@ DO $$ DECLARE r record; BEGIN
   FOR r IN SELECT schemaname, tablename, policyname FROM pg_policies WHERE policyname LIKE 'staff\_%' OR policyname LIKE 'profiles_select_staff%'
   LOOP EXECUTE format('DROP POLICY %I ON %I.%I', r.policyname, r.schemaname, r.tablename); END LOOP;
 END $$;
+-- 1b. Migration 4 : RPC du profil filtré (la policy profiles_select_staff_athletes
+--     est déjà retirée ; ne pas la recréer, elle ouvrait la ligne entière).
+DROP FUNCTION IF EXISTS public.staff_athlete_profiles();
 -- 2. can_read_doc / can_read_doc_file : rejouer leur définition d'origine
 --    (blocs CREATE OR REPLACE de supabase/migrations/20261014100000_fiches.sql).
 -- 3. Tables et fonctions

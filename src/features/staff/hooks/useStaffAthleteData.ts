@@ -4,6 +4,8 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import type { Profile } from "@/hooks/useAuth";
 
 export interface StaffWorkoutLog {
   id: string;
@@ -96,16 +98,31 @@ export function useStaffWeeklyRetours(athleteId: string, enabled: boolean) {
   });
 }
 
-/** Profil de l'athlète suivi (identité, mensurations de base). */
+/**
+ * Profils des athlètes suivis, filtrés côté base par domaine (RPC
+ * staff_athlete_profiles) : nom et coach toujours, le reste seulement si le
+ * domaine correspondant est ouvert (et consenti pour les données de santé).
+ * Le pro n'a plus de lecture directe de la ligne `profiles` de l'athlète.
+ */
+export type StaffAthleteProfile = Database["public"]["Functions"]["staff_athlete_profiles"]["Returns"][number];
+
+export async function fetchStaffAthleteProfiles(): Promise<StaffAthleteProfile[]> {
+  const { data, error } = await supabase.rpc("staff_athlete_profiles");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Profil de l'athlète suivi, au format attendu par AthleteProvider. */
 export function useStaffAthleteProfile(athleteId: string | undefined) {
   return useQuery({
     queryKey: ["staff", "athlete-profile", athleteId],
     enabled: !!athleteId,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", athleteId!).maybeSingle();
-      if (error) throw error;
-      return data;
+      const p = (await fetchStaffAthleteProfiles()).find((a) => a.id === athleteId);
+      if (!p) return null;
+      const { coach_name: _coachName, ...fields } = p;
+      return { ...fields, role: "athlete" } as unknown as Profile;
     },
   });
 }
