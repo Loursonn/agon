@@ -1165,8 +1165,13 @@ tests et retraits du planning, plus toutes les opérations d'une semaine, dans
 Les règles du planning de l'app (lundi → dimanche, une semaine par semaine
 ISO, pas de chevauchement entre sœurs, un enfant dans son parent) sont
 vérifiées à la validation sur une copie de l'état, opération après
-opération : l'assistant reçoit une erreur qui nomme le champ plutôt qu'un
-refus de trigger au moment d'appliquer. Choix du propriétaire : suppression
+opération : l'assistant reçoit une erreur qui nomme le champ. C'est la seule
+garde : la base ne les vérifie pas. La copie suit aussi les séances prévues
+qui partent avec leur semaine, pour refuser dès la validation ce qui
+échouerait à l'application. Testé contre la structure réelle des tables
+(contraintes, cascades, triggers) chargée dans PGlite : saison complète,
+suppressions en cascade, déplacement de cycle, panne en route, annulation
+exacte. Choix du propriétaire : suppression
 autorisée, mais **le réalisé reste** — supprimer un cycle retire ses séances
 prévues, les séances faites restent sans semaine (alors que l'écran de l'app
 les supprime) ; un test passé ne se modifie pas ; une séance retirée passe
@@ -1180,10 +1185,10 @@ semaines n'ont pas d'`athlete_id` : l'annulation vérifie que leur parent est
 
 **Limites connues** :
 - Les fiches (documents) ne sont pas encore inscrites par l'assistant.
-- Ni la planification ni l'annulation ne recontrôlent qu'un enfant tient dans
-  son parent au moment d'appliquer (la base ne vérifie que les
-  chevauchements) : une proposition appliquée longtemps après sa validation
-  peut laisser un mésocycle dépasser de son macrocycle.
+- La base ne vérifie ni les chevauchements ni l'inclusion dans le parent
+  (aucun trigger, vérifié le 01/11/2026 ; seul `end_date > start_date`) : le
+  validateur est la seule garde. Une proposition appliquée longtemps après sa
+  validation n'est pas recontrôlée.
 - L'athlète ne voit pas lui-même ce journal : il faut le lui fournir sur
   demande.
 - Une écriture directe ne resynchronise pas les fiches (`sync_doc_assignments`

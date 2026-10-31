@@ -74,8 +74,8 @@ function stateOf(t: Record<string, Row[]>, athlete = A): PlanState {
     micros: (t.microcycles ?? []).filter((w) => cycles.some((c) => c.id === w.cycle_id)),
     competitions: mine(t.competitions),
     tests: mine(t.test_sessions).map((x) => ({ ...x, completed: x.completed === true })),
-    placements: mine(t.workout_logs).map((l) => ({ session_id: l.session_id, date: l.scheduled_date, status: l.status })),
-    energyPlacements: mine(t.energy_session_assignments).map((l) => ({ energy_session_id: l.energy_session_id, date: l.scheduled_date, status: l.status })),
+    placements: mine(t.workout_logs).map((l) => ({ session_id: l.session_id, date: l.scheduled_date, status: l.status, microcycle_id: l.microcycle_id })),
+    energyPlacements: mine(t.energy_session_assignments).map((l) => ({ energy_session_id: l.energy_session_id, date: l.scheduled_date, status: l.status, microcycle_id: l.microcycle_id })),
     themeDates: mine(t.day_themes).map((d) => d.date),
   } as unknown as PlanState;
 }
@@ -180,6 +180,16 @@ describe("plan — validation", () => {
     expect(err([{ op: "delete_macrocycle", id: "M1" }, { op: "update_mesocycle", id: "m1", name: "X" }])).toContain("introuvable");
     // Après la suppression du mésocycle, sa place est libre.
     ok([{ op: "delete_mesocycle", id: "m1" }, { op: "create_mesocycle", macrocycle_id: "M1", name: "Nouveau", start_date: "2026-11-02", end_date: "2026-11-29" }]);
+  });
+
+  it("une séance partie avec sa semaine ne se retire pas une seconde fois", () => {
+    // Trouvé sur la vraie structure : sinon validé, puis refusé à l'application.
+    expect(err([{ op: "delete_cycle", id: "c1" }, { op: "remove_placement", session_id: "s1", date: "2026-11-09" }]))
+      .toContain("déjà retirée avec sa semaine");
+    expect(err([{ op: "update_cycle", id: "c1", start_date: "2026-11-16", end_date: "2026-12-13" }, { op: "remove_placement", session_id: "s1", date: "2026-11-09" }]))
+      .toContain("déjà retirée avec sa semaine");
+    // Dans l'autre ordre, c'est accepté.
+    ok([{ op: "remove_placement", session_id: "s1", date: "2026-11-09" }, { op: "delete_cycle", id: "c1" }]);
   });
 
   it("refuse une ref inconnue ou du mauvais type, et les champs inconnus", () => {

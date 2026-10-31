@@ -228,7 +228,7 @@ async function runWeek(db: Db, athleteId: string, coachId: string, ops: WeekOp[]
   if (themes.length > 0) {
     const previous = check<Row[]>(
       await db.from("day_themes")
-        .select("athlete_id, coach_id, date, label, intensity, dominante, color, note")
+        .select("athlete_id, coach_id, date, label, intensity, dominante, color, note, created_at")
         .eq("athlete_id", athleteId)
         .in("date", themes.map((t) => t.date)),
       "day_themes",
@@ -393,6 +393,7 @@ async function undoOne(db: Db, athleteId: string, coachId: string, s: UndoStep):
       dominante: r.dominante ?? null,
       color: r.color,
       note: r.note ?? "",
+      ...(typeof r.created_at === "string" ? { created_at: r.created_at } : {}),
       updated_at: new Date().toISOString(),
     }));
     if (rows.length > 0) check(await db.from("day_themes").upsert(rows, { onConflict: "athlete_id,date" }), "day_themes");

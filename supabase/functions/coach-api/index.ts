@@ -75,8 +75,9 @@ async function allowedAthletes(admin: SupabaseClient, coachId: string): Promise<
   const { data: athletes, error } = await admin
     .from("profiles")
     .select("id, first_name, full_name")
-    .eq("coach_id", coachId)
-    .neq("id", coachId);
+    // Un coach-athlète qui se coache lui-même (coach_id = lui) est aussi son
+    // propre athlète : visible s'il a donné l'accord, comme les autres.
+    .eq("coach_id", coachId);
   if (error) throw new Error("profiles: " + error.message);
   const ids = (athletes ?? []).map((a) => a.id as string);
   if (ids.length === 0) return new Map();
@@ -211,11 +212,11 @@ async function planState(admin: SupabaseClient, athleteId: string, dates: string
     q(admin.from("competitions").select("id, name, date, type, priority, location").eq("athlete_id", athleteId).order("date").limit(500), "competitions"),
     q(admin.from("test_sessions").select("id, title, date, type, completed").eq("athlete_id", athleteId).order("date").limit(500), "test_sessions"),
     dates.length === 0 ? [] : q(
-      admin.from("workout_logs").select("session_id, scheduled_date, status").eq("athlete_id", athleteId).in("scheduled_date", dates),
+      admin.from("workout_logs").select("session_id, scheduled_date, status, microcycle_id").eq("athlete_id", athleteId).in("scheduled_date", dates),
       "workout_logs",
     ),
     dates.length === 0 ? [] : q(
-      admin.from("energy_session_assignments").select("energy_session_id, scheduled_date, status").eq("athlete_id", athleteId).in("scheduled_date", dates),
+      admin.from("energy_session_assignments").select("energy_session_id, scheduled_date, status, microcycle_id").eq("athlete_id", athleteId).in("scheduled_date", dates),
       "energy_session_assignments",
     ),
     dates.length === 0 ? [] : q(admin.from("day_themes").select("date").eq("athlete_id", athleteId).in("date", dates), "day_themes"),
@@ -223,8 +224,8 @@ async function planState(admin: SupabaseClient, athleteId: string, dates: string
   return {
     macros, mesos, cycles, micros,
     competitions, tests: tests.map((t) => ({ ...t, completed: t.completed === true })),
-    placements: placements.map((p) => ({ session_id: p.session_id, date: p.scheduled_date, status: p.status })),
-    energyPlacements: energyPlacements.map((p) => ({ energy_session_id: p.energy_session_id, date: p.scheduled_date, status: p.status })),
+    placements: placements.map((p) => ({ session_id: p.session_id, date: p.scheduled_date, status: p.status, microcycle_id: p.microcycle_id })),
+    energyPlacements: energyPlacements.map((p) => ({ energy_session_id: p.energy_session_id, date: p.scheduled_date, status: p.status, microcycle_id: p.microcycle_id })),
     themeDates: themes.map((t) => t.date),
   } as unknown as PlanState;
 }
@@ -671,7 +672,8 @@ serve(async (req) => {
 
     // Un compte qui n'est plus coach perd l'accès, même avec une clé valide.
     const { data: profile } = await admin.from("profiles").select("role").eq("id", caller.coachId).maybeSingle();
-    if (profile?.role !== "coach") return fail(403, "compte_non_coach", "Ce compte n'est pas (ou plus) un compte coach.");
+    // « coach_athlete » : un coach qui s'entraîne aussi. C'est un coach.
+    if (profile?.role !== "coach" && profile?.role !== "coach_athlete") return fail(403, "compte_non_coach", "Ce compte n'est pas (ou plus) un compte coach.");
 
     // ── Débit (clé de l'assistant seulement) ──
     if (caller.keyId) {

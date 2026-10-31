@@ -329,7 +329,7 @@ export async function applyPlanOp(
     case "remove_day_theme": {
       const theme = check<Row | null>(
         await db.from("day_themes")
-          .select("id, athlete_id, coach_id, date, label, intensity, dominante, color, note")
+          .select("id, athlete_id, coach_id, date, label, intensity, dominante, color, note, created_at")
           .eq("athlete_id", athleteId).eq("date", op.date).maybeSingle(),
         "day_themes",
       );

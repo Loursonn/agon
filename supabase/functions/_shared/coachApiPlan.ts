@@ -6,8 +6,9 @@
  * Mêmes règles que l'app (`src/features/coach/components/planning/`) :
  * périodes du lundi au dimanche, une semaine (microcycle) par semaine ISO,
  * pas de chevauchement entre frères, un enfant dans les dates de son parent.
- * Les vérifier ici donne à l'assistant une erreur qui nomme le champ, plutôt
- * qu'un refus de trigger illisible au moment d'appliquer.
+ * La base ne les vérifie pas (seul `end_date > start_date`) : cette
+ * validation est la seule garde, et l'assistant reçoit une erreur qui nomme
+ * le champ.
  *
  * Validation sur une copie de travail de l'état : une opération voit ce que
  * les précédentes ont créé, modifié ou supprimé.
@@ -30,8 +31,8 @@ export interface PlanState {
   competitions: { id: string; name: string; date: string }[];
   tests: { id: string; title: string; date: string; completed: boolean }[];
   /** Placements existants aux dates citées par des retraits. */
-  placements: { session_id: string; date: string; status: string }[];
-  energyPlacements: { energy_session_id: string; date: string; status: string }[];
+  placements: { session_id: string; date: string; status: string; microcycle_id?: string | null }[];
+  energyPlacements: { energy_session_id: string; date: string; status: string; microcycle_id?: string | null }[];
   themeDates: string[];
 }
 
@@ -128,6 +129,21 @@ export function buildWeeks(cycleId: string, start: string, end: string, newId: (
     out.push({ id: newId(), cycle_id: cycleId, week_number: n, start_date: mon, end_date: addDays(mon, 6), is_deload: deload.includes(n) });
   }
   return out;
+}
+
+/** Statut d'une séance prévue partie avec sa semaine plus haut dans la proposition. */
+const GONE = "partie avec sa semaine";
+
+/**
+ * Retire des semaines de l'état : leurs séances prévues partent avec elles,
+ * comme à l'application ; le réalisé reste.
+ */
+function dropWeeks(st: PlanState, keep: (w: MicroState) => boolean) {
+  const gone = new Set(st.micros.filter((w) => !keep(w)).map((w) => w.id));
+  st.micros = st.micros.filter(keep);
+  for (const p of [...st.placements, ...st.energyPlacements]) {
+    if (p.microcycle_id && gone.has(p.microcycle_id) && p.status === "planned") p.status = GONE;
+  }
 }
 
 const overlaps = (a: { start_date: string; end_date: string }, s: string, e: string) => s <= a.end_date && e >= a.start_date;
@@ -257,7 +273,7 @@ export function parsePlanOp(raw: Obj, path: string, ctx: PlanCtx): PlanOp {
       const m = findIn(st.macros, idOf(raw.id, `${path}.id`), "macrocycle", `${path}.id`);
       const mesoIds = st.mesos.filter((x) => x.macrocycle_id === m.id).map((x) => x.id);
       const cycleIds = st.cycles.filter((c) => c.mesocycle_id && mesoIds.includes(c.mesocycle_id)).map((c) => c.id);
-      st.micros = st.micros.filter((w) => !cycleIds.includes(w.cycle_id));
+      dropWeeks(st, (w) => !cycleIds.includes(w.cycle_id));
       st.cycles = st.cycles.filter((c) => !cycleIds.includes(c.id));
       st.mesos = st.mesos.filter((x) => x.macrocycle_id !== m.id);
       st.macros = st.macros.filter((x) => x.id !== m.id);
@@ -310,7 +326,7 @@ export function parsePlanOp(raw: Obj, path: string, ctx: PlanCtx): PlanOp {
       onlyKeys(raw, ["op", "id"], path);
       const m = findIn(st.mesos, idOf(raw.id, `${path}.id`), "mésocycle", `${path}.id`);
       const cycleIds = st.cycles.filter((c) => c.mesocycle_id === m.id).map((c) => c.id);
-      st.micros = st.micros.filter((w) => !cycleIds.includes(w.cycle_id));
+      dropWeeks(st, (w) => !cycleIds.includes(w.cycle_id));
       st.cycles = st.cycles.filter((c) => !cycleIds.includes(c.id));
       st.mesos = st.mesos.filter((x) => x.id !== m.id);
       return { op: "delete_mesocycle", id: m.id, name: m.name };
@@ -365,6 +381,7 @@ export function parsePlanOp(raw: Obj, path: string, ctx: PlanCtx): PlanOp {
           const same = old.find((o) => o.start_date === w.start_date);
           return same ? { ...same, week_number: w.week_number } : w;
         });
+        dropWeeks(st, (w) => w.cycle_id !== c.id || weeks.some((k) => k.id === w.id));
         st.micros = [...st.micros.filter((w) => w.cycle_id !== c.id), ...weeks];
       }
       if (Object.keys(patch).length === 0) fail(path, "rien à modifier");
@@ -375,7 +392,7 @@ export function parsePlanOp(raw: Obj, path: string, ctx: PlanCtx): PlanOp {
     case "delete_cycle": {
       onlyKeys(raw, ["op", "id"], path);
       const c = findIn(st.cycles, idOf(raw.id, `${path}.id`), "cycle", `${path}.id`);
-      st.micros = st.micros.filter((w) => w.cycle_id !== c.id);
+      dropWeeks(st, (w) => w.cycle_id !== c.id);
       st.cycles = st.cycles.filter((x) => x.id !== c.id);
       return { op: "delete_cycle", id: c.id, name: c.name };
     }
@@ -418,6 +435,7 @@ export function parsePlanOp(raw: Obj, path: string, ctx: PlanCtx): PlanOp {
       const d = date(raw.date, `${path}.date`, ctx);
       const p = st.placements.find((x) => x.session_id === sid && x.date === d);
       if (!p) fail(path, "aucune séance prévue à cette date");
+      if (p.status === GONE) fail(path, "déjà retirée avec sa semaine par une opération plus haut");
       if (p.status !== "planned") fail(path, `séance « ${p.status} » : seul le prévu se retire, le réalisé reste à l'athlète`);
       p.status = "skipped";
       return { op: "remove_placement", session_id: sid, date: d };
@@ -428,6 +446,7 @@ export function parsePlanOp(raw: Obj, path: string, ctx: PlanCtx): PlanOp {
       const d = date(raw.date, `${path}.date`, ctx);
       const p = st.energyPlacements.find((x) => x.energy_session_id === eid && x.date === d);
       if (!p) fail(path, "aucune séance énergétique prévue à cette date");
+      if (p.status === GONE) fail(path, "déjà retirée avec sa semaine par une opération plus haut");
       if (p.status !== "planned") fail(path, `séance « ${p.status} » : seul le prévu se retire, le réalisé reste à l'athlète`);
       st.energyPlacements = st.energyPlacements.filter((x) => x !== p);
       return { op: "remove_energy_placement", energy_session_id: eid, date: d };
