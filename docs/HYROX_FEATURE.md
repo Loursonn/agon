@@ -156,3 +156,41 @@ Sources : RoxHype 25/26, HYROX Data Lab S7-S8, HYROX Data Lab Utrecht.
 | Références en table (pas constantes) | Remplaçables par données clients |
 | Percentile 0 = meilleur | Convention Rox-Coach (temps : plus bas = mieux) |
 | `const db = supabase as any` | Types Supabase auto-générés périmés |
+
+---
+
+## 10. Tests HYROX (bilan d'entrée et retests) — en cours
+
+Prompt source : `Prompt-Agon-Tests-HYROX-2026-10-31.md` (Hugo, 31/10/2026). Livraison en 6 PR :
+1. **moteur de calcul + golden tests** (cette PR) ;
+2. migrations : presets batterie v3, catégorie HYROX au profil, `hyrox_test_grids`, `hyrox_axes_params`, `hyrox_work_axes_rules`, `hyrox_test_analyses`, `hyrox_race_results` ;
+3. saisie (S1 à S5 + semaine 1) ;
+4. fiche résultat (coach desktop, athlète mobile) ;
+5. comparaison de 2 analyses et recalcul ;
+6. calibration (prédit vs réel, export CSV).
+
+### Moteur : `src/lib/hyrox/tests/`
+TS pur, aucun import React ni réseau. Point d'entrée : `analyzeTests(inputs, profile, { set, target_s, context })`.
+
+| Fichier | Rôle |
+|---|---|
+| `types.ts` | Entrées brutes (`HyroxTestInputs`), profil, grilles (`GridSet`), règles |
+| `params.ts` | `GRID_SET_V1` = seed v1 (grilles, poids, paramètres course, paramètres d'axes, règles) ; `ALGO_VERSION`, `RACE_LOADS` |
+| `running.ts` | VC, D′, E (Riegel), S, seuil 1, 3 zones athlète, 6 zones coach, FC seuil (CHR), 5 et 10 km, réserve de vitesse et profil, tableau % VC → durée tenable |
+| `sled.ts` | Profil charge-vitesse (régression, L0, réserve, R²) et lecture semaine 1 |
+| `scores.ts` | Notes 1-5 par mesure, note par axe (moyenne pondérée, arrondie à 0,5), plafonds robustesse |
+| `chrono.ts` + `chronoData.ts` | Chrono estimé (fourchette, leviers), VC minimum par chrono visé, splits médians par chrono |
+| `insights.ts` | Points forts / faibles, drapeaux, moteur de règles, plan de bloc (`axesPlan`), Roxzone |
+| `index.ts` | `analyzeTests` : tout calculer, stamper `algo_version` + `grid_version` |
+
+Principes :
+- **Aucune grille en dur dans le calcul** : le moteur reçoit un `GridSet`. `GRID_SET_V1` sert de seed à la base (PR 2) et de défaut en test.
+- **Entrées brutes jamais modifiées** : un recalcul avec une autre version produit une nouvelle sortie, l'ancienne reste lisible.
+- **Une entrée manquante donne « — »**, jamais NaN. 2 points de course suffisent (signalé).
+- Chaque mesure porte sa **source** : publiée, calée chrono, ma méthode, méthode vitesse critique / Riegel.
+- Vocabulaire côté athlète : « système cardio-respiratoire », « seuils », 3 zones (Zone 1 Endurance, Zone 2 Seuils, Zone 3 Haute intensité). Les 6 zones de vitesse, les 5 zones FC, E et le tableau % VC restent côté coach.
+- Analyse course : modèle vitesse critique (Monod-Scherrer / Jones) + loi de puissance de Riegel, seuils selon la méthode Rivet.
+
+Tests : `src/lib/__tests__/hyroxTests.test.ts` (golden tests 1 à 3 du prompt, cas limites, sled, versions de grille). Oracle : le radar bilan YOXX (`radar-bilan.html`, fonctions `compute`, `axisScores`, `predict`, `axesPlan`, `roxPlan`), résultats identiques.
+
+Seuils sans source, seedés actifs mais marqués `to_recalibrate` : chute sled en semaine 1 (85 %), chute wall balls (75 %), écart Push / Pull (2 notes). Grille de la réserve au sled à recaler (L0 surestime la charge max réelle).

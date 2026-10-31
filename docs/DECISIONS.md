@@ -1231,4 +1231,18 @@ crée des habitudes, et dépose une fiche qu'il a fabriquée (`POST /fiches`).
 
 ---
 
+## 2026-10 — Tests HYROX : moteur pur, paramètres versionnés injectés
+
+**Décision** : le moteur des Tests HYROX (`src/lib/hyrox/tests/`) ne lit aucune constante de grille. Il reçoit un `GridSet` (grilles 1-5, poids, paramètres course, paramètres d'axes, règles), stampe chaque sortie `algo_version` + `grid_version`, et ne modifie jamais les entrées brutes. `GRID_SET_V1` est la seule copie des valeurs v1 : il servira de seed SQL.
+
+**Pourquoi** : Hugo veut perfectionner la batterie et les calculs en continu, sans redéployer, et pouvoir recalculer une ancienne analyse avec une nouvelle version sans perdre l'ancienne (comparaison aux vrais chronos de course).
+
+**Détails** :
+- Port fidèle du radar bilan YOXX du 31/10/2026, vérifié par les golden tests 1 à 3 (le radar exécuté dans node a servi d'oracle).
+- Les prédictions 5 et 10 km tronquent les secondes à l'affichage (`fmtTime(s, { floor: true })`), comme l'outil de référence (10 km = 55:22,8 → 55:22).
+- Le moteur propose les axes de travail ; seule la version validée par le coach sera montrée à l'athlète (PR 2 et 4).
+- Règles d'axes sous forme de données (`condition` jsonb : métrique, opérateur, seuil, `all` / `any`), pour vivre dans `hyrox_work_axes_rules`.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*
