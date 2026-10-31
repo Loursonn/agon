@@ -44,6 +44,9 @@ export const QK = {
   calAll:         ['cal'] as const,
   // ── Modifications athlète (reschedule + bonus, pour coach) ───────────────────
   athleteModifications: (aid: string) => ['athleteModifications', aid] as const,
+  // ── Lien de première connexion d un athlète pré-créé ─────────────────────────
+  athleteClaim: (aid: string) => ["athleteClaim", aid] as const,
+  claimInfo: (token: string) => ["claimInfo", token] as const,
   // ── Coach dashboard ───────────────────────────────────────────────────────────
   coachDashboard: {
     today:         (cid: string, date: string) => ['coachDashboard', 'today',         cid, date] as const,

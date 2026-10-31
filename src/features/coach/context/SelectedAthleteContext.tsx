@@ -21,14 +21,14 @@ export function useSelectedAthlete() {
 
 export function SelectedAthleteProvider({ children }: { children: React.ReactNode }) {
   const { athleteId } = useParams<{ athleteId: string }>();
-  const { athletes, user, profile } = useAuth();
+  const { athletes, hiddenAthletes, user, profile } = useAuth();
   const navigate = useNavigate();
 
   const selectedAthleteId = athleteId ?? null;
   const isOwnView = selectedAthleteId === user?.id;
   const selectedAthlete: Profile | null = isOwnView
     ? profile
-    : (athletes.find((a) => a.id === selectedAthleteId) ?? null);
+    : ([...athletes, ...hiddenAthletes].find((a) => a.id === selectedAthleteId) ?? null);
 
   const setSelectedAthlete = (id: string) => {
     navigate(`/coach/athletes/${id}/planning`);

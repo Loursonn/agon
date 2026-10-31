@@ -37,6 +37,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-10-31-athletes-masques-et-pre-creation",
+    date: "2026-10-31",
+    kind: "feature",
+    title: "Masque tes athlètes en pause et prépare un nouvel athlète avant sa première connexion",
+    summary:
+      "Deux nouveautés dans la page Athlètes : tu peux masquer les athlètes que tu ne suis qu'en pré-saison, et créer un athlète toi-même pour le programmer avant même qu'il ne se connecte.",
+    sections: [
+      {
+        title: "Masquer un athlète",
+        points: [
+          "Dans Athlètes, le bouton œil barré à droite de chaque ligne masque l'athlète. Il disparaît de ta liste, du sélecteur d'athlète, de l'accueil et des alertes.",
+          "Les athlètes masqués restent dans la section repliée « Masqués » en bas de la page, d'où tu peux les rouvrir ou les réafficher d'un clic.",
+          "Ton athlète ne voit aucun changement de son côté : le masquage est un simple confort pour toi.",
+        ],
+      },
+      {
+        title: "Créer un athlète avant sa première connexion",
+        points: [
+          "Le bouton + en haut de la page Athlètes demande juste un prénom et un nom, puis crée sa page comme celle des autres : tu peux construire son programme tout de suite.",
+          "Tant qu'il ne s'est pas connecté, une petite icône bleue en forme de deux maillons apparaît à côté de son nom (dans sa page et dans la liste). Un clic copie le lien à lui envoyer.",
+          "Avec ce lien, il retrouve son prénom, son nom et ton code coach déjà remplis : il n'a plus qu'à choisir son email et son mot de passe, et tout ce que tu as préparé est là.",
+          "Le lien ne marche qu'une seule fois. Si tu supprimes un athlète encore en attente, son lien est supprimé avec lui.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-01-garmin-hors-ia",
     date: "2026-11-01",
     kind: "feature",

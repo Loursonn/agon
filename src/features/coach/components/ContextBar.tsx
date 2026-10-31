@@ -7,6 +7,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import { C } from "@/lib/theme";
+import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import {
   Popover,
   PopoverContent,
@@ -176,6 +177,11 @@ export default function ContextBar() {
             </span>
           )}
         </div>
+
+        {/* Lien de première connexion (athlète pré-créé, pas encore activé) */}
+        {selectedAthlete?.is_pending && (
+          <ClaimLinkButton athleteId={selectedAthlete.id} pending size={13} />
+        )}
 
         {/* Badge modifications athlète */}
         {modifCount > 0 && (

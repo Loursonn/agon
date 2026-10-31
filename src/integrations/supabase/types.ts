@@ -1512,6 +1512,12 @@ export type Database = {
           },
         ]
       }
+      athlete_claims: {
+        Row: { athlete_id: string; created_at: string; token: string }
+        Insert: { athlete_id: string; created_at?: string; token: string }
+        Update: { athlete_id?: string; created_at?: string; token?: string }
+        Relationships: []
+      }
       invitations: {
         Row: {
           coach_id: string
@@ -2199,6 +2205,7 @@ export type Database = {
           birth_date: string | null
           body_fat_pct: number | null
           booking_url: string | null
+          coach_hidden: boolean
           coach_code: string | null
           coach_id: string | null
           created_at: string | null
@@ -2211,6 +2218,7 @@ export type Database = {
           id: string
           is_admin: boolean
           is_certified_coach: boolean
+          is_pending: boolean
           is_hyrox_athlete: boolean
           last_name: string | null
           role: string
@@ -2222,6 +2230,7 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          coach_hidden?: boolean
           coach_code?: string | null
           coach_id?: string | null
           created_at?: string | null
@@ -2234,6 +2243,7 @@ export type Database = {
           id: string
           is_admin?: boolean
           is_certified_coach?: boolean
+          is_pending?: boolean
           is_hyrox_athlete?: boolean
           last_name?: string | null
           role: string
@@ -2245,6 +2255,7 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          coach_hidden?: boolean
           coach_code?: string | null
           coach_id?: string | null
           created_at?: string | null
@@ -2257,6 +2268,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           is_certified_coach?: boolean
+          is_pending?: boolean
           is_hyrox_athlete?: boolean
           last_name?: string | null
           role?: string
@@ -3934,6 +3946,14 @@ export type Database = {
         | { Args: { "": string }; Returns: boolean[] }
       toggle_coach_certification: {
         Args: { p_certified: boolean; p_target_id: string }
+        Returns: undefined
+      }
+      get_claim_info: {
+        Args: { p_token: string }
+        Returns: { first_name: string | null; last_name: string | null; coach_code: string | null; coach_name: string | null }[]
+      }
+      set_athlete_hidden: {
+        Args: { athlete_id: string; hidden: boolean }
         Returns: undefined
       }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }

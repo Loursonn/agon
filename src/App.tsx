@@ -12,6 +12,7 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import Login from "./pages/Login.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import InviteAccept from "./pages/InviteAccept.tsx";
+import ClaimAthlete from "./pages/ClaimAthlete.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 // Pages légales publiques (lazy — rarement ouvertes, mais doivent rester
@@ -101,6 +102,7 @@ function AnimatedRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/invite/:token" element={<InviteAccept />} />
+          <Route path="/claim/:token" element={<ClaimAthlete />} />
 
           {/* Documents légaux — publics par obligation */}
           <Route path="/confidentialite"  element={<PrivacyPolicy />} />
