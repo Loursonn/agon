@@ -244,6 +244,89 @@ export type Database = {
           },
         ]
       }
+      athlete_staff: {
+        Row: {
+          added_by: string | null
+          added_by_role: string
+          athlete_id: string
+          athlete_notified_at: string | null
+          can_edit_coach_content: boolean
+          coach_notified_at: string | null
+          created_at: string
+          id: string
+          permissions: Json
+          profession: string
+          revoked_at: string | null
+          revoked_by: string | null
+          staff_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          added_by_role: string
+          athlete_id: string
+          athlete_notified_at?: string | null
+          can_edit_coach_content?: boolean
+          coach_notified_at?: string | null
+          created_at?: string
+          id?: string
+          permissions?: Json
+          profession: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          staff_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          added_by_role?: string
+          athlete_id?: string
+          athlete_notified_at?: string | null
+          can_edit_coach_content?: boolean
+          coach_notified_at?: string | null
+          created_at?: string
+          id?: string
+          permissions?: Json
+          profession?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          staff_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_staff_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_staff_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_staff_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_staff_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_test_results: {
         Row: {
           athlete_id: string
@@ -364,6 +447,162 @@ export type Database = {
           quote_id?: number
         }
         Relationships: []
+      }
+      coach_api_access_log: {
+        Row: {
+          athlete_id: string | null
+          coach_id: string
+          created_at: string
+          id: number
+          key_id: string | null
+          route: string
+        }
+        Insert: {
+          athlete_id?: string | null
+          coach_id: string
+          created_at?: string
+          id?: number
+          key_id?: string | null
+          route: string
+        }
+        Update: {
+          athlete_id?: string | null
+          coach_id?: string
+          created_at?: string
+          id?: number
+          key_id?: string | null
+          route?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_access_log_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_api_drafts: {
+        Row: {
+          applied_via: string | null
+          athlete_id: string
+          base_hash: string | null
+          body: string
+          coach_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          key_id: string | null
+          kind: string
+          ops: Json
+          status: string
+          title: string
+          undo: Json
+          undone_at: string | null
+        }
+        Insert: {
+          applied_via?: string | null
+          athlete_id: string
+          base_hash?: string | null
+          body?: string
+          coach_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          key_id?: string | null
+          kind: string
+          ops?: Json
+          status?: string
+          title: string
+          undo?: Json
+          undone_at?: string | null
+        }
+        Update: {
+          applied_via?: string | null
+          athlete_id?: string
+          base_hash?: string | null
+          body?: string
+          coach_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          key_id?: string | null
+          kind?: string
+          ops?: Json
+          status?: string
+          title?: string
+          undo?: Json
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_drafts_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_api_keys: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
+      coach_api_rate: {
+        Row: {
+          hits: number
+          key_id: string
+          window_start: string
+        }
+        Insert: {
+          hits?: number
+          key_id: string
+          window_start: string
+        }
+        Update: {
+          hits?: number
+          key_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_api_rate_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coach_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       competitions: {
         Row: {
@@ -2213,6 +2452,7 @@ export type Database = {
           is_certified_coach: boolean
           is_hyrox_athlete: boolean
           last_name: string | null
+          profession: string | null
           role: string
           weight_kg: number | null
         }
@@ -2236,6 +2476,7 @@ export type Database = {
           is_certified_coach?: boolean
           is_hyrox_athlete?: boolean
           last_name?: string | null
+          profession?: string | null
           role: string
           weight_kg?: number | null
         }
@@ -2259,6 +2500,7 @@ export type Database = {
           is_certified_coach?: boolean
           is_hyrox_athlete?: boolean
           last_name?: string | null
+          profession?: string | null
           role?: string
           weight_kg?: number | null
         }
@@ -2904,6 +3146,76 @@ export type Database = {
           {
             foreignKeyName: "specific_sports_coach_id_fkey"
             columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_invitations: {
+        Row: {
+          athlete_id: string
+          can_edit_coach_content: boolean
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          invited_by: string
+          invited_by_role: string
+          permissions: Json
+          profession: string
+          token: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          athlete_id: string
+          can_edit_coach_content?: boolean
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by: string
+          invited_by_role: string
+          permissions?: Json
+          profession: string
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          can_edit_coach_content?: boolean
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          invited_by_role?: string
+          permissions?: Json
+          profession?: string
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitations_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invitations_used_by_fkey"
+            columns: ["used_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3724,6 +4036,7 @@ export type Database = {
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
+      accept_staff_invitation: { Args: { p_token: string }; Returns: string }
       ai_eligible_sources: {
         Args: { p_athlete: string }
         Returns: Database["public"]["Enums"]["data_source"][]
@@ -3732,6 +4045,7 @@ export type Database = {
       can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
       can_read_doc_file: { Args: { object_name: string }; Returns: boolean }
       close_unfinished_workouts: { Args: never; Returns: number }
+      coach_api_hit: { Args: { p_key: string }; Returns: number }
       col_is_null:
         | {
             Args: {
@@ -3828,6 +4142,17 @@ export type Database = {
         }[]
       }
       get_my_coach_email: { Args: never; Returns: string }
+      get_staff_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          athlete_name: string
+          coach_name: string
+          invited_by_role: string
+          inviter_name: string
+          profession: string
+          status: string
+        }[]
+      }
       has_unique: { Args: { "": string }; Returns: string }
       in_todo: { Args: never; Returns: boolean }
       is_coach_of: { Args: { athlete_uuid: string }; Returns: boolean }
@@ -3918,6 +4243,38 @@ export type Database = {
         }
         Returns: boolean
       }
+      staff_app_data_domain: { Args: { p_key: string }; Returns: string }
+      staff_apply_to_all: { Args: { p_link_id: string }; Returns: number }
+      staff_can: {
+        Args: { athlete_uuid: string; domain: string; level: string }
+        Returns: boolean
+      }
+      staff_can_edit: {
+        Args: { athlete_uuid: string; author: string; domain: string }
+        Returns: boolean
+      }
+      staff_can_edit_doc: { Args: { doc_uuid: string }; Returns: boolean }
+      staff_can_path: {
+        Args: { domain: string; level: string; p_name: string }
+        Returns: boolean
+      }
+      staff_can_write_bank: { Args: { coach_uuid: string }; Returns: boolean }
+      staff_default_permissions: {
+        Args: { p_profession: string }
+        Returns: Json
+      }
+      staff_doc_for_athlete: {
+        Args: { athlete_uuid: string; doc_uuid: string }
+        Returns: boolean
+      }
+      staff_domains: { Args: never; Returns: string[] }
+      staff_is_linked: { Args: { athlete_uuid: string }; Returns: boolean }
+      staff_normalize_permissions: { Args: { p: Json }; Returns: Json }
+      staff_profile_visible: { Args: { staff_uuid: string }; Returns: boolean }
+      staff_sharing_consented: {
+        Args: { athlete_uuid: string }
+        Returns: boolean
+      }
       sync_doc_assignments: {
         Args: { p_athlete: string; p_doc_ids: string[]; p_source: string }
         Returns: undefined
@@ -3936,7 +4293,9 @@ export type Database = {
         Args: { p_certified: boolean; p_target_id: string }
         Returns: undefined
       }
+      trigger_coros_sync: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
+      workout_log_athlete_id: { Args: { p_log_id: string }; Returns: string }
       workout_log_has_entries: { Args: { mods: Json }; Returns: boolean }
     }
     Enums: {
@@ -3945,6 +4304,7 @@ export type Database = {
         | "ai_programming"
         | "garmin_sync"
         | "coros_sync"
+        | "staff_sharing"
       data_source: "garmin" | "coros" | "file_import" | "manual"
       provider_status:
         | "active"
@@ -4088,6 +4448,7 @@ export const Constants = {
         "ai_programming",
         "garmin_sync",
         "coros_sync",
+        "staff_sharing",
       ],
       data_source: ["garmin", "coros", "file_import", "manual"],
       provider_status: [
