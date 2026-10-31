@@ -14,6 +14,7 @@
  * les précédentes ont créé, modifié ou supprimé.
  */
 import { cleanText, fail, id as idOf, int, type Obj, oneOf, onlyKeys, reqText } from "./coachApiCheck.ts";
+import type { CareState } from "./coachApiCare.ts";
 
 // ── État lu en base ─────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ export interface MesoState extends Period { macrocycle_id: string }
 export interface CycleState extends Period { mesocycle_id: string | null }
 export interface MicroState { id: string; cycle_id: string; week_number: number; start_date: string; end_date: string; is_deload: boolean }
 
-export interface PlanState {
+export interface PlanState extends CareState {
   macros: MacroState[];
   mesos: MesoState[];
   cycles: CycleState[];

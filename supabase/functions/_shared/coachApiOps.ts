@@ -30,8 +30,9 @@ import {
 } from "./coachApiCheck.ts";
 import { type EnergySessionShape, parseEnergySession } from "./coachApiEnergy.ts";
 import { isPlanOpName, PLAN_OPS, parsePlanOp, type PlanCtx, type PlanOp, type PlanState } from "./coachApiPlan.ts";
+import { CARE_OPS, type CareCtx, type CareOp, isCareOpName, parseCareOp } from "./coachApiCare.ts";
 
-export type { PlanOp, PlanState };
+export type { CareOp, PlanOp, PlanState };
 
 export { cleanText };
 
@@ -191,7 +192,7 @@ export type WeekOp =
     note: string;
   };
 
-export type DraftOp = ProgOp | PlanningOp | GoalsOp | WeekOp | PlanOp;
+export type DraftOp = ProgOp | PlanningOp | GoalsOp | WeekOp | PlanOp | CareOp;
 
 // Listes du thème du jour, recopiées de `src/lib/dayTheme.ts` (un test
 // vérifie qu'elles restent égales).
@@ -707,11 +708,11 @@ function weekParser(ctx: ValidateCtx, plan: boolean) {
 
       default:
         return fail(`${path}.op`, plan
-          ? `opération inconnue (attendues : ${[...WEEK_OPS, ...PLAN_OPS].join(", ")})`
+          ? `opération inconnue (attendues : ${[...WEEK_OPS, ...PLAN_OPS, ...CARE_OPS].join(", ")})`
           : `${WEEK_OPS.join(", ")} attendu`);
     }
   };
-  return { parse, sessionRefs };
+  return { parse, sessionRefs, energyRefs };
 }
 
 const WEEK_OPS = ["create_session", "place_session", "create_energy_session", "place_energy_session", "set_day_theme"] as const;
@@ -738,8 +739,20 @@ function parsePlanOps(rawOps: Obj[], ctx: ValidateCtx): DraftOp[] {
     sessionRef: (r) => week.sessionRefs.get(r)?.id,
     refs: new Map(),
   };
+  const cctx: CareCtx = {
+    newId: ctx.newId,
+    state: pctx.state,
+    sessions: pctx.sessions,
+    sessionRef: pctx.sessionRef,
+    energyRef: (r) => week.energyRefs.get(r),
+    links: new Map(),
+  };
   return rawOps.map((raw, i) => (
-    isPlanOpName(raw.op) ? parsePlanOp(raw, `ops[${i}]`, pctx) : week.parse(raw, `ops[${i}]`)
+    isPlanOpName(raw.op)
+      ? parsePlanOp(raw, `ops[${i}]`, pctx)
+      : isCareOpName(raw.op)
+      ? parseCareOp(raw, `ops[${i}]`, cctx)
+      : week.parse(raw, `ops[${i}]`)
   ));
 }
 

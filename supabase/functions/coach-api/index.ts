@@ -16,15 +16,21 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AI_ASSISTANT_SINCE, type DraftKind, type DraftOp, type PlanState, normName, validateDraft, type ProgSessionShape } from "../_shared/coachApiOps.ts";
 import { ApplyConflict, applyDraft, parseUndo, UndoConflict, undoSteps } from "../_shared/coachApiApply.ts";
-import { buildPeriodisation, buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
+import { buildFiches, buildHabits, buildPeriodisation, buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
+import type { CareState } from "../_shared/coachApiCare.ts";
+import { cleanText, Invalid, isObj, oneOf, onlyKeys, reqText } from "../_shared/coachApiCheck.ts";
+import { collectDocIds } from "../_shared/fiches.ts";
 
 const RATE_LIMIT_PER_MINUTE = 60;
 const MAX_BODY_BYTES = 100_000;
+/** Fiche déposée : 10 Mo, la limite du bucket `docs` (en base64 : un tiers de plus). */
+const MAX_FICHE_BYTES = 10 * 1024 * 1024;
+const MAX_FICHE_BODY = 14_500_000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
 };
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
@@ -244,6 +250,53 @@ function removalDates(raw: unknown): string[] {
   return [...out];
 }
 
+/**
+ * Fiches et habitudes de l'athlète, telles que l'assistant peut les voir et
+ * les proposer. Jamais les fiches que l'athlète a lui-même ajoutées.
+ */
+async function careData(admin: SupabaseClient, coachId: string, athleteId: string) {
+  const q = async <T>(p: PromiseLike<{ data: T[] | null; error: { message: string } | null }>, what: string) => {
+    const { data, error } = await p;
+    if (error) throw new Error(`${what}: ${error.message}`);
+    return data ?? [];
+  };
+  const [docsAll, assignments, energyOwned, habits, profile] = await Promise.all([
+    q(admin.from("docs")
+      .select("id, title, description, category, kind, athlete_id, origin_id, variant_label, tags, uploaded_by")
+      .eq("coach_id", coachId).is("archived_at", null)
+      .or(`athlete_id.is.null,athlete_id.eq.${athleteId}`)
+      .order("created_at", { ascending: false }).limit(1000), "docs"),
+    q(admin.from("doc_assignments").select("doc_id, source, coach_note, seen_at").eq("athlete_id", athleteId), "doc_assignments"),
+    q(admin.from("energy_sessions").select("id, name, fiches").eq("athlete_id", athleteId).is("archived_at", null).limit(500), "energy_sessions"),
+    q(admin.from("habits").select("id, name, emoji, color, created_by, sort_order").eq("athlete_id", athleteId).eq("is_active", true), "habits"),
+    q(admin.from("profiles").select("habit_tracker_enabled").eq("id", athleteId), "profiles"),
+  ]);
+  const docs = docsAll.filter((d) => d.uploaded_by !== athleteId);
+  const claudeIds = docs.filter((d) => d.athlete_id === null && Array.isArray(d.tags) && d.tags.includes("claude")).map((d) => d.id as string);
+  const elsewhere = claudeIds.length === 0 ? [] : await q(
+    admin.from("doc_assignments").select("doc_id").in("doc_id", claudeIds).neq("athlete_id", athleteId),
+    "doc_assignments",
+  );
+  const shared = new Set(elsewhere.map((a) => a.doc_id as string));
+  return { docs, assignments, energyOwned, habits, tracker: profile[0]?.habit_tracker_enabled === true, shared };
+}
+
+function careState(d: Awaited<ReturnType<typeof careData>>): CareState {
+  return {
+    fiches: d.docs.map((x) => ({
+      id: x.id as string,
+      title: x.title as string,
+      bank: x.athlete_id === null,
+      claude: Array.isArray(x.tags) && x.tags.includes("claude"),
+      shared: d.shared.has(x.id as string),
+    })),
+    manualFiches: d.assignments.filter((a) => a.source === "manuel").map((a) => a.doc_id as string),
+    energyOwned: d.energyOwned.map((e) => ({ id: e.id as string, name: e.name as string, fiches: Array.isArray(e.fiches) ? e.fiches : [] })),
+    habits: d.habits.map((h) => ({ id: h.id as string, name: h.created_by ? h.name as string : null, mine: !!h.created_by })),
+    habitTracker: d.tracker,
+  };
+}
+
 // ─────────────────────────────── Routes ─────────────────────────────────────
 
 async function getAthletes(admin: SupabaseClient, caller: Caller) {
@@ -401,6 +454,149 @@ async function getEnergyBank(admin: SupabaseClient, caller: Caller, url: URL) {
   });
 }
 
+async function getFiches(admin: SupabaseClient, caller: Caller, athleteId: string) {
+  await logAccess(admin, caller, "GET /athletes/:id/fiches", athleteId);
+  const d = await careData(admin, caller.coachId, athleteId);
+  const { values } = await appData(admin, athleteId, ["asp:prog"]);
+  const prog = Array.isArray(values["asp:prog"]) ? values["asp:prog"] as { id: string; name: string; fiches?: unknown }[] : [];
+  const links = [
+    ...prog.flatMap((s) => collectDocIds([s.fiches as never]).map((doc_id) => ({ doc_id, session_id: s.id, session_name: s.name, type: "muscu" as const }))),
+    ...d.energyOwned.flatMap((e) => collectDocIds([e.fiches as never]).map((doc_id) => ({ doc_id, session_id: e.id as string, session_name: e.name as string, type: "energie" as const }))),
+  ];
+  const visible = new Set(d.docs.map((x) => x.id as string));
+  return json(buildFiches({
+    docs: d.docs as never,
+    // Une fiche attribuée qui n'est plus visible ici (archivée, ajout de
+    // l'athlète) ne sort pas : son titre n'est pas du coach.
+    assignments: d.assignments.filter((a) => visible.has(a.doc_id as string)) as never,
+    links: links.filter((l) => visible.has(l.doc_id)),
+  }));
+}
+
+async function getHabitudes(admin: SupabaseClient, caller: Caller, athleteId: string) {
+  await logAccess(admin, caller, "GET /athletes/:id/habitudes", athleteId);
+  const d = await careData(admin, caller.coachId, athleteId);
+  const today = todayParis();
+  const since = new Date(Date.parse(today + "T00:00:00Z") - 27 * 86_400_000).toISOString().slice(0, 10);
+  const { data: logs, error } = d.habits.length === 0
+    ? { data: [], error: null }
+    : await admin.from("habit_logs").select("habit_id, date").eq("athlete_id", athleteId)
+      .in("habit_id", d.habits.map((h) => h.id)).gte("date", since);
+  if (error) throw new Error("habit_logs: " + error.message);
+  return json(buildHabits({ today, tracker: d.tracker, habits: d.habits as never, logs: (logs ?? []) as never }));
+}
+
+const FICHE_MIME: Record<string, { ext: string; kind: "pdf" | "image"; magic: (b: Uint8Array) => boolean }> = {
+  "application/pdf": { ext: "pdf", kind: "pdf", magic: (b) => b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 },
+  "image/jpeg": { ext: "jpg", kind: "image", magic: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  "image/png": { ext: "png", kind: "image", magic: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 },
+  "image/webp": {
+    ext: "webp", kind: "image",
+    magic: (b) => String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP",
+  },
+};
+const FICHE_CATEGORIES = ["mobilite", "pacing", "prevention", "recuperation", "nutrition", "education", "questionnaire", "autre"] as const;
+
+/**
+ * Fiche fabriquée par l'assistant (PDF ou image) : ajoutée à la banque du
+ * coach, étiquetée « claude ». Aucun athlète ne la voit tant qu'une
+ * proposition ne l'attribue ou ne la rattache pas à une séance.
+ */
+async function postFiche(admin: SupabaseClient, caller: Caller, req: Request) {
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_FICHE_BODY) return fail(413, "corps_trop_long", "Fiche : 10 Mo maximum.");
+  const text = await req.text();
+  if (text.length > MAX_FICHE_BODY) return fail(413, "corps_trop_long", "Fiche : 10 Mo maximum.");
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return fail(400, "json_invalide", "Le corps de la requête doit être du JSON.");
+  }
+
+  let row: { title: string; description: string | null; category: string; mime: string; bytes: Uint8Array };
+  try {
+    if (!isObj(raw)) throw new Invalid("body : objet JSON attendu");
+    onlyKeys(raw, ["title", "description", "category", "mime_type", "content_base64"], "body");
+    const mime = oneOf(raw.mime_type, Object.keys(FICHE_MIME), "mime_type");
+    if (typeof raw.content_base64 !== "string") throw new Invalid("content_base64 : texte base64 attendu");
+    const b64 = raw.content_base64.replace(/^data:[^,]*,/, "").replace(/\s+/g, "");
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) throw new Invalid("content_base64 : base64 invalide");
+    const bin = atob(b64);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    if (bytes.length === 0 || bytes.length > MAX_FICHE_BYTES) throw new Invalid("content_base64 : fichier vide ou de plus de 10 Mo");
+    if (!FICHE_MIME[mime].magic(bytes)) throw new Invalid(`content_base64 : le contenu n'est pas un fichier ${mime}`);
+    row = {
+      title: reqText(raw.title, 120, "title"),
+      description: raw.description === undefined || raw.description === null ? null : (cleanText(raw.description, 1000, "description") || null),
+      category: raw.category === undefined ? "autre" : oneOf(raw.category, FICHE_CATEGORIES, "category"),
+      mime,
+      bytes,
+    };
+  } catch (e) {
+    if (e instanceof Invalid) return fail(400, "fiche_invalide", e.message);
+    return fail(400, "fiche_invalide", "content_base64 : base64 invalide");
+  }
+
+  await logAccess(admin, caller, "POST /fiches", null);
+  const id = crypto.randomUUID();
+  const path = `${caller.coachId}/banque/${id}.${FICHE_MIME[row.mime].ext}`;
+  const { error: upErr } = await admin.storage.from("docs").upload(path, row.bytes, { contentType: row.mime, upsert: false });
+  if (upErr) throw new Error("storage docs: " + upErr.message);
+  const { error } = await admin.from("docs").insert({
+    id,
+    coach_id: caller.coachId,
+    athlete_id: null,
+    uploaded_by: caller.coachId,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    tags: ["claude"],
+    kind: FICHE_MIME[row.mime].kind,
+    file_path: path,
+    file_size: row.bytes.length,
+    mime_type: row.mime,
+    is_self_service: false,
+  });
+  if (error) {
+    await admin.storage.from("docs").remove([path]);
+    throw new Error("docs: " + error.message);
+  }
+  return json({
+    id,
+    titre: row.title,
+    message: "Fiche ajoutée à la banque du coach, étiquetée « claude ». Aucun athlète ne la voit : attribue-la (assign_fiche) ou rattache-la à une séance (attach_fiche) dans une proposition. Pour la retirer : DELETE /fiches/" + id + ".",
+  }, 201);
+}
+
+/** Retire une fiche déposée par l'assistant, tant que personne ne l'a reçue. */
+async function deleteFiche(admin: SupabaseClient, caller: Caller, docId: string) {
+  const { data: doc, error } = await admin
+    .from("docs").select("id, file_path, tags").eq("id", docId).eq("coach_id", caller.coachId).maybeSingle();
+  if (error) throw new Error("docs: " + error.message);
+  if (!doc || !(Array.isArray(doc.tags) && doc.tags.includes("claude"))) {
+    return fail(404, "fiche_introuvable", "Fiche inconnue. Seules les fiches déposées par l'assistant se retirent ici ; les autres, le coach les gère dans Agon.");
+  }
+  await logAccess(admin, caller, "DELETE /fiches/:id", null);
+  const count = async (table: string, column: string) => {
+    const { count: n, error: cErr } = await admin.from(table).select("id", { count: "exact", head: true }).eq(column, docId);
+    if (cErr) throw new Error(`${table}: ${cErr.message}`);
+    return n ?? 0;
+  };
+  if ((await count("doc_assignments", "doc_id")) > 0) {
+    return fail(409, "fiche_utilisee", "Fiche attribuée ou rattachée à une séance : retire-la d'abord (unassign_fiche, detach_fiche), ou annule la proposition qui l'a donnée.");
+  }
+  if ((await count("docs", "origin_id")) > 0 || (await count("doc_comments", "doc_id")) > 0) {
+    return fail(409, "fiche_utilisee", "Le coach en a fait des variantes ou elle a des commentaires : elle reste, le coach la gère dans Agon.");
+  }
+  if (doc.file_path) {
+    const { error: rmErr } = await admin.storage.from("docs").remove([doc.file_path as string]);
+    if (rmErr) throw new Error("storage docs: " + rmErr.message);
+  }
+  const { error: dErr } = await admin.from("docs").delete().eq("id", docId).eq("coach_id", caller.coachId);
+  if (dErr) throw new Error("docs: " + dErr.message);
+  return json({ status: "supprimee", message: "Fiche retirée de la banque." });
+}
+
 async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: string, req: Request) {
   const text = await req.text();
   if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) {
@@ -436,7 +632,9 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
     library: kind === "programme" || kind === "semaine" || kind === "plan" ? await library(admin, caller.coachId) : undefined,
     today: todayParis(),
     energy: kind === "semaine" || kind === "plan" ? await energyForAthlete(admin, caller.coachId, athleteId) : undefined,
-    plan: kind === "plan" ? await planState(admin, athleteId, removalDates(raw)) : undefined,
+    plan: kind === "plan"
+      ? { ...await planState(admin, athleteId, removalDates(raw)), ...careState(await careData(admin, caller.coachId, athleteId)) }
+      : undefined,
   });
   if (!result.ok) return fail(400, "proposition_invalide", result.error);
 
@@ -644,7 +842,7 @@ serve(async (req) => {
     const url = new URL(req.url);
     const path = url.pathname.replace(/^.*?\/coach-api/, "").replace(/\/+$/, "") || "/";
     const seg = path.split("/").filter(Boolean);
-    const route = `${req.method} /${seg.map((s, i) => (i === 1 && (seg[0] === "athletes" || seg[0] === "drafts") ? ":id" : s)).join("/")}`;
+    const route = `${req.method} /${seg.map((s, i) => (i === 1 && (seg[0] === "athletes" || seg[0] === "drafts" || seg[0] === "fiches") ? ":id" : s)).join("/")}`;
     const appRoute = route === "POST /drafts/:id/appliquer" || route === "POST /drafts/:id/annuler";
 
     // ── Authentification ──
@@ -699,6 +897,11 @@ serve(async (req) => {
     if (route === "GET /drafts") return await getDrafts(admin, caller, url);
     if (route === "GET /seances-energie") return await getEnergyBank(admin, caller, url);
     if (route === "GET /tests") return await getTests(admin, caller, url);
+    if (route === "POST /fiches") return await postFiche(admin, caller, req);
+    if (route === "DELETE /fiches/:id") {
+      if (!UUID.test(seg[1])) return fail(404, "fiche_introuvable", "Fiche inconnue.");
+      return await deleteFiche(admin, caller, seg[1]);
+    }
 
     if (seg[0] === "athletes" && seg.length === 3) {
       const athleteId = seg[1];
@@ -711,10 +914,12 @@ serve(async (req) => {
       if (route === "GET /athletes/:id/summary") return await getSummary(admin, caller, athlete, url);
       if (route === "GET /athletes/:id/program") return await getProgram(admin, caller, athleteId);
       if (route === "GET /athletes/:id/periodisation") return await getPeriodisation(admin, caller, athleteId);
+      if (route === "GET /athletes/:id/fiches") return await getFiches(admin, caller, athleteId);
+      if (route === "GET /athletes/:id/habitudes") return await getHabitudes(admin, caller, athleteId);
       if (route === "POST /athletes/:id/drafts") return await postDraft(admin, caller, athleteId, req);
     }
 
-    return fail(404, "route_inconnue", "Routes : GET /athletes, GET /athletes/:id/summary, GET /athletes/:id/program, GET /athletes/:id/periodisation, POST /athletes/:id/drafts, GET /drafts, POST /drafts/:id/appliquer, POST /drafts/:id/annuler, GET /exercices?q=, GET /seances-energie?q=, GET /tests?q=");
+    return fail(404, "route_inconnue", "Routes : GET /athletes, GET /athletes/:id/summary, GET /athletes/:id/program, GET /athletes/:id/periodisation, GET /athletes/:id/fiches, GET /athletes/:id/habitudes, POST /athletes/:id/drafts, POST /fiches, DELETE /fiches/:id, GET /drafts, POST /drafts/:id/appliquer, POST /drafts/:id/annuler, GET /exercices?q=, GET /seances-energie?q=, GET /tests?q=");
   } catch (e) {
     console.error("coach-api:", e instanceof Error ? e.message : e);
     return fail(500, "erreur_serveur", "Erreur interne. Réessaie plus tard.");

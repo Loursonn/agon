@@ -64,6 +64,10 @@ Chaque lecture est journalisée.
 | GET | `/athletes/:id/summary?from=AAAA-MM-JJ&to=AAAA-MM-JJ` | Données d'une période (28 jours par défaut, 90 max) |
 | GET | `/athletes/:id/program` | Programme en cours, avec les ids à citer dans les propositions |
 | GET | `/athletes/:id/periodisation` | Macrocycles, mésocycles, cycles et semaines, compétitions et tests, avec leurs ids |
+| GET | `/athletes/:id/fiches` | Fiches de ta banque et fiches perso de l'athlète, celles qu'il a déjà (et vues ou non), celles rattachées à ses séances |
+| GET | `/athletes/:id/habitudes` | Suivi activé ou non, habitudes et assiduité (jours cochés sur 7 et 28 jours) |
+| POST | `/fiches` | Déposer dans ta banque une fiche fabriquée par l'assistant (PDF ou image) |
+| DELETE | `/fiches/:id` | Retirer une fiche déposée par l'assistant, tant que personne ne l'a reçue |
 | POST | `/athletes/:id/drafts` | Déposer une proposition |
 | GET | `/drafts?status=pending\|applied\|rejected\|undone&athlete_id=…` | Propositions et leur sort |
 | POST | `/drafts/:id/appliquer` | Appliquer une proposition déposée |
@@ -260,12 +264,46 @@ semaine (mêmes règles), plus :
   (elle ne réapparaît pas). Un test passé ne se modifie ni ne se supprime.
 - Les opérations s'appliquent dans l'ordre : créer avant de citer une `ref`.
 
+#### Fiches et habitudes
+
+Dans la même planification :
+
+| op | Champs |
+|---|---|
+| `assign_fiche` | `fiche_id`, `note?` (500 caractères, affichée à l'athlète), `perso?` (`true` : la ranger dans les fiches perso de l'athlète — seulement une fiche déposée par l'assistant et donnée à personne d'autre) |
+| `unassign_fiche` | `fiche_id` — une fiche attribuée à la main |
+| `attach_fiche` | `fiche_id`, et la séance : `session_id` ou `ref` (musculation), `energy_session_id` ou `energy_ref` (séance énergétique propre à l'athlète) |
+| `detach_fiche` | `fiche_id`, `session_id` ou `energy_session_id` |
+| `create_habit` | `name` (40 caractères), `icon?`, `color?` (palette d'Agon) |
+| `update_habit` | `id`, `name?`, `icon?`, `color?` — une habitude posée par toi ou ton assistant |
+| `remove_habit` | `id` — idem ; ses jours cochés restent |
+
+- Une fiche rattachée à une séance est attribuée à l'athlète quand la séance
+  est à son planning, comme dans Agon.
+- Pas de fiche sur une séance énergétique de ta bibliothèque partagée : le
+  changement toucherait tous les athlètes qui l'ont. Rattache-la à la copie de
+  l'athlète, ou fais-le dans Agon.
+- La première habitude active le suivi des habitudes de l'athlète s'il ne
+  l'était pas (l'aperçu le dit).
+- Les habitudes que l'athlète s'est données sont à lui : l'assistant n'en
+  voit que l'assiduité, pas le nom, et ne les modifie pas.
+
+**Déposer une fiche** fabriquée par l'assistant : `POST /fiches` avec
+`{ "title", "description?", "category?", "mime_type", "content_base64" }`.
+Formats : `application/pdf`, `image/jpeg`, `image/png`, `image/webp` ; 10 Mo
+au plus. Elle arrive dans ta banque avec l'étiquette « claude » et **aucun
+athlète ne la voit** tant qu'une proposition ne l'attribue pas ou ne la
+rattache pas à une séance. Pour la retirer : `DELETE /fiches/:id` (refusé si
+elle a été donnée, a des variantes ou des commentaires), ou supprime-la dans
+Agon.
+
 **Annuler** une planification remet tout comme avant, suppressions en
 cascade comprises (périodes, séances prévues, liens des séances faites et
 du plan de course d'une compétition). Ce qui a reçu du contenu depuis
 reste : un macrocycle où tu as ajouté un mésocycle, un test passé entre-temps,
 une compétition commentée par l'athlète, une séance retirée qu'il a faite
-quand même.
+quand même. Une habitude créée puis cochée par l'athlète reste, et le suivi
+avec elle.
 
 ### Planning
 

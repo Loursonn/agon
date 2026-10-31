@@ -49,6 +49,8 @@ import {
 } from "./coachApiDb.ts";
 import { applyPlanOp, PLAN_INSERTED, undoPlanInserted, undoRowStep } from "./coachApiPlanApply.ts";
 import { isPlanOpName, type PlanOp } from "./coachApiPlan.ts";
+import { type CareOp, isCareOpName } from "./coachApiCare.ts";
+import { applyCareOp, syncFicheAssignments, undoCareInserted, undoCareStep } from "./coachApiCareApply.ts";
 
 export { ApplyConflict, type Db, hashJson, INSERTED_TABLES, type InsertedTable, RESTORE_TABLES, type RestoreTable, type UndoStep };
 
@@ -77,13 +79,28 @@ export interface ApplyResult {
  */
 export async function applyDraft(input: ApplyInput): Promise<ApplyResult> {
   const journal: UndoStep[] = [];
+  let goals: GoalsShape | undefined;
   try {
-    const goals = await run(input, journal);
-    return { undo: journal, ...(goals ? { goals } : {}) };
+    goals = await run(input, journal);
   } catch (e) {
     const report = await undoSteps(input.db, input.athleteId, input.coachId, journal, true, true);
     if (report.failed.length > 0) console.error("coach-api rollback incomplet:", report.failed.join(" ; "));
     throw e;
+  }
+  if (input.kind !== "objectifs") await syncFiches(input.db, input.athleteId, input.coachId);
+  return { undo: journal, ...(goals ? { goals } : {}) };
+}
+
+/**
+ * Les fiches suivent les séances : une séance créée, retirée ou une fiche
+ * rattachée change ce que l'athlète voit dans ses fiches. Comme dans l'app,
+ * un échec ici n'annule pas ce qui vient d'être appliqué.
+ */
+async function syncFiches(db: Db, athleteId: string, coachId: string) {
+  try {
+    await syncFicheAssignments(db, athleteId, coachId);
+  } catch (e) {
+    console.error("coach-api sync fiches:", e instanceof Error ? e.message : e);
   }
 }
 
@@ -123,6 +140,7 @@ async function run(input: ApplyInput, journal: UndoStep[]): Promise<GoalsShape |
     const today = input.today ?? new Date().toISOString().slice(0, 10);
     for (const op of ops) {
       if (isPlanOpName(op.op)) await applyPlanOp(db, athleteId, coachId, op as PlanOp, journal, today);
+      else if (isCareOpName(op.op)) await applyCareOp(db, athleteId, coachId, op as CareOp, journal);
       else await runWeek(db, athleteId, coachId, [op as WeekOp], journal);
     }
   }
@@ -300,6 +318,21 @@ export function parseUndo(raw: unknown): UndoStep[] {
           .filter((r): r is Row => !!r && typeof r === "object" && typeof (r as Row).id === "string" && typeof (r as Row).value === "string")
           .map((r) => ({ id: r.id as string, value: r.value as string })),
       });
+    } else if (o.t === "fiche_link" && (o.target === "prog" || o.target === "energy") && typeof o.session_id === "string" && typeof o.attachment_id === "string") {
+      out.push({ t: "fiche_link", target: o.target, session_id: o.session_id, attachment_id: o.attachment_id, ...(o.fresh === true ? { fresh: true } : {}) });
+    } else if (o.t === "fiche_unlink" && (o.target === "prog" || o.target === "energy") && typeof o.session_id === "string" && Array.isArray(o.items)) {
+      out.push({
+        t: "fiche_unlink",
+        target: o.target,
+        session_id: o.session_id,
+        items: o.items
+          .filter((x): x is Row => !!x && typeof x === "object" && typeof (x as Row).index === "number" && !!(x as Row).attachment && typeof (x as Row).attachment === "object")
+          .map((x) => ({ index: x.index as number, attachment: x.attachment as Row })),
+      });
+    } else if (o.t === "fiche_perso" && typeof o.doc_id === "string") {
+      out.push({ t: "fiche_perso", doc_id: o.doc_id });
+    } else if (o.t === "habit_tracker" && Array.isArray(o.habit_ids)) {
+      out.push({ t: "habit_tracker", habit_ids: o.habit_ids.filter((x): x is string => typeof x === "string") });
     }
   }
   return out;
@@ -344,6 +377,7 @@ export async function undoSteps(
       failed.push(e instanceof Error ? e.message : String(e));
     }
   }
+  if (steps.length > 0) await syncFiches(db, athleteId, coachId);
   return { kept, failed };
 }
 
@@ -382,6 +416,9 @@ async function undoOne(db: Db, athleteId: string, coachId: string, s: UndoStep):
   if (s.t === "deleted" || s.t === "updated" || s.t === "relink") {
     return undoRowStep(db, athleteId, s);
   }
+  if (s.t === "fiche_link" || s.t === "fiche_unlink" || s.t === "fiche_perso" || s.t === "habit_tracker") {
+    return undoCareStep(db, athleteId, coachId, s);
+  }
 
   if (s.t === "restore") {
     const rows = s.rows.map((r) => ({
@@ -402,6 +439,7 @@ async function undoOne(db: Db, athleteId: string, coachId: string, s: UndoStep):
 
   if (s.ids.length === 0) return 0;
   if (PLAN_INSERTED.has(s.table)) return undoPlanInserted(db, athleteId, s.table, s.ids);
+  if (s.table === "doc_assignments" || s.table === "habits") return undoCareInserted(db, athleteId, s.table, s.ids);
   if (s.table === "workout_logs" || s.table === "energy_session_assignments") {
     // Seul le prévu part : une séance faite, en cours ou manquée a une
     // histoire côté athlète.

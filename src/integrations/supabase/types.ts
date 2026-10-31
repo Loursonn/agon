@@ -1335,6 +1335,7 @@ export type Database = {
           athlete_id: string
           color: string
           created_at: string | null
+          created_by: string | null
           emoji: string
           id: string
           is_active: boolean | null
@@ -1345,6 +1346,7 @@ export type Database = {
           athlete_id: string
           color?: string
           created_at?: string | null
+          created_by?: string | null
           emoji?: string
           id?: string
           is_active?: boolean | null
@@ -1355,6 +1357,7 @@ export type Database = {
           athlete_id?: string
           color?: string
           created_at?: string | null
+          created_by?: string | null
           emoji?: string
           id?: string
           is_active?: boolean | null
@@ -1362,6 +1365,13 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "habits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "habits_athlete_id_fkey"
             columns: ["athlete_id"]

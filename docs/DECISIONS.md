@@ -1183,17 +1183,45 @@ parents, pour que l'annulation recrée les parents d'abord. Mésocycles et
 semaines n'ont pas d'`athlete_id` : l'annulation vérifie que leur parent est
 à l'athlète, et force `athlete_id` sur toute ligne recréée.
 
+**Fiches et habitudes** (01/11/2026, même `kind: "plan"`) : l'assistant
+attribue une fiche du coach (`doc_assignments` source `manuel`, avec note),
+la rattache à une séance (JSON de `asp:prog` ou `energy_sessions.fiches`),
+crée des habitudes, et dépose une fiche qu'il a fabriquée (`POST /fiches`).
+- Une fiche fabriquée arrive **en banque**, étiquetée `claude`, jamais
+  directement en fiche perso : la RLS `can_read_doc` rend une fiche perso
+  visible à l'athlète dès qu'elle existe, ce qui contournerait la
+  proposition. `assign_fiche` avec `perso: true` la range chez l'athlète
+  (l'annulation la remet en banque), seulement si elle vient de l'assistant
+  et n'est donnée à personne d'autre. Le dépôt n'écrit rien chez un athlète :
+  il est direct (choix du propriétaire), et se défait par `DELETE /fiches/:id`
+  ou depuis la banque.
+- Pas de rattachement sur une séance énergétique de la bibliothèque : elle est
+  partagée, le changement toucherait d'autres athlètes.
+- Rattachements journalisés à l'unité (`fiche_link` / `fiche_unlink`), pas par
+  copie de tout `asp:prog` : annuler ne refuse pas pour un programme modifié
+  depuis, et n'efface pas les retouches du coach.
+- Le serveur resynchronise lui-même les attributions `programme` / `energie`
+  après chaque application et annulation (`syncFicheAssignments`, même calcul
+  que la RPC `sync_doc_assignments`, qui exige une session) : une écriture
+  directe est vue tout de suite par l'athlète. Une attribution recréée ainsi
+  repart « non vue ».
+- `habits.created_by` (migration 20261101120000) : NULL = posée par l'athlète.
+  Le nom de ces habitudes est un texte libre de l'athlète, il ne sort pas
+  (assiduité seulement) et l'assistant ne les modifie pas. La première
+  habitude active `habit_tracker_enabled` ; l'annulation le désactive, sauf
+  si une habitude créée avec lui a été cochée (elle reste, le suivi aussi).
+- Testé contre la structure réelle des tables (PGlite) : contraintes
+  d'unicité, cascades, panne en route, annulation exacte.
+
 **Limites connues** :
-- Les fiches (documents) ne sont pas encore inscrites par l'assistant.
+- Si l'athlète renomme une habitude posée par le coach, son nouveau nom part
+  chez l'assistant.
 - La base ne vérifie ni les chevauchements ni l'inclusion dans le parent
   (aucun trigger, vérifié le 01/11/2026 ; seul `end_date > start_date`) : le
   validateur est la seule garde. Une proposition appliquée longtemps après sa
   validation n'est pas recontrôlée.
 - L'athlète ne voit pas lui-même ce journal : il faut le lui fournir sur
   demande.
-- Une écriture directe ne resynchronise pas les fiches (`sync_doc_assignments`
-  exige la session du coach) : c'est fait au prochain enregistrement du
-  programme, ou quand le coach applique ou annule dans Agon.
 - Si l'éditeur de programmation est ouvert pendant une écriture directe, sa
   sauvegarde différée peut l'écraser.
 

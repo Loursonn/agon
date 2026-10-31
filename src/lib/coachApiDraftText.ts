@@ -231,6 +231,24 @@ export function describeOp(op: DraftOp, names: Names): string {
       return `Modifier le test ${op.title} : ${patchText(op.patch)}`;
     case "delete_test":
       return `Supprimer le test ${op.title}`;
+    case "assign_fiche":
+      return `Donner la fiche « ${op.title} »${op.perso ? " (rangée dans ses fiches perso)" : ""}${op.note ? ` — « ${op.note} »` : ""}`;
+    case "unassign_fiche":
+      return `Retirer la fiche « ${op.title} »`;
+    case "attach_fiche":
+      return `Rattacher la fiche « ${op.title} » à ${op.session_name}`;
+    case "detach_fiche":
+      return `Détacher la fiche « ${op.title} » de ${op.session_name}`;
+    case "create_habit":
+      return `Nouvelle habitude « ${op.row.name} »${op.enable_tracker ? " (active le suivi des habitudes)" : ""}`;
+    case "update_habit":
+      return `Modifier l'habitude « ${op.name} » : ${[
+        op.patch.name ? `nom « ${op.patch.name} »` : null,
+        op.patch.emoji ? "icône" : null,
+        op.patch.color ? "couleur" : null,
+      ].filter(Boolean).join(", ")}`;
+    case "remove_habit":
+      return `Retirer l'habitude « ${op.name} » (ses jours cochés restent)`;
   }
 }
 

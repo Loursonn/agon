@@ -74,6 +74,8 @@ export const ROW_COLUMNS = {
   energy_session_assignments: [
     "id", "athlete_id", "coach_id", "energy_session_id", "scheduled_date", "status", "microcycle_id", "notes", "created_at",
   ],
+  doc_assignments: ["id", "doc_id", "athlete_id", "assigned_by", "source", "coach_note", "seen_at", "created_at"],
+  habits: ["id", "athlete_id", "name", "emoji", "color", "is_active", "sort_order", "created_by", "created_at"],
 } as const;
 export type RowTable = keyof typeof ROW_COLUMNS;
 export const ROW_TABLES = Object.keys(ROW_COLUMNS) as RowTable[];
@@ -83,6 +85,7 @@ export const cols = (t: RowTable) => ROW_COLUMNS[t].join(", ");
 export const INSERTED_TABLES = [
   "workout_logs", "energy_session_assignments", "energy_sessions", "day_themes",
   "macrocycles", "mesocycles", "cycles", "microcycles", "competitions", "test_sessions",
+  "doc_assignments", "habits",
 ] as const;
 export type InsertedTable = typeof INSERTED_TABLES[number];
 export const RESTORE_TABLES = ["day_themes"] as const;
@@ -116,7 +119,21 @@ export type UndoStep =
    * Liens remis à zéro par une suppression (séance réalisée d'une semaine
    * supprimée, plan de course d'une compétition supprimée) : à renouer.
    */
-  | { t: "relink"; table: RelinkTable; rows: { id: string; value: string }[] };
+  | { t: "relink"; table: RelinkTable; rows: { id: string; value: string }[] }
+  /**
+   * Fiche rattachée à une séance : ce rattachement-là, à retirer. `fresh` :
+   * la séance n'avait aucune liste de fiches, elle n'en a plus.
+   */
+  | { t: "fiche_link"; target: "prog" | "energy"; session_id: string; attachment_id: string; fresh?: boolean }
+  /** Rattachements retirés d'une séance, avec leur place : à remettre. */
+  | { t: "fiche_unlink"; target: "prog" | "energy"; session_id: string; items: { index: number; attachment: Row }[] }
+  /** Fiche de la banque rangée dans les fiches de l'athlète : à remettre en banque. */
+  | { t: "fiche_perso"; doc_id: string }
+  /**
+   * Suivi des habitudes activé pour l'athlète : à désactiver, sauf si une des
+   * habitudes créées avec lui a été cochée depuis (elle est restée).
+   */
+  | { t: "habit_tracker"; habit_ids: string[] };
 
 export function pick(table: RowTable, r: Row): Row {
   const out: Row = {};

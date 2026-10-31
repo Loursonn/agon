@@ -384,6 +384,7 @@ export async function applyPlanOp(
 
 const WITH_ATHLETE = new Set<RowTable>([
   "macrocycles", "cycles", "competitions", "test_sessions", "workout_logs", "energy_session_assignments",
+  "doc_assignments", "habits",
 ]);
 
 /** Tables de la périodisation, des compétitions et des tests (étape `inserted`). */
@@ -484,8 +485,20 @@ export async function undoRowStep(
       }
       return out;
     });
+    // Une attribution dont la fiche a été supprimée depuis ne revient pas.
+    if (s.table === "doc_assignments" && ok.length > 0) {
+      const docs = new Set(ids(check<Row[]>(
+        await db.from("docs").select("id").in("id", ok.map((r) => r.doc_id as string)),
+        "docs",
+      )));
+      for (let i = ok.length - 1; i >= 0; i--) if (!docs.has(ok[i].doc_id as string)) ok.splice(i, 1);
+    }
     if (ok.length === 0) return 0;
-    const onConflict = s.table === "workout_logs" ? "athlete_id,session_id,scheduled_date" : "id";
+    const onConflict = s.table === "workout_logs"
+      ? "athlete_id,session_id,scheduled_date"
+      : s.table === "doc_assignments"
+      ? "doc_id,athlete_id,source"
+      : "id";
     check(await db.from(s.table).upsert(ok, { onConflict, ignoreDuplicates: true }), s.table);
     return 0;
   }

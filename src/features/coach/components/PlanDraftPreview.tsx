@@ -2,19 +2,25 @@ import { C } from "@/lib/theme";
 import { describeOp, type namesFrom } from "@/lib/coachApiDraftText";
 import type { DraftOp, ProgSessionShape } from "@shared/coachApiOps.ts";
 import { isPlanOpName } from "@shared/coachApiPlan.ts";
+import { isCareOpName } from "@shared/coachApiCare.ts";
 import { WeekDraftPreview } from "./WeekDraftPreview";
 
 const SECTIONS: { title: string; match: (op: string) => boolean }[] = [
   { title: "Périodisation", match: (op) => /cycle|week_deload/.test(op) },
   { title: "Compétitions et tests", match: (op) => /competition|test/.test(op) },
-  { title: "Retiré du planning", match: (op) => op.startsWith("remove_") },
+  { title: "Retiré du planning", match: (op) => op.startsWith("remove_") && op !== "remove_habit" },
+  { title: "Fiches", match: (op) => op.endsWith("_fiche") },
+  { title: "Habitudes", match: (op) => op.endsWith("_habit") },
 ];
+
+const isRemoval = (op: string) => /^(delete_|remove_|unassign_|detach_)/.test(op);
 
 const sectionTitle = { fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.4px", margin: "10px 0 6px" };
 
 /**
- * Aperçu d'une planification : la périodisation, les événements et les
- * retraits en phrases, puis les semaines qu'elle construit, jour par jour.
+ * Aperçu d'une planification : la périodisation, les événements, les
+ * retraits, les fiches et les habitudes en phrases, puis les semaines
+ * qu'elle construit, jour par jour.
  * Les suppressions sont en rouge : le coach doit les voir avant d'appliquer.
  */
 export function PlanDraftPreview({ athleteId, ops, prog, names }: {
@@ -23,8 +29,8 @@ export function PlanDraftPreview({ athleteId, ops, prog, names }: {
   prog: ProgSessionShape[] | undefined;
   names: ReturnType<typeof namesFrom>;
 }) {
-  const plan = ops.filter((o) => isPlanOpName(o.op));
-  const week = ops.filter((o) => !isPlanOpName(o.op));
+  const plan = ops.filter((o) => isPlanOpName(o.op) || isCareOpName(o.op));
+  const week = ops.filter((o) => !isPlanOpName(o.op) && !isCareOpName(o.op));
 
   return (
     <div style={{ marginBottom: 10 }}>
@@ -41,7 +47,7 @@ export function PlanDraftPreview({ athleteId, ops, prog, names }: {
                   style={{
                     fontSize: 12,
                     lineHeight: 1.45,
-                    color: op.op.startsWith("delete_") || op.op.startsWith("remove_") ? "#EF4444" : C.tx,
+                    color: isRemoval(op.op) ? "#EF4444" : C.tx,
                   }}
                 >
                   {describeOp(op, names)}

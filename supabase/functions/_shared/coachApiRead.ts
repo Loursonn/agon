@@ -461,3 +461,86 @@ export function buildPeriodisation(input: PeriodisationInput) {
     })),
   };
 }
+
+// ─────────────────────────────── Fiches ─────────────────────────────────────
+
+export interface FichesInput {
+  /** Fiches du coach visibles pour cet athlète : banque et fiches personnelles (hors ajouts de l'athlète). */
+  docs: {
+    id: string; title: string; description: string | null; category: string; kind: string;
+    athlete_id: string | null; origin_id: string | null; variant_label: string | null; tags: string[] | null;
+  }[];
+  assignments: { doc_id: string; source: string; coach_note: string | null; seen_at: string | null }[];
+  /** Séances qui portent des fiches (niveau séance). */
+  links: { doc_id: string; session_id: string; session_name: string; type: "muscu" | "energie" }[];
+}
+
+const SOURCE_LABEL: Record<string, string> = { manuel: "à la main", programme: "par une séance de musculation", energie: "par une séance énergétique" };
+
+/** Fiches que l'assistant peut donner à l'athlète, et ce que l'athlète a déjà. */
+export function buildFiches(input: FichesInput) {
+  const title = new Map(input.docs.map((d) => [d.id, label(d.title, 120)]));
+  return {
+    fiches: input.docs.map((d) => ({
+      id: d.id,
+      titre: label(d.title, 120),
+      description: label(d.description, 500),
+      categorie: label(d.category, 20),
+      format: d.kind === "pdf" ? "pdf" : "image",
+      rangement: d.athlete_id ? "perso" : "banque",
+      variante_de: d.origin_id,
+      variante: label(d.variant_label, 40),
+      deposee_par_claude: Array.isArray(d.tags) && d.tags.includes("claude"),
+    })),
+    attribuees: input.assignments.map((a) => ({
+      fiche_id: a.doc_id,
+      titre: title.get(a.doc_id) ?? null,
+      attribuee: SOURCE_LABEL[a.source] ?? a.source,
+      note: label(a.coach_note, 500),
+      vue: !!a.seen_at,
+    })),
+    rattachees: input.links.map((l) => ({
+      fiche_id: l.doc_id,
+      titre: title.get(l.doc_id) ?? null,
+      ...(l.type === "muscu" ? { session_id: l.session_id } : { energy_session_id: l.session_id }),
+      seance: label(l.session_name, 80),
+    })),
+  };
+}
+
+// ─────────────────────────────── Habitudes ──────────────────────────────────
+
+export interface HabitsInput {
+  today: string;
+  tracker: boolean;
+  habits: { id: string; name: string; emoji: string; color: string; created_by: string | null; sort_order: number | null }[];
+  logs: { habit_id: string; date: string }[];
+}
+
+/**
+ * Habitudes et assiduité. Le nom d'une habitude que l'athlète s'est donnée
+ * est un texte libre de l'athlète : il ne sort pas, seule son assiduité.
+ */
+export function buildHabits(input: HabitsInput) {
+  const since7 = addDays(input.today, -6);
+  const since28 = addDays(input.today, -27);
+  let n = 0;
+  const sorted = [...input.habits].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
+  return {
+    suivi_active: input.tracker,
+    habitudes: sorted.map((h) => {
+      const days = input.logs.filter((l) => l.habit_id === h.id && l.date <= input.today).map((l) => l.date).sort();
+      const mine = h.created_by !== null;
+      return {
+        id: h.id,
+        posee_par: mine ? "coach" : "athlete",
+        ...(mine
+          ? { nom: label(h.name, 40), icone: label(h.emoji, 20), couleur: label(h.color, 7) }
+          : { nom: null, libelle: `habitude de l'athlète n°${++n}` }),
+        jours_coches_7j: days.filter((d) => d >= since7).length,
+        jours_coches_28j: days.filter((d) => d >= since28).length,
+        derniere_coche: days.at(-1) ?? null,
+      };
+    }),
+  };
+}

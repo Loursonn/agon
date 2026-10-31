@@ -31,6 +31,7 @@ export function fakeDb(initial: Record<string, Row[]> = {}, failOn?: { table: st
   const t = (name: string) => (tables[name] ??= []);
 
   function remove(table: string, gone: Row[]) {
+    if (gone.length === 0) return;
     tables[table] = t(table).filter((r) => !gone.includes(r));
     const ids = gone.map((r) => r.id);
     for (const fk of FKS.filter((f) => f.ref === table)) {
@@ -51,7 +52,8 @@ export function fakeDb(initial: Record<string, Row[]> = {}, failOn?: { table: st
 
       const exec = () => {
         if (failOn && failOn.table === table && failOn.op === op) return { data: null, error: { message: "panne simulée" } };
-        const rows = t(table);
+        // Une lecture ne crée pas la table : l'état comparé reste celui écrit.
+        const rows = op === "insert" || op === "upsert" ? t(table) : (tables[table] ?? []);
         let out: Row[] = [];
         if (op === "select") out = rows.filter((r) => filters.every((f) => f(r)));
         else if (op === "delete") {
@@ -90,6 +92,7 @@ export function fakeDb(initial: Record<string, Row[]> = {}, failOn?: { table: st
         eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), q),
         is: (c: string, v: unknown) => (filters.push((r) => (r[c] ?? null) === v), q),
         in: (c: string, v: unknown[]) => (filters.push((r) => v.includes(r[c])), q),
+        not: (c: string, o: string, v: unknown) => (filters.push((r) => !(o === "is" ? (r[c] ?? null) === v : r[c] === v)), q),
         insert: (p: Row | Row[]) => ((op = "insert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), q),
         upsert: (p: Row | Row[], o = {}) => ((op = "upsert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), (opts = o), q),
         update: (p: Row) => ((op = "update"), (payload = [structuredClone(p)]), q),

@@ -147,6 +147,8 @@ function invalidateAfterWrite(qc: QueryClient, athleteId: string) {
     qc.invalidateQueries({ queryKey: [key] });
   }
   qc.invalidateQueries({ queryKey: QK.competitions() });
+  // Fiches attribuées, rattachées ou rangées chez l'athlète (préfixe : tout le module).
+  qc.invalidateQueries({ queryKey: QK.docs });
   qc.invalidateQueries({ queryKey: QK.testSessions(athleteId) });
   // Les fiches suivent le programme et les séances énergie placées.
   void syncDocAssignmentsFromProg(athleteId, undefined, qc);

@@ -87,6 +87,14 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         ],
       },
       {
+        title: "Fiches et habitudes",
+        points: [
+          "Ton assistant donne à l'athlète une fiche de ta banque, avec ton mot, ou la rattache à une séance. Il peut aussi fabriquer une fiche (PDF) : elle arrive dans ta banque avec l'étiquette « claude », et aucun athlète ne la voit tant que tu ne l'as pas donnée.",
+          "Il crée des habitudes pour l'athlète (et active le suivi des habitudes si besoin). Celles que l'athlète s'est données restent à lui : ton assistant n'en voit que l'assiduité, jamais le nom.",
+          "Comme le reste, tout s'annule en un clic. Une habitude que l'athlète a déjà cochée reste en place.",
+        ],
+      },
+      {
         title: "Qui est concerné",
         points: [
           "Seuls les athlètes qui ont accepté le traitement par l'IA sous le nouveau texte sont visibles par ton assistant. Tes athlètes reverront l'écran de consentement à leur prochaine connexion : c'est normal, le texte nomme désormais ton assistant.",
