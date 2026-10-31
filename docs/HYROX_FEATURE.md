@@ -161,7 +161,7 @@ Sources : RoxHype 25/26, HYROX Data Lab S7-S8, HYROX Data Lab Utrecht.
 
 ## 10. Tests HYROX (bilan d'entrée et retests)
 
-Prompt source : `Prompt-Agon-Tests-HYROX-2026-10-31.md` (Hugo, 31/10/2026). Livré en une seule PR (moteur, base, saisie, fiche résultat, comparaison et recalcul, calibration). Migration testée en local seulement : **pas de `db push` sans l'accord de Hugo**.
+Prompt source : `Prompt-Agon-Tests-HYROX-2026-10-31.md` (Hugo, 31/10/2026). Livré en une seule PR (moteur, base, saisie, fiche résultat, comparaison et recalcul, calibration). Migration **appliquée en prod le 2026-11-01** (accord de Hugo) via `supabase db query --linked -f`, jamais `db push` (voir `DB_MIGRATIONS.md`). Tests RLS en prod : `supabase/tests/hyrox_tests_rls.sql`.
 
 ### Moteur : `src/lib/hyrox/tests/`
 TS pur, aucun import React ni réseau. Point d'entrée : `analyzeTests(inputs, profile, { set, target_s, context })`.
@@ -211,6 +211,7 @@ Seuils sans source, seedés actifs mais marqués `to_recalibrate` : chute sled e
 - Trigger `hyrox_test_analyses_freeze` : entrées, profil, sorties et versions ne changent plus après création ; seuls la validation, le chrono visé et les axes validés bougent.
 - Hors staff en V1, comme les autres tables HYROX.
 - Banc local : `supabase/tests/hyrox_tests_pglite.mjs` (PGlite, sans Docker) : migrations rejouées, idempotence, seed, RLS.
+- Les anciens presets HYROX sont marqués `hyrox_legacy` mais restent affichés dans la banque de tests du coach (pas encore filtrés), à côté des 21 presets v3.
 - Saisie : les séances remplies par l'athlète passent par le circuit existant (`test_sessions` → trigger → `athlete_test_results` / `athlete_test_values`) ; les noms des presets v3 sont uniques, entre eux et face aux presets existants, pour que le trigger les retrouve. D'où « Burpee broad jump 80 m · bilan » (l'ancien preset « Burpee broad jump 80 m » existe toujours ; test dédié).
 
 ### Interface

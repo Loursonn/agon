@@ -401,3 +401,29 @@ DROP FUNCTION IF EXISTS public.accept_staff_invitation(text), public.get_staff_i
 --    La valeur d'enum consent_purpose 'staff_sharing' ne peut pas être retirée : la laisser.
 COMMIT;
 ```
+
+---
+
+## Migration 2026-11-01 — Tests HYROX (bilan d'entrée et retests)
+
+**Fichier :** `supabase/migrations/20261101130000_hyrox_tests.sql` — `profiles.hyrox_category` ; batterie v3 (21 presets `test_definitions` S1-S5 + W1, 81 variables ; les 10 anciens presets HYROX gardés, `battery = 'hyrox_legacy'`) ; grilles versionnées (`hyrox_test_grid_versions`, `hyrox_test_grids`, `hyrox_test_params`, `hyrox_axes_params`, `hyrox_work_axes_rules`, seed v1 actif) ; `hyrox_test_analyses` (snapshot figé, trigger de gel) ; `hyrox_test_axes_drafts` (coach / admin) ; colonnes Roxzone sur `hyrox_results`.
+
+**Statut : ✅ APPLIQUÉE en prod le 2026-11-01** via `supabase db query --linked -f` (pas de `db push` : l'historique des migrations de la base n'est pas tenu, 56 fichiers y apparaissent « non appliqués » alors que la plupart le sont ; un `db push` les rejouerait tous). Avant : contrôle des prérequis et essai à blanc dans une transaction annulée.
+
+Tests : `supabase db query --linked -f supabase/tests/hyrox_tests_rls.sql` — coach, athlète, autre athlète, autre coach dans une transaction annulée — 17 vérifications OK (grilles en lecture seule, analyse invisible à l'athlète avant validation puis visible, brouillon jamais visible, gel des entrées, autre coach sans accès, saisie du BBJ du bilan vers le preset v3). Aucune ligne laissée en base. Banc local sans Docker : `supabase/tests/hyrox_tests_pglite.mjs` (30 contrôles).
+
+Spec : `docs/HYROX_FEATURE.md` section 10.
+
+### Rollback
+
+Les nouvelles tables ne sont lues que par l'onglet Tests HYROX. Pour revenir en arrière sans perte sur l'existant :
+
+```sql
+BEGIN;
+DROP TABLE IF EXISTS public.hyrox_test_axes_drafts, public.hyrox_test_analyses,
+  public.hyrox_work_axes_rules, public.hyrox_axes_params, public.hyrox_test_params,
+  public.hyrox_test_grids, public.hyrox_test_grid_versions;
+DROP FUNCTION IF EXISTS public.hyrox_test_analyses_freeze();
+-- Les 21 presets v3 (et leurs résultats) : à retirer seulement si aucun athlète ne les a saisis.
+COMMIT;
+```
