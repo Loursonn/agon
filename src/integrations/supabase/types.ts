@@ -402,6 +402,7 @@ export type Database = {
       }
       coach_api_drafts: {
         Row: {
+          applied_via: string | null
           athlete_id: string
           base_hash: string | null
           body: string
@@ -414,8 +415,11 @@ export type Database = {
           ops: Json
           status: string
           title: string
+          undo: Json
+          undone_at: string | null
         }
         Insert: {
+          applied_via?: string | null
           athlete_id: string
           base_hash?: string | null
           body?: string
@@ -428,8 +432,11 @@ export type Database = {
           ops?: Json
           status?: string
           title: string
+          undo?: Json
+          undone_at?: string | null
         }
         Update: {
+          applied_via?: string | null
           athlete_id?: string
           base_hash?: string | null
           body?: string
@@ -442,6 +449,8 @@ export type Database = {
           ops?: Json
           status?: string
           title?: string
+          undo?: Json
+          undone_at?: string | null
         }
         Relationships: [
           {
