@@ -1065,6 +1065,170 @@ Les données de cycle menstruel relèvent de l'article 9 du RGPD — consentemen
 explicite distinct, analyse d'impact, conservation propre. C'est un chantier de
 conformité entier, pas une case à cocher.
 
+
+## 2026-10 — L'assistant IA du coach lit par une API et propose, il n'écrit pas
+
+**Contexte** : un coach veut que son assistant IA personnel (Claude, sur son
+ordinateur) lise les données de ses athlètes pour en faire des analyses et des
+synthèses, et lui propose des axes de travail ou des modifications. Modèle
+repris d'une autre app (Polaris), adapté à ce qui diffère ici : des données de
+santé, et plusieurs personnes autour d'un même athlète.
+
+**Décision** : Edge Function `coach-api`, clé `agon_…` réservée aux coachs
+(hash SHA-256 seul en base), lecture des athlètes consentants, et dépôt de
+propositions dans `coach_api_drafts` que le coach applique ou écarte dans Agon.
+
+**Pourquoi des propositions et pas des écritures** : deux raisons, chacune
+suffisante.
+- Le front charge chaque clé `app_data` entière et la réécrit entière à la
+  sauvegarde suivante. Une écriture serveur faite pendant qu'un onglet est
+  ouvert serait écrasée sans bruit. Polaris règle ce problème par une file
+  d'opérations rejouée automatiquement ; ici le rejeu est un clic du coach, et
+  il passe par la même mutation que l'éditeur.
+- Le texte de consentement dit à l'athlète que son coach « relit tout ». Une
+  écriture directe le rendrait faux.
+
+**Pourquoi un module d'opérations partagé** (`_shared/coachApiOps.ts`) : le
+serveur valide la proposition, l'app l'applique. Avec deux définitions, une
+proposition acceptée par l'un pourrait être appliquée autrement par l'autre.
+L'id d'un exercice ajouté est fixé à la validation, donc l'application est
+déterministe. Une modification de paramètres exige `a_partir_de` (numéro
+d'occurrence de la séance) : sans lui, elle réécrirait aussi les séances déjà
+faites, comme le rappelle `toMultiWeekSession`.
+
+**Pourquoi une empreinte de contenu et pas `updated_at`** : pour prévenir le
+coach qu'un programme a changé depuis la proposition. `app_data.updated_at`
+n'est écrit que par `sSave`, pas par `useUpdateProgrammation`, et aucun trigger
+ne le tient à jour. Le faire bouger à chaque édition aurait changé les fils
+d'activité qui le lisent. La proposition garde le SHA-256 du JSON visé ; l'app
+le recalcule avant d'appliquer.
+
+**Consentement** : une seule case IA (`ai_programming`), élargie pour nommer
+Google Gemini (via Agon) et l'assistant Claude du coach. Choix du propriétaire,
+contre une case séparée par destinataire comme pour Garmin et COROS. Le texte
+reste exact sur ce qui diffère : Agon peut garantir que Gemini n'entraîne pas
+ses modèles avec ces données (API payante), pas Claude, qui passe par le compte
+personnel du coach. Un accord donné sous l'ancien texte ne vaut pas pour
+Claude : le serveur exige `doc_version >= AI_ASSISTANT_SINCE`, et
+`LEGAL_VERSION` passe au 30 octobre pour re-solliciter tout le monde.
+
+**Ce qui ne sort pas** : le texte libre écrit par l'athlète (ressenti,
+commentaires de séance, notes de sommeil ou de blessure) — c'est là qu'un
+diagnostic ou un traitement peut se glisser. Le nom de famille. Les données
+Garmin (les vues `ai_provider_*` les excluent déjà). Un athlète qui n'a pas
+consenti n'apparaît pas du tout, et « pas ton athlète » et « pas d'accord »
+renvoient la même 404 : la différence révélerait sa décision.
+
+**Traçabilité** : chaque lecture est écrite dans `coach_api_access_log` avant
+d'être servie ; si l'écriture échoue, rien n'est servi. C'est ce qui permet de
+répondre à l'art. 15.1.c (à qui ses données ont été communiquées) avec des
+faits.
+
+**Semaine d'entraînement** (`kind: "semaine"`) : l'assistant propose en un
+bloc des séances créées (musculation dans `asp:prog`, énergie en copie propre
+à l'athlète), leurs placements sur des dates et le thème de chaque jour. Elle
+ajoute sans rien supprimer ; seul le thème d'un jour déjà posé est remplacé,
+et l'aperçu le montre barré (choix du propriétaire). Les séances de muscu
+créées sont `once`, sans jour fixe : elles n'ont lieu qu'aux dates placées.
+Les séances énergétiques arrivent en JSON structuré, validé côté serveur
+comme le reste, plutôt qu'en texte YOXX : les parseurs YOXX dépendent de
+`src/` et ne tournent pas dans Deno, donc l'assistant n'aurait reçu aucune
+erreur à corriger. Les écritures d'une semaine (programme, séances,
+placements, thèmes) ne sont pas atomiques : une panne en route est défaite
+par le journal d'annulation (voir plus bas).
+
+**Écriture directe et annulation** (31/10/2026) : le coach veut que
+l'assistant inscrive lui-même ce qu'ils ont validé ensemble, sans clic de
+plus. `"appliquer": true` sur une proposition l'applique tout de suite ; le
+mode d'emploi réserve ce cas à une demande explicite du coach. Pas
+d'interrupteur par clé (choix du propriétaire, contre ma recommandation : une
+clé volée peut donc écrire). Contrepartie demandée par le propriétaire : tout
+doit pouvoir être défait. L'application se fait désormais **côté serveur**,
+pour le clic dans Agon comme pour l'assistant (l'app appelle `coach-api` avec
+la session du coach) : un seul code, et un journal d'annulation (`undo`) que
+seul le serveur écrit — il est rejoué avec la clé de service, il ne doit pas
+venir du navigateur. Le journal sert aussi de rollback : une application qui
+échoue en route est défaite avant de répondre. L'annulation ne supprime
+jamais ce que l'athlète a réalisé (séance faite, séance énergie faite), ni la
+définition d'une séance qu'il a faite ; elle refuse d'écraser un programme ou
+des objectifs modifiés depuis sans confirmation (`forcer`). La politique RLS
+ne laisse plus au coach que « écarter » depuis le navigateur.
+
+**Événements** : compétitions, tests (valeurs mesurées), et événements du
+calendrier de l'athlète **avec leur titre**, texte libre de l'athlète —
+exception assumée à la règle ci-dessus, choisie par le propriétaire et
+annoncée dans le texte de consentement.
+
+**Planification** (`kind: "plan"`, 01/11/2026) : périodisation, compétitions,
+tests et retraits du planning, plus toutes les opérations d'une semaine, dans
+**une seule proposition** — donc une seule annulation pour un plan entier.
+Les règles du planning de l'app (lundi → dimanche, une semaine par semaine
+ISO, pas de chevauchement entre sœurs, un enfant dans son parent) sont
+vérifiées à la validation sur une copie de l'état, opération après
+opération : l'assistant reçoit une erreur qui nomme le champ. C'est la seule
+garde : la base ne les vérifie pas. La copie suit aussi les séances prévues
+qui partent avec leur semaine, pour refuser dès la validation ce qui
+échouerait à l'application. Testé contre la structure réelle des tables
+(contraintes, cascades, triggers) chargée dans PGlite : saison complète,
+suppressions en cascade, déplacement de cycle, panne en route, annulation
+exacte. Choix du propriétaire : suppression
+autorisée, mais **le réalisé reste** — supprimer un cycle retire ses séances
+prévues, les séances faites restent sans semaine (alors que l'écran de l'app
+les supprime) ; un test passé ne se modifie pas ; une séance retirée passe
+« sautée » (comme le calendrier du coach, pour ne pas réapparaître).
+Journal : lignes supprimées (colonnes listées, `ROW_COLUMNS`), modifiées, et
+liens remis à zéro par une suppression (`relink` : semaine d'une séance faite,
+compétition d'un plan de course) ; les enfants sont inscrits avant les
+parents, pour que l'annulation recrée les parents d'abord. Mésocycles et
+semaines n'ont pas d'`athlete_id` : l'annulation vérifie que leur parent est
+à l'athlète, et force `athlete_id` sur toute ligne recréée.
+
+**Fiches et habitudes** (01/11/2026, même `kind: "plan"`) : l'assistant
+attribue une fiche du coach (`doc_assignments` source `manuel`, avec note),
+la rattache à une séance (JSON de `asp:prog` ou `energy_sessions.fiches`),
+crée des habitudes, et dépose une fiche qu'il a fabriquée (`POST /fiches`).
+- Une fiche fabriquée arrive **en banque**, étiquetée `claude`, jamais
+  directement en fiche perso : la RLS `can_read_doc` rend une fiche perso
+  visible à l'athlète dès qu'elle existe, ce qui contournerait la
+  proposition. `assign_fiche` avec `perso: true` la range chez l'athlète
+  (l'annulation la remet en banque), seulement si elle vient de l'assistant
+  et n'est donnée à personne d'autre. Le dépôt n'écrit rien chez un athlète :
+  il est direct (choix du propriétaire), et se défait par `DELETE /fiches/:id`
+  ou depuis la banque.
+- Pas de rattachement sur une séance énergétique de la bibliothèque : elle est
+  partagée, le changement toucherait d'autres athlètes.
+- Rattachements journalisés à l'unité (`fiche_link` / `fiche_unlink`), pas par
+  copie de tout `asp:prog` : annuler ne refuse pas pour un programme modifié
+  depuis, et n'efface pas les retouches du coach.
+- Le serveur resynchronise lui-même les attributions `programme` / `energie`
+  après chaque application et annulation (`syncFicheAssignments`, même calcul
+  que la RPC `sync_doc_assignments`, qui exige une session) : une écriture
+  directe est vue tout de suite par l'athlète. Une attribution recréée ainsi
+  repart « non vue ».
+- `habits.created_by` (migration 20261101120000) : NULL = posée par l'athlète.
+  Le nom de ces habitudes est un texte libre de l'athlète, il ne sort pas
+  (assiduité seulement) et l'assistant ne les modifie pas. La première
+  habitude active `habit_tracker_enabled` ; l'annulation le désactive, sauf
+  si une habitude créée avec lui a été cochée (elle reste, le suivi aussi).
+- Testé contre la structure réelle des tables (PGlite) : contraintes
+  d'unicité, cascades, panne en route, annulation exacte.
+
+**Limites connues** :
+- Si l'athlète renomme une habitude posée par le coach, son nouveau nom part
+  chez l'assistant.
+- La base ne vérifie ni les chevauchements ni l'inclusion dans le parent
+  (aucun trigger, vérifié le 01/11/2026 ; seul `end_date > start_date`) : le
+  validateur est la seule garde. Une proposition appliquée longtemps après sa
+  validation n'est pas recontrôlée.
+- L'athlète ne voit pas lui-même ce journal : il faut le lui fournir sur
+  demande.
+- Si l'éditeur de programmation est ouvert pendant une écriture directe, sa
+  sauvegarde différée peut l'écraser.
+
+- Si le coach applique une proposition pendant que l'éditeur de programmation
+  a une sauvegarde différée en cours (800 ms), cette sauvegarde peut l'écraser.
+  Fenêtre étroite, non traitée.
+
 ---
 
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*
