@@ -53,7 +53,7 @@ export type InjuryMechanism = 'contact' | 'sans_contact' | 'chute' | 'geste_repe
 export type InjuryContext = 'entrainement' | 'competition' | 'hors_sport';
 export type TrainingImpact = 'aucun' | 'adapte' | 'arret_partiel' | 'arret_total';
 export type DiagnosedBy = 'personne' | 'medecin' | 'kine' | 'osteo' | 'autre';
-export type DeclaredBy = 'athlete' | 'coach';
+export type DeclaredBy = 'athlete' | 'coach' | 'staff';
 
 export const INJURY_TYPE_LABEL: Record<InjuryType, string> = {
   traumatique:         'Traumatique',
@@ -93,6 +93,7 @@ export const DIAGNOSED_BY_LABEL: Record<DiagnosedBy, string> = {
 export const DECLARED_BY_LABEL: Record<DeclaredBy, string> = {
   athlete: 'Déclarée par l\'athlète',
   coach:   'Déclarée par le coach',
+  staff:   'Saisie par un professionnel du staff',
 };
 
 /**
@@ -141,6 +142,8 @@ export interface MedicalEntry {
   return_date: string | null;
   /** Côté d'où vient la déclaration — posé automatiquement à la création. */
   declared_by: DeclaredBy | null;
+  /** Auteur de la saisie (null si compte supprimé). */
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
   medical_attachments: MedicalAttachment[];

@@ -31,7 +31,11 @@ async function determineActiveCycleId(athleteId: string): Promise<string | null>
   return (covering ?? rows[0]).id;
 }
 
-export function useAthletePersistedState(athleteId: string) {
+/**
+ * @param opts.readOnly  Lecteur sans droit d'écriture (professionnel du staff) :
+ *   aucune écriture automatique au chargement (migration par cycle).
+ */
+export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: boolean }) {
   const load = useCallback(<T>(k: string, fb: T) => sLoad<T>(k, fb, athleteId), [athleteId]);
   const save = useCallback((k: string, v: unknown) => sSave(k, v, athleteId), [athleteId]);
 
@@ -119,7 +123,7 @@ export function useAthletePersistedState(athleteId: string) {
       // Lecture en erreur (réseau, session expirée) ≠ « pas encore migré » :
       // dans le doute on ne migre pas, on réessaiera au prochain chargement.
       const migratedRes = await sLoadResult<boolean>("asp:percycle_migrated", athleteId);
-      if (migratedRes.ok && !migratedRes.value) {
+      if (!opts?.readOnly && migratedRes.ok && !migratedRes.value) {
         // Le drapeau "migré" ne doit être posé QUE si les recopies ont réussi.
         // Sinon une écriture ratée (réseau) marquait la migration faite alors
         // que le cycle restait vide : programme et séances perdus définitivement.

@@ -41,7 +41,19 @@ import { Chip } from "./medicalUi";
  * Utilisé côté athlète (Profil) et côté coach (Profil athlète) : les deux
  * peuvent ajouter / modifier.
  */
-export function MedicalEntriesSection({ athleteId, canEdit }: { athleteId: string; canEdit: boolean }) {
+export function MedicalEntriesSection({
+  athleteId, canEdit, canEditEntry, canEditHistory, asStaff = false,
+}: {
+  athleteId: string;
+  /** Peut ajouter des antécédents (et, par défaut, tous les modifier). */
+  canEdit: boolean;
+  /** Restreint la modification par entrée (staff : les siennes, ou celles du coach si autorisé). */
+  canEditEntry?: (e: MedicalEntry) => boolean;
+  /** Allergies / traitements (medical_history). Par défaut = canEdit. */
+  canEditHistory?: boolean;
+  /** Saisie par un professionnel du staff. */
+  asStaff?: boolean;
+}) {
   const { data: entries = [], isLoading } = useMedicalEntries(athleteId);
   const [editing, setEditing] = useState<MedicalEntry | "new" | null>(null);
 
@@ -57,13 +69,13 @@ export function MedicalEntriesSection({ athleteId, canEdit }: { athleteId: strin
 
       {entries.map((e) =>
         editing !== "new" && editing?.id === e.id ? (
-          <EntryForm key={e.id} athleteId={athleteId} existing={e} onDone={() => setEditing(null)} />
+          <EntryForm key={e.id} athleteId={athleteId} existing={e} asStaff={asStaff} onDone={() => setEditing(null)} />
         ) : (
-          <EntryCard key={e.id} entry={e} athleteId={athleteId} canEdit={canEdit} onEdit={() => setEditing(e)} />
+          <EntryCard key={e.id} entry={e} athleteId={athleteId} canEdit={canEdit && (canEditEntry ? canEditEntry(e) : true)} onEdit={() => setEditing(e)} />
         ),
       )}
 
-      {editing === "new" && <EntryForm athleteId={athleteId} onDone={() => setEditing(null)} />}
+      {editing === "new" && <EntryForm athleteId={athleteId} asStaff={asStaff} onDone={() => setEditing(null)} />}
 
       {canEdit && editing === null && (
         <button
@@ -74,7 +86,7 @@ export function MedicalEntriesSection({ athleteId, canEdit }: { athleteId: strin
         </button>
       )}
 
-      <AllergiesBlock athleteId={athleteId} canEdit={canEdit} />
+      <AllergiesBlock athleteId={athleteId} canEdit={canEditHistory ?? canEdit} />
     </div>
   );
 }
@@ -278,8 +290,8 @@ function AttachmentThumb({ att, url, canEdit, onOpen, onDelete }: {
 
 // ── Formulaire ──────────────────────────────────────────────────────────────
 
-function EntryForm({ athleteId, existing, onDone }: { athleteId: string; existing?: MedicalEntry; onDone: () => void }) {
-  const save = useSaveMedicalEntry(athleteId);
+function EntryForm({ athleteId, existing, onDone, asStaff = false }: { athleteId: string; existing?: MedicalEntry; onDone: () => void; asStaff?: boolean }) {
+  const save = useSaveMedicalEntry(athleteId, asStaff);
   const add = useAddMedicalAttachment(athleteId);
   const [kind, setKind] = useState<MedicalEntryKind>(existing?.kind ?? "blessure");
   const [title, setTitle] = useState(existing?.title ?? "");

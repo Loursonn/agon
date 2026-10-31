@@ -47,7 +47,8 @@ export function useActiveInjuries(athleteId: string | undefined) {
   return { injuries, isLoading };
 }
 
-export function useSaveMedicalEntry(athleteId: string) {
+/** @param asStaff  Saisie par un professionnel du staff (déclarée comme telle). */
+export function useSaveMedicalEntry(athleteId: string, asStaff = false) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, input }: { id?: string; input: MedicalEntryInput }): Promise<MedicalEntry> => {
@@ -55,7 +56,7 @@ export function useSaveMedicalEntry(athleteId: string) {
       // `declared_by` n'est pas un choix de formulaire : on sait qui saisit.
       // Posé à la création seulement, pour qu'une relecture du coach ne réécrive
       // pas l'origine d'une déclaration faite par l'athlète.
-      const declared_by = auth.user?.id === athleteId ? 'athlete' : 'coach';
+      const declared_by = auth.user?.id === athleteId ? 'athlete' : asStaff ? 'staff' : 'coach';
       const q = id
         ? db.from('medical_entries').update(input).eq('id', id)
         : db.from('medical_entries').insert({

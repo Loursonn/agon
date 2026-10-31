@@ -49,5 +49,6 @@ export function RoleRedirect() {
     );
   }
   if (profile.role === "coach" || profile.role === "coach_athlete") return <Navigate to="/coach" replace />;
+  if (profile.role === "staff") return <Navigate to="/staff" replace />;
   return <Navigate to="/athlete" replace />;
 }

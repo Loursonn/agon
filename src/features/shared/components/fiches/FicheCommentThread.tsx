@@ -10,6 +10,8 @@ import {
 } from "@/features/shared/hooks/fiches/useDocComments";
 import { useDocSignedUrl } from "@/features/shared/hooks/fiches/useDocs";
 import type { DocComment } from "@/features/shared/types/fiches";
+import { personName, useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
+import { professionLabel } from "@/features/staff/lib/staffPermissions";
 import { btnGhost, btnPrimary, input, sectionTitle } from "./ficheStyles";
 
 interface Props {
@@ -19,6 +21,8 @@ interface Props {
   coachId: string;
   /** Nom affiché pour les messages de l'athlète (côté coach) */
   athleteName?: string;
+  /** Lecture seule (pro du staff sans droit d'écriture sur les commentaires) */
+  readOnly?: boolean;
 }
 
 function CommentImage({ path }: { path: string }) {
@@ -35,7 +39,7 @@ function fmt(iso: string) {
   return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export function FicheCommentThread({ docId, athleteId, coachId, athleteName }: Props) {
+export function FicheCommentThread({ docId, athleteId, coachId, athleteName, readOnly = false }: Props) {
   const { user } = useAuth();
   const { data: comments = [], isLoading } = useDocComments(docId, athleteId);
   const add = useAddDocComment();
@@ -54,8 +58,15 @@ export function FicheCommentThread({ docId, athleteId, coachId, athleteName }: P
     );
   };
 
-  const author = (c: DocComment) =>
-    c.author_id === user?.id ? "Moi" : c.author_id === athleteId ? (athleteName ?? "Athlète") : "Coach";
+  // Les pros du staff commentent aussi : nom + métier plutôt que « Coach ».
+  const { data: staff = [] } = useAthleteStaff(athleteId);
+  const author = (c: DocComment) => {
+    if (c.author_id === user?.id) return "Moi";
+    if (c.author_id === athleteId) return athleteName ?? "Athlète";
+    if (c.author_id === coachId) return "Coach";
+    const pro = staff.find((l) => l.staff_id === c.author_id);
+    return pro ? `${personName(pro.staff)} · ${professionLabel(pro.profession)}` : "Staff";
+  };
 
   return (
     <div>
@@ -93,6 +104,7 @@ export function FicheCommentThread({ docId, athleteId, coachId, athleteName }: P
         </div>
       )}
 
+      {!readOnly && <>
       <textarea
         value={body}
         onChange={e => setBody(e.target.value)}
@@ -122,6 +134,7 @@ export function FicheCommentThread({ docId, athleteId, coachId, athleteName }: P
           onChange={e => { setImage(e.target.files?.[0] ?? null); e.target.value = ""; }}
         />
       </div>
+      </>}
     </div>
   );
 }

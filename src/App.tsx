@@ -12,6 +12,7 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import Login from "./pages/Login.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import InviteAccept from "./pages/InviteAccept.tsx";
+import StaffInviteAccept from "./features/staff/pages/StaffInviteAccept.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 // Pages légales publiques (lazy — rarement ouvertes, mais doivent rester
@@ -26,6 +27,9 @@ const LegalNotice   = lazy(() => import("./pages/legal/LegalNotice.tsx"));
 const AthleteApp       = lazy(() => import("./pages/athlete/AthleteApp.tsx"));
 const CoachShell       = lazy(() => import("./features/coach/CoachShell.tsx"));
 const CoachAthleteArea = lazy(() => import("./pages/coach/CoachAthleteArea.tsx"));
+const StaffApp         = lazy(() => import("./features/staff/StaffApp.tsx"));
+const StaffHomePage    = lazy(() => import("./features/staff/pages/StaffHomePage.tsx"));
+const StaffAthleteArea = lazy(() => import("./features/staff/pages/StaffAthleteArea.tsx"));
 
 // Pages athlète (lazy)
 const TodayPage          = lazy(() => import("./features/athlete/pages/TodayPage.tsx"));
@@ -62,6 +66,7 @@ const CoachHyroxPage            = lazy(() => import("./features/coach/pages/Hyro
 const FichesPage                = lazy(() => import("./features/coach/pages/FichesPage.tsx"));
 const CoachUpdatesPage          = lazy(() => import("./features/coach/pages/CoachUpdatesPage.tsx"));
 const AthleteFichesPage         = lazy(() => import("./features/coach/pages/AthleteFichesPage.tsx"));
+const CoachStaffPage            = lazy(() => import("./features/staff/pages/CoachStaffPage.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -101,6 +106,7 @@ function AnimatedRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/invite/:token" element={<InviteAccept />} />
+          <Route path="/staff-invite/:token" element={<StaffInviteAccept />} />
 
           {/* Documents légaux — publics par obligation */}
           <Route path="/confidentialite"  element={<PrivacyPolicy />} />
@@ -125,6 +131,12 @@ function AnimatedRoutes() {
             <Route path="test" element={<AthleteTestPage />} />
             <Route path="hyrox" element={<AthleteHyroxPage />} />
             <Route path="specific/:assignmentId" element={<SpecificExecutionPage />} />
+          </Route>
+
+          {/* Espace professionnel (staff) — kiné, ostéo, coach adjoint… */}
+          <Route path="/staff" element={<ProtectedRoute><StaffApp /></ProtectedRoute>}>
+            <Route index element={<StaffHomePage />} />
+            <Route path="athletes/:athleteId" element={<StaffAthleteArea />} />
           </Route>
 
           {/* Vue coach — sidebar + toutes sous-routes */}
@@ -159,6 +171,7 @@ function AnimatedRoutes() {
               <Route path="tests"         element={<Navigate to="../profil-sportif?view=testing" replace />} />
               <Route path="hyrox"         element={<CoachHyroxPage />} />
               <Route path="fiches"        element={<AthleteFichesPage />} />
+              <Route path="staff"         element={<CoachStaffPage />} />
               <Route path="athlete-view"  element={<AthleteViewPage />} />
             </Route>
 
