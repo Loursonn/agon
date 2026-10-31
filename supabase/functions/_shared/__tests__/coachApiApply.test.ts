@@ -12,78 +12,7 @@ import { describe, expect, it } from "vitest";
 import { applyDraft, type Db, parseUndo, UndoConflict, undoSteps } from "../coachApiApply";
 import { type ProgSessionShape, validateDraft, type DraftOp } from "../coachApiOps";
 
-type Row = Record<string, unknown>;
-
-/** Clés d'unicité utilisées par les upserts (`onConflict`). */
-const PK: Record<string, string[]> = {
-  app_data: ["athlete_id", "key"],
-  day_themes: ["athlete_id", "date"],
-  workout_logs: ["athlete_id", "session_id", "scheduled_date"],
-};
-
-let seq = 0;
-
-function fakeDb(initial: Record<string, Row[]> = {}, failOn?: { table: string; op: string }) {
-  const tables: Record<string, Row[]> = structuredClone(initial);
-  const t = (name: string) => (tables[name] ??= []);
-
-  const db: Db = {
-    rpc: () => Promise.resolve({ data: null, error: null }),
-    from(table: string) {
-      const filters: ((r: Row) => boolean)[] = [];
-      let op: "select" | "insert" | "upsert" | "delete" = "select";
-      let payload: Row[] = [];
-      let opts: { onConflict?: string; ignoreDuplicates?: boolean } = {};
-      let single: "one" | "maybe" | null = null;
-
-      const exec = () => {
-        if (failOn && failOn.table === table && failOn.op === op) return { data: null, error: { message: "panne simulée" } };
-        const rows = t(table);
-        let out: Row[] = [];
-        if (op === "select") out = rows.filter((r) => filters.every((f) => f(r)));
-        else if (op === "delete") {
-          out = rows.filter((r) => filters.every((f) => f(r)));
-          tables[table] = rows.filter((r) => !out.includes(r));
-        } else if (op === "insert") {
-          out = payload.map((p) => ({ id: p.id ?? `row-${++seq}`, ...p }));
-          rows.push(...out);
-        } else {
-          const keys = opts.onConflict?.split(",") ?? PK[table];
-          for (const p of payload) {
-            const found = rows.find((r) => keys.every((k) => r[k] === p[k]));
-            if (found) {
-              if (opts.ignoreDuplicates) continue;
-              Object.assign(found, p);
-              out.push(found);
-            } else {
-              const row = { id: `row-${++seq}`, ...p };
-              rows.push(row);
-              out.push(row);
-            }
-          }
-        }
-        const copy = structuredClone(out);
-        if (single === "one") return copy.length === 1 ? { data: copy[0], error: null } : { data: null, error: { message: "pas une ligne" } };
-        if (single === "maybe") return { data: copy[0] ?? null, error: null };
-        return { data: copy, error: null };
-      };
-
-      const q = {
-        select: () => q,
-        eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), q),
-        in: (c: string, v: unknown[]) => (filters.push((r) => v.includes(r[c])), q),
-        insert: (p: Row | Row[]) => ((op = "insert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), q),
-        upsert: (p: Row | Row[], o = {}) => ((op = "upsert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), (opts = o), q),
-        delete: () => ((op = "delete"), q),
-        single: () => ((single = "one"), q),
-        maybeSingle: () => ((single = "maybe"), q),
-        then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) => Promise.resolve(exec()).then(res, rej),
-      };
-      return q;
-    },
-  };
-  return { db, tables };
-}
+import { fakeDb, type Row } from "./fakeDb";
 
 const A = "athlete-1";
 const COACH = "coach-1";

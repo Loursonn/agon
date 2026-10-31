@@ -79,6 +79,14 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         ],
       },
       {
+        title: "Périodiser ensemble",
+        points: [
+          "Ton assistant planifie aussi la saison : macrocycles, mésocycles, cycles avec leurs semaines de décharge, compétitions et tests. Il part des compétitions, des tests et des événements de l'athlète, et te présente le plan avant de le déposer.",
+          "Il peut répartir une séance hebdomadaire sur tout un cycle, déplacer un cycle, ou retirer du planning ce qui ne tient plus (séance, thème du jour).",
+          "Tout un plan s'applique en un clic, et s'annule en un clic, suppressions comprises. Ce que l'athlète a réalisé ne part jamais : seul le prévu est retiré, et une séance retirée passe en « sautée ».",
+        ],
+      },
+      {
         title: "Qui est concerné",
         points: [
           "Seuls les athlètes qui ont accepté le traitement par l'IA sous le nouveau texte sont visibles par ton assistant. Tes athlètes reverront l'écran de consentement à leur prochaine connexion : c'est normal, le texte nomme désormais ton assistant.",

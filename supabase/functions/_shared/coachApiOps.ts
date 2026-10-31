@@ -29,6 +29,9 @@ import {
   reqText,
 } from "./coachApiCheck.ts";
 import { type EnergySessionShape, parseEnergySession } from "./coachApiEnergy.ts";
+import { isPlanOpName, PLAN_OPS, parsePlanOp, type PlanCtx, type PlanOp, type PlanState } from "./coachApiPlan.ts";
+
+export type { PlanOp, PlanState };
 
 export { cleanText };
 
@@ -41,7 +44,7 @@ export { cleanText };
  */
 export const AI_ASSISTANT_SINCE = "2026-10-30";
 
-export const DRAFT_KINDS = ["axe", "programme", "planning", "objectifs", "semaine"] as const;
+export const DRAFT_KINDS = ["axe", "programme", "planning", "objectifs", "semaine", "plan"] as const;
 export type DraftKind = typeof DRAFT_KINDS[number];
 
 export const LIMITS = {
@@ -188,7 +191,7 @@ export type WeekOp =
     note: string;
   };
 
-export type DraftOp = ProgOp | PlanningOp | GoalsOp | WeekOp;
+export type DraftOp = ProgOp | PlanningOp | GoalsOp | WeekOp | PlanOp;
 
 // Listes du thème du jour, recopiées de `src/lib/dayTheme.ts` (un test
 // vérifie qu'elles restent égales).
@@ -362,7 +365,7 @@ function findBloc(session: ProgSessionShape, bid: string, path: string): BlocSha
   return b;
 }
 
-interface ValidateCtx {
+export interface ValidateCtx {
   prog: ProgSessionShape[];
   /** Fournit l'id d'un exercice ajouté : fixé à la validation, pour que
    *  l'application de la proposition soit déterministe. */
@@ -373,6 +376,8 @@ interface ValidateCtx {
   today?: string;
   /** Séances énergétiques existantes que l'athlète peut recevoir. */
   energy?: Map<string, { name: string }>;
+  /** Périodisation, compétitions, tests… de l'athlète. Obligatoire pour un plan. */
+  plan?: PlanState;
 }
 
 /** Exercice ajouté par l'assistant, dans un bloc existant ou une séance créée. */
@@ -589,29 +594,38 @@ function parseNewSession(raw: Obj, path: string, ctx: ValidateCtx): ProgSessionS
 }
 
 /**
- * Opérations d'une semaine. Les séances créées portent une `ref` choisie par
- * l'assistant, citée ensuite par `place_session` / `place_energy_session` ;
- * elle doit être créée avant d'être placée.
+ * Opérations d'une semaine, lues une à une. Les séances créées portent une
+ * `ref` choisie par l'assistant, citée ensuite par `place_session` /
+ * `place_energy_session` ; elle doit être créée avant d'être placée.
+ *
+ * `plan` : la semaine fait partie d'une planification, une séance créée peut
+ * alors revenir chaque semaine (`recurrence: "weekly"` + `day_of_week`) pour
+ * être répartie sur un cycle.
  */
-function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
+function weekParser(ctx: ValidateCtx, plan: boolean) {
   const today = ctx.today;
   if (!today) throw new Error("validateDraft: today manquant pour une semaine");
   const sessionRefs = new Map<string, ProgSessionShape>();
   const energyRefs = new Map<string, EnergySessionShape>();
   const placed = new Set<string>();
   const themed = new Set<string>();
-  const out: WeekOp[] = [];
 
-  rawOps.forEach((raw, i) => {
-    const path = `ops[${i}]`;
+  const parse = (raw: Obj, path: string): WeekOp => {
     switch (raw.op) {
       case "create_session": {
-        onlyKeys(raw, ["op", "ref", "name", "short", "blocs"], path);
+        onlyKeys(raw, ["op", "ref", "name", "short", "blocs", ...(plan ? ["day_of_week", "recurrence"] : [])], path);
         const ref = parseRef(raw.ref, `${path}.ref`, sessionRefs);
         const session = parseNewSession(raw, path, ctx);
+        if (raw.day_of_week !== undefined) session.day_of_week = int(raw.day_of_week, 0, 6, `${path}.day_of_week`);
+        if (raw.recurrence !== undefined) {
+          if (raw.recurrence !== "weekly" && raw.recurrence !== "once") fail(`${path}.recurrence`, "« weekly » ou « once » attendu");
+          session.recurrence = raw.recurrence;
+        }
+        if (session.recurrence === "weekly" && session.day_of_week === undefined) {
+          fail(`${path}.day_of_week`, "une séance hebdomadaire a besoin de son jour (0 = lundi … 6 = dimanche)");
+        }
         sessionRefs.set(ref, session);
-        out.push({ op: "create_session", session });
-        return;
+        return { op: "create_session", session };
       }
 
       case "create_energy_session": {
@@ -619,8 +633,7 @@ function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
         const ref = parseRef(raw.ref, `${path}.ref`, energyRefs);
         const energy = parseEnergySession(raw, path, ctx.newId);
         energyRefs.set(ref, energy);
-        out.push({ op: "create_energy_session", energy });
-        return;
+        return { op: "create_energy_session", energy };
       }
 
       case "place_session": {
@@ -638,8 +651,7 @@ function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
         const key = `${sessionId}|${date}`;
         if (placed.has(key)) fail(path, "séance déjà placée à cette date dans cette proposition");
         placed.add(key);
-        out.push({ op: "place_session", date, session_id: sessionId });
-        return;
+        return { op: "place_session", date, session_id: sessionId };
       }
 
       case "place_energy_session": {
@@ -662,8 +674,7 @@ function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
         const key = `e:${energyId}|${date}`;
         if (placed.has(key)) fail(path, "séance déjà placée à cette date dans cette proposition");
         placed.add(key);
-        out.push({ op: "place_energy_session", date, energy_session_id: energyId, name });
-        return;
+        return { op: "place_energy_session", date, energy_session_id: energyId, name };
       }
 
       case "set_day_theme": {
@@ -691,16 +702,48 @@ function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
           ? (intensity ? DAY_INTENSITY_COLOR[intensity] : DAY_DEFAULT_COLOR)
           : hexColor(raw.color, `${path}.color`);
         const note = raw.note === undefined ? "" : cleanText(raw.note, LIMITS.dayThemeNote, `${path}.note`);
-        out.push({ op: "set_day_theme", date, label, intensity, dominante, color, note });
-        return;
+        return { op: "set_day_theme", date, label, intensity, dominante, color, note };
       }
 
       default:
-        fail(`${path}.op`, "create_session, place_session, create_energy_session, place_energy_session ou set_day_theme attendu");
+        return fail(`${path}.op`, plan
+          ? `opération inconnue (attendues : ${[...WEEK_OPS, ...PLAN_OPS].join(", ")})`
+          : `${WEEK_OPS.join(", ")} attendu`);
     }
-  });
-  return out;
+  };
+  return { parse, sessionRefs };
 }
+
+const WEEK_OPS = ["create_session", "place_session", "create_energy_session", "place_energy_session", "set_day_theme"] as const;
+
+function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
+  const p = weekParser(ctx, false);
+  return rawOps.map((raw, i) => p.parse(raw, `ops[${i}]`));
+}
+
+/**
+ * Planification : tout ce qu'une semaine sait faire, plus la périodisation,
+ * les compétitions, les tests et les retraits du planning. Une seule
+ * proposition, donc une seule annulation pour tout ce qu'elle a posé.
+ */
+function parsePlanOps(rawOps: Obj[], ctx: ValidateCtx): DraftOp[] {
+  if (!ctx.plan) throw new Error("validateDraft: état du planning manquant pour un plan");
+  const week = weekParser(ctx, true);
+  const pctx: PlanCtx = {
+    today: ctx.today!,
+    newId: ctx.newId,
+    // Copie : la validation fait évoluer l'état opération après opération.
+    state: structuredClone(ctx.plan),
+    sessions: () => [...ctx.prog, ...week.sessionRefs.values()],
+    sessionRef: (r) => week.sessionRefs.get(r)?.id,
+    refs: new Map(),
+  };
+  return rawOps.map((raw, i) => (
+    isPlanOpName(raw.op) ? parsePlanOp(raw, `ops[${i}]`, pctx) : week.parse(raw, `ops[${i}]`)
+  ));
+}
+
+
 
 /**
  * Ajoute au programme les séances créées par une semaine. Une séance déjà
@@ -750,6 +793,10 @@ export function validateDraft(raw: unknown, ctx: ValidateCtx): Result<ValidDraft
     if (kind === "semaine") {
       const ops = parseWeekOps(raw.ops as Obj[], ctx);
       return { ok: true, value: { kind: "semaine", title, body, ops } };
+    }
+    if (kind === "plan") {
+      const ops = parsePlanOps(raw.ops as Obj[], ctx);
+      return { ok: true, value: { kind: "plan", title, body, ops } };
     }
 
     const ops: DraftOp[] = (raw.ops as Obj[]).map((o, i) => {

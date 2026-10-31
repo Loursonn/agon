@@ -14,9 +14,9 @@
 // Documentation pour les coachs : docs/API_COACH.md.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { AI_ASSISTANT_SINCE, type DraftKind, type DraftOp, normName, validateDraft, type ProgSessionShape } from "../_shared/coachApiOps.ts";
+import { AI_ASSISTANT_SINCE, type DraftKind, type DraftOp, type PlanState, normName, validateDraft, type ProgSessionShape } from "../_shared/coachApiOps.ts";
 import { ApplyConflict, applyDraft, parseUndo, UndoConflict, undoSteps } from "../_shared/coachApiApply.ts";
-import { buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
+import { buildPeriodisation, buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
 
 const RATE_LIMIT_PER_MINUTE = 60;
 const MAX_BODY_BYTES = 100_000;
@@ -179,6 +179,70 @@ async function energyForAthlete(admin: SupabaseClient, coachId: string, athleteI
   return new Map((data ?? []).map((e) => [e.id as string, { name: e.name as string }]));
 }
 
+/**
+ * Périodisation, compétitions et tests de l'athlète. `dates` : jours cités
+ * par des retraits du planning, dont on charge aussi les placements.
+ */
+async function planState(admin: SupabaseClient, athleteId: string, dates: string[] = []): Promise<PlanState> {
+  const q = async <T>(p: PromiseLike<{ data: T[] | null; error: { message: string } | null }>, what: string) => {
+    const { data, error } = await p;
+    if (error) throw new Error(`${what}: ${error.message}`);
+    return data ?? [];
+  };
+  const macros = await q(admin.from("macrocycles").select("id, name, start_date, end_date, objective").eq("athlete_id", athleteId).limit(200), "macrocycles");
+  const mesos = macros.length === 0 ? [] : await q(
+    admin.from("mesocycles")
+      .select("id, macrocycle_id, name, start_date, end_date, objective, frequency, deload_week, volume_config, intensity_config")
+      .in("macrocycle_id", macros.map((m) => m.id)).limit(500),
+    "mesocycles",
+  );
+  const cycleCols = "id, mesocycle_id, name, start_date, end_date, objective";
+  const [direct, viaMeso] = await Promise.all([
+    q(admin.from("cycles").select(cycleCols).eq("athlete_id", athleteId).limit(500), "cycles"),
+    mesos.length === 0 ? [] : q(admin.from("cycles").select(cycleCols).in("mesocycle_id", mesos.map((m) => m.id)).limit(500), "cycles"),
+  ]);
+  const cycles = [...new Map([...direct, ...viaMeso].map((c) => [c.id, c])).values()];
+  const micros = cycles.length === 0 ? [] : await q(
+    admin.from("microcycles").select("id, cycle_id, week_number, start_date, end_date, is_deload")
+      .in("cycle_id", cycles.map((c) => c.id)).limit(3000),
+    "microcycles",
+  );
+  const [competitions, tests, placements, energyPlacements, themes] = await Promise.all([
+    q(admin.from("competitions").select("id, name, date, type, priority, location").eq("athlete_id", athleteId).order("date").limit(500), "competitions"),
+    q(admin.from("test_sessions").select("id, title, date, type, completed").eq("athlete_id", athleteId).order("date").limit(500), "test_sessions"),
+    dates.length === 0 ? [] : q(
+      admin.from("workout_logs").select("session_id, scheduled_date, status").eq("athlete_id", athleteId).in("scheduled_date", dates),
+      "workout_logs",
+    ),
+    dates.length === 0 ? [] : q(
+      admin.from("energy_session_assignments").select("energy_session_id, scheduled_date, status").eq("athlete_id", athleteId).in("scheduled_date", dates),
+      "energy_session_assignments",
+    ),
+    dates.length === 0 ? [] : q(admin.from("day_themes").select("date").eq("athlete_id", athleteId).in("date", dates), "day_themes"),
+  ]);
+  return {
+    macros, mesos, cycles, micros,
+    competitions, tests: tests.map((t) => ({ ...t, completed: t.completed === true })),
+    placements: placements.map((p) => ({ session_id: p.session_id, date: p.scheduled_date, status: p.status })),
+    energyPlacements: energyPlacements.map((p) => ({ energy_session_id: p.energy_session_id, date: p.scheduled_date, status: p.status })),
+    themeDates: themes.map((t) => t.date),
+  } as unknown as PlanState;
+}
+
+/** Jours cités par les retraits d'une planification (avant validation). */
+function removalDates(raw: unknown): string[] {
+  const ops = (raw as { ops?: unknown } | null)?.ops;
+  if (!Array.isArray(ops)) return [];
+  const out = new Set<string>();
+  for (const o of ops.slice(0, 50)) {
+    const r = o as { op?: unknown; date?: unknown } | null;
+    if (typeof r?.op === "string" && r.op.startsWith("remove_") && typeof r.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
+      out.add(r.date);
+    }
+  }
+  return [...out];
+}
+
 // ─────────────────────────────── Routes ─────────────────────────────────────
 
 async function getAthletes(admin: SupabaseClient, caller: Caller) {
@@ -234,17 +298,17 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
       .eq("athlete_id", athlete.id).gte("date", from).lte("date", to)
       .order("date").limit(500),
     admin.from("energy_session_assignments")
-      .select("scheduled_date, status, rpe_score, actual_duration_min, distance_km, energy_sessions(name, session_kind, total_duration_s, total_distance_m)")
+      .select("energy_session_id, scheduled_date, status, rpe_score, actual_duration_min, distance_km, energy_sessions(name, session_kind, total_duration_s, total_distance_m)")
       .eq("athlete_id", athlete.id).gte("scheduled_date", from).lte("scheduled_date", to)
       .order("scheduled_date").limit(500),
     // Pas `athlete_comment` ni `notes` : texte libre.
     admin.from("competitions")
-      .select("date, name, type, priority, location")
+      .select("id, date, name, type, priority, location")
       .eq("athlete_id", athlete.id).gte("date", from)
       .order("date").limit(100),
     // Pas `results_note` ni `description`.
     admin.from("test_sessions")
-      .select("date, title, type, completed, results_structured")
+      .select("id, date, title, type, completed, results_structured")
       .eq("athlete_id", athlete.id).gte("date", from).lte("date", to)
       .order("date").limit(200),
     admin.from("athlete_life_events")
@@ -270,6 +334,28 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
     tests: tests.data ?? [],
     lifeEvents: life.data ?? [],
   }));
+}
+
+async function getPeriodisation(admin: SupabaseClient, caller: Caller, athleteId: string) {
+  await logAccess(admin, caller, "GET /athletes/:id/periodisation", athleteId);
+  const st = await planState(admin, athleteId);
+  return json(buildPeriodisation(st as unknown as Parameters<typeof buildPeriodisation>[0]));
+}
+
+/** Banque de tests du coach (les siens et ceux d'Agon), pour nommer un test. */
+async function getTests(admin: SupabaseClient, caller: Caller, url: URL) {
+  const q = (url.searchParams.get("q") ?? "").trim();
+  if (q && (q.length < 2 || q.length > 60)) return fail(400, "recherche_invalide", "q : entre 2 et 60 caractères");
+  let query = admin
+    .from("test_definitions")
+    .select("name, category, kind")
+    .or(`is_global.eq.true,created_by.eq.${caller.coachId}`)
+    .order("name")
+    .limit(q ? 20 : 100);
+  if (q) query = query.ilike("name", "%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%");
+  const { data, error } = await query;
+  if (error) throw new Error("test_definitions: " + error.message);
+  return json({ tests: (data ?? []).map((t) => ({ nom: t.name, categorie: t.category, type: t.kind })) });
 }
 
 async function getExercices(admin: SupabaseClient, caller: Caller, url: URL) {
@@ -346,9 +432,10 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
   const result = validateDraft(raw, {
     prog,
     newId: () => crypto.randomUUID(),
-    library: kind === "programme" || kind === "semaine" ? await library(admin, caller.coachId) : undefined,
+    library: kind === "programme" || kind === "semaine" || kind === "plan" ? await library(admin, caller.coachId) : undefined,
     today: todayParis(),
-    energy: kind === "semaine" ? await energyForAthlete(admin, caller.coachId, athleteId) : undefined,
+    energy: kind === "semaine" || kind === "plan" ? await energyForAthlete(admin, caller.coachId, athleteId) : undefined,
+    plan: kind === "plan" ? await planState(admin, athleteId, removalDates(raw)) : undefined,
   });
   if (!result.ok) return fail(400, "proposition_invalide", result.error);
 
@@ -432,7 +519,7 @@ async function applyStored(admin: SupabaseClient, caller: Caller, draft: StoredD
 
   try {
     const res = await applyDraft({
-      db: admin, athleteId: draft.athlete_id, coachId: caller.coachId, kind: draft.kind, ops: draft.ops,
+      db: admin, athleteId: draft.athlete_id, coachId: caller.coachId, kind: draft.kind, ops: draft.ops, today: todayParis(),
     });
     const { error: uErr } = await admin.from("coach_api_drafts").update({ undo: res.undo }).eq("id", draft.id);
     if (uErr) console.error("coach-api undo journal:", uErr.message);
@@ -609,6 +696,7 @@ serve(async (req) => {
     if (route === "GET /exercices") return await getExercices(admin, caller, url);
     if (route === "GET /drafts") return await getDrafts(admin, caller, url);
     if (route === "GET /seances-energie") return await getEnergyBank(admin, caller, url);
+    if (route === "GET /tests") return await getTests(admin, caller, url);
 
     if (seg[0] === "athletes" && seg.length === 3) {
       const athleteId = seg[1];
@@ -620,10 +708,11 @@ serve(async (req) => {
 
       if (route === "GET /athletes/:id/summary") return await getSummary(admin, caller, athlete, url);
       if (route === "GET /athletes/:id/program") return await getProgram(admin, caller, athleteId);
+      if (route === "GET /athletes/:id/periodisation") return await getPeriodisation(admin, caller, athleteId);
       if (route === "POST /athletes/:id/drafts") return await postDraft(admin, caller, athleteId, req);
     }
 
-    return fail(404, "route_inconnue", "Routes : GET /athletes, GET /athletes/:id/summary, GET /athletes/:id/program, POST /athletes/:id/drafts, GET /drafts, POST /drafts/:id/appliquer, POST /drafts/:id/annuler, GET /exercices?q=, GET /seances-energie?q=");
+    return fail(404, "route_inconnue", "Routes : GET /athletes, GET /athletes/:id/summary, GET /athletes/:id/program, GET /athletes/:id/periodisation, POST /athletes/:id/drafts, GET /drafts, POST /drafts/:id/appliquer, POST /drafts/:id/annuler, GET /exercices?q=, GET /seances-energie?q=, GET /tests?q=");
   } catch (e) {
     console.error("coach-api:", e instanceof Error ? e.message : e);
     return fail(500, "erreur_serveur", "Erreur interne. Réessaie plus tard.");

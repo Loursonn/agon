@@ -1159,7 +1159,31 @@ calendrier de l'athlète **avec leur titre**, texte libre de l'athlète —
 exception assumée à la règle ci-dessus, choisie par le propriétaire et
 annoncée dans le texte de consentement.
 
+**Planification** (`kind: "plan"`, 01/11/2026) : périodisation, compétitions,
+tests et retraits du planning, plus toutes les opérations d'une semaine, dans
+**une seule proposition** — donc une seule annulation pour un plan entier.
+Les règles du planning de l'app (lundi → dimanche, une semaine par semaine
+ISO, pas de chevauchement entre sœurs, un enfant dans son parent) sont
+vérifiées à la validation sur une copie de l'état, opération après
+opération : l'assistant reçoit une erreur qui nomme le champ plutôt qu'un
+refus de trigger au moment d'appliquer. Choix du propriétaire : suppression
+autorisée, mais **le réalisé reste** — supprimer un cycle retire ses séances
+prévues, les séances faites restent sans semaine (alors que l'écran de l'app
+les supprime) ; un test passé ne se modifie pas ; une séance retirée passe
+« sautée » (comme le calendrier du coach, pour ne pas réapparaître).
+Journal : lignes supprimées (colonnes listées, `ROW_COLUMNS`), modifiées, et
+liens remis à zéro par une suppression (`relink` : semaine d'une séance faite,
+compétition d'un plan de course) ; les enfants sont inscrits avant les
+parents, pour que l'annulation recrée les parents d'abord. Mésocycles et
+semaines n'ont pas d'`athlete_id` : l'annulation vérifie que leur parent est
+à l'athlète, et force `athlete_id` sur toute ligne recréée.
+
 **Limites connues** :
+- Les fiches (documents) ne sont pas encore inscrites par l'assistant.
+- Ni la planification ni l'annulation ne recontrôlent qu'un enfant tient dans
+  son parent au moment d'appliquer (la base ne vérifie que les
+  chevauchements) : une proposition appliquée longtemps après sa validation
+  peut laisser un mésocycle dépasser de son macrocycle.
 - L'athlète ne voit pas lui-même ce journal : il faut le lui fournir sur
   demande.
 - Une écriture directe ne resynchronise pas les fiches (`sync_doc_assignments`

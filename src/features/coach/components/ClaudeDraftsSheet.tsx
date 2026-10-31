@@ -17,6 +17,7 @@ import {
 import { describeOp, namesFrom } from "@/lib/coachApiDraftText";
 import type { ProgSessionShape } from "@shared/coachApiOps.ts";
 import { WeekDraftPreview } from "./WeekDraftPreview";
+import { PlanDraftPreview } from "./PlanDraftPreview";
 
 const KIND_LABEL: Record<CoachApiDraft["kind"], string> = {
   axe: "Axe de travail",
@@ -24,6 +25,7 @@ const KIND_LABEL: Record<CoachApiDraft["kind"], string> = {
   planning: "Planning",
   objectifs: "Objectifs",
   semaine: "Semaine",
+  plan: "Planification",
 };
 
 const fmt = (iso: string) =>
@@ -33,8 +35,9 @@ function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: stri
   const { setGoals } = useAthleteContext();
   const { data: prog } = useProgrammation(athleteId);
   const target = draft.kind === "objectifs" ? "asp:goals" : "asp:prog";
-  // Une semaine ajoute sans rien modifier : pas d'état de départ à comparer.
-  const tracked = draft.kind !== "axe" && draft.kind !== "semaine";
+  // Une semaine ou une planification touche des lignes, pas une clé du
+  // programme : pas d'empreinte de départ à comparer.
+  const tracked = draft.kind !== "axe" && draft.kind !== "semaine" && draft.kind !== "plan";
   const { data: targetHash } = useDraftTargetHash(tracked ? athleteId : undefined, target);
   const apply = useApplyCoachApiDraft(athleteId);
   const reject = useRejectCoachApiDraft(athleteId);
@@ -88,6 +91,8 @@ function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: stri
 
       {draft.kind === "semaine" ? (
         <WeekDraftPreview athleteId={athleteId} ops={draft.ops} prog={progShape} />
+      ) : draft.kind === "plan" ? (
+        <PlanDraftPreview athleteId={athleteId} ops={draft.ops} prog={progShape} names={names} />
       ) : draft.ops.length > 0 && (
         <ul style={{ margin: "0 0 10px", padding: "0 0 0 16px", display: "flex", flexDirection: "column", gap: 4 }}>
           {draft.ops.map((op, i) => (

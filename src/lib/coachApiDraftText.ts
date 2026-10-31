@@ -175,5 +175,87 @@ export function describeOp(op: DraftOp, names: Names): string {
       return `Placer ${op.name} le ${op.date}`;
     case "set_day_theme":
       return `Thème du ${op.date} : ${dayThemeText(op)}`;
+
+    case "create_macrocycle":
+      return `Créer le macrocycle ${op.row.name} ${span(op.row)}${op.row.objective ? ` — ${op.row.objective}` : ""}`;
+    case "update_macrocycle":
+      return `Modifier le macrocycle ${op.name} : ${patchText(op.patch)}`;
+    case "delete_macrocycle":
+      return `Supprimer le macrocycle ${op.name}, ses mésocycles, cycles et séances prévues (le réalisé reste)`;
+    case "create_mesocycle": {
+      const r = op.row;
+      const extra = [
+        r.frequency ? `${r.frequency} séances/sem.` : null,
+        r.deload_week ? `décharge semaine ${r.deload_week}` : null,
+        r.volume_config ? `volume ${VOLUME_LABEL[r.volume_config.type] ?? r.volume_config.type}` : null,
+        r.intensity_config?.zones.length ? `zones ${r.intensity_config.zones.join(", ")}` : null,
+      ].filter(Boolean).join(", ");
+      return `Créer le mésocycle ${r.name} ${span(r)}${extra ? ` (${extra})` : ""}${r.objective ? ` — ${r.objective}` : ""}`;
+    }
+    case "update_mesocycle":
+      return `Modifier le mésocycle ${op.name} : ${patchText(op.patch)}`;
+    case "delete_mesocycle":
+      return `Supprimer le mésocycle ${op.name}, ses cycles et séances prévues (le réalisé reste)`;
+    case "create_cycle": {
+      const deload = op.weeks.filter((w) => w.is_deload).map((w) => w.week_number);
+      return `Créer le cycle ${op.row.name} ${span(op.row)}, ${op.weeks.length} semaine${op.weeks.length > 1 ? "s" : ""}`
+        + (deload.length ? `, décharge semaine ${deload.join(" et ")}` : "")
+        + (op.row.objective ? ` — ${op.row.objective}` : "");
+    }
+    case "update_cycle":
+      return `Modifier le cycle ${op.name} : ${patchText(op.patch)}`
+        + (op.patch.start_date ? " (les semaines suivent ; les séances prévues des semaines retirées partent)" : "");
+    case "delete_cycle":
+      return `Supprimer le cycle ${op.name} et ses séances prévues (le réalisé reste)`;
+    case "set_week_deload":
+      return `${op.cycle_name}, semaine ${op.week_number} : ${op.is_deload ? "décharge" : "plus de décharge"}`;
+    case "schedule_session_in_cycle":
+      return `Répartir ${names.session(op.session_id)} sur chaque semaine du cycle ${op.cycle_name}, à partir d'aujourd'hui`;
+    case "remove_placement":
+      return `Retirer ${names.session(op.session_id)} du ${op.date} (marquée sautée)`;
+    case "remove_energy_placement":
+      return `Retirer la séance énergétique du ${op.date}`;
+    case "remove_day_theme":
+      return `Retirer le thème du ${op.date}`;
+    case "create_competition": {
+      const r = op.row;
+      return `Ajouter ${COMPETITION_LABEL[r.type] ?? r.type} ${r.name} le ${r.date} (priorité ${r.priority}${r.location ? `, ${r.location}` : ""})`;
+    }
+    case "update_competition":
+      return `Modifier ${op.name} : ${patchText(op.patch)}`;
+    case "delete_competition":
+      return `Supprimer ${op.name}`;
+    case "create_test":
+      return `Planifier le test ${op.row.title} le ${op.row.date}${op.row.description ? ` — ${op.row.description}` : ""}`;
+    case "update_test":
+      return `Modifier le test ${op.title} : ${patchText(op.patch)}`;
+    case "delete_test":
+      return `Supprimer le test ${op.title}`;
   }
+}
+
+const VOLUME_LABEL: Record<string, string> = { progressive: "progressif", ondulant: "ondulant", plateau: "plateau", polarize: "polarisé" };
+const COMPETITION_LABEL: Record<string, string> = { competition: "la compétition", match: "le match", stage: "le stage", off: "la coupure", autre: "l'événement" };
+
+const fr = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+const span = (r: { start_date: string; end_date: string }) => `du ${fr(r.start_date)} au ${fr(r.end_date)}`;
+
+const FIELD_LABEL: Record<string, string> = {
+  name: "nom", title: "titre", objective: "objectif", date: "date", type: "type", priority: "priorité",
+  location: "lieu", description: "description", frequency: "séances/sem.", deload_week: "semaine de décharge",
+};
+
+/** « du 3 nov. au 30 nov., nom « Force » ». */
+function patchText(patch: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (typeof patch.start_date === "string" && typeof patch.end_date === "string") {
+    parts.push(span({ start_date: patch.start_date, end_date: patch.end_date }));
+  }
+  for (const [k, v] of Object.entries(patch)) {
+    if (k === "start_date" || k === "end_date") continue;
+    if (k === "volume_config") parts.push(`volume ${VOLUME_LABEL[(v as { type: string }).type] ?? ""}`);
+    else if (k === "intensity_config") parts.push(`zones ${(v as { zones: string[] }).zones.join(", ") || "aucune"}`);
+    else parts.push(v === null || v === "" ? `${FIELD_LABEL[k] ?? k} retiré` : `${FIELD_LABEL[k] ?? k} « ${String(v)} »`);
+  }
+  return parts.join(", ");
 }

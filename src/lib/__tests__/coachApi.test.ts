@@ -141,3 +141,20 @@ describe("totaux d'une séance énergétique côté serveur", () => {
   });
 });
 
+
+describe("description d'une planification", () => {
+  const names = namesFrom([], []);
+
+  it("dit les périodes, les suppressions et ce qui reste", () => {
+    expect(describeOp({
+      op: "create_cycle",
+      row: { id: "c", mesocycle_id: null, name: "Force 1", start_date: "2026-11-02", end_date: "2026-11-29", objective: null },
+      weeks: [1, 2, 3, 4].map((n) => ({ id: `w${n}`, cycle_id: "c", week_number: n, start_date: "", end_date: "", is_deload: n === 4 })),
+    }, names)).toBe("Créer le cycle Force 1 du 2 nov. au 29 nov., 4 semaines, décharge semaine 4");
+    expect(describeOp({ op: "delete_cycle", id: "c", name: "Force 1" }, names)).toContain("le réalisé reste");
+    expect(describeOp({ op: "update_test", id: "t", title: "VMA", patch: { date: "2026-11-27" } }, names))
+      .toBe("Modifier le test VMA : date « 2026-11-27 »");
+    expect(describeOp({ op: "create_competition", row: { id: "k", name: "Hyrox Paris", date: "2027-03-20", type: "competition", priority: "A", location: null } }, names))
+      .toBe("Ajouter la compétition Hyrox Paris le 2027-03-20 (priorité A)");
+  });
+});

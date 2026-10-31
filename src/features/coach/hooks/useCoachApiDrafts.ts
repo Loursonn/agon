@@ -138,6 +138,16 @@ function invalidateAfterWrite(qc: QueryClient, athleteId: string) {
   qc.invalidateQueries({ queryKey: QK.dayThemes(athleteId) });
   qc.invalidateQueries({ queryKey: ["day-themes", "recent"] });
   invalidateSessionStatus(qc, athleteId);
+  // Planification : périodisation, compétitions, tests, calendrier.
+  for (const key of [
+    "timeline-data", "planning-summary", "calendar-events", "week-schedule", "cal", "cal-range",
+    "cycle-sessions", "athlete-cycles", "athlete-cycles-list", "active-cycle", "assistant-last-cycle",
+    "microcycles-nav", "microcycle", "activePlan", "test-results", "test-progression",
+  ]) {
+    qc.invalidateQueries({ queryKey: [key] });
+  }
+  qc.invalidateQueries({ queryKey: QK.competitions() });
+  qc.invalidateQueries({ queryKey: QK.testSessions(athleteId) });
   // Les fiches suivent le programme et les séances énergie placées.
   void syncDocAssignmentsFromProg(athleteId, undefined, qc);
   void syncDocAssignmentsFromEnergy(athleteId, qc);

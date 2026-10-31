@@ -29,69 +29,31 @@ import {
   type WeekOp,
 } from "./coachApiOps.ts";
 import { energyTotals } from "./coachApiEnergy.ts";
+import {
+  ApplyConflict,
+  check,
+  type Db,
+  hashJson,
+  INSERTED_TABLES,
+  type InsertedTable,
+  readKey,
+  RELINKS,
+  type RelinkTable,
+  RESTORE_TABLES,
+  type RestoreTable,
+  type Row,
+  ROW_TABLES,
+  type RowTable,
+  type UndoStep,
+  writeKey,
+} from "./coachApiDb.ts";
+import { applyPlanOp, PLAN_INSERTED, undoPlanInserted, undoRowStep } from "./coachApiPlanApply.ts";
+import { isPlanOpName, type PlanOp } from "./coachApiPlan.ts";
 
-/** Client Supabase (supabase-js v2). Typé au plus large : partagé Deno / Node. */
-// Le constructeur de requêtes de supabase-js n'a pas de type exportable sans
-// importer le paquet, que Deno et Node résolvent différemment.
-// deno-lint-ignore no-explicit-any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Db = { from(table: string): any; rpc(fn: string, args: Record<string, unknown>): any };
-
-type Row = Record<string, unknown>;
-
-/** Une étape du journal : ce qu'il faut faire pour revenir en arrière. */
-export type UndoStep =
-  /** Une clé `app_data` remplacée : valeur d'avant, empreinte d'après. */
-  | { t: "app_data"; key: "asp:prog" | "asp:goals"; before: unknown; after_hash: string }
-  /**
-   * Séances ajoutées au programme : à retirer, sauf celles que l'athlète a
-   * déjà faites (sa séance réalisée garde sa définition).
-   */
-  | { t: "prog_sessions_added"; ids: string[] }
-  /** Lignes créées : à supprimer, sauf ce que l'athlète a réalisé depuis. */
-  | { t: "inserted"; table: InsertedTable; ids: string[] }
-  /** Lignes modifiées ou supprimées : leur état d'avant, à remettre. */
-  | { t: "restore"; table: RestoreTable; rows: Row[] };
-
-export const INSERTED_TABLES = ["workout_logs", "energy_session_assignments", "energy_sessions", "day_themes"] as const;
-export type InsertedTable = typeof INSERTED_TABLES[number];
-export const RESTORE_TABLES = ["day_themes"] as const;
-export type RestoreTable = typeof RESTORE_TABLES[number];
-
-/** La proposition ne s'applique plus (référence disparue). */
-export class ApplyConflict extends Error {}
+export { ApplyConflict, type Db, hashJson, INSERTED_TABLES, type InsertedTable, RESTORE_TABLES, type RestoreTable, type UndoStep };
 
 /** Valeur par défaut des objectifs, comme `useAthletePersistedState`. */
 const DEFAULT_GOALS: GoalsShape = { sessionsPerWeek: 6, sleepTarget: 8 };
-
-export async function hashJson(v: unknown): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(v ?? null)));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
-  if (res.error) throw new Error(`${what}: ${res.error.message}`);
-  return res.data;
-}
-
-async function readKey(db: Db, athleteId: string, key: string): Promise<unknown> {
-  const data = check<Row | null>(
-    await db.from("app_data").select("value").eq("athlete_id", athleteId).eq("key", key).maybeSingle(),
-    `app_data ${key}`,
-  );
-  return data ? data.value : null;
-}
-
-/** Écrit une clé et renvoie l'empreinte de ce que la base a stocké. */
-async function writeKey(db: Db, athleteId: string, key: string, value: unknown): Promise<string> {
-  const data = check<Row>(
-    await db.from("app_data").upsert({ athlete_id: athleteId, key, value }).select("value").single(),
-    `app_data ${key}`,
-  );
-  // jsonb réordonne les clés : on hache ce que la base renvoie, pas ce qu'on
-  // a envoyé, sinon l'empreinte ne correspondrait jamais à une relecture.
-  return hashJson(data.value);
-}
 
 export interface ApplyInput {
   db: Db;
@@ -99,6 +61,8 @@ export interface ApplyInput {
   coachId: string;
   kind: DraftKind;
   ops: DraftOp[];
+  /** Date du jour (Paris) : une séance répartie sur un cycle part d'aujourd'hui. */
+  today?: string;
 }
 
 export interface ApplyResult {
@@ -151,6 +115,16 @@ async function run(input: ApplyInput, journal: UndoStep[]): Promise<GoalsShape |
 
   if (kind === "semaine") {
     await runWeek(db, athleteId, coachId, ops as WeekOp[], journal);
+  }
+
+  if (kind === "plan") {
+    // Dans l'ordre : une opération s'appuie sur ce que les précédentes ont
+    // créé (séance puis répartition sur un cycle créé plus haut…).
+    const today = input.today ?? new Date().toISOString().slice(0, 10);
+    for (const op of ops) {
+      if (isPlanOpName(op.op)) await applyPlanOp(db, athleteId, coachId, op as PlanOp, journal, today);
+      else await runWeek(db, athleteId, coachId, [op as WeekOp], journal);
+    }
   }
   return undefined;
 }
@@ -316,6 +290,16 @@ export function parseUndo(raw: unknown): UndoStep[] {
       out.push({ t: "inserted", table: o.table as InsertedTable, ids: o.ids.filter((x): x is string => typeof x === "string") });
     } else if (o.t === "restore" && RESTORE_TABLES.includes(o.table as RestoreTable) && Array.isArray(o.rows)) {
       out.push({ t: "restore", table: o.table as RestoreTable, rows: o.rows.filter((r): r is Row => !!r && typeof r === "object") });
+    } else if ((o.t === "deleted" || o.t === "updated") && ROW_TABLES.includes(o.table as RowTable) && Array.isArray(o.rows)) {
+      out.push({ t: o.t, table: o.table as RowTable, rows: o.rows.filter((r): r is Row => !!r && typeof r === "object") });
+    } else if (o.t === "relink" && o.table && Object.hasOwn(RELINKS, o.table as string) && Array.isArray(o.rows)) {
+      out.push({
+        t: "relink",
+        table: o.table as RelinkTable,
+        rows: o.rows
+          .filter((r): r is Row => !!r && typeof r === "object" && typeof (r as Row).id === "string" && typeof (r as Row).value === "string")
+          .map((r) => ({ id: r.id as string, value: r.value as string })),
+      });
     }
   }
   return out;
@@ -395,6 +379,10 @@ async function undoOne(db: Db, athleteId: string, coachId: string, s: UndoStep):
     return kept;
   }
 
+  if (s.t === "deleted" || s.t === "updated" || s.t === "relink") {
+    return undoRowStep(db, athleteId, s);
+  }
+
   if (s.t === "restore") {
     const rows = s.rows.map((r) => ({
       athlete_id: athleteId,
@@ -412,6 +400,7 @@ async function undoOne(db: Db, athleteId: string, coachId: string, s: UndoStep):
   }
 
   if (s.ids.length === 0) return 0;
+  if (PLAN_INSERTED.has(s.table)) return undoPlanInserted(db, athleteId, s.table, s.ids);
   if (s.table === "workout_logs" || s.table === "energy_session_assignments") {
     // Seul le prévu part : une séance faite, en cours ou manquée a une
     // histoire côté athlète.

@@ -160,15 +160,16 @@ export interface SummaryInput {
   activities: Array<Record<string, unknown>>;
   dailies: Array<Record<string, unknown>>;
   /** Compétitions à partir du début de la période (`competitions`). */
-  competitions?: Array<{ date: string; name: string | null; type: string | null; priority: string | null; location: string | null }>;
+  competitions?: Array<{ id?: string; date: string; name: string | null; type: string | null; priority: string | null; location: string | null }>;
   /** Tests planifiés (`test_sessions`). */
-  tests?: Array<{ date: string; title: string | null; type: string | null; completed: boolean | null; results_structured: unknown }>;
+  tests?: Array<{ id?: string; date: string; title: string | null; type: string | null; completed: boolean | null; results_structured: unknown }>;
   /** Événements saisis par l'athlète (`athlete_life_events`). */
   lifeEvents?: Array<{ date_start: string; date_end: string; title: string | null }>;
   /** Thèmes du jour posés par le coach (`day_themes`). */
   dayThemes?: Array<{ date: string; label: string | null; intensity: string | null; dominante: string | null }>;
   /** Séances énergétiques planifiées (`energy_session_assignments`). */
   energyLogs?: Array<{
+    energy_session_id?: string;
     scheduled_date: string;
     status: string;
     rpe_score: number | null;
@@ -300,6 +301,8 @@ export function buildSummary(input: SummaryInput) {
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
       .map((l) => ({
         date: l.scheduled_date,
+        // Pour retirer une séance prévue (remove_placement).
+        session_id: l.session_id,
         nom: label(l.session_name, 80),
         statut: label(l.status, 20),
         rpe: num(l.rpe_score, 1, 10),
@@ -311,16 +314,17 @@ export function buildSummary(input: SummaryInput) {
     evenements: {
       competitions: (input.competitions ?? [])
         .filter((c) => inRange(c.date, from, to))
-        .map((c) => ({ date: c.date, nom: label(c.name, 80), type: label(c.type, 20), priorite: label(c.priority, 2), lieu: label(c.location, 80) })),
+        .map((c) => ({ id: c.id ?? null, date: c.date, nom: label(c.name, 80), type: label(c.type, 20), priorite: label(c.priority, 2), lieu: label(c.location, 80) })),
       // Les suivantes, pour périodiser vers elles.
       competitions_a_venir: (input.competitions ?? [])
         .filter((c) => isIsoDate(c.date) && c.date > to)
         .sort((a, b) => a.date.localeCompare(b.date))
         .slice(0, 5)
-        .map((c) => ({ date: c.date, nom: label(c.name, 80), type: label(c.type, 20), priorite: label(c.priority, 2) })),
+        .map((c) => ({ id: c.id ?? null, date: c.date, nom: label(c.name, 80), type: label(c.type, 20), priorite: label(c.priority, 2) })),
       tests: (input.tests ?? [])
         .filter((t) => inRange(t.date, from, to))
         .map((t) => ({
+          id: t.id ?? null,
           date: t.date,
           titre: label(t.title, 80),
           type: label(t.type, 20),
@@ -350,6 +354,7 @@ export function buildSummary(input: SummaryInput) {
         const e = l.energy_sessions ?? { name: null, session_kind: null, total_duration_s: null, total_distance_m: null };
         return {
           date: l.scheduled_date,
+          energy_session_id: l.energy_session_id ?? null,
           nom: label(e.name, 80),
           type: label(e.session_kind, 20),
           statut: label(l.status, 20),
@@ -390,5 +395,69 @@ export function buildSummary(input: SummaryInput) {
           source: label(d.source, 20),
         })),
     },
+  };
+}
+
+// ─────────────────────────────── Périodisation ──────────────────────────────
+
+export interface PeriodisationInput {
+  macros: Array<{ id: string; name: string; start_date: string; end_date: string; objective: string | null }>;
+  mesos: Array<{
+    id: string; macrocycle_id: string; name: string; start_date: string; end_date: string; objective: string | null;
+    frequency: number | null; deload_week: number | null; volume_config: unknown; intensity_config: unknown;
+  }>;
+  cycles: Array<{ id: string; mesocycle_id: string | null; name: string; start_date: string; end_date: string; objective: string | null }>;
+  micros: Array<{ id: string; cycle_id: string; week_number: number; start_date: string; end_date: string; is_deload: boolean }>;
+  competitions: Array<{ id: string; date: string; name: string | null; type: string | null; priority: string | null; location: string | null }>;
+  tests: Array<{ id: string; date: string; title: string | null; type: string | null; completed: boolean | null }>;
+}
+
+/**
+ * Arbre de la périodisation de l'athlète, avec les ids qu'une planification
+ * cite pour modifier ou supprimer. Textes du coach seulement (noms,
+ * objectifs) : le commentaire de l'athlète sur une compétition n'y est pas.
+ */
+export function buildPeriodisation(input: PeriodisationInput) {
+  const byStart = <T extends { start_date: string }>(a: T, b: T) => a.start_date.localeCompare(b.start_date);
+  const cycle = (c: PeriodisationInput["cycles"][number]) => ({
+    id: c.id,
+    nom: label(c.name, 80),
+    du: c.start_date,
+    au: c.end_date,
+    objectif: label(c.objective, 500),
+    semaines: input.micros
+      .filter((w) => w.cycle_id === c.id)
+      .sort((a, b) => a.week_number - b.week_number)
+      .map((w) => ({ numero: w.week_number, du: w.start_date, au: w.end_date, decharge: w.is_deload === true })),
+  });
+  return {
+    macrocycles: [...input.macros].sort(byStart).map((m) => ({
+      id: m.id,
+      nom: label(m.name, 80),
+      du: m.start_date,
+      au: m.end_date,
+      objectif: label(m.objective, 500),
+      mesocycles: input.mesos.filter((x) => x.macrocycle_id === m.id).sort(byStart).map((x) => ({
+        id: x.id,
+        nom: label(x.name, 80),
+        du: x.start_date,
+        au: x.end_date,
+        objectif: label(x.objective, 500),
+        frequence: num(x.frequency, 1, 14),
+        semaine_decharge: num(x.deload_week, 1, 53),
+        volume: label(obj(x.volume_config).type, 20),
+        zones: (Array.isArray(obj(x.intensity_config).zones) ? obj(x.intensity_config).zones as unknown[] : [])
+          .map((z) => label(z, 4)).filter(Boolean),
+        cycles: input.cycles.filter((c) => c.mesocycle_id === x.id).sort(byStart).map(cycle),
+      })),
+    })),
+    // Cycles posés seuls (« créer un cycle depuis le bloc »).
+    cycles_hors_mesocycle: input.cycles.filter((c) => !c.mesocycle_id).sort(byStart).map(cycle),
+    competitions: [...input.competitions].sort((a, b) => a.date.localeCompare(b.date)).map((c) => ({
+      id: c.id, date: c.date, nom: label(c.name, 80), type: label(c.type, 20), priorite: label(c.priority, 2), lieu: label(c.location, 80),
+    })),
+    tests: [...input.tests].sort((a, b) => a.date.localeCompare(b.date)).map((t) => ({
+      id: t.id, date: t.date, titre: label(t.title, 80), type: label(t.type, 20), fait: t.completed === true,
+    })),
   };
 }

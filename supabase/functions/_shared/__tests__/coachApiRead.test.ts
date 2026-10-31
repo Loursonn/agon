@@ -124,13 +124,13 @@ describe("buildSummary — semaine prévue et réalisée", () => {
         { date: "2026-11-05", label: "Hors période", intensity: null, dominante: null },
       ],
       energyLogs: [{
-        scheduled_date: "2026-10-06", status: "completed", rpe_score: 7, actual_duration_min: 48, distance_km: 9.2,
+        energy_session_id: "es1", scheduled_date: "2026-10-06", status: "completed", rpe_score: 7, actual_duration_min: 48, distance_km: 9.2,
         energy_sessions: { name: "VMA 6 × 400", session_kind: "vo2", total_duration_s: 2700, total_distance_m: 5400 },
       }],
     }));
     expect(s.themes_du_jour).toEqual([{ date: "2026-10-05", label: "Jambes lourdes", intensite: "hard", dominante: "force" }]);
     expect(s.seances_energie).toEqual([{
-      date: "2026-10-06", nom: "VMA 6 × 400", type: "vo2", statut: "completed",
+      date: "2026-10-06", energy_session_id: "es1", nom: "VMA 6 × 400", type: "vo2", statut: "completed",
       duree_prevue_min: 45, distance_prevue_km: 5.4, rpe: 7, duree_min: 48, distance_km: 9.2,
     }]);
   });
@@ -147,19 +147,19 @@ describe("buildSummary — événements", () => {
   it("donne compétitions, tests et événements de vie, sans texte libre de l'athlète", () => {
     const s = buildSummary(input({
       competitions: [
-        { date: "2026-10-10", name: "Hyrox Paris", type: "competition", priority: "A", location: "Paris" },
-        { date: "2026-12-01", name: "Hyrox Lyon", type: "competition", priority: "B", location: null },
+        { id: "c1", date: "2026-10-10", name: "Hyrox Paris", type: "competition", priority: "A", location: "Paris" },
+        { id: "c2", date: "2026-12-01", name: "Hyrox Lyon", type: "competition", priority: "B", location: null },
       ],
-      tests: [{ date: "2026-10-12", title: "Squat 1RM", type: "musculation", completed: true,
+      tests: [{ id: "t1", date: "2026-10-12", title: "Squat 1RM", type: "musculation", completed: true,
         results_structured: { variables: { "1rm": 140, bidon: "x" }, comment: "genou douloureux" } }],
       lifeEvents: [
         { date_start: "2026-10-20", date_end: "2026-10-22", title: "Partiels" },
         { date_start: "2026-11-20", date_end: "2026-11-22", title: "Hors période" },
       ],
     }));
-    expect(s.evenements.competitions).toEqual([{ date: "2026-10-10", nom: "Hyrox Paris", type: "competition", priorite: "A", lieu: "Paris" }]);
-    expect(s.evenements.competitions_a_venir).toEqual([{ date: "2026-12-01", nom: "Hyrox Lyon", type: "competition", priorite: "B" }]);
-    expect(s.evenements.tests).toEqual([{ date: "2026-10-12", titre: "Squat 1RM", type: "musculation", fait: true, resultats: { "1rm": 140 } }]);
+    expect(s.evenements.competitions).toEqual([{ id: "c1", date: "2026-10-10", nom: "Hyrox Paris", type: "competition", priorite: "A", lieu: "Paris" }]);
+    expect(s.evenements.competitions_a_venir).toEqual([{ id: "c2", date: "2026-12-01", nom: "Hyrox Lyon", type: "competition", priorite: "B" }]);
+    expect(s.evenements.tests).toEqual([{ id: "t1", date: "2026-10-12", titre: "Squat 1RM", type: "musculation", fait: true, resultats: { "1rm": 140 } }]);
     expect(s.evenements.vie).toEqual([{ du: "2026-10-20", au: "2026-10-22", titre: "Partiels" }]);
     expect(JSON.stringify(s)).not.toContain("genou douloureux");
   });

@@ -63,12 +63,14 @@ Chaque lecture est journalisée.
 | GET | `/athletes` | Athlètes visibles (id, prénom) |
 | GET | `/athletes/:id/summary?from=AAAA-MM-JJ&to=AAAA-MM-JJ` | Données d'une période (28 jours par défaut, 90 max) |
 | GET | `/athletes/:id/program` | Programme en cours, avec les ids à citer dans les propositions |
+| GET | `/athletes/:id/periodisation` | Macrocycles, mésocycles, cycles et semaines, compétitions et tests, avec leurs ids |
 | POST | `/athletes/:id/drafts` | Déposer une proposition |
 | GET | `/drafts?status=pending\|applied\|rejected\|undone&athlete_id=…` | Propositions et leur sort |
 | POST | `/drafts/:id/appliquer` | Appliquer une proposition déposée |
 | POST | `/drafts/:id/annuler` | Annuler une proposition appliquée (`{ "forcer": true }` si besoin, voir plus bas) |
 | GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque |
 | GET | `/seances-energie?q=vma` | Chercher une séance énergétique dans ta banque (sans `q` : les 50 dernières) |
+| GET | `/tests?q=squat` | Chercher un test dans ta banque de tests (nom exact à reprendre dans `create_test`) |
 
 Les écritures passent toutes par une proposition, appliquée par toi ou à ta
 demande, et annulable.
@@ -217,6 +219,53 @@ ce qui est déjà prévu, l'assistant lit `GET /summary` sur la semaine à venir
 
 Si une application est interrompue (réseau), un nouveau clic sur
 « Appliquer » termine la semaine sans rien poser en double.
+
+### Planification
+
+`"kind": "plan"` : périodiser, poser compétitions et tests, retirer ce qui ne
+tient plus, et construire des semaines, **en une seule proposition** — donc
+une seule annulation pour tout. Elle accepte toutes les opérations d'une
+semaine (mêmes règles), plus :
+
+| op | Champs |
+|---|---|
+| `create_macrocycle` | `ref?`, `name`, `start_date`, `end_date`, `objective?` |
+| `create_mesocycle` | `ref?`, `macrocycle_id` **ou** `macrocycle_ref`, `name`, `start_date`, `end_date`, `objective?`, `frequency?` (1–14), `deload_week?`, `volume_type?` (`progressive`, `ondulant`, `plateau`, `polarize`), `zones?` (`["Z2","Z4"]`) |
+| `create_cycle` | `ref?`, `mesocycle_id` **ou** `mesocycle_ref` (ou aucun : cycle seul), `name`, `start_date`, `end_date`, `objective?`, `deload_weeks?` (`[4]`) |
+| `update_macrocycle` / `update_mesocycle` / `update_cycle` | `id` et les champs à changer |
+| `delete_macrocycle` / `delete_mesocycle` / `delete_cycle` | `id` — avec tout ce qu'il contient |
+| `set_week_deload` | `cycle_id` ou `cycle_ref`, `week_number`, `is_deload` |
+| `schedule_session_in_cycle` | `session_id` ou `ref`, `cycle_id` ou `cycle_ref` |
+| `remove_placement` | `session_id`, `date` |
+| `remove_energy_placement` | `energy_session_id`, `date` |
+| `remove_day_theme` | `date` |
+| `create_competition` | `name`, `date`, `type?` (`competition`, `match`, `stage`, `off`, `autre`), `priority?` (`A`, `B`, `C`), `location?` |
+| `update_competition` / `delete_competition` | `id` (+ champs à changer) |
+| `create_test` | `title`, `date`, `type?` (`musculation`, `endurance`, `vitesse`, `puissance`, `souplesse`, `autre`), `description?` |
+| `update_test` / `delete_test` | `id` (+ champs à changer) — pas un test déjà passé |
+
+- Comme dans le planning d'Agon : une période va **du lundi au dimanche**,
+  une semaine (microcycle) est créée pour chaque semaine du cycle, deux
+  périodes sœurs ne se chevauchent pas, et un enfant tient dans les dates de
+  son parent. Dates d'un an en arrière à deux ans en avant.
+- Déplacer un cycle refait ses semaines : celles qui sortent partent avec
+  leurs séances **prévues**.
+- `schedule_session_in_cycle` place la séance chaque semaine du cycle, à son
+  jour, à partir d'aujourd'hui (comme « placer sur le cycle » dans Agon). La
+  séance doit être hebdomadaire avec un jour : dans un plan, `create_session`
+  accepte `recurrence: "weekly"` et `day_of_week` (0 = lundi … 6 = dimanche).
+- **Le réalisé reste.** Supprimer un cycle ou un macrocycle retire ses
+  séances prévues ; une séance faite, en cours ou manquée reste chez
+  l'athlète (sans semaine). `remove_placement` marque la séance « sautée »
+  (elle ne réapparaît pas). Un test passé ne se modifie ni ne se supprime.
+- Les opérations s'appliquent dans l'ordre : créer avant de citer une `ref`.
+
+**Annuler** une planification remet tout comme avant, suppressions en
+cascade comprises (périodes, séances prévues, liens des séances faites et
+du plan de course d'une compétition). Ce qui a reçu du contenu depuis
+reste : un macrocycle où tu as ajouté un mésocycle, un test passé entre-temps,
+une compétition commentée par l'athlète, une séance retirée qu'il a faite
+quand même.
 
 ### Planning
 
