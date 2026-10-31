@@ -10,6 +10,8 @@ import { FICHE_CATEGORIES, FICHE_CATEGORY_LABEL } from "@/features/shared/types/
 import type { Doc, FicheCategory } from "@/features/shared/types/fiches";
 import { useAthleteDocs } from "@/features/shared/hooks/fiches/useDocs";
 import { DocUploadError, uploadDoc, useDeleteOwnDoc } from "@/features/shared/hooks/fiches/useDocMutations";
+import { PhotoFicheCapture } from "@/features/shared/components/fiches/PhotoFicheCapture";
+import { PhotoFicheError, photosToFicheFile } from "@/lib/photosToFiche";
 import { FichePreview } from "@/features/shared/components/fiches/FichePreview";
 import { FicheCommentThread } from "@/features/shared/components/fiches/FicheCommentThread";
 import { CATEGORY_COLOR, btnGhost, btnPrimary, sectionTitle } from "@/features/shared/components/fiches/ficheStyles";
@@ -129,16 +131,30 @@ function AddFicheDialog({ coachId, athleteId, staffId, onClose, onDone }: {
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [source, setSource] = useState<"photos" | "file">(() =>
+    window.matchMedia?.("(pointer: coarse)").matches ? "photos" : "file");
+  const [photos, setPhotos] = useState<File[]>([]);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<FicheCategory>("prevention");
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<string | null>(null);
+  const ready = source === "photos" ? photos.length > 0 : !!file;
 
   async function submit() {
-    if (!file) return;
+    if (!ready) return;
     setBusy(true);
     try {
+      const name = title.trim()
+        || (source === "file" && file ? file.name.replace(/\.[^.]+$/, "") : `Fiche du ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`);
+      let upload = file;
+      if (source === "photos") {
+        setStep(photos.length > 1 ? "Création du PDF…" : "Compression…");
+        upload = await photosToFicheFile(photos, name);
+      }
+      if (!upload) return;
+      setStep("Envoi…");
       // Banque du coach principal (athlete_id null), puis attribution à l'athlète.
-      const doc = await uploadDoc({ file, coachId, athleteId: null, uploadedBy: staffId, title: title || file.name.replace(/\.[^.]+$/, ""), category });
+      const doc = await uploadDoc({ file: upload, coachId, athleteId: null, uploadedBy: staffId, title: name, category });
       const { error } = await supabase.from("doc_assignments").insert({
         doc_id: doc.id, athlete_id: athleteId, assigned_by: staffId, source: "manuel",
       });
@@ -146,9 +162,10 @@ function AddFicheDialog({ coachId, athleteId, staffId, onClose, onDone }: {
       toast.success("Fiche ajoutée et attribuée");
       onDone();
     } catch (e) {
-      toast.error(e instanceof DocUploadError ? e.message : "Erreur lors de l'ajout de la fiche");
+      toast.error(e instanceof DocUploadError || e instanceof PhotoFicheError ? e.message : "Erreur lors de l'ajout de la fiche");
     } finally {
       setBusy(false);
+      setStep(null);
     }
   }
 
@@ -160,14 +177,26 @@ function AddFicheDialog({ coachId, athleteId, staffId, onClose, onDone }: {
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ width: "100%", maxWidth: 440, background: C.s1, border: "1px solid " + C.brdL, borderRadius: 6, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ width: "100%", maxWidth: 440, maxHeight: "92vh", overflowY: "auto", background: C.s1, border: "1px solid " + C.brdL, borderRadius: 6, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>Ajouter une fiche</div>
         <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>
           Elle rejoint la banque de fiches du coach principal, à ton nom, et elle est attribuée à l'athlète.
         </div>
-        <button type="button" style={btnGhost} onClick={() => fileRef.current?.click()}>
-          {file ? `${file.name} · ${formatFileSize(file.size)}` : "Choisir un PDF ou une image"}
-        </button>
+        <div style={{ display: "flex", gap: 14 }}>
+          {(["photos", "file"] as const).map((k) => (
+            <label key={k} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: source === k ? C.tx : C.tx3, cursor: "pointer" }}>
+              <input type="radio" name="add-fiche-source" checked={source === k} onChange={() => setSource(k)} disabled={busy} />
+              {k === "photos" ? "Photos" : "PDF ou image"}
+            </label>
+          ))}
+        </div>
+        {source === "photos" ? (
+          <PhotoFicheCapture photos={photos} onChange={setPhotos} disabled={busy} />
+        ) : (
+          <button type="button" style={btnGhost} onClick={() => fileRef.current?.click()}>
+            {file ? `${file.name} · ${formatFileSize(file.size)}` : "Choisir un PDF ou une image"}
+          </button>
+        )}
         <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" style={{ display: "none" }}
           onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, "")); e.target.value = ""; }} />
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre" style={field} />
@@ -176,8 +205,8 @@ function AddFicheDialog({ coachId, athleteId, staffId, onClose, onDone }: {
         </select>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button style={btnGhost} onClick={onClose}>Annuler</button>
-          <button style={{ ...btnPrimary, opacity: !file || busy ? 0.5 : 1 }} disabled={!file || busy} onClick={submit}>
-            {busy ? "Envoi…" : "Ajouter"}
+          <button style={{ ...btnPrimary, opacity: !ready || busy ? 0.5 : 1 }} disabled={!ready || busy} onClick={submit}>
+            {busy ? step ?? "Envoi…" : "Ajouter"}
           </button>
         </div>
       </div>

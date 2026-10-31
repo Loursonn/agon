@@ -45,6 +45,9 @@ import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
 import { DayThemePill } from "@/features/shared/components/DayThemePill";
 import { dayThemeFullLabel, indexDayThemesByDate, type DayThemeLike } from "@/lib/dayTheme";
 import { DayDetailsDrawer } from "./DayDetailsDrawer";
+import { groupScheduleByDate, useDocSchedule, type ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
+import { DayFiches } from "@/features/shared/components/fiches/DayFiches";
+import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
 import { QuickAddDialog } from "./QuickAddDialog";
 import { buildProjectionCoverage, isProjectionCovered } from "@/lib/planningProjection";
 import { athleteMoveTitle } from "@/lib/athleteChoices";
@@ -335,6 +338,7 @@ function DroppableDay({
   wellnessLogged,
   nutritionLogged,
   dayTheme,
+  dayFiches = [],
 }: {
   date: Date;
   events: CalEvent[];
@@ -347,6 +351,8 @@ function DroppableDay({
   wellnessLogged: boolean;
   nutritionLogged: boolean;
   dayTheme?: DayThemeLike | null;
+  /** Fiches posées sur ce jour (staff ou coach) */
+  dayFiches?: ScheduledDoc[];
 }) {
   const dateStr = format(date, "yyyy-MM-dd");
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
@@ -450,7 +456,9 @@ function DroppableDay({
       {(() => {
         const regularEvents = events.filter((e) => e.type !== "life_event" && e.type !== "competition");
         const lifeCount = events.length - regularEvents.length;
-        const maxAfterLife = Math.max(1, maxVisible - lifeCount);
+        // Les fiches du jour prennent une ligne (la case fait 110 px, overflow caché).
+        const ficheLines = dayFiches.length > 0 ? 1 : 0;
+        const maxAfterLife = Math.max(1, maxVisible - lifeCount - ficheLines);
         const overflow = Math.max(0, regularEvents.length - maxAfterLife);
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
@@ -460,6 +468,12 @@ function DroppableDay({
             {overflow > 0 && (
               <div style={{ fontSize: 9, color: C.tx3, paddingLeft: 4 }}>
                 +{overflow} autre{overflow > 1 ? "s" : ""}
+              </div>
+            )}
+            {dayFiches.length === 1 && <DayFiches items={dayFiches} compact />}
+            {dayFiches.length > 1 && (
+              <div title={dayFiches.map((f) => f.doc?.title).filter(Boolean).join(", ")} style={{ fontSize: 10, color: C.tx2, paddingLeft: 4, whiteSpace: "nowrap" }}>
+                📄 {dayFiches.length} fiches
               </div>
             )}
           </div>
@@ -817,6 +831,8 @@ export function CalendarMonthView({
   // Un seul appel pour toute la grille, indexé par date : la case ne requête pas.
   const { data: dayThemeRows = [] } = useDayThemesRange(athleteId, monthRange.start, monthRange.end);
   const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
+  const { data: scheduledDocs = [] } = useDocSchedule(athleteId, monthRange);
+  const fichesByDate = useMemo(() => groupScheduleByDate(scheduledDocs), [scheduledDocs]);
   const realEvents = useMemo(() => rawEvents.map(toCalEvent), [rawEvents]);
   const { mutate: assignWorkout }       = useAssignWorkout();
   const { mutate: reschedule }          = useRescheduleWorkout();
@@ -1267,6 +1283,7 @@ export function CalendarMonthView({
                       wellnessLogged={wLogged}
                       nutritionLogged={nLogged}
                       dayTheme={dayThemesByDate[dateStr] ?? null}
+                      dayFiches={fichesByDate.get(dateStr)}
                     />
                   );
                 })}
@@ -1341,6 +1358,9 @@ export function CalendarMonthView({
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Fiche ouverte depuis une case (fiches posées sur un jour) */}
+      <FicheViewerHost athleteId={athleteId} viewOnly />
 
       {/* Day details drawer */}
       <DayDetailsDrawer

@@ -956,6 +956,58 @@ export type Database = {
           },
         ]
       }
+      doc_schedule: {
+        Row: {
+          added_by: string | null
+          athlete_id: string
+          created_at: string
+          date: string
+          doc_id: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          athlete_id: string
+          created_at?: string
+          date: string
+          doc_id: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          athlete_id?: string
+          created_at?: string
+          date?: string
+          doc_id?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_schedule_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_schedule_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_schedule_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "docs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       docs: {
         Row: {
           archived_at: string | null
@@ -1444,6 +1496,7 @@ export type Database = {
           athlete_id: string
           color: string
           created_at: string | null
+          created_by: string | null
           emoji: string
           id: string
           is_active: boolean | null
@@ -1454,6 +1507,7 @@ export type Database = {
           athlete_id: string
           color?: string
           created_at?: string | null
+          created_by?: string | null
           emoji?: string
           id?: string
           is_active?: boolean | null
@@ -1464,6 +1518,7 @@ export type Database = {
           athlete_id?: string
           color?: string
           created_at?: string | null
+          created_by?: string | null
           emoji?: string
           id?: string
           is_active?: boolean | null
@@ -1474,6 +1529,13 @@ export type Database = {
           {
             foreignKeyName: "habits_athlete_id_fkey"
             columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habits_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4266,6 +4328,15 @@ export type Database = {
       runtests:
         | { Args: never; Returns: string[] }
         | { Args: { "": string }; Returns: string[] }
+      schedule_doc: {
+        Args: {
+          p_athlete: string
+          p_dates: string[]
+          p_doc: string
+          p_note?: string
+        }
+        Returns: number
+      }
       set_active_performance_reference: {
         Args: {
           p_athlete_id: string

@@ -110,6 +110,20 @@ EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('B8 pro crée une fiche li
 INSERT INTO doc_comments(doc_id, athlete_id, author_id, body)
 SELECT d.id, i.athlete, i.staff, 'commentaire test' FROM docs d, ids i WHERE d.title='TEST fiche staff';
 INSERT INTO r(k,v) VALUES ('B9 pro commente la fiche', 'ok');
+-- Fiches posées sur des jours
+INSERT INTO r(k,v) SELECT 'S1 pro pose la fiche sur 3 jours (3)',
+  schedule_doc(i.athlete, d.id, ARRAY[current_date, current_date + 2, current_date + 4]::date[], 'test')::text
+  FROM docs d, ids i WHERE d.title='TEST fiche staff';
+INSERT INTO r(k,v) SELECT 'S2 doublon ignoré (0)',
+  schedule_doc(i.athlete, d.id, ARRAY[current_date]::date[])::text FROM docs d, ids i WHERE d.title='TEST fiche staff';
+DO $$ BEGIN
+  PERFORM schedule_doc(i.other_athlete, d.id, ARRAY[current_date]::date[]) FROM docs d, ids i WHERE d.title='TEST fiche staff';
+  INSERT INTO r(k,v) VALUES ('S3 pro pose chez un athlète non suivi', 'ACCEPTÉ (KO)');
+EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('S3 pro pose chez un athlète non suivi', 'refusé (OK)'); END $$;
+DO $$ BEGIN
+  INSERT INTO doc_schedule(doc_id, athlete_id, date, added_by) SELECT d.id, i.athlete, current_date + 6, i.coach FROM docs d, ids i WHERE d.title='TEST fiche staff';
+  INSERT INTO r(k,v) VALUES ('S4 pro usurpe l''auteur', 'ACCEPTÉ (KO)');
+EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('S4 pro usurpe l''auteur', 'refusé (OK)'); END $$;
 INSERT INTO r(k,v) SELECT 'B10 chemin Storage banque coach autorisé', staff_can_write_docs_path(coach::text || '/banque/x.pdf')::text FROM ids;
 INSERT INTO r(k,v) SELECT 'B11 chemin Storage autre athlète refusé', (NOT staff_can_write_docs_path(coach::text || '/athletes/' || other_athlete::text || '/x.pdf'))::text FROM ids;
 INSERT INTO r(k,v) SELECT 'B12 chemin médical athlète (write)', staff_can_path(athlete::text || '/e/x.pdf', 'medical', 'write')::text FROM ids;
@@ -117,6 +131,9 @@ INSERT INTO r(k,v) SELECT 'B12 chemin médical athlète (write)', staff_can_path
 -- ===== ATHLÈTE =====
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', athlete, 'role','authenticated')::text FROM ids), true);
 INSERT INTO r(k,v) SELECT 'C1 athlète lit la fiche du pro', can_read_doc(d.id)::text FROM docs d WHERE d.title='TEST fiche staff';
+INSERT INTO r(k,v) SELECT 'S5 athlète voit ses fiches du jour (3)', count(*)::text FROM doc_schedule WHERE athlete_id = auth.uid();
+WITH u AS (DELETE FROM doc_schedule WHERE athlete_id = auth.uid() RETURNING 1)
+INSERT INTO r(k,v) SELECT 'S6 athlète ne retire pas (0)', count(*)::text FROM u;
 INSERT INTO r(k,v) SELECT 'C2 athlète voit son staff (1)', count(*)::text FROM athlete_staff WHERE athlete_id = auth.uid();
 INSERT INTO r(k,v) SELECT 'C3 athlète voit le profil du pro (1)', count(*)::text FROM profiles WHERE id=(SELECT staff FROM ids);
 DO $$ BEGIN
@@ -145,6 +162,9 @@ INSERT INTO r(k,v) SELECT 'P9 nutritionniste (tests none, nutrition write) : poi
 INSERT INTO r(k,v) SELECT 'D3 2e pro ne voit pas le profil du 1er pro (0)', count(*)::text FROM profiles WHERE id=(SELECT staff FROM ids);
 WITH u AS (UPDATE medical_entries SET notes='y' WHERE created_by=(SELECT staff FROM ids) RETURNING 1)
 INSERT INTO r(k,v) SELECT 'D4 2e pro ne touche pas l''entrée du 1er (0)', count(*)::text FROM u;
+INSERT INTO r(k,v) SELECT 'S7 2e pro voit les fiches du jour (3)', count(*)::text FROM doc_schedule WHERE athlete_id=(SELECT athlete FROM ids);
+WITH u AS (DELETE FROM doc_schedule WHERE athlete_id=(SELECT athlete FROM ids) RETURNING 1)
+INSERT INTO r(k,v) SELECT 'S8 2e pro ne retire pas celles du 1er (0)', count(*)::text FROM u;
 
 -- ===== COACH =====
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', coach, 'role','authenticated')::text FROM ids), true);
@@ -152,6 +172,7 @@ RESET ROLE; UPDATE athlete_staff SET athlete_notified_at = now() WHERE athlete_i
 UPDATE athlete_staff SET permissions = permissions || '{"nutrition":"read"}', can_edit_coach_content = true WHERE staff_id=(SELECT staff FROM ids);
 INSERT INTO r(k,v) SELECT 'E1 coach règle les droits → athlète à informer',
   (permissions->>'nutrition' = 'read' AND can_edit_coach_content AND athlete_notified_at IS NULL)::text FROM athlete_staff WHERE staff_id=(SELECT staff FROM ids);
+INSERT INTO r(k,v) SELECT 'S9 coach voit les fiches du jour (3)', count(*)::text FROM doc_schedule WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'E2 coach voit la fiche du pro dans sa banque', can_read_doc(d.id)::text FROM docs d WHERE d.title='TEST fiche staff';
 INSERT INTO r(k,v) SELECT 'E3 appliquer à tous (0 autre lien)', staff_apply_to_all(id)::text FROM athlete_staff WHERE staff_id=(SELECT staff FROM ids);
 
@@ -159,6 +180,8 @@ INSERT INTO r(k,v) SELECT 'E3 appliquer à tous (0 autre lien)', staff_apply_to_
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', staff, 'role','authenticated')::text FROM ids), true);
 INSERT INTO r(k,v) SELECT 'E4 pro + option → peut éditer contenu du coach',
   staff_can_edit((SELECT athlete FROM ids), 'medical', (SELECT coach FROM ids))::text;
+WITH u AS (DELETE FROM doc_schedule WHERE athlete_id=(SELECT athlete FROM ids) AND date = current_date RETURNING 1)
+INSERT INTO r(k,v) SELECT 'S10 pro retire sa fiche du jour (1)', count(*)::text FROM u;
 INSERT INTO r(k,v) SELECT 'E5 … mais pas celui de l''athlète', (NOT staff_can_edit((SELECT athlete FROM ids), 'medical', (SELECT athlete FROM ids)))::text;
 
 -- ===== Révocation par l'athlète =====
@@ -167,6 +190,7 @@ UPDATE athlete_staff SET status='revoked' WHERE staff_id=(SELECT staff FROM ids)
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', staff, 'role','authenticated')::text FROM ids), true);
 INSERT INTO r(k,v) SELECT 'F1 après révocation : workout_logs (0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'F2 après révocation : profil athlète (0)', count(*)::text FROM profiles WHERE id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'S11 après révocation : fiches du jour (0)', count(*)::text FROM doc_schedule WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'F2b après révocation : RPC profil (0)', count(*)::text FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
 DO $$ BEGIN
   UPDATE athlete_staff SET status='active' WHERE staff_id = auth.uid();

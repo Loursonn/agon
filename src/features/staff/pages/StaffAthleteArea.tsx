@@ -6,11 +6,10 @@
  */
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { C } from "@/lib/theme";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth, type Profile } from "@/hooks/useAuth";
 import { AthleteProvider } from "@/features/shared/context/AthleteContext";
 import { MedicalEntriesSection } from "@/features/shared/components/medical/MedicalEntriesSection";
-import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
-import ProgramPage from "@/features/athlete/pages/ProgramPage";
 import AthleteTestPage from "@/features/athlete/pages/AthleteTestPage";
 import AlimPage from "@/features/athlete/pages/AlimPage";
 import { useMyStaffLinks, type MyStaffAthlete } from "../hooks/useMyStaffLinks";
@@ -30,6 +29,7 @@ import { StaffLogsTab } from "../components/tabs/StaffLogsTab";
 import { StaffPlanningTab } from "../components/tabs/StaffPlanningTab";
 import { StaffWellnessTab } from "../components/tabs/StaffWellnessTab";
 import { StaffCommentsTab } from "../components/tabs/StaffCommentsTab";
+import { StaffProgramTab } from "../components/program/StaffProgramTab";
 
 const TABS: { key: StaffDomain; label: string }[] = [
   { key: "seances", label: "Programme" },
@@ -76,15 +76,14 @@ function ConsentPending() {
 }
 
 function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: MyStaffAthlete; userId: string }) {
+  // Pages athlète réutilisées (nutrition, tests) : conçues pour mobile, élargies
+  // sur ordinateur sans s'étirer sur tout l'écran.
+  const isMobile = useIsMobile();
+  const narrow = isMobile ? undefined : 760;
   if (HEALTH_DOMAINS.has(domain) && !link.healthConsent) return <ConsentPending />;
   switch (domain) {
     case "seances":
-      return (
-        <div style={{ maxWidth: 480 }}>
-          <ProgramPage />
-          <FicheViewerHost athleteId={link.athleteId} viewOnly />
-        </div>
-      );
+      return <StaffProgramTab link={link} />;
     case "planification":
       return <StaffPlanningTab athleteId={link.athleteId} />;
     case "logs":
@@ -94,7 +93,7 @@ function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: My
     case "medical": {
       const write = canWrite(link.permissions, "medical");
       return (
-        <div style={{ maxWidth: 620 }}>
+        <div style={{ maxWidth: isMobile ? undefined : 960 }}>
           <MedicalEntriesSection
             athleteId={link.athleteId}
             canEdit={write}
@@ -106,9 +105,9 @@ function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: My
       );
     }
     case "nutrition":
-      return <div style={{ maxWidth: 480 }}><AlimPage /></div>;
+      return <div style={{ maxWidth: narrow }}><AlimPage /></div>;
     case "tests":
-      return <div style={{ maxWidth: 480 }}><AthleteTestPage /></div>;
+      return <div style={{ maxWidth: narrow }}><AthleteTestPage /></div>;
     case "fiches":
       return <StaffFichesTab link={link} />;
     case "commentaires":
