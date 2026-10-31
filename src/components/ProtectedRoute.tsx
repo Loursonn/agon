@@ -5,7 +5,7 @@ import ConsentGate from "@/components/ConsentGate";
 // Redirige vers /login si non connecté
 // Redirige vers /coach ou /athlete selon le rôle une fois connecté
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -23,6 +23,16 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     doit pouvoir s'afficher sans base légale. Un oubli dans une page isolée
     suffirait à créer un traitement illicite.
   */
+  /*
+    Exception : un compte professionnel pur (rôle `staff` : kiné, ostéo…) ne
+    confie aucune donnée de santé le concernant à l'app. Il consulte celles des
+    athlètes qui l'ont accepté, sur la base de leur propre accord
+    (`staff_sharing`, vérifié côté base par staff_can). L'écran d'accord santé,
+    écrit pour un athlète, ne s'applique donc pas à lui. Un coach qui est aussi
+    pro (double casquette) garde son rôle coach et passe toujours la barrière.
+  */
+  if (profile?.role === "staff") return <>{children}</>;
+
   return <ConsentGate>{children}</ConsentGate>;
 }
 
@@ -49,5 +59,6 @@ export function RoleRedirect() {
     );
   }
   if (profile.role === "coach" || profile.role === "coach_athlete") return <Navigate to="/coach" replace />;
+  if (profile.role === "staff") return <Navigate to="/staff" replace />;
   return <Navigate to="/athlete" replace />;
 }

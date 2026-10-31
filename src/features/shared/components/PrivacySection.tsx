@@ -23,13 +23,15 @@ import { useDeleteAccount } from "@/features/shared/hooks/useDeleteAccount";
  * nombre de clics que la case cochée à l'inscription.
  */
 
-const OPTIONAL_PURPOSES: ConsentPurpose[] = ["ai_programming", "garmin_sync", "coros_sync"];
+const OPTIONAL_PURPOSES: ConsentPurpose[] = ["ai_programming", "staff_sharing", "garmin_sync", "coros_sync"];
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
 export function PrivacySection() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  // Le partage avec un staff ne concerne que les comptes qui ont des données d'athlète.
+  const isAthlete = profile?.role === "athlete" || profile?.role === "coach_athlete";
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -107,7 +109,8 @@ export function PrivacySection() {
                   // Les accords montre ne sont demandés qu'au moment de la
                   // connexion du compte : afficher un interrupteur pour une
                   // montre jamais connectée n'aurait rien à désactiver.
-                  if (!row && p !== "ai_programming") return null;
+                  if (!row && p !== "ai_programming" && p !== "staff_sharing") return null;
+                  if (p === "staff_sharing" && !isAthlete) return null;
                   return (
                     <div key={p} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                       <button

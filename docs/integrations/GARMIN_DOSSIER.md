@@ -295,12 +295,13 @@ Ce qui rend le consentement défendable ici, et pas seulement allégué :
 - consentement **distinct** pour la synchronisation de la montre, demandé au
   moment de la connexion et non noyé dans une acceptation globale ;
 - **révocable** depuis le même écran, en un clic ;
-- **versionné** : un accord donné sur une version antérieure des documents est
-  traité comme une absence d'accord et redemandé ;
+- **versionné** : un accord donné sur une version des documents qui ne couvre
+  plus le traitement concerné est traité comme une absence d'accord et
+  redemandé ;
 - **journalisé en append-only** : un retrait est une écriture nouvelle, jamais
   une modification. Une preuve qu'on peut réécrire n'est pas une preuve.
 
 Garmin est **responsable de traitement indépendant**, pas notre sous-traitant :
-c'est ce que dit le §4.3 de la politique de confidentialité, et c'est ce qui
+c'est ce que dit le §4.4 de la politique de confidentialité, et c'est ce qui
 est juridiquement exact. Le présenter comme un sous-traitant serait une erreur
 qu'un relecteur Garmin repérerait.

@@ -1,4 +1,5 @@
-import { useLocation, useNavigate, Outlet } from "react-router-dom";
+import { useLocation, useNavigate, Outlet, Navigate } from "react-router-dom";
+import { useHasStaffLinks } from "@/features/staff/hooks/useMyStaffLinks";
 import {
   SidebarProvider,
   Sidebar,
@@ -73,6 +74,8 @@ function CoachShellInner() {
   const { user, profile, logout } = useAuth();
   const unseenUpdates = useAppUpdates(user?.id).unseen.length;
   const { toggle } = useCommandPalette();
+  // Double casquette : un coach qui est aussi pro chez un autre coach
+  const { hasLinks: isStaffElsewhere } = useHasStaffLinks();
 
   function isActive(path: string, exact: boolean) {
     if (exact) return location.pathname === path;
@@ -268,12 +271,26 @@ function CoachShellInner() {
             <span>Rechercher</span>
             <kbd style={{ fontSize: 10, opacity: 0.5, marginLeft: 2, fontFamily: "inherit" }}>⌘K</kbd>
           </button>
+          {/* Espace pro — coach qui est aussi staff d'athlètes d'autres coachs */}
+          {isStaffElsewhere && (
+            <button
+              onClick={() => navigate("/staff")}
+              style={{
+                marginLeft: "auto", padding: "5px 12px", borderRadius: 6,
+                border: "1px solid " + C.brdL, background: "transparent", color: C.tx2,
+                fontSize: 11, fontWeight: 700, cursor: "pointer",
+                fontFamily: "inherit", whiteSpace: "nowrap",
+              }}
+            >
+              Staff
+            </button>
+          )}
           {/* Mode switch — visible pour coach et coach_athlete */}
           {(profile?.role === "coach_athlete" || profile?.role === "coach") && (
             <button
               onClick={() => navigate("/athlete")}
               style={{
-                marginLeft: "auto", padding: "5px 12px", borderRadius: 6,
+                marginLeft: isStaffElsewhere ? 0 : "auto", padding: "5px 12px", borderRadius: 6,
                 border: "1px solid " + C.coach + "40",
                 background: C.coach + "15", color: C.coach,
                 fontSize: 11, fontWeight: 700, cursor: "pointer",
@@ -299,6 +316,9 @@ function CoachShellInner() {
 }
 
 export default function CoachShell() {
+  const { profile } = useAuth();
+  // Compte professionnel uniquement : pas d'espace coach.
+  if (profile?.role === "staff") return <Navigate to="/staff" replace />;
   return (
     <CommandPaletteProvider>
       <CoachShellInner />

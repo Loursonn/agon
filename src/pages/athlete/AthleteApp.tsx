@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AthleteProvider } from "@/features/shared/context/AthleteContext";
 import AthleteLayout from "@/features/athlete/AthleteLayout";
@@ -11,6 +11,8 @@ export default function AthleteApp() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   if (!user) return null;
+  // Compte professionnel uniquement : pas d'espace athlète.
+  if (profile?.role === "staff") return <Navigate to="/staff" replace />;
 
   const canSwitchToCoach = profile?.role === "coach_athlete" || profile?.role === "coach";
 

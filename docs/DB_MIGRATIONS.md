@@ -30,6 +30,15 @@ supabase db dump --file backup_$(date +%Y%m%d).sql
 
 ---
 
+## Checklist pour chaque nouvelle migration
+
+- **Nouvelle table liée à un athlète → à quel domaine staff appartient-elle ?** (`seances`, `planification`, `logs`, `wellness`, `medical`, `nutrition`, `tests`, `fiches`, `commentaires` — voir `docs/STAFF_FEATURE.md`.) Ajouter une policy `staff_<table>_select` (et écriture si besoin) appuyée sur `staff_can(athlete_id, '<domaine>', 'read'|'write')`, ou noter explicitement dans la migration que la table est hors staff.
+- Nouvelle clé `app_data` → la rattacher à un domaine dans `staff_app_data_domain()` (sinon invisible pour le staff, ce qui est le comportement sûr par défaut).
+- Nouveau chemin Storage lié à un athlète → vérifier `staff_can_path()` / `staff_can_write_docs_path()`.
+- Ne jamais réécrire `is_coach_of` / `can_coach_athlete` pour y ajouter le staff : les accès staff passent par des policies séparées préfixées `staff_` (elles s'ajoutent en OU).
+
+---
+
 ## Ordre d'exécution des migrations PROMPT 6
 
 Les migrations doivent être appliquées dans cet ordre (dépendances) :

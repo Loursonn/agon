@@ -111,6 +111,13 @@ export const QK = {
   providerActivities:  (aid: string) => ['provider-activities', aid] as const,
   providerDailies:     (aid: string, from: string, to: string) =>
     ['provider-dailies', aid, from, to] as const,
+  // ── Staff autour des athlètes ─────────────────────────────────────────────────
+  staff:               ['staff'] as const,
+  athleteStaff:        (aid: string) => ['staff', 'athlete', aid] as const,
+  staffInvitations:    (aid: string) => ['staff', 'invitations', aid] as const,
+  myStaffLinks:        (uid: string) => ['staff', 'mine', uid] as const,
+  staffInvitation:     (token: string) => ['staff', 'invitation', token] as const,
+  staffConsent:        (aid: string) => ['staff', 'consent', aid] as const,
   // ── API coach pour assistant IA (Claude) ──────────────────────────────────────
   coachApiKeys:   (coachId: string) => ['coach-api-keys', coachId] as const,
   coachApiDrafts: (aid: string) => ['coach-api-drafts', aid] as const,

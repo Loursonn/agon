@@ -6,6 +6,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
 import ProfileDrawer from "./components/ProfileDrawer";
+import { useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
 import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
 import AppFbForm from "./components/AppFbForm";
 import { WellnessFlow } from "@/components/athlete/WellnessFlow";
@@ -69,6 +70,9 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
   // Build tab list based on HYROX flag
   const ATH_TABS = [...BASE_TABS, ...(athleteProfile?.is_hyrox_athlete ? [HYROX_TAB] : []), ...TAIL_TABS];
+  // Information de l'athlète (spec staff §6) : pro ajouté ou droits modifiés, pas encore vu.
+  const { data: staffLinks = [] } = useAthleteStaff(athleteId);
+  const staffUnseen = staffLinks.filter((l) => l.status === "active" && !l.athlete_notified_at).length;
 
   // Derive active tab from pathname
   const pathSegments = location.pathname.split("/").filter(Boolean);
@@ -175,7 +179,12 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
                 transition: "color 150ms",
               }}
             >
-              <span style={{ display: "flex", alignItems: "center" }}>{t.icon}</span>
+              <span style={{ display: "flex", alignItems: "center", position: "relative" }}>
+                {t.icon}
+                {t.k === "profil" && staffUnseen > 0 && (
+                  <span aria-label="Nouveau dans ton staff" style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: C.ac }} />
+                )}
+              </span>
               <span style={{ letterSpacing: "0.2px" }}>{t.l}</span>
             </button>
           );

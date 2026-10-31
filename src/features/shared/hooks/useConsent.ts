@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/useAuth";
-import { LEGAL_VERSION } from "@/lib/legal";
+import { CORE_CONSENT_SINCE, LEGAL_VERSION } from "@/lib/legal";
 
 /**
  * Lecture et écriture du consentement RGPD.
@@ -14,7 +14,7 @@ import { LEGAL_VERSION } from "@/lib/legal";
  */
 
 /** Finalités de traitement nécessitant un consentement distinct. */
-export type ConsentPurpose = "health_data" | "ai_programming" | "garmin_sync" | "coros_sync";
+export type ConsentPurpose = "health_data" | "ai_programming" | "garmin_sync" | "coros_sync" | "staff_sharing";
 
 export interface ConsentState {
   purpose: ConsentPurpose;
@@ -59,6 +59,13 @@ export const CONSENT_COPY: Record<
     label:
       "J'accepte qu'Agon récupère les données enregistrées par ma montre COROS et les partage avec mon coach.",
     detail: "Facultatif, et révocable à tout moment.",
+    required: false,
+  },
+  staff_sharing: {
+    label:
+      "J'accepte que les professionnels ajoutés par mon coach ou par moi (kiné, ostéo, nutritionniste…) accèdent à mes données selon les droits définis par mon coach.",
+    detail:
+      "Facultatif, et révocable à tout moment. Chaque professionnel ne voit que les domaines que ton coach lui ouvre (programme, séances, bien-être, blessures, nutrition…), et tu retrouves la liste de tes pros et de leurs droits dans « Mon staff ». Tant que tu n'as pas accepté, ton staff ne voit aucune de tes données.",
     required: false,
   },
 };
@@ -123,24 +130,34 @@ export function useSetConsent() {
       const { error } = await supabase.from("user_consents").insert(rows);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, decisions) => {
       qc.invalidateQueries({ queryKey: QK.consents(user?.id ?? "none") });
+      // Bandeau « accord staff » de Mon staff (lu via staff_sharing_consented).
+      if (user && decisions.some((d) => d.purpose === "staff_sharing")) {
+        qc.invalidateQueries({ queryKey: QK.staffConsent(user.id) });
+      }
     },
   });
 }
 
 /**
- * Vrai si le consentement socle est accordé *et* porte sur la version courante
- * des documents.
+ * Vrai si le consentement socle est accordé sous une version qui le couvre
+ * encore (`CORE_CONSENT_SINCE` ou plus récente).
  *
- * Une version périmée vaut absence de consentement : si le texte a changé de
- * façon substantielle, l'utilisateur n'a pas consenti au nouveau traitement. Il
- * est alors re-sollicité par `ConsentGate`.
+ * Une version trop ancienne vaut absence de consentement : si le traitement
+ * couvert a changé, l'utilisateur n'y a pas consenti. Il est alors
+ * re-sollicité par `ConsentGate`. Les versions sont des dates `AAAA-MM-JJ` :
+ * l'ordre alphabétique est l'ordre chronologique.
  */
 export function hasValidCoreConsent(consents: ConsentState[] | undefined): boolean {
   if (!consents) return false;
   const core = consents.find((c) => c.purpose === "health_data");
-  return !!core && core.granted && core.docVersion === LEGAL_VERSION;
+  return !!core && core.granted && core.docVersion >= CORE_CONSENT_SINCE;
+}
+
+/** Vrai si l'utilisateur a déjà répondu (oui ou non) pour cette finalité. */
+export function hasDecided(consents: ConsentState[] | undefined, purpose: ConsentPurpose): boolean {
+  return !!consents?.some((c) => c.purpose === purpose);
 }
 
 /** État d'une finalité facultative, en traitant l'absence comme un refus. */

@@ -31,9 +31,19 @@ async function determineActiveCycleId(athleteId: string): Promise<string | null>
   return (covering ?? rows[0]).id;
 }
 
-export function useAthletePersistedState(athleteId: string) {
+/**
+ * @param opts.readOnly  Lecteur sans droit d'écriture (professionnel du staff) :
+ *   aucune écriture (migration par cycle, miroir legacy, sauvegardes).
+ */
+export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: boolean }) {
   const load = useCallback(<T>(k: string, fb: T) => sLoad<T>(k, fb, athleteId), [athleteId]);
-  const save = useCallback((k: string, v: unknown) => sSave(k, v, athleteId), [athleteId]);
+  // Lecteur sans droit d'écriture (staff) : aucune écriture, ni miroir legacy
+  // ni sauvegarde. La RLS les refuserait de toute façon.
+  const readOnly = !!opts?.readOnly;
+  const save = useCallback(
+    (k: string, v: unknown) => (readOnly ? Promise.resolve() : sSave(k, v, athleteId)),
+    [athleteId, readOnly],
+  );
 
   // Cycle actuellement ouvert. exos/sessions/completed sont scopés sur lui.
   // null = aucun cycle en base (back-compat : on retombe sur les clés globales).
@@ -46,11 +56,12 @@ export function useAthletePersistedState(athleteId: string) {
   );
   // Écrit la clé scopée + un miroir sur la clé legacy (consommée par les vues coach).
   const saveBoth = useCallback((base: string, val: unknown) => {
+    if (readOnly) return Promise.resolve();
     const k = keyFor(base);
     const p = sSave(k, val, athleteId);
     if (k !== base) sSave(base, val, athleteId).catch(() => {});
     return p;
-  }, [keyFor, athleteId]);
+  }, [keyFor, athleteId, readOnly]);
 
   const [exos, setExosRaw] = useState<ExosMap>({});
   const [exMeta, setExMetaRaw] = useState<Record<string, unknown>>({});
@@ -119,7 +130,7 @@ export function useAthletePersistedState(athleteId: string) {
       // Lecture en erreur (réseau, session expirée) ≠ « pas encore migré » :
       // dans le doute on ne migre pas, on réessaiera au prochain chargement.
       const migratedRes = await sLoadResult<boolean>("asp:percycle_migrated", athleteId);
-      if (migratedRes.ok && !migratedRes.value) {
+      if (!readOnly && migratedRes.ok && !migratedRes.value) {
         // Le drapeau "migré" ne doit être posé QUE si les recopies ont réussi.
         // Sinon une écriture ratée (réseau) marquait la migration faite alors
         // que le cycle restait vide : programme et séances perdus définitivement.

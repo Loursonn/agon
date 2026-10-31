@@ -33,6 +33,8 @@ import { formatClusterReps } from "@/features/coach/components/programmation/clu
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 import { AthleteFichesView } from "@/features/athlete/components/fiches/AthleteFichesView";
 import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
+import { groupScheduleByDate, useDocSchedule, type ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
+import { DayFiches } from "@/features/shared/components/fiches/DayFiches";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1045,7 +1047,7 @@ function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPres
 function DayRow({
   day, today, onSessionPress, onReschedule, onTestPress,
   freeActivities, onAddActivity, onEditActivity, onAddCompetition, viewOnly,
-  dayTheme,
+  dayTheme, dayFiches = [],
 }: {
   day: WeekDay;
   today: string;
@@ -1059,13 +1061,15 @@ function DayRow({
   onAddCompetition: ((date: string) => void) | null;
   viewOnly: boolean;
   dayTheme?: DayThemeLike | null;
+  /** Fiches posées sur ce jour par un pro du staff ou le coach */
+  dayFiches?: ScheduledDoc[];
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
   const d       = new Date(day.date + "T12:00:00");
   const dateNum = d.getDate();
   const isCompDay = day.competitions.length > 0;
-  const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0;
+  const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0 && dayFiches.length === 0;
 
   return (
     <div style={{
@@ -1106,7 +1110,9 @@ function DayRow({
             <div style={{ fontSize: 12, fontWeight: isEmpty ? 400 : 600, color: isEmpty ? C.tx3 : C.tx }}>
               {isEmpty
                 ? (isPast ? "Repos" : "Aucune séance")
-                : `${day.sessions.length} séance${day.sessions.length > 1 ? "s" : ""}`}
+                : day.sessions.length === 0 && dayFiches.length > 0
+                  ? `${dayFiches.length} fiche${dayFiches.length > 1 ? "s" : ""}`
+                  : `${day.sessions.length} séance${day.sessions.length > 1 ? "s" : ""}`}
             </div>
           )}
           {/* Thème du coach, sous le décompte : il qualifie la journée même
@@ -1167,6 +1173,13 @@ function DayRow({
           {freeActivities.map(f => (
             <FreeActivityChip key={f.id} activity={f} onPress={onEditActivity} />
           ))}
+        </div>
+      )}
+
+      {/* Fiches posées sur ce jour (staff ou coach) */}
+      {dayFiches.length > 0 && (
+        <div style={{ padding: "6px 14px 6px 14px" }}>
+          <DayFiches items={dayFiches} />
         </div>
       )}
 
@@ -1266,6 +1279,10 @@ function ProgramSessionsView() {
     athleteId ?? undefined, weekBounds?.start, weekBounds?.end,
   );
   const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
+  const { data: scheduledDocs = [] } = useDocSchedule(
+    weekBounds ? athleteId : null, weekBounds ?? { start: "", end: "" },
+  );
+  const fichesByDate = useMemo(() => groupScheduleByDate(scheduledDocs), [scheduledDocs]);
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -1444,6 +1461,7 @@ function ProgramSessionsView() {
                     onAddCompetition={myCoachId ? setCompDate : null}
                     viewOnly={viewOnly}
                     dayTheme={dayThemesByDate[day.date] ?? null}
+                    dayFiches={fichesByDate.get(day.date)}
                   />
                 ))}
               </div>

@@ -9,6 +9,7 @@ import { MedicalEntriesSection } from "@/features/shared/components/medical/Medi
 import { RunningVolumeCard } from "@/features/shared/components/RunningVolumeCard";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { StravaExportTutorial } from "@/features/athlete/components/StravaExportTutorial";
+import { AthleteStaffPanel } from "@/features/staff/components/AthleteStaffPanel";
 
 const MONTHS_FR = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
 
@@ -181,6 +182,14 @@ export default function ProfilPage() {
         <div style={{ marginBottom: 24 }}>
           <div style={sectionTitle}>Antécédents médicaux</div>
           <MedicalEntriesSection athleteId={athleteId} canEdit />
+        </div>
+      )}
+
+      {/* ── Mon staff (kiné, ostéo, nutritionniste…) ── */}
+      {!viewOnly && athleteId && (
+        <div id="mon-staff" style={{ marginBottom: 24 }}>
+          <div style={sectionTitle}>Mon staff</div>
+          <AthleteStaffPanel athleteId={athleteId} athleteName={displayProfile?.full_name ?? "toi"} mode="athlete" />
         </div>
       )}
 

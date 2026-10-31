@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Profile {
   id: string;
-  role: "coach" | "athlete" | "coach_athlete";
+  role: "coach" | "athlete" | "coach_athlete" | "staff";
   full_name: string;
   coach_id: string | null;
   coach_code: string | null;
@@ -22,6 +22,8 @@ export interface Profile {
   is_hyrox_athlete: boolean;
   /** Lien Calendly du coach pour le point hebdo (null = aucune réservation proposée) */
   booking_url: string | null;
+  /** Métier par défaut d'un professionnel (staff). Les droits suivent le métier du lien. */
+  profession?: string | null;
   /** true = masqué par son coach (liste, sélecteur, accueil). Sans effet côté athlète. */
   coach_hidden?: boolean;
   /** true = compte pré-créé par le coach, pas encore réclamé par l'athlète */
@@ -49,6 +51,8 @@ interface AuthContextType {
   registerCoach: (email: string, password: string, fullName: string, isCoachAthlete?: boolean) => Promise<void>;
   registerAthlete: (email: string, password: string, fullName: string, token: string) => Promise<void>;
   registerAthleteWithCode: (email: string, password: string, fullName: string, coachCode: string) => Promise<void>;
+  /** Compte professionnel (kiné, ostéo…) — gratuit, sans athlètes à lui. */
+  registerStaff: (email: string, password: string, fullName: string, profession: string) => Promise<void>;
   linkToCoach: (coachCode: string) => Promise<void>;
   unlinkFromCoach: () => Promise<void>;
   removeSelfAsAthlete: () => Promise<void>;
@@ -233,6 +237,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (profileError) throw new Error(profileError.message);
   }
 
+  async function registerStaff(email: string, password: string, fullName: string, profession: string) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error("Erreur lors de la création du compte");
+
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: data.user.id,
+      role: "staff",
+      full_name: fullName,
+      profession,
+    });
+    if (profileError) throw new Error(profileError.message);
+    await fetchProfile(data.user.id);
+  }
+
   async function linkToCoach(coachCode: string) {
     if (!user) throw new Error("Non connecté");
     const { data: coach } = await supabase
@@ -324,7 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, profile, loading,
       athletes, hiddenAthletes, setAthleteHidden, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
-      login, registerCoach, registerAthlete, registerAthleteWithCode,
+      login, registerCoach, registerAthlete, registerAthleteWithCode, registerStaff,
       canCoachSelf, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
     }}>
       {children}

@@ -129,13 +129,15 @@ export function useAthleteContext(): AthleteContextValue {
 interface AthleteProviderProps {
   athleteId: string;
   viewOnly?: boolean;
+  /** Lecteur sans droit d'écriture (staff) : pas d'écriture automatique au chargement. */
+  readOnly?: boolean;
   athleteProfile?: Profile | null;
   onEditProfile?: (tab?: "profil" | "nutrition") => void;
   userName?: string;
   children: React.ReactNode;
 }
 
-export function AthleteProvider({ athleteId, viewOnly = false, athleteProfile = null, onEditProfile, userName, children }: AthleteProviderProps) {
+export function AthleteProvider({ athleteId, viewOnly = false, readOnly = false, athleteProfile = null, onEditProfile, userName, children }: AthleteProviderProps) {
   // UI notification state (shared between layout & pages)
   const [weekJustCompleted, setWeekJustCompleted] = useState<number | null>(null);
   const [milestoneNotif, setMilestoneNotif] = useState<number | null>(null);
@@ -190,7 +192,7 @@ export function AthleteProvider({ athleteId, viewOnly = false, athleteProfile = 
 
   const save = (k: string, v: unknown) => sSave(k, v, athleteId);
 
-  const persisted = useAthletePersistedState(athleteId);
+  const persisted = useAthletePersistedState(athleteId, { readOnly });
   const computations = useAthleteComputations({ ...persisted });
   // Legacy energy state — tables (energy_session_config, app_data energy keys) were
   // dropped in the energy-refonte DB migration. Provide empty defaults so old
