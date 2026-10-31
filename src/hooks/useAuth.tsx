@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,13 +24,25 @@ export interface Profile {
   booking_url: string | null;
   /** Métier par défaut d'un professionnel (staff). Les droits suivent le métier du lien. */
   profession?: string | null;
+  /** true = masqué par son coach (liste, sélecteur, accueil). Sans effet côté athlète. */
+  coach_hidden?: boolean;
+  /** true = compte pré-créé par le coach, pas encore réclamé par l'athlète */
+  is_pending?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  /** Athlètes visibles (non masqués) : alimente liste, sélecteur, accueil, alertes */
   athletes: Profile[];
+  /** Athlètes masqués par le coach (accessibles uniquement via la section « Masqués ») */
+  hiddenAthletes: Profile[];
+  setAthleteHidden: (athleteId: string, hidden: boolean) => Promise<void>;
+  /** Crée un athlète avant sa première connexion ; renvoie son id */
+  createPendingAthlete: (firstName: string, lastName: string) => Promise<string>;
+  /** Supprime un athlète pré-créé encore non réclamé */
+  removePendingAthlete: (athleteId: string) => Promise<void>;
   /** Peut programmer pour soi-même côté coach (coach pur, ou coach-athlète auto-coaché) */
   canCoachSelf: boolean;
   activeAthleteId: string | null;
@@ -72,7 +84,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [athletes, setAthletes] = useState<Profile[]>([]);
+  const [allAthletes, setAllAthletes] = useState<Profile[]>([]);
+  const athletes = useMemo(() => allAthletes.filter((a) => !a.coach_hidden), [allAthletes]);
+  const hiddenAthletes = useMemo(() => allAthletes.filter((a) => a.coach_hidden), [allAthletes]);
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(null);
 
   async function fetchProfile(userId: string) {
@@ -100,7 +114,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select("*")
       .eq("coach_id", coachId)
       .order("full_name");
-    setAthletes((data as Profile[]) || []);
+    setAllAthletes((data as Profile[]) || []);
+  }
+
+  async function setAthleteHidden(athleteId: string, hidden: boolean) {
+    if (!user) throw new Error("Non connecté");
+    const { error } = await supabase.rpc("set_athlete_hidden", { athlete_id: athleteId, hidden });
+    if (error) throw new Error(error.message);
+    await fetchAthletes(user.id);
+  }
+
+  async function createPendingAthlete(firstName: string, lastName: string): Promise<string> {
+    if (!user) throw new Error("Non connecté");
+    const { data, error } = await supabase.functions.invoke("pending-athlete", {
+      body: { action: "create", firstName, lastName },
+    });
+    if (error || data?.error) throw new Error(data?.error ?? "Création impossible");
+    await fetchAthletes(user.id);
+    return data.athleteId as string;
+  }
+
+  async function removePendingAthlete(athleteId: string) {
+    if (!user) throw new Error("Non connecté");
+    const { data, error } = await supabase.functions.invoke("pending-athlete", {
+      body: { action: "delete", athleteId },
+    });
+    if (error || data?.error) throw new Error(data?.error ?? "Suppression impossible");
+    await fetchAthletes(user.id);
   }
 
   useEffect(() => {
@@ -113,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
-      else { setProfile(null); setAthletes([]); setActiveAthleteId(null); }
+      else { setProfile(null); setAllAthletes([]); setActiveAthleteId(null); }
     });
 
     return () => subscription.unsubscribe();
@@ -257,7 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   async function logout() {
-    setAthletes([]);
+    setAllAthletes([]);
     setActiveAthleteId(null);
     await supabase.auth.signOut({ scope: "local" });
   }
@@ -302,7 +342,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
-      athletes, activeAthleteId, setActiveAthleteId,
+      athletes, hiddenAthletes, setAthleteHidden, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
       login, registerCoach, registerAthlete, registerAthleteWithCode, registerStaff,
       canCoachSelf, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
     }}>

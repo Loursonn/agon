@@ -1,4 +1,5 @@
 import { IMPORT_PROMPT, IMPORT_PROMPT_FILENAME } from "./importPrompt";
+import { COACH_API_PROMPT, COACH_API_PROMPT_FILENAME } from "./coachApiPrompt";
 
 /**
  * Nouveautés de l'app, affichées aux coachs (accueil + page Nouveautés).
@@ -36,6 +37,107 @@ export interface ReleaseNote {
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    id: "2026-11-02-assistant-ia-claude",
+    date: "2026-11-02",
+    kind: "feature",
+    title: "Branche ton assistant IA sur les données de tes athlètes",
+    summary:
+      "Ton assistant Claude peut maintenant lire les données des athlètes qui l'acceptent, t'en faire des analyses et des synthèses, et te proposer des axes de travail ou des modifications. Il ne change jamais rien seul : c'est toi qui appliques.",
+    sections: [
+      {
+        title: "Démarrer",
+        points: [
+          "Paramètres → Assistant IA (Claude) → Générer une clé. Elle ne s'affiche qu'une fois : copie-la et donne-la à ton assistant avec le mode d'emploi ci-dessous.",
+          "Une clé se révoque en un clic au même endroit ; l'assistant perd l'accès immédiatement.",
+        ],
+      },
+      {
+        title: "Ce que tu verras",
+        points: [
+          "Tu discutes avec ton assistant : il lit les données (y compris compétitions, tests et événements du calendrier de l'athlète), te montre ses analyses et ses propositions dans la discussion, et n'inscrit rien sans ton accord.",
+          "Dis-lui « dépose » : la proposition t'attend dans Agon, tu l'appliques d'un clic. Dis-lui « fais-le » : il l'inscrit lui-même directement.",
+          "Un badge « Claude » en haut de la fiche d'un athlète quand une proposition t'attend. Chacune dit ce qu'elle change, en clair, avec le nom des séances et des exercices.",
+          "Appliquer ou Écarter : rien ne change pour l'athlète tant que tu n'as pas appliqué. Si le programme a bougé depuis la proposition, tu es prévenu avant.",
+          "Les axes de travail sont des textes : tu les retiens ou tu les écartes, et tu construis toi-même.",
+        ],
+      },
+      {
+        title: "Revenir en arrière",
+        points: [
+          "Tout ce que l'assistant inscrit s'annule : badge « Claude » → « Inscrit dans Agon » → Annuler. Tout revient comme avant.",
+          "Tu peux aussi lui demander d'annuler. Ce que l'athlète a déjà réalisé (une séance faite) reste toujours en place.",
+          "Si tu as retouché le programme depuis, Agon te prévient avant d'annuler : sinon tes retouches seraient effacées aussi.",
+        ],
+      },
+      {
+        title: "Construire une semaine ensemble",
+        points: [
+          "Tu bâtis la semaine d'un athlète en discussion avec ton assistant : thème de chaque jour, séances de muscu et d'énergie, existantes ou nouvelles. Quand elle te va, il la dépose et tu l'appliques d'un clic.",
+          "L'aperçu montre la semaine jour par jour et le contenu des séances créées. Elle ajoute sans rien supprimer ; si un jour avait déjà un thème, l'ancien apparaît barré.",
+          "La semaine passée, demande-lui le bilan : il compare ce qui était prévu à ce qui a été fait (séances, RPE, charges, durées, bien-être).",
+        ],
+      },
+      {
+        title: "Périodiser ensemble",
+        points: [
+          "Ton assistant planifie aussi la saison : macrocycles, mésocycles, cycles avec leurs semaines de décharge, compétitions et tests. Il part des compétitions, des tests et des événements de l'athlète, et te présente le plan avant de le déposer.",
+          "Il peut répartir une séance hebdomadaire sur tout un cycle, déplacer un cycle, ou retirer du planning ce qui ne tient plus (séance, thème du jour).",
+          "Tout un plan s'applique en un clic, et s'annule en un clic, suppressions comprises. Ce que l'athlète a réalisé ne part jamais : seul le prévu est retiré, et une séance retirée passe en « sautée ».",
+        ],
+      },
+      {
+        title: "Fiches et habitudes",
+        points: [
+          "Ton assistant donne à l'athlète une fiche de ta banque, avec ton mot, ou la rattache à une séance. Il peut aussi fabriquer une fiche (PDF) : elle arrive dans ta banque avec l'étiquette « claude », et aucun athlète ne la voit tant que tu ne l'as pas donnée.",
+          "Il crée des habitudes pour l'athlète (et active le suivi des habitudes si besoin). Celles que l'athlète s'est données restent à lui : ton assistant n'en voit que l'assiduité, jamais le nom.",
+          "Comme le reste, tout s'annule en un clic. Une habitude que l'athlète a déjà cochée reste en place.",
+        ],
+      },
+      {
+        title: "Qui est concerné",
+        points: [
+          "Seuls les athlètes qui ont accepté le traitement par l'IA sous le nouveau texte sont visibles par ton assistant. Tes athlètes reverront l'écran de consentement à leur prochaine connexion : c'est normal, le texte nomme désormais ton assistant.",
+          "Ton assistant ne reçoit ni le nom de famille, ni ce que l'athlète écrit librement sur ses séances (ressenti, commentaires), ni les données Garmin. Il voit le titre des événements que l'athlète ajoute à son calendrier : le texte de consentement le lui dit.",
+        ],
+      },
+    ],
+    resources: [
+      {
+        label: "Mode d'emploi pour ton assistant IA",
+        description: "À donner à Claude Code sur ton ordinateur, avec ta clé. Claude dans le navigateur (claude.ai) ne peut pas appeler l'API.",
+        text: COACH_API_PROMPT,
+        filename: COACH_API_PROMPT_FILENAME,
+      },
+    ],
+  },
+  {
+    id: "2026-10-31-athletes-masques-et-pre-creation",
+    date: "2026-10-31",
+    kind: "feature",
+    title: "Masque tes athlètes en pause et prépare un nouvel athlète avant sa première connexion",
+    summary:
+      "Deux nouveautés dans la page Athlètes : tu peux masquer les athlètes que tu ne suis qu'en pré-saison, et créer un athlète toi-même pour le programmer avant même qu'il ne se connecte.",
+    sections: [
+      {
+        title: "Masquer un athlète",
+        points: [
+          "Dans Athlètes, le bouton œil barré à droite de chaque ligne masque l'athlète. Il disparaît de ta liste, du sélecteur d'athlète, de l'accueil et des alertes.",
+          "Les athlètes masqués restent dans la section repliée « Masqués » en bas de la page, d'où tu peux les rouvrir ou les réafficher d'un clic.",
+          "Ton athlète ne voit aucun changement de son côté : le masquage est un simple confort pour toi.",
+        ],
+      },
+      {
+        title: "Créer un athlète avant sa première connexion",
+        points: [
+          "Le bouton + en haut de la page Athlètes demande juste un prénom et un nom, puis crée sa page comme celle des autres : tu peux construire son programme tout de suite.",
+          "Tant qu'il ne s'est pas connecté, une petite icône bleue en forme de deux maillons apparaît à côté de son nom (dans sa page et dans la liste). Un clic copie le lien à lui envoyer.",
+          "Avec ce lien, il retrouve son prénom, son nom et ton code coach déjà remplis : il n'a plus qu'à choisir son email et son mot de passe, et tout ce que tu as préparé est là.",
+          "Le lien ne marche qu'une seule fois. Si tu supprimes un athlète encore en attente, son lien est supprimé avec lui.",
+        ],
+      },
+    ],
+  },
   {
     id: "2026-10-31-staff-v1",
     date: "2026-10-31",
@@ -130,7 +232,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       {
         title: "Ce que tu verras",
         points: [
-          "Si l'athlète a refusé, un message te le dit en clair et t'indique où il peut l'activer : son profil, section Confidentialité, « Programmation assistée par IA ». Tu n'as pas à deviner la cause.",
+          "Si l'athlète a refusé, un message te le dit en clair et t'indique où il peut l'activer : son profil, section Confidentialité, sur l'accord qui mentionne l'API Google Gemini. Tu n'as pas à deviner la cause.",
           "Un accord donné puis retiré reprend effet immédiatement sur le générateur — aucune génération ne part entre-temps.",
           "Lance le générateur depuis la fiche de l'athlète concerné : sans athlète sélectionné, la demande est refusée plutôt que traitée au hasard.",
         ],

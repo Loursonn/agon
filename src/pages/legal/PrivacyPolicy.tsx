@@ -177,8 +177,8 @@ export default function PrivacyPolicy() {
               "Consentement explicite et spécifique, donné service par service (art. 9.2.a)",
             ],
             [
-              "Générer une proposition de programme assistée par intelligence artificielle, à la demande du coach",
-              "Historique d'entraînement, objectifs, contraintes et blessures déclarées",
+              "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Google Gemini utilisée par Agon, ou via l'assistant Claude de votre coach",
+              "Historique d'entraînement, bien-être, poids, objectifs, blessures déclarées, données de montre autorisées ; pour l'assistant Claude, également vos compétitions, tests et les titres des événements de votre calendrier",
               "Consentement explicite (art. 9.2.a)",
             ],
             [
@@ -216,6 +216,27 @@ export default function PrivacyPolicy() {
           Si vous mettez fin à la relation de coaching depuis votre profil, l'accès du coach à vos
           données cesse immédiatement.
         </P>
+        <P>
+          Si vous l'avez accepté (accord « intelligence artificielle », révocable dans votre profil),
+          votre coach peut aussi faire lire vos données d'entraînement par son assistant
+          d'intelligence artificielle personnel, <strong>Claude, édité par Anthropic</strong>, au
+          moyen d'une clé qu'il génère dans Agon. Cet assistant reçoit votre prénom, vos séances et
+          charges réalisées, votre bien-être, votre poids, vos blessures déclarées (zones et dates),
+          vos compétitions et tests, les données de montre autorisées, ainsi que les dates et titres
+          des événements que vous ajoutez à votre calendrier (examens, voyages…) — jamais vos
+          commentaires libres sur vos séances, votre ressenti ou vos blessures. Il aide votre coach à
+          planifier et à périodiser votre entraînement, et peut l'inscrire dans Agon (séances,
+          cycles, compétitions, tests, fiches, habitudes) — uniquement à la demande de votre coach,
+          qui décide. Il ne supprime jamais ce que vous avez déjà réalisé ou renseigné.
+        </P>
+        <P>
+          Anthropic n'est pas notre prestataire : vos données passent par le compte personnel de
+          votre coach, et leur usage — notamment pour l'entraînement des modèles — dépend des
+          réglages de ce compte, que nous ne contrôlons pas. Chaque lecture est journalisée : sur
+          simple demande, nous pouvons vous indiquer quand vos données ont été transmises à cet
+          assistant. Un accord donné avant le 30 octobre 2026, sous un texte qui ne nommait que
+          Google Gemini, ne vaut pas pour cet assistant.
+        </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
           4.2 Nos prestataires techniques
@@ -240,8 +261,9 @@ export default function PrivacyPolicy() {
           ])}
         />
         <P>
-          Concernant l'intelligence artificielle : lorsque votre coach demande la génération d'un
-          programme, les données nécessaires sont transmises à l'API Google Gemini. Ces données{" "}
+          Concernant l'intelligence artificielle : lorsqu'une analyse, une synthèse ou une
+          proposition de programme est demandée, les données nécessaires sont transmises à l'API
+          Google Gemini. Ces données{" "}
           <strong>ne sont pas utilisées pour entraîner les modèles de Google</strong>, conformément
           aux conditions de l'API payante. Aucune donnée issue d'un service tiers dont les
           conditions l'interdisent n'est transmise à ce traitement.

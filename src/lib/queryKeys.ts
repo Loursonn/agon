@@ -44,6 +44,9 @@ export const QK = {
   calAll:         ['cal'] as const,
   // ── Modifications athlète (reschedule + bonus, pour coach) ───────────────────
   athleteModifications: (aid: string) => ['athleteModifications', aid] as const,
+  // ── Lien de première connexion d un athlète pré-créé ─────────────────────────
+  athleteClaim: (aid: string) => ["athleteClaim", aid] as const,
+  claimInfo: (token: string) => ["claimInfo", token] as const,
   // ── Coach dashboard ───────────────────────────────────────────────────────────
   coachDashboard: {
     today:         (cid: string, date: string) => ['coachDashboard', 'today',         cid, date] as const,
@@ -115,4 +118,8 @@ export const QK = {
   myStaffLinks:        (uid: string) => ['staff', 'mine', uid] as const,
   staffInvitation:     (token: string) => ['staff', 'invitation', token] as const,
   staffConsent:        (aid: string) => ['staff', 'consent', aid] as const,
+  // ── API coach pour assistant IA (Claude) ──────────────────────────────────────
+  coachApiKeys:   (coachId: string) => ['coach-api-keys', coachId] as const,
+  coachApiDrafts: (aid: string) => ['coach-api-drafts', aid] as const,
+  coachApiHistory: (aid: string) => ['coach-api-drafts', aid, 'history'] as const,
 } as const;

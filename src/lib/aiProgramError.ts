@@ -7,7 +7,7 @@
  */
 const MESSAGES: Record<string, string> = {
   consentement_ia_absent:
-    "Cet athlète n'a pas accepté le traitement de ses données par l'IA. Il peut l'activer dans son profil, section Confidentialité (« Programmation assistée par IA »).",
+    "Cet athlète n'a pas accepté le traitement de ses données par l'IA. Il peut l'activer dans son profil, section Confidentialité, sur l'accord qui mentionne l'API Google Gemini.",
   athlete_non_autorise:
     "Tu n'es pas le coach de cet athlète : la génération par IA est réservée à son coach et à lui-même.",
   athlete_absent:

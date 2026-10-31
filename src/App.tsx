@@ -13,6 +13,7 @@ import Login from "./pages/Login.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import InviteAccept from "./pages/InviteAccept.tsx";
 import StaffInviteAccept from "./features/staff/pages/StaffInviteAccept.tsx";
+import ClaimAthlete from "./pages/ClaimAthlete.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 // Pages légales publiques (lazy — rarement ouvertes, mais doivent rester
@@ -107,6 +108,7 @@ function AnimatedRoutes() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/invite/:token" element={<InviteAccept />} />
           <Route path="/staff-invite/:token" element={<StaffInviteAccept />} />
+          <Route path="/claim/:token" element={<ClaimAthlete />} />
 
           {/* Documents légaux — publics par obligation */}
           <Route path="/confidentialite"  element={<PrivacyPolicy />} />
