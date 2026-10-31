@@ -194,7 +194,7 @@ Pour les tables relationnelles (`docs`, `medical_entries`…), même règle via 
   - **Précisé (2026-10-31)** :
     - accord **facultatif** (un athlète sans staff n'est pas forcé), retirable dans le profil (« Confidentialité & données ») ou donné depuis « Mon staff » ;
     - demandé aux rôles `athlete` et `coach_athlete` seulement : case à l'inscription, écran court « Ton staff dans Agon » (accepter / refuser) pour les comptes existants qui n'ont jamais répondu. Les autres accords restent valables (`CORE_CONSENT_SINCE` dans `src/lib/legal.ts`) ;
-    - **tant que l'accord n'est pas donné (ou après un retrait), `staff_can()` renvoie `false` pour tous les domaines** : la politique classe aussi l'entraînement parmi les données de santé. Le pro voit seulement le nom de l'athlète et de son coach (migration `20261031125000_staff_consent_all_domains.sql`).
+    - **tant que l'accord n'est pas donné (ou après un retrait), `staff_can()` renvoie `false` pour tous les domaines** : la politique classe aussi l'entraînement parmi les données de santé. Le pro voit seulement le nom de l'athlète et de son coach (migration `20261031125000_staff_consent_all_domains.sql`, appliquée le 2026-10-31).
   - Politique de confidentialité, version 2026-10-31 : §2, §3 (finalité staff), §4.2 « Les professionnels de votre staff », §6 (conservation des liens), §7 (retrait).
   - À faire relire par un juriste avant la mise en ligne.
 - **Données des montres** (Garmin, COROS) : hors staff en V1. Le dossier Garmin vient d'exclure toute IA ; un partage à des tiers doit être vérifié contre les conditions Garmin avant ouverture.

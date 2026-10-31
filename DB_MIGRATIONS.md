@@ -358,9 +358,9 @@ Rollback : `DROP FUNCTION IF EXISTS public.get_app_update_reads(); DROP TABLE IF
 - `supabase/migrations/20261031124000_doc_schedule.sql` — table `doc_schedule` (fiche posée sur un jour du planning d'un athlète, domaine staff `fiches`) + RPC `schedule_doc(athlete, doc, dates[], note)` en SECURITY INVOKER (la RLS s'applique) : crée l'attribution `doc_assignments` si absente puis une ligne par jour (120 jours max). Lecture : athlète, coach, staff `fiches` lecture. Ajout : staff `fiches` écriture sur une fiche visible pour l'athlète, ou le coach avec sa propre fiche. Retrait : coach, ou staff selon `staff_can_edit`.
 - `supabase/migrations/20261031125000_staff_consent_all_domains.sql` — `staff_can()` exige l'accord `staff_sharing` de l'athlète pour **tous** les domaines (avant : seulement médical, nutrition, bien-être). Sans accord, ou après un retrait, le pro ne voit plus que le nom de l'athlète et de son coach.
 
-**Statut : ✅ 1 à 5 APPLIQUÉES en prod le 2026-10-31** via `supabase db query --linked -f` (pas de `db push`). **6 (`staff_consent_all_domains`) : ⏳ à appliquer** — validée à blanc (migration + tests dans une transaction annulée).
+**Statut : ✅ APPLIQUÉES en prod le 2026-10-31** (les 6) via `supabase db query --linked -f` (pas de `db push`).
 
-Tests : `supabase db query --linked -f supabase/tests/staff_rls.sql` — simulation des rôles (coach, athlète, 2 pros) dans une transaction annulée — 70 vérifications OK (lecture par domaine, champs du profil filtrés, fiches posées sur les jours, rien de visible sans accord staff, retrait puis accord redonné, garde des droits, usurpation d'auteur, réutilisation d'invitation, révocation). Aucune ligne laissée en base.
+Tests : `supabase db query --linked -f supabase/tests/staff_rls.sql` — simulation des rôles (coach, athlète, 2 pros) dans une transaction annulée — 69 vérifications OK (lecture par domaine, champs du profil filtrés, fiches posées sur les jours, rien de visible sans accord staff, retrait puis accord redonné, garde des droits, usurpation d'auteur, réutilisation d'invitation, révocation). Aucune ligne laissée en base.
 
 Spec : `docs/STAFF_FEATURE.md`.
 
