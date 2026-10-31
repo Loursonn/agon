@@ -14,12 +14,13 @@ import {
 import { StaffLinkCard } from "./StaffLinkCard";
 import { StaffInviteDialog } from "./StaffInviteDialog";
 import { copyText } from "../lib/clipboard";
+import { useSetConsent } from "@/features/shared/hooks/useConsent";
 
 const sectionTitle: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 8px",
 };
 
-/** Consentement unique de l'athlète au partage de ses données de santé avec son staff. */
+/** Accord unique de l'athlète au partage de ses données avec son staff (`staff_sharing`). */
 function useStaffHealthConsent(athleteId: string) {
   return useQuery({
     queryKey: QK.staffConsent(athleteId),
@@ -52,6 +53,7 @@ export function AthleteStaffPanel({
   const { data: links = [], isLoading } = useAthleteStaff(athleteId);
   const { data: invitations = [] } = useStaffInvitations(athleteId);
   const { data: consent } = useStaffHealthConsent(athleteId);
+  const setConsent = useSetConsent();
   const cancel = useCancelStaffInvitation();
   const markSeen = useMarkStaffSeen();
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -89,8 +91,24 @@ export function AthleteStaffPanel({
       {consent === false && (
         <div style={{ fontSize: 12, color: C.o, background: C.oS, border: "1px solid " + C.o + "40", borderRadius: 4, padding: "10px 12px", lineHeight: 1.6 }}>
           {mode === "coach"
-            ? `${athleteName} n'a pas encore donné son accord au partage de ses données de santé : médical, nutrition et bien-être restent masqués aux pros, quels que soient leurs droits.`
-            : "Tu n'as pas encore donné ton accord au partage de tes données de santé : médical, nutrition et bien-être restent masqués à ton staff."}
+            ? `${athleteName} n'a pas donné son accord au partage de ses données avec son staff : ses pros ne voient aucune de ses données, quels que soient leurs droits. L'accord se donne depuis son profil.`
+            : "Tu n'as pas donné ton accord au partage de tes données avec ton staff : tes pros ne voient aucune de tes données, quels que soient leurs droits."}
+          {mode === "athlete" && (
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={() =>
+                  setConsent.mutate([{ purpose: "staff_sharing", granted: true }], {
+                    onSuccess: () => toast.success("Accord enregistré", { description: "Ton staff voit tes données selon ses droits." }),
+                    onError: (e) => toast.error("Échec de l'enregistrement", { description: e.message }),
+                  })
+                }
+                disabled={setConsent.isPending}
+                style={{ padding: "7px 12px", borderRadius: 4, border: "none", background: C.ac, color: "#000", fontSize: 12, fontWeight: 700, cursor: setConsent.isPending ? "wait" : "pointer", fontFamily: "inherit" }}
+              >
+                Donner mon accord
+              </button>
+            </div>
+          )}
         </div>
       )}
 

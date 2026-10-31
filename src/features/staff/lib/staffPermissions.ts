@@ -70,7 +70,7 @@ export const DOMAIN_HINT: Record<StaffDomain, string> = {
 /** Domaines où l'écriture existe en V1. Ailleurs, « écriture » = lecture. */
 export const WRITABLE_V1: ReadonlySet<StaffDomain> = new Set<StaffDomain>(["medical", "fiches", "commentaires"]);
 
-/** Données de santé : ouvertes au staff seulement après le consentement unique de l'athlète. */
+/** Données de santé sensibles (badge dans la grille des droits). Tous les domaines exigent l'accord staff de l'athlète. */
 export const HEALTH_DOMAINS: ReadonlySet<StaffDomain> = new Set<StaffDomain>(["medical", "nutrition", "wellness"]);
 
 export const LEVEL_LABEL: Record<StaffLevel, string> = {

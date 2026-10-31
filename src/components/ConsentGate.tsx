@@ -5,6 +5,7 @@ import { errorMessage } from "@/lib/errors";
 import { LEGAL_ROUTES } from "@/lib/legal";
 import {
   CONSENT_COPY,
+  hasDecided,
   hasValidCoreConsent,
   useConsents,
   useSetConsent,
@@ -26,6 +27,13 @@ import {
  * Les comptes créés avant la mise en place du mécanisme passent ici au premier
  * accès : le RGPD interdit de présumer leur consentement, donc aucun backfill
  * n'a été fait en base.
+ *
+ * Accord staff (`staff_sharing`, facultatif) : demandé aux athlètes seulement
+ * (rôles athlete et coach_athlete), avec les autres cases à l'inscription. Un
+ * athlète déjà inscrit qui n'a jamais répondu voit un écran court qui ne pose
+ * que cette question : ses autres accords restent valables. Oui ou non, la
+ * réponse est enregistrée et la question n'est plus posée ; elle reste
+ * modifiable dans le profil.
  */
 
 const S = {
@@ -46,6 +54,9 @@ const S = {
  *  que l'utilisateur n'a pas encore choisi n'est pas un consentement éclairé. */
 const GATE_PURPOSES: ConsentPurpose[] = ["health_data", "ai_programming"];
 
+/** Seuls les athlètes ont des données à partager avec un staff. */
+const isAthleteRole = (role: string | undefined) => role === "athlete" || role === "coach_athlete";
+
 function Centered({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -64,7 +75,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 }
 
 export default function ConsentGate({ children }: { children: React.ReactNode }) {
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
   const { data: consents, isLoading, isError, error, refetch } = useConsents();
   const setConsent = useSetConsent();
 
@@ -130,8 +141,14 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
     );
   }
 
-  if (hasValidCoreConsent(consents)) return <>{children}</>;
+  const askStaff = isAthleteRole(profile?.role) && !hasDecided(consents, "staff_sharing");
 
+  if (hasValidCoreConsent(consents)) {
+    return askStaff ? <StaffSharingStep /> : <>{children}</>;
+  }
+
+  // Une réponse staff déjà donnée n'est pas reposée (ni écrasée par une case vide).
+  const purposes: ConsentPurpose[] = askStaff ? [...GATE_PURPOSES, "staff_sharing"] : GATE_PURPOSES;
   const coreChecked = !!checked.health_data;
   // Un compte déjà consentant mais sur une version antérieure du document :
   // le message doit dire que le texte a changé, pas accueillir l'utilisateur
@@ -142,7 +159,7 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
     setSubmitError("");
     try {
       await setConsent.mutateAsync(
-        GATE_PURPOSES.map((p) => ({ purpose: p, granted: !!checked[p] })),
+        purposes.map((p) => ({ purpose: p, granted: !!checked[p] })),
       );
     } catch (err) {
       setSubmitError(errorMessage(err));
@@ -175,7 +192,7 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
-          {GATE_PURPOSES.map((p) => {
+          {purposes.map((p) => {
             const copy = CONSENT_COPY[p];
             const on = !!checked[p];
             return (
@@ -282,6 +299,88 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
         >
           Refuser et me déconnecter
         </button>
+      </div>
+    </Centered>
+  );
+}
+
+/**
+ * Écran court pour un athlète déjà inscrit : seul l'accord staff est demandé.
+ * Accepter et refuser sont deux boutons de même poids (art. 7.3 RGPD) ; les
+ * deux enregistrent la réponse.
+ */
+function StaffSharingStep() {
+  const setConsent = useSetConsent();
+  const [submitError, setSubmitError] = useState("");
+  const copy = CONSENT_COPY.staff_sharing;
+
+  async function answer(granted: boolean) {
+    setSubmitError("");
+    try {
+      await setConsent.mutateAsync([{ purpose: "staff_sharing", granted }]);
+    } catch (err) {
+      setSubmitError(errorMessage(err));
+    }
+  }
+
+  const btn = (primary: boolean): React.CSSProperties => ({
+    flex: 1,
+    minWidth: 140,
+    padding: "12px 0",
+    borderRadius: 4,
+    border: primary ? "none" : "1px solid " + S.brdL,
+    background: primary ? S.ac : "transparent",
+    color: primary ? "#000" : S.tx,
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: setConsent.isPending ? "wait" : "pointer",
+    fontFamily: "inherit",
+    opacity: setConsent.isPending ? 0.7 : 1,
+  });
+
+  return (
+    <Centered>
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ fontSize: 28, fontWeight: 900, color: S.tx, letterSpacing: "-1px" }}>Agon</div>
+      </div>
+
+      <div style={{ background: S.s1, borderRadius: 6, padding: 24, border: "1px solid " + S.brd }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: S.ac, letterSpacing: "0.5px", marginBottom: 6 }}>NOUVEAU</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: S.tx, marginBottom: 8 }}>Ton staff dans Agon</div>
+        <div style={{ fontSize: 13, color: S.tx2, lineHeight: 1.7, marginBottom: 16 }}>
+          Ton coach peut maintenant ouvrir l'accès à tes données à des professionnels qui
+          t'accompagnent : kiné, ostéo, nutritionniste, préparateur mental… Tu peux aussi en ajouter
+          toi-même. Comme il s'agit de données de santé, ils ne voient rien sans ton accord.
+        </div>
+
+        <div style={{ padding: "12px 14px", borderRadius: 4, background: S.s2, border: "1px solid " + S.brd, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: S.tx, lineHeight: 1.5 }}>{copy.label}</div>
+          <div style={{ fontSize: 11, color: S.tx3, marginTop: 4, lineHeight: 1.5 }}>{copy.detail}</div>
+        </div>
+
+        <div style={{ fontSize: 11, color: S.tx3, lineHeight: 1.6, marginBottom: 16 }}>
+          Ta réponse ne change rien à tes autres accords. Tu peux la modifier à tout moment depuis
+          ton profil. Détail dans la{" "}
+          <Link to={LEGAL_ROUTES.privacy} style={{ color: S.ac }}>
+            politique de confidentialité
+          </Link>
+          .
+        </div>
+
+        {submitError && (
+          <div style={{ fontSize: 13, color: S.r, padding: "8px 10px", borderRadius: 4, background: S.r + "15", marginBottom: 12 }}>
+            {submitError}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={() => answer(false)} disabled={setConsent.isPending} style={btn(false)}>
+            Je refuse
+          </button>
+          <button onClick={() => answer(true)} disabled={setConsent.isPending} style={btn(true)}>
+            J'accepte
+          </button>
+        </div>
       </div>
     </Centered>
   );

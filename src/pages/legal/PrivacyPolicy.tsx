@@ -86,7 +86,8 @@ export default function PrivacyPolicy() {
           items={[
             "Adresse email et mot de passe (stocké sous forme de hachage irréversible, jamais en clair).",
             "Nom et prénom.",
-            "Rôle dans l'application : coach ou athlète, et le rattachement entre les deux.",
+            "Rôle dans l'application : coach, athlète ou professionnel du staff, et le rattachement entre eux.",
+            "Pour un professionnel du staff : son métier, les athlètes qu'il accompagne et les droits qui lui sont ouverts.",
             "Préférences d'affichage et paramètres du compte.",
           ]}
         />
@@ -109,6 +110,7 @@ export default function PrivacyPolicy() {
             "Blessures et zones douloureuses que vous déclarez, avec leurs dates.",
             "Données de nutrition que vous saisissez.",
             "Commentaires et retours échangés avec votre coach.",
+            "Contenus déposés par les professionnels de votre staff : entrées de suivi médical, fiches, commentaires.",
           ]}
         />
 
@@ -170,6 +172,11 @@ export default function PrivacyPolicy() {
               "Permettre à votre coach de suivre votre progression, d'adapter votre programme et de prévenir le surentraînement ou la blessure",
               "Données d'entraînement, de bien-être, de blessure, données de montre connectée",
               "Consentement explicite (art. 9.2.a)",
+            ],
+            [
+              "Permettre aux professionnels ajoutés par votre coach ou par vous (kiné, ostéopathe, nutritionniste…) de vous accompagner",
+              "Les seuls domaines que votre coach leur ouvre : programme, planification, séances réalisées, bien-être, suivi médical et blessures, nutrition, tests, fiches, commentaires",
+              "Consentement explicite et spécifique, facultatif (art. 9.2.a)",
             ],
             [
               "Récupérer automatiquement les données de votre montre",
@@ -239,7 +246,33 @@ export default function PrivacyPolicy() {
         </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
-          4.2 Nos prestataires techniques
+          4.2 Les professionnels de votre staff
+        </h3>
+        <P>
+          Votre coach, ou vous-même, pouvez ajouter à votre staff des professionnels qui vous
+          accompagnent : kiné, ostéopathe, nutritionniste, préparateur mental, médecin, coach
+          adjoint. Un professionnel n'accède à vos données que si vous l'avez accepté (accord
+          « staff », facultatif, modifiable dans votre profil), et seulement dans les domaines que
+          votre coach lui ouvre, en lecture ou en écriture : programme, planification, séances
+          réalisées, bien-être, suivi médical et blessures, nutrition, tests, fiches, commentaires.
+          Comme pour votre coach, ces restrictions sont appliquées par la base de données
+          elle-même. <strong>Sans votre accord, aucun professionnel ne voit vos données</strong>,
+          même s'il a été ajouté à votre staff.
+        </P>
+        <P>
+          Dans « Mon staff », vous voyez à tout moment vos professionnels, leur métier et leurs
+          droits, et vous êtes informé de chaque ajout et de chaque changement de droits. Vous
+          pouvez retirer l'accès d'un professionnel, ou retirer votre accord pour tous : l'accès
+          cesse immédiatement.
+        </P>
+        <P>
+          Dans les domaines ouverts en écriture, un professionnel peut ajouter des entrées à votre
+          suivi médical, déposer des fiches et commenter. Ces contenus restent rattachés à votre
+          suivi et à la bibliothèque de votre coach, avec le nom de leur auteur.
+        </P>
+
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+          4.3 Nos prestataires techniques
         </h3>
         <P>
           Ces tiers agissent sur nos instructions, dans le cadre d'un contrat conforme à l'article
@@ -270,7 +303,7 @@ export default function PrivacyPolicy() {
         </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
-          4.3 Les services que vous connectez
+          4.4 Les services que vous connectez
         </h3>
         <P>
           Lorsque vous connectez une montre, le fabricant du service agit comme{" "}
@@ -291,7 +324,7 @@ export default function PrivacyPolicy() {
         />
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
-          4.4 Autorités
+          4.5 Autorités
         </h3>
         <P>
           Nous pouvons être contraints de communiquer des données sur réquisition judiciaire ou
@@ -363,7 +396,8 @@ export default function PrivacyPolicy() {
               retrait n'a pas d'effet rétroactif sur les traitements déjà effectués, mais arrête
               les traitements futurs. Retirer votre consentement au traitement de vos données de
               santé rend l'application inutilisable : nous vous proposerons alors de supprimer
-              votre compte.
+              votre compte. Retirer votre accord « staff » coupe immédiatement l'accès de tous vos
+              professionnels, sans autre effet sur l'application.
             </>,
             <>
               <strong>Limitation et opposition</strong> — demander le gel d'un traitement, ou vous
@@ -416,7 +450,7 @@ export default function PrivacyPolicy() {
           Cette politique peut évoluer. Chaque version porte un numéro et une date, affichés en
           tête de page. En cas de changement substantiel — nouvelle finalité, nouveau destinataire,
           nouvelle catégorie de données — nous vous en informons dans l'application et vous
-          redemandons votre consentement. Continuer à utiliser le service après une modification
+          demandons votre consentement pour ce qui change. Continuer à utiliser le service après une modification
           mineure vaut acceptation de celle-ci.
         </P>
         <P>

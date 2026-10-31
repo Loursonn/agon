@@ -177,7 +177,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         points: [
           "Dans son profil, « Mon staff » liste chaque professionnel avec son métier et ce qu'il voit. Il est prévenu des ajouts et peut retirer un accès.",
           "Il peut aussi inviter lui-même son kiné ou son ostéo : les droits habituels du métier s'appliquent, tu les ajustes ensuite.",
-          "Les données de santé (médical, nutrition, bien-être) ne sont partagées qu'après l'accord de l'athlète.",
+          "Rien n'est partagé sans son accord : à sa prochaine ouverture, l'app lui pose la question une fois (accepter ou refuser). Tant qu'il n'a pas accepté, ses pros ne voient aucune de ses données. Il peut changer d'avis dans son profil.",
         ],
       },
       {

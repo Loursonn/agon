@@ -101,7 +101,7 @@ export function useStaffWeeklyRetours(athleteId: string, enabled: boolean) {
 /**
  * Profils des athlètes suivis, filtrés côté base par domaine (RPC
  * staff_athlete_profiles) : nom et coach toujours, le reste seulement si le
- * domaine correspondant est ouvert (et consenti pour les données de santé).
+ * domaine correspondant est ouvert et que l'athlète a donné son accord staff.
  * Le pro n'a plus de lecture directe de la ligne `profiles` de l'athlète.
  */
 export type StaffAthleteProfile = Database["public"]["Functions"]["staff_athlete_profiles"]["Returns"][number];

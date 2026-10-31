@@ -36,12 +36,12 @@ DO $$ BEGIN
   INSERT INTO r(k,v) VALUES ('G1 insert direct hors RPC', 'ACCEPTÉ (KO)');
 EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('G1 insert direct hors RPC', 'refusé (OK)'); END $$;
 
--- ===== STAFF, sans consentement =====
+-- ===== STAFF, sans consentement : rien de l'athlète n'est visible =====
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', staff, 'role','authenticated')::text FROM ids), true);
-INSERT INTO r(k,v) SELECT 'A1 domaines app_data visibles', coalesce(string_agg(DISTINCT staff_app_data_domain(key), ','),'∅') FROM app_data WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'A1 domaines app_data sans accord (∅)', coalesce(string_agg(DISTINCT staff_app_data_domain(key), ','),'∅') FROM app_data WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'A2 medical_entries sans consentement (0 attendu)', count(*)::text FROM medical_entries WHERE athlete_id=(SELECT athlete FROM ids);
-INSERT INTO r(k,v) SELECT 'A3 workout_logs (logs: read, >0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'A3 workout_logs sans accord (0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'A4 measurement_logs (nutrition: none, 0)', count(*)::text FROM measurement_logs WHERE athlete_id=(SELECT athlete FROM ids);
 -- Profil de l'athlète : plus de lecture directe, RPC filtrée par domaine
 INSERT INTO r(k,v) SELECT 'P1 ligne profiles de l''athlète en direct (0)', count(*)::text FROM profiles WHERE id=(SELECT athlete FROM ids);
@@ -49,7 +49,7 @@ INSERT INTO r(k,v) SELECT 'P2 RPC : nom + coach visibles', (count(*) = 1 AND boo
   FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
 INSERT INTO r(k,v) SELECT 'P3 kiné (nutrition none) : poids/taille/métabolisme masqués', (weight_kg IS NULL AND height_cm IS NULL AND base_metabolism IS NULL AND body_fat_pct IS NULL)::text
   FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
-INSERT INTO r(k,v) SELECT 'P4 tests en lecture → sexe/âge visibles', (p.gender = i.a_gender AND p.age IS NOT DISTINCT FROM i.a_age)::text
+INSERT INTO r(k,v) SELECT 'P4 tests en lecture sans accord : sexe/âge masqués', (p.gender IS NULL AND p.age IS NULL)::text
   FROM staff_athlete_profiles() p, ids i WHERE p.id = i.athlete;
 INSERT INTO r(k,v) SELECT 'P5 bien-être sans consentement : habitudes masquées', (habit_tracker_enabled IS NULL)::text
   FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
@@ -80,6 +80,9 @@ INSERT INTO user_consents(user_id, purpose, granted, doc_version, statement)
 SELECT athlete, 'staff_sharing', true, 'test', 'TEST RLS — annulé' FROM ids;
 SET LOCAL ROLE authenticated;
 INSERT INTO r(k,v) SELECT 'B1 medical_entries avec consentement (>0)', count(*)::text FROM medical_entries WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'B1b workout_logs avec accord (>0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'P4b accord + tests en lecture : sexe/âge visibles', (p.gender = i.a_gender AND p.age IS NOT DISTINCT FROM i.a_age)::text
+  FROM staff_athlete_profiles() p, ids i WHERE p.id = i.athlete;
 INSERT INTO r(k,v) SELECT 'P7 consentement + nutrition : poids visible', (p.weight_kg = i.a_weight)::text
   FROM staff_athlete_profiles() p, ids i WHERE p.id = i.athlete;
 INSERT INTO r(k,v) SELECT 'P8 consentement + bien-être : habitudes visibles', (p.habit_tracker_enabled = i.a_habit)::text
@@ -127,6 +130,23 @@ EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('S4 pro usurpe l''auteur',
 INSERT INTO r(k,v) SELECT 'B10 chemin Storage banque coach autorisé', staff_can_write_docs_path(coach::text || '/banque/x.pdf')::text FROM ids;
 INSERT INTO r(k,v) SELECT 'B11 chemin Storage autre athlète refusé', (NOT staff_can_write_docs_path(coach::text || '/athletes/' || other_athlete::text || '/x.pdf'))::text FROM ids;
 INSERT INTO r(k,v) SELECT 'B12 chemin médical athlète (write)', staff_can_path(athlete::text || '/e/x.pdf', 'medical', 'write')::text FROM ids;
+
+-- ===== Retrait de l'accord par l'athlète, puis accord redonné =====
+RESET ROLE;
+INSERT INTO user_consents(user_id, purpose, granted, doc_version, statement)
+SELECT athlete, 'staff_sharing', false, 'test', 'TEST RLS — retrait, annulé' FROM ids;
+SET LOCAL ROLE authenticated;
+INSERT INTO r(k,v) SELECT 'R1 accord retiré : workout_logs (0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'R2 accord retiré : medical_entries (0)', count(*)::text FROM medical_entries WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'R3 accord retiré : fiches du jour (0)', count(*)::text FROM doc_schedule WHERE athlete_id=(SELECT athlete FROM ids);
+INSERT INTO r(k,v) SELECT 'R4 accord retiré : écriture fiches refusée', (NOT staff_can((SELECT athlete FROM ids), 'fiches', 'write'))::text;
+INSERT INTO r(k,v) SELECT 'R5 accord retiré : nom + coach toujours visibles', (count(*) = 1 AND bool_and(full_name IS NOT NULL))::text
+  FROM staff_athlete_profiles() WHERE id=(SELECT athlete FROM ids);
+RESET ROLE;
+INSERT INTO user_consents(user_id, purpose, granted, doc_version, statement)
+SELECT athlete, 'staff_sharing', true, 'test', 'TEST RLS — accord redonné, annulé' FROM ids;
+SET LOCAL ROLE authenticated;
+INSERT INTO r(k,v) SELECT 'R6 accord redonné : workout_logs (>0)', count(*)::text FROM workout_logs WHERE athlete_id=(SELECT athlete FROM ids);
 
 -- ===== ATHLÈTE =====
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', athlete, 'role','authenticated')::text FROM ids), true);

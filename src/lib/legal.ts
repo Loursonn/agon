@@ -22,10 +22,23 @@
  * Les corrections purement rédactionnelles (typo, reformulation) ne doivent PAS
  * l'incrémenter, sinon on harcèle les utilisateurs pour rien.
  */
-export const LEGAL_VERSION = "2026-10-30";
+export const LEGAL_VERSION = "2026-10-31";
+
+/**
+ * Plus ancienne version sous laquelle l'accord socle (`health_data`) reste
+ * valable.
+ *
+ * Distincte de LEGAL_VERSION : une nouvelle version n'oblige à revalider
+ * l'accord socle que si elle change ce à quoi il porte. Le 31 octobre 2026
+ * ajoute le partage avec le staff, qui a son propre accord facultatif
+ * (`staff_sharing`) : l'accord socle du 30 octobre reste valable, seul
+ * l'accord staff est demandé. À aligner sur LEGAL_VERSION quand une version
+ * change le traitement couvert par l'accord socle.
+ */
+export const CORE_CONSENT_SINCE = "2026-10-30";
 
 /** Date d'entrée en vigueur affichée en tête des documents. */
-export const LEGAL_EFFECTIVE_DATE = "30 octobre 2026";
+export const LEGAL_EFFECTIVE_DATE = "31 octobre 2026";
 
 /**
  * Marqueur des champs que seul Hugo peut renseigner (données d'état civil et
@@ -173,5 +186,6 @@ export const RETENTION = [
   { data: "Données de bien-être, poids, blessures", duration: "Durée de vie du compte" },
   { data: "Données importées depuis une montre connectée", duration: "Durée de vie du compte, ou suppression immédiate à la déconnexion du service" },
   { data: "Journaux techniques de connexion", duration: "12 mois" },
+  { data: "Liens avec les professionnels de votre staff, et leurs droits", duration: "Durée de vie du compte (un accès retiré est conservé comme historique, sans plus aucune lecture possible)" },
   { data: "Preuve du consentement", duration: "5 ans après son retrait (obligation de preuve)" },
 ] as const;

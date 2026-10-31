@@ -17,7 +17,6 @@ import { useStaffAthleteProfile } from "../hooks/useStaffAthleteData";
 import { useRevokeStaffLink } from "../hooks/useAthleteStaff";
 import {
   DOMAIN_LABEL,
-  HEALTH_DOMAINS,
   canRead,
   canWrite,
   professionLabel,
@@ -70,7 +69,7 @@ function AccessTab({ link }: { link: MyStaffAthlete }) {
 function ConsentPending() {
   return (
     <div style={{ fontSize: 13, color: C.o, background: C.oS, border: "1px solid " + C.o + "40", borderRadius: 4, padding: "12px 14px", lineHeight: 1.6, maxWidth: 620 }}>
-      Donnée de santé : visible dès que l'athlète aura donné son accord au partage avec son staff.
+      En attente de l'accord de l'athlète : ses données seront visibles, selon tes droits, dès qu'il aura accepté le partage avec son staff. Lui ou son coach peuvent le lui rappeler.
     </div>
   );
 }
@@ -80,7 +79,7 @@ function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: My
   // sur ordinateur sans s'étirer sur tout l'écran.
   const isMobile = useIsMobile();
   const narrow = isMobile ? undefined : 760;
-  if (HEALTH_DOMAINS.has(domain) && !link.healthConsent) return <ConsentPending />;
+  if (!link.sharingConsent) return <ConsentPending />;
   switch (domain) {
     case "seances":
       return <StaffProgramTab link={link} />;

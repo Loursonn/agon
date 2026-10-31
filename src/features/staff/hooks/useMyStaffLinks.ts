@@ -1,6 +1,6 @@
 /**
  * Côté professionnel : ses liens actifs vers des athlètes, avec le coach
- * principal de chacun, et l'état du consentement unique de l'athlète.
+ * principal de chacun, et l'état de l'accord staff de l'athlète.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,8 +19,8 @@ export interface MyStaffAthlete {
   profession: StaffProfession;
   permissions: StaffPermissions;
   canEditCoachContent: boolean;
-  /** Consentement unique de l'athlète au partage de ses données de santé. */
-  healthConsent: boolean;
+  /** Accord de l'athlète au partage avec son staff : sans lui, aucune donnée visible. */
+  sharingConsent: boolean;
   createdAt: string;
 }
 
@@ -73,7 +73,7 @@ export function useMyStaffLinks() {
           profession: r.profession,
           permissions: toPermissions(r.permissions),
           canEditCoachContent: r.can_edit_coach_content,
-          healthConsent: consents[i],
+          sharingConsent: consents[i],
           createdAt: r.created_at,
         };
       });

@@ -1,6 +1,6 @@
 /**
  * Accueil du professionnel : ses athlètes, avec le coach principal de chacun
- * et les alertes utiles (blessure en cours, accord santé manquant).
+ * et les alertes utiles (blessure en cours, accord de l'athlète manquant).
  */
 import { useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
@@ -10,7 +10,7 @@ import { canRead, professionLabel, summarizePermissions } from "../lib/staffPerm
 
 function AthleteCard({ a }: { a: MyStaffAthlete }) {
   const navigate = useNavigate();
-  const medical = canRead(a.permissions, "medical") && a.healthConsent;
+  const medical = canRead(a.permissions, "medical") && a.sharingConsent;
   const { injuries } = useActiveInjuries(medical ? a.athleteId : undefined);
 
   return (
@@ -41,9 +41,9 @@ function AthleteCard({ a }: { a: MyStaffAthlete }) {
               {injuries.length} blessure{injuries.length > 1 ? "s" : ""} en cours
             </span>
           )}
-          {!a.healthConsent && (
+          {!a.sharingConsent && (
             <span style={{ fontSize: 10, fontWeight: 700, color: C.o, background: C.oS, borderRadius: 3, padding: "2px 6px" }}>
-              Données de santé en attente de l'accord de l'athlète
+              En attente de l'accord de l'athlète : rien de visible
             </span>
           )}
         </div>

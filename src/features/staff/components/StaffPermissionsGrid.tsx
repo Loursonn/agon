@@ -40,7 +40,7 @@ export function StaffPermissionsGrid({
             <div style={{ fontSize: 12.5, fontWeight: 600, color: C.tx }}>
               {DOMAIN_LABEL[d]}
               {HEALTH_DOMAINS.has(d) && (
-                <span title="Donnée de santé : visible après l'accord de l'athlète" style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: C.o }}>
+                <span title="Donnée de santé sensible" style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: C.o }}>
                   SANTÉ
                 </span>
               )}
