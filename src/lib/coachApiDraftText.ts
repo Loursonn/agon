@@ -11,6 +11,10 @@ import type {
   ParamValue,
   ProgSessionShape,
 } from "@shared/coachApiOps.ts";
+import type { EnergyDurationShape, EnergyIntervalShape, EnergyStepShape } from "@shared/coachApiEnergy.ts";
+import type { EnergyTarget } from "@/types/energy";
+import { formatS, formatTarget } from "@/lib/energy/formatTarget";
+import { DAY_THEME_DOMINANTE_LABEL, DAY_THEME_INTENSITY_LABEL } from "@/lib/dayTheme";
 
 const DAYS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
 
@@ -43,8 +47,14 @@ interface Names {
   bloc: (sid: string, bid: string) => string;
 }
 
-export function namesFrom(prog: ProgSessionShape[] | undefined): Names {
-  const s = (id: string) => prog?.find((x) => x.id === id);
+/**
+ * Noms lisibles des séances, blocs et exercices cités. Les séances créées
+ * par la proposition elle-même (semaine) n'existent pas encore dans le
+ * programme : on les prend dans ses opérations.
+ */
+export function namesFrom(prog: ProgSessionShape[] | undefined, ops: readonly DraftOp[] = []): Names {
+  const created = ops.flatMap((o) => (o.op === "create_session" ? [o.session] : []));
+  const s = (id: string) => prog?.find((x) => x.id === id) ?? created.find((x) => x.id === id);
   return {
     session: (id) => s(id)?.name ?? "séance supprimée",
     exercice: (sid, eid) => {
@@ -53,6 +63,70 @@ export function namesFrom(prog: ProgSessionShape[] | undefined): Names {
     },
     bloc: (sid, bid) => s(sid)?.blocs.find((b) => b.id === bid)?.name ?? "bloc supprimé",
   };
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  warmup: "Échauffement",
+  work: "Effort",
+  recovery: "Récup",
+  rest: "Repos",
+  cooldown: "Retour au calme",
+  open: "Libre",
+};
+
+export const ENERGY_KIND_LABEL: Record<string, string> = {
+  vo2: "VO₂max / VMA",
+  tempo: "Tempo",
+  seuil: "Seuil",
+  footing: "Footing",
+  fartlek: "Fartlek",
+  autre: "Autre",
+};
+
+function durationText(d: EnergyDurationShape): string {
+  switch (d.kind) {
+    case "time": return d.value % 60 === 0 && d.value < 3600 ? `${d.value / 60}'` : formatS(d.value);
+    case "distance": return d.value >= 1000 ? `${(d.value / 1000).toString().replace(".", ",")} km` : `${d.value} m`;
+    case "calories": return `${d.value} cal`;
+    case "lap_button": return "jusqu'au tour";
+  }
+}
+
+function intervalText(iv: EnergyIntervalShape): string {
+  const target = formatTarget(iv.target as EnergyTarget);
+  let out = `${ROLE_LABEL[iv.role] ?? iv.role} ${durationText(iv.duration)}`;
+  if (target && iv.target.kind !== "none") out += ` @ ${target}`;
+  if (iv.notes) out += ` — ${iv.notes}`;
+  return out;
+}
+
+/** Une ligne par étape, groupes indentés : « 6 × », puis leurs étapes. */
+export function energyStepLines(steps: readonly EnergyStepShape[], depth = 0): string[] {
+  const pad = "  ".repeat(depth);
+  const lines: string[] = [];
+  for (const st of steps) {
+    if (st.type === "interval") {
+      lines.push(pad + intervalText(st));
+      continue;
+    }
+    let head = `${pad}${st.repeat} ×`;
+    if (st.departure_every_s) head += ` (départ toutes les ${formatS(st.departure_every_s)})`;
+    if (st.instructions) head += ` — ${st.instructions}`;
+    lines.push(head);
+    lines.push(...energyStepLines(st.children, depth + 1));
+    if (st.rest_between) lines.push(`${pad}  entre les répétitions : ${intervalText(st.rest_between)}`);
+  }
+  return lines;
+}
+
+/** « Hard · Force — Jambes lourdes » */
+export function dayThemeText(t: { label: string; intensity: string | null; dominante: string | null }): string {
+  const tags = [
+    t.intensity ? DAY_THEME_INTENSITY_LABEL[t.intensity as keyof typeof DAY_THEME_INTENSITY_LABEL] ?? t.intensity : null,
+    t.dominante ? DAY_THEME_DOMINANTE_LABEL[t.dominante as keyof typeof DAY_THEME_DOMINANTE_LABEL] ?? t.dominante : null,
+  ].filter(Boolean).join(" · ");
+  if (tags && t.label) return `${tags} — ${t.label}`;
+  return tags || t.label;
 }
 
 export function describeOp(op: DraftOp, names: Names): string {
@@ -91,5 +165,15 @@ export function describeOp(op: DraftOp, names: Names): string {
       if (op.sleepWakeup) parts.push(`lever à ${hm(op.sleepWakeup)}`);
       return `Objectifs : ${parts.join(", ")}`;
     }
+    case "create_session":
+      return `Créer la séance ${op.session.name} (${op.session.blocs.reduce((n, b) => n + b.exercices.length, 0)} exercices)`;
+    case "place_session":
+      return `Placer ${names.session(op.session_id)} le ${op.date}`;
+    case "create_energy_session":
+      return `Créer la séance énergétique ${op.energy.name} (${ENERGY_KIND_LABEL[op.energy.session_kind] ?? op.energy.session_kind})`;
+    case "place_energy_session":
+      return `Placer ${op.name} le ${op.date}`;
+    case "set_day_theme":
+      return `Thème du ${op.date} : ${dayThemeText(op)}`;
   }
 }

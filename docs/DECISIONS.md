@@ -1124,9 +1124,25 @@ d'être servie ; si l'écriture échoue, rien n'est servi. C'est ce qui permet d
 répondre à l'art. 15.1.c (à qui ses données ont été communiquées) avec des
 faits.
 
+**Semaine d'entraînement** (`kind: "semaine"`) : l'assistant propose en un
+bloc des séances créées (musculation dans `asp:prog`, énergie en copie propre
+à l'athlète), leurs placements sur des dates et le thème de chaque jour. Elle
+ajoute sans rien supprimer ; seul le thème d'un jour déjà posé est remplacé,
+et l'aperçu le montre barré (choix du propriétaire). Les séances de muscu
+créées sont `once`, sans jour fixe : elles n'ont lieu qu'aux dates placées.
+Les séances énergétiques arrivent en JSON structuré, validé côté serveur
+comme le reste, plutôt qu'en texte YOXX : les parseurs YOXX dépendent de
+`src/` et ne tournent pas dans Deno, donc l'assistant n'aurait reçu aucune
+erreur à corriger. Les écritures d'une semaine (programme, séances,
+placements, thèmes) ne sont pas atomiques : chacune est rejouable (ids fixés
+à la proposition, upserts, vérification avant insertion), et un second clic
+termine une application interrompue sans doublon.
+
 **Limites connues** :
 - L'athlète ne voit pas lui-même ce journal : il faut le lui fournir sur
   demande.
+- Une semaine interrompue en route laisse une partie posée jusqu'au clic
+  suivant ; une semaine qui cite une séance supprimée entre-temps s'arrête là.
 - Si le coach applique une proposition pendant que l'éditeur de programmation
   a une sauvegarde différée en cours (800 ms), cette sauvegarde peut l'écraser.
   Fenêtre étroite, non traitée.

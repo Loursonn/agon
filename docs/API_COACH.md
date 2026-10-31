@@ -38,9 +38,10 @@ traitement de leurs données par l'IA** sous le texte qui nomme ton assistant
 donné cet accord, ou l'a donné sous l'ancien texte qui ne nommait que Google
 Gemini : il peut l'activer dans son profil, section Confidentialité.
 
-Ce que l'assistant reçoit : prénom, séances et charges réalisées, bien-être,
-poids, blessures (zones, dates), records, objectifs, données de montre
-autorisées. Jamais le texte libre écrit par l'athlète (ressenti, commentaires).
+Ce que l'assistant reçoit : prénom, séances et charges réalisées, séances
+énergétiques (durée, distance, RPE), thèmes du jour que tu as posés,
+bien-être, poids, blessures (zones, dates), records, objectifs, données de
+montre autorisées. Jamais le texte libre écrit par l'athlète (ressenti, commentaires).
 Les données Garmin ne sont jamais transmises à une IA.
 
 Chaque lecture est journalisée.
@@ -55,6 +56,7 @@ Chaque lecture est journalisée.
 | POST | `/athletes/:id/drafts` | Déposer une proposition |
 | GET | `/drafts?status=pending\|applied\|rejected&athlete_id=…` | Propositions déposées et leur sort |
 | GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque |
+| GET | `/seances-energie?q=vma` | Chercher une séance énergétique dans ta banque (sans `q` : les 50 dernières) |
 
 Aucune route ne supprime ni n'écrit directement.
 
@@ -130,6 +132,66 @@ curl -s -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/js
     }]
   }'
 ```
+
+### Semaine d'entraînement
+
+Une semaine se propose en une seule proposition `"kind": "semaine"` : elle
+crée des séances, les place sur des dates et pose le thème de chaque jour. Tu
+l'appliques d'un clic. Elle **ajoute** et ne supprime rien : une séance déjà
+prévue le reste. Seul le thème d'un jour qui en avait déjà un est remplacé,
+et l'aperçu montre l'ancien barré.
+
+Dates au format `AAAA-MM-JJ`, d'aujourd'hui à 56 jours plus tard. Pour voir
+ce qui est déjà prévu, l'assistant lit `GET /summary` sur la semaine à venir
+(`from` et `to` peuvent être dans le futur).
+
+| op | Champs |
+|---|---|
+| `create_session` | `ref`, `name`, `short?`, `blocs: [{ name, category?, instructions?, exercices: [exercice] }]` |
+| `place_session` | `date`, et `session_id` (séance du programme) **ou** `ref` (séance créée plus haut) |
+| `create_energy_session` | `ref`, `name`, `session_kind`, `structure_type?`, `notes?`, `intervals` |
+| `place_energy_session` | `date`, et `energy_session_id` (de ta banque) **ou** `ref` |
+| `set_day_theme` | `date`, `label?` (40 car.), `intensity?`, `dominante?`, `color?` (`#rrggbb`), `note?` |
+
+- `ref` : un nom court choisi par l'assistant (`"vma"`, `"force-a"`), pour
+  placer ensuite la séance qu'il vient de créer. Créer avant de placer.
+- Une séance de musculation créée est **ponctuelle** : elle n'a lieu qu'aux
+  dates où elle est placée. `exercice` : comme dans `add_exercice`.
+  `category` : `Echauffement`, `Force`, `Hypertrophie`, `Explo/vitesse`,
+  `Mixte` (défaut) ou `Cardio`.
+- Une séance énergétique créée est propre à l'athlète (elle n'entre pas dans
+  ta banque). `session_kind` : `vo2`, `tempo`, `seuil`, `footing`, `fartlek`,
+  `autre`. Les séances spécifiques (exercices, format classique) se
+  construisent dans Agon.
+- `intensity` : `hard`, `moyen`, `easy`, `recup_active`, `repos`.
+  `dominante` : `force`, `puissance_vitesse`, `volume`, `aerobie`, `seuil`,
+  `hyrox`, `technique`, `mixte`. Sans `color`, celle de l'intensité.
+
+`intervals` reprend la structure de l'éditeur énergie :
+
+```json
+[
+  { "type": "interval", "role": "warmup", "duration": { "kind": "time", "value": 600 },
+    "target": { "kind": "hr_zone", "zone": 2 } },
+  { "type": "group", "repeat": 6, "children": [
+    { "type": "interval", "role": "work", "duration": { "kind": "distance", "value": 400 },
+      "target": { "kind": "pace_test_pct", "test_metric": "VMA", "min": 95, "max": 100 },
+      "equipment": "course" },
+    { "type": "interval", "role": "recovery", "duration": { "kind": "time", "value": 60 } }
+  ] }
+]
+```
+
+| Champ | Valeurs |
+|---|---|
+| `role` | `warmup`, `work`, `recovery`, `rest`, `cooldown`, `open` |
+| `duration` | `{ kind: "time", value: secondes }`, `"distance"` (mètres), `"calories"`, ou `{ kind: "lap_button" }` |
+| `target` | `none` · `hr_zone` (`zone` 1–5) · `hr_pct` / `hr_bpm` / `power` (`min`, `max`) · `pace` (`min_s_per_unit`, `max_s_per_unit` en secondes par km, `unit` `min_per_km` ou `kmh`) · `pace_test_pct` (`test_metric` `VMA`, `VC`, `Allure 10K`, `Allure semi`, `Allure marathon`) · `power_test_pct` (`PMA`, `FTP`, `PC30`, `PC5`) · `cadence` (`unit` `spm` ou `rpm`) · `text` (`value`) |
+| `equipment` | `course`, `rameur`, `skierg`, `bikeerg`, `velo`, `elliptique`, `corde`, `autre` |
+| groupe | `repeat` (1–50), `children`, `rest_between?`, `departure_every_s?`, `instructions?` ; 3 niveaux au plus |
+
+Si une application est interrompue (réseau), un nouveau clic sur
+« Appliquer » termine la semaine sans rien poser en double.
 
 ### Planning
 

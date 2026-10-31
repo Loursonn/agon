@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { describeOp, namesFrom, paramsText } from "@/lib/coachApiDraftText";
+import { dayThemeText, describeOp, energyStepLines, namesFrom, paramsText } from "@/lib/coachApiDraftText";
+import { DAY_THEME_DOMINANTES, DAY_THEME_INTENSITIES, DAY_THEME_INTENSITY_COLOR, DAY_THEME_DEFAULT_COLOR } from "@/lib/dayTheme";
+import { BLOC_CATEGORIES } from "@/features/coach/components/programmation/types";
+import {
+  BLOC_CATEGORIES as API_BLOC_CATEGORIES,
+  DAY_DEFAULT_COLOR,
+  DAY_DOMINANTES,
+  DAY_INTENSITIES,
+  DAY_INTENSITY_COLOR,
+} from "@shared/coachApiOps.ts";
+import type { EnergyStepShape } from "@shared/coachApiEnergy.ts";
 import { API_KEY_PREFIX, generateApiKey, keyPrefix, sha256Hex } from "@/lib/coachApiKey";
 import { LEGAL_VERSION } from "@/lib/legal";
 import { AI_ASSISTANT_SINCE, type ProgSessionShape } from "@shared/coachApiOps.ts";
@@ -62,5 +72,50 @@ describe("description des opérations", () => {
     expect(describeOp({ op: "set_session_schedule", session_id: "s1", day_of_week: 2 }, names)).toBe("Placer Bas du corps le mercredi");
     expect(describeOp({ op: "set_goals", sessionsPerWeek: 4, sleepBedtime: { h: 22, m: 30 } }, names))
       .toBe("Objectifs : 4 séances par semaine, coucher à 22h30");
+  });
+});
+
+describe("listes recopiées côté serveur", () => {
+  // Le module partagé tourne aussi dans Deno et ne peut pas importer src/ :
+  // si l'app ajoute une valeur, ce test rappelle de la reporter.
+  it("thème du jour : mêmes intensités, dominantes et couleurs", () => {
+    expect([...DAY_INTENSITIES]).toEqual([...DAY_THEME_INTENSITIES]);
+    expect([...DAY_DOMINANTES]).toEqual([...DAY_THEME_DOMINANTES]);
+    expect(DAY_INTENSITY_COLOR).toEqual(DAY_THEME_INTENSITY_COLOR);
+    expect(DAY_DEFAULT_COLOR).toBe(DAY_THEME_DEFAULT_COLOR);
+  });
+
+  it("catégories de bloc identiques à l'éditeur", () => {
+    expect([...API_BLOC_CATEGORIES]).toEqual([...BLOC_CATEGORIES]);
+  });
+});
+
+describe("description d'une semaine", () => {
+  it("nomme une séance créée par la proposition elle-même", () => {
+    const created = { ...prog[0], id: "new-1", name: "Force haut 2" };
+    const names = namesFrom(prog, [{ op: "create_session", session: created }]);
+    expect(describeOp({ op: "place_session", date: "2026-11-03", session_id: "new-1" }, names))
+      .toBe("Placer Force haut 2 le 2026-11-03");
+  });
+
+  it("résume le thème du jour comme le calendrier", () => {
+    expect(dayThemeText({ label: "Jambes lourdes", intensity: "hard", dominante: "force" })).toBe("Hard · Force — Jambes lourdes");
+    expect(dayThemeText({ label: "", intensity: null, dominante: "aerobie" })).toBe("Aérobie");
+  });
+
+  it("écrit les étapes d'une séance énergétique, groupes indentés", () => {
+    const steps: EnergyStepShape[] = [
+      { type: "interval", id: "1", role: "warmup", duration: { kind: "time", value: 600 }, target: { kind: "hr_zone", zone: 2 } },
+      { type: "group", id: "2", role: "work", repeat: 6, children: [
+        { type: "interval", id: "3", role: "work", duration: { kind: "distance", value: 400 }, target: { kind: "pace_test_pct", test_metric: "VMA", min: 95, max: 100 } },
+        { type: "interval", id: "4", role: "recovery", duration: { kind: "time", value: 60 }, target: { kind: "none" } },
+      ] },
+    ];
+    expect(energyStepLines(steps)).toEqual([
+      "Échauffement 10' @ Zone 2",
+      "6 ×",
+      "  Effort 400 m @ 95–100% VMA",
+      "  Récup 1'",
+    ]);
   });
 });

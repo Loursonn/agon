@@ -115,3 +115,30 @@ describe("readProgram", () => {
     expect(readProgram(prog, new Map())[0].blocs[0].exercices[0].params).toEqual({ nb_series: 3 });
   });
 });
+
+describe("buildSummary — semaine prévue et réalisée", () => {
+  it("donne les thèmes du jour et les séances énergétiques de la période, sans texte libre", () => {
+    const s = buildSummary(input({
+      dayThemes: [
+        { date: "2026-10-05", label: "Jambes lourdes", intensity: "hard", dominante: "force" },
+        { date: "2026-11-05", label: "Hors période", intensity: null, dominante: null },
+      ],
+      energyLogs: [{
+        scheduled_date: "2026-10-06", status: "completed", rpe_score: 7, actual_duration_min: 48, distance_km: 9.2,
+        energy_sessions: { name: "VMA 6 × 400", session_kind: "vo2", total_duration_s: 2700, total_distance_m: 5400 },
+      }],
+    }));
+    expect(s.themes_du_jour).toEqual([{ date: "2026-10-05", label: "Jambes lourdes", intensite: "hard", dominante: "force" }]);
+    expect(s.seances_energie).toEqual([{
+      date: "2026-10-06", nom: "VMA 6 × 400", type: "vo2", statut: "completed",
+      duree_prevue_min: 45, distance_prevue_km: 5.4, rpe: 7, duree_min: 48, distance_km: 9.2,
+    }]);
+  });
+
+  it("tolère une séance énergétique dont la fiche a disparu", () => {
+    const s = buildSummary(input({
+      energyLogs: [{ scheduled_date: "2026-10-06", status: "planned", rpe_score: null, actual_duration_min: null, distance_km: null, energy_sessions: null }],
+    }));
+    expect(s.seances_energie[0]).toMatchObject({ nom: null, statut: "planned", duree_prevue_min: null });
+  });
+});

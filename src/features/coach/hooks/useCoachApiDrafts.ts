@@ -6,6 +6,7 @@ import type { Goals } from "@/features/shared/types/athlete";
 import type { ProgSession } from "@/features/coach/components/programmation/types";
 import { syncDocAssignmentsFromProg } from "@/features/shared/hooks/fiches/syncDocAssignments";
 import { sha256Hex } from "@/lib/coachApiKey";
+import { applyWeekDraft } from "./applyWeekDraft";
 import {
   applyGoalsOps,
   applyProgOps,
@@ -97,6 +98,8 @@ interface ApplyArgs {
   draft: CoachApiDraft;
   /** Setter du contexte athlète : les objectifs passent par la sauvegarde normale. */
   setGoals: (v: Goals | ((p: Goals) => Goals)) => void;
+  /** Coach connecté : auteur des placements et des thèmes d'une semaine. */
+  coachId: string;
 }
 
 /**
@@ -110,7 +113,7 @@ interface ApplyArgs {
 export function useApplyCoachApiDraft(athleteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ draft, setGoals }: ApplyArgs) => {
+    mutationFn: async ({ draft, setGoals, coachId }: ApplyArgs) => {
       if (!(await claim(draft.id, "applied"))) throw new DraftAlreadyDecided();
       try {
         if (draft.kind === "programme" || draft.kind === "planning") {
@@ -132,6 +135,8 @@ export function useApplyCoachApiDraft(athleteId: string) {
           void syncDocAssignmentsFromProg(athleteId, next, qc);
         } else if (draft.kind === "objectifs") {
           setGoals((g) => applyGoalsOps(g, draft.ops as GoalsOp[]) as Goals);
+        } else if (draft.kind === "semaine") {
+          await applyWeekDraft(qc, athleteId, coachId, draft.ops);
         }
       } catch (e) {
         await release(draft.id);

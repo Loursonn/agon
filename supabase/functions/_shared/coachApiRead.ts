@@ -157,6 +157,22 @@ export interface SummaryInput {
   prs: Array<{ date: string; exercise_ref: string; kg: number }>;
   activities: Array<Record<string, unknown>>;
   dailies: Array<Record<string, unknown>>;
+  /** Thèmes du jour posés par le coach (`day_themes`). */
+  dayThemes?: Array<{ date: string; label: string | null; intensity: string | null; dominante: string | null }>;
+  /** Séances énergétiques planifiées (`energy_session_assignments`). */
+  energyLogs?: Array<{
+    scheduled_date: string;
+    status: string;
+    rpe_score: number | null;
+    actual_duration_min: number | null;
+    distance_km: number | null;
+    energy_sessions: {
+      name: string | null;
+      session_kind: string | null;
+      total_duration_s: number | null;
+      total_distance_m: number | null;
+    } | null;
+  }>;
 }
 
 /** Prénom seul : l'assistant n'a pas besoin du nom de famille pour analyser. */
@@ -271,6 +287,33 @@ export function buildSummary(input: SummaryInput) {
         forme: num(obj(l.athlete_modifications).sessionForme, 1, 5),
         exercices: performedSets(l.athlete_modifications, names),
       })),
+    // Ce que le coach avait prévu pour chaque jour : à comparer avec ce qui a
+    // été fait. La note du thème n'est pas transmise.
+    themes_du_jour: (input.dayThemes ?? [])
+      .filter((t) => inRange(t.date, from, to))
+      .map((t) => ({
+        date: t.date,
+        label: label(t.label),
+        intensite: label(t.intensity, 20),
+        dominante: label(t.dominante, 20),
+      })),
+    // Ni les notes de l'athlète ni ses validations de blocs : texte libre.
+    seances_energie: (input.energyLogs ?? [])
+      .filter((l) => inRange(l.scheduled_date, from, to))
+      .map((l) => {
+        const e = l.energy_sessions ?? { name: null, session_kind: null, total_duration_s: null, total_distance_m: null };
+        return {
+          date: l.scheduled_date,
+          nom: label(e.name, 80),
+          type: label(e.session_kind, 20),
+          statut: label(l.status, 20),
+          duree_prevue_min: e.total_duration_s == null ? null : num(Math.round(Number(e.total_duration_s) / 60), 0, 2000),
+          distance_prevue_km: e.total_distance_m == null ? null : num(Number(e.total_distance_m) / 1000, 0, 1000),
+          rpe: num(l.rpe_score, 1, 10),
+          duree_min: num(l.actual_duration_min, 0, 2000),
+          distance_km: num(l.distance_km, 0, 1000),
+        };
+      }),
     records: input.prs
       .filter((p) => inRange(p.date, from, to))
       .map((p) => ({ date: p.date, exercice: label(p.exercise_ref, 80), kg: num(p.kg, 0, 1000) })),

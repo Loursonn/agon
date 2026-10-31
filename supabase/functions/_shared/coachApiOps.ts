@@ -16,6 +16,22 @@
  * intacts, par décomposition d'objet.
  */
 
+import {
+  cleanText,
+  fail,
+  id,
+  int,
+  Invalid,
+  isObj,
+  num,
+  type Obj,
+  onlyKeys,
+  reqText,
+} from "./coachApiCheck.ts";
+import { type EnergySessionShape, parseEnergySession } from "./coachApiEnergy.ts";
+
+export { cleanText };
+
 /**
  * Version du texte de consentement IA qui nomme l'assistant Claude du coach.
  *
@@ -25,7 +41,7 @@
  */
 export const AI_ASSISTANT_SINCE = "2026-10-30";
 
-export const DRAFT_KINDS = ["axe", "programme", "planning", "objectifs"] as const;
+export const DRAFT_KINDS = ["axe", "programme", "planning", "objectifs", "semaine"] as const;
 export type DraftKind = typeof DRAFT_KINDS[number];
 
 export const LIMITS = {
@@ -38,6 +54,13 @@ export const LIMITS = {
   exerciseName: 80,
   tempo: 12,
   series: 20,
+  sessionName: 80,
+  blocName: 60,
+  blocs: 12,
+  exercicesPerBloc: 20,
+  dayThemeNote: 500,
+  /** Une semaine se propose au plus 8 semaines à l'avance. */
+  horizonDays: 56,
 } as const;
 
 // ─────────────────────────────── Formes ─────────────────────────────────────
@@ -73,6 +96,9 @@ export interface BlocShape {
   id: string;
   name: string;
   category?: string;
+  color?: string;
+  series_mode?: "libre" | "fixe";
+  timing_mode?: "libre" | "depart" | "repos";
   instructions?: string;
   sort_order: number;
   exercices: ExerciceShape[];
@@ -141,7 +167,49 @@ export type GoalsOp = {
   sleepWakeup?: { h: number; m: number };
 };
 
-export type DraftOp = ProgOp | PlanningOp | GoalsOp;
+/**
+ * Semaine d'entraînement : créer des séances, les placer sur des dates,
+ * poser le thème de chaque jour. Rien n'y supprime : une séance déjà prévue
+ * reste prévue, la proposition ne fait qu'ajouter. Seul le thème d'un jour
+ * qui en avait déjà un est remplacé, et l'aperçu le montre.
+ */
+export type WeekOp =
+  | { op: "create_session"; session: ProgSessionShape }
+  | { op: "place_session"; date: string; session_id: string }
+  | { op: "create_energy_session"; energy: EnergySessionShape }
+  | { op: "place_energy_session"; date: string; energy_session_id: string; name: string }
+  | {
+    op: "set_day_theme";
+    date: string;
+    label: string;
+    intensity: DayIntensity | null;
+    dominante: DayDominante | null;
+    color: string;
+    note: string;
+  };
+
+export type DraftOp = ProgOp | PlanningOp | GoalsOp | WeekOp;
+
+// Listes du thème du jour, recopiées de `src/lib/dayTheme.ts` (un test
+// vérifie qu'elles restent égales).
+export const DAY_INTENSITIES = ["hard", "moyen", "easy", "recup_active", "repos"] as const;
+export type DayIntensity = typeof DAY_INTENSITIES[number];
+export const DAY_DOMINANTES = [
+  "force", "puissance_vitesse", "volume", "aerobie", "seuil", "hyrox", "technique", "mixte",
+] as const;
+export type DayDominante = typeof DAY_DOMINANTES[number];
+export const DAY_INTENSITY_COLOR: Record<DayIntensity, string> = {
+  hard: "#ef4444",
+  moyen: "#f59e0b",
+  easy: "#22c55e",
+  recup_active: "#06b6d4",
+  repos: "#94a3b8",
+};
+export const DAY_DEFAULT_COLOR = "#3b82f6";
+
+/** Catégories de bloc de l'éditeur (`BLOC_CATEGORIES`). */
+export const BLOC_CATEGORIES = ["Echauffement", "Force", "Hypertrophie", "Explo/vitesse", "Mixte", "Cardio"] as const;
+const BLOC_PALETTE = ["#FFC933", "#F97316", "#22C55E", "#EF4444", "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6"];
 
 export interface ValidDraft {
   kind: DraftKind;
@@ -156,63 +224,6 @@ export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export class DraftApplyError extends Error {}
 
 // ─────────────────────────────── Outils ─────────────────────────────────────
-
-type Obj = Record<string, unknown>;
-
-function isObj(v: unknown): v is Obj {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
-/** Erreur de validation, avec le chemin du champ fautif pour que l'IA corrige. */
-class Invalid extends Error {}
-
-function fail(path: string, msg: string): never {
-  throw new Invalid(`${path} : ${msg}`);
-}
-
-function onlyKeys(o: Obj, allowed: readonly string[], path: string) {
-  for (const k of Object.keys(o)) {
-    if (!allowed.includes(k)) fail(`${path}.${k}`, `champ inconnu (attendus : ${allowed.join(", ")})`);
-  }
-}
-
-/**
- * Texte libre : sans caractères de contrôle, borné. Ce texte sera affiché au
- * coach puis, s'il applique, à l'athlète — il ne doit rien contenir qu'un
- * humain n'ait pas pu taper.
- */
-export function cleanText(v: unknown, max: number, path: string): string {
-  if (typeof v !== "string") fail(path, "texte attendu");
-  // eslint-disable-next-line no-control-regex
-  const s = v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim();
-  if (s.length > max) fail(path, `${max} caractères maximum (reçu ${s.length})`);
-  return s;
-}
-
-function reqText(v: unknown, max: number, path: string): string {
-  const s = cleanText(v, max, path);
-  if (!s) fail(path, "ne peut pas être vide");
-  return s;
-}
-
-function int(v: unknown, min: number, max: number, path: string): number {
-  if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max) {
-    fail(path, `entier entre ${min} et ${max} attendu`);
-  }
-  return v;
-}
-
-function num(v: unknown, min: number, max: number, path: string): number {
-  if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) {
-    fail(path, `nombre entre ${min} et ${max} attendu`);
-  }
-  return Math.round(v * 100) / 100;
-}
-
-function id(v: unknown, path: string): string {
-  if (typeof v !== "string" || !v || v.length > 64) fail(path, "identifiant attendu");
-  return v;
-}
 
 /** Normalisation de nom d'exercice pour retrouver l'entrée de bibliothèque. */
 export function normName(s: string): string {
@@ -358,6 +369,38 @@ interface ValidateCtx {
   newId: () => string;
   /** Lien vers la bibliothèque d'exercices par nom normalisé. */
   library?: Map<string, { id: string; name: string }>;
+  /** Date du jour (AAAA-MM-JJ, Paris). Obligatoire pour une semaine. */
+  today?: string;
+  /** Séances énergétiques existantes que l'athlète peut recevoir. */
+  energy?: Map<string, { name: string }>;
+}
+
+/** Exercice ajouté par l'assistant, dans un bloc existant ou une séance créée. */
+function parseNewExercice(e: unknown, ep: string, ctx: ValidateCtx): ExerciceShape {
+  if (!isObj(e)) fail(ep, "objet attendu");
+  onlyKeys(e, ["exercise_name", "mode", "libre_text", "comment", "params"], ep);
+  const name = reqText(e.exercise_name, LIMITS.exerciseName, `${ep}.exercise_name`);
+  const mode = e.mode ?? "classique";
+  if (mode !== "classique" && mode !== "libre") {
+    fail(`${ep}.mode`, "« classique » ou « libre » attendu (les méthodes se choisissent dans Agon)");
+  }
+  const lib = ctx.library?.get(normName(name));
+  const exercice: ExerciceShape = {
+    id: ctx.newId(),
+    exercise_id: lib?.id ?? "",
+    exercise_name: lib?.name ?? name,
+    mode,
+    sort_order: 0,
+    // Un exercice libre garde des paramètres, comme dans l'éditeur où le
+    // mode libre se choisit sur un exercice existant : ceux de
+    // `defaultExerciceParams`, s'il n'en donne pas.
+    params: mode === "classique"
+      ? parseParams(e.params, `${ep}.params`)
+      : parseParams(e.params ?? { nb_series: 4, reps: 8, rir: 2 }, `${ep}.params`),
+  };
+  if (mode === "libre") exercice.libre_text = reqText(e.libre_text, LIMITS.libreText, `${ep}.libre_text`);
+  if (e.comment !== undefined) exercice.comment = cleanText(e.comment, LIMITS.comment, `${ep}.comment`);
+  return exercice;
 }
 
 function parseProgOp(raw: Obj, path: string, ctx: ValidateCtx): ProgOp {
@@ -370,31 +413,7 @@ function parseProgOp(raw: Obj, path: string, ctx: ValidateCtx): ProgOp {
         ? undefined
         : int(raw.position, 0, bloc.exercices.length, `${path}.position`);
 
-      const e = raw.exercice;
-      const ep = `${path}.exercice`;
-      if (!isObj(e)) fail(ep, "objet attendu");
-      onlyKeys(e, ["exercise_name", "mode", "libre_text", "comment", "params"], ep);
-      const name = reqText(e.exercise_name, LIMITS.exerciseName, `${ep}.exercise_name`);
-      const mode = e.mode ?? "classique";
-      if (mode !== "classique" && mode !== "libre") {
-        fail(`${ep}.mode`, "« classique » ou « libre » attendu (les méthodes se choisissent dans Agon)");
-      }
-      const lib = ctx.library?.get(normName(name));
-      const exercice: ExerciceShape = {
-        id: ctx.newId(),
-        exercise_id: lib?.id ?? "",
-        exercise_name: lib?.name ?? name,
-        mode,
-        sort_order: 0,
-        // Un exercice libre garde des paramètres, comme dans l'éditeur où le
-        // mode libre se choisit sur un exercice existant : ceux de
-        // `defaultExerciceParams`, s'il n'en donne pas.
-        params: mode === "classique"
-          ? parseParams(e.params, `${ep}.params`)
-          : parseParams(e.params ?? { nb_series: 4, reps: 8, rir: 2 }, `${ep}.params`),
-      };
-      if (mode === "libre") exercice.libre_text = reqText(e.libre_text, LIMITS.libreText, `${ep}.libre_text`);
-      if (e.comment !== undefined) exercice.comment = cleanText(e.comment, LIMITS.comment, `${ep}.comment`);
+      const exercice = parseNewExercice(raw.exercice, `${path}.exercice`, ctx);
       return {
         op: "add_exercice", session_id: session.id, bloc_id: bloc.id, exercice,
         ...(position !== undefined ? { position } : {}),
@@ -486,6 +505,218 @@ function parseGoalsOp(raw: Obj, path: string): GoalsOp {
   return op;
 }
 
+// ─────────────────────────────── Semaine ────────────────────────────────────
+
+const REF = /^[A-Za-z0-9_-]{1,32}$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function addDays(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** « Full body 2 » → « FB2 » : même règle que l'import YOXX (`deriveShort`). */
+export function deriveShort(name: string): string {
+  const words = normName(name).split(/\s+/).filter(Boolean);
+  return words.map((w) => (/^\d+$/.test(w) ? w : w[0].toUpperCase())).join("").slice(0, 5) || "S";
+}
+
+function weekDate(v: unknown, path: string, today: string): string {
+  if (typeof v !== "string" || !ISO_DATE.test(v) || Number.isNaN(Date.parse(v + "T00:00:00Z"))) {
+    fail(path, "date AAAA-MM-JJ attendue");
+  }
+  if (v < today) fail(path, `date passée (aujourd'hui : ${today})`);
+  const last = addDays(today, LIMITS.horizonDays);
+  if (v > last) fail(path, `${LIMITS.horizonDays} jours à l'avance au plus (jusqu'au ${last})`);
+  return v;
+}
+
+function hexColor(v: unknown, path: string): string {
+  if (typeof v !== "string" || !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v.trim())) {
+    fail(path, "couleur #rrggbb attendue");
+  }
+  const hex = v.trim().toLowerCase().slice(1);
+  return "#" + (hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex);
+}
+
+function parseRef(v: unknown, path: string, refs: Map<string, unknown>): string {
+  if (typeof v !== "string" || !REF.test(v)) fail(path, "référence attendue : lettres, chiffres, - ou _, 32 caractères maximum");
+  if (refs.has(v)) fail(path, `référence « ${v} » déjà utilisée dans cette proposition`);
+  return v;
+}
+
+function parseNewSession(raw: Obj, path: string, ctx: ValidateCtx): ProgSessionShape {
+  const name = reqText(raw.name, LIMITS.sessionName, `${path}.name`);
+  const short = raw.short === undefined
+    ? deriveShort(name)
+    : reqText(raw.short, 6, `${path}.short`).toUpperCase();
+  if (!Array.isArray(raw.blocs) || raw.blocs.length === 0) fail(`${path}.blocs`, "au moins un bloc attendu");
+  if (raw.blocs.length > LIMITS.blocs) fail(`${path}.blocs`, `${LIMITS.blocs} blocs maximum`);
+  const sessionId = ctx.newId();
+  const blocs: BlocShape[] = raw.blocs.map((b: unknown, i: number) => {
+    const bp = `${path}.blocs[${i}]`;
+    if (!isObj(b)) fail(bp, "objet attendu");
+    onlyKeys(b, ["name", "category", "instructions", "exercices"], bp);
+    if (!Array.isArray(b.exercices) || b.exercices.length === 0) fail(`${bp}.exercices`, "au moins un exercice attendu");
+    if (b.exercices.length > LIMITS.exercicesPerBloc) fail(`${bp}.exercices`, `${LIMITS.exercicesPerBloc} exercices maximum par bloc`);
+    const bloc: BlocShape = {
+      id: ctx.newId(),
+      name: reqText(b.name, LIMITS.blocName, `${bp}.name`),
+      category: b.category === undefined
+        ? "Mixte"
+        : (BLOC_CATEGORIES.includes(b.category as typeof BLOC_CATEGORIES[number])
+          ? b.category as string
+          : fail(`${bp}.category`, `${BLOC_CATEGORIES.join(", ")} attendu`)),
+      color: BLOC_PALETTE[i % BLOC_PALETTE.length],
+      series_mode: "libre",
+      timing_mode: "libre",
+      sort_order: i,
+      exercices: b.exercices.map((e: unknown, j: number) => ({
+        ...parseNewExercice(e, `${bp}.exercices[${j}]`, ctx),
+        sort_order: j,
+      })),
+    };
+    if (b.instructions !== undefined) {
+      const t = cleanText(b.instructions, LIMITS.instructions, `${bp}.instructions`);
+      if (t) bloc.instructions = t;
+    }
+    return bloc;
+  });
+  // Une séance créée pour une semaine n'a lieu qu'aux dates où elle est
+  // placée : « once », sans jour fixe, pour ne pas se répéter seule ensuite.
+  return { id: sessionId, name, short, recurrence: "once", multi_semaine: false, blocs };
+}
+
+/**
+ * Opérations d'une semaine. Les séances créées portent une `ref` choisie par
+ * l'assistant, citée ensuite par `place_session` / `place_energy_session` ;
+ * elle doit être créée avant d'être placée.
+ */
+function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
+  const today = ctx.today;
+  if (!today) throw new Error("validateDraft: today manquant pour une semaine");
+  const sessionRefs = new Map<string, ProgSessionShape>();
+  const energyRefs = new Map<string, EnergySessionShape>();
+  const placed = new Set<string>();
+  const themed = new Set<string>();
+  const out: WeekOp[] = [];
+
+  rawOps.forEach((raw, i) => {
+    const path = `ops[${i}]`;
+    switch (raw.op) {
+      case "create_session": {
+        onlyKeys(raw, ["op", "ref", "name", "short", "blocs"], path);
+        const ref = parseRef(raw.ref, `${path}.ref`, sessionRefs);
+        const session = parseNewSession(raw, path, ctx);
+        sessionRefs.set(ref, session);
+        out.push({ op: "create_session", session });
+        return;
+      }
+
+      case "create_energy_session": {
+        onlyKeys(raw, ["op", "ref", "name", "session_kind", "structure_type", "notes", "intervals"], path);
+        const ref = parseRef(raw.ref, `${path}.ref`, energyRefs);
+        const energy = parseEnergySession(raw, path, ctx.newId);
+        energyRefs.set(ref, energy);
+        out.push({ op: "create_energy_session", energy });
+        return;
+      }
+
+      case "place_session": {
+        onlyKeys(raw, ["op", "date", "session_id", "ref"], path);
+        const date = weekDate(raw.date, `${path}.date`, today);
+        let sessionId: string;
+        if (raw.ref !== undefined) {
+          if (raw.session_id !== undefined) fail(path, "session_id ou ref, pas les deux");
+          const created = typeof raw.ref === "string" ? sessionRefs.get(raw.ref) : undefined;
+          if (!created) fail(`${path}.ref`, "aucune séance créée plus haut avec cette ref (create_session avant place_session)");
+          sessionId = created.id;
+        } else {
+          sessionId = findSession(ctx.prog, id(raw.session_id, `${path}.session_id`), `${path}.session_id`).id;
+        }
+        const key = `${sessionId}|${date}`;
+        if (placed.has(key)) fail(path, "séance déjà placée à cette date dans cette proposition");
+        placed.add(key);
+        out.push({ op: "place_session", date, session_id: sessionId });
+        return;
+      }
+
+      case "place_energy_session": {
+        onlyKeys(raw, ["op", "date", "energy_session_id", "ref"], path);
+        const date = weekDate(raw.date, `${path}.date`, today);
+        let energyId: string;
+        let name: string;
+        if (raw.ref !== undefined) {
+          if (raw.energy_session_id !== undefined) fail(path, "energy_session_id ou ref, pas les deux");
+          const created = typeof raw.ref === "string" ? energyRefs.get(raw.ref) : undefined;
+          if (!created) fail(`${path}.ref`, "aucune séance énergétique créée plus haut avec cette ref (create_energy_session avant place_energy_session)");
+          energyId = created.id;
+          name = created.name;
+        } else {
+          energyId = id(raw.energy_session_id, `${path}.energy_session_id`);
+          const known = ctx.energy?.get(energyId);
+          if (!known) fail(`${path}.energy_session_id`, "séance énergétique introuvable (voir GET /seances-energie)");
+          name = known.name;
+        }
+        const key = `e:${energyId}|${date}`;
+        if (placed.has(key)) fail(path, "séance déjà placée à cette date dans cette proposition");
+        placed.add(key);
+        out.push({ op: "place_energy_session", date, energy_session_id: energyId, name });
+        return;
+      }
+
+      case "set_day_theme": {
+        onlyKeys(raw, ["op", "date", "label", "intensity", "dominante", "color", "note"], path);
+        const date = weekDate(raw.date, `${path}.date`, today);
+        if (themed.has(date)) fail(`${path}.date`, "un seul thème par jour");
+        themed.add(date);
+        const label = raw.label === undefined
+          ? ""
+          : cleanText(raw.label, 40, `${path}.label`).replace(/\s+/g, " ");
+        const intensity = raw.intensity === undefined || raw.intensity === null
+          ? null
+          : (DAY_INTENSITIES.includes(raw.intensity as DayIntensity)
+            ? raw.intensity as DayIntensity
+            : fail(`${path}.intensity`, `${DAY_INTENSITIES.join(", ")} attendu`));
+        const dominante = raw.dominante === undefined || raw.dominante === null
+          ? null
+          : (DAY_DOMINANTES.includes(raw.dominante as DayDominante)
+            ? raw.dominante as DayDominante
+            : fail(`${path}.dominante`, `${DAY_DOMINANTES.join(", ")} attendu`));
+        // Un thème vide ne s'affiche pas chez l'athlète : il n'a rien à faire
+        // dans une proposition.
+        if (!label && !intensity && !dominante) fail(path, "label, intensity ou dominante attendu");
+        const color = raw.color === undefined
+          ? (intensity ? DAY_INTENSITY_COLOR[intensity] : DAY_DEFAULT_COLOR)
+          : hexColor(raw.color, `${path}.color`);
+        const note = raw.note === undefined ? "" : cleanText(raw.note, LIMITS.dayThemeNote, `${path}.note`);
+        out.push({ op: "set_day_theme", date, label, intensity, dominante, color, note });
+        return;
+      }
+
+      default:
+        fail(`${path}.op`, "create_session, place_session, create_energy_session, place_energy_session ou set_day_theme attendu");
+    }
+  });
+  return out;
+}
+
+/**
+ * Ajoute au programme les séances créées par une semaine. Une séance déjà
+ * présente (même id) est laissée telle quelle : appliquer deux fois — après
+ * un échec réseau à mi-chemin — ne la duplique pas.
+ */
+export function applyWeekProgOps(prog: ProgSessionShape[], ops: readonly DraftOp[]): ProgSessionShape[] {
+  let next = prog;
+  for (const op of ops) {
+    if (op.op !== "create_session") continue;
+    if (next.some((s) => s.id === op.session.id)) continue;
+    next = [...next, op.session];
+  }
+  return next;
+}
+
 /**
  * Valide une proposition reçue par l'API.
  *
@@ -513,9 +744,16 @@ export function validateDraft(raw: unknown, ctx: ValidateCtx): Result<ValidDraft
     if (!Array.isArray(raw.ops) || raw.ops.length === 0) fail("ops", "au moins une opération attendue");
     if (raw.ops.length > LIMITS.ops) fail("ops", `${LIMITS.ops} opérations maximum`);
 
-    const ops: DraftOp[] = raw.ops.map((o: unknown, i: number) => {
+    raw.ops.forEach((o: unknown, i: number) => {
+      if (!isObj(o)) fail(`ops[${i}]`, "objet attendu");
+    });
+    if (kind === "semaine") {
+      const ops = parseWeekOps(raw.ops as Obj[], ctx);
+      return { ok: true, value: { kind: "semaine", title, body, ops } };
+    }
+
+    const ops: DraftOp[] = (raw.ops as Obj[]).map((o, i) => {
       const p = `ops[${i}]`;
-      if (!isObj(o)) fail(p, "objet attendu");
       if (kind === "programme") return parseProgOp(o, p, ctx);
       if (kind === "planning") return parsePlanningOp(o, p, ctx);
       return parseGoalsOp(o, p);

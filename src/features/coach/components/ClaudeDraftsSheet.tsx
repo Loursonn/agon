@@ -13,12 +13,15 @@ import {
 } from "@/features/coach/hooks/useCoachApiDrafts";
 import { describeOp, namesFrom } from "@/lib/coachApiDraftText";
 import { DraftApplyError, type ProgSessionShape } from "@shared/coachApiOps.ts";
+import { useAuth } from "@/hooks/useAuth";
+import { WeekDraftPreview } from "./WeekDraftPreview";
 
 const KIND_LABEL: Record<CoachApiDraft["kind"], string> = {
   axe: "Axe de travail",
   programme: "Programme",
   planning: "Planning",
   objectifs: "Objectifs",
+  semaine: "Semaine",
 };
 
 const fmt = (iso: string) =>
@@ -26,26 +29,37 @@ const fmt = (iso: string) =>
 
 function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: string }) {
   const { setGoals } = useAthleteContext();
+  const { user } = useAuth();
   const { data: prog } = useProgrammation(athleteId);
   const target = draft.kind === "objectifs" ? "asp:goals" : "asp:prog";
-  const { data: targetHash } = useDraftTargetHash(draft.kind === "axe" ? undefined : athleteId, target);
+  // Une semaine ajoute sans rien modifier : pas d'état de départ à comparer.
+  const tracked = draft.kind !== "axe" && draft.kind !== "semaine";
+  const { data: targetHash } = useDraftTargetHash(tracked ? athleteId : undefined, target);
   const apply = useApplyCoachApiDraft(athleteId);
   const reject = useRejectCoachApiDraft(athleteId);
   const busy = apply.isPending || reject.isPending;
 
-  const names = namesFrom(prog as unknown as ProgSessionShape[] | undefined);
+  const progShape = prog as unknown as ProgSessionShape[] | undefined;
+  const names = namesFrom(progShape, draft.ops);
   // Le programme a changé depuis la proposition : elle a été pensée pour un
   // état qui n'existe plus. Elle peut rester juste, mais le coach doit le
   // savoir avant de cliquer.
-  const stale = draft.kind !== "axe" && !!targetHash && !!draft.base_hash && targetHash !== draft.base_hash;
+  const stale = tracked && !!targetHash && !!draft.base_hash && targetHash !== draft.base_hash;
 
   async function handleApply() {
+    if (!user?.id) return;
     try {
-      await apply.mutateAsync({ draft, setGoals });
+      await apply.mutateAsync({ draft, setGoals, coachId: user.id });
       toast.success(draft.kind === "axe" ? "Axe de travail retenu" : "Proposition appliquée");
     } catch (e) {
       if (e instanceof DraftAlreadyDecided) toast.info("Cette proposition a déjà été traitée ailleurs.");
-      else if (e instanceof DraftApplyError) toast.error(`Elle ne s'applique plus : ${e.message}. Rien n'a été modifié.`);
+      else if (draft.kind === "semaine") {
+        // Écritures successives : une partie a pu passer. Un nouveau clic
+        // reprend sans rien dupliquer (voir applyWeekDraft).
+        toast.error(e instanceof DraftApplyError
+          ? `Elle ne s'applique plus : ${e.message}. Une partie de la semaine a pu être posée.`
+          : "L'application s'est interrompue. Clique à nouveau sur Appliquer : rien ne sera posé en double.");
+      } else if (e instanceof DraftApplyError) toast.error(`Elle ne s'applique plus : ${e.message}. Rien n'a été modifié.`);
       else toast.error("L'application a échoué. Rien n'a été modifié.");
     }
   }
@@ -76,7 +90,9 @@ function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: stri
         <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap", marginBottom: 10 }}>{draft.body}</div>
       )}
 
-      {draft.ops.length > 0 && (
+      {draft.kind === "semaine" ? (
+        <WeekDraftPreview athleteId={athleteId} ops={draft.ops} prog={progShape} />
+      ) : draft.ops.length > 0 && (
         <ul style={{ margin: "0 0 10px", padding: "0 0 0 16px", display: "flex", flexDirection: "column", gap: 4 }}>
           {draft.ops.map((op, i) => (
             <li key={i} style={{ fontSize: 12, color: C.tx, lineHeight: 1.45 }}>{describeOp(op, names)}</li>

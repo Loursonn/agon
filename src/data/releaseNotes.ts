@@ -62,6 +62,14 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         ],
       },
       {
+        title: "Construire une semaine ensemble",
+        points: [
+          "Tu bâtis la semaine d'un athlète en discussion avec ton assistant : thème de chaque jour, séances de muscu et d'énergie, existantes ou nouvelles. Quand elle te va, il la dépose et tu l'appliques d'un clic.",
+          "L'aperçu montre la semaine jour par jour et le contenu des séances créées. Elle ajoute sans rien supprimer ; si un jour avait déjà un thème, l'ancien apparaît barré.",
+          "La semaine passée, demande-lui le bilan : il compare ce qui était prévu à ce qui a été fait (séances, RPE, charges, durées, bien-être).",
+        ],
+      },
+      {
         title: "Qui est concerné",
         points: [
           "Seuls les athlètes qui ont accepté le traitement par l'IA sous le nouveau texte sont visibles par ton assistant. Tes athlètes reverront l'écran de consentement à leur prochaine connexion : c'est normal, le texte nomme désormais ton assistant.",
