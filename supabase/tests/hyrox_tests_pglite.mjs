@@ -112,6 +112,10 @@ console.log("\nSynchro des saisies (trigger existant)");
 await db.exec(`insert into test_sessions(athlete_id, date, title, completed, results_structured) values ('${U.ath}','2026-11-07','Wall balls 5 min', true, '{"variables":{"min_1":22,"min_2":19,"total":86,"no_reps":3}}')`);
 const sv = await one(`select count(*)::int n from athlete_test_values v join athlete_test_results r on r.id=v.result_id where r.athlete_id='${U.ath}'`);
 check(`une séance « Wall balls 5 min » remplie alimente athlete_test_values (${sv.n} valeurs)`, sv.n === 4);
+// L'ancien preset « Burpee broad jump 80 m » existe toujours : le BBJ du bilan doit aller sur le preset v3.
+await db.exec(`insert into test_sessions(athlete_id, date, title, completed, results_structured) values ('${U.ath}','2026-11-08','Burpee broad jump 80 m · bilan', true, '{"variables":{"time":250,"jumps":38,"rpe":9}}')`);
+const bbj = await one(`select r.test_definition_id::text d, count(v.*)::int n from athlete_test_results r join athlete_test_values v on v.result_id=r.id where r.athlete_id='${U.ath}' and r.performed_at='2026-11-08' group by 1`);
+check(`le BBJ du bilan alimente le preset v3 e2, pas l'ancien (${bbj?.n} valeurs)`, bbj?.d === "00000000-0000-0000-0000-0000000000e2" && bbj?.n === 3);
 
 console.log(`\n${ok} OK, ${ko} KO`);
 process.exit(ko ? 1 : 0);

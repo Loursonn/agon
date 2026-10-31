@@ -7,7 +7,7 @@
  *   Un test vérifie que la migration contient exactement seedSql(GRID_SET_V1).
  * - Types des lignes hyrox_test_analyses / hyrox_test_axes_drafts.
  */
-import type { AthleteContext, AxesPlan } from "./insights";
+import type { AthleteContext, AxesPlan, PlanItem } from "./insights";
 import type {
   AxesParams, AxisKey, GridRow, GridSet, HyroxTestInputs, AthleteTestProfile, MetricKey, MetricSource,
   RuleCondition, RuleStep, RunningParams, ScoringParams, Sex, HyroxCategory, WorkAxisRule,
@@ -160,13 +160,46 @@ export interface HyroxTestAnalysisRow {
   algo_version: string;
   grid_version: string;
   target_s: number | null;
-  axes_validated: AxesPlan | null;
+  axes_validated: ValidatedAxes | null;
   validated_at: string | null;
   validated_by: string | null;
   recalculated_from: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Axes de travail validés par le coach (seule version que voit l'athlète).
+ * Partent de la proposition du moteur (AxesPlan), réécrits par le coach.
+ */
+export interface ValidatedAxes {
+  principal1: PlanItem;
+  principal2: PlanItem;
+  appoint: string[];
+  maintenance: string[];
+  safety: string[];
+  block: string[];
+  roxzone: string | null;
+  coach_note: string | null;
+  /** Version du plan d'origine (axes@x.y.z), null si écrit à la main. */
+  from_engine: string | null;
+}
+
+export function validatedFromPlan(plan: AxesPlan | null): ValidatedAxes {
+  if (!plan)
+    return { principal1: { label: "Course", detail: "" }, principal2: { label: "", detail: "" }, appoint: [], maintenance: [], safety: [], block: [], roxzone: null, coach_note: null, from_engine: null };
+  return {
+    principal1: { ...plan.principal1 },
+    principal2: { label: plan.principal2.label, detail: plan.principal2.detail },
+    appoint: [...plan.appoint.items, ...(plan.appoint.detail ? [plan.appoint.detail] : [])],
+    maintenance: [...plan.maintenance],
+    safety: [...plan.safety],
+    block: [...plan.block],
+    roxzone: plan.roxzone.text,
+    coach_note: null,
+    from_engine: plan.algo,
+  };
 }
 
 /** Ligne de hyrox_test_axes_drafts : coach et admin seulement, jamais l'athlète. */

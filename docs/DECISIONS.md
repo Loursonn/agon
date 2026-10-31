@@ -1258,6 +1258,22 @@ crée des habitudes, et dépose une fiche qu'il a fabriquée (`POST /fiches`).
 
 **Testé** : PGlite (`supabase/tests/hyrox_tests_pglite.mjs`), 29 contrôles : idempotence, seed, presets, RLS coach / athlète / autre coach / admin, gel, une seule version active, synchro des saisies.
 
+
+## 2026-11 — Tests HYROX : calcul côté client, saisie par le circuit des tests programmés
+
+**Contexte** : il fallait brancher la saisie de la semaine de bilan, la fiche résultat, la validation des axes, le recalcul et la calibration.
+
+**Décisions** :
+- **Saisie** : athlète et coach écrivent une ligne `test_sessions` complétée ; le trigger existant `sync_test_session_to_results` alimente `athlete_test_results`. Pas de deuxième chemin d'écriture, et la saisie apparaît dans le calendrier comme les autres tests.
+- **Noms des presets** : le trigger retrouve un test par son nom. Le preset v3 du BBJ s'appelle « Burpee broad jump 80 m · bilan » parce que l'ancien preset « Burpee broad jump 80 m » existe toujours (aucun preset existant renommé ni supprimé). Un test bloque toute future collision.
+- **Calcul** : dans le navigateur, avec le moteur pur et la version de grilles lue en base ; le résultat est enregistré figé (`storedOutputs`, sans la proposition d'axes qui vit dans le brouillon). Pas d'Edge Function : mêmes résultats que les tests, rien à déployer.
+- **Analyse = une période** : pour chaque test, le résultat le plus récent entre deux dates (21 jours par défaut jusqu'au dernier résultat). Les ids des résultats retenus sont gardés (`source_result_ids`).
+- **Axes validés** : type `ValidatedAxes` (textes réécrits par le coach), distinct de la proposition `AxesPlan`. L'athlète ne lit que lui.
+- **Ce que voit l'athlète** : la base lui donne l'analyse validée entière (`outputs` compris) ; c'est l'interface qui retire E, les 6 zones, D′, le tableau % VC et les règles. Acceptable : ce sont ses propres données, pas celles d'un autre ; à revoir si on veut cacher ces valeurs au niveau de la base (vue ou colonne séparée).
+- **Recalcul** réservé à l'admin, seulement quand la version active des grilles ou du calcul diffère.
+
+**Testé** : `hyroxTestsMapping.test.ts` (golden 1 saisi dans les presets v3 = mêmes notes, fenêtre, profil, calibration, CSV), `AnalysisSheet.test.tsx` (vue athlète), PGlite 30 contrôles (dont la synchro du BBJ vers le preset v3).
+
 ---
 
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

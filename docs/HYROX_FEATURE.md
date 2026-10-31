@@ -159,15 +159,9 @@ Sources : RoxHype 25/26, HYROX Data Lab S7-S8, HYROX Data Lab Utrecht.
 
 ---
 
-## 10. Tests HYROX (bilan d'entrée et retests) — en cours
+## 10. Tests HYROX (bilan d'entrée et retests)
 
-Prompt source : `Prompt-Agon-Tests-HYROX-2026-10-31.md` (Hugo, 31/10/2026). Livraison en 6 PR :
-1. **moteur de calcul + golden tests** (cette PR) ;
-2. migrations : presets batterie v3, catégorie HYROX au profil, `hyrox_test_grids`, `hyrox_axes_params`, `hyrox_work_axes_rules`, `hyrox_test_analyses`, `hyrox_race_results` ;
-3. saisie (S1 à S5 + semaine 1) ;
-4. fiche résultat (coach desktop, athlète mobile) ;
-5. comparaison de 2 analyses et recalcul ;
-6. calibration (prédit vs réel, export CSV).
+Prompt source : `Prompt-Agon-Tests-HYROX-2026-10-31.md` (Hugo, 31/10/2026). Livré en une seule PR (moteur, base, saisie, fiche résultat, comparaison et recalcul, calibration). Migration testée en local seulement : **pas de `db push` sans l'accord de Hugo**.
 
 ### Moteur : `src/lib/hyrox/tests/`
 TS pur, aucun import React ni réseau. Point d'entrée : `analyzeTests(inputs, profile, { set, target_s, context })`.
@@ -181,7 +175,10 @@ TS pur, aucun import React ni réseau. Point d'entrée : `analyzeTests(inputs, p
 | `scores.ts` | Notes 1-5 par mesure, note par axe (moyenne pondérée, arrondie à 0,5), plafonds robustesse |
 | `chrono.ts` + `chronoData.ts` | Chrono estimé (fourchette, leviers), VC minimum par chrono visé, splits médians par chrono |
 | `insights.ts` | Points forts / faibles, drapeaux, moteur de règles, plan de bloc (`axesPlan`), Roxzone |
-| `index.ts` | `analyzeTests` : tout calculer, stamper `algo_version` + `grid_version` |
+| `index.ts` | `analyzeTests` : tout calculer, stamper `algo_version` + `grid_version` ; `storedOutputs` (sorties gardées en base, sans la proposition d'axes) |
+| `db.ts` | GridSet <-> lignes de la base, `seedSql`, types des lignes, `ValidatedAxes` (axes réécrits par le coach) |
+| `mapping.ts` | Résultats de la batterie v3 -> `HyroxTestInputs` (le plus récent de chaque test dans une période), profil -> `AthleteTestProfile` (avertissements), semaine type |
+| `calibration.ts` | Dernière analyse avant chaque course solo vs chrono réel, par segment, résumé, export CSV |
 
 Principes :
 - **Aucune grille en dur dans le calcul** : le moteur reçoit un `GridSet`. `GRID_SET_V1` sert de seed à la base (PR 2) et de défaut en test.
@@ -214,4 +211,18 @@ Seuils sans source, seedés actifs mais marqués `to_recalibrate` : chute sled e
 - Trigger `hyrox_test_analyses_freeze` : entrées, profil, sorties et versions ne changent plus après création ; seuls la validation, le chrono visé et les axes validés bougent.
 - Hors staff en V1, comme les autres tables HYROX.
 - Banc local : `supabase/tests/hyrox_tests_pglite.mjs` (PGlite, sans Docker) : migrations rejouées, idempotence, seed, RLS.
-- Saisie : les séances remplies par l'athlète passent par le circuit existant (`test_sessions` → trigger → `athlete_test_results` / `athlete_test_values`) ; les noms des presets v3 sont uniques pour que le trigger les retrouve.
+- Saisie : les séances remplies par l'athlète passent par le circuit existant (`test_sessions` → trigger → `athlete_test_results` / `athlete_test_values`) ; les noms des presets v3 sont uniques, entre eux et face aux presets existants, pour que le trigger les retrouve. D'où « Burpee broad jump 80 m · bilan » (l'ancien preset « Burpee broad jump 80 m » existe toujours ; test dédié).
+
+### Interface
+
+Coach : `/coach/athletes/:athleteId/hyrox?view=tests` → `src/features/coach/components/hyrox/tests/TestsView.tsx`.
+- **Semaine de tests** (`BatteryPlan`) : séances S1 à S5 + semaine 1 avec le jour de la semaine type (lun S1 · mar S2 · jeu S3 · ven S4 · dim S5), protocole, vidéo à filmer, dernier résultat ; saisie dans `TestEntryDrawer` (charges des sleds pré-remplies à 80 / 100 / 120 % de la charge de course de la catégorie, grille 3 × 4 tronçons pour la semaine 1, temps en « m:ss » ou en secondes). Enregistrement = une ligne `test_sessions` complétée (mise à jour si le test existe déjà ce jour-là).
+- **Analyses** : liste (validée ou non), « Nouvelle analyse » (`NewAnalysisPanel` : type, période, chrono visé, tests manquants, avertissements de profil, aperçu du chrono), comparaison de 2 analyses (`CompareAnalyses` : écarts colorés selon le sens de la grille).
+- **Fiche résultat** (`AnalysisSheet`), dans l'ordre du prompt : chrono estimé + fourchette + leviers, radar bilan vs analyse précédente, points forts / faibles + drapeaux, course (`RunningSection` : VC, seuil 1, FC seuil, courbe vitesse-durée, 3 zones ; côté coach E, D′, 5 / 10 km, 6 zones de vitesse, zones FC, tableau % VC), sleds (`SledSection` : profils Push / Pull, ligne de la charge de course, réserve, semaine 1), détail par axe (`AxisDetail` : note, source, grille 1-5 dépliable « à construire, en dessous, moyen Open, haut d'Open, niveau Pro »), pistes par station (règles, coach), axes de travail (`AxesEditor`).
+- **Axes** : contexte de l'athlète (compétition, cas types, envie, défauts techniques, dernière course pour la Roxzone, reprise depuis l'onglet Courses), proposition recalculée en direct, puis texte validé par le coach (`axes_validated`) avec alerte de vocabulaire (moteur, tenue, le HYROX, jargon coach). « Valider et montrer à l'athlète » / « Retirer la validation ».
+- **Recalcul** (admin) : quand la version active des grilles ou du calcul a changé, crée une nouvelle analyse (`recalculated_from`), l'ancienne reste.
+- **Calibration** (admin, onglet du même écran) : `CalibrationView`, écart réel − estimé, part dans la fourchette, plus gros écarts par segment, export CSV.
+
+Athlète : onglet « Tests » de `/athlete/hyrox` → `AthleteTestsView` : ses bilans validés (fiche en mode athlète : 3 zones, pas de E, pas de 6 zones, pas de règles, axes validés seulement) et sa semaine de tests (saisie des tests en auto-saisie).
+
+Hooks : `src/features/shared/hooks/hyrox/useHyroxTests.ts` (batterie, résultats, profil et catégorie, grilles par version et version active, analyses, brouillon, création, validation, calibration). Tests d'affichage : `src/features/coach/components/hyrox/tests/__tests__/AnalysisSheet.test.tsx` (vue athlète sans rien du côté coach).

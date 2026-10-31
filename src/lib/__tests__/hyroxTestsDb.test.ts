@@ -53,4 +53,14 @@ describe("Tests HYROX : base", () => {
     // noms uniques (le trigger de synchro retrouve un test par son nom)
     expect(new Set(ids.map(m => m[2].toLowerCase())).size).toBe(ids.length);
   });
+
+  it("aucun nom de la batterie v3 ne reprend celui d'un preset existant (synchro par nom)", () => {
+    const names = [...sql.matchAll(/\('00000000-0000-0000-0000-0000000000(?:d[1-9a-f]|e[0-5])', '([^']+)', 'hyrox', 'preset'/g)].map(m => m[1].toLowerCase());
+    expect(names).toHaveLength(21);
+    const dir = path.dirname(MIGRATION);
+    const older = fs.readdirSync(dir).filter(f => f.endsWith(".sql") && f < "20261101130000").map(f => fs.readFileSync(path.join(dir, f), "utf8"));
+    const existing = new Set(older.flatMap(t => [...t.matchAll(/\('[0-9a-f-]{36}', '([^']+)', '[a-z_]+', 'preset'/g)].map(m => m[1].toLowerCase())));
+    expect(existing.has("burpee broad jump 80 m")).toBe(true); // l'ancien preset reste tel quel
+    expect(names.filter(n => existing.has(n))).toEqual([]);
+  });
 });

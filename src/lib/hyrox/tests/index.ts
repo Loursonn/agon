@@ -21,6 +21,8 @@ export * from "./scores";
 export * from "./chrono";
 export * from "./insights";
 export * from "./db";
+export * from "./mapping";
+export * from "./calibration";
 
 export interface HyroxTestAnalysisOutputs {
   algo_version: string;
@@ -32,6 +34,14 @@ export interface HyroxTestAnalysisOutputs {
   rules: WorkAxisRule[];
   /** Proposition du moteur ; null sans chrono visé ou sans VC. */
   axes_plan: AxesPlan | null;
+}
+
+/** Sorties gardées en base (hyrox_test_analyses.outputs) : la proposition d'axes vit dans le brouillon. */
+export type StoredOutputs = Omit<HyroxTestAnalysisOutputs, "axes_plan">;
+
+export function storedOutputs(out: HyroxTestAnalysisOutputs): StoredOutputs {
+  const { axes_plan, ...rest } = out;
+  return JSON.parse(JSON.stringify(rest)) as StoredOutputs;
 }
 
 export function analyzeTests(

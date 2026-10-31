@@ -7,6 +7,7 @@ import StationsView from "../components/hyrox/StationsView";
 import RunsView from "../components/hyrox/RunsView";
 import HyroxRadarView from "../components/hyrox/HyroxRadarView";
 import BilanView from "../components/hyrox/BilanView";
+import TestsView from "../components/hyrox/tests/TestsView";
 
 export default function HyroxPage() {
   const [searchParams] = useSearchParams();
@@ -34,7 +35,7 @@ export default function HyroxPage() {
       {view === "stations" && <StationsView />}
       {view === "runs"     && <RunsView />}
       {view === "radar"    && <HyroxRadarView />}
-      {view === "tests"    && <EmptyPlaceholder label="Tests HYROX" />}
+      {view === "tests"    && <TestsView />}
       {view === "plan"     && <EmptyPlaceholder label="Plan de course" />}
     </div>
   );

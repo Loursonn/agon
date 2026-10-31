@@ -117,7 +117,7 @@ VALUES
    'Suspension passive à la barre : grip.',
    jsonb_build_object('text', 'En dernier dans la séance. Barre de traction, prise en pronation largeur d''épaules, bras tendus, suspension passive jusqu''au lâcher. Même barre au retest. Noter le temps.', 'video', 'De face, du départ au lâcher.')),
   -- S5 BBJ et wall balls
-  ('00000000-0000-0000-0000-0000000000e2', 'Burpee broad jump 80 m', 'hyrox', 'preset', true, 'self', 'hyrox_v3', 'S5', 1,
+  ('00000000-0000-0000-0000-0000000000e2', 'Burpee broad jump 80 m · bilan', 'hyrox', 'preset', true, 'self', 'hyrox_v3', 'S5', 1,
    '80 m de BBJ le plus vite possible, au standard de course.',
    jsonb_build_object('text', '80 m au standard de course. Compter les sauts (longueur moyenne). Noter le temps, le nombre de sauts, l''effort ressenti sur 10 et la FC 1 min après.', 'video', 'De profil, tout le test (no-reps).')),
   ('00000000-0000-0000-0000-0000000000e3', 'Wall balls 5 min', 'hyrox', 'preset', true, 'self', 'hyrox_v3', 'S5', 2,
