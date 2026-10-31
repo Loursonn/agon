@@ -33,3 +33,9 @@ verify_jwt = false
 # le coach, avec une limite de débit en base. Une requête sans clé valide
 # reçoit 401 avant toute lecture.
 verify_jwt = false
+
+[functions.claim-athlete]
+# Appelée par l'athlète AVANT sa première connexion : il n'a pas encore de
+# session, donc pas de JWT. L'autorisation tient au jeton secret du lien
+# (≈ 244 bits, usage unique, stocké dans `athlete_claims`).
+verify_jwt = false
