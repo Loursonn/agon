@@ -5,6 +5,9 @@ import type { Exercice } from "./types"
 import { SyntheseBar } from "./SyntheseBar"
 import { ExerciceParamsPanel } from "./ExerciceParamsPanel"
 import { RmDrawer } from "./RmDrawer"
+import { ExerciceMusclesEditor, MuscleChips } from "./ExerciceMusclesEditor"
+import { useExerciseBankMuscles } from "./hooks/useExerciseBankMuscles"
+import { resolveMuscles } from "@/lib/muscleVolume"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence"
 
@@ -60,6 +63,8 @@ export function ExerciceRow({
   const accentSoft = accent + "1F"
 
   const { best: bestRM } = useExerciceRM(athleteId, exercice.exercise_name)
+  const { data: bankMuscles } = useExerciseBankMuscles()
+  const muscles = resolveMuscles(exercice, bankMuscles ?? new Map())
 
   const effectiveMultiSemaine = sessionMultiSemaine || (exercice.multi_semaine ?? false)
   const displayParams = getDisplayParams(exercice, activeWeek, effectiveMultiSemaine)
@@ -162,6 +167,12 @@ export function ExerciceRow({
               <SyntheseBar params={displayParams} color={accent} />
             </div>
           )}
+
+          {exercice.mode !== 'libre' && hasName && (
+            <div style={{ marginTop: 3, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+              <MuscleChips muscles={muscles} />
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -198,6 +209,9 @@ export function ExerciceRow({
             athleteId={athleteId}
             onChange={onChange}
           />
+          {exercice.mode !== 'libre' && hasName && (
+            <ExerciceMusclesEditor exercice={exercice} onChange={onChange} />
+          )}
         </div>
       )}
 

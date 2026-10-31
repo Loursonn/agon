@@ -38,6 +38,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-01-series-par-muscle",
+    date: "2026-11-01",
+    kind: "feature",
+    title: "Séries par muscle et par semaine : visibles pendant que tu programmes",
+    summary:
+      "Chaque exercice a maintenant des muscles principaux et secondaires, que tu vois et modifies directement dans ta séance. Sous tes séances, un tableau te donne le volume de chaque muscle semaine par semaine, et la vue Retours utilise le même calcul.",
+    sections: [
+      {
+        title: "Les muscles d'un exercice",
+        points: [
+          "Dans la Banque, un exercice peut avoir 2 muscles principaux (facultatif pour le 2e) et autant de muscles secondaires que tu veux.",
+          "Dans une séance, les muscles de l'exercice s'affichent sous ses paramètres. Ouvre l'exercice pour les changer : un clic = principal, un 2e clic = secondaire, un 3e = retiré.",
+          "Ce que tu changes dans la séance ne vaut que pour cet exercice dans ce programme : la Banque n'est pas modifiée. « Revenir à la banque » remet les valeurs d'origine.",
+        ],
+      },
+      {
+        title: "Le volume par muscle",
+        points: [
+          "Un muscle principal compte 1 série, un muscle secondaire 0,5 : il faut 2 séries pour en faire 1.",
+          "Sous tes séances (onglet Musculation), un tableau montre les séries de chaque muscle pour chaque semaine du cycle, avec le total de la semaine. Coche « Détail des sous-muscles » pour séparer dos, épaules, mollets et avant-bras.",
+          "Le calcul suit la progression de tes séances : si tu passes de 3 à 5 séries d'une semaine à l'autre, le tableau le reflète. Il part des séances placées dans le calendrier.",
+          "Dans Retours, la carte « Séries par muscle » reprend ce tableau avec, pour chaque case, les séries des séances terminées sur celles prévues. Elle remplace l'ancienne carte qui affichait des chiffres faux.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-02-assistant-ia-claude",
     date: "2026-11-02",
     kind: "feature",

@@ -45,6 +45,8 @@ export const QK = {
   // ── Modifications athlète (reschedule + bonus, pour coach) ───────────────────
   athleteModifications: (aid: string) => ['athleteModifications', aid] as const,
   // ── Lien de première connexion d un athlète pré-créé ─────────────────────────
+  exerciseBankMuscles: ["exerciseBankMuscles"] as const,
+  muscleVolumeLogs: (aid: string) => ["muscleVolumeLogs", aid] as const,
   athleteClaim: (aid: string) => ["athleteClaim", aid] as const,
   claimInfo: (token: string) => ["claimInfo", token] as const,
   // ── Coach dashboard ───────────────────────────────────────────────────────────

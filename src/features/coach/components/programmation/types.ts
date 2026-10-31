@@ -23,8 +23,19 @@ export interface ExerciceParams {
   manual_rm?: number | null  // Fictive 1RM when no real PR exists
 }
 
+/**
+ * Muscles travaillés par un exercice (ids de MTREE : « Pecs », « Dos-GD »…).
+ * 2 principaux max (comptent 1 série chacun), secondaires illimités (0,5 série).
+ */
+export interface ExerciceMuscles {
+  primary: string[]
+  secondary: string[]
+}
+
 export interface Exercice {
   id: string
+  /** Muscles propres à cet exercice dans le programme. Absent = ceux de la banque. */
+  muscles?: ExerciceMuscles
   exercise_id: string
   exercise_name: string
   mode: 'classique' | 'methode' | 'libre'

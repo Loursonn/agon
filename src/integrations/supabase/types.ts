@@ -1390,6 +1390,7 @@ export type Database = {
           pdf_url: string | null
           secondary: string[] | null
           target: string | null
+          target_2: string | null
           tier: number | null
           tips: string | null
           updated_at: string | null
@@ -1415,6 +1416,7 @@ export type Database = {
           pdf_url?: string | null
           secondary?: string[] | null
           target?: string | null
+          target_2?: string | null
           tier?: number | null
           tips?: string | null
           updated_at?: string | null
@@ -1440,6 +1442,7 @@ export type Database = {
           pdf_url?: string | null
           secondary?: string[] | null
           target?: string | null
+          target_2?: string | null
           tier?: number | null
           tips?: string | null
           updated_at?: string | null

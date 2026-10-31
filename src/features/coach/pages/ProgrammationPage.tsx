@@ -1027,6 +1027,8 @@ export default function ProgrammationPage() {
         <ProgrammationView
           athleteId={athleteId}
           cycleId={activeCycle?.id}
+          rangeStart={activeCycle?.start_date}
+          rangeEnd={activeCycle?.end_date}
         />
       )}
 
