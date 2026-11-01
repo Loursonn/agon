@@ -211,7 +211,7 @@ Seuils sans source, seedés actifs mais marqués `to_recalibrate` : chute sled e
 - Trigger `hyrox_test_analyses_freeze` : entrées, profil, sorties et versions ne changent plus après création ; seuls la validation, le chrono visé et les axes validés bougent.
 - Hors staff en V1, comme les autres tables HYROX.
 - Banc local : `supabase/tests/hyrox_tests_pglite.mjs` (PGlite, sans Docker) : migrations rejouées, idempotence, seed, RLS.
-- Les anciens presets HYROX sont marqués `hyrox_legacy` mais restent affichés dans la banque de tests du coach (pas encore filtrés), à côté des 21 presets v3.
+- Les 10 anciens presets HYROX (`hyrox_legacy`) sont masqués des listes de choix (`isPickableTest` dans `src/features/shared/types/tests.ts`) : banque de tests du coach, ajout rapide et colonne de tests du planning, « ajouter un résultat ». Ils restent en base et restent chargés : leurs anciens résultats s'affichent et se corrigent toujours.
 - Saisie : les séances remplies par l'athlète passent par le circuit existant (`test_sessions` → trigger → `athlete_test_results` / `athlete_test_values`) ; les noms des presets v3 sont uniques, entre eux et face aux presets existants, pour que le trigger les retrouve. D'où « Burpee broad jump 80 m · bilan » (l'ancien preset « Burpee broad jump 80 m » existe toujours ; test dédié).
 
 ### Interface

@@ -8,7 +8,7 @@ import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
 import { useAssignEnergySession } from "@/features/shared/hooks/useEnergyAssignments";
 import { useTestDefinitions } from "@/features/shared/hooks/tests/useTestDefinitions";
 import type { TestDefinitionWithVariables } from "@/features/shared/types/tests";
-import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER } from "@/features/shared/types/tests";
+import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER, isPickableTest } from "@/features/shared/types/tests";
 
 type Tab = "workout" | "energy" | "test" | "specific";
 
@@ -109,7 +109,7 @@ export function QuickAddDialog({
     s.name.toLowerCase().includes(energySearch.toLowerCase()),
   );
   const filteredTests = testDefinitions.filter(d =>
-    d.name.toLowerCase().includes(testSearch.toLowerCase()),
+    isPickableTest(d) && d.name.toLowerCase().includes(testSearch.toLowerCase()),
   );
 
   // Group tests by category

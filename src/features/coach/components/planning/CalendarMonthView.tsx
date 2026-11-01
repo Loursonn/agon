@@ -39,7 +39,7 @@ import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
 import { useAssignEnergySession, useUpdateEnergyAssignment } from "@/features/shared/hooks/useEnergyAssignments";
 import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useTestDefinitions } from "@/features/shared/hooks/tests/useTestDefinitions";
-import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER } from "@/features/shared/types/tests";
+import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER, isPickableTest } from "@/features/shared/types/tests";
 import type { EnergySessionRow } from "@/types/energy";
 import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
 import { DayThemePill } from "@/features/shared/components/DayThemePill";
@@ -841,6 +841,7 @@ export function CalendarMonthView({
   const { mutate: assignEnergy }        = useAssignEnergySession();
   const { mutate: rescheduleEnergy }    = useUpdateEnergyAssignment();
   const { data: testDefinitions = [] }  = useTestDefinitions(coachId);
+  const pickableTests = useMemo(() => testDefinitions.filter(isPickableTest), [testDefinitions]);
   const { mutate: createTestSession }   = useCreateTestSession();
   const { mutate: rescheduleTest }      = useRescheduleTestSession();
 
@@ -1321,7 +1322,7 @@ export function CalendarMonthView({
           <PlanningBank
             sessions={progSessions}
             energySessions={energySessions}
-            testDefinitions={testDefinitions}
+            testDefinitions={pickableTests}
             activeDragId={activeDragId}
           />
           </div>

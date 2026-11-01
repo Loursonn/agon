@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { GRID_SET_V1, analyzeTests, gridSetFromRows, gridSetToRows, seedSql, primaryMetric } from "@/lib/hyrox/tests";
+import { isPickableTest } from "@/features/shared/types/tests";
 
 const MIGRATION = path.resolve(__dirname, "../../../supabase/migrations/20261101130000_hyrox_tests.sql");
 const sql = fs.readFileSync(MIGRATION, "utf8");
@@ -62,5 +63,13 @@ describe("Tests HYROX : base", () => {
     const existing = new Set(older.flatMap(t => [...t.matchAll(/\('[0-9a-f-]{36}', '([^']+)', '[a-z_]+', 'preset'/g)].map(m => m[1].toLowerCase())));
     expect(existing.has("burpee broad jump 80 m")).toBe(true); // l'ancien preset reste tel quel
     expect(names.filter(n => existing.has(n))).toEqual([]);
+  });
+
+  it("anciens presets HYROX masqués des listes de choix, tout le reste proposé", () => {
+    expect(sql).toMatch(/SET battery = 'hyrox_legacy'/);
+    expect(isPickableTest({ battery: "hyrox_legacy" })).toBe(false);
+    expect(isPickableTest({ battery: "hyrox_v3" })).toBe(true);
+    expect(isPickableTest({ battery: null })).toBe(true);
+    expect(isPickableTest({})).toBe(true);
   });
 });
