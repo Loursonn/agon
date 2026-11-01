@@ -6,12 +6,14 @@ import RacesView from "@/features/coach/components/hyrox/RacesView";
 import StationsView from "@/features/coach/components/hyrox/StationsView";
 import RunsView from "@/features/coach/components/hyrox/RunsView";
 import HyroxRadarView from "@/features/coach/components/hyrox/HyroxRadarView";
+import AthleteTestsView from "@/features/coach/components/hyrox/tests/AthleteTestsView";
 
 const TABS = [
   { key: "courses",  label: "Courses"  },
   { key: "stations", label: "Stations" },
   { key: "runs",     label: "Runs"     },
   { key: "radar",    label: "Radar"    },
+  { key: "tests",    label: "Tests"    },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -64,6 +66,7 @@ export default function AthleteHyroxPage() {
         {tab === "stations" && <StationsView />}
         {tab === "runs"     && <RunsView />}
         {tab === "radar"    && <HyroxRadarView />}
+        {tab === "tests"    && <AthleteTestsView />}
       </div>
     </div>
   );

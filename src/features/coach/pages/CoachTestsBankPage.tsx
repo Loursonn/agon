@@ -18,7 +18,7 @@ import type {
   TestCategory,
   TestFillMode,
 } from '@/features/shared/types/tests';
-import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER, ARTICULATIONS, PHYSIO_METRICS } from '@/features/shared/types/tests';
+import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER, ARTICULATIONS, PHYSIO_METRICS, isPickableTest } from '@/features/shared/types/tests';
 import type { ExtrapOp } from '@/features/shared/types/tests';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -508,7 +508,7 @@ export default function CoachTestsBankPage() {
   const [mode, setMode] = useState<'idle' | 'create' | 'edit'>('idle');
   const [editTarget, setEditTarget] = useState<TestDefinitionWithVariables | null>(null);
 
-  const presets = tests.filter(t => t.kind === 'preset');
+  const presets = tests.filter(t => t.kind === 'preset' && isPickableTest(t));
   const custom  = tests.filter(t => t.kind === 'custom');
 
   function handleCreate(form: TestForm) {
