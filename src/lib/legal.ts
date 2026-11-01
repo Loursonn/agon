@@ -37,6 +37,18 @@ export const LEGAL_VERSION = "2026-10-31";
  */
 export const CORE_CONSENT_SINCE = "2026-10-30";
 
+/**
+ * Plus ancienne version sous laquelle une réponse à l'accord IA
+ * (`ai_programming`) compte encore comme une réponse.
+ *
+ * Le texte du 30 octobre 2026 nomme l'assistant Claude du coach en plus de
+ * Gemini. Une décision prise sous l'ancien texte (Gemini seul) ne porte pas sur
+ * Claude : l'athlète est re-sollicité par `ConsentGate`. Même valeur que
+ * `AI_ASSISTANT_SINCE` côté serveur (`supabase/functions/_shared/coachApiOps.ts`),
+ * vérifiée par un test.
+ */
+export const AI_CONSENT_SINCE = "2026-10-30";
+
 /** Date d'entrée en vigueur affichée en tête des documents. */
 export const LEGAL_EFFECTIVE_DATE = "31 octobre 2026";
 
