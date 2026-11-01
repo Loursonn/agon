@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-01-semaine-tests-calendrier",
+    date: "2026-11-01",
+    kind: "feature",
+    title: "Tests HYROX : la semaine de tests se programme en un clic",
+    summary:
+      "Depuis l'onglet « Semaine de tests » d'un athlète, un bouton pose les séances 1 à 5 de la batterie dans son calendrier.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Programmer la semaine de tests » : tu choisis le lundi, les séances tombent sur lun · mar · jeu · ven · dim, et tu peux changer le jour de chaque séance avant de valider.",
+          "L'aperçu liste chaque test à sa date ; un test déjà dans le calendrier ce jour-là n'est pas doublé.",
+          "L'athlète voit ses tests à faire dans son calendrier et « Prévu le … » dans son onglet Tests ; un test saisi un autre jour reprend le test prévu au lieu d'en créer un deuxième.",
+          "« Annuler la semaine » retire les tests pas encore faits, jamais un résultat saisi. La Semaine 1 (sleds 3 × 50 m) se programme à part, dans le bloc d'entraînement.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-01-accueil-athlete-corrections",
     date: "2026-11-01",
     kind: "fix",

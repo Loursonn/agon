@@ -135,8 +135,25 @@ export function useSaveBatteryEntry(athleteId: string) {
         .ilike("title", input.test.name)
         .limit(1);
       if (e1) throw e1;
-      if (existing?.length) {
-        const { error } = await db.from("test_sessions").update(row).eq("id", existing[0].id);
+      // Sinon, un test programmé pas encore fait (semaine de tests) : il est
+      // repris à la date réelle plutôt que de rester « à faire » à côté.
+      let target = existing?.[0]?.id as string | undefined;
+      let moveTo: string | undefined;
+      if (!target) {
+        const { data: planned, error: e2 } = await db
+          .from("test_sessions")
+          .select("id")
+          .eq("athlete_id", athleteId)
+          .eq("completed", false)
+          .ilike("title", input.test.name)
+          .order("date", { ascending: true })
+          .limit(1);
+        if (e2) throw e2;
+        target = planned?.[0]?.id;
+        moveTo = target ? input.date : undefined;
+      }
+      if (target) {
+        const { error } = await db.from("test_sessions").update(moveTo ? { ...row, date: moveTo } : row).eq("id", target);
         if (error) throw error;
       } else {
         const coachId = user?.id === athleteId ? profile?.coach_id ?? null : user?.id ?? null;
@@ -152,9 +169,92 @@ export function useSaveBatteryEntry(athleteId: string) {
       qc.invalidateQueries({ queryKey: QK.athleteCurrentValues(athleteId) });
       qc.invalidateQueries({ queryKey: QK.testSessions(athleteId) });
       qc.invalidateQueries({ queryKey: ["calendar-events", athleteId] });
+      qc.invalidateQueries({ queryKey: ["hyroxTests", "calendar", athleteId] });
+      qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
       toast.success("Résultat enregistré");
     },
     onError: () => toast.error("Erreur lors de l'enregistrement"),
+  });
+}
+
+// ── Programmation de la semaine de tests ─────────────────────────────────────
+
+/** Un test de la batterie posé dans le calendrier de l'athlète (prévu ou fait). */
+export interface BatteryCalendarRow {
+  id: string;
+  title: string;
+  date: string;
+  completed: boolean;
+}
+
+const calendarKey = (aid: string) => ["hyroxTests", "calendar", aid] as const;
+
+/** Tests de la batterie présents dans le calendrier de l'athlète, par titre exact. */
+export function useBatteryCalendar(athleteId: string | undefined, names: string[]) {
+  return useQuery<BatteryCalendarRow[]>({
+    queryKey: [...calendarKey(athleteId ?? ""), names.length],
+    enabled: !!athleteId && names.length > 0,
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("test_sessions")
+        .select("id, title, date, completed")
+        .eq("athlete_id", athleteId)
+        .in("title", names)
+        .order("date", { ascending: true });
+      if (error) throw error;
+      return ((data ?? []) as BatteryCalendarRow[]).map(r => ({ ...r, date: String(r.date).slice(0, 10), completed: !!r.completed }));
+    },
+  });
+}
+
+function invalidateCalendar(qc: ReturnType<typeof useQueryClient>, athleteId: string) {
+  qc.invalidateQueries({ queryKey: calendarKey(athleteId) });
+  qc.invalidateQueries({ queryKey: QK.testSessions(athleteId) });
+  qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
+  qc.invalidateQueries({ queryKey: ["calendar-events", athleteId] });
+  qc.invalidateQueries({ queryKey: ["week-schedule", athleteId] });
+}
+
+/**
+ * Pose les tests de la semaine dans le calendrier : une ligne test_sessions
+ * « à faire » par test, en un seul envoi (tout ou rien). La saisie se fait
+ * ensuite comme pour n'importe quel test programmé.
+ */
+export function useScheduleTestWeek(athleteId: string) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (items: { name: string; date: string }[]) => {
+      if (!items.length) return 0;
+      const rows = items.map(i => ({
+        athlete_id: athleteId, coach_id: user?.id ?? null, title: i.name, type: "autre", date: i.date, completed: false,
+      }));
+      const { error } = await db.from("test_sessions").insert(rows);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: n => {
+      invalidateCalendar(qc, athleteId);
+      toast.success(n > 1 ? `${n} tests programmés` : n === 1 ? "1 test programmé" : "Rien à programmer");
+    },
+    onError: () => toast.error("Erreur lors de la programmation"),
+  });
+}
+
+/** Retire des tests programmés, seulement s'ils ne sont pas encore faits. */
+export function useCancelTestWeek(athleteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!ids.length) return;
+      const { error } = await db.from("test_sessions").delete().in("id", ids).eq("completed", false);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateCalendar(qc, athleteId);
+      toast.success("Tests retirés du calendrier");
+    },
+    onError: () => toast.error("Erreur lors du retrait"),
   });
 }
 

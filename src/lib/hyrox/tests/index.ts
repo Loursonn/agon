@@ -23,6 +23,7 @@ export * from "./insights";
 export * from "./db";
 export * from "./mapping";
 export * from "./calibration";
+export * from "./schedule";
 
 export interface HyroxTestAnalysisOutputs {
   algo_version: string;
