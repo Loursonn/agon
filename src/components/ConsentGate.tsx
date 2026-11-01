@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { errorMessage } from "@/lib/errors";
-import { LEGAL_ROUTES } from "@/lib/legal";
+import { AI_CONSENT_SINCE, LEGAL_ROUTES } from "@/lib/legal";
 import {
   CONSENT_COPY,
   hasDecided,
+  hasDecidedSince,
   hasValidCoreConsent,
   useConsents,
   useSetConsent,
@@ -34,6 +35,13 @@ import {
  * que cette question : ses autres accords restent valables. Oui ou non, la
  * réponse est enregistrée et la question n'est plus posée ; elle reste
  * modifiable dans le profil.
+ *
+ * Accord IA (`ai_programming`, facultatif) : même mécanisme, pour les mêmes
+ * rôles. Le texte du 30 octobre 2026 nomme l'assistant Claude du coach ; une
+ * réponse donnée sous l'ancien texte (Gemini seul) ne porte pas sur lui et vaut
+ * absence de réponse (`AI_CONSENT_SINCE`). L'athlète voit alors un écran court
+ * qui ne pose que cette question, avant celui du staff s'il manque aussi. Oui et
+ * non ont le même poids, les deux sont enregistrés, et un refus ne ferme rien.
  */
 
 const S = {
@@ -54,7 +62,7 @@ const S = {
  *  que l'utilisateur n'a pas encore choisi n'est pas un consentement éclairé. */
 const GATE_PURPOSES: ConsentPurpose[] = ["health_data", "ai_programming"];
 
-/** Seuls les athlètes ont des données à partager avec un staff. */
+/** Seuls les athlètes ont des données à partager avec un staff ou à confier à l'IA. */
 const isAthleteRole = (role: string | undefined) => role === "athlete" || role === "coach_athlete";
 
 function Centered({ children }: { children: React.ReactNode }) {
@@ -141,9 +149,15 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
     );
   }
 
-  const askStaff = isAthleteRole(profile?.role) && !hasDecided(consents, "staff_sharing");
+  const athlete = isAthleteRole(profile?.role);
+  const askStaff = athlete && !hasDecided(consents, "staff_sharing");
+  const askAi = athlete && !hasDecidedSince(consents, "ai_programming", AI_CONSENT_SINCE);
 
   if (hasValidCoreConsent(consents)) {
+    // Une question à la fois : l'accord IA d'abord, puis le staff s'il manque.
+    if (askAi) {
+      return <AiProgrammingStep isUpdate={hasDecided(consents, "ai_programming")} />;
+    }
     return askStaff ? <StaffSharingStep /> : <>{children}</>;
   }
 
@@ -304,20 +318,86 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
   );
 }
 
-/**
- * Écran court pour un athlète déjà inscrit : seul l'accord staff est demandé.
- * Accepter et refuser sont deux boutons de même poids (art. 7.3 RGPD) ; les
- * deux enregistrent la réponse.
- */
+/** Écran court pour un athlète déjà inscrit : seul l'accord staff est demandé. */
 function StaffSharingStep() {
+  return (
+    <OptionalConsentStep
+      purpose="staff_sharing"
+      kicker="NOUVEAU"
+      title="Ton staff dans Agon"
+      intro={
+        <>
+          Ton coach peut maintenant ouvrir l'accès à tes données à des professionnels qui
+          t'accompagnent : kiné, ostéo, nutritionniste, préparateur mental… Tu peux aussi en ajouter
+          toi-même. Comme il s'agit de données de santé, ils ne voient rien sans ton accord.
+        </>
+      }
+      footer="Ta réponse ne change rien à tes autres accords. Tu peux la modifier à tout moment depuis ton profil."
+      emphasizeAccept
+    />
+  );
+}
+
+/**
+ * Écran court pour un athlète déjà inscrit : seul l'accord IA est demandé,
+ * parce qu'il n'a jamais répondu ou qu'il a répondu sous l'ancien texte.
+ * Accepter et refuser ont exactement le même style : rien ne pousse vers le oui.
+ */
+function AiProgrammingStep({ isUpdate }: { isUpdate: boolean }) {
+  return (
+    <OptionalConsentStep
+      purpose="ai_programming"
+      kicker={isUpdate ? "TEXTE MIS À JOUR" : "ACCORD FACULTATIF"}
+      title="L'IA dans ton suivi"
+      intro={
+        isUpdate ? (
+          <>
+            Le texte de l'accord sur l'intelligence artificielle a changé : en plus de Google
+            Gemini, il nomme maintenant l'assistant Claude (Anthropic) de ton coach. Ta réponse
+            précédente portait sur l'ancien texte, la question t'est donc reposée.
+          </>
+        ) : (
+          <>
+            Ton coach peut s'appuyer sur des outils d'intelligence artificielle, Google Gemini et
+            son assistant Claude (Anthropic), pour analyser tes données d'entraînement et préparer
+            son travail. Rien ne leur est transmis sans ton accord.
+          </>
+        )
+      }
+      footer="Si tu refuses, tu continues d'utiliser Agon normalement. Ta réponse ne change rien à tes autres accords et reste modifiable à tout moment depuis ton profil, rubrique Confidentialité."
+    />
+  );
+}
+
+/**
+ * Une seule question facultative, posée après l'inscription. Les deux boutons
+ * enregistrent la réponse (art. 7.3 RGPD : refuser aussi simple qu'accepter) ;
+ * une fois enregistrée, `ConsentGate` ne repose plus la question.
+ */
+function OptionalConsentStep({
+  purpose,
+  kicker,
+  title,
+  intro,
+  footer,
+  emphasizeAccept = false,
+}: {
+  purpose: ConsentPurpose;
+  kicker: string;
+  title: string;
+  intro: React.ReactNode;
+  footer: string;
+  /** Faux : « J'accepte » et « Je refuse » ont le même style. */
+  emphasizeAccept?: boolean;
+}) {
   const setConsent = useSetConsent();
   const [submitError, setSubmitError] = useState("");
-  const copy = CONSENT_COPY.staff_sharing;
+  const copy = CONSENT_COPY[purpose];
 
   async function answer(granted: boolean) {
     setSubmitError("");
     try {
-      await setConsent.mutateAsync([{ purpose: "staff_sharing", granted }]);
+      await setConsent.mutateAsync([{ purpose, granted }]);
     } catch (err) {
       setSubmitError(errorMessage(err));
     }
@@ -345,13 +425,9 @@ function StaffSharingStep() {
       </div>
 
       <div style={{ background: S.s1, borderRadius: 6, padding: 24, border: "1px solid " + S.brd }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: S.ac, letterSpacing: "0.5px", marginBottom: 6 }}>NOUVEAU</div>
-        <div style={{ fontSize: 17, fontWeight: 800, color: S.tx, marginBottom: 8 }}>Ton staff dans Agon</div>
-        <div style={{ fontSize: 13, color: S.tx2, lineHeight: 1.7, marginBottom: 16 }}>
-          Ton coach peut maintenant ouvrir l'accès à tes données à des professionnels qui
-          t'accompagnent : kiné, ostéo, nutritionniste, préparateur mental… Tu peux aussi en ajouter
-          toi-même. Comme il s'agit de données de santé, ils ne voient rien sans ton accord.
-        </div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: S.ac, letterSpacing: "0.5px", marginBottom: 6 }}>{kicker}</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: S.tx, marginBottom: 8 }}>{title}</div>
+        <div style={{ fontSize: 13, color: S.tx2, lineHeight: 1.7, marginBottom: 16 }}>{intro}</div>
 
         <div style={{ padding: "12px 14px", borderRadius: 4, background: S.s2, border: "1px solid " + S.brd, marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: S.tx, lineHeight: 1.5 }}>{copy.label}</div>
@@ -359,8 +435,7 @@ function StaffSharingStep() {
         </div>
 
         <div style={{ fontSize: 11, color: S.tx3, lineHeight: 1.6, marginBottom: 16 }}>
-          Ta réponse ne change rien à tes autres accords. Tu peux la modifier à tout moment depuis
-          ton profil. Détail dans la{" "}
+          {footer} Détail dans la{" "}
           <Link to={LEGAL_ROUTES.privacy} style={{ color: S.ac }}>
             politique de confidentialité
           </Link>
@@ -377,7 +452,7 @@ function StaffSharingStep() {
           <button onClick={() => answer(false)} disabled={setConsent.isPending} style={btn(false)}>
             Je refuse
           </button>
-          <button onClick={() => answer(true)} disabled={setConsent.isPending} style={btn(true)}>
+          <button onClick={() => answer(true)} disabled={setConsent.isPending} style={btn(emphasizeAccept)}>
             J'accepte
           </button>
         </div>
