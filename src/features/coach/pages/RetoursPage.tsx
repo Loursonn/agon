@@ -9,7 +9,9 @@ import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare, Footprints } from "lucide-react";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { C } from "@/lib/theme";
-import { MuscleVolumeCard } from "@/components/athlete/StatsViews";
+import { MuscleVolumePanel } from "@/features/coach/components/programmation/MuscleVolumePanel";
+import { useMuscleVolume } from "@/features/coach/components/programmation/hooks/useMuscleVolume";
+import { localISO } from "@/lib/date";
 import { PageSkeleton } from "@/features/shared/components/skeletons";
 import { KPICard } from "@/features/coach/components/KPICard";
 import { useMonthlyRetours } from "@/features/shared/hooks/useMonthlyRetours";
@@ -38,10 +40,20 @@ function detailFromParam(raw: string | null): DetailView {
   return DETAIL_VIEWS.includes(raw as (typeof DETAIL_VIEWS)[number]) ? (raw as DetailView) : null;
 }
 
+/** Séries par muscle : 4 semaines avant → 3 après la semaine consultée, prévu et terminé. */
+function RetoursMuscleVolume({ athleteId, weekStart }: { athleteId: string | undefined; weekStart: Date }) {
+  const { weeks, byWeek, isLoading } = useMuscleVolume(
+    athleteId,
+    localISO(subWeeks(weekStart, 4)),
+    localISO(addWeeks(weekStart, 3)),
+  );
+  return <MuscleVolumePanel weeks={weeks} byWeek={byWeek} isLoading={isLoading} showDone title="Séries par muscle et par semaine" />;
+}
+
 export default function RetoursPage() {
   const { athleteId } = useParams<{ athleteId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { goals, exos, exMeta, sets, sessions, weeksArr, tw, currentWeek, freeSessions } = useAthleteContext();
+  const { goals, freeSessions } = useAthleteContext();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [selectedWeek, setSelectedWeek]   = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -467,7 +479,7 @@ export default function RetoursPage() {
 
       {/* ── Séries par muscle par semaine ── */}
       <div style={{ marginTop: 24 }}>
-        <MuscleVolumeCard exos={exos} exMeta={exMeta} sets={sets} sessions={sessions} weeksArr={weeksArr} tw={tw} initialWeek={currentWeek} />
+        <RetoursMuscleVolume athleteId={athleteId} weekStart={selectedWeek} />
       </div>
 
       {/* ── Blessures ── */}

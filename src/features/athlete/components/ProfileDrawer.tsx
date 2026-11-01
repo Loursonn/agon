@@ -62,6 +62,7 @@ export default function ProfileDrawer({ onClose }: Props) {
   const { data: coachRetours = [] } = useAthleteRetours(athleteId ?? undefined);
   const seenRetours = coachRetours.filter((r) => r.athlete_reaction);
   const [showAllRetours, setShowAllRetours] = useState(false);
+  const [fbExpanded, setFbExpanded] = useState(false);
 
   // Retour coach : uniquement s'il date des 14 derniers jours
   const recentFb = Object.entries(coachFeedbacks)
@@ -284,12 +285,14 @@ export default function ProfileDrawer({ onClose }: Props) {
         {/* ── Retour coach (14 derniers jours uniquement) ── */}
         {recentFb && (
           <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.coach + "40", overflow: "hidden" }}>
-            <button onClick={() => { navigate("coach-feedback"); onClose(); }} style={{ width: "100%", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
+            <button onClick={() => setFbExpanded((v) => !v)} style={{ width: "100%", padding: "12px 14px", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter"><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg><span style={{ fontSize: 11, fontWeight: 700, color: C.coach }}>Retour du coach</span></div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontSize: 9, color: C.tx3 }}>{fmtDay(recentFb.date!.slice(0, 10))}</span><span style={{ fontSize: 11, color: C.coach }}>›</span></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontSize: 9, color: C.tx3 }}>{fmtDay(recentFb.date!.slice(0, 10))}</span><span style={{ fontSize: 11, color: C.coach }}>{fbExpanded ? "–" : "+"}</span></div>
               </div>
-              <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>"{recentFb.note}"</div>
+              <div style={fbExpanded
+                ? { fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", whiteSpace: "pre-wrap" as const }
+                : { fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>"{recentFb.note}"</div>
             </button>
           </div>
         )}

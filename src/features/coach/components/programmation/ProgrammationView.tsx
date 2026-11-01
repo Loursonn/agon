@@ -25,6 +25,9 @@ import type { ProgSession } from "./types"
 import { SessionForm } from "./SessionForm"
 import { SessionBlocEditor } from "./SessionBlocEditor"
 import { CardSkeleton } from "@/features/shared/components/skeletons"
+import { MuscleVolumePanel } from "./MuscleVolumePanel"
+import { useMuscleVolume } from "./hooks/useMuscleVolume"
+import { localISO } from "@/lib/date"
 
 const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
@@ -34,6 +37,17 @@ const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 interface ProgrammationViewProps {
   athleteId: string | undefined
   cycleId: string | undefined
+  /** Période du cycle affiché (YYYY-MM-DD) pour le volume par muscle. Défaut : 6 semaines depuis aujourd'hui. */
+  rangeStart?: string
+  rangeEnd?: string
+}
+
+/** Séries par muscle et par semaine sur la période du cycle (prévu). */
+function ProgrammationMuscleVolume({ athleteId, rangeStart, rangeEnd }: { athleteId: string | undefined; rangeStart?: string; rangeEnd?: string }) {
+  const today = localISO(new Date())
+  const end = rangeEnd ?? localISO(new Date(Date.now() + 35 * 86_400_000))
+  const { weeks, byWeek, isLoading } = useMuscleVolume(athleteId, rangeStart ?? today, end)
+  return <MuscleVolumePanel weeks={weeks} byWeek={byWeek} isLoading={isLoading} />
 }
 
 function totalExercices(session: ProgSession): number {
@@ -325,7 +339,7 @@ function SortableSessionCard(props: SortableSessionCardProps) {
   )
 }
 
-export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps) {
+export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: ProgrammationViewProps) {
   const { data: serverSessions = [], isLoading } = useProgrammation(athleteId)
   const updateMutation = useUpdateProgrammation(athleteId)
   const [sessions, setSessions] = useState<ProgSession[]>([])
@@ -648,6 +662,9 @@ export function ProgrammationView({ athleteId, cycleId }: ProgrammationViewProps
         </SortableContext>
       </DndContext>
 
+      {sessions.length > 0 && (
+        <ProgrammationMuscleVolume athleteId={athleteId} rangeStart={rangeStart} rangeEnd={rangeEnd} />
+      )}
     </div>
   )
 }

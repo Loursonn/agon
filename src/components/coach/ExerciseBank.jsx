@@ -9,7 +9,7 @@ const parseYtId=v=>{const m=(v||'').match(/(?:youtube\.com\/(?:watch\?v=|shorts\
 function ExerciseCreateModal({coachId,onSave,onClose}){
   const{profile}=useAuth();
   const isAdmin=profile?.is_admin===true;
-  const[form,setForm]=useState({name:'',target:'Pecs',secondary:[],equipment:'Barre',difficulty:'Intermédiaire',ex_type:'muscu',is_compound:true,is_unilateral:false,youtube_id:'',instructions:'',tips:''});
+  const[form,setForm]=useState({name:'',target:'Pecs',target_2:'',secondary:[],equipment:'Barre',difficulty:'Intermédiaire',ex_type:'muscu',is_compound:true,is_unilateral:false,youtube_id:'',instructions:'',tips:''});
   const[saving,setSaving]=useState(false);const[saveError,setSaveError]=useState('');
   const TARGETS=['Pecs','Dos-GD','Dos-Trap','Dos-Rhom','Ep-Ant','Ep-Lat','Ep-Post','Quads','Ischios','Fessiers','Adducteurs','Triceps','Biceps','Core','Mollets'];
   const EQUIPS=['Barre','Haltères','Cable','Machine','Poids de corps','Élastique','Kettlebell','Smith'];
@@ -19,7 +19,7 @@ function ExerciseCreateModal({coachId,onSave,onClose}){
   const save=async()=>{
     if(!form.name.trim())return;setSaving(true);setSaveError('');
     const ytId=form.youtube_id?parseYtId(form.youtube_id):null;
-    const{error}=await supabase.from('exercises').insert({...form,name:form.name.trim(),youtube_id:ytId||null,created_by:coachId,is_public:true,is_verified:isAdmin});
+    const{error}=await supabase.from('exercises').insert({...form,target_2:form.target_2||null,secondary:form.secondary.filter(m=>m!==form.target&&m!==form.target_2),name:form.name.trim(),youtube_id:ytId||null,created_by:coachId,is_public:true,is_verified:isAdmin});
     setSaving(false);
     if(error){setSaveError(error.message||JSON.stringify(error));console.error('ExerciseCreateModal insert error:',error);}
     else onSave();
@@ -35,6 +35,7 @@ function ExerciseCreateModal({coachId,onSave,onClose}){
           <div><label style={lS}>Nom *</label><input value={form.name} onChange={e=>upd('name',e.target.value)} placeholder="Ex: Développé couché barre" style={fS}/></div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
             <div><label style={lS}>Muscle principal</label><select value={form.target} onChange={e=>upd('target',e.target.value)} style={fS}>{TARGETS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+            <div><label style={lS}>2e muscle principal (facultatif)</label><select value={form.target_2} onChange={e=>upd('target_2',e.target.value)} style={fS}><option value=''>—</option>{TARGETS.filter(t=>t!==form.target).map(t=><option key={t} value={t}>{t}</option>)}</select></div>
             <div><label style={lS}>Équipement</label><select value={form.equipment} onChange={e=>upd('equipment',e.target.value)} style={fS}>{EQUIPS.map(e=><option key={e} value={e}>{e}</option>)}</select></div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
@@ -85,6 +86,7 @@ function ExerciseCharacteristicsPanel({ex,onSaved}){
   const[form,setForm]=useState({
     ex_type:ex.ex_type||'muscu',
     target:ex.target||'',
+    target_2:ex.target_2||'',
     secondary:ex.secondary||[],
     equipment:ex.equipment||'',
     difficulty:ex.difficulty||'',
@@ -101,7 +103,8 @@ function ExerciseCharacteristicsPanel({ex,onSaved}){
     const{error}=await supabase.from('exercises').update({
       ex_type:form.ex_type||null,
       target:form.target||null,
-      secondary:form.secondary,
+      target_2:form.target_2&&form.target_2!==form.target?form.target_2:null,
+      secondary:form.secondary.filter(m=>m!==form.target&&m!==form.target_2),
       equipment:form.equipment||null,
       difficulty:form.difficulty||null,
       is_compound:form.is_compound,
@@ -116,11 +119,12 @@ function ExerciseCharacteristicsPanel({ex,onSaved}){
     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
       <div><label style={lS}>Type</label><select value={form.ex_type} onChange={e=>upd('ex_type',e.target.value)} style={fS}>{EX_TYPES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</select></div>
       <div><label style={lS}>Muscle principal</label><select value={form.target} onChange={e=>upd('target',e.target.value)} style={fS}><option value=''>—</option>{TARGETS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+      <div><label style={lS}>2e muscle principal (facultatif)</label><select value={form.target_2} onChange={e=>upd('target_2',e.target.value)} style={fS}><option value=''>—</option>{TARGETS.filter(t=>t!==form.target).map(t=><option key={t} value={t}>{t}</option>)}</select></div>
       <div><label style={lS}>Équipement</label><select value={form.equipment} onChange={e=>upd('equipment',e.target.value)} style={fS}><option value=''>—</option>{EQUIPS.map(e=><option key={e} value={e}>{e}</option>)}</select></div>
       <div><label style={lS}>Difficulté</label><select value={form.difficulty} onChange={e=>upd('difficulty',e.target.value)} style={fS}><option value=''>—</option>{['Débutant','Intermédiaire','Avancé'].map(d=><option key={d} value={d}>{d}</option>)}</select></div>
     </div>
     <div style={{marginBottom:10}}>
-      <label style={lS}>Muscles secondaires</label>
+      <label style={lS}>Muscles secondaires <span style={{fontWeight:400,textTransform:'none'}}>(comptent 0,5 série)</span></label>
       <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
         {TARGETS.map(m=>{const on=form.secondary.includes(m);return(<button key={m} onClick={()=>toggleSec(m)} style={{padding:'3px 9px',borderRadius:6,border:'1px solid '+(on?C.ac:C.brdL),background:on?C.ac:'transparent',color:on?'#fff':C.tx2,fontSize:10,fontWeight:on?700:400,cursor:'pointer',fontFamily:'inherit'}}>{m}</button>);})}
       </div>
@@ -174,6 +178,7 @@ function ExerciseDetailModal({ex,coachId,onClose,onAdd,onDelete,onMergeClick,onR
           </div>
           <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
             {ex.target&&<span style={{fontSize:11,padding:'3px 10px',borderRadius:6,background:C.acS,color:C.ac,fontWeight:600}}>{ex.target}</span>}
+            {ex.target_2&&<span style={{fontSize:11,padding:'3px 10px',borderRadius:6,background:C.acS,color:C.ac,fontWeight:600}}>{ex.target_2}</span>}
             {(ex.secondary||[]).map(m=><span key={m} style={{fontSize:11,padding:'3px 10px',borderRadius:6,background:C.s2,color:C.tx3}}>{m}</span>)}
           </div>
           <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
@@ -234,7 +239,7 @@ function ExerciseBank({coachId,onAddToExos}){
     setLoading(true);
     let q=supabase.from('exercises').select('*',{count:'exact'}).order('name').range(page*PAGE,(page+1)*PAGE-1);
     if(search)q=q.ilike('name',`%${search}%`);
-    if(fMuscles.length>0){const orParts=fMuscles.flatMap(m=>[`target.eq.${m}`,`secondary.cs.{${m}}`]);q=q.or(orParts.join(','));}
+    if(fMuscles.length>0){const orParts=fMuscles.flatMap(m=>[`target.eq.${m}`,`target_2.eq.${m}`,`secondary.cs.{${m}}`]);q=q.or(orParts.join(','));}
     if(fEquip)q=q.eq('equipment',fEquip);
     if(fDiff)q=q.eq('difficulty',fDiff);
     if(fType)q=q.eq('ex_type',fType);

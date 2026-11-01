@@ -407,17 +407,21 @@ const FORM_FIELDS_ICONS: Record<string, React.ReactNode> = {
   doms:    <Dumbbell size={16} />,
 };
 
-const FORM_FIELDS = [
-  { key: "fatigue", label: "Récupération", inv: true,
-    advice: (v: number) => v >= 7 ? "Grande fatigue détectée. Priorise le sommeil et réduis l'intensité cette semaine." : v <= 3 ? "Bonne récupération. Tu peux pousser plus fort." : null },
-  { key: "sommeil", label: "Sommeil",      inv: false,
-    advice: (v: number) => v <= 4 ? "Sommeil insuffisant. Vise 7-9h et couche-toi avant minuit." : null },
-  { key: "stress",  label: "Stress",       inv: true,
-    advice: (v: number) => v >= 7 ? "Stress élevé : évite les séances HIIT, préfère l'endurance légère." : null },
-  { key: "energie", label: "Énergie",      inv: false,
-    advice: (v: number) => v <= 3 ? "Énergie basse : vérifie tes apports glucidiques avant les séances." : null },
-  { key: "doms",    label: "DOMS",         inv: true,
-    advice: (v: number) => v >= 7 ? "Courbatures importantes. Privilégie du travail léger ou une séance d'activation." : null },
+// Chaque note du wellness va de 1 à 5, 5 = le mieux (voir WELL_ITEMS dans lib/wellness).
+// Seuil d'alerte aligné sur getAlerts : 2 ou moins.
+type FormeTip = { text: string; tone: "bad" | "good" };
+const FORM_FIELDS: Array<{ key: string; label: string; advice: (v: number) => FormeTip | null }> = [
+  { key: "fatigue", label: "Récupération",
+    advice: (v) => v <= 2 ? { text: "Grande fatigue détectée. Priorise le sommeil et réduis l'intensité cette semaine.", tone: "bad" }
+      : v >= 4 ? { text: "Bonne récupération. Tu peux pousser plus fort.", tone: "good" } : null },
+  { key: "sommeil", label: "Sommeil",
+    advice: (v) => v <= 2 ? { text: "Sommeil insuffisant. Vise 7-9h et couche-toi avant minuit.", tone: "bad" } : null },
+  { key: "stress",  label: "Stress",
+    advice: (v) => v <= 2 ? { text: "Stress élevé : évite les séances HIIT, préfère l'endurance légère.", tone: "bad" } : null },
+  { key: "energie", label: "Énergie",
+    advice: (v) => v <= 2 ? { text: "Énergie basse : vérifie tes apports glucidiques avant les séances.", tone: "bad" } : null },
+  { key: "doms",    label: "Courbatures",
+    advice: (v) => v <= 2 ? { text: "Courbatures importantes. Privilégie du travail léger ou une séance d'activation.", tone: "bad" } : null },
 ];
 
 function getFormeAdvice(wellness: Record<string, number> | null): Array<{ icon: React.ReactNode; label: string; text: string; color: string }> {
@@ -428,8 +432,7 @@ function getFormeAdvice(wellness: Record<string, number> | null): Array<{ icon: 
     if (v == null) continue;
     const tip = f.advice(v);
     if (!tip) continue;
-    const isBad = f.inv ? v >= 7 : v <= 3;
-    tips.push({ icon: FORM_FIELDS_ICONS[f.key], label: f.label, text: tip, color: isBad ? C.r : C.o });
+    tips.push({ icon: FORM_FIELDS_ICONS[f.key], label: f.label, text: tip.text, color: tip.tone === "bad" ? C.r : C.g });
   }
   return tips;
 }
@@ -769,6 +772,8 @@ export default function TodayPage() {
   const [activityDate, setActivityDate] = useState<string | null>(null);
   const [editActivity, setEditActivity] = useState<FreeSession | null>(null);
   const [energyPreview, setEnergyPreview] = useState<UnifiedCalendarEvent | null>(null);
+  const [fbExpanded, setFbExpanded] = useState(false);
+  const [confirmDelEvt, setConfirmDelEvt] = useState<string | null>(null);
   const [showOtherSessions, setShowOtherSessions] = useState(false);
   const [testPreviewId, setTestPreviewId] = useState<string | null>(null);
   const [mensuOpen, setMensuOpen] = useState(false);
@@ -917,9 +922,9 @@ export default function TodayPage() {
   const yesterdayISO = localISO(new Date(Date.now() - 86400000));
   const yesterdayWellness = wellnessByISO?.[yesterdayISO] as { score?: number } | undefined ?? null;
   const yesterdayDay = weekDays.find((d) => d.date === yesterdayISO);
-  const yesterdaySessName = yesterdayDay?.sessions.find((s) => s.isCompleted)?.session.name
-    ?? yesterdayDay?.sessions[0]?.session.name
-    ?? null;
+  // Seule une séance réellement clôturée compte : une séance prévue mais pas faite
+  // n'a rien à faire sous une coche verte.
+  const yesterdaySessName = yesterdayDay?.sessions.find((s) => s.isCompleted)?.session.name ?? null;
 
   // ── Wellness trend (last 14 days) ────────────────────────────────────────
   const wellnessTrend = Array.from({ length: 14 }, (_, i) => {
@@ -1078,7 +1083,7 @@ export default function TodayPage() {
         {/* Section 1a — Message du coach */}
         {recentFb && (
           <button
-            onClick={() => { navigate("coach-feedback"); haptic(); }}
+            onClick={() => { setFbExpanded((v) => !v); haptic(); }}
             style={{
               width: "100%", marginBottom: 20, padding: "13px 16px",
               background: C.s1, borderRadius: 6,
@@ -1092,10 +1097,12 @@ export default function TodayPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 9, color: C.tx3 }}>{new Date(recentFb.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                <span style={{ fontSize: 11, color: C.coach }}>›</span>
+                <span style={{ fontSize: 11, color: C.coach }}>{fbExpanded ? "–" : "+"}</span>
               </div>
             </div>
-            <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+            <div style={fbExpanded
+              ? { fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", whiteSpace: "pre-wrap" as const }
+              : { fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
               "{recentFb.note}"
             </div>
           </button>
@@ -1669,11 +1676,10 @@ export default function TodayPage() {
             return (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {upcoming.map((evt) => (
+                  <div key={evt.id} style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd }}>
                   <div
-                    key={evt.id}
                     style={{
-                      background: C.s1, borderRadius: 6, padding: "10px 14px",
-                      border: "1px solid " + C.brd,
+                      padding: "10px 14px",
                       display: "flex", alignItems: "center", gap: 10,
                     }}
                   >
@@ -1689,11 +1695,22 @@ export default function TodayPage() {
                       </div>
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); deleteLifeEvent({ id: evt.id, athlete_id: athleteId ?? "" }); }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: C.tx3, padding: 4, flexShrink: 0 }}
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelEvt((cur) => (cur === evt.id ? null : evt.id)); }}
+                      aria-label="Supprimer l'événement"
+                      style={{ background: "none", border: "none", cursor: "pointer", color: confirmDelEvt === evt.id ? C.r : C.tx3, padding: 4, flexShrink: 0 }}
                     >
                       <Trash2 size={13} />
                     </button>
+                  </div>
+                  {confirmDelEvt === evt.id && (
+                    <div style={{ margin: "0 10px 10px", padding: "10px 12px", borderRadius: 4, background: C.rS, border: "1px solid " + C.r + "40" }}>
+                      <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cet événement ? Ton coach ne le verra plus sur le planning.</div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => setConfirmDelEvt(null)} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+                        <button onClick={() => { deleteLifeEvent({ id: evt.id, athlete_id: athleteId ?? "" }); setConfirmDelEvt(null); }} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "none", background: C.r, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+                      </div>
+                    </div>
+                  )}
                   </div>
                 ))}
               </div>

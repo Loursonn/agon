@@ -45,6 +45,8 @@ export const QK = {
   // ── Modifications athlète (reschedule + bonus, pour coach) ───────────────────
   athleteModifications: (aid: string) => ['athleteModifications', aid] as const,
   // ── Lien de première connexion d un athlète pré-créé ─────────────────────────
+  exerciseBankMuscles: ["exerciseBankMuscles"] as const,
+  muscleVolumeLogs: (aid: string) => ["muscleVolumeLogs", aid] as const,
   athleteClaim: (aid: string) => ["athleteClaim", aid] as const,
   claimInfo: (token: string) => ["claimInfo", token] as const,
   // ── Coach dashboard ───────────────────────────────────────────────────────────
@@ -77,6 +79,14 @@ export const QK = {
   hyroxResult:     (id: string)  => ['hyroxResult', id]      as const,
   hyroxReferences: ['hyroxReferences']                        as const,
   hyroxPlans:      (aid: string) => ['hyroxPlans', aid]      as const,
+  // ── Tests HYROX (bilan et retests) ────────────────────────────────────────────
+  hyroxBattery:        ['hyroxTests', 'battery']                        as const,
+  hyroxGridSet:        (version: string) => ['hyroxTests', 'grid', version] as const,
+  hyroxActiveGrid:     ['hyroxTests', 'grid', 'active']                 as const,
+  hyroxAnalyses:       (aid: string) => ['hyroxTests', 'analyses', aid] as const,
+  hyroxAxesDraft:      (id: string)  => ['hyroxTests', 'draft', id]     as const,
+  hyroxAthleteProfile: (aid: string) => ['hyroxTests', 'profile', aid]  as const,
+  hyroxCalibration:    ['hyroxTests', 'calibration']                    as const,
   // ── Fiches ────────────────────────────────────────────────────────────────────
   docs:            ['docs'] as const,
   docsBank:        (cid: string) => ['docs', 'bank', cid]          as const,

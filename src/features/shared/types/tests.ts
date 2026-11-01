@@ -46,8 +46,19 @@ export interface TestDefinition {
   is_global: boolean;
   description: string | null;
   protocol: { text?: string } | null;
+  /** Batterie : 'hyrox_v3' (bilan HYROX actuel), 'hyrox_legacy' (anciens presets HYROX, masqués des listes de choix), null sinon. */
+  battery?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Test proposé dans les listes de choix (banque, planning, ajout de résultat).
+ * Les anciens presets HYROX (battery = 'hyrox_legacy') restent en base et
+ * restent chargés pour relire ou corriger leurs résultats, mais ne se choisissent plus.
+ */
+export function isPickableTest(t: { battery?: string | null }): boolean {
+  return t.battery !== 'hyrox_legacy';
 }
 
 export type ExtrapOp = 'div' | 'mul';

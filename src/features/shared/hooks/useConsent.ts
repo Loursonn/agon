@@ -160,6 +160,19 @@ export function hasDecided(consents: ConsentState[] | undefined, purpose: Consen
   return !!consents?.some((c) => c.purpose === purpose);
 }
 
+/**
+ * Vrai si l'utilisateur a répondu (oui ou non) pour cette finalité sous une
+ * version du texte au moins égale à `since`. Une réponse plus ancienne portait
+ * sur un autre texte : elle vaut absence de réponse.
+ */
+export function hasDecidedSince(
+  consents: ConsentState[] | undefined,
+  purpose: ConsentPurpose,
+  since: string,
+): boolean {
+  return !!consents?.some((c) => c.purpose === purpose && c.docVersion >= since);
+}
+
 /** État d'une finalité facultative, en traitant l'absence comme un refus. */
 export function isGranted(
   consents: ConsentState[] | undefined,

@@ -11,7 +11,7 @@ import { useAthleteTestResults, useCreateTestResult, useUpdateTestResult, useDel
 import { usePendingCoachTests, useFillCoachTestSession } from '@/features/shared/hooks/tests/useCoachTestQueue';
 import { useTestDefinitions } from '@/features/shared/hooks/tests/useTestDefinitions';
 import type { TestDefinitionWithVariables, AthleteTestResult } from '@/features/shared/types/tests';
-import { TEST_CATEGORY_COLOR, TEST_CATEGORY_LABEL, TEST_CATEGORY_ORDER, type TestCategory } from '@/features/shared/types/tests';
+import { TEST_CATEGORY_COLOR, TEST_CATEGORY_LABEL, TEST_CATEGORY_ORDER, isPickableTest, type TestCategory } from '@/features/shared/types/tests';
 
 // ── Données par catégorie (évolution métrique, triée + colorée) ────────────────
 
@@ -487,6 +487,7 @@ export default function TestPage({ embedded = false }: { embedded?: boolean }) {
 
   const { data: results = [], isLoading: loadingResults } = useAthleteTestResults(athleteId);
   const { data: allTests = [] } = useTestDefinitions(coachId);
+  const pickableTests = allTests.filter(isPickableTest);
   const deleteMut = useDeleteTestResult(athleteId);
 
   const [addingResult, setAddingResult] = useState(false);
@@ -542,7 +543,7 @@ export default function TestPage({ embedded = false }: { embedded?: boolean }) {
         {addingResult && (
           <div style={{ marginBottom: 16 }}>
             <AddResultForm
-              tests={allTests}
+              tests={pickableTests}
               athleteId={athleteId}
               onSuccess={() => setAddingResult(false)}
               onCancel={() => setAddingResult(false)}

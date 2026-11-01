@@ -1231,4 +1231,49 @@ crée des habitudes, et dépose une fiche qu'il a fabriquée (`POST /fiches`).
 
 ---
 
+## 2026-10 — Tests HYROX : moteur pur, paramètres versionnés injectés
+
+**Décision** : le moteur des Tests HYROX (`src/lib/hyrox/tests/`) ne lit aucune constante de grille. Il reçoit un `GridSet` (grilles 1-5, poids, paramètres course, paramètres d'axes, règles), stampe chaque sortie `algo_version` + `grid_version`, et ne modifie jamais les entrées brutes. `GRID_SET_V1` est la seule copie des valeurs v1 : il servira de seed SQL.
+
+**Pourquoi** : Hugo veut perfectionner la batterie et les calculs en continu, sans redéployer, et pouvoir recalculer une ancienne analyse avec une nouvelle version sans perdre l'ancienne (comparaison aux vrais chronos de course).
+
+**Détails** :
+- Port fidèle du radar bilan YOXX du 31/10/2026, vérifié par les golden tests 1 à 3 (le radar exécuté dans node a servi d'oracle).
+- Les prédictions 5 et 10 km tronquent les secondes à l'affichage (`fmtTime(s, { floor: true })`), comme l'outil de référence (10 km = 55:22,8 → 55:22).
+- Le moteur propose les axes de travail ; seule la version validée par le coach sera montrée à l'athlète (PR 2 et 4).
+- Règles d'axes sous forme de données (`condition` jsonb : métrique, opérateur, seuil, `all` / `any`), pour vivre dans `hyrox_work_axes_rules`.
+
+---
+
+## 2026-11 — Tests HYROX en base : snapshot figé, brouillon d'axes séparé, courses dans hyrox_results
+
+**Décision** :
+- Une analyse (`hyrox_test_analyses`) est un snapshot figé par trigger : entrées brutes, profil, sorties et versions. Recalculer avec une autre version crée une nouvelle ligne (`recalculated_from`), l'ancienne reste.
+- La proposition d'axes du moteur et le contexte de l'athlète (douleur, blessure, envie) vivent dans `hyrox_test_axes_drafts`, lisible par le coach et l'admin seulement. L'athlète lit une analyse seulement après validation (`validated_at`, qui exige `axes_validated`). La RLS n'est donc pas calquée à l'identique sur `hyrox_results` : l'athlète n'écrit pas d'analyse.
+- Pas de table `hyrox_race_results` : les courses vivent déjà dans `hyrox_results` (runs, stations, Roxzone, rang, participants) ; on y ajoute top % final, rang et top % Roxzone, cause.
+- Grilles, paramètres et règles dans 5 tables versionnées, une seule version active.
+- Seed généré depuis `GRID_SET_V1` et vérifié par un test : une seule source pour les valeurs v1.
+
+**Pourquoi** : « l'athlète ne voit que ce que le coach a validé, jamais un brouillon » ne tient pas avec une RLS par ligne si brouillon et version validée partagent la ligne. Une table de courses parallèle aurait dédoublé la saisie du coach.
+
+**Testé** : PGlite (`supabase/tests/hyrox_tests_pglite.mjs`), 29 contrôles : idempotence, seed, presets, RLS coach / athlète / autre coach / admin, gel, une seule version active, synchro des saisies.
+
+
+## 2026-11 — Tests HYROX : calcul côté client, saisie par le circuit des tests programmés
+
+**Contexte** : il fallait brancher la saisie de la semaine de bilan, la fiche résultat, la validation des axes, le recalcul et la calibration.
+
+**Décisions** :
+- **Saisie** : athlète et coach écrivent une ligne `test_sessions` complétée ; le trigger existant `sync_test_session_to_results` alimente `athlete_test_results`. Pas de deuxième chemin d'écriture, et la saisie apparaît dans le calendrier comme les autres tests.
+- **Noms des presets** : le trigger retrouve un test par son nom. Le preset v3 du BBJ s'appelle « Burpee broad jump 80 m · bilan » parce que l'ancien preset « Burpee broad jump 80 m » existe toujours (aucun preset existant renommé ni supprimé). Un test bloque toute future collision.
+- **Calcul** : dans le navigateur, avec le moteur pur et la version de grilles lue en base ; le résultat est enregistré figé (`storedOutputs`, sans la proposition d'axes qui vit dans le brouillon). Pas d'Edge Function : mêmes résultats que les tests, rien à déployer.
+- **Analyse = une période** : pour chaque test, le résultat le plus récent entre deux dates (21 jours par défaut jusqu'au dernier résultat). Les ids des résultats retenus sont gardés (`source_result_ids`).
+- **Axes validés** : type `ValidatedAxes` (textes réécrits par le coach), distinct de la proposition `AxesPlan`. L'athlète ne lit que lui.
+- **Ce que voit l'athlète** : la base lui donne l'analyse validée entière (`outputs` compris) ; c'est l'interface qui retire E, les 6 zones, D′, le tableau % VC et les règles. Acceptable : ce sont ses propres données, pas celles d'un autre ; à revoir si on veut cacher ces valeurs au niveau de la base (vue ou colonne séparée).
+- **Recalcul** réservé à l'admin, seulement quand la version active des grilles ou du calcul diffère.
+
+**Testé** : `hyroxTestsMapping.test.ts` (golden 1 saisi dans les presets v3 = mêmes notes, fenêtre, profil, calibration, CSV), `AnalysisSheet.test.tsx` (vue athlète), PGlite 30 contrôles (dont la synchro du BBJ vers le preset v3).
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*
