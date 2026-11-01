@@ -33,6 +33,7 @@ interface FreeActivityModalProps {
 
 export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }: FreeActivityModalProps) {
   const isEdit = !!existing;
+  const [confirmDel, setConfirmDel] = useState(false);
   const [sport, setSport] = useState(SPORTS[0]);
   const [customLabel, setCustomLabel] = useState("");
   const [duration, setDuration] = useState("");
@@ -103,7 +104,7 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
           </div>
           {isEdit && onDelete && existing && (
             <button
-              onClick={() => { onDelete(existing.id); onClose(); }}
+              onClick={() => setConfirmDel((v) => !v)}
               style={{
                 padding: "5px 12px", borderRadius: 4,
                 border: "1px solid " + C.r + "50", background: "rgba(239,75,75,0.08)",
@@ -117,6 +118,15 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
         </DrawerHeader>
 
         <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {confirmDel && isEdit && onDelete && existing && (
+            <div style={{ padding: "10px 12px", borderRadius: 4, background: C.rS, border: "1px solid " + C.r + "40" }}>
+              <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cette activité ?</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+                <button type="button" onClick={() => { onDelete(existing.id); onClose(); }} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "none", background: C.r, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+              </div>
+            </div>
+          )}
           {/* Sport picker */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>

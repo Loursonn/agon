@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-01-accueil-athlete-corrections",
+    date: "2026-11-01",
+    kind: "fix",
+    title: "Accueil athlète : quatre corrections avant la vidéo de présentation",
+    summary:
+      "Le lien « Retour du coach » menait à une page introuvable, les conseils de forme lisaient le wellness à l'envers, la carte « Hier » cochait une séance non faite, et deux suppressions se faisaient sans confirmation.",
+    sections: [
+      {
+        title: "Ce qui ne marchait pas",
+        points: [
+          "Taper « Retour du coach » (accueil ou menu profil) envoyait l'athlète sur une page introuvable. La carte se déplie maintenant sur place pour lire la note en entier.",
+          "Les conseils de « Tendance de forme » avaient été écrits pour une échelle de 1 à 10, alors que le wellness va de 1 à 5 (5 = le mieux). Résultat : « Bonne récupération » s'affichait quand l'athlète était épuisé, et les alertes fatigue, stress et courbatures n'apparaissaient jamais. Les seuils sont alignés sur le bilan du wellness : alerte à 2 ou moins.",
+          "La carte « Hier » affichait la première séance prévue avec une coche verte, même quand rien n'avait été fait. Elle ne montre plus qu'une séance réellement clôturée.",
+          "Supprimer un événement (« Mes événements ») ou une activité libre se faisait d'un seul tap, sans retour possible. Une confirmation s'affiche maintenant.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-01-series-par-muscle",
     date: "2026-11-01",
     kind: "feature",
