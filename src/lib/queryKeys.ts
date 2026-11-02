@@ -128,6 +128,8 @@ export const QK = {
   myStaffLinks:        (uid: string) => ['staff', 'mine', uid] as const,
   staffInvitation:     (token: string) => ['staff', 'invitation', token] as const,
   staffConsent:        (aid: string) => ['staff', 'consent', aid] as const,
+  // ── Double coach ─────────────────────────────────────────────────────────
+  athleteCoaches:      (aid: string) => ['athlete-coaches', aid] as const,
   // ── API coach pour assistant IA (Claude) ──────────────────────────────────────
   coachApiKeys:   (coachId: string) => ['coach-api-keys', coachId] as const,
   coachApiDrafts: (aid: string) => ['coach-api-drafts', aid] as const,

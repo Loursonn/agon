@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import { ChevronDown, Eye, EyeOff, Plus, Users } from "lucide-react";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
+import { useRemoveCoCoach } from "@/features/shared/hooks/useCoCoach";
 
 export default function AthletesListPage() {
-  const { profile, athletes, user, loading, canCoachSelf, removeSelfAsAthlete, becomeSelfCoach, hiddenAthletes, setAthleteHidden, createPendingAthlete, removePendingAthlete } = useAuth();
+  const { profile, athletes, user, loading, canCoachSelf, removeSelfAsAthlete, becomeSelfCoach, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete } = useAuth();
   const navigate = useNavigate();
+  const removeCoCoach = useRemoveCoCoach();
   const isCoachAthlete = profile?.role === "coach" || profile?.role === "coach_athlete";
   // Coach-athlète : sa ligne perso dépend de coach_id (self = son propre athlète)
   const isHybrid = profile?.role === "coach_athlete";
@@ -86,7 +88,17 @@ export default function AthletesListPage() {
             {a.full_name.charAt(0).toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.tx }}>{a.full_name}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.tx, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              {a.full_name}
+              {(a.co_coached_by_me || a.co_coach_id) && (
+                <span
+                  title={a.co_coached_by_me ? "Tu es co-coach de cet athlète" : "Cet athlète a un co-coach"}
+                  style={{ fontSize: 10, fontWeight: 700, color: C.coach, background: C.coach + "1A", border: "1px solid " + C.coach + "40", borderRadius: 3, padding: "1px 6px", letterSpacing: "0.3px" }}
+                >
+                  {a.co_coached_by_me ? "CO-COACH" : "2 COACHS"}
+                </span>
+              )}
+            </div>
             <div style={{ fontSize: 11, color: a.is_pending ? C.b : C.tx3 }}>
               {a.is_pending ? "En attente de première connexion" : [a.age ? `${a.age} ans` : null, a.height_cm ? `${a.height_cm} cm` : null]
                 .filter(Boolean).join(" · ") || "Profil non renseigné"}
@@ -95,7 +107,7 @@ export default function AthletesListPage() {
           <span style={{ fontSize: 16, color: C.tx3 }}>›</span>
         </button>
 
-        <ClaimLinkButton athleteId={a.id} pending={!!a.is_pending} />
+        {!a.co_coached_by_me && <ClaimLinkButton athleteId={a.id} pending={!!a.is_pending} />}
 
         <button
           onClick={() => handleToggleHidden(a.id, !hidden)}
@@ -141,6 +153,13 @@ export default function AthletesListPage() {
       if (target?.is_pending) {
         await removePendingAthlete(athleteId);
         toast.success("Athlète supprimé");
+        return;
+      }
+      if (target?.co_coached_by_me) {
+        // Co-coach : il quitte le co-coaching, le coach référent garde l'athlète
+        await removeCoCoach.mutateAsync({ athleteId });
+        await refreshAthletes();
+        toast.success("Tu ne co-coaches plus cet athlète");
         return;
       }
       await supabase.rpc("unlink_athlete", { athlete_id: athleteId });
@@ -441,7 +460,9 @@ export default function AthletesListPage() {
               <div style={{ fontSize: 13, color: C.tx3, marginBottom: 20 }}>
                 {isSelf
                   ? "Tu ne seras plus ton propre coach. Ton historique est conservé, tu pourras te rajouter à tout moment."
-                  : <><strong style={{ color: C.tx }}>{a?.full_name}</strong> sera dissocié de ton compte.</>}
+                  : (a as { co_coached_by_me?: boolean } | null | undefined)?.co_coached_by_me
+                    ? <>Tu ne co-coacheras plus <strong style={{ color: C.tx }}>{a?.full_name}</strong>. Son coach référent garde tout son suivi.</>
+                    : <><strong style={{ color: C.tx }}>{a?.full_name}</strong> sera dissocié de ton compte{(a as { co_coach_id?: string | null } | null | undefined)?.co_coach_id ? ", et son co-coach perdra aussi l'accès" : ""}.</>}
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button

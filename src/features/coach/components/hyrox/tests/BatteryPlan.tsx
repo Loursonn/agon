@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Video } from "lucide-react";
+import { CalendarPlus, ChevronDown, ChevronRight, Video } from "lucide-react";
 import { C } from "@/lib/theme";
-import { BATTERY_SESSIONS, type AthleteTestProfile, type BatteryResult } from "@/lib/hyrox/tests";
-import { useHyroxBattery, useHyroxBatteryResults, type BatteryTest } from "@/features/shared/hooks/hyrox/useHyroxTests";
+import { BATTERY_SESSIONS, addDaysIso, mondayOf, type AthleteTestProfile, type BatteryResult } from "@/lib/hyrox/tests";
+import {
+  useBatteryCalendar, useCancelTestWeek, useHyroxBattery, useHyroxBatteryResults,
+  type BatteryCalendarRow, type BatteryTest,
+} from "@/features/shared/hooks/hyrox/useHyroxTests";
 import { ListSkeleton } from "@/features/shared/components/skeletons";
 import TestEntryDrawer from "./TestEntryDrawer";
+import ScheduleTestWeekDrawer from "./ScheduleTestWeekDrawer";
 import { Btn, Card, Muted } from "./ui";
 import { displayEntry, fmtDate } from "./format";
 
@@ -30,6 +34,17 @@ export default function BatteryPlan({ athleteId, mode, readOnly, profile }: Prop
   const { data: results = [] } = useHyroxBatteryResults(athleteId);
   const [open, setOpen] = useState<string | null>(null);
   const [entry, setEntry] = useState<BatteryTest | null>(null);
+  const [scheduling, setScheduling] = useState(false);
+  const names = useMemo(() => tests.map(t => t.name), [tests]);
+  const { data: calendar = [] } = useBatteryCalendar(athleteId, names);
+  const canSchedule = mode === "coach" && !readOnly;
+
+  // Prochaine date prévue (pas encore faite) de chaque test, par titre.
+  const plannedByName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of calendar) if (!r.completed && !m.has(r.title.toLowerCase())) m.set(r.title.toLowerCase(), r.date);
+    return m;
+  }, [calendar]);
 
   const latest = useMemo(() => {
     const m = new Map<string, BatteryResult>();
@@ -43,6 +58,9 @@ export default function BatteryPlan({ athleteId, mode, readOnly, profile }: Prop
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {canSchedule && (
+        <ScheduledWeeks athleteId={athleteId} calendar={calendar} onSchedule={() => setScheduling(true)} />
+      )}
       {BATTERY_SESSIONS.map(s => {
         const list = tests.filter(t => t.battery_session === s.key);
         const done = list.filter(t => latest.has(t.id)).length;
@@ -72,7 +90,11 @@ export default function BatteryPlan({ athleteId, mode, readOnly, profile }: Prop
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{t.name}</div>
                         <div style={{ fontSize: 11, color: r ? C.tx2 : C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {r ? `${fmtDate(r.performed_at)} · ${summary(t, r)}` : "Pas encore fait"}
+                          {r
+                            ? `${fmtDate(r.performed_at)} · ${summary(t, r)}`
+                            : plannedByName.has(t.name.toLowerCase())
+                              ? `Prévu le ${fmtDate(plannedByName.get(t.name.toLowerCase())!)}`
+                              : "Pas encore fait"}
                         </div>
                       </div>
                     </button>
@@ -104,6 +126,66 @@ export default function BatteryPlan({ athleteId, mode, readOnly, profile }: Prop
         );
       })}
       <TestEntryDrawer athleteId={athleteId} test={entry} previous={entry ? latest.get(entry.id) : undefined} profile={profile} onClose={() => setEntry(null)} />
+      {canSchedule && (
+        <ScheduleTestWeekDrawer open={scheduling} athleteId={athleteId} tests={tests} calendar={calendar} onClose={() => setScheduling(false)} />
+      )}
     </div>
+  );
+}
+
+/**
+ * Bouton « Programmer la semaine de tests » et semaines déjà programmées.
+ * « Annuler la semaine » ne retire que les tests pas encore faits : un résultat
+ * saisi n'est jamais effacé d'ici.
+ */
+function ScheduledWeeks({ athleteId, calendar, onSchedule }: { athleteId: string; calendar: BatteryCalendarRow[]; onSchedule: () => void }) {
+  const cancel = useCancelTestWeek(athleteId);
+  const [confirm, setConfirm] = useState<string | null>(null);
+
+  const weeks = useMemo(() => {
+    const m = new Map<string, BatteryCalendarRow[]>();
+    for (const r of calendar) {
+      if (r.completed) continue;
+      const k = mondayOf(r.date);
+      m.set(k, [...(m.get(k) ?? []), r]);
+    }
+    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [calendar]);
+
+  return (
+    <Card>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Semaine de tests dans le calendrier</div>
+          <Muted>Pose les séances 1 à 5 dans le calendrier de l'athlète, à faire. Il saisit ses résultats depuis son calendrier ou ici.</Muted>
+        </div>
+        <Btn primary onClick={onSchedule}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><CalendarPlus size={14} /> Programmer la semaine de tests</span>
+        </Btn>
+      </div>
+      {weeks.map(([monday, rows]) => (
+        <div key={monday} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 10, paddingTop: 10, borderTop: "1px solid " + C.brd }}>
+          <div style={{ flex: 1, minWidth: 180, fontSize: 12, color: C.tx2 }}>
+            Semaine du {fmtDate(monday)} au {fmtDate(addDaysIso(monday, 6))} · {rows.length} test{rows.length > 1 ? "s" : ""} à faire
+          </div>
+          {confirm === monday ? (
+            <>
+              <Muted>Retirer ces {rows.length} tests du calendrier ?</Muted>
+              <Btn small onClick={() => setConfirm(null)}>Garder</Btn>
+              <Btn
+                small
+                disabled={cancel.isPending}
+                style={{ color: C.r, borderColor: C.r }}
+                onClick={() => cancel.mutate(rows.map(r => r.id), { onSuccess: () => setConfirm(null) })}
+              >
+                {cancel.isPending ? "Retrait…" : "Retirer"}
+              </Btn>
+            </>
+          ) : (
+            <Btn small onClick={() => setConfirm(monday)}>Annuler la semaine</Btn>
+          )}
+        </div>
+      ))}
+    </Card>
   );
 }

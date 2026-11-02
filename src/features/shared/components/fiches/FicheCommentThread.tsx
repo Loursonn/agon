@@ -11,6 +11,7 @@ import {
 import { useDocSignedUrl } from "@/features/shared/hooks/fiches/useDocs";
 import type { DocComment } from "@/features/shared/types/fiches";
 import { personName, useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
+import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { professionLabel } from "@/features/staff/lib/staffPermissions";
 import { btnGhost, btnPrimary, input, sectionTitle } from "./ficheStyles";
 
@@ -60,10 +61,13 @@ export function FicheCommentThread({ docId, athleteId, coachId, athleteName, rea
 
   // Les pros du staff commentent aussi : nom + métier plutôt que « Coach ».
   const { data: staff = [] } = useAthleteStaff(athleteId);
+  // Double coach : référent et co-coach s'affichent tous deux « Coach »
+  const { data: coaches } = useAthleteCoaches(athleteId);
   const author = (c: DocComment) => {
     if (c.author_id === user?.id) return "Moi";
     if (c.author_id === athleteId) return athleteName ?? "Athlète";
-    if (c.author_id === coachId) return "Coach";
+    if (c.author_id === coachId || c.author_id === coaches?.referent?.id) return "Coach";
+    if (c.author_id === coaches?.coCoach?.id) return `Coach · ${coaches.coCoach.full_name}`;
     const pro = staff.find((l) => l.staff_id === c.author_id);
     return pro ? `${personName(pro.staff)} · ${professionLabel(pro.profession)}` : "Staff";
   };

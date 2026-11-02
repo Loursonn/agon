@@ -38,11 +38,10 @@ export default function CoachPerfNotification({ coachId, athleteId, C }: Props) 
 
   const loadNotifications = async () => {
     setLoading(true);
-    let query = supabase
-      .from("performance_notifications")
-      .select("*")
-      .eq("coach_id", coachId);
-    if (athleteId) query = query.eq("athlete_id", athleteId);
+    // Pour un athlète donné : toutes ses alertes (la RLS les ouvre à ses deux
+    // coachs, référent et co-coach). Sinon : celles adressées à ce coach.
+    let query = supabase.from("performance_notifications").select("*");
+    query = athleteId ? query.eq("athlete_id", athleteId) : query.eq("coach_id", coachId);
     const { data: notifs } = await query
       .order("created_at", { ascending: false })
       .limit(20);

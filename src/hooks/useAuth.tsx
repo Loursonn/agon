@@ -28,6 +28,10 @@ export interface Profile {
   coach_hidden?: boolean;
   /** true = compte pré-créé par le coach, pas encore réclamé par l'athlète */
   is_pending?: boolean;
+  /** Côté coach : je suis co-coach de cet athlète (son coach référent est coach_id) */
+  co_coached_by_me?: boolean;
+  /** Côté coach : id du co-coach de l'athlète (null = un seul coach) */
+  co_coach_id?: string | null;
 }
 
 interface AuthContextType {
@@ -39,6 +43,8 @@ interface AuthContextType {
   /** Athlètes masqués par le coach (accessibles uniquement via la section « Masqués ») */
   hiddenAthletes: Profile[];
   setAthleteHidden: (athleteId: string, hidden: boolean) => Promise<void>;
+  /** Recharge la liste des athlètes (après ajout/retrait d'un co-coach…) */
+  refreshAthletes: () => Promise<void>;
   /** Crée un athlète avant sa première connexion ; renvoie son id */
   createPendingAthlete: (firstName: string, lastName: string) => Promise<string>;
   /** Supprime un athlète pré-créé encore non réclamé */
@@ -109,12 +115,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function fetchAthletes(coachId: string) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("coach_id", coachId)
-      .order("full_name");
-    setAllAthletes((data as Profile[]) || []);
+    // athlete_co_coaches pas encore dans les types générés
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
+    const [{ data: own }, { data: coLinks }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("coach_id", coachId).order("full_name"),
+      // Athlètes dont je suis co-coach (même droits que le coach référent)
+      db.from("athlete_co_coaches").select("athlete_id, hidden").eq("co_coach_id", coachId),
+    ]);
+    const ownList = ((own as Profile[]) || []);
+
+    // Co-coach éventuel de mes propres athlètes (badge « co-coaché »)
+    const ownIds = ownList.map((a) => a.id);
+    const { data: myLinks } = ownIds.length
+      ? await db.from("athlete_co_coaches").select("athlete_id, co_coach_id").in("athlete_id", ownIds)
+      : { data: [] };
+    const coCoachOf = new Map<string, string>(
+      ((myLinks ?? []) as { athlete_id: string; co_coach_id: string }[]).map((l) => [l.athlete_id, l.co_coach_id]),
+    );
+
+    const links = (coLinks ?? []) as { athlete_id: string; hidden: boolean }[];
+    let coList: Profile[] = [];
+    if (links.length) {
+      const hiddenById = new Map(links.map((l) => [l.athlete_id, l.hidden]));
+      const { data } = await supabase.from("profiles").select("*").in("id", links.map((l) => l.athlete_id));
+      // Le masquage du co-coach vit sur sa ligne de liaison, pas sur le profil
+      coList = ((data as Profile[]) || []).map((a) => ({
+        ...a,
+        coach_hidden: hiddenById.get(a.id) ?? false,
+        co_coached_by_me: true,
+        co_coach_id: coachId,
+      }));
+    }
+
+    const merged = [
+      ...ownList.map((a) => ({ ...a, co_coach_id: coCoachOf.get(a.id) ?? null })),
+      ...coList,
+    ].sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fr"));
+    setAllAthletes(merged);
   }
 
   async function setAthleteHidden(athleteId: string, hidden: boolean) {
@@ -122,6 +160,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.rpc("set_athlete_hidden", { athlete_id: athleteId, hidden });
     if (error) throw new Error(error.message);
     await fetchAthletes(user.id);
+  }
+
+  async function refreshAthletes() {
+    if (user) await fetchAthletes(user.id);
   }
 
   async function createPendingAthlete(firstName: string, lastName: string): Promise<string> {
@@ -342,7 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
-      athletes, hiddenAthletes, setAthleteHidden, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
+      athletes, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
       login, registerCoach, registerAthlete, registerAthleteWithCode, registerStaff,
       canCoachSelf, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
     }}>
