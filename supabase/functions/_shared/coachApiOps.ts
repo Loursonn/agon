@@ -153,7 +153,20 @@ export type ProgOp =
     libre_text?: string;
   }
   | { op: "remove_exercice"; session_id: string; exercice_id: string }
-  | { op: "set_bloc_instructions"; session_id: string; bloc_id: string; instructions: string };
+  | { op: "set_bloc_instructions"; session_id: string; bloc_id: string; instructions: string }
+  | {
+    /**
+     * Vidéo de démo d'un exercice de la banque (`exercises.youtube_id`). La
+     * banque est commune : la vidéo vaut pour tous les athlètes qui ont cet
+     * exercice, pas seulement celui de la proposition.
+     */
+    op: "set_exercise_video";
+    exercise_id: string;
+    exercise_name: string;
+    youtube_id: string;
+    /** Remplace une vidéo déjà en place (sinon refus). */
+    remplacer?: boolean;
+  };
 
 export type PlanningOp = {
   op: "set_session_schedule";
@@ -379,6 +392,54 @@ export interface ValidateCtx {
   energy?: Map<string, { name: string }>;
   /** Périodisation, compétitions, tests… de l'athlète. Obligatoire pour un plan. */
   plan?: PlanState;
+  /** Banque d'exercices et droits du coach. Obligatoire pour `set_exercise_video`. */
+  videos?: VideoBank;
+}
+
+/** Exercice de la banque visible du coach, avec sa vidéo actuelle. */
+export interface VideoBankEntry {
+  id: string;
+  name: string;
+  youtube_id: string | null;
+}
+
+/** Banque d'exercices pour `set_exercise_video`. */
+export interface VideoBank {
+  /** Le coach peut modifier la banque (admin ou coach certifié). */
+  canEdit: boolean;
+  /** Exercices visibles par nom exact, casse ignorée (`videoKey`). */
+  byName: Map<string, VideoBankEntry[]>;
+}
+
+/** Clé de recherche d'un nom d'exercice : nom exact, casse et espaces ignorés. */
+export function videoKey(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+/**
+ * ID YouTube (11 caractères) depuis un ID seul ou une URL : `watch?v=`,
+ * `youtu.be/`, `shorts/`, `embed/`, `live/`. `null` si rien de reconnu.
+ */
+export function parseYoutubeId(input: string): string | null {
+  const v = input.trim();
+  if (YOUTUBE_ID.test(v)) return v;
+  let url: URL;
+  try {
+    url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : "https://" + v);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase().replace(/^(www\.|m\.|music\.)/, "");
+  const parts = url.pathname.split("/").filter(Boolean);
+  let id: string | null = null;
+  if (host === "youtu.be") id = parts[0] ?? null;
+  else if (host === "youtube.com" || host === "youtube-nocookie.com") {
+    if (parts[0] === "watch") id = url.searchParams.get("v");
+    else if (["shorts", "embed", "live", "v"].includes(parts[0] ?? "")) id = parts[1] ?? null;
+  }
+  return id && YOUTUBE_ID.test(id) ? id : null;
 }
 
 /** Exercice ajouté par l'assistant, dans un bloc existant ou une séance créée. */
@@ -469,8 +530,39 @@ function parseProgOp(raw: Obj, path: string, ctx: ValidateCtx): ProgOp {
       };
     }
 
+    case "set_exercise_video": {
+      onlyKeys(raw, ["op", "exercise_name", "youtube", "remplacer"], path);
+      const name = reqText(raw.exercise_name, LIMITS.exerciseName, `${path}.exercise_name`);
+      if (typeof raw.youtube !== "string") fail(`${path}.youtube`, "texte attendu : ID YouTube (11 caractères) ou URL de la vidéo");
+      const youtubeId = parseYoutubeId(raw.youtube);
+      if (!youtubeId) {
+        fail(`${path}.youtube`, "vidéo YouTube non reconnue : ID de 11 caractères ou URL (watch?v=, youtu.be/, shorts/, embed/)");
+      }
+      if (raw.remplacer !== undefined && typeof raw.remplacer !== "boolean") fail(`${path}.remplacer`, "true ou false attendu");
+      const bank = ctx.videos;
+      if (!bank) fail(path, "banque d'exercices indisponible");
+      if (!bank.canEdit) {
+        fail(path, "réservé aux coachs certifiés et aux admins Agon : la banque d'exercices est commune à tous les coachs");
+      }
+      const found = bank.byName.get(videoKey(name)) ?? [];
+      if (found.length === 0) {
+        fail(`${path}.exercise_name`, `aucun exercice de la banque ne s'appelle « ${name} » (nom exact, voir GET /exercices?q=)`);
+      }
+      if (found.length > 1) {
+        fail(`${path}.exercise_name`, `${found.length} exercices de la banque s'appellent « ${name} » : impossible de choisir, à régler dans Agon`);
+      }
+      const ex = found[0];
+      if (ex.youtube_id && ex.youtube_id !== youtubeId && raw.remplacer !== true) {
+        fail(path, `« ${ex.name} » a déjà une vidéo (${ex.youtube_id}) : remplacer: true pour la changer`);
+      }
+      return {
+        op: "set_exercise_video", exercise_id: ex.id, exercise_name: ex.name, youtube_id: youtubeId,
+        ...(raw.remplacer === true ? { remplacer: true } : {}),
+      };
+    }
+
     default:
-      return fail(`${path}.op`, "add_exercice, update_exercice, remove_exercice ou set_bloc_instructions attendu");
+      return fail(`${path}.op`, "add_exercice, update_exercice, remove_exercice, set_bloc_instructions ou set_exercise_video attendu");
   }
 }
 
@@ -819,6 +911,13 @@ export function validateDraft(raw: unknown, ctx: ValidateCtx): Result<ValidDraft
       return parseGoalsOp(o, p);
     });
 
+    const videos = new Set<string>();
+    ops.forEach((o, i) => {
+      if (o.op !== "set_exercise_video") return;
+      if (videos.has(o.exercise_id)) fail(`ops[${i}]`, `vidéo de « ${o.exercise_name} » déjà donnée plus haut`);
+      videos.add(o.exercise_id);
+    });
+
     // Application à blanc : détecte par exemple deux suppressions du même
     // exercice, ou une modification d'un exercice supprimé plus haut.
     if (kind === "programme" || kind === "planning") {
@@ -938,6 +1037,10 @@ export function applyProgOps(
           }
           return { ...s, blocs: s.blocs.map((b) => (b.id === op.bloc_id ? { ...b, instructions: op.instructions } : b)) };
         });
+        break;
+
+      case "set_exercise_video":
+        // Banque d'exercices, pas le programme : appliqué à part.
         break;
 
       case "set_session_schedule":

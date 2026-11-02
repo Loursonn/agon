@@ -151,6 +151,8 @@ export function describeOp(op: DraftOp, names: Names): string {
       return op.instructions
         ? `Consignes du bloc ${names.bloc(op.session_id, op.bloc_id)} (${names.session(op.session_id)}) : « ${op.instructions} »`
         : `Retirer les consignes du bloc ${names.bloc(op.session_id, op.bloc_id)} (${names.session(op.session_id)})`;
+    case "set_exercise_video":
+      return `${op.remplacer ? "Remplacer la vidéo" : "Vidéo"} de démo de ${op.exercise_name} : youtu.be/${op.youtube_id} (vidéo de la banque, visible pour tous les athlètes qui ont cet exercice)`;
     case "set_session_schedule": {
       const day = op.day_of_week === null ? "sans jour fixe" : `le ${DAYS[op.day_of_week]}`;
       const rec = op.recurrence === "once" ? ", une seule fois" : op.recurrence === "weekly" ? ", chaque semaine" : "";

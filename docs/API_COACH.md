@@ -72,7 +72,7 @@ Chaque lecture est journalisée.
 | GET | `/drafts?status=pending\|applied\|rejected\|undone&athlete_id=…` | Propositions et leur sort |
 | POST | `/drafts/:id/appliquer` | Appliquer une proposition déposée |
 | POST | `/drafts/:id/annuler` | Annuler une proposition appliquée (`{ "forcer": true }` si besoin, voir plus bas) |
-| GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque |
+| GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque (`&details=1` : avec sa vidéo) |
 | GET | `/seances-energie?q=vma` | Chercher une séance énergétique dans ta banque (sans `q` : les 50 dernières) |
 | GET | `/tests?q=squat` | Chercher un test dans ta banque de tests (nom exact à reprendre dans `create_test`) |
 
@@ -135,6 +135,7 @@ lieu.
 | `update_exercice` | `session_id`, `exercice_id`, `a_partir_de` (obligatoire avec `params`), `params?`, `comment?`, `libre_text?` |
 | `remove_exercice` | `session_id`, `exercice_id` |
 | `set_bloc_instructions` | `session_id`, `bloc_id`, `instructions` |
+| `set_exercise_video` | `exercise_name`, `youtube`, `remplacer?` |
 
 `a_partir_de` : numéro de l'occurrence de la séance à partir de laquelle la
 modification vaut — en général `prochaine_occurrence`. Elle vaut jusqu'à la
@@ -145,6 +146,33 @@ changent pas.
 `rir`, `tempo`, `reps_mode` (`"EC"` ou `"iso"`) acceptent une valeur seule
 (identique pour toutes les séries) ou un tableau (une valeur par série) ;
 `charge_unit` : `"kg"` (défaut), `"%RM"` ou `"PDC"`.
+
+`set_exercise_video` pose la vidéo de démo d'un exercice de la banque : c'est
+elle qu'ouvre le bouton vidéo de l'athlète pendant sa séance. Ne mets pas le
+lien dans la consigne (`comment`).
+
+- `exercise_name` : nom exact d'un exercice de la banque (casse ignorée),
+  public ou à toi. Aucun ou plusieurs exercices de ce nom → refus.
+- `youtube` : ID de 11 caractères ou URL (`watch?v=`, `youtu.be/`, `shorts/`,
+  `embed/`). Seul l'ID est gardé.
+- Réservé aux coachs certifiés et aux admins Agon : la banque est commune, la
+  vidéo vaut **pour tous les athlètes qui ont cet exercice**.
+- Une vidéo déjà en place n'est remplacée qu'avec `"remplacer": true` (le refus
+  donne l'ID actuel). Même vidéo : rien ne change.
+- `POST /drafts/:id/annuler` remet la vidéo d'avant, sauf si elle a été changée
+  depuis.
+- `GET /exercices?q=…&details=1` renvoie `[{ name, youtube_id }]` : utile pour
+  voir lesquels ont déjà une vidéo. Sans `details`, la réponse reste une liste
+  de noms.
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  $BASE/athletes/<id>/drafts -d '{
+    "kind": "programme",
+    "title": "Vidéos de démo",
+    "ops": [{ "op": "set_exercise_video", "exercise_name": "Squat", "youtube": "https://youtu.be/<id>" }]
+  }'
+```
 
 Un exercice dont le nom correspond à ta bibliothèque y est relié ; sinon il est
 ajouté hors bibliothèque, et la proposition l'indique. Les exercices en mode
