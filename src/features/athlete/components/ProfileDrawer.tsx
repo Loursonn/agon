@@ -768,7 +768,7 @@ function CoachSection({ onClose }: { onClose: () => void }) {
             )}
             {coaches?.coCoach ? (
               <div style={{ fontSize: 11, color: C.tx3, marginTop: 10 }}>
-                2e coach : <span style={{ color: C.tx, fontWeight: 600 }}>{coaches.coCoach.full_name}</span>
+                2e coach : <span style={{ color: C.tx, fontWeight: 600 }}>{coaches.coCoach.id === user?.id ? "toi (en duo)" : coaches.coCoach.full_name}</span>
               </div>
             ) : (
               <button
