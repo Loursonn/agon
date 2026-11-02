@@ -8,6 +8,7 @@ import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
 import { DeclareInjurySheet } from "@/features/shared/components/medical/DeclareInjurySheet";
 import { injurySummary } from "@/lib/injuryDetails";
 import { useNavigate } from "react-router-dom";
+import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import PerformanceProfile from "@/components/athlete/PerformanceProfile";
 import { WeightChart, SleepTunnel } from "@/components/athlete/StatsCharts";
 import { getWellnessChartData } from "@/lib/calculations";
@@ -313,7 +314,7 @@ export default function ProfileDrawer({ onClose }: Props) {
         {!viewOnly && <BookingSection />}
 
         {/* ── Mon coach ── */}
-        {!viewOnly && <CoachSection />}
+        {!viewOnly && <CoachSection onClose={onClose} />}
 
         {/* ── Données sportives (tests VMA, FC…) ── */}
         <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
@@ -547,8 +548,11 @@ function BookingSection() {
 
 // ── Gestion du coach ─────────────────────────────────────────────────────────
 
-function CoachSection() {
+function CoachSection({ onClose }: { onClose: () => void }) {
   const { user, profile, linkToCoach, unlinkFromCoach, becomeSelfCoach, removeSelfAsAthlete } = useAuth();
+  const navigate = useNavigate();
+  // Double coach : 2e coach éventuel (géré dans Profil → « Mes coachs »)
+  const { data: coaches } = useAthleteCoaches(user?.id);
   const [showJoin, setShowJoin] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -760,6 +764,18 @@ function CoachSection() {
             ) : (
               <button onClick={() => setConfirmAction("quit")} style={{ width: "100%", padding: "9px 0", borderRadius: 4, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                 Quitter mon coach
+              </button>
+            )}
+            {coaches?.coCoach ? (
+              <div style={{ fontSize: 11, color: C.tx3, marginTop: 10 }}>
+                2e coach : <span style={{ color: C.tx, fontWeight: 600 }}>{coaches.coCoach.id === user?.id ? "toi (en duo)" : coaches.coCoach.full_name}</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => { navigate("/athlete/profil#mes-coachs"); onClose(); }}
+                style={{ width: "100%", marginTop: 8, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.coach + "40", background: C.coach + "12", color: C.coach, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Ajouter un 2e coach
               </button>
             )}
           </>

@@ -17,6 +17,7 @@ Tests RLS : `supabase/tests/co_coach_rls.sql` (37 contrôles, ROLLBACK final).
 | Athlète | Voit ses deux coachs (Profil → « Mes coachs »). Ses retours et alertes vont aux deux. |
 | Staff « coach adjoint » | Inchangé : droits réglables par domaine, distinct du co-coach. |
 | API coach | Les clés du co-coach couvrent l'athlète partagé (même accord IA requis). |
+| Se co-coacher soi-même | Un coach-athlète suivi par un autre coach peut se déclarer co-coach de lui-même (Profil → « M'ajouter comme 2e coach ») pour programmer en duo avec son coach. Seul lui peut le faire (migration `20261102110000_co_coach_self.sql`, tests `co_coach_self_rls.sql`). |
 
 ## 2. Modèle
 

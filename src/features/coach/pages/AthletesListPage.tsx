@@ -11,7 +11,7 @@ import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import { useRemoveCoCoach } from "@/features/shared/hooks/useCoCoach";
 
 export default function AthletesListPage() {
-  const { profile, athletes, user, loading, canCoachSelf, removeSelfAsAthlete, becomeSelfCoach, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete } = useAuth();
+  const { profile, athletes, user, loading, canCoachSelf, selfCoCoached, removeSelfAsAthlete, becomeSelfCoach, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete } = useAuth();
   const navigate = useNavigate();
   const removeCoCoach = useRemoveCoCoach();
   const isCoachAthlete = profile?.role === "coach" || profile?.role === "coach_athlete";
@@ -145,6 +145,13 @@ export default function AthletesListPage() {
     setRemoving(true);
     try {
       if (athleteId === user?.id) {
+        if (selfCoCoached) {
+          // Co-coach de soi-même : on retire juste ce rôle, le coach référent reste
+          await removeCoCoach.mutateAsync({ athleteId });
+          await refreshAthletes();
+          toast.success("Tu ne co-coaches plus ton entraînement");
+          return;
+        }
         await removeSelfAsAthlete();
         toast.success("Tu ne fais plus partie de tes athlètes");
         return;
@@ -294,7 +301,9 @@ export default function AthletesListPage() {
                     <div style={{ fontSize: 14, fontWeight: 600, color: C.tx }}>
                       {profile.full_name}
                     </div>
-                    <div style={{ fontSize: 11, color: C.ac }}>Mon programme personnel</div>
+                    <div style={{ fontSize: 11, color: C.ac }}>
+                      {selfCoCoached ? "Mon programme personnel · en duo avec mon coach" : "Mon programme personnel"}
+                    </div>
                   </div>
                 </button>
                 {isHybrid && (
@@ -459,7 +468,9 @@ export default function AthletesListPage() {
               </div>
               <div style={{ fontSize: 13, color: C.tx3, marginBottom: 20 }}>
                 {isSelf
-                  ? "Tu ne seras plus ton propre coach. Ton historique est conservé, tu pourras te rajouter à tout moment."
+                  ? selfCoCoached
+                    ? "Tu ne seras plus co-coach de ton entraînement : ton coach référent continue seul. Tu pourras te rajouter depuis ton profil."
+                    : "Tu ne seras plus ton propre coach. Ton historique est conservé, tu pourras te rajouter à tout moment."
                   : (a as { co_coached_by_me?: boolean } | null | undefined)?.co_coached_by_me
                     ? <>Tu ne co-coacheras plus <strong style={{ color: C.tx }}>{a?.full_name}</strong>. Son coach référent garde tout son suivi.</>
                     : <><strong style={{ color: C.tx }}>{a?.full_name}</strong> sera dissocié de ton compte{(a as { co_coach_id?: string | null } | null | undefined)?.co_coach_id ? ", et son co-coach perdra aussi l'accès" : ""}.</>}

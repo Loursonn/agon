@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -74,6 +75,14 @@ export default function ProfilPage() {
 
   const [editing, setEditing] = useState(false);
   const displayProfile = athleteProfile ?? profile;
+
+  // Lien direct vers une section (#mes-coachs depuis le menu, #mon-staff…)
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const t = window.setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    return () => window.clearTimeout(t);
+  }, [hash]);
   const { volume, isLoading: volumeLoading } = useRunningVolume(athleteId ?? undefined, freeSessions);
 
   // Pesées journalisées, plus récente d'abord
@@ -188,7 +197,7 @@ export default function ProfilPage() {
 
       {/* ── Mes coachs (double coach) ── */}
       {!viewOnly && athleteId && (
-        <div id="mes-coachs" style={{ marginBottom: 24 }}>
+        <div id="mes-coachs" style={{ marginBottom: 24, scrollMarginTop: 56 }}>
           <div style={sectionTitle}>Mes coachs</div>
           <CoCoachPanel athleteId={athleteId} athleteName={displayProfile?.full_name ?? "toi"} mode="athlete" />
         </div>

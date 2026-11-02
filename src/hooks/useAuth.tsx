@@ -49,8 +49,10 @@ interface AuthContextType {
   createPendingAthlete: (firstName: string, lastName: string) => Promise<string>;
   /** Supprime un athlète pré-créé encore non réclamé */
   removePendingAthlete: (athleteId: string) => Promise<void>;
-  /** Peut programmer pour soi-même côté coach (coach pur, ou coach-athlète auto-coaché) */
+  /** Peut programmer pour soi-même côté coach (coach pur, coach-athlète auto-coaché ou co-coach de lui-même) */
   canCoachSelf: boolean;
+  /** Coach-athlète suivi par un autre coach et co-coach de lui-même (double coach) */
+  selfCoCoached: boolean;
   activeAthleteId: string | null;
   setActiveAthleteId: (id: string | null) => void;
   login: (email: string, password: string) => Promise<void>;
@@ -333,9 +335,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchProfile(user.id);
   }
 
-  // Coach-athlète coaché par un autre (ou sans coach) : plus d'accès à sa propre programmation
+  // Coach-athlète co-coach de lui-même (double coach avec son coach externe)
+  const selfCoCoached = !!user && allAthletes.some((a) => a.id === user.id && a.co_coached_by_me);
+
+  // Coach-athlète coaché par un autre (ou sans coach) : plus d'accès à sa propre
+  // programmation, sauf s'il s'est déclaré co-coach de lui-même
   const canCoachSelf = !!user && !!profile && (
-    profile.role === "coach" || (profile.role === "coach_athlete" && profile.coach_id === user.id)
+    profile.role === "coach" ||
+    (profile.role === "coach_athlete" && (profile.coach_id === user.id || selfCoCoached))
   );
 
   async function logout() {
@@ -386,7 +393,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, profile, loading,
       athletes, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
       login, registerCoach, registerAthlete, registerAthleteWithCode, registerStaff,
-      canCoachSelf, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
+      canCoachSelf, selfCoCoached, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
     }}>
       {children}
     </AuthContext.Provider>

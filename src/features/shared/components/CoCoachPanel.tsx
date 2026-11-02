@@ -38,7 +38,7 @@ export function CoCoachPanel({
   athleteName: string;
   mode: "coach" | "athlete";
 }) {
-  const { user, refreshAthletes } = useAuth();
+  const { user, profile, refreshAthletes } = useAuth();
   const navigate = useNavigate();
   const { data, isLoading } = useAthleteCoaches(athleteId);
   const add = useAddCoCoach();
@@ -57,17 +57,24 @@ export function CoCoachPanel({
   // Qui peut retirer : référent, athlète, ou le co-coach lui-même
   const canRemove = !!coCoach && (mode === "athlete" || iAmReferent || iAmCoCoach);
 
-  const onAdd = () => {
-    if (!code.trim()) return;
+  // Coach-athlète suivi par un autre coach : il peut se co-coacher lui-même
+  const canAddSelf = canAdd && mode === "athlete" && athleteId === me
+    && profile?.role === "coach_athlete" && !!profile.coach_code && referent?.id !== me;
+
+  const onAdd = (coachCode = code) => {
+    if (!coachCode.trim()) return;
     add.mutate(
-      { athleteId, coachCode: code },
+      { athleteId, coachCode },
       {
         onSuccess: async (res) => {
           setCode("");
-          toast.success(`${res.full_name} est maintenant co-coach`, {
-            description: "Les deux coachs voient et modifient les mêmes entraînements.",
+          toast.success(res.co_coach_id === me ? "Tu es maintenant co-coach de ton entraînement" : `${res.full_name} est maintenant co-coach`, {
+            description: res.co_coach_id === me
+              ? "Ton programme apparaît dans ton espace coach, à côté de ton coach référent."
+              : "Les deux coachs voient et modifient les mêmes entraînements.",
           });
-          if (mode === "coach") await refreshAthletes();
+          // Liste d'athlètes (et accès à son propre programme côté coach)
+          await refreshAthletes();
         },
         onError: (e) => toast.error("Ajout impossible", { description: e.message }),
       },
@@ -85,10 +92,8 @@ export function CoCoachPanel({
       {
         onSuccess: async () => {
           toast.success(iAmCoCoach ? "Tu ne co-coaches plus cet athlète" : "Co-coach retiré");
-          if (mode === "coach") {
-            await refreshAthletes();
-            if (iAmCoCoach) navigate("/coach/athletes");
-          }
+          await refreshAthletes();
+          if (mode === "coach" && iAmCoCoach) navigate("/coach/athletes");
         },
         onError: (e) => toast.error("Retrait impossible", { description: e.message }),
       },
@@ -142,12 +147,22 @@ export function CoCoachPanel({
             style={{ flex: 1, minWidth: 150, maxWidth: 220, padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", letterSpacing: "1px" }}
           />
           <button
-            onClick={onAdd}
+            onClick={() => onAdd()}
             disabled={add.isPending || !code.trim()}
             style={{ padding: "9px 16px", borderRadius: 4, border: "none", background: C.ac, color: "#0E0C0A", fontWeight: 700, fontSize: 12, cursor: add.isPending ? "wait" : "pointer", fontFamily: "inherit", opacity: code.trim() ? 1 : 0.5 }}
           >
             Ajouter un co-coach
           </button>
+          {canAddSelf && (
+            <button
+              onClick={() => onAdd(profile?.coach_code ?? "")}
+              disabled={add.isPending}
+              title="Programmer ton entraînement en duo avec ton coach"
+              style={{ ...ghostBtn, minHeight: 36, padding: "9px 12px", color: C.coach, borderColor: C.coach + "50" }}
+            >
+              M'ajouter comme 2e coach
+            </button>
+          )}
         </div>
       )}
     </div>
