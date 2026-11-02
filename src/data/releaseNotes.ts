@@ -49,7 +49,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         title: "Comment ça marche",
         points: [
           "Fiche athlète → onglet « Coachs & staff » : entre le code coach de ton collègue, il a accès tout de suite.",
-          "L'athlète peut aussi ajouter son 2e coach depuis son profil (« Mes coachs »).",
+          "L'athlète peut aussi ajouter son 2e coach : menu ≡ → « Ajouter un 2e coach », ou Profil → « Mes coachs ».",
           "Programmes, planning, séances énergie, fiches, tests, retours : ce que l'un modifie, l'autre le voit aussitôt. Alertes et retours de l'athlète arrivent chez les deux.",
           "Ta banque reste privée : seul ce qui est attribué à l'athlète commun est partagé.",
           "Tu restes le coach référent : toi seul retires le co-coach (il peut aussi partir de lui-même). Dans ta liste, un badge « 2 COACHS » ou « CO-COACH » signale ces athlètes.",
