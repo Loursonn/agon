@@ -17,6 +17,7 @@ import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import type { AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
 import type { ExerciceParams, ClusterConfig } from "@/features/coach/components/programmation/types";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
+import { LinkifiedText } from "@/features/shared/components/LinkifiedText";
 import { VideoRequestBanner, VideoRequestRow } from "@/features/athlete/components/VideoRequest";
 import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 
@@ -808,7 +809,7 @@ function SupersetCard({
               </div>
               {m.coachComment && (
                 <div style={{ marginTop: 2, marginLeft: 25, fontSize: 10, color: C.tx2, fontStyle: "italic", lineHeight: 1.4 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg>{m.coachComment}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg><LinkifiedText text={m.coachComment} />
                 </div>
               )}
             </div>
@@ -1121,7 +1122,7 @@ function ExerciceCard({
         {/* Coach comment */}
         {coachComment && (
           <div style={{ marginTop: 5, fontSize: 10, color: C.tx2, fontStyle: "italic", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg>{coachComment}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }}><path d="M4 4H20V17H10L6 21V17H4Z"/><path d="M8 9H16M8 13H13"/></svg><LinkifiedText text={coachComment} />
           </div>
         )}
       </div>

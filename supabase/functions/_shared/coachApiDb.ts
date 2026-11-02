@@ -133,7 +133,12 @@ export type UndoStep =
    * Suivi des habitudes activé pour l'athlète : à désactiver, sauf si une des
    * habitudes créées avec lui a été cochée depuis (elle est restée).
    */
-  | { t: "habit_tracker"; habit_ids: string[] };
+  | { t: "habit_tracker"; habit_ids: string[] }
+  /**
+   * Vidéo d'un exercice de la banque changée : remettre `before`, seulement
+   * si la vidéo est toujours `after` (un changement fait depuis reste).
+   */
+  | { t: "exercise_video"; exercise_id: string; before: string | null; after: string };
 
 export function pick(table: RowTable, r: Row): Row {
   const out: Row = {};

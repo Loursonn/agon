@@ -108,16 +108,23 @@ async function run(input: ApplyInput, journal: UndoStep[]): Promise<GoalsShape |
   const { db, athleteId, coachId, kind, ops } = input;
 
   if (kind === "programme" || kind === "planning") {
-    const before = await readKey(db, athleteId, "asp:prog");
-    const current = (Array.isArray(before) ? before : []) as ProgSessionShape[];
-    let next: ProgSessionShape[];
-    try {
-      next = applyProgOps(current, ops as (ProgOp | PlanningOp)[]);
-    } catch (e) {
-      throw new ApplyConflict(e instanceof Error ? e.message : String(e));
+    // Les vidéos vont dans la banque d'exercices, pas dans le programme : une
+    // proposition qui ne pose que des vidéos ne réécrit pas `asp:prog`.
+    const videos = ops.filter((o): o is VideoOp => o.op === "set_exercise_video");
+    const progOps = ops.filter((o) => o.op !== "set_exercise_video") as (ProgOp | PlanningOp)[];
+    if (progOps.length > 0) {
+      const before = await readKey(db, athleteId, "asp:prog");
+      const current = (Array.isArray(before) ? before : []) as ProgSessionShape[];
+      let next: ProgSessionShape[];
+      try {
+        next = applyProgOps(current, progOps);
+      } catch (e) {
+        throw new ApplyConflict(e instanceof Error ? e.message : String(e));
+      }
+      const after_hash = await writeKey(db, athleteId, "asp:prog", next);
+      journal.push({ t: "app_data", key: "asp:prog", before, after_hash });
     }
-    const after_hash = await writeKey(db, athleteId, "asp:prog", next);
-    journal.push({ t: "app_data", key: "asp:prog", before, after_hash });
+    if (videos.length > 0) await applyVideos(db, coachId, videos, journal);
     return undefined;
   }
 
@@ -145,6 +152,38 @@ async function run(input: ApplyInput, journal: UndoStep[]): Promise<GoalsShape |
     }
   }
   return undefined;
+}
+
+type VideoOp = Extract<ProgOp, { op: "set_exercise_video" }>;
+
+/**
+ * Vidéos de démo dans la banque d'exercices. L'API écrit avec la clé de
+ * service : on refait ici le contrôle de la policy `exercises_update_certified`
+ * (admin ou coach certifié), et on relit la vidéo en place au moment
+ * d'appliquer, pas celle vue au dépôt.
+ */
+async function applyVideos(db: Db, coachId: string, ops: VideoOp[], journal: UndoStep[]) {
+  const me = check<Row | null>(
+    await db.from("profiles").select("is_admin, is_certified_coach").eq("id", coachId).maybeSingle(),
+    "profiles",
+  );
+  if (me?.is_admin !== true && me?.is_certified_coach !== true) {
+    throw new ApplyConflict("seuls les coachs certifiés et les admins Agon modifient la banque d'exercices");
+  }
+  for (const op of ops) {
+    const ex = check<Row | null>(
+      await db.from("exercises").select("id, youtube_id").eq("id", op.exercise_id).maybeSingle(),
+      "exercises",
+    );
+    if (!ex) throw new ApplyConflict(`l'exercice « ${op.exercise_name} » n'est plus dans la banque`);
+    const before = typeof ex.youtube_id === "string" && ex.youtube_id ? ex.youtube_id : null;
+    if (before === op.youtube_id) continue;
+    if (before && !op.remplacer) {
+      throw new ApplyConflict(`« ${op.exercise_name} » a déjà une vidéo (${before}) : remplacer: true pour la changer`);
+    }
+    check(await db.from("exercises").update({ youtube_id: op.youtube_id }).eq("id", op.exercise_id).select("id"), "exercises");
+    journal.push({ t: "exercise_video", exercise_id: op.exercise_id, before, after: op.youtube_id });
+  }
 }
 
 function ofOp<K extends WeekOp["op"]>(ops: WeekOp[], op: K): Extract<WeekOp, { op: K }>[] {
@@ -331,6 +370,11 @@ export function parseUndo(raw: unknown): UndoStep[] {
       });
     } else if (o.t === "fiche_perso" && typeof o.doc_id === "string") {
       out.push({ t: "fiche_perso", doc_id: o.doc_id });
+    } else if (
+      o.t === "exercise_video" && typeof o.exercise_id === "string" && typeof o.after === "string"
+      && (o.before === null || typeof o.before === "string")
+    ) {
+      out.push({ t: "exercise_video", exercise_id: o.exercise_id, before: o.before as string | null, after: o.after });
     } else if (o.t === "habit_tracker" && Array.isArray(o.habit_ids)) {
       out.push({ t: "habit_tracker", habit_ids: o.habit_ids.filter((x): x is string => typeof x === "string") });
     }
@@ -411,6 +455,15 @@ async function undoOne(db: Db, athleteId: string, coachId: string, s: UndoStep):
       check(await db.from("app_data").upsert({ athlete_id: athleteId, key: "asp:prog", value: next }), "app_data asp:prog");
     }
     return kept;
+  }
+
+  if (s.t === "exercise_video") {
+    // Seulement si personne n'a changé la vidéo depuis.
+    check(
+      await db.from("exercises").update({ youtube_id: s.before }).eq("id", s.exercise_id).eq("youtube_id", s.after).select("id"),
+      "exercises",
+    );
+    return 0;
   }
 
   if (s.t === "deleted" || s.t === "updated" || s.t === "relink") {

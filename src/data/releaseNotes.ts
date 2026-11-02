@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-02-videos-assistant",
+    date: "2026-11-02",
+    kind: "feature",
+    title: "Assistant IA : vidéos de démo sur les exercices",
+    summary:
+      "Ton assistant peut poser la vidéo YouTube de démo d'un exercice : l'athlète l'ouvre avec le bouton vidéo pendant sa séance.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "L'assistant propose la vidéo d'un exercice de la banque ; elle s'applique et s'annule comme ses autres propositions.",
+          "La banque est commune : la vidéo vaut pour tous les athlètes qui ont cet exercice. Réservé aux coachs certifiés, et une vidéo existante n'est remplacée que si tu le demandes.",
+          "Les liens écrits dans une consigne d'exercice sont maintenant cliquables côté athlète (ouverture dans un nouvel onglet).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-02-double-coach",
     date: "2026-11-02",
     kind: "feature",

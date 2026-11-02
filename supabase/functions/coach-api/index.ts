@@ -14,7 +14,10 @@
 // Documentation pour les coachs : docs/API_COACH.md.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { AI_ASSISTANT_SINCE, type DraftKind, type DraftOp, type PlanState, normName, validateDraft, type ProgSessionShape } from "../_shared/coachApiOps.ts";
+import {
+  AI_ASSISTANT_SINCE, type DraftKind, type DraftOp, type PlanState, normName, validateDraft, type ProgSessionShape,
+  type VideoBank, type VideoBankEntry, videoKey,
+} from "../_shared/coachApiOps.ts";
 import { ApplyConflict, applyDraft, parseUndo, UndoConflict, undoSteps } from "../_shared/coachApiApply.ts";
 import { buildFiches, buildHabits, buildPeriodisation, buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
 import type { CareState } from "../_shared/coachApiCare.ts";
@@ -176,6 +179,37 @@ async function library(admin: SupabaseClient, coachId: string) {
   }
   return map;
 }
+
+/**
+ * Banque d'exercices pour `set_exercise_video` : exercices visibles du coach
+ * (publics et les siens) par nom exact, avec leur vidéo, et son droit de
+ * modifier la banque (même règle que la policy `exercises_update_certified`).
+ */
+async function videoBank(admin: SupabaseClient, coachId: string): Promise<VideoBank> {
+  const [{ data: me, error: pErr }, { data, error }] = await Promise.all([
+    admin.from("profiles").select("is_admin, is_certified_coach").eq("id", coachId).maybeSingle(),
+    admin.from("exercises").select("id, name, youtube_id").or(`is_public.eq.true,created_by.eq.${coachId}`).limit(5000),
+  ]);
+  if (pErr) throw new Error("profiles: " + pErr.message);
+  if (error) throw new Error("exercises: " + error.message);
+  const byName = new Map<string, VideoBankEntry[]>();
+  for (const e of data ?? []) {
+    const k = videoKey(e.name as string);
+    if (!k) continue;
+    const list = byName.get(k) ?? [];
+    list.push({ id: e.id as string, name: e.name as string, youtube_id: (e.youtube_id as string | null) || null });
+    byName.set(k, list);
+  }
+  return { canEdit: me?.is_admin === true || me?.is_certified_coach === true, byName };
+}
+
+/** La proposition pose-t-elle une vidéo d'exercice ? (lu avant validation) */
+function hasVideoOp(raw: unknown): boolean {
+  const ops = (raw as { ops?: unknown } | null)?.ops;
+  return Array.isArray(ops) && ops.some((o) => (o as { op?: unknown } | null)?.op === "set_exercise_video");
+}
+
+const VIDEO_NOTE = " Vidéo de la banque, visible pour tous les athlètes qui ont cet exercice.";
 
 /**
  * Séances énergétiques qu'une semaine peut placer chez cet athlète : la
@@ -424,15 +458,19 @@ async function getExercices(admin: SupabaseClient, caller: Caller, url: URL) {
   if (q.length < 2 || q.length > 60) return fail(400, "recherche_invalide", "q : entre 2 et 60 caractères");
   // Les jokers de LIKE sont échappés : la recherche porte sur le texte tapé.
   const pattern = "%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%";
+  // `details=1` : nom et vidéo, pour savoir quels exercices en ont déjà une.
+  const details = url.searchParams.get("details") === "1";
   const { data, error } = await admin
     .from("exercises")
-    .select("name")
+    .select("name, youtube_id")
     .or(`is_public.eq.true,created_by.eq.${caller.coachId}`)
     .ilike("name", pattern)
     .order("name")
     .limit(20);
   if (error) throw new Error("exercises: " + error.message);
-  return json({ exercices: (data ?? []).map((e) => e.name) });
+  const rows = data ?? [];
+  if (details) return json({ exercices: rows.map((e) => ({ name: e.name, youtube_id: e.youtube_id || null })) });
+  return json({ exercices: rows.map((e) => e.name) });
 }
 
 /** Banque de séances énergétiques du coach, pour en placer une dans une semaine. */
@@ -642,6 +680,7 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
     plan: kind === "plan"
       ? { ...await planState(admin, athleteId, removalDates(raw)), ...careState(await careData(admin, caller.coachId, athleteId)) }
       : undefined,
+    videos: kind === "programme" && hasVideoOp(raw) ? await videoBank(admin, caller.coachId) : undefined,
   });
   if (!result.ok) return fail(400, "proposition_invalide", result.error);
 
@@ -687,7 +726,8 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
 
   return json({
     ...data,
-    message: "Proposition déposée. Elle n'est appliquée que si le coach la valide dans Agon.",
+    message: "Proposition déposée. Elle n'est appliquée que si le coach la valide dans Agon."
+      + (hasVideoOp(draft) ? VIDEO_NOTE : ""),
   }, 201);
 }
 
@@ -739,7 +779,8 @@ async function applyStored(admin: SupabaseClient, caller: Caller, draft: StoredD
     return json({
       status: "applied",
       ...(res.goals ? { goals: res.goals } : {}),
-      message: "Appliqué dans Agon. Annulable : POST /drafts/" + draft.id + "/annuler.",
+      message: "Appliqué dans Agon. Annulable : POST /drafts/" + draft.id + "/annuler."
+        + (hasVideoOp(draft) ? VIDEO_NOTE : ""),
     });
   } catch (e) {
     await admin.from("coach_api_drafts").update({ status: "pending", decided_at: null, applied_via: null }).eq("id", draft.id);

@@ -89,8 +89,14 @@ export function useRemoveCoCoach() {
  * propre staff) : l'invitation en attente est retirée au passage.
  */
 export async function addSelfAsCoCoach(userId: string, ownCoachCode: string, staffInviteToken?: string) {
-  const { error } = await db.rpc("add_co_coach", { p_athlete: userId, p_coach_code: ownCoachCode });
-  if (error) throw cleanError(error);
+  // Déjà co-coach de soi-même (2e clic, ancienne invitation) : rien à refaire.
+  const { data: link, error: e1 } = await db.from("athlete_co_coaches")
+    .select("co_coach_id").eq("athlete_id", userId).maybeSingle();
+  if (e1) throw cleanError(e1);
+  if (link?.co_coach_id !== userId) {
+    const { error } = await db.rpc("add_co_coach", { p_athlete: userId, p_coach_code: ownCoachCode });
+    if (error) throw cleanError(error);
+  }
   if (staffInviteToken) {
     await supabase.from("staff_invitations").delete().eq("token", staffInviteToken).eq("athlete_id", userId);
   }
