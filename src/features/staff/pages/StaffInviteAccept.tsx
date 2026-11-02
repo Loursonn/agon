@@ -20,6 +20,8 @@ import {
   professionLabel,
   type StaffProfession,
 } from "../lib/staffPermissions";
+import { addSelfAsCoCoach } from "@/features/shared/hooks/useCoCoach";
+import { toast } from "sonner";
 import { acceptStaffInvitation, useStaffInvitationPreview } from "../hooks/useMyStaffLinks";
 
 const input: React.CSSProperties = {
@@ -48,7 +50,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 export default function StaffInviteAccept() {
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { user, profile, loading, login, registerStaff, logout } = useAuth();
+  const { user, profile, loading, login, registerStaff, logout, refreshAthletes } = useAuth();
   const { data: inv, isLoading, isError } = useStaffInvitationPreview(token);
 
   const [tab, setTab] = useState<"signup" | "login">("signup");
@@ -94,7 +96,22 @@ export default function StaffInviteAccept() {
   );
 
   async function accept() {
-    await acceptStaffInvitation(token);
+    try {
+      await acceptStaffInvitation(token);
+    } catch (e) {
+      // Coach-athlète qui ouvre sa propre invitation : il ne peut pas être son
+      // propre staff, mais il peut être co-coach de lui-même (double coach,
+      // en duo avec son coach). On fait ça à la place, et on range l'invitation.
+      const own = /propre staff/i.test(errorMessage(e));
+      if (!own || !user || profile?.role !== "coach_athlete" || !profile.coach_code) throw e;
+      await addSelfAsCoCoach(user.id, profile.coach_code, token);
+      await refreshAthletes();
+      toast.success("Tu es maintenant co-coach de ton entraînement", {
+        description: "En duo avec ton coach : ton programme est dans ton espace coach.",
+      });
+      navigate("/coach/athletes", { replace: true });
+      return;
+    }
     navigate("/staff", { replace: true });
   }
 

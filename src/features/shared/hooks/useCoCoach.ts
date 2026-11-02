@@ -82,3 +82,16 @@ export function useRemoveCoCoach() {
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: QK.athleteCoaches(vars.athleteId) }),
   });
 }
+
+/**
+ * Coach-athlète suivi par un autre coach : se déclare co-coach de lui-même.
+ * Utilisé quand il ouvre sa propre invitation staff (il ne peut pas être son
+ * propre staff) : l'invitation en attente est retirée au passage.
+ */
+export async function addSelfAsCoCoach(userId: string, ownCoachCode: string, staffInviteToken?: string) {
+  const { error } = await db.rpc("add_co_coach", { p_athlete: userId, p_coach_code: ownCoachCode });
+  if (error) throw cleanError(error);
+  if (staffInviteToken) {
+    await supabase.from("staff_invitations").delete().eq("token", staffInviteToken).eq("athlete_id", userId);
+  }
+}
