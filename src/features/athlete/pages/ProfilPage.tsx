@@ -10,6 +10,7 @@ import { RunningVolumeCard } from "@/features/shared/components/RunningVolumeCar
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { StravaExportTutorial } from "@/features/athlete/components/StravaExportTutorial";
 import { AthleteStaffPanel } from "@/features/staff/components/AthleteStaffPanel";
+import { CoCoachPanel } from "@/features/shared/components/CoCoachPanel";
 
 const MONTHS_FR = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
 
@@ -182,6 +183,14 @@ export default function ProfilPage() {
         <div style={{ marginBottom: 24 }}>
           <div style={sectionTitle}>Antécédents médicaux</div>
           <MedicalEntriesSection athleteId={athleteId} canEdit />
+        </div>
+      )}
+
+      {/* ── Mes coachs (double coach) ── */}
+      {!viewOnly && athleteId && (
+        <div id="mes-coachs" style={{ marginBottom: 24 }}>
+          <div style={sectionTitle}>Mes coachs</div>
+          <CoCoachPanel athleteId={athleteId} athleteName={displayProfile?.full_name ?? "toi"} mode="athlete" />
         </div>
       )}
 

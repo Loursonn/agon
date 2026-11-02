@@ -78,12 +78,19 @@ interface AllowedAthlete {
  * Les autres n'existent pas pour l'API — même leur prénom ne sort pas.
  */
 async function allowedAthletes(admin: SupabaseClient, coachId: string): Promise<Map<string, AllowedAthlete>> {
-  const { data: athletes, error } = await admin
-    .from("profiles")
-    .select("id, first_name, full_name")
-    // Un coach-athlète qui se coache lui-même (coach_id = lui) est aussi son
-    // propre athlète : visible s'il a donné l'accord, comme les autres.
-    .eq("coach_id", coachId);
+  // Athlètes co-coachés : mêmes droits que ceux dont il est le coach référent
+  const { data: coLinks, error: lErr } = await admin
+    .from("athlete_co_coaches")
+    .select("athlete_id")
+    .eq("co_coach_id", coachId);
+  if (lErr) throw new Error("athlete_co_coaches: " + lErr.message);
+  const coIds = (coLinks ?? []).map((l) => l.athlete_id as string);
+
+  let q = admin.from("profiles").select("id, first_name, full_name");
+  // Un coach-athlète qui se coache lui-même (coach_id = lui) est aussi son
+  // propre athlète : visible s'il a donné l'accord, comme les autres.
+  q = coIds.length ? q.or(`coach_id.eq.${coachId},id.in.(${coIds.join(",")})`) : q.eq("coach_id", coachId);
+  const { data: athletes, error } = await q;
   if (error) throw new Error("profiles: " + error.message);
   const ids = (athletes ?? []).map((a) => a.id as string);
   if (ids.length === 0) return new Map();
@@ -695,7 +702,14 @@ interface StoredDraft {
 async function canWriteFor(admin: SupabaseClient, caller: Caller, athleteId: string): Promise<boolean> {
   if (caller.via === "api") return (await allowedAthletes(admin, caller.coachId)).has(athleteId);
   const { data } = await admin.from("profiles").select("coach_id").eq("id", athleteId).maybeSingle();
-  return data?.coach_id === caller.coachId;
+  if (data?.coach_id === caller.coachId) return true;
+  const { data: link } = await admin
+    .from("athlete_co_coaches")
+    .select("athlete_id")
+    .eq("athlete_id", athleteId)
+    .eq("co_coach_id", caller.coachId)
+    .maybeSingle();
+  return !!link;
 }
 
 /**

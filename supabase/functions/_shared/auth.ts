@@ -82,7 +82,20 @@ export async function canActForAthlete(user: AuthedUser, athleteId: string): Pro
     console.error("canActForAthlete:", error.message);
     return false;
   }
-  return !!data && data.coach_id === user.id;
+  if (!!data && data.coach_id === user.id) return true;
+
+  // Double coach : le co-coach a les mêmes droits que le coach référent
+  const { data: link, error: linkErr } = await admin
+    .from("athlete_co_coaches")
+    .select("athlete_id")
+    .eq("athlete_id", athleteId)
+    .eq("co_coach_id", user.id)
+    .maybeSingle();
+  if (linkErr) {
+    console.error("canActForAthlete (co-coach):", linkErr.message);
+    return false;
+  }
+  return !!link;
 }
 
 /**

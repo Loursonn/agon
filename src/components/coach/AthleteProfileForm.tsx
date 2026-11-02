@@ -454,7 +454,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         </div>
 
         {/* HYROX toggle */}
-        {(athlete.coach_id === user?.id || athlete.id === user?.id) && (
+        {(athlete.coach_id === user?.id || athlete.id === user?.id || (athlete as { co_coached_by_me?: boolean }).co_coached_by_me) && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, padding: "8px 0" }}>
             <div style={{ fontSize: 12, color: C.tx2 }}>Athlète HYROX</div>
             <button onClick={() => setIsHyrox(!isHyrox)} style={{ width: 46, height: 26, borderRadius: 13, background: isHyrox ? C.o : C.s2, border: `2px solid ${isHyrox ? C.o : C.brdL}`, cursor: "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0, outline: "none" }}>

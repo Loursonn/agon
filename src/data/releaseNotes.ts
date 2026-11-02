@@ -38,6 +38,26 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-02-double-coach",
+    date: "2026-11-02",
+    kind: "feature",
+    title: "Double coach : coacher un athlète à deux",
+    summary:
+      "Un athlète peut avoir deux coachs. Les deux ont les mêmes droits : ils voient, créent et modifient tous ses entraînements.",
+    sections: [
+      {
+        title: "Comment ça marche",
+        points: [
+          "Fiche athlète → onglet « Coachs & staff » : entre le code coach de ton collègue, il a accès tout de suite.",
+          "L'athlète peut aussi ajouter son 2e coach depuis son profil (« Mes coachs »).",
+          "Programmes, planning, séances énergie, fiches, tests, retours : ce que l'un modifie, l'autre le voit aussitôt. Alertes et retours de l'athlète arrivent chez les deux.",
+          "Ta banque reste privée : seul ce qui est attribué à l'athlète commun est partagé.",
+          "Tu restes le coach référent : toi seul retires le co-coach (il peut aussi partir de lui-même). Dans ta liste, un badge « 2 COACHS » ou « CO-COACH » signale ces athlètes.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-01-semaine-tests-calendrier",
     date: "2026-11-01",
     kind: "feature",
