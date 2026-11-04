@@ -284,6 +284,28 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
         {test && !loading && (
           <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", padding: "0 20px", display: "flex", flexDirection: "column", gap: 14 }}>
 
+            {/* Protocole en premier : la 1re ligne dit quand faire le test (ex. « À la fin de ta 1re série du 1er exercice ») */}
+            {definition?.protocol?.text && (
+              <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px", border: "1px solid " + C.ac + "60" }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
+                  Quand et comment
+                </div>
+                <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{definition.protocol.text}</div>
+              </div>
+            )}
+
+            {/* Fiche / vidéo explicative (lien saisi dans la banque de tests) */}
+            {definition?.media_url && (
+              <a
+                href={definition.media_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "block", textAlign: "center", background: C.ac, color: "#000", fontSize: 13, fontWeight: 700, borderRadius: 4, padding: "12px 14px", textDecoration: "none" }}
+              >
+                Voir la fiche du test
+              </a>
+            )}
+
             {/* Description */}
             {(test.description ?? definition?.description) && (
               <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
@@ -293,16 +315,6 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
                 <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5 }}>
                   {test.description ?? definition?.description}
                 </div>
-              </div>
-            )}
-
-            {/* Protocol */}
-            {definition?.protocol?.text && (
-              <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
-                  Protocole
-                </div>
-                <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5 }}>{definition.protocol.text}</div>
               </div>
             )}
 
