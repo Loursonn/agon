@@ -13,7 +13,7 @@ import { toCompactDay } from "@shared/domain/dates";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData,
-  Injury, ArchivedBlock, NewBlockOpts, BodyWeight, VisibilitySettings,
+  ArchivedBlock, NewBlockOpts, BodyWeight, VisibilitySettings,
 } from "../types/athlete";
 
 interface LogicDeps {
@@ -28,7 +28,6 @@ interface LogicDeps {
   bodyWeight: BodyWeight;
   weightLog: Record<string, number>;
   weightMilestones: Array<{ date: string; kg: number }>;
-  injuries: Injury[];
   blockHistory: ArchivedBlock[];
   tw: number;
   dw: number;
@@ -52,7 +51,6 @@ interface LogicDeps {
   setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
   setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
   setBodyWeight: (v: BodyWeight) => void;
-  setInjuries: (v: Injury[]) => void;
   setVisibilitySettings: (v: VisibilitySettings) => Promise<void>;
   setMilestoneNotif: (v: number | null) => void;
   setWeekJustCompleted: (v: number | null) => void;
@@ -65,11 +63,11 @@ export function useAthleteLogic(d: LogicDeps) {
   const qc = useQueryClient();
   const {
     athleteId, exos, sets, sessions, blockConfig, goals, completedSessions,
-    wellnessHistory, bodyWeight, weightLog, weightMilestones, injuries, blockHistory,
+    wellnessHistory, bodyWeight, weightLog, weightMilestones, blockHistory,
     tw, dw, weeksArr, weeklyTarget, loaded,
     setExos, setSets, setSessions, setBlockConfig, setGoals, setCompletedSessions,
     setAthleteNotes, setBlockHistory, setWellness, setWellnessHistory,
-    setWeightLog, setWeightMilestones, setBodyWeight, setInjuries,
+    setWeightLog, setWeightMilestones, setBodyWeight,
     setMilestoneNotif, setWeekJustCompleted, setShowBilan, setAW, save,
     _setWellnessRaw, _setWellnessHistoryRaw,
   } = d;
@@ -239,9 +237,6 @@ export function useAthleteLogic(d: LogicDeps) {
     }));
   }, [setSessions]);
 
-  const addInjury = useCallback((inj: Injury) => setInjuries([...injuries, inj]), [injuries, setInjuries]);
-  const updateInjury = useCallback((inj: Injury) => setInjuries(injuries.map(i => i.id === inj.id ? inj : i)), [injuries, setInjuries]);
-  const deleteInjury = useCallback((id: string) => setInjuries(injuries.filter(i => i.id !== id)), [injuries, setInjuries]);
 
   const toggleHabitLog = useCallback(async (habitId: string, dateISO: string, habitLogs: Record<string, string[]>, setHabitLogs: (v: Record<string, string[]>) => void) => {
     const logs = habitLogs[habitId] || [];
@@ -259,6 +254,6 @@ export function useAthleteLogic(d: LogicDeps) {
   return {
     completeSession, uncompleteSession,
     archiveAndNewBlock, applyAIEdit, saveWellness, updateSessionDay,
-    updateSessionWeekDay, addInjury, updateInjury, deleteInjury, toggleHabitLog, updSets,
+    updateSessionWeekDay, toggleHabitLog, updSets,
   };
 }

@@ -98,8 +98,6 @@ export async function saveDay(athleteId: string, day: IsoDay, log: NutritionDail
 export function invalidateNutrition(qc: QueryClient, athleteId: string): Promise<void> {
   return Promise.all([
     qc.invalidateQueries({ queryKey: nutritionKeys.all(athleteId) }),
-    // Clé historique (src/lib/queryKeys.ts), tant qu'elle existe.
-    qc.invalidateQueries({ queryKey: ["nutritionStrategy", athleteId] }),
     qc.invalidateQueries({ queryKey: ["weeklyRetours", athleteId] }),
     qc.invalidateQueries({ queryKey: ["monthlyRetours", athleteId] }),
   ]).then(() => undefined);

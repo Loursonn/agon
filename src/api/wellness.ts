@@ -146,9 +146,6 @@ export function invalidateWellness(qc: QueryClient, athleteId: string): Promise<
       predicate: (q) =>
         q.queryKey[0] === "wellness" && q.queryKey[1] === "_many" && String(q.queryKey[2] ?? "").split(",").includes(athleteId),
     }),
-    // Anciennes clés de l'accueil coach (QK.coachDashboard.wellness / wellnessAlerts).
-    qc.invalidateQueries({ queryKey: ["coachDashboard", "wellness"] }),
-    qc.invalidateQueries({ queryKey: ["coachDashboard", "wellnessAlerts"] }),
     qc.invalidateQueries({ queryKey: ["weeklyRetours", athleteId] }),
     qc.invalidateQueries({ queryKey: ["monthlyRetours", athleteId] }),
     qc.invalidateQueries({ queryKey: ["micro-stats", athleteId] }),

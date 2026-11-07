@@ -56,7 +56,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
     timerActive, timerFinished, timerLeft, timerDur, timerStop,
     showBlockHistory, setShowBlockHistory, blockHistory, setBlockHistory,
     exos, sessions, prs, combinedData, totalDone,
-    saveWellness, addInjury, goals, wellness, weightLog, archiveAndNewBlock,
+    saveWellness, goals, wellness, weightLog, archiveAndNewBlock,
     freeSessions,
   } = useAthleteContext();
 
@@ -379,7 +379,6 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
             existing={wellness}
             onSave={(data) => { saveWellness(data); setShowWellness(false); }}
             sleepTarget={goals.sleepTarget}
-            onAddInjury={addInjury}
             weightLog={weightLog}
           />
         </div>

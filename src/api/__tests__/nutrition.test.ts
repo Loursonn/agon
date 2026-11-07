@@ -80,7 +80,7 @@ describe("api/nutrition", () => {
     const qc = { invalidateQueries: vi.fn().mockResolvedValue(undefined) };
     await invalidateNutrition(qc as never, "a");
     const keys = qc.invalidateQueries.mock.calls.map((c) => c[0].queryKey);
-    expect(keys).toEqual([nutritionKeys.all("a"), ["nutritionStrategy", "a"], ["weeklyRetours", "a"], ["monthlyRetours", "a"]]);
+    expect(keys).toEqual([nutritionKeys.all("a"), ["weeklyRetours", "a"], ["monthlyRetours", "a"]]);
     expect(nutritionKeys.days("a", "2026-11-01", "2026-11-07").slice(0, 2)).toEqual(nutritionKeys.all("a"));
   });
 });

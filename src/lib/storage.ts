@@ -16,7 +16,6 @@ export const SKEYS = {
   custMethods:    "asp:custmethods",
   weightLog:      "asp:wlog",
   weightMilestones:"asp:wmile",
-  injuries:       "asp:injuries",
   sessions:       "asp:sessions",
   blockConfig:    "asp:blockConfig",
   blockHistory:   "asp:blockHistory",

@@ -100,18 +100,6 @@ export interface BodyWeight {
   target: number;
 }
 
-// ─── Injuries ────────────────────────────────────────────────────────────────
-
-export interface Injury {
-  id: string;
-  zones: string[];
-  type?: string;
-  intensity?: number;
-  status: string;
-  date_start?: string;
-  date_end?: string;
-}
-
 // ─── Goals ───────────────────────────────────────────────────────────────────
 
 export interface Goals {
