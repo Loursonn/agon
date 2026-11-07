@@ -32,7 +32,7 @@ const corsHeaders = {
 };
 
 /** Buckets susceptibles de contenir des fichiers rattachés à un utilisateur. */
-const USER_BUCKETS = ["medical", "test-files", "garmin-screenshots", "test-media", "avatars"];
+const USER_BUCKETS = ["medical", "test-files", "garmin-screenshots", "test-media", "avatars", "docs"];
 
 function errMessage(err: unknown, fallback = "Erreur"): string {
   if (err instanceof Error) return err.message || fallback;

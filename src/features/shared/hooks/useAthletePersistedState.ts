@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
-import { SKEYS, sLoad, sLoadResult, sSave, cycleKey, sSaveCycle } from "@/lib/storage";
+import {
+  SKEYS, sLoadResult, sSave, cycleKey, sSaveCycle,
+  isKeyLoadFailed, isKeyNotLoadedError, KeyNotLoadedError,
+} from "@/lib/storage";
+import { mergeLocalIntoServer } from "@/lib/mergeLocal";
 import { DEF_SESSIONS, DEF_BLOCK_CONFIG } from "@/lib/exercises";
 import { getNutritionStrategy } from "@/lib/nutrition";
 import { todayKey } from "@/lib/date";
@@ -10,6 +15,19 @@ import type {
   VisibilitySettings, SessionLog, FreeSession, NutritionStrategy,
 } from "../types/athlete";
 import { supabase } from "@/integrations/supabase/client";
+
+/**
+ * Clé dont la lecture a échoué : comment la réappliquer une fois relue.
+ * `apply(server, dirty)` — dirty = l'athlète a modifié la valeur pendant que
+ * l'écriture était bloquée → on fusionne sa saisie dans la valeur serveur.
+ */
+interface Reloader {
+  fb: unknown;
+  apply: (server: unknown, dirty: boolean) => void;
+}
+
+const NOT_LOADED_TOAST = "asp-not-loaded";
+const RETRY_DELAYS_MS = [3_000, 8_000, 15_000, 30_000, 60_000];
 
 const DEF_VISIBILITY: VisibilitySettings = {
   muscu: true, energy: true, tests: true, wellness: true,
@@ -36,12 +54,33 @@ async function determineActiveCycleId(athleteId: string): Promise<string | null>
  *   aucune écriture (migration par cycle, miroir legacy, sauvegardes).
  */
 export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: boolean }) {
-  const load = useCallback(<T>(k: string, fb: T) => sLoad<T>(k, fb, athleteId), [athleteId]);
   // Lecteur sans droit d'écriture (staff) : aucune écriture, ni miroir legacy
   // ni sauvegarde. La RLS les refuserait de toute façon.
   const readOnly = !!opts?.readOnly;
+
+  // ── Clés non chargées (lecture en erreur) ──────────────────────────────────
+  // Leur écriture est bloquée (voir sSave) : l'état local n'y vaut que le défaut
+  // et le réécrire effacerait l'historique en base. On les relit automatiquement
+  // (délai croissant, retour du réseau, retour au premier plan).
+  const failedRef = useRef(new Map<string, Reloader>());
+  // Clés modifiées localement pendant que leur écriture était bloquée.
+  const dirtyRef = useRef(new Set<string>());
+  const [unloadedKeys, setUnloadedKeys] = useState<string[]>([]);
+  const syncUnloaded = useCallback(() => setUnloadedKeys([...failedRef.current.keys()]), []);
+  const athleteIdRef = useRef(athleteId);
+  athleteIdRef.current = athleteId;
+
   const save = useCallback(
-    (k: string, v: unknown) => (readOnly ? Promise.resolve() : sSave(k, v, athleteId)),
+    (k: string, v: unknown): Promise<void> => {
+      if (readOnly) return Promise.resolve();
+      // sSave ignore null/undefined : rien n'est écrit, donc rien à bloquer.
+      if (v === null || v === undefined) return Promise.resolve();
+      if (isKeyLoadFailed(k, athleteId)) {
+        dirtyRef.current.add(k);
+        return Promise.reject(new KeyNotLoadedError(k));
+      }
+      return sSave(k, v, athleteId);
+    },
     [athleteId, readOnly],
   );
 
@@ -58,10 +97,11 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   const saveBoth = useCallback((base: string, val: unknown) => {
     if (readOnly) return Promise.resolve();
     const k = keyFor(base);
-    const p = sSave(k, val, athleteId);
-    if (k !== base) sSave(base, val, athleteId).catch(() => {});
+    const p = save(k, val);
+    // Miroir seulement si la clé scopée a pu partir (sinon on recopierait un défaut).
+    if (k !== base) p.then(() => sSave(base, val, athleteId)).catch(() => {});
     return p;
-  }, [keyFor, athleteId, readOnly]);
+  }, [keyFor, athleteId, readOnly, save]);
 
   const [exos, setExosRaw] = useState<ExosMap>({});
   const [exMeta, setExMetaRaw] = useState<Record<string, unknown>>({});
@@ -89,33 +129,115 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "error" | null>(null);
 
+  // ── Rechargement au retour dans l'app ──────────────────────────────────────
+  // Le provider n'est plus remonté à chaque navigation (App.tsx) : sans ça, une
+  // modification du coach n'apparaîtrait qu'après un rechargement manuel.
+  // On relit tout quand l'app revient au premier plan après une longue absence.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  useEffect(() => {
+    const AWAY_MS = 10 * 60 * 1000;
+    let hiddenAt: number | null = null;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return; }
+      if (hiddenAt !== null && Date.now() - hiddenAt >= AWAY_MS) setRefreshNonce((n) => n + 1);
+      hiddenAt = null;
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  // ── Save flash ────────────────────────────────────────────────────────────
+  const flash = useCallback((ok: boolean) => {
+    setSaveStatus(ok ? "saved" : "error");
+    setTimeout(() => setSaveStatus(null), 2000);
+  }, []);
+
+  // Toute écriture d'une saisie athlète passe par ici. Avant, la plupart des
+  // setters faisaient `.catch(() => {})` : l'UI se mettait à jour de façon
+  // optimiste, l'écriture échouait (réseau coupé en salle) et la saisie
+  // disparaissait au rechargement suivant, sans aucun signal. On flashe l'état
+  // ET on remonte un toast. `id` fixe : sonner remplace le toast au lieu d'en
+  // empiler un par écriture ratée.
+  // Renvoie true seulement si le serveur a confirmé l'écriture.
+  const persist = useCallback((p: Promise<unknown>): Promise<boolean> => {
+    return p.then(
+      () => { flash(true); return true; },
+      (e) => {
+        if (isKeyNotLoadedError(e)) {
+          // Écriture retenue (clé non chargée) : elle partira, fusionnée avec
+          // la base, dès que la relecture réussira.
+          toast.warning("Données pas encore chargées — ta saisie sera enregistrée au retour du réseau", { id: NOT_LOADED_TOAST });
+          return false;
+        }
+        flash(false);
+        toast.error("Sauvegarde échouée — vérifie ta connexion", { id: "asp-persist-error" });
+        return false;
+      },
+    );
+  }, [flash]);
+
+  /** Réapplication d'une clé relue avec succès (fusion si saisie locale entre-temps). */
+  const makeReloader = useCallback(<T,>(
+    fb: T,
+    setRaw: Dispatch<SetStateAction<T>>,
+    write: (v: T) => Promise<unknown>,
+    normalize?: (v: T) => T,
+    isCurrent?: () => boolean,
+  ): Reloader => ({
+    fb,
+    apply: (server, dirty) => {
+      if (isCurrent && !isCurrent()) return;
+      const sv = normalize ? normalize(server as T) : (server as T);
+      if (!dirty) { setRaw(sv); return; }
+      setRaw((prev) => {
+        const merged = mergeLocalIntoServer(sv, prev, fb);
+        void persist(write(merged));
+        return merged;
+      });
+    },
+  }), [persist]);
+
   // ── Initial load ───────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       // exos / sessions / completedSessions ne sont PLUS chargés ici : ils sont
       // scopés par cycle (voir l'effet dédié plus bas). Tout le reste est global.
+      failedRef.current.clear();
+      dirtyRef.current.clear();
+      // Lecture qui distingue « clé absente » (défaut légitime) de « lecture en
+      // erreur » : dans ce cas la clé est enregistrée pour relecture et son
+      // écriture reste bloquée d'ici là.
+      const tracked = async <T,>(
+        k: string, fb: T, setRaw: Dispatch<SetStateAction<T>>, normalize?: (v: T) => T,
+      ): Promise<T> => {
+        const r = await sLoadResult<T>(k, athleteId);
+        if (r.ok) return r.value === undefined ? fb : (r.value as T);
+        failedRef.current.set(k, makeReloader(fb, setRaw, (v) => save(k, v), normalize));
+        return fb;
+      };
+      const todayOnly = (v: WellnessData | null) => (v?.date === todayKey() ? v : null);
       const [m, s, w, wh, bw, g, an, cm, wl, wmil, inj, bc, bh, ws, ns, nl, sl, fs] =
         await Promise.all([
-          load<Record<string, unknown>>(SKEYS.exMeta, {}),
-          load<SetsMap>(SKEYS.sets, {}),
-          load<WellnessData | null>(SKEYS.wellness, null),
-          load<Record<string, WellnessData>>(SKEYS.wellnessHistory, {}),
-          load<BodyWeight>(SKEYS.bw, { current: 0, target: 0 }),
-          load<Goals>(SKEYS.goals, { sessionsPerWeek: 6, sleepTarget: 8 }),
-          load<Record<string, string>>(SKEYS.anotes, {}),
-          load<unknown[]>(SKEYS.custMethods, []),
-          load<Record<string, number>>(SKEYS.weightLog, {}),
-          load<Array<{ date: string; kg: number }>>(SKEYS.weightMilestones, []),
-          load<Injury[]>(SKEYS.injuries, []),
-          load<BlockConfig>(SKEYS.blockConfig, DEF_BLOCK_CONFIG as BlockConfig),
-          load<ArchivedBlock[]>(SKEYS.blockHistory, []),
-          load<Record<string, unknown>>(SKEYS.weekSchedule, {}),
+          tracked<Record<string, unknown>>(SKEYS.exMeta, {}, setExMetaRaw),
+          tracked<SetsMap>(SKEYS.sets, {}, setSetsRaw),
+          tracked<WellnessData | null>(SKEYS.wellness, null, setWellnessRaw, todayOnly),
+          tracked<Record<string, WellnessData>>(SKEYS.wellnessHistory, {}, setWellnessHistoryRaw),
+          tracked<BodyWeight>(SKEYS.bw, { current: 0, target: 0 }, setBodyWeightRaw),
+          tracked<Goals>(SKEYS.goals, { sessionsPerWeek: 6, sleepTarget: 8 }, setGoalsRaw),
+          tracked<Record<string, string>>(SKEYS.anotes, {}, setAthleteNotesRaw),
+          tracked<unknown[]>(SKEYS.custMethods, [], setCustomMethodsRaw),
+          tracked<Record<string, number>>(SKEYS.weightLog, {}, setWeightLogRaw),
+          tracked<Array<{ date: string; kg: number }>>(SKEYS.weightMilestones, [], setWeightMilestonesRaw),
+          tracked<Injury[]>(SKEYS.injuries, [], setInjuriesRaw),
+          tracked<BlockConfig>(SKEYS.blockConfig, DEF_BLOCK_CONFIG as BlockConfig, setBlockConfigRaw),
+          tracked<ArchivedBlock[]>(SKEYS.blockHistory, [], setBlockHistoryRaw, (v) => v || []),
+          tracked<Record<string, unknown>>(SKEYS.weekSchedule, {}, setWeekScheduleRaw, (v) => v || {}),
           getNutritionStrategy(athleteId).catch(() => null),
-          load<Record<string, unknown>>("asp:nutrition_log", {}),
-          load<Record<string, SessionLog>>(SKEYS.sessionLogs, {}),
-          load<FreeSession[]>(SKEYS.freeSessions, []),
+          tracked<Record<string, unknown>>("asp:nutrition_log", {}, setNutritionLogRaw, (v) => v || {}),
+          tracked<Record<string, SessionLog>>(SKEYS.sessionLogs, {}, setSessionLogsRaw),
+          tracked<FreeSession[]>(SKEYS.freeSessions, [], setFreeSessionsRaw),
         ]);
-      const todayW = w?.date === todayKey() ? w : null;
+      const todayW = todayOnly(w);
       if (w && !todayW) save(SKEYS.wellness, null).catch(() => {});
       setExMetaRaw(m); setSetsRaw(s); setWellnessRaw(todayW);
       setWellnessHistoryRaw(wh); setBodyWeightRaw(bw);
@@ -144,11 +266,15 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
             copiesOk = false; // impossible de savoir : ne surtout pas écraser
           } else if (scopedRes.value === undefined) {
             try {
-              const [le, lsess, lcs] = await Promise.all([
-                load<ExosMap | null>(SKEYS.exos, null),
-                load<Session[] | null>(SKEYS.sessions, null),
-                load<Record<number, string[]> | null>(SKEYS.completed, null),
+              const [leR, lsessR, lcsR] = await Promise.all([
+                sLoadResult<ExosMap>(SKEYS.exos, athleteId),
+                sLoadResult<Session[]>(SKEYS.sessions, athleteId),
+                sLoadResult<Record<number, string[]>>(SKEYS.completed, athleteId),
               ]);
+              // Lecture legacy en erreur → on ne sait pas s'il y avait des
+              // données : ne pas poser le drapeau, la migration sera retentée.
+              if (!leR.ok || !lsessR.ok || !lcsR.ok) throw new Error("legacy read failed");
+              const le = leR.value, lsess = lsessR.value, lcs = lcsR.value;
               if (le)    await sSaveCycle(SKEYS.exos, activeCycleId, le, athleteId);
               if (lsess) await sSaveCycle(SKEYS.sessions, activeCycleId, lsess, athleteId);
               if (lcs)   await sSaveCycle(SKEYS.completed, activeCycleId, lcs, athleteId);
@@ -164,8 +290,9 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       openCycleRef.current = activeCycleId;
       setOpenCycleIdState(activeCycleId);
       setLoaded(true);
+      syncUnloaded();
     })();
-  }, [athleteId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [athleteId, refreshNonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Charge exos / sessions / completed du cycle ouvert ─────────────────────
   // Rejoué à chaque changement de cycle ouvert (ouverture d'un ancien cycle,
@@ -191,6 +318,21 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       setExosRaw(exosVal);
       setSessionsRaw(sessVal);
       setCompletedSessionsRaw(compVal);
+      // Lecture en erreur : écriture bloquée + relecture auto, uniquement tant
+      // que ce cycle reste celui ouvert.
+      const isCurrent = (k: string, base: string) => () => keyFor(base) === k;
+      const reg = <T,>(
+        res: { ok: boolean }, k: string, base: string, fb: T,
+        setRaw: Dispatch<SetStateAction<T>>, normalize?: (v: T) => T,
+      ) => {
+        if (res.ok) { failedRef.current.delete(k); dirtyRef.current.delete(k); return; }
+        failedRef.current.set(k, makeReloader(fb, setRaw, (v) => saveBoth(base, v), normalize, isCurrent(k, base)));
+      };
+      reg<ExosMap>(e, exKey, SKEYS.exos, {}, setExosRaw, (v) => v || {});
+      reg<Session[]>(sess, seKey, SKEYS.sessions, DEF_SESSIONS as Session[], setSessionsRaw,
+        (v) => (v && v.length ? v : (DEF_SESSIONS as Session[])));
+      reg<Record<number, string[]>>(cs, csKey, SKEYS.completed, {}, setCompletedSessionsRaw, (v) => v || {});
+      syncUnloaded();
       // Miroir legacy : les vues coach (overview, retours, missed) lisent encore
       // les clés globales. On les aligne sur le cycle ouvert pour ne rien régresser.
       // Uniquement les valeurs réellement lues en base : jamais un défaut issu
@@ -202,7 +344,57 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       }
     })();
     return () => { cancelled = true; };
-  }, [openCycleId, athleteId, save]);
+  }, [openCycleId, athleteId, save, refreshNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Relecture automatique des clés en erreur ───────────────────────────────
+  const retryingRef = useRef(false);
+  const retryFailed = useCallback(async () => {
+    if (retryingRef.current || failedRef.current.size === 0) return;
+    retryingRef.current = true;
+    const aid = athleteId;
+    try {
+      const entries = [...failedRef.current.entries()];
+      const results = await Promise.all(entries.map(([k]) => sLoadResult(k, aid)));
+      if (aid !== athleteIdRef.current) return; // athlète changé pendant la relecture
+      entries.forEach(([k, r], i) => {
+        const res = results[i];
+        if (!res.ok || failedRef.current.get(k) !== r) return;
+        failedRef.current.delete(k);
+        const dirty = dirtyRef.current.delete(k);
+        r.apply(res.value === undefined ? r.fb : res.value, dirty);
+      });
+    } finally {
+      retryingRef.current = false;
+      syncUnloaded();
+    }
+  }, [athleteId, syncUnloaded]);
+
+  const hasUnloaded = unloadedKeys.length > 0;
+  useEffect(() => {
+    if (!hasUnloaded) { toast.dismiss(NOT_LOADED_TOAST); return; }
+    toast.warning("Certaines données n'ont pas pu être chargées — nouvel essai…", { id: NOT_LOADED_TOAST });
+    let attempt = 0;
+    let tid: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+    const schedule = () => {
+      const d = RETRY_DELAYS_MS[Math.min(attempt++, RETRY_DELAYS_MS.length - 1)];
+      tid = setTimeout(async () => {
+        await retryFailed();
+        if (!stopped && failedRef.current.size > 0) schedule();
+      }, d);
+    };
+    schedule();
+    const onOnline = () => { void retryFailed(); };
+    const onVisible = () => { if (document.visibilityState === "visible") void retryFailed(); };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      clearTimeout(tid);
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [hasUnloaded, retryFailed]);
 
   // ── Visibility settings + test sessions from Supabase ────────────────────
   useEffect(() => {
@@ -213,7 +405,7 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     supabase.from('app_data').select('value')
       .eq('athlete_id', athleteId).eq('key', 'asp:visibility').maybeSingle()
       .then(({ data }) => { if (data?.value) setVisibilityRaw(v => ({ ...v, ...(data.value as VisibilitySettings) })); });
-  }, [athleteId]);
+  }, [athleteId, refreshNonce]);
 
   // ── Wellness midnight reset ────────────────────────────────────────────────
   useEffect(() => {
@@ -222,25 +414,6 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     const tid = setTimeout(() => { setWellnessRaw(null); save(SKEYS.wellness, null).catch(() => {}); }, +midnight - +now);
     return () => clearTimeout(tid);
   }, [wellness]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Save flash ────────────────────────────────────────────────────────────
-  const flash = useCallback((ok: boolean) => {
-    setSaveStatus(ok ? "saved" : "error");
-    setTimeout(() => setSaveStatus(null), 2000);
-  }, []);
-
-  // Toute écriture d'une saisie athlète passe par ici. Avant, la plupart des
-  // setters faisaient `.catch(() => {})` : l'UI se mettait à jour de façon
-  // optimiste, l'écriture échouait (réseau coupé en salle) et la saisie
-  // disparaissait au rechargement suivant, sans aucun signal. On flashe l'état
-  // ET on remonte un toast. `id` fixe : sonner remplace le toast au lieu d'en
-  // empiler un par écriture ratée.
-  const persist = useCallback((p: Promise<unknown>): void => {
-    p.then(() => flash(true)).catch(() => {
-      flash(false);
-      toast.error("Sauvegarde échouée — vérifie ta connexion", { id: "asp-persist-error" });
-    });
-  }, [flash]);
 
   // ── Wrapped setters (persist on write) ────────────────────────────────────
   const setExos = useCallback((v: ExosMap | ((p: ExosMap) => ExosMap)) => {
@@ -321,16 +494,18 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     }
   }, [athleteId, flash]);
 
-  const setWellness = useCallback((v: WellnessData | null) => {
-    setWellnessRaw(v); persist(save(SKEYS.wellness, v));
+  // Ces trois setters renvoient la confirmation serveur (true/false) : la saisie
+  // wellness n'affiche son succès / ne purge son brouillon qu'après confirmation.
+  const setWellness = useCallback((v: WellnessData | null): Promise<boolean> => {
+    setWellnessRaw(v); return persist(save(SKEYS.wellness, v));
   }, [save, persist]);
 
-  const setWellnessHistory = useCallback((v: Record<string, WellnessData>) => {
-    setWellnessHistoryRaw(v); persist(save(SKEYS.wellnessHistory, v));
+  const setWellnessHistory = useCallback((v: Record<string, WellnessData>): Promise<boolean> => {
+    setWellnessHistoryRaw(v); return persist(save(SKEYS.wellnessHistory, v));
   }, [save, persist]);
 
-  const setWeightLog = useCallback((v: Record<string, number>) => {
-    setWeightLogRaw(v); persist(save(SKEYS.weightLog, v));
+  const setWeightLog = useCallback((v: Record<string, number>): Promise<boolean> => {
+    setWeightLogRaw(v); return persist(save(SKEYS.weightLog, v));
   }, [save, persist]);
 
   const setWeightMilestones = useCallback((v: Array<{ date: string; kg: number }>) => {
@@ -347,6 +522,8 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     sessionLogs, freeSessions, nutritionStrategy, setNutritionStrategy,
     nutritionLog, visibilitySettings, testSessions, setTestSessions: setTestSessionsRaw,
     loaded, saveStatus,
+    /** Clés app_data dont la lecture a échoué (écriture bloquée, relecture en cours). */
+    unloadedKeys,
     // Cycle ouvert (stockage exos/séances scopé par cycle)
     openCycleId, setOpenCycleId,
     // Wrapped setters (write + persist)

@@ -105,7 +105,7 @@ export interface AthleteContextValue {
   uncompleteSession: (sessId: string, week: number) => void;
   archiveAndNewBlock: (opts: NewBlockOpts) => void;
   applyAIEdit: (newSessions: ExosMap) => void;
-  saveWellness: (data: WellnessData) => void;
+  saveWellness: (data: WellnessData) => void | Promise<boolean>;
   updateSessionDay: (sessId: string, dayIdx: number) => void;
   updateSessionWeekDay: (sessId: string, blockWeek: number, dayIdx: number | null) => void;
   addInjury: (inj: Injury) => void;
@@ -122,6 +122,12 @@ export function useAthleteContext(): AthleteContextValue {
   const ctx = useContext(AthleteCtx);
   if (!ctx) throw new Error("useAthleteContext must be used inside AthleteProvider");
   return ctx;
+}
+
+/** Variante sans exception, pour les composants aussi montés hors AthleteProvider. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useOptionalAthleteContext(): AthleteContextValue | null {
+  return useContext(AthleteCtx);
 }
 
 // ─── Provider ───────────────────────────────────────────────────────────────

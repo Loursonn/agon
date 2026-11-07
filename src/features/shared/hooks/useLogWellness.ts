@@ -6,18 +6,23 @@ import type { WellnessData } from "../types/athlete";
 /**
  * Mutation: log today's wellness.
  * Wraps context.saveWellness with toast feedback.
- * The context already updates state immediately (optimistic from the caller's perspective).
+ * L'état local est mis à jour tout de suite ; le toast de succès attend la
+ * confirmation serveur (un échec est déjà signalé par le toast de persist).
  */
 export function useLogWellness() {
   const { saveWellness } = useAthleteContext();
 
+  // Le succès n'est annoncé qu'après confirmation du serveur (avant, le toast
+  // partait avant même l'envoi, y compris hors ligne).
   const mutate = useCallback(
-    (data: WellnessData) => {
+    async (data: WellnessData): Promise<boolean> => {
       try {
-        saveWellness(data);
-        toast.success("Wellness enregistré !");
+        const ok = (await saveWellness(data)) !== false;
+        if (ok) toast.success("Wellness enregistré !");
+        return ok;
       } catch {
         toast.error("Erreur lors de l'enregistrement");
+        return false;
       }
     },
     [saveWellness],

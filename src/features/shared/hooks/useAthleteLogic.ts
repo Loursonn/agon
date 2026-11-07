@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { todayKey, localISO } from "@/lib/date";
 import { checkMilestone } from "@/lib/date";
 import { SKEYS } from "@/lib/storage";
+import { clearDraft, wellnessDraftKey } from "@/lib/localDraft";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData,
@@ -37,9 +38,9 @@ interface LogicDeps {
   setCompletedSessions: (v: Record<number, string[]>) => void;
   setAthleteNotes: (v: Record<string, string>) => void;
   setBlockHistory: (v: ArchivedBlock[]) => void;
-  setWellness: (v: WellnessData | null) => void;
-  setWellnessHistory: (v: Record<string, WellnessData>) => void;
-  setWeightLog: (v: Record<string, number>) => void;
+  setWellness: (v: WellnessData | null) => void | Promise<boolean>;
+  setWellnessHistory: (v: Record<string, WellnessData>) => void | Promise<boolean>;
+  setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
   setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
   setBodyWeight: (v: BodyWeight) => void;
   setInjuries: (v: Injury[]) => void;
@@ -309,15 +310,19 @@ export function useAthleteLogic(d: LogicDeps) {
     setExos(merged);
   }, [exos, setExos]);
 
-  const saveWellness = useCallback((data: WellnessData) => {
-    const dataWithDate = { ...data, date: todayKey() };
-    setWellness(dataWithDate);
-    const wh = { ...wellnessHistory, [todayKey()]: dataWithDate };
-    setWellnessHistory(wh);
+  // Renvoie true quand le serveur a confirmé l'écriture du wellness (et du
+  // poids saisi) ; le brouillon local du formulaire n'est purgé qu'à ce moment.
+  const saveWellness = useCallback((data: WellnessData): Promise<boolean> => {
+    const day = todayKey();
+    const dataWithDate = { ...data, date: day };
+    const writes: Array<void | Promise<boolean>> = [];
+    writes.push(setWellness(dataWithDate));
+    const wh = { ...wellnessHistory, [day]: dataWithDate };
+    writes.push(setWellnessHistory(wh));
     if (data.poids) {
-      const key = todayKey();
+      const key = day;
       const nwl = { ...weightLog, [key]: data.poids };
-      setWeightLog(nwl);
+      writes.push(setWeightLog(nwl));
       const milestone = checkMilestone(nwl, bodyWeight.current);
       if (milestone && milestone > bodyWeight.current) {
         const nm = [...weightMilestones, { date: key, kg: milestone }];
@@ -328,7 +333,12 @@ export function useAthleteLogic(d: LogicDeps) {
         setTimeout(() => setMilestoneNotif(null), 3500);
       }
     }
-  }, [wellnessHistory, weightLog, bodyWeight, weightMilestones, setWellness, setWellnessHistory, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
+    return Promise.all(writes.map((w) => Promise.resolve(w ?? true))).then((oks) => {
+      const ok = oks.every(Boolean);
+      if (ok && athleteId) clearDraft(wellnessDraftKey(athleteId, day));
+      return ok;
+    });
+  }, [athleteId, wellnessHistory, weightLog, bodyWeight, weightMilestones, setWellness, setWellnessHistory, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
 
   const updateSessionDay = useCallback((sessId: string, dayIdx: number) => {
     setSessions(prev => prev.map(s => s.id === sessId ? { ...s, day_of_week: dayIdx } : s));
