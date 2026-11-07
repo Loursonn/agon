@@ -181,7 +181,7 @@ async function fetchWeekData(
       .lte("scheduled_date", end),
 
     db.from("test_sessions")
-      .select("id, title, type, date, completed, results_note, results_structured, coach_validated")
+      .select("id, title, type, date, completed, results_note, results_structured")
       .eq("athlete_id", athleteId)
       .gte("date", start)
       .lte("date", end),
