@@ -1,8 +1,10 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { C } from "@/lib/theme";
 import { BZFRONT, BZBACK, ALL_BZ, INJ_TYPES, INJ_STATUS, stC } from "@/lib/muscles";
 import { todayKey } from "@/lib/date";
 import { WELL_ITEMS, calcScore, getReco, getAlerts } from "@/lib/wellness";
+import { useOptionalAthleteContext } from "@/features/shared/context/AthleteContext";
+import { loadDraft, saveDraft, wellnessDraftKey } from "@/lib/localDraft";
 
 // ── Legacy zone-based BodyMap (used by InjuryForm) ──────────────────────────
 function BodyMap({selected,onToggle,color}){
@@ -273,18 +275,33 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
   const tgt=sleepTarget||8;
   const S_DOMS_ZONES=WELL_ITEMS.length; // 5 - shown if doms <= 3 (DOMS significant)
   const S_INJURY=6;const S_SLEEP=7;const S_WEIGHT=8;const S_BILAN=9;
-  const[step,setStep]=useState(0);
-  const[vals,setVals]=useState({fatigue:existing?.fatigue||3,sommeil:existing?.sommeil||3,stress:existing?.stress||3,energie:existing?.energie||3,doms:existing?.doms||5});
-  const[domsZones,setDomsZones]=useState(existing?.domsZones||[]);
-  const[domsPoints,setDomsPoints]=useState(existing?.domsPoints||[]);
-  const[coucher,setCoucher]=useState(existing?.coucher||{h:23,m:0});
-  const[reveil,setReveil]=useState(existing?.reveil||{h:7,m:0});
-  const[poids,setPoids]=useState(existing?.poids||"");
-  const[sleepInterrupt,setSleepInterrupt]=useState(existing?.sleepInterrupt??null);
-  const[sleepInterruptNote,setSleepInterruptNote]=useState(existing?.sleepInterruptNote||"");
+  // Brouillon local du formulaire en cours (par athlète + jour) : restauré à la
+  // réouverture si l'app a été fermée/tuée avant « Sauvegarder », purgé par
+  // saveWellness une fois l'enregistrement confirmé par le serveur.
+  const athleteId=useOptionalAthleteContext()?.athleteId;
+  const[dKey]=useState(()=>athleteId?wellnessDraftKey(athleteId,todayKey()):null);
+  const[draft]=useState(()=>dKey?loadDraft(dKey,{maxAgeMs:24*3600*1000})?.value??null:null);
+  const[step,setStep]=useState(draft?.step??0);
+  const[vals,setVals]=useState(draft?.vals??{fatigue:existing?.fatigue||3,sommeil:existing?.sommeil||3,stress:existing?.stress||3,energie:existing?.energie||3,doms:existing?.doms||5});
+  const[domsZones,setDomsZones]=useState(draft?.domsZones??(existing?.domsZones||[]));
+  const[domsPoints,setDomsPoints]=useState(draft?.domsPoints??(existing?.domsPoints||[]));
+  const[coucher,setCoucher]=useState(draft?.coucher??(existing?.coucher||{h:23,m:0}));
+  const[reveil,setReveil]=useState(draft?.reveil??(existing?.reveil||{h:7,m:0}));
+  const[poids,setPoids]=useState(draft?.poids??(existing?.poids||""));
+  const[sleepInterrupt,setSleepInterrupt]=useState(draft?draft.sleepInterrupt??null:(existing?.sleepInterrupt??null));
+  const[sleepInterruptNote,setSleepInterruptNote]=useState(draft?.sleepInterruptNote??(existing?.sleepInterruptNote||""));
   const prevPoids=(()=>{if(!weightLog)return null;const d=new Date();d.setDate(d.getDate()-1);const k=String(d.getFullYear())+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");return weightLog[k]||null;})();
-  const[injOui,setInjOui]=useState(null);
-  const[injComment,setInjComment]=useState(existing?.injComment||"");
+  const[injOui,setInjOui]=useState(draft?draft.injOui??null:null);
+  const[injComment,setInjComment]=useState(draft?.injComment??(existing?.injComment||""));
+  const snapshot={step,vals,domsZones,domsPoints,coucher,reveil,poids,sleepInterrupt,sleepInterruptNote,injOui,injComment};
+  const snapJson=JSON.stringify(snapshot);
+  const initialSnapRef=useRef(snapJson);
+  useEffect(()=>{
+    // Rien de saisi depuis l'ouverture → pas de brouillon (sinon il masquerait
+    // un wellness enregistré entre-temps depuis un autre appareil).
+    if(!dKey||snapJson===initialSnapRef.current)return;
+    saveDraft(dKey,JSON.parse(snapJson));
+  },[dKey,snapJson]);
   const score=calcScore(vals);const reco=getReco(score);const alerts=getAlerts(vals);
   const sleepDur=()=>{const rM=reveil.h*60+reveil.m,cM=coucher.h*60+coucher.m;return Math.round((rM<=cM?rM+1440-cM:rM-cM)/60*10)/10;};
   const dur=sleepDur();const diff=Math.round((dur-tgt)*10)/10;const sleepC=Math.abs(diff)<=0.5?C.g:Math.abs(diff)<=1.5?C.o:C.r;

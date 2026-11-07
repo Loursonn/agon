@@ -42,6 +42,7 @@ import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
 import { localISO, normalizeDayMap } from "@/lib/date";
+import { loadDraft, saveDraft, clearDraft, energyDraftKey } from "@/lib/localDraft";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
@@ -471,6 +472,14 @@ const FOSTER_LABELS: Record<number, string> = {
 function rpeColor(v: number) { return v <= 4 ? C.g : v <= 7 ? C.o : C.r; }
 function rpeBg(v: number)    { return v <= 4 ? C.gS : v <= 7 ? C.oS : C.rS; }
 
+interface EnergyDraft {
+  phase: "preview" | "log" | "rpe";
+  localBlocks: BlockLogs;
+  globalNote: string;
+  actualDuration: string;
+  runDist: RunDistanceValue;
+}
+
 function EnergyPreviewOverlay({
   event,
   athleteId,
@@ -499,6 +508,8 @@ function EnergyPreviewOverlay({
   const workBlocks = getWorkIntervals(session?.intervals ?? []);
   const isComplex  = workBlocks.length > 1;
 
+  // Le brouillon n'est écrit qu'après l'init (sinon il serait écrasé par les défauts).
+  const draftReadyRef = useRef(false);
   useEffect(() => {
     if (!session) return;
     if (workBlocks.length > 0) {
@@ -510,8 +521,35 @@ function EnergyPreviewOverlay({
     if (session.total_duration_s != null)
       setActualDuration(String(Math.round(session.total_duration_s / 60)));
     setRunDist(initialRunDistance(session.total_distance_m));
+    // Saisie en cours retrouvée (app fermée/tuée avant « Valider ») : on la
+    // restaure par-dessus les valeurs par défaut.
+    const draft = !isCompleted && athleteId
+      ? loadDraft<EnergyDraft>(energyDraftKey(athleteId, assignmentId), { maxAgeMs: 48 * 3600 * 1000 })
+      : null;
+    if (draft) {
+      const d = draft.value;
+      if (d.localBlocks) setLocalBlocks((prev) => ({ ...prev, ...d.localBlocks }));
+      if (d.globalNote != null) setGlobalNote(d.globalNote);
+      if (d.actualDuration != null) setActualDuration(d.actualDuration);
+      if (d.runDist) setRunDist(d.runDist);
+      if (d.phase === "log") setPhase("log");
+    }
+    draftReadyRef.current = true;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id]);
+
+  // Brouillon local de la saisie en cours (par athlète + séance du jour), écrit
+  // à chaque modification pendant la saisie, purgé une fois la validation confirmée.
+  const energyDraft: EnergyDraft = { phase, localBlocks, globalNote, actualDuration, runDist };
+  const energyDraftJson = JSON.stringify(energyDraft);
+  useEffect(() => {
+    if (!draftReadyRef.current || isCompleted || !athleteId || phase !== "log" || complete.isSuccess) return;
+    saveDraft(energyDraftKey(athleteId, assignmentId), JSON.parse(energyDraftJson));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [energyDraftJson]);
+  useEffect(() => {
+    if (complete.isSuccess && athleteId) clearDraft(energyDraftKey(athleteId, assignmentId));
+  }, [complete.isSuccess, athleteId, assignmentId]);
 
   function handleValidate() {
     const logs: BlockLogs = isComplex ? localBlocks : {};

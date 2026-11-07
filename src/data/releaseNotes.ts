@@ -38,6 +38,27 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-07-fiabilite-securite",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "App plus rapide, saisies protégées, données mieux verrouillées",
+    summary:
+      "Changer de page ne recharge plus toute l'app, les saisies de séance de tes athlètes ne se perdent plus en cas de coupure réseau, et l'accès aux données est resserré.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Navigation : passer d'une page à l'autre ne recharge plus toutes les données. La sidebar et la barre d'onglets restent en place.",
+          "Côté athlète : la séance en cours, la séance énergie et le wellness sont gardés sur le téléphone jusqu'à l'envoi. Fermer l'app ou perdre le réseau ne fait plus rien perdre.",
+          "Un échec réseau à l'ouverture ne peut plus effacer l'historique wellness ou poids d'un athlète.",
+          "Sécurité : les profils coach ne sont plus visibles sans être connecté, et un coach ne voit plus que les fichiers (tests, captures) de ses propres athlètes.",
+          "Rejoindre un coach se fait toujours avec son code, mais la vérification passe maintenant par le serveur.",
+          "Supprimer son compte efface aussi les fiches et photos de commentaires.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-02-videos-assistant",
     date: "2026-11-02",
     kind: "feature",

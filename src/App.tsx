@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { Fragment, lazy, Suspense, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "sonner";
@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute, { RoleRedirect } from "@/components/ProtectedRoute";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 // Pages publiques (chargées immédiatement — nécessaires au démarrage)
 import Login from "./pages/Login.tsx";
@@ -69,14 +68,13 @@ const CoachUpdatesPage          = lazy(() => import("./features/coach/pages/Coac
 const AthleteFichesPage         = lazy(() => import("./features/coach/pages/AthleteFichesPage.tsx"));
 const CoachStaffPage            = lazy(() => import("./features/staff/pages/CoachStaffPage.tsx"));
 
-const queryClient = new QueryClient();
-
-// Fade transition for route changes (100ms ease-out)
-const fadeVariants: Variants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit:    { opacity: 0 },
-};
+// staleTime : une donnée lue il y a moins de 30 s n'est pas re-téléchargée à
+// chaque ouverture de page (les mutations invalident explicitement leurs clés).
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000 },
+  },
+});
 
 // Fallback minimal pendant le chargement des chunks
 function PageLoader() {
@@ -88,32 +86,53 @@ function PageLoader() {
   );
 }
 
-// AnimatePresence wrapper needs access to location
-function AnimatedRoutes() {
-  const location = useLocation();
+// Chargement d'une page à l'intérieur d'un layout : le layout (sidebar, barre
+// d'onglets) reste affiché.
+function InlineLoader() {
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-          key={location.pathname}
-          variants={fadeVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={{ duration: 0.1, ease: "easeOut" }}
-          style={{ display: "contents" }}
-        >
-        <Routes location={location}>
+    <div style={{ minHeight: "40vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 24, height: 24, border: "2.5px solid rgba(231,211,168,0.2)", borderTopColor: "#FFC933", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+/**
+ * Page (feuille de route) : remontée à chaque changement d'URL, comme avant,
+ * mais SANS remonter les layouts ni leurs providers (AthleteProvider…).
+ * Auparavant toute l'app était remontée à chaque navigation, ce qui relançait
+ * tout le chargement des données.
+ */
+function Page({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return (
+    <Suspense fallback={<InlineLoader />}>
+      <Fragment key={pathname}>{children}</Fragment>
+    </Suspense>
+  );
+}
+
+/** Layout lié à un athlète : remonté seulement quand l'athlète change. */
+function AthleteScoped({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  const athleteId = pathname.match(/\/athletes\/([^/]+)/)?.[1] ?? "";
+  return <Fragment key={athleteId}>{children}</Fragment>;
+}
+
+function AppRoutes() {
+  return (
+        <Routes>
           {/* Pages publiques */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/invite/:token" element={<InviteAccept />} />
-          <Route path="/staff-invite/:token" element={<StaffInviteAccept />} />
-          <Route path="/claim/:token" element={<ClaimAthlete />} />
+          <Route path="/login" element={<Page><Login /></Page>} />
+          <Route path="/reset-password" element={<Page><ResetPassword /></Page>} />
+          <Route path="/invite/:token" element={<Page><InviteAccept /></Page>} />
+          <Route path="/staff-invite/:token" element={<Page><StaffInviteAccept /></Page>} />
+          <Route path="/claim/:token" element={<Page><ClaimAthlete /></Page>} />
 
           {/* Documents légaux — publics par obligation */}
-          <Route path="/confidentialite"  element={<PrivacyPolicy />} />
-          <Route path="/cgu"              element={<Terms />} />
-          <Route path="/mentions-legales" element={<LegalNotice />} />
+          <Route path="/confidentialite"  element={<Page><PrivacyPolicy /></Page>} />
+          <Route path="/cgu"              element={<Page><Terms /></Page>} />
+          <Route path="/mentions-legales" element={<Page><LegalNotice /></Page>} />
           {/* Alias anglais : les formulaires partenaires et les robots les attendent souvent */}
           <Route path="/privacy" element={<Navigate to="/confidentialite" replace />} />
           <Route path="/terms"   element={<Navigate to="/cgu" replace />} />
@@ -123,70 +142,68 @@ function AnimatedRoutes() {
 
           {/* Vue athlète (layout + sous-routes) */}
           <Route path="/athlete" element={<ProtectedRoute><AthleteApp /></ProtectedRoute>}>
-            <Route index element={<TodayPage />} />
-            <Route path="program" element={<ProgramPage />} />
-            <Route path="program/workout/:id" element={<WorkoutDetailPage />} />
-            <Route path="profil" element={<ProfilPage />} />
+            <Route index element={<Page><TodayPage /></Page>} />
+            <Route path="program" element={<Page><ProgramPage /></Page>} />
+            <Route path="program/workout/:id" element={<Page><WorkoutDetailPage /></Page>} />
+            <Route path="profil" element={<Page><ProfilPage /></Page>} />
             {/* Legacy routes kept for backward compat */}
-            <Route path="log" element={<LogSeancePage />} />
-            <Route path="alim" element={<AlimPage />} />
-            <Route path="test" element={<AthleteTestPage />} />
-            <Route path="hyrox" element={<AthleteHyroxPage />} />
-            <Route path="specific/:assignmentId" element={<SpecificExecutionPage />} />
+            <Route path="log" element={<Page><LogSeancePage /></Page>} />
+            <Route path="alim" element={<Page><AlimPage /></Page>} />
+            <Route path="test" element={<Page><AthleteTestPage /></Page>} />
+            <Route path="hyrox" element={<Page><AthleteHyroxPage /></Page>} />
+            <Route path="specific/:assignmentId" element={<Page><SpecificExecutionPage /></Page>} />
           </Route>
 
           {/* Espace professionnel (staff) — kiné, ostéo, coach adjoint… */}
           <Route path="/staff" element={<ProtectedRoute><StaffApp /></ProtectedRoute>}>
-            <Route index element={<StaffHomePage />} />
-            <Route path="athletes/:athleteId" element={<StaffAthleteArea />} />
+            <Route index element={<Page><StaffHomePage /></Page>} />
+            <Route path="athletes/:athleteId" element={<Page><StaffAthleteArea /></Page>} />
           </Route>
 
           {/* Vue coach — sidebar + toutes sous-routes */}
           <Route path="/coach" element={<ProtectedRoute><CoachShell /></ProtectedRoute>}>
             {/* Page d'accueil coach */}
-            <Route index element={<CoachHomePage />} />
+            <Route index element={<Page><CoachHomePage /></Page>} />
 
             {/* Pages globales */}
-            <Route path="athletes" element={<AthletesListPage />} />
-            <Route path="library"  element={<LibraryPage />} />
-            <Route path="tests"    element={<CoachTestsBankPage />} />
-            <Route path="fiches"   element={<FichesPage />} />
-            <Route path="nouveautes" element={<CoachUpdatesPage />} />
-            <Route path="coaches"  element={<CoachesListPage />} />
-            <Route path="roadmap"  element={<RoadmapPage />} />
-            <Route path="avis"     element={<AthleteFeedbackPage />} />
-            <Route path="settings"     element={<SettingsPage />} />
+            <Route path="athletes" element={<Page><AthletesListPage /></Page>} />
+            <Route path="library"  element={<Page><LibraryPage /></Page>} />
+            <Route path="tests"    element={<Page><CoachTestsBankPage /></Page>} />
+            <Route path="fiches"   element={<Page><FichesPage /></Page>} />
+            <Route path="nouveautes" element={<Page><CoachUpdatesPage /></Page>} />
+            <Route path="coaches"  element={<Page><CoachesListPage /></Page>} />
+            <Route path="roadmap"  element={<Page><RoadmapPage /></Page>} />
+            <Route path="avis"     element={<Page><AthleteFeedbackPage /></Page>} />
+            <Route path="settings"     element={<Page><SettingsPage /></Page>} />
 {/* Banque séances énergie (sans contexte athlète) */}
-            <Route path="energy-library"                  element={<EnergyLibraryPage />} />
-            <Route path="energy-library/new"              element={<EnergySessionEditorPage />} />
-            <Route path="energy-library/:sessionId/edit"  element={<EnergySessionEditorPage />} />
+            <Route path="energy-library"                  element={<Page><EnergyLibraryPage /></Page>} />
+            <Route path="energy-library/new"              element={<Page><EnergySessionEditorPage /></Page>} />
+            <Route path="energy-library/:sessionId/edit"  element={<Page><EnergySessionEditorPage /></Page>} />
 
             {/* Vue par athlète (ContextBar + AthleteProvider) */}
-            <Route path="athletes/:athleteId" element={<CoachAthleteArea />}>
+            <Route path="athletes/:athleteId" element={<AthleteScoped><CoachAthleteArea /></AthleteScoped>}>
               <Route index element={<Navigate to="planning" replace />} />
-              <Route path="planning"       element={<PlanningPage />} />
-              <Route path="programmation"  element={<ProgrammationPage />} />
-              <Route path="profil-sportif" element={<ProfilAthletePage />} />
-              <Route path="donnees"       element={<DonneesPage />} />
-              <Route path="retours"       element={<RetoursPage />} />
+              <Route path="planning"       element={<Page><PlanningPage /></Page>} />
+              <Route path="programmation"  element={<Page><ProgrammationPage /></Page>} />
+              <Route path="profil-sportif" element={<Page><ProfilAthletePage /></Page>} />
+              <Route path="donnees"       element={<Page><DonneesPage /></Page>} />
+              <Route path="retours"       element={<Page><RetoursPage /></Page>} />
               {/* Legacy : Tests vit maintenant dans Profil athlète → Suivi Testing */}
               <Route path="tests"         element={<Navigate to="../profil-sportif?view=testing" replace />} />
-              <Route path="hyrox"         element={<CoachHyroxPage />} />
-              <Route path="fiches"        element={<AthleteFichesPage />} />
-              <Route path="staff"         element={<CoachStaffPage />} />
-              <Route path="athlete-view"  element={<AthleteViewPage />} />
+              <Route path="hyrox"         element={<Page><CoachHyroxPage /></Page>} />
+              <Route path="fiches"        element={<Page><AthleteFichesPage /></Page>} />
+              <Route path="staff"         element={<Page><CoachStaffPage /></Page>} />
+              <Route path="athlete-view"  element={<Page><AthleteViewPage /></Page>} />
             </Route>
 
             {/* Éditeur séances énergie par athlète (hors ContextBar) */}
-            <Route path="athletes/:athleteId/energy/new"              element={<EnergySessionEditorPage />} />
-            <Route path="athletes/:athleteId/energy/:sessionId/edit"  element={<EnergySessionEditorPage />} />
+            <Route path="athletes/:athleteId/energy/new"              element={<Page><EnergySessionEditorPage /></Page>} />
+            <Route path="athletes/:athleteId/energy/:sessionId/edit"  element={<Page><EnergySessionEditorPage /></Page>} />
           </Route>
 
           {/* 404 */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<Page><NotFound /></Page>} />
         </Routes>
-      </motion.div>
-    </AnimatePresence>
   );
 }
 
@@ -204,7 +221,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Suspense fallback={<PageLoader />}>
-            <AnimatedRoutes />
+            <AppRoutes />
           </Suspense>
         </AuthProvider>
       </BrowserRouter>

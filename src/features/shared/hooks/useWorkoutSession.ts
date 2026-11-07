@@ -7,7 +7,7 @@
  *   LEGACY: session id like "s_TIMESTAMP_x" — exercises in app_data (key=asp:exos::cycleId)
  */
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -52,6 +52,15 @@ export interface WorkoutBlocData {
 
 export interface WorkoutSessionResult {
   isLoading: boolean;
+  /**
+   * État de la lecture du workout_log lui-même. Tant qu'il n'est pas "ready",
+   * `athleteModifications` n'est PAS connu (≠ vide) : ne rien réécrire dessus.
+   *  - "pending" : premier chargement en cours
+   *  - "paused"  : hors ligne, React Query attend le réseau
+   *  - "error"   : échec après les nouveaux essais
+   */
+  logStatus: "pending" | "paused" | "error" | "ready";
+  refetchLog: () => void;
   workoutLogId: string | null;
   sessionId: string | null;
   sessionName: string;
@@ -213,21 +222,35 @@ function buildProgBlocs(
 export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSessionResult {
   const { athleteId } = useAthleteContext();
 
-  const { data: wlog, isLoading: loadingLog } = useQuery({
+  const {
+    data: wlog, isLoading: loadingLog, isPending: logPending, isError: logError,
+    fetchStatus: logFetchStatus, refetch: refetchLogQuery,
+  } = useQuery({
     queryKey: ["workout-log-detail", workoutLogId],
     enabled: !!workoutLogId,
     staleTime: 30_000,
+    // L'erreur DOIT remonter : avant, elle était avalée (data = null) et la page
+    // prenait « pas de saisie » pour la vérité → la 1re série envoyée au retour
+    // du réseau effaçait coachOverride et commentaires. Ici React Query réessaie.
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("workout_logs")
         .select(
           "id, session_id, session_name, status, rpe_score, scheduled_date, athlete_modifications, microcycle_id, original_scheduled_date, rescheduled_by_athlete, week_number"
         )
         .eq("id", workoutLogId!)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
+  // `wlog === null` = log réellement absent (lu avec succès) ; `undefined` = pas encore lu.
+  const logStatus: WorkoutSessionResult["logStatus"] =
+    wlog !== undefined && !logPending ? "ready"
+    : logError ? "error"
+    : logFetchStatus === "paused" ? "paused"
+    : "pending";
+  const refetchLog = useCallback(() => { void refetchLogQuery(); }, [refetchLogQuery]);
 
   const { data: microcycle } = useQuery({
     queryKey: ["microcycle", wlog?.microcycle_id],
@@ -282,6 +305,8 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
 
     const empty: WorkoutSessionResult = {
       isLoading,
+      logStatus,
+      refetchLog,
       workoutLogId: null,
       sessionId: null,
       sessionName: "",
@@ -309,6 +334,8 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
       const progSess = progSessions.find((s) => s.id === wlog.session_id);
       return {
         isLoading: false,
+        logStatus,
+        refetchLog,
         workoutLogId: wlog.id,
         sessionId: wlog.session_id,
         sessionName: progSess?.name ?? wlog.session_name,
@@ -338,6 +365,8 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
 
       return {
         isLoading: false,
+        logStatus,
+        refetchLog,
         workoutLogId: wlog.id,
         sessionId: wlog.session_id,
         sessionName: wlog.session_name,
@@ -361,6 +390,8 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
 
     return {
       isLoading: false,
+      logStatus,
+      refetchLog,
       workoutLogId: wlog.id,
       sessionId: wlog.session_id,
       sessionName: progSession.name,
@@ -375,5 +406,5 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
       rescheduledByAthlete: wlog.rescheduled_by_athlete ?? false,
       originalScheduledDate: wlog.original_scheduled_date ?? null,
     };
-  }, [wlog, progSessions, microcycle, loadingLog, loadingSessions, needsLegacy, loadingLegacy, legacyExosRows, sessionRank, loadingRank]);
+  }, [wlog, progSessions, microcycle, loadingLog, loadingSessions, needsLegacy, loadingLegacy, legacyExosRows, sessionRank, loadingRank, logStatus, refetchLog]);
 }

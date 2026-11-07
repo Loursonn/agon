@@ -2,6 +2,16 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+// Fonctions de rattachement au coach (migration 20261107100000_security_rpcs).
+// Absentes de types.ts tant qu'il n'est pas régénéré.
+type RpcResult<T> = Promise<{ data: T | null; error: { message: string } | null }>;
+const authRpc = supabase as unknown as {
+  rpc(fn: "coach_code_exists", args: { p_code: string }): RpcResult<boolean>;
+  rpc(fn: "link_to_coach_by_code", args: { p_code: string }): RpcResult<string>;
+  rpc(fn: "invitation_is_valid", args: { p_token: string }): RpcResult<boolean>;
+  rpc(fn: "redeem_invitation", args: { p_token: string }): RpcResult<string>;
+};
+
 export interface Profile {
   id: string;
   role: "coach" | "athlete" | "coach_athlete" | "staff";
@@ -217,8 +227,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Ensure uniqueness (retry on collision)
     let attempts = 0;
     while (attempts < 5) {
-      const { data: existing } = await supabase.from("profiles").select("id").eq("coach_code", code).maybeSingle();
-      if (!existing) break;
+      const { data: exists } = await authRpc.rpc("coach_code_exists", { p_code: code });
+      if (!exists) break;
       code = generateCoachCode();
       attempts++;
     }
@@ -235,14 +245,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function registerAthlete(email: string, password: string, fullName: string, token: string) {
-    const { data: invite, error: inviteError } = await supabase
-      .from("invitations")
-      .select("*")
-      .eq("token", token)
-      .is("used_at", null)
-      .single();
-
-    if (inviteError || !invite) throw new Error("Lien d'invitation invalide ou déjà utilisé");
+    const { data: valid } = await authRpc.rpc("invitation_is_valid", { p_token: token });
+    if (!valid) throw new Error("Lien d'invitation invalide ou déjà utilisé");
 
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw new Error(error.message);
@@ -252,21 +256,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: data.user.id,
       role: "athlete",
       full_name: fullName,
-      coach_id: invite.coach_id,
     });
     if (profileError) throw new Error(profileError.message);
 
-    await supabase.from("invitations").update({ used_at: new Date().toISOString() }).eq("token", token);
+    // Le rattachement au coach passe par le serveur (contrôle du lien)
+    const { error: redeemError } = await authRpc.rpc("redeem_invitation", { p_token: token });
+    if (redeemError) throw new Error("Compte créé, mais le lien d'invitation n'a pas pu être utilisé : " + redeemError.message);
   }
 
   async function registerAthleteWithCode(email: string, password: string, fullName: string, coachCode: string) {
-    const { data: coach } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("coach_code", coachCode.toUpperCase().trim())
-      .maybeSingle();
-
-    if (!coach) throw new Error("Code coach invalide — vérifie auprès de ton coach");
+    const code = coachCode.toUpperCase().trim();
+    const { data: exists } = await authRpc.rpc("coach_code_exists", { p_code: code });
+    if (!exists) throw new Error("Code coach invalide — vérifie auprès de ton coach");
 
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw new Error(error.message);
@@ -276,9 +277,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: data.user.id,
       role: "athlete",
       full_name: fullName,
-      coach_id: coach.id,
     });
     if (profileError) throw new Error(profileError.message);
+
+    // Le rattachement au coach passe par le serveur (contrôle du code)
+    const { error: linkError } = await authRpc.rpc("link_to_coach_by_code", { p_code: code });
+    if (linkError) throw new Error("Compte créé, mais le rattachement au coach a échoué : " + linkError.message);
   }
 
   async function registerStaff(email: string, password: string, fullName: string, profession: string) {
@@ -298,15 +302,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function linkToCoach(coachCode: string) {
     if (!user) throw new Error("Non connecté");
-    const { data: coach } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("coach_code", coachCode.toUpperCase().trim())
-      .maybeSingle();
-    if (!coach) throw new Error("Code coach invalide");
-    if (coach.id === user.id) throw new Error("Tu ne peux pas entrer ton propre code coach");
-    const { error } = await supabase.from("profiles").update({ coach_id: coach.id }).eq("id", user.id);
-    if (error) throw new Error("Erreur lors de l'assignation");
+    const code = coachCode.toUpperCase().trim();
+    if (profile?.coach_code && profile.coach_code === code) {
+      throw new Error("Tu ne peux pas entrer ton propre code coach");
+    }
+    const { error } = await authRpc.rpc("link_to_coach_by_code", { p_code: code });
+    if (error) {
+      if (/invalide/i.test(error.message)) throw new Error("Code coach invalide");
+      if (/propre code/i.test(error.message)) throw new Error("Tu ne peux pas entrer ton propre code coach");
+      throw new Error("Erreur lors de l'assignation");
+    }
     await fetchProfile(user.id);
   }
 

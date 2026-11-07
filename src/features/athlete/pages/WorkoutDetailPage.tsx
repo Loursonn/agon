@@ -10,6 +10,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hooks/useWorkoutSession";
 import { useSaveWorkoutSets } from "@/features/shared/hooks/useSaveWorkoutSets";
+import { loadDraft, clearDraft, workoutDraftKey } from "@/lib/localDraft";
 import { QK } from "@/lib/queryKeys";
 import { formatRepsAt, formatSetsReps, hasIso, isAllIso, isIsoAt } from "@/lib/formatSetsReps";
 import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
@@ -2189,7 +2190,7 @@ export default function WorkoutDetailPage() {
   const qc = useQueryClient();
 
   const workout = useWorkoutSession(id);
-  const { save: saveWorkoutSets, flushNow: flushWorkoutSets } = useSaveWorkoutSets(id, athleteId);
+  const { save: saveWorkoutSets, flushNow: flushWorkoutSets, discardPending } = useSaveWorkoutSets(id, athleteId);
 
   // ── State ────────────────────────────────────────────────────────────────
   const [sets, setSets] = useState<AllSets>({});
@@ -2251,10 +2252,25 @@ export default function WorkoutDetailPage() {
   // "une seule fois", un exercice apparu ensuite n'avait aucune ligne dans
   // `sets` → le clic renvoyait un SetState vide → crash à la sauvegarde.
   // La saisie en cours n'est jamais écrasée et aucune ligne n'est supprimée.
+  //
+  // Tant que le workout_log n'est pas RÉELLEMENT lu (hors ligne, erreur), on
+  // n'initialise rien : sinon `localMods` partait de {} et la 1re série envoyée
+  // au retour du réseau effaçait coachOverride et commentaires.
   useEffect(() => {
-    if (workout.isLoading) return;
+    if (workout.isLoading || workout.logStatus !== "ready" || !workout.workoutLogId) return;
 
-    const base = workout.athleteModifications ?? {};
+    const serverMods = workout.athleteModifications ?? {};
+    let base = serverMods;
+    // Brouillon local non synchronisé (app tuée / envoi raté) = plus récent que
+    // la base : on le restaure, en gardant l'adaptation coach lue en base.
+    let restored = false;
+    if (!setsInit && athleteId && id) {
+      const draft = loadDraft<AthleteModifications>(workoutDraftKey(athleteId, id));
+      if (draft && !draft.synced) {
+        base = { ...draft.value, coachOverride: serverMods.coachOverride };
+        restored = true;
+      }
+    }
     const savedSets = base.sessionSets ?? {};
 
     setSets((prev) => {
@@ -2277,8 +2293,12 @@ export default function WorkoutDetailPage() {
     if (!setsInit) {
       setLocalMods(base);
       setSetsInit(true);
+      if (restored) {
+        flushWorkoutSets(base);
+        toast.info("Saisie non envoyée retrouvée — envoi en cours", { id: "workout-draft-restored" });
+      }
     }
-  }, [workout.isLoading, workout.blocs, workout.athleteModifications, setsInit]);
+  }, [workout.isLoading, workout.logStatus, workout.workoutLogId, workout.blocs, workout.athleteModifications, setsInit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Backfill empty cells from prevSets once they load ───────────────────
   useEffect(() => {
@@ -2366,22 +2386,26 @@ export default function WorkoutDetailPage() {
     // Écriture IMMÉDIATE : sur `visibilitychange` l'onglet part en arrière-plan
     // et le navigateur mobile gèle ses timers. Un enregistrement débouncé ne
     // partirait jamais si le système tuait l'onglet dans la foulée.
-    const flush = () => {
-      if (!id || workout.status === "completed") return;
-      const mods = allSetsToMods(setsRef.current, localModsRef.current);
-      flushWorkoutSets(mods);
+    // On n'envoie que la saisie EN ATTENTE (jamais un état recalculé : avant
+    // chargement il valait {} et écrasait la séance en base). Chaque saisie
+    // passe par saveWorkoutSets, donc l'attente contient toujours la dernière.
+    const flush = (keepalive: boolean) => {
+      if (!id) return;
+      flushWorkoutSets(undefined, keepalive ? { keepalive: true } : undefined);
     };
-    const onVisChange = () => { if (document.hidden) flush(); };
+    // En arrière-plan / fermeture : envoi `keepalive`, qui survit à la page.
+    const onVisChange = () => { if (document.hidden) flush(true); };
     document.addEventListener("visibilitychange", onVisChange);
     // `pagehide` couvre la fermeture d'onglet et le retour arrière iOS, cas où
     // `visibilitychange` n'est pas garanti.
-    window.addEventListener("pagehide", flush);
+    const onPageHide = () => flush(true);
+    window.addEventListener("pagehide", onPageHide);
     return () => {
       document.removeEventListener("visibilitychange", onVisChange);
-      window.removeEventListener("pagehide", flush);
-      flush(); // flush on unmount
+      window.removeEventListener("pagehide", onPageHide);
+      flush(false); // flush on unmount
     };
-  }, [id, workout.status, flushWorkoutSets]);
+  }, [id, flushWorkoutSets]);
 
   // ── Inactivity reminder (10 min without interaction) ───────────────────
   const lastActivityRef = useRef(Date.now());
@@ -2695,6 +2719,9 @@ export default function WorkoutDetailPage() {
     },
     onSuccess: () => {
       localStorage.removeItem("activeWorkoutSession");
+      // Séance validée avec la saisie complète : plus rien à renvoyer.
+      discardPending();
+      if (athleteId && id) clearDraft(workoutDraftKey(athleteId, id));
       invalidateSessionStatus(qc, athleteId, id);
       if (athleteId) qc.invalidateQueries({ queryKey: runningVolumeKey(athleteId) });
       setShowFinish(false);
@@ -2746,6 +2773,25 @@ export default function WorkoutDetailPage() {
     return (
       <div style={{ padding: 32, textAlign: "center", color: C.tx3, fontSize: 13 }}>
         Chargement…
+      </div>
+    );
+  }
+  if (workout.logStatus === "pending" || workout.logStatus === "paused" || workout.logStatus === "error") {
+    return (
+      <div style={{ padding: 32, textAlign: "center", color: C.tx3, fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        <span>
+          {workout.logStatus === "pending" ? "Chargement…"
+            : workout.logStatus === "paused" ? "Hors ligne — la séance s'affichera au retour du réseau"
+            : "Impossible de charger la séance"}
+        </span>
+        {workout.logStatus !== "pending" && (
+          <button
+            onClick={() => workout.refetchLog()}
+            style={{ padding: "7px 14px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Réessayer
+          </button>
+        )}
       </div>
     );
   }
