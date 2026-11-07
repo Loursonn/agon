@@ -107,6 +107,8 @@ export interface EnergySessionDetail {
   step_log: Record<string, EnergyStepLog> | null; // per-step completion
   block_logs: Record<string, { done: boolean; note?: string }> | null;
   activity_url: string | null;
+  /** Sortie de montre rattachée (posée par la page Retours via `useRunningVolume`) */
+  watch_run?: import('@/lib/watchRunMatching').RunMatch | null;
 }
 
 // ── Activité libre ────────────────────────────────────────────────────────────

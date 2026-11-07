@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { isToday, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, X, ChevronDown, ChevronUp, Hourglass } from "lucide-react";
@@ -279,7 +280,9 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
             {session.session_kind.toUpperCase()}
           </span>
         )}
-        {!done && <span style={{ fontSize: 8, color: cols.accent, flexShrink: 0 }}>{cols.label}</span>}
+        {session.watch_run
+          ? <WatchRunTag match={session.watch_run} size={8} />
+          : !done && <span style={{ fontSize: 8, color: cols.accent, flexShrink: 0 }}>{cols.label}</span>}
         {hasDetail && (open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />)}
       </div>
 

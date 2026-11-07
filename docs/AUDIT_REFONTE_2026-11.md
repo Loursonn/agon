@@ -122,7 +122,7 @@ Source : audit couche données.
 
 1. 🔴 **Lire le programme écrit en base** : ouvrir un cycle réécrit `asp:exos/sessions/completed` (miroirs lus par les vues coach) avec des erreurs avalées (`useAthletePersistedState.ts:194-202`).
 2. 🔴 **Validation de séance à 2 endroits** : l'ancien parcours écrit `asp:completed`, l'actuel seulement `workout_logs`. Or le suivi coach (`get_coach_overview`, `useCoachOverview.ts:109`, `useMissedWorkouts.ts:50`) lit `asp:completed` → **suivi coach probablement faux**. RPE : écrit dans `workout_logs` **et/ou** `workout_rpe` selon l'écran, `useMicroStats` lit `workout_rpe` (4 valeurs déjà divergentes en prod).
-3. 🔴 **Requêtes vers des tables inexistantes** (erreurs avalées par `?? []`) : `wellness_logs` (`useMicroStats.ts:29`), `nutrition_strategy`/`nutrition_daily_log` (retours hebdo/mensuels), `session_exercises` (`useUnifiedCalendar.ts`). → les retours n'affichent jamais la nutrition, les stats micro jamais le wellness.
+3. 🔴 **Requêtes vers des tables inexistantes** (erreurs avalées par `?? []`) : `wellness_logs` (`useMicroStats.ts:29`), `nutrition_strategy`/`nutrition_daily_log` (retours hebdo/mensuels), `session_exercises` (`useUnifiedCalendar.ts`). → les retours n'affichent jamais la nutrition, les stats micro jamais le wellness. Colonne inexistante `test_sessions.coach_validated` demandée par les retours → erreur 400, tests absents des retours *(corrigé le 2026-11-07)*.
 4. 🟠 **VMA/FCmax** : l'écran athlète `PerformanceProfile.tsx:96-191` est hors React Query et n'invalide jamais `athlete-references` → les cibles d'intensité restent périmées. (= exactement « je change la FC, un autre écran ne suit pas »).
 5. 🟠 **Records (1RM)** : deux formules d'Epley (arrondi 0,5 vs 1 kg) → coach et athlète n'affichent pas le même 1RM. `useAutoComputePRs` jamais appelé.
 6. 🟠 **Coach et athlète lisent des sources différentes** : nutrition (athlète écrit `app_data`, coach lit des tables vides), blessures (`coach-api` lit l'ancienne clé `asp:injuries` au lieu de `medical_entries`).
@@ -212,18 +212,20 @@ Source : audit qualité.
 
 ### Phase 0 — Urgences (avant le 11/11) · ~1-2 j
 - [ ] Dump BDD + vérif PITR.
-- [ ] Lot sécurité S1→S10 (une migration, tests pgTAP associés).
-- [ ] P1 : `sLoad` ne renvoie plus de valeur par défaut sur erreur + blocage des écritures non chargées.
-- [ ] P2/P3 : brouillon local de la séance en cours (+ énergie, wellness).
-- [ ] Bucket `docs` dans la suppression de compte.
-- [ ] `App.tsx` : retirer la remontée à chaque navigation + `Suspense` par shell + réglages `QueryClient`. (Gain de vitesse immédiat, ~1 h.)
+- [x] Lot sécurité S1→S10 (une migration, tests pgTAP associés).
+- [x] P1 : `sLoad` ne renvoie plus de valeur par défaut sur erreur + blocage des écritures non chargées.
+- [x] P2/P3 : brouillon local de la séance en cours (+ énergie, wellness).
+- [x] Bucket `docs` dans la suppression de compte.
+- [x] `App.tsx` : retirer la remontée à chaque navigation + `Suspense` par shell + réglages `QueryClient`. (Gain de vitesse immédiat, ~1 h.)
 
 ### Phase 1 — Garde-fous (avant le 11/11) · ~1-2 j
-- [ ] CI GitHub Actions (`tsc` avec seuil 119 qui descend, lint, vitest, build) + protection `main` + secret scanning/Dependabot.
-- [ ] Régénérer `types.ts`.
-- [ ] Réécrire `CLAUDE.md` à partir du réel ; y mettre les règles de la mémoire d'Hugo ; supprimer `docs/CLAUDE.md` et `AUTOMATISATION PUSH` ; sortir `settings.local.json` de git.
-- [ ] Créer les skills projet (§8).
-- [ ] Supprimer le code mort (86 fichiers) et les dépendances inutiles.
+- [x] CI GitHub Actions (`npm run check` : `tsc` ≤ `.tsc-baseline` (99), lint, vitest, build) + Dependabot (vers `dev`).
+- [ ] Protection de `main` + secret scanning (réglages GitHub, à faire par le propriétaire du repo).
+- [x] Régénérer `types.ts`.
+- [x] Réécrire `CLAUDE.md` à partir du réel ; y mettre les règles de la mémoire d'Hugo ; supprimer `docs/CLAUDE.md` et `AUTOMATISATION PUSH`.
+- [ ] Sortir `settings.local.json` de git (JSON invalide ligne 80 : virgule manquante avant les lignes Windows) — décision Hugo/Tito.
+- [x] Créer les skills projet (§8) : `.claude/skills/`.
+- [x] Supprimer le code mort (84 fichiers, 14 500 lignes) et 24 dépendances inutiles.
 
 ### Phase 2 — Garmin + Coros (priorité produit) · ~2-3 sem.
 - [ ] Coros : configurer `APP_URL` + secrets Vault, **première vraie connexion** (Hugo ou un athlète Coros), mettre la doc à jour avec ce qu'on observe.

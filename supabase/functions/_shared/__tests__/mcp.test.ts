@@ -7,8 +7,8 @@
  * produit « réponse sans résultat » sur un appel qui a pourtant réussi, et on
  * cherche du côté du serveur.
  */
-import { describe, expect, it } from "vitest";
-import { parseRpcBody, resolveTool } from "../mcp";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { McpClient, McpError, parseRpcBody, resolveTool } from "../mcp";
 
 describe("parseRpcBody — réponse JSON", () => {
   it("lit une réponse unique", () => {
@@ -138,5 +138,55 @@ describe("resolveTool", () => {
 
   it("rend null sur une liste vide", () => {
     expect(resolveTool([], "querySportRecords", /sport/i)).toBeNull();
+  });
+});
+
+// ─────────── Transport : une panne n'est jamais une réponse vide ───────────
+
+describe("McpClient — erreurs explicites", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const reply = (body: string, contentType = "application/json", status = 200) => ({
+    ok: status < 300,
+    status,
+    headers: new Headers({ "content-type": contentType }),
+    text: () => Promise.resolve(body),
+  });
+
+  /** initialize, notifications/initialized, puis la réponse testée. */
+  function stub(last: unknown) {
+    const fn = vi.fn()
+      .mockResolvedValueOnce(reply('{"jsonrpc":"2.0","id":1,"result":{}}'))
+      .mockResolvedValueOnce(reply("", "application/json", 202));
+    if (last instanceof Error) fn.mockRejectedValueOnce(last);
+    else fn.mockResolvedValueOnce(last);
+    vi.stubGlobal("fetch", fn);
+  }
+
+  const client = () => new McpClient({ host: "https://mcpeu.coros.com", accessToken: "t" });
+
+  it("panne réseau → McpError « injoignable »", async () => {
+    stub(new TypeError("fetch failed"));
+    await expect(client().callTool("x", {})).rejects.toThrow(McpError);
+  });
+
+  it("corps illisible → McpError « illisible », pas une liste vide", async () => {
+    stub(reply("<html>502</html>"));
+    await expect(client().callTool("x", {})).rejects.toThrow(/illisible/);
+  });
+
+  it("listTools rend le schéma des paramètres", async () => {
+    stub(reply(JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      result: { tools: [{ name: "q", inputSchema: { type: "object", properties: { startDate: { type: "string" } } } }] },
+    })));
+    const tools = await client().listTools();
+    expect(tools[0].inputSchema?.properties?.startDate).toEqual({ type: "string" });
+  });
+
+  it("401 garde son code, pour que l'appelant tente un rafraîchissement", async () => {
+    stub(reply("unauthorized", "text/plain", 401));
+    await expect(client().listTools()).rejects.toMatchObject({ code: 401 });
   });
 });

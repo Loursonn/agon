@@ -119,6 +119,10 @@ export const QK = {
   // ── Services connectés (Garmin / COROS) ───────────────────────────────────────
   providerConnections: (uid: string) => ['provider-connections', uid] as const,
   providerActivities:  (aid: string) => ['provider-activities', aid] as const,
+  /** Sorties lues pour le volume de course : sous le préfixe des activités, pour
+   *  qu'un import ou une synchro (qui invalident `providerActivities`) les
+   *  rafraîchisse aussi. */
+  providerRuns:        (aid: string, from: string) => ['provider-activities', aid, 'runs', from] as const,
   providerDailies:     (aid: string, from: string, to: string) =>
     ['provider-dailies', aid, from, to] as const,
   // ── Staff autour des athlètes ─────────────────────────────────────────────────

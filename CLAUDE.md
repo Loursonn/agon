@@ -1,133 +1,134 @@
 # Agon
 
-App de suivi d'athlètes en préparation physique (coach + athlètes). Cible finale : mobile iOS/Android.
+App de suivi d'athlètes en préparation physique. Les **coachs** travaillent sur ordinateur, les **athlètes** sur téléphone (web mobile aujourd'hui, App Store / Play Store visés janvier-février 2027). ~15 utilisateurs réels, une seule base Supabase = la production.
 
-> **Ne faire aucune modification avant d'avoir 95% de confiance dans ce qui doit être construit. Poser des questions jusqu'à atteindre cette confiance.**
+> **Ne faire aucune modification avant d'avoir 95 % de confiance dans ce qui doit être construit. Poser des questions jusqu'à atteindre cette confiance.**
+
+Feuille de route et dette connue : `docs/AUDIT_REFONTE_2026-11.md` (à lire avant tout chantier structurel).
 
 ## Stack
 
-- **Frontend** : React 18 + TypeScript + Vite, shadcn/ui + Tailwind CSS
-- **Backend** : Supabase (PostgreSQL + Auth + Edge Functions)
-- **IA** : Google Gemini 2.5 Flash (génération de programmes)
-- **Data** : TanStack React Query v5, React Hook Form + Zod, Recharts
-- **Mobile cible** : React Native + Expo
-
-## Architecture
-
-Fichier monolithique actuel : `src/components/WeightliftingTracker.jsx` (~2500 lignes, à refactoriser).
-
-Structure cible :
-```
-src/
-├── pages/athlete/    (Dashboard, Session, Stats)
-├── pages/coach/      (Programs, Exercises, Athletes, Stats, Settings)
-├── components/       ui/ | athlete/ | coach/
-├── hooks/
-└── lib/supabase.ts
-```
-
-## Base de données
-
-BDD actuelle : table `app_data` (JSONB clé-valeur, pas d'auth).
-
-Schéma cible :
-```
-profiles          (id, role: coach|athlete, full_name, coach_id?)
-programs          (id, coach_id, name)
-blocks            (id, program_id, week_start, week_end, is_deload)
-sessions          (id, block_id, label, day_of_week)
-exercises         (id, name, bloc, target, ex_type, tier)
-session_exercises (id, session_id, exercise_id, order, weeks_config JSONB)
-workout_logs      (id, athlete_id, session_id, date, completed)
-set_logs          (id, workout_log_id, exercise_id, set_num, kg, reps, rir, method)
-wellness_logs     (id, athlete_id, date, fatigue, sleep, stress, energy, doms JSONB)
-body_weight       (id, athlete_id, date, weight_kg)
-pr_logs           (id, athlete_id, exercise_id, kg, date)
-injuries          (id, athlete_id, zone, date_start, date_end)
-```
+- **Front** : React 18 + TypeScript + Vite, React Router v6, TanStack React Query v5, Recharts. UI : composants `src/components/ui` (shadcn) + beaucoup de styles inline hérités — pas de design system unifié pour l'instant.
+- **Back** : Supabase — PostgreSQL + RLS, Auth, Storage, Edge Functions (Deno), Vault, pg_cron / pg_net.
+- **IA** : Google Gemini (Edge Functions `ai-program`, `athlete-insights`). Les données Garmin sont exclues de tout traitement IA.
+- **Déploiement** : Vercel déploie `main` automatiquement.
+- **Mobile natif** : pas démarré (Capacitor ou Expo, décision ouverte — audit §11).
 
 ## Rôles
 
-Coach : créer/assigner programmes, voir stats athlètes, générer IA, commenter.
-Athlète : suivre séances, saisir wellness, voir ses stats, commenter.
+| Rôle | Où | Ce qu'il fait |
+|------|----|---------------|
+| `coach` | `/coach` | programmes, planning, tests, fiches, retours, stats de ses athlètes |
+| `athlete` | `/athlete` | séances du jour, saisie des charges, wellness, profil, tests |
+| `coach_athlete` | les deux | coach qui s'entraîne aussi |
+| co-coach | `/coach` | 2ᵉ coach d'un athlète (`athlete_co_coaches`), mêmes droits que le référent (`docs/CO_COACH_FEATURE.md`) |
+| staff | `/staff` | kiné, coach adjoint, nutri : droits par lien d'invitation, gérés par le coach (`docs/STAFF_FEATURE.md`) |
+| admin | — | `profiles.is_admin` (Hugo) : liste des coachs, certification, roadmap |
 
-## Conventions de code
+`profiles.coach_id` = coach référent. **Toute policy RLS passe par `is_coach_of(athlete_id)`** (référent OU co-coach), jamais `coach_id = auth.uid()` en dur. Autres helpers : `is_co_coach_of`, `my_coach_id`, `staff_can`, `current_user_is_admin`, `is_coach_of_folder` (chemins Storage).
 
-- TypeScript uniquement (`.tsx`, pas de `.jsx`)
-- Un composant = un fichier, PascalCase ; hooks : préfixe `use` dans `src/hooks/`
-- Imports : alias `@/` pour `src/` ; Styling : Tailwind uniquement
-- Requêtes BDD : via hooks React Query, jamais directement dans les composants
+## Où est le code
 
-## Git workflow
+```
+src/
+├── App.tsx                 routes (lazy) + QueryClient
+├── features/
+│   ├── athlete/  pages/ components/ hooks/      app athlète (Today, Program, WorkoutDetail, Profil, Hyrox…)
+│   ├── coach/    pages/ components/ hooks/ context/   app coach (athlètes, planning, programmation, banque…)
+│   ├── staff/    pages/ components/ hooks/ lib/
+│   └── shared/   hooks/ context/ components/ types/   état athlète persisté, hooks communs
+├── lib/                    logique pure testée (calculs, dates, énergie, hyrox, import FIT/zip, brouillons locaux)
+├── hooks/useAuth.tsx       inscription, connexion, rattachement coach (RPC)
+├── integrations/supabase/  client.ts + types.ts (généré)
+├── data/releaseNotes.ts    fil « Nouveautés » des coachs
+└── components/ui/          primitives shadcn
+supabase/
+├── migrations/             SQL (historique distant désynchronisé, voir plus bas)
+├── functions/              Edge Functions ; _shared/ est aussi importé par le front (décodeurs FIT)
+└── tests/                  scripts SQL de test RLS, exécutés en transaction annulée
+```
 
-### Branches
-- `main` → production (Vercel auto-deploy). Ne jamais committer directement.
-- `dev` → branche de travail partagée. Les deux développeurs pushent ici directement. Pas de feature branches.
+### Données : deux modèles cohabitent
 
-### Début de session obligatoire
+1. **Hérité** : table `app_data` (clé-valeur JSONB, clés `asp:*` par athlète), lue/écrite via `src/lib/storage.ts` (`sLoad`/`sSave`) et `useAthletePersistedState`.
+2. **Relationnel** : `workout_logs`, `set_logs`, cycles, tests, wellness, fiches, `provider_*`… lus via des hooks React Query (`src/features/*/hooks`, clés dans `src/lib/queryKeys.ts`).
 
-**1. Récupérer la dernière version GitHub (priorité absolue sur la version locale)**
+Les écritures « miroir » entre les deux sont la première source de régressions. Ne pas en ajouter ; la cible est une couche `src/api/` typée unique (audit §5).
+
+### Montres connectées
+
+- **COROS** : OAuth2 PKCE (`provider-coros-connect` / `-callback`), synchro par cron (`provider-coros-sync`), fichiers FIT décodés à la main (`supabase/functions/_shared`).
+- **Garmin** : candidature développeur en cours ; dossier `docs/integrations/`. Attribution « Garmin [appareil] » obligatoire, désinscription et changement de permissions à gérer.
+- Import manuel de fichiers (FIT/zip) dans le navigateur (`src/lib/import`).
+- Décisions détaillées : `docs/DECISIONS.md` (entrées 2026-10).
+
+## Commandes
+
+```bash
+npm run dev          # Vite sur le port 5173 — un seul serveur à la fois
+npm test             # vitest
+npm run typecheck    # tsc : le nombre d'erreurs ne doit pas dépasser .tsc-baseline
+npm run lint
+npm run build
+npm run check        # les quatre d'un coup — à lancer avant chaque push
+```
+
+La CI GitHub (`.github/workflows/ci.yml`) lance `typecheck`, `lint`, `test`, `build` sur chaque push et chaque PR. Une PR rouge ne se merge pas.
+
+## Conventions
+
+- TypeScript (`.tsx`/`.ts`) pour tout nouveau fichier. Un composant = un fichier, PascalCase. Hooks préfixés `use`.
+- Alias `@/` → `src/`.
+- Accès BDD dans des hooks React Query, jamais directement dans un composant.
+- Tout calcul non trivial va dans `src/lib/` avec un test à côté (`__tests__/`).
+- Une mesure absente s'affiche « — », jamais 0.
+- Tu corriges des erreurs TypeScript ? Baisse `.tsc-baseline`.
+
+## Base de données — règles
+
+- **Jamais `supabase db push`** : l'historique distant ne connaît pas les migrations locales de 2026-05 à aujourd'hui, il rejouerait tout sur la prod.
+- Appliquer une migration : `supabase db query --linked -f supabase/migrations/<fichier>.sql`, puis vérifier par une requête en lecture.
+- **Demander à Hugo avant toute écriture en prod.** Tester d'abord à blanc : `BEGIN; … ; ROLLBACK;` avec `SET LOCAL ROLE authenticated` + `set_config('request.jwt.claims', …)` (exemples dans `supabase/tests/`).
+- Durcissement côté serveur : mesurer `git rev-list --count origin/main..origin/dev`. Le client de prod vient de `main` ; s'il ne sait pas encore appeler la nouvelle règle, découper la migration (avant / après déploiement).
+- Après une migration : régénérer `supabase gen types typescript --linked > src/integrations/supabase/types.ts`.
+- Changer `profiles.coach_id` : seulement via les RPC `link_to_coach_by_code`, `redeem_invitation`, `unlink_athlete` ou les Edge Functions.
+
+## Edge Functions — déploiement
+
+1. `pwd` : lancer `supabase functions deploy <nom>` depuis le dossier (ou worktree) qui contient le bon code.
+2. `grep` le symbole attendu dans le fichier avant de déployer.
+3. Si le contrat d'appel change, vérifier que `main` sait déjà l'appeler (voir ci-dessus).
+
+## « Nouveautés » coachs
+
+Chaque lot livré ajoute une entrée en tête de `src/data/releaseNotes.ts` : id daté unique, `kind: "feature"` **ou** `"fix"` (jamais mélangés), texte compréhensible par un coach, sans jargon.
+
+## Données réelles
+
+Ne jamais montrer, capturer ni exporter de vrais athlètes. Pour les captures et démos : coach « Agon Démo » et athlète « Léa Démo » (`scripts/seed-demo.mjs`, code coach `DEMO42`).
+
+## Git
+
+- `main` = production (Vercel). On n'y committe jamais directement.
+- `dev` = branche de travail partagée par Hugo et Tito. Pas de feature branches.
+
+**Début de session** :
 ```bash
 git checkout dev
 git fetch origin
 git reset --hard origin/dev
 ```
-> `reset --hard` garantit que la version locale = version GitHub exacte, même si Hugo a pushé entre temps. Ne jamais utiliser `git pull` seul — risque de merge inutile si divergence.
+Puis `npm run dev` et vérifier que l'app charge sans erreur console bloquante.
 
-**2. Lancer l'app en local pour vérifier qu'elle tourne**
-```bash
-npm run dev
-```
-Ouvrir dans le navigateur, vérifier que l'app charge sans erreur console bloquante avant de commencer à coder.
+**Pousser** : `git add <fichiers>` (jamais `git add .`), commit `type(scope): message` terminé par `Co-Authored-By: <modèle Claude> <noreply@anthropic.com>`, `npm run check`, `git push origin dev`. Push refusé → `git pull origin dev --rebase`, lire les deux versions de chaque conflit, puis repousser.
 
-### PUSH — sauvegarder sur dev
-```bash
-git add <fichiers modifiés>   # jamais .claude/settings.local.json
-git commit -m "type(scope): message
+**PR dev → main** : environ tous les 3 lots, pas à chaque prompt. Avant : `git fetch origin && git merge origin/main --no-edit`, `npm run check`, push, puis `gh pr create --base main --head dev`. Hugo relit et merge.
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-git push origin dev
-```
-Si push rejeté (non-fast-forward = l'autre dev a pushé entre-temps) :
-```bash
-git pull origin dev --rebase
-# résoudre conflits si besoin → lire les deux versions avant de choisir
-git push origin dev
-```
+**Interdits** : `--force` sur `dev` ou `main` ; committer `.claude/settings.local.json`, `supabase/.temp/` ou `.env*`.
 
-### PULL REQUEST — dev → main (mise en prod)
-```bash
-gh pr create --base main --head dev \
-  --title "feat: ..." \
-  --body "$(cat <<'EOF'
-## Summary
-- ...
+Skills du projet (`.claude/skills/`) : `pousser`, `preparer-pr`, `recuperer`, `nouvelle-fonctionnalite`, `migration-bdd`, `edge-function`, `integration-provider`, `rgpd-check`, `release-notes`.
 
-## Test plan
-- [ ] ...
+## Documentation
 
-🤖 Generated with Claude Code
-EOF
-)"
-```
-Le propriétaire du repo review + merge → Vercel déploie automatiquement.
-
-### Règles absolues
-- Toujours commencer par `git fetch origin && git reset --hard origin/dev`
-- Ne jamais committer `.claude/settings.local.json`
-- Ne jamais `--force` push sur `dev` ou `main`
-- En cas de conflit rebase : lire les deux versions avant de choisir — ne pas écraser aveuglément
-
-## Fichiers clés
-
-- `src/components/WeightliftingTracker.jsx` — monolithe actuel
-- `supabase/functions/ai-program/index.ts` — Edge Function IA
-- `src/integrations/supabase/types.ts` — types auto-générés
-- `docs/` — ARCHITECTURE.md, DATABASE.md, FEATURES.md, DECISIONS.md
-
-## Env
-
-```
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-```
+- À jour : `docs/AUDIT_REFONTE_2026-11.md`, `docs/DECISIONS.md` (journal des choix, entrée la plus récente en bas), `docs/*_FEATURE.md`, `docs/integrations/`.
+- Historiques, ne pas s'y fier : `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/FEATURES.md`, `docs/AUDIT.md`, `docs/PROGRESS.md` (époque du monolithe `WeightliftingTracker`).

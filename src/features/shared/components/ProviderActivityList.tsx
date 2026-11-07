@@ -7,14 +7,16 @@ import {
   formatElevation,
   formatHr,
   formatPace,
+  provenanceFallback,
   provenanceOf,
-  sourceLabel,
+  providerAttribution,
   sportLabel,
 } from "@/lib/activityDisplay";
 import {
   useProviderActivities,
   type ProviderActivity,
 } from "@/features/shared/hooks/useProviderActivities";
+import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
 
 /**
  * Sorties remontées par une montre ou importées depuis un fichier.
@@ -42,6 +44,9 @@ export function ProviderActivityList({
 }) {
   const { data: activities, isLoading, error } = useProviderActivities(athleteId, { limit });
   const [ouverte, setOuverte] = useState<string | null>(null);
+  // Séance prévue à laquelle chaque sortie se rattache : même calcul que le volume.
+  const plusAncienne = activities && activities.length > 0 ? activities[activities.length - 1].localDate : undefined;
+  const { matchByActivity } = useRunningVolume(athleteId, [], plusAncienne);
 
   if (!athleteId) return null;
 
@@ -79,6 +84,7 @@ export function ProviderActivityList({
             <Ligne
               key={a.id}
               activity={a}
+              seance={matchByActivity.get(a.id)}
               ouverte={ouverte === a.id}
               onToggle={() => setOuverte((id) => (id === a.id ? null : a.id))}
             />
@@ -92,10 +98,13 @@ export function ProviderActivityList({
 /** Une sortie : l'essentiel sur une ligne, la provenance au dépli. */
 function Ligne({
   activity: a,
+  seance,
   ouverte,
   onToggle,
 }: {
   activity: ProviderActivity;
+  /** Séance prévue du même jour à laquelle cette sortie est rattachée */
+  seance?: RunMatch;
   ouverte: boolean;
   onToggle: () => void;
 }) {
@@ -150,7 +159,8 @@ function Ligne({
               flexShrink: 0,
             }}
           >
-            {sourceLabel(a.source)}
+            {/* « Garmin [modèle] » : attribution exigée par les conditions Garmin. */}
+            {providerAttribution(a.source, a.deviceName)}
           </span>
         </div>
 
@@ -162,6 +172,13 @@ function Ligne({
             </span>
           ))}
         </div>
+
+        {/* Renvoi vers la séance prévue : les deux blocs restent séparés, ils se citent. */}
+        {seance && (
+          <div style={{ fontSize: 10, color: C.g, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            Séance prévue : {seance.plannedLabel}
+          </div>
+        )}
       </button>
 
       {ouverte && (
@@ -189,7 +206,7 @@ function Ligne({
             </>
           ) : (
             <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45 }}>
-              Chiffres lus directement dans le fichier de la montre, sans recalcul.
+              {provenanceFallback(a.source, a.deviceName)}
             </div>
           )}
         </div>
@@ -221,11 +238,15 @@ export function ProviderActivitySummary({
   const borne = depuis.toISOString().slice(0, 10);
 
   const parSport = new Map<string, { n: number; durationS: number; distanceM: number }>();
+  // Provenances des sorties comptées : un total qui inclut des données Garmin
+  // doit le dire (« Garmin [modèle] »), comme chaque ligne.
+  const provenances = new Set<string>();
   for (const a of activities) {
     if (a.localDate < borne) continue;
     const clef = a.sport ?? "autre";
     const acc = parSport.get(clef) ?? { n: 0, durationS: 0, distanceM: 0 };
     acc.n++;
+    provenances.add(providerAttribution(a.source, a.deviceName));
     acc.durationS += a.durationS ?? 0;
     acc.distanceM += a.distanceM ?? 0;
     parSport.set(clef, acc);
@@ -248,6 +269,9 @@ export function ProviderActivitySummary({
           {acc.distanceM > 0 && <span style={{ color: C.tx2 }}>{formatDistance(acc.distanceM)}</span>}
         </div>
       ))}
+      <div style={{ fontSize: 10, color: C.tx3 }}>
+        Sources : {[...provenances].sort().join(", ")}
+      </div>
     </div>
   );
 }

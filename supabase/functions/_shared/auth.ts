@@ -120,3 +120,45 @@ export async function hasConsent(userId: string, purpose: string): Promise<boole
 
   return !!data?.granted;
 }
+
+/**
+ * Le porteur est-il une clé `service_role` du projet ?
+ *
+ * Une égalité de chaîne avec `SUPABASE_SERVICE_ROLE_KEY` ne suffit pas : le
+ * cron lit sa clé dans le Vault, et un projet peut avoir plusieurs clés
+ * `service_role` valides (émises à des dates différentes) qui ne sont pas la
+ * même chaîne. Le 2026-11-07, la clé du Vault était refusée ainsi : le cron
+ * COROS n'aurait jamais rien synchronisé.
+ *
+ * Donc : égalité → oui. Sinon, si le jeton se dit `service_role`, on le prouve
+ * par un appel réservé à l'administration (lister 1 utilisateur). Un jeton
+ * forgé ou une clé d'un autre projet échoue ; un jeton d'athlète n'atteint pas
+ * cet appel (filtre sur la revendication `role`).
+ */
+export async function isServiceRoleBearer(bearer: string): Promise<boolean> {
+  if (!bearer) return false;
+  if (bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return true;
+  if (jwtRole(bearer) !== "service_role") return false;
+  try {
+    const probe = createClient(Deno.env.get("SUPABASE_URL")!, bearer, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error } = await probe.auth.admin.listUsers({ page: 1, perPage: 1 });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/** Revendication `role` d'un JWT, sans vérifier la signature (filtre seulement). */
+export function jwtRole(token: string): string | null {
+  const part = token.split(".")[1];
+  if (!part) return null;
+  try {
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
+    const payload = JSON.parse(atob(b64));
+    return typeof payload?.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}

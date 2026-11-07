@@ -1,3 +1,5 @@
+> **Document historique** (époque du monolithe `WeightliftingTracker`) — ne plus s'y fier. État actuel : `CLAUDE.md` et `docs/AUDIT_REFONTE_2026-11.md`.
+
 # Base de données
 
 ---

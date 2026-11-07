@@ -11,11 +11,12 @@ function shortDate(isoDate: string): string {
 
 const fmtKm = (km: number) => `${km.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km`;
 
-/** Volume de course à pied : semaine, 7 jours glissants, 8 dernières semaines */
+/** Volume de course à pied (saisie + montre, dédoublonnés) : semaine, 7 jours glissants, 8 dernières semaines */
 export function RunningVolumeCard({ volume, isLoading }: { volume: RunningVolume; isLoading?: boolean }) {
   const data = volume.weeks.map((w, i) => ({
     label: shortDate(w.monday),
     km: w.km,
+    watchKm: w.watchKm,
     current: i === volume.weeks.length - 1,
   }));
   const hasData = volume.weeks.some((w) => w.km > 0);
@@ -54,7 +55,10 @@ export function RunningVolumeCard({ volume, isLoading }: { volume: RunningVolume
                 contentStyle={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 4, fontSize: 11, color: C.tx }}
                 labelStyle={{ color: C.tx3 }}
                 labelFormatter={(l) => `Semaine du ${l}`}
-                formatter={(v: number) => [fmtKm(v), "Course"]}
+                formatter={(v: number, _n, item) => {
+                  const w = (item as { payload?: { watchKm?: number } }).payload?.watchKm ?? 0;
+                  return [w > 0 ? `${fmtKm(v)} (dont ${fmtKm(w)} montre)` : fmtKm(v), "Course"];
+                }}
               />
               <Bar dataKey="km" radius={[4, 4, 0, 0]} maxBarSize={22}>
                 {data.map((d) => (
@@ -63,10 +67,16 @@ export function RunningVolumeCard({ volume, isLoading }: { volume: RunningVolume
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          {/* Provenance : d'où viennent les km (décision « la provenance des chiffres est affichée ») */}
+          <div style={{ fontSize: 9, color: C.tx3, marginTop: 6, lineHeight: 1.4 }}>
+            {volume.watchKm > 0
+              ? `Dont ${fmtKm(volume.watchKm)} mesurés par la montre ou un fichier importé. Une sortie aussi saisie en fin de séance n'est comptée qu'une fois, à la mesure de la montre.`
+              : "Km saisis en fin de séance. Les sorties d'une montre connectée ou d'un fichier importé s'ajoutent ici."}
+          </div>
         </>
       ) : (
         <div style={{ fontSize: 11, color: C.tx3, textAlign: "center", padding: "8px 0" }}>
-          Aucune course enregistrée sur les 8 dernières semaines. Les km se saisissent en fin de séance.
+          Aucune course enregistrée sur les 8 dernières semaines. Les km se saisissent en fin de séance, ou arrivent d'une montre connectée.
         </div>
       )}
     </div>

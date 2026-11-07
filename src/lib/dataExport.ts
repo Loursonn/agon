@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { providerAttribution } from "@/lib/activityDisplay";
 
 /**
  * Export des données personnelles (RGPD art. 15 et 20).
@@ -45,6 +46,12 @@ const ATHLETE_TABLES = [
   "performance_logs",
   "performance_notifications",
   "planning_blocks",
+  // Montres connectées : état des connexions (aucun jeton : ils sont dans
+  // `provider_tokens`, illisible côté client, et dans le Vault), activités et
+  // données quotidiennes, avec la mention de provenance « Garmin [appareil] ».
+  "provider_activities",
+  "provider_connections",
+  "provider_dailies",
   "retours",
   "seasons",
   "test_results",
@@ -93,6 +100,25 @@ async function readTable(table: string, column: string, value: string) {
 }
 
 /**
+ * Mention de provenance sur chaque ligne de montre exportée.
+ *
+ * Les conditions Garmin exigent l'attribution « Garmin [modèle] » dans les
+ * exports aussi, pas seulement à l'écran : un fichier transmis à un tiers ne
+ * doit pas présenter une donnée Garmin comme anonyme. La colonne `source` le
+ * dit pour une machine ; `attribution` le dit pour une personne.
+ */
+export function withAttribution(table: string, rows: unknown[]): unknown[] {
+  if (table !== "provider_activities" && table !== "provider_dailies") return rows;
+  return rows.map((r) => {
+    if (!r || typeof r !== "object") return r;
+    const row = r as Record<string, unknown>;
+    if (typeof row.source !== "string") return row;
+    const device = typeof row.device_name === "string" ? row.device_name : null;
+    return { attribution: providerAttribution(row.source, device), ...row };
+  });
+}
+
+/**
  * Construit l'archive JSON des données de l'utilisateur.
  *
  * Une table illisible n'interrompt pas l'export : elle est consignée dans
@@ -118,7 +144,7 @@ export async function buildDataExport(userId: string): Promise<ExportResult> {
 
   for (const job of jobs) {
     try {
-      const rows = await readTable(job.table, job.column, userId);
+      const rows = withAttribution(job.table, await readTable(job.table, job.column, userId));
       if (rows.length > 0) {
         tables[job.table] = rows;
         rowCount += rows.length;

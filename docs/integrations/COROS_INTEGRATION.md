@@ -195,9 +195,13 @@ qu'un chiffre extrait d'une phrase par heuristique serve de base à un conseil.
 | `_shared/activityFiles/` | décodeur FIT sans dépendance, partagé avec le navigateur via l'alias `@shared` |
 | `provider-coros-connect` | construit l'URL d'autorisation ; refuse sans `APP_URL` |
 | `provider-coros-callback` | reçoit le code, échange, écrit les jetons ; `verify_jwt = false` |
-| `provider-coros-sync` | rafraîchit le jeton, liste les FIT, télécharge, décode, insère ; stocke la santé en prose |
+| `provider-coros-sync` | sous verrou : rafraîchit le jeton, liste les FIT, télécharge, décode, écarte les doublons inter-sources, insère ; stocke la santé en prose |
+| `provider-coros-sync/sweep.ts` | parcours des fenêtres de dates (troncature, erreurs, quota, temps), sans dépendance, testé |
+| `_shared/activityDedup.ts` | doublons inter-sources (même empreinte, ou départ à ±2 min et sport compatible), commun à COROS et Garmin |
 | `provider-disconnect` | révoque chez COROS puis supprime la connexion |
-| `trigger_coros_sync()` + cron `coros-sync` | déclenche la synchronisation à 3 h 40 |
+| `trigger_coros_sync()` + cron `coros-sync` | à 3 h 40, un appel par connexion active (`{ connection_id }`) |
+| `provider_sync_try_lock` / `provider_sync_unlock` | bail de synchronisation par connexion (cron et bouton manuel ne tournent jamais ensemble) |
+| `provider_fit_quota` + `provider_fit_quota_*` | fichiers FIT consommés par connexion et par jour UTC, réservés avant téléchargement |
 
 ### Le transport MCP, et ses deux pièges
 
@@ -217,10 +221,29 @@ qu'un chiffre extrait d'une phrase par heuristique serve de base à un conseil.
 
 Le quota (50 fichiers / athlète / 24 h, 10 par appel) impose d'avancer par
 fenêtres datées : 30 jours, resserrées par moitié jusqu'à tenir dans le budget
-restant, et `synced_through` n'avance que si la fenêtre a été traitée en entier.
-Lister est gratuit, télécharger est compté — d'où le choix de relister plus
-étroit plutôt que de tronquer une liste d'URL dont on ne connaît pas les dates.
-Détail du raisonnement dans `docs/DECISIONS.md`.
+restant **et** jusqu'à recevoir moins de 10 URL (une liste de 10 est peut-être
+tronquée). Lister est gratuit, télécharger est compté — d'où le choix de
+relister plus étroit plutôt que de tronquer une liste d'URL dont on ne connaît
+pas les dates. Détail du raisonnement dans `docs/DECISIONS.md`.
+
+Chaque passage :
+
+1. prend le bail de la connexion (sinon : « synchronisation déjà en cours ») ;
+2. relit d'abord la **fenêtre récente** — les 2 derniers jours terminés, la
+   veille et aujourd'hui — parce que c'est ce que le coach regarde le matin ;
+3. puis **rattrape** l'écart entre `synced_through` et cette fenêtre, avec le
+   reste du quota du jour (`provider_fit_quota`) ;
+4. avance `synced_through` sur la seule partie couverte sans trou, et jamais
+   au-delà du **dernier jour terminé** (veille locale si le fuseau de l'athlète
+   est connu par son dernier FIT, sinon `now − 36 h`). Une sortie faite après
+   la synchro de la nuit est donc relue la nuit suivante.
+
+Une erreur (réseau, réponse illisible, refus COROS en prose ou en `isError`,
+téléchargement non 2xx, base indisponible) arrête le parcours au bord de la
+dernière fenêtre complète et s'écrit dans `last_error`. Le quota atteint n'est
+pas une erreur : le compte rendu porte `pending`, et la suite vient le
+lendemain. Un refus de renouvellement du jeton ne passe en `needs_reauth` que
+sur `invalid_grant` / `invalid_client` / `unauthorized_client`.
 
 ### Réserve toujours ouverte
 
@@ -234,8 +257,23 @@ de `querySportRecords`) avant même la première requête.
 
 Restent non vérifiés en particulier : le nom de l'outil de données quotidiennes
 (`queryDailyActivity` est une hypothèse, rattrapée par le motif `/daily|sleep/`),
-les noms des paramètres de plage de dates (`startDate` / `endDate`), et la forme
-exacte des URL de téléchargement.
+et la forme exacte des URL de téléchargement.
+
+Les **paramètres de dates** ne sont plus supposés : ils sont lus dans le
+`inputSchema` publié par `tools/list` (`resolveDateArgs` : `startDate`/`endDate`,
+`startDay`/`endDay`, `from`/`to`…, format `2026-11-07`, `"20261107"` ou
+`20261107` selon le type et la description). Schéma absent, paramètres
+introuvables, paramètre obligatoire inconnu ou horodatage : erreur explicite,
+pas d'appel deviné. Le journal de chaque exécution liste désormais les outils
+**avec** leurs paramètres — à recopier ici à la première connexion réelle.
+
+Non observés non plus, et gérés prudemment faute de mieux : ce que COROS compte
+dans le quota (URL générées ou fichiers téléchargés — on compte les
+téléchargements), si sa fenêtre de 24 h est glissante (on compte par jour UTC,
+et un refus de quota de COROS est traité comme une erreur sans trou), la date
+utilisée par le filtre (locale ou UTC — couvert par la relecture des derniers
+jours), et le texte exact d'une réponse vide ou d'une erreur en prose
+(`classifyFitListing` : dans le doute, erreur).
 
 ---
 

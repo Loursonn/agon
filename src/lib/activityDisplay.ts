@@ -209,3 +209,35 @@ export const SOURCE_LABELS: Record<string, string> = {
 export function sourceLabel(source: string): string {
   return SOURCE_LABELS[source] ?? source;
 }
+
+/**
+ * Mention de provenance à afficher et à exporter avec une donnée.
+ *
+ * Les conditions de Garmin (API Brand Guidelines) exigent « Garmin [modèle de
+ * l'appareil] » partout où une donnée Garmin est montrée ou exportée, sous
+ * peine de suspension de l'accès. Le modèle vient de `device_name` ; inconnu,
+ * on écrit « Garmin » seul plutôt que d'inventer un appareil. Les autres
+ * sources gardent leur libellé, avec l'appareil quand il est connu.
+ */
+export function providerAttribution(source: string, deviceName?: string | null): string {
+  const label = sourceLabel(source);
+  const device = typeof deviceName === "string" ? deviceName.trim() : "";
+  if (source === "file_import" || source === "manual" || device === "") return label;
+  // Certains fournisseurs répètent la marque dans le nom (« Garmin Forerunner »).
+  const sansMarque = device.toLowerCase().startsWith(label.toLowerCase() + " ")
+    ? device.slice(label.length + 1)
+    : device;
+  return `${label} ${sansMarque}`;
+}
+
+/**
+ * Phrase de provenance quand la sortie n'a pas de mentions détaillées : un
+ * fichier lu tel quel, ou des chiffres transmis par le fournisseur.
+ */
+export function provenanceFallback(source: string, deviceName?: string | null): string {
+  if (source === "file_import") return "Chiffres lus directement dans le fichier de la montre, sans recalcul.";
+  if (source === "garmin") {
+    return `Chiffres transmis par Garmin Connect (${providerAttribution(source, deviceName)}), sans recalcul.`;
+  }
+  return `Chiffres transmis par ${providerAttribution(source, deviceName)}, sans recalcul.`;
+}

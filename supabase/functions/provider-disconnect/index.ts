@@ -1,5 +1,5 @@
 /**
- * Déconnexion d'un service tiers.
+ * Déconnexion d'un service tiers (COROS, Garmin).
  *
  * Deux appelants, un seul chemin :
  *   - l'athlète depuis ses paramètres, avec son jeton de session ;
@@ -8,18 +8,27 @@
  *
  * Ordre des opérations : révoquer chez le fournisseur D'ABORD, effacer nos
  * jetons ENSUITE. Dans l'autre sens, un échec de révocation nous laisserait
- * sans le jeton nécessaire pour réessayer — et un accès COROS resterait ouvert
- * sans que personne ne puisse plus le fermer.
+ * sans le jeton nécessaire pour réessayer — et un accès resterait ouvert sans
+ * que personne ne puisse plus le fermer.
+ *   - COROS : révocation RFC 7009 des deux jetons (`/oauth2/revoke`).
+ *   - Garmin : `DELETE /wellness-api/rest/user/registration`, obligatoire chez
+ *     Garmin dès que l'app offre « Disconnect » ou « Delete my account »
+ *     (spec OAuth2 PKCE). Le jeton d'accès (24 h) est rafraîchi d'abord s'il
+ *     a expiré ; le cron `garmin-maintenance` garde le refresh token vivant.
  *
- * Ce que la déconnexion n'efface pas : les activités et données quotidiennes
- * déjà importées. Ce sont les données d'entraînement de l'athlète, pas celles
- * du fournisseur ; les supprimer parce qu'il débranche sa montre lui ferait
- * perdre son historique sans qu'il l'ait demandé. Pour tout effacer, il y a la
- * suppression de compte.
+ * Ce que la déconnexion efface (décision du 07/11/2026, docs/DECISIONS.md) :
+ * les activités et données quotidiennes importées PAR CE FOURNISSEUR, ses
+ * notifications en attente, la connexion et les jetons (Vault compris), en une
+ * transaction (`provider_forget`). Ce qu'elle garde : les activités importées à
+ * la main par fichier (`source = 'file_import'`), qui viennent de l'athlète et
+ * non du fournisseur. C'est ce que promet le dossier Garmin (§3) et la
+ * politique de confidentialité (« suppression immédiate à la déconnexion »).
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { fetchMetadata, revokeToken } from "../_shared/coros.ts";
+import { garminFromEnv } from "../_shared/garminConfig.ts";
+import { forgetProvider, revokeAndForget, type ForgetReport } from "../_shared/oauth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,11 +100,32 @@ serve(async (req) => {
     // un double clic ne doit pas afficher un échec sur une opération réussie.
     if (!connection) return json({ success: true, revoked: false, alreadyGone: true });
 
-    // ---- 1. Révocation chez le fournisseur ---------------------------------
+    // ---- Garmin : révocation + oubli via la base commune -------------------
+    if (provider === "garmin") {
+      const adapter = garminFromEnv();
+      if (!adapter) {
+        /*
+          Secrets absents (avant l'approbation Garmin, aucune connexion ne peut
+          exister). Si le cas se présente quand même, l'athlète doit pouvoir se
+          déconnecter : on efface, et on dit que Garmin n'a pas été prévenu.
+        */
+        const forgotten = await forgetProvider(admin, athleteId, "garmin");
+        return json({
+          success: true,
+          revoked: false,
+          warnings: ["Garmin non configuré côté serveur : désinscription Garmin non envoyée"],
+          deleted: forgotten,
+        });
+      }
+      const r = await revokeAndForget(admin, adapter, { athleteId, connectionId: connection.id as string });
+      return json({ success: true, revoked: r.revoked, warnings: r.warnings, deleted: r.forgotten });
+    }
+
+    // ---- COROS : 1. Révocation chez le fournisseur -------------------------
     let revoked = false;
     const warnings: string[] = [];
 
-    if (provider === "coros" && connection.api_host) {
+    if (connection.api_host) {
       try {
         const { data: tokenRows } = await admin.rpc("provider_token_read", {
           p_connection_id: connection.id,
@@ -149,18 +179,13 @@ serve(async (req) => {
 
     // ---- 2. Effacement local -----------------------------------------------
     /*
-      La suppression de la connexion cascade vers `provider_tokens`, dont le
-      déclencheur `provider_tokens_drop_secrets` supprime les secrets du Vault.
-      Sans ce déclencheur, les jetons resteraient chiffrés dans le Vault pour
-      toujours — conservés après que l'athlète a demandé le contraire.
+      `provider_forget` : activités et données quotidiennes COROS, connexion,
+      jetons (cascade vers `provider_tokens`, dont le déclencheur supprime les
+      secrets du Vault), en une transaction. `file_import` n'est pas touché.
     */
-    const { error: deleteError } = await admin
-      .from("provider_connections")
-      .delete()
-      .eq("id", connection.id);
-    if (deleteError) throw new Error(`effacement : ${deleteError.message}`);
+    const deleted: ForgetReport = await forgetProvider(admin, athleteId, "coros");
 
-    return json({ success: true, revoked, warnings });
+    return json({ success: true, revoked, warnings, deleted });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("provider-disconnect:", msg.slice(0, 500));

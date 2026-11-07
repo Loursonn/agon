@@ -38,6 +38,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-07-sorties-montre-volume",
+    date: "2026-11-07",
+    kind: "feature",
+    title: "Les sorties de la montre comptent dans le volume de course",
+    summary:
+      "Une sortie enregistrée par la montre de ton athlète (ou importée depuis un fichier) compte maintenant dans ses km de la semaine et se rattache à la séance prévue du jour.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Volume de course (profil sportif, retours) : les km de la montre sont inclus, avec la part qui vient de la montre.",
+          "Retours : une séance prévue faite avec la montre affiche « Réalisée — 10,2 km montre ».",
+          "Si ton athlète saisit aussi la sortie à la main, elle ne compte qu'une fois : c'est la mesure de la montre qui est retenue.",
+          "Le statut de la séance ne change pas tout seul : ton athlète la valide toujours, avec son RPE.",
+        ],
+      },
+      {
+        title: "Montres connectées",
+        points: [
+          "Synchronisation COROS fiabilisée : plus de sortie oubliée quand elle est faite après la synchro de la nuit.",
+          "Quand un athlète déconnecte sa montre, les sorties qu'elle avait envoyées sont supprimées. Celles importées à la main par fichier restent.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-07-fiabilite-securite",
     date: "2026-11-07",
     kind: "fix",
@@ -51,6 +77,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Navigation : passer d'une page à l'autre ne recharge plus toutes les données. La sidebar et la barre d'onglets restent en place.",
           "Côté athlète : la séance en cours, la séance énergie et le wellness sont gardés sur le téléphone jusqu'à l'envoi. Fermer l'app ou perdre le réseau ne fait plus rien perdre.",
           "Un échec réseau à l'ouverture ne peut plus effacer l'historique wellness ou poids d'un athlète.",
+          "Retours hebdo et mensuels : les tests de la période s'affichent de nouveau.",
           "Sécurité : les profils coach ne sont plus visibles sans être connecté, et un coach ne voit plus que les fichiers (tests, captures) de ses propres athlètes.",
           "Rejoindre un coach se fait toujours avec son code, mais la vérification passe maintenant par le serveur.",
           "Supprimer son compte efface aussi les fiches et photos de commentaires.",

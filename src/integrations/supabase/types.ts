@@ -191,6 +191,55 @@ export type Database = {
           },
         ]
       }
+      athlete_co_coaches: {
+        Row: {
+          added_by: string | null
+          added_by_role: string
+          athlete_id: string
+          co_coach_id: string
+          created_at: string
+          hidden: boolean
+        }
+        Insert: {
+          added_by?: string | null
+          added_by_role: string
+          athlete_id: string
+          co_coach_id: string
+          created_at?: string
+          hidden?: boolean
+        }
+        Update: {
+          added_by?: string | null
+          added_by_role?: string
+          athlete_id?: string
+          co_coach_id?: string
+          created_at?: string
+          hidden?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_co_coaches_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_co_coaches_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_co_coaches_co_coach_id_fkey"
+            columns: ["co_coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_life_events: {
         Row: {
           athlete_id: string
@@ -772,18 +821,25 @@ export type Database = {
         Row: {
           ai_allowed: boolean
           coach_visible: boolean
+          consent_purpose: Database["public"]["Enums"]["consent_purpose"] | null
           notes: string
           source: Database["public"]["Enums"]["data_source"]
         }
         Insert: {
           ai_allowed: boolean
           coach_visible: boolean
+          consent_purpose?:
+            | Database["public"]["Enums"]["consent_purpose"]
+            | null
           notes: string
           source: Database["public"]["Enums"]["data_source"]
         }
         Update: {
           ai_allowed?: boolean
           coach_visible?: boolean
+          consent_purpose?:
+            | Database["public"]["Enums"]["consent_purpose"]
+            | null
           notes?: string
           source?: Database["public"]["Enums"]["data_source"]
         }
@@ -1545,6 +1601,35 @@ export type Database = {
           },
         ]
       }
+      hyrox_axes_params: {
+        Row: {
+          created_at: string
+          notes: string | null
+          params: Json
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          notes?: string | null
+          params: Json
+          version: string
+        }
+        Update: {
+          created_at?: string
+          notes?: string | null
+          params?: Json
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_axes_params_version_fkey"
+            columns: ["version"]
+            isOneToOne: true
+            referencedRelation: "hyrox_test_grid_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
       hyrox_race_plans: {
         Row: {
           athlete_id: string
@@ -1708,7 +1793,10 @@ export type Database = {
           rank_age_group: number | null
           rank_overall: number | null
           row_s: number | null
+          roxzone_cause: string | null
+          roxzone_rank: number | null
           roxzone_splits: Json | null
+          roxzone_top_pct: number | null
           roxzone_total_s: number | null
           run_1_s: number | null
           run_2_s: number | null
@@ -1723,6 +1811,7 @@ export type Database = {
           sled_push_s: number | null
           source: string
           status: string
+          top_pct_overall: number | null
           total_s: number
           updated_at: string
           venue: string | null
@@ -1753,7 +1842,10 @@ export type Database = {
           rank_age_group?: number | null
           rank_overall?: number | null
           row_s?: number | null
+          roxzone_cause?: string | null
+          roxzone_rank?: number | null
           roxzone_splits?: Json | null
+          roxzone_top_pct?: number | null
           roxzone_total_s?: number | null
           run_1_s?: number | null
           run_2_s?: number | null
@@ -1768,6 +1860,7 @@ export type Database = {
           sled_push_s?: number | null
           source?: string
           status?: string
+          top_pct_overall?: number | null
           total_s: number
           updated_at?: string
           venue?: string | null
@@ -1798,7 +1891,10 @@ export type Database = {
           rank_age_group?: number | null
           rank_overall?: number | null
           row_s?: number | null
+          roxzone_cause?: string | null
+          roxzone_rank?: number | null
           roxzone_splits?: Json | null
+          roxzone_top_pct?: number | null
           roxzone_total_s?: number | null
           run_1_s?: number | null
           run_2_s?: number | null
@@ -1813,6 +1909,7 @@ export type Database = {
           sled_push_s?: number | null
           source?: string
           status?: string
+          top_pct_overall?: number | null
           total_s?: number
           updated_at?: string
           venue?: string | null
@@ -1839,6 +1936,323 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_test_analyses: {
+        Row: {
+          algo_version: string
+          athlete_id: string
+          axes_validated: Json | null
+          created_at: string
+          created_by: string | null
+          date: string
+          grid_version: string
+          id: string
+          inputs: Json
+          kind: string
+          outputs: Json
+          profile: Json
+          recalculated_from: string | null
+          source_result_ids: string[]
+          target_s: number | null
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          algo_version: string
+          athlete_id: string
+          axes_validated?: Json | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          grid_version: string
+          id?: string
+          inputs: Json
+          kind: string
+          outputs: Json
+          profile: Json
+          recalculated_from?: string | null
+          source_result_ids?: string[]
+          target_s?: number | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          algo_version?: string
+          athlete_id?: string
+          axes_validated?: Json | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          grid_version?: string
+          id?: string
+          inputs?: Json
+          kind?: string
+          outputs?: Json
+          profile?: Json
+          recalculated_from?: string | null
+          source_result_ids?: string[]
+          target_s?: number | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_test_analyses_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_test_analyses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_test_analyses_grid_version_fkey"
+            columns: ["grid_version"]
+            isOneToOne: false
+            referencedRelation: "hyrox_test_grid_versions"
+            referencedColumns: ["version"]
+          },
+          {
+            foreignKeyName: "hyrox_test_analyses_recalculated_from_fkey"
+            columns: ["recalculated_from"]
+            isOneToOne: false
+            referencedRelation: "hyrox_test_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_test_analyses_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_test_axes_drafts: {
+        Row: {
+          analysis_id: string
+          axes_plan: Json | null
+          context: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          analysis_id: string
+          axes_plan?: Json | null
+          context?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          analysis_id?: string
+          axes_plan?: Json | null
+          context?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_test_axes_drafts_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: true
+            referencedRelation: "hyrox_test_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_test_axes_drafts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_test_grid_versions: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          notes: string | null
+          version: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          notes?: string | null
+          version: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          notes?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_test_grid_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_test_grids: {
+        Row: {
+          active: boolean
+          axis: string
+          category: string | null
+          created_at: string
+          direction: string
+          id: string
+          metric_key: string
+          notes: string | null
+          sex: string | null
+          source: string
+          thresholds: number[]
+          version: string
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          axis: string
+          category?: string | null
+          created_at?: string
+          direction: string
+          id?: string
+          metric_key: string
+          notes?: string | null
+          sex?: string | null
+          source: string
+          thresholds: number[]
+          version: string
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          axis?: string
+          category?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          metric_key?: string
+          notes?: string | null
+          sex?: string | null
+          source?: string
+          thresholds?: number[]
+          version?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_test_grids_version_fkey"
+            columns: ["version"]
+            isOneToOne: false
+            referencedRelation: "hyrox_test_grid_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
+      hyrox_test_params: {
+        Row: {
+          created_at: string
+          notes: string | null
+          params: Json
+          scope: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          notes?: string | null
+          params: Json
+          scope: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          notes?: string | null
+          params?: Json
+          scope?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_test_params_version_fkey"
+            columns: ["version"]
+            isOneToOne: false
+            referencedRelation: "hyrox_test_grid_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
+      hyrox_work_axes_rules: {
+        Row: {
+          active: boolean
+          axis: string
+          condition: Json
+          created_at: string
+          group_name: string
+          id: string
+          means: string
+          metric_key: string | null
+          rationale: string
+          rule_key: string
+          sort_order: number
+          step: string
+          to_recalibrate: boolean
+          version: string
+        }
+        Insert: {
+          active?: boolean
+          axis: string
+          condition: Json
+          created_at?: string
+          group_name: string
+          id?: string
+          means: string
+          metric_key?: string | null
+          rationale: string
+          rule_key: string
+          sort_order?: number
+          step: string
+          to_recalibrate?: boolean
+          version: string
+        }
+        Update: {
+          active?: boolean
+          axis?: string
+          condition?: Json
+          created_at?: string
+          group_name?: string
+          id?: string
+          means?: string
+          metric_key?: string | null
+          rationale?: string
+          rule_key?: string
+          sort_order?: number
+          step?: string
+          to_recalibrate?: boolean
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_work_axes_rules_version_fkey"
+            columns: ["version"]
+            isOneToOne: false
+            referencedRelation: "hyrox_test_grid_versions"
+            referencedColumns: ["version"]
           },
         ]
       }
@@ -2539,6 +2953,7 @@ export type Database = {
           habit_tracker_enabled: boolean | null
           height_cm: number | null
           home_hidden_sections: string[]
+          hyrox_category: string | null
           id: string
           is_admin: boolean
           is_certified_coach: boolean
@@ -2565,6 +2980,7 @@ export type Database = {
           habit_tracker_enabled?: boolean | null
           height_cm?: number | null
           home_hidden_sections?: string[]
+          hyrox_category?: string | null
           id: string
           is_admin?: boolean
           is_certified_coach?: boolean
@@ -2591,6 +3007,7 @@ export type Database = {
           habit_tracker_enabled?: boolean | null
           height_cm?: number | null
           home_hidden_sections?: string[]
+          hyrox_category?: string | null
           id?: string
           is_admin?: boolean
           is_certified_coach?: boolean
@@ -2619,6 +3036,7 @@ export type Database = {
           avg_pace_s_per_km: number | null
           calories: number | null
           details: Json | null
+          device_name: string | null
           distance_m: number | null
           duration_s: number | null
           elevation_gain_m: number | null
@@ -2639,6 +3057,7 @@ export type Database = {
           avg_pace_s_per_km?: number | null
           calories?: number | null
           details?: Json | null
+          device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
@@ -2659,6 +3078,7 @@ export type Database = {
           avg_pace_s_per_km?: number | null
           calories?: number | null
           details?: Json | null
+          device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
@@ -2694,6 +3114,8 @@ export type Database = {
           last_sync_at: string | null
           provider: Database["public"]["Enums"]["data_source"]
           status: Database["public"]["Enums"]["provider_status"]
+          sync_lock_token: string | null
+          sync_locked_until: string | null
           synced_through: string | null
           updated_at: string
         }
@@ -2708,6 +3130,8 @@ export type Database = {
           last_sync_at?: string | null
           provider: Database["public"]["Enums"]["data_source"]
           status?: Database["public"]["Enums"]["provider_status"]
+          sync_lock_token?: string | null
+          sync_locked_until?: string | null
           synced_through?: string | null
           updated_at?: string
         }
@@ -2722,6 +3146,8 @@ export type Database = {
           last_sync_at?: string | null
           provider?: Database["public"]["Enums"]["data_source"]
           status?: Database["public"]["Enums"]["provider_status"]
+          sync_lock_token?: string | null
+          sync_locked_until?: string | null
           synced_through?: string | null
           updated_at?: string
         }
@@ -2809,6 +3235,35 @@ export type Database = {
           },
         ]
       }
+      provider_fit_quota: {
+        Row: {
+          connection_id: string
+          day: string
+          updated_at: string
+          used: number
+        }
+        Insert: {
+          connection_id: string
+          day: string
+          updated_at?: string
+          used?: number
+        }
+        Update: {
+          connection_id?: string
+          day?: string
+          updated_at?: string
+          used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_fit_quota_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "provider_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_oauth_clients: {
         Row: {
           api_host: string
@@ -2879,6 +3334,8 @@ export type Database = {
           access_expires_at: string | null
           access_secret_id: string
           connection_id: string
+          refresh_expires_at: string | null
+          refresh_locked_until: string | null
           refresh_secret_id: string | null
           updated_at: string
         }
@@ -2886,6 +3343,8 @@ export type Database = {
           access_expires_at?: string | null
           access_secret_id: string
           connection_id: string
+          refresh_expires_at?: string | null
+          refresh_locked_until?: string | null
           refresh_secret_id?: string | null
           updated_at?: string
         }
@@ -2893,6 +3352,8 @@ export type Database = {
           access_expires_at?: string | null
           access_secret_id?: string
           connection_id?: string
+          refresh_expires_at?: string | null
+          refresh_locked_until?: string | null
           refresh_secret_id?: string | null
           updated_at?: string
         }
@@ -2905,6 +3366,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      provider_webhook_inbox: {
+        Row: {
+          attempts: number
+          error: string | null
+          external_user_id: string | null
+          fingerprint: string
+          id: string
+          locked_until: string | null
+          payload: Json
+          processed_at: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          received_at: string
+          type: string
+        }
+        Insert: {
+          attempts?: number
+          error?: string | null
+          external_user_id?: string | null
+          fingerprint: string
+          id?: string
+          locked_until?: string | null
+          payload: Json
+          processed_at?: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          received_at?: string
+          type: string
+        }
+        Update: {
+          attempts?: number
+          error?: string | null
+          external_user_id?: string | null
+          fingerprint?: string
+          id?: string
+          locked_until?: string | null
+          payload?: Json
+          processed_at?: string | null
+          provider?: Database["public"]["Enums"]["data_source"]
+          received_at?: string
+          type?: string
+        }
+        Relationships: []
       }
       retours: {
         Row: {
@@ -3322,6 +3825,9 @@ export type Database = {
       test_definitions: {
         Row: {
           articulation: string | null
+          battery: string | null
+          battery_order: number | null
+          battery_session: string | null
           category: string | null
           created_at: string | null
           created_by: string | null
@@ -3337,6 +3843,9 @@ export type Database = {
         }
         Insert: {
           articulation?: string | null
+          battery?: string | null
+          battery_order?: number | null
+          battery_session?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3352,6 +3861,9 @@ export type Database = {
         }
         Update: {
           articulation?: string | null
+          battery?: string | null
+          battery_order?: number | null
+          battery_session?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -4134,6 +4646,10 @@ export type Database = {
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
       accept_staff_invitation: { Args: { p_token: string }; Returns: string }
+      add_co_coach: {
+        Args: { p_athlete: string; p_coach_code: string }
+        Returns: Json
+      }
       ai_eligible_sources: {
         Args: { p_athlete: string }
         Returns: Database["public"]["Enums"]["data_source"][]
@@ -4143,6 +4659,7 @@ export type Database = {
       can_read_doc_file: { Args: { object_name: string }; Returns: boolean }
       close_unfinished_workouts: { Args: never; Returns: number }
       coach_api_hit: { Args: { p_key: string }; Returns: number }
+      coach_code_exists: { Args: { p_code: string }; Returns: boolean }
       col_is_null:
         | {
             Args: {
@@ -4189,6 +4706,7 @@ export type Database = {
           redirect_uri: string
         }[]
       }
+      current_user_is_admin: { Args: never; Returns: boolean }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
       delete_energy_session: { Args: { p_session_id: string }; Returns: string }
@@ -4209,6 +4727,7 @@ export type Database = {
       do_tap:
         | { Args: never; Returns: string[] }
         | { Args: { "": string }; Returns: string[] }
+      doc_for_my_athlete: { Args: { doc_uuid: string }; Returns: boolean }
       fail:
         | { Args: never; Returns: string }
         | { Args: { "": string }; Returns: string }
@@ -4261,9 +4780,18 @@ export type Database = {
       }
       has_unique: { Args: { "": string }; Returns: string }
       in_todo: { Args: never; Returns: boolean }
+      invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
+      is_athlete_coach: {
+        Args: { athlete_uuid: string; p_coach: string }
+        Returns: boolean
+      }
+      is_co_coach_of: { Args: { athlete_uuid: string }; Returns: boolean }
       is_coach_of: { Args: { athlete_uuid: string }; Returns: boolean }
+      is_coach_of_folder: { Args: { p_folder: string }; Returns: boolean }
+      is_coach_partner: { Args: { p_coach: string }; Returns: boolean }
       is_empty: { Args: { "": string }; Returns: string }
       isnt_empty: { Args: { "": string }; Returns: string }
+      link_to_coach_by_code: { Args: { p_code: string }; Returns: string }
       list_user_storage_objects: {
         Args: { target_user: string }
         Returns: {
@@ -4299,6 +4827,74 @@ export type Database = {
       pg_version: { Args: never; Returns: string }
       pg_version_num: { Args: never; Returns: number }
       pgtap_version: { Args: never; Returns: number }
+      provider_daily_merge: {
+        Args: {
+          p_athlete: string
+          p_day: string
+          p_fields: Json
+          p_kind: string
+          p_raw: Json
+          p_source: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: string
+      }
+      provider_fit_quota_exhaust: {
+        Args: { p_connection_id: string; p_limit: number }
+        Returns: undefined
+      }
+      provider_fit_quota_remaining: {
+        Args: { p_connection_id: string; p_limit: number }
+        Returns: number
+      }
+      provider_fit_quota_reserve: {
+        Args: { p_connection_id: string; p_count: number; p_limit: number }
+        Returns: boolean
+      }
+      provider_forget: {
+        Args: {
+          p_athlete: string
+          p_provider: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: Json
+      }
+      provider_inbox_claim: {
+        Args: {
+          p_ids?: string[]
+          p_limit?: number
+          p_provider: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: {
+          attempts: number
+          error: string | null
+          external_user_id: string | null
+          fingerprint: string
+          id: string
+          locked_until: string | null
+          payload: Json
+          processed_at: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          received_at: string
+          type: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "provider_webhook_inbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      provider_sync_try_lock: {
+        Args: { p_connection_id: string; p_ttl_seconds?: number }
+        Returns: string
+      }
+      provider_sync_unlock: {
+        Args: { p_connection_id: string; p_token: string }
+        Returns: undefined
+      }
+      provider_token_claim_refresh: {
+        Args: { p_connection_id: string; p_seconds?: number }
+        Returns: boolean
+      }
       provider_token_read: {
         Args: { p_connection_id: string }
         Returns: {
@@ -4306,6 +4902,10 @@ export type Database = {
           expires_at: string
           refresh_token: string
         }[]
+      }
+      provider_token_release_refresh: {
+        Args: { p_connection_id: string }
+        Returns: undefined
       }
       provider_token_write: {
         Args: {
@@ -4321,6 +4921,8 @@ export type Database = {
         Args: { p_reaction: string; p_retour_id: string }
         Returns: undefined
       }
+      redeem_invitation: { Args: { p_token: string }; Returns: string }
+      remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
       run_workout_status_maintenance: {
         Args: never
         Returns: {
@@ -4434,6 +5036,7 @@ export type Database = {
         Returns: undefined
       }
       trigger_coros_sync: { Args: never; Returns: undefined }
+      trigger_garmin_maintenance: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
       workout_log_athlete_id: { Args: { p_log_id: string }; Returns: string }
       workout_log_has_entries: { Args: { mods: Json }; Returns: boolean }
