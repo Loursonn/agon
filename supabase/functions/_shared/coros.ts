@@ -205,6 +205,51 @@ export interface TokenSet {
   scopes: string[];
 }
 
+/**
+ * Réponse non 2xx du point de jetons.
+ *
+ * Porte le statut HTTP et le code d'erreur OAuth (`error` du corps, RFC 6749
+ * §5.2) pour que l'appelant distingue un refus définitif — `invalid_grant` :
+ * le refresh token est mort, l'athlète doit reconnecter — d'une panne
+ * passagère (5xx, 429), après laquelle il suffit de réessayer. Confondre les
+ * deux fait afficher « reconnecte ta montre » à chaque hoquet de COROS.
+ */
+export class CorosTokenError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly oauthError: string | null,
+  ) {
+    super(message);
+    this.name = "CorosTokenError";
+  }
+}
+
+/*
+  Codes OAuth qui veulent dire « ce jeton ne marchera plus jamais ». Tout le
+  reste (panne réseau, 5xx, 429, `invalid_request`, `temporarily_unavailable`,
+  corps illisible) est traité comme passager.
+*/
+const REFRESH_REJECTED = new Set(["invalid_grant", "invalid_client", "unauthorized_client"]);
+
+/** Vrai si l'erreur est un refus explicite et définitif du renouvellement. */
+export function isRefreshRejected(e: unknown): boolean {
+  return e instanceof CorosTokenError &&
+    e.oauthError !== null &&
+    REFRESH_REJECTED.has(e.oauthError);
+}
+
+function oauthErrorCode(text: string): string | null {
+  try {
+    const body = JSON.parse(text) as { error?: unknown };
+    return typeof body.error === "string" ? body.error : null;
+  } catch {
+    // Certains serveurs répondent `invalid_grant` en texte brut.
+    const m = text.trim().match(/^([a-z_]+)$/);
+    return m ? m[1] : null;
+  }
+}
+
 async function postToken(
   tokenEndpoint: string,
   form: Record<string, string>,
@@ -223,15 +268,24 @@ async function postToken(
       recopié dans les logs d'une Edge Function est un jeton qui survit à sa
       révocation.
     */
-    throw new Error(`COROS jeton refusé (${res.status}) : ${text.slice(0, 300)}`);
+    throw new CorosTokenError(
+      `COROS jeton refusé (${res.status}) : ${text.slice(0, 300)}`,
+      res.status,
+      oauthErrorCode(text),
+    );
   }
 
-  const body = JSON.parse(text) as {
+  let body: {
     access_token?: string;
     refresh_token?: string;
     expires_in?: number;
     scope?: string;
   };
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new Error(`COROS réponse de jeton illisible (${res.status})`);
+  }
   if (!body.access_token) throw new Error("COROS n'a pas renvoyé d'access_token");
 
   return {
@@ -296,6 +350,17 @@ export const COROS_TOOLS = {
   par 24 h, 10 par appel. Ce n'est pas un réglage de confort — le dépasser fait
   échouer les appels suivants, donc le rattrapage d'un historique d'un an est
   nécessairement étalé sur plusieurs jours.
+
+  « 10 par appel » a une conséquence moins visible : une liste qui revient avec
+  10 URL est peut-être tronquée. La synchronisation resserre alors la fenêtre
+  de dates jusqu'à recevoir strictement moins de 10 URL, sinon les fichiers
+  au-delà du dixième seraient sautés et le curseur avancerait par-dessus.
+
+  Le décompte journalier est tenu en base (`provider_fit_quota`, par connexion
+  et par jour UTC). COROS parle de « 24 h » sans préciser si la fenêtre est
+  glissante : si elle l'est, un refus de quota peut survenir avant nos 50, et
+  il est alors traité comme une erreur (curseur inchangé, quota du jour marqué
+  épuisé), pas comme une liste vide.
 */
 export const COROS_FIT_LIMITS = {
   perCall: 10,
@@ -383,6 +448,302 @@ export function planFitWindow(
   if (daysBetween(cursor, today) < 0) return null;
   const end = shiftDay(cursor, span - 1);
   return { from: cursor, to: daysBetween(end, today) < 0 ? today : end };
+}
+
+// ──────────────────────── Curseur et recouvrement ────────────────────────────
+
+const maxDay = (a: string, b: string) => (a > b ? a : b);
+const minDay = (a: string, b: string) => (a < b ? a : b);
+
+/** Décalage UTC plausible (±14 h), en secondes. */
+function plausibleOffset(s: number | null | undefined): s is number {
+  return typeof s === "number" && Number.isFinite(s) && Math.abs(s) <= 14 * 3600;
+}
+
+/**
+ * Dernier jour *terminé* : le curseur `synced_through` ne doit jamais aller
+ * au-delà.
+ *
+ * Avancer le curseur jusqu'à aujourd'hui perdait toute sortie faite après la
+ * synchronisation de la nuit : la journée était marquée « traitée » à 3 h 40,
+ * et la course de 18 h n'était jamais redemandée.
+ *
+ * Fuseau connu (`utcOffsetS`, lu dans le dernier FIT de l'athlète) : la veille
+ * de son jour local. Fuseau inconnu : le dernier jour terminé partout sur
+ * Terre — une journée D finit au plus tard à D+1 12:00 UTC (UTC−12), donc
+ * c'est le jour de `now − 36 h`.
+ */
+export function lastSettledDay(now: Date, utcOffsetS?: number | null): string {
+  if (plausibleOffset(utcOffsetS)) {
+    return shiftDay(ymd(new Date(now.getTime() + utcOffsetS * 1000)), -1);
+  }
+  return ymd(new Date(now.getTime() - 36 * 3600 * 1000));
+}
+
+export interface SyncPlan {
+  /**
+   * Fenêtre relue à chaque passage, terminée aujourd'hui : les derniers jours
+   * terminés plus le jour en cours. Traitée en premier, parce que c'est ce que
+   * le coach regarde le matin, même pendant un long rattrapage d'historique.
+   */
+  recent: FitWindow;
+  /** Rattrapage entre le curseur et la fenêtre récente, s'il reste un écart. */
+  backfill: FitWindow | null;
+  /** Dernier jour terminé : borne haute du curseur. */
+  settled: string;
+  /** Dernier jour couvert sans trou au départ (curseur, ou veille du début d'historique). */
+  coveredThrough: string;
+  /** Curseur tel que lu en base (null = jamais synchronisé). */
+  syncedThrough: string | null;
+}
+
+/**
+ * Ce qu'un passage doit lister.
+ *
+ * La fenêtre récente recouvre volontairement des jours déjà couverts par le
+ * curseur (`rescanDays` jours terminés avant `settled`) : une montre peut
+ * remonter une sortie chez COROS avec plusieurs jours de retard, et la date de
+ * l'activité est celle de la sortie, pas celle de la remontée. Les fichiers
+ * relus sont reconnus à l'empreinte et ne créent pas de doublon ; ils coûtent
+ * du quota, ce qui est le prix de ne pas perdre de sortie.
+ */
+export function planSync(p: {
+  syncedThrough: string | null;
+  historyStart: string;
+  today: string;
+  settled: string;
+  rescanDays: number;
+}): SyncPlan {
+  const settled = minDay(p.settled, p.today);
+  const coveredThrough = p.syncedThrough ?? shiftDay(p.historyStart, -1);
+  const recentFrom = minDay(
+    maxDay(p.historyStart, shiftDay(settled, -Math.max(0, p.rescanDays))),
+    p.today,
+  );
+  const backfillFrom = shiftDay(coveredThrough, 1);
+  return {
+    recent: { from: recentFrom, to: p.today },
+    backfill: backfillFrom < recentFrom
+      ? { from: backfillFrom, to: shiftDay(recentFrom, -1) }
+      : null,
+    settled,
+    coveredThrough,
+    syncedThrough: p.syncedThrough,
+  };
+}
+
+/**
+ * Nouvelle valeur du curseur après un passage.
+ *
+ * `backfillThrough` / `recentThrough` : dernier jour de la fenêtre traité *en
+ * entier et sans erreur*, depuis le début de cette fenêtre (null = rien).
+ * Le curseur n'avance que sur une couverture contiguë, ne recule jamais, et ne
+ * dépasse jamais le dernier jour terminé.
+ */
+export function nextSyncedThrough(
+  plan: SyncPlan,
+  done: { backfillThrough: string | null; recentThrough: string | null },
+): string | null {
+  let covered = plan.coveredThrough;
+  if (plan.backfill && done.backfillThrough) {
+    covered = maxDay(covered, minDay(done.backfillThrough, plan.backfill.to));
+  }
+  if (done.recentThrough && covered >= shiftDay(plan.recent.from, -1)) {
+    covered = maxDay(covered, minDay(done.recentThrough, plan.settled));
+  }
+  if (covered === plan.coveredThrough) return plan.syncedThrough;
+  return covered;
+}
+
+// ─────────────────── Réponse de l'outil de liste des FIT ─────────────────────
+
+export type FitListing =
+  | { kind: "urls"; urls: string[] }
+  | { kind: "empty" }
+  | { kind: "error"; reason: string; quota: boolean };
+
+const QUOTA_RE = /quota|rate.?limit|too many requests|limit (?:exceeded|reached)|exceed/i;
+const EMPTY_RE =
+  /\bno\s+(?:\w+\s+){0,2}(?:activit|record|data|file|fit|workout|sport)|\bnot found\b|\bnone\b|\b0\s+(?:\w+\s+)?(?:activit|record|file)|aucun/i;
+const ERRORISH_RE =
+  /\berror\b|\binvalid\b|\bfail|unauthori[sz]ed|forbidden|denied|expired|exception|\bmissing\b|\brequired\b|\bnot allowed\b/i;
+
+/**
+ * Distingue une vraie réponse vide d'une erreur.
+ *
+ * Traiter une erreur (quota, paramètre refusé, texte d'erreur en prose sans
+ * `isError`) comme « 0 fichier » faisait avancer le curseur par-dessus des
+ * jours jamais lus : un trou définitif. Dans le doute, c'est une erreur — le
+ * pire cas est alors un curseur qui n'avance pas et un `last_error` lisible,
+ * pas une sortie perdue sans trace.
+ */
+export function classifyFitListing(result: { text: string; isError: boolean }): FitListing {
+  const text = result.text ?? "";
+  const urls = extractFitUrls(text);
+
+  if (!result.isError && urls.length > 0) return { kind: "urls", urls };
+
+  const reason = text.trim().slice(0, 300) || (result.isError ? "erreur sans message" : "");
+  if (QUOTA_RE.test(text)) return { kind: "error", reason, quota: true };
+
+  if (result.isError) {
+    return EMPTY_RE.test(text) && !ERRORISH_RE.test(text)
+      ? { kind: "empty" }
+      : { kind: "error", reason, quota: false };
+  }
+
+  return ERRORISH_RE.test(text) ? { kind: "error", reason, quota: false } : { kind: "empty" };
+}
+
+// ──────────────────── Paramètres de dates des outils MCP ─────────────────────
+
+interface JsonSchemaProp {
+  type?: string | string[];
+  format?: string;
+  pattern?: string;
+  description?: string;
+}
+
+/** Ce que `tools/list` publie pour un outil (seuls les champs lus ici). */
+export interface ToolDescriptor {
+  name: string;
+  description?: string;
+  inputSchema?: {
+    type?: string;
+    properties?: Record<string, JsonSchemaProp>;
+    required?: string[];
+  };
+}
+
+/** `iso` = 2026-11-07, `compact` = "20261107", `int` = 20261107. */
+export type DateFormat = "iso" | "compact" | "int";
+
+export interface DateArgsSpec {
+  tool: string;
+  /** Début de période ; vaut `end` en mode « un seul jour » (`single`). */
+  start: string;
+  end: string;
+  /** L'outil ne prend qu'un jour (`date` / `day`), pas une plage. */
+  single: boolean;
+  format: DateFormat;
+  /** Paramètre de taille de page, seulement s'il est publié. */
+  limitKey: string | null;
+}
+
+/** Le schéma publié ne permet pas d'appeler l'outil sans deviner. */
+export class CorosSchemaError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CorosSchemaError";
+  }
+}
+
+const START_RE = /^(start|begin|from)[_-]?(date|day|time)?$/i;
+const END_RE = /^(end|to|until)[_-]?(date|day|time)?$/i;
+const LIMIT_RE = /^(limit|page[_-]?size|size|max[_-]?results|count)$/i;
+const DAY_RE = /^(date|day|query[_-]?date)$/i;
+
+function dateFormatOf(name: string, prop: JsonSchemaProp, tool: string): DateFormat {
+  const types = Array.isArray(prop.type) ? prop.type : [prop.type];
+  const hint = `${prop.description ?? ""} ${prop.format ?? ""} ${prop.pattern ?? ""}`;
+  const numeric = types.includes("integer") || types.includes("number");
+
+  if (/timestamp|epoch|milli|seconds|unix/i.test(hint) || (numeric && /time/i.test(name))) {
+    throw new CorosSchemaError(
+      `${tool}.${name} attend un horodatage (${hint.trim() || "type " + types.join("/")}) : format non pris en charge, à câbler explicitement.`,
+    );
+  }
+  if (numeric) return "int";
+  if (/yyyymmdd/i.test(hint) || /\\d\{8\}|\[0-9\]\{8\}/.test(prop.pattern ?? "")) return "compact";
+  return "iso";
+}
+
+/**
+ * Noms et format des paramètres de dates d'un outil, lus dans le schéma qu'il
+ * publie.
+ *
+ * Les noms d'outils sont déjà résolus contre `tools/list` ; les paramètres
+ * l'étaient d'après la documentation (`startDate` / `endDate`), jamais
+ * vérifiés. Un nom de paramètre faux est ignoré en silence par beaucoup de
+ * serveurs, qui répondent alors sur leur plage par défaut (7 jours chez
+ * COROS) : la synchronisation « marcherait » et sauterait l'historique. D'où
+ * une erreur explicite plutôt qu'une supposition.
+ */
+export function resolveDateArgs(
+  tool: ToolDescriptor,
+  opts: { allowSingleDay?: boolean } = {},
+): DateArgsSpec {
+  const props = tool.inputSchema?.properties;
+  if (!props || Object.keys(props).length === 0) {
+    throw new CorosSchemaError(
+      `${tool.name} ne publie pas le schéma de ses paramètres : impossible de savoir comment lui passer une plage de dates.`,
+    );
+  }
+  const names = Object.keys(props);
+  const start = names.find((n) => START_RE.test(n));
+  const end = names.find((n) => END_RE.test(n));
+  const day = names.find((n) => DAY_RE.test(n));
+
+  /*
+    Un outil « un jour à la fois » (données quotidiennes) : acceptable quand
+    l'appelant ne demande qu'un jour par appel, jamais pour les FIT, qu'on
+    liste par fenêtres de plusieurs jours.
+  */
+  if ((!start || !end) && day && opts.allowSingleDay) {
+    const format = dateFormatOf(day, props[day], tool.name);
+    const unknown = (tool.inputSchema?.required ?? []).filter((r) => r !== day);
+    if (unknown.length > 0) {
+      throw new CorosSchemaError(
+        `${tool.name} exige des paramètres que la synchronisation ne sait pas remplir : ${unknown.join(", ")}.`,
+      );
+    }
+    return { tool: tool.name, start: day, end: day, single: true, format, limitKey: null };
+  }
+
+  if (!start || !end) {
+    throw new CorosSchemaError(
+      `${tool.name} : paramètres de début / fin de période introuvables dans le schéma publié (${names.join(", ")}).`,
+    );
+  }
+
+  const format = dateFormatOf(start, props[start], tool.name);
+  const endFormat = dateFormatOf(end, props[end], tool.name);
+  if (endFormat !== format) {
+    throw new CorosSchemaError(
+      `${tool.name} : ${start} et ${end} n'ont pas le même format (${format} / ${endFormat}).`,
+    );
+  }
+
+  const limitKey = names.find((n) => LIMIT_RE.test(n)) ?? null;
+
+  const unknownRequired = (tool.inputSchema?.required ?? [])
+    .filter((r) => r !== start && r !== end && r !== limitKey);
+  if (unknownRequired.length > 0) {
+    throw new CorosSchemaError(
+      `${tool.name} exige des paramètres que la synchronisation ne sait pas remplir : ${unknownRequired.join(", ")}.`,
+    );
+  }
+
+  return { tool: tool.name, start, end, single: false, format, limitKey };
+}
+
+/** Arguments d'appel pour une plage `from`–`to` (jours ISO inclus). */
+export function buildDateArgs(
+  spec: DateArgsSpec,
+  from: string,
+  to: string,
+  limit?: number,
+): Record<string, unknown> {
+  const fmt = (d: string): string | number =>
+    spec.format === "iso" ? d : spec.format === "compact" ? d.replace(/-/g, "") : Number(d.replace(/-/g, ""));
+  if (spec.single && from !== to) {
+    throw new CorosSchemaError(`${spec.tool} ne prend qu'un jour à la fois (${from} → ${to} demandé).`);
+  }
+  const args: Record<string, unknown> = spec.single
+    ? { [spec.start]: fmt(from) }
+    : { [spec.start]: fmt(from), [spec.end]: fmt(to) };
+  if (spec.limitKey && typeof limit === "number") args[spec.limitKey] = limit;
+  return args;
 }
 
 /**

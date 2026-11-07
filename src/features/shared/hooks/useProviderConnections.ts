@@ -4,7 +4,7 @@ import { QK } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
- * Services connectés de l'athlète (montres COROS, Garmin à venir).
+ * Services connectés de l'athlète (montres COROS et Garmin).
  *
  * Tout ce qui est sensible se passe côté serveur : le `code_verifier` PKCE, le
  * `client_id`, l'échange du code, les jetons. Ce module ne fait que trois
@@ -15,6 +15,46 @@ import { useAuth } from "@/hooks/useAuth";
  */
 
 export type ProviderName = "garmin" | "coros";
+
+/**
+ * Garmin ouvert dans l'interface ?
+ *
+ * Tant que Garmin n'a pas approuvé le dossier, la ligne Garmin s'affiche
+ * « bientôt disponible », désactivée. Le jour de l'approbation : poser les
+ * secrets serveur, déployer les fonctions, puis `VITE_GARMIN_ENABLED=true` sur
+ * Vercel (redéploiement). Ce drapeau ne protège rien : s'il est activé trop
+ * tôt, `provider-garmin-connect` répond 503 `garmin_indisponible` et le bouton
+ * l'explique. Voir docs/integrations/GARMIN_DOSSIER.md, « Mise en service ».
+ */
+export const GARMIN_ENABLED = import.meta.env.VITE_GARMIN_ENABLED === "true";
+
+/** Erreur renvoyée par une fonction de connexion, avec son code serveur. */
+export class ConnectError extends Error {
+  constructor(message: string, readonly code: string | null) {
+    super(message);
+  }
+}
+
+/**
+ * Lit le corps JSON d'une erreur d'Edge Function. `supabase.functions.invoke`
+ * ne rend qu'un message générique (« non-2xx status code ») ; le code serveur
+ * (`garmin_indisponible`, `consentement_absent`…) est dans la réponse.
+ */
+async function connectError(error: { message: string; context?: unknown }): Promise<ConnectError> {
+  const ctx = error.context as { json?: () => Promise<unknown> } | undefined;
+  try {
+    const body = (await ctx?.json?.()) as { error?: unknown; message?: unknown } | undefined;
+    if (body && typeof body === "object") {
+      return new ConnectError(
+        typeof body.message === "string" ? body.message : error.message,
+        typeof body.error === "string" ? body.error : null,
+      );
+    }
+  } catch {
+    /* corps illisible : message générique */
+  }
+  return new ConnectError(error.message, null);
+}
 
 /** Régions de compte COROS. Celle de l'athlète, pas celle de notre serveur. */
 export const COROS_REGIONS = [
@@ -135,6 +175,25 @@ export function useConnectCoros() {
   });
 }
 
+/**
+ * Démarre l'autorisation Garmin (OAuth 2.0 PKCE). Même principe que COROS :
+ * le serveur garde le `code_verifier` et le `client_secret`, le navigateur ne
+ * reçoit qu'une URL et y part en redirection complète.
+ */
+export function useConnectGarmin() {
+  return useMutation<void, ConnectError, void>({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke<{ authorizeUrl?: string }>(
+        "provider-garmin-connect",
+        { body: {} },
+      );
+      if (error) throw await connectError(error);
+      if (!data?.authorizeUrl) throw new ConnectError("URL d'autorisation absente", null);
+      window.location.assign(data.authorizeUrl);
+    },
+  });
+}
+
 export interface SyncReport {
   athleteId: string;
   imported: number;
@@ -185,6 +244,8 @@ export interface DisconnectResult {
   /** Vrai si le fournisseur a confirmé la révocation de son côté. */
   revoked?: boolean;
   warnings?: string[];
+  /** Ce qui a été supprimé chez nous (activités, journées, connexion). */
+  deleted?: { activities: number; dailies: number; inbox: number; connection: number };
 }
 
 /**
@@ -195,9 +256,10 @@ export interface DisconnectResult {
  * requête sauf s'il est appelé avec la clé service_role, ce que le navigateur
  * ne peut pas faire.
  *
- * Les activités déjà importées restent : ce sont les données d'entraînement de
- * l'athlète, pas celles de la montre. Les effacer parce qu'il débranche son
- * compte lui ferait perdre son historique sans l'avoir demandé.
+ * Décision du 07/11/2026 : la déconnexion supprime les activités et données
+ * quotidiennes importées PAR CE FOURNISSEUR (après révocation chez lui). Les
+ * activités importées à la main par fichier restent. L'interface demande
+ * confirmation avant, en le disant.
  */
 export function useDisconnectProvider() {
   const { user } = useAuth();
@@ -215,6 +277,8 @@ export function useDisconnectProvider() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.providerConnections(user?.id ?? "none") });
+      // Les sorties de ce fournisseur viennent d'être supprimées.
+      qc.invalidateQueries({ queryKey: QK.providerActivities(user?.id ?? "none") });
     },
   });
 }

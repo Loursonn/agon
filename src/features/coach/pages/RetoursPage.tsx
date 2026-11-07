@@ -29,6 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMedicalEntries } from "@/features/shared/hooks/useMedicalEntries";
 import { activeInjuries, fmtInjuryDate, injuryFacts, injurySummary } from "@/lib/injuryDetails";
 import { DECLARED_BY_LABEL, MEDICAL_STATUS_LABEL } from "@/features/shared/types/medical";
+import type { EnergySessionDetail } from "@/features/shared/types/retours.types";
 
 type ViewMode = "month" | "week";
 type DetailView = "wellness" | "workouts" | "tests" | "competitions" | "nutrition" | null;
@@ -75,7 +76,7 @@ export default function RetoursPage() {
   const activeCount = activeInjuries(injuries).length;
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { data: monthData, isLoading: monthLoading } = useMonthlyRetours(athleteId!, selectedMonth);
+  const { data: monthDataRaw, isLoading: monthLoading } = useMonthlyRetours(athleteId!, selectedMonth);
   const { data: weekData,  isLoading: weekLoading  } = useWeeklyRetours(athleteId!, selectedWeek);
   const { data: modifications = [] } = useAthleteModifications(athleteId!);
   const { user } = useAuth();
@@ -103,10 +104,22 @@ export default function RetoursPage() {
   // Km de course sur la période affichée (semaine ou mois) — hook avant tout return anticipé
   const periodStart = format(viewMode === "month" ? selectedMonth : selectedWeek, "yyyy-MM-dd");
   const periodEnd   = format(viewMode === "month" ? endOfMonth(selectedMonth) : addDays(selectedWeek, 6), "yyyy-MM-dd");
-  const { kmBetween } = useRunningVolume(athleteId, freeSessions, periodStart);
-  const runKm = kmBetween(periodStart, periodEnd);
+  // Même calcul que le volume du profil : saisie + montre, une sortie comptée une fois.
+  const { summaryBetween, matchByPlanned } = useRunningVolume(athleteId, freeSessions, periodStart);
+  const { km: runKm, watchKm: runWatchKm } = summaryBetween(periodStart, periodEnd);
 
   if (isLoading) return <PageSkeleton />;
+
+  /** Pose sur chaque séance prévue la sortie de montre qui s'y rattache (affichage seul). */
+  const withWatch = (list: EnergySessionDetail[]): EnergySessionDetail[] =>
+    list.map((e) => ({ ...e, watch_run: matchByPlanned.get(e.id) ?? null }));
+  const weekCurrentRaw = weekData?.current_week;
+  const weekCurrent = weekCurrentRaw
+    ? { ...weekCurrentRaw, energy_sessions: withWatch(weekCurrentRaw.energy_sessions) }
+    : weekCurrentRaw;
+  const monthData = monthDataRaw
+    ? { ...monthDataRaw, energy_sessions: withWatch(monthDataRaw.energy_sessions) }
+    : monthDataRaw;
 
   // ── Labels ────────────────────────────────────────────────────────────────
   const monthLabel = format(selectedMonth, "MMMM yyyy", { locale: fr });
@@ -118,7 +131,6 @@ export default function RetoursPage() {
 
   // ── KPI source ────────────────────────────────────────────────────────────
   const kpiData = viewMode === "month" ? monthData : null;
-  const weekCurrent = weekData?.current_week;
 
   const weekDone  = weekCurrent ? weekCurrent.workouts.filter(w => w.status === "completed").length + weekCurrent.energy_sessions.filter(e => e.completed || e.partial).length : 0;
   const weekTotal = weekCurrent ? weekCurrent.workouts.length + weekCurrent.energy_sessions.length : 0;
@@ -228,7 +240,7 @@ export default function RetoursPage() {
           { icon: <Heart size={14} style={{ color: "#66F03C" }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
           { icon: <Dumbbell size={14} style={{ color: C.ac }} />,            title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate}%` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
           { icon: <FlaskConical size={14} style={{ color: C.b }} />,         title: "Tests",           value: testsVal,    subtitle: undefined,                                                onClick: () => setDetailView("tests")        },
-          { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km" },
+          { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km", subtitle2: runWatchKm > 0 ? `dont ${runWatchKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} montre` : undefined },
           { icon: <Trophy size={14} style={{ color: "#F5A623" }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
           { icon: <UtensilsCrossed size={14} style={{ color: "#F59E0B" }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
         ].map((kpi) => (

@@ -31,6 +31,8 @@ export interface ProviderActivity {
   maxHr: number | null;
   avgPaceSPerKm: number | null;
   calories: number | null;
+  /** Modèle de l'appareil (« Forerunner 265 »), pour l'attribution « Garmin [modèle] ». */
+  deviceName: string | null;
   details: Record<string, unknown> | null;
 }
 
@@ -47,6 +49,7 @@ interface ActivityRow {
   max_hr: number | null;
   avg_pace_s_per_km: number | string | null;
   calories: number | null;
+  device_name: string | null;
   details: Record<string, unknown> | null;
 }
 
@@ -81,7 +84,7 @@ export function useProviderActivities(
       const { data, error } = await supabase
         .from("provider_activities")
         .select(
-          "id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, details",
+          "id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details",
         )
         .eq("athlete_id", athleteId!)
         // `started_at` en second critère : plusieurs sorties le même jour
@@ -94,7 +97,9 @@ export function useProviderActivities(
 
       if (error) throw error;
 
-      return ((data ?? []) as ActivityRow[]).map((r) => ({
+      // `device_name` (migration 20261107140000) n'est pas encore dans les
+      // types générés : passage par `unknown` jusqu'à leur régénération.
+      return ((data ?? []) as unknown as ActivityRow[]).map((r) => ({
         id: r.id,
         source: r.source,
         startedAt: r.started_at,
@@ -107,6 +112,7 @@ export function useProviderActivities(
         maxHr: r.max_hr,
         avgPaceSPerKm: num(r.avg_pace_s_per_km),
         calories: r.calories,
+        deviceName: r.device_name ?? null,
         details: r.details,
       }));
     },

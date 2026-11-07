@@ -132,7 +132,7 @@ serve(async (req) => {
       // 42703 et aucune révocation n'avait jamais lieu — un jeton fournisseur
       // survivait à la suppression du compte, sans que rien ne le signale
       // autrement qu'un avertissement dans la réponse.
-      .select("provider")
+      .select("provider, external_user_id")
       .eq("athlete_id", user.id);
 
     /*
@@ -146,7 +146,12 @@ serve(async (req) => {
       revocationErrors.push(`lecture des connexions: ${connError.message}`);
     }
 
-    for (const c of (connections ?? []) as Array<{ provider: string }>) {
+    /*
+      `provider-disconnect` couvre COROS et Garmin : révocation chez le
+      fournisseur (Garmin : DELETE /user/registration, obligatoire en cas de
+      « Delete my account »), puis `provider_forget`.
+    */
+    for (const c of (connections ?? []) as Array<{ provider: string; external_user_id: string | null }>) {
       try {
         const { error } = await admin.functions.invoke("provider-disconnect", {
           body: { userId: user.id, provider: c.provider, internal: true },
@@ -154,6 +159,22 @@ serve(async (req) => {
         if (error) revocationErrors.push(`${c.provider}: ${error.message}`);
       } catch (e) {
         revocationErrors.push(`${c.provider}: ${errMessage(e)}`);
+      }
+      /*
+        Filet de sécurité : si la déconnexion a échoué, la cascade du compte
+        supprimera connexion, jetons et données, mais pas les notifications
+        brutes en attente (`provider_webhook_inbox` n'a pas de clé étrangère
+        vers l'athlète — Garmin ne connaît que son propre identifiant).
+      */
+      if (c.external_user_id) {
+        const { error: inboxError } = await admin
+          .from("provider_webhook_inbox")
+          .delete()
+          .eq("provider", c.provider)
+          .eq("external_user_id", c.external_user_id);
+        if (inboxError && inboxError.code !== "42P01") {
+          revocationErrors.push(`${c.provider} (notifications en attente): ${inboxError.message}`);
+        }
       }
     }
 

@@ -38,6 +38,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-07-sorties-montre-volume",
+    date: "2026-11-07",
+    kind: "feature",
+    title: "Les sorties de la montre comptent dans le volume de course",
+    summary:
+      "Une sortie enregistrée par la montre de ton athlète (ou importée depuis un fichier) compte maintenant dans ses km de la semaine et se rattache à la séance prévue du jour.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Volume de course (profil sportif, retours) : les km de la montre sont inclus, avec la part qui vient de la montre.",
+          "Retours : une séance prévue faite avec la montre affiche « Réalisée — 10,2 km montre ».",
+          "Si ton athlète saisit aussi la sortie à la main, elle ne compte qu'une fois : c'est la mesure de la montre qui est retenue.",
+          "Le statut de la séance ne change pas tout seul : ton athlète la valide toujours, avec son RPE.",
+        ],
+      },
+      {
+        title: "Montres connectées",
+        points: [
+          "Synchronisation COROS fiabilisée : plus de sortie oubliée quand elle est faite après la synchro de la nuit.",
+          "Quand un athlète déconnecte sa montre, les sorties qu'elle avait envoyées sont supprimées. Celles importées à la main par fichier restent.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-07-fiabilite-securite",
     date: "2026-11-07",
     kind: "fix",

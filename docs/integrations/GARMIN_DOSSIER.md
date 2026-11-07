@@ -31,12 +31,12 @@ Il reste à **copier-coller dans le formulaire**, section par section.
 
 **Après approbation, pas avant** — deux chantiers, aucun ne bloque le dépôt :
 
-1. **Le webhook entrant.** Le palier Starter est *push only*, donc Garmin
-   enverra les données vers un endpoint public permanent. Cette fonction
-   n'existe pas (`supabase/functions/` n'a que les fonctions COROS). L'URL
-   devra être configurée dans le portail développeur avant la première
-   connexion d'un athlète. Le schéma `provider_activities` est déjà commun aux
-   deux fournisseurs, donc ce travail ne repart pas de zéro.
+1. **Le webhook entrant — codé, pas déployé (07/11/2026).** Connexion,
+   callback, webhook, entretien et déconnexion existent (voir « Mise en service
+   le jour de l'approbation » en fin de dossier). Toutes les fonctions Garmin
+   répondent 503 tant que les secrets ne sont pas posés, et la ligne Garmin du
+   profil athlète reste « bientôt disponible » tant que `VITE_GARMIN_ENABLED`
+   n'est pas à `true`.
 
 2. **La publication des séances (Training API).** Demandée dans ce dossier,
    pas encore codée. Il faut traduire une séance Agon en *workout* Garmin, et
@@ -132,8 +132,11 @@ lira sur les pages légales.
 >
 > Connecting a Garmin account is **optional and per-athlete**. The athlete
 > initiates it from his own profile, grants explicit consent to the sync, and
-> can revoke it at any time from the same screen — which deletes the stored
-> tokens and the data obtained through them.
+> can revoke it at any time from the same screen — which deregisters him at
+> Garmin, then deletes the stored tokens and every activity and daily summary
+> obtained through them. Activities he imported from his own files are kept.
+> The same deletion happens when he withdraws his consent, or removes Agon from
+> his Garmin Connect account.
 
 ---
 
@@ -305,3 +308,121 @@ Garmin est **responsable de traitement indépendant**, pas notre sous-traitant :
 c'est ce que dit le §4.4 de la politique de confidentialité, et c'est ce qui
 est juridiquement exact. Le présenter comme un sous-traitant serait une erreur
 qu'un relecteur Garmin repérerait.
+
+---
+
+## Mise en service le jour de l'approbation
+
+Tout est codé (07/11/2026) et rien n'est actif : sans secrets, chaque fonction
+Garmin répond 503 ; sans connexion Garmin, le cron ne fait rien. L'ordre
+ci-dessous compte — chaque étape suppose la précédente.
+
+### Ce qui est implémenté
+
+| Pièce | Rôle |
+|---|---|
+| `provider-garmin-connect` | Vérifie l'accord `garmin_sync`, crée `state` + PKCE (S256), renvoie l'URL `https://connect.garmin.com/oauth2Confirm` |
+| `provider-garmin-callback` | Consomme `state`, échange le code (`POST https://connectapi.garmin.com/di-oauth2-service/oauth/token`, avec `client_secret`), lit `GET /wellness-api/rest/user/id` et `/user/permissions`, range les jetons dans Vault, renvoie vers `APP_URL/athlete/profil?garmin=…` |
+| `provider-garmin-webhook` | Vérifie le jeton d'URL, écrit chaque entrée brute dans `provider_webhook_inbox`, répond 200, puis traite (activités, `dailies`, `sleeps`, `hrv`, `deregistrations`, `userPermissionsChange`) |
+| `provider-garmin-maintenance` | Appelée par le cron : reprend l'inbox en retard, renouvelle les refresh tokens (~90 j) à 60 jours de l'échéance, déconnecte les connexions dont l'accord a été retiré |
+| `provider-disconnect` | `DELETE /wellness-api/rest/user/registration` puis suppression des activités et journées Garmin, de la connexion et des jetons. Les imports de fichiers restent |
+| `delete-account` | Passe par `provider-disconnect` pour chaque montre, puis purge l'inbox de l'athlète |
+| Migration `20261107140000_provider_base_garmin.sql` | `consent_purpose`, unicité `(provider, external_user_id)`, `device_name`, inbox, bail de rafraîchissement, `provider_forget`, cron `garmin-maintenance` |
+
+Endpoints Garmin vérifiés dans la spec publique *OAuth2 PKCE* ; le format des
+notifications push (clés `activities`, `dailies`, … contenant des listes
+d'entrées avec `userId` et `summaryId`) est **supposé** d'après la doc
+partenaire usuelle — à vérifier dans le portail dès l'accès, voir « À vérifier ».
+
+### 1. Base — avant tout déploiement de fonction
+
+Appliquer `supabase/migrations/20261107140000_provider_base_garmin.sql` selon
+le skill `migration-bdd` (`supabase db query --linked -f …`, jamais `db push`).
+Elle est additive : le client de production ne lit ni n'écrit ce qu'elle
+change. Test à blanc : `supabase/tests/provider_base_garmin.sql` (51 contrôles,
+`ROLLBACK`). **Le front qui lit `device_name` ne doit pas partir en production
+avant cette migration.**
+
+### 2. Secrets Supabase
+
+```bash
+supabase secrets set GARMIN_CLIENT_ID=…        # « Consumer key » du portail
+supabase secrets set GARMIN_CLIENT_SECRET=…    # « Consumer secret »
+supabase secrets set GARMIN_WEBHOOK_TOKEN=$(openssl rand -hex 32)
+```
+
+`APP_URL` (déjà posé pour COROS) doit valoir `https://agon-training.com`. Le
+cron lit `project_url` et `service_role_key` dans Vault — déjà présents.
+Conserver `GARMIN_WEBHOOK_TOKEN` : il entre dans l'URL du portail.
+
+### 3. Fonctions
+
+Depuis le worktree de la branche déployée (skill `edge-function`) :
+
+```bash
+supabase functions deploy provider-garmin-connect
+supabase functions deploy provider-garmin-callback      # verify_jwt = false (config.toml)
+supabase functions deploy provider-garmin-webhook       # verify_jwt = false (config.toml)
+supabase functions deploy provider-garmin-maintenance
+supabase functions deploy provider-disconnect
+supabase functions deploy delete-account
+```
+
+`provider-disconnect` et `delete-account` changent de comportement pour COROS
+aussi (suppression des données à la déconnexion) : à déployer avec le front
+qui annonce cette suppression.
+
+### 4. Portail développeur Garmin
+
+- **Redirect URI** : `https://mxbfnkkbtmbrauvqplrt.supabase.co/functions/v1/provider-garmin-callback`
+- **Endpoint configuration**, mode **push**, pour Activities, Activity Details
+  (facultatif), Manually updated activities, Dailies, Sleeps, HRV,
+  **Deregistrations** et **User Permissions Change** :
+  `https://mxbfnkkbtmbrauvqplrt.supabase.co/functions/v1/provider-garmin-webhook?token=<GARMIN_WEBHOOK_TOKEN>`
+  Si le portail refuse les paramètres d'URL : `…/provider-garmin-webhook/<GARMIN_WEBHOOK_TOKEN>`
+  (la fonction lit les deux).
+- Ne pas activer de type **ping** : la fonction ne suit pas les `callbackURL`
+  (elle les marque traitées sans rien importer).
+
+### 5. Essai avec la clé d'évaluation
+
+1. Sur Vercel, Preview uniquement : `VITE_GARMIN_ENABLED=true`.
+2. Avec le compte Garmin de Hugo : accord `garmin_sync` → Connecter → retour
+   `?garmin=ok`.
+3. Enregistrer une courte activité ; vérifier dans l'heure qu'elle apparaît
+   avec « Garmin [modèle] », et que `provider_webhook_inbox` se vide
+   (`select type, processed_at, error from provider_webhook_inbox order by received_at desc limit 20`).
+4. Lire `raw` d'une ligne `provider_activities` et d'une `provider_dailies` :
+   comparer les noms de champs avec `mapGarminActivity` / `mapGarminDaily`
+   (`supabase/functions/_shared/providers/garmin.ts`). Corriger avant
+   d'ouvrir à d'autres.
+5. Déconnecter : les activités Garmin disparaissent, l'app disparaît de
+   Garmin Connect → *Applications tierces*.
+6. Retirer Agon depuis Garmin Connect (reconnexion préalable) : la
+   désinscription arrive par webhook, les données sont supprimées.
+
+### 6. Ouverture et Partner Verification
+
+- `VITE_GARMIN_ENABLED=true` en Production sur Vercel, redéploiement.
+- Demander la **Partner Verification** depuis le portail. Garmin vérifie
+  notamment : déconnexion fonctionnelle (DELETE registration), réponse 200
+  rapide du webhook, traitement de `deregistrations` et `userPermissionsChange`,
+  attribution « Garmin [modèle] » partout où une donnée est affichée ou
+  exportée, et l'absence de traitement non déclaré (§6). Tenir prêtes des
+  captures de la ligne d'activité, du récapitulatif « Sources : … » et de
+  l'export RGPD (champ `attribution`).
+- Jusqu'à la vérification, l'app reste « unverified » avec un plafond de
+  connexions : n'ouvrir qu'aux athlètes volontaires.
+
+### À vérifier dès l'accès au portail
+
+Faute d'accès à la doc partenaire, ces points sont supposés :
+
+- forme exacte des notifications push et noms de champs (`deviceName`,
+  `activityType`, `restingHeartRateInBeatsPerMinute`, `overallSleepScore`,
+  `lastNightAvg`…) ;
+- présence d'un en-tête `garmin-client-id` (vérifié seulement s'il est là) ;
+- acceptation d'un paramètre `?token=` dans l'URL du portail ;
+- délai de réponse exigé et politique de rejeu ;
+- durée de vie réelle du refresh token (on suppose ~90 jours, conforme à
+  `refresh_token_expires_in = 7775998` de la spec).

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, ChevronDown, ChevronUp } from "lucide-react";
@@ -187,6 +188,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
           }}>
             {statusLabel}
           </span>
+          <WatchRunTag match={session.watch_run} />
           {session.rpe_score != null && (
             <span style={{
               fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,

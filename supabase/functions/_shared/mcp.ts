@@ -34,6 +34,23 @@ export interface McpTextContent {
   text?: string;
 }
 
+/** Un outil tel que publié par `tools/list`. */
+export interface McpTool {
+  name: string;
+  description?: string;
+  /** JSON Schema des arguments (obligatoire dans la spec MCP). */
+  inputSchema?: {
+    type?: string;
+    properties?: Record<string, {
+      type?: string | string[];
+      format?: string;
+      pattern?: string;
+      description?: string;
+    }>;
+    required?: string[];
+  };
+}
+
 export interface McpToolResult {
   /** Les blocs renvoyés par l'outil, dans l'ordre. */
   content: McpTextContent[];
@@ -191,11 +208,19 @@ export class McpClient {
   }
 
   private async send(payload: unknown, expectResponse: boolean): Promise<JsonRpcResponse | null> {
-    const res = await fetch(this.endpoint, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify(payload),
-    });
+    let res: Response;
+    try {
+      res = await fetch(this.endpoint, {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      // Panne réseau : erreur explicite, jamais confondue avec une réponse vide.
+      throw new McpError(
+        `MCP injoignable (${this.endpoint}) : ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
 
     /*
       Capté dès la première réponse : `initialize` est le seul appel qui
@@ -221,7 +246,12 @@ export class McpClient {
     // Une notification ne reçoit pas de réponse (202 avec corps vide).
     if (!expectResponse) return null;
 
-    const messages = parseRpcBody(res.headers.get("content-type") ?? "", text);
+    let messages: JsonRpcResponse[];
+    try {
+      messages = parseRpcBody(res.headers.get("content-type") ?? "", text);
+    } catch {
+      throw new McpError(`MCP réponse illisible : ${text.slice(0, 300)}`);
+    }
     const answer = messages.find((m) => m.error !== undefined || m.result !== undefined);
     if (!answer) {
       throw new McpError(`MCP réponse sans résultat : ${text.slice(0, 300)}`);
@@ -260,8 +290,12 @@ export class McpClient {
     this.initialized = true;
   }
 
-  /** Liste les outils. Utile une fois, pour confronter la doc au réel. */
-  async listTools(): Promise<Array<{ name: string; description?: string }>> {
+  /**
+   * Liste les outils, avec le schéma de leurs paramètres (`inputSchema`).
+   * Utile une fois par exécution, pour confronter la doc au réel — noms
+   * d'outils *et* noms de paramètres.
+   */
+  async listTools(): Promise<McpTool[]> {
     await this.initialize();
     const answer = await this.send({
       jsonrpc: "2.0",
@@ -269,8 +303,8 @@ export class McpClient {
       method: "tools/list",
       params: {},
     }, true);
-    const result = answer?.result as { tools?: Array<{ name: string; description?: string }> };
-    return result?.tools ?? [];
+    const result = answer?.result as { tools?: McpTool[] };
+    return Array.isArray(result?.tools) ? result.tools : [];
   }
 
   /**

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { X, Moon, Sunrise, CheckCircle2, Zap, ChevronDown, ChevronUp, Footprints, BarChart2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -397,9 +398,14 @@ function EnergyCard({ e }: { e: EnergySessionDetail }) {
           {dur  && <span style={{ fontSize: 10, color: C.tx3 }}>{dur}</span>}
           {dist && <span style={{ fontSize: 10, color: C.tx3 }}>{dist}</span>}
           {e.rpe_score != null && <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3 }}>RPE {e.rpe_score}</span>}
-          <span style={{ fontSize: 9, fontWeight: 700, color: col }}>
-            {e.partial ? `Partielle ${doneCount}/${totalCount}` : e.completed ? "✓" : "Planifiée"}
-          </span>
+          {e.watch_run && !e.completed && !e.partial
+            ? <WatchRunTag match={e.watch_run} size={9} />
+            : (
+              <span style={{ fontSize: 9, fontWeight: 700, color: col }}>
+                {e.partial ? `Partielle ${doneCount}/${totalCount}` : e.completed ? "✓" : "Planifiée"}
+              </span>
+            )}
+          {e.watch_run && (e.completed || e.partial) && <WatchRunTag match={e.watch_run} size={9} />}
           {hasDetail && (open ? <ChevronUp size={12} color={C.tx3} /> : <ChevronDown size={12} color={C.tx3} />)}
         </div>
       </div>

@@ -1276,4 +1276,355 @@ crée des habitudes, et dépose une fiche qu'il a fabriquée (`POST /fiches`).
 
 ---
 
+## 2026-11 — Les sorties de montre comptent dans le volume de course, une seule fois
+
+**Décision** : le volume de course (profil athlète, fiche coach, km des retours)
+additionne les sorties de course de `provider_activities` (montre ou fichier
+importé) et la saisie manuelle, après dédoublonnage. Le calcul est pur et vit
+dans `src/lib/watchRunMatching.ts` (`buildRunLedger`) ; `useRunningVolume` est le
+seul hook qui le lit. Calcul côté client, aucun changement de schéma.
+
+**Ce qui est de la course** : `running` et ses variantes (trail, tapis, piste,
+virtuel, et les types Garmin à venir), comparés sans casse ni séparateur. La
+marche, la randonnée, `wheelchair_push_run` et un sport inconnu ne comptent pas.
+
+**Rattachement** : une sortie se rattache à une séance énergie / spécifique
+prévue **le même jour local** (`local_date` = `scheduled_date`), une pour une. Une
+séance est « de la course » si elle a été validée en « Course », ou, tant qu'elle
+ne l'est pas, si son type est VMA, tempo, seuil, footing ou fartlek ; jamais si
+elle est `skipped`. S'il y a plusieurs candidats, le couple le plus proche en
+distance et en durée passe d'abord (saisie si elle existe, sinon prévu). Les
+sorties restantes se rapprochent ensuite des activités libres « course » du jour.
+
+**Dédoublonnage** : un couple rapproché ne produit qu'une ligne de km, celle de
+la montre ; la saisie ne sert que si la sortie n'a pas de distance. Pourquoi la
+montre : le champ km de fin de séance est pré-rempli avec la distance *prévue*,
+donc valider sans corriger enregistre le plan ; la montre a mesuré. Deux copies
+d'une même sortie (FIT importé + synchro, départs à moins de 2 min) ne comptent
+qu'une fois. Les km courus en séance de muscu s'ajoutent toujours, sans
+rapprochement.
+
+**Comment évolue « deux blocs séparés »** : les blocs restent séparés et aucun
+graphique ne compare prévu et réalisé. Ils se *citent* : la séance prévue porte
+« Réalisée — 10,2 km montre » (retours coach, aperçu du jour athlète), la sortie
+porte « Séance prévue : Footing » (liste des sorties, des deux côtés). Le statut
+de la séance n'est pas modifié en base — c'est l'athlète qui valide, avec son
+RPE. Le graphique de volume mélange les deux sources parce qu'il mesure une seule
+chose, des km réellement courus ; la part montre est écrite sous le graphique et
+sur la tuile des retours (décision « la provenance des chiffres est affichée »).
+
+**Testé** : `src/lib/__tests__/watchRunMatching.test.ts`.
+
+---
+
+## 2026-11 — Synchro COROS : le curseur ne couvre que des journées terminées, et chaque passage relit les derniers jours
+
+**Décision** : `synced_through` ne dépasse jamais le dernier jour *terminé*
+(`lastSettledDay`) : la veille du jour local de l'athlète si son fuseau est
+connu (décalage UTC lu dans son dernier FIT), sinon le jour de `now − 36 h`,
+terminé partout sur Terre. Chaque passage relit d'abord une fenêtre récente —
+les 2 derniers jours terminés, la veille et aujourd'hui (`COROS_RESCAN_DAYS`) —
+puis rattrape l'écart éventuel entre le curseur et cette fenêtre. Le curseur
+n'avance que sur une couverture contiguë de fenêtres traitées en entier
+(`nextSyncedThrough`), et ne recule jamais.
+
+**Pourquoi** : le curseur avançait jusqu'à aujourd'hui à 3 h 40, donc une sortie
+faite à 18 h n'était jamais redemandée (audit C1). La relecture couvre aussi une
+montre qui remonte une sortie chez COROS avec plusieurs jours de retard, et
+l'incertitude sur la date utilisée par COROS pour filtrer (locale ou UTC, non
+documentée). Les fichiers relus sont reconnus comme doublons ; ils coûtent du
+quota (~4 à 8 fichiers par nuit en régime établi), c'est le prix de ne pas
+perdre de sortie. La fenêtre récente passe avant le rattrapage parce que c'est
+ce que le coach regarde le matin, même pendant un rattrapage d'un an.
+
+**Corollaire (C2)** : une erreur n'est jamais « 0 fichier ». Panne réseau,
+réponse illisible, `isError`, texte d'erreur ou de quota en prose sans
+`isError`, téléchargement non 2xx, base indisponible : le parcours s'arrête au
+bord de la dernière fenêtre complète et `last_error` reçoit un message lisible.
+Seuls un contenu qui n'est pas un FIT, un décodage impossible ou un refus de
+contrainte en base (22xxx / 23xxx) sont des refus définitifs, nommés, qui
+laissent la fenêtre avancer — sinon un fichier corrompu bloquerait l'historique
+pour toujours. Dans le doute (`classifyFitListing`), c'est une erreur : le pire
+cas devient un curseur qui stagne avec un message, pas une sortie perdue.
+
+**Corollaire (troncature)** : COROS rend au plus 10 URL par appel. Une liste de
+10 URL est donc peut-être tronquée : la fenêtre est resserrée jusqu'à recevoir
+moins de 10 URL ; à un seul jour, elle est acceptée avec un avertissement.
+
+---
+
+## 2026-11 — Quota COROS suivi en base, par connexion et par jour UTC, réservé avant téléchargement
+
+**Décision** : table `provider_fit_quota (connection_id, day, used)`, service_role
+seulement. `provider_fit_quota_reserve` réserve tous les fichiers d'une fenêtre
+d'un coup (tout ou rien, UPDATE conditionnel atomique) avant de les télécharger,
+et ne rend jamais : un téléchargement raté a peut-être été compté par COROS.
+Le cron dispose du reste de la journée (50 − consommé), le bouton manuel de
+min(10, reste). Un refus de quota venu de COROS (texte ou 429) marque la journée
+épuisée (`provider_fit_quota_exhaust`). Atteindre le quota n'est pas une erreur :
+`last_error` reste vide, le compte rendu porte `pending`, et le passage suivant
+reprend au même bord.
+
+**Pourquoi** : le quota (50 / 24 h) n'était pas suivi (C3). Un compteur en
+mémoire ne voyait pas le bouton manuel de la veille au soir. Jour UTC plutôt que
+fenêtre glissante parce que COROS ne précise pas ; si sa fenêtre glisse, un
+refus peut arriver avant nos 50, et il est traité comme une erreur — sans trou.
+
+**Limite connue** : le décompte est par connexion. Un athlète qui se déconnecte
+puis se reconnecte le même jour repart à 50 chez nous alors que COROS compte
+peut-être toujours : il tombera alors sur un refus de quota, géré.
+
+---
+
+## 2026-11 — Verrou de synchronisation par bail en colonne, pas par verrou consultatif
+
+**Décision** : `provider_connections.sync_locked_until` + `sync_lock_token`, pris
+par `provider_sync_try_lock(connection_id, ttl)` (UPDATE conditionnel, renvoie un
+jeton ou NULL) et rendu par `provider_sync_unlock(connection_id, jeton)`. Toute la
+synchronisation d'une connexion — rafraîchissement du jeton compris — se fait
+sous ce bail de 10 min (plafonné à 1 h). Une synchro manuelle qui tombe pendant
+le cron reçoit « Une synchronisation est déjà en cours ».
+
+**Pourquoi** : le cron et le bouton manuel pouvaient présenter le même refresh
+token ; COROS le fait tourner, donc le second se faisait refuser et la connexion
+passait en « reconnexion requise » (C5). `pg_try_advisory_xact_lock` ne marche
+pas avec supabase-js : chaque RPC est sa propre transaction, le verrou serait
+rendu à la fin de l'appel qui le prend ; un verrou de session resterait accroché
+à une connexion du pool PostgREST. Le bail en colonne survit entre les appels et
+expire seul si la fonction est tuée. Le jeton empêche une exécution dont le bail
+a expiré de libérer celui qu'une autre a pris entre-temps.
+
+**Avec (C5)** : seul un refus explicite du point de jetons (`invalid_grant`,
+`invalid_client`, `unauthorized_client` — `CorosTokenError.oauthError`) passe la
+connexion en `needs_reauth`. Réseau, 5xx, 429, réponse illisible : la connexion
+reste active, `last_error` dit « nouvel essai à la prochaine synchronisation ».
+Un 401 du serveur MCP avec un jeton qu'on croyait valide déclenche un seul
+rafraîchissement forcé.
+
+---
+
+## 2026-11 — Le cron appelle la synchronisation COROS une fois par connexion
+
+**Décision** : `trigger_coros_sync()` émet un `net.http_post` par connexion
+COROS active, corps `{ "connection_id": … }`, les moins récemment synchronisées
+d'abord. `provider-coros-sync` ne lit `connection_id` que sous la clé
+`service_role` ; appelé sans, en `service_role`, il garde l'ancien comportement
+(toutes les connexions à la suite) pour la transition. Chaque connexion s'arrête
+d'elle-même après `COROS_SYNC_DEADLINE_MS` (110 s) en enregistrant son curseur.
+
+**Pourquoi** : un seul appel pour tous les athlètes dépassait le temps
+d'exécution d'une Edge Function dès une quinzaine d'athlètes (C6), et un
+athlète lent retardait tous les suivants. pg_net met les appels en file et rend
+la main : la transaction du cron reste courte quel que soit le nombre
+d'athlètes.
+
+**Ordre de déploiement** : migration `20261107130000_coros_sync_reliability.sql`
+d'abord (la nouvelle fonction appelle ses RPC), puis `provider-coros-sync`
+aussitôt après. Entre les deux, l'ancienne fonction ignore `connection_id` et
+traite toutes les connexions à chaque appel : sans effet tant qu'il y a au plus
+une connexion active (zéro au 07/11/2026).
+
+---
+
+## 2026-11 — Doublons inter-sources : une fonction serveur commune, même règle que l'import navigateur
+
+**Décision** : `_shared/activityDedup.ts` exporte `findCrossSourceDuplicate(db,
+candidat, toleranceSec = 120)` — même `external_id`, OU départ à ±2 min avec
+sports compatibles (inconnu = compatible ; deux sports connus doivent être
+égaux, sans casse), toutes sources confondues — et la règle pure
+`isSameOuting(a, b, toleranceSec)`. La synchronisation COROS l'appelle avant
+chaque insertion ; la synchronisation Garmin l'importera avec la même
+signature. Un index `(athlete_id, started_at)` sert la recherche.
+
+**Pourquoi** : COROS ne refusait que l'empreinte identique (octets identiques),
+alors que l'import de fichiers rapprochait déjà à ±2 min (C7) : un GPX Strava
+puis le FIT de la montre donnaient deux lignes. La fonction **lève** si la base
+ne répond pas — « pas pu vérifier » n'est pas « pas de doublon » ; l'appelant
+traite l'exception comme un échec passager.
+
+**Reste à faire** : `src/lib/activityImport.ts` garde sa propre copie de la
+règle (même tolérance, même condition de sport). Pour qu'elle pointe vers la
+version serveur, sortir `isSameOuting` dans un module sans import distant
+(`activityDedup.ts` importe le type `SupabaseClient` depuis esm.sh, que `tsc`
+côté navigateur ne résout pas), puis l'importer par `@shared`.
+
+---
+
+## 2026-11 — Déconnecter une montre supprime ce que le fournisseur a apporté
+
+**Décision (Hugo, 07/11/2026)** : `provider-disconnect` révoque d'abord chez le
+fournisseur (COROS : `/oauth2/revoke` ; Garmin : `DELETE
+/wellness-api/rest/user/registration`), puis supprime en une transaction
+(`provider_forget`) les activités et données quotidiennes de **cette source**,
+ses notifications en attente, la connexion et les jetons (Vault compris). Les
+activités `file_import` restent. L'interface demande une confirmation qui le
+dit.
+
+**Remplace** le paragraphe « Ce que la déconnexion n'efface pas » de l'entrée
+2026-10 sur le consentement montre. **Pourquoi** : le dossier Garmin (§3) et la
+politique de confidentialité (« suppression immédiate à la déconnexion »)
+promettaient déjà la suppression ; le code faisait l'inverse. Un relecteur
+Garmin qui teste la déconnexion doit voir disparaître les données. L'historique
+de l'athlète n'est pas perdu sans recours : l'import de fichiers le restitue.
+
+Même effet pour une **désinscription côté Garmin** (webhook `deregistrations`)
+et pour un **retrait de l'accord `garmin_sync`** (le cron `garmin-maintenance`
+déconnecte la connexion passée en `consent_withdrawn`) : la spec Garmin impose
+l'appel à `DELETE /user/registration` dès que l'utilisateur pense retirer son
+consentement. COROS garde l'ancien comportement sur ce dernier point (connexion
+`consent_withdrawn`, données masquées au coach) — à aligner si on le veut.
+
+---
+
+## 2026-11 — Base OAuth commune et adaptateur par fournisseur ; COROS garde son code
+
+**Décision** : `_shared/oauth.ts` porte ce qui est commun (PKCE S256, `state`
+écrit puis consommé en une requête et refusé s'il a été émis pour un autre
+fournisseur, échange, rafraîchissement sous bail, écriture Vault, révocation
+puis oubli). Chaque fournisseur fournit un adaptateur (`_shared/providers/
+garmin.ts` : URLs, `client_secret`, `fetchUserId`, `revoke`). Module pur,
+testé par Vitest.
+
+**Pourquoi COROS n'y est pas basculé** : son client est enregistré
+dynamiquement par hôte régional et ses métadonnées sont revérifiées à chaque
+appel — deux mécanismes que la base n'a pas à connaître —, `coros.ts` est en
+cours de modification par le chantier fiabilité COROS, et
+`provider-coros-connect` / `-callback` n'ont pas de tests qui prouveraient
+qu'une bascule ne change rien. Le gain (quelques dizaines de lignes) ne vaut pas
+le risque d'une régression sur la seule intégration qui tourne. À refaire quand
+un troisième fournisseur arrivera, avec des tests de ces deux fonctions d'abord.
+
+**Bail de rafraîchissement** (`provider_token_claim_refresh`) : Garmin délivre
+un nouveau refresh token à chaque usage et l'ancien meurt. Deux
+rafraîchissements simultanés (cron et déconnexion) en brûleraient un et le
+second passerait la connexion en `needs_reauth` à tort. Celui qui n'a pas le
+bail relit le jeton écrit par l'autre.
+
+---
+
+## 2026-11 — La finalité de consentement est une colonne de `data_source_policies`
+
+**Décision** : `data_source_policies.consent_purpose` (NULL seulement pour
+`file_import` et `manual`, imposé par contrainte). `source_consent_granted` et
+le trigger de retrait la lisent ; une source sans ligne de politique est
+refusée.
+
+**Pourquoi** : la fonction faisait `CASE … WHEN 'garmin' THEN 'garmin_sync'
+ELSE 'coros_sync'` — toute nouvelle source (Whoop, Polar…) aurait hérité du
+consentement COROS, donc été visible du coach sur un accord donné pour une
+autre montre. Même logique que `ai_allowed` : la règle par source vit dans une
+table, et l'inconnu est interdit.
+
+---
+
+## 2026-11 — Webhook Garmin : écrire le brut, répondre 200, traiter ensuite
+
+**Décision** : `provider-garmin-webhook` n'écrit que dans
+`provider_webhook_inbox` (une ligne par entrée, empreinte SHA-256 unique) puis
+répond 200. Le traitement suit dans la même invocation
+(`EdgeRuntime.waitUntil`), et le cron `garmin-maintenance` reprend ce qui n'a
+pas abouti (bail de 5 min, 5 tentatives, `FOR UPDATE SKIP LOCKED`).
+
+**Pourquoi** : Garmin exige un 200 « en quelques secondes » et rejoue les
+échecs ; un traitement synchrone (dédoublonnage, plusieurs écritures) ferait
+dépasser le délai sur un gros lot, Garmin rejouerait, et on traiterait deux
+fois. Une ligne par entrée plutôt que par requête : une entrée fautive se
+rejoue seule sans bloquer les autres, et l'empreinte rend un doublon de Garmin
+inoffensif.
+
+**Données d'un inconnu** (userId Garmin lié à aucune connexion), d'une
+connexion sans accord ou d'un type non autorisé : la ligne est **supprimée**,
+pas gardée « au cas où ». Le reste de l'inbox est purgé 7 jours après
+traitement (30 jours s'il reste en échec).
+
+**Origine** : Garmin ne signe pas ses notifications. Le secret
+`GARMIN_WEBHOOK_TOKEN` (≥ 32 caractères, comparé en temps constant) est mis
+dans l'URL déclarée au portail ; sans lui la fonction répond 503 — l'endpoint
+n'est jamais ouvert « en attendant ». L'en-tête `garmin-client-id`, s'il est
+présent, doit valoir notre client_id (présence supposée, non documentée
+publiquement).
+
+---
+
+## 2026-11 — Cron d'entretien Garmin : jetons rafraîchis tous les ~30 jours, silence tant qu'il n'y a rien
+
+**Décision** : `garmin-maintenance` toutes les 15 minutes appelle
+`trigger_garmin_maintenance()`, qui purge l'inbox en SQL et n'émet l'appel HTTP
+vers `provider-garmin-maintenance` que s'il y a un message en retard, un refresh
+token qui expire dans moins de 60 jours, ou une connexion à fermer après
+retrait d'accord.
+
+**Pourquoi** : en push on n'appelle presque jamais Garmin, donc le refresh
+token (~90 j) expirerait, et avec lui la possibilité d'appeler `DELETE
+/user/registration` — c'est-à-dire de tenir la promesse de déconnexion. Le
+renouveler à 60 jours de l'échéance laisse deux mois de reprises si Garmin est
+indisponible. Un refus explicite (invalid_grant, 400/401) passe la connexion en
+`needs_reauth` ; une panne réseau ou un 5xx, non. Sans connexion Garmin (état
+normal jusqu'à l'approbation), le cron ne fait rien et n'écrit rien.
+
+---
+
+## 2026-11 — Permission Garmin retirée = import arrêté et données de ce type supprimées
+
+**Décision** : sur `userPermissionsChange`, `granted_scopes` est remplacé par la
+liste reçue. Sans `ACTIVITY_EXPORT`, les activités Garmin de l'athlète sont
+supprimées ; sans `HEALTH_EXPORT`, ses données quotidiennes Garmin. Chaque
+import revérifie la permission.
+
+**Pourquoi** : c'est une déconnexion partielle, décidée par l'athlète chez
+Garmin. Garder ce qui a été obtenu grâce à une permission retirée
+contredirait la règle de la déconnexion complète. Liste vide (lecture échouée
+au callback) = inconnue, on n'en déduit rien.
+
+---
+
+## 2026-11 — Garmin ouvert par `VITE_GARMIN_ENABLED`, le serveur refuse en 503 sans secrets
+
+**Décision** : la ligne Garmin du panneau « Montres » est « bientôt
+disponible » (désactivée) tant que `VITE_GARMIN_ENABLED` ≠ `true`. Côté serveur,
+chaque fonction Garmin répond 503 tant que `GARMIN_CLIENT_ID` /
+`GARMIN_CLIENT_SECRET` (et `GARMIN_WEBHOOK_TOKEN` pour le webhook) manquent ; le
+bouton traduit `garmin_indisponible` en « bientôt disponible ».
+
+**Pourquoi deux niveaux** : le drapeau évite de montrer un bouton qui échoue ;
+le 503 protège réellement, quel que soit le drapeau. Un appel à la fonction
+pour savoir s'il faut afficher le bouton coûterait une requête à chaque
+ouverture de profil, pour une information qui change une fois.
+
+---
+
+## 2026-11 — Attribution « Garmin [modèle] » : colonne `device_name`, à l'écran et dans l'export
+
+**Décision** : `provider_activities.device_name` reçoit le `deviceName` du
+résumé Garmin. `providerAttribution(source, device)` (`src/lib/activityDisplay.ts`)
+rend « Garmin Forerunner 265 », ou « Garmin » seul si l'appareil est inconnu ;
+elle est affichée sur chaque sortie, dans le récapitulatif par sport (ligne
+« Sources : … ») et ajoutée (`attribution`) à chaque ligne d'activité et de
+journée dans l'export RGPD.
+
+**Pourquoi** : les API Brand Guidelines Garmin exigent cette mention partout où
+une donnée Garmin est montrée ou exportée, sous peine de suspension. En
+colonne et non dans `raw`, que le client ne lit pas. Tout nouvel écran qui
+affiche des données de montre (volume de course…) doit passer par
+`providerAttribution`.
+
+---
+
+## 2026-11 — `provider_dailies` en lecture seule pour l'athlète ; fusion par type de résumé
+
+**Décision** : la politique `provider_dailies_own` (FOR ALL) devient
+`provider_dailies_own_read` (SELECT). Les écritures passent par
+`provider_daily_merge` (service_role), qui range `raw` par type
+(`{"dailies": …, "sleeps": …, "hrv": …}`) et ne met à jour que les colonnes que
+ce type renseigne.
+
+**Pourquoi** : un athlète pouvait écrire une fausse FC de repos estampillée
+« Garmin » — c'est le pendant de S10 pour les activités. Le client n'a jamais
+écrit dans cette table (ni sur `main` ni sur `dev`), donc rien ne casse en
+production. La fusion par type parce que Garmin envoie la même journée en
+plusieurs résumés séparés : un upsert simple aurait effacé le sommeil en
+recevant les pas.
+
+---
+
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*

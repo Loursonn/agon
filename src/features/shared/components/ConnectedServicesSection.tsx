@@ -10,13 +10,16 @@ import {
 } from "@/features/shared/hooks/useConsent";
 import {
   COROS_REGIONS,
+  GARMIN_ENABLED,
   connectionFor,
   useConnectCoros,
+  useConnectGarmin,
   useDisconnectProvider,
   useProviderConnections,
   useSyncCoros,
   type CorosRegion,
   type ProviderConnection,
+  type ProviderName,
 } from "@/features/shared/hooks/useProviderConnections";
 
 /**
@@ -31,57 +34,81 @@ import {
  *     donc demandé juste avant la redirection, avec le libellé exact qui sera
  *     archivé dans `user_consents.statement`.
  *  2. **La déconnexion est aussi accessible que la connexion.** Même panneau,
- *     même nombre de clics. Le RGPD l'exige pour le retrait du consentement,
- *     et il n'y a aucune raison de traiter différemment le fait de débrancher
- *     un compte.
+ *     pas plus d'étapes que pour connecter. Le RGPD l'exige pour le retrait du
+ *     consentement. Une seule confirmation, parce que depuis le 07/11/2026 la
+ *     déconnexion supprime les données importées par ce fournisseur.
+ *
+ * Une ligne par fournisseur (COROS, Garmin). Garmin reste « bientôt
+ * disponible » tant que `VITE_GARMIN_ENABLED` n'est pas activé.
  */
 
-/** Ce que le retour d'autorisation peut valoir, et quoi en dire à l'athlète. */
-const OUTCOMES: Record<string, { kind: "success" | "warning" | "error"; title: string; detail?: string }> = {
-  ok: {
-    kind: "success",
-    title: "Compte COROS connecté",
-    detail: "Tes activités seront récupérées automatiquement chaque jour.",
-  },
-  partiel: {
-    kind: "warning",
-    title: "Connexion incomplète",
-    detail:
-      "COROS n'a pas accordé l'accès durable. La synchronisation s'arrêtera dans quelques heures — reconnecte ton compte en acceptant toutes les autorisations.",
-  },
-  refus: {
-    kind: "warning",
-    title: "Autorisation annulée",
-    detail: "Rien n'a été connecté. Tu peux réessayer quand tu veux.",
-  },
-  expire: {
-    kind: "error",
-    title: "Demande expirée",
-    detail:
-      "Une autorisation reste valable dix minutes. Relance la connexion depuis cette page.",
-  },
-  consentement_absent: {
-    kind: "error",
-    title: "Accord manquant",
-    detail:
-      "Ton accord pour la synchronisation COROS n'était plus actif au retour. Aucune donnée n'a été récupérée.",
-  },
-  parametres_manquants: {
-    kind: "error",
-    title: "Retour incomplet",
-    detail: "COROS n'a pas renvoyé les informations attendues. Réessaie.",
-  },
-  client_introuvable: {
-    kind: "error",
-    title: "Configuration COROS introuvable",
-    detail: "Réessaie ; si le problème persiste, signale-le à ton coach.",
-  },
-  erreur: {
-    kind: "error",
-    title: "La connexion a échoué",
-    detail: "Réessaie dans un moment.",
-  },
-};
+const PROVIDER_LABEL: Record<ProviderName, string> = { coros: "COROS", garmin: "Garmin" };
+
+type Outcome = { kind: "success" | "warning" | "error"; title: string; detail?: string };
+
+/**
+ * Ce que le retour d'autorisation peut valoir, et quoi en dire à l'athlète.
+ * Le paramètre d'URL porte le nom du fournisseur (`?coros=ok`, `?garmin=ok`).
+ */
+function outcomesFor(provider: ProviderName): Record<string, Outcome> {
+  const nom = PROVIDER_LABEL[provider];
+  return {
+    ok: {
+      kind: "success",
+      title: `Compte ${nom} connecté`,
+      detail: provider === "garmin"
+        ? "Tes prochaines activités arriveront automatiquement après chaque synchronisation de ta montre avec Garmin Connect."
+        : "Tes activités seront récupérées automatiquement chaque jour.",
+    },
+    partiel: {
+      kind: "warning",
+      title: "Connexion incomplète",
+      detail: provider === "garmin"
+        ? "Garmin n'a autorisé ni les activités ni les données de santé : rien ne sera importé. Reconnecte ton compte en cochant ces autorisations."
+        : "COROS n'a pas accordé l'accès durable. La synchronisation s'arrêtera dans quelques heures — reconnecte ton compte en acceptant toutes les autorisations.",
+    },
+    refus: {
+      kind: "warning",
+      title: "Autorisation annulée",
+      detail: "Rien n'a été connecté. Tu peux réessayer quand tu veux.",
+    },
+    expire: {
+      kind: "error",
+      title: "Demande expirée",
+      detail: "Une autorisation reste valable dix minutes. Relance la connexion depuis cette page.",
+    },
+    consentement_absent: {
+      kind: "error",
+      title: "Accord manquant",
+      detail: `Ton accord pour la synchronisation ${nom} n'était plus actif au retour. Aucune donnée n'a été récupérée.`,
+    },
+    compte_deja_lie: {
+      kind: "error",
+      title: `Compte ${nom} déjà utilisé`,
+      detail: `Ce compte ${nom} est déjà relié à un autre compte Agon. Déconnecte-le de l'autre compte d'abord.`,
+    },
+    indisponible: {
+      kind: "error",
+      title: `Connexion ${nom} pas encore ouverte`,
+      detail: "Agon attend la validation du fournisseur. Rien n'a été connecté.",
+    },
+    parametres_manquants: {
+      kind: "error",
+      title: "Retour incomplet",
+      detail: `${nom} n'a pas renvoyé les informations attendues. Réessaie.`,
+    },
+    client_introuvable: {
+      kind: "error",
+      title: `Configuration ${nom} introuvable`,
+      detail: "Réessaie ; si le problème persiste, signale-le à ton coach.",
+    },
+    erreur: {
+      kind: "error",
+      title: "La connexion a échoué",
+      detail: "Réessaie dans un moment.",
+    },
+  };
+}
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -102,6 +129,7 @@ export function ConnectedServicesSection() {
   const [open, setOpen] = useState(false);
   const { data: connections, isLoading } = useProviderConnections();
   const coros = connectionFor(connections, "coros");
+  const garmin = connectionFor(connections, "garmin");
 
   /*
     Le résultat de l'autorisation arrive dans l'URL, posé par la fonction de
@@ -111,14 +139,19 @@ export function ConnectedServicesSection() {
   */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const outcome = params.get("coros");
-    if (!outcome) return;
+    let touched = false;
+    for (const provider of ["coros", "garmin"] as const) {
+      const outcome = params.get(provider);
+      if (!outcome) continue;
+      const outcomes = outcomesFor(provider);
+      const copy = outcomes[outcome] ?? outcomes.erreur;
+      toast[copy.kind](copy.title, { description: copy.detail });
+      if (copy.kind !== "success") setOpen(true);
+      params.delete(provider);
+      touched = true;
+    }
+    if (!touched) return;
 
-    const copy = OUTCOMES[outcome] ?? OUTCOMES.erreur;
-    toast[copy.kind](copy.title, { description: copy.detail });
-    if (copy.kind !== "success") setOpen(true);
-
-    params.delete("coros");
     const q = params.toString();
     window.history.replaceState(
       {},
@@ -137,10 +170,12 @@ export function ConnectedServicesSection() {
           Montres &amp; services connectés
         </div>
         <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {coros?.status === "active" && (
-            <span style={{ fontSize: 10, color: C.g, border: "1px solid " + C.g + "40", background: C.gS, borderRadius: 10, padding: "2px 7px" }}>
-              COROS
-            </span>
+          {([["coros", coros], ["garmin", garmin]] as const).map(([p, c]) =>
+            c?.status === "active" ? (
+              <span key={p} style={{ fontSize: 10, color: C.g, border: "1px solid " + C.g + "40", background: C.gS, borderRadius: 10, padding: "2px 7px" }}>
+                {PROVIDER_LABEL[p]}
+              </span>
+            ) : null,
           )}
           <span style={{ fontSize: 12, color: C.tx3, display: "inline-block", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }}>∨</span>
         </span>
@@ -154,14 +189,8 @@ export function ConnectedServicesSection() {
             <>
               <CorosRow connection={coros} />
 
-              {/* ── Garmin : dossier déposé, pas encore d'accès ── */}
-              <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14, opacity: 0.6 }}>
-                <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
-                <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5, marginTop: 4 }}>
-                  En attente de validation du programme développeur Garmin. Dès l'accord, la
-                  connexion se fera exactement comme pour COROS. En attendant, l'import de fichiers
-                  ci-dessous récupère le même contenu.
-                </div>
+              <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14 }}>
+                <GarminRow connection={garmin} />
               </div>
 
               {/*
@@ -219,7 +248,6 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
   const { data: consents } = useConsents();
   const setConsent = useSetConsent();
   const connect = useConnectCoros();
-  const disconnect = useDisconnectProvider();
   const sync = useSyncCoros();
 
   const [region, setRegion] = useState<CorosRegion>("eu");
@@ -293,29 +321,6 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
     });
   };
 
-  const couper = () => {
-    disconnect.mutate("coros", {
-      onSuccess: (r) => {
-        if (r.revoked) {
-          toast.success("Compte COROS déconnecté", {
-            description: "L'accès a été révoqué chez COROS. Tes activités déjà importées restent.",
-          });
-        } else {
-          /*
-            Distinction volontairement visible : « j'ai effacé ma copie du
-            jeton » n'est pas « l'accès est coupé ». Le masquer donnerait à
-            l'athlète une certitude qu'on n'a pas.
-          */
-          toast.warning("Déconnecté côté Agon", {
-            description:
-              "COROS n'a pas confirmé la révocation. Nos jetons sont supprimés ; retire aussi l'autorisation depuis ton compte COROS pour en être sûr.",
-          });
-        }
-      },
-      onError: (e) => toast.error("Déconnexion impossible", { description: e.message }),
-    });
-  };
-
   if (connection) {
     const status = STATUS_COPY[connection.status];
     const tone = status.tone === "ok" ? C.g : status.tone === "warn" ? C.o : C.r;
@@ -384,16 +389,7 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
           </>
         )}
 
-        <button
-          onClick={couper}
-          disabled={disconnect.isPending}
-          style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: disconnect.isPending ? "wait" : "pointer", fontFamily: "inherit" }}
-        >
-          {disconnect.isPending ? "Déconnexion…" : "Déconnecter mon compte COROS"}
-        </button>
-        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
-          L'accès est révoqué chez COROS. Les activités déjà importées restent dans ton historique.
-        </div>
+        <DisconnectBlock provider="coros" />
       </div>
     );
   }
@@ -433,6 +429,234 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
         style={{ padding: "11px 0", borderRadius: 6, border: "1px solid " + (pretAConnecter ? C.g + "40" : C.brd), background: pretAConnecter ? C.gS : C.s2, color: pretAConnecter ? C.g : C.tx3, fontSize: 12, fontWeight: 600, cursor: pretAConnecter && !busy ? "pointer" : "not-allowed", opacity: pretAConnecter ? 1 : 0.6, fontFamily: "inherit" }}
       >
         {busy ? "Redirection vers COROS…" : "Connecter mon compte COROS"}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Déconnexion, avec confirmation.
+ *
+ * Décision du 07/11/2026 : déconnecter supprime les activités et les données
+ * quotidiennes importées par ce fournisseur (les fichiers importés à la main
+ * restent). C'est irréversible : un premier clic explique, le second confirme.
+ */
+function DisconnectBlock({ provider }: { provider: ProviderName }) {
+  const disconnect = useDisconnectProvider();
+  const [confirmer, setConfirmer] = useState(false);
+  const nom = PROVIDER_LABEL[provider];
+
+  const couper = () => {
+    disconnect.mutate(provider, {
+      onSuccess: (r) => {
+        setConfirmer(false);
+        const n = r.deleted?.activities ?? 0;
+        const supprime = n > 0 ? ` ${n} activité${n > 1 ? "s" : ""} ${nom} supprimée${n > 1 ? "s" : ""}.` : "";
+        if (r.revoked) {
+          toast.success(`Compte ${nom} déconnecté`, {
+            description: `L'accès a été révoqué chez ${nom}.${supprime}`,
+          });
+        } else {
+          /*
+            « J'ai effacé ma copie du jeton » n'est pas « l'accès est coupé ».
+            Le masquer donnerait à l'athlète une certitude qu'on n'a pas.
+          */
+          toast.warning("Déconnecté côté Agon", {
+            description: `${nom} n'a pas confirmé la révocation. Nos jetons et tes données ${nom} sont supprimés ; retire aussi l'autorisation depuis ton compte ${nom} pour en être sûr.`,
+          });
+        }
+      },
+      onError: (e) => toast.error("Déconnexion impossible", { description: e.message }),
+    });
+  };
+
+  if (!confirmer) {
+    return (
+      <>
+        <button
+          onClick={() => setConfirmer(true)}
+          style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          Déconnecter mon compte {nom}
+        </button>
+        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+          L'accès est révoqué chez {nom}, et les données que {nom} a envoyées à Agon sont
+          supprimées. Les fichiers que tu as importés toi-même restent.
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, border: "1px solid " + C.r + "40", background: C.rS, borderRadius: 6, padding: "10px 12px" }}>
+      <div style={{ fontSize: 11, color: C.tx, lineHeight: 1.5 }}>
+        Tes activités et données de santé importées depuis {nom} seront supprimées d'Agon, pour
+        toi comme pour ton coach. C'est définitif. Les activités importées par fichier restent.
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={() => setConfirmer(false)}
+          disabled={disconnect.isPending}
+          style={{ flex: 1, padding: "9px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          Annuler
+        </button>
+        <button
+          onClick={couper}
+          disabled={disconnect.isPending}
+          style={{ flex: 1, padding: "9px 0", borderRadius: 6, border: "1px solid " + C.r + "60", background: C.s2, color: C.r, fontSize: 12, fontWeight: 600, cursor: disconnect.isPending ? "wait" : "pointer", fontFamily: "inherit" }}
+        >
+          {disconnect.isPending ? "Déconnexion…" : "Déconnecter et supprimer"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ligne Garmin.
+ *
+ * Tant que `VITE_GARMIN_ENABLED` n'est pas activé (dossier Garmin en cours
+ * d'examen), la ligne est désactivée et dit pourquoi. Une fois ouverte :
+ * consentement `garmin_sync` demandé au moment où il sert, puis OAuth. Pas de
+ * bouton « synchroniser » : Garmin pousse les données lui-même (palier
+ * Starter), et sans historique — d'où le renvoi vers l'import de fichiers.
+ */
+function GarminRow({ connection }: { connection: ProviderConnection | undefined }) {
+  const { data: consents } = useConsents();
+  const setConsent = useSetConsent();
+  const connect = useConnectGarmin();
+  const [accepte, setAccepte] = useState(false);
+
+  const consentGranted = isGranted(consents, "garmin_sync");
+  const pretAConnecter = consentGranted || accepte;
+  const busy = connect.isPending || setConsent.isPending;
+
+  const lancer = () => {
+    const demarrer = () =>
+      connect.mutate(undefined, {
+        onError: (e) => {
+          if (e.code === "garmin_indisponible") {
+            toast.info("Garmin bientôt disponible", { description: e.message });
+          } else {
+            toast.error("Impossible de démarrer la connexion", { description: e.message });
+          }
+        },
+      });
+    // Accord enregistré AVANT la redirection (voir CorosRow).
+    if (!consentGranted) {
+      setConsent.mutate([{ purpose: "garmin_sync", granted: true }], {
+        onSuccess: demarrer,
+        onError: (e) => toast.error("Accord non enregistré", { description: e.message }),
+      });
+      return;
+    }
+    demarrer();
+  };
+
+  if (!GARMIN_ENABLED && !connection) {
+    return (
+      <div style={{ opacity: 0.6 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
+          <div style={{ fontSize: 11, color: C.tx3 }}>Bientôt disponible</div>
+        </div>
+        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5, marginTop: 4 }}>
+          En attente de validation du programme développeur Garmin. En attendant, l'import de
+          fichiers ci-dessous récupère le même contenu.
+        </div>
+        <button
+          disabled
+          style={{ marginTop: 10, width: "100%", padding: "10px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx3, fontSize: 12, fontWeight: 600, cursor: "not-allowed", fontFamily: "inherit" }}
+        >
+          Connecter mon compte Garmin
+        </button>
+      </div>
+    );
+  }
+
+  const historique = (
+    <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+      Garmin n'envoie que les activités enregistrées après la connexion, sans historique. Pour tes
+      sorties plus anciennes, utilise l'import de fichiers ci-dessous.
+    </div>
+  );
+
+  if (connection) {
+    const status = STATUS_COPY[connection.status];
+    const tone = status.tone === "ok" ? C.g : status.tone === "warn" ? C.o : C.r;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
+          <div style={{ fontSize: 11, color: tone }}>{status.label}</div>
+        </div>
+        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+          Connecté le {fmtDate(connection.connectedAt)}
+          {connection.lastSyncAt
+            ? ` · dernière donnée reçue le ${fmtDate(connection.lastSyncAt)}`
+            : " · aucune donnée reçue pour l'instant"}
+        </div>
+        {connection.lastError && (
+          <div style={{ fontSize: 11, color: C.r, background: C.rS, border: "1px solid " + C.r + "30", borderRadius: 6, padding: "8px 10px", lineHeight: 1.5 }}>
+            {connection.lastError}
+          </div>
+        )}
+        {connection.status === "active" ? historique : (
+          <>
+            <button
+              onClick={lancer}
+              disabled={busy}
+              style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.o + "40", background: C.s2, color: C.o, fontSize: 12, fontWeight: 600, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}
+            >
+              {busy ? "Redirection vers Garmin…" : "Reconnecter mon compte Garmin"}
+            </button>
+            <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+              {connection.status === "consent_withdrawn"
+                ? "Tu as retiré ton accord : la connexion va être fermée chez Garmin et tes données Garmin supprimées."
+                : "Garmin n'accepte plus notre autorisation. Reconnecte ton compte pour continuer à recevoir tes activités."}
+            </div>
+          </>
+        )}
+        <DisconnectBlock provider="garmin" />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
+      <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+        Récupère automatiquement tes activités, ta fréquence cardiaque, ton sommeil et tes
+        indicateurs de récupération, et les partage avec ton coach. Les données Garmin ne sont
+        jamais envoyées à un service d'intelligence artificielle.
+      </div>
+      {historique}
+
+      {!consentGranted && (
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={accepte}
+            onChange={(e) => setAccepte(e.target.checked)}
+            style={{ marginTop: 2, flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 11, color: C.tx2, lineHeight: 1.5 }}>
+            {CONSENT_COPY.garmin_sync.label}
+            <span style={{ display: "block", color: C.tx3, marginTop: 3 }}>
+              {CONSENT_COPY.garmin_sync.detail} Tu pourras le retirer dans « Confidentialité &amp;
+              données ».
+            </span>
+          </span>
+        </label>
+      )}
+
+      <button
+        onClick={lancer}
+        disabled={!pretAConnecter || busy}
+        style={{ padding: "11px 0", borderRadius: 6, border: "1px solid " + (pretAConnecter ? C.g + "40" : C.brd), background: pretAConnecter ? C.gS : C.s2, color: pretAConnecter ? C.g : C.tx3, fontSize: 12, fontWeight: 600, cursor: pretAConnecter && !busy ? "pointer" : "not-allowed", opacity: pretAConnecter ? 1 : 0.6, fontFamily: "inherit" }}
+      >
+        {busy ? "Redirection vers Garmin…" : "Connecter mon compte Garmin"}
       </button>
     </div>
   );

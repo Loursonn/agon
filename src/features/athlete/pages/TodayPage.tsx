@@ -46,6 +46,8 @@ import { loadDraft, saveDraft, clearDraft, energyDraftKey } from "@/lib/localDra
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
+import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
+import { watchRunMeasure, watchRunText } from "@/lib/watchRunLabel";
 import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
 import { LifeEventFormModal } from "@/features/athlete/components/LifeEventFormModal";
 import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
@@ -143,9 +145,11 @@ interface DayPreviewSheetProps {
   competitionsByDate: Map<string, CompetitionDayCardData[]>;
   viewOnly?: boolean;
   dayTheme?: DayThemeLike | null;
+  /** Sortie de montre rattachée à chaque séance énergie prévue (par id d'assignation) */
+  watchByPlanned?: Map<string, RunMatch>;
 }
 
-function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly, dayTheme }: DayPreviewSheetProps) {
+function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly, dayTheme, watchByPlanned }: DayPreviewSheetProps) {
   if (!day) return null;
   const date = new Date(day.date + "T12:00:00");
   const dateLabel = `${DAYS_FULL_FR[day.dow]} ${date.getDate()} ${MONTHS_FR[date.getMonth()]}`;
@@ -283,6 +287,7 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
                 const kc = ENERGY_KIND_COLOR[ev.sessionKind ?? ""] ?? "#FFC933";
                 const kl = ENERGY_KIND_LABEL[ev.sessionKind ?? ""] ?? ev.sessionKind ?? "Énergie";
                 const isDone = ev.status === "completed";
+                const watchRun = watchByPlanned?.get(ev.id);
                 return (
                   <button
                     key={ev.id}
@@ -299,7 +304,8 @@ function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByD
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>{ev.title}</div>
                       <div style={{ fontSize: 10, marginTop: 2, fontWeight: 600, color: kc }}>
-                        {kl} · {isDone ? "Complétée ✓" : isPast ? "Manquée" : "À faire"}
+                        {kl} · {isDone ? "Complétée ✓" : watchRun ? watchRunText(watchRun) : isPast ? "Manquée" : "À faire"}
+                        {isDone && watchRun && <span style={{ color: C.g }}> · {watchRunMeasure(watchRun)}</span>}
                       </div>
                     </div>
                     <span style={{ fontSize: 11, color: C.tx3 }}>Voir →</span>
@@ -847,6 +853,8 @@ export default function TodayPage() {
   const myCoachId = profile?.coach_id;
   // Sections de l'accueil masquées par le coach
   const { isVisible: show } = useHomeHiddenSections(athleteId);
+  // Sorties de montre rattachées aux séances énergie prévues (8 dernières semaines)
+  const { matchByPlanned: watchByPlanned } = useRunningVolume(athleteId ?? undefined, freeSessions);
 
   // `wellnessHistory` est écrit par saveWellness() avec la clé compacte de
   // todayKey() ("20260817"), alors que tout TodayPage raisonne en ISO à tirets.
@@ -1883,6 +1891,7 @@ export default function TodayPage() {
         }}
         freeSessions={freeSessions}
         energyByDate={energyByDate}
+        watchByPlanned={watchByPlanned}
         onEnergyPreview={(ev) => {
           if (ev.sessionKind === "specifique" && !viewOnly) {
             navigate(`/athlete/specific/${ev.id}`);

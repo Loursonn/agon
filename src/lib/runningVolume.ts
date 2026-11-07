@@ -1,4 +1,8 @@
 /** Volume de course à pied : agrégation par semaine (pur, testable). */
+import { summarizeKm, type RunEntry } from "@/lib/watchRunMatching";
+
+/** Une sortie comptée dans le volume (déjà dédoublonnée : voir `buildRunLedger`) */
+export type { RunEntry } from "@/lib/watchRunMatching";
 
 /** Nombre de semaines d'historique (graphique) */
 export const RUNNING_WEEKS = 8;
@@ -6,6 +10,8 @@ export const RUNNING_WEEKS = 8;
 export interface RunningWeek {
   monday: string; // yyyy-MM-dd
   km: number;
+  /** Part mesurée par une montre ou un fichier importé */
+  watchKm: number;
 }
 
 export interface RunningVolume {
@@ -17,12 +23,8 @@ export interface RunningVolume {
   lastWeekKm: number;
   /** RUNNING_WEEKS dernières semaines, la plus ancienne d'abord */
   weeks: RunningWeek[];
-}
-
-/** Une séance de course comptée dans le volume */
-export interface RunEntry {
-  date: string;
-  km: number;
+  /** Km mesurés par la montre sur les RUNNING_WEEKS semaines (provenance affichée) */
+  watchKm: number;
 }
 
 export function iso(d: Date): string {
@@ -46,19 +48,19 @@ export function computeRunningVolume(runs: RunEntry[], now = new Date()): Runnin
   const thisMonday = mondayOf(now);
   const today = iso(now);
   const rollingStart = iso(addDays(now, -6));
-  const sum = (from: string, to: string) =>
-    runs.reduce((s, r) => (r.date >= from && r.date <= to ? s + r.km : s), 0);
+  const sum = (from: string, to: string) => summarizeKm(runs, from, to).km;
 
   const weeks: RunningWeek[] = Array.from({ length: RUNNING_WEEKS }, (_, i) => {
     const mon = addDays(thisMonday, -7 * (RUNNING_WEEKS - 1 - i));
-    return { monday: iso(mon), km: sum(iso(mon), iso(addDays(mon, 6))) };
+    return { monday: iso(mon), ...summarizeKm(runs, iso(mon), iso(addDays(mon, 6))) };
   });
+  const windowEnd = iso(addDays(thisMonday, 6));
 
-  const round = (n: number) => Math.round(n * 10) / 10;
   return {
-    weekKm:     round(sum(iso(thisMonday), iso(addDays(thisMonday, 6)))),
-    rolling7Km: round(sum(rollingStart, today)),
-    lastWeekKm: round(weeks[RUNNING_WEEKS - 2]?.km ?? 0),
-    weeks:      weeks.map((w) => ({ ...w, km: round(w.km) })),
+    weekKm:     sum(iso(thisMonday), windowEnd),
+    rolling7Km: sum(rollingStart, today),
+    lastWeekKm: weeks[RUNNING_WEEKS - 2]?.km ?? 0,
+    weeks,
+    watchKm:    summarizeKm(runs, weeks[0].monday, windowEnd).watchKm,
   };
 }
