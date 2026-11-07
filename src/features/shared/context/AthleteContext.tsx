@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { nutritionKeys } from "@/api/nutrition";
+import { useNutritionLog, useNutritionStrategy } from "../hooks/useNutrition";
 import type { Profile } from "@/hooks/useAuth";
 import { useAthletePersistedState } from "../hooks/useAthletePersistedState";
 import { useAthleteComputations } from "../hooks/useAthleteComputations";
@@ -199,7 +202,7 @@ export function AthleteProvider({ athleteId, viewOnly = false, readOnly = false,
   const save = (k: string, v: unknown) => sSave(k, v, athleteId);
 
   const persisted = useAthletePersistedState(athleteId, { readOnly });
-  const computations = useAthleteComputations({ ...persisted });
+  const computations = useAthleteComputations({ ...persisted, athleteId });
   // Legacy energy state — tables (energy_session_config, app_data energy keys) were
   // dropped in the energy-refonte DB migration. Provide empty defaults so old
   // consumers (ProgPage, ProgrammationPage, RetoursPage, DashboardPage) don't crash.
@@ -223,9 +226,23 @@ export function AthleteProvider({ athleteId, viewOnly = false, readOnly = false,
     setMilestoneNotif, setWeekJustCompleted, setShowBilan, setAW, save,
   });
 
+  // Nutrition : lue via la couche API (cache React Query) pour qu'une saisie ou
+  // une stratégie enregistrée apparaisse tout de suite (invalidateNutrition).
+  const nutritionStrategyQ = useNutritionStrategy(athleteId);
+  const nutritionLogQ = useNutritionLog(athleteId);
+  const qc = useQueryClient();
+  const { setNutritionStrategy: setNutritionStrategyLocal } = persisted;
+  const setNutritionStrategy = useCallback((v: NutritionStrategy | null) => {
+    qc.setQueryData(nutritionKeys.strategy(athleteId), v);
+    setNutritionStrategyLocal(v);
+  }, [qc, athleteId, setNutritionStrategyLocal]);
+
   const value: AthleteContextValue = {
     athleteId, viewOnly, athleteProfile, onEditProfile, userName,
     ...persisted,
+    nutritionStrategy: nutritionStrategyQ.data !== undefined ? (nutritionStrategyQ.data as NutritionStrategy | null) : persisted.nutritionStrategy,
+    nutritionLog: (nutritionLogQ.data as Record<string, unknown> | undefined) ?? persisted.nutritionLog,
+    setNutritionStrategy,
     timerLeft, timerDur, timerActive, timerFinished, timerSetDur, timerStart, timerStop,
     showWellness, setShowWellness, showAppFeedback, setShowAppFeedback,
     ...energy,

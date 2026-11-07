@@ -4,6 +4,12 @@ import { todayKey, localISO } from "@/lib/date";
 import { checkMilestone } from "@/lib/date";
 import { SKEYS } from "@/lib/storage";
 import { clearDraft, wellnessDraftKey } from "@/lib/localDraft";
+import { invalidateWellness, saveWellnessForm } from "@/api/wellness";
+import {
+  completeWorkout, invalidateWorkouts, listWorkoutLogs, planWorkout, reopenWorkout, setWorkoutNote,
+} from "@/api/workouts";
+import { toLegacyEntry } from "@shared/domain/wellness";
+import { toCompactDay } from "@shared/domain/dates";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData,
@@ -40,6 +46,9 @@ interface LogicDeps {
   setBlockHistory: (v: ArchivedBlock[]) => void;
   setWellness: (v: WellnessData | null) => void | Promise<boolean>;
   setWellnessHistory: (v: Record<string, WellnessData>) => void | Promise<boolean>;
+  /** Mettent à jour l'état en mémoire sans écrire en base (useAthletePersistedState). */
+  _setWellnessRaw: (v: WellnessData | null) => void;
+  _setWellnessHistoryRaw: (v: Record<string, WellnessData> | ((p: Record<string, WellnessData>) => Record<string, WellnessData>)) => void;
   setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
   setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
   setBodyWeight: (v: BodyWeight) => void;
@@ -62,133 +71,14 @@ export function useAthleteLogic(d: LogicDeps) {
     setAthleteNotes, setBlockHistory, setWellness, setWellnessHistory,
     setWeightLog, setWeightMilestones, setBodyWeight, setInjuries,
     setMilestoneNotif, setWeekJustCompleted, setShowBilan, setAW, save,
+    _setWellnessRaw, _setWellnessHistoryRaw,
   } = d;
 
-  // ── Backfill completedSessions → workout_logs on first load ─────────────
-  // Sessions marked complete before DB-sync was implemented live only in
-  // localStorage. This one-time sync writes them to workout_logs so that
-  // the Retours view (which reads only from the DB) can see them.
-  const backfillDoneRef = useRef(false);
-  useEffect(() => {
-    return () => { backfillDoneRef.current = false; };
-  }, []);
-  useEffect(() => {
-    if (!loaded || backfillDoneRef.current || !athleteId || !blockConfig?.startDate) return;
-    backfillDoneRef.current = true;
-
-    // On ne sort PAS si completedSessions est vide : l'auto-nettoyage des séances
-    // hors-cycle (plus bas) doit pouvoir tourner même sans complétions locales.
-    const allEntries = Object.entries(completedSessions) as [string, string[]][];
-
-    const blockStart = new Date(blockConfig.startDate + "T12:00:00");
-    const dow0 = blockStart.getDay();
-    const blockMonday = new Date(blockStart);
-    blockMonday.setDate(blockStart.getDate() + (dow0 === 0 ? -6 : 1 - dow0));
-
-    (async () => {
-      // Bornes des cycles réels de l'athlète : on ne matérialise une complétion
-      // QUE si sa date tombe dans un cycle existant. Évite que des semaines
-      // "faites" stockées en localStorage (completedSessions) recréent des
-      // séances validées hors cycle (ex. après avoir raccourci/stoppé un cycle).
-      const { data: cyclesRows } = await supabase
-        .from("cycles").select("start_date, end_date").eq("athlete_id", athleteId);
-      const cycles = cyclesRows ?? [];
-      const hasCycles = cycles.length > 0;
-      const inAnyCycle = (dateStr: string) =>
-        cycles.some((c) => dateStr >= c.start_date && dateStr <= c.end_date);
-      const todayStr = localISO();
-
-      // Auto-nettoyage : si des cycles existent, on supprime les séances tombées
-      // HORS de tout cycle (phantoms laissés par d'anciens backfills, ex. après
-      // avoir stoppé/raccourci un cycle). Sinon, repart proprement.
-      //
-      // On ne cible QUE la signature d'un phantom de backfill : un log "completed"
-      // sans aucune saisie de l'athlète. Auparavant ce nettoyage supprimait TOUT
-      // log hors cycle : une séance glissée par le coach sur une date hors cycle
-      // disparaissait au chargement suivant, et une séance en cours d'exécution
-      // était effacée sous les pieds de l'athlète (ses charges/reps n'étaient
-      // alors plus jamais enregistrées).
-      if (hasCycles) {
-        const { data: allLogs } = await supabase
-          .from("workout_logs")
-          .select("id, scheduled_date, status, athlete_modifications")
-          .eq("athlete_id", athleteId);
-        const orphanIds = (allLogs ?? [])
-          .filter((l) =>
-            !inAnyCycle(l.scheduled_date) &&
-            l.status === "completed" &&
-            l.athlete_modifications == null
-          )
-          .map((l) => l.id);
-        if (orphanIds.length > 0) {
-          await supabase.from("workout_logs").delete().in("id", orphanIds);
-        }
-      }
-
-      // Auto-réparation : une séance FUTURE ne peut pas être réalisée. On repasse
-      // en "planned" tous les logs "completed" dont la date est dans le futur
-      // (erreurs de backfills antérieurs, completedSessions par semaine non fiable).
-      const { data: futureDone } = await supabase
-        .from("workout_logs").select("id")
-        .eq("athlete_id", athleteId).eq("status", "completed").gt("scheduled_date", todayStr);
-      const futureDoneIds = (futureDone ?? []).map((l) => l.id);
-      if (futureDoneIds.length > 0) {
-        await supabase.from("workout_logs").update({ status: "planned" }).in("id", futureDoneIds);
-      }
-
-      for (const [weekStr, sessIds] of allEntries) {
-        const week = Number(weekStr);
-        if (!Number.isFinite(week) || week < 1 || sessIds.length === 0) continue;
-
-        const monday = new Date(blockMonday);
-        monday.setDate(blockMonday.getDate() + (week - 1) * 7);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        const weekStart = localISO(monday);
-        const weekEnd   = localISO(sunday);
-
-        for (const sessId of sessIds) {
-          const sess = sessions.find(s => s.id === sessId);
-
-          // Date planifiée de la séance dans cette semaine
-          const dow = (sess?.weekDays?.[weekStr] ?? sess?.day_of_week) as number | undefined;
-          const scheduledDate = dow != null
-            ? (() => { const d = new Date(monday); d.setDate(monday.getDate() + dow); return localISO(d); })()
-            : weekStart;
-
-          // Hors de tout cycle réel → on ne matérialise pas la complétion
-          if (hasCycles && !inAnyCycle(scheduledDate)) continue;
-          // Séance future → jamais marquée réalisée par le backfill
-          if (scheduledDate > todayStr) continue;
-
-          // Check if a workout_log already exists for this session in this week
-          const { data: rows } = await supabase
-            .from("workout_logs")
-            .select("id, status")
-            .eq("session_id", sessId)
-            .eq("athlete_id", athleteId)
-            .gte("scheduled_date", weekStart)
-            .lte("scheduled_date", weekEnd)
-            .limit(1);
-          const existing = rows?.[0] ?? null;
-          if (existing) {
-            if (existing.status !== "completed") {
-              await supabase.from("workout_logs").update({ status: "completed" }).eq("id", existing.id);
-            }
-          } else {
-            await supabase.from("workout_logs").insert({
-              athlete_id:     athleteId,
-              session_id:     sessId,
-              session_name:   sess?.name ?? "Séance",
-              scheduled_date: scheduledDate,
-              status:         "completed",
-            });
-          }
-        }
-      }
-      qc.invalidateQueries({ queryKey: ["cal", athleteId] });
-    })();
-  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  // L'ancien rattrapage `asp:completed` → `workout_logs` (et ses nettoyages)
+  // a été supprimé le 2026-11-07 : il datait de l'époque où les séances
+  // validées vivaient dans le navigateur, tournait à chaque ouverture — y
+  // compris en vue coach et staff — et pouvait repasser en « réalisée » une
+  // séance que l'athlète avait réouverte. `workout_logs` est la seule source.
 
   // Calcule la date exacte planifiée pour une séance dans une semaine donnée
   const sessionScheduledDate = useCallback((sessId: string, week: number): string | null => {
@@ -221,39 +111,25 @@ export function useAthleteLogic(d: LogicDeps) {
     const scheduledDate = sessionScheduledDate(sessId, week) ?? weekStart;
 
     (async () => {
-      // Search by session_id + week range — works regardless of which exact day
-      // the coach placed the session on (avoids exact-date mismatch bug)
-      const { data: rows } = await supabase
-        .from("workout_logs")
-        .select("id")
-        .eq("session_id", sessId)
-        .eq("athlete_id", athleteId)
-        .gte("scheduled_date", weekStart)
-        .lte("scheduled_date", weekEnd)
-        .order("scheduled_date")
-        .limit(1);
-
-      const existing = rows?.[0] ?? null;
-
-      if (existing) {
-        await supabase
-          .from("workout_logs")
-          .update(note != null ? { status, notes: note } : { status })
-          .eq("id", existing.id);
-      } else if (status === "completed") {
-        await supabase
-          .from("workout_logs")
-          .insert({
-            athlete_id:     athleteId,
-            session_id:     sessId,
-            session_name:   sess?.name ?? "Séance",
-            scheduled_date: scheduledDate,
-            status:         "completed",
-            ...(note != null ? { notes: note } : {}),
-          });
+      // Séance de la semaine, quel que soit le jour où le coach l'a placée.
+      const [existing] = await listWorkoutLogs({
+        athleteIds: [athleteId], sessionId: sessId, from: weekStart, to: weekEnd, limit: 1, withMods: false,
+      });
+      let logId = existing?.id ?? null;
+      if (status === "completed") {
+        if (!logId) {
+          logId = (await planWorkout({
+            athleteId, coachId: null, sessionId: sessId,
+            sessionName: sess?.name ?? "Séance", date: scheduledDate, weekNumber: week,
+          })).id;
+        }
+        await completeWorkout({ logId });
+      } else if (logId) {
+        await reopenWorkout(logId);
       }
-      qc.invalidateQueries({ queryKey: ["cal", athleteId] });
-    })();
+      if (logId && note != null) await setWorkoutNote(logId, note);
+      await invalidateWorkouts(qc, { athleteId, logId: logId ?? undefined });
+    })().catch((e) => console.error("[syncWorkoutLogStatus]", e));
   }, [sessionScheduledDate, sessions, athleteId, blockConfig?.startDate, qc]);
 
   const completeSession = useCallback((sessId: string, week: number, note?: string) => {
@@ -314,11 +190,21 @@ export function useAthleteLogic(d: LogicDeps) {
   // poids saisi) ; le brouillon local du formulaire n'est purgé qu'à ce moment.
   const saveWellness = useCallback((data: WellnessData): Promise<boolean> => {
     const day = todayKey();
-    const dataWithDate = { ...data, date: day };
-    const writes: Array<void | Promise<boolean>> = [];
-    writes.push(setWellness(dataWithDate));
-    const wh = { ...wellnessHistory, [day]: dataWithDate };
-    writes.push(setWellnessHistory(wh));
+    // Le jour seul, côté serveur (RPC `wellness_set_day`) : un autre appareil
+    // ou le coach ne voit plus sa saisie effacée par une réécriture du blob.
+    const wellnessWrite: Promise<boolean> = saveWellnessForm(athleteId, data)
+      .then((saved) => {
+        const legacy = { ...toLegacyEntry(saved), date: toCompactDay(saved.day) } as unknown as WellnessData;
+        _setWellnessRaw(legacy);
+        _setWellnessHistoryRaw((prev) => ({ ...prev, [toCompactDay(saved.day)]: legacy }));
+        void invalidateWellness(qc, athleteId);
+        return true;
+      })
+      .catch((e) => {
+        console.error("[saveWellness]", e);
+        return false;
+      });
+    const writes: Array<void | Promise<boolean>> = [wellnessWrite];
     if (data.poids) {
       const key = day;
       const nwl = { ...weightLog, [key]: data.poids };
@@ -338,7 +224,7 @@ export function useAthleteLogic(d: LogicDeps) {
       if (ok && athleteId) clearDraft(wellnessDraftKey(athleteId, day));
       return ok;
     });
-  }, [athleteId, wellnessHistory, weightLog, bodyWeight, weightMilestones, setWellness, setWellnessHistory, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
+  }, [athleteId, qc, weightLog, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
 
   const updateSessionDay = useCallback((sessId: string, dayIdx: number) => {
     setSessions(prev => prev.map(s => s.id === sessId ? { ...s, day_of_week: dayIdx } : s));

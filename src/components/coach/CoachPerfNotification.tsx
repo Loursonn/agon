@@ -1,21 +1,7 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface Notification {
-  id: string;
-  athlete_id: string;
-  performance_log_id: string;
-  status: "pending" | "approved" | "rejected";
-  created_at: string;
-  athlete_name?: string;
-  metric_name?: string;
-  value?: number;
-  unit?: string;
-  date?: string;
-  test_title?: string;
-}
+import { useState } from "react";
+import { toast } from "sonner";
+import { usePerformanceReviews, useReviewMeasurement } from "@/features/shared/hooks/useReferences";
+import type { PerformanceReview } from "@/api/references";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -27,103 +13,40 @@ interface Props {
 
 // ── Composant ─────────────────────────────────────────────────────────────────
 
+/**
+ * Mesures envoyées par l'athlète, à valider (elles deviennent la référence
+ * active) ou rejeter. Validation = une RPC atomique ; références, séances
+ * énergie et accueil coach sont invalidés tout de suite.
+ */
 export default function CoachPerfNotification({ coachId, athleteId, C }: Props) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Pour un athlète donné : toutes ses alertes (la RLS les ouvre à ses deux
+  // coachs, référent et co-coach). Sinon : celles adressées à ce coach.
+  const { data, isLoading: loading, isError } = usePerformanceReviews(athleteId ? { athleteId } : { coachId });
+  const review = useReviewMeasurement();
   const [processing, setProcessing] = useState<string | null>(null);
+  const notifications = (data ?? []).map((n) => ({
+    ...n,
+    athlete_name: n.athleteName ?? undefined,
+    metric_name: n.metricName ?? undefined,
+    value: n.value ?? undefined,
+    unit: n.unit ?? undefined,
+    date: n.date ?? undefined,
+    test_title: n.testTitle ?? undefined,
+  }));
 
-  useEffect(() => {
-    loadNotifications();
-  }, [coachId, athleteId]);
-
-  const loadNotifications = async () => {
-    setLoading(true);
-    // Pour un athlète donné : toutes ses alertes (la RLS les ouvre à ses deux
-    // coachs, référent et co-coach). Sinon : celles adressées à ce coach.
-    let query = supabase.from("performance_notifications").select("*");
-    query = athleteId ? query.eq("athlete_id", athleteId) : query.eq("coach_id", coachId);
-    const { data: notifs } = await query
-      .order("created_at", { ascending: false })
-      .limit(20);
-
-    if (!notifs?.length) {
-      setNotifications([]);
-      setLoading(false);
-      return;
-    }
-
-    // Enrichir avec les données de performance et d'athlète
-    const enriched = await Promise.all(
-      notifs.map(async (n) => {
-        const [{ data: perf }, { data: athlete }] = await Promise.all([
-          supabase.from("performance_logs").select("metric_name,value,unit,date,test_session_id").eq("id", n.performance_log_id).single(),
-          supabase.from("profiles").select("full_name").eq("id", n.athlete_id).single(),
-        ]);
-
-        let testTitle: string | undefined;
-        if (perf?.test_session_id) {
-          const { data: test } = await supabase.from("test_sessions").select("title").eq("id", perf.test_session_id).single();
-          testTitle = test?.title;
-        }
-
-        return {
-          ...n,
-          athlete_name: athlete?.full_name,
-          metric_name: perf?.metric_name,
-          value: perf?.value,
-          unit: perf?.unit,
-          date: perf?.date,
-          test_title: testTitle,
-        } as Notification;
-      })
-    );
-
-    setNotifications(enriched);
-    setLoading(false);
-  };
-
-  const handleApprove = async (notif: Notification) => {
+  const decide = async (notif: PerformanceReview, approve: boolean) => {
     setProcessing(notif.id);
     try {
-      // Valider la notification
-      await supabase.from("performance_notifications").update({
-        status: "approved",
-        resolved_at: new Date().toISOString(),
-      }).eq("id", notif.id);
-
-      // Mettre à jour coach_validated dans performance_logs
-      await supabase.from("performance_logs").update({ coach_validated: true }).eq("id", notif.performance_log_id);
-
-      // Activer comme référence via RPC
-      if (notif.metric_name) {
-        await supabase.rpc("set_active_performance_reference", {
-          p_performance_log_id: notif.performance_log_id,
-          p_athlete_id: notif.athlete_id,
-          p_metric_name: notif.metric_name,
-        });
-      }
-
-      loadNotifications();
+      await review.mutateAsync({ notificationId: notif.id, logId: notif.performanceLogId, athleteId: notif.athleteId, approve });
+      toast.success(approve ? "Performance validée — référence active" : "Performance rejetée");
+    } catch {
+      toast.error(approve ? "Validation non enregistrée — vérifie ta connexion" : "Rejet non enregistré — vérifie ta connexion");
     } finally {
       setProcessing(null);
     }
   };
-
-  const handleReject = async (notif: Notification) => {
-    setProcessing(notif.id);
-    try {
-      await supabase.from("performance_notifications").update({
-        status: "rejected",
-        resolved_at: new Date().toISOString(),
-      }).eq("id", notif.id);
-
-      await supabase.from("performance_logs").update({ coach_validated: false }).eq("id", notif.performance_log_id);
-
-      loadNotifications();
-    } finally {
-      setProcessing(null);
-    }
-  };
+  const handleApprove = (notif: PerformanceReview) => decide(notif, true);
+  const handleReject = (notif: PerformanceReview) => decide(notif, false);
 
   const pending = notifications.filter(n => n.status === "pending");
   const resolved = notifications.filter(n => n.status !== "pending");
@@ -140,6 +63,10 @@ export default function CoachPerfNotification({ coachId, athleteId, C }: Props) 
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "20px 0", color: C.tx3, fontSize: 12 }}>Chargement…</div>
+      ) : isError ? (
+        <div style={{ background: C.s1, borderRadius: 6, padding: "20px", border: "1px solid " + C.brd, textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: C.tx3 }}>Validations non chargées — vérifie ta connexion</div>
+        </div>
       ) : notifications.length === 0 ? (
         <div style={{ background: C.s1, borderRadius: 6, padding: "20px", border: "1px solid " + C.brd, textAlign: "center" }}>
           <div style={{ fontSize: 11, color: C.tx3 }}>Aucune notification de performance</div>

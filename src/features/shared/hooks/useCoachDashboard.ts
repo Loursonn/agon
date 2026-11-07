@@ -2,15 +2,14 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { calcScore } from "@/lib/wellness";
+import { getReco } from "@/lib/wellness";
 import { QK } from "@/lib/queryKeys";
 import { localISO } from "@/lib/date";
+import { wellnessScore, type WellnessEntry } from "@shared/domain/wellness";
+import { useWellnessHistories } from "./useWellness";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
-
-const WELL_COLOR = (s: number) =>
-  s >= 70 ? "#66F03C" : s >= 50 ? "#F5A623" : "#FF5A33";
 
 export type SessionStatus = "planned" | "in_progress" | "completed" | "missed" | "skipped";
 
@@ -25,8 +24,13 @@ export interface TodayAthlete {
   athleteId: string;
   athleteName: string;
   sessions: TodaySession[];
+  /** Score du wellness saisi aujourd'hui (domaine wellness) ; null = pas de saisie ou incomplète. */
   wellnessScore: number | null;
   wellnessColor: string;
+  /** Palier (Optimal, Bon, Modéré, Fatigué, Surmenage) ; null sans score. */
+  wellnessLabel: string | null;
+  /** Réponse « blessé/malade » du wellness d'aujourd'hui ; null sinon. */
+  injuryNote: string | null;
 }
 
 export interface MissedSession {
@@ -67,22 +71,10 @@ export function useCoachDashboard() {
     ...COMMON,
   });
 
-  // ── 2. Wellness from app_data (latest entry per athlete) ───────────────────
-  const wellQ = useQuery({
-    queryKey: QK.coachDashboard.wellness(user?.id ?? "", today),
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("app_data")
-        .select("athlete_id, value")
-        .in("athlete_id", athleteIds)
-        .eq("key", "asp:wellness");
-      if (error) throw error;
-      return (data ?? []) as { athlete_id: string; value: unknown }[];
-    },
-    enabled: !!user && athleteIds.length > 0,
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
-  });
+  // ── 2. Wellness du jour (asp:wh + archive, lu par src/api/wellness) ────────
+  // Avant : `asp:wellness.date` (compacte "20261107") comparée à "2026-11-07"
+  // → le wellness du jour n'apparaissait jamais. Même requête que les alertes.
+  const wellQ = useWellnessHistories(athleteIds, { enabled: !!user });
 
   // ── 3. Yesterday's missed sessions ─────────────────────────────────────────
   const missedQ = useQuery({
@@ -127,12 +119,11 @@ export function useCoachDashboard() {
 
   // ── Merge: today's athletes ─────────────────────────────────────────────────
   const todayAthletes = useMemo<TodayAthlete[]>(() => {
-    const wellMap: Record<string, unknown> = {};
-    (wellQ.data ?? []).forEach((r) => {
-      // Only use wellness if it was filled TODAY — otherwise score is stale
-      const v = r.value as { date?: string } | null;
-      if (v?.date === today) wellMap[r.athlete_id] = r.value;
-    });
+    // Seulement la saisie d'AUJOURD'HUI (jour ISO local) : sinon le score est périmé.
+    const wellMap: Record<string, WellnessEntry> = {};
+    for (const [aid, h] of Object.entries(wellQ.data ?? {})) {
+      if (h[today]) wellMap[aid] = h[today];
+    }
 
     const logsByAthlete: Record<string, (typeof logsQ.data)[number][]> = {};
     (logsQ.data ?? []).forEach((r) => {
@@ -148,8 +139,9 @@ export function useCoachDashboard() {
     return athletes
       .filter((a) => seenIds.has(a.id))
       .map((a) => {
-        const rawWell = wellMap[a.id];
-        const score = rawWell ? calcScore(rawWell) : null;
+        const entry = wellMap[a.id];
+        const score = wellnessScore(entry);
+        const reco = getReco(score);
         return {
           athleteId:     a.id,
           athleteName:   a.full_name,
@@ -160,10 +152,12 @@ export function useCoachDashboard() {
             rpeScore:    l.rpe_score,
           })),
           wellnessScore: score,
-          wellnessColor: score != null ? WELL_COLOR(score) : "#7D7468",
+          wellnessColor: reco.c,
+          wellnessLabel: score != null ? reco.label : null,
+          injuryNote:    entry?.injuryNote ?? null,
         };
       });
-  }, [logsQ.data, wellQ.data, athletes]);
+  }, [logsQ.data, wellQ.data, athletes, today]);
 
   // ── Missed sessions ─────────────────────────────────────────────────────────
   const missedSessions = useMemo<MissedSession[]>(() => {

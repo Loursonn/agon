@@ -9,13 +9,13 @@
  *               occurrence qui a ses propres valeurs
  */
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
-import { useQueryClient } from "@tanstack/react-query"
 import { X, Copy, AlertTriangle, Video, Link2, Link2Off } from "lucide-react"
 import { C } from "@/lib/theme"
 import type { ProgSession, Exercice, ExerciceParams, Bloc } from "./types"
 import { SessionBlocEditor } from "./SessionBlocEditor"
 import { useSessionWeekLogs } from "./hooks/useSessionWeekLogs"
 import type { SessionSetLog } from "@/features/shared/types/athlete"
+import { exerciseHasEntries } from "@shared/domain/athleteMods"
 import { maxDefinedWeek, resolveExerciceParams, resolveVideoRequest, toMultiWeekSession } from "@/lib/sessionOccurrence"
 import { formatReps, formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps"
 import { IsoBadge } from "@/features/shared/components/IsoBadge"
@@ -334,7 +334,6 @@ function EmptyCol({ msg, sub }: { msg: string; sub?: string }) {
 export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, onClose, initialWeek = 1 }: Props) {
   const [activeWeek, setActiveWeek] = useState(initialWeek)
   useEffect(() => { setActiveWeek(initialWeek) }, [initialWeek])
-  const qc = useQueryClient()
   const { mutate: saveOverride, isPending: clearingOverride } = useCoachSessionOverride()
   // Bandeau « modif ponctuelle » masqué pour ces logs (choix « Garder »)
   const [keptOverrides, setKeptOverrides] = useState<Set<string>>(new Set())
@@ -423,15 +422,14 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
 
   function clearNextOverride() {
     if (!nextOverride || !athleteId) return
-    saveOverride(
-      { workoutLogId: nextOverride.id, athleteId, override: null },
-      { onSuccess: () => qc.invalidateQueries({ queryKey: ["session-week-logs", athleteId, session.id] }) },
-    )
+    // useCoachSessionOverride invalide déjà toutes les séances de l'athlète.
+    saveOverride({ workoutLogId: nextOverride.id, athleteId, override: null })
   }
 
   const totalExos = session.blocs.reduce((s, b) => s + b.exercices.length, 0)
+  // « Rien réalisé » = aucune série saisie (charge ou reps), règle unique du cron.
   const noRealise = prevuBlocs.every(b =>
-    b.exercices.every(ex => !(atMods?.sessionSets?.[ex.id]?.length)),
+    b.exercices.every(ex => !exerciseHasEntries(atMods, ex.id)),
   )
 
   return (

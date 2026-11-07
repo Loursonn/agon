@@ -1,32 +1,10 @@
 // Types pour les retours hebdomadaires enrichis
 
 // ── Nutrition ─────────────────────────────────────────────────────────────────
-
-export interface NutritionStrategy {
-  id: string;
-  athlete_id: string;
-  coach_id: string;
-  strategy: 'maintenance' | 'seche' | 'prise_de_masse';
-  can_track_calories: boolean;
-  total_calories_coach: number | null;
-  target_weight: number | null;
-  surplus_deficit_min: number | null;  // kcal, e.g. -200 (acceptable undershoot)
-  surplus_deficit_max: number | null;  // kcal, e.g. +100 (acceptable overshoot)
-  macros_glucides: number | null;      // g/j cible
-  macros_lipides: number | null;
-  macros_proteines: number | null;
-}
-
-export interface NutritionDailyLog {
-  id: string;
-  athlete_id: string;
-  date: string;                          // "yyyy-MM-dd"
-  active_calories: number | null;
-  total_calories_consumed: number | null;
-  glucides_consumed: number | null;      // g
-  lipides_consumed: number | null;
-  proteines_consumed: number | null;
-}
+// Stockée dans `app_data` (`asp:nutrition_strategy`, `asp:nutrition_log`), lue
+// via `src/api/nutrition.ts`. Les écarts de la stratégie sont en % signés.
+import type { NutritionDay, NutritionStrategy } from "@/lib/nutrition";
+export type { NutritionDay, NutritionStrategy };
 
 export interface WorkoutExerciseComment {
   id: string;
@@ -68,12 +46,15 @@ export interface PlannedExercise {
 // ── Type wellness d'une journée ───────────────────────────────────────────────
 
 export interface WellnessDay {
-  score:      number;
-  fatigue:    number;
-  sommeil:    number;
-  stress:     number;
-  energie:    number;
-  doms?:      number;
+  /** Score recalculé (`wellnessScore`) ; null si une note manque — affiché « — ». */
+  score:      number | null;
+  fatigue:    number | null;
+  sommeil:    number | null;
+  stress:     number | null;
+  energie:    number | null;
+  doms?:      number | null;
+  /** Réponse « blessé / malade » du wellness : le commentaire, sinon null. */
+  injuryNote?: string | null;
   domsZones?: string[];
   domsPoints?: Array<{ id: string; x: number; y: number; side: "front" | "back"; intensity?: number }>;
   coucher?:   { h: number; m: number };
@@ -181,7 +162,7 @@ export interface WeeklyRetourData {
   daily_wellness: Record<string, WellnessDay | null>;
   free_activities: FreeActivityDetail[];
   nutrition_strategy: NutritionStrategy | null;
-  nutrition_logs: NutritionDailyLog[];
+  nutrition_logs: NutritionDay[];
 }
 
 export interface WeekComparisonData {
@@ -269,5 +250,5 @@ export interface MonthlyRetourData {
   competitions: CompetitionDetail[];
   free_activities: FreeActivityDetail[];
   nutrition_strategy: NutritionStrategy | null;
-  nutrition_logs: NutritionDailyLog[];
+  nutrition_logs: NutritionDay[];
 }

@@ -42,6 +42,8 @@ import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
 import { localISO, normalizeDayMap } from "@/lib/date";
+import { calcScore, wellnessColor } from "@/lib/wellness";
+import { averageScore, wellnessBand } from "@shared/domain/wellness";
 import { loadDraft, saveDraft, clearDraft, energyDraftKey } from "@/lib/localDraft";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
@@ -966,7 +968,8 @@ export default function TodayPage() {
 
   // ── Yesterday's recap ─────────────────────────────────────────────────────
   const yesterdayISO = localISO(new Date(Date.now() - 86400000));
-  const yesterdayWellness = wellnessByISO?.[yesterdayISO] as { score?: number } | undefined ?? null;
+  const yesterdayRaw = wellnessByISO?.[yesterdayISO] ?? null;
+  const yesterdayWellness = yesterdayRaw ? { score: calcScore(yesterdayRaw) } : null;
   const yesterdayDay = weekDays.find((d) => d.date === yesterdayISO);
   // Seule une séance réellement clôturée compte : une séance prévue mais pas faite
   // n'a rien à faire sous une coche verte.
@@ -975,10 +978,8 @@ export default function TodayPage() {
   // ── Wellness trend (last 14 days) ────────────────────────────────────────
   const wellnessTrend = Array.from({ length: 14 }, (_, i) => {
     const iso = localISO(new Date(Date.now() - (13 - i) * 86400000));
-    const w = wellnessByISO?.[iso] as Record<string, number> | null | undefined;
-    const score = w ? Math.round(
-      ((w.fatigue ?? 3) + (w.sommeil ?? 3) + (w.stress ?? 3) + (w.energie ?? 3) + (w.doms ?? 3)) / 25 * 100
-    ) : null;
+    // Score unique (domaine wellness) : null si une note manque, jamais inventé.
+    const score = calcScore(wellnessByISO?.[iso] ?? null);
     return { d: iso.slice(5), score };
   });
   const wellnessTrendHasData = wellnessTrend.some((d) => d.score !== null);
@@ -1005,19 +1006,10 @@ export default function TodayPage() {
   })();
 
   // ── Average wellness score (last 7 days with data) ───────────────────────
-  const recentScores = wellnessTrend.slice(-7).map((d) => d.score).filter((s): s is number => s !== null);
-  const avgFormeScore = recentScores.length > 0
-    ? Math.round(recentScores.reduce((a, b) => a + b, 0) / recentScores.length)
-    : null;
-  const formeColor = avgFormeScore == null ? C.tx3
-    : avgFormeScore >= 75 ? C.g
-    : avgFormeScore >= 55 ? C.o
-    : C.r;
-  const formeLabel = avgFormeScore == null ? "—"
-    : avgFormeScore >= 75 ? "Excellente"
-    : avgFormeScore >= 60 ? "Bonne"
-    : avgFormeScore >= 45 ? "Correcte"
-    : "À surveiller";
+  // Mêmes 5 paliers que le coach (80 / 65 / 50 / 35).
+  const avgFormeScore = averageScore(wellnessTrend.slice(-7).map((d) => d.score));
+  const formeColor = avgFormeScore == null ? C.tx3 : wellnessColor(avgFormeScore);
+  const formeLabel = wellnessBand(avgFormeScore)?.label ?? "—";
 
   // Recent coach feedback (14 days)
   const recentFb = useMemo(() => {
@@ -1862,7 +1854,7 @@ export default function TodayPage() {
               </div>
             )}
 
-            {formeAdvice.length === 0 && avgFormeScore != null && avgFormeScore >= 70 && (
+            {formeAdvice.length === 0 && wellnessBand(avgFormeScore)?.tone === "good" && (
               <div
                 style={{
                   background: C.gS, borderRadius: 6, padding: "12px 14px",

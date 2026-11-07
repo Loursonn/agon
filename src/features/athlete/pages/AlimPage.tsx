@@ -1,19 +1,28 @@
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import NutritionView from "@/components/athlete/NutritionView";
+import { useNutritionStrategy } from "@/features/shared/hooks/useNutrition";
 
+/**
+ * Le journal est lu et écrit par NutritionView via `src/api/nutrition.ts`
+ * (une journée à la fois, RPC `nutrition_save_day`). Plus de réécriture du
+ * journal complet par le contexte (`setNutritionLog`), qui écrasait la saisie
+ * d'un autre appareil.
+ */
 export default function AlimPage() {
-  const { athleteId, viewOnly, athleteProfile, nutritionStrategy, nutritionLog, setNutritionLog, weightLog } = useAthleteContext();
+  const { athleteId, viewOnly, athleteProfile, nutritionStrategy, weightLog } = useAthleteContext();
+  // Stratégie relue par la couche API (plan du coach à jour) ; le contexte sert
+  // le temps du premier chargement.
+  const strategyQuery = useNutritionStrategy(athleteId);
+  const strategy = strategyQuery.data !== undefined ? strategyQuery.data : nutritionStrategy;
   const bmr = (athleteProfile as { base_metabolism?: number } | null)?.base_metabolism ?? null;
 
   return (
     <NutritionView
       athleteId={athleteId}
       bmr={bmr}
-      nutritionStrategy={nutritionStrategy}
-      history={nutritionLog as Record<string, import("@/lib/nutrition").NutritionDailyLog>}
+      nutritionStrategy={strategy}
       weightLog={weightLog}
       viewOnly={viewOnly}
-      onLogSaved={(date, log) => setNutritionLog(prev => ({ ...prev, [date]: log }))}
     />
   );
 }

@@ -2,7 +2,7 @@
  * PRLogsSection — Gestion des records personnels 1RM.
  *
  * Deux sources :
- *   ⚡ computed  — Epley (kg × (1 + reps/30)) calculé auto en fin de séance
+ *   ⚡ computed  — Epley (kg × (1 + reps/30), arrondi 0,5 kg) calculé à la validation de séance
  *   ✏️  manual   — saisie manuelle coach/athlète
  *
  * UI :
@@ -21,10 +21,9 @@ import {
   usePRsByRef,
   useAddPRLog,
   useDeletePRLog,
-  epley1RM,
   type PRLog,
 } from "@/features/shared/hooks/usePRLogs";
-import { effectiveRmRef } from "@/features/shared/hooks/useAutoComputePRs";
+import { estimateOneRm, recordRefOf as effectiveRmRef } from "@shared/domain/performance";
 import { useSyncHistoricalPRs } from "@/features/shared/hooks/useSyncHistoricalPRs";
 import type { Exercise } from "@/features/shared/types/athlete";
 
@@ -50,7 +49,7 @@ const inp = (extra?: React.CSSProperties): React.CSSProperties => ({
 
 // ─── Source badge ─────────────────────────────────────────────────────────────
 
-function SourceBadge({ source, reps, kg }: { source: PRLog["source"]; reps?: number; kg?: number }) {
+function SourceBadge({ source, reps, kg }: { source: PRLog["source"]; reps?: number | null; kg?: number | null }) {
   if (source === "computed") {
     return (
       <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: `${C.ac}20`, color: C.ac, display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
@@ -87,19 +86,20 @@ function AddPRForm({ athleteId, existingRefs, defaultRef, onDone }: AddPRFormPro
 
   const addPR = useAddPRLog();
   const filtered = existingRefs.filter(r => r.toLowerCase().includes(ref.toLowerCase()) && r !== ref);
-  const epleyKg = mode === "epley" && kg && reps ? epley1RM(parseFloat(kg), parseInt(reps)) : null;
+  const epleyKg = mode === "epley" && kg && reps ? estimateOneRm(parseFloat(kg), parseInt(reps)) : null;
 
   function handleSubmit() {
-    const finalKg = mode === "direct" ? parseFloat(kg) : (epleyKg ?? 0);
-    if (!ref.trim() || !finalKg || !date) return;
+    const lifted = parseFloat(kg);
+    const nbReps = mode === "epley" ? parseInt(reps) : 1;
+    if (!ref.trim() || !(lifted > 0) || !(nbReps > 0) || !date) return;
     addPR.mutate({
       athleteId,
-      exercise_ref: ref.trim(),
-      kg: finalKg,
+      ref: ref.trim(),
+      kg: lifted,
+      reps: nbReps,
       date,
       notes: notes.trim() || undefined,
       source: "manual",
-      ...(mode === "epley" && kg && reps ? { source_kg: parseFloat(kg), source_reps: parseInt(reps) } : {}),
     }, { onSuccess: onDone });
   }
 

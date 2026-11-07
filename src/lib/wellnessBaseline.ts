@@ -11,9 +11,21 @@
  * reposé, « Fraîcheur musculaire » 1 DOMS intenses → 5 aucune douleur). Un
  * z négatif veut donc toujours dire « moins bien que d'habitude », sans
  * inversion à faire.
+ *
+ * Lecture : l'historique passe par `parseWellnessHistory` (domaine). Il accepte
+ * donc le blob brut `asp:wh` — clés compactes "YYYYMMDD", celles qui existent
+ * en base — aussi bien qu'un historique déjà lu. Avant le 2026-11-08, seules
+ * les clés ISO étaient gardées : aucune alerte ne se déclenchait jamais.
  */
-import { WELL_ITEMS, calcScore } from "@/lib/wellness";
-import type { WellnessData } from "@/features/shared/types/athlete";
+import {
+  WELLNESS_ITEMS,
+  WELLNESS_ITEM_LABEL,
+  parseWellnessHistory,
+  wellnessScore,
+  type WellnessEntry,
+  type WellnessHistory,
+  type WellnessItem,
+} from "@shared/domain/wellness";
 
 // ── Réglages ─────────────────────────────────────────────────────────────────
 
@@ -38,14 +50,12 @@ export const Z_SCORE_ALERTE = -1.5;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type WellnessItemKey = "fatigue" | "sommeil" | "stress" | "energie" | "doms";
+export type WellnessItemKey = WellnessItem;
 
-export const ITEM_KEYS: WellnessItemKey[] = ["fatigue", "sommeil", "stress", "energie", "doms"];
+export const ITEM_KEYS: WellnessItemKey[] = [...WELLNESS_ITEMS];
 
 /** Libellé vu par l'athlète lors de la saisie — on garde le même mot côté coach. */
-export const ITEM_LABEL: Record<WellnessItemKey, string> = Object.fromEntries(
-  WELL_ITEMS.map((i) => [i.k, i.q]),
-) as Record<WellnessItemKey, string>;
+export const ITEM_LABEL: Record<WellnessItemKey, string> = WELLNESS_ITEM_LABEL;
 
 export type AlertLevel = "none" | "vigilance" | "alerte";
 
@@ -108,17 +118,13 @@ export function daysBetween(a: string, b: string): number {
 
 // ── Évaluation ───────────────────────────────────────────────────────────────
 
-/** Dates de saisie exploitables, les plus récentes d'abord. */
-function sortedDates(history: Record<string, WellnessData>): string[] {
-  return Object.keys(history ?? {})
-    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && history[d])
-    .sort()
-    .reverse();
+/** Dates de saisie (jours ISO), les plus récentes d'abord. */
+function sortedDates(history: WellnessHistory): string[] {
+  return Object.keys(history).sort().reverse();
 }
 
-function numeric(w: WellnessData | undefined, key: WellnessItemKey): number | null {
-  const v = w?.[key];
-  return typeof v === "number" && isFinite(v) ? v : null;
+function numeric(w: WellnessEntry | undefined, key: WellnessItemKey): number | null {
+  return w?.items[key] ?? null;
 }
 
 /**
@@ -126,7 +132,7 @@ function numeric(w: WellnessData | undefined, key: WellnessItemKey): number | nu
  * Ne regarde que le niveau, sans la règle « deux saisies de suite ».
  */
 function assessEntry(
-  history: Record<string, WellnessData>,
+  history: WellnessHistory,
   date: string,
 ): { level: AlertLevel; baselineCount: number; deviations: WellnessDeviation[]; scoreZ: number | null } {
   const from = shiftIso(date, -BASELINE_DAYS);
@@ -158,11 +164,14 @@ function assessEntry(
   }
 
   // Score global : capte une baisse diffuse que chaque item pris seul ne voit pas.
-  const scoreValue = calcScore(entry);
-  const pastScores = window.map((d) => calcScore(history[d]));
+  // Une saisie sans score (note manquante ou hors échelle) ne compte pas.
+  const scoreValue = wellnessScore(entry);
+  const pastScores = window.map((d) => wellnessScore(history[d])).filter((v): v is number => v !== null);
   const { mean: scoreMean, sd: scoreSd } = meanSd(pastScores);
-  const scoreZ = zScore(scoreValue, scoreMean, scoreSd, SD_FLOOR_SCORE);
-  if (scoreZ <= Z_SCORE_VIGILANCE) {
+  const scoreZ = scoreValue !== null && pastScores.length >= MIN_BASELINE_ENTRIES
+    ? zScore(scoreValue, scoreMean, scoreSd, SD_FLOOR_SCORE)
+    : null;
+  if (scoreValue !== null && scoreZ !== null && scoreZ <= Z_SCORE_VIGILANCE) {
     deviations.push({
       item: "score", label: "Score global", value: scoreValue, mean: scoreMean, sd: scoreSd, z: scoreZ,
       level: scoreZ <= Z_SCORE_ALERTE ? "alerte" : "vigilance",
@@ -180,19 +189,22 @@ function assessEntry(
 /**
  * Évalue la dernière saisie d'un athlète.
  *
- * `today` est la date de référence (yyyy-MM-dd). Une saisie plus vieille qu'hier
- * ne dit rien de l'état actuel : on ne la transforme pas en alerte.
+ * `history` : blob `asp:wh` brut (clés compactes) ou historique déjà lu
+ * (`WellnessHistory`). `today` est la date de référence (yyyy-MM-dd). Une
+ * saisie plus vieille qu'hier ne dit rien de l'état actuel : on ne la
+ * transforme pas en alerte.
  */
 export function assessWellness(
-  history: Record<string, WellnessData> | null | undefined,
+  raw: unknown,
   today: string,
 ): WellnessAssessment {
   const empty: WellnessAssessment = {
     level: "none", date: null, baselineBuilding: false,
     baselineCount: 0, deviations: [], twoConsecutive: false,
   };
-  if (!history) return empty;
+  if (!raw) return empty;
 
+  const history = parseWellnessHistory(raw);
   const dates = sortedDates(history);
   const last = dates[0];
   if (!last) return empty;

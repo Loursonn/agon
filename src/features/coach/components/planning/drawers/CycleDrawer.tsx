@@ -11,6 +11,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import type { Cycle, Mesocycle } from "../hooks/useTimelineData";
 import { snapMonday, snapSunday, computeCascade, chainNextStart } from "../utils/planningHelpers";
 import { DateQuickAdjust } from "../DateQuickAdjust";
+import { deletePlannedWorkouts, listWorkoutLogs } from "@/api/workouts";
 
 // ── Microcycle auto-generation ────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ async function regenerateMicrocycles(cycleId: string, start: string, end: string
   const toDelete = (existing ?? []).filter((m) => !neededStarts.has(m.start_date));
   if (toDelete.length > 0) {
     const ids = toDelete.map((m) => m.id);
-    await supabase.from("workout_logs").delete().in("microcycle_id", ids);
+    await deletePlannedWorkouts({ microcycleIds: ids });
     await supabase.from("microcycles").delete().in("id", ids);
   }
 
@@ -58,18 +59,11 @@ function useCycleSessions(athleteId: string, startDate: string, endDate: string)
       // Scope by the cycle's date span. Cycles are sequential (non-overlapping),
       // and most logs are date-based (microcycle_id null), so date range is the
       // reliable scope here.
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("id, session_name, scheduled_date, status, workout_rpe(rpe_score)")
-        .eq("athlete_id", athleteId)
-        .gte("scheduled_date", startDate)
-        .lte("scheduled_date", endDate)
-        .order("scheduled_date");
-      return (data ?? []).map((w) => ({
+      const data = await listWorkoutLogs({ athleteIds: [athleteId], from: startDate, to: endDate, withMods: false });
+      // RPE : seule source `rpe_score` (l'embed workout_rpe n'était jamais lu).
+      return data.map((w) => ({
         id: w.id, session_name: w.session_name, scheduled_date: w.scheduled_date,
-        status: w.status,
-        rpe: Array.isArray(w.workout_rpe) && w.workout_rpe.length > 0
-          ? (w.workout_rpe[0] as { rpe_score: number }).rpe_score : null,
+        status: w.status, rpe: w.rpe_score,
       }));
     },
   });
@@ -264,14 +258,11 @@ export function CycleDrawer({
     if (!error) await regenerateMicrocycles(cycle.id, newStart, newEnd);
 
     // Borne dure : si on raccourcit la fin (sans cascade), on supprime les séances
-    // au-delà de la nouvelle fin. Permet de "stopper" un cycle à une date donnée
-    // (ex. fin = hier) pour repartir proprement, sans logs résiduels (y compris les
-    // logs hérités date-based marqués validés par erreur).
+    // PRÉVUES au-delà de la nouvelle fin, pour "stopper" un cycle à une date donnée.
+    // Les séances réalisées, commencées ou notées (RPE) sont gardées : ce sont les
+    // données de l'athlète (voir deletePlannedWorkouts).
     if (!error && !cascade && newEnd < oldEnd) {
-      await supabase.from("workout_logs").delete()
-        .eq("athlete_id", athleteId)
-        .gt("scheduled_date", newEnd)
-        .lte("scheduled_date", oldEnd);
+      await deletePlannedWorkouts({ athleteId, after: newEnd, until: oldEnd });
     }
 
     if (!error && cascade) {
@@ -419,7 +410,13 @@ export function CycleDrawer({
     setDeleting(true);
     const { data: micros } = await supabase.from("microcycles").select("id").eq("cycle_id", cycle.id);
     const microIds = (micros ?? []).map((m: { id: string }) => m.id);
-    if (microIds.length > 0) await supabase.from("workout_logs").delete().in("microcycle_id", microIds);
+    try {
+      await deletePlannedWorkouts({ microcycleIds: microIds });
+    } catch (e) {
+      setDeleting(false);
+      toast.error(e instanceof Error ? e.message : "Erreur suppression");
+      return;
+    }
     await supabase.from("microcycles").delete().eq("cycle_id", cycle.id);
     const { error } = await supabase.from("cycles").delete().eq("id", cycle.id);
     setDeleting(false);

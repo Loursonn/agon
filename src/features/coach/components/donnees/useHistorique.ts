@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateWorkouts, listWorkoutLogs, removeWorkout } from "@/api/workouts";
 import type { Macrocycle, Mesocycle, Cycle } from "@/features/coach/components/planning/hooks/useTimelineData";
 import type { ProgSession } from "@/features/coach/components/programmation/types";
 import { stripForeignPersonalFiches } from "@/features/shared/hooks/fiches/syncDocAssignments";
@@ -30,12 +31,9 @@ export function useHistorique(athleteId: string) {
     enabled: !!athleteId,
     staleTime: 30_000,
     queryFn: async (): Promise<HistoriqueData> => {
-      const [macroRes, logsRes] = await Promise.all([
+      const [macroRes, logs] = await Promise.all([
         supabase.from("macrocycles").select("*").eq("athlete_id", athleteId).order("start_date", { ascending: false }),
-        supabase.from("workout_logs")
-          .select("id, session_id, session_name, scheduled_date, status")
-          .eq("athlete_id", athleteId)
-          .order("scheduled_date"),
+        listWorkoutLogs({ athleteIds: [athleteId], withMods: false }),
       ]);
 
       const macros = (macroRes.data ?? []) as Macrocycle[];
@@ -59,7 +57,13 @@ export function useHistorique(athleteId: string) {
         .eq("athlete_id", athleteId).is("mesocycle_id", null).order("start_date");
       cycles = [...cycles, ...((saRes.data ?? []) as Cycle[])];
 
-      return { macros, mesos, cycles, logs: (logsRes.data ?? []) as HistoLog[] };
+      return {
+        macros, mesos, cycles,
+        logs: logs.map((l) => ({
+          id: l.id, session_id: l.session_id, session_name: l.session_name,
+          scheduled_date: l.scheduled_date, status: l.status,
+        })),
+      };
     },
   });
 }
@@ -69,16 +73,11 @@ export function useHistorique(athleteId: string) {
 export function useDeleteWorkoutLog(athleteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (logId: string) => {
-      const { error } = await supabase.from("workout_logs").delete().eq("id", logId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["historique", athleteId] });
-      qc.invalidateQueries({ queryKey: ["cal", athleteId] });
-      qc.invalidateQueries({ queryKey: ["calendar-events", athleteId] });
-      qc.invalidateQueries({ queryKey: ["week-schedule", athleteId] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
+    // Suppression explicite et confirmée par le coach dans l'historique :
+    // une séance réalisée peut être retirée (doublon, erreur de saisie).
+    mutationFn: (logId: string) => removeWorkout(logId, { allowCompleted: true }),
+    onSuccess: (_d, logId) => {
+      void invalidateWorkouts(qc, { athleteId, logId });
       toast.success("Séance supprimée de l'historique");
     },
     onError: () => toast.error("Erreur lors de la suppression"),

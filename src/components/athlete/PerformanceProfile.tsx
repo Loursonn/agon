@@ -1,44 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { groupMeasurements, type PerformanceLog } from "@/api/references";
+import {
+  useActivateReference,
+  useAddMeasurement,
+  useDeleteMeasurement,
+  useMeasurementHistory,
+} from "@/features/shared/hooks/useReferences";
+import { useAddPRLog, useDeletePRLog, usePRsByRef } from "@/features/shared/hooks/usePRLogs";
+import { estimateOneRm, isFcZoneKey } from "@shared/domain/performance";
+import { localIsoDay } from "@shared/domain/dates";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface PerformanceLog {
-  id: string;
-  athlete_id: string;
-  metric_type: string;
-  metric_name: string;
-  value: number;
-  unit: string;
-  custom_unit?: string;
-  date: string;
-  test_session_id?: string;
-  is_active_reference: boolean;
-  coach_validated?: boolean;
-  notes?: string;
-  created_at: string;
-}
+export type { PerformanceLog };
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const METRIC_TYPES = [
-  { id: "vma", label: "VMA", units: ["km/h"], emoji: "VMA", description: "Vitesse Maximale Aérobie" },
-  { id: "vitesse_critique", label: "Vitesse Critique", units: ["km/h", "min/km"], emoji: "VC", description: "Vitesse Critique" },
+/**
+ * Types proposés à l'athlète. `metric` = nom canonique enregistré (celui que
+ * lit le module énergie : « FCmax », pas « FC Max ») ; sans `metric`, l'athlète
+ * nomme lui-même sa mesure. Le 1RM va dans les records (`exercise_pr_logs`),
+ * comme ceux du coach, pour servir à la programmation en % RM.
+ */
+const METRIC_TYPES: { id: string; label: string; metric?: string; units: string[]; emoji: string; description: string }[] = [
+  { id: "vma", label: "VMA", metric: "VMA", units: ["km/h"], emoji: "VMA", description: "Vitesse Maximale Aérobie" },
+  { id: "vitesse_critique", label: "Vitesse critique", metric: "VC", units: ["km/h"], emoji: "VC", description: "Vitesse Critique" },
   { id: "one_rm", label: "1RM", units: ["kg"], emoji: "1RM", description: "Répétition maximale (préciser l'exercice)" },
   { id: "temps_distance", label: "Temps / Distance", units: ["s", "min:s"], emoji: "T/D", description: "Ex: 100m, 1000m, 5km…" },
-  { id: "puissance", label: "Puissance", units: ["W", "W/kg"], emoji: "P", description: "Puissance maximale ou seuil" },
-  { id: "fc_max", label: "FC Max", units: ["bpm"], emoji: "FC", description: "Fréquence cardiaque maximale" },
-  { id: "fc_repos", label: "FC Repos", units: ["bpm"], emoji: "FCr", description: "Fréquence cardiaque de repos" },
+  { id: "pma", label: "PMA", metric: "PMA", units: ["W"], emoji: "PMA", description: "Puissance Maximale Aérobie" },
+  { id: "ftp", label: "FTP", metric: "FTP", units: ["W"], emoji: "FTP", description: "Puissance au seuil (vélo)" },
+  { id: "fc_max", label: "FC max", metric: "FCmax", units: ["bpm"], emoji: "FC", description: "Fréquence cardiaque maximale" },
+  { id: "fc_repos", label: "FC repos", metric: "FCrepos", units: ["bpm"], emoji: "FCr", description: "Fréquence cardiaque de repos" },
   { id: "custom", label: "Autre", units: ["custom"], emoji: "---", description: "Métrique personnalisée" },
 ];
 
 const METRIC_COLORS: Record<string, string> = {
   vma: "#FF5A33", vitesse_critique: "#F5A623", one_rm: "#FFC933",
-  temps_distance: "#66F03C", puissance: "#33B5FF", fc_max: "#FFC933",
+  temps_distance: "#66F03C", pma: "#33B5FF", ftp: "#33B5FF", puissance: "#33B5FF", fc_max: "#FFC933",
   fc_repos: "#9194A0", custom: "#F060C0",
 };
+
+/** Type d'affichage d'une métrique : par nom canonique d'abord (saisies du coach : metric_type « reference »). */
+function typeOf(metricName: string, metricType: string) {
+  return METRIC_TYPES.find((m) => m.metric === metricName) ?? METRIC_TYPES.find((m) => m.id === metricType);
+}
+
+const emptyForm = () => ({
+  metric_type: "vma",
+  metric_name: "VMA",
+  value: "",
+  reps: "1",
+  unit: "km/h",
+  custom_unit: "",
+  date: localIsoDay(),
+  notes: "",
+});
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -76,126 +92,95 @@ function MiniPerfChart({ data, color, activeRef }: { data: { date: string; value
 // ── Composant principal ────────────────────────────────────────────────────────
 
 export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: Props) {
-  const [logs, setLogs] = useState<PerformanceLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: logs = [], isLoading: loading, isError } = useMeasurementHistory(athleteId);
+  const { bestByRef } = usePRsByRef(athleteId);
+  const addMeasurement = useAddMeasurement();
+  const activate = useActivateReference(athleteId);
+  const remove = useDeleteMeasurement(athleteId);
+  const addRecord = useAddPRLog();
+  const deleteRecord = useDeletePRLog();
   const [showForm, setShowForm] = useState(false);
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [settingRef, setSettingRef] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
 
-  const [form, setForm] = useState({
-    metric_type: "vma",
-    metric_name: "VMA",
-    value: "",
-    unit: "km/h",
-    custom_unit: "",
-    date: new Date().toISOString().slice(0, 10),
-    notes: "",
-  });
-
-  useEffect(() => {
-    loadLogs();
-  }, [athleteId]);
-
-  const loadLogs = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("performance_logs")
-      .select("*")
-      .eq("athlete_id", athleteId)
-      .order("date", { ascending: false });
-    // Un chargement en échec affichait "aucune donnée", indistinguable d'un
-    // historique réellement vide.
-    if (error) toast.error("Performances non chargées — vérifie ta connexion");
-    else setLogs((data as PerformanceLog[]) || []);
-    setLoading(false);
-  };
-
-  // Grouper par metric_name
-  const grouped = logs.reduce<Record<string, PerformanceLog[]>>((acc, log) => {
-    if (!acc[log.metric_name]) acc[log.metric_name] = [];
-    acc[log.metric_name].push(log);
-    return acc;
-  }, {});
+  // Bornes de zones FC : des réglages du coach, pas des performances.
+  const grouped = groupMeasurements(logs.filter((l) => !isFcZoneKey(l.metric_name)));
+  const records = Object.values(bestByRef).sort((a, b) => a.exercise_ref.localeCompare(b.exercise_ref));
+  const formType = METRIC_TYPES.find((m) => m.id === form.metric_type);
+  const isOneRm = form.metric_type === "one_rm";
 
   const handleMetricTypeChange = (type: string) => {
     const mt = METRIC_TYPES.find(m => m.id === type);
     const defaultUnit = mt?.units[0] || "custom";
-    const defaultName = type === "one_rm" ? "" : mt?.label || "";
-    setForm(f => ({ ...f, metric_type: type, metric_name: defaultName, unit: defaultUnit }));
+    setForm(f => ({ ...f, metric_type: type, metric_name: mt?.metric ?? "", unit: defaultUnit, reps: "1" }));
   };
 
   const handleSubmit = async () => {
     const val = parseFloat(form.value);
     if (!form.metric_name.trim() || isNaN(val)) return;
 
-    const payload = {
-      athlete_id: athleteId,
-      metric_type: form.metric_type,
-      metric_name: form.metric_name.trim(),
-      value: val,
-      unit: form.unit === "custom" ? (form.custom_unit || "custom") : form.unit,
-      custom_unit: form.unit === "custom" ? form.custom_unit : null,
-      date: form.date,
-      notes: form.notes || null,
-      is_active_reference: false,
-      created_by: athleteId,
-    };
-
-    const { data: inserted, error } = await supabase.from("performance_logs").insert(payload).select().single();
-    // Sans ce garde, un insert refusé fermait quand même le formulaire : la
-    // performance saisie disparaissait sans le moindre message.
-    if (error || !inserted) {
-      toast.error("Performance non enregistrée — vérifie ta connexion");
+    if (isOneRm) {
+      const reps = parseInt(form.reps, 10) || 1;
+      try {
+        await addRecord.mutateAsync({
+          athleteId, ref: form.metric_name.trim(), kg: val, reps, date: form.date,
+          notes: form.notes || null, source: "manual",
+        });
+        setShowForm(false);
+      } catch {
+        // Le message d'erreur est affiché par le hook ; le formulaire reste ouvert.
+      }
       return;
     }
 
-    // Notifier le coach si athlète
-    if (!isCoach) {
-      const { data: profile } = await supabase.from("profiles").select("coach_id").eq("id", athleteId).single();
-      if (profile?.coach_id) {
-        // La notification est secondaire : son échec ne doit pas faire croire
-        // que la performance n'a pas été enregistrée.
-        await supabase.from("performance_notifications").insert({
-          coach_id: profile.coach_id,
-          athlete_id: athleteId,
-          performance_log_id: inserted.id,
-          status: "pending",
-        });
-      }
+    try {
+      const { notified } = await addMeasurement.mutateAsync({
+        athleteId,
+        metricType: form.metric_type,
+        metricName: form.metric_name,
+        value: val,
+        unit: form.unit === "custom" ? (form.custom_unit || "custom") : form.unit,
+        customUnit: form.unit === "custom" ? form.custom_unit : null,
+        date: form.date,
+        notes: form.notes || null,
+        createdBy: athleteId,
+        notifyCoach: !isCoach,
+      });
+      if (!isCoach && !notified) toast("Performance enregistrée — ton coach n'a pas pu être prévenu", { duration: 3000 });
+      setShowForm(false);
+    } catch {
+      // Sans ce garde, un insert refusé fermait quand même le formulaire : la
+      // performance saisie disparaissait sans le moindre message.
+      toast.error("Performance non enregistrée — vérifie ta connexion");
     }
-
-    setShowForm(false);
-    loadLogs();
   };
 
   const handleSetActiveRef = async (logId: string, metricName: string) => {
     setSettingRef(logId);
     try {
-      const { error } = await supabase.rpc("set_active_performance_reference", {
-        p_performance_log_id: logId,
-        p_athlete_id: athleteId,
-        p_metric_name: metricName,
-      });
-      if (error) {
-        toast.error("Référence non mise à jour — vérifie ta connexion");
-        return;
-      }
-      loadLogs();
+      await activate.mutateAsync({ logId, metricName });
+    } catch {
+      toast.error("Référence non mise à jour — vérifie ta connexion");
     } finally {
       setSettingRef(null);
     }
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("performance_logs").delete().eq("id", id);
-    if (error) {
+    try {
+      await remove.mutateAsync(id);
+      setConfirmDelete(null);
+    } catch {
       toast.error("Suppression échouée — vérifie ta connexion");
-      return;
     }
-    setConfirmDelete(null);
-    loadLogs();
   };
+
+  const canSubmit = !!form.metric_name.trim() && !!form.value;
+  const oneRmPreview = isOneRm && parseInt(form.reps, 10) > 1 && parseFloat(form.value) > 0
+    ? estimateOneRm(parseFloat(form.value), parseInt(form.reps, 10))
+    : null;
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -205,15 +190,21 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
           <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>Performances sportives</div>
           <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>VMA, 1RM, VC, temps… avec historique</div>
         </div>
-        <button onClick={() => { setForm({ metric_type: "vma", metric_name: "VMA", value: "", unit: "km/h", custom_unit: "", date: new Date().toISOString().slice(0, 10), notes: "" }); setShowForm(true); }}
-          style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-          + Ajouter
-        </button>
+        {!viewOnly && (
+          <button onClick={() => { setForm(emptyForm()); setShowForm(true); }}
+            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            + Ajouter
+          </button>
+        )}
       </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "20px 0", color: C.tx3, fontSize: 12 }}>Chargement…</div>
-      ) : Object.keys(grouped).length === 0 ? (
+      ) : isError ? (
+        <div style={{ background: C.s1, borderRadius: 6, padding: "24px 20px", border: "1px solid " + C.brd, textAlign: "center", fontSize: 13, color: C.tx3 }}>
+          Performances non chargées — vérifie ta connexion
+        </div>
+      ) : Object.keys(grouped).length === 0 && records.length === 0 ? (
         <div style={{ background: C.s1, borderRadius: 6, padding: "24px 20px", border: "1px solid " + C.brd, textAlign: "center" }}>
           <div style={{ fontSize: 14, marginBottom: 8, fontWeight: 700, color: C.tx3 }}>Performances</div>
           <div style={{ fontSize: 13, color: C.tx3 }}>Aucune performance enregistrée</div>
@@ -223,8 +214,8 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
         Object.entries(grouped).map(([metricName, entries]) => {
           const activeRef = entries.find(e => e.is_active_reference);
           const latest = entries[0];
-          const metricType = METRIC_TYPES.find(m => m.id === latest.metric_type);
-          const color = METRIC_COLORS[latest.metric_type] || C.ac;
+          const metricType = typeOf(metricName, latest.metric_type);
+          const color = METRIC_COLORS[metricType?.id ?? latest.metric_type] || C.ac;
           const isExpanded = expandedMetric === metricName;
           const chartData = [...entries].reverse().map(e => ({ date: e.date, value: e.value }));
 
@@ -240,7 +231,7 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{metricName}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{metricType?.metric ? metricType.label : metricName}</div>
                     {activeRef && (
                       <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: C.g + "20", color: C.g }}>REF ACTIVE</span>
                     )}
@@ -280,10 +271,10 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
                           </div>
                           <div style={{ fontSize: 10, color: C.tx3 }}>{entry.date}{entry.notes ? " · " + entry.notes : ""}</div>
                         </div>
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        {!viewOnly && <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                           {!entry.is_active_reference && (
                             <button
-                              onClick={() => handleSetActiveRef(entry.id, metricName)}
+                              onClick={() => handleSetActiveRef(entry.id, entry.metric_name)}
                               disabled={settingRef === entry.id}
                               style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + color + "50", background: color + "12", color, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
                             >
@@ -292,7 +283,7 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
                           )}
                           <button onClick={() => setConfirmDelete(entry.id)}
                             style={{ width: 26, height: 26, borderRadius: 6, border: "none", background: "rgba(239,75,75,0.1)", color: "#FF5A33", fontSize: 12, cursor: "pointer" }}>×</button>
-                        </div>
+                        </div>}
                       </div>
                     ))}
                   </div>
@@ -301,6 +292,28 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
             </div>
           );
         })
+      )}
+
+      {/* Records (1RM) — même table que ceux du coach, utilisés pour les % RM */}
+      {!loading && records.length > 0 && (
+        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, marginBottom: 10, padding: "12px 16px" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Records (1RM)</div>
+          {records.map((r) => (
+            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid " + C.brd }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{r.exercise_ref}</div>
+                <div style={{ fontSize: 10, color: C.tx3 }}>
+                  {r.date}{r.source_reps && r.source_reps > 1 && r.source_kg ? ` · ${r.source_kg} kg × ${r.source_reps}` : ""}{r.source === "computed" ? " · séance" : ""}
+                </div>
+              </div>
+              <span style={{ fontSize: 18, fontWeight: 900, color: METRIC_COLORS.one_rm }}>{r.kg} kg</span>
+              {!viewOnly && r.source === "manual" && (
+                <button onClick={() => deleteRecord.mutate({ id: r.id, athleteId })} aria-label="Supprimer ce record"
+                  style={{ width: 26, height: 26, borderRadius: 6, border: "none", background: "rgba(239,75,75,0.1)", color: "#FF5A33", fontSize: 12, cursor: "pointer" }}>×</button>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Modal ajout */}
@@ -328,15 +341,21 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
                 <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
                   {form.metric_type === "one_rm" ? "Exercice *" : "Nom de la métrique *"}
                 </div>
-                <input value={form.metric_name} onChange={e => setForm(f => ({ ...f, metric_name: e.target.value }))}
-                  placeholder={form.metric_type === "one_rm" ? "Ex: 1RM Développé couché" : "Ex: VMA"}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                {formType?.metric ? (
+                  <div style={{ padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx3, fontSize: 13 }}>
+                    {formType.label}
+                  </div>
+                ) : (
+                  <input value={form.metric_name} onChange={e => setForm(f => ({ ...f, metric_name: e.target.value }))}
+                    placeholder={isOneRm ? "Ex: Développé couché" : "Ex: 5 km"}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                )}
               </div>
 
               {/* Valeur + Unité */}
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ flex: 2 }}>
-                  <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Valeur *</div>
+                  <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>{isOneRm ? "Charge *" : "Valeur *"}</div>
                   <input type="number" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} placeholder="Ex: 18.5"
                     style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
                 </div>
@@ -361,6 +380,17 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
                 </div>
               </div>
 
+              {isOneRm && (
+                <div>
+                  <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Répétitions à cette charge</div>
+                  <input type="number" min={1} max={30} value={form.reps} onChange={e => setForm(f => ({ ...f, reps: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                  {oneRmPreview != null && (
+                    <div style={{ fontSize: 11, color: C.tx3, marginTop: 6 }}>1RM estimé : <strong style={{ color: METRIC_COLORS.one_rm }}>{oneRmPreview} kg</strong></div>
+                  )}
+                </div>
+              )}
+
               {/* Date */}
               <div>
                 <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Date</div>
@@ -381,9 +411,9 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
                 style={{ flex: 1, padding: "12px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                 Annuler
               </button>
-              <button onClick={handleSubmit} disabled={!form.metric_name.trim() || !form.value}
-                style={{ flex: 2, padding: "12px 0", borderRadius: 4, border: "none", background: (form.metric_name.trim() && form.value) ? C.ac : C.s2, color: (form.metric_name.trim() && form.value) ? "#fff" : C.tx3, fontSize: 13, fontWeight: 700, cursor: (form.metric_name.trim() && form.value) ? "pointer" : "default", fontFamily: "inherit" }}>
-                Enregistrer
+              <button onClick={handleSubmit} disabled={!canSubmit || addMeasurement.isPending || addRecord.isPending}
+                style={{ flex: 2, padding: "12px 0", borderRadius: 4, border: "none", background: canSubmit ? C.ac : C.s2, color: canSubmit ? "#fff" : C.tx3, fontSize: 13, fontWeight: 700, cursor: canSubmit ? "pointer" : "default", fontFamily: "inherit" }}>
+                {addMeasurement.isPending || addRecord.isPending ? "…" : "Enregistrer"}
               </button>
             </div>
           </div>

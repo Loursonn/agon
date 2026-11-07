@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
+import { invalidateReferences } from "@/api/references";
 import { C } from "@/lib/theme";
 import type { TestVariable, TestDefinitionWithVariables } from "@/features/shared/types/tests";
 
@@ -240,6 +241,8 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
     if (error) { toast.error("Erreur lors de l'enregistrement"); return; }
     qc.invalidateQueries({ queryKey: QK.activePlan(athleteId) });
     qc.invalidateQueries({ queryKey: QK.testSessions(athleteId) });
+    // Le trigger SQL a pu créer une référence (VMA…) : séances énergie à jour.
+    void invalidateReferences(qc, athleteId);
     toast.success("Test enregistré ✓");
     onClose();
   }

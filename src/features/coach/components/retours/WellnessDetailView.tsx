@@ -8,6 +8,8 @@ import {
 } from "recharts";
 import { C } from "@/lib/theme";
 import { domsReading } from "@/lib/wellnessBaseline";
+import { wellnessView } from "@/lib/wellness";
+import { WELLNESS_ITEM_SHORT, averageItem, averageScore } from "@shared/domain/wellness";
 import type { DailyData } from "@/features/shared/types/retours.types";
 
 interface SleepGoals {
@@ -18,6 +20,7 @@ interface SleepGoals {
 
 interface WellnessDetailViewProps {
   dailyData:   Record<string, DailyData>;
+  /** Ignoré : la moyenne est recalculée ici depuis les notes (gardé pour les appelants). */
   avgWellness: number | null;
   sleepGoals?: SleepGoals;
   onClose:     () => void;
@@ -101,28 +104,27 @@ function SleepTooltip({ active, payload, label }: any) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose }: WellnessDetailViewProps) {
+export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessDetailViewProps) {
   const [tab, setTab] = useState<Tab>("score");
 
   const entries = Object.values(dailyData)
     .filter((d) => d.wellness != null)
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  // Score et notes recalculés par le domaine wellness : une saisie incomplète
+  // donne un trou (null) dans la courbe, pas un 0.
+  const views = entries.map((d) => ({ date: d.date, ...wellnessView(d.wellness) }));
+
   // ── Score chart ──────────────────────────────────────────────────────────
-  const scoreData = entries.map((d) => ({
-    date:  format(parseISO(d.date), "d MMM", { locale: fr }),
-    score: d.wellness!.score,
+  const scoreData = views.map((v) => ({
+    date:  format(parseISO(v.date), "d MMM", { locale: fr }),
+    score: v.score,
   }));
 
   // ── Composantes chart ────────────────────────────────────────────────────
-  const composantesData = entries.map((d) => ({
-    date:    format(parseISO(d.date), "d MMM", { locale: fr }),
-    fatigue: d.wellness!.fatigue,
-    sommeil: d.wellness!.sommeil,
-    stress:  d.wellness!.stress,
-    energie: d.wellness!.energie,
-    // Cinquième item de la saisie : il manquait à l'affichage côté coach.
-    doms:    d.wellness!.doms,
+  const composantesData = views.map((v) => ({
+    date:    format(parseISO(v.date), "d MMM", { locale: fr }),
+    ...v.items,
   }));
 
   // ── Sleep tunnel (Garmin-style) ──────────────────────────────────────────
@@ -183,11 +185,14 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
   const realSleepCount = sleepData.filter((s) => s.isReal).length;
 
   // ── Stats ────────────────────────────────────────────────────────────────
-  const avgFatigue = avg(entries.map((d) => d.wellness!.fatigue));
-  const avgSommeil = avg(entries.map((d) => d.wellness!.sommeil));
-  const avgStress  = avg(entries.map((d) => d.wellness!.stress));
-  const avgEnergie = avg(entries.map((d) => d.wellness!.energie));
-  const avgDoms    = avg(entries.map((d) => d.wellness!.doms));
+  // Moyennes sur les seules notes présentes ; le score moyen est recalculé ici
+  // (la valeur reçue comptait les jours sans score comme des 0).
+  const avgScore   = averageScore(views.map((v) => v.score));
+  const avgFatigue = averageItem(views, "fatigue");
+  const avgSommeil = averageItem(views, "sommeil");
+  const avgStress  = averageItem(views, "stress");
+  const avgEnergie = averageItem(views, "energie");
+  const avgDoms    = averageItem(views, "doms");
 
   return (
     <div style={overlayStyle}>
@@ -204,11 +209,11 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))", gap: 8, marginBottom: 20 }}>
           {[
-            { label: "Score moy.", value: avgWellness, unit: "/100", color: C.ac },
-            { label: "Fatigue",    value: avgFatigue,  unit: "/5",   color: C.o  },
-            { label: "Sommeil",    value: avgSommeil,  unit: "/5",   color: C.b  },
-            { label: "Stress",     value: avgStress,   unit: "/5",   color: C.r  },
-            { label: "Énergie",    value: avgEnergie,  unit: "/5",   color: C.g  },
+            { label: "Score moy.", value: avgScore, unit: "/100", color: C.ac },
+            { label: WELLNESS_ITEM_SHORT.fatigue, value: avgFatigue,  unit: "/5",   color: C.o  },
+            { label: WELLNESS_ITEM_SHORT.sommeil, value: avgSommeil,  unit: "/5",   color: C.b  },
+            { label: WELLNESS_ITEM_SHORT.stress,  value: avgStress,   unit: "/5",   color: C.r  },
+            { label: WELLNESS_ITEM_SHORT.energie, value: avgEnergie,  unit: "/5",   color: C.g  },
             // L'athlète note sa fraîcheur (1 = DOMS intenses, 5 = aucune douleur) :
             // on redit la moyenne en courbatures pour éviter la lecture à l'envers.
             {
@@ -257,7 +262,9 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} />
               <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={TOOLTIP_STYLE} />
-              <ReferenceLine y={70} stroke={C.g} strokeDasharray="4 4" label={{ value: "70", fill: C.g, fontSize: 9 }} />
+              {/* Paliers : ≥ 65 Bon (vert), 50-64 Modéré (orange), < 50 Fatigué (rouge) */}
+              <ReferenceLine y={65} stroke={C.g} strokeDasharray="4 4" label={{ value: "65", fill: C.g, fontSize: 9 }} />
+              <ReferenceLine y={50} stroke={C.o} strokeDasharray="4 4" label={{ value: "50", fill: C.o, fontSize: 9 }} />
               <Line type="monotone" dataKey="score" stroke={C.ac} strokeWidth={2} dot={{ r: 3, fill: C.ac }} activeDot={{ r: 5 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -271,10 +278,10 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
               <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={TOOLTIP_STYLE} />
               <Legend wrapperStyle={{ fontSize: 10, color: C.tx3 }} />
-              <Line type="monotone" dataKey="fatigue" stroke={C.o} strokeWidth={2} dot={false} name="Fatigue" />
-              <Line type="monotone" dataKey="sommeil" stroke={C.b} strokeWidth={2} dot={false} name="Sommeil" />
-              <Line type="monotone" dataKey="stress"  stroke={C.r} strokeWidth={2} dot={false} name="Stress" />
-              <Line type="monotone" dataKey="energie" stroke={C.g} strokeWidth={2} dot={false} name="Énergie" />
+              <Line type="monotone" dataKey="fatigue" stroke={C.o} strokeWidth={2} dot={false} name={WELLNESS_ITEM_SHORT.fatigue} />
+              <Line type="monotone" dataKey="sommeil" stroke={C.b} strokeWidth={2} dot={false} name={WELLNESS_ITEM_SHORT.sommeil} />
+              <Line type="monotone" dataKey="stress"  stroke={C.r} strokeWidth={2} dot={false} name={WELLNESS_ITEM_SHORT.stress} />
+              <Line type="monotone" dataKey="energie" stroke={C.g} strokeWidth={2} dot={false} name={WELLNESS_ITEM_SHORT.energie} />
               <Line type="monotone" dataKey="doms"    stroke={C.y} strokeWidth={2} dot={false} name="Fraîcheur musc." />
             </LineChart>
           </ResponsiveContainer>
@@ -424,11 +431,6 @@ export function WellnessDetailView({ dailyData, avgWellness, sleepGoals, onClose
       </div>
     </div>
   );
-}
-
-function avg(nums: number[]): number | null {
-  if (!nums.length) return null;
-  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10;
 }
 
 const overlayStyle: React.CSSProperties = {

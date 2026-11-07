@@ -1,10 +1,16 @@
 import { useRef, useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import type { AthleteModifications } from "../types/athlete";
-import { QK } from "@/lib/queryKeys";
 import { saveDraft, markDraftSynced, workoutDraftKey } from "@/lib/localDraft";
+import {
+  currentAccessToken,
+  invalidateWorkouts,
+  isWorkoutNotFound,
+  onAccessTokenChange,
+  patchWorkoutEntries,
+  sendEntriesKeepalive,
+} from "@/api/workouts";
 
 const DEBOUNCE_MS = 600;
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
@@ -39,33 +45,14 @@ interface PendingEntry {
 }
 
 /**
- * Envoi `keepalive` direct à PostgREST : supabase-js ne permet pas de passer
- * `keepalive` à fetch, et c'est la seule façon qu'une requête partie sur
- * `pagehide` aille au bout quand l'onglet est fermé / tué.
- * Best effort : la réponse peut ne jamais revenir → la saisie reste « en
- * attente » et le brouillon local « non synchronisé » (renvoyé plus tard).
+ * Envoi `keepalive` (fermeture / mise en arrière-plan) : passe par la RPC
+ * `patch_workout_entries`, qui fusionne la saisie sans toucher l'adaptation du
+ * coach (l'ancien PATCH réécrivait toute la colonne). Best effort : la réponse
+ * peut ne jamais revenir → la saisie reste « en attente » et le brouillon local
+ * « non synchronisé » (renvoyé plus tard).
  */
 function sendKeepalive(entry: PendingEntry, token: string | null): void {
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
-  if (!url || !key || !token || typeof fetch === "undefined") return;
-  const body = JSON.stringify({ athlete_modifications: entry.mods });
-  if (body.length > KEEPALIVE_MAX_BYTES) return;
-  try {
-    void fetch(`${url}/rest/v1/workout_logs?id=eq.${encodeURIComponent(entry.id)}`, {
-      method: "PATCH",
-      keepalive: true,
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body,
-    }).catch(() => {});
-  } catch {
-    /* ignore */
-  }
+  sendEntriesKeepalive({ logId: entry.id, mods: entry.mods, token, maxBytes: KEEPALIVE_MAX_BYTES });
 }
 
 export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?: string | null): SaveWorkoutSets {
@@ -92,13 +79,11 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
   useEffect(() => {
     mountedRef.current = true;
     let alive = true;
-    supabase.auth.getSession()
-      .then(({ data }) => { if (alive) tokenRef.current = data.session?.access_token ?? null; })
+    currentAccessToken()
+      .then((t) => { if (alive) tokenRef.current = t; })
       .catch(() => {});
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      tokenRef.current = session?.access_token ?? null;
-    });
-    return () => { alive = false; mountedRef.current = false; sub.subscription.unsubscribe(); };
+    const unsubscribe = onAccessTokenChange((t) => { tokenRef.current = t; });
+    return () => { alive = false; mountedRef.current = false; unsubscribe(); };
   }, []);
 
   // Déclaré via ref pour que `write` puisse relancer `flushNow` sans cycle de deps.
@@ -121,18 +106,14 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
       let ok = false;
       let missing = false;
       try {
-        // `.select()` permet de détecter le cas "0 ligne mise à jour" : sans lui,
-        // un UPDATE sur une séance disparue (supprimée entre-temps) réussit
-        // silencieusement et la saisie de l'athlète est perdue sans aucun signal.
-        const { data, error } = await supabase
-          .from("workout_logs")
-          .update({ athlete_modifications: entry.mods })
-          .eq("id", entry.id)
-          .select("id");
-        ok = !error && !!data && data.length > 0;
-        missing = !error && !!data && data.length === 0;
-      } catch {
+        // Fusion côté serveur (RPC) : l'adaptation du coach posée pendant la
+        // séance n'est plus écrasée. Une séance disparue (supprimée
+        // entre-temps) lève « introuvable » au lieu de réussir en silence.
+        await patchWorkoutEntries(entry.id, entry.mods);
+        ok = true;
+      } catch (e) {
         ok = false;
+        missing = isWorkoutNotFound(e);
       } finally {
         inFlightRef.current = false;
       }
@@ -142,12 +123,7 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
         clearTimeout(retryTimerRef.current);
         if (entry.aid) markDraftSynced(workoutDraftKey(entry.aid, entry.id), entry.mods);
         toast.dismiss(SAVE_ERROR_TOAST);
-        qc.invalidateQueries({ queryKey: ["workout-log-detail", entry.id] });
-        // Le planning coach lit athlete_modifications (séries, ajouts, commentaires)
-        if (entry.aid) {
-          qc.invalidateQueries({ queryKey: QK.cal(entry.aid) });
-          qc.invalidateQueries({ queryKey: QK.athleteModifications(entry.aid) });
-        }
+        void invalidateWorkouts(qc, { athleteId: entry.aid, logId: entry.id });
         if (pendingRef.current === entry) {
           pendingRef.current = null;
         } else if (pendingRef.current) {

@@ -3,6 +3,7 @@ import { format, differenceInDays, parseISO, addDays, startOfISOWeek, endOfISOWe
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Macrocycle, Mesocycle, Cycle, Microcycle, TimelineData } from "./useTimelineData";
+import { deletePlannedWorkouts } from "@/api/workouts";
 
 type AnyItem = Macrocycle | Mesocycle | Cycle | Microcycle;
 type Level = "macrocycles" | "mesocycles" | "cycles" | "microcycles";
@@ -112,7 +113,7 @@ export function useDragCycle() {
         const toDelete = (existing ?? []).filter((m) => !neededStarts.has(m.start_date));
         if (toDelete.length > 0) {
           const ids = toDelete.map((m) => m.id);
-          await supabase.from("workout_logs").delete().in("microcycle_id", ids);
+          await deletePlannedWorkouts({ microcycleIds: ids });
           await supabase.from("microcycles").delete().in("id", ids);
         }
 

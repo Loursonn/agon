@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { getReco } from "@/lib/wellness";
+import { scoreOfRaw } from "@shared/domain/wellness";
 import type { WellnessData } from "../types/athlete";
 
 export interface ReadinessScore {
@@ -8,32 +10,16 @@ export interface ReadinessScore {
 }
 
 /**
- * Computes the readiness score (0-100) from wellness data.
- * Uses stored score when available, otherwise recomputes from fields (scale 1-5, all fields: high = good).
- * Formula mirrors calcScore in lib/wellness.ts: sum(5 fields) / 25 * 100
- * Returns null when wellness is not yet logged.
+ * Score de forme (0-100) de la saisie du jour, avec son palier.
+ * Seul calcul : `wellnessScore` / `wellnessBand` du domaine wellness (le
+ * `score` stocké n'est plus lu), mêmes 5 paliers que le coach.
+ * null si pas de saisie, ou saisie incomplète (« — », jamais 0).
  */
 export function useReadinessScore(wellness: WellnessData | null): ReadinessScore | null {
   return useMemo(() => {
-    if (!wellness) return null;
-
-    const score = wellness.score ?? Math.min(100, Math.max(0, Math.round(
-      ((wellness.fatigue ?? 3) + (wellness.sommeil ?? 3) + (wellness.stress ?? 3) +
-       (wellness.energie ?? 3) + (wellness.doms ?? 3)) / 25 * 100
-    )));
-
-    let color: string;
-    let label: string;
-    if (score >= 85) {
-      color = "#66F03C"; label = "Excellent";
-    } else if (score >= 70) {
-      color = "#66F03C"; label = "Bon";
-    } else if (score >= 50) {
-      color = "#F5A623"; label = "Moyen";
-    } else {
-      color = "#FF5A33"; label = "Faible";
-    }
-
-    return { score, color, label };
+    const score = scoreOfRaw(wellness);
+    if (score == null) return null;
+    const reco = getReco(score);
+    return { score, color: reco.c, label: reco.label };
   }, [wellness]);
 }

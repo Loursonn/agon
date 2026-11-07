@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { QK } from '@/lib/queryKeys';
+import { invalidateReferences } from '@/api/references';
 import type {
   AthleteTestResult,
   AthleteCurrentValue,
@@ -95,8 +96,8 @@ export function useCreateTestResult(athleteId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.athleteTestResults(athleteId) });
       qc.invalidateQueries({ queryKey: QK.athleteCurrentValues(athleteId) });
-      qc.invalidateQueries({ queryKey: ['athlete-refs-full', athleteId] });
-      qc.invalidateQueries({ queryKey: ['athlete-references', athleteId] });
+      // Le trigger SQL crée la référence (VMA…) : séances énergie et profil à jour.
+      void invalidateReferences(qc, athleteId);
       qc.invalidateQueries({ queryKey: ['categoryTestSeries', athleteId] });
       qc.invalidateQueries({ queryKey: ['articularProfile', athleteId] });
       toast.success('Résultat enregistré');
@@ -139,8 +140,8 @@ export function useUpdateTestResult(athleteId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.athleteTestResults(athleteId) });
       qc.invalidateQueries({ queryKey: QK.athleteCurrentValues(athleteId) });
-      qc.invalidateQueries({ queryKey: ['athlete-refs-full', athleteId] });
-      qc.invalidateQueries({ queryKey: ['athlete-references', athleteId] });
+      // Le trigger SQL crée la référence (VMA…) : séances énergie et profil à jour.
+      void invalidateReferences(qc, athleteId);
       qc.invalidateQueries({ queryKey: ['categoryTestSeries', athleteId] });
       qc.invalidateQueries({ queryKey: ['articularProfile', athleteId] });
       toast.success('Résultat mis à jour');

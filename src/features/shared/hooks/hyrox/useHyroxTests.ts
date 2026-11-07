@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { QK } from "@/lib/queryKeys";
+import { invalidateReferences } from "@/api/references";
 import {
   analyzeTests, BATTERY_IDS, gridSetFromRows, storedOutputs,
   type AthleteContext, type AthleteTestProfile, type AxesPlan, type AxesParamsDbRow, type BatteryResult, type BatterySession,
@@ -171,6 +172,8 @@ export function useSaveBatteryEntry(athleteId: string) {
       qc.invalidateQueries({ queryKey: ["calendar-events", athleteId] });
       qc.invalidateQueries({ queryKey: ["hyroxTests", "calendar", athleteId] });
       qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
+      // Le trigger SQL crée la référence liée au test (VMA…).
+      void invalidateReferences(qc, athleteId);
       toast.success("Résultat enregistré");
     },
     onError: () => toast.error("Erreur lors de l'enregistrement"),

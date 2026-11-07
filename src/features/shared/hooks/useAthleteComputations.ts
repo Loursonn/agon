@@ -1,7 +1,9 @@
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getWorkoutStats, workoutKeys } from "@/api/workouts";
 import { DEF_METHODS } from "@/lib/exercises";
 import { getAllPRs, getMuscSets, getCombinedData } from "@/lib/calculations";
-import { getReco } from "@/lib/wellness";
+import { calcScore, getReco } from "@/lib/wellness";
 import type { ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData } from "../types/athlete";
 
 interface ComputationInput {
@@ -15,13 +17,26 @@ interface ComputationInput {
   customMethods: unknown[];
   wellness: WellnessData | null;
   wellnessHistory: Record<string, WellnessData>;
+  /**
+   * Athlète affiché. Quand il est fourni, la série et le total de séances
+   * viennent de `workout_logs` (source réelle) au lieu de l'ancien
+   * `asp:completed`, abandonné depuis juin (≈ 0 pour tout le monde).
+   */
+  athleteId?: string | null;
 }
 
 export function useAthleteComputations(s: ComputationInput) {
   const {
     exos, exMeta, sets, sessions, blockConfig, goals,
-    completedSessions, customMethods, wellness, wellnessHistory,
+    completedSessions, customMethods, wellness, wellnessHistory, athleteId,
   } = s;
+
+  const { data: workoutStats } = useQuery({
+    queryKey: workoutKeys.stats(athleteId ?? ""),
+    enabled: !!athleteId,
+    staleTime: 60_000,
+    queryFn: () => getWorkoutStats(athleteId!),
+  });
 
   const tw = blockConfig.totalWeeks || 6;
   const dw = blockConfig.deloadWeek || 0;
@@ -60,7 +75,7 @@ export function useAthleteComputations(s: ComputationInput) {
     [weeksArr, weeklyTarget, goals.sessionsPerWeek],
   );
 
-  const streak = useMemo(() => {
+  const legacyStreak = useMemo(() => {
     let str = 0;
     for (let w = currentWeek - 1; w >= 1; w--) {
       if ((completedSessions[w] || []).length >= (weeklyTarget[w] || goals.sessionsPerWeek)) str++;
@@ -76,13 +91,16 @@ export function useAthleteComputations(s: ComputationInput) {
   const prs = useMemo(() => getAllPRs(exos), [exos]);
   const muscSets = useMemo(() => getMuscSets(exos, exMeta), [exos, exMeta]);
   const combinedData = useMemo(() => getCombinedData(exos, sets, wellnessHistory, tw), [exos, sets, wellnessHistory, tw]);
-  const totalDone = useMemo(() => Object.values(completedSessions).flat().length, [completedSessions]);
+  const legacyTotalDone = useMemo(() => Object.values(completedSessions).flat().length, [completedSessions]);
+  const streak = athleteId ? workoutStats?.streak ?? 0 : legacyStreak;
+  const totalDone = athleteId ? workoutStats?.totalDone ?? 0 : legacyTotalDone;
   // Les blessures actives ne se déduisent plus d'ici : elles viennent de
   // `medical_entries` via `useActiveInjuries`, la même source que les
   // antécédents du profil. Un badge « blessure active » et une fiche blessure
   // qui se contredisent, c'est un badge qu'on arrête de croire.
 
-  const wScore = wellness?.score || 50;
+  // Recalculé depuis les notes (domaine wellness) ; affiché seulement si `wellness` existe.
+  const wScore = calcScore(wellness) ?? 0;
   const wReco = useMemo(() => getReco(wScore), [wScore]);
 
   return {

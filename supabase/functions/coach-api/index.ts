@@ -23,6 +23,7 @@ import { buildFiches, buildHabits, buildPeriodisation, buildSummary, firstName, 
 import type { CareState } from "../_shared/coachApiCare.ts";
 import { cleanText, Invalid, isObj, oneOf, onlyKeys, reqText } from "../_shared/coachApiCheck.ts";
 import { collectDocIds } from "../_shared/fiches.ts";
+import { INJURY_EXPORT_COLUMNS } from "../_shared/domain/injuries.ts";
 
 const RATE_LIMIT_PER_MINUTE = 60;
 const MAX_BODY_BYTES = 100_000;
@@ -367,8 +368,8 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
 
   await logAccess(admin, caller, "GET /athletes/:id/summary", athlete.id);
 
-  const [{ values }, logs, prs, acts, days, themes, energy, comps, tests, life] = await Promise.all([
-    appData(admin, athlete.id, ["asp:goals", "asp:bw", "asp:wh", "asp:wlog", "asp:injuries", "asp:prog"]),
+  const [{ values }, logs, prs, acts, days, themes, energy, comps, tests, life, injuries] = await Promise.all([
+    appData(admin, athlete.id, ["asp:goals", "asp:bw", "asp:wh", "asp:wlog", "asp:blockHistory", "asp:prog"]),
     admin.from("workout_logs")
       .select("scheduled_date, session_id, session_name, status, rpe_score, duration_s, athlete_modifications")
       .eq("athlete_id", athlete.id).gte("scheduled_date", from).lte("scheduled_date", to)
@@ -410,8 +411,13 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
       .select("date_start, date_end, title")
       .eq("athlete_id", athlete.id).lte("date_start", to).gte("date_end", from)
       .order("date_start").limit(100),
+    // Colonnes en liste blanche : ni titre, ni diagnostic, ni notes.
+    admin.from("medical_entries")
+      .select(INJURY_EXPORT_COLUMNS)
+      .eq("athlete_id", athlete.id).eq("kind", "blessure")
+      .order("date", { ascending: false }).limit(200),
   ]);
-  for (const r of [logs, prs, acts, days, themes, energy, comps, tests, life]) if (r.error) throw new Error(r.error.message);
+  for (const r of [logs, prs, acts, days, themes, energy, comps, tests, life, injuries]) if (r.error) throw new Error(r.error.message);
 
   return json(buildSummary({
     athlete,
@@ -428,6 +434,7 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
     competitions: comps.data ?? [],
     tests: tests.data ?? [],
     lifeEvents: life.data ?? [],
+    injuries: injuries.data ?? [],
   }));
 }
 

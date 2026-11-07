@@ -1,17 +1,19 @@
 import { Fragment, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { parseKm } from "@/features/shared/components/RunDistanceInput";
-import { runningVolumeKey } from "@/features/shared/hooks/useRunningVolume";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { loadFromPctRm } from "@shared/domain/performance";
+import type { RecordSet } from "@shared/domain/performance";
+import { computeRecordsFromSession, invalidateRecords, resolveRecordRef } from "@/api/records";
+import { usePRsByRef, useRecordLinks } from "@/features/shared/hooks/usePRLogs";
+import { completeWorkout as completeWorkoutLog, invalidateWorkouts, reopenWorkout as reopenWorkoutLog, setWorkoutRpe } from "@/api/workouts";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hooks/useWorkoutSession";
 import { useSaveWorkoutSets } from "@/features/shared/hooks/useSaveWorkoutSets";
 import { loadDraft, clearDraft, workoutDraftKey } from "@/lib/localDraft";
-import { QK } from "@/lib/queryKeys";
 import { formatRepsAt, formatSetsReps, hasIso, isAllIso, isIsoAt } from "@/lib/formatSetsReps";
 import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
 import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
@@ -20,7 +22,6 @@ import type { ExerciceParams, ClusterConfig } from "@/features/coach/components/
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 import { LinkifiedText } from "@/features/shared/components/LinkifiedText";
 import { VideoRequestBanner, VideoRequestRow } from "@/features/athlete/components/VideoRequest";
-import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -77,18 +78,33 @@ function parsePrevVal(str: string, field: "kg" | "reps"): string {
   return m ? m[1] : "";
 }
 
+/**
+ * Charge à pré-remplir. En %RM, la valeur prescrite (« 75 ») est un
+ * pourcentage : avant, elle s'affichait telle quelle dans la case kg et 75 kg
+ * étaient enregistrés dès que l'athlète validait la série sans corriger.
+ * Elle est maintenant convertie avec le 1RM de l'athlète (record, sinon 1RM
+ * fictif du coach), arrondie à 0,5 kg ; sans 1RM, la case reste vide (la
+ * consigne « @ 75%RM » reste affichée dans l'en-tête de l'exercice).
+ */
+function prescribedKg(params: ExerciceParams, raw: number | null | undefined, oneRm: number | null | undefined): number | null {
+  if (raw == null) return null;
+  if (params.charge_unit === "kg") return raw;
+  if (params.charge_unit === "%RM") return loadFromPctRm(oneRm ?? params.manual_rm, raw);
+  return null;
+}
+
 function getSetTarget(
   params: ExerciceParams,
   setIdx: number,
+  oneRm?: number | null,
 ): { reps?: number; kg?: number | null; rir?: number | null } {
   const reps =
     params.reps.mode === "par_serie" ? params.reps.values[setIdx] : params.reps.value;
-  const kg =
-    params.charge_unit !== "PDC"
-      ? params.charge.mode === "par_serie"
-        ? params.charge.values[setIdx]
-        : params.charge.value
-      : null;
+  const kg = prescribedKg(
+    params,
+    params.charge.mode === "par_serie" ? params.charge.values[setIdx] : params.charge.value,
+    oneRm,
+  );
   const rir =
     params.rir.mode === "par_serie"
       ? (params.rir.values as (number | null)[])[setIdx]
@@ -100,6 +116,7 @@ function initSetState(
   params: ExerciceParams,
   setIdx: number,
   saved?: SessionSetLog,
+  oneRm?: number | null,
 ): SetState {
   if (saved) {
     return {
@@ -110,7 +127,7 @@ function initSetState(
       skipped: saved.skipped ?? false,
     };
   }
-  const t = getSetTarget(params, setIdx);
+  const t = getSetTarget(params, setIdx, oneRm);
   return {
     kg: t.kg != null ? String(t.kg).replace(".", ",") : "",
     reps: t.reps != null ? String(t.reps) : "",
@@ -169,6 +186,7 @@ function buildExSets(
   ex: WorkoutExerciceData,
   saved: SessionSetLog[] | undefined,
   prev: SetState[] | undefined,
+  oneRm?: number | null,
 ): SetState[] {
   if (ex.mode === "libre") {
     // Libre : une seule "série" virtuelle = case à cocher de validation
@@ -183,10 +201,9 @@ function buildExSets(
   const count = Math.max(prescribed || 0, saved?.length ?? 0, prev?.length ?? 0);
 
   const safeReps = c ? (Array.isArray(c.reps) ? c.reps : Array(c.nb_clusters).fill(5)) : null;
-  const globalKg =
-    c && ex.params.charge.mode === "global" && ex.params.charge.value != null
-      ? String(ex.params.charge.value).replace(".", ",")
-      : "";
+  const globalKgNum =
+    c && ex.params.charge.mode === "global" ? prescribedKg(ex.params, ex.params.charge.value, oneRm) : null;
+  const globalKg = globalKgNum != null ? String(globalKgNum).replace(".", ",") : "";
 
   return Array.from({ length: count }, (_, i) => {
     const existing = prev?.[i];
@@ -207,7 +224,7 @@ function buildExSets(
       return { kg: globalKg, reps: String(prescribedReps), rir: "", done: false, skipped: false };
     }
 
-    return normalizeSet(initSetState(ex.params, i, savedItem ?? undefined));
+    return normalizeSet(initSetState(ex.params, i, savedItem ?? undefined, oneRm));
   });
 }
 
@@ -2018,24 +2035,12 @@ function RpeSheetForLog({
   const [rpe, setRpe] = useState<number | null>(null);
 
   const { mutate: saveRpe, isPending } = useMutation({
-    mutationFn: async (rpeScore: number) => {
-      // supabase-js ne lève pas : sans lire `error`, un RPE refusé fermait la
-      // feuille comme si tout s'était bien passé et la note était perdue.
-      const { error: logErr } = await supabase
-        .from("workout_logs")
-        .update({ rpe_score: rpeScore })
-        .eq("id", workoutLogId);
-      if (logErr) throw logErr;
-      const { error: rpeErr } = await supabase.from("workout_rpe").upsert({
-        workout_log_id: workoutLogId,
-        athlete_id: athleteId ?? "",
-        rpe_score: rpeScore,
-      });
-      if (rpeErr) throw rpeErr;
-    },
+    // Seule source du RPE : `workout_logs.rpe_score` (RPC). L'ancien upsert
+    // dans `workout_rpe` échouait au 2e RPE (doublon) et affichait
+    // « RPE non enregistré » alors que la note était écrite.
+    mutationFn: (rpeScore: number) => setWorkoutRpe(workoutLogId, rpeScore),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["workout-log-detail", workoutLogId] });
-      if (athleteId) qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
+      void invalidateWorkouts(qc, { athleteId, logId: workoutLogId });
       onClose();
     },
     onError: () => {
@@ -2238,6 +2243,22 @@ export default function WorkoutDetailPage() {
     workout.scheduledDate,
   );
 
+  // ── Records : 1RM pour convertir les %RM, références pour les nouveaux records ──
+  const { bestByRef } = usePRsByRef(athleteId);
+  const { data: recordLinks } = useRecordLinks(athleteId);
+  const recordRefByEx = useMemo(() => {
+    const out: Record<string, string | null> = {};
+    for (const bloc of workout.blocs) {
+      for (const ex of bloc.exercices) out[ex.id] = resolveRecordRef(ex, recordLinks ?? {});
+    }
+    return out;
+  }, [workout.blocs, recordLinks]);
+  const oneRmByEx = useMemo(() => {
+    const out: Record<string, number | null> = {};
+    for (const [exId, ref] of Object.entries(recordRefByEx)) out[exId] = ref ? bestByRef[ref]?.kg ?? null : null;
+    return out;
+  }, [recordRefByEx, bestByRef]);
+
   // ── Vidéos banque d'exercices (exercise_id → youtube_id) ─────────────────
   const bankExerciseIds = useMemo(
     () => [...new Set(workout.blocs.flatMap((b) => b.exercices.map((e) => e.exercise_id).filter((x): x is string => !!x)))],
@@ -2279,7 +2300,7 @@ export default function WorkoutDetailPage() {
 
       for (const bloc of workout.blocs) {
         for (const ex of bloc.exercices) {
-          const rows = buildExSets(ex, savedSets[ex.id], prev[ex.id]);
+          const rows = buildExSets(ex, savedSets[ex.id], prev[ex.id], oneRmByEx[ex.id]);
           if (!sameSets(rows, prev[ex.id])) {
             next[ex.id] = rows;
             changed = true;
@@ -2299,6 +2320,37 @@ export default function WorkoutDetailPage() {
       }
     }
   }, [workout.isLoading, workout.logStatus, workout.workoutLogId, workout.blocs, workout.athleteModifications, setsInit]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── %RM : records chargés après l'ouverture → charge convertie dans les
+  // cases encore vides (jamais une série déjà validée, passée ou saisie).
+  useEffect(() => {
+    if (!setsInit) return;
+    setSets((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const bloc of workout.blocs) {
+        for (const ex of bloc.exercices) {
+          if (ex.params.charge_unit !== "%RM" || ex.mode === "libre") continue;
+          const exSets = next[ex.id];
+          if (!exSets) continue;
+          const nb = ex.params.cluster?.nb_clusters ?? 1;
+          const updated = exSets.map((raw, i) => {
+            const s = normalizeSet(raw);
+            if (s.done || s.skipped || s.kg) return raw;
+            const t = ex.params.cluster
+              ? prescribedKg(ex.params, ex.params.charge.mode === "global" ? ex.params.charge.value : null, oneRmByEx[ex.id])
+              : getSetTarget(ex.params, Math.floor(i / nb), oneRmByEx[ex.id]).kg;
+            return t != null ? { ...s, kg: String(t).replace(".", ",") } : raw;
+          });
+          if (updated.some((u, i) => u !== exSets[i])) {
+            next[ex.id] = updated;
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [setsInit, oneRmByEx, workout.blocs]);
 
   // ── Backfill empty cells from prevSets once they load ───────────────────
   useEffect(() => {
@@ -2687,46 +2739,63 @@ export default function WorkoutDetailPage() {
   const { mutate: reopenWorkout, isPending: reopening } = useMutation({
     mutationFn: async () => {
       if (!id) return;
-      const { error } = await supabase
-        .from("workout_logs")
-        .update({ status: "planned", completed_at: null, rpe_score: null })
-        .eq("id", id);
-      if (error) throw error;
+      await reopenWorkoutLog(id);
     },
     onSuccess: () => {
-      invalidateSessionStatus(qc, athleteId, id);
+      void invalidateWorkouts(qc, { athleteId, logId: id });
       toast.success("Séance réouverte");
     },
     onError: () => toast.error("Erreur lors de la réouverture"),
   });
+
+  // ── Records battus pendant la séance (calculés à la validation) ──────────
+  // Séries faites des exercices rattachés à un record ; une erreur ici ne
+  // remet jamais en cause la validation (déjà enregistrée).
+  const recordNewRecords = useCallback(
+    async (aid: string, doneSets: Record<string, SessionSetLog[]>) => {
+      const recordSets: RecordSet[] = [];
+      for (const [exId, rows] of Object.entries(doneSets)) {
+        const ref = recordRefByEx[exId];
+        if (!ref) continue;
+        for (const r of rows ?? []) {
+          if (r?.done && !r.skipped) recordSets.push({ ref, kg: r.kg, reps: r.reps });
+        }
+      }
+      if (recordSets.length === 0) return;
+      try {
+        const found = await computeRecordsFromSession(aid, recordSets);
+        if (found.length > 0) {
+          void invalidateRecords(qc, aid);
+          const list = found.map((c) => `${c.ref} ${String(c.kg).replace(".", ",")} kg`).join(", ");
+          toast.success(`Nouveau record : ${list}`);
+        }
+      } catch {
+        /* records : best effort */
+      }
+    },
+    [recordRefByEx, qc],
+  );
 
   // ── Complete workout ─────────────────────────────────────────────────────
   const [runKm, setRunKm] = useState("");
   const { mutate: completeWorkout, isPending: completing } = useMutation({
     mutationFn: async () => {
       if (!id) return;
-      const finalMods = allSetsToMods(sets, localMods);
-      const { error } = await supabase
-        .from("workout_logs")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          athlete_modifications: finalMods,
-          run_distance_km: parseKm(runKm),
-        } as never)
-        .eq("id", id);
-      if (error) throw error;
+      // RPC : statut + saisie fusionnée sans toucher l'adaptation du coach,
+      // idempotente (un double appui ne change pas l'heure de validation).
+      await completeWorkoutLog({ logId: id, mods: allSetsToMods(sets, localMods), runKm: parseKm(runKm) });
+      return allSetsToMods(sets, localMods).sessionSets ?? {};
     },
-    onSuccess: () => {
+    onSuccess: (doneSets) => {
       localStorage.removeItem("activeWorkoutSession");
       // Séance validée avec la saisie complète : plus rien à renvoyer.
       discardPending();
       if (athleteId && id) clearDraft(workoutDraftKey(athleteId, id));
-      invalidateSessionStatus(qc, athleteId, id);
-      if (athleteId) qc.invalidateQueries({ queryKey: runningVolumeKey(athleteId) });
+      void invalidateWorkouts(qc, { athleteId, logId: id });
       setShowFinish(false);
       setShowRpe(true);
       toast.success("Séance complétée ! ");
+      if (athleteId && doneSets) void recordNewRecords(athleteId, doneSets);
     },
     onError: () => {
       toast.error("Erreur lors de l'enregistrement");

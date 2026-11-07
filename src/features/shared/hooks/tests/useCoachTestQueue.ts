@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { QK } from '@/lib/queryKeys';
+import { invalidateReferences } from '@/api/references';
 import type { TestVariable } from '@/features/shared/types/tests';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,8 +78,8 @@ export function useFillCoachTestSession(athleteId: string) {
       qc.invalidateQueries({ queryKey: QK.athleteTestResults(athleteId) });
       qc.invalidateQueries({ queryKey: QK.athleteCurrentValues(athleteId) });
       qc.invalidateQueries({ queryKey: QK.articularProfile(athleteId) });
-      qc.invalidateQueries({ queryKey: ['athlete-refs-full', athleteId] });
-      qc.invalidateQueries({ queryKey: ['athlete-references', athleteId] });
+      // Le trigger SQL crée la référence (VMA…) : séances énergie et profil à jour.
+      void invalidateReferences(qc, athleteId);
       qc.invalidateQueries({ queryKey: ['categoryTestSeries', athleteId] });
       toast.success('Test noté ✓');
     },

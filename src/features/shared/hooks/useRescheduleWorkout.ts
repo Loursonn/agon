@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
+import { invalidateWorkouts, rescheduleWorkoutByAthlete } from "@/api/workouts";
 
 /** Nombre de jours entre deux dates ISO (positif si b > a). */
 function daysBetween(a: string, b: string): number {
@@ -45,34 +45,13 @@ export function useRescheduleWorkout() {
 
       const coachAlert = newMonday !== currentMonday;
 
-      // Try full update (requires migration 20260507000000_athlete_flexibility).
-      // If columns don't exist yet, PostgREST returns error.code "42703" (undefined_column).
-      // Fall back to date-only update so reschedule still works pre-migration.
-      const fullUpdate = await supabase
-        .from("workout_logs")
-        .update({
-          scheduled_date:         newDate,
-          rescheduled_by_athlete: true,
-          reschedule_reason:      reason ?? null,
-          coach_alert:            coachAlert,
-        } as Record<string, unknown>)
-        .eq("id", workoutLogId)
-        .select("id, scheduled_date")
-        .single();
-
-      if (fullUpdate.error) {
-        // Unknown column → migration not yet applied, retry with date only
-        const fallback = await supabase
-          .from("workout_logs")
-          .update({ scheduled_date: newDate })
-          .eq("id", workoutLogId)
-          .select("id, scheduled_date")
-          .single();
-        if (fallback.error) throw fallback.error;
-        return { data: fallback.data, coachAlert };
-      }
-
-      return { data: fullUpdate.data, coachAlert };
+      // `reason` n'a pas de colonne en base : elle n'est pas stockée. (L'ancienne
+      // version l'écrivait dans `reschedule_reason`, inexistante : la requête
+      // échouait et le repli n'écrivait que la date — le coach ne voyait ni le
+      // déplacement ni l'alerte.)
+      void reason;
+      const data = await rescheduleWorkoutByAthlete({ logId: workoutLogId, newDate, coachAlert });
+      return { data, coachAlert };
     },
 
     onMutate: async ({ athleteId, weekMondayISO, newDate, workoutLogId }) => {
@@ -96,12 +75,9 @@ export function useRescheduleWorkout() {
       toast.error("Impossible de déplacer la séance");
     },
 
-    onSuccess: ({ coachAlert }, { athleteId, weekMondayISO }) => {
-      qc.invalidateQueries({ queryKey: QK.activePlan(athleteId) });
-      qc.invalidateQueries({ queryKey: QK.workoutLogsWeek(athleteId, weekMondayISO) });
+    onSuccess: ({ coachAlert }, { athleteId, workoutLogId }) => {
       // Planning coach + Retours : le déplacement doit y apparaître tout de suite
-      qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
-      qc.invalidateQueries({ queryKey: QK.athleteModifications(athleteId) });
+      void invalidateWorkouts(qc, { athleteId, logId: workoutLogId });
       if (coachAlert) {
         toast.warning("Séance déplacée — ton coach sera notifié", { duration: 4000 });
       } else {

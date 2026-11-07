@@ -4,8 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelectedAthlete } from "@/features/coach/context/SelectedAthleteContext";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
+import { countAthleteChoices, workoutKeys } from "@/api/workouts";
 import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
 import { C } from "@/lib/theme";
@@ -78,17 +77,12 @@ export default function ContextBar() {
 
   // Badge modifications athlète (reschedule + bonus sets)
   const { data: modifCount = 0 } = useQuery({
-    queryKey: QK.athleteModifications(athleteId ?? ""),
+    // Clé distincte de la liste des Retours : avant, compteur et tableau
+    // partageaient la même clé et s'écrasaient dans le cache.
+    queryKey: workoutKeys.choicesCount(athleteId ?? ""),
     enabled: !!athleteId,
     staleTime: 60_000,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("workout_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("athlete_id", athleteId!)
-        .or("rescheduled_by_athlete.eq.true,athlete_modifications.not.is.null");
-      return count ?? 0;
-    },
+    queryFn: () => countAthleteChoices(athleteId!),
   });
 
   // Filter HYROX tab based on athlete flag

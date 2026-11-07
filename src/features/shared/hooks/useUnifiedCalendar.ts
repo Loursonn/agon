@@ -10,6 +10,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  invalidateWorkouts, listWorkoutLogs, moveWorkoutByCoach, planWorkout, removeWorkout, skipOccurrence, skipWorkout,
+} from "@/api/workouts";
 import { toast } from "sonner";
 import type { Exercise, WeekConfig } from "@/features/shared/types/athlete";
 import { syncDocAssignmentsFromEnergy } from "./fiches/syncDocAssignments";
@@ -85,14 +88,8 @@ export function useUnifiedCalendar(
     staleTime,
     queryFn: async (): Promise<UnifiedCalendarEvent[]> => {
       // ── 1. Parallel fetch: workouts + tests + competitions + energy + free + life events ─
-      const [wRes, tRes, cRes, eRes, fRes, leRes] = await Promise.all([
-        supabase
-          .from("workout_logs")
-          .select("id, session_id, session_name, scheduled_date, status, rpe_score, athlete_modifications, rescheduled_by_athlete, coach_alert, original_scheduled_date, week_number")
-          .eq("athlete_id", athleteId)
-          .gte("scheduled_date", start)
-          .lte("scheduled_date", end)
-          .order("scheduled_date"),
+      const [logs, tRes, cRes, eRes, fRes, leRes] = await Promise.all([
+        listWorkoutLogs({ athleteIds: [athleteId], from: start, to: end }),
 
         supabase
           .from("test_sessions")
@@ -135,7 +132,6 @@ export function useUnifiedCalendar(
           .order("date_start"),
       ]);
 
-      const logs         = wRes.data ?? [];
       const tests        = tRes.data ?? [];
       const comps        = cRes.data ?? [];
       const energyAssign = eRes.data ?? [];
@@ -180,7 +176,7 @@ export function useUnifiedCalendar(
       const events: UnifiedCalendarEvent[] = [];
 
       for (const w of logs) {
-        const rpe = (w as Record<string, unknown>).rpe_score as number | null ?? null;
+        const rpe = w.rpe_score;
         events.push({
           id:                   w.id,
           type:                 "workout",
@@ -193,7 +189,7 @@ export function useUnifiedCalendar(
           rescheduledByAthlete: w.rescheduled_by_athlete ?? false,
           coachAlert:           w.coach_alert ?? false,
           originalScheduledDate: w.original_scheduled_date ?? undefined,
-          raw:                  { ...(w as Record<string, unknown>), session_id: w.session_id },
+          raw:                  { ...(w as unknown as Record<string, unknown>), session_id: w.session_id },
         });
       }
 
@@ -307,24 +303,10 @@ export function useAssignWorkout() {
       date: string;
       weekNumber?: number;
     }) => {
-      const { error } = await supabase.from("workout_logs").insert({
-        athlete_id:            athleteId,
-        coach_id:              coachId,
-        session_id:            sessionId,
-        session_name:          sessionName,
-        scheduled_date:        date,
-        original_scheduled_date: date,
-        status:                "planned",
-        ...(weekNumber != null ? { week_number: weekNumber } : {}),
-      });
-      if (error) throw error;
+      await planWorkout({ athleteId, coachId, sessionId, sessionName, date, weekNumber });
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: calBaseKey(vars.athleteId) });
-      qc.invalidateQueries({ queryKey: ["calendar-events", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["week-schedule", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["activePlan", vars.athleteId] });
+      void invalidateWorkouts(qc, { athleteId: vars.athleteId });
       toast.success("Séance ajoutée");
     },
     onError: () => toast.error("Erreur lors de l'ajout"),
@@ -427,29 +409,19 @@ export function useDeleteCalendarEvent() {
       if (type === "workout" && id.startsWith("block-") && sessionId && date) {
         // Past or future: a skipped log suppresses this single occurrence of the
         // recurring session (same mechanism as moving it to another day)
-        const { error } = await supabase.from("workout_logs").upsert({
-          athlete_id:     athleteId,
-          coach_id:       coachId ?? null,
-          session_id:     sessionId,
-          session_name:   sessionName ?? "Séance",
-          scheduled_date: date,
-          status:         "skipped",
-        }, { onConflict: "athlete_id,session_id,scheduled_date" });
-        if (error) throw error;
+        await skipOccurrence({ athleteId, coachId: coachId ?? null, sessionId, sessionName: sessionName ?? "Séance", date });
         return;
       }
 
       if (type === "workout") {
         if (status === "completed") {
-          // Séance validée : hard delete pour pouvoir supprimer les doublons
-          const { error } = await supabase.from("workout_logs").delete().eq("id", id);
-          if (error) throw error;
+          // Séance validée : suppression explicite (confirmée) par le coach,
+          // pour pouvoir retirer les doublons.
+          await removeWorkout(id, { allowCompleted: true });
         } else {
           // Past or future real log: mark skipped. A hard delete would let the
           // recurring projection reappear on the same day.
-          const { error } = await supabase.from("workout_logs")
-            .update({ status: "skipped" }).eq("id", id);
-          if (error) throw error;
+          await skipWorkout(id);
         }
         return;
       }
@@ -458,10 +430,8 @@ export function useDeleteCalendarEvent() {
       if (error) throw error;
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: calBaseKey(vars.athleteId) });
-      qc.invalidateQueries({ queryKey: ["calendar-events", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["week-schedule", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", vars.athleteId] });
+      // Calendrier + tout ce qui lit les séances (et les séances énergie).
+      void invalidateWorkouts(qc, { athleteId: vars.athleteId });
       toast.success("Supprimé");
     },
     onError: () => toast.error("Erreur lors de la suppression"),
@@ -489,40 +459,16 @@ export function useRescheduleWorkout() {
 
       if (!sessionId) return;
 
-      // 1. Mark old slot as skipped
-      if (isProjected) {
-        const { error } = await supabase.from("workout_logs").insert({
-          athlete_id:     athleteId,
-          coach_id:       coachId,
-          session_id:     sessionId,
-          session_name:   sessionName,
-          scheduled_date: event.date,
-          status:         "skipped",
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("workout_logs")
-          .update({ status: "skipped" }).eq("id", event.id);
-        if (error) throw error;
-      }
-
-      // 2. Create / update planned log on new date
-      const { error } = await supabase.from("workout_logs").upsert({
-        athlete_id:     athleteId,
-        coach_id:       coachId,
-        session_id:     sessionId,
-        session_name:   sessionName,
-        scheduled_date: newDate,
-        status:         "planned",
-      }, { onConflict: "athlete_id,session_id,scheduled_date" });
-      if (error) throw error;
+      // Ancienne date annulée, séance prévue à la nouvelle (refusé si l'une
+      // des deux est une séance déjà réalisée).
+      await moveWorkoutByCoach({
+        athleteId, coachId, sessionId, sessionName,
+        fromDate: event.date, toDate: newDate,
+        logId: isProjected ? null : event.id,
+      });
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: calBaseKey(vars.athleteId) });
-      qc.invalidateQueries({ queryKey: ["calendar-events", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["week-schedule", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["activePlan", vars.athleteId] });
+      void invalidateWorkouts(qc, { athleteId: vars.athleteId });
       toast.success("Séance déplacée");
     },
     onError: () => toast.error("Erreur lors du déplacement"),

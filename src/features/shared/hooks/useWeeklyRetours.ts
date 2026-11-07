@@ -4,15 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import type { VideoRequestStatus,
   WeeklyRetourData, WeekComparisonData,
-  PerformedExercise, PerformedSet, PlannedExercise, WellnessDay, EnergySessionDetail,
-  FreeActivityDetail, NutritionStrategy, NutritionDailyLog,
+  PerformedExercise, PerformedSet, PlannedExercise, EnergySessionDetail,
+  FreeActivityDetail,
 } from "@/features/shared/types/retours.types";
 import type { SetRow, Exercise, BlockConfig, ArchivedBlock, AthleteModifications, SessionSetLog } from "@/features/shared/types/athlete";
 import type { ProgSession, Exercice, Bloc } from "@/features/coach/components/programmation/types";
 import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence";
 import { fetchOccurrencesForSessions } from "./useSessionOccurrence";
-import { startOfWeek, endOfWeek, subWeeks, format, eachDayOfInterval, addDays } from "date-fns";
-import { normalizeDayMap as normalizeWH } from "@/lib/date";
+import { startOfWeek, endOfWeek, subWeeks, format, addDays } from "date-fns";
+import { averageWellness, dailyWellness, retoursWellnessHistory } from "@/lib/retoursWellness";
+import { wellnessScore } from "@shared/domain/wellness";
+import { getDays as getNutritionDays, getStrategy as getNutritionStrategy } from "@/api/nutrition";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -62,25 +64,6 @@ function calcWeekNum(dateStr: string, blockStartDate: string | null | undefined)
 }
 
 /**
- * Merge wellness histories from all archived blocks + current `asp:wh`.
- * Current block takes precedence for any date collision.
- */
-function buildMergedWellness(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  currentWH: Record<string, any>,
-  blockHistory: ArchivedBlock[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Record<string, any> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const merged: Record<string, any> = {};
-  for (const block of blockHistory) {
-    if (block.wellnessHistory) Object.assign(merged, normalizeWH(block.wellnessHistory));
-  }
-  Object.assign(merged, normalizeWH(currentWH)); // current block wins
-  return merged;
-}
-
-/**
  * Given a workout date, find which block it belongs to and return its
  * exos, sets, and blockConfig. Falls back to current block data.
  */
@@ -111,35 +94,6 @@ function findBlockForDate(
   return { exos: currentExos, sets: currentSets, blockConfig: currentBlockConfig };
 }
 
-function buildDailyWellness(
-  startDate: Date,
-  endDate: Date,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  mergedWH: Record<string, any>,
-): Record<string, WellnessDay | null> {
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
-  const result: Record<string, WellnessDay | null> = {};
-  for (const day of days) {
-    const d = format(day, "yyyy-MM-dd");
-    const e = mergedWH[d];
-    result[d] = e
-      ? {
-          score:     e.score     ?? 0,
-          fatigue:   e.fatigue   ?? 0,
-          sommeil:   e.sommeil   ?? 0,
-          stress:    e.stress    ?? 0,
-          energie:   e.energie   ?? 0,
-          doms:      e.doms,
-          domsZones: e.domsZones,
-          coucher:   e.coucher,
-          reveil:    e.reveil,
-          sleepDur:  e.sleepDur,
-        }
-      : null;
-  }
-  return result;
-}
-
 // ── Core fetch ────────────────────────────────────────────────────────────────
 
 async function fetchWeekData(
@@ -153,19 +107,17 @@ async function fetchWeekData(
   const end   = format(endDate,   "yyyy-MM-dd");
 
   // Current block data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const currentWH: Record<string, any>              = appDataMap["asp:wh"]           ?? {};
   const currentExos: Record<string, Exercise[]>     = appDataMap["asp:exos"]          ?? {};
   const currentSets: Record<string, SetRow[]>       = appDataMap["asp:sets"]           ?? {};
   const currentBlockConfig: BlockConfig             = appDataMap["asp:blockConfig"]   ?? {};
   const progSessions: ProgSession[]                 = appDataMap["asp:prog"]          ?? [];
   const blockHistory: ArchivedBlock[]               = appDataMap["asp:blockHistory"]  ?? [];
 
-  // Merged wellness across all blocks
-  const mergedWH = buildMergedWellness(currentWH, blockHistory);
+  // Wellness du bloc courant + blocs archivés, en jours ISO (clés compactes en base)
+  const mergedWH = retoursWellnessHistory(appDataMap["asp:wh"], blockHistory);
 
   // ── Parallel DB queries ──────────────────────────────────────────────────────
-  const [workoutsRes, energyRes, testsRes, compsRes, nutritionLogsRes, nutritionStrategyRes] = await Promise.all([
+  const [workoutsRes, energyRes, testsRes, compsRes, nutritionLogs, nutritionStrategy] = await Promise.all([
     db.from("workout_logs")
       .select("id, session_id, session_name, scheduled_date, status, duration_s, notes, rpe_score, athlete_modifications, week_number")
       .eq("athlete_id", athleteId)
@@ -192,17 +144,9 @@ async function fetchWeekData(
       .gte("date", start)
       .lte("date", end),
 
-    db.from("nutrition_daily_log")
-      .select("id, athlete_id, date, active_calories, total_calories_consumed, glucides_consumed, lipides_consumed, proteines_consumed")
-      .eq("athlete_id", athleteId)
-      .gte("date", start)
-      .lte("date", end)
-      .order("date"),
-
-    db.from("nutrition_strategy")
-      .select("id, athlete_id, coach_id, strategy, can_track_calories, total_calories_coach, target_weight, surplus_deficit_min, surplus_deficit_max, macros_glucides, macros_lipides, macros_proteines")
-      .eq("athlete_id", athleteId)
-      .maybeSingle(),
+    // Nutrition : `app_data` via la couche API (les tables `nutrition_*` n'existent pas).
+    getNutritionDays(athleteId, start, end),
+    getNutritionStrategy(athleteId),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -222,15 +166,7 @@ async function fetchWeekData(
         .in("workout_log_id", workoutIds)
     : { data: [] as unknown[] };
 
-  // Wellness averages (using merged history)
-  const scoresInWeek = Object.entries(mergedWH)
-    .filter(([d]) => d >= start && d <= end)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map(([, v]) => (v as any).score)
-    .filter((s): s is number => s != null);
-  const avgWellness = scoresInWeek.length > 0
-    ? Math.round(scoresInWeek.reduce((a, b) => a + b, 0) / scoresInWeek.length)
-    : null;
+  const avgWellness = averageWellness(mergedWH, start, end);
 
   // ── Pre-resolve exercise names for all workouts ─────────────────────────────
   // Collect all exercise IDs that appear in sessionSets but may not be in progSession/planned
@@ -382,7 +318,7 @@ async function fetchWeekData(
       duration_s:     w.duration_s ?? null,
       notes:          w.notes      ?? null,
       rpe_score:      w.rpe_score  ?? null,
-      wellness_day:   mergedWH[w.scheduled_date]?.score ?? null,
+      wellness_day:   mergedWH[w.scheduled_date] ? wellnessScore(mergedWH[w.scheduled_date]) : null,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       exercise_comments: (comments as any[]).filter((c) => c.workout_log_id === w.id),
       planned_exercises:   planned,
@@ -478,19 +414,9 @@ async function fetchWeekData(
       priority:        c.priority        ?? null,
     })),
     avg_wellness:    avgWellness,
-    daily_wellness:  buildDailyWellness(startDate, endDate, mergedWH),
+    daily_wellness:  dailyWellness(mergedWH, start, end),
     free_activities: freeActivities,
-    nutrition_strategy: (nutritionStrategyRes.data as NutritionStrategy | null) ?? null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    nutrition_logs: ((nutritionLogsRes.data ?? []) as any[]).map((n): NutritionDailyLog => ({
-      id:                      n.id,
-      athlete_id:              n.athlete_id,
-      date:                    n.date,
-      active_calories:         n.active_calories         ?? null,
-      total_calories_consumed: n.total_calories_consumed ?? null,
-      glucides_consumed:       n.glucides_consumed       ?? null,
-      lipides_consumed:        n.lipides_consumed        ?? null,
-      proteines_consumed:      n.proteines_consumed      ?? null,
-    })),
+    nutrition_strategy: nutritionStrategy,
+    nutrition_logs:     nutritionLogs,
   };
 }

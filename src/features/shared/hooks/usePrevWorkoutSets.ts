@@ -17,7 +17,7 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getPreviousLoggedWorkout, workoutKeys } from "@/api/workouts";
 import { useAthleteContext } from "../context/AthleteContext";
 import type { AthleteModifications, SessionSetLog } from "../types/athlete";
 
@@ -35,15 +35,6 @@ function isLegacy(sessionId: string | null): boolean {
   return !!sessionId && sessionId.startsWith("s_");
 }
 
-/** Une séance ne sert de référence que si l'athlète y a saisi quelque chose. */
-function hasLoggedData(mods: AthleteModifications | null | undefined): boolean {
-  const sessionSets = mods?.sessionSets;
-  if (!sessionSets) return false;
-  return Object.values(sessionSets).some((rows) =>
-    (rows ?? []).some((s) => s && (s.kg != null || s.reps != null)),
-  );
-}
-
 export function usePrevWorkoutSets(
   sessionId: string | null,
   currentLogId: string | null,
@@ -55,30 +46,20 @@ export function usePrevWorkoutSets(
   const { sets, athleteId } = useAthleteContext();
   const legacy = isLegacy(sessionId);
 
+  // Dernière séance passée de la même séance-type qui contient réellement des
+  // saisies (règle du cron) : une séance ouverte puis abandonnée sans rien
+  // remplir ne masque pas la vraie référence.
   const { data: prevLog } = useQuery({
-    queryKey: ["prev-workout-log", sessionId, currentLogId, athleteId, currentDate],
+    queryKey: workoutKeys.previous(athleteId ?? "", sessionId ?? "", currentLogId, currentDate ?? null),
     enabled: !legacy && !!sessionId && !!athleteId,
     staleTime: 300_000,
-    queryFn: async () => {
-      if (!sessionId || !athleteId) return null;
-      // On récupère les dernières séances passées puis on garde la première
-      // qui contient réellement des saisies : une séance ouverte puis
-      // abandonnée sans rien remplir ne doit pas masquer la vraie référence.
-      let q = supabase
-        .from("workout_logs")
-        .select("id, scheduled_date, athlete_modifications")
-        .eq("athlete_id", athleteId)
-        .eq("session_id", sessionId)
-        .neq("status", "skipped")
-        .neq("id", currentLogId ?? "00000000-0000-0000-0000-000000000000");
-      if (currentDate) q = q.lte("scheduled_date", currentDate);
-
-      const { data } = await q.order("scheduled_date", { ascending: false }).limit(10);
-
-      return (data ?? []).find((row) =>
-        hasLoggedData(row.athlete_modifications as AthleteModifications | null),
-      ) ?? null;
-    },
+    queryFn: () =>
+      getPreviousLoggedWorkout({
+        athleteId: athleteId!,
+        sessionId: sessionId!,
+        excludeId: currentLogId,
+        onOrBefore: currentDate ?? null,
+      }),
   });
 
   return useMemo(() => {

@@ -2,7 +2,8 @@ import { useState } from "react"
 import { C } from "@/lib/theme"
 import { X, Plus } from "lucide-react"
 import { useExerciceRM } from "./hooks/useExerciceRM"
-import { useAddPRLog, epley1RM } from "@/features/shared/hooks/usePRLogs"
+import { useAddPRLog } from "@/features/shared/hooks/usePRLogs"
+import { estimateOneRm } from "@shared/domain/performance"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { localISO } from "@/lib/date";
@@ -12,12 +13,13 @@ const VIOLET = "#FFC933"
 interface RmDrawerProps {
   open: boolean
   onClose: () => void
-  exerciseName: string
+  exercice: { exercise_name: string; exercise_id?: string | null }
   athleteId: string | undefined
 }
 
-export function RmDrawer({ open, onClose, exerciseName, athleteId }: RmDrawerProps) {
-  const { history, isLoading } = useExerciceRM(athleteId, exerciseName)
+export function RmDrawer({ open, onClose, exercice, athleteId }: RmDrawerProps) {
+  const { ref, history, isLoading } = useExerciceRM(athleteId, exercice)
+  const exerciseName = exercice.exercise_name
   const addPR = useAddPRLog()
   const [newKg, setNewKg] = useState("")
   const [newReps, setNewReps] = useState("1")
@@ -27,16 +29,8 @@ export function RmDrawer({ open, onClose, exerciseName, athleteId }: RmDrawerPro
   async function handleAdd() {
     const kg = parseFloat(newKg)
     const reps = parseInt(newReps, 10)
-    if (!kg || !reps || !athleteId) return
-    await addPR.mutateAsync({
-      athleteId,
-      exercise_ref: exerciseName,
-      kg: reps === 1 ? kg : epley1RM(kg, reps),
-      date: localISO(),
-      source: "manual",
-      source_reps: reps,
-      source_kg: kg,
-    })
+    if (!kg || !reps || !athleteId || !ref) return
+    await addPR.mutateAsync({ athleteId, ref, kg, reps, date: localISO(), source: "manual" })
     setNewKg("")
     setNewReps("1")
   }
@@ -60,7 +54,9 @@ export function RmDrawer({ open, onClose, exerciseName, athleteId }: RmDrawerPro
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>{exerciseName}</div>
-            <div style={{ fontSize: 11, color: C.tx3 }}>Historique 1RM</div>
+            <div style={{ fontSize: 11, color: C.tx3 }}>
+              Historique 1RM{ref && ref !== exerciseName ? ` · record « ${ref} »` : ""}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -97,7 +93,7 @@ export function RmDrawer({ open, onClose, exerciseName, athleteId }: RmDrawerPro
           </div>
           {newKg && parseInt(newReps, 10) > 1 && (
             <div style={{ fontSize: 10, color: C.tx3, marginBottom: 8 }}>
-              1RM estimé (Epley) : <span style={{ color: VIOLET, fontWeight: 700 }}>{epley1RM(parseFloat(newKg) || 0, parseInt(newReps, 10) || 1)} kg</span>
+              1RM estimé (Epley) : <span style={{ color: VIOLET, fontWeight: 700 }}>{estimateOneRm(parseFloat(newKg) || 0, parseInt(newReps, 10) || 1)} kg</span>
             </div>
           )}
           <button

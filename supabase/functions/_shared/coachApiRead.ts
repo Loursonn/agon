@@ -15,6 +15,9 @@
  *
  * Module pur, testé par vitest.
  */
+import { exportableInjuries } from "./domain/injuries.ts";
+import { byIsoDay } from "./domain/dates.ts";
+import { archivedWellnessOf, parseWellnessHistory, wellnessEntries, wellnessScore } from "./domain/wellness.ts";
 import { cleanText, type ExerciceParamsShape, isWeekRecord, type ProgSessionShape } from "./coachApiOps.ts";
 
 type Obj = Record<string, unknown>;
@@ -144,7 +147,7 @@ export interface SummaryInput {
   athlete: { id: string; first_name: string | null; full_name: string | null };
   from: string;
   to: string;
-  /** Valeurs `app_data` par clé : asp:goals, asp:bw, asp:wh, asp:wlog, asp:injuries. */
+  /** Valeurs `app_data` par clé : asp:goals, asp:bw, asp:wh, asp:wlog, asp:blockHistory. */
   appData: Record<string, unknown>;
   prog: unknown;
   workoutLogs: Array<{
@@ -163,6 +166,8 @@ export interface SummaryInput {
   competitions?: Array<{ id?: string; date: string; name: string | null; type: string | null; priority: string | null; location: string | null }>;
   /** Tests planifiés (`test_sessions`). */
   tests?: Array<{ id?: string; date: string; title: string | null; type: string | null; completed: boolean | null; results_structured: unknown }>;
+  /** Blessures (`medical_entries`, colonnes `INJURY_EXPORT_COLUMNS` seulement). */
+  injuries?: unknown[];
   /** Événements saisis par l'athlète (`athlete_life_events`). */
   lifeEvents?: Array<{ date_start: string; date_end: string; title: string | null }>;
   /** Thèmes du jour posés par le coach (`day_themes`). */
@@ -240,19 +245,24 @@ export function buildSummary(input: SummaryInput) {
   const { from, to, appData } = input;
   const goals = obj(appData["asp:goals"]);
   const bw = obj(appData["asp:bw"]);
-  const wh = obj(appData["asp:wh"]);
-  const wlog = obj(appData["asp:wlog"]);
-  const injuries = Array.isArray(appData["asp:injuries"]) ? (appData["asp:injuries"] as unknown[]) : [];
+  // `asp:wh` et `asp:wlog` sont indexés en "YYYYMMDD" : lus via le domaine, en jours ISO.
+  const wellness = wellnessEntries(
+    parseWellnessHistory(appData["asp:wh"], archivedWellnessOf(appData["asp:blockHistory"])),
+    from,
+    to,
+  );
+  const wlog = byIsoDay(obj(appData["asp:wlog"]));
   const names = exerciseNames(input.prog);
 
   return {
     athlete: { id: input.athlete.id, prenom: firstName(input.athlete) },
     periode: { du: from, au: to },
     echelles: {
-      fatigue_sommeil_stress_energie_courbatures: "1 à 5",
+      fatigue_sommeil_stress_energie_fraicheur_musculaire: "1 à 5, 5 = mieux",
       score_bien_etre: "0 à 100",
       rpe: "1 à 10",
       rir: "répétitions en réserve",
+      douleur: "0 à 10",
     },
     objectifs: {
       seances_par_semaine: num(goals.sessionsPerWeek, 1, 14),
@@ -261,41 +271,24 @@ export function buildSummary(input: SummaryInput) {
       lever: hm(goals.sleepWakeup),
       poids_cible_kg: num(bw.target, 20, 400),
     },
-    bien_etre: Object.entries(wh)
-      .filter(([d]) => inRange(d, from, to))
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, v]) => {
-        const w = obj(v);
-        return {
-          date,
-          score: num(w.score, 0, 100),
-          fatigue: num(w.fatigue, 1, 5),
-          sommeil: num(w.sommeil, 1, 5),
-          stress: num(w.stress, 1, 5),
-          energie: num(w.energie, 1, 5),
-          courbatures: num(w.doms, 1, 5),
-          sommeil_h: num(w.sleepDur, 0, 24),
-        };
-      }),
+    bien_etre: wellness.map((e) => ({
+      date: e.day,
+      score: wellnessScore(e),
+      fatigue: e.items.fatigue,
+      sommeil: e.items.sommeil,
+      stress: e.items.stress,
+      energie: e.items.energie,
+      fraicheur_musculaire: e.items.doms,
+      sommeil_h: num(e.sleep.hours, 0, 24),
+      // Oui / non seulement : le commentaire est du texte libre.
+      blesse_malade: e.injuryNote != null,
+    })),
     poids: Object.entries(wlog)
       .filter(([d]) => inRange(d, from, to))
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, kg]) => ({ date, kg: num(kg, 20, 400) }))
       .filter((p) => p.kg !== null),
-    blessures: injuries
-      .map((raw) => {
-        const i = obj(raw);
-        return {
-          zones: (Array.isArray(i.zones) ? i.zones : []).map((z) => label(z)).filter(Boolean).slice(0, 10),
-          type: label(i.type),
-          intensite: num(i.intensity, 0, 10),
-          statut: label(i.status, 20),
-          debut: isIsoDate(i.date_start) ? i.date_start : null,
-          fin: isIsoDate(i.date_end) ? i.date_end : null,
-        };
-      })
-      // Blessures qui recouvrent la période, ou encore ouvertes.
-      .filter((i) => (!i.debut || i.debut <= to) && (!i.fin || i.fin >= from)),
+    blessures: exportableInjuries(input.injuries ?? [], from, to),
     seances: input.workoutLogs
       .filter((l) => inRange(l.scheduled_date, from, to))
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))

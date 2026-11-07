@@ -189,7 +189,7 @@ function IconBtn({ title, onClick, children }: { title: string; onClick: () => v
 
 function Attachments({ entry, athleteId, canEdit }: { entry: MedicalEntry; athleteId: string; canEdit: boolean }) {
   const atts = entry.medical_attachments ?? [];
-  const { data: urls = {} } = useMedicalSignedUrls(atts.map((a) => a.file_path));
+  const { data: urls = {} } = useMedicalSignedUrls(athleteId, atts.map((a) => a.file_path));
   const add = useAddMedicalAttachment(athleteId);
   const del = useDeleteMedicalAttachment(athleteId);
   const inputRef = useRef<HTMLInputElement>(null);

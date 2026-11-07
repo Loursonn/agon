@@ -4,6 +4,8 @@ import { isToday, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, X, ChevronDown, ChevronUp, Hourglass } from "lucide-react";
 import { C } from "@/lib/theme";
+import { wellnessView } from "@/lib/wellness";
+import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT } from "@shared/domain/wellness";
 import { DayDetailPanel } from "./DayDetailPanel";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsPill } from "./VideoRequestsList";
@@ -53,31 +55,29 @@ function StatusIcon({ status }: { status: string }) {
 
 // ── Wellness mini-block ───────────────────────────────────────────────────────
 
-function wellnessColor(score: number) {
-  if (score >= 70) return C.g;
-  if (score >= 50) return C.o;
-  return C.r;
-}
-
 function WellnessBlock({ wellness, onClick }: { wellness: WellnessDay; onClick: () => void }) {
-  const col = wellnessColor(wellness.score);
+  // Score recalculé par le domaine (le `score` reçu n'est pas lu : il valait 0
+  // quand il manquait). Libellés : ceux de la saisie athlète, dans l'ordre.
+  const { items, score, reco, injuryNote } = wellnessView(wellness);
+  const col = reco.c;
   return (
     <div onClick={onClick} style={{ cursor: "pointer", background: col + "12", border: "1px solid " + col + "40", borderRadius: 4, padding: "7px 8px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 5 }}>
-        <span style={{ fontSize: 20, fontWeight: 900, color: col, lineHeight: 1 }}>{wellness.score}</span>
+        <span style={{ fontSize: 20, fontWeight: 900, color: col, lineHeight: 1 }}>{score ?? "—"}</span>
         <span style={{ fontSize: 9, color: C.tx3 }}>/100</span>
         <span style={{ marginLeft: "auto", fontSize: 9, color: C.tx3 }}>↗</span>
       </div>
+      {injuryNote && (
+        <div title={injuryNote} style={{ marginBottom: 5, padding: "3px 5px", borderRadius: 3, background: C.r + "18", border: "1px solid " + C.r + "50" }}>
+          <div style={{ fontSize: 8, fontWeight: 800, color: C.r, textTransform: "uppercase" }}>Blessé / malade</div>
+          <div style={{ fontSize: 9, color: C.tx, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{injuryNote}</div>
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {[
-          { label: "repos", value: wellness.sommeil },
-          { label: "sommeil", value: wellness.fatigue },
-          { label: "stress", value: wellness.stress  },
-          { label: "intensite", value: wellness.energie },
-        ].map(({ label, value }) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 9 }}>{label}</span>
-            <span style={{ fontSize: 9, fontWeight: 600, color: C.tx2 }}>{value ?? "—"}</span>
+        {WELLNESS_ITEMS.map((k) => (
+          <div key={k} title={WELLNESS_ITEM_LABEL[k]} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 9 }}>{WELLNESS_ITEM_SHORT[k]}</span>
+            <span style={{ fontSize: 9, fontWeight: 600, color: C.tx2 }}>{items[k] ?? "—"}</span>
           </div>
         ))}
       </div>

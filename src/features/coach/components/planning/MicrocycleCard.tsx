@@ -55,7 +55,7 @@ export const MicrocycleCard = memo(function MicrocycleCard({ micro, athleteId }:
         <div className="rounded-md p-1.5 bg-[#22C55E]/10 border border-[#22C55E]/20">
           <div className="text-[9px] text-white/40 mb-0.5">Wellness</div>
           <div className="text-sm font-bold text-[#22C55E]">
-            {stats?.avg_wellness != null ? stats.avg_wellness.toFixed(1) : "—"}
+            {stats?.avg_wellness != null ? `${stats.avg_wellness}/100` : "—"}
           </div>
         </div>
       </div>

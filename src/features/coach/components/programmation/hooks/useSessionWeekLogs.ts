@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
+import { listWorkoutLogs, workoutKeys } from "@/api/workouts"
 import type { AthleteModifications } from "@/features/shared/types/athlete"
 import { computeOccurrences } from "@/lib/sessionOccurrence"
 import { localISO } from "@/lib/date"
@@ -20,19 +20,11 @@ export function useSessionWeekLogs(
   sessionId: string,
 ) {
   const { data: rawLogs = [], isLoading } = useQuery({
-    queryKey: ["session-week-logs", athleteId, sessionId],
+    queryKey: workoutKeys.session(athleteId ?? "", sessionId),
     enabled: !!athleteId && !!sessionId,
     staleTime: 30_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("id, scheduled_date, status, rpe_score, athlete_modifications, microcycle_id, notes")
-        .eq("athlete_id", athleteId!)
-        .eq("session_id", sessionId)
-        .neq("status", "skipped")
-        .order("scheduled_date", { ascending: false })
-      return data ?? []
-    },
+    queryFn: () =>
+      listWorkoutLogs({ athleteIds: [athleteId!], sessionId, excludeStatuses: ["skipped"], ascending: false }),
   })
 
   // Occurrence = rang chronologique parmi les logs non « skipped » de la séance
