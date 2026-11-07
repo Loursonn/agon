@@ -821,18 +821,25 @@ export type Database = {
         Row: {
           ai_allowed: boolean
           coach_visible: boolean
+          consent_purpose: Database["public"]["Enums"]["consent_purpose"] | null
           notes: string
           source: Database["public"]["Enums"]["data_source"]
         }
         Insert: {
           ai_allowed: boolean
           coach_visible: boolean
+          consent_purpose?:
+            | Database["public"]["Enums"]["consent_purpose"]
+            | null
           notes: string
           source: Database["public"]["Enums"]["data_source"]
         }
         Update: {
           ai_allowed?: boolean
           coach_visible?: boolean
+          consent_purpose?:
+            | Database["public"]["Enums"]["consent_purpose"]
+            | null
           notes?: string
           source?: Database["public"]["Enums"]["data_source"]
         }
@@ -3029,6 +3036,7 @@ export type Database = {
           avg_pace_s_per_km: number | null
           calories: number | null
           details: Json | null
+          device_name: string | null
           distance_m: number | null
           duration_s: number | null
           elevation_gain_m: number | null
@@ -3049,6 +3057,7 @@ export type Database = {
           avg_pace_s_per_km?: number | null
           calories?: number | null
           details?: Json | null
+          device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
@@ -3069,6 +3078,7 @@ export type Database = {
           avg_pace_s_per_km?: number | null
           calories?: number | null
           details?: Json | null
+          device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
@@ -3104,6 +3114,8 @@ export type Database = {
           last_sync_at: string | null
           provider: Database["public"]["Enums"]["data_source"]
           status: Database["public"]["Enums"]["provider_status"]
+          sync_lock_token: string | null
+          sync_locked_until: string | null
           synced_through: string | null
           updated_at: string
         }
@@ -3118,6 +3130,8 @@ export type Database = {
           last_sync_at?: string | null
           provider: Database["public"]["Enums"]["data_source"]
           status?: Database["public"]["Enums"]["provider_status"]
+          sync_lock_token?: string | null
+          sync_locked_until?: string | null
           synced_through?: string | null
           updated_at?: string
         }
@@ -3132,6 +3146,8 @@ export type Database = {
           last_sync_at?: string | null
           provider?: Database["public"]["Enums"]["data_source"]
           status?: Database["public"]["Enums"]["provider_status"]
+          sync_lock_token?: string | null
+          sync_locked_until?: string | null
           synced_through?: string | null
           updated_at?: string
         }
@@ -3219,6 +3235,35 @@ export type Database = {
           },
         ]
       }
+      provider_fit_quota: {
+        Row: {
+          connection_id: string
+          day: string
+          updated_at: string
+          used: number
+        }
+        Insert: {
+          connection_id: string
+          day: string
+          updated_at?: string
+          used?: number
+        }
+        Update: {
+          connection_id?: string
+          day?: string
+          updated_at?: string
+          used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_fit_quota_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "provider_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_oauth_clients: {
         Row: {
           api_host: string
@@ -3289,6 +3334,8 @@ export type Database = {
           access_expires_at: string | null
           access_secret_id: string
           connection_id: string
+          refresh_expires_at: string | null
+          refresh_locked_until: string | null
           refresh_secret_id: string | null
           updated_at: string
         }
@@ -3296,6 +3343,8 @@ export type Database = {
           access_expires_at?: string | null
           access_secret_id: string
           connection_id: string
+          refresh_expires_at?: string | null
+          refresh_locked_until?: string | null
           refresh_secret_id?: string | null
           updated_at?: string
         }
@@ -3303,6 +3352,8 @@ export type Database = {
           access_expires_at?: string | null
           access_secret_id?: string
           connection_id?: string
+          refresh_expires_at?: string | null
+          refresh_locked_until?: string | null
           refresh_secret_id?: string | null
           updated_at?: string
         }
@@ -3315,6 +3366,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      provider_webhook_inbox: {
+        Row: {
+          attempts: number
+          error: string | null
+          external_user_id: string | null
+          fingerprint: string
+          id: string
+          locked_until: string | null
+          payload: Json
+          processed_at: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          received_at: string
+          type: string
+        }
+        Insert: {
+          attempts?: number
+          error?: string | null
+          external_user_id?: string | null
+          fingerprint: string
+          id?: string
+          locked_until?: string | null
+          payload: Json
+          processed_at?: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          received_at?: string
+          type: string
+        }
+        Update: {
+          attempts?: number
+          error?: string | null
+          external_user_id?: string | null
+          fingerprint?: string
+          id?: string
+          locked_until?: string | null
+          payload?: Json
+          processed_at?: string | null
+          provider?: Database["public"]["Enums"]["data_source"]
+          received_at?: string
+          type?: string
+        }
+        Relationships: []
       }
       retours: {
         Row: {
@@ -4734,6 +4827,74 @@ export type Database = {
       pg_version: { Args: never; Returns: string }
       pg_version_num: { Args: never; Returns: number }
       pgtap_version: { Args: never; Returns: number }
+      provider_daily_merge: {
+        Args: {
+          p_athlete: string
+          p_day: string
+          p_fields: Json
+          p_kind: string
+          p_raw: Json
+          p_source: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: string
+      }
+      provider_fit_quota_exhaust: {
+        Args: { p_connection_id: string; p_limit: number }
+        Returns: undefined
+      }
+      provider_fit_quota_remaining: {
+        Args: { p_connection_id: string; p_limit: number }
+        Returns: number
+      }
+      provider_fit_quota_reserve: {
+        Args: { p_connection_id: string; p_count: number; p_limit: number }
+        Returns: boolean
+      }
+      provider_forget: {
+        Args: {
+          p_athlete: string
+          p_provider: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: Json
+      }
+      provider_inbox_claim: {
+        Args: {
+          p_ids?: string[]
+          p_limit?: number
+          p_provider: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: {
+          attempts: number
+          error: string | null
+          external_user_id: string | null
+          fingerprint: string
+          id: string
+          locked_until: string | null
+          payload: Json
+          processed_at: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          received_at: string
+          type: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "provider_webhook_inbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      provider_sync_try_lock: {
+        Args: { p_connection_id: string; p_ttl_seconds?: number }
+        Returns: string
+      }
+      provider_sync_unlock: {
+        Args: { p_connection_id: string; p_token: string }
+        Returns: undefined
+      }
+      provider_token_claim_refresh: {
+        Args: { p_connection_id: string; p_seconds?: number }
+        Returns: boolean
+      }
       provider_token_read: {
         Args: { p_connection_id: string }
         Returns: {
@@ -4741,6 +4902,10 @@ export type Database = {
           expires_at: string
           refresh_token: string
         }[]
+      }
+      provider_token_release_refresh: {
+        Args: { p_connection_id: string }
+        Returns: undefined
       }
       provider_token_write: {
         Args: {
@@ -4871,6 +5036,7 @@ export type Database = {
         Returns: undefined
       }
       trigger_coros_sync: { Args: never; Returns: undefined }
+      trigger_garmin_maintenance: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
       workout_log_athlete_id: { Args: { p_log_id: string }; Returns: string }
       workout_log_has_entries: { Args: { mods: Json }; Returns: boolean }
