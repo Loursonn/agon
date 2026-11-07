@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { check, db } from "./client";
 
 /**
  * Séances réalisées (`workout_logs`).
@@ -23,7 +23,7 @@ export type PlannedWorkoutScope =
 
 export async function deletePlannedWorkouts(scope: PlannedWorkoutScope): Promise<void> {
   if ("microcycleIds" in scope && scope.microcycleIds.length === 0) return;
-  let query = supabase.from("workout_logs").delete();
+  let query = db().from("workout_logs").delete();
   if ("microcycleIds" in scope) {
     query = query.in("microcycle_id", scope.microcycleIds);
   } else {
@@ -32,9 +32,8 @@ export async function deletePlannedWorkouts(scope: PlannedWorkoutScope): Promise
       .gt("scheduled_date", scope.after)
       .lte("scheduled_date", scope.until);
   }
-  const { error } = await query
-    .neq("status", "completed")
-    .is("athlete_modifications", null)
-    .is("rpe_score", null);
-  if (error) throw new Error(`Suppression des séances prévues impossible : ${error.message}`);
+  check(
+    await query.neq("status", "completed").is("athlete_modifications", null).is("rpe_score", null),
+    "Suppression des séances prévues impossible",
+  );
 }

@@ -26,7 +26,14 @@ const FKS: { table: string; column: string; ref: string; action: "cascade" | "nu
 
 let seq = 0;
 
-export function fakeDb(initial: Record<string, Row[]> = {}, failOn?: { table: string; op: string }) {
+/** Réponse simulée d'une RPC : reçoit les arguments et les tables (modifiables). */
+export type FakeRpc = (args: Record<string, unknown>, tables: Record<string, Row[]>) => unknown;
+
+export function fakeDb(
+  initial: Record<string, Row[]> = {},
+  failOn?: { table: string; op: string },
+  rpcs: Record<string, FakeRpc> = {},
+) {
   const tables: Record<string, Row[]> = structuredClone(initial);
   const t = (name: string) => (tables[name] ??= []);
 
@@ -42,20 +49,38 @@ export function fakeDb(initial: Record<string, Row[]> = {}, failOn?: { table: st
   }
 
   const db: Db = {
-    rpc: () => Promise.resolve({ data: null, error: null }),
+    rpc: (fn: string, args: Record<string, unknown> = {}) => {
+      if (failOn && failOn.table === fn && failOn.op === "rpc") return Promise.resolve({ data: null, error: { message: "panne simulée" } });
+      const handler = rpcs[fn];
+      if (!handler) return Promise.resolve({ data: null, error: null });
+      try {
+        return Promise.resolve({ data: structuredClone(handler(args, tables) ?? null), error: null });
+      } catch (e) {
+        return Promise.resolve({ data: null, error: { message: e instanceof Error ? e.message : String(e) } });
+      }
+    },
     from(table: string) {
       const filters: ((r: Row) => boolean)[] = [];
       let op: "select" | "insert" | "upsert" | "delete" | "update" = "select";
       let payload: Row[] = [];
       let opts: { onConflict?: string; ignoreDuplicates?: boolean } = {};
       let single: "one" | "maybe" | null = null;
+      let orderBy: { col: string; asc: boolean } | null = null;
+      let max: number | null = null;
 
       const exec = () => {
         if (failOn && failOn.table === table && failOn.op === op) return { data: null, error: { message: "panne simulée" } };
         // Une lecture ne crée pas la table : l'état comparé reste celui écrit.
         const rows = op === "insert" || op === "upsert" ? t(table) : (tables[table] ?? []);
         let out: Row[] = [];
-        if (op === "select") out = rows.filter((r) => filters.every((f) => f(r)));
+        if (op === "select") {
+          out = rows.filter((r) => filters.every((f) => f(r)));
+          if (orderBy) {
+            const { col, asc } = orderBy;
+            out = [...out].sort((x, y) => (x[col] === y[col] ? 0 : (x[col] as never) < (y[col] as never) ? -1 : 1) * (asc ? 1 : -1));
+          }
+          if (max != null) out = out.slice(0, max);
+        }
         else if (op === "delete") {
           out = rows.filter((r) => filters.every((f) => f(r)));
           remove(table, out);
@@ -91,6 +116,13 @@ export function fakeDb(initial: Record<string, Row[]> = {}, failOn?: { table: st
         select: () => q,
         eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), q),
         is: (c: string, v: unknown) => (filters.push((r) => (r[c] ?? null) === v), q),
+        neq: (c: string, v: unknown) => (filters.push((r) => r[c] !== v), q),
+        gt: (c: string, v: never) => (filters.push((r) => r[c] != null && (r[c] as never) > v), q),
+        gte: (c: string, v: never) => (filters.push((r) => r[c] != null && (r[c] as never) >= v), q),
+        lt: (c: string, v: never) => (filters.push((r) => r[c] != null && (r[c] as never) < v), q),
+        lte: (c: string, v: never) => (filters.push((r) => r[c] != null && (r[c] as never) <= v), q),
+        order: (c: string, o: { ascending?: boolean } = {}) => ((orderBy = { col: c, asc: o.ascending !== false }), q),
+        limit: (n: number) => ((max = n), q),
         in: (c: string, v: unknown[]) => (filters.push((r) => v.includes(r[c])), q),
         not: (c: string, o: string, v: unknown) => (filters.push((r) => !(o === "is" ? (r[c] ?? null) === v : r[c] === v)), q),
         insert: (p: Row | Row[]) => ((op = "insert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), q),

@@ -11,7 +11,6 @@ Aujourd'hui ~135 fichiers parlent à Supabase, chacun avec son format de date, s
 ```
 src/api/
 ├── client.ts            client Supabase + `unwrap()` (lève une ApiError lisible, jamais de `?? []` silencieux)
-├── keys.ts              toutes les clés React Query, par entité, préfixées ['<entité>', athleteId, …]
 ├── workouts.ts          séances réalisées (workout_logs)
 ├── wellness.ts          wellness (app_data `asp:wh` pour l'instant)
 ├── references.ts        VMA, FC, seuils… (performance_logs)
@@ -35,12 +34,12 @@ supabase/functions/_shared/domain/
 
 ## 3. Ce que chaque lot corrige (visible)
 
-### Lot 0 — urgence, avant la couche
+### Lot 0 — urgence, avant la couche ✅
 - 🔴 **Raccourcir ou déplacer un cycle supprime les séances réalisées** de l'athlète (`CycleDrawer.tsx`, `useResizeCycle.ts`, `useDragCycle.ts` : suppression par plage de dates sans regarder le statut). Correctif : ne supprimer que les séances non réalisées et sans saisie ; les autres sont détachées du cycle et gardées.
 - 🔴 **Ouvrir un athlète en vue coach / staff réécrit ses séances** (rattrapage `asp:completed` de `useAthleteLogic` à chaque chargement, y compris en lecture seule) → arrêté en lecture seule ; supprimé quand le lot 2 est fait.
 
-### Lot 1 — socle
-`client.ts`, `keys.ts`, `domain/dates.ts`, faux client de test, règle ESLint en avertissement, `CLAUDE.md` mis à jour.
+### Lot 1 — socle ✅
+`client.ts` (`db`, `unwrap`, `unwrapRows`, `check`, `setDbForTests`), `domain/dates.ts`, base simulée étendue (`fakeDb` : comparaisons, tri, RPC), règle ESLint en avertissement, `CLAUDE.md`. Les clés React Query vivent dans chaque module (`<entité>Keys`), pas dans un fichier commun.
 
 ### Lot 2 — séances (`workouts.ts`) — le plus gros
 - RPC `complete_workout`, `reopen_workout`, `set_workout_rpe`, `patch_workout_entries` (fusion qui **garde l'adaptation du coach**), `set_coach_override`.
