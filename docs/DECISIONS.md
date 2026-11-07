@@ -1628,3 +1628,17 @@ recevant les pas.
 ---
 
 *Ajouter une entrée ici à chaque décision technique importante : changement d'architecture, choix de librairie, refactorisation majeure, changement de workflow.*
+
+## 2026-11 — Une clé `service_role` se prouve, elle ne se compare pas
+
+**Décision** : les fonctions appelées par un cron (`provider-coros-sync`,
+`provider-garmin-maintenance`) reconnaissent l'appel serveur avec
+`isServiceRoleBearer` (`_shared/auth.ts`) : égalité avec
+`SUPABASE_SERVICE_ROLE_KEY`, sinon jeton qui se dit `service_role` **et** réussit
+un appel réservé à l'administration.
+
+**Pourquoi** : le cron lit sa clé dans le Vault. Le projet a plusieurs clés
+`service_role` valides qui ne sont pas la même chaîne ; celle du Vault était
+refusée par la comparaison stricte. Le cron COROS n'aurait donc jamais rien
+synchronisé, sans autre trace qu'un 401 dans `net._http_response`. Constaté au
+premier appel réel, le 2026-11-07.

@@ -14,7 +14,7 @@
  *      `DELETE /user/registration` dès que l'utilisateur pense retirer son
  *      consentement, et le retrait vaut déconnexion (données supprimées).
  *
- * Réservée au cron : le porteur doit être exactement la clé service_role
+ * Réservée au cron : le porteur doit être une clé service_role (voir isServiceRoleBearer)
  * (comme `provider-coros-sync`). La passerelle vérifie le JWT avant nous.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -23,13 +23,14 @@ import { findCrossSourceDuplicate } from "../_shared/activityDedup.ts";
 import { garminFromEnv } from "../_shared/garminConfig.ts";
 import { freshAccessToken, OAuthTokenError, refreshTokenDue, revokeAndForget } from "../_shared/oauth.ts";
 import { drainInbox } from "../_shared/providers/garminIngest.ts";
+import { isServiceRoleBearer } from "../_shared/auth.ts";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 serve(async (req) => {
   const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-  if (!bearer || bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+  if (!(await isServiceRoleBearer(bearer))) {
     return json({ error: "Non autorisé" }, 401);
   }
 

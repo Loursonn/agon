@@ -27,7 +27,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { hasConsent } from "../_shared/auth.ts";
+import { hasConsent, isServiceRoleBearer } from "../_shared/auth.ts";
 import {
   buildDateArgs,
   classifyFitListing,
@@ -733,7 +733,7 @@ serve(async (req) => {
     `connection_id` du corps n'est lu que dans ce cas — venant d'un client, ce
     serait une porte ouverte.
   */
-  const isCron = bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const isCron = await isServiceRoleBearer(bearer);
 
   let body: { connection_id?: unknown } = {};
   try {
