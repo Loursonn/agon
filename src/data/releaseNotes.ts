@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-07-cycles-seances-gardees",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "Modifier un cycle ne supprime plus les séances faites par ton athlète",
+    summary:
+      "Raccourcir, déplacer ou supprimer un cycle pouvait effacer des séances déjà réalisées, avec leurs charges. Elles sont maintenant toujours gardées.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Planning : raccourcir, déplacer ou supprimer un cycle ne retire que les séances encore à faire. Une séance réalisée, commencée ou notée (RPE) reste dans l'historique de l'athlète.",
+          "Ouvrir la fiche d'un athlète ne modifie plus jamais ses séances en arrière-plan : une séance qu'il a rouverte ne repasse plus en « réalisée » toute seule.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-07-sorties-montre-volume",
     date: "2026-11-07",
     kind: "feature",

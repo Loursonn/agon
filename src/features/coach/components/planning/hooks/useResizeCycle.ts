@@ -3,6 +3,7 @@ import { format, parseISO, max, min, startOfISOWeek, endOfISOWeek, addWeeks } fr
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { AnyItem, Level, TimelineData } from "./useTimelineData";
+import { deletePlannedWorkouts } from "@/api/workouts";
 
 // ── Microcycle helpers ────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ async function regenerateMicrocycles(cycleId: string, newStart: Date, newEnd: Da
   const toDelete = (existing ?? []).filter((m) => !neededStarts.has(m.start_date));
   if (toDelete.length > 0) {
     const ids = toDelete.map((m) => m.id);
-    await supabase.from("workout_logs").delete().in("microcycle_id", ids);
+    await deletePlannedWorkouts({ microcycleIds: ids });
     await supabase.from("microcycles").delete().in("id", ids);
   }
 
@@ -250,10 +251,7 @@ export function useResizeCycle() {
         // aussi les logs date-based (microcycle_id null) que regenerate ne touche pas.
         const newEndStr = format(vars.newEnd, "yyyy-MM-dd");
         if (newEndStr < vars.item.end_date) {
-          await supabase.from("workout_logs").delete()
-            .eq("athlete_id", vars.athleteId)
-            .gt("scheduled_date", newEndStr)
-            .lte("scheduled_date", vars.item.end_date);
+          await deletePlannedWorkouts({ athleteId: vars.athleteId, after: newEndStr, until: vars.item.end_date });
         }
       }
 

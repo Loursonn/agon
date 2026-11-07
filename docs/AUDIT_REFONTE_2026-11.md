@@ -235,7 +235,7 @@ Source : audit qualité.
 - [ ] Garmin : webhook (stockage brut → 200 → traitement), deregistration + permission change, cron de refresh, attribution « Garmin [modèle] ». Tests sur des exemples de données (clé Personal).
 - [ ] Faire compter les données montre dans le volume de course + rattacher aux séances prévues.
 - [ ] Aligner `GARMIN_DOSSIER.md` et le comportement de la déconnexion.
-- [ ] Export RGPD : ajouter les données provider.
+- [x] Export RGPD : ajouter les données provider.
 
 ### Phase 3 — Confort athlète (hors ligne) · ~2 sem.
 - [ ] Phase 1 hors ligne : `vite-plugin-pwa`, manifest `standalone`, cache React Query persisté (IndexedDB), toutes les `queryFn` lèvent une erreur au lieu de renvoyer `null`.
@@ -258,7 +258,7 @@ Source : audit qualité.
 - [ ] Migrer chaque écran inline → Tailwind avec breakpoints, à partir des maquettes Claude Design ; découper les gros fichiers.
 
 ### Phase 7 — Stores (janv.-fév. 2027)
-- [ ] Décision **Capacitor** (recommandé : réutilise tout le code web et le hors-ligne ; plugins santé suffisants) vs React Native/Expo (réécriture de ~13 000 lignes d'UI athlète). À acter dans `DECISIONS.md` (CLAUDE.md dit encore Expo).
+- [x] Décision **Capacitor** (recommandé : réutilise tout le code web et le hors-ligne ; plugins santé suffisants) vs React Native/Expo (réécriture de ~13 000 lignes d'UI athlète). À acter dans `DECISIONS.md` (CLAUDE.md dit encore Expo).
 - [ ] Comptes Apple (99 $/an) + Google (25 $ une fois). Attention : un compte Google personnel récent doit faire un test fermé (12 testeurs, 14 jours) avant la prod.
 - [ ] URL web de suppression de compte, compte démo stable, privacy labels / Data safety, vérification d'âge.
 - [ ] Avis juriste HDS si la feature kiné est ouverte largement.
@@ -267,11 +267,11 @@ Source : audit qualité.
 
 ## 11. Décisions à prendre (Hugo)
 
-1. **Ordre** : sécurité + pertes de données + garde-fous **avant** Garmin ? (recommandé : oui, ~3 j, et c'est ce qui profite le plus de Claude Max).
-2. **Couche API** : `src/api/` + RPC (recommandé) plutôt qu'une API REST en Edge Functions ?
-3. **Mobile** : Capacitor (recommandé) ou React Native/Expo ?
-4. **Déconnexion d'une montre** : garder ou supprimer les activités importées ? (le dossier Garmin promet la suppression)
-5. **Données montre** : les compter dans le volume de course et les rattacher automatiquement aux séances prévues ?
+1. ✅ *Décidé : oui.* **Ordre** : sécurité + pertes de données + garde-fous **avant** Garmin ? (recommandé : oui, ~3 j, et c'est ce qui profite le plus de Claude Max).
+2. ✅ *Décidé (2026-11-07) : `src/api/` + RPC.* **Couche API** : `src/api/` + RPC (recommandé) plutôt qu'une API REST en Edge Functions ?
+3. ✅ *Décidé (2026-11-07) : Capacitor.* **Mobile** : Capacitor (recommandé) ou React Native/Expo ?
+4. ✅ *Décidé : supprimer (imports de fichiers gardés).* **Déconnexion d'une montre** : garder ou supprimer les activités importées ? (le dossier Garmin promet la suppression)
+5. ✅ *Décidé : oui, comptées une seule fois.* **Données montre** : les compter dans le volume de course et les rattacher automatiquement aux séances prévues ?
 6. **Legacy** : supprimer `invitations` et `retours` (archivés en CSV avant) ?
 7. **Migrations** : faire le `migration repair` (rend `db push` à nouveau sûr) ?
 8. **Charte** : brancher le disque `AGON` pour récupérer la charte source.

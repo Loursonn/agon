@@ -12,7 +12,7 @@ Feuille de route et dette connue : `docs/AUDIT_REFONTE_2026-11.md` (à lire avan
 - **Back** : Supabase — PostgreSQL + RLS, Auth, Storage, Edge Functions (Deno), Vault, pg_cron / pg_net.
 - **IA** : Google Gemini (Edge Functions `ai-program`, `athlete-insights`). Les données Garmin sont exclues de tout traitement IA.
 - **Déploiement** : Vercel déploie `main` automatiquement.
-- **Mobile natif** : pas démarré (Capacitor ou Expo, décision ouverte — audit §11).
+- **Mobile natif** : **Capacitor** (décidé le 2026-11-07) — l'app web empaquetée pour l'App Store / Play Store, même code. Pas démarré (cible janvier-février 2027).
 
 ## Rôles
 
@@ -53,7 +53,7 @@ supabase/
 1. **Hérité** : table `app_data` (clé-valeur JSONB, clés `asp:*` par athlète), lue/écrite via `src/lib/storage.ts` (`sLoad`/`sSave`) et `useAthletePersistedState`.
 2. **Relationnel** : `workout_logs`, `set_logs`, cycles, tests, wellness, fiches, `provider_*`… lus via des hooks React Query (`src/features/*/hooks`, clés dans `src/lib/queryKeys.ts`).
 
-Les écritures « miroir » entre les deux sont la première source de régressions. Ne pas en ajouter ; la cible est une couche `src/api/` typée unique (audit §5).
+Les écritures « miroir » entre les deux sont la première source de régressions. Ne pas en ajouter. Cible décidée : couche `src/api/<entité>.ts` typée et testée, seule à parler à Supabase ; les hooks React Query deviennent de simples adaptateurs (audit §5.2-5.3). Une entité migrée n'est plus lue ni écrite ailleurs.
 
 ### Montres connectées
 

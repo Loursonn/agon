@@ -1642,3 +1642,28 @@ un appel réservé à l'administration.
 refusée par la comparaison stricte. Le cron COROS n'aurait donc jamais rien
 synchronisé, sans autre trace qu'un 401 dans `net._http_response`. Constaté au
 premier appel réel, le 2026-11-07.
+
+## 2026-11 — L'app mobile sera faite avec Capacitor
+
+**Décision** : l'app App Store / Play Store (janvier-février 2027) empaquette
+l'app web existante avec Capacitor. Pas de réécriture React Native / Expo.
+
+**Pourquoi** : Capacitor réutilise tout le code (≈ 13 000 lignes d'UI athlète),
+le travail hors ligne de la phase 3 et la future couche `src/api/`. Les plugins
+nécessaires (notifications, santé, fichiers) existent. Expo imposait de
+réécrire chaque écran, donc deux applications à maintenir à deux développeurs.
+
+## 2026-11 — Une couche `src/api/` typée, pas une API REST
+
+**Décision** : toute lecture et écriture de données passe par
+`src/api/<entité>.ts` (fonctions typées au-dessus de supabase-js, clés de cache
+et invalidations de l'entité, tests). RPC Postgres seulement pour les
+opérations multi-tables. Les hooks React Query appellent `src/api/` et rien
+d'autre. Migration entité par entité, en commençant par les sources de
+régressions connues (audit §5.1).
+
+**Pourquoi** : c'est le « contrat unique, testé, partagé par toutes les
+interfaces » recommandé par Benjamin, sans serveur REST en plus : la RLS reste
+la barrière de sécurité (une API en Edge Functions la contournerait avec la clé
+service et obligerait à réécrire chaque règle d'accès), pas de latence
+supplémentaire, et le même module sert le web, Capacitor et `coach-api`.
