@@ -9,6 +9,7 @@ import { SyntheseBar } from "./SyntheseBar"
 import { MethodPickerModal } from "./MethodPickerModal"
 import { useTrainingMethods } from "@/features/shared/hooks/useTrainingMethods"
 import { useExerciceRM } from "./hooks/useExerciceRM"
+import { loadFromPctRm } from "@shared/domain/performance"
 import type { TrainingMethod } from "@/types/trainingMethods"
 import { methodConfigToExerciceParams } from "@/features/coach/components/library/MethodPreview"
 import { isWeekRecord, resolveExerciceParams, resolveVideoRequest, setVideoRequest } from "@/lib/sessionOccurrence"
@@ -232,7 +233,7 @@ export function ExerciceParamsPanel({
   const [showSearch, setShowSearch] = useState(!exercice.exercise_name)
   const [showMethodPicker, setShowMethodPicker] = useState(false)
   const { data: methods = [] } = useTrainingMethods()
-  const { best: bestRM } = useExerciceRM(athleteId, exercice.exercise_name)
+  const { best: bestRM } = useExerciceRM(athleteId, exercice)
 
   const multiSemaine = sessionMultiSemaine || (exercice.multi_semaine ?? false)
   const params = getParams(exercice, activeWeek, multiSemaine)
@@ -556,7 +557,7 @@ export function ExerciceParamsPanel({
                 <span style={{ fontSize: 12, color: C.tx3, fontWeight: 600 }}>{params.charge_unit}</span>
                 {params.charge_unit === '%RM' && (bestRM || params.manual_rm) && chargeGlobal !== null && (
                   <span style={{ fontSize: 12, color: VIOLET, fontWeight: 700, background: VIOLET_S, padding: "2px 7px", borderRadius: 6, flexShrink: 0 }}>
-                    ≈ {Math.round((bestRM?.kg ?? params.manual_rm ?? 0) * (chargeGlobal as number) / 100)}kg
+                    ≈ {loadFromPctRm(bestRM?.kg ?? params.manual_rm, chargeGlobal as number)}kg
                   </span>
                 )}
               </div>

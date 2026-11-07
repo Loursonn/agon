@@ -4645,6 +4645,38 @@ export type Database = {
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
+      _workout_log_for_write: {
+        Args: { p_coach_only?: boolean; p_log: string }
+        Returns: {
+          athlete_id: string
+          athlete_modifications: Json | null
+          coach_alert: boolean
+          coach_id: string | null
+          completed_at: string | null
+          created_at: string
+          duration_s: number | null
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          original_scheduled_date: string | null
+          rescheduled_by_athlete: boolean
+          rpe_score: number | null
+          run_distance_km: number | null
+          scheduled_date: string
+          session_id: string
+          session_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          week_number: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workout_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       accept_staff_invitation: { Args: { p_token: string }; Returns: string }
       add_co_coach: {
         Args: { p_athlete: string; p_coach_code: string }
@@ -4660,6 +4692,7 @@ export type Database = {
       close_unfinished_workouts: { Args: never; Returns: number }
       coach_api_hit: { Args: { p_key: string }; Returns: number }
       coach_code_exists: { Args: { p_code: string }; Returns: boolean }
+      coach_profile_visible: { Args: { p_id: string }; Returns: boolean }
       col_is_null:
         | {
             Args: {
@@ -4696,6 +4729,43 @@ export type Database = {
             }
             Returns: string
           }
+      complete_workout: {
+        Args: {
+          p_log: string
+          p_mods?: Json
+          p_rpe?: number
+          p_run_km?: number
+        }
+        Returns: {
+          athlete_id: string
+          athlete_modifications: Json | null
+          coach_alert: boolean
+          coach_id: string | null
+          completed_at: string | null
+          created_at: string
+          duration_s: number | null
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          original_scheduled_date: string | null
+          rescheduled_by_athlete: boolean
+          rpe_score: number | null
+          run_distance_km: number | null
+          scheduled_date: string
+          session_id: string
+          session_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          week_number: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workout_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       consume_oauth_state: {
         Args: { p_state: string }
         Returns: {
@@ -4819,11 +4889,48 @@ export type Database = {
       }
       my_coach_id: { Args: never; Returns: string }
       no_plan: { Args: never; Returns: boolean[] }
+      normalize_metric_name: { Args: { p_name: string }; Returns: string }
       num_failed: { Args: never; Returns: number }
+      nutrition_save_day: {
+        Args: { p_athlete: string; p_day: string; p_log: Json }
+        Returns: Json
+      }
       os_name: { Args: never; Returns: string }
       pass:
         | { Args: never; Returns: string }
         | { Args: { "": string }; Returns: string }
+      patch_workout_entries: {
+        Args: { p_log: string; p_patch: Json }
+        Returns: {
+          athlete_id: string
+          athlete_modifications: Json | null
+          coach_alert: boolean
+          coach_id: string | null
+          completed_at: string | null
+          created_at: string
+          duration_s: number | null
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          original_scheduled_date: string | null
+          rescheduled_by_athlete: boolean
+          rpe_score: number | null
+          run_distance_km: number | null
+          scheduled_date: string
+          session_id: string
+          session_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          week_number: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workout_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       pg_version: { Args: never; Returns: string }
       pg_version_num: { Args: never; Returns: number }
       pgtap_version: { Args: never; Returns: number }
@@ -4923,6 +5030,42 @@ export type Database = {
       }
       redeem_invitation: { Args: { p_token: string }; Returns: string }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
+      reopen_workout: {
+        Args: { p_log: string }
+        Returns: {
+          athlete_id: string
+          athlete_modifications: Json | null
+          coach_alert: boolean
+          coach_id: string | null
+          completed_at: string | null
+          created_at: string
+          duration_s: number | null
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          original_scheduled_date: string | null
+          rescheduled_by_athlete: boolean
+          rpe_score: number | null
+          run_distance_km: number | null
+          scheduled_date: string
+          session_id: string
+          session_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          week_number: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workout_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_performance_notification: {
+        Args: { p_approve: boolean; p_log: string; p_notification: string }
+        Returns: undefined
+      }
       run_workout_status_maintenance: {
         Args: never
         Returns: {
@@ -4933,6 +5076,10 @@ export type Database = {
       runtests:
         | { Args: never; Returns: string[] }
         | { Args: { "": string }; Returns: string[] }
+      save_fc_zones: {
+        Args: { p_athlete: string; p_zones: Json }
+        Returns: number
+      }
       schedule_doc: {
         Args: {
           p_athlete: string
@@ -4953,6 +5100,81 @@ export type Database = {
       set_athlete_hidden: {
         Args: { athlete_id: string; hidden: boolean }
         Returns: undefined
+      }
+      set_coach_override: {
+        Args: { p_log: string; p_override: Json }
+        Returns: {
+          athlete_id: string
+          athlete_modifications: Json | null
+          coach_alert: boolean
+          coach_id: string | null
+          completed_at: string | null
+          created_at: string
+          duration_s: number | null
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          original_scheduled_date: string | null
+          rescheduled_by_athlete: boolean
+          rpe_score: number | null
+          run_distance_km: number | null
+          scheduled_date: string
+          session_id: string
+          session_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          week_number: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workout_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_performance_reference: {
+        Args: {
+          p_athlete: string
+          p_date?: string
+          p_metric: string
+          p_unit?: string
+          p_validated?: boolean
+          p_value: number
+        }
+        Returns: string
+      }
+      set_workout_rpe: {
+        Args: { p_log: string; p_rpe: number }
+        Returns: {
+          athlete_id: string
+          athlete_modifications: Json | null
+          coach_alert: boolean
+          coach_id: string | null
+          completed_at: string | null
+          created_at: string
+          duration_s: number | null
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          original_scheduled_date: string | null
+          rescheduled_by_athlete: boolean
+          rpe_score: number | null
+          run_distance_km: number | null
+          scheduled_date: string
+          session_id: string
+          session_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          week_number: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workout_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       skip:
         | { Args: { "": string }; Returns: string }
@@ -5038,6 +5260,14 @@ export type Database = {
       trigger_coros_sync: { Args: never; Returns: undefined }
       trigger_garmin_maintenance: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
+      wellness_delete_day: {
+        Args: { p_athlete: string; p_day: string }
+        Returns: boolean
+      }
+      wellness_set_day: {
+        Args: { p_athlete: string; p_day: string; p_entry: Json }
+        Returns: Json
+      }
       workout_log_athlete_id: { Args: { p_log_id: string }; Returns: string }
       workout_log_has_entries: { Args: { mods: Json }; Returns: boolean }
     }

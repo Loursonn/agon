@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
+import { invalidateWorkouts, listSessionLogsBetween, moveWorkoutToDayByAthlete, planWorkout } from "@/api/workouts";
 import { mondayOfISO, planUnplannedStart, type WeekLogLite } from "@/lib/planningProjection";
 
 export interface StartUnplannedInput {
@@ -42,60 +41,27 @@ export function useStartUnplannedSession() {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       })();
 
-      const { data: weekLogs, error: readErr } = await supabase
-        .from("workout_logs")
-        .select("id, session_id, scheduled_date, status")
-        .eq("athlete_id", athleteId)
-        .eq("session_id", sessionId)
-        .gte("scheduled_date", monday)
-        .lte("scheduled_date", sunday);
-      if (readErr) throw readErr;
+      const weekLogs = await listSessionLogsBetween({ athleteId, sessionId, from: monday, to: sunday });
 
-      const plan = planUnplannedStart((weekLogs ?? []) as WeekLogLite[], sessionId, scheduledDate);
+      const plan = planUnplannedStart(weekLogs as WeekLogLite[], sessionId, scheduledDate);
 
       if (plan.action === "open") {
         return { id: plan.logId, session_name: sessionName, action: "open" };
       }
 
       if (plan.action === "move") {
-        const { data, error } = await supabase
-          .from("workout_logs")
-          .update({
-            scheduled_date:         scheduledDate,
-            rescheduled_by_athlete: true,
-          })
-          .eq("id", plan.logId)
-          .select("id, session_name")
-          .single();
-        if (error) throw error;
-        return { id: data.id, session_name: data.session_name, action: "move" };
+        const moved = await moveWorkoutToDayByAthlete(plan.logId, scheduledDate);
+        return { id: moved.id, session_name: moved.session_name, action: "move" };
       }
 
-      const { data, error } = await supabase
-        .from("workout_logs")
-        .insert({
-          athlete_id:              athleteId,
-          coach_id:                coachId,
-          session_id:              sessionId,
-          session_name:            sessionName,
-          scheduled_date:          scheduledDate,
-          original_scheduled_date: scheduledDate,
-          status:                  "planned",
-          rescheduled_by_athlete:  true,
-          coach_alert:             false,
-        })
-        .select("id, session_name")
-        .single();
-
-      if (error) throw error;
-      return { id: data.id, session_name: data.session_name, action: "insert" };
+      const created = await planWorkout({
+        athleteId, coachId, sessionId, sessionName, date: scheduledDate, byAthlete: true,
+      });
+      return { id: created.id, session_name: created.session_name, action: "insert" };
     },
 
-    onSuccess: (data, { athleteId, weekMondayISO }) => {
-      qc.invalidateQueries({ queryKey: QK.activePlan(athleteId) });
-      qc.invalidateQueries({ queryKey: QK.workoutLogsWeek(athleteId, weekMondayISO) });
-      qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
-      qc.invalidateQueries({ queryKey: QK.athleteModifications(athleteId) });
+    onSuccess: (data, { athleteId }) => {
+      void invalidateWorkouts(qc, { athleteId, logId: data.id });
       if (data.action === "move") toast.success(`Séance déplacée à aujourd'hui : ${data.session_name}`);
       else if (data.action === "insert") toast.success(`Séance ajoutée : ${data.session_name}`);
     },

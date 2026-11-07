@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { listWorkoutLogs } from "@/api/workouts";
 import type { SummaryMesocycle } from "./usePlanningSummary";
 
 export interface WeekLoad {
@@ -14,13 +14,9 @@ export function useMesoLoad(meso: SummaryMesocycle, athleteId: string) {
     staleTime: 300_000,
     queryFn: async () => {
       // Fetch all workout_logs + RPE for this meso date range
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("scheduled_date, status, workout_rpe(rpe_score)")
-        .eq("athlete_id", athleteId)
-        .gte("scheduled_date", meso.start_date)
-        .lte("scheduled_date", meso.end_date)
-        .order("scheduled_date");
+      const data = await listWorkoutLogs({
+        athleteIds: [athleteId], from: meso.start_date, to: meso.end_date, withMods: false,
+      });
 
       // Bucket by microcycle week_number using meso.cycles > microcycles
       const allMicros = meso.cycles.flatMap((c) => c.microcycles);
@@ -35,7 +31,7 @@ export function useMesoLoad(meso: SummaryMesocycle, athleteId: string) {
         weekMap[micro.id] = { completed: 0, rpe: [] };
       }
 
-      for (const log of data ?? []) {
+      for (const log of data) {
         // Find which microcycle this date falls into
         const micro = allMicros.find(
           (m) => log.scheduled_date >= m.start_date && log.scheduled_date <= m.end_date,
@@ -45,10 +41,7 @@ export function useMesoLoad(meso: SummaryMesocycle, athleteId: string) {
         if (!bucket) continue;
         if (log.status === "completed") {
           bucket.completed++;
-          const rpe = Array.isArray(log.workout_rpe) && log.workout_rpe.length > 0
-            ? (log.workout_rpe[0] as { rpe_score: number }).rpe_score
-            : null;
-          if (rpe != null) bucket.rpe.push(rpe);
+          if (log.rpe_score != null) bucket.rpe.push(log.rpe_score);
         }
       }
 

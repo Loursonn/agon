@@ -11,7 +11,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import type { Cycle, Mesocycle } from "../hooks/useTimelineData";
 import { snapMonday, snapSunday, computeCascade, chainNextStart } from "../utils/planningHelpers";
 import { DateQuickAdjust } from "../DateQuickAdjust";
-import { deletePlannedWorkouts } from "@/api/workouts";
+import { deletePlannedWorkouts, listWorkoutLogs } from "@/api/workouts";
 
 // ── Microcycle auto-generation ────────────────────────────────────────────────
 
@@ -59,18 +59,11 @@ function useCycleSessions(athleteId: string, startDate: string, endDate: string)
       // Scope by the cycle's date span. Cycles are sequential (non-overlapping),
       // and most logs are date-based (microcycle_id null), so date range is the
       // reliable scope here.
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("id, session_name, scheduled_date, status, workout_rpe(rpe_score)")
-        .eq("athlete_id", athleteId)
-        .gte("scheduled_date", startDate)
-        .lte("scheduled_date", endDate)
-        .order("scheduled_date");
-      return (data ?? []).map((w) => ({
+      const data = await listWorkoutLogs({ athleteIds: [athleteId], from: startDate, to: endDate, withMods: false });
+      // RPE : seule source `rpe_score` (l'embed workout_rpe n'était jamais lu).
+      return data.map((w) => ({
         id: w.id, session_name: w.session_name, scheduled_date: w.scheduled_date,
-        status: w.status,
-        rpe: Array.isArray(w.workout_rpe) && w.workout_rpe.length > 0
-          ? (w.workout_rpe[0] as { rpe_score: number }).rpe_score : null,
+        status: w.status, rpe: w.rpe_score,
       }));
     },
   });

@@ -1,11 +1,6 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { QK } from "@/lib/queryKeys";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+import { useRecentMeasurements } from "@/features/shared/hooks/useReferences";
 
 export interface RecentRecord {
   id:             string;
@@ -18,45 +13,23 @@ export interface RecentRecord {
   coachValidated: boolean | null;
 }
 
-/** Last `limit` performance_logs across all coached athletes, newest first. */
+/**
+ * Dernières mesures de performance des athlètes du coach (accueil « Records
+ * & tests »), la plus récente d'abord — sans les bornes de zones FC, qui
+ * s'affichaient comme des records. Clé `referenceKeys.recent` : invalidée par
+ * toute écriture de référence (`invalidateReferences`), et elle dépend de la
+ * liste des athlètes.
+ */
 export function useRecentRecords(limit = 8) {
-  const { athletes, user } = useAuth();
+  const { athletes } = useAuth();
   const athleteIds = useMemo(() => athletes.map((a) => a.id), [athletes]);
-
-  const query = useQuery({
-    queryKey: QK.coachDashboard.recentRecords(user?.id ?? ""),
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("performance_logs")
-        .select("id, athlete_id, metric_name, value, unit, date, coach_validated")
-        .in("athlete_id", athleteIds)
-        .order("date", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      return (data ?? []) as {
-        id: string; athlete_id: string; metric_name: string;
-        value: number; unit: string; date: string; coach_validated: boolean | null;
-      }[];
-    },
-    enabled: !!user && athleteIds.length > 0,
-    staleTime: 120_000,
-    refetchOnWindowFocus: true,
-  });
+  const query = useRecentMeasurements(athleteIds, limit);
 
   const records = useMemo<RecentRecord[]>(() => {
-    return (query.data ?? []).map((r) => {
-      const athlete = athletes.find((a) => a.id === r.athlete_id);
-      return {
-        id:             r.id,
-        athleteId:      r.athlete_id,
-        athleteName:    athlete?.full_name ?? "—",
-        metricName:     r.metric_name,
-        value:          r.value,
-        unit:           r.unit,
-        date:           r.date,
-        coachValidated: r.coach_validated,
-      };
-    });
+    return (query.data ?? []).map((r) => ({
+      ...r,
+      athleteName: athletes.find((a) => a.id === r.athleteId)?.full_name ?? "—",
+    }));
   }, [query.data, athletes]);
 
   return { records, isLoading: query.isLoading };

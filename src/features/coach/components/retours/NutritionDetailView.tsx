@@ -7,13 +7,24 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell,
 } from "recharts";
 import { C } from "@/lib/theme";
-import type { NutritionStrategy, NutritionDailyLog } from "@/features/shared/types/retours.types";
+import {
+  evaluateLoggedDay, nutritionAdherence, NUTRITION_TOLERANCE_PCT,
+  type NutritionDailyLog, type NutritionStrategy,
+} from "@/lib/nutrition";
+
+/** Une journée datée (`getDays` de `src/api/nutrition.ts`). */
+type NutritionDayRow = NutritionDailyLog & { date: string };
 
 interface NutritionDetailViewProps {
-  logs:     NutritionDailyLog[];
+  logs:     NutritionDayRow[];
+  /** Plan du coach : la cible est un % SIGNÉ de la dépense, pas des kcal. */
   strategy: NutritionStrategy | null;
+  /** Métabolisme de base : dépense du jour = MB + calories actives saisies. */
+  bmr?:     number | null;
   onClose:  () => void;
 }
+
+const fmtPct = (v: number) => (v > 0 ? "+" : "") + (Math.round(v * 10) / 10) + " %";
 
 type Tab = "calories" | "macros" | "respect";
 
@@ -53,7 +64,7 @@ function CalTooltip({ active, payload, label }: any) {
   const consumed = payload.find((p: any) => p.dataKey === "consumed")?.value;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const target   = payload.find((p: any) => p.dataKey === "target")?.value;
-  const ecart    = consumed != null && target != null ? consumed - target : null;
+  const ecart    = consumed != null && target != null ? consumed - target : null; // kcal vs milieu de la zone
   return (
     <div style={{ ...TOOLTIP_STYLE, padding: "8px 12px", minWidth: 140 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: C.tx, marginBottom: 4 }}>{label}</div>
@@ -101,19 +112,24 @@ function MacrosTooltip({ active, payload, label }: any) {
 function RespectTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ecart = payload.find((p: any) => p.dataKey === "ecart")?.value;
-  const ok    = payload[0]?.payload?.ok as boolean | null;
+  const pct    = payload.find((p: any) => p.dataKey === "pct")?.value as number | undefined;
+  const row    = payload[0]?.payload as { status: string; reference: number; windowMin: number; windowMax: number } | undefined;
   return (
-    <div style={{ ...TOOLTIP_STYLE, padding: "8px 12px", minWidth: 130 }}>
+    <div style={{ ...TOOLTIP_STYLE, padding: "8px 12px", minWidth: 150 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: C.tx, marginBottom: 4 }}>{label}</div>
-      {ecart != null && (
-        <div style={{ fontSize: 10, color: ecart >= 0 ? C.o : C.b }}>
-          {ecart >= 0 ? "+" : ""}{ecart} kcal vs cible
+      {pct != null && (
+        <div style={{ fontSize: 10, color: pct >= 0 ? C.o : C.b }}>
+          {pct <= 0 ? "Déficit" : "Surplus"} {fmtPct(pct)} vs dépense
         </div>
       )}
-      {ok != null && (
-        <div style={{ fontSize: 10, color: ok ? C.g : C.o, marginTop: 2, fontWeight: 700 }}>
-          {ok ? "✓ Dans la cible" : "Hors cible"}
+      {row && (
+        <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
+          Dépense {row.reference} kcal · visé {row.windowMin === row.windowMax ? fmtPct(row.windowMin) : `${fmtPct(row.windowMin)} à ${fmtPct(row.windowMax)}`}
+        </div>
+      )}
+      {row && (
+        <div style={{ fontSize: 10, color: row.status === "ok" ? C.g : row.status === "close" ? C.o : C.r, marginTop: 2, fontWeight: 700 }}>
+          {row.status === "ok" ? "✓ Dans l'objectif" : row.status === "close" ? "Proche de l'objectif" : "Hors objectif"}
         </div>
       )}
     </div>
@@ -122,7 +138,7 @@ function RespectTooltip({ active, payload, label }: any) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetailViewProps) {
+export function NutritionDetailView({ logs, strategy, bmr = null, onClose }: NutritionDetailViewProps) {
   const [tab, setTab] = useState<Tab>("calories");
 
   const sortedLogs = [...logs].sort((a, b) => a.date.localeCompare(b.date));
@@ -138,25 +154,24 @@ export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetail
   const avgLip  = avg(logsWithLip.map((l) => l.lipides_consumed!));
   const avgProt = avg(logsWithProt.map((l) => l.proteines_consumed!));
 
-  const target = strategy?.total_calories_coach ?? null;
-  const okDays = target != null
-    && strategy?.surplus_deficit_min != null
-    && strategy?.surplus_deficit_max != null
-    ? logsWithCal.filter((l) => {
-        const e = l.total_calories_consumed! - target;
-        return e >= strategy.surplus_deficit_min! && e <= strategy.surplus_deficit_max!;
-      }).length
-    : null;
-  const pctOk = okDays != null && logsWithCal.length > 0
-    ? Math.round((okDays / logsWithCal.length) * 100)
-    : null;
+  // Respect de la stratégie : même calcul que l'écran Alimentation de l'athlète
+  // (% de déficit/surplus vs la dépense du jour). Avant : les % du coach
+  // étaient comparés à des kcal, aucun jour n'était jamais « dans la cible ».
+  const evals = strategy
+    ? logsWithCal.map((l) => ({ l, e: evaluateLoggedDay(strategy, bmr, l) })).filter((x) => x.e != null)
+    : [];
+  const adherence = nutritionAdherence(strategy, bmr, logsWithCal);
+  const okDays = strategy && evals.length ? adherence.ok : null;
+  const pctOk = adherence.pctOk;
   const pctOkColor = pctOk == null ? C.tx3 : pctOk >= 80 ? C.g : pctOk >= 50 ? C.o : C.r;
+  const window0 = evals[0]?.e ?? null;
 
   // ── Chart data ───────────────────────────────────────────────────────────
+  const targetByDate = new Map(evals.map(({ l, e }) => [l.date, e!.target]));
   const calData = logsWithCal.map((l) => ({
     date:     format(parseISO(l.date), "d MMM", { locale: fr }),
     consumed: l.total_calories_consumed!,
-    ...(target != null ? { target } : {}),
+    ...(targetByDate.has(l.date) ? { target: targetByDate.get(l.date)! } : {}),
   }));
 
   const macrosData = sortedLogs
@@ -168,19 +183,14 @@ export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetail
       proteines: l.proteines_consumed ?? 0,
     }));
 
-  const respectData = target != null
-    ? logsWithCal.map((l) => {
-        const ecart = l.total_calories_consumed! - target;
-        const ok = strategy?.surplus_deficit_min != null && strategy?.surplus_deficit_max != null
-          ? ecart >= strategy.surplus_deficit_min && ecart <= strategy.surplus_deficit_max
-          : null;
-        return {
-          date:  format(parseISO(l.date), "d MMM", { locale: fr }),
-          ecart,
-          ok,
-        };
-      })
-    : [];
+  const respectData = evals.map(({ l, e }) => ({
+    date:      format(parseISO(l.date), "d MMM", { locale: fr }),
+    pct:       Math.round(e!.actualPct * 10) / 10,
+    status:    e!.status,
+    reference: e!.reference,
+    windowMin: e!.windowMin,
+    windowMax: e!.windowMax,
+  }));
 
   // ── Empty state — no strategy ────────────────────────────────────────────
   if (!strategy) {
@@ -214,7 +224,7 @@ export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetail
             <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>Nutrition — détails</div>
             <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
               {STRATEGY_LABEL[strategy.strategy] ?? strategy.strategy}
-              {strategy.total_calories_coach != null && ` · Cible ${strategy.total_calories_coach} kcal/j`}
+              {window0 && ` · Visé ${window0.windowMin === window0.windowMax ? fmtPct(window0.windowMin) : `${fmtPct(window0.windowMin)} à ${fmtPct(window0.windowMax)}`} vs dépense`}
               {logsWithCal.length > 0 && ` · ${logsWithCal.length} jour${logsWithCal.length > 1 ? "s" : ""} loggé${logsWithCal.length > 1 ? "s" : ""}`}
             </div>
           </div>
@@ -228,7 +238,7 @@ export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetail
             { label: "Glucides",   value: avgGluc,              unit: "g/j",    color: C.b   },
             { label: "Lipides",    value: avgLip,               unit: "g/j",    color: C.o   },
             { label: "Protéines",  value: avgProt,              unit: "g/j",    color: C.g   },
-            { label: "% jours OK", value: pctOk != null ? pctOk + "%" : null, unit: `${okDays ?? "—"}/${logsWithCal.length}j`, color: pctOkColor },
+            { label: "% jours OK", value: pctOk != null ? pctOk + "%" : null, unit: `${okDays ?? "—"}/${evals.length || logsWithCal.length}j`, color: pctOkColor },
           ].map(({ label, value, unit, color }) => (
             <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
@@ -274,12 +284,15 @@ export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetail
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} />
                   <Tooltip content={<CalTooltip />} />
-                  {target != null && (
-                    <ReferenceLine
-                      y={target}
+                  {targetByDate.size > 0 && (
+                    <Line
+                      type="monotone"
+                      dataKey="target"
                       stroke={C.tx3}
                       strokeDasharray="4 4"
-                      label={{ value: `${target} kcal`, fill: C.tx3, fontSize: 9, position: "insideTopRight" }}
+                      strokeWidth={1}
+                      dot={false}
+                      name="Cible du jour"
                     />
                   )}
                   <Line
@@ -338,9 +351,9 @@ export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetail
         {/* TAB — Respect stratégie */}
         {logs.length > 0 && tab === "respect" && (
           <>
-            {target == null ? (
+            {respectData.length === 0 && logsWithCal.length > 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0", color: C.tx3, fontSize: 13 }}>
-                Aucune cible calorique définie par le coach
+                Dépense de référence inconnue : renseigne le métabolisme de base ou la dépense du plan
               </div>
             ) : respectData.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0", color: C.tx3, fontSize: 13 }}>
@@ -349,38 +362,38 @@ export function NutritionDetailView({ logs, strategy, onClose }: NutritionDetail
             ) : (
               <>
                 <div style={{ fontSize: 10, color: C.tx3, marginBottom: 12 }}>
-                  Écart journalier vs cible ({target} kcal).
-                  {strategy.surplus_deficit_min != null && strategy.surplus_deficit_max != null && (
-                    <> Zone OK : [{strategy.surplus_deficit_min >= 0 ? "+" : ""}{strategy.surplus_deficit_min} ; +{strategy.surplus_deficit_max}] kcal.</>
+                  % de déficit (−) ou de surplus (+) vs la dépense du jour (MB + calories actives saisies, sinon dépense du plan).
+                  {window0 && (
+                    <> Objectif : {window0.windowMin === window0.windowMax ? fmtPct(window0.windowMin) : `${fmtPct(window0.windowMin)} à ${fmtPct(window0.windowMax)}`} (±{NUTRITION_TOLERANCE_PCT} pts).</>
                   )}
                 </div>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={respectData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} unit=" kcal" width={52} />
+                    <YAxis tick={{ fontSize: 10, fill: C.tx3 }} tickLine={false} axisLine={false} unit=" %" width={44} />
                     <Tooltip content={<RespectTooltip />} cursor={{ fill: C.brd + "50" }} />
                     <ReferenceLine y={0} stroke={C.tx3} strokeWidth={1} />
-                    {strategy.surplus_deficit_min != null && (
+                    {window0 && (
                       <ReferenceLine
-                        y={strategy.surplus_deficit_min}
+                        y={window0.windowMin}
                         stroke={C.o}
                         strokeDasharray="4 4"
-                        label={{ value: `min ${strategy.surplus_deficit_min}`, fill: C.o, fontSize: 9, position: "insideTopLeft" }}
+                        label={{ value: window0.windowMin === window0.windowMax ? `visé ${fmtPct(window0.windowMin)}` : `min ${fmtPct(window0.windowMin)}`, fill: C.o, fontSize: 9, position: "insideTopLeft" }}
                       />
                     )}
-                    {strategy.surplus_deficit_max != null && (
+                    {window0 && window0.windowMax !== window0.windowMin && (
                       <ReferenceLine
-                        y={strategy.surplus_deficit_max}
+                        y={window0.windowMax}
                         stroke={C.o}
                         strokeDasharray="4 4"
-                        label={{ value: `max +${strategy.surplus_deficit_max}`, fill: C.o, fontSize: 9, position: "insideTopRight" }}
+                        label={{ value: `max ${fmtPct(window0.windowMax)}`, fill: C.o, fontSize: 9, position: "insideTopRight" }}
                       />
                     )}
-                    <Bar dataKey="ecart" name="Écart" isAnimationActive={false} radius={[3, 3, 0, 0]}>
+                    <Bar dataKey="pct" name="Écart" isAnimationActive={false} radius={[3, 3, 0, 0]}>
                       {respectData.map((entry, i) => (
                         <Cell
                           key={i}
-                          fill={entry.ok == null ? C.tx3 : entry.ok ? C.g : C.o}
+                          fill={entry.status === "ok" ? C.g : entry.status === "close" ? C.o : C.r}
                         />
                       ))}
                     </Bar>

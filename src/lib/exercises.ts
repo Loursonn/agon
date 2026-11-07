@@ -1,4 +1,5 @@
 import { C } from "@/lib/theme";
+import { estimateOneRm, roundLoad } from "@shared/domain/performance";
 
 // ── RIR ──────────────────────────────────────────────────────────────────────
 
@@ -33,10 +34,10 @@ export const parseRepsArr = (repsRange: unknown, sets: number): number[] => {
   return Array.from({ length: sets }, () => parseReps(s));
 };
 
-export const e1rm = (kg: number, reps: number) =>
-  reps === 1 ? kg : Math.round(kg * (1 + reps / 30));
+/** 1RM estimé : même formule et même arrondi (0,5 kg) que les records — `@shared/domain/performance`. */
+export const e1rm = (kg: number, reps: number) => estimateOneRm(kg, reps);
 
-export const roundHalf = (v: number) => Math.round(v * 2) / 2;
+export const roundHalf = (v: number) => roundLoad(v, 0.5);
 
 // ── Exercise name normalization ───────────────────────────────────────────────
 

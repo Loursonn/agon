@@ -38,6 +38,68 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-08-alerte-blesse-malade",
+    date: "2026-11-08",
+    kind: "feature",
+    title: "Athlète blessé ou malade : alerte sur ton accueil",
+    summary: "Quand un athlète répond « blessé / malade » dans son wellness, tu le vois tout de suite, avec son commentaire.",
+    sections: [
+      {
+        title: "Où le voir",
+        points: [
+          "Accueil : une section « Blessé / malade » liste les athlètes qui l'ont signalé aujourd'hui ou hier, avec leur commentaire.",
+          "Retours : un encart rouge reprend les jours signalés de la semaine ou du mois affiché.",
+          "Aucune fiche blessure n'est créée automatiquement : c'est toi qui décides.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-08-donnees-fiabilisees",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "Wellness, RPE, nutrition et records : des chiffres justes partout",
+    summary: "Plusieurs informations ne s'affichaient pas ou étaient fausses. Elles reviennent, calculées de la même façon chez toi et chez l'athlète.",
+    sections: [
+      {
+        title: "Wellness",
+        points: [
+          "Le wellness du jour s'affiche de nouveau sur ton accueil, et les alertes wellness se déclenchent.",
+          "Un seul score et 5 niveaux partout (Optimal, Bon, Modéré, Fatigué, Surmenage) ; un score absent s'affiche « — », plus jamais 0.",
+          "Les libellés du calendrier des Retours correspondent enfin aux bonnes notes.",
+          "Deux appareils ne s'effacent plus mutuellement la saisie du jour.",
+        ],
+      },
+      {
+        title: "Séances",
+        points: [
+          "Le RPE réapparaît dans la timeline, les cartes de cycle et la charge du mésocycle ; plus d'erreur au 2ᵉ RPE.",
+          "Ton adaptation d'une séance n'est plus effacée quand l'athlète enregistre ses séries.",
+          "Les déplacements de séance faits par l'athlète réapparaissent dans les Retours.",
+          "Une charge prescrite en % RM est convertie en kg pour l'athlète (case vide s'il n'a pas de 1RM), au lieu d'afficher « 75 kg ».",
+          "Les nouveaux records sont détectés quand l'athlète valide sa séance.",
+        ],
+      },
+      {
+        title: "Références et records",
+        points: [
+          "La FC max ou la FC repos saisie par l'athlète sert enfin à ses séances d'énergie.",
+          "Changer une VMA ou une FC met tout à jour immédiatement, sans recharger.",
+          "Une seule formule de 1RM, arrondie à 0,5 kg ; le 1RM est retrouvé même quand l'exercice porte un autre nom que le record.",
+          "L'accueil « Records & tests » n'affiche plus les zones FC comme des records.",
+        ],
+      },
+      {
+        title: "Nutrition",
+        points: [
+          "La nutrition s'affiche dans les Retours, avec un respect de la stratégie calculé correctement.",
+          "La stratégie que tu enregistres apparaît tout de suite.",
+          "Une saisie de l'athlète après minuit n'est plus rangée la veille.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-07-cycles-seances-gardees",
     date: "2026-11-07",
     kind: "fix",

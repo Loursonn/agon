@@ -54,7 +54,7 @@ function RetoursMuscleVolume({ athleteId, weekStart }: { athleteId: string | und
 export default function RetoursPage() {
   const { athleteId } = useParams<{ athleteId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { goals, freeSessions } = useAthleteContext();
+  const { goals, freeSessions, athleteProfile } = useAthleteContext();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [selectedWeek, setSelectedWeek]   = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -174,7 +174,16 @@ export default function RetoursPage() {
 
   const nutritionLogs     = kpiData ? (monthData?.nutrition_logs ?? []) : (weekCurrent?.nutrition_logs ?? []);
   const nutritionStrategy = kpiData ? (monthData?.nutrition_strategy ?? null) : (weekCurrent?.nutrition_strategy ?? null);
+  const bmr               = (athleteProfile as { base_metabolism?: number | null } | null)?.base_metabolism ?? null;
   const calLogs           = nutritionLogs.filter((l) => l.total_calories_consumed != null);
+
+  // Réponse « blessé / malade » du wellness sur la période affichée.
+  const injuryDays = (viewMode === "month" && monthData
+    ? Object.entries(monthData.daily_data).map(([d, x]) => [d, x.wellness?.injuryNote ?? null] as const)
+    : Object.entries(weekCurrent?.daily_wellness ?? {}).map(([d, w]) => [d, w?.injuryNote ?? null] as const)
+  )
+    .filter((e): e is readonly [string, string] => !!e[1])
+    .sort(([a], [b]) => a.localeCompare(b));
   const avgKcal           = calLogs.length > 0
     ? Math.round(calLogs.reduce((s, l) => s + l.total_calories_consumed!, 0) / calLogs.length)
     : null;
@@ -247,6 +256,25 @@ export default function RetoursPage() {
           <KPICard key={kpi.title} {...kpi} />
         ))}
       </div>
+
+      {injuryDays.length > 0 && (
+        <div role="alert" style={{
+          marginBottom: 16, padding: "10px 14px", borderRadius: 8,
+          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#EF4444", marginBottom: 6 }}>
+            Blessé / malade signalé dans le wellness
+          </div>
+          {injuryDays.map(([d, note]) => (
+            <div key={d} style={{ fontSize: 12, color: C.tx, lineHeight: 1.5 }}>
+              <span style={{ color: C.tx3, marginRight: 8 }}>
+                {format(new Date(d + "T12:00:00"), "EEE d MMM", { locale: fr })}
+              </span>
+              {note}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Main content */}
       {viewMode === "week" && weekCurrent && (
@@ -404,6 +432,7 @@ export default function RetoursPage() {
         <NutritionDetailView
           logs={nutritionLogs}
           strategy={nutritionStrategy}
+          bmr={bmr}
           onClose={closeDetail}
         />
       )}

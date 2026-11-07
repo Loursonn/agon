@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Outlet, Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { AthleteProvider } from "@/features/shared/context/AthleteContext";
+import { useAuth, type Profile } from "@/hooks/useAuth";
+import { AthleteProvider, useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { SelectedAthleteProvider } from "@/features/coach/context/SelectedAthleteContext";
 import ContextBar from "@/features/coach/components/ContextBar";
 import AthleteProfileForm from "@/components/coach/AthleteProfileForm";
@@ -37,15 +37,36 @@ export default function CoachAthleteArea() {
         <div style={{ flex: 1 }}>
           <Outlet />
         </div>
+        {editProfileTab && selectedAthlete && (
+          <ProfileFormInContext
+            athlete={selectedAthlete}
+            initialTab={editProfileTab}
+            onClose={() => setEditProfileTab(null)}
+          />
+        )}
       </AthleteProvider>
-      {editProfileTab && selectedAthlete && (
-        <AthleteProfileForm
-          athlete={selectedAthlete}
-          initialTab={editProfileTab}
-          lockTab
-          onClose={() => setEditProfileTab(null)}
-        />
-      )}
     </SelectedAthleteProvider>
+  );
+}
+
+/**
+ * Formulaire monté DANS l'AthleteProvider : le plan nutritionnel enregistré
+ * remplace tout de suite celui du contexte (accueil, profil, Alimentation),
+ * au lieu d'attendre un rechargement.
+ */
+function ProfileFormInContext({ athlete, initialTab, onClose }: {
+  athlete: Profile;
+  initialTab: "profil" | "nutrition";
+  onClose: () => void;
+}) {
+  const { setNutritionStrategy } = useAthleteContext();
+  return (
+    <AthleteProfileForm
+      athlete={athlete}
+      initialTab={initialTab}
+      lockTab
+      onClose={onClose}
+      onNutritionSaved={setNutritionStrategy}
+    />
   );
 }

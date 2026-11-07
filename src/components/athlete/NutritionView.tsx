@@ -1,17 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { errorMessage } from "@/lib/errors";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { EmojiIcon } from "@/components/ui/AgonIcon";
+import { addDays, localIsoDay } from "@shared/domain/dates";
 import {
-  getDailyLog,
-  upsertDailyLog,
+  calorieMode,
+  dayDepense,
+  evaluateLoggedDay,
   evaluateNutritionDay,
   NUTRITION_TOLERANCE_PCT,
   NutritionDayStatus,
   NutritionStrategy,
   NutritionDailyLog,
 } from "@/lib/nutrition";
+import { useNutritionLog, useSaveNutritionDay } from "@/features/shared/hooks/useNutrition";
 
 const STRATEGY_META: Record<string, { label: string; color: string; icon: string; verb: string }> = {
   maintenance:    { label: "Maintenance",    color: C.b, icon: "balance", verb: "Écart visé" },
@@ -19,15 +22,8 @@ const STRATEGY_META: Record<string, { label: string; color: string; icon: string
   prise_de_masse: { label: "Prise de masse", color: C.g, icon: "musculation", verb: "Surplus visé" },
 };
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isoDaysAgo(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
-}
+// Jour LOCAL : `toISOString` datait la saisie de la veille entre minuit et ~2 h.
+const isoDaysAgo = (today: string, n: number) => addDays(today, -n);
 
 function fmtKcal(n: number) {
   return n.toLocaleString("fr-FR");
@@ -47,26 +43,28 @@ interface Props {
   athleteId: string;
   bmr: number | null;
   nutritionStrategy: NutritionStrategy | null;
-  history?: Record<string, NutritionDailyLog>;
   weightLog?: Record<string, number>;
-  onLogSaved?: (date: string, log: NutritionDailyLog) => void;
   viewOnly?: boolean;
 }
 
-export default function NutritionView({ athleteId, bmr, nutritionStrategy, history, weightLog, onLogSaved, viewOnly = false }: Props) {
-  const today = todayISO();
+export default function NutritionView({ athleteId, bmr, nutritionStrategy, weightLog, viewOnly = false }: Props) {
+  const today = localIsoDay();
+  // Journal lu par la couche API (lève en cas d'erreur, jamais `{}` à la place).
+  const logQuery = useNutritionLog(athleteId);
+  const history = logQuery.data;
+  const saveDay = useSaveNutritionDay(athleteId);
   const [log, setLog] = useState<Partial<NutritionDailyLog>>({});
-  const [logLoading, setLogLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // Saisie en cours : un rafraîchissement du journal ne l'écrase pas.
+  const dirty = useRef(false);
+  const logLoading = logQuery.isLoading;
+  const saving = saveDay.isPending;
 
   useEffect(() => {
-    getDailyLog(athleteId, today)
-      .then(existing => { if (existing) setLog(existing); })
-      .catch(err => console.error("getDailyLog:", err))
-      .finally(() => setLogLoading(false));
-  }, [athleteId, today]);
+    if (history && !dirty.current) setLog(history[today] ?? {});
+  }, [history, today]);
 
   const upd = (k: keyof NutritionDailyLog, v: number | null) => {
+    dirty.current = true;
     setLog(prev => {
       const next = { ...prev, [k]: v };
       if (k === "glucides_consumed" || k === "lipides_consumed" || k === "proteines_consumed") {
@@ -79,17 +77,14 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
     });
   };
 
+  // Une seule écriture : la journée du jour, via la RPC atomique.
   async function handleSave() {
-    setSaving(true);
     try {
-      const logToSave = log as NutritionDailyLog;
-      await upsertDailyLog(athleteId, today, logToSave);
-      onLogSaved?.(today, logToSave);
+      await saveDay.mutateAsync({ day: today, log: log as NutritionDailyLog });
+      dirty.current = false;
       toast.success("Journée enregistrée !");
     } catch (e) {
       toast.error(errorMessage(e, "Erreur lors de l'enregistrement"));
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -115,10 +110,10 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
   const meta = STRATEGY_META[strat.strategy] || { label: strat.strategy, color: C.ac, icon: "nutrition", verb: "Objectif" };
 
   // ── Dépense & évaluation du jour ───────────────────────────────────────────
-  const mode = strat.calorie_mode ?? (strat.can_track_calories ? "active" : "nap");
+  const mode = calorieMode(strat);
   const showActiveCal = mode === "active" || mode === "hybrid";
   const activeCal = log.active_calories ?? 0;
-  const dynamicDepense = (mode !== "nap" && activeCal > 0 && bmr) ? bmr + activeCal : null;
+  const dynamicDepense = dayDepense(strat, bmr, log);
 
   const calConsumed = log.total_calories_consumed || 0;
   const evalDay = evaluateNutritionDay(strat, calConsumed, dynamicDepense);
@@ -158,12 +153,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
 
   // ── Streak & historique ────────────────────────────────────────────────────
   const statusFor = (dateISO: string): NutritionDayStatus | null => {
-    const l = history?.[dateISO] as NutritionDailyLog | undefined;
-    const consumed = l?.total_calories_consumed || 0;
-    if (!consumed) return null;
-    const act = l?.active_calories || 0;
-    const dyn = (mode !== "nap" && act > 0 && bmr) ? bmr + act : null;
-    return evaluateNutritionDay(strat, consumed, dyn)?.status ?? null;
+    return evaluateLoggedDay(strat, bmr, history?.[dateISO])?.status ?? null;
   };
 
   const streakData = (() => {
@@ -174,13 +164,13 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
     let i = statusFor(today) === null ? 1 : 0;
     let startISO = today;
     for (; i < 365; i++) {
-      const iso = isoDaysAgo(i);
+      const iso = isoDaysAgo(today, i);
       const st = statusFor(iso);
       if (st === "ok") { streak++; startISO = iso; }
       else break;
     }
     const days = Array.from({ length: 14 }, (_, k) => {
-      const iso = isoDaysAgo(13 - k);
+      const iso = isoDaysAgo(today, 13 - k);
       return { iso, status: statusFor(iso) };
     });
     return { streak, startISO, days };
@@ -192,7 +182,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
       .filter(([, v]) => typeof v === "number" && v > 0)
       .sort(([a], [b]) => a.localeCompare(b));
     if (entries.length === 0) return null;
-    const last30 = entries.filter(([d]) => d >= isoDaysAgo(30));
+    const last30 = entries.filter(([d]) => d >= isoDaysAgo(today, 30));
     const series = (last30.length >= 2 ? last30 : entries.slice(-10)).map(([d, v]) => ({ d, v }));
     const current = entries[entries.length - 1][1];
     // Delta depuis le début de la streak (ou sur la fenêtre affichée)
@@ -368,6 +358,13 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, histo
 
         {logLoading ? (
           <div style={{ color: C.tx3, fontSize: 13, textAlign: "center", padding: "14px 0" }}>Chargement...</div>
+        ) : logQuery.isError ? (
+          <div style={{ color: C.tx3, fontSize: 13, textAlign: "center", padding: "14px 0" }}>
+            Impossible de charger ton journal.{" "}
+            <button onClick={() => logQuery.refetch()} style={{ background: "none", border: "none", color: C.ac, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13, padding: 0 }}>
+              Réessayer
+            </button>
+          </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 

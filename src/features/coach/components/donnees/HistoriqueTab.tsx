@@ -3,8 +3,12 @@ import { ChevronDown, ChevronRight, Copy, Trash2 } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
-import { calcScore, getReco } from "@/lib/wellness";
-import type { WellnessData } from "@/features/shared/types/athlete";
+import { getReco } from "@/lib/wellness";
+import {
+  WELLNESS_ITEMS, WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT,
+  averageScore, wellnessEntries, wellnessScore, type WellnessEntry,
+} from "@shared/domain/wellness";
+import { useDeleteWellnessEntry, useWellnessHistory } from "@/features/shared/hooks/useWellness";
 import { useHistorique, useDeleteWorkoutLog, useCopySessionAsType, type HistoLog } from "./useHistorique";
 import type { Cycle, Mesocycle, Macrocycle } from "@/features/coach/components/planning/hooks/useTimelineData";
 import { localISO } from "@/lib/date";
@@ -190,57 +194,56 @@ function CycleContent({
 
 // ── Wellness history ──────────────────────────────────────────────────────────
 
-const WELL_METRICS: { k: keyof WellnessData; label: string }[] = [
-  { k: "fatigue", label: "Récup"   },
-  { k: "sommeil", label: "Sommeil" },
-  { k: "stress",  label: "Stress"  },
-  { k: "energie", label: "Énergie" },
-  { k: "doms",    label: "DOMS"    },
-];
-
-/** Normalise "yyyymmdd" ou "yyyy-mm-dd" → "yyyy-mm-dd" */
-function normDate(key: string): string {
-  return key.includes("-") ? key : `${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6, 8)}`;
-}
-
-function metricColor(v?: number): string {
+function metricColor(v?: number | null): string {
   if (v == null) return C.tx3;
   return v >= 4 ? C.g : v >= 3 ? C.o : C.r;
 }
 
-function WellnessRow({ date, w, onDelete }: { date: string; w: WellnessData; onDelete: () => void }) {
+function fmtSleep(h: number): string {
+  const min = Math.round((h % 1) * 60);
+  return `${Math.floor(h)}h${min > 0 ? String(min).padStart(2, "0") : ""}`;
+}
+
+function WellnessRow({ e, onDelete, deleting }: { e: WellnessEntry; onDelete: () => void; deleting: boolean }) {
   const [confirm, setConfirm] = useState(false);
-  const score = calcScore(w);
+  // Score et palier : domaine wellness ; « — » si la saisie est incomplète.
+  const score = wellnessScore(e);
   const reco = getReco(score);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.s2, borderRadius: 4, border: "1px solid " + C.brd }}>
       <div style={{ width: 44, flexShrink: 0, textAlign: "center" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: reco.c, lineHeight: 1 }}>{score}</div>
-        <div style={{ fontSize: 8, color: C.tx3, marginTop: 2 }}>{reco.label}</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: reco.c, lineHeight: 1 }}>{score ?? "—"}</div>
+        <div style={{ fontSize: 8, color: C.tx3, marginTop: 2 }}>{score != null ? reco.label : "incomplet"}</div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: C.tx, marginBottom: 4 }}>
-          {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "short" })}
-          {w.poids != null && <span style={{ fontWeight: 400, color: C.tx3 }}> · {w.poids} kg</span>}
-          {w.sleepDur != null && <span style={{ fontWeight: 400, color: C.tx3 }}> · {Math.floor(w.sleepDur)}h{Math.round((w.sleepDur % 1) * 60) > 0 ? String(Math.round((w.sleepDur % 1) * 60)).padStart(2, "0") : ""} sommeil</span>}
+          {new Date(e.day + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "short" })}
+          {e.weightKg != null && <span style={{ fontWeight: 400, color: C.tx3 }}> · {e.weightKg} kg</span>}
+          {e.sleep.hours != null && <span style={{ fontWeight: 400, color: C.tx3 }}> · {fmtSleep(e.sleep.hours)} sommeil</span>}
+          {e.archived && <span style={{ fontWeight: 400, color: C.tx3 }}> · bloc archivé</span>}
         </div>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {WELL_METRICS.map((m) => {
-            const v = w[m.k] as number | undefined;
+          {WELLNESS_ITEMS.map((k) => {
+            const v = e.items[k];
             return (
-              <span key={m.k} style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: metricColor(v) + "18", color: metricColor(v) }}>
-                {m.label} {v ?? "—"}/5
+              <span key={k} title={WELLNESS_ITEM_LABEL[k]} style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: metricColor(v) + "18", color: metricColor(v) }}>
+                {WELLNESS_ITEM_SHORT[k]} {v ?? "—"}/5
               </span>
             );
           })}
         </div>
-        {w.domsZones && w.domsZones.length > 0 && (
-          <div style={{ fontSize: 9, color: C.tx3, marginTop: 3 }}>Zones : {w.domsZones.join(", ")}</div>
+        {e.domsZones.length > 0 && (
+          <div style={{ fontSize: 9, color: C.tx3, marginTop: 3 }}>Zones : {e.domsZones.join(", ")}</div>
+        )}
+        {e.injuryNote && (
+          <div style={{ fontSize: 10, color: C.r, marginTop: 4, lineHeight: 1.4 }}>
+            <span style={{ fontWeight: 700 }}>Blessé / malade :</span> {e.injuryNote}
+          </div>
         )}
       </div>
-      {confirm ? (
+      {e.archived ? null : confirm ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+          <button disabled={deleting} onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
           <button onClick={() => setConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
         </div>
       ) : (
@@ -253,30 +256,26 @@ function WellnessRow({ date, w, onDelete }: { date: string; w: WellnessData; onD
 }
 
 function WellnessHistory() {
-  const { wellnessHistory, setWellnessHistory } = useAthleteContext();
+  const { athleteId } = useAthleteContext();
+  // Historique lu par src/api/wellness (asp:wh + blocs archivés, jours ISO).
+  const { data: history, isLoading, error } = useWellnessHistory(athleteId);
+  // Suppression d'UN jour par RPC : ne réécrit plus tout l'historique depuis
+  // la copie en mémoire du coach (qui pouvait effacer une saisie de l'athlète).
+  const del = useDeleteWellnessEntry(athleteId);
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
-
-  const deleteWellness = (origKey: string) => {
-    const next = { ...(wellnessHistory ?? {}) };
-    delete next[origKey];
-    setWellnessHistory(next);
-  };
 
   // Groupé par mois, plus récent en premier
   const byMonth = useMemo(() => {
-    const entries = Object.entries(wellnessHistory ?? {})
-      .map(([k, w]) => ({ origKey: k, date: normDate(k), w }))
-      .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.date))
-      .sort((a, b) => b.date.localeCompare(a.date));
-    const m = new Map<string, { origKey: string; date: string; w: WellnessData }[]>();
+    const entries = wellnessEntries(history ?? {}).reverse();
+    const m = new Map<string, WellnessEntry[]>();
     for (const e of entries) {
-      const month = e.date.slice(0, 7); // yyyy-mm
+      const month = e.day.slice(0, 7); // yyyy-mm
       const arr = m.get(month) ?? [];
       arr.push(e);
       m.set(month, arr);
     }
     return [...m.entries()];
-  }, [wellnessHistory]);
+  }, [history]);
 
   const toggle = (month: string) => {
     setOpenMonths((prev) => {
@@ -293,7 +292,16 @@ function WellnessHistory() {
         Check-ins quotidiens · score global /100 + détail /5
       </div>
 
-      {byMonth.length === 0 ? (
+      {del.error && (
+        <div style={{ fontSize: 11, color: C.r, marginBottom: 8 }}>{(del.error as Error).message}</div>
+      )}
+      {error ? (
+        <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.r + "40", fontSize: 12, color: C.r }}>
+          {(error as Error).message}
+        </div>
+      ) : isLoading ? (
+        <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>
+      ) : byMonth.length === 0 ? (
         <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, fontSize: 12, color: C.tx3 }}>
           Aucun wellness enregistré par cet athlète.
         </div>
@@ -301,7 +309,8 @@ function WellnessHistory() {
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {byMonth.map(([month, entries]) => {
             const open = openMonths.has(month);
-            const avg = Math.round(entries.reduce((s, e) => s + calcScore(e.w), 0) / entries.length);
+            // Moyenne des scores présents : un jour incomplet ne compte pas comme 0.
+            const avg = averageScore(entries.map((e) => wellnessScore(e)));
             const label = new Date(month + "-15T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
             return (
               <div key={month} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -311,12 +320,14 @@ function WellnessHistory() {
                   level="cycle"
                   title={label.charAt(0).toUpperCase() + label.slice(1)}
                   subtitle={`${entries.length} jour${entries.length > 1 ? "s" : ""}`}
-                  badge={`moy. ${avg}`}
+                  badge={`moy. ${avg ?? "—"}`}
                   color={getReco(avg).c}
                 />
                 {open && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingLeft: 22 }}>
-                    {entries.map((e) => <WellnessRow key={e.date} date={e.date} w={e.w} onDelete={() => deleteWellness(e.origKey)} />)}
+                    {entries.map((e) => (
+                      <WellnessRow key={e.day} e={e} deleting={del.isPending} onDelete={() => del.mutate(e.day)} />
+                    ))}
                   </div>
                 )}
               </div>

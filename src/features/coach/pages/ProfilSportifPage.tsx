@@ -6,18 +6,19 @@
  */
 import { useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { WellnessData } from "@/features/shared/types/athlete";
 import { toast } from "sonner";
 import { Plus, Pencil, X, Check } from "lucide-react";
 import { C } from "@/lib/theme";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import MeasurementComparison from "@/features/coach/components/MeasurementComparison";
 import CategoryProfiles from "@/features/coach/components/CategoryProfiles";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { WeightChart } from "@/components/athlete/StatsCharts";
 import { PRLogsSection } from "@/features/coach/components/PRLogsSection";
+import { useActiveReferences, useDeleteMeasurement, useSaveFcZones, useSetReference } from "@/features/shared/hooks/useReferences";
+import { storedFcZones as pickFcZones } from "@/api/references";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -107,79 +108,32 @@ function ftpZones(ftp: number) {
 
 // ── DB hooks ──────────────────────────────────────────────────────────────────
 
-type RefsMap = Record<string, { value: number; date: string; id: string; unit: string; metric_type?: string | null }>;
-
-function useAthleteRefs(athleteId: string) {
-  return useQuery<RefsMap>({
-    queryKey: ["athlete-refs-full", athleteId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("performance_logs")
-        .select("id, metric_name, value, unit, date, metric_type")
-        .eq("athlete_id", athleteId)
-        .eq("is_active_reference", true);
-      if (error) throw error;
-      const map: RefsMap = {};
-      for (const row of data ?? []) {
-        map[row.metric_name] = { value: row.value, date: row.date, id: row.id, unit: row.unit, metric_type: row.metric_type };
-      }
-      return map;
-    },
-    staleTime: 30_000,
-  });
-}
-
+/** Références : `src/api/references.ts` (RPC atomiques, invalidation partout). */
 function useUpsertRef(athleteId: string) {
-  const qc = useQueryClient();
-  const { user } = useAuth();
-
-  return useMutation({
-    mutationFn: async ({
-      metricName, value, unit, metricType = "reference",
-    }: { metricName: string; value: number; unit: string; metricType?: string }) => {
-      await supabase
-        .from("performance_logs")
-        .update({ is_active_reference: false })
-        .eq("athlete_id", athleteId)
-        .eq("metric_name", metricName)
-        .eq("is_active_reference", true);
-
-      const { error } = await supabase.from("performance_logs").insert({
-        athlete_id: athleteId,
-        metric_name: metricName,
-        metric_type: metricType,
-        value,
-        unit,
-        date: new Date().toISOString().slice(0, 10),
-        is_active_reference: true,
-        created_by: user?.id ?? null,
-        coach_validated: true,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["athlete-refs-full", athleteId] });
-      qc.invalidateQueries({ queryKey: ["athlete-references", athleteId] });
-      toast.success("Référence mise à jour");
-    },
-    onError: () => toast.error("Erreur lors de la mise à jour"),
-  });
+  const m = useSetReference();
+  return {
+    ...m,
+    mutate: ({ metricName, value, unit }: { metricName: string; value: number; unit: string; metricType?: string }) =>
+      m.mutate(
+        { athleteId, metricName, value, unit, validated: true },
+        {
+          onSuccess: () => toast.success("Référence mise à jour"),
+          onError: () => toast.error("Erreur lors de la mise à jour"),
+        },
+      ),
+  };
 }
 
 function useDeleteRef(athleteId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("performance_logs").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["athlete-refs-full", athleteId] });
-      qc.invalidateQueries({ queryKey: ["athlete-references", athleteId] });
-      toast.success("Donnée supprimée");
-    },
-    onError: () => toast.error("Erreur lors de la suppression"),
-  });
+  const m = useDeleteMeasurement(athleteId);
+  return {
+    ...m,
+    mutate: (id: string) =>
+      m.mutate(id, {
+        onSuccess: () => toast.success("Donnée supprimée"),
+        onError: () => toast.error("Erreur lors de la suppression"),
+      }),
+  };
 }
 
 function useLastWeights(athleteId: string) {
@@ -753,9 +707,10 @@ function ZoneTableSimple({ title, rows }: {
 export default function ProfilSportifPage() {
   const { athleteId } = useParams<{ athleteId: string }>();
   const { weightLog, weightMilestones, bodyWeight, nutritionStrategy, exos, setExos } = useAthleteContext();
-  const { data: refs = {}, isLoading } = useAthleteRefs(athleteId!);
+  const { data: refs = {}, isLoading } = useActiveReferences(athleteId);
   const upsert = useUpsertRef(athleteId!);
   const deleteRef = useDeleteRef(athleteId!);
+  const saveFcZones = useSaveFcZones(athleteId!);
 
   const customEntries = Object.entries(refs).filter(
     ([k]) => !PREDEFINED_KEYS.has(k) && !k.startsWith("FCzone_") && k !== "FCzone_Z0_min"
@@ -767,16 +722,14 @@ export default function ProfilSportifPage() {
   const vmax   = refs["Vmax"]?.value;
   const ftp    = refs["FTP"]?.value;
 
-  const storedFcZones: Record<string, number> = {};
-  FC_ZONES_DEF.forEach((z) => {
-    if (refs[z.zoneKey]) storedFcZones[z.zoneKey] = refs[z.zoneKey].value;
-  });
-  if (refs["FCzone_Z0_min"]) storedFcZones["FCzone_Z0_min"] = refs["FCzone_Z0_min"].value;
+  const storedFcZones: Record<string, number> = pickFcZones(refs);
 
-  async function saveZones(zones: Record<string, number>) {
-    for (const [key, val] of Object.entries(zones)) {
-      await upsert.mutateAsync({ metricName: key, value: val, unit: "bpm", metricType: "zone" });
-    }
+  // Une écriture pour les 6 bornes ; une borne inchangée ne crée pas de ligne.
+  function saveZones(zones: Record<string, number>) {
+    saveFcZones.mutate(zones, {
+      onSuccess: (n) => toast.success(n > 0 ? "Zones FC enregistrées" : "Zones FC déjà à jour"),
+      onError: () => toast.error("Zones FC non enregistrées"),
+    });
   }
 
   const metricsOf = (cat: Category) => METRICS.filter((m) => m.category === cat);
@@ -829,7 +782,7 @@ export default function ProfilSportifPage() {
                       fcrep={fcrep}
                       storedZones={storedFcZones}
                       onSaveZones={saveZones}
-                      saving={upsert.isPending}
+                      saving={saveFcZones.isPending}
                     />
                     <div style={{ padding: "10px 14px", borderRadius: 4, background: C.ac + "10", border: "1px solid " + C.ac + "30", fontSize: 11, color: C.tx2 }}>
                       Les zones FC personnalisées s'appliquent dans l'aperçu de séance et le calendrier planning. Les bornes définissent l'interpolation d'intensité pour les cibles en bpm.

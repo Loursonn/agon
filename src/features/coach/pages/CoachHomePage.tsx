@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -23,6 +23,7 @@ import { useWellnessAlerts } from "@/features/shared/hooks/useWellnessAlerts";
 import { formatAssessment } from "@/lib/wellnessBaseline";
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/lib/theme";
+import { localISO } from "@/lib/date";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
 import { CoachUpdatesCard } from "@/features/coach/components/updates/CoachUpdatesCard";
 import { priorityLabel, COMPETITION_META } from "@/types/planning";
@@ -30,12 +31,12 @@ import type { SessionStatus } from "@/features/shared/hooks/useCoachDashboard";
 
 // ── Animation variants ─────────────────────────────────────────────────────────
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 10 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
 };
 
-const stagger = {
+const stagger: Variants = {
   hidden: {},
   show:   { transition: { staggerChildren: 0.07 } },
 };
@@ -112,7 +113,7 @@ export default function CoachHomePage() {
   const { records, isLoading: loadRecords }             = useRecentRecords(8);
   const { competitions, isLoading: loadCompet }         = useUpcomingCompetitions(30);
   const { activities, isLoading: loadActivity }         = useRecentActivity(8);
-  const { alerts: wellnessAlerts }                      = useWellnessAlerts();
+  const { alerts: wellnessAlerts, injuries: wellnessInjuries } = useWellnessAlerts();
 
   // Séances travaillées mais jamais clôturées par l'athlète : les données sont
   // là, mais le statut "planned" les exclut de l'historique et des stats.
@@ -279,6 +280,37 @@ export default function CoachHomePage() {
               )}
             </Card>
           </motion.div>
+
+          {/* ── Blessé / malade — réponse du wellness (aujourd'hui ou hier) ── */}
+          {wellnessInjuries.length > 0 && (
+            <motion.div variants={fadeUp}>
+              <SectionTitle icon={<AlertTriangle size={11} style={{ color: C.r }} />}>Blessé / malade</SectionTitle>
+              <Card>
+                {wellnessInjuries.map((a, i) => (
+                  <div
+                    key={`${a.athleteId}_${a.day}`}
+                    onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?detail=wellness`)}
+                    className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+                    style={{
+                      borderBottom: i < wellnessInjuries.length - 1
+                        ? "1px solid rgba(231,211,168,0.1)"
+                        : undefined,
+                      borderLeft: `3px solid ${C.r}`,
+                    }}
+                  >
+                    <Avatar name={a.athleteName} color={C.r} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold" style={{ color: C.tx }}>{a.athleteName}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: C.tx2 }}>
+                        {a.day === localISO() ? "Aujourd'hui" : "Hier"} — {a.note}
+                      </p>
+                    </div>
+                    <ChevronRight size={13} style={{ color: C.tx3 }} />
+                  </div>
+                ))}
+              </Card>
+            </motion.div>
+          )}
 
           {/* ── À traiter — séances manquées ── */}
           {missedSessions.length > 0 && (

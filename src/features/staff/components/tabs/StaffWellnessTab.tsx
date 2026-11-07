@@ -1,32 +1,26 @@
 import { C } from "@/lib/theme";
+import { getReco } from "@/lib/wellness";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
+import { useWellnessHistory } from "@/features/shared/hooks/useWellness";
+import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT, wellnessEntries, wellnessScore } from "@shared/domain/wellness";
 import { empty, tabTitle } from "./staffTabStyles";
 
-const COLS: { k: "score" | "sommeil" | "fatigue" | "stress" | "energie" | "doms"; l: string }[] = [
-  { k: "score", l: "Score" },
-  { k: "sommeil", l: "Sommeil" },
-  { k: "fatigue", l: "Fatigue" },
-  { k: "stress", l: "Stress" },
-  { k: "energie", l: "Énergie" },
-  { k: "doms", l: "Courbatures" },
-];
-
-/** Clés « 20261018 » ou ISO → ISO */
-function toISO(k: string): string {
-  return /^\d{8}$/.test(k) ? `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}` : k.slice(0, 10);
-}
-
-/** Bien-être (domaine `wellness`) — 21 derniers relevés, lecture seule. */
+/**
+ * Bien-être (domaine `wellness`) — 21 derniers relevés, lecture seule.
+ * Lu par src/api/wellness : jours ISO, clés de semaine parasites ("1".."4")
+ * écartées (elles donnaient des lignes « Invalid Date »), score recalculé.
+ * La RLS ne laisse voir que `asp:wh` (l'archive des blocs n'est pas ouverte au staff).
+ */
 export function StaffWellnessTab() {
-  const { wellnessHistory, loaded } = useAthleteContext();
-  const rows = Object.entries(wellnessHistory ?? {})
-    .map(([k, v]) => ({ date: toISO(v?.date ?? k), v }))
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 21);
+  const { athleteId } = useAthleteContext();
+  const { data, isLoading, error } = useWellnessHistory(athleteId);
+  const rows = wellnessEntries(data ?? {}).reverse().slice(0, 21);
 
-  if (!loaded) return <div style={empty}>Chargement…</div>;
+  if (isLoading) return <div style={empty}>Chargement…</div>;
+  if (error) return <div style={empty}>Bien-être indisponible : {(error as Error).message}</div>;
   if (rows.length === 0) return <div style={empty}>Aucun relevé de bien-être.</div>;
 
+  const th = { textAlign: "right" as const, padding: "6px 8px", color: C.tx3, fontWeight: 600 };
   return (
     <div>
       <h2 style={tabTitle}>21 derniers relevés</h2>
@@ -34,25 +28,28 @@ export function StaffWellnessTab() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "6px 8px", color: C.tx3, fontWeight: 600 }}>Date</th>
-              {COLS.map((c) => <th key={c.k} style={{ textAlign: "right", padding: "6px 8px", color: C.tx3, fontWeight: 600 }}>{c.l}</th>)}
-              <th style={{ textAlign: "right", padding: "6px 8px", color: C.tx3, fontWeight: 600 }}>Durée</th>
+              <th style={{ ...th, textAlign: "left" }}>Date</th>
+              <th style={th}>Score</th>
+              {WELLNESS_ITEMS.map((k) => <th key={k} title={WELLNESS_ITEM_LABEL[k]} style={th}>{WELLNESS_ITEM_SHORT[k]}</th>)}
+              <th style={th}>Durée</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ date, v }) => (
-              <tr key={date} style={{ borderTop: "1px solid " + C.brd }}>
-                <td style={{ padding: "6px 8px", color: C.tx2, whiteSpace: "nowrap" }}>
-                  {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
-                </td>
-                {COLS.map((c) => (
-                  <td key={c.k} style={{ padding: "6px 8px", textAlign: "right", color: C.tx, fontWeight: c.k === "score" ? 700 : 400 }}>
-                    {typeof v?.[c.k] === "number" ? v[c.k] : "—"}
+            {rows.map((e) => {
+              const score = wellnessScore(e);
+              return (
+                <tr key={e.day} style={{ borderTop: "1px solid " + C.brd }}>
+                  <td style={{ padding: "6px 8px", color: C.tx2, whiteSpace: "nowrap" }}>
+                    {new Date(e.day + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
                   </td>
-                ))}
-                <td style={{ padding: "6px 8px", textAlign: "right", color: C.tx2 }}>{typeof v?.sleepDur === "number" ? `${v.sleepDur} h` : "—"}</td>
-              </tr>
-            ))}
+                  <td style={{ padding: "6px 8px", textAlign: "right", color: getReco(score).c, fontWeight: 700 }}>{score ?? "—"}</td>
+                  {WELLNESS_ITEMS.map((k) => (
+                    <td key={k} style={{ padding: "6px 8px", textAlign: "right", color: C.tx }}>{e.items[k] ?? "—"}</td>
+                  ))}
+                  <td style={{ padding: "6px 8px", textAlign: "right", color: C.tx2 }}>{e.sleep.hours != null ? `${e.sleep.hours} h` : "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

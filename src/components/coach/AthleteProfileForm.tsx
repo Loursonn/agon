@@ -1,13 +1,9 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth, Profile } from "@/hooks/useAuth";
-import {
-  getNutritionStrategy,
-  upsertNutritionStrategy,
-  NutritionStrategyType,
-  CalorieMode,
-  DeficitMode,
-} from "@/lib/nutrition";
+import type { NutritionStrategy, NutritionStrategyType, CalorieMode, DeficitMode } from "@/lib/nutrition";
+import { getStrategy, invalidateNutrition, saveStrategy } from "@/api/nutrition";
 import { localISO } from "@/lib/date";
 
 const C = {
@@ -59,10 +55,13 @@ interface Props {
   initialTab?: "profil" | "nutrition";
   /** Masque le switcher d'onglets : le formulaire ne montre que initialTab */
   lockTab?: boolean;
+  /** Plan nutritionnel enregistré : l'écran parent l'affiche sans attendre un rechargement. */
+  onNutritionSaved?: (strategy: NutritionStrategy) => void;
 }
 
-export default function AthleteProfileForm({ athlete, onClose, inline = false, initialTab = "profil", lockTab = false }: Props) {
+export default function AthleteProfileForm({ athlete, onClose, inline = false, initialTab = "profil", lockTab = false, onNutritionSaved }: Props) {
   const { updateAthleteProfile, user } = useAuth();
+  const qc = useQueryClient();
   const isOwnProfile = user?.id === athlete.id;
 
   // ── Sub-onglet ─────────────────────────────────────────────────────────────
@@ -235,7 +234,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
 
   // ── Chargement nutrition depuis Supabase ──────────────────────────────────
   useEffect(() => {
-    getNutritionStrategy(athlete.id)
+    getStrategy(athlete.id)
       .then(s => {
         if (s) {
           setNutStrategy(s.strategy);
@@ -270,8 +269,13 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
           setNutWeeklyTargetKg(s.weekly_target_kg?.toString() ?? "");
         }
       })
-      .catch(console.error)
-      .finally(() => setNutLoaded(true));
+      // Lecture en erreur : on ne débloque pas l'enregistrement, sinon le plan
+      // par défaut du formulaire écraserait celui du coach.
+      .then(() => setNutLoaded(true))
+      .catch((e) => {
+        console.error(e);
+        setErrorNut("Plan nutritionnel non chargé — recharge la page avant de l'enregistrer.");
+      });
   }, [athlete.id]);
 
   // ── Formule MB ────────────────────────────────────────────────────────────
@@ -335,7 +339,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         body_fat_pct: bodyFatPct ? parseFloat(bodyFatPct) : null,
         base_metabolism: metaManual ? parseInt(metaManual) : null,
       });
-      await upsertNutritionStrategy(athlete.id, {
+      const strategy: NutritionStrategy = {
         strategy: nutStrategy,
         can_track_calories: nutCalorieMode !== "nap",
         calorie_mode: nutCalorieMode,
@@ -355,7 +359,11 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
         macros_glucides_pct: nutGlucidesPct ? parseFloat(nutGlucidesPct) : null,
         macros_lipides_pct: nutLipidesPct ? parseFloat(nutLipidesPct) : null,
         macros_proteines_pct: nutProteinesPct ? parseFloat(nutProteinesPct) : null,
-      });
+      };
+      await saveStrategy(athlete.id, strategy);
+      // Avant : le contexte n'était jamais rafraîchi, le coach revoyait l'ancien plan.
+      onNutritionSaved?.(strategy);
+      void invalidateNutrition(qc, athlete.id);
       toast.success("Plan nutritionnel enregistré !");
     } catch (e) {
       setErrorNut((e as Error).message || "Erreur lors de la sauvegarde");

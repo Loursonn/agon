@@ -6,6 +6,7 @@ import {
 import { fr } from "date-fns/locale";
 import { CheckCircle2, Trophy, FlaskConical, Zap, Footprints } from "lucide-react";
 import { C } from "@/lib/theme";
+import { wellnessView } from "@/lib/wellness";
 import { DayDetailPanel } from "./DayDetailPanel";
 import type { DailyData, WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
@@ -22,12 +23,6 @@ interface MonthCalendarViewProps {
 }
 
 const DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-
-function wellnessColor(score: number): string {
-  if (score >= 70) return C.g;
-  if (score >= 50) return C.o;
-  return C.r;
-}
 
 export function MonthCalendarView({ month, dailyData, energyByDate = {}, workouts = [], energySessions = [], freeActivities = [], athleteId }: MonthCalendarViewProps) {
   const [panelDate, setPanelDate]         = useState<string | null>(null);
@@ -118,15 +113,20 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
                 </span>
 
                 {/* Wellness dot + score */}
-                {wellness && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                    <div style={{
-                      width: 7, height: 7, borderRadius: "50%",
-                      background: wellnessColor(wellness.score), flexShrink: 0,
-                    }} />
-                    <span style={{ fontSize: 9, color: C.tx3 }}>{wellness.score}</span>
-                  </div>
-                )}
+                {wellness && (() => {
+                  // Score recalculé (domaine wellness) : « — » si la saisie est incomplète, jamais 0.
+                  const { score, reco, injuryNote } = wellnessView(wellness);
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }} title={injuryNote ? `Blessé / malade : ${injuryNote}` : undefined}>
+                      <div style={{
+                        width: 7, height: 7, borderRadius: "50%",
+                        background: reco.c, flexShrink: 0,
+                      }} />
+                      <span style={{ fontSize: 9, color: C.tx3 }}>{score ?? "—"}</span>
+                      {injuryNote && <span style={{ fontSize: 9, fontWeight: 800, color: C.r }}>✚</span>}
+                    </div>
+                  );
+                })()}
 
                 {/* Workouts completed */}
                 {data && data.workouts_completed > 0 && (

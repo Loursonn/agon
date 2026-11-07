@@ -1,3 +1,20 @@
+-- =============================================================================
+-- ⛔ NE PAS APPLIQUER — migration OBSOLÈTE, neutralisée le 2026-11-08 (lot 5).
+--
+-- Ces tables `nutrition_strategy` / `nutrition_daily_log` n'existent pas en
+-- prod : la nutrition vit dans `app_data` (`asp:nutrition_strategy`,
+-- `asp:nutrition_log`), écrite via src/api/nutrition.ts et la RPC
+-- `nutrition_save_day` (20261108130000_nutrition_rpcs.sql). Ses policies
+-- (`coach_id = auth.uid()` en dur) casseraient en plus le co-coach.
+--
+-- Le fichier garde son nom parce que la version 20260404 est inscrite dans
+-- l'historique distant (`supabase_migrations.schema_migrations`) : le renommer
+-- ferait apparaître une version « distante seulement » et pousserait à un
+-- `migration repair`. Le contenu est mis en commentaire pour qu'un rejeu
+-- (base neuve, `db reset`) ne crée rien. Ancien contenu, pour mémoire :
+-- =============================================================================
+
+/*
 -- Migration : Module Alimentation
 -- Tables : nutrition_strategy, nutrition_daily_log
 
@@ -63,3 +80,5 @@ CREATE POLICY "nutrition_daily_log_coach_read" ON public.nutrition_daily_log
       WHERE id = nutrition_daily_log.athlete_id AND coach_id = auth.uid()
     )
   );
+
+*/

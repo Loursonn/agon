@@ -4,6 +4,12 @@ import { todayKey, localISO } from "@/lib/date";
 import { checkMilestone } from "@/lib/date";
 import { SKEYS } from "@/lib/storage";
 import { clearDraft, wellnessDraftKey } from "@/lib/localDraft";
+import { invalidateWellness, saveWellnessForm } from "@/api/wellness";
+import {
+  completeWorkout, invalidateWorkouts, listWorkoutLogs, planWorkout, reopenWorkout, setWorkoutNote,
+} from "@/api/workouts";
+import { toLegacyEntry } from "@shared/domain/wellness";
+import { toCompactDay } from "@shared/domain/dates";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData,
@@ -40,6 +46,9 @@ interface LogicDeps {
   setBlockHistory: (v: ArchivedBlock[]) => void;
   setWellness: (v: WellnessData | null) => void | Promise<boolean>;
   setWellnessHistory: (v: Record<string, WellnessData>) => void | Promise<boolean>;
+  /** Mettent à jour l'état en mémoire sans écrire en base (useAthletePersistedState). */
+  _setWellnessRaw: (v: WellnessData | null) => void;
+  _setWellnessHistoryRaw: (v: Record<string, WellnessData> | ((p: Record<string, WellnessData>) => Record<string, WellnessData>)) => void;
   setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
   setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
   setBodyWeight: (v: BodyWeight) => void;
@@ -62,6 +71,7 @@ export function useAthleteLogic(d: LogicDeps) {
     setAthleteNotes, setBlockHistory, setWellness, setWellnessHistory,
     setWeightLog, setWeightMilestones, setBodyWeight, setInjuries,
     setMilestoneNotif, setWeekJustCompleted, setShowBilan, setAW, save,
+    _setWellnessRaw, _setWellnessHistoryRaw,
   } = d;
 
   // L'ancien rattrapage `asp:completed` → `workout_logs` (et ses nettoyages)
@@ -101,39 +111,25 @@ export function useAthleteLogic(d: LogicDeps) {
     const scheduledDate = sessionScheduledDate(sessId, week) ?? weekStart;
 
     (async () => {
-      // Search by session_id + week range — works regardless of which exact day
-      // the coach placed the session on (avoids exact-date mismatch bug)
-      const { data: rows } = await supabase
-        .from("workout_logs")
-        .select("id")
-        .eq("session_id", sessId)
-        .eq("athlete_id", athleteId)
-        .gte("scheduled_date", weekStart)
-        .lte("scheduled_date", weekEnd)
-        .order("scheduled_date")
-        .limit(1);
-
-      const existing = rows?.[0] ?? null;
-
-      if (existing) {
-        await supabase
-          .from("workout_logs")
-          .update(note != null ? { status, notes: note } : { status })
-          .eq("id", existing.id);
-      } else if (status === "completed") {
-        await supabase
-          .from("workout_logs")
-          .insert({
-            athlete_id:     athleteId,
-            session_id:     sessId,
-            session_name:   sess?.name ?? "Séance",
-            scheduled_date: scheduledDate,
-            status:         "completed",
-            ...(note != null ? { notes: note } : {}),
-          });
+      // Séance de la semaine, quel que soit le jour où le coach l'a placée.
+      const [existing] = await listWorkoutLogs({
+        athleteIds: [athleteId], sessionId: sessId, from: weekStart, to: weekEnd, limit: 1, withMods: false,
+      });
+      let logId = existing?.id ?? null;
+      if (status === "completed") {
+        if (!logId) {
+          logId = (await planWorkout({
+            athleteId, coachId: null, sessionId: sessId,
+            sessionName: sess?.name ?? "Séance", date: scheduledDate, weekNumber: week,
+          })).id;
+        }
+        await completeWorkout({ logId });
+      } else if (logId) {
+        await reopenWorkout(logId);
       }
-      qc.invalidateQueries({ queryKey: ["cal", athleteId] });
-    })();
+      if (logId && note != null) await setWorkoutNote(logId, note);
+      await invalidateWorkouts(qc, { athleteId, logId: logId ?? undefined });
+    })().catch((e) => console.error("[syncWorkoutLogStatus]", e));
   }, [sessionScheduledDate, sessions, athleteId, blockConfig?.startDate, qc]);
 
   const completeSession = useCallback((sessId: string, week: number, note?: string) => {
@@ -194,11 +190,21 @@ export function useAthleteLogic(d: LogicDeps) {
   // poids saisi) ; le brouillon local du formulaire n'est purgé qu'à ce moment.
   const saveWellness = useCallback((data: WellnessData): Promise<boolean> => {
     const day = todayKey();
-    const dataWithDate = { ...data, date: day };
-    const writes: Array<void | Promise<boolean>> = [];
-    writes.push(setWellness(dataWithDate));
-    const wh = { ...wellnessHistory, [day]: dataWithDate };
-    writes.push(setWellnessHistory(wh));
+    // Le jour seul, côté serveur (RPC `wellness_set_day`) : un autre appareil
+    // ou le coach ne voit plus sa saisie effacée par une réécriture du blob.
+    const wellnessWrite: Promise<boolean> = saveWellnessForm(athleteId, data)
+      .then((saved) => {
+        const legacy = { ...toLegacyEntry(saved), date: toCompactDay(saved.day) } as unknown as WellnessData;
+        _setWellnessRaw(legacy);
+        _setWellnessHistoryRaw((prev) => ({ ...prev, [toCompactDay(saved.day)]: legacy }));
+        void invalidateWellness(qc, athleteId);
+        return true;
+      })
+      .catch((e) => {
+        console.error("[saveWellness]", e);
+        return false;
+      });
+    const writes: Array<void | Promise<boolean>> = [wellnessWrite];
     if (data.poids) {
       const key = day;
       const nwl = { ...weightLog, [key]: data.poids };
@@ -218,7 +224,7 @@ export function useAthleteLogic(d: LogicDeps) {
       if (ok && athleteId) clearDraft(wellnessDraftKey(athleteId, day));
       return ok;
     });
-  }, [athleteId, wellnessHistory, weightLog, bodyWeight, weightMilestones, setWellness, setWellnessHistory, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
+  }, [athleteId, qc, weightLog, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
 
   const updateSessionDay = useCallback((sessId: string, dayIdx: number) => {
     setSessions(prev => prev.map(s => s.id === sessId ? { ...s, day_of_week: dayIdx } : s));

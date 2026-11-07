@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { listWorkoutLogs } from "@/api/workouts";
 
 // ── Re-export shared types so drawers import from one place ──────────────────
 
@@ -160,21 +161,12 @@ export function useMicrocycleDays(
     enabled:  !!athleteId && !!startDate,
     staleTime: 60_000,
     queryFn: async (): Promise<Record<string, WorkoutDayData[]>> => {
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("id, session_name, status, scheduled_date, workout_rpe(rpe_score)")
-        .eq("athlete_id", athleteId)
-        .gte("scheduled_date", startDate)
-        .lte("scheduled_date", endDate)
-        .order("scheduled_date");
+      const data = await listWorkoutLogs({ athleteIds: [athleteId], from: startDate, to: endDate, withMods: false });
 
       const byDate: Record<string, WorkoutDayData[]> = {};
-      for (const w of data ?? []) {
-        const d = w.scheduled_date;
-        const rpe = Array.isArray(w.workout_rpe) && w.workout_rpe.length > 0
-          ? (w.workout_rpe[0] as { rpe_score: number }).rpe_score
-          : null;
-        (byDate[d] ??= []).push({ id: w.id, session_name: w.session_name, status: w.status, rpe });
+      for (const w of data) {
+        // RPE : seule source `rpe_score` (l'embed workout_rpe n'était jamais lu).
+        (byDate[w.scheduled_date] ??= []).push({ id: w.id, session_name: w.session_name, status: w.status, rpe: w.rpe_score });
       }
       return byDate;
     },

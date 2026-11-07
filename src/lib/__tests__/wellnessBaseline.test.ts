@@ -13,6 +13,12 @@ import {
 } from "@/lib/wellnessBaseline";
 import type { WellnessData } from "@/features/shared/types/athlete";
 
+/**
+ * Clés comme en base : `asp:wh` est indexé en "YYYYMMDD" (293 entrées réelles
+ * au 2026-11-07, aucune en ISO). Les dates rendues restent en ISO.
+ */
+const c = (iso: string) => iso.replace(/-/g, "");
+
 /** Saisie où tous les items valent la même note. */
 const V = (v: number): WellnessData => ({
   fatigue: v, sommeil: v, stress: v, energie: v, doms: v,
@@ -26,7 +32,7 @@ const V = (v: number): WellnessData => ({
 function alternating(endIso: string, n = 14): Record<string, WellnessData> {
   const h: Record<string, WellnessData> = {};
   for (let i = 0; i < n; i++) {
-    h[shiftIso(endIso, -(n - 1 - i))] = V(i % 2 === 0 ? 5 : 3);
+    h[c(shiftIso(endIso, -(n - 1 - i)))] = V(i % 2 === 0 ? 5 : 3);
   }
   return h;
 }
@@ -34,7 +40,7 @@ function alternating(endIso: string, n = 14): Record<string, WellnessData> {
 /** Base plate : même note tous les jours, donc écart-type nul. */
 function flat(endIso: string, n: number, value: number): Record<string, WellnessData> {
   const h: Record<string, WellnessData> = {};
-  for (let i = 0; i < n; i++) h[shiftIso(endIso, -i)] = V(value);
+  for (let i = 0; i < n; i++) h[c(shiftIso(endIso, -i))] = V(value);
   return h;
 }
 
@@ -83,7 +89,7 @@ describe("assessWellness", () => {
   });
 
   it("moins de 7 saisies : habitude en construction, aucune alerte", () => {
-    const history = { ...flat("2026-02-28", 6, 5), [today]: V(1) };
+    const history = { ...flat("2026-02-28", 6, 5), [c(today)]: V(1) };
     const a = assessWellness(history, today);
     expect(a.baselineBuilding).toBe(true);
     expect(a.baselineCount).toBe(6);
@@ -93,7 +99,7 @@ describe("assessWellness", () => {
   });
 
   it("7 saisies suffisent à juger", () => {
-    const history = { ...flat("2026-02-28", 7, 4), [today]: V(4) };
+    const history = { ...flat("2026-02-28", 7, 4), [c(today)]: V(4) };
     const a = assessWellness(history, today);
     expect(a.baselineBuilding).toBe(false);
     expect(a.baselineCount).toBe(7);
@@ -102,7 +108,7 @@ describe("assessWellness", () => {
 
   it("écart-type nul : le plancher évite le z infini et une chute d'un point alerte", () => {
     // 14 jours à 4/5 partout : l'athlète ne varie jamais.
-    const history = { ...flat("2026-02-28", 14, 4), [today]: { ...V(4), doms: 3 } };
+    const history = { ...flat("2026-02-28", 14, 4), [c(today)]: { ...V(4), doms: 3 } };
     const a = assessWellness(history, today);
     expect(a.level).toBe("alerte");
     expect(a.deviations).toHaveLength(1);
@@ -115,7 +121,7 @@ describe("assessWellness", () => {
   });
 
   it("chute d'un item sur une base variable : vigilance avant alerte", () => {
-    const history = { ...alternating("2026-02-28"), [today]: { ...V(4), doms: 2 } };
+    const history = { ...alternating("2026-02-28"), [c(today)]: { ...V(4), doms: 2 } };
     const a = assessWellness(history, today);
     // Habitude de l'item = 4 ± 1,04 → z = −1,93 : moins bien que d'habitude,
     // mais pas au point de l'alerte.
@@ -129,8 +135,8 @@ describe("assessWellness", () => {
   it("baisse diffuse du score global, sans item en cause", () => {
     const history = {
       ...alternating("2026-02-27"),
-      "2026-02-28": V(5),
-      [today]: V(3),
+      "20260228": V(5),
+      [c(today)]: V(3),
     };
     const a = assessWellness(history, today);
     expect(a.level).toBe("vigilance");
@@ -145,8 +151,8 @@ describe("assessWellness", () => {
     const low: WellnessData = { ...V(3), doms: 2 }; // score 56
     const history = {
       ...alternating("2026-02-27"),
-      "2026-02-28": low,
-      [today]: low,
+      "20260228": low,
+      [c(today)]: low,
     };
     const a = assessWellness(history, today);
     expect(a.twoConsecutive).toBe(true);
@@ -160,14 +166,14 @@ describe("assessWellness", () => {
   it("une seule saisie basse ne suffit pas à la répétition", () => {
     const history = {
       ...alternating("2026-02-27"),
-      "2026-02-28": V(5), // la veille était bonne
-      [today]: { ...V(3), doms: 2 },
+      "20260228": V(5), // la veille était bonne
+      [c(today)]: { ...V(3), doms: 2 },
     };
     expect(assessWellness(history, today).twoConsecutive).toBe(false);
   });
 
   it("saisie trop ancienne : on ne l'interprète pas", () => {
-    const history = { ...flat("2026-02-20", 14, 4), "2026-02-20": { ...V(4), doms: 1 } };
+    const history = { ...flat("2026-02-20", 14, 4), "20260220": { ...V(4), doms: 1 } };
     const a = assessWellness(history, today);
     expect(a.level).toBe("none");
     expect(a.date).toBe("2026-02-20"); // la date reste visible côté coach
@@ -177,14 +183,14 @@ describe("assessWellness", () => {
 
   it("la saisie de la veille compte encore", () => {
     const yesterday = "2026-02-28";
-    const history = { ...flat("2026-02-27", 14, 4), [yesterday]: { ...V(4), doms: 3 } };
+    const history = { ...flat("2026-02-27", 14, 4), [c(yesterday)]: { ...V(4), doms: 3 } };
     const a = assessWellness(history, today);
     expect(a.date).toBe(yesterday);
     expect(a.level).toBe("alerte");
   });
 
   it("une saisie dans le futur est ignorée", () => {
-    const history = { ...flat("2026-03-01", 14, 4), "2026-03-05": { ...V(4), doms: 1 } };
+    const history = { ...flat("2026-03-01", 14, 4), "20260305": { ...V(4), doms: 1 } };
     const a = assessWellness(history, today);
     expect(a.level).toBe("none");
     expect(a.date).toBe("2026-03-05");
@@ -193,7 +199,7 @@ describe("assessWellness", () => {
   it("la saisie évaluée n'entre pas dans sa propre habitude", () => {
     // 14 jours à 5, puis une chute à 2. Si la saisie comptait dans sa base, elle
     // tirerait la moyenne vers elle et minorerait l'écart.
-    const history = { ...flat("2026-02-28", 14, 5), [today]: V(2) };
+    const history = { ...flat("2026-02-28", 14, 5), [c(today)]: V(2) };
     const a = assessWellness(history, today);
     const dev = a.deviations.find((d) => d.item === "fatigue");
     expect(dev?.mean).toBe(5);
@@ -204,19 +210,42 @@ describe("assessWellness", () => {
     const history = {
       ...flat("2026-01-10", 20, 5), // bien avant la fenêtre
       ...flat("2026-02-28", 7, 4),
-      [today]: V(4),
+      [c(today)]: V(4),
     };
     expect(assessWellness(history, today).baselineCount).toBe(7);
   });
 
   it("ignore les clés qui ne sont pas des dates", () => {
-    const history = { ...flat("2026-02-28", 7, 4), [today]: V(4), nope: V(1) } as Record<
-      string,
-      WellnessData
-    >;
+    // Clés de semaine parasites "1".."4" à valeur numérique : présentes en base.
+    const history = { ...flat("2026-02-28", 7, 4), [c(today)]: V(4), nope: V(1), "1": 3, "4": 2 };
     const a = assessWellness(history, today);
     expect(a.date).toBe(today);
     expect(a.baselineCount).toBe(7);
+  });
+
+  it("lit l'ancien format ISO comme le format compact", () => {
+    const iso: Record<string, WellnessData> = {};
+    for (let i = 1; i <= 14; i++) iso[shiftIso(today, -i)] = V(4);
+    iso[today] = { ...V(4), doms: 3 };
+    expect(assessWellness(iso, today).level).toBe("alerte");
+  });
+
+  it("régression : un historique réel en clés compactes déclenche bien l'alerte", () => {
+    // Avant le 2026-11-08, seules les clés ISO étaient lues : zéro alerte en prod.
+    const history = { ...flat("2026-02-28", 14, 4), [c(today)]: { ...V(4), doms: 3 } };
+    expect(Object.keys(history).every((k) => /^\d{8}$/.test(k))).toBe(true);
+    expect(assessWellness(history, today).level).toBe("alerte");
+  });
+
+  it("une note hors échelle (ancienne échelle /10) n'entre ni dans l'habitude ni dans le score", () => {
+    const history = {
+      ...flat("2026-02-28", 14, 4),
+      "20260214": { fatigue: 9, sommeil: 9, stress: 9, energie: 9, doms: 9 },
+      [c(today)]: V(4),
+    };
+    const a = assessWellness(history, today);
+    expect(a.level).toBe("none");
+    expect(a.deviations).toEqual([]);
   });
 });
 

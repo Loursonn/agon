@@ -23,11 +23,11 @@ function input(over: Partial<SummaryInput> = {}): SummaryInput {
         },
       },
       "asp:wlog": { "2026-10-02": 62.4, "2026-10-03": "n'importe quoi" },
-      "asp:injuries": [
-        { id: "i1", zones: ["Genou G"], type: "tendinite", intensity: 4, status: "active", date_start: "2026-09-20" },
-        { id: "i2", zones: ["Épaule"], status: "guerie", date_start: "2026-01-01", date_end: "2026-02-01" },
-      ],
     },
+    injuries: [
+      { kind: "blessure", status: "en_cours", zone: "Genou G", date: "2026-09-20", pain_level: 4, title: "tendinite après l'IRM" },
+      { kind: "blessure", status: "gueri", zone: "Épaule", date: "2026-01-01", return_date: "2026-02-01" },
+    ],
     prog: [{ id: "s1", name: "A", short: "A", recurrence: "weekly", multi_semaine: false,
       blocs: [{ id: "b1", name: "Force", sort_order: 0, exercices: [
         { id: "e1", exercise_id: "x", exercise_name: "Squat", mode: "classique", sort_order: 0, params: { nb_series: 3 } },
@@ -71,13 +71,29 @@ describe("buildSummary", () => {
     expect(s.poids).toEqual([{ date: "2026-10-02", kg: 62.4 }]);
   });
 
+  it("lit le wellness et le poids stockés en clés compactes (format réel)", () => {
+    const base = input();
+    const s = buildSummary({
+      ...base,
+      appData: {
+        ...base.appData,
+        "asp:wh": { "20261002": { fatigue: 4, sommeil: 4, stress: 3, energie: 4, doms: 5, injComment: "genou" } },
+        "asp:wlog": { "20261002": 62.4 },
+      },
+    });
+    expect(s.bien_etre).toHaveLength(1);
+    expect(s.bien_etre[0]).toMatchObject({ date: "2026-10-02", score: 80, fraicheur_musculaire: 5, blesse_malade: true });
+    expect(JSON.stringify(s)).not.toContain("genou");
+    expect(s.poids).toEqual([{ date: "2026-10-02", kg: 62.4 }]);
+  });
+
   it("ne donne que le prénom", () => {
     expect(buildSummary(input()).athlete).toEqual({ id: "a1", prenom: "Léa" });
     expect(firstName({ first_name: null, full_name: "Léa Martin" })).toBe("Léa");
   });
 
   it("garde les blessures qui recouvrent la période, ouvertes comprises", () => {
-    expect(buildSummary(input()).blessures.map((b) => b.zones)).toEqual([["Genou G"]]);
+    expect(buildSummary(input()).blessures.map((b) => b.zone)).toEqual(["Genou G"]);
   });
 
   it("nomme les séries réalisées par l'exercice du programme, et écarte celles qu'on ne sait plus nommer", () => {

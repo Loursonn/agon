@@ -4,6 +4,8 @@ import { X, Moon, Sunrise, CheckCircle2, Zap, ChevronDown, ChevronUp, Footprints
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { C } from "@/lib/theme";
+import { wellnessView } from "@/lib/wellness";
+import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL } from "@shared/domain/wellness";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsList } from "./VideoRequestsList";
 import type { WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
@@ -44,10 +46,10 @@ function simulateSleep(sommeil: number): { bedH: number; bedM: number; upH: numb
   return { bedH: bed.h, bedM: bed.m, upH: up.h, upM: up.m };
 }
 
-function scoreColor(v: number, max = 10): string {
-  const pct = v / max;
-  if (pct >= 0.7) return C.g;
-  if (pct >= 0.5) return C.o;
+/** Note 1-5 (5 = mieux) : vert ≥ 4, orange 3, rouge ≤ 2. */
+function itemColor(v: number): string {
+  if (v >= 4) return C.g;
+  if (v >= 3) return C.o;
   return C.r;
 }
 
@@ -487,7 +489,9 @@ export function DayDetailPanel({ date, wellness, workouts = [], energySessions =
   const [evolutionWorkout, setEvolutionWorkout] = useState<WorkoutDetail | null>(null);
   const dateLabel = format(parseISO(date), "EEEE d MMMM", { locale: fr });
   const titleCase = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
-  const scoreCol  = wellness ? scoreColor(wellness.score, 100) : C.tx3;
+  // Score, palier et réponse « blessé/malade » : domaine wellness (recalculés).
+  const view      = wellness ? wellnessView(wellness) : null;
+  const scoreCol  = view ? view.reco.c : C.tx3;
 
   const completedWorkouts = workouts.filter((w) => w.status === "completed");
 
@@ -523,25 +527,37 @@ export function DayDetailPanel({ date, wellness, workouts = [], energySessions =
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 background: scoreCol + "15", flexShrink: 0,
               }}>
-                <span style={{ fontSize: 22, fontWeight: 900, color: scoreCol, lineHeight: 1 }}>{wellness.score}</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: scoreCol, lineHeight: 1 }}>{view?.score ?? "—"}</span>
                 <span style={{ fontSize: 9, color: C.tx3 }}>/100</span>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 4 }}>
-                  {wellness.score >= 70 ? "Bonne forme" : wellness.score >= 50 ? "Forme correcte" : "Fatigue élevée"}
+                <div style={{ fontSize: 13, fontWeight: 700, color: scoreCol, marginBottom: 4 }}>
+                  {view?.reco.label ?? "—"}
                 </div>
                 <div style={{ fontSize: 11, color: C.tx3 }}>
-                  Fatigue {wellness.fatigue}/5 · Énergie {wellness.energie}/5
+                  {view?.score != null ? view.reco.desc : "Saisie incomplète"}
                 </div>
               </div>
             </div>
 
-            {/* Component bars */}
+            {/* Réponse « Es-tu blessé/malade ? » */}
+            {view?.injuryNote && (
+              <div style={{ marginBottom: 16, padding: "10px 12px", borderRadius: 4, background: C.r + "12", border: "1px solid " + C.r + "40" }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>
+                  Blessé / malade
+                </div>
+                <div style={{ fontSize: 12, color: C.tx, lineHeight: 1.5 }}>{view.injuryNote}</div>
+              </div>
+            )}
+
+            {/* Les 5 notes, avec les intitulés de la saisie athlète (5 = mieux) */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 4 }}>
-              <ComponentBar label="Fatigue" value={wellness.fatigue} color={C.o} />
-              <ComponentBar label="Sommeil" value={wellness.sommeil} color={C.b} />
-              <ComponentBar label="Stress"  value={wellness.stress}  color={C.r} />
-              <ComponentBar label="Énergie" value={wellness.energie} color={C.g} />
+              {WELLNESS_ITEMS.map((k) => {
+                const v = view?.items[k];
+                return v != null
+                  ? <ComponentBar key={k} label={WELLNESS_ITEM_LABEL[k]} value={v} color={itemColor(v)} />
+                  : null;
+              })}
             </div>
 
             {/* DOMS */}

@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { listWorkoutLogs } from "@/api/workouts";
+import { getWellnessHistory } from "@/api/wellness";
+import { averageScore, wellnessEntries, wellnessScore } from "@shared/domain/wellness";
 
 export interface MicroStats {
   completed: number;
   planned:   number;
   avg_rpe:   number | null;
+  /** Score wellness moyen /100 sur la semaine (domaine wellness) ; null sans saisie. */
   avg_wellness: number | null;
 }
 
@@ -18,19 +22,11 @@ export function useMicroStats(
     enabled: !!athleteId && !!startDate,
     staleTime: 300_000,
     queryFn: async () => {
-      const [logsRes, wellnessRes, energyRes] = await Promise.all([
-        supabase
-          .from("workout_logs")
-          .select("status, workout_rpe(rpe_score)")
-          .eq("athlete_id", athleteId)
-          .gte("scheduled_date", startDate)
-          .lte("scheduled_date", endDate),
-        supabase
-          .from("wellness_logs")
-          .select("energy, fatigue, stress, sleep")
-          .eq("athlete_id", athleteId)
-          .gte("date", startDate)
-          .lte("date", endDate),
+      const [logs, wellnessRes, energyRes] = await Promise.all([
+        listWorkoutLogs({ athleteIds: [athleteId], from: startDate, to: endDate, withMods: false }),
+        // Wellness : `wellness_logs` n'existe pas (toujours « — ») ; lu par
+        // src/api/wellness (asp:wh + archive), même score que partout ailleurs.
+        getWellnessHistory(athleteId, { from: startDate, to: endDate }),
         supabase
           .from("energy_session_assignments")
           .select("rpe_score")
@@ -40,15 +36,12 @@ export function useMicroStats(
           .lte("scheduled_date", endDate),
       ]);
 
-      const logs = logsRes.data ?? [];
       const completed = logs.filter((l) => l.status === "completed").length;
       const planned   = logs.length;
 
-      const muscuRpes = logs.flatMap((l) => {
-        if (!Array.isArray(l.workout_rpe) || l.workout_rpe.length === 0) return [];
-        const r = (l.workout_rpe[0] as { rpe_score: number }).rpe_score;
-        return r != null ? [r] : [];
-      });
+      // RPE : seule source `workout_logs.rpe_score` (l'embed workout_rpe arrivait
+      // en objet, jamais en tableau : la moyenne restait vide).
+      const muscuRpes = logs.flatMap((l) => (l.rpe_score != null ? [l.rpe_score] : []));
       const energyRpes = (energyRes.data ?? [])
         .map((e) => (e as { rpe_score: number | null }).rpe_score)
         .filter((r): r is number => r != null);
@@ -57,16 +50,7 @@ export function useMicroStats(
         ? allRpes.reduce((s, v) => s + v, 0) / allRpes.length
         : null;
 
-      const wellness = wellnessRes.data ?? [];
-      const wellnessScores = wellness.map((w) => {
-        const vals = [w.energy, w.fatigue != null ? 10 - w.fatigue : null, w.stress != null ? 10 - w.stress : null, w.sleep]
-          .filter((v): v is number => v != null);
-        return vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
-      }).filter((v): v is number => v != null);
-
-      const avg_wellness = wellnessScores.length > 0
-        ? wellnessScores.reduce((s, v) => s + v, 0) / wellnessScores.length
-        : null;
+      const avg_wellness = averageScore(wellnessEntries(wellnessRes).map((e) => wellnessScore(e)));
 
       return { completed, planned, avg_rpe, avg_wellness };
     },

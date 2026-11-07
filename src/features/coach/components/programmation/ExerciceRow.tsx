@@ -62,7 +62,7 @@ export function ExerciceRow({
   const accent = accentColor ?? VIOLET
   const accentSoft = accent + "1F"
 
-  const { best: bestRM } = useExerciceRM(athleteId, exercice.exercise_name)
+  const { best: bestRM } = useExerciceRM(athleteId, exercice)
   const { data: bankMuscles } = useExerciseBankMuscles()
   const muscles = resolveMuscles(exercice, bankMuscles ?? new Map())
 
@@ -220,7 +220,7 @@ export function ExerciceRow({
         <RmDrawer
           open={showRm}
           onClose={() => setShowRm(false)}
-          exerciseName={exercice.exercise_name}
+          exercice={exercice}
           athleteId={athleteId}
         />
       )}
