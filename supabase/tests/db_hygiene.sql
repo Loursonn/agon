@@ -1,10 +1,14 @@
 -- Tests de 20261109180000_db_hygiene.sql (index des FK, updated_at, policies
 -- en double, banque de tests coach_athlete, RPC énergie admin, set_own_coach).
--- Usage (base liée, rien n'est conservé) :
---   { echo 'BEGIN;'; cat supabase/migrations/20261109180000_db_hygiene.sql; cat supabase/tests/db_hygiene.sql; echo 'ROLLBACK;'; } > /tmp/x.sql
---   supabase db query --linked -f /tmp/x.sql
+-- Toujours annulé (BEGIN … ROLLBACK dans ce fichier) : rien n'est conservé.
+-- Avant application :
+--   { echo 'BEGIN;'; cat supabase/migrations/20261109180000_db_hygiene.sql; sed '/^BEGIN;$/d' supabase/tests/db_hygiene.sql; } > "$TMPDIR/x.sql"
+--   supabase db query --linked -f "$TMPDIR/x.sql"
+-- Après application : supabase db query --linked -f supabase/tests/db_hygiene.sql
 -- Chaque ligne de résultat doit avoir ok = true. Aucune donnée réelle n'est
 -- affichée : seulement des noms de cas et des compteurs.
+
+BEGIN;
 
 -- ===== Préparation =====
 CREATE TEMP TABLE t_ids AS
@@ -219,3 +223,4 @@ END $$;
 RESET ROLE;
 
 SELECT name, ok, left(detail, 60) AS detail FROM t_res;
+ROLLBACK;

@@ -1712,3 +1712,24 @@ moins 15 ans pour utiliser Agon. ». Les comptes existants ne sont pas touchés.
 RGPD / loi Informatique et libertés art. 45) sans aucun contrôle. Le
 contrôle serveur seul évite qu'on le contourne en appelant l'API directement ;
 la phase 1 évite de casser les inscriptions du client en production.
+
+## 2026-11-08 — Écritures en prod du lot refonte
+
+**Fait** (accord d'Hugo) : `claim-athlete` déployé (date de naissance
+facultative), migration âge minimum phase 1 (20261109160000), hygiène base
+(20261109180000), tables santé (20261110100000), types régénérés,
+`pending-athlete` et `delete-account` déployés. Phase 2 de l'âge (date
+obligatoire) : après déploiement de `main`.
+
+**Incident** : le test `supabase/tests/db_hygiene.sql` a été lancé seul alors
+qu'il n'avait pas sa propre transaction annulée : ses écritures de test sont
+restées en prod (une séance énergie + assignation et une séance « Test hygiène
+BDD » à J+400 chez un athlète, un coach-athlète inactif remis sans coach
+référent, la date de modification d'un test de la banque). Tout a été
+retiré ou remis le jour même, avec l'accord d'Hugo ; aucun co-coach ni lien
+coach perdu (vérifié).
+
+**Règle** : chaque fichier de `supabase/tests/` contient son propre
+`BEGIN; … ROLLBACK;` (corrigé pour `db_hygiene.sql`, déjà le cas des autres).
+Avant de lancer un test, vérifier `grep -n "^ROLLBACK;" <fichier>`.
+

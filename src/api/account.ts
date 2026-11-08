@@ -207,30 +207,17 @@ export async function ensureCoachCode(profile: Profile): Promise<Profile> {
   return { ...profile, coach_code: code };
 }
 
-/*
-  `set_own_coach` (migration 20261109180000) n'est pas encore dans les types
-  générés : cast à retirer après `supabase gen types`.
-*/
-type SetOwnCoachRpc = (fn: "set_own_coach", args: { p_coach: string | null }) =>
-  PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
-
 /**
  * Quitter son coach (`null`) ou se coacher soi-même (coach-athlète : son propre id).
- *
  * Passe par la RPC `set_own_coach` (CLAUDE.md : `profiles.coach_id` ne
- * s'écrit que par RPC). Tant que la migration n'est pas appliquée en prod,
- * la RPC est inconnue (PGRST202) : repli sur l'écriture directe d'avant,
- * que le trigger `guard_profile_privileged_fields` limite aux mêmes deux
- * valeurs. Repli à supprimer une fois la migration en prod.
+ * s'écrit que par RPC).
  */
 export async function setOwnCoach(userId: string, coachId: null | string, what = "Erreur"): Promise<void> {
   if (coachId !== null && coachId !== userId) {
     throw new ApiError(what, { message: "Rattachement à un autre coach : passer par le code coach" });
   }
-  const rpc = db().rpc as unknown as SetOwnCoachRpc;
-  const res = await rpc.call(db(), "set_own_coach", { p_coach: coachId });
-  if (res.error?.code !== "PGRST202") return check(res, what);
-  check(await db().from("profiles").update({ coach_id: coachId }).eq("id", userId), what);
+  // Les types générés ne savent pas que l'argument accepte NULL.
+  check(await db().rpc("set_own_coach", { p_coach: coachId as string }), what);
 }
 
 /** Lien d'invitation (ancien parcours `/invite/:token`) créé par le coach connecté ; renvoie le jeton. */

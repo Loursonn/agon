@@ -425,18 +425,6 @@ export interface BodyWeightGoal {
   targetKg: number | null;
 }
 
-type DbErr = { message: string; code?: string } | null;
-interface Select<T> extends PromiseLike<{ data: T[] | null; error: DbErr }> {
-  eq(col: string, v: unknown): Select<T>;
-  gte(col: string, v: unknown): Select<T>;
-  lte(col: string, v: unknown): Select<T>;
-  order(col: string, o?: { ascending?: boolean }): Select<T>;
-}
-/** Tables de la migration 20261110100000, pas encore dans les types générés. */
-function weightTable<T>(name: "body_weight_logs" | "body_weight_milestones" | "body_weight_goals", cols: string): Select<T> {
-  return (db() as unknown as { from: (t: string) => { select: (c: string) => Select<T> } }).from(name).select(cols);
-}
-
 /** Table absente (migration pas encore appliquée) : PostgREST PGRST205, Postgres 42P01. */
 function tableMissing(e: unknown): boolean {
   return e instanceof ApiError && (e.code === "PGRST205" || e.code === "42P01");
@@ -470,7 +458,7 @@ function legacyPoints(entries: Array<[unknown, unknown]>): WeightPoint[] {
 export async function getWeightLog(athleteId: string, range: { from?: IsoDay | null; to?: IsoDay | null } = {}): Promise<WeightPoint[]> {
   const what = "Lecture des pesées impossible";
   try {
-    let q = weightTable<{ day: string; kg: unknown }>("body_weight_logs", "day, kg").eq("athlete_id", athleteId);
+    let q = db().from("body_weight_logs").select("day, kg").eq("athlete_id", athleteId);
     if (range.from) q = q.gte("day", range.from);
     if (range.to) q = q.lte("day", range.to);
     return unwrapRows(await q.order("day", { ascending: true }), what)
@@ -489,7 +477,7 @@ export async function getWeightMilestones(athleteId: string): Promise<WeightPoin
   const what = "Lecture des paliers de poids impossible";
   try {
     const rows = unwrapRows(
-      await weightTable<{ day: string; kg: unknown }>("body_weight_milestones", "day, kg").eq("athlete_id", athleteId).order("day", { ascending: true }),
+      await db().from("body_weight_milestones").select("day, kg").eq("athlete_id", athleteId).order("day", { ascending: true }),
       what,
     );
     return rows
@@ -514,7 +502,7 @@ export async function getBodyWeightGoal(athleteId: string): Promise<BodyWeightGo
   let row: { reference_kg: unknown; target_kg: unknown } | undefined;
   try {
     [row] = unwrapRows(
-      await weightTable<{ reference_kg: unknown; target_kg: unknown }>("body_weight_goals", "reference_kg, target_kg").eq("athlete_id", athleteId),
+      await db().from("body_weight_goals").select("reference_kg, target_kg").eq("athlete_id", athleteId),
       what,
     );
   } catch (e) {

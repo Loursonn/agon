@@ -490,6 +490,96 @@ export type Database = {
           },
         ]
       }
+      body_weight_goals: {
+        Row: {
+          athlete_id: string
+          reference_kg: number | null
+          target_kg: number | null
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          reference_kg?: number | null
+          target_kg?: number | null
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          reference_kg?: number | null
+          target_kg?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "body_weight_goals_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      body_weight_logs: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          day: string
+          kg: number
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          day: string
+          kg: number
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          day?: string
+          kg?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "body_weight_logs_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      body_weight_milestones: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          day: string
+          kg: number
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          day: string
+          kg: number
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          day?: string
+          kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "body_weight_milestones_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       citation_likes: {
         Row: {
           created_at: string
@@ -1595,6 +1685,41 @@ export type Database = {
           {
             foreignKeyName: "habits_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_sync_errors: {
+        Row: {
+          athlete_id: string | null
+          constraint_name: string | null
+          created_at: string
+          id: number
+          key: string
+          sqlstate: string | null
+        }
+        Insert: {
+          athlete_id?: string | null
+          constraint_name?: string | null
+          created_at?: string
+          id?: never
+          key: string
+          sqlstate?: string | null
+        }
+        Update: {
+          athlete_id?: string | null
+          constraint_name?: string | null
+          created_at?: string
+          id?: never
+          key?: string
+          sqlstate?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_sync_errors_athlete_id_fkey"
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4246,6 +4371,83 @@ export type Database = {
           },
         ]
       }
+      wellness_entries: {
+        Row: {
+          archived: boolean
+          athlete_id: string
+          bedtime: string | null
+          created_at: string
+          day: string
+          doms: number | null
+          doms_points: Json
+          doms_zones: string[]
+          energie: number | null
+          fatigue: number | null
+          injury_note: string | null
+          score: number | null
+          sleep_hours: number | null
+          sleep_interrupt_note: string | null
+          sleep_interrupted: boolean | null
+          sommeil: number | null
+          stress: number | null
+          updated_at: string
+          wake: string | null
+          weight_kg: number | null
+        }
+        Insert: {
+          archived?: boolean
+          athlete_id: string
+          bedtime?: string | null
+          created_at?: string
+          day: string
+          doms?: number | null
+          doms_points?: Json
+          doms_zones?: string[]
+          energie?: number | null
+          fatigue?: number | null
+          injury_note?: string | null
+          score?: number | null
+          sleep_hours?: number | null
+          sleep_interrupt_note?: string | null
+          sleep_interrupted?: boolean | null
+          sommeil?: number | null
+          stress?: number | null
+          updated_at?: string
+          wake?: string | null
+          weight_kg?: number | null
+        }
+        Update: {
+          archived?: boolean
+          athlete_id?: string
+          bedtime?: string | null
+          created_at?: string
+          day?: string
+          doms?: number | null
+          doms_points?: Json
+          doms_zones?: string[]
+          energie?: number | null
+          fatigue?: number | null
+          injury_note?: string | null
+          score?: number | null
+          sleep_hours?: number | null
+          sleep_interrupt_note?: string | null
+          sleep_interrupted?: boolean | null
+          sommeil?: number | null
+          stress?: number | null
+          updated_at?: string
+          wake?: string | null
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_entries_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_exercise_comments: {
         Row: {
           comment: string
@@ -4924,6 +5126,59 @@ export type Database = {
         }[]
       }
       has_unique: { Args: { "": string }; Returns: string }
+      health_day: { Args: { p: string }; Returns: string }
+      health_hm: { Args: { p: Json }; Returns: string }
+      health_item: { Args: { p: Json }; Returns: number }
+      health_num: { Args: { p: Json }; Returns: number }
+      health_parse_wellness: {
+        Args: {
+          p_archived: boolean
+          p_athlete: string
+          p_key: string
+          p_v: Json
+        }
+        Returns: {
+          archived: boolean
+          athlete_id: string
+          bedtime: string | null
+          created_at: string
+          day: string
+          doms: number | null
+          doms_points: Json
+          doms_zones: string[]
+          energie: number | null
+          fatigue: number | null
+          injury_note: string | null
+          score: number | null
+          sleep_hours: number | null
+          sleep_interrupt_note: string | null
+          sleep_interrupted: boolean | null
+          sommeil: number | null
+          stress: number | null
+          updated_at: string
+          wake: string | null
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wellness_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      health_resync: { Args: { p_athlete?: string }; Returns: number }
+      health_sync_goals: { Args: { p_athlete: string }; Returns: undefined }
+      health_sync_key: {
+        Args: { p_athlete: string; p_key: string }
+        Returns: undefined
+      }
+      health_sync_milestones: {
+        Args: { p_athlete: string }
+        Returns: undefined
+      }
+      health_sync_weight: { Args: { p_athlete: string }; Returns: undefined }
+      health_sync_wellness: { Args: { p_athlete: string }; Returns: undefined }
+      health_text: { Args: { p: Json }; Returns: string }
       in_todo: { Args: never; Returns: boolean }
       invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
       is_athlete_coach: {
@@ -5311,6 +5566,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_own_coach: { Args: { p_coach: string }; Returns: string }
       set_performance_reference: {
         Args: {
           p_athlete: string
@@ -5353,6 +5609,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      signup_birth_date_error: {
+        Args: { p_birth: string; p_min?: number; p_today: string }
+        Returns: string
       }
       skip:
         | { Args: { "": string }; Returns: string }

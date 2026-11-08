@@ -194,14 +194,14 @@ describe("api/account — code coach et inscription", () => {
     expect(tables.profiles[0].coach_id).toBe("c");
   });
 
-  it("setOwnCoach : RPC pas encore en prod (PGRST202) → écriture directe d'avant", async () => {
+  it("setOwnCoach : refus de la RPC remonté, pas d'écriture directe", async () => {
     const base = fakeDb({ profiles: [{ id: "u", coach_id: "c" }] });
     setDbForTests({
       ...base.db,
-      rpc: () => Promise.resolve({ data: null, error: { message: "Could not find the function", code: "PGRST202" } }),
+      rpc: () => Promise.resolve({ data: null, error: { message: "refusé", code: "42501" } }),
     });
-    await setOwnCoach("u", null);
-    expect(base.tables.profiles[0].coach_id).toBeNull();
+    await expect(setOwnCoach("u", null)).rejects.toThrow();
+    expect(base.tables.profiles[0].coach_id).toBe("c");
   });
 
   it("ensureCoachCode : code tiré et enregistré ; rien si déjà là ou pas coach", async () => {

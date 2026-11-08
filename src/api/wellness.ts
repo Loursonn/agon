@@ -32,8 +32,7 @@ const WH = "asp:wh";
 const ARCHIVE = "asp:blockHistory";
 const TABLE = "wellness_entries";
 const COLUMNS =
-  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, " +
-  "sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived";
+  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived";
 
 export interface WellnessRange {
   from?: IsoDay | null;
@@ -75,18 +74,7 @@ export interface WellnessRow {
   archived: boolean;
 }
 
-type DbErr = { message: string; code?: string } | null;
-interface Select<T> extends PromiseLike<{ data: T[] | null; error: DbErr }> {
-  eq(col: string, v: unknown): Select<T>;
-  in(col: string, v: readonly unknown[]): Select<T>;
-  gte(col: string, v: unknown): Select<T>;
-  lte(col: string, v: unknown): Select<T>;
-  order(col: string, o?: { ascending?: boolean }): Select<T>;
-  range(from: number, to: number): Select<T>;
-}
-/** `wellness_entries` n'est pas encore dans les types générés (migration 20261110100000). */
-const entries = () =>
-  (db() as unknown as { from: (t: string) => { select: (cols: string) => Select<WellnessRow> } }).from(TABLE).select(COLUMNS);
+const entries = () => db().from(TABLE).select(COLUMNS);
 
 /** Table absente (migration pas encore appliquée) : PostgREST PGRST205, Postgres 42P01. */
 export function tableMissing(e: unknown): boolean {
