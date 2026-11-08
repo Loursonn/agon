@@ -11,6 +11,7 @@ import { X } from "lucide-react"
 import { toast } from "sonner"
 import { C } from "@/lib/theme"
 import { QK } from "@/lib/queryKeys"
+import { programKeys } from "@/api/program"
 import { ProgSessionWeekDrawer } from "@/features/coach/components/programmation/ProgSessionWeekDrawer"
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation"
 import { useUpdateProgrammation } from "@/features/coach/components/programmation/hooks/useUpdateProgrammation"
@@ -40,7 +41,7 @@ export function SessionEvolutionDrawer({ athleteId, sessionId, occurrence, onClo
     if (!updated) return
     pending.current = null
     // Ne jamais réécrire asp:prog à partir d'une lecture en erreur
-    const latest = qc.getQueryData<ProgSession[]>(["asp-prog", athleteId])
+    const latest = qc.getQueryData<ProgSession[]>(programKeys.sessions(athleteId))
     if (!latest) {
       toast.error("Programmation non chargée : modification non enregistrée")
       return

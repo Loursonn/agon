@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
 import { C } from "@/lib/theme"
-import { supabase } from "@/integrations/supabase/client"
+import { useCycleWeeks } from "./hooks/useProgramCycles"
 import { Copy } from "lucide-react"
 
 const VIOLET = "#FFC933"
@@ -15,27 +14,8 @@ interface SemaineNavProps {
   weekCount?: number
 }
 
-interface Microcycle {
-  id: string
-  start_date: string
-  end_date: string
-}
-
 export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek, weekCount }: SemaineNavProps) {
-  const { data: microcycles = [] } = useQuery<Microcycle[]>({
-    queryKey: ["microcycles-nav", cycleId],
-    enabled: !!cycleId,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("microcycles")
-        .select("id, start_date, end_date")
-        .eq("cycle_id", cycleId!)
-        .order("start_date")
-      if (error) throw error
-      return (data ?? []) as Microcycle[]
-    },
-  })
+  const { data: microcycles = [] } = useCycleWeeks(cycleId)
 
   // Occurrences : au moins les semaines du cycle, plus si des params existent au-delà
   const count = Math.max(microcycles.length, weekCount ?? 0, 1)

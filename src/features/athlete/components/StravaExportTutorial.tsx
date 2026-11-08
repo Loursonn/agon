@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { accountKeys, getMyCoachEmail } from "@/api/account";
+import { useAuth } from "@/hooks/useAuth";
 
 const ASSET_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/public-assets`;
 
@@ -16,15 +17,14 @@ const STEPS = [
 
 /** Tuto : exporter ses données Strava et les transmettre au coach */
 export function StravaExportTutorial() {
+  const { user } = useAuth();
+  // Clé par utilisateur : avant, une clé commune gardait l'e-mail du coach du
+  // compte précédent après un changement de compte sans rechargement.
   const { data: coachEmail } = useQuery<string | null>({
-    queryKey: ["myCoachEmail"],
+    queryKey: accountKeys.coachEmail(user?.id ?? "none"),
+    enabled: !!user,
     staleTime: Infinity,
-    queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).rpc("get_my_coach_email");
-      if (error) throw error;
-      return (data as string | null) ?? null;
-    },
+    queryFn: getMyCoachEmail,
   });
 
   const copy = async () => {

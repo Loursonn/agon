@@ -3,7 +3,7 @@ import { errorMessage } from "@/lib/errors";
 import { Link, useNavigate } from "react-router-dom";
 import { LEGAL_ROUTES } from "@/lib/legal";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { sendPasswordReset } from "@/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -53,11 +53,14 @@ export default function Login() {
     setError("");
     setLoading(true);
     const email = new FormData(e.currentTarget).get("email") as string;
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      await sendPasswordReset(email, `${window.location.origin}/reset-password`);
+    } catch (err) {
+      setLoading(false);
+      setError(errorMessage(err));
+      return;
+    }
     setLoading(false);
-    if (resetErr) { setError(resetErr.message); return; }
     setForgotSent(true);
   }
 

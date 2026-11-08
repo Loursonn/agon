@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo } from "react";
 import { X, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { getWorkoutLog } from "@/api/workouts";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { SessionBlocEditor } from "@/features/coach/components/programmation/SessionBlocEditor";
 import { defaultExerciceParams } from "@/features/coach/components/programmation/types";
@@ -53,14 +53,7 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
   const { data: wlog, isLoading: loadingLog } = useQuery({
     queryKey: ["coach-override-log", workoutLogId],
     staleTime: 0,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("id, session_id, session_name, scheduled_date, athlete_modifications")
-        .eq("id", workoutLogId)
-        .maybeSingle();
-      return data;
-    },
+    queryFn: () => getWorkoutLog(workoutLogId),
   });
 
   const { data: progSessions = [], isLoading: loadingSessions } = useProgrammation(athleteId);

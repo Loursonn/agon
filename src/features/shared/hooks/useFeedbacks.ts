@@ -1,60 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
+import { appContentKeys, appendUserFeedback, getCoachFeedbacks, listUserFeedback } from "@/api/appContent";
 import type { CoachFeedbacks, AppFeedbackEntry } from "../types/athlete";
-
-async function fetchCoachFeedback(athleteId: string): Promise<CoachFeedbacks> {
-  const { data } = await supabase.from('app_data').select('value')
-    .eq('athlete_id', athleteId).eq('key', 'asp:coach_feedback').maybeSingle();
-  return (data?.value as CoachFeedbacks) || {};
-}
-
-async function fetchAppFeedback(athleteId: string): Promise<AppFeedbackEntry[]> {
-  const { data } = await supabase.from('app_data').select('value')
-    .eq('athlete_id', athleteId).eq('key', 'app:user_feedback').maybeSingle();
-  return ((data?.value as { entries?: AppFeedbackEntry[] })?.entries) || [];
-}
-
-async function saveAppFeedback(athleteId: string, entries: AppFeedbackEntry[]) {
-  await supabase.from('app_data').upsert(
-    { athlete_id: athleteId, key: 'app:user_feedback', value: { entries }, updated_at: new Date().toISOString() },
-    { onConflict: 'athlete_id,key' },
-  );
-}
 
 export function useFeedbacks(athleteId: string) {
   const qc = useQueryClient();
 
   const { data: coachFeedbacks = {} } = useQuery<CoachFeedbacks>({
-    queryKey: QK.coachFeedback(athleteId),
-    queryFn: () => fetchCoachFeedback(athleteId),
+    queryKey: appContentKeys.coachFeedback(athleteId),
+    queryFn: () => getCoachFeedbacks(athleteId),
     staleTime: 30_000,
   });
 
   const { data: appFeedbacks = [] } = useQuery<AppFeedbackEntry[]>({
-    queryKey: QK.appFeedback(athleteId),
-    queryFn: () => fetchAppFeedback(athleteId),
+    queryKey: appContentKeys.userFeedback(athleteId),
+    queryFn: () => listUserFeedback(athleteId),
     staleTime: 60_000,
   });
 
   const addFeedbackMutation = useMutation({
-    mutationFn: async (entry: AppFeedbackEntry) => {
-      const newList = [...appFeedbacks, entry];
-      await saveAppFeedback(athleteId, newList);
-      return newList;
-    },
+    // Relit la liste en base avant d'ajouter : jamais la copie en mémoire.
+    mutationFn: (entry: AppFeedbackEntry) => appendUserFeedback(athleteId, entry),
     onMutate: async (entry) => {
-      await qc.cancelQueries({ queryKey: QK.appFeedback(athleteId) });
-      const previous = qc.getQueryData<AppFeedbackEntry[]>(QK.appFeedback(athleteId));
-      qc.setQueryData(QK.appFeedback(athleteId), (old: AppFeedbackEntry[] = []) => [...old, entry]);
+      await qc.cancelQueries({ queryKey: appContentKeys.userFeedback(athleteId) });
+      const previous = qc.getQueryData<AppFeedbackEntry[]>(appContentKeys.userFeedback(athleteId));
+      qc.setQueryData(appContentKeys.userFeedback(athleteId), (old: AppFeedbackEntry[] = []) => [...old, entry]);
       return { previous };
     },
     onSuccess: (newList) => {
-      qc.setQueryData(QK.appFeedback(athleteId), newList);
+      qc.setQueryData(appContentKeys.userFeedback(athleteId), newList);
     },
     onError: (_err, _entry, ctx) => {
       if (ctx?.previous !== undefined) {
-        qc.setQueryData(QK.appFeedback(athleteId), ctx.previous);
+        qc.setQueryData(appContentKeys.userFeedback(athleteId), ctx.previous);
       }
     },
   });

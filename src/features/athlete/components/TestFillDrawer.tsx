@@ -3,9 +3,7 @@ import { FlaskConical } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
-import { invalidateReferences } from "@/api/references";
+import { completeTestSession, getTestSessionForFill, invalidateTests, type TestSessionFill } from "@/api/tests";
 import { C } from "@/lib/theme";
 import type { TestVariable, TestDefinitionWithVariables } from "@/features/shared/types/tests";
 
@@ -15,24 +13,12 @@ interface TestFillDrawerProps {
   onClose: () => void;
 }
 
-interface TestData {
-  id: string;
-  title: string;
-  type: string;
-  date: string;
-  completed: boolean;
-  description: string | null;
-  results_note: string | null;
-  results_structured: Record<string, unknown> | null;
-}
+type TestData = TestSessionFill;
 
 const TYPE_COLOR: Record<string, string> = {
   musculation: "#FFC933", endurance: "#33B5FF", vitesse: "#EF4444",
   puissance: "#F59E0B", souplesse: "#10B981", autre: "#6B7280",
 };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
 
 // ── Value type helpers ────────────────────────────────────────────────────────
 
@@ -149,55 +135,44 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
   useEffect(() => {
     if (!testId) { setTest(null); setDefinition(null); setValues({}); setNote(""); setComment(""); return; }
     setLoading(true);
+    let cancelled = false;
 
-    db.from("test_sessions")
-      .select("id, title, type, date, completed, description, results_note, results_structured")
-      .eq("id", testId)
-      .single()
-      .then(async ({ data }: { data: TestData | null }) => {
+    getTestSessionForFill(testId)
+      .then(({ session: data, definition: def }) => {
+        if (cancelled) return;
         setTest(data);
+        setDefinition(def);
 
-        const structured = data?.results_structured as Record<string, unknown> | null;
+        const structured = data?.results_structured ?? null;
 
-        if (data?.title) {
-          const { data: defs } = await db
-            .from("test_definitions")
-            .select("*, test_variables(*)")
-            .ilike("name", data.title)
-            .limit(1);
-
-          const def = (defs?.[0] as TestDefinitionWithVariables | null) ?? null;
-          if (def) {
-            def.test_variables = [...def.test_variables].sort((a, b) => a.label.localeCompare(b.label));
-          }
-          setDefinition(def);
-
-          if (def && structured) {
-            // Pre-fill variable values
-            const storedVars = (structured.variables ?? {}) as Record<string, number>;
-            const preloaded: Record<string, string> = {};
-            for (const v of def.test_variables) {
-              const val = storedVars[v.key];
-              if (val != null && !isNaN(Number(val))) {
-                preloaded[v.key] = storedToDisplay(Number(val), v.value_type);
-              }
+        if (def && structured) {
+          // Pre-fill variable values
+          const storedVars = (structured.variables ?? {}) as Record<string, number>;
+          const preloaded: Record<string, string> = {};
+          for (const v of def.test_variables) {
+            const val = storedVars[v.key];
+            if (val != null && !isNaN(Number(val))) {
+              preloaded[v.key] = storedToDisplay(Number(val), v.value_type);
             }
-            setValues(preloaded);
           }
+          setValues(preloaded);
+        }
 
-          // For non-variable tests, note = results_note
-          if (!def || def.test_variables.length === 0) {
-            setNote(data?.results_note ?? "");
-          }
-        } else {
+        // For non-variable tests, note = results_note
+        if (!def || def.test_variables.length === 0) {
           setNote(data?.results_note ?? "");
         }
 
         // Pre-fill comment from results_structured.comment
         setComment((structured?.comment as string) ?? "");
-
-        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Impossible de charger le test");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
+    return () => { cancelled = true; };
   }, [testId]);
 
   const tc = TYPE_COLOR[test?.type ?? ""] ?? "#6B7280";
@@ -228,21 +203,19 @@ export function TestFillDrawer({ testId, athleteId, onClose }: TestFillDrawerPro
 
     if (comment.trim()) results_structured.comment = comment.trim();
 
-    const { error } = await db
-      .from("test_sessions")
-      .update({
-        completed: true,
-        results_note: results_note_val,
-        results_structured: Object.keys(results_structured).length > 0 ? results_structured : null,
-      })
-      .eq("id", test.id);
-
+    try {
+      await completeTestSession(test.id, {
+        resultsNote: results_note_val,
+        resultsStructured: Object.keys(results_structured).length > 0 ? results_structured : null,
+      });
+    } catch {
+      setSaving(false);
+      toast.error("Erreur lors de l'enregistrement");
+      return;
+    }
     setSaving(false);
-    if (error) { toast.error("Erreur lors de l'enregistrement"); return; }
-    qc.invalidateQueries({ queryKey: QK.activePlan(athleteId) });
-    qc.invalidateQueries({ queryKey: QK.testSessions(athleteId) });
-    // Le trigger SQL a pu créer une référence (VMA…) : séances énergie à jour.
-    void invalidateReferences(qc, athleteId);
+    // Semaine, planning, résultats et références (créées par trigger) à jour.
+    void invalidateTests(qc, athleteId);
     toast.success("Test enregistré ✓");
     onClose();
   }

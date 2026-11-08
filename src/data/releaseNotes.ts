@@ -38,6 +38,41 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-08-plus-de-pertes",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "Plus aucune modification perdue en silence",
+    summary: "Quand une sauvegarde échoue, l'app le dit au lieu d'afficher « enregistré ». Et deux personnes qui travaillent en même temps ne s'effacent plus.",
+    sections: [
+      {
+        title: "Programmation et planning",
+        points: [
+          "Deux coachs (ou un coach et l'assistant) qui modifient le même programme ne s'effacent plus leurs changements.",
+          "Créer un cycle ou changer ses dates se fait d'un bloc : plus de cycle sans semaines, plus de « semaine 1 » en double, les semaines allégées restent marquées.",
+          "Une séance déjà réalisée n'est plus remise en « prévue » quand tu crées un cycle depuis le bloc.",
+        ],
+      },
+      {
+        title: "Séances énergie, tests, poids",
+        points: [
+          "Si tu supprimes une séance énergie pendant que l'athlète la valide, il voit une erreur au lieu de « Séance validée ! ».",
+          "Annuler la validation d'une course la retire bien du volume de course.",
+          "Modifier un résultat de test ne peut plus effacer ses valeurs.",
+          "La pesée du jour et les paliers de poids ne s'écrasent plus d'un appareil à l'autre.",
+        ],
+      },
+      {
+        title: "Ailleurs",
+        points: [
+          "Accueil : « X a enregistré une séance » s'affiche de nouveau dans l'activité récente.",
+          "Banque d'exercices : fusionner deux exercices garde la vidéo et les consignes du doublon ; un exercice créé depuis la recherche t'appartient (tu peux le modifier).",
+          "Le compte « J-x » avant une compétition et la séance du jour côté pro ne se trompent plus de jour après minuit.",
+          "Activer HYROX sur un athlète affiche l'onglet tout de suite.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-08-alerte-blesse-malade",
     date: "2026-11-08",
     kind: "feature",

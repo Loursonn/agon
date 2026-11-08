@@ -1,15 +1,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getReco } from "@/lib/wellness";
-import { QK } from "@/lib/queryKeys";
 import { localISO } from "@/lib/date";
 import { wellnessScore, type WellnessEntry } from "@shared/domain/wellness";
+import { listWorkoutLogs } from "@/api/workouts";
+import { coachKeys, listUpcomingTestSessions } from "@/api/coaches";
 import { useWellnessHistories } from "./useWellness";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
 
 export type SessionStatus = "planned" | "in_progress" | "completed" | "missed" | "skipped";
 
@@ -54,19 +51,8 @@ export function useCoachDashboard() {
 
   // ── 1. Today's workout_logs ─────────────────────────────────────────────────
   const logsQ = useQuery({
-    queryKey: QK.coachDashboard.today(user?.id ?? "", today),
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("workout_logs")
-        .select("id, athlete_id, session_name, status, rpe_score")
-        .in("athlete_id", athleteIds)
-        .eq("scheduled_date", today);
-      if (error) throw error;
-      return (data ?? []) as {
-        id: string; athlete_id: string; session_name: string | null;
-        status: string; rpe_score: number | null;
-      }[];
-    },
+    queryKey: coachKeys.dashboardToday(user?.id ?? "", today),
+    queryFn: () => listWorkoutLogs({ athleteIds, from: today, to: today, withMods: false }),
     enabled: !!user && athleteIds.length > 0,
     ...COMMON,
   });
@@ -78,19 +64,8 @@ export function useCoachDashboard() {
 
   // ── 3. Yesterday's missed sessions ─────────────────────────────────────────
   const missedQ = useQuery({
-    queryKey: QK.coachDashboard.missed(user?.id ?? "", yesterday),
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("workout_logs")
-        .select("id, athlete_id, session_name, scheduled_date")
-        .in("athlete_id", athleteIds)
-        .eq("scheduled_date", yesterday)
-        .eq("status", "missed");
-      if (error) throw error;
-      return (data ?? []) as {
-        id: string; athlete_id: string; session_name: string | null; scheduled_date: string;
-      }[];
-    },
+    queryKey: coachKeys.dashboardMissed(user?.id ?? "", yesterday),
+    queryFn: () => listWorkoutLogs({ athleteIds, from: yesterday, to: yesterday, statuses: ["missed"], withMods: false }),
     enabled: !!user && athleteIds.length > 0,
     staleTime: 60_000,
     refetchOnWindowFocus: true,
@@ -98,20 +73,8 @@ export function useCoachDashboard() {
 
   // ── 4. Upcoming test sessions ──────────────────────────────────────────────
   const testsQ = useQuery({
-    queryKey: QK.coachDashboard.upcomingTests(user?.id ?? "", today),
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("test_sessions")
-        .select("id, athlete_id, title, date")
-        .in("athlete_id", athleteIds)
-        .gte("date", today)
-        .eq("completed", false)
-        .order("date", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as {
-        id: string; athlete_id: string; title: string; date: string;
-      }[];
-    },
+    queryKey: coachKeys.dashboardUpcomingTests(user?.id ?? "", today),
+    queryFn: () => listUpcomingTestSessions(athleteIds, today),
     enabled: !!user && athleteIds.length > 0,
     staleTime: 60_000,
     refetchOnWindowFocus: true,
@@ -148,7 +111,7 @@ export function useCoachDashboard() {
           sessions:      (logsByAthlete[a.id] ?? []).map((l) => ({
             id:          l.id,
             sessionName: l.session_name,
-            status:      l.status as SessionStatus,
+            status:      l.status,
             rpeScore:    l.rpe_score,
           })),
           wellnessScore: score,

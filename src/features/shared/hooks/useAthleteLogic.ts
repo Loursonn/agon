@@ -10,7 +10,9 @@ import {
 } from "@/api/workouts";
 import { toLegacyEntry } from "@shared/domain/wellness";
 import { toCompactDay } from "@shared/domain/dates";
-import { supabase } from "@/integrations/supabase/client";
+import { setHabitDone } from "@/api/habits";
+import { recordWeightMilestone, saveWeight } from "@/api/profile";
+import { toast } from "sonner";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData,
   ArchivedBlock, NewBlockOpts, BodyWeight, VisibilitySettings,
@@ -48,6 +50,9 @@ interface LogicDeps {
   /** Mettent à jour l'état en mémoire sans écrire en base (useAthletePersistedState). */
   _setWellnessRaw: (v: WellnessData | null) => void;
   _setWellnessHistoryRaw: (v: Record<string, WellnessData> | ((p: Record<string, WellnessData>) => Record<string, WellnessData>)) => void;
+  _setWeightLogRaw: (v: Record<string, number>) => void;
+  _setWeightMilestonesRaw: (v: Array<{ date: string; kg: number }>) => void;
+  _setBodyWeightRaw: (v: BodyWeight) => void;
   setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
   setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
   setBodyWeight: (v: BodyWeight) => void;
@@ -69,7 +74,7 @@ export function useAthleteLogic(d: LogicDeps) {
     setAthleteNotes, setBlockHistory, setWellness, setWellnessHistory,
     setWeightLog, setWeightMilestones, setBodyWeight,
     setMilestoneNotif, setWeekJustCompleted, setShowBilan, setAW, save,
-    _setWellnessRaw, _setWellnessHistoryRaw,
+    _setWellnessRaw, _setWellnessHistoryRaw, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw,
   } = d;
 
   // L'ancien rattrapage `asp:completed` → `workout_logs` (et ses nettoyages)
@@ -204,25 +209,31 @@ export function useAthleteLogic(d: LogicDeps) {
       });
     const writes: Array<void | Promise<boolean>> = [wellnessWrite];
     if (data.poids) {
-      const key = day;
-      const nwl = { ...weightLog, [key]: data.poids };
-      writes.push(setWeightLog(nwl));
-      const milestone = checkMilestone(nwl, bodyWeight.current);
-      if (milestone && milestone > bodyWeight.current) {
-        const nm = [...weightMilestones, { date: key, kg: milestone }];
-        setWeightMilestones(nm);
-        const newBw = { ...bodyWeight, current: milestone };
-        setBodyWeight(newBw);
-        setMilestoneNotif(milestone);
-        setTimeout(() => setMilestoneNotif(null), 3500);
-      }
+      // Une seule pesée, côté serveur (RPC `weight_set_day`) : le journal n'est
+      // plus réécrit en entier depuis l'état de l'appareil.
+      const iso = localISO();
+      writes.push(saveWeight(athleteId, iso, data.poids).then(async (log) => {
+        _setWeightLogRaw(log);
+        const milestone = checkMilestone(log, bodyWeight.current);
+        if (milestone && milestone > bodyWeight.current) {
+          const bw = await recordWeightMilestone(athleteId, iso, milestone);
+          _setWeightMilestonesRaw([...weightMilestones, { date: toCompactDay(iso), kg: milestone }]);
+          _setBodyWeightRaw(bw);
+          setMilestoneNotif(milestone);
+          setTimeout(() => setMilestoneNotif(null), 3500);
+        }
+        return true;
+      }).catch((e) => {
+        console.error("[saveWeight]", e);
+        return false;
+      }));
     }
     return Promise.all(writes.map((w) => Promise.resolve(w ?? true))).then((oks) => {
       const ok = oks.every(Boolean);
       if (ok && athleteId) clearDraft(wellnessDraftKey(athleteId, day));
       return ok;
     });
-  }, [athleteId, qc, weightLog, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
+  }, [athleteId, qc, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw, setMilestoneNotif]);
 
   const updateSessionDay = useCallback((sessId: string, dayIdx: number) => {
     setSessions(prev => prev.map(s => s.id === sessId ? { ...s, day_of_week: dayIdx } : s));
@@ -240,12 +251,12 @@ export function useAthleteLogic(d: LogicDeps) {
 
   const toggleHabitLog = useCallback(async (habitId: string, dateISO: string, habitLogs: Record<string, string[]>, setHabitLogs: (v: Record<string, string[]>) => void) => {
     const logs = habitLogs[habitId] || [];
-    if (logs.includes(dateISO)) {
-      await supabase.from('habit_logs').delete().match({ habit_id: habitId, date: dateISO });
-      setHabitLogs({ ...habitLogs, [habitId]: (habitLogs[habitId] || []).filter(d => d !== dateISO) });
-    } else {
-      await supabase.from('habit_logs').insert({ habit_id: habitId, athlete_id: athleteId, date: dateISO });
-      setHabitLogs({ ...habitLogs, [habitId]: [...(habitLogs[habitId] || []), dateISO] });
+    try {
+      const next = await setHabitDone(athleteId, habitId, dateISO, !logs.includes(dateISO), logs);
+      setHabitLogs({ ...habitLogs, [habitId]: next });
+    } catch (e) {
+      console.error("[toggleHabitLog]", e);
+      toast.error("Habitude non enregistrée — vérifie ta connexion");
     }
   }, [athleteId]);
 

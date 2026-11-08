@@ -13,7 +13,9 @@ import type {
   BodyWeight, Goals, ArchivedBlock,
   VisibilitySettings, SessionLog, FreeSession,
 } from "../types/athlete";
-import { supabase } from "@/integrations/supabase/client";
+import { readAppData, writeAppData } from "@/api/appData";
+import { listTestSessions } from "@/api/tests";
+import { listAthleteCycles } from "@/api/cycles";
 
 /**
  * Clé dont la lecture a échoué : comment la réappliquer une fois relue.
@@ -37,12 +39,13 @@ const DEF_VISIBILITY: VisibilitySettings = {
 async function determineActiveCycleId(athleteId: string): Promise<string | null> {
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const { data } = await supabase
-    .from("cycles")
-    .select("id, start_date, end_date")
-    .eq("athlete_id", athleteId)
-    .order("start_date", { ascending: false });
-  const rows = (data ?? []) as { id: string; start_date: string; end_date: string }[];
+  let rows: { id: string; start_date: string; end_date: string }[];
+  try {
+    // Plus récent d'abord.
+    rows = (await listAthleteCycles(athleteId, { direct: true })).reverse();
+  } catch {
+    return null; // comme avant : sans cycles lisibles, clés globales
+  }
   if (rows.length === 0) return null;
   const covering = rows.find((c) => c.start_date <= today && today <= c.end_date);
   return (covering ?? rows[0]).id;
@@ -392,12 +395,12 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   // ── Visibility settings + test sessions from Supabase ────────────────────
   useEffect(() => {
     if (!athleteId) return;
-    supabase.from('test_sessions').select('id,type,title,date,completed')
-      .eq('athlete_id', athleteId).order('date', { ascending: true })
-      .then(({ data }) => { if (data) setTestSessionsRaw(data); });
-    supabase.from('app_data').select('value')
-      .eq('athlete_id', athleteId).eq('key', 'asp:visibility').maybeSingle()
-      .then(({ data }) => { if (data?.value) setVisibilityRaw(v => ({ ...v, ...(data.value as VisibilitySettings) })); });
+    listTestSessions(athleteId)
+      .then(setTestSessionsRaw)
+      .catch(() => { /* garde la liste déjà affichée */ });
+    readAppData<VisibilitySettings>(athleteId, 'asp:visibility')
+      .then(({ value }) => { if (value) setVisibilityRaw(v => ({ ...v, ...value })); })
+      .catch(() => { /* réglages par défaut : tout visible */ });
   }, [athleteId, refreshNonce]);
 
   // ── Wellness midnight reset ────────────────────────────────────────────────
@@ -461,15 +464,12 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
 
   const setVisibilitySettings = useCallback(async (settings: VisibilitySettings) => {
     setVisibilityRaw(settings);
-    const { error } = await supabase.from('app_data').upsert(
-      { athlete_id: athleteId, key: 'asp:visibility', value: settings, updated_at: new Date().toISOString() },
-      { onConflict: 'athlete_id,key' },
-    );
-    if (error) {
+    try {
+      await writeAppData(athleteId, 'asp:visibility', settings);
+      flash(true);
+    } catch {
       flash(false);
       toast.error("Sauvegarde échouée — vérifie ta connexion", { id: "asp-persist-error" });
-    } else {
-      flash(true);
     }
   }, [athleteId, flash]);
 

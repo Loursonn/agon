@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { claimAthleteAccount } from "@/api/account";
 import { errorMessage } from "@/lib/errors";
 import { LEGAL_ROUTES } from "@/lib/legal";
 import { useClaimInfo } from "@/features/shared/hooks/useAthleteClaimLink";
@@ -36,12 +36,7 @@ export default function ClaimAthlete() {
     }
     setLoading(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("claim-athlete", {
-        body: { token, email, password },
-      });
-      if (fnError || data?.error) throw new Error(data?.error ?? "Activation impossible");
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw new Error(signInError.message);
+      await claimAthleteAccount(token, email, password);
       navigate("/");
     } catch (err) {
       setError(errorMessage(err));

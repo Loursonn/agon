@@ -1,50 +1,33 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { QK } from "@/lib/queryKeys";
 import type { Goals } from "@/features/shared/types/athlete";
-import { sha256Hex } from "@/lib/coachApiKey";
 import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 import {
   syncDocAssignmentsFromEnergy,
   syncDocAssignmentsFromProg,
 } from "@/features/shared/hooks/fiches/syncDocAssignments";
-import type { DraftKind, DraftOp } from "@shared/coachApiOps.ts";
+import { invalidateDocs } from "@/api/docs";
+import { invalidateProgram } from "@/api/program";
+import { invalidateEnergy } from "@/api/energy";
+import { invalidateTests } from "@/api/tests";
+import {
+  callCoachApi, coachKeys, draftTargetHash, invalidateCoachApiDrafts, listDraftHistory, listPendingDrafts, rejectDraft,
+  type CoachApiDraft,
+} from "@/api/coaches";
 
-export interface CoachApiDraft {
-  id: string;
-  kind: DraftKind;
-  title: string;
-  body: string;
-  ops: DraftOp[];
-  base_hash: string | null;
-  status: "pending" | "applied" | "rejected" | "undone";
-  applied_via: "app" | "api" | null;
-  created_at: string;
-  decided_at: string | null;
-  undone_at: string | null;
-}
-
-const COLUMNS = "id, kind, title, body, ops, base_hash, status, applied_via, created_at, decided_at, undone_at";
+export type { CoachApiDraft } from "@/api/coaches";
+export { CoachApiError, DraftAlreadyDecided } from "@/api/coaches";
 
 /** Propositions en attente de l'assistant IA du coach, pour un athlète. */
 export function useCoachApiDrafts(athleteId: string | undefined) {
-  return useQuery({
-    queryKey: QK.coachApiDrafts(athleteId ?? ""),
+  return useQuery<CoachApiDraft[]>({
+    queryKey: coachKeys.apiDrafts(athleteId ?? ""),
     enabled: !!athleteId,
     staleTime: 30_000,
     // L'assistant dépose pendant que l'app est ouverte : un retour sur
     // l'onglet suffit à voir ce qu'il vient de proposer.
     refetchOnWindowFocus: true,
-    queryFn: async (): Promise<CoachApiDraft[]> => {
-      const { data, error } = await supabase
-        .from("coach_api_drafts")
-        .select(COLUMNS)
-        .eq("athlete_id", athleteId!)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as CoachApiDraft[];
-    },
+    queryFn: () => listPendingDrafts(athleteId!),
   });
 }
 
@@ -54,87 +37,34 @@ export function useCoachApiDrafts(athleteId: string | undefined) {
  * C'est là que le coach annule.
  */
 export function useCoachApiHistory(athleteId: string | undefined) {
-  return useQuery({
-    queryKey: QK.coachApiHistory(athleteId ?? ""),
+  return useQuery<CoachApiDraft[]>({
+    queryKey: coachKeys.apiHistory(athleteId ?? ""),
     enabled: !!athleteId,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
-    queryFn: async (): Promise<CoachApiDraft[]> => {
-      const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
-      const { data, error } = await supabase
-        .from("coach_api_drafts")
-        .select(COLUMNS)
-        .eq("athlete_id", athleteId!)
-        .in("status", ["applied", "undone"])
-        .neq("kind", "axe")
-        .gte("decided_at", since)
-        .order("decided_at", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      return (data ?? []) as unknown as CoachApiDraft[];
-    },
+    queryFn: () => listDraftHistory(athleteId!),
   });
 }
 
 /**
  * Empreinte actuelle de la clé visée, calculée comme l'Edge Function la
- * calcule (SHA-256 du JSON renvoyé par la base). Différente de `base_hash` :
- * la cible a changé depuis la proposition.
+ * calcule. Différente de `base_hash` : la cible a changé depuis la proposition.
  */
 export function useDraftTargetHash(athleteId: string | undefined, key: "asp:prog" | "asp:goals") {
   return useQuery({
-    queryKey: ["coach-api-draft-target", athleteId, key],
+    queryKey: coachKeys.draftTarget(athleteId, key),
     enabled: !!athleteId,
     staleTime: 10_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_data")
-        .select("value")
-        .eq("athlete_id", athleteId!)
-        .eq("key", key)
-        .maybeSingle();
-      if (error) throw error;
-      return sha256Hex(JSON.stringify(data?.value ?? null));
-    },
+    queryFn: () => draftTargetHash(athleteId!, key),
   });
-}
-
-/** Erreur renvoyée par l'Edge Function : un code stable et une phrase. */
-export class CoachApiError extends Error {
-  constructor(public code: string, message: string) {
-    super(message);
-  }
-}
-
-/**
- * Appelle `coach-api` avec la session du coach. Appliquer et annuler se font
- * côté serveur : c'est lui qui tient le journal qui permet de revenir en
- * arrière.
- */
-async function callCoachApi<T>(path: string, body?: unknown): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<T>(`coach-api/${path}`, {
-    method: "POST",
-    body: body ?? {},
-  });
-  if (error) {
-    const ctx = (error as { context?: Response }).context;
-    let payload: { error?: string; message?: string } | null = null;
-    try {
-      payload = ctx ? await ctx.json() : null;
-    } catch {
-      payload = null;
-    }
-    throw new CoachApiError(payload?.error ?? "erreur", payload?.message ?? "La requête a échoué.");
-  }
-  return data as T;
 }
 
 /** Tout ce qu'une proposition peut avoir changé chez l'athlète. */
 function invalidateAfterWrite(qc: QueryClient, athleteId: string) {
-  qc.invalidateQueries({ queryKey: ["coach-api-drafts", athleteId] });
-  qc.invalidateQueries({ queryKey: ["asp-prog", athleteId] });
-  qc.invalidateQueries({ queryKey: ["coach-api-draft-target", athleteId] });
-  qc.invalidateQueries({ queryKey: QK.energySessions });
+  void invalidateCoachApiDrafts(qc, athleteId);
+  void invalidateProgram(qc, athleteId);
+  void invalidateEnergy(qc, null);
+  void invalidateTests(qc, athleteId);
   qc.invalidateQueries({ queryKey: QK.dayThemes(athleteId) });
   qc.invalidateQueries({ queryKey: ["day-themes", "recent"] });
   invalidateSessionStatus(qc, athleteId);
@@ -148,7 +78,7 @@ function invalidateAfterWrite(qc: QueryClient, athleteId: string) {
   }
   qc.invalidateQueries({ queryKey: QK.competitions() });
   // Fiches attribuées, rattachées ou rangées chez l'athlète (préfixe : tout le module).
-  qc.invalidateQueries({ queryKey: QK.docs });
+  void invalidateDocs(qc, athleteId);
   qc.invalidateQueries({ queryKey: QK.testSessions(athleteId) });
   // Les fiches suivent le programme et les séances énergie placées.
   void syncDocAssignmentsFromProg(athleteId, undefined, qc);
@@ -188,22 +118,11 @@ export function useUndoCoachApiDraft(athleteId: string) {
   });
 }
 
-export class DraftAlreadyDecided extends Error {}
-
 /** Écarte une proposition (ou marque un axe de travail comme lu et non retenu). */
 export function useRejectCoachApiDraft(athleteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from("coach_api_drafts")
-        .update({ status: "rejected", decided_at: new Date().toISOString() })
-        .eq("id", id)
-        .eq("status", "pending")
-        .select("id");
-      if (error) throw error;
-      if ((data ?? []).length === 0) throw new DraftAlreadyDecided();
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: QK.coachApiDrafts(athleteId) }),
+    mutationFn: rejectDraft,
+    onSettled: () => invalidateCoachApiDrafts(qc, athleteId),
   });
 }

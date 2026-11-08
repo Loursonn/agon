@@ -1,6 +1,6 @@
 -- Tests de la migration sécurité du 2026-11-07 (20261107100000, 20261107110000 = 2a, 20261107120000 = 2b).
 -- Usage (base liée, rien n'est conservé) :
---   { echo BEGIN; cat <migrations 2a/2b non encore appliquées>; cat supabase/tests/security_lockdown.sql; echo ROLLBACK; } > /tmp/x.sql
+--   { echo 'BEGIN;' cat <migrations 2a/2b non encore appliquées>; cat supabase/tests/security_lockdown.sql; echo 'ROLLBACK;' } > /tmp/x.sql
 --   supabase db query --linked -f /tmp/x.sql
 -- Chaque ligne de résultat doit avoir ok = true.
 -- Note : un coach qui retire son athlète passe par la RPC unlink_athlete

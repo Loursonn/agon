@@ -26,6 +26,12 @@ const FKS: { table: string; column: string; ref: string; action: "cascade" | "nu
 
 let seq = 0;
 
+/** `ilike` : `%` et `_` comme en SQL, sans tenir compte de la casse. */
+function likeToRegExp(pattern: string): RegExp {
+  const body = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".");
+  return new RegExp(`^${body}$`, "i");
+}
+
 /** Réponse simulée d'une RPC : reçoit les arguments et les tables (modifiables). */
 export type FakeRpc = (args: Record<string, unknown>, tables: Record<string, Row[]>) => unknown;
 
@@ -67,18 +73,25 @@ export function fakeDb(
       let single: "one" | "maybe" | null = null;
       let orderBy: { col: string; asc: boolean } | null = null;
       let max: number | null = null;
+      /** `range(from, to)` : lignes sautées avant la limite. */
+      let skip = 0;
+      /** `select(…, { count: "exact" })` : total filtré, avant `range`/`limit`. */
+      let withCount = false;
 
       const exec = () => {
         if (failOn && failOn.table === table && failOn.op === op) return { data: null, error: { message: "panne simulée" } };
         // Une lecture ne crée pas la table : l'état comparé reste celui écrit.
         const rows = op === "insert" || op === "upsert" ? t(table) : (tables[table] ?? []);
         let out: Row[] = [];
+        let total = 0;
         if (op === "select") {
           out = rows.filter((r) => filters.every((f) => f(r)));
           if (orderBy) {
             const { col, asc } = orderBy;
             out = [...out].sort((x, y) => (x[col] === y[col] ? 0 : (x[col] as never) < (y[col] as never) ? -1 : 1) * (asc ? 1 : -1));
           }
+          total = out.length;
+          if (skip > 0) out = out.slice(skip);
           if (max != null) out = out.slice(0, max);
         }
         else if (op === "delete") {
@@ -109,11 +122,11 @@ export function fakeDb(
         const copy = structuredClone(out);
         if (single === "one") return copy.length === 1 ? { data: copy[0], error: null } : { data: null, error: { message: "pas une ligne" } };
         if (single === "maybe") return { data: copy[0] ?? null, error: null };
-        return { data: copy, error: null };
+        return withCount ? { data: copy, count: total, error: null } : { data: copy, error: null };
       };
 
       const q = {
-        select: () => q,
+        select: (_cols?: string, o: { count?: string } = {}) => ((withCount = withCount || o.count === "exact"), q),
         eq: (c: string, v: unknown) => (filters.push((r) => r[c] === v), q),
         is: (c: string, v: unknown) => (filters.push((r) => (r[c] ?? null) === v), q),
         neq: (c: string, v: unknown) => (filters.push((r) => r[c] !== v), q),
@@ -123,8 +136,19 @@ export function fakeDb(
         lte: (c: string, v: never) => (filters.push((r) => r[c] != null && (r[c] as never) <= v), q),
         order: (c: string, o: { ascending?: boolean } = {}) => ((orderBy = { col: c, asc: o.ascending !== false }), q),
         limit: (n: number) => ((max = n), q),
+        range: (from: number, to: number) => ((skip = from), (max = to - from + 1), q),
         in: (c: string, v: unknown[]) => (filters.push((r) => v.includes(r[c])), q),
         not: (c: string, o: string, v: unknown) => (filters.push((r) => !(o === "is" ? (r[c] ?? null) === v : r[c] === v)), q),
+        /** `or("a.eq.x,b.cs.{y}")` : seulement `eq` (comparé en texte) et `cs` (tableau contenant une valeur). */
+        or: (expr: string) => (filters.push((r) => expr.split(",").some((part) => {
+          const [c, o, ...rest] = part.split(".");
+          const v = rest.join(".");
+          if (o === "cs") return Array.isArray(r[c]) && (r[c] as unknown[]).includes(v.replace(/^\{|\}$/g, ""));
+          return o === "eq" && r[c] != null && String(r[c]) === v;
+        })), q),
+        ilike: (c: string, pattern: string) => (filters.push((r) => typeof r[c] === "string" && likeToRegExp(pattern).test(r[c] as string)), q),
+        /** `like` : comme `ilike`, sensible à la casse. */
+        like: (c: string, pattern: string) => (filters.push((r) => typeof r[c] === "string" && new RegExp(likeToRegExp(pattern).source).test(r[c] as string)), q),
         insert: (p: Row | Row[]) => ((op = "insert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), q),
         upsert: (p: Row | Row[], o = {}) => ((op = "upsert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), (opts = o), q),
         update: (p: Row) => ((op = "update"), (payload = [structuredClone(p)]), q),

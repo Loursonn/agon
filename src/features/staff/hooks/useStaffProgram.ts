@@ -6,29 +6,19 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getStaffOccurrences, staffKeys } from "@/api/staff";
 import { useUnifiedCalendar } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { groupScheduleByDate, useDocSchedule } from "@/features/shared/hooks/fiches/useDocSchedule";
-import { computeOccurrences } from "@/lib/sessionOccurrence";
 import type { ProgSession } from "@/features/coach/components/programmation/types";
 
 /** Rang (1-based) de chaque workout_log dans sa séance, tous cycles confondus. */
 function useOccurrences(athleteId: string) {
   return useQuery({
-    queryKey: ["staff", "occurrences", athleteId],
+    queryKey: staffKeys.occurrences(athleteId),
     enabled: !!athleteId,
     staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("workout_logs")
-        .select("id, session_id, scheduled_date, status")
-        .eq("athlete_id", athleteId)
-        .neq("status", "skipped")
-        .limit(2000);
-      if (error) throw error;
-      return computeOccurrences(data ?? []);
-    },
+    queryFn: () => getStaffOccurrences(athleteId),
   });
 }
 

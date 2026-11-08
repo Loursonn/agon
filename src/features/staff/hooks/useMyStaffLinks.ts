@@ -3,11 +3,15 @@
  * principal de chacun, et l'état de l'accord staff de l'athlète.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchStaffAthleteProfiles } from "./useStaffAthleteData";
-import { toPermissions, type StaffPermissions, type StaffProfession } from "../lib/staffPermissions";
+import {
+  acceptStaffInvitation, getStaffInvitationPreview, invalidateStaff, listMyStaffLinks, listStaffAthleteProfiles,
+  staffKeys, staffSharingConsented, type StaffInvitationPreview,
+} from "@/api/staff";
+import type { StaffPermissions, StaffProfession } from "../lib/staffPermissions";
+
+export type { StaffInvitationPreview } from "@/api/staff";
+export { acceptStaffInvitation } from "@/api/staff";
 
 export interface MyStaffAthlete {
   linkId: string;
@@ -24,42 +28,22 @@ export interface MyStaffAthlete {
   createdAt: string;
 }
 
-interface Row {
-  id: string;
-  athlete_id: string;
-  profession: StaffProfession;
-  permissions: unknown;
-  can_edit_coach_content: boolean;
-  created_at: string;
-}
-
 export function useMyStaffLinks() {
   const { user } = useAuth();
   return useQuery<MyStaffAthlete[]>({
-    queryKey: QK.myStaffLinks(user?.id ?? ""),
+    queryKey: staffKeys.mine(user?.id ?? ""),
     enabled: !!user,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("athlete_staff")
-        .select("id, athlete_id, profession, permissions, can_edit_coach_content, created_at")
-        .eq("staff_id", user!.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      const rows = (data ?? []) as unknown as Row[];
+      const rows = await listMyStaffLinks(user!.id);
 
       // Identité de l'athlète et nom du coach : via la RPC filtrée (le pro n'a
       // pas de lecture directe de la ligne profiles de l'athlète).
-      const profiles = rows.length ? await fetchStaffAthleteProfiles() : [];
+      const profiles = rows.length ? await listStaffAthleteProfiles() : [];
       const byId = new Map(profiles.map((p) => [p.id, p]));
 
-      const consents = await Promise.all(
-        rows.map(async (r) => {
-          const { data: ok } = await supabase.rpc("staff_sharing_consented", { athlete_uuid: r.athlete_id });
-          return !!ok;
-        }),
-      );
+      // Une lecture d'accord qui échoue lève (avant : lue comme « pas d'accord »).
+      const consents = await Promise.all(rows.map((r) => staffSharingConsented(r.athlete_id)));
 
       return rows.map((r, i) => {
         const a = byId.get(r.athlete_id);
@@ -71,7 +55,7 @@ export function useMyStaffLinks() {
           coachId: a?.coach_id ?? null,
           coachName: a?.coach_name ?? null,
           profession: r.profession,
-          permissions: toPermissions(r.permissions),
+          permissions: r.permissions,
           canEditCoachContent: r.can_edit_coach_content,
           sharingConsent: consents[i],
           createdAt: r.created_at,
@@ -89,40 +73,20 @@ export function useHasStaffLinks() {
 
 // ── Invitation ────────────────────────────────────────────────────────────────
 
-export interface StaffInvitationPreview {
-  athlete_name: string;
-  coach_name: string | null;
-  inviter_name: string | null;
-  invited_by_role: "coach" | "athlete";
-  profession: StaffProfession;
-  status: "valid" | "used" | "expired";
-}
-
 /** Lecture publique d'une invitation par son jeton (avant connexion). */
 export function useStaffInvitationPreview(token: string | undefined) {
   return useQuery<StaffInvitationPreview | null>({
-    queryKey: QK.staffInvitation(token ?? ""),
+    queryKey: staffKeys.invitation(token ?? ""),
     enabled: !!token,
     staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_staff_invitation", { p_token: token! });
-      if (error) throw error;
-      const row = (data ?? [])[0];
-      return (row as StaffInvitationPreview | undefined) ?? null;
-    },
+    queryFn: () => getStaffInvitationPreview(token!),
   });
-}
-
-export async function acceptStaffInvitation(token: string): Promise<string> {
-  const { data, error } = await supabase.rpc("accept_staff_invitation", { p_token: token });
-  if (error) throw new Error(error.message);
-  return data as string;
 }
 
 export function useAcceptStaffInvitation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: acceptStaffInvitation,
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.staff }),
+    onSuccess: () => invalidateStaff(qc),
   });
 }

@@ -1,61 +1,53 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { getHyroxFlag, hyroxKeys, setHyroxFlag } from "@/api/hyrox";
 
 /**
- * Read and toggle `is_hyrox_athlete` on a profile.
- * Pattern follows useHabits (flag on profiles + optimistic rollback).
+ * Lit et bascule `is_hyrox_athlete` sur un profil (mise à jour optimiste,
+ * retour arrière en cas d'erreur). Après succès, la liste des athlètes du
+ * coach est rechargée : l'onglet HYROX apparaît / disparaît tout de suite
+ * dans la barre de contexte.
  */
 export function useHyroxFlag(athleteId: string | undefined) {
-  const { user, profile } = useAuth();
-  const [enabled, setEnabled] = useState(false);
-  const [toggling, setToggling] = useState(false);
+  const qc = useQueryClient();
+  const { user, refreshAthletes } = useAuth();
+  const key = hyroxKeys.flag(athleteId ?? "");
 
-  useEffect(() => {
-    if (!athleteId) return;
-    supabase
-      .from("profiles")
-      .select("is_hyrox_athlete")
-      .eq("id", athleteId)
-      .single()
-      .then(({ data }) => {
-        if (data) setEnabled(!!(data as { is_hyrox_athlete?: boolean }).is_hyrox_athlete);
-      });
-  }, [athleteId]);
+  const { data: enabled = false } = useQuery({
+    queryKey: key,
+    enabled: !!athleteId,
+    queryFn: () => getHyroxFlag(athleteId as string),
+  });
+
+  const mutation = useMutation({
+    mutationFn: (next: boolean) => setHyroxFlag(athleteId as string, next),
+    onMutate: async (next) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<boolean>(key);
+      qc.setQueryData(key, next);
+      return { previous };
+    },
+    onError: (err, _next, ctx) => {
+      qc.setQueryData(key, ctx?.previous ?? false);
+      toast.error("Impossible de modifier le flag HYROX");
+      console.error("hyrox flag toggle:", err);
+    },
+    onSuccess: (_d, next) => {
+      void qc.invalidateQueries({ queryKey: key });
+      if (user) void refreshAthletes();
+      window.dispatchEvent(new CustomEvent("hyrox-flag-changed", { detail: { athleteId, enabled: next } }));
+    },
+  });
 
   const toggle = async () => {
     if (!athleteId) return;
-    setToggling(true);
-    const next = !enabled;
-    setEnabled(next);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ is_hyrox_athlete: next } as Record<string, unknown>)
-      .eq("id", athleteId);
-    if (error) {
-      setEnabled(!next);
-      toast.error("Impossible de modifier le flag HYROX");
-      console.error("hyrox flag toggle:", error);
+    try {
+      await mutation.mutateAsync(!enabled);
+    } catch {
+      /* déjà signalé */
     }
-    // Refresh athletes list so ContextBar / AthleteLayout see the change
-    if (user && !error) {
-      const isOwn = athleteId === user.id;
-      if (isOwn || profile?.role === "coach" || profile?.role === "coach_athlete") {
-        // Re-fetch profile data so selectedAthlete picks up the flag
-        const { data: freshProfile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", athleteId)
-          .single();
-        if (freshProfile) {
-          // Dispatch a custom event for ContextBar/AthleteLayout to react
-          window.dispatchEvent(new CustomEvent("hyrox-flag-changed", { detail: { athleteId, enabled: next } }));
-        }
-      }
-    }
-    setToggling(false);
   };
 
-  return { enabled, toggling, toggle };
+  return { enabled, toggling: mutation.isPending, toggle };
 }

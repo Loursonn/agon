@@ -1,43 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
-import { calBaseKey } from "@/features/shared/hooks/useUnifiedCalendar";
 import { toast } from "sonner";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+import { deleteExerciseComment, invalidateCoachRetours, upsertExerciseComment } from "@/api/coachRetours";
+import { invalidateCompetitions, setCompetitionComment } from "@/api/competitions";
+import { QK } from "@/lib/queryKeys";
 
 export function useUpsertExerciseComment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      workoutLogId,
-      exerciseId,
-      exerciseName,
-      comment,
-    }: {
-      workoutLogId: string;
-      exerciseId: string | null;
-      exerciseName: string;
-      comment: string;
-    }) => {
-      const { data, error } = await db
-        .from("workout_exercise_comments")
-        .upsert({
-          workout_log_id: workoutLogId,
-          exercise_id: exerciseId,
-          exercise_name: exerciseName,
-          comment,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: upsertExerciseComment,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QK.weeklyRetours() });
+      void invalidateCoachRetours(queryClient);
       toast.success("Commentaire enregistré");
     },
     onError: () => {
@@ -50,16 +23,9 @@ export function useDeleteExerciseComment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (commentId: string) => {
-      const { error } = await db
-        .from("workout_exercise_comments")
-        .delete()
-        .eq("id", commentId);
-
-      if (error) throw error;
-    },
+    mutationFn: deleteExerciseComment,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QK.weeklyRetours() });
+      void invalidateCoachRetours(queryClient);
       toast.success("Commentaire supprimé");
     },
     onError: () => {
@@ -72,29 +38,12 @@ export function useUpdateCompetitionComment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      competitionId,
-      athleteComment,
-    }: {
-      competitionId: string;
-      athleteComment: string;
-    }) => {
-      const { data, error } = await db
-        .from("competitions")
-        .update({ athlete_comment: athleteComment })
-        .eq("id", competitionId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data: { athlete_id: string }) => {
+    mutationFn: ({ competitionId, athleteComment }: { competitionId: string; athleteComment: string }) =>
+      setCompetitionComment(competitionId, athleteComment),
+    onSuccess: (data) => {
+      // Le bilan s'affiche dans les Retours et sur le jour de compétition (semaine / Programme).
       queryClient.invalidateQueries({ queryKey: QK.weeklyRetours() });
-      queryClient.invalidateQueries({ queryKey: QK.competitions() });
-      // Le bilan s'affiche aussi sur le jour de compétition (semaine / Programme)
-      queryClient.invalidateQueries({ queryKey: QK.activePlan(data.athlete_id) });
-      queryClient.invalidateQueries({ queryKey: calBaseKey(data.athlete_id) });
+      void invalidateCompetitions(queryClient, data.athlete_id);
       toast.success("Bilan enregistré");
     },
     onError: () => {

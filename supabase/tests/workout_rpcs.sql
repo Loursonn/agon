@@ -1,6 +1,6 @@
 -- Tests de 20261108100000_workout_rpcs.sql (RPC des séances réalisées).
 -- Usage (base liée, rien n'est conservé) :
---   { echo BEGIN; cat supabase/migrations/20261108100000_workout_rpcs.sql; cat supabase/tests/workout_rpcs.sql; echo ROLLBACK; } > /tmp/x.sql
+--   { echo 'BEGIN;' cat supabase/migrations/20261108100000_workout_rpcs.sql; cat supabase/tests/workout_rpcs.sql; echo 'ROLLBACK;' } > /tmp/x.sql
 --   supabase db query --linked -f /tmp/x.sql
 -- Chaque ligne de résultat doit avoir ok = true.
 -- Les séances de test sont créées dans la transaction (annulée à la fin).

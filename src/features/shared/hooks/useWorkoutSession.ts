@@ -8,7 +8,9 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getWorkoutLog } from "@/api/workouts";
+import { cycleKeys, getMicrocycle } from "@/api/cycles";
+import { listLegacyCycleExercises, planningKeys } from "@/api/planning";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { defaultExerciceParams } from "@/features/coach/components/programmation/types";
@@ -232,17 +234,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
     // L'erreur DOIT remonter : avant, elle était avalée (data = null) et la page
     // prenait « pas de saisie » pour la vérité → la 1re série envoyée au retour
     // du réseau effaçait coachOverride et commentaires. Ici React Query réessaie.
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("workout_logs")
-        .select(
-          "id, session_id, session_name, status, rpe_score, scheduled_date, athlete_modifications, microcycle_id, original_scheduled_date, rescheduled_by_athlete, week_number"
-        )
-        .eq("id", workoutLogId!)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getWorkoutLog(workoutLogId!),
   });
   // `wlog === null` = log réellement absent (lu avec succès) ; `undefined` = pas encore lu.
   const logStatus: WorkoutSessionResult["logStatus"] =
@@ -253,19 +245,10 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
   const refetchLog = useCallback(() => { void refetchLogQuery(); }, [refetchLogQuery]);
 
   const { data: microcycle } = useQuery({
-    queryKey: ["microcycle", wlog?.microcycle_id],
+    queryKey: cycleKeys.microcycle(wlog?.microcycle_id),
     enabled: !!wlog?.microcycle_id,
     staleTime: 300_000,
-    queryFn: async () => {
-      const id = wlog?.microcycle_id;
-      if (!id) return null;
-      const { data } = await supabase
-        .from("microcycles")
-        .select("week_number, cycle_id")
-        .eq("id", id)
-        .maybeSingle();
-      return data;
-    },
+    queryFn: () => getMicrocycle(wlog!.microcycle_id!),
   });
 
   const { data: progSessions = [], isLoading: loadingSessions } = useProgrammation(athleteId);
@@ -278,20 +261,13 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
     queryKey: ["legacy-exos", athleteId],
     enabled: needsLegacy,
     staleTime: 300_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("app_data")
-        .select("key, value")
-        .eq("athlete_id", athleteId)
-        .like("key", "asp:exos::%");
-      return data ?? [];
-    },
+    queryFn: () => listLegacyCycleExercises(athleteId),
   });
 
   // Occurrence de la séance = rang chronologique de ce log parmi les logs non
   // « skipped » de la même séance (1re fois = 1, 2e fois = 2…), tous cycles confondus.
   const { data: sessionRank, isLoading: loadingRank } = useQuery({
-    queryKey: ["session-occurrence", athleteId, wlog?.session_id, wlog?.scheduled_date],
+    queryKey: planningKeys.occurrence(athleteId, wlog?.session_id, wlog?.scheduled_date),
     enabled: !!athleteId && !!wlog?.session_id && !!wlog?.scheduled_date,
     staleTime: 30_000,
     queryFn: () => fetchSessionOccurrence(athleteId!, wlog!.session_id, wlog!.scheduled_date),

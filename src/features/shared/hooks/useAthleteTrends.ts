@@ -4,8 +4,7 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
+import { getAiInsights, getTrendSessions, profileKeys } from "@/api/profile";
 import { localISO } from "@/lib/date";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { usePRLogs } from "@/features/shared/hooks/usePRLogs";
@@ -23,29 +22,11 @@ export function useAthleteTrends(days: number): { summary: TrendSummary; ready: 
   const { cur, prev } = windows(days);
 
   const { data: logs = NO_LOGS, isSuccess: logsReady } = useQuery({
-    queryKey: ["athlete-trend-sessions", athleteId, prev.start, cur.end],
+    queryKey: profileKeys.trendSessions(athleteId, prev.start, cur.end),
     enabled: !!athleteId,
     staleTime: 60_000,
-    queryFn: async (): Promise<WorkoutRow[]> => {
-      // Muscu + énergie / spécifique : toutes les séances prescrites
-      const [workouts, energy] = await Promise.all([
-        supabase
-          .from("workout_logs")
-          .select("scheduled_date, status")
-          .eq("athlete_id", athleteId)
-          .gte("scheduled_date", prev.start)
-          .lte("scheduled_date", cur.end),
-        supabase
-          .from("energy_session_assignments")
-          .select("scheduled_date, status")
-          .eq("athlete_id", athleteId)
-          .gte("scheduled_date", prev.start)
-          .lte("scheduled_date", cur.end),
-      ]);
-      if (workouts.error) throw workouts.error;
-      if (energy.error) throw energy.error;
-      return [...(workouts.data ?? []), ...(energy.data ?? [])] as WorkoutRow[];
-    },
+    // Muscu + énergie / spécifique : toutes les séances prescrites
+    queryFn: async (): Promise<WorkoutRow[]> => (await getTrendSessions(athleteId, prev.start, cur.end)) as WorkoutRow[],
   });
 
   const summary = useMemo<TrendSummary>(() => ({
@@ -111,7 +92,7 @@ export function useAthleteInsights(summary: TrendSummary, ready: boolean) {
   const hasData = rules.length > 0;
 
   const { data: ai, isFetching } = useQuery({
-    queryKey: [...QK.athleteInsights(athleteId, day), summary.days],
+    queryKey: profileKeys.insights(athleteId, day, summary.days),
     enabled: !!athleteId && ready && hasData,
     staleTime: Infinity,
     retry: false,
@@ -119,12 +100,9 @@ export function useAthleteInsights(summary: TrendSummary, ready: boolean) {
       const cached = readCache(cacheKey);
       if (cached) return cached;
       try {
-        const { data, error } = await supabase.functions.invoke("athlete-insights", { body: toAiPayload(summary) });
-        const list = (data as { insights?: unknown })?.insights;
-        if (error || !Array.isArray(list) || !list.length) return null;
-        const clean = list.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 4);
-        if (clean.length) writeCache(cacheKey, clean);
-        return clean.length ? clean : null;
+        const clean = await getAiInsights(toAiPayload(summary));
+        if (clean) writeCache(cacheKey, clean);
+        return clean;
       } catch {
         // Edge function pas déployée ou inaccessible → fallback silencieux sur les règles
         return null;

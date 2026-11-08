@@ -1,6 +1,6 @@
 -- Tests de la migration 20261108120000_references_rpcs.sql (lot 4).
 -- Usage (base liée, rien n'est conservé) :
---   { echo BEGIN; cat supabase/migrations/20261108120000_references_rpcs.sql; cat supabase/tests/references_rpcs.sql; echo ROLLBACK; } > /tmp/x.sql
+--   { echo 'BEGIN;' cat supabase/migrations/20261108120000_references_rpcs.sql; cat supabase/tests/references_rpcs.sql; echo 'ROLLBACK;' } > /tmp/x.sql
 --   tail -1 /tmp/x.sql   # doit afficher ROLLBACK
 --   supabase db query --linked -f /tmp/x.sql
 -- Chaque ligne de résultat doit avoir ok = true.

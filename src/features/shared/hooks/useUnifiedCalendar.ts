@@ -5,72 +5,39 @@
  * useWeekSchedule (week-scoped). All mutations invalidate the same
  * partial key ["cal", athleteId] so every active range refetches automatically.
  *
- * Views manage their own date-range; the hook is just a typed Supabase fetch.
+ * Views manage their own date-range; the read is `getCalendarEvents`
+ * (src/api/planning.ts).
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import {
-  invalidateWorkouts, listWorkoutLogs, moveWorkoutByCoach, planWorkout, removeWorkout, skipOccurrence, skipWorkout,
+  invalidateWorkouts, moveWorkoutByCoach, planWorkout, removeWorkout, skipOccurrence, skipWorkout,
 } from "@/api/workouts";
+import {
+  createTestSession, deleteTestSession, getCalendarEvents, planningKeys, rescheduleTestSession,
+  type UCEventType, type UnifiedCalendarEvent,
+} from "@/api/planning";
+import { deleteEnergyAssignment, invalidateEnergy } from "@/api/energy";
+import { invalidateTests } from "@/api/tests";
 import { toast } from "sonner";
-import type { Exercise, WeekConfig } from "@/features/shared/types/athlete";
 import { syncDocAssignmentsFromEnergy } from "./fiches/syncDocAssignments";
-import { QK } from "@/lib/queryKeys";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type UCEventType = "workout" | "test" | "competition" | "energy" | "free_activity" | "life_event";
-
-export interface UnifiedCalendarEvent {
-  id: string;
-  type: UCEventType;
-  date: string;           // ISO yyyy-MM-dd
-  title: string;
-  status?: string;        // planned | completed | missed | skipped
-  rpe?: number | null;
-  // Workout-specific
-  sessionId?: string;          // workout_logs.session_id
-  exercises?: Exercise[];      // populated only when includeExercises = true
-  rescheduledByAthlete?: boolean;
-  coachAlert?: boolean;
-  /** Date prévue par le coach avant un déplacement par l'athlète */
-  originalScheduledDate?: string;
-  // Test-specific
-  testType?: string;
-  completed?: boolean;
-  // Competition-specific
-  priority?: string;
-  location?: string;
-  // Energy-specific
-  sessionKind?: string;        // vo2 | tempo | seuil | footing | fartlek | autre | custom
-  energySessionId?: string;    // energy_sessions.id
-  partial?: boolean;           // some blocks done but not completed
-  // Free activity-specific
-  sport?: string;
-  sportEmoji?: string;
-  duration?: number;
-  intensity?: number;
-  // Life event-specific
-  dateEnd?: string;             // multi-day life events
-  /** Raw DB row for fields not promoted to typed fields */
-  raw: Record<string, unknown>;
-}
+export type { UCEventType, UnifiedCalendarEvent };
 
 // ── Query key helpers ─────────────────────────────────────────────────────────
 
 /** Partial key — used by mutations to invalidate ALL ranges for an athlete. */
-export const calBaseKey = (athleteId: string) => QK.cal(athleteId);
+export const calBaseKey = (athleteId: string) => planningKeys.calendarAll(athleteId);
 
 /** Full key for a specific range query. */
 export const calRangeKey = (athleteId: string, start: string, end: string) =>
-  ["cal", athleteId, start, end] as const;
+  planningKeys.calendar(athleteId, start, end);
 
 // ── Main hook ─────────────────────────────────────────────────────────────────
 
 export interface UseUnifiedCalendarOptions {
-  /** Also fetch session_exercises → exercises for workout events. Default: false. */
-  includeExercises?: boolean;
   staleTime?: number;
 }
 
@@ -79,206 +46,14 @@ export function useUnifiedCalendar(
   range: { start: string; end: string },
   options: UseUnifiedCalendarOptions = {},
 ) {
-  const { includeExercises = false, staleTime = 30_000 } = options;
+  const { staleTime = 30_000 } = options;
   const { start, end } = range;
 
   return useQuery({
     queryKey: calRangeKey(athleteId, start, end),
     enabled: !!athleteId && !!start && !!end,
     staleTime,
-    queryFn: async (): Promise<UnifiedCalendarEvent[]> => {
-      // ── 1. Parallel fetch: workouts + tests + competitions + energy + free + life events ─
-      const [logs, tRes, cRes, eRes, fRes, leRes] = await Promise.all([
-        listWorkoutLogs({ athleteIds: [athleteId], from: start, to: end }),
-
-        supabase
-          .from("test_sessions")
-          .select("id, title, date, completed, type")
-          .eq("athlete_id", athleteId)
-          .gte("date", start)
-          .lte("date", end)
-          .order("date"),
-
-        supabase
-          .from("competitions")
-          .select("id, coach_id, athlete_id, name, type, date, priority, location, notes, athlete_comment")
-          .eq("athlete_id", athleteId)
-          .gte("date", start)
-          .lte("date", end)
-          .order("date"),
-
-        supabase
-          .from("energy_session_assignments")
-          .select("id, athlete_id, energy_session_id, scheduled_date, status, notes, rpe_score, block_logs, energy_sessions(id, name, session_kind)")
-          .eq("athlete_id", athleteId)
-          .gte("scheduled_date", start)
-          .lte("scheduled_date", end)
-          .order("scheduled_date"),
-
-        supabase
-          .from("app_data")
-          .select("value")
-          .eq("athlete_id", athleteId)
-          .eq("key", "asp:freesess")
-          .maybeSingle(),
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any)
-          .from("athlete_life_events")
-          .select("id, athlete_id, date_start, date_end, title")
-          .eq("athlete_id", athleteId)
-          .lte("date_start", end)
-          .gte("date_end", start)
-          .order("date_start"),
-      ]);
-
-      const tests        = tRes.data ?? [];
-      const comps        = cRes.data ?? [];
-      const energyAssign = eRes.data ?? [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const allFree: any[] = (fRes.data as any)?.value ?? [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lifeEvents: any[] = leRes.data ?? [];
-
-      // ── 2. Optionally fetch exercises ──────────────────────────────────────
-      const exercisesBySession: Record<string, Exercise[]> = {};
-
-      if (includeExercises && logs.length > 0) {
-        const sessionIds = [
-          ...new Set(logs.map((l) => l.session_id).filter((id): id is string => !!id)),
-        ];
-        if (sessionIds.length > 0) {
-          const { data: seData } = await supabase
-            .from("session_exercises")
-            .select("session_id, exercise_id, order, weeks_config, exercises(id, name, bloc, target, ex_type)")
-            .in("session_id", sessionIds)
-            .order("order");
-
-          for (const se of seData ?? []) {
-            const ex = se.exercises as {
-              id: string; name: string; bloc?: string; target?: string; ex_type?: string;
-            } | null;
-            if (!ex) continue;
-            const mapped: Exercise = {
-              id: se.exercise_id,
-              name: ex.name,
-              bloc: ex.bloc ?? undefined,
-              target: ex.target ?? undefined,
-              exType: ex.ex_type ?? undefined,
-              weeks: (se.weeks_config as Record<number, WeekConfig>) ?? {},
-            };
-            (exercisesBySession[se.session_id] ??= []).push(mapped);
-          }
-        }
-      }
-
-      // ── 3. Build typed events ──────────────────────────────────────────────
-      const events: UnifiedCalendarEvent[] = [];
-
-      for (const w of logs) {
-        const rpe = w.rpe_score;
-        events.push({
-          id:                   w.id,
-          type:                 "workout",
-          date:                 w.scheduled_date,
-          title:                w.session_name,
-          status:               w.status,
-          rpe,
-          sessionId:            w.session_id ?? undefined,
-          exercises:            includeExercises ? (exercisesBySession[w.session_id ?? ""] ?? []) : undefined,
-          rescheduledByAthlete: w.rescheduled_by_athlete ?? false,
-          coachAlert:           w.coach_alert ?? false,
-          originalScheduledDate: w.original_scheduled_date ?? undefined,
-          raw:                  { ...(w as unknown as Record<string, unknown>), session_id: w.session_id },
-        });
-      }
-
-      for (const t of tests) {
-        events.push({
-          id:        t.id,
-          type:      "test",
-          date:      t.date,
-          title:     t.title,
-          status:    t.completed ? "completed" : "planned",
-          completed: t.completed,
-          testType:  t.type,
-          raw:       t as Record<string, unknown>,
-        });
-      }
-
-      for (const c of comps) {
-        events.push({
-          id:       c.id,
-          type:     "competition",
-          date:     c.date,
-          title:    c.name,
-          priority: c.priority ?? undefined,
-          location: c.location ?? undefined,
-          raw:      c as Record<string, unknown>,
-        });
-      }
-
-      for (const ea of energyAssign) {
-        const session = (ea as Record<string, unknown>).energy_sessions as {
-          id: string; name: string; session_kind: string;
-        } | null;
-        const blockLogs = (ea as Record<string, unknown>).block_logs as Record<string, { done: boolean }> | null;
-        const blVals = blockLogs ? Object.values(blockLogs) : [];
-        const isPartial = blVals.length > 0
-          && blVals.some((b) => b.done)
-          && blVals.some((b) => !b.done);
-        events.push({
-          id:              ea.id,
-          type:            "energy",
-          date:            ea.scheduled_date,
-          title:           session?.name ?? "Séance énergie",
-          status:          ea.status ?? "planned",
-          rpe:             (ea as Record<string, unknown>).rpe_score as number | null ?? null,
-          sessionKind:     session?.session_kind,
-          energySessionId: ea.energy_session_id,
-          partial:         isPartial,
-          raw:             ea as Record<string, unknown>,
-        });
-      }
-
-      for (const f of allFree) {
-        if (!f.date || f.date < start || f.date > end) continue;
-        events.push({
-          id:          f.id,
-          type:        "free_activity",
-          date:        f.date,
-          title:       f.name ?? f.sport ?? "Activité libre",
-          status:      f.completed ? "completed" : "planned",
-          sport:       f.sport,
-          sportEmoji:  f.sportEmoji,
-          duration:    f.duration,
-          intensity:   f.intensity,
-          raw:         f as Record<string, unknown>,
-        });
-      }
-
-      // Expand multi-day life events into one event per day
-      for (const le of lifeEvents) {
-        // Midi local + date locale : toISOString() sur minuit local décale
-        // d'un jour en UTC+1/+2
-        const ds = new Date(le.date_start + "T12:00:00");
-        const de = new Date((le.date_end ?? le.date_start) + "T12:00:00");
-        for (let d = new Date(ds); d <= de; d.setDate(d.getDate() + 1)) {
-          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          if (iso < start || iso > end) continue;
-          events.push({
-            id:      le.id + "_" + iso,
-            type:    "life_event",
-            date:    iso,
-            title:   le.title,
-            dateEnd: le.date_end,
-            raw:     le as Record<string, unknown>,
-          });
-        }
-      }
-
-      return events;
-    },
+    queryFn: () => getCalendarEvents(athleteId, start, end),
   });
 }
 
@@ -330,20 +105,10 @@ export function useCreateTestSession() {
       type: string;
       date: string;
     }) => {
-      const { error } = await supabase.from("test_sessions").insert({
-        athlete_id: athleteId,
-        coach_id:   coachId,
-        title,
-        type,
-        date,
-        completed:  false,
-      });
-      if (error) throw error;
+      await createTestSession({ athleteId, coachId, title, type, date });
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: calBaseKey(vars.athleteId) });
-      qc.invalidateQueries({ queryKey: ["calendar-events", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["week-schedule", vars.athleteId] });
+      void invalidateTests(qc, vars.athleteId);
       toast.success("Test créé");
     },
     onError: () => toast.error("Erreur lors de la création"),
@@ -355,17 +120,11 @@ export function useRescheduleTestSession() {
 
   return useMutation({
     mutationFn: async ({ id, date, athleteId }: { id: string; date: string; athleteId: string }) => {
-      const { error } = await supabase
-        .from("test_sessions")
-        .update({ date })
-        .eq("id", id);
-      if (error) throw error;
+      await rescheduleTestSession(id, date);
       return athleteId;
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: calBaseKey(vars.athleteId) });
-      qc.invalidateQueries({ queryKey: ["calendar-events", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["week-schedule", vars.athleteId] });
+      void invalidateTests(qc, vars.athleteId);
       toast.success("Test déplacé");
     },
     onError: () => toast.error("Erreur lors du déplacement"),
@@ -399,8 +158,7 @@ export function useDeleteCalendarEvent() {
 
       // Energy session assignment: hard delete
       if (type === "energy") {
-        const { error } = await supabase.from("energy_session_assignments").delete().eq("id", id);
-        if (error) throw error;
+        await deleteEnergyAssignment(id);
         void syncDocAssignmentsFromEnergy(athleteId);
         return;
       }
@@ -426,12 +184,13 @@ export function useDeleteCalendarEvent() {
         return;
       }
 
-      const { error } = await supabase.from("test_sessions").delete().eq("id", id);
-      if (error) throw error;
+      await deleteTestSession(id);
     },
     onSuccess: (_data, vars) => {
-      // Calendrier + tout ce qui lit les séances (et les séances énergie).
+      // Calendrier + tout ce qui lit les séances (et les séances énergie, les tests).
       void invalidateWorkouts(qc, { athleteId: vars.athleteId });
+      if (vars.type === "test") void invalidateTests(qc, vars.athleteId);
+      if (vars.type === "energy") void invalidateEnergy(qc, vars.athleteId);
       toast.success("Supprimé");
     },
     onError: () => toast.error("Erreur lors de la suppression"),

@@ -1,62 +1,16 @@
 import { useState } from "react";
 import { Edit3, Check } from "lucide-react";
-import { format, parseISO, differenceInWeeks, addWeeks, addDays, startOfISOWeek, endOfISOWeek } from "date-fns";
+import { format, parseISO, differenceInWeeks, addWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { invalidateCycles, updatePeriod } from "@/api/cycles";
+import { rechainCyclesInMeso } from "../utils/rechain";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Macrocycle, Mesocycle } from "../hooks/useTimelineData";
 import { snapMonday, snapSunday, computeCascade, chainNextStart, endFromWeeks } from "../utils/planningHelpers";
 import { DateQuickAdjust } from "../DateQuickAdjust";
-
-// ── Rechain cycles within a meso after its dates change ───────────────────────
-
-async function rechainCyclesInMeso(mesoId: string, newStart: string, newEnd: string) {
-  const { data: cycles } = await supabase
-    .from("cycles")
-    .select("id, start_date, end_date")
-    .eq("mesocycle_id", mesoId)
-    .order("start_date");
-
-  if (!cycles?.length) return;
-
-  let cursor = snapMonday(newStart);
-
-  for (const c of cycles) {
-    if (cursor > newEnd) {
-      // Cycle falls entirely outside new meso bounds — skip (don't delete, let coach handle)
-      break;
-    }
-    const weeks = Math.max(1, differenceInWeeks(parseISO(c.end_date), parseISO(c.start_date)) + 1);
-    let end = endFromWeeks(cursor, weeks);
-    // Clamp to meso end
-    if (end > newEnd) end = format(endOfISOWeek(parseISO(newEnd)), "yyyy-MM-dd");
-
-    await supabase.from("cycles").update({ start_date: cursor, end_date: end }).eq("id", c.id);
-
-    // Regenerate microcycles for this cycle
-    await supabase.from("microcycles").delete().eq("cycle_id", c.id);
-    const microRows: Array<{ cycle_id: string; week_number: number; start_date: string; end_date: string; is_deload: boolean }> = [];
-    let wMon = startOfISOWeek(parseISO(cursor));
-    const ed  = parseISO(end);
-    let week  = 1;
-    while (wMon <= ed) {
-      microRows.push({
-        cycle_id: c.id, week_number: week,
-        start_date: format(wMon, "yyyy-MM-dd"),
-        end_date:   format(endOfISOWeek(wMon), "yyyy-MM-dd"),
-        is_deload: false,
-      });
-      wMon = addWeeks(wMon, 1);
-      week++;
-    }
-    if (microRows.length > 0) await supabase.from("microcycles").insert(microRows);
-
-    cursor = chainNextStart(end);
-  }
-}
 
 // ── Volume chart helpers ───────────────────────────────────────────────────────
 
@@ -192,25 +146,31 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
 
   async function doSaveDates(newStart: string, newEnd: string, cascade: boolean) {
     setSavingDates(true);
-    const { error } = await supabase
-      .from("mesocycles").update({ start_date: newStart, end_date: newEnd }).eq("id", meso.id);
-    if (error) { toast.error("Erreur"); setSavingDates(false); return; }
-
-    // Re-chain cycles inside this meso
-    await rechainCyclesInMeso(meso.id, newStart, newEnd);
-
-    if (cascade && cascadeModal) {
-      const updates = computeCascade(newEnd, cascadeModal.later);
-      for (const u of updates) {
-        await supabase.from("mesocycles")
-          .update({ start_date: u.start_date, end_date: u.end_date }).eq("id", u.id);
-        // Re-chain cycles inside each cascaded meso too
-        await rechainCyclesInMeso(u.id, u.start_date, u.end_date);
-      }
+    try {
+      await updatePeriod("mesocycles", meso.id, { start_date: newStart, end_date: newEnd });
+    } catch {
+      toast.error("Erreur");
+      setSavingDates(false);
+      return;
     }
 
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    try {
+      // Re-chain cycles inside this meso
+      await rechainCyclesInMeso(meso.id, newStart, newEnd);
+
+      if (cascade && cascadeModal) {
+        const updates = computeCascade(newEnd, cascadeModal.later);
+        for (const u of updates) {
+          await updatePeriod("mesocycles", u.id, { start_date: u.start_date, end_date: u.end_date });
+          // Re-chain cycles inside each cascaded meso too
+          await rechainCyclesInMeso(u.id, u.start_date, u.end_date);
+        }
+      }
+    } catch {
+      toast.error("Dates enregistrées, mais l'ajustement des cycles a échoué");
+    }
+
+    void invalidateCycles(qc, athleteId);
     setSavingDates(false);
     setCascadeModal(null);
     setEditingDates(false);
@@ -220,11 +180,15 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
   async function saveParent() {
     if (parentId === meso.macrocycle_id) { setEditingParent(false); return; }
     setSavingParent(true);
-    const { error } = await supabase.from("mesocycles").update({ macrocycle_id: parentId }).eq("id", meso.id);
+    try {
+      await updatePeriod("mesocycles", meso.id, { macrocycle_id: parentId });
+    } catch {
+      setSavingParent(false);
+      toast.error("Erreur");
+      return;
+    }
     setSavingParent(false);
-    if (error) { toast.error("Erreur"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
     toast.success("Macrocycle parent modifié");
     setEditingParent(false);
   }
@@ -266,19 +230,20 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
 
   async function save() {
     setSaving(true);
-    const { error } = await supabase
-      .from("mesocycles")
-      .update({
+    try {
+      await updatePeriod("mesocycles", meso.id, {
         volume_config:    { type: volumeType },
         intensity_config: { zones },
         frequency,
         deload_week: deloadWeek,
-      })
-      .eq("id", meso.id);
+      });
+    } catch {
+      setSaving(false);
+      toast.error("Erreur");
+      return;
+    }
     setSaving(false);
-    if (error) { toast.error("Erreur"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
     toast.success("Mésocycle mis à jour");
   }
 

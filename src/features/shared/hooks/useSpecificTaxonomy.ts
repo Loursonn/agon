@@ -1,59 +1,38 @@
-﻿/**
- * Hooks React Query pour les référentiels de la Banque Spécifique :
- * sports (specific_sports) et qualités physiques (physical_qualities).
+/**
+ * Hooks React Query pour les référentiels de la Banque Spécifique
+ * (src/api/specific.ts) : sports et qualités physiques.
  * Chaque référentiel = défauts globaux (coach_id NULL) + customs du coach.
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
-import type { SpecificSport, PhysicalQuality } from "@/types/specific";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
-function slugify(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+import {
+  createQuality,
+  createSport,
+  deleteQuality,
+  deleteSport,
+  listPhysicalQualities,
+  listSpecificSports,
+  specificKeys,
+  type PhysicalQuality,
+  type SpecificSport,
+} from "@/api/specific";
 
 // ── Sports ────────────────────────────────────────────────────────────────────
 
 export function useSpecificSports() {
   return useQuery<SpecificSport[]>({
-    queryKey: QK.specificSports,
+    queryKey: specificKeys.sports,
     staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("specific_sports")
-        .select("*")
-        .order("is_default", { ascending: false })
-        .order("name");
-      if (error) throw error;
-      return (data ?? []) as SpecificSport[];
-    },
+    queryFn: listSpecificSports,
   });
 }
 
 export function useCreateSport() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name, coachId, color }: { name: string; coachId: string; color?: string }) => {
-      const { data, error } = await db
-        .from("specific_sports")
-        .insert({ name: name.trim(), slug: slugify(name), coach_id: coachId, color: color ?? null })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as SpecificSport;
-    },
+    mutationFn: (p: { name: string; coachId: string; color?: string }) => createSport(p),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.specificSports });
+      qc.invalidateQueries({ queryKey: specificKeys.sports });
       toast.success("Sport ajouté");
     },
     onError: () => toast.error("Erreur lors de l'ajout du sport"),
@@ -63,12 +42,9 @@ export function useCreateSport() {
 export function useDeleteSport() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await db.from("specific_sports").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => deleteSport(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.specificSports });
+      qc.invalidateQueries({ queryKey: specificKeys.sports });
       toast.success("Sport supprimé");
     },
     onError: () => toast.error("Erreur lors de la suppression du sport"),
@@ -79,34 +55,18 @@ export function useDeleteSport() {
 
 export function usePhysicalQualities() {
   return useQuery<PhysicalQuality[]>({
-    queryKey: QK.physicalQualities,
+    queryKey: specificKeys.qualities,
     staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("physical_qualities")
-        .select("*")
-        .order("is_default", { ascending: false })
-        .order("name");
-      if (error) throw error;
-      return (data ?? []) as PhysicalQuality[];
-    },
+    queryFn: listPhysicalQualities,
   });
 }
 
 export function useCreateQuality() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name, coachId }: { name: string; coachId: string }) => {
-      const { data, error } = await db
-        .from("physical_qualities")
-        .insert({ name: name.trim(), slug: slugify(name), coach_id: coachId })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as PhysicalQuality;
-    },
+    mutationFn: (p: { name: string; coachId: string }) => createQuality(p),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.physicalQualities });
+      qc.invalidateQueries({ queryKey: specificKeys.qualities });
       toast.success("Qualité ajoutée");
     },
     onError: () => toast.error("Erreur lors de l'ajout de la qualité"),
@@ -116,12 +76,9 @@ export function useCreateQuality() {
 export function useDeleteQuality() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await db.from("physical_qualities").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => deleteQuality(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.physicalQualities });
+      qc.invalidateQueries({ queryKey: specificKeys.qualities });
       toast.success("Qualité supprimée");
     },
     onError: () => toast.error("Erreur lors de la suppression de la qualité"),

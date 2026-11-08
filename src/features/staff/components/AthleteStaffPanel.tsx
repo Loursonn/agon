@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
-import { QK } from "@/lib/queryKeys";
-import { supabase } from "@/integrations/supabase/client";
 import { professionLabel, staffInviteUrl } from "../lib/staffPermissions";
 import {
   useAthleteStaff,
   useCancelStaffInvitation,
   useMarkStaffSeen,
+  useStaffHealthConsent,
   useStaffInvitations,
 } from "../hooks/useAthleteStaff";
 import { StaffLinkCard } from "./StaffLinkCard";
@@ -19,19 +17,6 @@ import { useSetConsent } from "@/features/shared/hooks/useConsent";
 const sectionTitle: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 8px",
 };
-
-/** Accord unique de l'athlète au partage de ses données avec son staff (`staff_sharing`). */
-function useStaffHealthConsent(athleteId: string) {
-  return useQuery({
-    queryKey: QK.staffConsent(athleteId),
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("staff_sharing_consented", { athlete_uuid: athleteId });
-      if (error) throw error;
-      return !!data;
-    },
-  });
-}
 
 /**
  * Staff d'un athlète.

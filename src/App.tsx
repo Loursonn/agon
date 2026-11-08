@@ -1,11 +1,15 @@
 import { Fragment, lazy, Suspense, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute, { RoleRedirect } from "@/components/ProtectedRoute";
+import { OfflineQueryProvider } from "@/features/shared/components/OfflineQueryProvider";
+import UpdatePrompt from "@/features/shared/components/UpdatePrompt";
+import { OFFLINE_CACHE_MAX_AGE_MS } from "@/lib/offline/offlineCache";
+import { startOfflinePersistence } from "@/lib/offline/offlinePersistence";
 
 // Pages publiques (chargées immédiatement — nécessaires au démarrage)
 import Login from "./pages/Login.tsx";
@@ -70,11 +74,29 @@ const CoachStaffPage            = lazy(() => import("./features/staff/pages/Coac
 
 // staleTime : une donnée lue il y a moins de 30 s n'est pas re-téléchargée à
 // chaque ouverture de page (les mutations invalident explicitement leurs clés).
+// Hors ligne (src/lib/offline) :
+// - gcTime = durée du cache persisté (7 j) : une requête inactive doit rester
+//   en mémoire pour être recopiée dans IndexedDB ;
+// - networkMode "online" (valeur par défaut de React Query, écrite pour être
+//   explicite) et non "offlineFirst" : hors ligne, la requête ne part pas du
+//   tout et l'écran garde les données restaurées. Avec "offlineFirst" elle
+//   partirait une fois ; or beaucoup de queryFn héritées avalent l'erreur
+//   réseau et renvoient `[]` / `null` (audit §3) : le cache serait remplacé par
+//   du vide. À reconsidérer quand toutes les lectures passeront par src/api/ ;
+// - mutations : comportement par défaut ("online", mises en pause hors ligne,
+//   reprises au retour du réseau tant que l'onglet vit). File d'attente
+//   persistée = phase 2.
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000 },
+    queries: { staleTime: 30_000, gcTime: OFFLINE_CACHE_MAX_AGE_MS, networkMode: "online" },
   },
 });
+
+// React Query v5 se croit en ligne au démarrage et n'écoute ensuite que les
+// événements online/offline : une app ouverte sans réseau ne le saurait pas.
+if (typeof navigator !== "undefined" && navigator.onLine === false) onlineManager.setOnline(false);
+
+const offlinePersistence = startOfflinePersistence(queryClient);
 
 // Fallback minimal pendant le chargement des chunks
 function PageLoader() {
@@ -208,9 +230,10 @@ function AppRoutes() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <OfflineQueryProvider client={queryClient} persistence={offlinePersistence}>
     <TooltipProvider>
       <Toaster />
+      <UpdatePrompt />
       {/* Desktop coach: bottom-right / Mobile athlete: top-center via richColors */}
       <Sonner
         position="bottom-right"
@@ -226,7 +249,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+  </OfflineQueryProvider>
 );
 
 export default App;

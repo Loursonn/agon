@@ -16,8 +16,7 @@ import { formatReps, hasIso, isAllIso } from "@/lib/formatSetsReps";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import { SessionPreviewModal, ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
 import { EmptyState } from "@/features/shared/components/EmptyState";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
+import { completeEnergyAssignment, invalidateEnergy, moveEnergyAssignment, reopenEnergyAssignment } from "@/api/energy";
 import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
@@ -1290,14 +1289,10 @@ function ProgramSessionsView() {
 
   const rescheduleEnergy = useMutation({
     mutationFn: async ({ assignmentId, newDate }: { assignmentId: string; newDate: string }) => {
-      const { error } = await supabase
-        .from("energy_session_assignments")
-        .update({ scheduled_date: newDate })
-        .eq("id", assignmentId);
-      if (error) throw error;
+      await moveEnergyAssignment(assignmentId, newDate);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.activePlan(athleteId ?? "") });
+      void invalidateEnergy(qc, athleteId);
       toast.success("Séance déplacée");
       setRescheduleTarget(null);
     },
@@ -1306,14 +1301,10 @@ function ProgramSessionsView() {
 
   const rescheduleEnergyToToday = useMutation({
     mutationFn: async (assignmentId: string) => {
-      const { error } = await supabase
-        .from("energy_session_assignments")
-        .update({ scheduled_date: today })
-        .eq("id", assignmentId);
-      if (error) throw error;
+      await moveEnergyAssignment(assignmentId, today);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.activePlan(athleteId ?? "") });
+      void invalidateEnergy(qc, athleteId);
       toast.success("Séance déplacée à aujourd'hui");
       setEnergyPreview(prev => prev ? { ...prev, scheduledDate: today } : null);
     },
@@ -1322,15 +1313,12 @@ function ProgramSessionsView() {
 
   const cancelEnergy = useMutation({
     mutationFn: async (assignmentId: string) => {
-      const { error } = await supabase
-        .from("energy_session_assignments")
-        // Même remise à zéro que depuis l'accueil : blocs cochés et RPE effacés
-        .update({ status: "planned", block_logs: {}, rpe_score: null, updated_at: new Date().toISOString() })
-        .eq("id", assignmentId);
-      if (error) throw error;
+      // Même remise à zéro que depuis l'accueil : blocs cochés et RPE effacés
+      await reopenEnergyAssignment(assignmentId);
     },
     onSuccess: () => {
       invalidateSessionStatus(qc, athleteId);
+      void invalidateEnergy(qc, athleteId);
       toast.success("Validation annulée");
       setEnergyPreview(null);
     },
@@ -1507,21 +1495,13 @@ function ProgramSessionsView() {
                   session_comment: null,
                 })
               : null;
-            supabase.from("energy_session_assignments")
-              .update({
-                status: "completed",
-                ...(stepLogNotes ? { notes: stepLogNotes } : {}),
+            completeEnergyAssignment(energyPreview.assignmentId, stepLogNotes ? { notes: stepLogNotes } : {})
+              .then(() => {
+                void invalidateEnergy(qc, athleteId);
+                toast.success("Séance terminée");
+                setEnergyPreview(null);
               })
-              .eq("id", energyPreview.assignmentId)
-              .then(({ error }) => {
-                if (!error) {
-                  qc.invalidateQueries({ queryKey: QK.activePlan(athleteId ?? "") });
-                  toast.success("Séance terminée");
-                  setEnergyPreview(null);
-                } else {
-                  toast.error("Erreur lors de la validation");
-                }
-              });
+              .catch(() => toast.error("Erreur lors de la validation"));
           }}
           onCancel={() => cancelEnergy.mutate(energyPreview.assignmentId)}
         />

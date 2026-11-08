@@ -1,43 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
-import { normalizeBookingUrl } from "@/lib/booking";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { coachKeys, getCoachBooking, setBookingUrl } from "@/api/coaches";
 
 /**
- * Lien de réservation du point hebdo du coach de l'athlète.
- *
- * Lecture autorisée par la policy existante `profiles_select_coaches` : un
- * utilisateur authentifié peut lire les lignes dont le rôle est coach, donc pas
- * de RLS à ajouter ici.
- *
- * L'URL est re-validée côté client : une ligne pourrait avoir été écrite avant
- * la contrainte SQL, et on refuse d'injecter dans un iframe une URL dont on
- * n'est pas sûr.
+ * Lien de réservation du point hebdo du coach de l'athlète (adaptateur de
+ * `src/api/coaches.ts`, qui re-valide l'URL avant de l'injecter dans un iframe).
  */
 export function useCoachBooking(coachId: string | null | undefined) {
   return useQuery({
-    queryKey: QK.coachBooking(coachId ?? "none"),
+    queryKey: coachKeys.booking(coachId ?? "none"),
     enabled: !!coachId,
     // Un lien Calendly ne bouge quasiment jamais : inutile de requêter à chaque
     // ouverture du profil.
     staleTime: 10 * 60 * 1000,
-    queryFn: async (): Promise<{ bookingUrl: string | null; coachName: string }> => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("full_name, first_name, last_name, booking_url")
-        .eq("id", coachId!)
-        .maybeSingle();
+    queryFn: () => getCoachBooking(coachId!),
+  });
+}
 
-      if (error) throw error;
-      if (!data) return { bookingUrl: null, coachName: "Coach" };
-
-      return {
-        bookingUrl: normalizeBookingUrl(data.booking_url),
-        coachName:
-          [data.first_name, data.last_name].filter(Boolean).join(" ") ||
-          data.full_name ||
-          "Coach",
-      };
-    },
+/** Coach : enregistre (ou retire avec `null`) son lien de réservation. */
+export function useSaveBookingUrl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ coachId, url }: { coachId: string; url: string | null }) => setBookingUrl(coachId, url),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: coachKeys.booking(v.coachId) }),
   });
 }

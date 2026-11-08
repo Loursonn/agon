@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getSession, onAuthChange, signOut, updatePassword } from "@/api/auth";
+import { errorMessage } from "@/lib/errors";
 
 const S = {
   bg: "#0E0C0A", s1: "#1E1A16", s2: "#27221D",
@@ -35,11 +36,10 @@ export default function ResetPassword() {
       setHasSession(false);
       return;
     }
-    supabase.auth.getSession().then(({ data: { session } }) => setHasSession(!!session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    getSession().then((session) => setHasSession(!!session), () => setHasSession(false));
+    return onAuthChange((_e, session) => {
       if (session) setHasSession(true);
     });
-    return () => subscription.unsubscribe();
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -48,7 +48,12 @@ export default function ResetPassword() {
     if (password.length < 6) { setError("Le mot de passe doit contenir au moins 6 caractères."); return; }
     if (password !== confirm) { setError("Les deux mots de passe ne correspondent pas."); return; }
     setLoading(true);
-    const { error: updErr } = await supabase.auth.updateUser({ password });
+    let updErr: { message: string } | null = null;
+    try {
+      await updatePassword(password);
+    } catch (err) {
+      updErr = { message: errorMessage(err) };
+    }
     setLoading(false);
     if (updErr) {
       setError(
@@ -61,7 +66,7 @@ export default function ResetPassword() {
       return;
     }
     // Déconnecte cette session de récupération : l'utilisateur se reconnecte sur l'app
-    await supabase.auth.signOut();
+    await signOut("global").catch(() => {});
     setDone(true);
   }
 

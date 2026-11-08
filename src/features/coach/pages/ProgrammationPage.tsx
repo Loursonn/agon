@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Zap, Plus, Library, X, Check, Copy, Pencil, Trash2, Repeat, Calendar, Lightbulb, Target } from "lucide-react";
 import { toast } from "sonner";
@@ -9,7 +8,6 @@ import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 
 import { NewBlockModal } from "@/components/coach/CoachComponents";
 import type { Session } from "@/features/shared/types/athlete";
@@ -20,9 +18,7 @@ import { DeleteEnergySessionButton } from "@/features/coach/components/energy/De
 import BlockHistoryViewer from "@/features/coach/components/BlockHistoryViewer";
 import { useCreateCycleFromBloc } from "@/features/shared/hooks/useCreateCycleFromBloc";
 import { ProgrammationView } from "@/features/coach/components/programmation/ProgrammationView";
-import { localISO } from "@/lib/date";
-import { QK } from "@/lib/queryKeys";
-import { planDayChange } from "@/lib/planningProjection";
+import { useAthleteCycles, useRescheduleSessionDay } from "@/features/coach/components/programmation/hooks/useProgramCycles";
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -777,23 +773,10 @@ export default function ProgrammationPage() {
   const [trashedSessions, setTrashedSessions] = useState<Array<{ session: Session; exos: unknown[] }>>([]);
   const [showTrash, setShowTrash] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ sessId: string; sessName: string } | null>(null);
-  const qc = useQueryClient();
-
   // Tous les cycles de l'athlète (passés, en cours, futurs), triés par date.
   type CycleLite = { id: string; name: string; start_date: string; end_date: string };
-  const { data: cyclesList = [], isLoading: cycleLoading } = useQuery({
-    queryKey: ["athlete-cycles-list", athleteId],
-    enabled: !!athleteId,
-    staleTime: 30_000,
-    queryFn: async (): Promise<CycleLite[]> => {
-      const { data } = await supabase
-        .from("cycles")
-        .select("id, name, start_date, end_date")
-        .eq("athlete_id", athleteId)
-        .order("start_date", { ascending: true });
-      return (data ?? []) as CycleLite[];
-    },
-  });
+  const { data: cyclesList = [], isLoading: cycleLoading } = useAthleteCycles(athleteId);
+  const rescheduleDay = useRescheduleSessionDay(athleteId);
 
   const createCycle = useCreateCycleFromBloc();
 
@@ -852,38 +835,15 @@ export default function ProgrammationPage() {
 
   async function rescheduleWorkoutLogs(sessId: string, newDay: number) {
     if (!athleteId) return;
-    const today = localISO();
-    const { data: logs } = await supabase
-      .from("workout_logs")
-      .select("id, status, rescheduled_by_athlete, microcycle_id, microcycles(start_date)")
-      .eq("athlete_id", athleteId)
-      .eq("session_id", sessId)
-      .gte("scheduled_date", today);
-
-    if (!logs?.length) return;
-
-    // Les séances déplacées par l'athlète (et celles déjà faites) gardent leur date
-    const { updates, keptByAthlete } = planDayChange(
-      (logs as Array<{ id: string; status: string; rescheduled_by_athlete: boolean; microcycles: { start_date: string } | null }>)
-        .map((l) => ({
-          id: l.id,
-          status: l.status,
-          rescheduled_by_athlete: l.rescheduled_by_athlete,
-          week_start: l.microcycles?.start_date ?? null,
-        })),
-      newDay,
-    );
-
-    const results = await Promise.all(updates.map(u =>
-      supabase.from("workout_logs").update({ scheduled_date: u.scheduled_date }).eq("id", u.id)
-    ));
-    const failed = results.filter((r) => r.error).length;
-
-    qc.invalidateQueries({ queryKey: QK.cal(athleteId) });
-    qc.invalidateQueries({ queryKey: ["timeline-data"] });
-    qc.invalidateQueries({ queryKey: ["micro-days"] });
-    qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
-    qc.invalidateQueries({ queryKey: QK.activePlan(athleteId) });
+    let res: Awaited<ReturnType<typeof rescheduleDay.mutateAsync>>;
+    try {
+      res = await rescheduleDay.mutateAsync({ sessionId: sessId, newDay });
+    } catch {
+      toast.error("Calendrier non mis à jour : les séances à venir n'ont pas été déplacées");
+      return;
+    }
+    if (!res) return;
+    const { failed, keptByAthlete } = res;
     const kept = keptByAthlete > 0
       ? ` · ${keptByAthlete} séance${keptByAthlete > 1 ? "s" : ""} déplacée${keptByAthlete > 1 ? "s" : ""} par l'athlète conservée${keptByAthlete > 1 ? "s" : ""}`
       : "";

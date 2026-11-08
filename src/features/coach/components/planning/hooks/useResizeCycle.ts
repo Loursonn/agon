@@ -1,53 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, parseISO, max, min, startOfISOWeek, endOfISOWeek, addWeeks } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
+import { format, parseISO, max, min } from "date-fns";
 import { toast } from "sonner";
 import type { AnyItem, Level, TimelineData } from "./useTimelineData";
-import { deletePlannedWorkouts } from "@/api/workouts";
-
-// ── Microcycle helpers ────────────────────────────────────────────────────────
-
-function buildMicrocycles(cycleId: string, start: Date, end: Date) {
-  const rows: { cycle_id: string; week_number: number; start_date: string; end_date: string; is_deload: boolean }[] = [];
-  let weekMon = startOfISOWeek(start); // Monday of start week
-  let week = 1;
-  while (weekMon <= end) {
-    rows.push({
-      cycle_id:    cycleId,
-      week_number: week,
-      start_date:  format(weekMon,               "yyyy-MM-dd"),
-      end_date:    format(endOfISOWeek(weekMon), "yyyy-MM-dd"), // Sunday
-      is_deload:   false,
-    });
-    weekMon = addWeeks(weekMon, 1);
-    week++;
-  }
-  return rows;
-}
-
-async function regenerateMicrocycles(cycleId: string, newStart: Date, newEnd: Date) {
-  const { data: existing } = await supabase
-    .from("microcycles").select("id, start_date").eq("cycle_id", cycleId);
-
-  const needed = buildMicrocycles(cycleId, newStart, newEnd);
-  const neededStarts   = new Set(needed.map((m) => m.start_date));
-  const existingStarts = new Set((existing ?? []).map((m) => m.start_date));
-
-  // Delete microcycles (and their workout_logs) outside the new range
-  const toDelete = (existing ?? []).filter((m) => !neededStarts.has(m.start_date));
-  if (toDelete.length > 0) {
-    const ids = toDelete.map((m) => m.id);
-    await deletePlannedWorkouts({ microcycleIds: ids });
-    await supabase.from("microcycles").delete().in("id", ids);
-  }
-
-  // Insert only weeks not already covered
-  const toInsert = needed.filter((m) => !existingStarts.has(m.start_date));
-  if (toInsert.length > 0) {
-    const { error } = await supabase.from("microcycles").insert(toInsert);
-    if (error) console.error("[regenerate-microcycles]", error.message);
-  }
-}
+import {
+  cycleKeys, invalidateCycles, listCycleMicrocycles, listMacrocycleMesocycles, listMesocycleCycles,
+  setCycleDates, updatePeriod, type PeriodLevel,
+} from "@/api/cycles";
 
 export type { AnyItem, Level };
 
@@ -68,7 +26,7 @@ interface ResizeVars {
 // Clips children that fall outside the new parent bounds.
 // Returns list of {table, id, start_date, end_date} to update.
 
-type ChildUpdate = { table: string; id: string; start_date: string; end_date: string };
+type ChildUpdate = { table: PeriodLevel; id: string; start_date: string; end_date: string };
 
 async function cascadeClipChildren(
   level: ResizeVars["level"],
@@ -82,12 +40,9 @@ async function cascadeClipChildren(
   const ne = format(newEnd,   "yyyy-MM-dd");
 
   if (level === "macrocycles") {
-    const { data: mesos } = await supabase
-      .from("mesocycles")
-      .select("id, start_date, end_date")
-      .eq("macrocycle_id", parentId);
+    const mesos = await listMacrocycleMesocycles(parentId);
 
-    for (const m of mesos ?? []) {
+    for (const m of mesos) {
       const cs = max([parseISO(m.start_date), newStart]);
       const ce = min([parseISO(m.end_date),   newEnd]);
       if (cs >= ce) {
@@ -101,12 +56,9 @@ async function cascadeClipChildren(
         updates.push({ table: "mesocycles", id: m.id, start_date: mesoStart, end_date: mesoEnd });
 
         // Cascade into cycles
-        const { data: cycles } = await supabase
-          .from("cycles")
-          .select("id, start_date, end_date")
-          .eq("mesocycle_id", m.id);
+        const cycles = await listMesocycleCycles(m.id);
 
-        for (const c of cycles ?? []) {
+        for (const c of cycles) {
           const cs2 = max([parseISO(c.start_date), cs]);
           const ce2 = min([parseISO(c.end_date),   ce]);
           if (cs2 >= ce2) {
@@ -119,12 +71,9 @@ async function cascadeClipChildren(
             updates.push({ table: "cycles", id: c.id, start_date: cycleStart, end_date: cycleEnd });
 
             // Cascade into microcycles
-            const { data: micros } = await supabase
-              .from("microcycles")
-              .select("id, start_date, end_date")
-              .eq("cycle_id", c.id);
+            const micros = await listCycleMicrocycles(c.id);
 
-            for (const mi of micros ?? []) {
+            for (const mi of micros) {
               const ms = max([parseISO(mi.start_date), cs2]);
               const me = min([parseISO(mi.end_date),   ce2]);
               if (ms >= me) {
@@ -142,12 +91,9 @@ async function cascadeClipChildren(
   }
 
   if (level === "mesocycles") {
-    const { data: cycles } = await supabase
-      .from("cycles")
-      .select("id, start_date, end_date")
-      .eq("mesocycle_id", parentId);
+    const cycles = await listMesocycleCycles(parentId);
 
-    for (const c of cycles ?? []) {
+    for (const c of cycles) {
       const cs = max([parseISO(c.start_date), newStart]);
       const ce = min([parseISO(c.end_date),   newEnd]);
       if (cs >= ce) {
@@ -159,12 +105,9 @@ async function cascadeClipChildren(
         const cycleEnd   = format(ce, "yyyy-MM-dd");
         updates.push({ table: "cycles", id: c.id, start_date: cycleStart, end_date: cycleEnd });
 
-        const { data: micros } = await supabase
-          .from("microcycles")
-          .select("id, start_date, end_date")
-          .eq("cycle_id", c.id);
+        const micros = await listCycleMicrocycles(c.id);
 
-        for (const mi of micros ?? []) {
+        for (const mi of micros) {
           const ms = max([parseISO(mi.start_date), cs]);
           const me = min([parseISO(mi.end_date),   ce]);
           if (ms >= me) {
@@ -179,7 +122,7 @@ async function cascadeClipChildren(
     }
   }
 
-  // "cycles" level: microcycles are regenerated separately in mutationFn — skip here.
+  // "cycles" level: microcycles are regenerated by setCycleDates — skip here.
 
   return updates;
 }
@@ -198,7 +141,7 @@ export function useResizeCycle() {
 
   return useMutation({
     onMutate: async (vars: ResizeVars) => {
-      const qKey = ["timeline-data", vars.athleteId, vars.rangeStart, vars.rangeEnd];
+      const qKey = cycleKeys.timeline(vars.athleteId, vars.rangeStart, vars.rangeEnd);
       await qc.cancelQueries({ queryKey: qKey });
       const previous = qc.getQueryData<TimelineData>(qKey);
 
@@ -229,30 +172,24 @@ export function useResizeCycle() {
         }
       }
 
-      // Update parent
-      const updatePayload: Record<string, string> = {
-        start_date: format(vars.newStart, "yyyy-MM-dd"),
-        end_date:   format(vars.newEnd,   "yyyy-MM-dd"),
-      };
-      if (vars.newMesocycleId !== undefined) updatePayload.mesocycle_id = vars.newMesocycleId;
+      const start = format(vars.newStart, "yyyy-MM-dd");
+      const end   = format(vars.newEnd,   "yyyy-MM-dd");
 
-      const { error } = await supabase
-        .from(vars.level)
-        .update(updatePayload)
-        .eq("id", vars.item.id);
-      if (error) throw error;
-
-      // Cascade clip children (or regenerate for cycles)
       if (vars.level === "cycles") {
-        await regenerateMicrocycles(vars.item.id, vars.newStart, vars.newEnd);
-
-        // Borne dure : raccourcir la fin d'un cycle supprime les séances au-delà
-        // de la nouvelle fin (comme une modif manuelle de la date de fin). Couvre
-        // aussi les logs date-based (microcycle_id null) que regenerate ne touche pas.
-        const newEndStr = format(vars.newEnd, "yyyy-MM-dd");
-        if (newEndStr < vars.item.end_date) {
-          await deletePlannedWorkouts({ athleteId: vars.athleteId, after: newEndStr, until: vars.item.end_date });
-        }
+        // Dates + semaines régénérées en une écriture. Borne dure : raccourcir
+        // la fin retire les séances PRÉVUES au-delà de la nouvelle fin (y
+        // compris celles sans semaine) ; les séances réelles sont gardées.
+        await setCycleDates({
+          cycleId: vars.item.id, start, end,
+          mesocycleId: vars.newMesocycleId,
+          trimAfterEnd: true,
+        });
+      } else {
+        await updatePeriod(vars.level, vars.item.id, {
+          start_date: start,
+          end_date:   end,
+          ...(vars.newMesocycleId !== undefined ? { mesocycle_id: vars.newMesocycleId } : {}),
+        });
       }
 
       const childUpdates = await cascadeClipChildren(
@@ -272,10 +209,7 @@ export function useResizeCycle() {
         Object.entries(byTable).map(([table, updates]) =>
           Promise.all(
             updates.map((u) =>
-              supabase
-                .from(table)
-                .update({ start_date: u.start_date, end_date: u.end_date })
-                .eq("id", u.id),
+              updatePeriod(table as PeriodLevel, u.id, { start_date: u.start_date, end_date: u.end_date }),
             ),
           ),
         ),
@@ -291,15 +225,9 @@ export function useResizeCycle() {
 
     onSuccess: (_data, vars) => {
       if (vars.level === "cycles") {
-        qc.setQueryData(["active-cycle-id", vars.athleteId], vars.item.id);
+        qc.setQueryData(cycleKeys.activeCycleId(vars.athleteId), vars.item.id);
       }
-      qc.invalidateQueries({ queryKey: ["timeline-data",    vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["planning-summary", vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["athlete-cycles",   vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["cycle-sessions",   vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["calendar-events",  vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["micro-days",       vars.athleteId] });
-      qc.invalidateQueries({ queryKey: ["micro-stats",      vars.athleteId] });
+      void invalidateCycles(qc, vars.athleteId);
     },
   });
 }
