@@ -7,7 +7,7 @@ import {
   deletePlannedWorkouts, listWorkoutLogs, listUnfinishedWorkouts, getPreviousLoggedWorkout,
   listAthleteChoices, countAthleteChoices, completeWorkout, patchWorkoutEntries, setWorkoutRpe,
   setCoachOverride, reopenWorkout, removeWorkout, skipWorkout, rescheduleWorkoutByAthlete,
-  invalidateWorkouts, workoutKeys, getWorkoutStats, isWorkoutNotFound, getWorkoutLog,
+  invalidateWorkouts, workoutKeys, getWorkoutStats, isWorkoutNotFound, getWorkoutLog, planWorkout,
 } from "@/api/workouts";
 
 const log = (id: string, o: Record<string, unknown>) => ({
@@ -285,5 +285,33 @@ describe("invalidateWorkouts", () => {
     await invalidateWorkouts(qc, { athleteId: "a", logId: "w" });
     for (const k of keys) expect([k, qc.getQueryState(k)?.isInvalidated]).toEqual([k, true]);
     for (const k of untouched) expect([k, qc.getQueryState(k)?.isInvalidated]).toEqual([k, false]);
+  });
+});
+
+describe("planWorkout avec id (séance libre rejouable)", () => {
+  const input = {
+    id: "local-1", athleteId: "a", coachId: null, sessionId: "S1", sessionName: "Haut du corps",
+    date: "2026-11-08", byAthlete: true,
+  };
+
+  it("crée la séance avec l'id donné ; un rejeu ne crée pas de doublon", async () => {
+    const { db, tables } = fakeDb({ workout_logs: [] });
+    setDbForTests(db);
+    const first = await planWorkout(input);
+    const again = await planWorkout(input);
+    expect(first.id).toBe("local-1");
+    expect(again.id).toBe("local-1");
+    expect(tables.workout_logs).toHaveLength(1);
+    expect(tables.workout_logs[0]).toMatchObject({ status: "planned", rescheduled_by_athlete: true, original_scheduled_date: "2026-11-08" });
+  });
+
+  it("place déjà prise (séance prévue ou annulée ce jour-là) : renvoie celle-là, sans en créer", async () => {
+    const { db, tables } = fakeDb({
+      workout_logs: [{ id: "du-coach", athlete_id: "a", session_id: "S1", scheduled_date: "2026-11-08", status: "skipped" }],
+    });
+    setDbForTests(db);
+    const got = await planWorkout(input);
+    expect(got.id).toBe("du-coach");
+    expect(tables.workout_logs).toHaveLength(1);
   });
 });

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { loadFromPctRm } from "@shared/domain/performance";
+import { localIsoDay } from "@shared/domain/dates";
 import type { RecordSet } from "@shared/domain/performance";
 import { computeRecordsFromSession, invalidateRecords, resolveRecordRef } from "@/api/records";
 import { usePRsByRef, useRecordLinks } from "@/features/shared/hooks/usePRLogs";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/offline/writes";
 import { classifyWriteError } from "@/lib/offline/writeQueue";
 import { applyOptimisticWorkout, draftAlreadyOnServer } from "@/lib/optimisticWorkout";
+import { collectRecordSets, newRecordsMessage } from "@/lib/offline/sessionRecords";
 import { WORKOUT_GONE_MESSAGE } from "@/features/shared/hooks/useUpsertWorkoutRpe";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
@@ -2783,29 +2785,23 @@ export default function WorkoutDetailPage() {
   // ── Records battus pendant la séance (calculés à la validation) ──────────
   // Séries faites des exercices rattachés à un record ; une erreur ici ne
   // remet jamais en cause la validation (déjà enregistrée).
+  // Validation partie de la file hors ligne : mêmes séries préparées ici
+  // (`recordSets` dans la saisie), records calculés par la file à l'envoi
+  // (`writes.ts`), même si l'écran n'est plus ouvert.
   const recordNewRecords = useCallback(
-    async (aid: string, doneSets: Record<string, SessionSetLog[]>) => {
-      const recordSets: RecordSet[] = [];
-      for (const [exId, rows] of Object.entries(doneSets)) {
-        const ref = recordRefByEx[exId];
-        if (!ref) continue;
-        for (const r of rows ?? []) {
-          if (r?.done && !r.skipped) recordSets.push({ ref, kg: r.kg, reps: r.reps });
-        }
-      }
+    async (aid: string, recordSets: RecordSet[]) => {
       if (recordSets.length === 0) return;
       try {
         const found = await computeRecordsFromSession(aid, recordSets);
         if (found.length > 0) {
           void invalidateRecords(qc, aid);
-          const list = found.map((c) => `${c.ref} ${String(c.kg).replace(".", ",")} kg`).join(", ");
-          toast.success(`Nouveau record : ${list}`);
+          toast.success(newRecordsMessage(found));
         }
       } catch {
         /* records : best effort */
       }
     },
-    [recordRefByEx, qc],
+    [qc],
   );
 
   // ── Complete workout ─────────────────────────────────────────────────────
@@ -2819,8 +2815,11 @@ export default function WorkoutDetailPage() {
       // COMPLÈTE de la séance, envoyée au retour du réseau.
       const mods = allSetsToMods(sets, localMods);
       const km = parseKm(runKm);
-      const res = await submitWrite("workout.complete", { athleteId: athleteId ?? "", logId: id, mods, runKm: km });
-      return { queued: res.status === "queued", mods, km };
+      const recordSets = collectRecordSets(mods.sessionSets ?? {}, recordRefByEx);
+      const res = await submitWrite("workout.complete", {
+        athleteId: athleteId ?? "", logId: id, mods, runKm: km, recordSets, recordDay: localIsoDay(),
+      });
+      return { queued: res.status === "queued", mods, km, recordSets };
     },
     onSuccess: (r) => {
       if (!r || !id) return;
@@ -2837,8 +2836,8 @@ export default function WorkoutDetailPage() {
       setShowRpe(true);
       if (r.queued) {
         // L'écran se comporte comme si c'était validé ; la file rafraîchit
-        // tout une fois vidée. Records : calculés en ligne seulement (lecture
-        // des records actuels), pas pour une validation en file.
+        // tout une fois vidée. Records : calculés par la file à l'envoi
+        // (relecture des records actuels à ce moment-là).
         applyOptimisticWorkout(qc, { athleteId, logId: id }, {
           status: "completed",
           completedAt: new Date().toISOString(),
@@ -2850,7 +2849,7 @@ export default function WorkoutDetailPage() {
       }
       void invalidateWorkouts(qc, { athleteId, logId: id });
       toast.success("Séance complétée ! ");
-      if (athleteId) void recordNewRecords(athleteId, r.mods.sessionSets ?? {});
+      if (athleteId) void recordNewRecords(athleteId, r.recordSets);
     },
     onError: (err: unknown) => {
       if (isWorkoutNotFound(err)) {

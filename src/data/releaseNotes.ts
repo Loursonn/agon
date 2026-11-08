@@ -38,6 +38,41 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-09-mobile-pc-et-hors-ligne",
+    date: "2026-11-09",
+    kind: "feature",
+    title: "Agon sur téléphone pour les coachs, sur ordinateur pour les athlètes",
+    summary: "L'espace coach s'utilise maintenant sur téléphone, l'espace athlète sur ordinateur, et une séance libre se démarre même sans réseau.",
+    sections: [
+      {
+        title: "Coach sur téléphone",
+        points: [
+          "Le menu s'ouvre en tiroir sur le côté et se referme dès que vous choisissez une page : l'écran reste en pleine largeur.",
+          "Les pages larges (planning, grilles) défilent dans leur zone sans décaler tout l'écran. Certains écrans détaillés seront encore améliorés.",
+        ],
+      },
+      {
+        title: "Athlète sur ordinateur",
+        points: [
+          "Navigation sur le côté et contenu centré : plus de petite colonne de téléphone perdue au milieu de l'écran.",
+        ],
+      },
+      {
+        title: "Sans réseau",
+        points: [
+          "Vos athlètes peuvent démarrer une séance libre sans connexion : elle est créée dès le retour du réseau, avec toute la saisie.",
+          "Les records battus pendant une séance validée sans réseau sont calculés à l'envoi.",
+        ],
+      },
+      {
+        title: "Inscription",
+        points: [
+          "La date de naissance est demandée à l'inscription : Agon est réservé aux 15 ans et plus.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-08-saisies-sans-reseau",
     date: "2026-11-08",
     kind: "feature",

@@ -4,27 +4,35 @@ import {
   archivedWellnessOf,
   parseWellnessEntry,
   parseWellnessHistory,
+  readItem,
   toLegacyEntry,
+  type DomsPoint,
+  type HourMinute,
   type WellnessEntry,
   type WellnessHistory,
 } from "@shared/domain/wellness";
 import { ApiError, db, unwrap, unwrapRows } from "./client";
 
 /**
- * Wellness (stockage actuel : `app_data`, clés `asp:wh` et
- * `asp:blockHistory[].wellnessHistory`). Voir docs/COUCHE_API.md, lot 3.
+ * Wellness. Voir docs/COUCHE_API.md (lot 3) et docs/SANTE_TABLES.md.
  *
- * - Lecture : toujours via `parseWellnessHistory` → jours ISO, notes 1-5 ou
- *   null, clés parasites écartées, archive incluse par défaut.
+ * - Lecture : table `wellness_entries` (une ligne par jour, `archived` = vient
+ *   seulement d'un bloc archivé). Elle est tenue à jour côté serveur, par
+ *   trigger, depuis `app_data` (`asp:wh`, `asp:blockHistory`) : tant que la
+ *   migration 20261110100000 n'est pas appliquée (table absente), on relit
+ *   l'ancien stockage, avec le même résultat.
  * - Écriture : RPC `wellness_set_day` / `wellness_delete_day` (un seul jour,
  *   atomique) ; jamais « relire tout le blob, le modifier, le réécrire ».
  * - Score et paliers : `wellnessScore` / `wellnessBand` du domaine, nulle part
  *   ailleurs.
- * - Le poids (`asp:wlog`, `asp:bw`) n'est pas géré ici.
+ * - Le poids (pesées, paliers, objectif) : `profile.ts`.
  */
 
 const WH = "asp:wh";
 const ARCHIVE = "asp:blockHistory";
+const TABLE = "wellness_entries";
+const COLUMNS =
+  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived";
 
 export interface WellnessRange {
   from?: IsoDay | null;
@@ -43,13 +51,127 @@ export const wellnessKeys = {
   many: (aids: readonly string[]) => ["wellness", "_many", [...aids].sort().join(",")] as const,
 };
 
-type Row = { athlete_id: string; key: string; value: unknown };
+// ── Table `wellness_entries` ──────────────────────────────────────────────────
+
+/** Ligne de `wellness_entries` (numeric → nombre, time → "HH:MM:SS"). */
+export interface WellnessRow {
+  athlete_id: string;
+  day: string;
+  fatigue: number | string | null;
+  sommeil: number | string | null;
+  stress: number | string | null;
+  energie: number | string | null;
+  doms: number | string | null;
+  bedtime: string | null;
+  wake: string | null;
+  sleep_hours: number | string | null;
+  sleep_interrupted: boolean | null;
+  sleep_interrupt_note: string | null;
+  doms_zones: string[] | null;
+  doms_points: unknown;
+  injury_note: string | null;
+  weight_kg: number | string | null;
+  archived: boolean;
+}
+
+const entries = () => db().from(TABLE).select(COLUMNS);
+
+/** Table absente (migration pas encore appliquée) : PostgREST PGRST205, Postgres 42P01. */
+export function tableMissing(e: unknown): boolean {
+  return e instanceof ApiError && (e.code === "PGRST205" || e.code === "42P01");
+}
+
+function toNum(v: unknown): number | null {
+  const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+function toHm(v: unknown): HourMinute | null {
+  const m = typeof v === "string" ? /^(\d{1,2}):(\d{2})/.exec(v) : null;
+  return m ? { h: Number(m[1]), m: Number(m[2]) } : null;
+}
+
+function toPoints(v: unknown): DomsPoint[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((p) => {
+    if (typeof p !== "object" || p === null) return [];
+    const o = p as Record<string, unknown>;
+    const x = toNum(o.x);
+    const y = toNum(o.y);
+    if (x == null || y == null || (o.side !== "front" && o.side !== "back")) return [];
+    const intensity = toNum(o.intensity);
+    return [{ id: String(o.id ?? `${o.side}-${x}-${y}`), x, y, side: o.side, ...(intensity != null ? { intensity } : {}) }];
+  });
+}
+
+/** Une ligne de la table → `WellnessEntry` (même forme que `parseWellnessEntry`). */
+export function wellnessRowToEntry(row: WellnessRow): WellnessEntry | null {
+  const day = typeof row.day === "string" ? row.day.slice(0, 10) : "";
+  if (!isIsoDay(day)) return null;
+  const hours = toNum(row.sleep_hours);
+  const kg = toNum(row.weight_kg);
+  return {
+    day,
+    items: {
+      fatigue: readItem(row.fatigue),
+      sommeil: readItem(row.sommeil),
+      stress: readItem(row.stress),
+      energie: readItem(row.energie),
+      doms: readItem(row.doms),
+    },
+    sleep: {
+      bedtime: toHm(row.bedtime),
+      wake: toHm(row.wake),
+      hours: hours != null && hours >= 0 && hours <= 24 ? hours : null,
+      interrupted: typeof row.sleep_interrupted === "boolean" ? row.sleep_interrupted : null,
+      interruptNote: row.sleep_interrupt_note?.trim() || null,
+    },
+    domsZones: Array.isArray(row.doms_zones) ? row.doms_zones.filter((z): z is string => typeof z === "string") : [],
+    domsPoints: toPoints(row.doms_points),
+    injuryNote: row.injury_note?.trim() || null,
+    weightKg: kg != null && kg > 0 ? kg : null,
+    archived: row.archived === true,
+  };
+}
+
+function rowsToHistory(rows: WellnessRow[]): WellnessHistory {
+  const out: WellnessHistory = {};
+  for (const e of rows.map(wellnessRowToEntry).filter((x): x is WellnessEntry => x !== null).sort((a, b) => a.day.localeCompare(b.day))) {
+    out[e.day] = e;
+  }
+  return out;
+}
+
+/** PostgREST renvoie au plus 1000 lignes par requête : lecture par pages. */
+const PAGE_SIZE = 1000;
+
+async function readEntries(athleteIds: readonly string[], r: WellnessRange, what: string): Promise<WellnessRow[]> {
+  const out: WellnessRow[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let q = athleteIds.length === 1 ? entries().eq("athlete_id", athleteIds[0]) : entries().in("athlete_id", [...athleteIds]);
+    if (r.from) q = q.gte("day", r.from);
+    if (r.to) q = q.lte("day", r.to);
+    if (r.includeArchived === false) q = q.eq("archived", false);
+    // Ordre total (jour puis athlète) : aucune ligne sautée ni doublée entre deux pages.
+    const page = unwrapRows<WellnessRow>(
+      await q.order("day", { ascending: true }).order("athlete_id", { ascending: true }).range(from, from + PAGE_SIZE - 1),
+      what,
+    );
+    out.push(...page);
+    if (page.length < PAGE_SIZE) return out;
+  }
+}
+
+// ── Ancien stockage (`app_data`), seulement si la table n'existe pas encore ──
+// À supprimer à l'étape 4 de docs/SANTE_TABLES.md.
+
+type LegacyRow = { athlete_id: string; key: string; value: unknown };
 
 function keysFor(includeArchived: boolean | undefined): string[] {
   return includeArchived === false ? [WH] : [WH, ARCHIVE];
 }
 
-function historyOf(rows: Row[], r: WellnessRange): WellnessHistory {
+function legacyHistoryOf(rows: LegacyRow[], r: WellnessRange): WellnessHistory {
   const wh = rows.find((x) => x.key === WH)?.value ?? null;
   const archived = r.includeArchived === false ? [] : archivedWellnessOf(rows.find((x) => x.key === ARCHIVE)?.value);
   const full = parseWellnessHistory(wh, archived);
@@ -59,13 +181,27 @@ function historyOf(rows: Row[], r: WellnessRange): WellnessHistory {
   return out;
 }
 
+async function legacyHistories(athleteIds: readonly string[], r: WellnessRange, what: string): Promise<Record<string, WellnessHistory>> {
+  const rows = unwrapRows<LegacyRow>(
+    await db().from("app_data").select("athlete_id, key, value").in("athlete_id", [...athleteIds]).in("key", keysFor(r.includeArchived)),
+    what,
+  );
+  const out: Record<string, WellnessHistory> = {};
+  for (const aid of athleteIds) out[aid] = legacyHistoryOf(rows.filter((x) => x.athlete_id === aid), r);
+  return out;
+}
+
+// ── Lectures ──────────────────────────────────────────────────────────────────
+
 /** Historique d'un athlète (jours ISO croissants). Lève en cas d'erreur. */
 export async function getWellnessHistory(athleteId: string, r: WellnessRange = {}): Promise<WellnessHistory> {
-  const rows = unwrapRows<Row>(
-    await db().from("app_data").select("athlete_id, key, value").eq("athlete_id", athleteId).in("key", keysFor(r.includeArchived)),
-    "Lecture du wellness impossible",
-  );
-  return historyOf(rows, r);
+  const what = "Lecture du wellness impossible";
+  try {
+    return rowsToHistory(await readEntries([athleteId], r, what));
+  } catch (e) {
+    if (!tableMissing(e)) throw e;
+    return (await legacyHistories([athleteId], r, what))[athleteId];
+  }
 }
 
 /**
@@ -77,13 +213,17 @@ export async function getWellnessHistories(
   athleteIds: readonly string[],
   r: WellnessRange = {},
 ): Promise<Record<string, WellnessHistory>> {
+  if (athleteIds.length === 0) return {};
+  const what = "Lecture du wellness des athlètes impossible";
+  let rows: WellnessRow[];
+  try {
+    rows = await readEntries(athleteIds, r, what);
+  } catch (e) {
+    if (!tableMissing(e)) throw e;
+    return legacyHistories(athleteIds, r, what);
+  }
   const out: Record<string, WellnessHistory> = {};
-  if (athleteIds.length === 0) return out;
-  const rows = unwrapRows<Row>(
-    await db().from("app_data").select("athlete_id, key, value").in("athlete_id", [...athleteIds]).in("key", keysFor(r.includeArchived)),
-    "Lecture du wellness des athlètes impossible",
-  );
-  for (const aid of athleteIds) out[aid] = historyOf(rows.filter((x) => x.athlete_id === aid), r);
+  for (const aid of athleteIds) out[aid] = rowsToHistory(rows.filter((x) => x.athlete_id === aid));
   return out;
 }
 

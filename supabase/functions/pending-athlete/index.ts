@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireUser } from "../_shared/auth.ts";
+import { purgeUserStorage, type StorageAdmin } from "../_shared/userStorage.ts";
 
 /**
  * Athlète pré-créé par le coach, avant sa première connexion.
@@ -8,7 +9,8 @@ import { requireUser } from "../_shared/auth.ts";
  *  - action "create" : crée un compte auth « fantôme » + son profil rattaché au
  *    coach + un jeton de réclamation. Le coach peut programmer dessus aussitôt.
  *  - action "delete" : supprime un athlète encore non réclamé (compte auth
- *    compris, le profil et le jeton partent en cascade). Un athlète pré-créé n'a
+ *    compris, le profil et le jeton partent en cascade ; ses fichiers — fiches
+ *    personnalisées dans `docs` — sont purgés avant). Un athlète pré-créé n'a
  *    pas d'historique à conserver, et le laisser orphelin garderait un lien de
  *    réclamation valide vers un compte que le coach a abandonné.
  */
@@ -102,9 +104,12 @@ serve(async (req) => {
       if (!athlete || athlete.coach_id !== user.id || !athlete.is_pending) {
         throw new Error("Athlète introuvable ou déjà activé");
       }
+      // Fichiers d'abord : les cascades SQL ne touchent pas Storage. Un échec
+      // ne bloque pas la suppression, il est remonté.
+      const warnings = await purgeUserStorage(admin as unknown as StorageAdmin, athleteId);
       const { error } = await admin.auth.admin.deleteUser(athleteId);
       if (error) throw new Error("Suppression impossible");
-      return json({ success: true });
+      return json({ success: true, warnings });
     }
 
     throw new Error("Action inconnue");

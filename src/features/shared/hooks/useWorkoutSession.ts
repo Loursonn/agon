@@ -9,8 +9,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { getWorkoutLog } from "@/api/workouts";
+import { resolveWorkoutId } from "@/lib/offline/writes";
 import { cycleKeys, getMicrocycle } from "@/api/cycles";
-import { listLegacyCycleExercises, planningKeys } from "@/api/planning";
+import { planningKeys } from "@/api/planning";
+import { listLegacyCycleExercises } from "@/api/exercises";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { defaultExerciceParams } from "@/features/coach/components/programmation/types";
@@ -234,7 +236,8 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
     // L'erreur DOIT remonter : avant, elle était avalée (data = null) et la page
     // prenait « pas de saisie » pour la vérité → la 1re série envoyée au retour
     // du réseau effaçait coachOverride et commentaires. Ici React Query réessaie.
-    queryFn: () => getWorkoutLog(workoutLogId!),
+    // Séance créée hors ligne puis fusionnée par le serveur : lire la vraie.
+    queryFn: () => getWorkoutLog(resolveWorkoutId(workoutLogId!)),
   });
   // `wlog === null` = log réellement absent (lu avec succès) ; `undefined` = pas encore lu.
   const logStatus: WorkoutSessionResult["logStatus"] =

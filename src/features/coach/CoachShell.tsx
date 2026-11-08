@@ -12,7 +12,9 @@ import {
   SidebarInset,
   SidebarTrigger,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/lib/theme";
 import { CommandPaletteProvider } from "./context/CommandPaletteContext";
@@ -69,14 +71,20 @@ const SIDEBAR_STYLE: React.CSSProperties = {
 
 // ── CoachShell ────────────────────────────────────────────────────────────────
 
-function CoachShellInner() {
+// Sur mobile (< 768 px), la sidebar shadcn devient un tiroir (Sheet) ouvert par
+// le bouton de la barre du haut ; sur PC elle reste fixe, repliable en icônes.
+function CoachSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, logout } = useAuth();
   const unseenUpdates = useAppUpdates(user?.id).unseen.length;
   const { toggle } = useCommandPalette();
-  // Double casquette : un coach qui est aussi pro chez un autre coach
-  const { hasLinks: isStaffElsewhere } = useHasStaffLinks();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // Tiroir mobile : on le referme dès qu'on change de page ou qu'on ouvre la recherche.
+  function closeDrawer() {
+    if (isMobile) setOpenMobile(false);
+  }
 
   function isActive(path: string, exact: boolean) {
     if (exact) return location.pathname === path;
@@ -88,12 +96,20 @@ function CoachShellInner() {
   }
 
   return (
-    <SidebarProvider defaultOpen={typeof window !== "undefined" ? window.innerWidth > 1024 : true} style={SIDEBAR_STYLE}>
-      {/* ── Sidebar ── */}
-      <Sidebar
-        collapsible="icon"
-        style={{ background: "#0E0C0A", borderRight: "1px solid rgba(231,211,168,0.2)" }}
-      >
+    <Sidebar
+      collapsible="icon"
+      style={{ background: "#0E0C0A", borderRight: "1px solid rgba(231,211,168,0.2)" }}
+    >
+      {/* Le tiroir mobile est rendu dans un portail, hors des variables CSS du
+          provider : le fond est donc posé ici, identique à celui du PC. */}
+      <div className="flex h-full min-h-0 w-full flex-col" style={{ background: "#0E0C0A" }}>
+        {/* Titre lu par les lecteurs d'écran (tiroir mobile = boîte de dialogue) */}
+        {isMobile && (
+          <>
+            <SheetTitle className="sr-only">Navigation coach</SheetTitle>
+            <SheetDescription className="sr-only">Pages de l'espace coach</SheetDescription>
+          </>
+        )}
         {/* Logo */}
         <SidebarHeader style={{ padding: "16px 14px 12px", borderBottom: "1px solid rgba(231,211,168,0.2)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -114,7 +130,7 @@ function CoachShellInner() {
         {/* Search button — opens command palette */}
         <div className="group-data-[collapsible=icon]:hidden" style={{ padding: "8px 10px 4px" }}>
           <button
-            onClick={toggle}
+            onClick={() => { closeDrawer(); toggle(); }}
             className="coach-sidebar-search"
             style={{
               width: "100%", display: "flex", alignItems: "center", gap: 8,
@@ -149,7 +165,7 @@ function CoachShellInner() {
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton
                     isActive={active}
-                    onClick={() => navigate(item.path)}
+                    onClick={() => { navigate(item.path); closeDrawer(); }}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -232,30 +248,58 @@ function CoachShellInner() {
             </div>
           </div>
         </SidebarFooter>
-      </Sidebar>
+      </div>
+    </Sidebar>
+  );
+}
+
+function CoachShellInner() {
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { toggle } = useCommandPalette();
+  // Double casquette : un coach qui est aussi pro chez un autre coach
+  const { hasLinks: isStaffElsewhere } = useHasStaffLinks();
+
+  return (
+    <SidebarProvider defaultOpen={typeof window !== "undefined" ? window.innerWidth > 1024 : true} style={SIDEBAR_STYLE}>
+      {/* ── Sidebar ── */}
+      <CoachSidebar />
 
       {/* ── Main content ── */}
-      <SidebarInset style={{ background: C.bg, display: "flex", flexDirection: "column" }}>
+      {/* min-w-0 : une page trop large défile dans sa zone, sans élargir l'écran entier. */}
+      <SidebarInset className="min-w-0" style={{ background: C.bg, display: "flex", flexDirection: "column" }}>
         {/* Topbar with trigger */}
         <div
+          className="px-3 md:px-4"
           style={{
             position: "sticky", top: 0, zIndex: 10,
             background: C.s1, borderBottom: "1px solid " + C.brd,
-            padding: "8px 16px", display: "flex", alignItems: "center", gap: 8,
+            paddingTop: 8, paddingBottom: 8, display: "flex", alignItems: "center", gap: 8,
             flexShrink: 0, minHeight: 45,
           }}
         >
           <SidebarTrigger
+            aria-label="Menu"
+            className="h-9 w-9 md:h-7 md:w-7"
             style={{
-              width: 28, height: 28, borderRadius: 6,
+              borderRadius: 6,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, cursor: "pointer", display: "flex",
               alignItems: "center", justifyContent: "center", fontSize: 14,
             }}
           />
-          {/* Cmd+K button in topbar */}
+          {/* Mobile : le logo remplace celui de la sidebar, cachée dans le tiroir */}
+          <img
+            src="/brand/agon-symbole-favicon-marbre.svg"
+            alt="Agon"
+            className="md:hidden"
+            style={{ width: 24, height: 24, flexShrink: 0 }}
+          />
+          {/* Cmd+K button in topbar — icône seule sur mobile */}
           <button
             onClick={toggle}
+            aria-label="Rechercher"
+            className="min-h-9 md:min-h-0"
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "5px 12px", borderRadius: 4,
@@ -269,13 +313,14 @@ function CoachShellInner() {
             onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)")}
           >
             <Search size={12} />
-            <span>Rechercher</span>
-            <kbd style={{ fontSize: 10, opacity: 0.5, marginLeft: 2, fontFamily: "inherit" }}>⌘K</kbd>
+            <span className="hidden md:inline">Rechercher</span>
+            <kbd className="hidden md:inline" style={{ fontSize: 10, opacity: 0.5, marginLeft: 2, fontFamily: "inherit" }}>⌘K</kbd>
           </button>
           {/* Espace pro — coach qui est aussi staff d'athlètes d'autres coachs */}
           {isStaffElsewhere && (
             <button
               onClick={() => navigate("/staff")}
+              className="min-h-9 md:min-h-0"
               style={{
                 marginLeft: "auto", padding: "5px 12px", borderRadius: 6,
                 border: "1px solid " + C.brdL, background: "transparent", color: C.tx2,
@@ -290,6 +335,7 @@ function CoachShellInner() {
           {(profile?.role === "coach_athlete" || profile?.role === "coach") && (
             <button
               onClick={() => navigate("/athlete")}
+              className="min-h-9 md:min-h-0"
               style={{
                 marginLeft: isStaffElsewhere ? 0 : "auto", padding: "5px 12px", borderRadius: 6,
                 border: "1px solid " + C.coach + "40",
@@ -306,7 +352,7 @@ function CoachShellInner() {
         <OfflineBanner variant="coach" />
 
         {/* Page content */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div className="min-w-0" style={{ flex: 1, overflowY: "auto" }}>
           <Outlet />
         </div>
       </SidebarInset>

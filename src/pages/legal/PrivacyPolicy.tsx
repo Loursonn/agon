@@ -86,6 +86,7 @@ export default function PrivacyPolicy() {
           items={[
             "Adresse email et mot de passe (stocké sous forme de hachage irréversible, jamais en clair).",
             "Nom et prénom.",
+            "Date de naissance, demandée à la création du compte pour vérifier l'âge minimum (15 ans).",
             "Rôle dans l'application : coach, athlète ou professionnel du staff, et le rattachement entre eux.",
             "Pour un professionnel du staff : son métier, les athlètes qu'il accompagne et les droits qui lui sont ouverts.",
             "Préférences d'affichage et paramètres du compte.",
@@ -439,9 +440,11 @@ export default function PrivacyPolicy() {
 
       <Section title="9. Mineurs">
         <P>
-          Le service n'est pas destiné aux personnes de moins de 15 ans. Si vous avez entre 15 et
-          18 ans, l'accord de votre représentant légal est requis. Si nous apprenons qu'un compte a
-          été créé par un enfant de moins de 15 ans sans cet accord, nous le supprimons.
+          Le service n'est pas destiné aux personnes de moins de 15 ans. Votre date de naissance
+          est demandée à la création du compte : l'inscription est refusée en dessous de 15 ans. Si
+          vous avez entre 15 et 18 ans, l'accord de votre représentant légal est requis. Si nous
+          apprenons qu'un compte a été créé par un enfant de moins de 15 ans sans cet accord, nous le
+          supprimons.
         </P>
       </Section>
 

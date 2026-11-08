@@ -14,9 +14,9 @@ import {
   invalidateWorkouts, moveWorkoutByCoach, planWorkout, removeWorkout, skipOccurrence, skipWorkout,
 } from "@/api/workouts";
 import {
-  createTestSession, deleteTestSession, getCalendarEvents, planningKeys, rescheduleTestSession,
-  type UCEventType, type UnifiedCalendarEvent,
+  getCalendarEvents, planningKeys, type UCEventType, type UnifiedCalendarEvent,
 } from "@/api/planning";
+import { createTestSession, deleteTestSession, rescheduleTestSession } from "@/api/tests";
 import { deleteEnergyAssignment, invalidateEnergy } from "@/api/energy";
 import { invalidateTests } from "@/api/tests";
 import { toast } from "sonner";

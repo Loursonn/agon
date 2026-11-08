@@ -1,0 +1,140 @@
+/* Agon — tokens de design. SEUL fichier qui porte des valeurs (docs/DESIGN_TOKENS.md).
+ *
+ * Lu par :
+ *   - le CSS (importé par src/index.css) : variables shadcn, Tailwind (tailwind.config.ts) ;
+ *   - le JS : src/lib/theme.ts le lit en texte brut et en tire l'objet `C` (valeurs hex,
+ *     car ~500 usages font `C.r + "30"` pour ajouter une opacité).
+ *
+ * Règles :
+ *   - un seul bloc `:root`, une déclaration `--nom: valeur;` par ligne ;
+ *   - les couleurs utilisées par `C` (hors bordures et fonds « -doux ») restent en `#RRGGBB`
+ *     (vérifié par src/styles/__tests__/tokens.test.ts) ;
+ *   - noms alignés sur la charte (agon-brand-kit/tokens/agon-tokens.css) quand ils existent.
+ *
+ * Valeurs ACTUELLES de l'app (rendu inchangé). Pour brancher la charte finale : remplacer
+ * les valeurs ici, rien d'autre. */
+
+:root {
+  /* ── Couleurs de marque ─────────────────────────────────────────────── */
+  --agon-basalte: #1E1A16;
+  --agon-basalte-2: #27221D;
+  --agon-bronze: #A67C52;
+  --agon-or-clair: #E6CB86;
+  --agon-sable: #E7D3A8;
+  --agon-pierre: #8E8780;
+  --agon-or-poli: linear-gradient(135deg, #8A6A2C, #E9CF8A 45%, #C9A14A 70%, #9C7A34);
+
+  /* ── Niveaux de contraste : vif (aplats, accents) · profond (texte sur clair / sur or) ── */
+  --agon-or-vif: #FFC933;
+  --agon-or-profond: #8A6A2C;
+  --agon-terracotta-vif: #FF5A33;
+  --agon-terracotta-profond: #8E3220;
+  --agon-vert-vif: #66F03C;
+  --agon-vert-profond: #3D6B24;
+  --agon-ardoise-vif: #33B5FF;
+  --agon-ardoise-profond: #25506B;
+  --agon-ocre-vif: #FF9500;
+  --agon-ocre-profond: #94560F;
+  --agon-patine-vif: #1FF0B0;
+  --agon-patine-profond: #1F5E47;
+  --agon-amethyste-vif: #F060C0;
+  --agon-amethyste-profond: #5E2A48;
+
+  /* ── Fond & surfaces ────────────────────────────────────────────────── */
+  --agon-bg: #0E0C0A;                       /* C.bg  obsidienne profond */
+  --agon-s1: var(--agon-basalte);           /* C.s1  cartes, tiroirs */
+  --agon-s2: var(--agon-basalte-2);         /* C.s2  champs, squelettes */
+  --agon-brd: rgba(231,211,168,0.10);       /* C.brd */
+  --agon-brd-l: rgba(231,211,168,0.18);     /* C.brdL */
+
+  /* ── Texte ──────────────────────────────────────────────────────────── */
+  --agon-tx: #FFFFFF;                       /* C.tx  */
+  --agon-tx2: #B9AE9C;                      /* C.tx2 secondaire */
+  --agon-tx3: #7D7468;                      /* C.tx3 discret, placeholder */
+  --agon-ink: var(--agon-bg);               /* texte posé sur un aplat or / clair */
+
+  /* ── Rôles ──────────────────────────────────────────────────────────── */
+  --agon-accent: var(--agon-or-vif);        /* C.ac  */
+  --agon-accent-doux: rgba(255,201,51,0.12);/* C.acS */
+  --agon-coach: var(--agon-or-vif);         /* C.coach */
+  --agon-coach-doux: rgba(255,201,51,0.12); /* C.coachS */
+
+  /* ── Sémantique (couleur · fond doux · vif · profond) ───────────────── */
+  --agon-succes: var(--agon-vert-vif);              /* C.g  */
+  --agon-succes-doux: rgba(102,240,60,0.1);         /* C.gS */
+  --agon-succes-vif: var(--agon-vert-vif);          /* C.gV */
+  --agon-succes-profond: var(--agon-vert-profond);  /* C.gP */
+  --agon-alerte: var(--agon-ocre-vif);              /* C.o  */
+  --agon-alerte-doux: rgba(255,149,0,0.1);          /* C.oS */
+  --agon-alerte-vif: var(--agon-ocre-vif);          /* C.oV */
+  --agon-alerte-profond: var(--agon-ocre-profond);  /* C.oP */
+  --agon-erreur: var(--agon-terracotta-vif);        /* C.r  */
+  --agon-erreur-doux: rgba(255,90,51,0.1);          /* C.rS */
+  --agon-erreur-vif: var(--agon-terracotta-vif);    /* C.rV */
+  --agon-erreur-profond: var(--agon-terracotta-profond); /* C.rP */
+  --agon-info: var(--agon-ardoise-vif);             /* C.b  */
+  --agon-info-doux: rgba(51,181,255,0.1);           /* C.bS */
+  --agon-info-vif: var(--agon-ardoise-vif);         /* C.bV */
+  --agon-info-profond: var(--agon-ardoise-profond); /* C.bP */
+  --agon-or-clair-doux: rgba(230,203,134,0.1);      /* C.yS (C.y = --agon-or-clair) */
+  --agon-patine: var(--agon-patine-vif);            /* C.pat */
+  --agon-amethyste: var(--agon-amethyste-vif);      /* C.ame */
+
+  /* ── Catégories (blocs, habitudes, graphiques) : BLOC_COLORS dans l'ordre ── */
+  --agon-cat-1: var(--agon-or-vif);
+  --agon-cat-2: var(--agon-terracotta-vif);
+  --agon-cat-3: var(--agon-vert-vif);
+  --agon-cat-4: var(--agon-ardoise-vif);
+  --agon-cat-5: var(--agon-bronze);
+  --agon-cat-6: var(--agon-patine-vif);
+  --agon-cat-7: var(--agon-amethyste-vif);
+  --agon-cat-8: var(--agon-ocre-vif);
+  --agon-cat-9: var(--agon-sable);
+  --agon-cat-10: var(--agon-pierre);
+
+  /* ── Composants shadcn (src/components/ui) : valeurs historiques ─────
+     Elles diffèrent très légèrement des couleurs ci-dessus (ex. or hsl(43 100% 60%)
+     = #FFC533 au lieu de #FFC933). Gardées telles quelles pour ne rien changer au rendu.
+     Charte finale : remplacer chacune par la variable indiquée. */
+  --agon-ui-bg: hsl(20 17% 3%);             /* → var(--agon-bg) */
+  --agon-ui-s1: hsl(24 14% 10%);            /* → var(--agon-s1) */
+  --agon-ui-s2: hsl(24 12% 13%);            /* → var(--agon-s2) */
+  --agon-ui-tx: hsl(0 0% 100%);             /* = --agon-tx */
+  --agon-ui-tx3: hsl(27 8% 45%);            /* → var(--agon-tx3) */
+  --agon-ui-accent: hsl(43 100% 60%);       /* → var(--agon-accent) */
+  --agon-ui-accent-doux: hsl(43 100% 60% / 0.1); /* → var(--agon-accent-doux) */
+  --agon-ui-ink: hsl(24 28% 7%);            /* → var(--agon-ink) */
+  --agon-ui-sable: hsl(38 50% 78%);         /* → var(--agon-sable) */
+  --agon-ui-erreur: hsl(13 100% 60%);       /* → var(--agon-erreur) */
+  --agon-ui-brd: hsl(38 43% 78% / 0.12);    /* → var(--agon-brd) */
+  --agon-ui-brd-sidebar: hsl(38 43% 78% / 0.10); /* → var(--agon-brd) */
+
+  /* ── Typographie ────────────────────────────────────────────────────── */
+  --agon-font-display: "Archivo", system-ui, sans-serif;
+  --agon-font-ui: "Geist", system-ui, sans-serif;
+  --agon-font-data: "Geist Mono", ui-monospace, monospace;
+  /* Échelle des composants src/ui (minimum 11 px). Classes Tailwind `text-agon-*`. */
+  --agon-text-xs: 11px;
+  --agon-text-sm: 12px;
+  --agon-text-base: 14px;
+  --agon-text-lg: 16px;                     /* minimum des champs sur iPhone (sinon zoom) */
+  --agon-text-xl: 18px;
+  --agon-text-2xl: 22px;
+  --agon-text-3xl: 28px;
+
+  /* ── Formes ─────────────────────────────────────────────────────────── */
+  /* rounded-sm / rounded-md / rounded-lg de Tailwind : 2 / 4 / 6 px (écrits en rem
+     comme avant, pour suivre la taille de police du navigateur à l'identique). */
+  --agon-radius-sm: calc(0.375rem - 4px);
+  --agon-radius: calc(0.375rem - 2px);
+  --agon-radius-lg: 0.375rem;
+
+  /* ── Espacements (classes `p-agon-*`, `gap-agon-*`…) ───────────────── */
+  --agon-space-2xs: 2px;
+  --agon-space-xs: 4px;
+  --agon-space-sm: 8px;
+  --agon-space-md: 12px;
+  --agon-space-lg: 16px;
+  --agon-space-xl: 24px;
+  --agon-space-2xl: 32px;
+}

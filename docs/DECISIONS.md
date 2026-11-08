@@ -1688,3 +1688,48 @@ est une RPC idempotente, donc la rejouer ne double rien.
 la saisie restait en pause dans l'onglet et disparaissait à sa fermeture. Les
 écritures coach (programmation, planning) touchent beaucoup de lignes et se
 font au bureau : les rejouer plus tard ouvrirait des conflits pour peu de gain.
+
+## 2026-11 — Âge minimum 15 ans vérifié à l'inscription
+
+**Décision** : date de naissance obligatoire à toute création de compte (coach,
+coach-athlète, athlète par code ou par lien, staff, activation d'un compte
+pré-créé par le coach). Moins de 15 ans : refus, message « Tu dois avoir au
+moins 15 ans pour utiliser Agon. ». Les comptes existants ne sont pas touchés.
+- Règle pure : `@shared/domain/age` (front via `src/lib/age.ts`, Edge Function
+  `claim-athlete`). Né un 29 février : 15 ans le 1er mars.
+- Le client vérifie AVANT `auth.signUp` (sinon un refus laisserait un compte
+  d'authentification sans profil). La date va dans `profiles.birth_date`.
+- Serveur : trigger `enforce_min_age_on_signup` sur `profiles` (INSERT, et
+  `is_pending` true → false). « Aujourd'hui » = UTC+14 (personne n'est refusé
+  à cause du fuseau). Autres mises à jour non contrôlées.
+- **Date absente** : acceptée tant que `main` ne l'envoie pas (phase 1,
+  migration 20261109160000, applicable tout de suite). Phase 2
+  (20261109170000 + `BIRTH_DATE_REQUIRED = true` dans `claim-athlete`) après
+  déploiement du nouveau client sur `main` : date absente refusée, sauf profils
+  créés côté serveur (athlète pré-créé, seed démo).
+
+**Pourquoi** : CGU et politique annoncent 15 ans (majorité numérique, art. 8
+RGPD / loi Informatique et libertés art. 45) sans aucun contrôle. Le
+contrôle serveur seul évite qu'on le contourne en appelant l'API directement ;
+la phase 1 évite de casser les inscriptions du client en production.
+
+## 2026-11-08 — Écritures en prod du lot refonte
+
+**Fait** (accord d'Hugo) : `claim-athlete` déployé (date de naissance
+facultative), migration âge minimum phase 1 (20261109160000), hygiène base
+(20261109180000), tables santé (20261110100000), types régénérés,
+`pending-athlete` et `delete-account` déployés. Phase 2 de l'âge (date
+obligatoire) : après déploiement de `main`.
+
+**Incident** : le test `supabase/tests/db_hygiene.sql` a été lancé seul alors
+qu'il n'avait pas sa propre transaction annulée : ses écritures de test sont
+restées en prod (une séance énergie + assignation et une séance « Test hygiène
+BDD » à J+400 chez un athlète, un coach-athlète inactif remis sans coach
+référent, la date de modification d'un test de la banque). Tout a été
+retiré ou remis le jour même, avec l'accord d'Hugo ; aucun co-coach ni lien
+coach perdu (vérifié).
+
+**Règle** : chaque fichier de `supabase/tests/` contient son propre
+`BEGIN; … ROLLBACK;` (corrigé pour `db_hygiene.sql`, déjà le cas des autres).
+Avant de lancer un test, vérifier `grep -n "^ROLLBACK;" <fichier>`.
+

@@ -8,6 +8,18 @@
  * son id : la saisie s'y enregistre, fusionnée avec l'adaptation du coach.
  * Une séance supprimée (P0002) : saisie abandonnée, l'athlète est prévenu.
  *
+ * Séance libre démarrée sans réseau (`workout.plan`) : id choisi sur le
+ * téléphone, création rejouable (`planWorkout` avec id). Mise en file AVANT
+ * les saisies de cette séance ; si le serveur avait déjà une séance à cette
+ * place (même séance-type, même jour), les saisies suivantes sont redirigées
+ * vers elle (`cascade`). Création refusée : ses saisies sont retirées avec elle.
+ *
+ * Après l'envoi depuis la file (`onSent`) : brouillon local des séries marqué
+ * synchronisé, records de la séance calculés (comme une validation en direct).
+ *
+ * Plusieurs onglets : la file stockée fait foi, modifiée sous `navigator.locks`
+ * et annoncée aux autres onglets par `BroadcastChannel` (voir `writeQueue.ts`).
+ *
  * Appel : `submitWrite(kind, args)` → `{ status: "sent", result }` ou
  * `{ status: "queued" }` (l'écran garde la saisie et affiche « en attente »).
  * Lève seulement un refus définitif du serveur.
@@ -18,20 +30,46 @@ import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import type { IsoDay } from "@shared/domain/dates";
 import type { NutritionDailyLog } from "@shared/domain/nutrition";
+import type { RecordSet } from "@shared/domain/performance";
 import { db } from "@/api/client";
 import { completeEnergyAssignment, setEnergyRpe, type CompleteEnergyInput } from "@/api/energy";
 import { saveDay } from "@/api/nutrition";
+import { computeRecordsFromSession, invalidateRecords } from "@/api/records";
 import { saveWeight } from "@/api/profile";
 import { saveWellnessForm } from "@/api/wellness";
-import { completeWorkout, currentAccessToken, patchWorkoutEntries, setWorkoutRpe } from "@/api/workouts";
-import { readStoredAuthUserId } from "./offlineCache";
 import {
-  createWriteQueue, isPermanentCode, type SubmitResult, type WriteOp, type WriteQueue, type WriteQueueStore,
+  completeWorkout, currentAccessToken, patchWorkoutEntries, planWorkout, setWorkoutRpe, type WorkoutLog,
+} from "@/api/workouts";
+import { markDraftSynced, workoutDraftKey } from "@/lib/localDraft";
+import { readStoredAuthUserId } from "./offlineCache";
+import { newRecordsMessage } from "./sessionRecords";
+import {
+  createWriteQueue, isPermanentCode,
+  type QueueBus, type QueueCascade, type QueueLock, type SubmitResult, type WriteOp, type WriteQueue, type WriteQueueStore,
 } from "./writeQueue";
 
 export interface WriteArgs {
-  "workout.entries": { athleteId: string; logId: string; patch: object };
-  "workout.complete": { athleteId: string; logId: string; mods?: object | null; runKm?: number | null; rpe?: number | null };
+  /**
+   * Séance libre créée sans réseau : `logId` choisi sur le téléphone
+   * (`crypto.randomUUID()`), création rejouable sans doublon.
+   */
+  "workout.plan": {
+    athleteId: string; logId: string; coachId: string | null;
+    sessionId: string; sessionName: string; date: IsoDay;
+  };
+  /**
+   * `draftLogId` : id de la séance tel que l'écran le connaît (brouillon local),
+   * gardé quand une séance libre a reçu l'id d'une séance déjà en base.
+   */
+  "workout.entries": { athleteId: string; logId: string; patch: object; draftLogId?: string };
+  "workout.complete": {
+    athleteId: string; logId: string; mods?: object | null; runKm?: number | null; rpe?: number | null;
+    draftLogId?: string;
+    /** Séries faites rattachées à un record, préparées à la validation (records calculés à l'envoi). */
+    recordSets?: RecordSet[];
+    /** Jour de la validation (date des records), pas celui de l'envoi. */
+    recordDay?: IsoDay;
+  };
   "workout.rpe": { athleteId: string; logId: string; rpe: number | null };
   "energy.complete": { athleteId: string; id: string; input: CompleteEnergyInput };
   "energy.rpe": { athleteId: string; id: string; rpe: number | null };
@@ -42,6 +80,10 @@ export interface WriteArgs {
 export type WriteKind = keyof WriteArgs;
 
 const EXECUTORS: { [K in WriteKind]: (a: WriteArgs[K]) => Promise<unknown> } = {
+  "workout.plan": (a) => planWorkout({
+    id: a.logId, athleteId: a.athleteId, coachId: a.coachId, sessionId: a.sessionId,
+    sessionName: a.sessionName, date: a.date, byAthlete: true,
+  }),
   "workout.entries": (a) => patchWorkoutEntries(a.logId, a.patch),
   "workout.complete": (a) => completeWorkout({ logId: a.logId, mods: a.mods, runKm: a.runKm, rpe: a.rpe }),
   "workout.rpe": (a) => setWorkoutRpe(a.logId, a.rpe),
@@ -80,6 +122,7 @@ export function writeKey<K extends WriteKind>(kind: K, args: WriteArgs[K]): stri
 
 // [libellé, féminin ?] pour accorder « non enregistré(e) ».
 const LABELS: Record<WriteKind, [string, boolean]> = {
+  "workout.plan": ["Séance ajoutée", true],
   "workout.entries": ["Saisie de séance", true],
   "workout.complete": ["Fin de séance", true],
   "workout.rpe": ["RPE de séance", false],
@@ -138,7 +181,8 @@ function idb(): UseStore | null {
 const store: WriteQueueStore = {
   async get(userId) {
     const s = idb();
-    if (!s) return memory.get(userId) ?? [];
+    // Dernière écriture IndexedDB ratée : la mémoire est plus récente.
+    if (!s || idbFailed) return memory.get(userId) ?? [];
     try { return ((await get<WriteOp[]>(userId, s)) ?? []).filter((o) => o && typeof o.kind === "string"); }
     catch { return memory.get(userId) ?? []; }
   },
@@ -157,6 +201,122 @@ const store: WriteQueueStore = {
     }
   },
 };
+
+// ── Plusieurs onglets ────────────────────────────────────────────────────────
+
+/** `navigator.locks` (Safari ≥ 15.4) ; sans lui, relire-fusionner réduit déjà la fenêtre. */
+const lock: QueueLock | undefined =
+  typeof navigator !== "undefined" && navigator.locks?.request
+    ? (name, fn) => navigator.locks.request(name, fn)
+    : undefined;
+
+function createBus(): QueueBus | undefined {
+  if (typeof BroadcastChannel === "undefined") return undefined;
+  try {
+    const ch = new BroadcastChannel("agon-writes");
+    return {
+      post: (userId) => { try { ch.postMessage({ userId }); } catch { /* onglet en fermeture */ } },
+      subscribe: (cb) => {
+        const on = (e: MessageEvent) => { const u = (e.data as { userId?: unknown } | null)?.userId; if (typeof u === "string") cb(u); };
+        ch.addEventListener("message", on);
+        return () => ch.removeEventListener("message", on);
+      },
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+// ── Suites d'un envoi depuis la file ─────────────────────────────────────────
+
+// Séance libre créée hors ligne que le serveur a fusionnée avec une séance
+// existante : id local → id serveur, gardé sur l'appareil (l'écran ouvert sur
+// l'id local continue d'écrire au bon endroit, même après rechargement).
+const ALIAS_KEY = "agon:workout-id-alias";
+
+function readAliases(): Record<string, string> {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(ALIAS_KEY) : null;
+    const v = raw ? JSON.parse(raw) : {};
+    return v && typeof v === "object" ? (v as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function rememberIdAlias(localId: string, serverId: string): void {
+  try {
+    localStorage.setItem(ALIAS_KEY, JSON.stringify({ ...readAliases(), [localId]: serverId }));
+  } catch {
+    /* stockage bloqué : seules les saisies déjà en file sont redirigées */
+  }
+}
+
+/** Id réel d'une séance (id local remplacé par celui du serveur si besoin). */
+export function resolveWorkoutId(id: string): string {
+  return readAliases()[id] ?? id;
+}
+
+const argLogId = (o: WriteOp): string | undefined => (o.args as { logId?: unknown } | null)?.logId as string | undefined;
+
+/**
+ * Séance libre envoyée : si le serveur en avait déjà une à cette place, les
+ * saisies suivantes de la séance locale vont vers elle (même clé, même
+ * cible). Refusée : ses saisies ne peuvent plus aboutir, elles sont retirées
+ * avec elle (un seul message, celui de la séance).
+ */
+export const workoutPlanCascade: QueueCascade<WriteKind> = (op, outcome) => {
+  if (op.kind !== "workout.plan") return null;
+  const localId = (op.args as WriteArgs["workout.plan"]).logId;
+  if (!outcome.ok) return (o) => (argLogId(o) === localId ? null : o);
+  const serverId = (outcome.result as WorkoutLog | null)?.id;
+  if (!serverId || serverId === localId) return null;
+  // L'écran peut rester sur l'id local : les saisies suivantes suivront.
+  rememberIdAlias(localId, serverId);
+  return (o) => {
+    if (o.kind === "workout.plan" || argLogId(o) !== localId) return o;
+    const prev = o.args as { logId: string; draftLogId?: string };
+    const args = { ...prev, logId: serverId, draftLogId: prev.draftLogId ?? localId };
+    return { ...o, args, key: writeKey(o.kind, args as never) };
+  };
+};
+
+/**
+ * Brouillon local des séries : « synchronisé » une fois la saisie partie de la
+ * file, s'il n'a pas changé depuis (`markDraftSynced` compare la valeur).
+ */
+export function markSentDraft(kind: string, args: unknown): void {
+  if (kind !== "workout.entries" && kind !== "workout.complete") return;
+  const a = args as { athleteId?: string; logId?: string; draftLogId?: string; patch?: object; mods?: object | null };
+  const value = kind === "workout.entries" ? a.patch : a.mods;
+  const id = a.draftLogId ?? a.logId;
+  if (!a.athleteId || !id || !value) return;
+  markDraftSynced(workoutDraftKey(a.athleteId, id), value);
+}
+
+/**
+ * Validation partie de la file : records calculés comme en direct (relecture
+ * des records actuels au moment de l'envoi). Le toast « nouveau record »
+ * s'affiche quel que soit l'écran ouvert (les toasts sont globaux) : c'est
+ * la seule façon pour l'athlète de l'apprendre. Best effort : une erreur ici
+ * ne remet pas en cause la validation, déjà enregistrée.
+ */
+async function recordsAfterQueuedCompletion(a: WriteArgs["workout.complete"]): Promise<void> {
+  if (!a.athleteId || !a.recordSets?.length) return;
+  try {
+    const found = await computeRecordsFromSession(a.athleteId, a.recordSets, a.recordDay ? { date: a.recordDay } : {});
+    if (found.length === 0) return;
+    if (queryClient) void invalidateRecords(queryClient, a.athleteId);
+    toast.success(newRecordsMessage(found));
+  } catch (e) {
+    console.error("[writes] records après envoi", e);
+  }
+}
+
+function onQueuedSent(op: WriteOp<WriteKind>): void {
+  markSentDraft(op.kind, op.args);
+  if (op.kind === "workout.complete") void recordsAfterQueuedCompletion(op.args as WriteArgs["workout.complete"]);
+}
 
 // ── File unique de l'app ─────────────────────────────────────────────────────
 
@@ -178,6 +338,10 @@ function getQueue(): WriteQueue<WriteKind> {
       executors: EXECUTORS as Record<WriteKind, (a: never) => Promise<unknown>>,
       isOnline,
       merge: mergeWriteArgs,
+      lock,
+      bus: createBus(),
+      cascade: workoutPlanCascade,
+      onSent: onQueuedSent,
       // Jeton valide (rafraîchi si besoin) avant de rejouer : sinon refus « droits ».
       ready: async () => !!(await currentAccessToken()),
       // Rafraîchit les écrans une fois la file vidée (avant, l'écran garde la
@@ -201,7 +365,16 @@ function getQueue(): WriteQueue<WriteKind> {
  * Lève seulement un refus définitif (séance retirée, saisie invalide).
  */
 export function submitWrite<K extends WriteKind>(kind: K, args: WriteArgs[K]): Promise<SubmitResult> {
-  return getQueue().submit(kind, writeKey(kind, args), args);
+  let a = args;
+  const logId = (args as { logId?: unknown }).logId;
+  if (kind !== "workout.plan" && typeof logId === "string") {
+    const real = resolveWorkoutId(logId);
+    if (real !== logId) {
+      const prev = args as unknown as { draftLogId?: string };
+      a = { ...args, logId: real, draftLogId: prev.draftLogId ?? logId } as WriteArgs[K];
+    }
+  }
+  return getQueue().submit(kind, writeKey(kind, a), a);
 }
 
 /** Saisies en attente d'envoi pour l'utilisateur connecté. */

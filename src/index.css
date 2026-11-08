@@ -1,59 +1,61 @@
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,200..700&family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap');
+@import "./styles/tokens.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Agon — direction artistique "Tranchant B" (mode sombre) */
+/* Agon — direction artistique "Tranchant B" (mode sombre).
+   Aucune valeur ici : tout vient de src/styles/tokens.css (docs/DESIGN_TOKENS.md).
+   Les noms shadcn (--primary…) restent pour les primitives de src/components/ui. */
 
 @layer base {
   :root {
-    --background: 20 17% 3%;              /* #0E0C0A obsidienne profond */
-    --foreground: 0 0% 100%;              /* #FFFFFF blanc */
+    --background: var(--agon-ui-bg);
+    --foreground: var(--agon-ui-tx);
 
-    --card: 24 14% 10%;                   /* #1E1A16 basalte */
-    --card-foreground: 0 0% 100%;
+    --card: var(--agon-ui-s1);
+    --card-foreground: var(--agon-ui-tx);
 
-    --popover: 24 12% 13%;                /* #27221D basalte 2 */
-    --popover-foreground: 0 0% 100%;
+    --popover: var(--agon-ui-s2);
+    --popover-foreground: var(--agon-ui-tx);
 
-    --primary: 43 100% 60%;               /* #FFC933 or vif */
-    --primary-foreground: 24 28% 7%;      /* #0E0C0A obsidienne */
+    --primary: var(--agon-ui-accent);
+    --primary-foreground: var(--agon-ui-ink);
 
-    --secondary: 38 50% 78%;              /* #E7D3A8 sable */
-    --secondary-foreground: 24 28% 7%;    /* #0E0C0A obsidienne */
+    --secondary: var(--agon-ui-sable);
+    --secondary-foreground: var(--agon-ui-ink);
 
-    --muted: 24 12% 13%;
-    --muted-foreground: 27 8% 45%;        /* #7D7468 pierre */
+    --muted: var(--agon-ui-s2);
+    --muted-foreground: var(--agon-ui-tx3);
 
-    --accent: 43 100% 60%;                /* #FFC933 or vif */
-    --accent-foreground: 24 28% 7%;
+    --accent: var(--agon-ui-accent);
+    --accent-foreground: var(--agon-ui-ink);
 
-    --destructive: 13 100% 60%;           /* #FF5A33 terracotta vif */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: var(--agon-ui-erreur);
+    --destructive-foreground: var(--agon-ui-tx);
 
-    --border: 38 43% 78% / 0.12;          /* sable 12% */
-    --input: 24 12% 13%;
-    --ring: 43 100% 60%;
+    --border: var(--agon-ui-brd);
+    --input: var(--agon-ui-s2);
+    --ring: var(--agon-ui-accent);
 
-    --radius: 0.375rem;                   /* 6px — agon module radius */
+    --radius: var(--agon-radius-lg);
 
-    /* Agon font stack */
-    --font-display: "Archivo", system-ui, sans-serif;
-    --font-ui: "Geist", system-ui, sans-serif;
-    --font-data: "Geist Mono", ui-monospace, monospace;
+    --font-display: var(--agon-font-display);
+    --font-ui: var(--agon-font-ui);
+    --font-data: var(--agon-font-data);
 
-    /* Agon gold gradient (bouton principal + records) */
-    --gold-gradient: linear-gradient(135deg, #8A6A2C, #E9CF8A 45%, #C9A14A 70%, #9C7A34);
+    /* Dégradé or (bouton principal + records) */
+    --gold-gradient: var(--agon-or-poli);
 
-    --sidebar-background: 20 17% 3%;
-    --sidebar-foreground: 27 8% 45%;
-    --sidebar-primary: 43 100% 60%;
-    --sidebar-primary-foreground: 24 28% 7%;
-    --sidebar-accent: 43 100% 60% / 0.1;
-    --sidebar-accent-foreground: 43 100% 60%;
-    --sidebar-border: 38 43% 78% / 0.10;
-    --sidebar-ring: 43 100% 60%;
+    --sidebar-background: var(--agon-ui-bg);
+    --sidebar-foreground: var(--agon-ui-tx3);
+    --sidebar-primary: var(--agon-ui-accent);
+    --sidebar-primary-foreground: var(--agon-ui-ink);
+    --sidebar-accent: var(--agon-ui-accent-doux);
+    --sidebar-accent-foreground: var(--agon-ui-accent);
+    --sidebar-border: var(--agon-ui-brd-sidebar);
+    --sidebar-ring: var(--agon-ui-accent);
   }
 }
 
@@ -63,9 +65,9 @@
   }
 
   html, body, #root {
-    background-color: #0E0C0A;
-    color: #FFFFFF;
-    font-family: "Geist", system-ui, sans-serif;
+    background-color: var(--agon-bg);
+    color: var(--agon-tx);
+    font-family: var(--agon-font-ui);
     /* Long unbroken strings (grilles, allures…) wrap instead of overflowing, incl. portaled drawers */
     overflow-wrap: break-word;
     @apply bg-background text-foreground;

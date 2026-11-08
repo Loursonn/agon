@@ -106,6 +106,9 @@ export default defineConfig(() => ({
     // Requis par @testing-library/jest-dom, qui appelle expect.extend au chargement.
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // Vitest vide les fichiers CSS importés, même en `?raw`. src/lib/theme.ts lit
+    // src/styles/tokens.css en texte brut : on laisse passer ces imports-là seulement.
+    css: { include: [/\.css\?raw$/] },
     // Les worktrees Claude contiennent une copie du repo : sans exclusion,
     // chaque test tourne deux fois.
     exclude: ["**/node_modules/**", "**/dist/**", ".claude/**"],

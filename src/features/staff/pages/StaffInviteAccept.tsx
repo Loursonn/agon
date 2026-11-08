@@ -12,6 +12,8 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { errorMessage } from "@/lib/errors";
+import { localIsoDay } from "@shared/domain/dates";
+import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { C } from "@/lib/theme";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import {
@@ -158,12 +160,13 @@ export default function StaffInviteAccept() {
     const password = String(form.get("password") ?? "");
     if (tab === "signup") {
       const fullName = String(form.get("fullName") ?? "").trim();
+      const birthDate = String(form.get("birthDate") ?? "");
       if (password !== String(form.get("confirm") ?? "")) {
         setError("Les mots de passe ne correspondent pas");
         return;
       }
       run(async () => {
-        await registerStaff(email, password, fullName, pickedProfession);
+        await registerStaff(email, password, fullName, birthDate, pickedProfession);
         await accept();
       });
     } else {
@@ -199,6 +202,12 @@ export default function StaffInviteAccept() {
             <div>
               <span style={label}>Nom complet</span>
               <input name="fullName" required placeholder="Prénom Nom" style={input} />
+            </div>
+            <div>
+              <span style={label}>Date de naissance</span>
+              <input name="birthDate" type="date" required min={OLDEST_BIRTH_DATE} max={localIsoDay()}
+                style={{ ...input, colorScheme: "dark" }} aria-label="Date de naissance" />
+              <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>Agon est réservé aux personnes de {MIN_AGE} ans et plus.</div>
             </div>
             <div>
               <span style={label}>Métier</span>

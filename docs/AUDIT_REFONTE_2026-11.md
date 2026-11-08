@@ -240,21 +240,22 @@ Source : audit qualité.
 - [x] Export RGPD : ajouter les données provider.
 
 ### Phase 3 — Confort athlète (hors ligne) · ~2 sem.
-- [ ] Phase 1 hors ligne : `vite-plugin-pwa`, manifest `standalone`, cache React Query persisté (IndexedDB), toutes les `queryFn` lèvent une erreur au lieu de renvoyer `null`.
-- [ ] Phase 2 hors ligne : file d'attente des écritures (IndexedDB), ids générés côté client, séparer `coachOverride` de `athlete_modifications`, indicateur « N saisies en attente ».
+- [x] Phase 1 hors ligne : `vite-plugin-pwa`, manifest `standalone`, cache React Query persisté (IndexedDB), toutes les `queryFn` lèvent une erreur au lieu de renvoyer `null` (2026-11-08, PR #138).
+- [x] Phase 2 hors ligne : file d'attente des écritures (IndexedDB, `src/lib/offline/writes.ts`), `coachOverride` séparé (`set_coach_override`), indicateur « N saisies en attente » (2026-11-08, PR #138). Reste : ids côté client pour une séance libre démarrée hors ligne.
 - [x] Sortir le backfill et les écritures miroir du démarrage (lot 0, 2026-11-07).
 
 ### Phase 4 — Couche données (fin des régressions) · ~3-4 sem., entité par entité
 - [x] `src/api/` + RPC ciblées (§5.2) : séances, wellness, références, records, nutrition, blessures (PR #137, `docs/COUCHE_API.md`).
-- [ ] Migrer les 113 fichiers qui importent encore Supabase directement (planning, tests, compétitions, énergie, staff…), puis passer la règle ESLint en erreur.
+- [x] Migrer les 113 fichiers qui importent encore Supabase directement (planning, tests, compétitions, énergie, staff…), puis passer la règle ESLint en erreur (2026-11-08, PR #138).
 - [x] Corriger les requêtes vers des tables ou colonnes inexistantes (`nutrition_*`, `wellness_logs`, `reschedule_reason`, `coach_validated`).
 - [x] Fusion RPE (seule source `workout_logs.rpe_score`).
 - [ ] Fusion tests, poids ; suppression des tables mortes (`workout_rpe` après export) ; `migration repair` si validé.
 - [ ] Sortir santé puis programme d'`app_data`.
 
 ### Phase 5 — Design system · ~1-2 sem.
-- [ ] Récupérer la charte source (disque `AGON`) + un seul fichier de tokens → `tailwind.config` + `theme.ts` dérivé (échelle typo ≥ 11 px).
-- [ ] Importer dans **Claude Design** ; toutes les maquettes partent de là.
+- [x] Récupérer la charte source (disque `AGON`, `agon-brand-kit/tokens/agon-tokens.css`).
+- [ ] Un seul fichier de tokens → `tailwind.config` + `theme.ts` dérivé (échelle typo ≥ 11 px) — tuyauterie en cours, valeurs finales quand la charte Claude Design est figée.
+- [x] Importer dans **Claude Design** ; toutes les maquettes partent de là (design system « Agon », 2026-11-08 ; charte en cours de finalisation).
 - [ ] Primitives `src/ui` stylées Agon sur shadcn (Button, Input, Select, Dialog/Sheet responsive, Module, Stat, Tag, EmptyState, Skeleton).
 
 ### Phase 6 — 4 fronts (coach PC/mobile, athlète mobile/PC) · écran par écran

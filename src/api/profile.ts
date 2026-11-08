@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { isIsoDay, localIsoDay, type IsoDay } from "@shared/domain/dates";
+import { isIsoDay, localIsoDay, toCompactDay, toIsoDay, type IsoDay } from "@shared/domain/dates";
 import type { WellnessHistory } from "@shared/domain/wellness";
 import {
   ALL_MEASUREMENT_KEYS,
@@ -16,7 +16,9 @@ import { ApiError, check, db, unwrap, unwrapRows } from "./client";
  * Profil d'un athlète : fiche (`profiles`), mensurations (`measurement_logs`
  * + photos du bucket `test-media`), profil articulaire (résultats des tests
  * « bilan articulaire »), éléments de profil (`athlete_profile_items`), poids
- * (`app_data` : `asp:wlog`, `asp:wmile`, `asp:bw`), tendances (Mon profil).
+ * (tables `body_weight_logs`, `body_weight_milestones`, `body_weight_goals`,
+ * tenues à jour par trigger depuis `app_data` `asp:wlog` / `asp:wmile` /
+ * `asp:bw` ; écriture par RPC — docs/SANTE_TABLES.md), tendances (Mon profil).
  *
  * Rattachement au coach, inscription, roster : `account.ts`. Le `coach_id`
  * n'est jamais écrit ici (`updateAthleteProfile` ne l'accepte pas).
@@ -30,6 +32,11 @@ export const profileKeys = {
   /** URLs signées des photos : pas d'athlète dans la clé (liste de chemins). */
   photoUrls: (paths: readonly string[]) => ["profile", "_photos", [...paths].sort().join(",")] as const,
   items: (aid: string) => ["profile", aid, "items"] as const,
+  /** Pesées, paliers et objectif de poids. */
+  weight: (aid: string) => ["profile", aid, "weight"] as const,
+  weightLog: (aid: string, from: IsoDay | null = null, to: IsoDay | null = null) => ["profile", aid, "weight", "log", from, to] as const,
+  weightMilestones: (aid: string) => ["profile", aid, "weight", "milestones"] as const,
+  weightGoal: (aid: string) => ["profile", aid, "weight", "goal"] as const,
   /**
    * Ancienne valeur gardée : le domaine « tests » (`useAthleteTests`,
    * `useCoachTestQueue`) invalide `['articularProfile', aid]` après une saisie.
@@ -404,6 +411,128 @@ export function recentWeights(history: WellnessHistory, n = 3): { avg: number; l
   if (entries.length === 0) return null;
   const avg = entries.reduce((s, e) => s + (e.weightKg as number), 0) / entries.length;
   return { avg: Math.round(avg * 10) / 10, lastDate: entries[0].day, count: entries.length };
+}
+
+/** Une pesée ou un palier, jour local ISO. */
+export interface WeightPoint {
+  day: IsoDay;
+  kg: number;
+}
+
+/** Poids de référence (dernier palier, ancien `asp:bw.current`) et objectif ; absent → null, jamais 0. */
+export interface BodyWeightGoal {
+  referenceKg: number | null;
+  targetKg: number | null;
+}
+
+/** Table absente (migration pas encore appliquée) : PostgREST PGRST205, Postgres 42P01. */
+function tableMissing(e: unknown): boolean {
+  return e instanceof ApiError && (e.code === "PGRST205" || e.code === "42P01");
+}
+
+const kgOf = (v: unknown): number | null => {
+  const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 && n < 500 ? n : null;
+};
+
+/** Ancien stockage, seulement si les tables n'existent pas encore (étape 4 de docs/SANTE_TABLES.md : à retirer). */
+async function legacyWeightValue(athleteId: string, key: "asp:wlog" | "asp:wmile" | "asp:bw", what: string): Promise<unknown> {
+  const row = unwrap(
+    await db().from("app_data").select("value").eq("athlete_id", athleteId).eq("key", key).maybeSingle(),
+    what,
+  ) as { value: unknown } | null;
+  return row?.value ?? null;
+}
+
+function legacyPoints(entries: Array<[unknown, unknown]>): WeightPoint[] {
+  const byDay = new Map<IsoDay, number>();
+  for (const [k, v] of entries) {
+    const day = toIsoDay(k);
+    const kg = kgOf(v);
+    if (day && kg != null && !(byDay.has(day) && !/^\d{8}$/.test(String(k).trim()))) byDay.set(day, kg);
+  }
+  return [...byDay.entries()].map(([day, kg]) => ({ day, kg })).sort((a, b) => a.day.localeCompare(b.day));
+}
+
+/** Pesées (une par jour), jours croissants, bornes incluses. Lève en cas d'erreur. */
+export async function getWeightLog(athleteId: string, range: { from?: IsoDay | null; to?: IsoDay | null } = {}): Promise<WeightPoint[]> {
+  const what = "Lecture des pesées impossible";
+  try {
+    let q = db().from("body_weight_logs").select("day, kg").eq("athlete_id", athleteId);
+    if (range.from) q = q.gte("day", range.from);
+    if (range.to) q = q.lte("day", range.to);
+    return unwrapRows(await q.order("day", { ascending: true }), what)
+      .map((r) => ({ day: String(r.day).slice(0, 10), kg: kgOf(r.kg) }))
+      .filter((p): p is WeightPoint => isIsoDay(p.day) && p.kg != null);
+  } catch (e) {
+    if (!tableMissing(e)) throw e;
+    const v = await legacyWeightValue(athleteId, "asp:wlog", what);
+    const all = legacyPoints(v && typeof v === "object" && !Array.isArray(v) ? Object.entries(v) : []);
+    return all.filter((p) => (!range.from || p.day >= range.from) && (!range.to || p.day <= range.to));
+  }
+}
+
+/** Paliers de poids franchis, jours croissants. */
+export async function getWeightMilestones(athleteId: string): Promise<WeightPoint[]> {
+  const what = "Lecture des paliers de poids impossible";
+  try {
+    const rows = unwrapRows(
+      await db().from("body_weight_milestones").select("day, kg").eq("athlete_id", athleteId).order("day", { ascending: true }),
+      what,
+    );
+    return rows
+      .map((r) => ({ day: String(r.day).slice(0, 10), kg: kgOf(r.kg) }))
+      .filter((p): p is WeightPoint => isIsoDay(p.day) && p.kg != null)
+      .sort((a, b) => a.day.localeCompare(b.day) || a.kg - b.kg);
+  } catch (e) {
+    if (!tableMissing(e)) throw e;
+    const v = await legacyWeightValue(athleteId, "asp:wmile", what);
+    const seen = new Set<string>();
+    return (Array.isArray(v) ? v : [])
+      .map((m) => (m && typeof m === "object" ? { day: toIsoDay((m as { date?: unknown }).date), kg: kgOf((m as { kg?: unknown }).kg) } : null))
+      .filter((p): p is WeightPoint => !!p && !!p.day && p.kg != null)
+      .filter((p) => (seen.has(`${p.day}:${p.kg}`) ? false : (seen.add(`${p.day}:${p.kg}`), true)))
+      .sort((a, b) => a.day.localeCompare(b.day) || a.kg - b.kg);
+  }
+}
+
+/** Poids de référence et objectif ; null si l'athlète n'en a pas. */
+export async function getBodyWeightGoal(athleteId: string): Promise<BodyWeightGoal | null> {
+  const what = "Lecture de l'objectif de poids impossible";
+  let row: { reference_kg: unknown; target_kg: unknown } | undefined;
+  try {
+    [row] = unwrapRows(
+      await db().from("body_weight_goals").select("reference_kg, target_kg").eq("athlete_id", athleteId),
+      what,
+    );
+  } catch (e) {
+    if (!tableMissing(e)) throw e;
+    const v = (await legacyWeightValue(athleteId, "asp:bw", what)) as { current?: unknown; target?: unknown } | null;
+    row = v && typeof v === "object" ? { reference_kg: v.current, target_kg: v.target } : undefined;
+  }
+  if (!row) return null;
+  const goal = { referenceKg: kgOf(row.reference_kg), targetKg: kgOf(row.target_kg) };
+  return goal.referenceKg == null && goal.targetKg == null ? null : goal;
+}
+
+// Adaptateurs vers l'état historique de l'app (`useAthletePersistedState` :
+// `weightLog`, `weightMilestones`, `bodyWeight`), tant qu'il garde ces formes.
+
+/** `{ "YYYYMMDD": kg }` (ce qu'attendent `checkMilestone`, `WeightChart`, `ProfilPage`). */
+export function toLegacyWeightLog(points: readonly WeightPoint[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const p of points) out[toCompactDay(p.day)] = p.kg;
+  return out;
+}
+
+/** `[{ date: "YYYYMMDD", kg }]`. */
+export function toLegacyMilestones(points: readonly WeightPoint[]): Array<{ date: string; kg: number }> {
+  return points.map((p) => ({ date: toCompactDay(p.day), kg: p.kg }));
+}
+
+/** `{ current, target }` ; absent → 0, comme l'ancien défaut `{ current: 0, target: 0 }`. */
+export function toLegacyBodyWeight(goal: BodyWeightGoal | null): { current: number; target: number } {
+  return { current: goal?.referenceKg ?? 0, target: goal?.targetKg ?? 0 };
 }
 
 type UntypedRpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{

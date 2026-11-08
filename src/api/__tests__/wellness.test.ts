@@ -54,28 +54,86 @@ const rpcs: Record<string, FakeRpc> = {
   },
 };
 
-describe("lecture", () => {
+/** Lignes de `wellness_entries` équivalentes au seed (ce que la synchro serveur produit). */
+const row = (athlete_id: string, day: string, o: Record<string, unknown> = {}) => ({
+  athlete_id, day, fatigue: 4, sommeil: 4, stress: 4, energie: 4, doms: 4, score: 80,
+  bedtime: null, wake: null, sleep_hours: null, sleep_interrupted: null, sleep_interrupt_note: null,
+  doms_zones: [], doms_points: [], injury_note: null, weight_kg: null, archived: false, ...o,
+});
+
+function seedTables() {
+  return {
+    ...seed(),
+    wellness_entries: [
+      row("a", "2026-09-01", { archived: true }),
+      row("a", "2026-11-06"),
+      row("a", "2026-11-07", { injury_note: "Genou" }),
+      row("b", "2026-11-07", { doms: 2, score: 72 }),
+    ] as Row[],
+  };
+}
+
+/** Comme PostgREST quand la table n'existe pas encore (migration pas appliquée). */
+function withoutTable(db: unknown) {
+  const real = db as { from: (t: string) => unknown };
+  const missing = { data: null, error: { message: "Could not find the table 'public.wellness_entries'", code: "PGRST205" } };
+  const chain: Record<string, unknown> = {};
+  for (const m of ["select", "eq", "in", "gte", "lte", "order", "range"]) chain[m] = () => chain;
+  chain.then = (ok: (v: unknown) => unknown) => Promise.resolve(missing).then(ok);
+  return { ...real, from: (t: string) => (t === "wellness_entries" ? chain : real.from(t)) };
+}
+
+describe("lecture (table wellness_entries)", () => {
   afterEach(() => setDbForTests(null));
 
-  it("historique : jours ISO, clés parasites écartées, archive incluse, asp:wh prioritaire", async () => {
-    const { db } = fakeDb(seed());
+  it("historique : jours ISO croissants, archive incluse, champs relus", async () => {
+    const { db } = fakeDb({
+      wellness_entries: [
+        row("a", "2026-11-07", {
+          injury_note: " Genou ", bedtime: "23:15:00", wake: "07:00:00", sleep_hours: "7.5", sleep_interrupted: false,
+          doms_zones: ["quadri"], doms_points: [{ id: "p1", x: 12.5, y: 40, side: "front", intensity: 2 }, { x: 1, y: 2, side: "top" }],
+          weight_kg: "72.4", fatigue: "5",
+        }),
+        row("a", "2026-09-01", { archived: true }),
+        row("a", "2026-10-01", { fatigue: null, score: null }),
+      ] as Row[],
+    });
     setDbForTests(db);
     const h = await getWellnessHistory("a");
-    expect(Object.keys(h)).toEqual(["2026-09-01", "2026-11-06", "2026-11-07"]);
-    expect(h["2026-11-06"].items.fatigue).toBe(4);
+    expect(Object.keys(h)).toEqual(["2026-09-01", "2026-10-01", "2026-11-07"]);
     expect(h["2026-09-01"].archived).toBe(true);
-    expect(h["2026-11-07"].injuryNote).toBe("Genou");
+    expect(h["2026-10-01"].items.fatigue).toBeNull();
+    expect(h["2026-11-07"]).toEqual({
+      day: "2026-11-07",
+      items: { fatigue: 5, sommeil: 4, stress: 4, energie: 4, doms: 4 },
+      sleep: { bedtime: { h: 23, m: 15 }, wake: { h: 7, m: 0 }, hours: 7.5, interrupted: false, interruptNote: null },
+      domsZones: ["quadri"],
+      domsPoints: [{ id: "p1", x: 12.5, y: 40, side: "front", intensity: 2 }],
+      injuryNote: "Genou",
+      weightKg: 72.4,
+      archived: false,
+    });
+  });
+
+  it("même résultat que la lecture de l'ancien stockage (seed équivalent)", async () => {
+    const { db } = fakeDb(seedTables());
+    setDbForTests(db);
+    const fromTable = await getWellnessHistory("a");
+    setDbForTests(withoutTable(fakeDb(seedTables()).db));
+    const fromLegacy = await getWellnessHistory("a");
+    expect(fromTable).toEqual(fromLegacy);
   });
 
   it("bornes de dates et archive exclue sur demande", async () => {
-    const { db } = fakeDb(seed());
+    const { db } = fakeDb(seedTables());
     setDbForTests(db);
     expect(Object.keys(await getWellnessHistory("a", { from: "2026-11-07" }))).toEqual(["2026-11-07"]);
+    expect(Object.keys(await getWellnessHistory("a", { to: "2026-11-06" }))).toEqual(["2026-09-01", "2026-11-06"]);
     expect(Object.keys(await getWellnessHistory("a", { includeArchived: false }))).toEqual(["2026-11-06", "2026-11-07"]);
   });
 
   it("plusieurs athlètes en une requête ; un athlète sans saisie a un historique vide", async () => {
-    const { db } = fakeDb(seed());
+    const { db } = fakeDb(seedTables());
     setDbForTests(db);
     const all = await getWellnessHistories(["a", "b", "c"]);
     expect(Object.keys(all["a"])).toHaveLength(3);
@@ -84,18 +142,46 @@ describe("lecture", () => {
     expect(await getWellnessHistories([])).toEqual({});
   });
 
-  it("wellness du jour : déduit de l'historique (clé compacte)", async () => {
-    const { db } = fakeDb(seed());
+  it("wellness du jour : lu dans la table", async () => {
+    const { db } = fakeDb(seedTables());
     setDbForTests(db);
-    expect((await getTodayWellness("a", "2026-11-07"))?.day).toBe("2026-11-07");
+    expect((await getTodayWellness("a", "2026-11-07"))?.injuryNote).toBe("Genou");
     expect(await getTodayWellness("a", "2026-11-08")).toBeNull();
   });
 
-  it("une lecture en erreur lève, elle ne renvoie pas {}", async () => {
-    const { db } = fakeDb(seed(), { table: "app_data", op: "select" });
+  it("une lecture en erreur lève, elle ne renvoie pas {} (et ne retombe pas sur l'ancien stockage)", async () => {
+    const { db } = fakeDb(seedTables(), { table: "wellness_entries", op: "select" });
     setDbForTests(db);
     await expect(getWellnessHistory("a")).rejects.toThrow(/Lecture du wellness impossible/);
     await expect(getWellnessHistories(["a"])).rejects.toThrow(/Lecture du wellness des athlètes impossible/);
+  });
+});
+
+describe("lecture (table absente : ancien stockage app_data)", () => {
+  afterEach(() => setDbForTests(null));
+
+  it("historique : jours ISO, clés parasites écartées, archive incluse, asp:wh prioritaire", async () => {
+    setDbForTests(withoutTable(fakeDb(seed()).db));
+    const h = await getWellnessHistory("a");
+    expect(Object.keys(h)).toEqual(["2026-09-01", "2026-11-06", "2026-11-07"]);
+    expect(h["2026-11-06"].items.fatigue).toBe(4);
+    expect(h["2026-09-01"].archived).toBe(true);
+    expect(h["2026-11-07"].injuryNote).toBe("Genou");
+    expect(Object.keys(await getWellnessHistory("a", { from: "2026-11-07" }))).toEqual(["2026-11-07"]);
+    expect(Object.keys(await getWellnessHistory("a", { includeArchived: false }))).toEqual(["2026-11-06", "2026-11-07"]);
+  });
+
+  it("plusieurs athlètes", async () => {
+    setDbForTests(withoutTable(fakeDb(seed()).db));
+    const all = await getWellnessHistories(["a", "b", "c"]);
+    expect(Object.keys(all["a"])).toHaveLength(3);
+    expect(all["b"]["2026-11-07"].items.doms).toBe(2);
+    expect(all["c"]).toEqual({});
+  });
+
+  it("ancien stockage en erreur : lève", async () => {
+    setDbForTests(withoutTable(fakeDb(seed(), { table: "app_data", op: "select" }).db));
+    await expect(getWellnessHistory("a")).rejects.toThrow(/Lecture du wellness impossible/);
   });
 });
 

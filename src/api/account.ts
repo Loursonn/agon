@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { ApiError, check, db, unwrap, unwrapRows } from "./client";
 import { signIn, signUp } from "./auth";
 import { getProfiles, type Profile } from "./profile";
+import { signupBirthDateError } from "@/lib/age";
 
 /**
  * Compte : inscription, rattachement au coach, roster du coach, lien de
@@ -9,8 +10,8 @@ import { getProfiles, type Profile } from "./profile";
  *
  * `profiles.coach_id` (CLAUDE.md) : un coach n'est posé que par les RPC
  * `link_to_coach_by_code` / `redeem_invitation` ou par les Edge Functions.
- * `setOwnCoach` n'écrit que les deux seules valeurs que le trigger
- * `guard_profile_privileged_fields` laisse passer en direct : `null` (quitter
+ * `setOwnCoach` (RPC `set_own_coach`) n'accepte que les deux valeurs que le
+ * trigger `guard_profile_privileged_fields` laisse passer : `null` (quitter
  * son coach) et soi-même (coach-athlète qui se coache).
  */
 
@@ -96,7 +97,10 @@ export async function invitationIsValid(token: string): Promise<boolean> {
   }
 }
 
-type NewProfile = { id: string; role: Profile["role"]; full_name: string; coach_code?: string; coach_id?: string; profession?: string };
+type NewProfile = {
+  id: string; role: Profile["role"]; full_name: string; birth_date: string;
+  coach_code?: string; coach_id?: string; profession?: string;
+};
 
 async function insertProfile(row: NewProfile): Promise<void> {
   const res = await db().from("profiles").insert(row);
@@ -119,13 +123,28 @@ const plain = (msg: string) => new Error(msg);
 export const serverReason = (e: unknown) => (e instanceof AccountError ? e.reason : e instanceof Error ? e.message : String(e));
 const reasonOf = serverReason;
 
-export async function registerCoach(email: string, password: string, fullName: string, isCoachAthlete = false): Promise<string> {
+/**
+ * Âge minimum (15 ans) : vérifié AVANT de créer le compte d'authentification,
+ * sinon un refus laisserait un compte sans profil. La base refait le contrôle
+ * (trigger `enforce_min_age_on_signup`) pour qui contournerait l'app.
+ */
+function assertBirthDate(birthDate: string): string {
+  const msg = signupBirthDateError(birthDate);
+  if (msg) throw plain(msg);
+  return birthDate.trim();
+}
+
+export async function registerCoach(
+  email: string, password: string, fullName: string, birthDate: string, isCoachAthlete = false,
+): Promise<string> {
+  const birth_date = assertBirthDate(birthDate);
   const user = await signUp(email, password);
   const code = await pickFreeCoachCode();
   await insertProfile({
     id: user.id,
     role: isCoachAthlete ? "coach_athlete" : "coach",
     full_name: fullName,
+    birth_date,
     coach_code: code,
     // Coach-athlète : son propre coach par défaut (apparaît dans ses athlètes)
     ...(isCoachAthlete ? { coach_id: user.id } : {}),
@@ -133,10 +152,13 @@ export async function registerCoach(email: string, password: string, fullName: s
   return user.id;
 }
 
-export async function registerAthleteWithInvitation(email: string, password: string, fullName: string, token: string): Promise<string> {
+export async function registerAthleteWithInvitation(
+  email: string, password: string, fullName: string, birthDate: string, token: string,
+): Promise<string> {
+  const birth_date = assertBirthDate(birthDate);
   if (!(await invitationIsValid(token))) throw plain("Lien d'invitation invalide ou déjà utilisé");
   const user = await signUp(email, password);
-  await insertProfile({ id: user.id, role: "athlete", full_name: fullName }).catch((e) => { throw plain(reasonOf(e)); });
+  await insertProfile({ id: user.id, role: "athlete", full_name: fullName, birth_date }).catch((e) => { throw plain(reasonOf(e)); });
   // Le rattachement au coach passe par le serveur (contrôle du lien)
   await redeemInvitation(token).catch((e) => {
     throw plain("Compte créé, mais le lien d'invitation n'a pas pu être utilisé : " + reasonOf(e));
@@ -144,12 +166,15 @@ export async function registerAthleteWithInvitation(email: string, password: str
   return user.id;
 }
 
-export async function registerAthleteWithCode(email: string, password: string, fullName: string, coachCode: string): Promise<string> {
+export async function registerAthleteWithCode(
+  email: string, password: string, fullName: string, birthDate: string, coachCode: string,
+): Promise<string> {
+  const birth_date = assertBirthDate(birthDate);
   const code = normalizeCoachCode(coachCode);
   const exists = await coachCodeExists(code).catch(() => false);
   if (!exists) throw plain("Code coach invalide — vérifie auprès de ton coach");
   const user = await signUp(email, password);
-  await insertProfile({ id: user.id, role: "athlete", full_name: fullName }).catch((e) => { throw plain(reasonOf(e)); });
+  await insertProfile({ id: user.id, role: "athlete", full_name: fullName, birth_date }).catch((e) => { throw plain(reasonOf(e)); });
   // Le rattachement au coach passe par le serveur (contrôle du code)
   await linkToCoachByCode(code).catch((e) => {
     throw plain("Compte créé, mais le rattachement au coach a échoué : " + reasonOf(e));
@@ -157,9 +182,12 @@ export async function registerAthleteWithCode(email: string, password: string, f
   return user.id;
 }
 
-export async function registerStaff(email: string, password: string, fullName: string, profession: string): Promise<string> {
+export async function registerStaff(
+  email: string, password: string, fullName: string, birthDate: string, profession: string,
+): Promise<string> {
+  const birth_date = assertBirthDate(birthDate);
   const user = await signUp(email, password);
-  await insertProfile({ id: user.id, role: "staff", full_name: fullName, profession }).catch((e) => { throw plain(reasonOf(e)); });
+  await insertProfile({ id: user.id, role: "staff", full_name: fullName, birth_date, profession }).catch((e) => { throw plain(reasonOf(e)); });
   return user.id;
 }
 
@@ -179,12 +207,17 @@ export async function ensureCoachCode(profile: Profile): Promise<Profile> {
   return { ...profile, coach_code: code };
 }
 
-/** Quitter son coach (`null`) ou se coacher soi-même (coach-athlète : son propre id). */
+/**
+ * Quitter son coach (`null`) ou se coacher soi-même (coach-athlète : son propre id).
+ * Passe par la RPC `set_own_coach` (CLAUDE.md : `profiles.coach_id` ne
+ * s'écrit que par RPC).
+ */
 export async function setOwnCoach(userId: string, coachId: null | string, what = "Erreur"): Promise<void> {
   if (coachId !== null && coachId !== userId) {
     throw new ApiError(what, { message: "Rattachement à un autre coach : passer par le code coach" });
   }
-  check(await db().from("profiles").update({ coach_id: coachId }).eq("id", userId), what);
+  // Les types générés ne savent pas que l'argument accepte NULL.
+  check(await db().rpc("set_own_coach", { p_coach: coachId as string }), what);
 }
 
 /** Lien d'invitation (ancien parcours `/invite/:token`) créé par le coach connecté ; renvoie le jeton. */
@@ -277,9 +310,16 @@ export async function getClaimInfo(token: string): Promise<ClaimInfo | null> {
   return rows[0] ?? null;
 }
 
-/** Active le compte pré-créé (Edge Function `claim-athlete`) puis connecte l'athlète. */
-export async function claimAthleteAccount(token: string, email: string, password: string): Promise<void> {
-  const { data, error } = await invoke<{ error?: string }>("claim-athlete", { body: { token, email, password } });
+/**
+ * Active le compte pré-créé (Edge Function `claim-athlete`) puis connecte
+ * l'athlète. La date de naissance est vérifiée ici puis par la fonction, qui
+ * l'enregistre sur le profil.
+ */
+export async function claimAthleteAccount(token: string, email: string, password: string, birthDate: string): Promise<void> {
+  const birth_date = assertBirthDate(birthDate);
+  const { data, error } = await invoke<{ error?: string }>("claim-athlete", {
+    body: { token, email, password, birthDate: birth_date },
+  });
   if (error || data?.error) throw plain(data?.error ?? "Activation impossible");
   await signIn(email, password);
 }
@@ -356,10 +396,14 @@ interface DynamicQuery {
   };
 }
 
-/** Toutes les lignes d'une table rattachées à `value` par `column`, avec les droits (RLS) de l'utilisateur. */
-export async function readOwnRows(table: string, column: string, value: string): Promise<unknown[]> {
+/**
+ * Toutes les lignes d'une table rattachées à `value` par `column`, avec les
+ * droits (RLS) de l'utilisateur. `columns` : liste explicite (pour écarter un
+ * secret) ou embarquement d'une table enfant (`*, enfant(*)`).
+ */
+export async function readOwnRows(table: string, column: string, value: string, columns = "*"): Promise<unknown[]> {
   const q = db() as unknown as DynamicQuery;
-  return unwrapRows(await q.from(table).select("*").eq(column, value), `Lecture de ${table} impossible`);
+  return unwrapRows(await q.from(table).select(columns).eq(column, value), `Lecture de ${table} impossible`);
 }
 
 export interface DeleteAccountResult {

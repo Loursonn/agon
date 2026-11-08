@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { listWorkoutLogs } from "@/api/workouts";
 import { cycleKeys } from "@/api/cycles";
-import { getTimeline, listMacrocycleTestResults, type TimelineData } from "@/api/planning";
+import { getTimeline, type TimelineData } from "@/api/planning";
+import { listMacrocycleTestResults } from "@/api/tests";
 
 // ── Types partagés (définis par la couche données) ───────────────────────────
 
@@ -10,9 +11,9 @@ export type { Macrocycle, Mesocycle, Cycle, Microcycle } from "@/api/cycles";
 export type {
   TimelineCompetition as Competition,
   TimelineTestSession as TLTestSession,
-  MacrocycleTestResult as TestResult,
   TimelineData,
 } from "@/api/planning";
+export type { MacrocycleTestResult as TestResult } from "@/api/tests";
 
 export type Level = "macrocycles" | "mesocycles" | "cycles" | "microcycles";
 export type AnyItem = TimelineData[Level][number];

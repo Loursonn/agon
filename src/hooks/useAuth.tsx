@@ -53,11 +53,11 @@ interface AuthContextType {
   activeAthleteId: string | null;
   setActiveAthleteId: (id: string | null) => void;
   login: (email: string, password: string) => Promise<void>;
-  registerCoach: (email: string, password: string, fullName: string, isCoachAthlete?: boolean) => Promise<void>;
-  registerAthlete: (email: string, password: string, fullName: string, token: string) => Promise<void>;
-  registerAthleteWithCode: (email: string, password: string, fullName: string, coachCode: string) => Promise<void>;
+  registerCoach: (email: string, password: string, fullName: string, birthDate: string, isCoachAthlete?: boolean) => Promise<void>;
+  registerAthlete: (email: string, password: string, fullName: string, birthDate: string, token: string) => Promise<void>;
+  registerAthleteWithCode: (email: string, password: string, fullName: string, birthDate: string, coachCode: string) => Promise<void>;
   /** Compte professionnel (kiné, ostéo…) — gratuit, sans athlètes à lui. */
-  registerStaff: (email: string, password: string, fullName: string, profession: string) => Promise<void>;
+  registerStaff: (email: string, password: string, fullName: string, birthDate: string, profession: string) => Promise<void>;
   linkToCoach: (coachCode: string) => Promise<void>;
   unlinkFromCoach: () => Promise<void>;
   removeSelfAsAthlete: () => Promise<void>;
@@ -189,20 +189,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signIn(email, password);
   }
 
-  async function registerCoach(email: string, password: string, fullName: string, isCoachAthlete = false) {
-    await apiRegisterCoach(email, password, fullName, isCoachAthlete);
+  async function registerCoach(email: string, password: string, fullName: string, birthDate: string, isCoachAthlete = false) {
+    await apiRegisterCoach(email, password, fullName, birthDate, isCoachAthlete);
   }
 
-  async function registerAthlete(email: string, password: string, fullName: string, token: string) {
-    await registerAthleteWithInvitation(email, password, fullName, token);
+  async function registerAthlete(email: string, password: string, fullName: string, birthDate: string, token: string) {
+    await registerAthleteWithInvitation(email, password, fullName, birthDate, token);
   }
 
-  async function registerAthleteWithCode(email: string, password: string, fullName: string, coachCode: string) {
-    await apiRegisterAthleteWithCode(email, password, fullName, coachCode);
+  async function registerAthleteWithCode(email: string, password: string, fullName: string, birthDate: string, coachCode: string) {
+    await apiRegisterAthleteWithCode(email, password, fullName, birthDate, coachCode);
   }
 
-  async function registerStaff(email: string, password: string, fullName: string, profession: string) {
-    const id = await apiRegisterStaff(email, password, fullName, profession);
+  async function registerStaff(email: string, password: string, fullName: string, birthDate: string, profession: string) {
+    const id = await apiRegisterStaff(email, password, fullName, birthDate, profession);
     await fetchProfile(id);
   }
 

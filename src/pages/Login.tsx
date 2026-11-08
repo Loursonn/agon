@@ -2,6 +2,8 @@ import { useState } from "react";
 import { errorMessage } from "@/lib/errors";
 import { Link, useNavigate } from "react-router-dom";
 import { LEGAL_ROUTES } from "@/lib/legal";
+import { localIsoDay } from "@shared/domain/dates";
+import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { useAuth } from "@/hooks/useAuth";
 import { sendPasswordReset } from "@/api/auth";
 import { Button } from "@/components/ui/button";
@@ -77,7 +79,10 @@ export default function Login() {
       return;
     }
     try {
-      await registerCoach(form.get("email") as string, password, form.get("fullName") as string, isCoachAthlete);
+      await registerCoach(
+        form.get("email") as string, password, form.get("fullName") as string,
+        form.get("birthDate") as string, isCoachAthlete,
+      );
       setRegistered(true);
     } catch (err) {
       setError(errorMessage(err));
@@ -103,6 +108,7 @@ export default function Login() {
         form.get("email") as string,
         password,
         form.get("fullName") as string,
+        form.get("birthDate") as string,
         form.get("coachCode") as string,
       );
       setRegistered(true);
@@ -128,6 +134,19 @@ export default function Login() {
     fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
   };
   const labelStyle: React.CSSProperties = { fontSize: 12, color: S.tx2, marginBottom: 4, display: "block" };
+  /**
+   * Date de naissance, commune aux deux formulaires (âge minimum vérifié par
+   * l'API et la base). Élément et non composant : un composant recréé à chaque
+   * rendu remonterait le champ (non contrôlé) et viderait la saisie.
+   */
+  const birthDateField = (
+    <div>
+      <label style={labelStyle} htmlFor="birthDate">Date de naissance</label>
+      <input id="birthDate" name="birthDate" type="date" required min={OLDEST_BIRTH_DATE} max={localIsoDay()}
+        style={{ ...inputStyle, colorScheme: "dark" }} />
+      <div style={{ fontSize: 11, color: S.tx3, marginTop: 4 }}>Agon est réservé aux personnes de {MIN_AGE} ans et plus.</div>
+    </div>
+  );
   /** Case d'acceptation des documents légaux, commune aux deux formulaires. */
   const TermsCheckbox = () => (
     <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
@@ -275,6 +294,7 @@ export default function Login() {
                 <label style={labelStyle}>Nom complet</label>
                 <input name="fullName" required placeholder="Hugo Dupont" style={inputStyle} />
               </div>
+              {birthDateField}
               <div>
                 <label style={labelStyle}>Email</label>
                 <input name="email" type="email" required placeholder="coach@example.com" style={inputStyle} />
@@ -322,6 +342,7 @@ export default function Login() {
                 <label style={labelStyle}>Ton prénom / nom</label>
                 <input name="fullName" required placeholder="Prénom Nom" style={inputStyle} />
               </div>
+              {birthDateField}
               <div>
                 <label style={labelStyle}>Email</label>
                 <input name="email" type="email" required placeholder="toi@example.com" style={inputStyle} />
