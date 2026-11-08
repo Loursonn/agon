@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   appBuster,
+  OFFLINE_CACHE_VERSION,
+  authStorageKey,
   cacheKeyFor,
   formatOfflineStamp,
   isCacheKey,
@@ -12,6 +14,12 @@ import {
   saveOfflineProfile,
   shouldPersistQuery,
 } from "../offlineCache";
+import { docsKeys } from "@/api/docs";
+import { medicalKeys } from "@/api/injuries";
+import { profileKeys } from "@/api/profile";
+import { accountKeys } from "@/api/account";
+import { staffKeys } from "@/api/staff";
+import { coachKeys } from "@/api/coaches";
 
 const ok = (queryKey: unknown[], data: unknown = [1], meta?: Record<string, unknown>) => ({
   queryKey,
@@ -29,12 +37,9 @@ describe("cacheKeyFor", () => {
 });
 
 describe("appBuster", () => {
-  it("change avec le build", () => {
-    expect(appBuster("abc")).not.toBe(appBuster("def"));
-    expect(appBuster("abc")).toBe(appBuster("abc"));
-  });
-  it("valeur stable sans build id", () => {
-    expect(appBuster(undefined)).toBe(appBuster(""));
+  it("suit la version du format, pas le déploiement", () => {
+    expect(appBuster()).toBe(appBuster(OFFLINE_CACHE_VERSION));
+    expect(appBuster("2")).not.toBe(appBuster("1"));
   });
 });
 
@@ -50,16 +55,23 @@ describe("shouldPersistQuery", () => {
     expect(shouldPersistQuery({ queryKey: ["x"], state: { status: "error", data: [1] } })).toBe(false);
     expect(shouldPersistQuery({ queryKey: ["x"], state: { status: "pending" } })).toBe(false);
   });
-  it("exclut URL signées, jetons et clés d'API", () => {
-    expect(shouldPersistQuery(ok(["docs", "signed-url", "p"]))).toBe(false);
-    expect(shouldPersistQuery(ok(["measurementPhotoUrls", ["a"]]))).toBe(false);
-    expect(shouldPersistQuery(ok(["coach-api-keys", "c"]))).toBe(false);
-    expect(shouldPersistQuery(ok(["claimInfo", "t"]))).toBe(false);
-    expect(shouldPersistQuery(ok(["staff", "invitation", "t"]))).toBe(false);
+  it("exclut URL signées, jetons et clés d'API (clés réelles des modules)", () => {
+    for (const key of [
+      docsKeys.signedUrl("p"),
+      medicalKeys.signedUrls("a1", ["x.pdf"]),
+      profileKeys.photoUrls(["a1/p.jpg"]),
+      accountKeys.claimInfo("t"),
+      accountKeys.claimLink("a1"),
+      staffKeys.invitation("t"),
+      coachKeys.apiKeys("c"),
+    ]) {
+      expect(shouldPersistQuery(ok([...key])), JSON.stringify(key)).toBe(false);
+    }
   });
-  it("le préfixe doit correspondre exactement", () => {
+  it("garde les autres clés de ces modules", () => {
     expect(shouldPersistQuery(ok(["docs", "athlete", "a1"]))).toBe(true);
     expect(shouldPersistQuery(ok(["staff", "athlete", "a1"]))).toBe(true);
+    expect(shouldPersistQuery(ok(["medical", "a1", "entries"]))).toBe(true);
   });
   it("meta.persist = false exclut la requête", () => {
     expect(shouldPersistQuery(ok(["x"], [1], { persist: false }))).toBe(false);
@@ -141,5 +153,13 @@ describe("profil hors ligne", () => {
     expect(readOfflineProfile(s, "u1")).toBeNull();
     expect(readOfflineProfile(null, "u1")).toBeNull();
     expect(readOfflineProfile({ getItem: () => "{oups" }, "u1")).toBeNull();
+  });
+});
+
+describe("authStorageKey", () => {
+  it("clé supabase-js du projet", () => {
+    expect(authStorageKey("https://abcdefgh.supabase.co")).toBe("sb-abcdefgh-auth-token");
+    expect(authStorageKey(undefined)).toBeNull();
+    expect(authStorageKey("pas une url")).toBeNull();
   });
 });

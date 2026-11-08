@@ -66,6 +66,7 @@ describe("listAthleteCycles / getLatestCycle", () => {
     setDbForTests(db);
     expect((await listAthleteCycles(A)).map((c) => c.id)).toEqual(["c-nested", "c-both", "c-solo"]);
     expect((await listAthleteCycles(A, { direct: true })).map((c) => c.id)).toEqual(["c-both", "c-solo"]);
+    expect((await listAthleteCycles(A, { direct: true, newestFirst: true })).map((c) => c.id)).toEqual(["c-solo", "c-both"]);
     expect((await getLatestCycle(A))?.id).toBe("c-solo");
   });
 

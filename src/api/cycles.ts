@@ -133,10 +133,15 @@ export interface CycleBrief { id: string; name: string; start_date: string; end_
  * portent son `athlete_id` ET ceux rattachés à ses mésocycles (dédoublonnés).
  * `direct: true` : seulement les premiers (plan actif de l'athlète).
  */
-export async function listAthleteCycles(athleteId: string, opts: { direct?: boolean } = {}): Promise<CycleBrief[]> {
+export async function listAthleteCycles(
+  athleteId: string,
+  opts: { direct?: boolean; newestFirst?: boolean } = {},
+): Promise<CycleBrief[]> {
+  // `newestFirst` : même ORDER BY que l'ancien choix du cycle ouvert côté
+  // athlète (start_date desc) — à dates égales, le même cycle reste choisi.
   const direct = unwrapRows<CycleBrief>(
     (await db().from("cycles").select("id, name, start_date, end_date, objective")
-      .eq("athlete_id", athleteId).order("start_date")) as never,
+      .eq("athlete_id", athleteId).order("start_date", { ascending: !opts.newestFirst })) as never,
     "Lecture des cycles impossible",
   );
   let nested: CycleBrief[] = [];
@@ -162,7 +167,8 @@ export async function listAthleteCycles(athleteId: string, opts: { direct?: bool
   const seen = new Set<string>();
   return [...direct, ...nested]
     .filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)))
-    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    // Tri stable : à dates égales, l'ordre renvoyé par la base est gardé.
+    .sort((a, b) => (opts.newestFirst ? -1 : 1) * a.start_date.localeCompare(b.start_date));
 }
 
 /** Dernier cycle commencé (date de début la plus récente), ou `null`. */

@@ -1,7 +1,7 @@
 import { onlineManager, type QueryClient } from "@tanstack/react-query";
 import { clear, createStore, del, get, keys, set, type UseStore } from "idb-keyval";
 import { db } from "@/api/client";
-import { appBuster, readStoredAuthUserId } from "./offlineCache";
+import { appBuster, authStorageKey, readStoredAuthUserId } from "./offlineCache";
 import {
   createPersistenceController,
   type OfflineStore,
@@ -66,7 +66,7 @@ export function startOfflinePersistence(queryClient: QueryClient): PersistenceCo
   const c = createPersistenceController({
     queryClient,
     store: indexedDbStore,
-    buster: appBuster(__APP_BUILD_ID__),
+    buster: appBuster(),
     canPersist: () => onlineManager.isOnline(),
     onError: (err) => {
       if (import.meta.env.DEV) console.warn("[offline] cache hors ligne :", err);
@@ -85,6 +85,15 @@ export function startOfflinePersistence(queryClient: QueryClient): PersistenceCo
     });
   } catch (err) {
     if (import.meta.env.DEV) console.warn("[offline] abonnement auth impossible :", err);
+  }
+
+  if (typeof window !== "undefined") {
+    // Déconnexion dans un AUTRE onglet (même hors ligne, où SIGNED_OUT n'est
+    // pas émis) : la session disparaît du stockage → on efface ici aussi.
+    const authKey = authStorageKey(import.meta.env.VITE_SUPABASE_URL);
+    window.addEventListener("storage", (e) => {
+      if (authKey && e.key === authKey && e.newValue === null) void c.clear();
+    });
   }
 
   if (typeof document !== "undefined") {

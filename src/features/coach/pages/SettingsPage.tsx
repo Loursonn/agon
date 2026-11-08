@@ -29,7 +29,6 @@ export default function SettingsPage() {
 
   async function handleLogout() {
     await logout();
-    window.location.href = "/login";
   }
 
   async function handleCopyCode() {

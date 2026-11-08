@@ -19,15 +19,23 @@ export type { AuthChangeEvent, Session, User };
 export class AuthFailure extends Error {
   readonly code?: string;
   readonly status?: number;
-  constructor(err: { message: string; code?: string; status?: number }) {
+  /** Échec réseau (serveur injoignable), pas un refus : la session reste valable. */
+  readonly network: boolean;
+  constructor(err: { message: string; code?: string; status?: number; name?: string }) {
     super(err.message);
     this.name = "AuthFailure";
     this.code = err.code;
     this.status = err.status;
+    this.network = err.name === "AuthRetryableFetchError" || err.status === 0;
   }
 }
 
-type AuthRes<T> = { data: T; error: { message: string; code?: string; status?: number } | null };
+/** true si l'erreur vient du réseau (hors ligne, réseau capté mais inutilisable). */
+export function isAuthNetworkError(e: unknown): boolean {
+  return e instanceof AuthFailure && e.network;
+}
+
+type AuthRes<T> = { data: T; error: { message: string; code?: string; status?: number; name?: string } | null };
 
 function ok<T>(res: AuthRes<T>): T {
   if (res.error) throw new AuthFailure(res.error);

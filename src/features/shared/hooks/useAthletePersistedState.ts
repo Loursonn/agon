@@ -41,8 +41,7 @@ async function determineActiveCycleId(athleteId: string): Promise<string | null>
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   let rows: { id: string; start_date: string; end_date: string }[];
   try {
-    // Plus récent d'abord.
-    rows = (await listAthleteCycles(athleteId, { direct: true })).reverse();
+    rows = await listAthleteCycles(athleteId, { direct: true, newestFirst: true });
   } catch {
     return null; // comme avant : sans cycles lisibles, clés globales
   }

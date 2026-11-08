@@ -76,8 +76,10 @@ export default function RetoursPage() {
   const activeCount = activeInjuries(injuries).length;
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { data: monthDataRaw, isLoading: monthLoading } = useMonthlyRetours(athleteId!, selectedMonth);
-  const { data: weekData,  isLoading: weekLoading  } = useWeeklyRetours(athleteId!, selectedWeek);
+  const monthQ = useMonthlyRetours(athleteId!, selectedMonth);
+  const weekQ = useWeeklyRetours(athleteId!, selectedWeek);
+  const { data: monthDataRaw, isLoading: monthLoading } = monthQ;
+  const { data: weekData,  isLoading: weekLoading  } = weekQ;
   const { data: modifications = [] } = useAthleteModifications(athleteId!);
   const { user } = useAuth();
   const weekStartStr = format(selectedWeek, "yyyy-MM-dd");
@@ -109,6 +111,21 @@ export default function RetoursPage() {
   const { km: runKm, watchKm: runWatchKm } = summaryBetween(periodStart, periodEnd);
 
   if (isLoading) return <PageSkeleton />;
+  // Lecture en échec : le dire, plutôt qu'afficher une période vide trompeuse.
+  const activeQ = viewMode === "month" ? monthQ : weekQ;
+  if (activeQ.isError && !activeQ.data) {
+    return (
+      <div style={{ padding: 32, textAlign: "center", color: C.tx2, fontSize: 14 }}>
+        <p style={{ marginBottom: 12 }}>Les retours de cette période n'ont pas pu être chargés.</p>
+        <button
+          onClick={() => void activeQ.refetch()}
+          style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
 
   /** Pose sur chaque séance prévue la sortie de montre qui s'y rattache (affichage seul). */
   const withWatch = (list: EnergySessionDetail[]): EnergySessionDetail[] =>

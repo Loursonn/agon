@@ -10,6 +10,7 @@ import {
   deleteEnergyAssignment,
   energyKeys,
   invalidateEnergy,
+  isEnergyNotFound,
   listAthleteEnergyAssignments,
   reopenEnergyAssignment,
   setEnergyRpe,
@@ -186,8 +187,14 @@ export function useCompleteEnergyAssignment() {
       void invalidateEnergy(qc, athleteId);
       toast.success("Séance validée !");
     },
-    onError: (err) => {
+    onError: (err, { athleteId }) => {
       console.error("[useCompleteEnergyAssignment] error:", err);
+      if (isEnergyNotFound(err)) {
+        // Séance retirée par le coach entre-temps : on rafraîchit pour qu'elle disparaisse.
+        void invalidateEnergy(qc, athleteId);
+        toast.error("Cette séance n'existe plus : ton coach l'a retirée.");
+        return;
+      }
       toast.error(`Validation échouée : ${errMsg(err)}`);
     },
   });

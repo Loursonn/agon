@@ -422,8 +422,15 @@ export async function getCalendarEvents(
     listTestSessionsBetween(athleteId, start, end),
     listCompetitions(athleteId),
     listEnergyAssignments({ athleteIds: [athleteId], from: start, to: end, join: "summary" }),
-    readAppData<FreeActivity[]>(athleteId, "asp:freesess"),
-    listLifeEvents(athleteId),
+    // Secondaires : une erreur ne doit pas vider tout le calendrier.
+    readAppData<FreeActivity[]>(athleteId, "asp:freesess").catch((e) => {
+      console.warn("[calendrier] activités libres non chargées", e);
+      return { found: false, value: undefined };
+    }),
+    listLifeEvents(athleteId).catch((e) => {
+      console.warn("[calendrier] événements de vie non chargés", e);
+      return [];
+    }),
   ]);
 
   const events: UnifiedCalendarEvent[] = [];

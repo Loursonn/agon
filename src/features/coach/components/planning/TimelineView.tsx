@@ -1159,7 +1159,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
     return () => obs.disconnect();
   }, []);
 
-  const { data, isLoading } = useTimelineData(athleteId, { start: rangeStart, end: rangeEnd });
+  const { data, isLoading, isError, refetch } = useTimelineData(athleteId, { start: rangeStart, end: rangeEnd });
   const calc = useCalculatePosition(rangeStart, rangeEnd, width - 88); // subtract label col
 
   const { mutate: _drag }   = useDragCycle();
@@ -1842,6 +1842,18 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
               <div style={{ padding: "60px 0", textAlign: "center" }}>
                 <div style={{ width: 24, height: 24, border: "2px solid " + C.brdL, borderTopColor: C.ac, borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto" }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : isError && !data ? (
+              // Lecture en échec : surtout pas « Aucun macrocycle » (le coach recréerait un doublon).
+              <div style={{ padding: "60px 0", textAlign: "center" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>La frise n'a pas pu être chargée</div>
+                <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 16 }}>Vérifie ta connexion puis réessaie.</div>
+                <button
+                  onClick={() => void refetch()}
+                  style={{ padding: "9px 18px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Réessayer
+                </button>
               </div>
             ) : (data?.macrocycles ?? []).length === 0 ? (
               <div style={{ padding: "60px 0", textAlign: "center" }}>

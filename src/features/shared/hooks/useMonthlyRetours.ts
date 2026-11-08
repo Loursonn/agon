@@ -23,6 +23,8 @@ import { wellnessScore } from "@shared/domain/wellness";
 import { getDays as getNutritionDays, getStrategy as getNutritionStrategy } from "@/api/nutrition";
 
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function useMonthlyRetours(athleteId: string, monthStart: Date) {
   const monthKey = format(monthStart, "yyyy-MM");
   return useQuery({
@@ -106,7 +108,10 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
     athleteId, workoutList.map((w) => w.session_id as string), end,
   ).catch(() => new Map<string, number>());
 
-  const commentsData = await listExerciseComments(workoutIds);
+  const commentsData = await listExerciseComments(workoutIds).catch((e) => {
+    console.warn("[retours] commentaires non chargés", e);
+    return [];
+  });
 
   const commentsByWorkout: Record<string, WorkoutExerciseComment[]> = {};
   for (const c of commentsData as WorkoutExerciseComment[]) {
@@ -137,8 +142,14 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
       }
     }
   }
-  if (allUnknownIds.size > 0) {
-    for (const [id, name] of await getExerciseNames([...allUnknownIds])) globalExNameMap.set(id, name);
+  // Noms de la banque (non bloquant ; les ids d'exercices perso ne sont pas des uuid).
+  const bankIds = [...allUnknownIds].filter((id) => UUID_RE.test(id));
+  if (bankIds.length > 0) {
+    const names = await getExerciseNames(bankIds).catch((e) => {
+      console.warn("[retours] noms d'exercices non chargés", e);
+      return new Map<string, string>();
+    });
+    for (const [id, name] of names) globalExNameMap.set(id, name);
   }
 
   // ── 3. Build workouts ────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { todayKey, localISO } from "@/lib/date";
 import { checkMilestone } from "@/lib/date";
-import { SKEYS } from "@/lib/storage";
+import { SKEYS, isKeyLoadFailed } from "@/lib/storage";
 import { clearDraft, wellnessDraftKey } from "@/lib/localDraft";
 import { invalidateWellness, saveWellnessForm } from "@/api/wellness";
 import {
@@ -214,7 +214,10 @@ export function useAthleteLogic(d: LogicDeps) {
       const iso = localISO();
       writes.push(saveWeight(athleteId, iso, data.poids).then(async (log) => {
         _setWeightLogRaw(log);
-        const milestone = checkMilestone(log, bodyWeight.current);
+        // Poids de référence ou paliers non chargés (réseau) : bodyWeight vaut
+        // le défaut 0, tout serait un « palier ». On attend une vraie lecture.
+        const refUnknown = isKeyLoadFailed(SKEYS.bw, athleteId) || isKeyLoadFailed(SKEYS.weightMilestones, athleteId);
+        const milestone = refUnknown ? null : checkMilestone(log, bodyWeight.current);
         if (milestone && milestone > bodyWeight.current) {
           const bw = await recordWeightMilestone(athleteId, iso, milestone);
           _setWeightMilestonesRaw([...weightMilestones, { date: toCompactDay(iso), kg: milestone }]);

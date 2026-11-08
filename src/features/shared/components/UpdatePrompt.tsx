@@ -12,6 +12,9 @@ let registered = false;
  */
 export default function UpdatePrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
+  // « × » ne cache l'invite que jusqu'au prochain retour sur l'onglet : un
+  // onglet coach ouvert des jours ne doit pas rester sur l'ancienne version.
+  const [dismissed, setDismissed] = useState(false);
   const [reloading, setReloading] = useState(false);
   const updateRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
 
@@ -35,7 +38,14 @@ export default function UpdatePrompt() {
     return () => { if (interval) clearInterval(interval); };
   }, []);
 
-  if (!needRefresh) return null;
+  useEffect(() => {
+    if (!needRefresh || !dismissed) return;
+    const onVisible = () => { if (document.visibilityState === "visible") setDismissed(false); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [needRefresh, dismissed]);
+
+  if (!needRefresh || dismissed) return null;
 
   return (
     <div
@@ -74,7 +84,7 @@ export default function UpdatePrompt() {
       </button>
       <button
         aria-label="Plus tard"
-        onClick={() => setNeedRefresh(false)}
+        onClick={() => setDismissed(true)}
         style={{ padding: "4px 6px", border: "none", background: "transparent", color: C.tx3, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
       >
         ×

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { getSession, onAuthChange, signIn, type User } from "@/api/auth";
+import { getSession, isAuthNetworkError, onAuthChange, signIn, type User } from "@/api/auth";
 import {
   createInvitation, createPendingAthlete as apiCreatePendingAthlete, ensureCoachCode, getCoachRoster,
   linkToCoachByCode, normalizeCoachCode, registerAthleteWithCode as apiRegisterAthleteWithCode,
@@ -25,8 +25,7 @@ const isOffline = () => typeof navigator !== "undefined" && navigator.onLine ===
  * qu'elle est toujours enregistrée sur l'appareil : on reprend son
  * utilisateur pour ouvrir l'app (le jeton sera rafraîchi au retour du réseau).
  */
-function offlineStoredUser(): User | null {
-  if (!isOffline()) return null;
+function storedUser(): User | null {
   return readStoredAuthUser(safeStorage(), import.meta.env.VITE_SUPABASE_URL) as unknown as User | null;
 }
 
@@ -63,7 +62,8 @@ interface AuthContextType {
   unlinkFromCoach: () => Promise<void>;
   removeSelfAsAthlete: () => Promise<void>;
   becomeSelfCoach: () => Promise<void>;
-  logout: () => Promise<void>;
+  /** Déconnecte cet appareil puis recharge sur `redirectTo` (défaut /login). */
+  logout: (redirectTo?: string) => Promise<void>;
   createInviteLink: () => Promise<string>;
   updateAthleteProfile: (athleteId: string, fields: AthleteProfileFields) => Promise<void>;
 }
@@ -137,22 +137,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    // Réseau en panne (hors ligne, ou réseau capté mais inutilisable) : une
+    // session vide ne veut pas dire « déconnecté ». Remis à false dès qu'une
+    // vraie session revient du serveur.
+    let networkDown = isOffline();
+
+    // Hors ligne : on ouvre tout de suite avec l'utilisateur enregistré, sans
+    // attendre `getSession`, qui réessaie de rafraîchir le jeton ~25 s.
+    const early = networkDown ? storedUser() : null;
+    if (early) {
+      setUser(early);
+      fetchProfile(early.id).finally(() => setLoading(false));
+    }
+
     getSession()
       .catch((e) => {
         console.error("[useAuth] session", e);
+        if (isAuthNetworkError(e)) networkDown = true;
         return null;
       })
       .then((session) => {
-        const u = session?.user ?? offlineStoredUser();
+        if (session?.user) {
+          networkDown = false;
+          setUser(session.user);
+          if (session.user.id !== early?.id) fetchProfile(session.user.id).finally(() => setLoading(false));
+          else setLoading(false);
+          return;
+        }
+        if (early) return; // déjà ouvert hors ligne
+        const u = networkDown || isOffline() ? storedUser() : null;
         setUser(u);
         if (u) fetchProfile(u.id).finally(() => setLoading(false));
         else setLoading(false);
       });
 
     return onAuthChange((event, session) => {
-      // Hors ligne, un jeton expiré donne une session vide sans déconnexion :
-      // on garde l'utilisateur affiché.
-      if (!session?.user && event !== "SIGNED_OUT" && offlineStoredUser()) return;
+      // Jeton expiré sans réseau : session vide SANS déconnexion. On garde
+      // l'utilisateur affiché ; un refus réel du serveur (en ligne) passe.
+      if (!session?.user && event !== "SIGNED_OUT" && (networkDown || isOffline()) && storedUser()) return;
+      if (session?.user) networkDown = false;
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
       else {
@@ -232,17 +255,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (profile.role === "coach_athlete" && (profile.coach_id === user.id || selfCoCoached))
   );
 
-  async function logout() {
+  async function logout(redirectTo = "/login") {
     setAllAthletes([]);
     setActiveAthleteId(null);
-    try {
-      await logoutDevice();
-    } catch (e) {
-      // Session oubliée sur l'appareil mais SIGNED_OUT non émis : on vide l'écran ici.
-      console.error("[useAuth] déconnexion", e);
-      setUser(null);
-      setProfile(null);
-    }
+    await logoutDevice().catch((e) => console.error("[useAuth] déconnexion", e));
+    // Rechargement complet : plus rien de l'ancien compte en mémoire (cache,
+    // requêtes en vol), même si la déconnexion s'est faite sans réseau.
+    window.location.href = redirectTo;
   }
 
   async function updateAthleteProfile(athleteId: string, fields: AthleteProfileFields) {

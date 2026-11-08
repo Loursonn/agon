@@ -217,7 +217,7 @@ function CoachShellInner() {
                 {profile?.full_name || "Coach"}
               </div>
               <button
-                onClick={logout}
+                onClick={() => void logout()}
                 style={{
                   fontSize: 10, color: C.tx3, background: "none", border: "none",
                   cursor: "pointer", fontFamily: "inherit", padding: 0,

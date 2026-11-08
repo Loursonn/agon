@@ -38,27 +38,50 @@ export function isCacheKey(key: unknown): key is string {
  * cache écrit par une autre version est jeté, car la forme des données peut
  * avoir changé (migration `src/api/` en cours).
  */
-export function appBuster(buildId: string | undefined): string {
-  return `agon:${buildId && buildId.trim() ? buildId.trim() : "dev"}`;
+/**
+ * Version du FORMAT du cache hors ligne. À augmenter seulement quand la forme
+ * des données en cache change de façon incompatible (clés, structure). Pas le
+ * numéro de déploiement : une nouvelle version activée au démarrage SANS réseau
+ * jetterait sinon tout le cache, et l'athlète aurait un écran vide.
+ */
+export const OFFLINE_CACHE_VERSION = "1";
+
+export function appBuster(version: string | undefined = OFFLINE_CACHE_VERSION): string {
+  return `agon:${version && version.trim() ? version.trim() : "dev"}`;
+}
+
+/** Clé du stockage local où supabase-js garde la session (`sb-<projet>-auth-token`). */
+export function authStorageKey(supabaseUrl: string | undefined): string | null {
+  if (!supabaseUrl) return null;
+  try {
+    return `sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Requêtes jamais persistées, par préfixe de clé :
- * - URL signées (expirent en 1 h, inutiles hors ligne ; photos corporelles) ;
- * - jetons d'invitation / de rattachement (parcours sans compte) ;
+ * Requêtes jamais persistées, repérées par un SEGMENT de leur clé (où qu'il
+ * soit : `["profile", "_photos", …]`, `["medical", id, "signedUrls", …]`) :
+ * - URL signées (photos corporelles, pièces médicales, fiches : valables 1 h,
+ *   utilisables par quiconque les a) ;
+ * - jetons d'invitation / de première connexion ;
  * - clés d'API coach.
  * Une requête peut aussi s'exclure elle-même avec `meta: { persist: false }`.
+ * Les tests construisent les clés avec les vrais `*Keys` des modules.
  */
-export const NEVER_PERSIST: readonly (readonly string[])[] = [
-  ["docs", "signed-url"],
-  ["measurementPhotoUrls"],
-  ["coach-api-keys"],
-  ["claimInfo"],
-  ["staff", "invitation"],
-];
+export const NEVER_PERSIST_SEGMENTS: ReadonlySet<string> = new Set([
+  "signed-url",     // docsKeys.signedUrl
+  "signedUrls",     // medicalKeys.signedUrls
+  "_photos",        // profileKeys.photoUrls
+  "_claim",         // accountKeys.claimInfo
+  "claimLink",      // accountKeys.claimLink
+  "invitation",     // staffKeys.invitation
+  "coach-api-keys", // coachKeys.apiKeys
+]);
 
-function startsWith(key: readonly unknown[], prefix: readonly string[]): boolean {
-  return prefix.every((part, i) => key[i] === part);
+function hasSecretSegment(key: readonly unknown[]): boolean {
+  return key.some((part) => typeof part === "string" && NEVER_PERSIST_SEGMENTS.has(part));
 }
 
 /** Ce dont le filtre a besoin d'une `Query` (permet de tester sans QueryClient). */
@@ -73,7 +96,7 @@ export function shouldPersistQuery(query: PersistCandidate): boolean {
   if (query.state.status !== "success") return false;
   if (query.state.data === undefined) return false;
   if (query.meta?.persist === false) return false;
-  return !NEVER_PERSIST.some((prefix) => startsWith(query.queryKey, prefix));
+  return !hasSecretSegment(query.queryKey);
 }
 
 /** Date de la donnée la plus récente du cache (pour « données du … »). */
