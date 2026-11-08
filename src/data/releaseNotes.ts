@@ -38,6 +38,30 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-08-saisies-sans-reseau",
+    date: "2026-11-08",
+    kind: "feature",
+    title: "Vos athlètes peuvent saisir sans réseau",
+    summary: "À la salle sans connexion, la fin de séance, le RPE, la séance énergie, le wellness, la nutrition et la pesée sont gardés sur le téléphone puis envoyés tout seuls au retour du réseau.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Sans réseau, la saisie est gardée sur le téléphone : l'écran la montre tout de suite et un bandeau indique combien de saisies attendent d'être envoyées.",
+          "Dès que le réseau revient, tout part automatiquement, dans l'ordre, sans rien refaire.",
+          "Si vous avez déplacé la séance entre-temps, la saisie s'y enregistre et votre adaptation du jour est gardée. Si vous l'avez supprimée, l'athlète est prévenu que sa saisie n'a pas pu être enregistrée.",
+          "Se déconnecter avec des saisies pas encore envoyées demande une confirmation avant de les perdre.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Sans réseau, l'espace coach se consulte mais ne se modifie pas : un bandeau « Hors ligne : modifications désactivées » le signale, et rien n'est perdu en silence.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-08-plus-de-pertes",
     date: "2026-11-08",
     kind: "fix",

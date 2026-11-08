@@ -45,6 +45,7 @@ import { localISO, normalizeDayMap } from "@/lib/date";
 import { calcScore, wellnessColor } from "@/lib/wellness";
 import { averageScore, wellnessBand } from "@shared/domain/wellness";
 import { loadDraft, saveDraft, clearDraft, energyDraftKey } from "@/lib/localDraft";
+import { queueIsDurable } from "@/lib/offline/writes";
 import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
@@ -556,8 +557,10 @@ function EnergyPreviewOverlay({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [energyDraftJson]);
   useEffect(() => {
-    if (complete.isSuccess && athleteId) clearDraft(energyDraftKey(athleteId, assignmentId));
-  }, [complete.isSuccess, athleteId, assignmentId]);
+    // Gardée en file sans IndexedDB (perdue au rechargement) : brouillon gardé.
+    const queued = (complete.data as { status?: string } | undefined)?.status === "queued";
+    if (complete.isSuccess && athleteId && (!queued || queueIsDurable())) clearDraft(energyDraftKey(athleteId, assignmentId));
+  }, [complete.isSuccess, complete.data, athleteId, assignmentId]);
 
   function handleValidate() {
     const logs: BlockLogs = isComplex ? localBlocks : {};

@@ -2,6 +2,7 @@ import { onlineManager, type QueryClient } from "@tanstack/react-query";
 import { clear, createStore, del, get, keys, set, type UseStore } from "idb-keyval";
 import { db } from "@/api/client";
 import { appBuster, authStorageKey, readStoredAuthUserId } from "./offlineCache";
+import { pendingWrites } from "./writes";
 import {
   createPersistenceController,
   type OfflineStore,
@@ -67,7 +68,10 @@ export function startOfflinePersistence(queryClient: QueryClient): PersistenceCo
     queryClient,
     store: indexedDbStore,
     buster: appBuster(),
-    canPersist: () => onlineManager.isOnline(),
+    // Hors ligne on n'écrit pas (une ancienne queryFn qui avale l'erreur réseau
+    // pourrait écraser le cache avec du vide), SAUF si des saisies attendent :
+    // leur affichage optimiste (séance validée…) doit survivre à un rechargement.
+    canPersist: () => onlineManager.isOnline() || pendingWrites() > 0,
     onError: (err) => {
       if (import.meta.env.DEV) console.warn("[offline] cache hors ligne :", err);
     },

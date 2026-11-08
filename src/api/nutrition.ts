@@ -84,7 +84,7 @@ type UntypedRpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{
  * ce jour-là et seulement lui, dans la même ligne, sans relire le blob.
  */
 export async function saveDay(athleteId: string, day: IsoDay, log: NutritionDailyLog): Promise<NutritionDailyLog> {
-  if (!isIsoDay(day)) throw new ApiError("Journée nutrition invalide", { message: String(day) });
+  if (!isIsoDay(day)) throw new ApiError("Journée nutrition invalide", { message: String(day), code: "22023" });
   // `nutrition_save_day` n'est pas encore dans les types générés (migration 20261108130000).
   const client = db() as unknown as { rpc: UntypedRpc };
   const saved = unwrap(

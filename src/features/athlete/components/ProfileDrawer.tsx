@@ -24,7 +24,7 @@ import { ProviderActivityList } from "@/features/shared/components/ProviderActiv
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useAthleteRetours } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import type { TrendSummary } from "@/lib/athleteTrends";
-import { logoutDevice } from "@/lib/offline/logoutDevice";
+import { confirmLogout, logoutDevice } from "@/lib/offline/logoutDevice";
 import { getCoachName } from "@/api/profile";
 import { useAuth } from "@/hooks/useAuth";
 import type { Profile } from "@/hooks/useAuth";
@@ -355,7 +355,7 @@ export default function ProfileDrawer({ onClose }: Props) {
 
         {/* Déconnexion */}
         <div style={{ marginTop: "auto", paddingTop: 8 }}>
-          <button onClick={async () => { await logoutDevice().catch(() => {}); window.location.href = "/login"; }} style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <button onClick={async () => { if (!confirmLogout()) return; await logoutDevice().catch(() => {}); window.location.href = "/login"; }} style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <span>⏻</span><span>Déconnexion</span>
           </button>
         </div>

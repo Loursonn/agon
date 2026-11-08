@@ -414,8 +414,8 @@ type UntypedRpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{
 const rpc: UntypedRpc = (fn, args) => (db() as unknown as { rpc: UntypedRpc }).rpc(fn, args);
 
 function checkWeight(day: IsoDay, kg: number) {
-  if (!isIsoDay(day)) throw new ApiError("Jour de pesée invalide", { message: String(day) });
-  if (!Number.isFinite(kg) || kg <= 0 || kg >= 500) throw new ApiError("Poids invalide", { message: String(kg) });
+  if (!isIsoDay(day)) throw new ApiError("Jour de pesée invalide", { message: String(day), code: "22023" });
+  if (!Number.isFinite(kg) || kg <= 0 || kg >= 500) throw new ApiError("Poids invalide", { message: String(kg), code: "22023" });
 }
 
 /**

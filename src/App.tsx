@@ -1,7 +1,7 @@
 import { Fragment, lazy, Suspense, type ReactNode } from "react";
-import { onlineManager, QueryClient } from "@tanstack/react-query";
+import { MutationCache, onlineManager, QueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { Toaster as Sonner } from "sonner";
+import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -10,6 +10,7 @@ import { OfflineQueryProvider } from "@/features/shared/components/OfflineQueryP
 import UpdatePrompt from "@/features/shared/components/UpdatePrompt";
 import { OFFLINE_CACHE_MAX_AGE_MS } from "@/lib/offline/offlineCache";
 import { startOfflinePersistence } from "@/lib/offline/offlinePersistence";
+import { pendingWrites, startWriteQueue } from "@/lib/offline/writes";
 
 // Pages publiques (chargées immédiatement — nécessaires au démarrage)
 import Login from "./pages/Login.tsx";
@@ -83,13 +84,33 @@ const CoachStaffPage            = lazy(() => import("./features/staff/pages/Coac
 //   partirait une fois ; or beaucoup de queryFn héritées avalent l'erreur
 //   réseau et renvoient `[]` / `null` (audit §3) : le cache serait remplacé par
 //   du vide. À reconsidérer quand toutes les lectures passeront par src/api/ ;
-// - mutations : comportement par défaut ("online", mises en pause hors ligne,
-//   reprises au retour du réseau tant que l'onglet vit). File d'attente
-//   persistée = phase 2.
+// - mutations : networkMode "always". Hors ligne, une mutation part tout de
+//   suite : les saisies athlète passent par la file `src/lib/offline/writes.ts`
+//   (gardées sur le téléphone, envoyées au retour du réseau) ; les autres
+//   (coach…) échouent aussitôt avec leur message d'erreur et annulent leur
+//   affichage optimiste, au lieu d'attendre en pause et d'être perdues à la
+//   fermeture de l'onglet.
+// - tant que des saisies attendent d'être envoyées, pas de rechargement
+//   automatique (retour du réseau, retour sur l'app, écran remonté) : il
+//   remplacerait leur affichage optimiste par l'état du serveur qui ne les a
+//   pas encore. La file rafraîchit tout une fois vidée.
+const noPendingWrites = () => pendingWrites() === 0;
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, gcTime: OFFLINE_CACHE_MAX_AGE_MS, networkMode: "online" },
+    queries: {
+      staleTime: 30_000, gcTime: OFFLINE_CACHE_MAX_AGE_MS, networkMode: "online",
+      refetchOnReconnect: noPendingWrites, refetchOnWindowFocus: noPendingWrites, refetchOnMount: noPendingWrites,
+    },
+    mutations: { networkMode: "always" },
   },
+  // Modification échouée hors ligne sans message à elle : on dit pourquoi.
+  mutationCache: new MutationCache({
+    onError: (_err, _vars, _ctx, mutation) => {
+      if (!mutation.options.onError && !onlineManager.isOnline()) {
+        sonnerToast.error("Pas de réseau : modification non enregistrée.", { id: "offline-mutation" });
+      }
+    },
+  }),
 });
 
 // React Query v5 se croit en ligne au démarrage et n'écoute ensuite que les
@@ -97,6 +118,7 @@ const queryClient = new QueryClient({
 if (typeof navigator !== "undefined" && navigator.onLine === false) onlineManager.setOnline(false);
 
 const offlinePersistence = startOfflinePersistence(queryClient);
+startWriteQueue(queryClient);
 
 // Fallback minimal pendant le chargement des chunks
 function PageLoader() {

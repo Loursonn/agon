@@ -119,7 +119,7 @@ export async function saveWellnessEntry(athleteId: string, entry: WellnessEntry)
  */
 export async function saveWellnessForm(athleteId: string, form: unknown, day: IsoDay = localIsoDay()): Promise<WellnessEntry> {
   const entry = parseWellnessEntry(form, day);
-  if (!entry) throw new ApiError("Enregistrement du wellness impossible", { message: "saisie illisible" });
+  if (!entry) throw new ApiError("Enregistrement du wellness impossible", { message: "saisie illisible", code: "22023" });
   return saveWellnessEntry(athleteId, { ...entry, archived: false });
 }
 

@@ -15,6 +15,7 @@ import {
   NutritionDailyLog,
 } from "@/lib/nutrition";
 import { useNutritionLog, useSaveNutritionDay } from "@/features/shared/hooks/useNutrition";
+import { notifyQueued } from "@/lib/offline/writes";
 
 const STRATEGY_META: Record<string, { label: string; color: string; icon: string; verb: string }> = {
   maintenance:    { label: "Maintenance",    color: C.b, icon: "balance", verb: "Écart visé" },
@@ -80,9 +81,10 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
   // Une seule écriture : la journée du jour, via la RPC atomique.
   async function handleSave() {
     try {
-      await saveDay.mutateAsync({ day: today, log: log as NutritionDailyLog });
+      const status = await saveDay.mutateAsync({ day: today, log: log as NutritionDailyLog });
       dirty.current = false;
-      toast.success("Journée enregistrée !");
+      if (status === "queued") notifyQueued();
+      else toast.success("Journée enregistrée !");
     } catch (e) {
       toast.error(errorMessage(e, "Erreur lors de l'enregistrement"));
     }

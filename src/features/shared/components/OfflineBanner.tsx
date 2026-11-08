@@ -2,20 +2,34 @@ import { useSyncExternalStore } from "react";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { C } from "@/lib/theme";
 import { formatOfflineStamp, latestDataTimestamp } from "@/lib/offline/offlineCache";
+import { pendingLabel, usePendingWrites } from "@/lib/offline/writes";
 
 const subscribe = (cb: () => void) => onlineManager.subscribe(cb);
 const isOnline = () => onlineManager.isOnline();
 
 /**
- * Bandeau « Hors ligne — données du 08/11 14:32 ».
- * Rien quand le réseau est là. La date est celle de la donnée la plus récente
- * du cache, c'est-à-dire, à peu près, la dernière fois que l'app a eu du réseau.
+ * Bandeau hors ligne.
+ * - athlète : « Hors ligne — données du 08/11 14:32 · 2 saisies en attente d'envoi » ;
+ * - coach : « Hors ligne : modifications désactivées — données du … » (les
+ *   écritures coach ne sont pas gardées, elles échouent tout de suite) ;
+ * - en ligne avec des saisies pas encore parties : « 2 saisies en attente d'envoi ».
+ * Rien sinon. La date est celle de la donnée la plus récente du cache, à peu
+ * près la dernière fois que l'app a eu du réseau.
  */
-export default function OfflineBanner() {
+export default function OfflineBanner({ variant = "athlete" }: { variant?: "athlete" | "coach" }) {
   const online = useSyncExternalStore(subscribe, isOnline, () => true);
+  const pending = usePendingWrites();
   const qc = useQueryClient();
-  if (online) return null;
-  const ts = latestDataTimestamp(qc.getQueryCache().getAll());
+  if (online && pending === 0) return null;
+
+  let text: string;
+  if (online) {
+    text = pendingLabel(pending);
+  } else {
+    const ts = latestDataTimestamp(qc.getQueryCache().getAll());
+    const head = variant === "coach" ? "Hors ligne : modifications désactivées" : "Hors ligne";
+    text = head + (ts ? ` — données du ${formatOfflineStamp(ts)}` : "") + (pending > 0 ? ` · ${pendingLabel(pending)}` : "");
+  }
   return (
     <div
       role="status"
@@ -29,7 +43,7 @@ export default function OfflineBanner() {
         borderTop: "1px solid " + C.brd,
       }}
     >
-      Hors ligne{ts ? ` — données du ${formatOfflineStamp(ts)}` : ""}
+      {text}
     </div>
   );
 }

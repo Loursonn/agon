@@ -4,14 +4,15 @@ import { todayKey, localISO } from "@/lib/date";
 import { checkMilestone } from "@/lib/date";
 import { SKEYS, isKeyLoadFailed } from "@/lib/storage";
 import { clearDraft, wellnessDraftKey } from "@/lib/localDraft";
-import { invalidateWellness, saveWellnessForm } from "@/api/wellness";
+import { invalidateWellness, wellnessKeys } from "@/api/wellness";
+import { notifyQueued, queueIsDurable, submitWrite } from "@/lib/offline/writes";
 import {
   completeWorkout, invalidateWorkouts, listWorkoutLogs, planWorkout, reopenWorkout, setWorkoutNote,
 } from "@/api/workouts";
-import { toLegacyEntry } from "@shared/domain/wellness";
+import { parseWellnessEntry, toLegacyEntry, type WellnessEntry } from "@shared/domain/wellness";
 import { toCompactDay } from "@shared/domain/dates";
 import { setHabitDone } from "@/api/habits";
-import { recordWeightMilestone, saveWeight } from "@/api/profile";
+import { recordWeightMilestone } from "@/api/profile";
 import { toast } from "sonner";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData,
@@ -50,7 +51,7 @@ interface LogicDeps {
   /** Mettent à jour l'état en mémoire sans écrire en base (useAthletePersistedState). */
   _setWellnessRaw: (v: WellnessData | null) => void;
   _setWellnessHistoryRaw: (v: Record<string, WellnessData> | ((p: Record<string, WellnessData>) => Record<string, WellnessData>)) => void;
-  _setWeightLogRaw: (v: Record<string, number>) => void;
+  _setWeightLogRaw: (v: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void;
   _setWeightMilestonesRaw: (v: Array<{ date: string; kg: number }>) => void;
   _setBodyWeightRaw: (v: BodyWeight) => void;
   setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
@@ -189,30 +190,55 @@ export function useAthleteLogic(d: LogicDeps) {
     setExos(merged);
   }, [exos, setExos]);
 
-  // Renvoie true quand le serveur a confirmé l'écriture du wellness (et du
-  // poids saisi) ; le brouillon local du formulaire n'est purgé qu'à ce moment.
+  // Renvoie true quand l'écriture du wellness (et du poids saisi) est faite
+  // OU gardée sur le téléphone sans réseau (file `src/lib/offline/writes.ts`,
+  // envoi au retour du réseau) ; le brouillon local du formulaire n'est purgé
+  // qu'à ce moment. false = refusée : message à l'athlète.
   const saveWellness = useCallback((data: WellnessData): Promise<boolean> => {
     const day = todayKey();
+    const iso = localISO();
+    let queued = false;
+    const showEntry = (saved: WellnessEntry) => {
+      const legacy = { ...toLegacyEntry(saved), date: toCompactDay(saved.day) } as unknown as WellnessData;
+      _setWellnessRaw(legacy);
+      _setWellnessHistoryRaw((prev) => ({ ...prev, [toCompactDay(saved.day)]: legacy }));
+    };
     // Le jour seul, côté serveur (RPC `wellness_set_day`) : un autre appareil
     // ou le coach ne voit plus sa saisie effacée par une réécriture du blob.
-    const wellnessWrite: Promise<boolean> = saveWellnessForm(athleteId, data)
-      .then((saved) => {
-        const legacy = { ...toLegacyEntry(saved), date: toCompactDay(saved.day) } as unknown as WellnessData;
-        _setWellnessRaw(legacy);
-        _setWellnessHistoryRaw((prev) => ({ ...prev, [toCompactDay(saved.day)]: legacy }));
-        void invalidateWellness(qc, athleteId);
+    const wellnessWrite: Promise<boolean> = submitWrite("wellness.day", { athleteId, day: iso, form: data })
+      .then((r) => {
+        if (r.status === "sent") {
+          showEntry(r.result as WellnessEntry);
+          void invalidateWellness(qc, athleteId);
+          return true;
+        }
+        queued = true;
+        const entry = parseWellnessEntry(data, iso);
+        if (entry) {
+          showEntry({ ...entry, archived: false });
+          qc.setQueryData(wellnessKeys.today(athleteId, iso), { ...entry, archived: false });
+        }
         return true;
       })
       .catch((e) => {
         console.error("[saveWellness]", e);
+        toast.error("Wellness non enregistré : réessaie dans un instant.");
         return false;
       });
     const writes: Array<void | Promise<boolean>> = [wellnessWrite];
     if (data.poids) {
       // Une seule pesée, côté serveur (RPC `weight_set_day`) : le journal n'est
       // plus réécrit en entier depuis l'état de l'appareil.
-      const iso = localISO();
-      writes.push(saveWeight(athleteId, iso, data.poids).then(async (log) => {
+      const kg = data.poids;
+      writes.push(submitWrite("weight.day", { athleteId, day: iso, kg }).then(async (r) => {
+        if (r.status === "queued") {
+          // Gardée sur le téléphone : affichée tout de suite, le palier sera
+          // vérifié à la prochaine pesée faite avec du réseau.
+          queued = true;
+          _setWeightLogRaw((prev) => ({ ...prev, [toCompactDay(iso)]: kg }));
+          return true;
+        }
+        const log = r.result as Record<string, number>;
         _setWeightLogRaw(log);
         // Poids de référence ou paliers non chargés (réseau) : bodyWeight vaut
         // le défaut 0, tout serait un « palier ». On attend une vraie lecture.
@@ -228,12 +254,15 @@ export function useAthleteLogic(d: LogicDeps) {
         return true;
       }).catch((e) => {
         console.error("[saveWeight]", e);
+        toast.error("Pesée non enregistrée : réessaie dans un instant.");
         return false;
       }));
     }
     return Promise.all(writes.map((w) => Promise.resolve(w ?? true))).then((oks) => {
       const ok = oks.every(Boolean);
-      if (ok && athleteId) clearDraft(wellnessDraftKey(athleteId, day));
+      // Gardée en file sans IndexedDB (perdue au rechargement) : brouillon gardé.
+      if (ok && athleteId && (!queued || queueIsDurable())) clearDraft(wellnessDraftKey(athleteId, day));
+      if (queued) notifyQueued();
       return ok;
     });
   }, [athleteId, qc, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw, setMilestoneNotif]);

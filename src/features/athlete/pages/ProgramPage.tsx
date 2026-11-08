@@ -16,7 +16,8 @@ import { formatReps, hasIso, isAllIso } from "@/lib/formatSetsReps";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import { SessionPreviewModal, ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
 import { EmptyState } from "@/features/shared/components/EmptyState";
-import { completeEnergyAssignment, invalidateEnergy, moveEnergyAssignment, reopenEnergyAssignment } from "@/api/energy";
+import { invalidateEnergy, moveEnergyAssignment, reopenEnergyAssignment } from "@/api/energy";
+import { useCompleteEnergyAssignment } from "@/features/shared/hooks/useEnergyAssignments";
 import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
@@ -1311,6 +1312,9 @@ function ProgramSessionsView() {
     onError: () => toast.error("Erreur lors du déplacement"),
   });
 
+  // Validation : gardée sur le téléphone sans réseau (file hors ligne).
+  const completeEnergy = useCompleteEnergyAssignment();
+
   const cancelEnergy = useMutation({
     mutationFn: async (assignmentId: string) => {
       // Même remise à zéro que depuis l'accueil : blocs cochés et RPE effacés
@@ -1495,13 +1499,12 @@ function ProgramSessionsView() {
                   session_comment: null,
                 })
               : null;
-            completeEnergyAssignment(energyPreview.assignmentId, stepLogNotes ? { notes: stepLogNotes } : {})
-              .then(() => {
-                void invalidateEnergy(qc, athleteId);
-                toast.success("Séance terminée");
-                setEnergyPreview(null);
-              })
-              .catch(() => toast.error("Erreur lors de la validation"));
+            if (!athleteId) return;
+            // Toasts (validée / gardée hors ligne / séance retirée) : dans le hook.
+            completeEnergy.mutate(
+              { id: energyPreview.assignmentId, athleteId, ...(stepLogNotes ? { notes: stepLogNotes } : {}) },
+              { onSuccess: () => setEnergyPreview(null) },
+            );
           }}
           onCancel={() => cancelEnergy.mutate(energyPreview.assignmentId)}
         />

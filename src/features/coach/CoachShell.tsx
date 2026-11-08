@@ -20,6 +20,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { useCommandPalette } from "./context/CommandPaletteContext";
 import { Search } from "lucide-react";
 import { useAppUpdates } from "@/features/shared/hooks/useAppUpdates";
+import OfflineBanner from "@/features/shared/components/OfflineBanner";
 
 // ── Agon brand icons (inline SVG, currentColor) ─────────────────────────────
 
@@ -301,6 +302,8 @@ function CoachShellInner() {
             </button>
           )}
         </div>
+
+        <OfflineBanner variant="coach" />
 
         {/* Page content */}
         <div style={{ flex: 1, overflowY: "auto" }}>

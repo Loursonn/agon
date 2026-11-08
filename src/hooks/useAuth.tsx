@@ -8,7 +8,7 @@ import {
 } from "@/api/account";
 import { getProfile, updateAthleteProfile as apiUpdateAthleteProfile, type AthleteProfileFields, type Profile } from "@/api/profile";
 import { clearOfflineProfile, readOfflineProfile, readStoredAuthUser, saveOfflineProfile } from "@/lib/offline/offlineCache";
-import { logoutDevice } from "@/lib/offline/logoutDevice";
+import { confirmLogout, logoutDevice } from "@/lib/offline/logoutDevice";
 
 function safeStorage(): Storage | null {
   try {
@@ -256,6 +256,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   async function logout(redirectTo = "/login") {
+    // Saisies hors ligne pas encore envoyées : on demande avant de les perdre.
+    if (!confirmLogout()) return;
     setAllAthletes([]);
     setActiveAthleteId(null);
     await logoutDevice().catch((e) => console.error("[useAuth] déconnexion", e));

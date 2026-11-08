@@ -15,7 +15,6 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   useEnergyAssignments,
   useCompleteEnergyAssignment,
-  useUpsertEnergyRpe,
 } from "@/features/shared/hooks/useEnergyAssignments";
 import { useSpecificExecution } from "@/features/athlete/hooks/useSpecificExecution";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
@@ -209,7 +208,6 @@ export default function SpecificExecutionPage() {
   const completeMutation = useCompleteEnergyAssignment();
   // Km courus pendant la séance (runs HYROX…) → volume de course
   const [runDist, setRunDist] = useState<RunDistanceValue>(initialRunDistance());
-  const rpeMutation = useUpsertEnergyRpe();
 
   // ── Format detection ────────────────────────────────────────────────────
   const isClassique = session?.format === "classique";
@@ -314,12 +312,10 @@ export default function SpecificExecutionPage() {
         notes,
         actual_duration_min: dur ?? null,
         ...runDistancePayload(runDist),
-      });
-      await rpeMutation.mutateAsync({
-        id: assignment.id,
-        athleteId: user.id,
+        // RPE dans la même écriture : une seule saisie à garder hors ligne.
         rpe_score: data.rpe,
       });
+      // Envoyée ou gardée sur le téléphone : la séance est enregistrée.
       navigate("/athlete");
     } catch { /* Error handled by mutation toast */ }
   }
@@ -558,7 +554,7 @@ export default function SpecificExecutionPage() {
             </div>
             <SessionEndForm
               onSubmit={handleEndSubmit}
-              isPending={completeMutation.isPending || rpeMutation.isPending}
+              isPending={completeMutation.isPending}
             />
           </div>
         )}

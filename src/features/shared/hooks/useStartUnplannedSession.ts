@@ -67,6 +67,11 @@ export function useStartUnplannedSession() {
     },
 
     onError: () => {
+      // Hors ligne, la séance ne peut pas être créée (pas encore d'id en base).
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        toast.error("Pas de réseau : cette séance doit être ouverte une fois en ligne avant d'être validée.");
+        return;
+      }
       toast.error("Impossible de démarrer cette séance");
     },
   });

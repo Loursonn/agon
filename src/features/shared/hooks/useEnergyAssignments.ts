@@ -1,25 +1,33 @@
 /**
  * Hooks React Query des séances énergie programmées chez un athlète :
  * adaptateurs de `src/api/energy.ts` (lectures, écritures, invalidation).
+ *
+ * Saisie de l'athlète (validation, RPE) : passe par la file hors ligne
+ * (`submitWrite`). Sans réseau, la saisie est gardée sur le téléphone et
+ * l'écran la montre tout de suite (mise à jour optimiste de toutes les listes
+ * de l'athlète) ; la file rafraîchit tout une fois envoyée.
  */
 import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   assignEnergySession,
-  completeEnergyAssignment,
   deleteEnergyAssignment,
   energyKeys,
   invalidateEnergy,
   isEnergyNotFound,
   listAthleteEnergyAssignments,
   reopenEnergyAssignment,
-  setEnergyRpe,
   updateEnergyAssignment,
   type DateRange,
   type EnergyActivityType,
   type EnergyAssignment,
   type EnergyAssignmentPatch,
 } from "@/api/energy";
+import { planningKeys, type ActivePlanResult, type UnifiedCalendarEvent } from "@/api/planning";
+import { applyEnergyCompletion, applyEnergyRpe, isPartialBlockLogs } from "@/lib/energy/completion";
+import {
+  assertNoPendingValidation, isPendingWriteError, notifyQueued, PENDING_VALIDATION_MESSAGE, submitWrite,
+} from "@/lib/offline/writes";
 import { syncDocAssignmentsFromEnergy } from "./fiches/syncDocAssignments";
 import type {
   EnergySessionAssignmentRow,
@@ -63,9 +71,71 @@ async function optimistic(
   return previous;
 }
 
-function rollback(qc: QueryClient, snapshot: Snapshot | undefined) {
+function rollback(qc: QueryClient, snapshot: readonly (readonly [readonly unknown[], unknown])[] | undefined) {
   for (const [key, data] of snapshot ?? []) qc.setQueryData(key, data);
 }
+
+type CacheSnapshot = [readonly unknown[], unknown][];
+
+/**
+ * Saisie de l'athlète sur UNE séance, appliquée partout où l'athlète la voit :
+ * listes de séances énergie, calendrier unifié (accueil) et semaine du plan
+ * actif (programme). Renvoie de quoi revenir en arrière.
+ */
+async function optimisticEntry(
+  qc: QueryClient,
+  athleteId: string,
+  id: string,
+  change: (a: EnergyAssignment) => EnergyAssignment,
+): Promise<CacheSnapshot> {
+  const lists = [energyKeys.assignments(athleteId), [...energyKeys.owner(athleteId), "list"]] as const;
+  const calendar = planningKeys.calendarAll(athleteId);
+  const plan = ["activePlan", athleteId] as const;
+  const families: readonly (readonly unknown[])[] = [...lists, calendar, plan];
+
+  await Promise.all(families.map((queryKey) => qc.cancelQueries({ queryKey })));
+  const snapshot: CacheSnapshot = families.flatMap((queryKey) => qc.getQueriesData<unknown>({ queryKey }));
+
+  for (const queryKey of lists) {
+    qc.setQueriesData<EnergyAssignment[]>({ queryKey }, (old) =>
+      Array.isArray(old) ? old.map((a) => (a.id === id ? change(a) : a)) : old);
+  }
+
+  qc.setQueriesData<UnifiedCalendarEvent[]>({ queryKey: calendar }, (old) =>
+    Array.isArray(old)
+      ? old.map((e) => {
+          if (e.type !== "energy" || e.id !== id) return e;
+          const base = (e.raw ?? { id, status: e.status, rpe_score: e.rpe }) as unknown as EnergyAssignment;
+          const next = change(base);
+          return {
+            ...e,
+            status: next.status,
+            rpe: next.rpe_score ?? null,
+            partial: isPartialBlockLogs(next.block_logs),
+            raw: e.raw ? (next as unknown as Record<string, unknown>) : e.raw,
+          };
+        })
+      : old);
+
+  qc.setQueriesData<ActivePlanResult>({ queryKey: plan }, (old) =>
+    old && Array.isArray(old.weekDays)
+      ? {
+          ...old,
+          weekDays: old.weekDays.map((d) => ({
+            ...d,
+            sessions: d.sessions.map((s) =>
+              s.kind === "energy" && s.id === id
+                ? { ...s, status: change({ id, status: s.status } as EnergyAssignment).status }
+                : s),
+          })),
+        }
+      : old);
+
+  return snapshot;
+}
+
+/** Même toast pour toute saisie gardée (un seul affiché à la fois). */
+const showQueued = notifyQueued;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mutations (coach : planification)
@@ -115,6 +185,7 @@ export function useUpdateEnergyAssignment() {
     mutationFn: async ({ id, athleteId: _aid, ...patch }: UpdateVars) => {
       const { status, block_logs, rpe_score, created_at: _c, updated_at: _u, energy_sessions: _e, athlete_id: _a, ...rest } = patch;
       if (status === "planned" && block_logs !== undefined) {
+        assertNoPendingValidation(id);
         const reopened = await reopenEnergyAssignment(id);
         return Object.keys(rest).length > 0 ? updateEnergyAssignment(id, rest as EnergyAssignmentPatch) : reopened;
       }
@@ -127,9 +198,9 @@ export function useUpdateEnergyAssignment() {
     onMutate: async ({ id, athleteId, ...patch }) => ({
       snapshot: await optimistic(qc, athleteId, (old) => old.map((a) => (a.id === id ? { ...a, ...patch } : a))),
     }),
-    onError: (_err, _vars, ctx) => {
+    onError: (err, _vars, ctx) => {
       rollback(qc, ctx?.snapshot);
-      toast.error("Erreur lors de la mise à jour de l'assignation");
+      toast.error(isPendingWriteError(err) ? PENDING_VALIDATION_MESSAGE : "Erreur lors de la mise à jour de l'assignation");
     },
     onSuccess: () => toast.success("Assignation mise à jour"),
     onSettled: (_d, _e, { athleteId }) => invalidateEnergy(qc, athleteId),
@@ -166,7 +237,8 @@ export function useUnassignEnergySession() {
 export interface CompleteEnergyVars {
   id: string;
   athleteId: string;
-  block_logs: BlockLogs;
+  /** Absent = blocs inchangés (la RPC fusionne bloc par bloc). */
+  block_logs?: BlockLogs;
   notes?: string;
   actual_duration_min?: number | null;
   activity_url?: string | null;
@@ -177,18 +249,32 @@ export interface CompleteEnergyVars {
   rpe_score?: number | null;
 }
 
-/** Valide une séance énergie : statut, blocs, durée, activité (et RPE) en une écriture. */
+/**
+ * Valide une séance énergie : statut, blocs, durée, activité (et RPE) en une
+ * écriture. Sans réseau : gardée sur le téléphone, l'écran la montre validée.
+ */
 export function useCompleteEnergyAssignment() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, athleteId: _aid, ...input }: CompleteEnergyVars) => completeEnergyAssignment(id, input),
-    onSuccess: (_data, { athleteId }) => {
+    mutationFn: ({ id, athleteId, ...input }: CompleteEnergyVars) =>
+      submitWrite("energy.complete", { athleteId, id, input }),
+    onMutate: async ({ id, athleteId, ...input }) => ({
+      snapshot: await optimisticEntry(qc, athleteId, id, (a) => applyEnergyCompletion(a, input)),
+    }),
+    onSuccess: (res, { athleteId }) => {
+      // Gardée : pas d'invalidation (elle viderait l'affichage hors ligne) ;
+      // la file rafraîchit tout une fois la saisie envoyée.
+      if (res.status === "queued") {
+        showQueued();
+        return;
+      }
       void invalidateEnergy(qc, athleteId);
       toast.success("Séance validée !");
     },
-    onError: (err, { athleteId }) => {
+    onError: (err, { athleteId }, ctx) => {
       console.error("[useCompleteEnergyAssignment] error:", err);
+      rollback(qc, ctx?.snapshot);
       if (isEnergyNotFound(err)) {
         // Séance retirée par le coach entre-temps : on rafraîchit pour qu'elle disparaisse.
         void invalidateEnergy(qc, athleteId);
@@ -205,26 +291,46 @@ export function useReopenEnergyAssignment() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id }: { id: string; athleteId: string }) => reopenEnergyAssignment(id),
+    mutationFn: async ({ id }: { id: string; athleteId: string }) => {
+      assertNoPendingValidation(id);
+      return reopenEnergyAssignment(id);
+    },
     onSuccess: (_data, { athleteId }) => {
       void invalidateEnergy(qc, athleteId);
       toast.success("Validation annulée");
     },
-    onError: () => toast.error("Erreur lors de l'annulation"),
+    onError: (err) => toast.error(isPendingWriteError(err) ? PENDING_VALIDATION_MESSAGE : "Erreur lors de l'annulation"),
   });
 }
 
-/** Enregistre le RPE Foster d'une séance énergie. */
+/** Enregistre le RPE Foster d'une séance énergie (gardé sur le téléphone sans réseau). */
 export function useUpsertEnergyRpe() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, rpe_score }: { id: string; athleteId: string; rpe_score: number }) => setEnergyRpe(id, rpe_score),
-    onSuccess: (_data, { athleteId }) => {
+    mutationFn: ({ id, athleteId, rpe_score }: { id: string; athleteId: string; rpe_score: number }) =>
+      submitWrite("energy.rpe", { athleteId, id, rpe: rpe_score }),
+    onMutate: async ({ id, athleteId, rpe_score }) => ({
+      snapshot: await optimisticEntry(qc, athleteId, id, (a) => applyEnergyRpe(a, rpe_score)),
+    }),
+    onSuccess: (res, { athleteId }) => {
+      if (res.status === "queued") {
+        showQueued();
+        return;
+      }
       void invalidateEnergy(qc, athleteId);
       toast.success("RPE enregistré");
     },
-    onError: () => toast.error("Erreur lors de l'enregistrement du RPE"),
+    onError: (err, { athleteId }, ctx) => {
+      console.error("[useUpsertEnergyRpe] error:", err);
+      rollback(qc, ctx?.snapshot);
+      if (isEnergyNotFound(err)) {
+        void invalidateEnergy(qc, athleteId);
+        toast.error("Cette séance n'existe plus : ton coach l'a retirée.");
+        return;
+      }
+      toast.error("Erreur lors de l'enregistrement du RPE");
+    },
   });
 }
 
