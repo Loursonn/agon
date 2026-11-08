@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { QK } from "@/lib/queryKeys"
+import { listWorkoutLogs, workoutKeys, type WorkoutListParams } from "@/api/workouts"
 import { computeWeeklyMuscleVolume, weekStartsBetween, type PlannedLog, type WeekVolume } from "@/lib/muscleVolume"
 import { useProgrammation } from "./useProgrammation"
 import { useExerciseBankMuscles } from "./useExerciseBankMuscles"
@@ -24,19 +23,12 @@ export function useMuscleVolume(athleteId: string | undefined, startISO: string 
 
   // Toutes les occurrences : le rang d'une séance se compte depuis sa 1re planification,
   // pas depuis le début de la plage affichée.
+  const params: WorkoutListParams = { athleteIds: athleteId ? [athleteId] : [], excludeStatuses: ["skipped"], withMods: false }
   const { data: logs = [], isLoading: l3 } = useQuery<PlannedLog[]>({
-    queryKey: QK.muscleVolumeLogs(athleteId ?? ""),
+    queryKey: workoutKeys.list(params),
     enabled: !!athleteId,
     staleTime: 30_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("workout_logs")
-        .select("id, session_id, scheduled_date, status")
-        .eq("athlete_id", athleteId!)
-        .neq("status", "skipped")
-      if (error) throw error
-      return data ?? []
-    },
+    queryFn: () => listWorkoutLogs(params),
   })
 
   const weeks = useMemo(

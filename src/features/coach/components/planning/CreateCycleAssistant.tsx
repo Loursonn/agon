@@ -1,16 +1,15 @@
 import { useState, useMemo } from "react";
-import { parseISO, addDays, format, differenceInWeeks } from "date-fns";
+import { parseISO, format, differenceInWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import { X, Check } from "lucide-react";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { createCycle, cycleKeys, getLatestCycle, invalidateCycles } from "@/api/cycles";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
-import { snapMonday, snapSunday, buildMicrocycles } from "./utils/planningHelpers";
+import { snapMonday, snapSunday } from "./utils/planningHelpers";
 import { SKEYS, sLoadCycle, sSaveCycle } from "@/lib/storage";
 import type { Session, ExosMap } from "@/features/shared/types/athlete";
-import { localISO } from "@/lib/date";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -21,6 +20,7 @@ export interface ParentMesoOption {
 
 interface Props {
   athleteId:     string;
+  /** Gardé pour les appelants ; le coach du cycle est l'utilisateur connecté (RPC). */
   coachId:       string;
   parentMesoId:  string;
   parentOptions: ParentMesoOption[];
@@ -57,37 +57,13 @@ interface LastCycleData {
 
 function useLastCycleData(athleteId: string) {
   return useQuery({
-    queryKey: ["assistant-last-cycle", athleteId],
+    queryKey: cycleKeys.lastCycle(athleteId),
     enabled:  !!athleteId,
     staleTime: 30_000,
     queryFn: async (): Promise<LastCycleData> => {
-      // Tous les cycles de l'athlète : chaîne macro → méso → cycle + standalone.
-      const { data: macros } = await supabase
-        .from("macrocycles").select("id").eq("athlete_id", athleteId);
-      const macroIds = (macros ?? []).map((m) => m.id);
-
-      let mesoIds: string[] = [];
-      if (macroIds.length > 0) {
-        const { data: mesos } = await supabase
-          .from("mesocycles").select("id").in("macrocycle_id", macroIds);
-        mesoIds = (mesos ?? []).map((m) => m.id);
-      }
-
-      type CycleRow = { id: string; name: string; start_date: string };
-      const cycleMap = new Map<string, CycleRow>();
-
-      if (mesoIds.length > 0) {
-        const { data: linked } = await supabase
-          .from("cycles").select("id, name, start_date").in("mesocycle_id", mesoIds);
-        for (const c of (linked ?? []) as CycleRow[]) cycleMap.set(c.id, c);
-      }
-      const { data: standalone } = await supabase
-        .from("cycles").select("id, name, start_date").eq("athlete_id", athleteId);
-      for (const c of (standalone ?? []) as CycleRow[]) cycleMap.set(c.id, c);
-
-      // Le cycle le plus récent (par date de début) = celui à reprendre.
-      const last = Array.from(cycleMap.values())
-        .sort((a, b) => b.start_date.localeCompare(a.start_date))[0];
+      // Tous les cycles de l'athlète (chaîne macro → méso → cycle + autonomes) :
+      // le plus récent (par date de début) = celui à reprendre.
+      const last = await getLatestCycle(athleteId);
       if (!last) return { cycleName: null, cycleId: null, sessions: [], exos: {} };
 
       // Séances + exos stockés pour CE cycle (clés scopées).
@@ -109,7 +85,7 @@ function useLastCycleData(athleteId: string) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CreateCycleAssistant({
-  athleteId, coachId, parentMesoId, parentOptions, defaultStart, defaultEnd, onClose,
+  athleteId, parentMesoId, parentOptions, defaultStart, defaultEnd, onClose,
 }: Props) {
   const qc = useQueryClient();
   const { setBlockConfig, setOpenCycleId } = useAthleteContext();
@@ -172,35 +148,11 @@ export function CreateCycleAssistant({
 
     setSaving(true);
     try {
-      // 1. Cycle
-      const { data: cycle, error: cycleErr } = await supabase
-        .from("cycles")
-        .insert({
-          mesocycle_id: parentId,
-          athlete_id:   athleteId,
-          coach_id:     coachId,
-          name:         name.trim(),
-          start_date:   snStart,
-          end_date:     snEnd,
-        })
-        .select("id")
-        .single();
-      if (cycleErr || !cycle) throw cycleErr ?? new Error("Création du cycle échouée");
-
-      // 2. Microcycles (1 par semaine ISO)
-      const microRows = buildMicrocycles(cycle.id, snStart, snEnd);
-      const { data: micros, error: microErr } = await supabase
-        .from("microcycles")
-        .insert(microRows)
-        .select("id, start_date");
-      if (microErr) throw microErr;
-
-      // 3. Séances reprises (clonées avec de nouveaux IDs) + workout_logs "planned"
+      // 1. Séances reprises (clonées avec de nouveaux IDs)
       const chosen = candidates.filter((c) => getSel(c.sessionId).take);
 
       const newSessions: Session[] = [];
       const newExos: ExosMap = {};
-      const workoutLogs: Record<string, unknown>[] = [];
 
       chosen.forEach((c, i) => {
         const newId = `s_${Date.now()}_${i}`;
@@ -216,20 +168,21 @@ export function CreateCycleAssistant({
         newExos[newId] = getSel(c.sessionId).withExos
           ? structuredClone(sourceExos[c.sessionId] ?? [])
           : [];
+      });
 
-        for (const micro of micros ?? []) {
-          const weekMonday = parseISO(micro.start_date);
-          const sessionDate = addDays(weekMonday, c.dayOfWeek ?? 0);
-          workoutLogs.push({
-            athlete_id:     athleteId,
-            coach_id:       coachId,
-            session_id:     newId,
-            session_name:   c.name,
-            scheduled_date: localISO(sessionDate),
-            status:         "planned",
-            microcycle_id:  micro.id,
-          });
-        }
+      // 2-3. Cycle + semaines ISO + une séance « prévue » par séance × semaine,
+      //      en une écriture (create_cycle).
+      const { cycle, weeks } = await createCycle({
+        athleteId,
+        mesocycleId: parentId,
+        name:        name.trim(),
+        start:       snStart,
+        end:         snEnd,
+        sessions:    newSessions.map((sess, i) => ({
+          sessionId:   sess.id,
+          sessionName: chosen[i].name,
+          dayOfWeek:   chosen[i].dayOfWeek ?? 0,
+        })),
       });
 
       // 4. Persiste les séances + exos SOUS LA CLÉ DU NOUVEAU CYCLE (par cycle).
@@ -246,34 +199,17 @@ export function CreateCycleAssistant({
         cycleId:    cycle.id,
         blockName:  name.trim(),
         startDate:  snStart,
-        totalWeeks: microRows.length || 1,
+        totalWeeks: weeks || 1,
         deloadWeek: 0,
       }));
       setOpenCycleId(cycle.id);
-
-      if (workoutLogs.length > 0) {
-        const { error: logsErr } = await supabase
-          .from("workout_logs")
-          .upsert(workoutLogs as never, { onConflict: "athlete_id,session_id,scheduled_date" });
-        if (logsErr) throw logsErr;
-      }
 
       toast.success(
         chosen.length > 0
           ? `Cycle créé · ${chosen.length} séance${chosen.length > 1 ? "s" : ""} reprise${chosen.length > 1 ? "s" : ""}`
           : "Cycle vide créé",
       );
-      qc.invalidateQueries({ queryKey: ["timeline-data",    athleteId] });
-      qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
-      qc.invalidateQueries({ queryKey: ["cycle-sessions",   athleteId] });
-      qc.invalidateQueries({ queryKey: ["active-cycle",     athleteId] });
-      qc.invalidateQueries({ queryKey: ["athlete-cycles",   athleteId] });
-      qc.invalidateQueries({ queryKey: ["athlete-cycles-list", athleteId] });
-      qc.invalidateQueries({ queryKey: ["workout-logs-week", athleteId] });
-      qc.invalidateQueries({ queryKey: ["calendar-events",  athleteId] });
-      qc.invalidateQueries({ queryKey: ["cal",              athleteId] });
-      qc.invalidateQueries({ queryKey: ["activePlan",       athleteId] });
-      qc.invalidateQueries({ queryKey: ["assistant-last-cycle", athleteId] });
+      void invalidateCycles(qc, athleteId);
       onClose();
     } catch (err) {
       toast.error("Erreur : " + ((err as Error)?.message ?? "création impossible"));

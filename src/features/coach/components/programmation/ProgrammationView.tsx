@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react"
+import { useIsMutating } from "@tanstack/react-query"
+import { programKeys } from "@/api/program"
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -358,26 +360,38 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
   const [importReport, setImportReport] = useState<{ sessionId: string; issues: ImportIssue[] } | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
   const hasPendingSave = useRef(false)
+  // Version serveur dont part l'état local : référence de chaque envoi. Une
+  // séance modifiée ou ajoutée ailleurs depuis n'est ni écrasée ni supprimée.
+  const baseRef = useRef<ProgSession[]>([])
+  const saving = useIsMutating({ mutationKey: programKeys.sessions(athleteId) }) > 0
 
-  // Sync from server only when no local pending changes
+  // Reprend la version serveur seulement sans saisie en attente NI envoi en
+  // cours (un rechargement en vol ramènerait l'état d'avant l'envoi).
   useEffect(() => {
-    if (!hasPendingSave.current) {
+    if (!hasPendingSave.current && !saving) {
+      baseRef.current = serverSessions
       setSessions(prev => {
         if (JSON.stringify(prev) === JSON.stringify(serverSessions)) return prev;
         return serverSessions;
       });
     }
-  }, [serverSessions])
+  }, [serverSessions, saving])
+
+  /** Envoie tout de suite (annule la sauvegarde différée : `next` l'inclut déjà). */
+  function send(next: ProgSession[]) {
+    clearTimeout(saveTimer.current)
+    hasPendingSave.current = false
+    const base = baseRef.current
+    baseRef.current = next
+    updateMutation.mutate({ base, next })
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   function debouncedSave(updated: ProgSession[]) {
     hasPendingSave.current = true
     clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      updateMutation.mutate(updated)
-      hasPendingSave.current = false
-    }, 800)
+    saveTimer.current = setTimeout(() => send(updated), 800)
   }
 
   function addSession(data: Omit<ProgSession, 'id' | 'blocs'>) {
@@ -391,7 +405,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
     setBankTemplate(null)
     const next = [...sessions, newSession]
     setSessions(next)
-    updateMutation.mutate(next)
+    send(next)
     setIsAddingSession(false)
     setOpenSessionId(newSession.id)
   }
@@ -399,7 +413,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
   function handleTextImport(session: ProgSession, issues: ImportIssue[]) {
     const next = [...sessions, session]
     setSessions(next)
-    updateMutation.mutate(next)
+    send(next)
     setShowTextImport(false)
     setOpenSessionId(session.id)
     const shown = issues.filter(i => i.level !== "info")
@@ -412,7 +426,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
   function updateSessionMeta(id: string, data: Omit<ProgSession, 'id' | 'blocs'>) {
     const next = sessions.map(s => s.id === id ? { ...s, ...data } : s)
     setSessions(next)
-    updateMutation.mutate(next)
+    send(next)
     setEditingSessionId(null)
   }
 
@@ -425,7 +439,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
   function deleteSession(id: string) {
     const next = sessions.filter(s => s.id !== id)
     setSessions(next)
-    updateMutation.mutate(next)
+    send(next)
     if (openSessionId === id) setOpenSessionId(null)
   }
 
@@ -439,7 +453,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
     list.splice(to, 0, list.splice(from, 1)[0])
     const reordered = list
     setSessions(reordered)
-    updateMutation.mutate(reordered)
+    send(reordered)
   }
 
   if (isLoading) {

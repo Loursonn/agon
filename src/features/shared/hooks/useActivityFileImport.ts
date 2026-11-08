@@ -1,13 +1,8 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
+import { getKnownActivities, insertActivities, invalidateProviders } from "@/api/providers";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  activityRow,
-  splitNewActivities,
-  type KnownStart,
-} from "@/lib/activityImport";
+import { activityRow, splitNewActivities } from "@/lib/activityImport";
 import type { ParsedActivity } from "@shared/activityFiles/index.ts";
 
 /**
@@ -84,52 +79,6 @@ async function startsWithZipMagic(file: File): Promise<boolean> {
   if (file.size < 4) return false;
   const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
   return ZIP_MAGIC.every((b, i) => head[i] === b);
-}
-
-/**
- * Activités déjà en base sur la plage de jours couverte par le dépôt.
- *
- * Paginé explicitement : PostgREST plafonne une réponse à mille lignes, et un
- * athlète qui importe cinq ans d'historique en dépasse. Sans pagination, les
- * lignes au-delà du millième seraient simplement absentes du jeu de
- * comparaison — donc réimportées en double, et le bogue n'apparaîtrait que
- * chez les utilisateurs les plus assidus.
- */
-async function loadKnown(
-  athleteId: string,
-  fromDate: string,
-  toDate: string,
-): Promise<{ ids: Set<string>; starts: KnownStart[] }> {
-  const ids = new Set<string>();
-  const starts: KnownStart[] = [];
-  const PAGE = 1000;
-
-  for (let page = 0; ; page++) {
-    const { data, error } = await supabase
-      .from("provider_activities")
-      .select("external_id, started_at, sport")
-      .eq("athlete_id", athleteId)
-      .gte("local_date", fromDate)
-      .lte("local_date", toDate)
-      // Ordre stable, sans quoi deux pages peuvent se recouvrir ou se sauter.
-      .order("started_at", { ascending: true })
-      .range(page * PAGE, page * PAGE + PAGE - 1);
-
-    if (error) throw new Error(`lecture de l'historique : ${error.message}`);
-    const rows = (data ?? []) as Array<{
-      external_id: string;
-      started_at: string;
-      sport: string | null;
-    }>;
-
-    for (const r of rows) {
-      ids.add(r.external_id);
-      starts.push({ ms: Date.parse(r.started_at), sport: r.sport });
-    }
-    if (rows.length < PAGE) break;
-  }
-
-  return { ids, starts };
 }
 
 /**
@@ -216,7 +165,7 @@ export function useActivityFileImport() {
 
       // ── Déduplication, puis insertion ──
       const dates = parsed.map((a) => a.localDate).sort();
-      const { ids, starts } = await loadKnown(user.id, dates[0], dates[dates.length - 1]);
+      const { ids, starts } = await getKnownActivities(user.id, dates[0], dates[dates.length - 1]);
 
       const split = splitNewActivities(parsed, ids, starts);
       const toInsert = split.toInsert;
@@ -232,24 +181,9 @@ export function useActivityFileImport() {
           total: toInsert.length,
         });
 
-        /*
-          `ignoreDuplicates` plutôt qu'une insertion sèche : deux onglets, ou un
-          dépôt relancé après une coupure réseau, produiraient une violation
-          d'unicité qui ferait échouer tout le lot alors que le résultat voulu
-          est déjà atteint. Les lignes renvoyées sont celles réellement
-          insérées, ce qui donne le compte des doublons sans requête de plus.
-        */
-        const { data, error } = await supabase
-          .from("provider_activities")
-          .upsert(chunk.map((a) => activityRow(user.id, a)), {
-            onConflict: "athlete_id,source,external_id",
-            ignoreDuplicates: true,
-          })
-          .select("id");
-
-        if (error) throw new Error(`insertion : ${error.message}`);
-
-        const inserted = (data ?? []).length;
+        // Doublons écartés par la base (`ignoreDuplicates`) : deux onglets ou
+        // un dépôt relancé après une coupure ne font pas échouer le lot.
+        const inserted = await insertActivities(chunk.map((a) => activityRow(user.id, a)));
         report.imported += inserted;
         report.duplicates += chunk.length - inserted;
       }
@@ -258,7 +192,7 @@ export function useActivityFileImport() {
     },
     onSettled: () => {
       setProgress(null);
-      qc.invalidateQueries({ queryKey: QK.providerActivities(user?.id ?? "none") });
+      if (user) void invalidateProviders(qc, user.id);
     },
   });
 

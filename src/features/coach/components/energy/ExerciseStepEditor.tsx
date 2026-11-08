@@ -13,7 +13,8 @@ import { C } from "@/lib/theme";
 import type { ExerciseInterval, IntervalRole } from "@/types/energy";
 import { genId } from "@/lib/energy/treeUtils";
 import { ExerciceSearch } from "@/features/coach/components/programmation/ExerciceSearch";
-import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { saveExerciseYoutubeId } from "@/api/energy";
 
 const EXO_COLOR = "#FFC933";
 
@@ -106,7 +107,9 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
     };
     // Persist youtube_id to exercise if added/changed
     if (exerciseId && youtubeId && youtubeId !== originalYoutubeId) {
-      supabase.from("exercises").update({ youtube_id: youtubeId }).eq("id", exerciseId).then();
+      // L'étape garde la vidéo même si la banque refuse ; on le signale.
+      saveExerciseYoutubeId(exerciseId, youtubeId).catch(() =>
+        toast.error("Vidéo gardée pour cette étape, mais pas enregistrée dans la banque d'exercices"));
     }
     onSave(result);
     onOpenChange(false);

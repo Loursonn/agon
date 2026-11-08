@@ -1,47 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO, differenceInWeeks, startOfISOWeek, endOfISOWeek, addWeeks, addDays } from "date-fns";
+import { format, parseISO, differenceInWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Edit3, Check, CheckCircle2, Clock, Circle, FolderOpen } from "lucide-react";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import type { Cycle, Mesocycle } from "../hooks/useTimelineData";
 import { snapMonday, snapSunday, computeCascade, chainNextStart } from "../utils/planningHelpers";
 import { DateQuickAdjust } from "../DateQuickAdjust";
-import { deletePlannedWorkouts, listWorkoutLogs } from "@/api/workouts";
-
-// ── Microcycle auto-generation ────────────────────────────────────────────────
-
-async function regenerateMicrocycles(cycleId: string, start: string, end: string) {
-  const { data: existing } = await supabase
-    .from("microcycles").select("id, start_date").eq("cycle_id", cycleId);
-
-  const needed: { cycle_id: string; week_number: number; start_date: string; end_date: string; is_deload: boolean }[] = [];
-  let weekMon = startOfISOWeek(parseISO(start));
-  const ed = parseISO(end);
-  let week = 1;
-  while (weekMon <= ed) {
-    needed.push({ cycle_id: cycleId, week_number: week, start_date: format(weekMon, "yyyy-MM-dd"), end_date: format(endOfISOWeek(weekMon), "yyyy-MM-dd"), is_deload: false });
-    weekMon = addWeeks(weekMon, 1);
-    week++;
-  }
-
-  const neededStarts   = new Set(needed.map((m) => m.start_date));
-  const existingStarts = new Set((existing ?? []).map((m) => m.start_date));
-
-  const toDelete = (existing ?? []).filter((m) => !neededStarts.has(m.start_date));
-  if (toDelete.length > 0) {
-    const ids = toDelete.map((m) => m.id);
-    await deletePlannedWorkouts({ microcycleIds: ids });
-    await supabase.from("microcycles").delete().in("id", ids);
-  }
-
-  const toInsert = needed.filter((m) => !existingStarts.has(m.start_date));
-  if (toInsert.length > 0) await supabase.from("microcycles").insert(toInsert);
-}
+import { listWorkoutLogs } from "@/api/workouts";
+import { deleteCycle as deleteCycleRow, invalidateCycles, setCycleDates, updatePeriod } from "@/api/cycles";
 
 // ── Session list ──────────────────────────────────────────────────────────────
 
@@ -250,41 +220,30 @@ export function CycleDrawer({
     cascade: boolean, laterCycles: Cycle[],
   ) {
     setSavingDates(true);
-    const updatePayload: Record<string, string> = { start_date: newStart, end_date: newEnd };
-    if (newMesoId) updatePayload.mesocycle_id = newMesoId;
-
-    const oldEnd = cycle.end_date;
-    const { error } = await supabase.from("cycles").update(updatePayload).eq("id", cycle.id);
-    if (!error) await regenerateMicrocycles(cycle.id, newStart, newEnd);
-
-    // Borne dure : si on raccourcit la fin (sans cascade), on supprime les séances
-    // PRÉVUES au-delà de la nouvelle fin, pour "stopper" un cycle à une date donnée.
-    // Les séances réalisées, commencées ou notées (RPE) sont gardées : ce sont les
-    // données de l'athlète (voir deletePlannedWorkouts).
-    if (!error && !cascade && newEnd < oldEnd) {
-      await deletePlannedWorkouts({ athleteId, after: newEnd, until: oldEnd });
-    }
-
-    if (!error && cascade) {
-      const updates = computeCascade(newEnd, laterCycles);
-      for (const u of updates) {
-        await supabase.from("cycles")
-          .update({ start_date: u.start_date, end_date: u.end_date }).eq("id", u.id);
-        await regenerateMicrocycles(u.id, u.start_date, u.end_date);
+    try {
+      // Dates + semaines régénérées en une écriture. Borne dure : si on
+      // raccourcit la fin (sans cascade), les séances PRÉVUES au-delà de la
+      // nouvelle fin sont retirées, pour « stopper » un cycle à une date
+      // donnée. Les séances réalisées, commencées ou notées (RPE) sont
+      // gardées : ce sont les données de l'athlète.
+      await setCycleDates({
+        cycleId: cycle.id, start: newStart, end: newEnd,
+        mesocycleId: newMesoId || undefined,
+        trimAfterEnd: !cascade,
+      });
+      if (cascade) {
+        for (const u of computeCascade(newEnd, laterCycles)) {
+          await setCycleDates({ cycleId: u.id, start: u.start_date, end: u.end_date });
+        }
       }
+    } catch {
+      setSavingDates(false);
+      toast.error("Erreur");
+      return;
+    } finally {
+      void invalidateCycles(qc, athleteId);
     }
-
     setSavingDates(false);
-    if (error) { toast.error("Erreur"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
-    qc.invalidateQueries({ queryKey: ["cycle-sessions", athleteId] });
-    qc.invalidateQueries({ queryKey: ["athlete-cycles", athleteId] });
-    qc.invalidateQueries({ queryKey: ["athlete-cycles-list", athleteId] });
-    qc.invalidateQueries({ queryKey: ["active-cycle", athleteId] });
-    qc.invalidateQueries({ queryKey: ["calendar-events", athleteId] });
-    qc.invalidateQueries({ queryKey: ["micro-days", athleteId] });
-    qc.invalidateQueries({ queryKey: ["micro-stats", athleteId] });
     setCascadeModal(null);
     setMesoModal(null);
     setEditingDates(false);
@@ -382,13 +341,15 @@ export function CycleDrawer({
   async function saveParent() {
     if (parentId === (cycle.mesocycle_id ?? "")) { setEditingParent(false); return; }
     setSavingParent(true);
-    const { error } = await supabase.from("cycles")
-      .update({ mesocycle_id: parentId || null })
-      .eq("id", cycle.id);
+    try {
+      await updatePeriod("cycles", cycle.id, { mesocycle_id: parentId || null });
+    } catch {
+      setSavingParent(false);
+      toast.error("Erreur");
+      return;
+    }
     setSavingParent(false);
-    if (error) { toast.error("Erreur"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
     toast.success("Mésocycle parent modifié");
     setEditingParent(false);
   }
@@ -396,10 +357,13 @@ export function CycleDrawer({
   // ── save objective ────────────────────────────────────────────────────────
 
   async function saveObjective() {
-    const { error } = await supabase.from("cycles").update({ objective }).eq("id", cycle.id);
-    if (error) { toast.error("Erreur"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    try {
+      await updatePeriod("cycles", cycle.id, { objective });
+    } catch {
+      toast.error("Erreur");
+      return;
+    }
+    void invalidateCycles(qc, athleteId);
     setEditingObj(false);
     toast.success("Objectif enregistré");
   }
@@ -408,24 +372,17 @@ export function CycleDrawer({
 
   async function deleteCycle() {
     setDeleting(true);
-    const { data: micros } = await supabase.from("microcycles").select("id").eq("cycle_id", cycle.id);
-    const microIds = (micros ?? []).map((m: { id: string }) => m.id);
     try {
-      await deletePlannedWorkouts({ microcycleIds: microIds });
+      // Séances prévues sans trace retirées ; séances réelles gardées (détachées).
+      await deleteCycleRow(cycle.id, { removePlanned: true });
     } catch (e) {
       setDeleting(false);
-      toast.error(e instanceof Error ? e.message : "Erreur suppression");
+      toast.error("Erreur suppression : " + (e instanceof Error ? e.message : ""));
       return;
     }
-    await supabase.from("microcycles").delete().eq("cycle_id", cycle.id);
-    const { error } = await supabase.from("cycles").delete().eq("id", cycle.id);
     setDeleting(false);
-    if (error) { toast.error("Erreur suppression : " + error.message); return; }
     toast.success("Cycle supprimé");
-    qc.invalidateQueries({ queryKey: ["timeline-data"] });
-    qc.invalidateQueries({ queryKey: ["active-cycle"] });
-    qc.invalidateQueries({ queryKey: ["athlete-cycles-list"] });
-    qc.invalidateQueries({ queryKey: ["cal-range"] });
+    void invalidateCycles(qc, athleteId);
     onClose?.();
   }
 

@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { formatReps, hasIso } from "@/lib/formatSetsReps";
-import { supabase } from "@/integrations/supabase/client";
+import { readAppDataKeys } from "@/api/appData";
+import { listWorkoutLogs } from "@/api/workouts";
+import { listEnergyAssignments } from "@/api/energy";
+import { listTestSessionsWithResults } from "@/api/tests";
+import { listCompetitionsBetween } from "@/api/competitions";
+import { listExerciseComments } from "@/api/coachRetours";
+import { getExerciseNames } from "@/api/exercises";
 import { QK } from "@/lib/queryKeys";
 import type { VideoRequestStatus,
   MonthlyRetourData, DailyData, WorkoutDetail,
@@ -16,8 +22,8 @@ import { averageWellness, retoursWellnessHistory, toWellnessDay } from "@/lib/re
 import { wellnessScore } from "@shared/domain/wellness";
 import { getDays as getNutritionDays, getStrategy as getNutritionStrategy } from "@/api/nutrition";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function useMonthlyRetours(athleteId: string, monthStart: Date) {
   const monthKey = format(monthStart, "yyyy-MM");
@@ -70,37 +76,12 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
   const end   = format(endOfMonth(monthStart),   "yyyy-MM-dd");
 
   // ── 1. Load app_data + DB tables in parallel ─────────────────────────────
-  const [appDataRes, workoutsRes, energyRes, testsRes, compsRes, nutritionLogs, nutritionStrategy] = await Promise.all([
-    db.from("app_data")
-      .select("key, value")
-      .eq("athlete_id", athleteId)
-      .in("key", ["asp:wh", "asp:sets", "asp:exos", "asp:blockConfig", "asp:blockHistory", "asp:freesess", "asp:prog"]),
-
-    db.from("workout_logs")
-      .select("id, session_id, session_name, scheduled_date, status, duration_s, notes, rpe_score, athlete_modifications, week_number")
-      .eq("athlete_id", athleteId)
-      .not("status", "eq", "skipped")
-      .gte("scheduled_date", start)
-      .lte("scheduled_date", end)
-      .order("scheduled_date"),
-
-    db.from("energy_session_assignments")
-      .select("id, scheduled_date, status, notes, rpe_score, block_logs, energy_sessions(id, name, session_kind, total_duration_s, total_distance_m, intervals)")
-      .eq("athlete_id", athleteId)
-      .gte("scheduled_date", start)
-      .lte("scheduled_date", end),
-
-    db.from("test_sessions")
-      .select("id, title, type, date, completed, results_note, results_structured")
-      .eq("athlete_id", athleteId)
-      .gte("date", start)
-      .lte("date", end),
-
-    db.from("competitions")
-      .select("id, name, type, date, location, athlete_comment, priority")
-      .eq("athlete_id", athleteId)
-      .gte("date", start)
-      .lte("date", end),
+  const [appDataRes, workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy] = await Promise.all([
+    readAppDataKeys(athleteId, ["asp:wh", "asp:sets", "asp:exos", "asp:blockConfig", "asp:blockHistory", "asp:freesess", "asp:prog"]),
+    listWorkoutLogs({ athleteIds: [athleteId], from: start, to: end, excludeStatuses: ["skipped"] }),
+    listEnergyAssignments({ athleteIds: [athleteId], from: start, to: end, join: "summary" }),
+    listTestSessionsWithResults(athleteId, start, end),
+    listCompetitionsBetween(athleteId, start, end),
 
     // Nutrition : `app_data` via la couche API (les tables `nutrition_*` n'existent pas).
     getNutritionDays(athleteId, start, end),
@@ -109,9 +90,7 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
 
   // Extract app_data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const appDataMap: Record<string, any> = Object.fromEntries(
-    (appDataRes.data ?? []).map((r: { key: string; value: unknown }) => [r.key, r.value])
-  );
+  const appDataMap: Record<string, any> = appDataRes;
   const currentExos: Record<string, Exercise[]> = appDataMap["asp:exos"]      ?? {};
   const currentSets: Record<string, SetRow[]>   = appDataMap["asp:sets"]       ?? {};
   const currentBlockConfig: BlockConfig         = appDataMap["asp:blockConfig"] ?? {};
@@ -122,8 +101,6 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
   const mergedWH = retoursWellnessHistory(appDataMap["asp:wh"], blockHistory);
 
   // ── 2. Exercise comments ─────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workoutList: any[] = workoutsRes.data ?? [];
   const workoutIds = workoutList.map((w) => w.id as string);
 
   // Occurrence de chaque séance (1re, 2e… fois planifiée) → params prévus
@@ -131,12 +108,10 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
     athleteId, workoutList.map((w) => w.session_id as string), end,
   ).catch(() => new Map<string, number>());
 
-  const { data: commentsData = [] } = workoutIds.length > 0
-    ? await db
-        .from("workout_exercise_comments")
-        .select("id, workout_log_id, exercise_id, exercise_name, comment, created_at, updated_at")
-        .in("workout_log_id", workoutIds)
-    : { data: [] as unknown[] };
+  const commentsData = await listExerciseComments(workoutIds).catch((e) => {
+    console.warn("[retours] commentaires non chargés", e);
+    return [];
+  });
 
   const commentsByWorkout: Record<string, WorkoutExerciseComment[]> = {};
   for (const c of commentsData as WorkoutExerciseComment[]) {
@@ -167,12 +142,14 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
       }
     }
   }
-  if (allUnknownIds.size > 0) {
-    const { data: exRows } = await db
-      .from("exercises")
-      .select("id, name")
-      .in("id", [...allUnknownIds]);
-    for (const row of exRows ?? []) globalExNameMap.set(row.id, row.name);
+  // Noms de la banque (non bloquant ; les ids d'exercices perso ne sont pas des uuid).
+  const bankIds = [...allUnknownIds].filter((id) => UUID_RE.test(id));
+  if (bankIds.length > 0) {
+    const names = await getExerciseNames(bankIds).catch((e) => {
+      console.warn("[retours] noms d'exercices non chargés", e);
+      return new Map<string, string>();
+    });
+    for (const [id, name] of names) globalExNameMap.set(id, name);
   }
 
   // ── 3. Build workouts ────────────────────────────────────────────────────
@@ -305,7 +282,7 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
 
   // ── 4. Energy sessions ───────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const energySessions: EnergySessionDetail[] = (energyRes.data ?? []).map((e: any) => {
+  const energySessions: EnergySessionDetail[] = energyRows.map((e: any) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const es = (e.energy_sessions as any) ?? {};
     // notes may be plain text or JSON step_log_v1
@@ -337,6 +314,8 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
       intervals:     es.intervals        ?? [],
       step_log:      stepLog,
       block_logs:    e.block_logs        ?? null,
+      actual_duration_min: e.actual_duration_min ?? null,
+      activity_url:  e.activity_url      ?? null,
     };
   });
 
@@ -346,8 +325,8 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
     end:   endOfMonth(new Date(start + "T12:00:00")),
   });
 
-  const compDates  = new Set((compsRes.data ?? []).map((c: { date: string }) => c.date));
-  const testDates  = new Set((testsRes.data ?? []).map((t: { date: string }) => t.date));
+  const compDates  = new Set(compRows.map((c: { date: string }) => c.date));
+  const testDates  = new Set(testRows.map((t: { date: string }) => t.date));
   const doneByDate: Record<string, number> = {};
   for (const w of workouts) {
     if (w.status === "completed")
@@ -403,12 +382,12 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
       specific: completed.filter((w) => w.session_type === "specific").length,
       energy:   energySessions.filter((e) => e.completed).length,
     },
-    tests_completed: (testsRes.data ?? []).filter((t: { completed: boolean }) => t.completed).length,
+    tests_completed: testRows.filter((t: { completed: boolean }) => t.completed).length,
     daily_data,
     workouts,
     energy_sessions: energySessions,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    test_sessions: (testsRes.data ?? []).map((t: any) => ({
+    test_sessions: testRows.map((t: any) => ({
       id:                  t.id,
       title:               t.title,
       type:                t.type,
@@ -419,7 +398,7 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
       coach_validated:     t.coach_validated      ?? null,
     })),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    competitions: (compsRes.data ?? []).map((c: any) => ({
+    competitions: compRows.map((c: any) => ({
       id:              c.id,
       name:            c.name,
       type:            c.type,

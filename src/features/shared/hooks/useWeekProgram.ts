@@ -1,13 +1,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
-import { supabase } from "@/integrations/supabase/client";
 import type { Session, Exercise, AthleteModifications } from "../types/athlete";
 import { localISO } from "@/lib/date";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import type { Bloc, ExerciceParams } from "@/features/coach/components/programmation/types";
 import { resolveExerciceParams } from "@/lib/sessionOccurrence";
-import { fetchOccurrencesForSessions } from "./useSessionOccurrence";
+import { getWeekWorkouts, planningKeys } from "@/api/planning";
 
 /** Exercice prévu, lu dans la ProgSession (asp:prog) à l'occurrence du jour. */
 export interface SessionPreviewItem {
@@ -66,25 +65,10 @@ export function useWeekProgram(weekStart: string | null): DayProgram[] {
 
   // Fetch workout_logs for this week from Supabase
   const { data: workoutLogs = [] } = useQuery({
-    queryKey: ["workout-logs-week", athleteId, mondayISO],
+    queryKey: planningKeys.week(athleteId ?? "", mondayISO),
     enabled: !!athleteId,
     staleTime: 30_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("id, session_id, session_name, scheduled_date, status, athlete_modifications")
-        .eq("athlete_id", athleteId)
-        .neq("status", "skipped")
-        .gte("scheduled_date", mondayISO)
-        .lte("scheduled_date", sundayISO);
-      const logs = data ?? [];
-      // Occurrence de chaque log : les params multi-semaines en dépendent
-      let occ = new Map<string, number>();
-      try {
-        occ = await fetchOccurrencesForSessions(athleteId!, logs.map((l) => l.session_id), sundayISO);
-      } catch { /* aperçu : occurrence 1 par défaut */ }
-      return logs.map((l) => ({ ...l, occurrence: occ.get(l.id) ?? 1 }));
-    },
+    queryFn: () => getWeekWorkouts(athleteId!, mondayISO, sundayISO),
   });
 
   const { data: progSessions = [] } = useProgrammation(athleteId ?? undefined);

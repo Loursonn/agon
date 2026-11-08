@@ -15,10 +15,13 @@ import { SKEYS } from "@/lib/storage";
 import { sSave } from "@/lib/storage";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, WellnessData,
-  BodyWeight, Goals, Injury, ArchivedBlock, NewBlockOpts,
+  BodyWeight, Goals, ArchivedBlock, NewBlockOpts,
   VisibilitySettings, SessionLog, FreeSession, NutritionStrategy,
   EnergySession, CoachFeedbacks, AppFeedbackEntry, Habit,
 } from "../types/athlete";
+
+/** Référence stable tant que le journal nutrition n'est pas chargé. */
+const EMPTY_LOG: Record<string, unknown> = {};
 
 // ─── Context shape ──────────────────────────────────────────────────────────
 
@@ -42,7 +45,6 @@ export interface AthleteContextValue {
   customMethods: unknown[]; setCustomMethods: (v: unknown[]) => void;
   weightLog: Record<string, number>; setWeightLog: (v: Record<string, number>) => void;
   weightMilestones: Array<{ date: string; kg: number }>; setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
-  injuries: Injury[]; setInjuries: (v: Injury[]) => void;
   wellness: WellnessData | null; setWellness: (v: WellnessData | null) => void;
   wellnessHistory: Record<string, WellnessData>; setWellnessHistory: (v: Record<string, WellnessData>) => void;
   bodyWeight: BodyWeight; setBodyWeight: (v: BodyWeight) => void;
@@ -51,7 +53,8 @@ export interface AthleteContextValue {
   sessionLogs: Record<string, SessionLog>; setSessionLogs: (v: Record<string, SessionLog>) => void;
   freeSessions: FreeSession[]; setFreeSessions: (v: FreeSession[] | ((prev: FreeSession[]) => FreeSession[])) => void;
   nutritionStrategy: NutritionStrategy | null; setNutritionStrategy: (v: NutritionStrategy | null) => void;
-  nutritionLog: Record<string, unknown>; setNutritionLog: (v: Record<string, unknown> | ((prev: Record<string, unknown>) => Record<string, unknown>)) => void;
+  /** Journal nutrition par jour ISO (lecture seule ; écriture : `saveDay` de `@/api/nutrition`). */
+  nutritionLog: Record<string, unknown>;
   visibilitySettings: VisibilitySettings; setVisibilitySettings: (v: VisibilitySettings) => Promise<void>;
   testSessions: unknown[]; setTestSessions: (v: unknown[]) => void;
   loaded: boolean; saveStatus: "saved" | "error" | null;
@@ -111,9 +114,6 @@ export interface AthleteContextValue {
   saveWellness: (data: WellnessData) => void | Promise<boolean>;
   updateSessionDay: (sessId: string, dayIdx: number) => void;
   updateSessionWeekDay: (sessId: string, blockWeek: number, dayIdx: number | null) => void;
-  addInjury: (inj: Injury) => void;
-  updateInjury: (inj: Injury) => void;
-  deleteInjury: (id: string) => void;
   toggleHabitLog: (habitId: string, dateISO: string, logs: Record<string, string[]>, setLogs: (v: Record<string, string[]>) => void) => Promise<void>;
   updSets: (k: string, ns: unknown[]) => void;
 }
@@ -231,17 +231,15 @@ export function AthleteProvider({ athleteId, viewOnly = false, readOnly = false,
   const nutritionStrategyQ = useNutritionStrategy(athleteId);
   const nutritionLogQ = useNutritionLog(athleteId);
   const qc = useQueryClient();
-  const { setNutritionStrategy: setNutritionStrategyLocal } = persisted;
   const setNutritionStrategy = useCallback((v: NutritionStrategy | null) => {
     qc.setQueryData(nutritionKeys.strategy(athleteId), v);
-    setNutritionStrategyLocal(v);
-  }, [qc, athleteId, setNutritionStrategyLocal]);
+  }, [qc, athleteId]);
 
   const value: AthleteContextValue = {
     athleteId, viewOnly, athleteProfile, onEditProfile, userName,
     ...persisted,
-    nutritionStrategy: nutritionStrategyQ.data !== undefined ? (nutritionStrategyQ.data as NutritionStrategy | null) : persisted.nutritionStrategy,
-    nutritionLog: (nutritionLogQ.data as Record<string, unknown> | undefined) ?? persisted.nutritionLog,
+    nutritionStrategy: (nutritionStrategyQ.data as NutritionStrategy | null | undefined) ?? null,
+    nutritionLog: (nutritionLogQ.data as Record<string, unknown> | undefined) ?? EMPTY_LOG,
     setNutritionStrategy,
     timerLeft, timerDur, timerActive, timerFinished, timerSetDur, timerStart, timerStop,
     showWellness, setShowWellness, showAppFeedback, setShowAppFeedback,

@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { BlockConfig, Session } from "@/features/shared/types/athlete";
 import { localISO } from "@/lib/date";
+import { createCycle, invalidateCycles } from "@/api/cycles";
 
 function addDays(d: Date, n: number): Date {
   const r = new Date(d);
@@ -27,95 +27,46 @@ interface Params {
   coachId:     string;
 }
 
+/**
+ * Crée un cycle autonome (sans mésocycle) depuis le bloc : une semaine par
+ * semaine du bloc, une séance prévue par séance × semaine (`create_cycle`,
+ * atomique). Une séance déjà réalisée ce jour-là n'est pas repassée en
+ * « prévue ».
+ */
 export function useCreateCycleFromBloc() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ blockConfig, sessions, athleteId, coachId }: Params) => {
+    mutationFn: async ({ blockConfig, sessions, athleteId }: Params) => {
       if (!blockConfig.startDate) throw new Error("Le bloc n'a pas de date de début.");
 
       const scheduledSessions = sessions.filter((s) => s.day_of_week != null);
       if (scheduledSessions.length === 0)
         throw new Error("Aucune séance n'a de jour assigné. Double-clique sur chaque séance pour définir son jour.");
 
-      const tw       = blockConfig.totalWeeks || 6;
-      const monday   = toMonday(blockConfig.startDate);
-      const endDate  = addDays(monday, tw * 7 - 1);
+      const tw      = blockConfig.totalWeeks || 6;
+      const monday  = toMonday(blockConfig.startDate);
+      const endDate = addDays(monday, tw * 7 - 1);
 
-      // ── 1. Créer le cycle ────────────────────────────────────────────────────
-      const { data: cycle, error: cycleErr } = await supabase
-        .from("cycles")
-        .insert({
-          name:        blockConfig.blockName || "Cycle",
-          start_date:  localISO(monday),
-          end_date:    localISO(endDate),
-          athlete_id:  athleteId,
-          coach_id:    coachId,
-          // mesocycle_id intentionnellement null (cycle standalone)
-        })
-        .select("id")
-        .single();
-
-      if (cycleErr) throw cycleErr;
-
-      // ── 2. Créer les microcycles (1 par semaine) ─────────────────────────────
-      const microInserts = Array.from({ length: tw }, (_, i) => {
-        const wStart = addDays(monday, i * 7);
-        const wEnd   = addDays(wStart, 6);
-        return {
-          cycle_id:    cycle.id,
-          week_number: i + 1,
-          start_date:  localISO(wStart),
-          end_date:    localISO(wEnd),
-          is_deload:   (i + 1) === (blockConfig.deloadWeek || 0),
-        };
+      const { cycle } = await createCycle({
+        athleteId,
+        name:       blockConfig.blockName || "Cycle",
+        start:      localISO(monday),
+        end:        localISO(endDate),
+        deloadWeek: blockConfig.deloadWeek || null,
+        // day_of_week : 0 = lundi … 6 = dimanche
+        sessions: scheduledSessions.map((s) => ({
+          sessionId:   s.id,
+          sessionName: s.name || s.short || "Séance",
+          dayOfWeek:   s.day_of_week!,
+        })),
       });
-
-      const { data: micros, error: microErr } = await supabase
-        .from("microcycles")
-        .insert(microInserts)
-        .select("id, week_number, start_date");
-
-      if (microErr) throw microErr;
-
-      // ── 3. Créer les workout_logs (1 par séance × semaine) ─────────────────
-      const workoutLogs: Record<string, unknown>[] = [];
-
-      for (const micro of micros ?? []) {
-        const weekMonday = new Date(micro.start_date + "T12:00:00");
-
-        for (const sess of sessions) {
-          if (sess.day_of_week == null) continue;
-          // day_of_week: 0=Lun, 1=Mar, ..., 6=Dim
-          const sessionDate = addDays(weekMonday, sess.day_of_week);
-
-          workoutLogs.push({
-            athlete_id:     athleteId,
-            coach_id:       coachId,
-            session_id:     sess.id,
-            session_name:   sess.name || sess.short || "Séance",
-            scheduled_date: localISO(sessionDate),
-            status:         "planned",
-            microcycle_id:  micro.id,
-          });
-        }
-      }
-
-      if (workoutLogs.length > 0) {
-        const { error: logsErr } = await supabase
-          .from("workout_logs")
-          .upsert(workoutLogs as never, { onConflict: "athlete_id,session_id,scheduled_date" });
-        if (logsErr) throw logsErr;
-      }
-
       return cycle;
     },
 
-    onSuccess: () => {
+    onSuccess: (_cycle, vars) => {
       toast.success("Cycle créé depuis le bloc !");
-      qc.invalidateQueries({ queryKey: ["timeline-data"] });
-      qc.invalidateQueries({ queryKey: ["cal-range"] });
-      qc.invalidateQueries({ queryKey: ["active-cycle"] });
+      void invalidateCycles(qc, vars.athleteId);
     },
 
     onError: (err: Error) => {

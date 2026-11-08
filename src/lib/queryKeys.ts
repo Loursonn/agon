@@ -3,17 +3,12 @@
  * All keys are typed tuples so cache invalidation is safe to refactor.
  */
 export const QK = {
-  habits:               (aid: string) => ['habits', aid]               as const,
-  habitLogs:            (aid: string) => ['habitLogs', aid]            as const,
   testSessions:         (aid: string) => ['testSessions', aid]         as const,
   energySessions:       ['energy-sessions']                            as const,
   energySession:        (id: string)  => ['energy-sessions', id]       as const,
   energyAssignments:    (aid: string) => ['energy-assignments', aid]   as const,
-  nutritionStrategy:    (aid: string) => ['nutritionStrategy', aid]    as const,
   coachFeedback:        (aid: string) => ['coachFeedback', aid]        as const,
   appFeedback:          (aid: string) => ['appFeedback', aid]          as const,
-  visibility:           (aid: string) => ['visibility', aid]           as const,
-  athleteData:          (aid: string) => ['athleteData', aid]          as const,
   // ── Tests énergétiques structurés ────────────────────────────────────────
   testDefinitions:      (cid: string) => ['testDefinitions', cid]      as const,
   athleteTestResults:   (aid: string) => ['athleteTestResults', aid]   as const,
@@ -42,8 +37,6 @@ export const QK = {
   // ── Calendrier unifié (planning coach) — préfixe de useUnifiedCalendar ──────
   cal:            (aid: string) => ['cal', aid] as const,
   calAll:         ['cal'] as const,
-  // ── Modifications athlète (reschedule + bonus, pour coach) ───────────────────
-  athleteModifications: (aid: string) => ['athleteModifications', aid] as const,
   // ── Lien de première connexion d un athlète pré-créé ─────────────────────────
   exerciseBankMuscles: ["exerciseBankMuscles"] as const,
   muscleVolumeLogs: (aid: string) => ["muscleVolumeLogs", aid] as const,
@@ -52,16 +45,12 @@ export const QK = {
   // ── Coach dashboard ───────────────────────────────────────────────────────────
   coachDashboard: {
     today:         (cid: string, date: string) => ['coachDashboard', 'today',         cid, date] as const,
-    wellness:      (cid: string, date: string) => ['coachDashboard', 'wellness',      cid, date] as const,
     missed:        (cid: string, date: string) => ['coachDashboard', 'missed',        cid, date] as const,
     planningMargin: (cid: string)               => ['coachDashboard', 'planningMargin', cid]       as const,
-    recentRecords:  (cid: string)               => ['coachDashboard', 'recentRecords',  cid]       as const,
     upcomingTests:  (cid: string, date: string) => ['coachDashboard', 'upcomingTests',  cid, date] as const,
-    wellnessAlerts: (cid: string, date: string) => ['coachDashboard', 'wellnessAlerts', cid, date] as const,
   },
   // ── Méthodes d'entraînement ───────────────────────────────────────────────────
   trainingMethods: (filters?: object) => ['training_methods', filters ?? {}] as const,
-  trainingMethod:  (id: string)       => ['training_methods', id]            as const,
   // ── Banque Spécifique ─────────────────────────────────────────────────────────
   specificSports:    ['specific-sports']    as const,
   physicalQualities: ['physical-qualities'] as const,
@@ -78,7 +67,6 @@ export const QK = {
   hyroxResults:    (aid: string) => ['hyroxResults', aid]    as const,
   hyroxResult:     (id: string)  => ['hyroxResult', id]      as const,
   hyroxReferences: ['hyroxReferences']                        as const,
-  hyroxPlans:      (aid: string) => ['hyroxPlans', aid]      as const,
   // ── Tests HYROX (bilan et retests) ────────────────────────────────────────────
   hyroxBattery:        ['hyroxTests', 'battery']                        as const,
   hyroxGridSet:        (version: string) => ['hyroxTests', 'grid', version] as const,
@@ -123,8 +111,6 @@ export const QK = {
    *  qu'un import ou une synchro (qui invalident `providerActivities`) les
    *  rafraîchisse aussi. */
   providerRuns:        (aid: string, from: string) => ['provider-activities', aid, 'runs', from] as const,
-  providerDailies:     (aid: string, from: string, to: string) =>
-    ['provider-dailies', aid, from, to] as const,
   // ── Staff autour des athlètes ─────────────────────────────────────────────────
   staff:               ['staff'] as const,
   athleteStaff:        (aid: string) => ['staff', 'athlete', aid] as const,

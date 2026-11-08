@@ -24,7 +24,8 @@ import { ProviderActivityList } from "@/features/shared/components/ProviderActiv
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useAthleteRetours } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import type { TrendSummary } from "@/lib/athleteTrends";
-import { supabase } from "@/integrations/supabase/client";
+import { confirmLogout, logoutDevice } from "@/lib/offline/logoutDevice";
+import { getCoachName } from "@/api/profile";
 import { useAuth } from "@/hooks/useAuth";
 import type { Profile } from "@/hooks/useAuth";
 import { useCoachBooking } from "@/features/shared/hooks/useCoachBooking";
@@ -354,7 +355,7 @@ export default function ProfileDrawer({ onClose }: Props) {
 
         {/* Déconnexion */}
         <div style={{ marginTop: "auto", paddingTop: 8 }}>
-          <button onClick={async () => { await supabase.auth.signOut({ scope: "local" }); window.location.href = "/login"; }} style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <button onClick={async () => { if (!confirmLogout()) return; await logoutDevice().catch(() => {}); window.location.href = "/login"; }} style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <span>⏻</span><span>Déconnexion</span>
           </button>
         </div>
@@ -579,19 +580,10 @@ function CoachSection({ onClose }: { onClose: () => void }) {
       return;
     }
     let cancelled = false;
-    supabase
-      .from("profiles")
-      .select("full_name, first_name, last_name")
-      .eq("id", coachId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled || !data) return;
-        setCoachName(
-          [data.first_name, data.last_name].filter(Boolean).join(" ") ||
-            data.full_name ||
-            "Coach",
-        );
-      });
+    getCoachName(coachId).then(
+      (name) => { if (!cancelled && name) setCoachName(name); },
+      (e) => console.error("[ProfileDrawer] coach", e),
+    );
     return () => {
       cancelled = true;
     };

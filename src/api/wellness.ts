@@ -119,7 +119,7 @@ export async function saveWellnessEntry(athleteId: string, entry: WellnessEntry)
  */
 export async function saveWellnessForm(athleteId: string, form: unknown, day: IsoDay = localIsoDay()): Promise<WellnessEntry> {
   const entry = parseWellnessEntry(form, day);
-  if (!entry) throw new ApiError("Enregistrement du wellness impossible", { message: "saisie illisible" });
+  if (!entry) throw new ApiError("Enregistrement du wellness impossible", { message: "saisie illisible", code: "22023" });
   return saveWellnessEntry(athleteId, { ...entry, archived: false });
 }
 
@@ -146,9 +146,6 @@ export function invalidateWellness(qc: QueryClient, athleteId: string): Promise<
       predicate: (q) =>
         q.queryKey[0] === "wellness" && q.queryKey[1] === "_many" && String(q.queryKey[2] ?? "").split(",").includes(athleteId),
     }),
-    // Anciennes clés de l'accueil coach (QK.coachDashboard.wellness / wellnessAlerts).
-    qc.invalidateQueries({ queryKey: ["coachDashboard", "wellness"] }),
-    qc.invalidateQueries({ queryKey: ["coachDashboard", "wellnessAlerts"] }),
     qc.invalidateQueries({ queryKey: ["weeklyRetours", athleteId] }),
     qc.invalidateQueries({ queryKey: ["monthlyRetours", athleteId] }),
     qc.invalidateQueries({ queryKey: ["micro-stats", athleteId] }),

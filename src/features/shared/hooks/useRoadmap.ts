@@ -1,5 +1,5 @@
 /**
- * Hooks React Query pour le module Roadmap.
+ * Hooks React Query pour le module Roadmap (adaptateurs de `src/api/appContent.ts`).
  * Tables : roadmap_phases, roadmap_items, roadmap_votes
  *
  * Accès : is_certified_coach OU is_admin (géré côté RLS).
@@ -7,65 +7,43 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
-import type { RoadmapPhase, RoadmapItem, RoadmapCategory, RoadmapPriority, RoadmapItemStatus, RoadmapPhaseStatus } from "@/features/coach/types/roadmap";
+import {
+  appContentKeys, createRoadmapItem, createRoadmapPhase, deleteRoadmapItem, deleteRoadmapPhase, invalidateRoadmap,
+  listMyRoadmapVotes, listRoadmapItems, listRoadmapPhases, roadmapVoteCounts, toggleRoadmapVote, updateRoadmapItem,
+  updateRoadmapPhase,
+} from "@/api/appContent";
+import type { RoadmapPhase, RoadmapItem, RoadmapPhaseStatus } from "@/features/coach/types/roadmap";
+
+export type { CreateItemInput, CreatePhaseInput, UpdateItemInput, UpdatePhaseInput } from "@/api/appContent";
+
+const K = appContentKeys;
 
 // ─── Phases ───────────────────────────────────────────────────────────────────
 
-async function fetchPhases(): Promise<RoadmapPhase[]> {
-  const { data, error } = await supabase
-    .from("roadmap_phases")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as unknown as RoadmapPhase[];
-}
-
 export function useRoadmapPhases() {
   return useQuery<RoadmapPhase[]>({
-    queryKey: QK.roadmapPhases,
-    queryFn:  fetchPhases,
+    queryKey: K.roadmapPhases,
+    queryFn:  listRoadmapPhases,
     staleTime: 60_000,
   });
 }
 
 // ─── Items (toutes phases) ────────────────────────────────────────────────────
 
-async function fetchAllItems(): Promise<RoadmapItem[]> {
-  const { data, error } = await supabase
-    .from("roadmap_items")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as unknown as RoadmapItem[];
-}
-
 export function useRoadmapItems() {
   return useQuery<RoadmapItem[]>({
-    queryKey: QK.roadmapItems(),
-    queryFn:  fetchAllItems,
+    queryKey: K.roadmapItems,
+    queryFn:  listRoadmapItems,
     staleTime: 30_000,
   });
 }
 
 // ─── Votes (de l'utilisateur courant) ─────────────────────────────────────────
 
-async function fetchMyVotes(userId: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("roadmap_votes")
-    .select("item_id")
-    .eq("user_id", userId);
-  if (error) throw error;
-  return (data ?? []).map((r: { item_id: string }) => r.item_id);
-}
-
 export function useMyRoadmapVotes(userId: string | undefined) {
   return useQuery<string[]>({
-    queryKey: QK.roadmapVotes(userId ?? ""),
-    queryFn:  () => fetchMyVotes(userId!),
+    queryKey: K.roadmapVotes(userId ?? ""),
+    queryFn:  () => listMyRoadmapVotes(userId!),
     enabled:  !!userId,
     staleTime: 30_000,
   });
@@ -79,23 +57,11 @@ export function useToggleVote(userId: string | undefined) {
   return useMutation({
     mutationFn: async ({ itemId, voted }: { itemId: string; voted: boolean }) => {
       if (!userId) throw new Error("Non authentifié");
-      if (voted) {
-        const { error } = await supabase
-          .from("roadmap_votes")
-          .delete()
-          .eq("item_id", itemId)
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("roadmap_votes")
-          .insert({ item_id: itemId, user_id: userId });
-        if (error) throw error;
-      }
+      await toggleRoadmapVote(userId, itemId, voted);
     },
 
     onMutate: async ({ itemId, voted }) => {
-      const key = QK.roadmapVotes(userId ?? "");
+      const key = K.roadmapVotes(userId ?? "");
       await qc.cancelQueries({ queryKey: key });
       const prev = qc.getQueryData<string[]>(key) ?? [];
       qc.setQueryData<string[]>(key, voted
@@ -107,202 +73,122 @@ export function useToggleVote(userId: string | undefined) {
 
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev !== undefined) {
-        qc.setQueryData(QK.roadmapVotes(userId ?? ""), ctx.prev);
+        qc.setQueryData(K.roadmapVotes(userId ?? ""), ctx.prev);
       }
     },
 
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: QK.roadmapVotes(userId ?? "") });
-    },
+    // Votes ET compteurs (avant : le compteur restait figé jusqu'au rechargement).
+    onSettled: () => invalidateRoadmap(qc),
   });
 }
 
-// ─── Create phase (admin) ─────────────────────────────────────────────────────
-
-export type CreatePhaseInput = Pick<RoadmapPhase, 'name' | 'quarter' | 'status' | 'sort_order'> & {
-  description?: string | null;
-};
+// ─── Phases (admin) ───────────────────────────────────────────────────────────
 
 export function useCreatePhase() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreatePhaseInput) => {
-      const { data, error } = await supabase
-        .from("roadmap_phases")
-        .insert(input)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as unknown as RoadmapPhase;
-    },
+    mutationFn: createRoadmapPhase,
     onSuccess: () => { toast.success("Phase créée"); },
     onError:   () => { toast.error("Erreur lors de la création de la phase"); },
-    onSettled: () => { qc.invalidateQueries({ queryKey: QK.roadmapPhases }); },
+    onSettled: () => invalidateRoadmap(qc),
   });
 }
-
-// ─── Update phase (admin) ─────────────────────────────────────────────────────
-
-export type UpdatePhaseInput = Partial<Omit<RoadmapPhase, 'id' | 'created_at' | 'updated_at'>> & { id: string };
 
 export function useUpdatePhase() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: UpdatePhaseInput) => {
-      const { data, error } = await supabase
-        .from("roadmap_phases")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as unknown as RoadmapPhase;
-    },
+    mutationFn: updateRoadmapPhase,
     onMutate: async ({ id, ...updates }) => {
-      await qc.cancelQueries({ queryKey: QK.roadmapPhases });
-      const prev = qc.getQueryData<RoadmapPhase[]>(QK.roadmapPhases);
-      qc.setQueryData<RoadmapPhase[]>(QK.roadmapPhases,
+      await qc.cancelQueries({ queryKey: K.roadmapPhases });
+      const prev = qc.getQueryData<RoadmapPhase[]>(K.roadmapPhases);
+      qc.setQueryData<RoadmapPhase[]>(K.roadmapPhases,
         (old) => old?.map((p) => p.id === id ? { ...p, ...updates } : p)
       );
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(QK.roadmapPhases, ctx.prev);
+      if (ctx?.prev) qc.setQueryData(K.roadmapPhases, ctx.prev);
       toast.error("Erreur lors de la mise à jour");
     },
-    onSettled: () => { qc.invalidateQueries({ queryKey: QK.roadmapPhases }); },
+    onSettled: () => invalidateRoadmap(qc),
   });
 }
-
-// ─── Delete phase (admin) ─────────────────────────────────────────────────────
 
 export function useDeletePhase() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("roadmap_phases").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: deleteRoadmapPhase,
     onSuccess: () => { toast.success("Phase supprimée"); },
     onError:   () => { toast.error("Erreur lors de la suppression"); },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: QK.roadmapPhases });
-      qc.invalidateQueries({ queryKey: QK.roadmapItems() });
-    },
+    onSettled: () => invalidateRoadmap(qc),
   });
 }
 
-// ─── Create item ──────────────────────────────────────────────────────────────
-
-export type CreateItemInput = {
-  phase_id?:    string | null;
-  title:        string;
-  description?: string | null;
-  category:     RoadmapCategory;
-  priority:     RoadmapPriority;
-  status:       RoadmapItemStatus;
-  sort_order?:  number;
-};
+// ─── Items ────────────────────────────────────────────────────────────────────
 
 export function useCreateItem() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateItemInput) => {
-      const { data, error } = await supabase
-        .from("roadmap_items")
-        .insert({ ...input, sort_order: input.sort_order ?? 0 })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as unknown as RoadmapItem;
-    },
+    mutationFn: createRoadmapItem,
     onSuccess: () => { toast.success("Item ajouté"); },
     onError:   () => { toast.error("Erreur lors de l'ajout"); },
-    onSettled: () => { qc.invalidateQueries({ queryKey: QK.roadmapItems() }); },
+    onSettled: () => invalidateRoadmap(qc),
   });
 }
-
-// ─── Update item (admin) ──────────────────────────────────────────────────────
-
-export type UpdateItemInput = Partial<Omit<RoadmapItem, 'id' | 'created_at' | 'updated_at' | 'vote_count' | 'user_voted'>> & { id: string };
 
 export function useUpdateItem() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: UpdateItemInput) => {
-      const { data, error } = await supabase
-        .from("roadmap_items")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as unknown as RoadmapItem;
-    },
+    mutationFn: updateRoadmapItem,
     onMutate: async ({ id, ...updates }) => {
-      await qc.cancelQueries({ queryKey: QK.roadmapItems() });
-      const prev = qc.getQueryData<RoadmapItem[]>(QK.roadmapItems());
-      qc.setQueryData<RoadmapItem[]>(QK.roadmapItems(),
+      await qc.cancelQueries({ queryKey: K.roadmapItems });
+      const prev = qc.getQueryData<RoadmapItem[]>(K.roadmapItems);
+      qc.setQueryData<RoadmapItem[]>(K.roadmapItems,
         (old) => old?.map((item) => item.id === id ? { ...item, ...updates } : item)
       );
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(QK.roadmapItems(), ctx.prev);
+      if (ctx?.prev) qc.setQueryData(K.roadmapItems, ctx.prev);
       toast.error("Erreur lors de la mise à jour");
     },
-    onSettled: () => { qc.invalidateQueries({ queryKey: QK.roadmapItems() }); },
+    onSettled: () => invalidateRoadmap(qc),
   });
 }
-
-// ─── Delete item (admin) ──────────────────────────────────────────────────────
 
 export function useDeleteItem() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("roadmap_items").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: deleteRoadmapItem,
     onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: QK.roadmapItems() });
-      const prev = qc.getQueryData<RoadmapItem[]>(QK.roadmapItems());
-      qc.setQueryData<RoadmapItem[]>(QK.roadmapItems(), (old) => old?.filter((i) => i.id !== id));
+      await qc.cancelQueries({ queryKey: K.roadmapItems });
+      const prev = qc.getQueryData<RoadmapItem[]>(K.roadmapItems);
+      qc.setQueryData<RoadmapItem[]>(K.roadmapItems, (old) => old?.filter((i) => i.id !== id));
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(QK.roadmapItems(), ctx.prev);
+      if (ctx?.prev) qc.setQueryData(K.roadmapItems, ctx.prev);
       toast.error("Erreur lors de la suppression");
     },
     onSuccess: () => { toast.success("Item supprimé"); },
-    onSettled: () => { qc.invalidateQueries({ queryKey: QK.roadmapItems() }); },
+    onSettled: () => invalidateRoadmap(qc),
   });
 }
 
-// ─── Fetch vote counts (server-side aggregation) ──────────────────────────────
+// ─── Compteurs de votes ───────────────────────────────────────────────────────
 
-export async function fetchVoteCounts(): Promise<Record<string, number>> {
-  const { data, error } = await supabase
-    .from("roadmap_votes")
-    .select("item_id");
-  if (error) throw error;
-  const counts: Record<string, number> = {};
-  (data ?? []).forEach((row: { item_id: string }) => {
-    counts[row.item_id] = (counts[row.item_id] ?? 0) + 1;
-  });
-  return counts;
-}
+export const fetchVoteCounts = roadmapVoteCounts;
 
 export function useVoteCounts() {
   return useQuery<Record<string, number>>({
-    queryKey: ['roadmap-vote-counts'],
-    queryFn:  fetchVoteCounts,
+    queryKey: K.roadmapVoteCounts,
+    queryFn:  roadmapVoteCounts,
     staleTime: 30_000,
   });
 }

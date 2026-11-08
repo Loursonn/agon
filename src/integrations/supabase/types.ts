@@ -4633,6 +4633,33 @@ export type Database = {
       _contract_on: { Args: { "": string }; Returns: unknown }
       _currtest: { Args: never; Returns: number }
       _db_privs: { Args: never; Returns: unknown[] }
+      _energy_assignment_for_write: {
+        Args: { p_assignment: string }
+        Returns: {
+          activity_type: string | null
+          activity_url: string | null
+          actual_duration_min: number | null
+          athlete_id: string
+          block_logs: Json
+          coach_id: string | null
+          created_at: string
+          distance_km: number | null
+          energy_session_id: string
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          rpe_score: number | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "energy_session_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _extensions: { Args: never; Returns: unknown[] }
       _get: { Args: { "": string }; Returns: number }
       _get_latest: { Args: { "": string }; Returns: number[] }
@@ -4729,6 +4756,42 @@ export type Database = {
             }
             Returns: string
           }
+      complete_energy_assignment: {
+        Args: {
+          p_activity_type?: string
+          p_activity_url?: string
+          p_assignment: string
+          p_block_logs?: Json
+          p_distance_km?: number
+          p_duration_min?: number
+          p_notes?: string
+          p_rpe?: number
+        }
+        Returns: {
+          activity_type: string | null
+          activity_url: string | null
+          actual_duration_min: number | null
+          athlete_id: string
+          block_logs: Json
+          coach_id: string | null
+          created_at: string
+          distance_km: number | null
+          energy_session_id: string
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          rpe_score: number | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "energy_session_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_workout: {
         Args: {
           p_log: string
@@ -4775,6 +4838,18 @@ export type Database = {
           provider: Database["public"]["Enums"]["data_source"]
           redirect_uri: string
         }[]
+      }
+      create_cycle: {
+        Args: {
+          p_athlete: string
+          p_deload_week?: number
+          p_end: string
+          p_mesocycle?: string
+          p_name: string
+          p_sessions?: Json
+          p_start: string
+        }
+        Returns: Json
       }
       current_user_is_admin: { Args: never; Returns: boolean }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
@@ -4934,6 +5009,16 @@ export type Database = {
       pg_version: { Args: never; Returns: string }
       pg_version_num: { Args: never; Returns: number }
       pgtap_version: { Args: never; Returns: number }
+      program_save_sessions: {
+        Args: {
+          p_athlete: string
+          p_base?: Json
+          p_order?: string[]
+          p_remove?: string[]
+          p_upsert: Json
+        }
+        Returns: Json
+      }
       provider_daily_merge: {
         Args: {
           p_athlete: string
@@ -5030,6 +5115,33 @@ export type Database = {
       }
       redeem_invitation: { Args: { p_token: string }; Returns: string }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
+      reopen_energy_assignment: {
+        Args: { p_assignment: string }
+        Returns: {
+          activity_type: string | null
+          activity_url: string | null
+          actual_duration_min: number | null
+          athlete_id: string
+          block_logs: Json
+          coach_id: string | null
+          created_at: string
+          distance_km: number | null
+          energy_session_id: string
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          rpe_score: number | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "energy_session_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reopen_workout: {
         Args: { p_log: string }
         Returns: {
@@ -5076,6 +5188,17 @@ export type Database = {
       runtests:
         | { Args: never; Returns: string[] }
         | { Args: { "": string }; Returns: string[] }
+      save_athlete_test_result: {
+        Args: {
+          p_athlete: string
+          p_definition: string
+          p_notes: string
+          p_performed_at: string
+          p_result?: string
+          p_values: Json
+        }
+        Returns: string
+      }
       save_fc_zones: {
         Args: { p_athlete: string; p_zones: Json }
         Returns: number
@@ -5129,6 +5252,61 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "workout_logs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_cycle_dates: {
+        Args: {
+          p_change_mesocycle?: boolean
+          p_cycle: string
+          p_drop_planned?: boolean
+          p_end: string
+          p_mesocycle?: string
+          p_start: string
+          p_trim_after_end?: boolean
+        }
+        Returns: {
+          athlete_id: string | null
+          coach_id: string | null
+          created_at: string
+          end_date: string
+          id: string
+          mesocycle_id: string | null
+          name: string
+          objective: string | null
+          start_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cycles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_energy_rpe: {
+        Args: { p_assignment: string; p_rpe: number }
+        Returns: {
+          activity_type: string | null
+          activity_url: string | null
+          actual_duration_min: number | null
+          athlete_id: string
+          block_logs: Json
+          coach_id: string | null
+          created_at: string
+          distance_km: number | null
+          energy_session_id: string
+          id: string
+          microcycle_id: string | null
+          notes: string | null
+          rpe_score: number | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "energy_session_assignments"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -5260,6 +5438,14 @@ export type Database = {
       trigger_coros_sync: { Args: never; Returns: undefined }
       trigger_garmin_maintenance: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
+      weight_record_milestone: {
+        Args: { p_athlete: string; p_day: string; p_kg: number }
+        Returns: Json
+      }
+      weight_set_day: {
+        Args: { p_athlete: string; p_day: string; p_kg: number }
+        Returns: Json
+      }
       wellness_delete_day: {
         Args: { p_athlete: string; p_day: string }
         Returns: boolean

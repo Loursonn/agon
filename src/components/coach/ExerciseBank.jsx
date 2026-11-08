@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  createBankExercise, deleteExercise, getExerciseBankPage, mergeExercises, searchMergeCandidates, updateExercise,
+} from "@/api/exercises";
 import { C } from "@/lib/theme";
 import { MTREE, getMC, mL, ALL_MIDS, normPrimary } from "@/lib/muscles";
 import { normalizeExName, normForMatch, fuzzyExMatch } from "@/lib/exercises";
@@ -19,10 +21,10 @@ function ExerciseCreateModal({coachId,onSave,onClose}){
   const save=async()=>{
     if(!form.name.trim())return;setSaving(true);setSaveError('');
     const ytId=form.youtube_id?parseYtId(form.youtube_id):null;
-    const{error}=await supabase.from('exercises').insert({...form,target_2:form.target_2||null,secondary:form.secondary.filter(m=>m!==form.target&&m!==form.target_2),name:form.name.trim(),youtube_id:ytId||null,created_by:coachId,is_public:true,is_verified:isAdmin});
-    setSaving(false);
-    if(error){setSaveError(error.message||JSON.stringify(error));console.error('ExerciseCreateModal insert error:',error);}
-    else onSave();
+    try{
+      await createBankExercise({...form,target_2:form.target_2||null,secondary:form.secondary.filter(m=>m!==form.target&&m!==form.target_2),name:form.name.trim(),youtube_id:ytId||null,created_by:coachId,is_public:true,is_verified:isAdmin});
+      setSaving(false);onSave();
+    }catch(error){setSaving(false);setSaveError(error.message||String(error));console.error('ExerciseCreateModal insert error:',error);}
   };
   return(<div style={{position:'fixed',inset:0,zIndex:310,background:'rgba(0,0,0,0.88)',overflowY:'auto'}}>
     <div style={{padding:16,maxWidth:480,margin:'0 auto'}}>
@@ -61,7 +63,7 @@ function MergeModal({source,onMerge,onClose}){
   const[search,setSearch]=useState('');const[results,setResults]=useState([]);const[target,setTarget]=useState(null);
   useEffect(()=>{
     if(search.length<2){setResults([]);return;}
-    supabase.from('exercises').select('id,name,target,youtube_id').ilike('name',`%${search}%`).neq('id',source.id).limit(8).then(({data})=>setResults(data||[]));
+    searchMergeCandidates(search,source.id).then(setResults,(e)=>{console.error('MergeModal search error:',e);setResults([]);});
   },[search]);
   return(<div style={{position:'fixed',inset:0,zIndex:320,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
     <div style={{background:C.s1,borderRadius:6,padding:20,width:'100%',maxWidth:400}}>
@@ -100,7 +102,8 @@ function ExerciseCharacteristicsPanel({ex,onSaved}){
   const lS={fontSize:10,fontWeight:600,color:C.tx3,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:4,display:'block'};
   const save=async()=>{
     setSaving(true);setMsg('');
-    const{error}=await supabase.from('exercises').update({
+    let error=null;
+    try{await updateExercise(ex.id,{
       ex_type:form.ex_type||null,
       target:form.target||null,
       target_2:form.target_2&&form.target_2!==form.target?form.target_2:null,
@@ -109,7 +112,7 @@ function ExerciseCharacteristicsPanel({ex,onSaved}){
       difficulty:form.difficulty||null,
       is_compound:form.is_compound,
       is_unilateral:form.is_unilateral,
-    }).eq('id',ex.id);
+    });}catch(e){error=e;}
     setSaving(false);
     if(error){setMsg('Erreur : '+error.message);}
     else{setMsg('Caractéristiques enregistrées');onSaved();setTimeout(()=>setMsg(''),2500);}
@@ -145,7 +148,7 @@ function ExerciseDetailModal({ex,coachId,onClose,onAdd,onDelete,onMergeClick,onR
   const isOwner=!ex.created_by||ex.created_by===coachId;
   const[showEdit,setShowEdit]=useState(false);
   const[promoting,setPromoting]=useState(false);
-  const promote=async()=>{setPromoting(true);await supabase.from('exercises').update({is_verified:true}).eq('id',ex.id);setPromoting(false);onRefresh();onClose();};
+  const promote=async()=>{setPromoting(true);try{await updateExercise(ex.id,{is_verified:true});}catch(e){setPromoting(false);alert('Erreur : '+e.message);return;}setPromoting(false);onRefresh();onClose();};
   const[localYtId,setLocalYtId]=useState(ex.youtube_id||'');
   const[ytInput,setYtInput]=useState(ex.youtube_id||'');
   const[ytSaving,setYtSaving]=useState(false);
@@ -154,7 +157,8 @@ function ExerciseDetailModal({ex,coachId,onClose,onAdd,onDelete,onMergeClick,onR
     setYtSaving(true);setYtMsg('');
     const raw=overrideId!==undefined?overrideId:ytInput.trim();
     const id=raw?parseYtId(raw):null;
-    const{error}=await supabase.from('exercises').update({youtube_id:id??null}).eq('id',ex.id);
+    let error=null;
+    try{await updateExercise(ex.id,{youtube_id:id??null});}catch(e){error=e;}
     setYtSaving(false);
     if(error){setYtMsg('Erreur: '+error.message);}
     else{setLocalYtId(id||'');setYtInput(id||'');setYtMsg(id?'Vidéo ajoutée !':'Vidéo supprimée');onRefresh();setTimeout(()=>setYtMsg(''),2500);}
@@ -227,8 +231,7 @@ function ExerciseBank({coachId,onAddToExos}){
   const[typeMenu,setTypeMenu]=useState(null);
   const quickSetType=async(ex,t)=>{
     setTypeMenu(null);
-    const{error}=await supabase.from('exercises').update({ex_type:t}).eq('id',ex.id);
-    if(error){alert('Erreur : '+error.message);return;}
+    try{await updateExercise(ex.id,{ex_type:t});}catch(error){alert('Erreur : '+error.message);return;}
     setExList(prev=>prev.map(e=>e.id===ex.id?{...e,ex_type:t}:e));
   };
   const TARGETS=['Pecs','Dos-GD','Dos-Trap','Dos-Rhom','Ep-Ant','Ep-Lat','Ep-Post','Quads','Ischios','Fessiers','Adducteurs','Triceps','Biceps','Core','Mollets'];
@@ -237,28 +240,15 @@ function ExerciseBank({coachId,onAddToExos}){
   useEffect(()=>{loadEx();},[search,fMuscles,fEquip,fDiff,fType,page]);
   const loadEx=async()=>{
     setLoading(true);
-    let q=supabase.from('exercises').select('*',{count:'exact'}).order('name').range(page*PAGE,(page+1)*PAGE-1);
-    if(search)q=q.ilike('name',`%${search}%`);
-    if(fMuscles.length>0){const orParts=fMuscles.flatMap(m=>[`target.eq.${m}`,`target_2.eq.${m}`,`secondary.cs.{${m}}`]);q=q.or(orParts.join(','));}
-    if(fEquip)q=q.eq('equipment',fEquip);
-    if(fDiff)q=q.eq('difficulty',fDiff);
-    if(fType)q=q.eq('ex_type',fType);
-    const{data,count}=await q;
-    setExList(data||[]);setTotal(count||0);setLoading(false);
+    try{
+      const{rows,total}=await getExerciseBankPage({search,muscles:fMuscles,equipment:fEquip,difficulty:fDiff,type:fType,page,pageSize:PAGE});
+      setExList(rows);setTotal(total);
+    }catch(e){console.error('ExerciseBank load error:',e);}
+    setLoading(false);
   };
-  const deleteEx=async(id)=>{const{error}=await supabase.from('exercises').delete().eq('id',id);if(error){alert('Erreur suppression : '+error.message);return;}setConfirmDel(null);setSel(null);loadEx();};
+  const deleteEx=async(id)=>{try{await deleteExercise(id);}catch(error){alert('Erreur suppression : '+error.message);return;}setConfirmDel(null);setSel(null);loadEx();};
   const mergeEx=async(keepId,delId)=>{
-    const keep=exList.find(e=>e.id===keepId)||sel;
-    const del=exList.find(e=>e.id===delId);
-    if(keep&&del){
-      const upd={};
-      if(!keep.youtube_id&&del.youtube_id)upd.youtube_id=del.youtube_id;
-      if(!keep.image_url&&del.image_url)upd.image_url=del.image_url;
-      if(!keep.instructions&&del.instructions)upd.instructions=del.instructions;
-      if(!keep.tips&&del.tips)upd.tips=del.tips;
-      if(Object.keys(upd).length)await supabase.from('exercises').update(upd).eq('id',keepId);
-    }
-    await supabase.from('exercises').delete().eq('id',delId);
+    try{await mergeExercises(keepId,delId);}catch(error){alert('Erreur fusion : '+error.message);return;}
     setShowMerge(false);setSel(null);loadEx();
   };
   const hasFilter=fMuscles.length>0||fEquip||fDiff||fType;

@@ -1,46 +1,19 @@
 import { useState } from "react";
-import { format, parseISO, differenceInWeeks, startOfISOWeek, endOfISOWeek, addWeeks, addDays } from "date-fns";
+import { format, parseISO, differenceInWeeks, addWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { X, Edit3, Check } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { invalidateCycles, updatePeriod } from "@/api/cycles";
+import { rechainMesosInMacro } from "../utils/rechain";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Macrocycle } from "../hooks/useTimelineData";
 import { useTestResults } from "../hooks/useTimelineData";
 import { snapMonday, snapSunday, computeCascade, chainNextStart, endFromWeeks } from "../utils/planningHelpers";
 import { DateQuickAdjust } from "../DateQuickAdjust";
-
-// ── Re-chain cycles inside a meso after its dates change ─────────────────────
-
-async function rechainCyclesInMeso(mesoId: string, newStart: string, newEnd: string) {
-  const { data: cycles } = await supabase
-    .from("cycles").select("id, start_date, end_date")
-    .eq("mesocycle_id", mesoId).order("start_date");
-  if (!cycles?.length) return;
-
-  let cursor = snapMonday(newStart);
-  for (const c of cycles) {
-    if (cursor > newEnd) break;
-    const weeks = Math.max(1, differenceInWeeks(parseISO(c.end_date), parseISO(c.start_date)) + 1);
-    let end = endFromWeeks(cursor, weeks);
-    if (end > newEnd) end = format(endOfISOWeek(parseISO(newEnd)), "yyyy-MM-dd");
-    await supabase.from("cycles").update({ start_date: cursor, end_date: end }).eq("id", c.id);
-    await supabase.from("microcycles").delete().eq("cycle_id", c.id);
-    const rows: Array<{ cycle_id: string; week_number: number; start_date: string; end_date: string; is_deload: boolean }> = [];
-    let wMon = startOfISOWeek(parseISO(cursor));
-    const ed = parseISO(end); let week = 1;
-    while (wMon <= ed) {
-      rows.push({ cycle_id: c.id, week_number: week, start_date: format(wMon, "yyyy-MM-dd"), end_date: format(endOfISOWeek(wMon), "yyyy-MM-dd"), is_deload: false });
-      wMon = addWeeks(wMon, 1); week++;
-    }
-    if (rows.length > 0) await supabase.from("microcycles").insert(rows);
-    cursor = chainNextStart(end);
-  }
-}
 
 // ── Recharts tooltip ──────────────────────────────────────────────────────────
 
@@ -144,52 +117,43 @@ export function MacrocycleDrawer({ macro, siblings, athleteId, rangeStart, range
   // ── save ──────────────────────────────────────────────────────────────────
 
   async function saveObjective() {
-    const { error } = await supabase.from("macrocycles").update({ objective }).eq("id", macro.id);
-    if (error) { toast.error("Erreur"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    try {
+      await updatePeriod("macrocycles", macro.id, { objective });
+    } catch {
+      toast.error("Erreur");
+      return;
+    }
+    void invalidateCycles(qc, athleteId);
     setEditingObj(false);
     toast.success("Objectif enregistré");
   }
 
-  async function rechainMesosInMacro(macroId: string, newStart: string, newEnd: string) {
-    const { data: mesos } = await supabase
-      .from("mesocycles").select("id, start_date, end_date")
-      .eq("macrocycle_id", macroId).order("start_date");
-    if (!mesos?.length) return;
-
-    let cursor = snapMonday(newStart);
-    for (const m of mesos) {
-      if (cursor > newEnd) break;
-      const weeks = Math.max(1, differenceInWeeks(parseISO(m.end_date), parseISO(m.start_date)) + 1);
-      let end = endFromWeeks(cursor, weeks);
-      if (end > newEnd) end = format(endOfISOWeek(parseISO(newEnd)), "yyyy-MM-dd");
-      await supabase.from("mesocycles").update({ start_date: cursor, end_date: end }).eq("id", m.id);
-      await rechainCyclesInMeso(m.id, cursor, end);
-      cursor = chainNextStart(end);
-    }
-  }
-
   async function doSaveDates(newStart: string, newEnd: string, cascade: boolean) {
     setSavingDates(true);
-    const { error } = await supabase
-      .from("macrocycles").update({ start_date: newStart, end_date: newEnd }).eq("id", macro.id);
-    if (error) { toast.error("Erreur"); setSavingDates(false); return; }
-
-    // Re-chain mesos (and their cycles) inside this macro
-    await rechainMesosInMacro(macro.id, newStart, newEnd);
-
-    if (cascade && cascadeModal) {
-      const updates = computeCascade(newEnd, cascadeModal.later);
-      for (const u of updates) {
-        await supabase.from("macrocycles")
-          .update({ start_date: u.start_date, end_date: u.end_date }).eq("id", u.id);
-        await rechainMesosInMacro(u.id, u.start_date, u.end_date);
-      }
+    try {
+      await updatePeriod("macrocycles", macro.id, { start_date: newStart, end_date: newEnd });
+    } catch {
+      toast.error("Erreur");
+      setSavingDates(false);
+      return;
     }
 
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    try {
+      // Re-chain mesos (and their cycles) inside this macro
+      await rechainMesosInMacro(macro.id, newStart, newEnd);
+
+      if (cascade && cascadeModal) {
+        const updates = computeCascade(newEnd, cascadeModal.later);
+        for (const u of updates) {
+          await updatePeriod("macrocycles", u.id, { start_date: u.start_date, end_date: u.end_date });
+          await rechainMesosInMacro(u.id, u.start_date, u.end_date);
+        }
+      }
+    } catch {
+      toast.error("Dates enregistrées, mais l'ajustement des cycles a échoué");
+    }
+
+    void invalidateCycles(qc, athleteId);
     setSavingDates(false);
     setCascadeModal(null);
     setEditingDates(false);

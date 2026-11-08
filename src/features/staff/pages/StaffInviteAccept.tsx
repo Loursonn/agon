@@ -141,7 +141,7 @@ export default function StaffInviteAccept() {
           {busy ? "Validation…" : "Accepter l'invitation"}
         </button>
         <button
-          onClick={() => logout()}
+          onClick={() => logout(window.location.pathname + window.location.search)}
           style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
         >
           Ce n'est pas moi — changer de compte

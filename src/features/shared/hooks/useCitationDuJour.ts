@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getCitationState, setCitationLiked, subscribeCitationLikes } from "@/api/appContent";
 import { useAuth } from "@/hooks/useAuth";
 import { citationDuJour } from "@/data/citations";
 import { toast } from "sonner";
@@ -31,49 +31,26 @@ export function useCitationDuJour() {
     if (!user) return;
     let cancelled = false;
 
-    (async () => {
-      const [likeRes, statsRes] = await Promise.all([
-        supabase
-          .from("citation_likes")
-          .select("quote_id")
-          .eq("user_id", user.id)
-          .eq("quote_id", quoteId)
-          .maybeSingle(),
-        supabase
-          .from("citation_stats")
-          .select("likes")
-          .eq("quote_id", quoteId)
-          .maybeSingle(),
-      ]);
-      if (cancelled) return;
-      setLiked(!!likeRes.data);
-      setCount(statsRes.data?.likes ?? 0);
-    })();
+    getCitationState(user.id, quoteId).then(
+      (st) => {
+        if (cancelled) return;
+        setLiked(st.liked);
+        setCount(st.count);
+      },
+      // Lecture ratée : affichage neutre (pas de like, compteur 0), comme avant.
+      (e) => {
+        console.warn("[citation] lecture des likes impossible", e);
+        if (cancelled) return;
+        setLiked(false);
+        setCount(0);
+      },
+    );
 
     return () => { cancelled = true; };
   }, [user, quoteId]);
 
   // Realtime on citation_stats
-  useEffect(() => {
-    const channel = supabase
-      .channel(`citation-stats-${quoteId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "citation_stats",
-          filter: `quote_id=eq.${quoteId}`,
-        },
-        (payload) => {
-          const newLikes = (payload.new as { likes?: number })?.likes;
-          if (typeof newLikes === "number") setCount(newLikes);
-        },
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [quoteId]);
+  useEffect(() => subscribeCitationLikes(quoteId, setCount), [quoteId]);
 
   const toggle = useCallback(async () => {
     if (!user || busy.current) return;
@@ -87,19 +64,7 @@ export function useCitationDuJour() {
     setCount(Math.max(0, prevCount + (wasLiked ? -1 : 1)));
 
     try {
-      if (wasLiked) {
-        const { error } = await supabase
-          .from("citation_likes")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("quote_id", quoteId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("citation_likes")
-          .insert({ user_id: user.id, quote_id: quoteId });
-        if (error) throw error;
-      }
+      await setCitationLiked(user.id, quoteId, !wasLiked);
     } catch {
       setLiked(wasLiked);
       setCount(prevCount);

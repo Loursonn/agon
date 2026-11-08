@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { formatReps, hasIso } from "@/lib/formatSetsReps";
-import { supabase } from "@/integrations/supabase/client";
+import { readAppDataKeys } from "@/api/appData";
+import { listWorkoutLogs } from "@/api/workouts";
+import { listEnergyAssignments } from "@/api/energy";
+import { listTestSessionsWithResults } from "@/api/tests";
+import { listCompetitionsBetween } from "@/api/competitions";
+import { listExerciseComments } from "@/api/coachRetours";
+import { getExerciseNames } from "@/api/exercises";
 import { QK } from "@/lib/queryKeys";
 import type { VideoRequestStatus,
   WeeklyRetourData, WeekComparisonData,
@@ -16,8 +22,8 @@ import { averageWellness, dailyWellness, retoursWellnessHistory } from "@/lib/re
 import { wellnessScore } from "@shared/domain/wellness";
 import { getDays as getNutritionDays, getStrategy as getNutritionStrategy } from "@/api/nutrition";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function useWeeklyRetours(athleteId: string, weekStartDate: Date) {
   return useQuery({
@@ -29,16 +35,9 @@ export function useWeeklyRetours(athleteId: string, weekStartDate: Date) {
       const prevEnd   = endOfWeek(subWeeks(weekStartDate, 1),   { weekStartsOn: 1 });
 
       // Load app_data once (shared between current + previous week)
-      const { data: appDataRows } = await db
-        .from("app_data")
-        .select("key, value")
-        .eq("athlete_id", athleteId)
-        .in("key", ["asp:wh", "asp:sets", "asp:exos", "asp:blockConfig", "asp:sessionlogs", "asp:blockHistory", "asp:freesess", "asp:prog"]);
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const appDataMap: Record<string, any> = Object.fromEntries(
-        (appDataRows ?? []).map((r: { key: string; value: unknown }) => [r.key, r.value])
-      );
+      const appDataMap: Record<string, any> = await readAppDataKeys(athleteId,
+        ["asp:wh", "asp:sets", "asp:exos", "asp:blockConfig", "asp:sessionlogs", "asp:blockHistory", "asp:freesess", "asp:prog"]);
 
       const [currentWeek, previousWeek] = await Promise.all([
         fetchWeekData(athleteId, curStart, curEnd, appDataMap),
@@ -117,40 +116,17 @@ async function fetchWeekData(
   const mergedWH = retoursWellnessHistory(appDataMap["asp:wh"], blockHistory);
 
   // ── Parallel DB queries ──────────────────────────────────────────────────────
-  const [workoutsRes, energyRes, testsRes, compsRes, nutritionLogs, nutritionStrategy] = await Promise.all([
-    db.from("workout_logs")
-      .select("id, session_id, session_name, scheduled_date, status, duration_s, notes, rpe_score, athlete_modifications, week_number")
-      .eq("athlete_id", athleteId)
-      .not("status", "eq", "skipped")
-      .gte("scheduled_date", start)
-      .lte("scheduled_date", end)
-      .order("scheduled_date"),
-
-    db.from("energy_session_assignments")
-      .select("id, scheduled_date, status, notes, rpe_score, block_logs, actual_duration_min, activity_url, energy_sessions(id, name, session_kind, total_duration_s, total_distance_m, intervals)")
-      .eq("athlete_id", athleteId)
-      .gte("scheduled_date", start)
-      .lte("scheduled_date", end),
-
-    db.from("test_sessions")
-      .select("id, title, type, date, completed, results_note, results_structured")
-      .eq("athlete_id", athleteId)
-      .gte("date", start)
-      .lte("date", end),
-
-    db.from("competitions")
-      .select("id, name, type, date, location, athlete_comment, priority")
-      .eq("athlete_id", athleteId)
-      .gte("date", start)
-      .lte("date", end),
+  const [workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy] = await Promise.all([
+    listWorkoutLogs({ athleteIds: [athleteId], from: start, to: end, excludeStatuses: ["skipped"] }),
+    listEnergyAssignments({ athleteIds: [athleteId], from: start, to: end, join: "summary" }),
+    listTestSessionsWithResults(athleteId, start, end),
+    listCompetitionsBetween(athleteId, start, end),
 
     // Nutrition : `app_data` via la couche API (les tables `nutrition_*` n'existent pas).
     getNutritionDays(athleteId, start, end),
     getNutritionStrategy(athleteId),
   ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workoutList: any[] = workoutsRes.data ?? [];
   const workoutIds = workoutList.map((w) => w.id as string);
 
   // Occurrence de chaque séance (1re, 2e… fois planifiée) → params prévus
@@ -159,12 +135,10 @@ async function fetchWeekData(
   ).catch(() => new Map<string, number>());
 
   // Exercise comments
-  const { data: comments = [] } = workoutIds.length > 0
-    ? await db
-        .from("workout_exercise_comments")
-        .select("id, workout_log_id, exercise_id, exercise_name, comment, created_at, updated_at")
-        .in("workout_log_id", workoutIds)
-    : { data: [] as unknown[] };
+  const comments = await listExerciseComments(workoutIds).catch((e) => {
+    console.warn("[retours] commentaires non chargés", e);
+    return [];
+  });
 
   const avgWellness = averageWellness(mergedWH, start, end);
 
@@ -195,12 +169,14 @@ async function fetchWeekData(
     }
   }
   // Single DB query for all unknown exercise IDs
-  if (allUnknownIds.size > 0) {
-    const { data: exRows } = await db
-      .from("exercises")
-      .select("id, name")
-      .in("id", [...allUnknownIds]);
-    for (const row of exRows ?? []) globalExNameMap.set(row.id, row.name);
+  // Noms de la banque (non bloquant ; les ids d'exercices perso ne sont pas des uuid).
+  const bankIds = [...allUnknownIds].filter((id) => UUID_RE.test(id));
+  if (bankIds.length > 0) {
+    const names = await getExerciseNames(bankIds).catch((e) => {
+      console.warn("[retours] noms d'exercices non chargés", e);
+      return new Map<string, string>();
+    });
+    for (const [id, name] of names) globalExNameMap.set(id, name);
   }
 
   // ── Build enriched workouts ──────────────────────────────────────────────────
@@ -334,7 +310,7 @@ async function fetchWeekData(
 
   // ── Energy sessions ──────────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const energySessions: EnergySessionDetail[] = (energyRes.data ?? []).map((e: any) => {
+  const energySessions: EnergySessionDetail[] = energyRows.map((e: any) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const es = (e.energy_sessions as any) ?? {};
     let note: string | null = null;
@@ -393,7 +369,7 @@ async function fetchWeekData(
     workouts:       enrichedWorkouts,
     energy_sessions: energySessions,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    test_sessions: (testsRes.data ?? []).map((t: any) => ({
+    test_sessions: testRows.map((t: any) => ({
       id:                  t.id,
       title:               t.title,
       type:                t.type,
@@ -404,7 +380,7 @@ async function fetchWeekData(
       coach_validated:     t.coach_validated      ?? null,
     })),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    competitions: (compsRes.data ?? []).map((c: any) => ({
+    competitions: compRows.map((c: any) => ({
       id:              c.id,
       name:            c.name,
       type:            c.type,

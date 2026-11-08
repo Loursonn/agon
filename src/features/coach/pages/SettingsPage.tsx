@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { useSaveBookingUrl } from "@/features/shared/hooks/useCoachBooking";
 import { C } from "@/lib/theme";
 import { toast } from "sonner";
 import { bookingUrlError, normalizeBookingUrl } from "@/lib/booking";
@@ -8,7 +8,8 @@ import { PrivacySection } from "@/features/shared/components/PrivacySection";
 import { CoachApiKeysSection } from "@/features/coach/components/CoachApiKeysSection";
 
 export default function SettingsPage() {
-  const { profile } = useAuth();
+  const { profile, logout } = useAuth();
+  const saveBooking = useSaveBookingUrl();
   const [showLogout, setShowLogout] = useState(false);
   const [bookingUrl, setBookingUrl] = useState("");
   // Référence locale de ce qui est en base : le contexte useAuth ne se recharge
@@ -27,8 +28,7 @@ export default function SettingsPage() {
   const bookingDirty = bookingUrl.trim() !== savedBookingUrl;
 
   async function handleLogout() {
-    await supabase.auth.signOut({ scope: "local" });
-    window.location.href = "/login";
+    await logout();
   }
 
   async function handleCopyCode() {
@@ -45,15 +45,13 @@ export default function SettingsPage() {
     if (bookingUrl.trim() !== "" && !value) return;
 
     setSavingBooking(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ booking_url: value })
-      .eq("id", profile.id);
-    setSavingBooking(false);
-
-    if (error) {
+    try {
+      await saveBooking.mutateAsync({ coachId: profile.id, url: value });
+    } catch {
       toast.error("Échec de l'enregistrement");
       return;
+    } finally {
+      setSavingBooking(false);
     }
     setBookingUrl(value ?? "");
     setSavedBookingUrl(value ?? "");

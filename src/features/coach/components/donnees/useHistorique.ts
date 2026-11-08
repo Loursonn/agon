@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { invalidateWorkouts, listWorkoutLogs, removeWorkout } from "@/api/workouts";
+import { cycleKeys, getCycleTree } from "@/api/cycles";
+import { getProgram } from "@/api/program";
+import { readAppData, writeAppData } from "@/api/appData";
 import type { Macrocycle, Mesocycle, Cycle } from "@/features/coach/components/planning/hooks/useTimelineData";
 import type { ProgSession } from "@/features/coach/components/programmation/types";
 import { stripForeignPersonalFiches } from "@/features/shared/hooks/fiches/syncDocAssignments";
@@ -27,35 +29,17 @@ export interface HistoriqueData {
 
 export function useHistorique(athleteId: string) {
   return useQuery({
-    queryKey: ["historique", athleteId],
+    queryKey: cycleKeys.history(athleteId),
     enabled: !!athleteId,
     staleTime: 30_000,
     queryFn: async (): Promise<HistoriqueData> => {
-      const [macroRes, logs] = await Promise.all([
-        supabase.from("macrocycles").select("*").eq("athlete_id", athleteId).order("start_date", { ascending: false }),
+      const [tree, logs] = await Promise.all([
+        getCycleTree(athleteId, { withMicrocycles: false }),
         listWorkoutLogs({ athleteIds: [athleteId], withMods: false }),
       ]);
-
-      const macros = (macroRes.data ?? []) as Macrocycle[];
-      const macroIds = macros.map((m) => m.id);
-
-      let mesos: Mesocycle[] = [];
-      if (macroIds.length > 0) {
-        const mesoRes = await supabase.from("mesocycles").select("*").in("macrocycle_id", macroIds).order("start_date");
-        mesos = (mesoRes.data ?? []) as Mesocycle[];
-      }
-      const mesoIds = mesos.map((m) => m.id);
-
-      let cycles: Cycle[] = [];
-      if (mesoIds.length > 0) {
-        const cycleRes = await supabase.from("cycles").select("*").in("mesocycle_id", mesoIds).order("start_date");
-        cycles = (cycleRes.data ?? []) as Cycle[];
-      }
-
-      // Cycles standalone (sans méso parent)
-      const saRes = await supabase.from("cycles").select("*")
-        .eq("athlete_id", athleteId).is("mesocycle_id", null).order("start_date");
-      cycles = [...cycles, ...((saRes.data ?? []) as Cycle[])];
+      // Macrocycles du plus récent au plus ancien ; mésos et cycles par date.
+      const macros = [...tree.macrocycles].reverse();
+      const { mesocycles: mesos, cycles } = tree;
 
       return {
         macros, mesos, cycles,
@@ -112,29 +96,17 @@ export function useCopySessionAsType() {
       targetAthleteId: string;
     }) => {
       // 1. Squelette d'origine dans la programmation de l'athlète source
-      const { data, error } = await supabase
-        .from("app_data").select("value")
-        .eq("athlete_id", sourceAthleteId).eq("key", "asp:prog")
-        .maybeSingle();
-      if (error) throw error;
-      const sessions = (data?.value ?? []) as ProgSession[];
+      const sessions = await getProgram(sourceAthleteId);
       const src = sessions.find((s) => s.id === sessionId);
       if (!src) throw new Error("Séance introuvable dans la programmation (supprimée ?)");
 
       // 2. Ajout aux Séances Type de la cible
-      const { data: t, error: tErr } = await supabase
-        .from("app_data").select("value")
-        .eq("athlete_id", targetAthleteId).eq("key", "asp:seances-type")
-        .maybeSingle();
-      if (tErr) throw tErr;
-      const existing = (t?.value ?? []) as ProgSession[];
+      const t = await readAppData<ProgSession[]>(targetAthleteId, "asp:seances-type");
+      const existing = Array.isArray(t.value) ? t.value : [];
       const { session: clean, removed } = await stripForeignPersonalFiches(cloneSession(src), targetAthleteId);
       const next = [...existing, clean];
 
-      const { error: upErr } = await supabase
-        .from("app_data")
-        .upsert({ athlete_id: targetAthleteId, key: "asp:seances-type", value: next as unknown as Record<string, unknown>[] });
-      if (upErr) throw upErr;
+      await writeAppData(targetAthleteId, "asp:seances-type", next);
       return { removed };
     },
     onSuccess: ({ removed }, vars) => {

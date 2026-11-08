@@ -1,0 +1,387 @@
+import type { QueryClient } from "@tanstack/react-query";
+import { ApiError, db, unwrapRows } from "./client";
+
+/**
+ * Montres connectées et activités importées : tables BRUTES
+ * `provider_connections` / `provider_activities` (lues avec les droits de
+ * l'utilisateur ; la RLS décide ce que voit le coach : `coach_visible`,
+ * consentement de l'athlète). Les vues `ai_provider_*` sont réservées à l'IA
+ * (filtre `ai_allowed`, Garmin exclu) : elles ne sont jamais lues ici.
+ *
+ * Tout ce qui est sensible (PKCE, `client_id`, jetons) reste côté serveur :
+ * ce module ne fait que demander une URL d'autorisation, une synchro ou une
+ * déconnexion aux Edge Functions.
+ */
+
+// ── Clés React Query ──────────────────────────────────────────────────────────
+
+export const providerKeys = {
+  all: (aid: string) => ["providers", aid] as const,
+  connections: (aid: string) => ["providers", aid, "connections"] as const,
+  activities: (aid: string, limit: number) => ["providers", aid, "activities", limit] as const,
+  /** Sorties de montre lues pour le volume de course. */
+  runs: (aid: string, from: string) => ["providers", aid, "runs", from] as const,
+  /**
+   * Km saisis à la main (séances énergie, muscu). Ancienne valeur gardée :
+   * `invalidateWorkouts` et `useEnergyAssignments` invalident `['runningVolume', aid]`.
+   */
+  manualRuns: (aid: string, from: string) => ["runningVolume", aid, from] as const,
+};
+
+/** Après un import, une synchro, une déconnexion : connexions, sorties, volume de course montre. */
+export function invalidateProviders(qc: QueryClient, athleteId: string): Promise<void> {
+  return qc.invalidateQueries({ queryKey: providerKeys.all(athleteId) });
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type ProviderName = "garmin" | "coros";
+
+/**
+ * États d'une connexion, à l'identique de l'énumération `provider_status`.
+ * `needs_reauth` (refus du fournisseur) ≠ `consent_withdrawn` (décision de
+ * l'athlète) : ne pas les confondre à l'affichage.
+ */
+export type ProviderStatus = "active" | "needs_reauth" | "consent_withdrawn" | "revoked";
+
+export interface ProviderConnection {
+  id: string;
+  provider: ProviderName;
+  status: ProviderStatus;
+  grantedScopes: string[];
+  connectedAt: string;
+  lastSyncAt: string | null;
+  syncedThrough: string | null;
+  lastError: string | null;
+}
+
+export interface ProviderActivity {
+  id: string;
+  source: string;
+  startedAt: string;
+  localDate: string;
+  sport: string | null;
+  durationS: number | null;
+  distanceM: number | null;
+  elevationGainM: number | null;
+  avgHr: number | null;
+  maxHr: number | null;
+  avgPaceSPerKm: number | null;
+  calories: number | null;
+  /** Modèle de l'appareil (« Forerunner 265 »), pour l'attribution « Garmin [modèle] ». */
+  deviceName: string | null;
+  details: Record<string, unknown> | null;
+}
+
+/** Sortie de montre réduite à ce que le volume de course utilise. */
+export interface WatchRun {
+  id: string;
+  source: string;
+  localDate: string;
+  startedAt: string;
+  sport: string | null;
+  distanceM: number | null;
+  durationS: number | null;
+  deviceName: string | null;
+}
+
+/**
+ * `numeric` de PostgreSQL arrive en chaîne (PostgREST garde la précision) :
+ * sans conversion, `distanceM / 1000` rend `NaN` et la distance s'affiche « — ».
+ */
+export const num = (v: unknown): number | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+// ── Connexions ────────────────────────────────────────────────────────────────
+
+/** Connexions d'un athlète (`api_host` non lu : détail d'implémentation). Lève si la lecture échoue. */
+export async function getConnections(athleteId: string): Promise<ProviderConnection[]> {
+  const rows = unwrapRows(
+    await db().from("provider_connections")
+      .select("id, provider, status, granted_scopes, connected_at, last_sync_at, synced_through, last_error")
+      .eq("athlete_id", athleteId),
+    "Lecture des montres connectées impossible",
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    provider: r.provider as ProviderName,
+    status: r.status as ProviderStatus,
+    grantedScopes: r.granted_scopes ?? [],
+    connectedAt: r.connected_at,
+    lastSyncAt: r.last_sync_at,
+    syncedThrough: r.synced_through,
+    lastError: r.last_error,
+  }));
+}
+
+/** Erreur renvoyée par une fonction de connexion, avec son code serveur. */
+export class ConnectError extends Error {
+  constructor(message: string, readonly code: string | null) {
+    super(message);
+  }
+}
+
+type FnError = { message: string; context?: unknown };
+type Invoke = <T>(fn: string, opts: { body: unknown }) => Promise<{ data: T | null; error: FnError | null }>;
+const invoke: Invoke = (fn, opts) => db().functions.invoke(fn, opts) as never;
+
+/**
+ * Corps JSON d'une erreur d'Edge Function : `invoke` ne rend qu'un message
+ * générique (« non-2xx status code »), le code (`garmin_indisponible`,
+ * `consentement_absent`…) est dans la réponse.
+ */
+export async function connectError(error: FnError): Promise<ConnectError> {
+  const ctx = error.context as { json?: () => Promise<unknown> } | undefined;
+  try {
+    const body = (await ctx?.json?.()) as { error?: unknown; message?: unknown } | undefined;
+    if (body && typeof body === "object") {
+      return new ConnectError(
+        typeof body.message === "string" ? body.message : error.message,
+        typeof body.error === "string" ? body.error : null,
+      );
+    }
+  } catch {
+    /* corps illisible : message générique */
+  }
+  return new ConnectError(error.message, null);
+}
+
+/** URL d'autorisation COROS (le navigateur y part en redirection complète). */
+export async function startCorosAuthorization(region: string): Promise<string> {
+  const { data, error } = await invoke<{ authorizeUrl?: string }>("provider-coros-connect", { body: { region } });
+  if (error) throw new Error(error.message);
+  if (!data?.authorizeUrl) throw new Error("URL d'autorisation absente");
+  return data.authorizeUrl;
+}
+
+/** URL d'autorisation Garmin (OAuth 2.0 PKCE) ; lève une `ConnectError` avec le code serveur. */
+export async function startGarminAuthorization(): Promise<string> {
+  const { data, error } = await invoke<{ authorizeUrl?: string }>("provider-garmin-connect", { body: {} });
+  if (error) throw await connectError(error);
+  if (!data?.authorizeUrl) throw new ConnectError("URL d'autorisation absente", null);
+  return data.authorizeUrl;
+}
+
+export interface SyncReport {
+  athleteId: string;
+  imported: number;
+  duplicates: number;
+  rejected: Array<{ name: string; reason: string }>;
+  dailies: number;
+  syncedThrough: string | null;
+  error?: string;
+}
+
+/** Synchro COROS immédiate (budget de fichiers plus étroit que le cron, appliqué par le serveur). */
+export async function syncCoros(): Promise<SyncReport | undefined> {
+  const { data, error } = await invoke<{ reports?: SyncReport[] }>("provider-coros-sync", { body: {} });
+  if (error) throw new Error(error.message);
+  return data?.reports?.[0];
+}
+
+export interface DisconnectResult {
+  success: boolean;
+  /** Vrai si le fournisseur a confirmé la révocation de son côté. */
+  revoked?: boolean;
+  warnings?: string[];
+  /** Ce qui a été supprimé chez nous (activités, journées, connexion). */
+  deleted?: { activities: number; dailies: number; inbox: number; connection: number };
+}
+
+/**
+ * Déconnecte un service pour l'utilisateur du jeton de session. Supprime les
+ * activités et journées importées PAR CE FOURNISSEUR (décision du 07/11/2026) ;
+ * les imports manuels restent.
+ */
+export async function disconnectProvider(provider: ProviderName): Promise<DisconnectResult> {
+  const { data, error } = await invoke<DisconnectResult>("provider-disconnect", { body: { provider } });
+  if (error) throw new Error(error.message);
+  if (!data?.success) throw new Error("La déconnexion n'a pas abouti");
+  return data;
+}
+
+// ── Activités ─────────────────────────────────────────────────────────────────
+
+/** Nombre de sorties remontées par défaut. */
+export const DEFAULT_ACTIVITY_LIMIT = 60;
+
+/**
+ * Sorties d'un athlète, plus récentes d'abord (`started_at` en second : deux
+ * sorties le même jour gardent leur ordre). Même requête pour l'athlète et son
+ * coach ; un coach peut en voir moins (RLS), sans erreur — c'est voulu.
+ */
+export async function getActivities(athleteId: string, limit = DEFAULT_ACTIVITY_LIMIT): Promise<ProviderActivity[]> {
+  const rows = unwrapRows(
+    await db().from("provider_activities")
+      .select("id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details")
+      .eq("athlete_id", athleteId)
+      .order("local_date", { ascending: false })
+      .order("started_at", { ascending: false })
+      .limit(limit),
+    "Lecture des activités impossible",
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    source: r.source,
+    startedAt: r.started_at,
+    localDate: r.local_date,
+    sport: r.sport,
+    durationS: r.duration_s,
+    distanceM: num(r.distance_m),
+    elevationGainM: num(r.elevation_gain_m),
+    avgHr: r.avg_hr,
+    maxHr: r.max_hr,
+    avgPaceSPerKm: num(r.avg_pace_s_per_km),
+    calories: r.calories,
+    deviceName: r.device_name ?? null,
+    details: (r.details as Record<string, unknown> | null) ?? null,
+  }));
+}
+
+/** Sorties depuis `from` (jour ISO), dans l'ordre chronologique, pour le volume de course. */
+export async function getWatchRuns(athleteId: string, from: string): Promise<WatchRun[]> {
+  const rows = unwrapRows(
+    await db().from("provider_activities")
+      .select("id, source, started_at, local_date, sport, distance_m, duration_s, device_name")
+      .eq("athlete_id", athleteId)
+      .gte("local_date", from)
+      .order("started_at", { ascending: true })
+      .limit(2000),
+    "Lecture des sorties impossible",
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    source: r.source,
+    localDate: r.local_date,
+    startedAt: r.started_at,
+    sport: r.sport,
+    distanceM: num(r.distance_m),
+    durationS: num(r.duration_s),
+    deviceName: r.device_name ?? null,
+  }));
+}
+
+export interface ManualRunSources {
+  /** Séances énergie / spécifiques prévues ou validées. */
+  planned: Array<{
+    id: string;
+    date: string;
+    status: string | null;
+    activityType: string | null;
+    sessionKind: string | null;
+    label: string;
+    plannedDistanceM: number | null;
+    plannedDurationS: number | null;
+    manualKm: number | null;
+    manualDurationMin: number | null;
+  }>;
+  /** Km courus saisis dans une séance de muscu. */
+  strength: Array<{ date: string; km: number }>;
+}
+
+interface AssignmentRow {
+  id: string;
+  scheduled_date: string;
+  status: string | null;
+  activity_type: string | null;
+  distance_km: number | string | null;
+  actual_duration_min: number | null;
+  energy_sessions: {
+    name: string | null;
+    session_kind: string | null;
+    total_distance_m: number | string | null;
+    total_duration_s: number | null;
+  } | null;
+}
+
+/**
+ * Km saisis à la main depuis `from` : séances énergie (prévues et validées) et
+ * distance courue en séance de muscu. Lus ici parce que seul le volume de
+ * course les combine aux sorties de montre (`buildRunLedger`).
+ */
+export async function getManualRunSources(athleteId: string, from: string): Promise<ManualRunSources> {
+  const [energy, workouts] = await Promise.all([
+    db().from("energy_session_assignments")
+      .select("id, scheduled_date, status, activity_type, distance_km, actual_duration_min, energy_sessions(name, session_kind, total_distance_m, total_duration_s)")
+      .eq("athlete_id", athleteId)
+      .gte("scheduled_date", from),
+    db().from("workout_logs")
+      .select("scheduled_date, run_distance_km")
+      .eq("athlete_id", athleteId)
+      .not("run_distance_km", "is", null)
+      .gte("scheduled_date", from),
+  ]);
+  const planned = unwrapRows(energy, "Lecture des séances énergie impossible") as unknown as AssignmentRow[];
+  const strength = unwrapRows(workouts, "Lecture des séances impossible") as unknown as { scheduled_date: string; run_distance_km: number | string }[];
+  return {
+    planned: planned.map((r) => ({
+      id: r.id,
+      date: r.scheduled_date,
+      status: r.status,
+      activityType: r.activity_type,
+      sessionKind: r.energy_sessions?.session_kind ?? null,
+      label: r.energy_sessions?.name ?? "Séance énergie",
+      plannedDistanceM: num(r.energy_sessions?.total_distance_m),
+      plannedDurationS: num(r.energy_sessions?.total_duration_s),
+      manualKm: num(r.distance_km),
+      manualDurationMin: num(r.actual_duration_min),
+    })),
+    strength: strength.map((r) => ({ date: r.scheduled_date, km: num(r.run_distance_km) ?? 0 })),
+  };
+}
+
+// ── Import de fichiers ────────────────────────────────────────────────────────
+
+export interface KnownActivities {
+  /** `external_id` déjà en base. */
+  ids: Set<string>;
+  starts: Array<{ ms: number; sport: string | null }>;
+}
+
+const KNOWN_PAGE = 1000;
+
+/**
+ * Activités déjà en base entre deux jours inclus, pour dédoublonner un import.
+ * Paginé : PostgREST plafonne une réponse à 1000 lignes ; sans pagination, les
+ * lignes au-delà seraient réimportées en double.
+ */
+export async function getKnownActivities(athleteId: string, fromDate: string, toDate: string): Promise<KnownActivities> {
+  const ids = new Set<string>();
+  const starts: KnownActivities["starts"] = [];
+  for (let page = 0; ; page++) {
+    const rows = unwrapRows(
+      await db().from("provider_activities")
+        .select("external_id, started_at, sport")
+        .eq("athlete_id", athleteId)
+        .gte("local_date", fromDate)
+        .lte("local_date", toDate)
+        // Ordre stable, sans quoi deux pages peuvent se recouvrir ou se sauter.
+        .order("started_at", { ascending: true })
+        .range(page * KNOWN_PAGE, page * KNOWN_PAGE + KNOWN_PAGE - 1),
+      "Lecture de l'historique impossible",
+    );
+    for (const r of rows) {
+      ids.add(r.external_id);
+      starts.push({ ms: Date.parse(r.started_at), sport: r.sport });
+    }
+    if (rows.length < KNOWN_PAGE) break;
+  }
+  return { ids, starts };
+}
+
+/**
+ * Insère des activités décodées ; renvoie le nombre de lignes réellement
+ * ajoutées. `ignoreDuplicates` : deux onglets ou un dépôt relancé ne font pas
+ * échouer le lot, les doublons sont simplement écartés.
+ */
+export async function insertActivities(rows: Record<string, unknown>[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const res = await db().from("provider_activities")
+    .upsert(rows as never, { onConflict: "athlete_id,source,external_id", ignoreDuplicates: true })
+    .select("id");
+  if (res.error) throw new ApiError("Insertion des activités impossible", res.error);
+  return (res.data ?? []).length;
+}

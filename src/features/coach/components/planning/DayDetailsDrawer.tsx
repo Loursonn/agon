@@ -8,7 +8,6 @@ import { C } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { competitionDayLabel, type Competition } from "@/types/planning";
 import type { WellnessData, AthleteModifications } from "@/features/shared/types/athlete";

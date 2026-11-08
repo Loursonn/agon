@@ -2,7 +2,7 @@ import { useState, useRef, useLayoutEffect, useCallback } from "react";
 import { startOfMonth, addMonths, subMonths, format, parseISO, startOfISOWeek, endOfISOWeek, addWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, X, Plus, Eye, Pencil, Trash2, Check, ChevronDown } from "lucide-react";
-import { snapMonday, snapSunday, keepWeeks, chainNextStart, endFromWeeks, computeCascade, buildMicrocycles } from "./utils/planningHelpers";
+import { snapMonday, snapSunday, keepWeeks, chainNextStart, endFromWeeks, computeCascade } from "./utils/planningHelpers";
 import { PERIOD_DEFAULTS } from "@/types/planning";
 import { PeriodConflictDialog } from "./dialogs/PeriodConflictDialog";
 import { ChildOverflowDialog } from "./dialogs/ChildOverflowDialog";
@@ -10,7 +10,10 @@ import { ChangeParentDialog } from "./dialogs/ChangeParentDialog";
 import { usePlanningKeyboardShortcuts } from "./hooks/usePlanningKeyboardShortcuts";
 import { C } from "@/lib/theme";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  createCycle, createMacrocycle, createMesocycle, createMicrocycle, cycleKeys, deleteCycle, deletePeriod,
+  invalidateCycles, setCycleDates, updatePeriod, type PeriodLevel,
+} from "@/api/cycles";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeleteCompetition } from "@/hooks/useCompetitions";
@@ -83,7 +86,7 @@ function DrawerShell({
   const canRename = state.type !== "competition" && state.type !== "microcycle";
   const canDelete = state.type !== "competition";
 
-  const TABLE_MAP: Partial<Record<DrawerType, string>> = {
+  const TABLE_MAP: Partial<Record<DrawerType, PeriodLevel>> = {
     macrocycle: "macrocycles",
     mesocycle:  "mesocycles",
     cycle:      "cycles",
@@ -95,10 +98,15 @@ function DrawerShell({
     setWorking(true);
     const table = TABLE_MAP[state.type];
     if (!table) { setWorking(false); return; }
-    const { error } = await supabase.from(table as never).update({ name: renameDraft.trim() }).eq("id", state.id);
+    try {
+      await updatePeriod(table, state.id, { name: renameDraft.trim() });
+    } catch {
+      setWorking(false);
+      toast.error("Erreur lors du renommage");
+      return;
+    }
     setWorking(false);
-    if (error) { toast.error("Erreur lors du renommage"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
+    void invalidateCycles(qc, athleteId);
     toast.success("Renommé");
     setRenaming(false);
   }
@@ -106,34 +114,13 @@ function DrawerShell({
   async function handleDelete() {
     setWorking(true);
     try {
-      if (state.type === "macrocycle") {
-        const mesoIds = data.mesocycles.filter((m) => m.macrocycle_id === state.id).map((m) => m.id);
-        const cycleIds = data.cycles.filter((c) => mesoIds.includes(c.mesocycle_id)).map((c) => c.id);
-        if (cycleIds.length > 0) {
-          await supabase.from("microcycles").delete().in("cycle_id", cycleIds);
-          await supabase.from("cycles").delete().in("id", cycleIds);
-        }
-        if (mesoIds.length > 0) await supabase.from("mesocycles").delete().in("id", mesoIds);
-        const { error } = await supabase.from("macrocycles").delete().eq("id", state.id);
-        if (error) throw error;
-      } else if (state.type === "mesocycle") {
-        const cycleIds = data.cycles.filter((c) => c.mesocycle_id === state.id).map((c) => c.id);
-        if (cycleIds.length > 0) {
-          await supabase.from("microcycles").delete().in("cycle_id", cycleIds);
-          await supabase.from("cycles").delete().in("id", cycleIds);
-        }
-        const { error } = await supabase.from("mesocycles").delete().eq("id", state.id);
-        if (error) throw error;
-      } else if (state.type === "cycle") {
-        await supabase.from("microcycles").delete().eq("cycle_id", state.id);
-        const { error } = await supabase.from("cycles").delete().eq("id", state.id);
-        if (error) throw error;
-      } else if (state.type === "microcycle") {
-        const { error } = await supabase.from("microcycles").delete().eq("id", state.id);
-        if (error) throw error;
-      }
-      qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-      qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+      // Les niveaux inférieurs suivent (clés étrangères en cascade) ; les
+      // séances restent, détachées de leurs semaines.
+      if (state.type === "macrocycle") await deletePeriod("macrocycles", state.id);
+      else if (state.type === "mesocycle") await deletePeriod("mesocycles", state.id);
+      else if (state.type === "cycle") await deleteCycle(state.id);
+      else if (state.type === "microcycle") await deletePeriod("microcycles", state.id);
+      void invalidateCycles(qc, athleteId);
       toast.success("Supprimé");
       onClose();
     } catch {
@@ -518,50 +505,29 @@ function CreateModal({
     }
 
     setSaving(true);
-    let error: unknown = null;
-    switch (state.level) {
-      case "macrocycle":
-        ({ error } = await supabase.from("macrocycles").insert({
-          athlete_id: athleteId, coach_id: coachId,
-          name: name.trim(), start_date: sDate, end_date: eDate,
-        }));
-        break;
-      case "mesocycle":
-        ({ error } = await supabase.from("mesocycles").insert({
-          macrocycle_id: selectedParentId, name: name.trim(),
-          start_date: sDate, end_date: eDate,
-        }));
-        break;
-      case "cycle": {
-        const { data: newCycle, error: cycleErr } = await supabase
-          .from("cycles")
-          .insert({
-            mesocycle_id: selectedParentId, athlete_id: athleteId, coach_id: coachId,
-            name: name.trim(), start_date: sDate, end_date: eDate,
-          })
-          .select("id")
-          .single();
-        error = cycleErr;
-        if (!cycleErr && newCycle) {
-          const micros = buildMicrocycles(newCycle.id, sDate, eDate);
-          if (micros.length > 0) {
-            const { error: microErr } = await supabase.from("microcycles").insert(micros);
-            if (microErr) console.error("[auto-microcycles]", microErr.message);
-          }
-        }
-        break;
+    try {
+      switch (state.level) {
+        case "macrocycle":
+          await createMacrocycle({ athleteId, coachId, name: name.trim(), start: sDate, end: eDate });
+          break;
+        case "mesocycle":
+          await createMesocycle({ macrocycleId: selectedParentId, name: name.trim(), start: sDate, end: eDate });
+          break;
+        case "cycle":
+          // Cycle + une semaine par semaine ISO, en une écriture.
+          await createCycle({ athleteId, mesocycleId: selectedParentId, name: name.trim(), start: sDate, end: eDate });
+          break;
+        case "microcycle":
+          await createMicrocycle({ cycleId: selectedParentId, weekNumber: weekNum, start: sDate, end: eDate, isDeload });
+          break;
       }
-      case "microcycle":
-        ({ error } = await supabase.from("microcycles").insert({
-          cycle_id: selectedParentId, week_number: weekNum,
-          start_date: sDate, end_date: eDate, is_deload: isDeload,
-        }));
-        break;
+    } catch {
+      setSaving(false);
+      toast.error("Erreur lors de la création");
+      return;
     }
     setSaving(false);
-    if (error) { toast.error("Erreur lors de la création"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data",    athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
     toast.success(`${LEVEL_LABEL[state.level]} créé`);
     onClose();
   }
@@ -882,26 +848,26 @@ function NoParentDragModal({
     if (!targetMacro) { toast.error("Crée d'abord un macrocycle pour cette période"); return; }
     setSaving(true);
 
-    const { data: newMeso, error: mesoErr } = await supabase
-      .from("mesocycles")
-      .insert({ macrocycle_id: targetMacro.id, name: mesoName.trim(), start_date: state.newStart, end_date: state.newEnd })
-      .select("id")
-      .single();
+    let newMesoId: string;
+    try {
+      newMesoId = (await createMesocycle({
+        macrocycleId: targetMacro.id, name: mesoName.trim(), start: state.newStart, end: state.newEnd,
+      })).id;
+    } catch {
+      toast.error("Erreur création mésocycle"); setSaving(false); return;
+    }
 
-    if (mesoErr || !newMeso) { toast.error("Erreur création mésocycle"); setSaving(false); return; }
+    try {
+      // Dates + rattachement + semaines régénérées en une écriture (séances gardées).
+      await setCycleDates({
+        cycleId: state.cycleId, start: state.newStart, end: state.newEnd,
+        mesocycleId: newMesoId, dropPlanned: false,
+      });
+    } catch {
+      toast.error("Erreur mise à jour cycle"); setSaving(false); return;
+    }
 
-    const { error: cycleErr } = await supabase
-      .from("cycles")
-      .update({ mesocycle_id: newMeso.id, start_date: state.newStart, end_date: state.newEnd })
-      .eq("id", state.cycleId);
-    if (cycleErr) { toast.error("Erreur mise à jour cycle"); setSaving(false); return; }
-
-    await supabase.from("microcycles").delete().eq("cycle_id", state.cycleId);
-    const micros = buildMicrocycles(state.cycleId, state.newStart, state.newEnd);
-    if (micros.length > 0) await supabase.from("microcycles").insert(micros);
-
-    qc.invalidateQueries({ queryKey: ["timeline-data",    athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
     toast.success("Mésocycle créé — cycle déplacé");
     setSaving(false);
     onClose();
@@ -988,12 +954,15 @@ function NoParentDragModal({
               disabled={saving}
               onClick={async () => {
                 setSaving(true);
-                await supabase.from("cycles").update({ mesocycle_id: overlappingMeso.id, start_date: state.newStart, end_date: state.newEnd }).eq("id", state.cycleId);
-                await supabase.from("microcycles").delete().eq("cycle_id", state.cycleId);
-                const micros = buildMicrocycles(state.cycleId, state.newStart, state.newEnd);
-                if (micros.length > 0) await supabase.from("microcycles").insert(micros);
-                qc.invalidateQueries({ queryKey: ["timeline-data", athleteId] });
-                qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+                try {
+                  await setCycleDates({
+                    cycleId: state.cycleId, start: state.newStart, end: state.newEnd,
+                    mesocycleId: overlappingMeso.id, dropPlanned: false,
+                  });
+                } catch {
+                  toast.error("Erreur mise à jour cycle"); setSaving(false); return;
+                }
+                void invalidateCycles(qc, athleteId);
                 toast.success("Cycle déplacé");
                 setSaving(false);
                 onClose();
@@ -1190,7 +1159,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
     return () => obs.disconnect();
   }, []);
 
-  const { data, isLoading } = useTimelineData(athleteId, { start: rangeStart, end: rangeEnd });
+  const { data, isLoading, isError, refetch } = useTimelineData(athleteId, { start: rangeStart, end: rangeEnd });
   const calc = useCalculatePosition(rangeStart, rangeEnd, width - 88); // subtract label col
 
   const { mutate: _drag }   = useDragCycle();
@@ -1232,24 +1201,28 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
     setUndoStack((s) => s.slice(0, -1));
 
     // Restore cache immediately
-    const qKey = ["timeline-data", athleteId, rsStr, reStr];
-    qc.setQueryData(qKey, previous);
+    qc.setQueryData(cycleKeys.timeline(athleteId, rsStr, reStr), previous);
 
     // Restore changed items in DB
     const levels = ["macrocycles", "mesocycles", "cycles", "microcycles"] as const;
-    for (const level of levels) {
-      const prevItems = previous[level] as Array<{ id: string; start_date: string; end_date: string }>;
-      const currItems = (data[level] as Array<{ id: string; start_date: string; end_date: string }>);
-      for (const prev of prevItems) {
-        const curr = currItems.find((c) => c.id === prev.id);
-        if (!curr || curr.start_date !== prev.start_date || curr.end_date !== prev.end_date) {
-          await supabase.from(level).update({ start_date: prev.start_date, end_date: prev.end_date }).eq("id", prev.id);
+    try {
+      for (const level of levels) {
+        const prevItems = previous[level] as Array<{ id: string; start_date: string; end_date: string }>;
+        const currItems = (data[level] as Array<{ id: string; start_date: string; end_date: string }>);
+        for (const prev of prevItems) {
+          const curr = currItems.find((c) => c.id === prev.id);
+          if (!curr || curr.start_date !== prev.start_date || curr.end_date !== prev.end_date) {
+            await updatePeriod(level, prev.id, { start_date: prev.start_date, end_date: prev.end_date });
+          }
         }
       }
+    } catch {
+      void invalidateCycles(qc, athleteId);
+      toast.error("Annulation incomplète");
+      return;
     }
 
-    qc.invalidateQueries({ queryKey: ["timeline-data",    athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
     toast.success("Action annulée");
   }, [undoStack, data, athleteId, rsStr, reStr, qc]);
 
@@ -1335,10 +1308,9 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
     for (const item of toShift) {
       const newStart = format(addWeeks(parseISO(item.start_date), 1), "yyyy-MM-dd");
       const newEnd   = format(addWeeks(parseISO(item.end_date),   1), "yyyy-MM-dd");
-      await supabase.from(level as never).update({ start_date: newStart, end_date: newEnd }).eq("id", item.id);
+      await updatePeriod(level as PeriodLevel, item.id, { start_date: newStart, end_date: newEnd });
     }
-    qc.invalidateQueries({ queryKey: ["timeline-data",    athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
   }
 
   function buildExistingSiblings(level: CreateLevel): CreateState["existingSiblings"] {
@@ -1394,7 +1366,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
 
       // Find last existing child of this parent → auto-chain
       type AnyItem = { id: string; start_date: string; end_date: string } & Record<string, unknown>;
-      const children = (data?.[childrenArr] as AnyItem[] | undefined)
+      const children = (data?.[childrenArr] as unknown as AnyItem[] | undefined)
         ?.filter((i) => i[parentKey] === parentId)
         ?.sort((a, b) => b.start_date.localeCompare(a.start_date));
       const lastChild = children?.[0];
@@ -1425,7 +1397,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
   }
 
   function makeDragHandler(level: "macrocycles" | "mesocycles" | "cycles" | "microcycles") {
-    return (id: string, ns: string, _ne: string, ps?: string, pe?: string) => {
+    return (id: string, ns: string, ne: string, ps?: string, pe?: string) => {
       const item = (data?.[level] as Array<{ id: string; name?: string; start_date: string; end_date: string }>)?.find((i) => i.id === id);
       if (!item) return;
       if (level !== "microcycles") {
@@ -1777,7 +1749,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
                       const first = macros[0];
                       openCreate(
                         "mesocycle", first.id, first.start_date, first.end_date, undefined,
-                        macros.map((m) => ({ id: m.id, label: `${m.name} (${m.start_date} → ${m.end_date})` })),
+                        macros.map((m) => ({ id: m.id, label: `${m.name} (${m.start_date} → ${m.end_date})`, start_date: m.start_date })),
                       );
                     } else if (level === "cycle") {
                       openCycleAssistant();
@@ -1787,7 +1759,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
                       const first = cycles[0];
                       openCreate(
                         "microcycle", first.id, first.start_date, first.end_date, undefined,
-                        cycles.map((c) => ({ id: c.id, label: `${c.name} (${c.start_date} → ${c.end_date})` })),
+                        cycles.map((c) => ({ id: c.id, label: `${c.name} (${c.start_date} → ${c.end_date})`, start_date: c.start_date })),
                       );
                     }
                   }}
@@ -1871,6 +1843,18 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
                 <div style={{ width: 24, height: 24, border: "2px solid " + C.brdL, borderTopColor: C.ac, borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto" }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
+            ) : isError && !data ? (
+              // Lecture en échec : surtout pas « Aucun macrocycle » (le coach recréerait un doublon).
+              <div style={{ padding: "60px 0", textAlign: "center" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>La frise n'a pas pu être chargée</div>
+                <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 16 }}>Vérifie ta connexion puis réessaie.</div>
+                <button
+                  onClick={() => void refetch()}
+                  style={{ padding: "9px 18px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Réessayer
+                </button>
+              </div>
             ) : (data?.macrocycles ?? []).length === 0 ? (
               <div style={{ padding: "60px 0", textAlign: "center" }}>
                 <div style={{ fontSize: 32, marginBottom: 10 }}></div>
@@ -1909,7 +1893,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
                     const first = macros[0];
                     openCreate(
                       "mesocycle", first?.id, first?.start_date, first?.end_date, undefined,
-                      macros.map((m) => ({ id: m.id, label: `${m.name} (${m.start_date} → ${m.end_date})` })),
+                      macros.map((m) => ({ id: m.id, label: `${m.name} (${m.start_date} → ${m.end_date})`, start_date: m.start_date })),
                     );
                   }}
                   onDrag={makeDragHandler("mesocycles")}

@@ -2,18 +2,21 @@ import { useCallback, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { todayKey, localISO } from "@/lib/date";
 import { checkMilestone } from "@/lib/date";
-import { SKEYS } from "@/lib/storage";
+import { SKEYS, isKeyLoadFailed } from "@/lib/storage";
 import { clearDraft, wellnessDraftKey } from "@/lib/localDraft";
-import { invalidateWellness, saveWellnessForm } from "@/api/wellness";
+import { invalidateWellness, wellnessKeys } from "@/api/wellness";
+import { notifyQueued, queueIsDurable, submitWrite } from "@/lib/offline/writes";
 import {
   completeWorkout, invalidateWorkouts, listWorkoutLogs, planWorkout, reopenWorkout, setWorkoutNote,
 } from "@/api/workouts";
-import { toLegacyEntry } from "@shared/domain/wellness";
+import { parseWellnessEntry, toLegacyEntry, type WellnessEntry } from "@shared/domain/wellness";
 import { toCompactDay } from "@shared/domain/dates";
-import { supabase } from "@/integrations/supabase/client";
+import { setHabitDone } from "@/api/habits";
+import { recordWeightMilestone } from "@/api/profile";
+import { toast } from "sonner";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, Goals, WellnessData,
-  Injury, ArchivedBlock, NewBlockOpts, BodyWeight, VisibilitySettings,
+  ArchivedBlock, NewBlockOpts, BodyWeight, VisibilitySettings,
 } from "../types/athlete";
 
 interface LogicDeps {
@@ -28,7 +31,6 @@ interface LogicDeps {
   bodyWeight: BodyWeight;
   weightLog: Record<string, number>;
   weightMilestones: Array<{ date: string; kg: number }>;
-  injuries: Injury[];
   blockHistory: ArchivedBlock[];
   tw: number;
   dw: number;
@@ -49,10 +51,12 @@ interface LogicDeps {
   /** Mettent à jour l'état en mémoire sans écrire en base (useAthletePersistedState). */
   _setWellnessRaw: (v: WellnessData | null) => void;
   _setWellnessHistoryRaw: (v: Record<string, WellnessData> | ((p: Record<string, WellnessData>) => Record<string, WellnessData>)) => void;
+  _setWeightLogRaw: (v: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void;
+  _setWeightMilestonesRaw: (v: Array<{ date: string; kg: number }>) => void;
+  _setBodyWeightRaw: (v: BodyWeight) => void;
   setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
   setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
   setBodyWeight: (v: BodyWeight) => void;
-  setInjuries: (v: Injury[]) => void;
   setVisibilitySettings: (v: VisibilitySettings) => Promise<void>;
   setMilestoneNotif: (v: number | null) => void;
   setWeekJustCompleted: (v: number | null) => void;
@@ -65,13 +69,13 @@ export function useAthleteLogic(d: LogicDeps) {
   const qc = useQueryClient();
   const {
     athleteId, exos, sets, sessions, blockConfig, goals, completedSessions,
-    wellnessHistory, bodyWeight, weightLog, weightMilestones, injuries, blockHistory,
+    wellnessHistory, bodyWeight, weightLog, weightMilestones, blockHistory,
     tw, dw, weeksArr, weeklyTarget, loaded,
     setExos, setSets, setSessions, setBlockConfig, setGoals, setCompletedSessions,
     setAthleteNotes, setBlockHistory, setWellness, setWellnessHistory,
-    setWeightLog, setWeightMilestones, setBodyWeight, setInjuries,
+    setWeightLog, setWeightMilestones, setBodyWeight,
     setMilestoneNotif, setWeekJustCompleted, setShowBilan, setAW, save,
-    _setWellnessRaw, _setWellnessHistoryRaw,
+    _setWellnessRaw, _setWellnessHistoryRaw, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw,
   } = d;
 
   // L'ancien rattrapage `asp:completed` → `workout_logs` (et ses nettoyages)
@@ -186,45 +190,82 @@ export function useAthleteLogic(d: LogicDeps) {
     setExos(merged);
   }, [exos, setExos]);
 
-  // Renvoie true quand le serveur a confirmé l'écriture du wellness (et du
-  // poids saisi) ; le brouillon local du formulaire n'est purgé qu'à ce moment.
+  // Renvoie true quand l'écriture du wellness (et du poids saisi) est faite
+  // OU gardée sur le téléphone sans réseau (file `src/lib/offline/writes.ts`,
+  // envoi au retour du réseau) ; le brouillon local du formulaire n'est purgé
+  // qu'à ce moment. false = refusée : message à l'athlète.
   const saveWellness = useCallback((data: WellnessData): Promise<boolean> => {
     const day = todayKey();
+    const iso = localISO();
+    let queued = false;
+    const showEntry = (saved: WellnessEntry) => {
+      const legacy = { ...toLegacyEntry(saved), date: toCompactDay(saved.day) } as unknown as WellnessData;
+      _setWellnessRaw(legacy);
+      _setWellnessHistoryRaw((prev) => ({ ...prev, [toCompactDay(saved.day)]: legacy }));
+    };
     // Le jour seul, côté serveur (RPC `wellness_set_day`) : un autre appareil
     // ou le coach ne voit plus sa saisie effacée par une réécriture du blob.
-    const wellnessWrite: Promise<boolean> = saveWellnessForm(athleteId, data)
-      .then((saved) => {
-        const legacy = { ...toLegacyEntry(saved), date: toCompactDay(saved.day) } as unknown as WellnessData;
-        _setWellnessRaw(legacy);
-        _setWellnessHistoryRaw((prev) => ({ ...prev, [toCompactDay(saved.day)]: legacy }));
-        void invalidateWellness(qc, athleteId);
+    const wellnessWrite: Promise<boolean> = submitWrite("wellness.day", { athleteId, day: iso, form: data })
+      .then((r) => {
+        if (r.status === "sent") {
+          showEntry(r.result as WellnessEntry);
+          void invalidateWellness(qc, athleteId);
+          return true;
+        }
+        queued = true;
+        const entry = parseWellnessEntry(data, iso);
+        if (entry) {
+          showEntry({ ...entry, archived: false });
+          qc.setQueryData(wellnessKeys.today(athleteId, iso), { ...entry, archived: false });
+        }
         return true;
       })
       .catch((e) => {
         console.error("[saveWellness]", e);
+        toast.error("Wellness non enregistré : réessaie dans un instant.");
         return false;
       });
     const writes: Array<void | Promise<boolean>> = [wellnessWrite];
     if (data.poids) {
-      const key = day;
-      const nwl = { ...weightLog, [key]: data.poids };
-      writes.push(setWeightLog(nwl));
-      const milestone = checkMilestone(nwl, bodyWeight.current);
-      if (milestone && milestone > bodyWeight.current) {
-        const nm = [...weightMilestones, { date: key, kg: milestone }];
-        setWeightMilestones(nm);
-        const newBw = { ...bodyWeight, current: milestone };
-        setBodyWeight(newBw);
-        setMilestoneNotif(milestone);
-        setTimeout(() => setMilestoneNotif(null), 3500);
-      }
+      // Une seule pesée, côté serveur (RPC `weight_set_day`) : le journal n'est
+      // plus réécrit en entier depuis l'état de l'appareil.
+      const kg = data.poids;
+      writes.push(submitWrite("weight.day", { athleteId, day: iso, kg }).then(async (r) => {
+        if (r.status === "queued") {
+          // Gardée sur le téléphone : affichée tout de suite, le palier sera
+          // vérifié à la prochaine pesée faite avec du réseau.
+          queued = true;
+          _setWeightLogRaw((prev) => ({ ...prev, [toCompactDay(iso)]: kg }));
+          return true;
+        }
+        const log = r.result as Record<string, number>;
+        _setWeightLogRaw(log);
+        // Poids de référence ou paliers non chargés (réseau) : bodyWeight vaut
+        // le défaut 0, tout serait un « palier ». On attend une vraie lecture.
+        const refUnknown = isKeyLoadFailed(SKEYS.bw, athleteId) || isKeyLoadFailed(SKEYS.weightMilestones, athleteId);
+        const milestone = refUnknown ? null : checkMilestone(log, bodyWeight.current);
+        if (milestone && milestone > bodyWeight.current) {
+          const bw = await recordWeightMilestone(athleteId, iso, milestone);
+          _setWeightMilestonesRaw([...weightMilestones, { date: toCompactDay(iso), kg: milestone }]);
+          _setBodyWeightRaw(bw);
+          setMilestoneNotif(milestone);
+          setTimeout(() => setMilestoneNotif(null), 3500);
+        }
+        return true;
+      }).catch((e) => {
+        console.error("[saveWeight]", e);
+        toast.error("Pesée non enregistrée : réessaie dans un instant.");
+        return false;
+      }));
     }
     return Promise.all(writes.map((w) => Promise.resolve(w ?? true))).then((oks) => {
       const ok = oks.every(Boolean);
-      if (ok && athleteId) clearDraft(wellnessDraftKey(athleteId, day));
+      // Gardée en file sans IndexedDB (perdue au rechargement) : brouillon gardé.
+      if (ok && athleteId && (!queued || queueIsDurable())) clearDraft(wellnessDraftKey(athleteId, day));
+      if (queued) notifyQueued();
       return ok;
     });
-  }, [athleteId, qc, weightLog, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, setWeightLog, setWeightMilestones, setBodyWeight, setMilestoneNotif]);
+  }, [athleteId, qc, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw, setMilestoneNotif]);
 
   const updateSessionDay = useCallback((sessId: string, dayIdx: number) => {
     setSessions(prev => prev.map(s => s.id === sessId ? { ...s, day_of_week: dayIdx } : s));
@@ -239,18 +280,15 @@ export function useAthleteLogic(d: LogicDeps) {
     }));
   }, [setSessions]);
 
-  const addInjury = useCallback((inj: Injury) => setInjuries([...injuries, inj]), [injuries, setInjuries]);
-  const updateInjury = useCallback((inj: Injury) => setInjuries(injuries.map(i => i.id === inj.id ? inj : i)), [injuries, setInjuries]);
-  const deleteInjury = useCallback((id: string) => setInjuries(injuries.filter(i => i.id !== id)), [injuries, setInjuries]);
 
   const toggleHabitLog = useCallback(async (habitId: string, dateISO: string, habitLogs: Record<string, string[]>, setHabitLogs: (v: Record<string, string[]>) => void) => {
     const logs = habitLogs[habitId] || [];
-    if (logs.includes(dateISO)) {
-      await supabase.from('habit_logs').delete().match({ habit_id: habitId, date: dateISO });
-      setHabitLogs({ ...habitLogs, [habitId]: (habitLogs[habitId] || []).filter(d => d !== dateISO) });
-    } else {
-      await supabase.from('habit_logs').insert({ habit_id: habitId, athlete_id: athleteId, date: dateISO });
-      setHabitLogs({ ...habitLogs, [habitId]: [...(habitLogs[habitId] || []), dateISO] });
+    try {
+      const next = await setHabitDone(athleteId, habitId, dateISO, !logs.includes(dateISO), logs);
+      setHabitLogs({ ...habitLogs, [habitId]: next });
+    } catch (e) {
+      console.error("[toggleHabitLog]", e);
+      toast.error("Habitude non enregistrée — vérifie ta connexion");
     }
   }, [athleteId]);
 
@@ -259,6 +297,6 @@ export function useAthleteLogic(d: LogicDeps) {
   return {
     completeSession, uncompleteSession,
     archiveAndNewBlock, applyAIEdit, saveWellness, updateSessionDay,
-    updateSessionWeekDay, addInjury, updateInjury, deleteInjury, toggleHabitLog, updSets,
+    updateSessionWeekDay, toggleHabitLog, updSets,
   };
 }

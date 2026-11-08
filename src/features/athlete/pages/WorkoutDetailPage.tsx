@@ -8,7 +8,13 @@ import { loadFromPctRm } from "@shared/domain/performance";
 import type { RecordSet } from "@shared/domain/performance";
 import { computeRecordsFromSession, invalidateRecords, resolveRecordRef } from "@/api/records";
 import { usePRsByRef, useRecordLinks } from "@/features/shared/hooks/usePRLogs";
-import { completeWorkout as completeWorkoutLog, invalidateWorkouts, reopenWorkout as reopenWorkoutLog, setWorkoutRpe } from "@/api/workouts";
+import { invalidateWorkouts, isWorkoutNotFound, reopenWorkout as reopenWorkoutLog } from "@/api/workouts";
+import {
+  assertNoPendingValidation, isPendingWriteError, notifyQueued, PENDING_VALIDATION_MESSAGE, queueIsDurable, submitWrite,
+} from "@/lib/offline/writes";
+import { classifyWriteError } from "@/lib/offline/writeQueue";
+import { applyOptimisticWorkout, draftAlreadyOnServer } from "@/lib/optimisticWorkout";
+import { WORKOUT_GONE_MESSAGE } from "@/features/shared/hooks/useUpsertWorkoutRpe";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hooks/useWorkoutSession";
@@ -2038,12 +2044,27 @@ function RpeSheetForLog({
     // Seule source du RPE : `workout_logs.rpe_score` (RPC). L'ancien upsert
     // dans `workout_rpe` échouait au 2e RPE (doublon) et affichait
     // « RPE non enregistré » alors que la note était écrite.
-    mutationFn: (rpeScore: number) => setWorkoutRpe(workoutLogId, rpeScore),
-    onSuccess: () => {
-      void invalidateWorkouts(qc, { athleteId, logId: workoutLogId });
+    // Hors ligne : gardé en file (`workout.rpe`), affiché tout de suite.
+    mutationFn: async (rpeScore: number) => {
+      const res = await submitWrite("workout.rpe", { athleteId, logId: workoutLogId, rpe: rpeScore });
+      return { rpeScore, queued: res.status === "queued" };
+    },
+    onSuccess: ({ rpeScore, queued }) => {
+      if (queued) {
+        applyOptimisticWorkout(qc, { athleteId, logId: workoutLogId }, { rpe: rpeScore });
+        notifyQueued();
+      } else {
+        void invalidateWorkouts(qc, { athleteId, logId: workoutLogId });
+      }
       onClose();
     },
-    onError: () => {
+    onError: (err: unknown) => {
+      if (isWorkoutNotFound(err)) {
+        void invalidateWorkouts(qc, { athleteId, logId: workoutLogId });
+        toast.error(WORKOUT_GONE_MESSAGE);
+        onClose();
+        return;
+      }
       toast.error("RPE non enregistré — vérifie ta connexion");
     },
   });
@@ -2287,7 +2308,10 @@ export default function WorkoutDetailPage() {
     let restored = false;
     if (!setsInit && athleteId && id) {
       const draft = loadDraft<AthleteModifications>(workoutDraftKey(athleteId, id));
-      if (draft && !draft.synced) {
+      // Brouillon « non synchronisé » mais déjà entièrement en base (parti par
+      // la file hors ligne ou en keepalive, sans accusé de réception) : rien à
+      // restaurer ni à renvoyer.
+      if (draft && !draft.synced && !draftAlreadyOnServer(serverMods, draft.value)) {
         base = { ...draft.value, coachOverride: serverMods.coachOverride };
         restored = true;
       }
@@ -2739,13 +2763,21 @@ export default function WorkoutDetailPage() {
   const { mutate: reopenWorkout, isPending: reopening } = useMutation({
     mutationFn: async () => {
       if (!id) return;
+      assertNoPendingValidation(id);
       await reopenWorkoutLog(id);
     },
     onSuccess: () => {
       void invalidateWorkouts(qc, { athleteId, logId: id });
       toast.success("Séance réouverte");
     },
-    onError: () => toast.error("Erreur lors de la réouverture"),
+    // La réouverture ne passe pas par la file hors ligne (elle annule une
+    // validation : à faire en ligne, jamais rejouée plus tard à l'aveugle).
+    onError: (err: unknown) => toast.error(
+      isPendingWriteError(err) ? PENDING_VALIDATION_MESSAGE
+      : classifyWriteError(err, typeof navigator !== "undefined" && navigator.onLine === false) === "network"
+        ? "Pas de réseau : la séance pourra être réouverte au retour du réseau."
+        : "Erreur lors de la réouverture",
+    ),
   });
 
   // ── Records battus pendant la séance (calculés à la validation) ──────────
@@ -2780,24 +2812,54 @@ export default function WorkoutDetailPage() {
   const [runKm, setRunKm] = useState("");
   const { mutate: completeWorkout, isPending: completing } = useMutation({
     mutationFn: async () => {
-      if (!id) return;
+      if (!id) return null;
       // RPC : statut + saisie fusionnée sans toucher l'adaptation du coach,
       // idempotente (un double appui ne change pas l'heure de validation).
-      await completeWorkoutLog({ logId: id, mods: allSetsToMods(sets, localMods), runKm: parseKm(runKm) });
-      return allSetsToMods(sets, localMods).sessionSets ?? {};
+      // Hors ligne : gardée en file (`workout.complete`) avec la saisie
+      // COMPLÈTE de la séance, envoyée au retour du réseau.
+      const mods = allSetsToMods(sets, localMods);
+      const km = parseKm(runKm);
+      const res = await submitWrite("workout.complete", { athleteId: athleteId ?? "", logId: id, mods, runKm: km });
+      return { queued: res.status === "queued", mods, km };
     },
-    onSuccess: (doneSets) => {
+    onSuccess: (r) => {
+      if (!r || !id) return;
       localStorage.removeItem("activeWorkoutSession");
-      // Séance validée avec la saisie complète : plus rien à renvoyer.
+      // Séance validée (ou validation en file) avec la saisie complète : plus
+      // rien à renvoyer. Le brouillon est effacé AUSSI quand la validation est
+      // en file : elle porte toute la saisie et vit dans IndexedDB ; garder le
+      // brouillon le ferait réapparaître (et renvoyer) sur une séance déjà
+      // synchronisée.
       discardPending();
-      if (athleteId && id) clearDraft(workoutDraftKey(athleteId, id));
-      void invalidateWorkouts(qc, { athleteId, logId: id });
+      // Sans IndexedDB la file ne survit pas au rechargement : brouillon gardé.
+      if (athleteId && (!r.queued || queueIsDurable())) clearDraft(workoutDraftKey(athleteId, id));
       setShowFinish(false);
       setShowRpe(true);
+      if (r.queued) {
+        // L'écran se comporte comme si c'était validé ; la file rafraîchit
+        // tout une fois vidée. Records : calculés en ligne seulement (lecture
+        // des records actuels), pas pour une validation en file.
+        applyOptimisticWorkout(qc, { athleteId, logId: id }, {
+          status: "completed",
+          completedAt: new Date().toISOString(),
+          runKm: r.km,
+          mods: r.mods,
+        });
+        notifyQueued();
+        return;
+      }
+      void invalidateWorkouts(qc, { athleteId, logId: id });
       toast.success("Séance complétée ! ");
-      if (athleteId && doneSets) void recordNewRecords(athleteId, doneSets);
+      if (athleteId) void recordNewRecords(athleteId, r.mods.sessionSets ?? {});
     },
-    onError: () => {
+    onError: (err: unknown) => {
+      if (isWorkoutNotFound(err)) {
+        // Séance retirée par le coach (même hors ligne : refus du serveur).
+        setShowFinish(false);
+        void invalidateWorkouts(qc, { athleteId, logId: id });
+        toast.error(WORKOUT_GONE_MESSAGE, { duration: 8000 });
+        return;
+      }
       toast.error("Erreur lors de l'enregistrement");
     },
   });

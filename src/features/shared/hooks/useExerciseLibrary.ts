@@ -1,29 +1,49 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { LibraryExercise } from "@/lib/import/yoxx/matchExercise";
-
-const KEY = ["exercise-library-names"];
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createExercise,
+  createExercises,
+  exerciseKeys,
+  getExerciseLibrary,
+  invalidateExercises,
+  searchExercises,
+  type ExerciseLite,
+  type LibraryExercise,
+} from "@/api/exercises";
 
 /** Toute la bibliothèque d'exercices (id, nom, vidéo) — pour rapprocher des noms écrits. */
 export function useExerciseLibrary(enabled = true) {
   return useQuery<LibraryExercise[]>({
-    queryKey: KEY,
+    queryKey: exerciseKeys.library,
     enabled,
     staleTime: 300_000,
-    queryFn: async () => {
-      const all: LibraryExercise[] = [];
-      for (let from = 0; ; from += 1000) {
-        const { data, error } = await supabase
-          .from("exercises")
-          .select("id, name, youtube_id")
-          .order("name")
-          .range(from, from + 999);
-        if (error) throw error;
-        all.push(...((data ?? []) as LibraryExercise[]));
-        if (!data || data.length < 1000) break;
-      }
-      return all;
-    },
+    queryFn: getExerciseLibrary,
+  });
+}
+
+/**
+ * Recherche dans la banque (10 résultats, par nom et/ou type). Sans texte ni
+ * type : aucune requête, liste vide. Les résultats précédents restent affichés
+ * pendant la recherche suivante.
+ */
+export function useExerciseSearch(search: string, type: string) {
+  const term = search.trim();
+  const active = !!term || !!type;
+  const q = useQuery<ExerciseLite[]>({
+    queryKey: exerciseKeys.search(term, type),
+    enabled: active,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+    queryFn: () => searchExercises({ search: term, type: type || undefined, limit: 10 }),
+  });
+  return { results: active ? (q.data ?? []) : [], isFetching: active && q.isFetching };
+}
+
+/** Crée un exercice « Communauté » rattaché au coach. */
+export function useCreateExercise() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { name: string; createdBy?: string | null }) => createExercise(p),
+    onSettled: () => invalidateExercises(qc),
   });
 }
 
@@ -31,15 +51,7 @@ export function useExerciseLibrary(enabled = true) {
 export function useCreateExercises() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ names, coachId }: { names: string[]; coachId: string }) => {
-      if (names.length === 0) return [] as LibraryExercise[];
-      const { data, error } = await supabase
-        .from("exercises")
-        .insert(names.map((name) => ({ name, created_by: coachId, is_verified: false })))
-        .select("id, name, youtube_id");
-      if (error) throw error;
-      return (data ?? []) as LibraryExercise[];
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
+    mutationFn: ({ names, coachId }: { names: string[]; coachId: string }) => createExercises(names, coachId),
+    onSettled: () => invalidateExercises(qc),
   });
 }

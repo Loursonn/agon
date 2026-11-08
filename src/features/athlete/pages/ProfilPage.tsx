@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { confirmLogout, logoutDevice } from "@/lib/offline/logoutDevice";
 import { toast } from "sonner";
 import { todayKey } from "@/lib/date";
 import { MedicalEntriesSection } from "@/features/shared/components/medical/MedicalEntriesSection";
@@ -230,7 +230,8 @@ export default function ProfilPage() {
         <div style={{ ...card, padding: 0, overflow: "hidden" }}>
           <button
             onClick={async () => {
-              await supabase.auth.signOut({ scope: "local" });
+              if (!confirmLogout()) return;
+              await logoutDevice().catch(() => {});
               window.location.href = "/login";
             }}
             style={{

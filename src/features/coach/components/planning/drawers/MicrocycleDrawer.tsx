@@ -3,7 +3,7 @@ import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Check, Minus, Edit3 } from "lucide-react";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { invalidateCycles, updatePeriod } from "@/api/cycles";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Microcycle } from "../hooks/useTimelineData";
@@ -156,14 +156,15 @@ export function MicrocycleDrawer({ micro, prevMicro, athleteId }: Props) {
   async function saveDates() {
     if (!startDate || !endDate || startDate > endDate) { toast.error("Dates invalides"); return; }
     setSavingDates(true);
-    const { error } = await supabase
-      .from("microcycles")
-      .update({ start_date: startDate, end_date: endDate, is_deload: isDeload })
-      .eq("id", micro.id);
+    try {
+      await updatePeriod("microcycles", micro.id, { start_date: startDate, end_date: endDate, is_deload: isDeload });
+    } catch {
+      setSavingDates(false);
+      toast.error("Erreur");
+      return;
+    }
     setSavingDates(false);
-    if (error) { toast.error("Erreur"); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-data",    athleteId] });
-    qc.invalidateQueries({ queryKey: ["planning-summary", athleteId] });
+    void invalidateCycles(qc, athleteId);
     setEditingDates(false);
     toast.success("Microcycle mis à jour");
   }

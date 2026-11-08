@@ -24,7 +24,7 @@ import { expandIntervals, computeTotals } from "@/lib/energy";
 import { formatSLong } from "@/lib/energy/formatTarget";
 import type { EnergyGroup, EnergyStep, SessionKind, StructureType, FieldSchema, SessionImage } from "@/types/energy";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadEnergySessionImage } from "@/api/energy";
 import { compressImage } from "@/lib/compressImage";
 import IntervalBuilder from "../components/energy/IntervalBuilder";
 import SessionPreview from "../components/energy/SessionPreview";
@@ -414,19 +414,17 @@ export default function EnergySessionEditorPage() {
     setIsUploading(true);
     try {
       const compressed = await compressImage(file);
-      const ext = (compressed.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `${user.id}/sessions/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage
-        .from("test-media")
-        .upload(path, compressed, { contentType: compressed.type });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("test-media").getPublicUrl(path);
+      const publicUrl = await uploadEnergySessionImage(user.id, compressed);
       // Replace local preview with remote URL
-      setImages(prev => prev.map(img => img.caption === tempId ? { url: urlData.publicUrl } : img));
+      setImages(prev => prev.map(img => img.caption === tempId ? { url: publicUrl } : img));
       URL.revokeObjectURL(localUrl);
     } catch (err) {
       console.error("[image upload]", err);
-      // Keep local preview even if upload fails — user can still see what they picked
+      // L'aperçu local (blob:) ne doit pas être enregistré dans la séance :
+      // personne d'autre ne pourrait l'afficher.
+      setImages(prev => prev.filter(img => img.caption !== tempId));
+      URL.revokeObjectURL(localUrl);
+      toast.error("Envoi de l'image impossible, réessaie");
     } finally {
       setIsUploading(false);
     }

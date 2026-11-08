@@ -6,38 +6,6 @@ import { WELL_ITEMS, calcScore, getReco, getAlerts } from "@/lib/wellness";
 import { useOptionalAthleteContext } from "@/features/shared/context/AthleteContext";
 import { loadDraft, saveDraft, wellnessDraftKey } from "@/lib/localDraft";
 
-// ── Legacy zone-based BodyMap (used by InjuryForm) ──────────────────────────
-function BodyMap({selected,onToggle,color}){
-  const[view,setView]=useState("front");
-  const c=color||C.r;
-  const zones=view==="front"?BZFRONT:BZBACK;
-  const bp=C.brdL;
-  return(<div>
-    <div style={{display:"flex",gap:6,marginBottom:8}}>
-      {["front","back"].map(v=><button key={v} onClick={()=>setView(v)} style={{flex:1,padding:"6px 0",borderRadius:7,border:"1px solid "+(view===v?c:C.brdL),background:view===v?c+"20":"transparent",color:view===v?c:C.tx3,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{v==="front"?"Vue avant":"Vue arriere"}</button>)}
-    </div>
-    <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-      <svg viewBox="0 0 100 160" style={{width:"42%",height:"auto",flexShrink:0}}>
-        <ellipse cx="50" cy="12" rx="10" ry="11" fill="none" stroke={bp} strokeWidth="1.5"/>
-        <path d="M34,24 L28,28 L24,74 L76,74 L72,28 L66,24 Q60,21 50,21 Q40,21 34,24 Z" fill="none" stroke={bp} strokeWidth="1.5"/>
-        <path d="M28,28 L20,32 L12,56 L9,74 L14,74 L17,56 L23,33" fill="none" stroke={bp} strokeWidth="1.5"/>
-        <path d="M72,28 L80,32 L88,56 L91,74 L86,74 L83,56 L77,33" fill="none" stroke={bp} strokeWidth="1.5"/>
-        <path d="M40,74 L36,110 L34,148 L41,148 L43,112 L46,74" fill="none" stroke={bp} strokeWidth="1.5"/>
-        <path d="M60,74 L64,110 L66,148 L59,148 L57,112 L54,74" fill="none" stroke={bp} strokeWidth="1.5"/>
-        {zones.map(z=>{const on=selected.includes(z.id);return(<g key={z.id} onClick={()=>onToggle(z.id)} style={{cursor:"pointer"}}><circle cx={z.cx} cy={z.cy} r={z.r+2} fill={on?c+"30":"transparent"} stroke={on?c:bp} strokeWidth={on?"1.8":"0.8"}/>{on&&<circle cx={z.cx} cy={z.cy} r={z.r*0.45} fill={c}/>}</g>);})}
-      </svg>
-      <div style={{flex:1}}>
-        <div style={{fontSize:9,color:C.tx3,marginBottom:6}}>Zones selectionnees :</div>
-        {selected.length===0?<div style={{fontSize:10,color:C.tx3,fontStyle:"italic"}}>Aucune - appuie sur le corps</div>:(
-          <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
-            {selected.map(id=>{const z=ALL_BZ.find(z=>z.id===id);return z?<button key={id} onClick={()=>onToggle(id)} style={{padding:"2px 7px",borderRadius:5,background:c+"20",color:c,fontSize:9,fontWeight:600,cursor:"pointer",border:"none",fontFamily:"inherit"}}>{z.label} x</button>:null;})}
-          </div>
-        )}
-      </div>
-    </div>
-  </div>);
-}
-
 // ── Free-point DOMS BodyMap ─────────────────────────────────────────────────
 const DOMS_COLORS = ["#F5A623", "#F07030", "#FF5A33"];
 function domsColor(intensity) {
@@ -236,42 +204,7 @@ function DomsBodyMap({ points, onChange }) {
   );
 }
 
-function InjuryForm({onSave,onCancel,existing}){
-  const[zones,setZones]=useState(existing?.zones||[]);
-  const[intensity,setIntensity]=useState(existing?.intensity||5);
-  const[type,setType]=useState(existing?.type||"");
-  const[status,setStatus]=useState(existing?.status||"Nouvelle");
-  const[notes,setNotes]=useState(existing?.notes||"");
-  const tog=id=>setZones(p=>p.includes(id)?p.filter(z=>z!==id):[...p,id]);
-  const intC=intensity<=3?C.g:intensity<=6?C.o:C.r;
-  return(<div style={{background:C.s1,borderRadius:6,padding:16,border:"1px solid "+C.brd}}>
-    <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Localisation</div><BodyMap selected={zones} onToggle={tog} color={C.r}/></div>
-    <div style={{marginBottom:14}}>
-      <div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Intensite de la douleur</div>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <button onClick={()=>setIntensity(p=>Math.max(1,p-1))} style={{width:28,height:28,borderRadius:7,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit"}}>-</button>
-        <div style={{flex:1,textAlign:"center"}}><span style={{fontSize:26,fontWeight:800,color:intC}}>{intensity}</span><span style={{fontSize:11,color:C.tx3}}>/10</span></div>
-        <button onClick={()=>setIntensity(p=>Math.min(10,p+1))} style={{width:28,height:28,borderRadius:7,border:"1px solid "+C.brdL,background:"transparent",color:C.tx2,cursor:"pointer",fontFamily:"inherit"}}>+</button>
-      </div>
-      <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden",marginTop:6}}><div style={{height:"100%",width:(intensity/10*100)+"%",background:intC,borderRadius:2,transition:"width 0.2s"}}/></div>
-    </div>
-    <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Type</div><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{INJ_TYPES.map(t=><button key={t} onClick={()=>setType(type===t?"":t)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid "+(type===t?C.r:C.brdL),background:type===t?C.rS:"transparent",color:type===t?C.r:C.tx3,fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:type===t?700:400}}>{t}</button>)}</div></div>
-    <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:8}}>Statut</div><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{INJ_STATUS.map(s=>{const sc=stC(s);return(<button key={s} onClick={()=>setStatus(s)} style={{padding:"5px 10px",borderRadius:7,border:"1px solid "+(status===s?sc:C.brdL),background:status===s?sc+"20":"transparent",color:status===s?sc:C.tx3,fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:status===s?700:400}}>{s}</button>);})}</div></div>
-    <div style={{marginBottom:14}}><div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:"uppercase",marginBottom:6}}>Notes</div><textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Description, circonstances, traitements..." rows={2} style={{width:"100%",padding:"8px 10px",borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx,fontSize:12,fontFamily:"inherit",resize:"none",boxSizing:"border-box",lineHeight:1.5}}/></div>
-    <div style={{display:"flex",gap:8}}>
-      {onCancel&&<button onClick={onCancel} style={{flex:1,padding:"10px 0",borderRadius:4,border:"1px solid "+C.brdL,background:"transparent",color:C.tx3,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>}
-      <button onClick={()=>onSave({id:existing?.id||Date.now(),zones,intensity,type,status,notes,date:existing?.date||todayKey()})} style={{flex:2,padding:"10px 0",borderRadius:4,border:"none",background:C.r,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{existing?"Modifier":"Ajouter"}</button>
-    </div>
-  </div>);
-}
-
-const bSm={width:32,height:32,borderRadius:4,border:"1px solid "+C.brdL,background:C.s2,color:C.tx2,fontSize:16,cursor:"pointer",fontFamily:"inherit"};
-
-function TimePick({label,time,setTime}){
-  return(<div style={{background:C.s1,borderRadius:6,padding:"12px 14px",flex:1,textAlign:"center"}}><div style={{fontSize:9,color:C.tx3,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>{label}</div><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><div><button onClick={()=>setTime(t=>({...t,h:(t.h+1)%24}))} style={bSm}>+</button><div style={{fontSize:22,fontWeight:800,color:C.tx,fontFamily:"monospace",margin:"4px 0"}}>{String(time.h).padStart(2,"0")}</div><button onClick={()=>setTime(t=>({...t,h:(t.h-1+24)%24}))} style={bSm}>-</button></div><div style={{fontSize:18,color:C.tx3}}>:</div><div><button onClick={()=>setTime(t=>({...t,m:(t.m+15)%60}))} style={bSm}>+</button><div style={{fontSize:22,fontWeight:800,color:C.tx,fontFamily:"monospace",margin:"4px 0"}}>{String(time.m).padStart(2,"0")}</div><button onClick={()=>setTime(t=>({...t,m:(t.m-15+60)%60}))} style={bSm}>-</button></div></div></div>);
-}
-
-function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
+function WellnessFlow({existing,onSave,sleepTarget,weightLog}){
   const tgt=sleepTarget||8;
   const S_DOMS_ZONES=WELL_ITEMS.length; // 5 - shown if doms <= 3 (DOMS significant)
   const S_INJURY=6;const S_SLEEP=7;const S_WEIGHT=8;const S_BILAN=9;
@@ -429,4 +362,4 @@ function WellnessFlow({existing,onSave,sleepTarget,onAddInjury,weightLog}){
   </div>);
 }
 
-export { BodyMap, DomsBodyMap, InjuryForm, WellnessFlow };
+export { DomsBodyMap, WellnessFlow };

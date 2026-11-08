@@ -1,12 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { QK } from "@/lib/queryKeys";
 import { localISO } from "@/lib/date";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+import { cycleKeys, listCyclesEndingSoon } from "@/api/cycles";
 
 export interface CycleEndingSoon {
   cycleId:      string;
@@ -29,21 +25,8 @@ export function usePlanningMargin(daysAhead = 14) {
   );
 
   const query = useQuery({
-    queryKey: QK.coachDashboard.planningMargin(user?.id ?? ""),
-    queryFn: async () => {
-      const { data, error } = await db
-        .from("cycles")
-        .select("id, athlete_id, name, start_date, end_date")
-        .in("athlete_id", athleteIds)
-        .lte("start_date", today)   // cycle must have started
-        .gte("end_date", today)
-        .lte("end_date", limit)
-        .order("end_date", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as {
-        id: string; athlete_id: string; name: string; start_date: string; end_date: string;
-      }[];
-    },
+    queryKey: cycleKeys.endingSoon(user?.id ?? ""),
+    queryFn: () => listCyclesEndingSoon(athleteIds, today, limit),
     enabled: !!user && athleteIds.length > 0,
     staleTime: 120_000,
     refetchOnWindowFocus: true,

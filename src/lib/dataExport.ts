@@ -1,4 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
+import { readOwnRows } from "@/api/account";
+import { getProfile } from "@/api/profile";
 import { providerAttribution } from "@/lib/activityDisplay";
 
 /**
@@ -77,28 +78,6 @@ export interface ExportResult {
   rowCount: number;
 }
 
-/*
-  Le client Supabase est typé table par table : `from()` n'accepte qu'un nom
-  littéral connu, et `eq()` qu'une colonne de cette table. Ici les deux sont
-  des variables de boucle — l'intérêt de l'export est précisément d'être
-  générique. Cette vue non typée isole la seule entorse nécessaire, au lieu de
-  répéter 37 appels typés qu'il faudrait maintenir à la main.
-*/
-interface DynamicQuery {
-  from: (table: string) => {
-    select: (cols: string) => {
-      eq: (col: string, val: string) => Promise<{ data: unknown[] | null; error: { message: string } | null }>;
-    };
-  };
-}
-
-async function readTable(table: string, column: string, value: string) {
-  const db = supabase as unknown as DynamicQuery;
-  const { data, error } = await db.from(table).select("*").eq(column, value);
-  if (error) throw new Error(error.message);
-  return data ?? [];
-}
-
 /**
  * Mention de provenance sur chaque ligne de montre exportée.
  *
@@ -130,12 +109,12 @@ export async function buildDataExport(userId: string): Promise<ExportResult> {
   const failures: { table: string; reason: string }[] = [];
   let rowCount = 0;
 
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .maybeSingle();
-  if (profileErr) failures.push({ table: "profiles", reason: profileErr.message });
+  let profile: unknown = null;
+  try {
+    profile = await getProfile(userId);
+  } catch (e) {
+    failures.push({ table: "profiles", reason: e instanceof Error ? e.message : String(e) });
+  }
 
   const jobs: { table: string; column: string }[] = [
     ...ATHLETE_TABLES.map((t) => ({ table: t, column: "athlete_id" })),
@@ -144,7 +123,7 @@ export async function buildDataExport(userId: string): Promise<ExportResult> {
 
   for (const job of jobs) {
     try {
-      const rows = withAttribution(job.table, await readTable(job.table, job.column, userId));
+      const rows = withAttribution(job.table, await readOwnRows(job.table, job.column, userId));
       if (rows.length > 0) {
         tables[job.table] = rows;
         rowCount += rows.length;

@@ -7,11 +7,11 @@
 import { useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import type { WellnessData } from "@/features/shared/types/athlete";
 import { toast } from "sonner";
 import { Plus, Pencil, X, Check } from "lucide-react";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { getWellnessHistory, wellnessKeys } from "@/api/wellness";
+import { recentWeights } from "@/api/profile";
 import MeasurementComparison from "@/features/coach/components/MeasurementComparison";
 import CategoryProfiles from "@/features/coach/components/CategoryProfiles";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -136,27 +136,17 @@ function useDeleteRef(athleteId: string) {
   };
 }
 
+/**
+ * Moyenne des 3 dernières pesées saisies avec le wellness (`asp:wh`, hors
+ * blocs archivés). Même clé que l'historique wellness : rafraîchie par
+ * `invalidateWellness` à chaque saisie.
+ */
 function useLastWeights(athleteId: string) {
-  return useQuery<{ avg: number; lastDate: string; count: number } | null>({
-    queryKey: ["last-weights-wellness", athleteId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_data")
-        .select("value")
-        .eq("athlete_id", athleteId)
-        .eq("key", "asp:wh")
-        .maybeSingle();
-      if (error) throw error;
-      const history = data?.value as Record<string, WellnessData> | null;
-      if (!history) return null;
-      const entries = Object.entries(history)
-        .filter(([, v]) => v?.poids != null && (v.poids as number) > 0)
-        .sort(([a], [b]) => b.localeCompare(a)) // desc by date
-        .slice(0, 3);
-      if (entries.length === 0) return null;
-      const avg = entries.reduce((s, [, v]) => s + (v.poids as number), 0) / entries.length;
-      return { avg: Math.round(avg * 10) / 10, lastDate: entries[0][0], count: entries.length };
-    },
+  const range = { includeArchived: false } as const;
+  return useQuery({
+    queryKey: wellnessKeys.history(athleteId, range),
+    queryFn: () => getWellnessHistory(athleteId, range),
+    select: (history) => recentWeights(history, 3),
     staleTime: 60_000,
   });
 }

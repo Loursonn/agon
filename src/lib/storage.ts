@@ -1,7 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+import { readAppData, writeAppData } from "@/api/appData";
 
 export const SKEYS = {
   exos:           "asp:exos",
@@ -16,7 +13,6 @@ export const SKEYS = {
   custMethods:    "asp:custmethods",
   weightLog:      "asp:wlog",
   weightMilestones:"asp:wmile",
-  injuries:       "asp:injuries",
   sessions:       "asp:sessions",
   blockConfig:    "asp:blockConfig",
   blockHistory:   "asp:blockHistory",
@@ -100,18 +96,9 @@ export async function sLoad<T>(k: string, fb: T, aid: string | null | undefined)
 export async function sLoadResult<T>(k: string, aid: string | null | undefined): Promise<{ ok: boolean; value?: T }> {
   if (!aid) return { ok: false };
   try {
-    const { data, error } = await db
-      .from("app_data")
-      .select("value")
-      .eq("athlete_id", aid)
-      .eq("key", k)
-      .maybeSingle();
-    if (error) {
-      markLoad(k, aid, false);
-      return { ok: false };
-    }
+    const r = await readAppData<T>(aid, k);
     markLoad(k, aid, true);
-    return { ok: true, value: data ? (data.value as T) : undefined };
+    return { ok: true, value: r.found ? r.value : undefined };
   } catch {
     markLoad(k, aid, false);
     return { ok: false };
@@ -124,12 +111,10 @@ export async function sSave(k: string, v: unknown, aid: string | null | undefine
   // Lecture en erreur → on ne connaît pas la valeur en base : la réécrire
   // effacerait des données. L'appelant doit relire la clé d'abord.
   if (isKeyLoadFailed(k, aid)) throw new KeyNotLoadedError(k);
-  const { error } = await db.from("app_data").upsert(
-    { athlete_id: aid, key: k, value: v, updated_at: new Date().toISOString() },
-    { onConflict: "athlete_id,key" }
-  );
-  if (error) {
-    console.error("sSave error", k, error.message, error.code);
+  try {
+    await writeAppData(aid, k, v);
+  } catch (error) {
+    console.error("sSave error", k, error instanceof Error ? error.message : error);
     throw error;
   }
 }

@@ -7,14 +7,15 @@ import {
 } from "@/lib/storage";
 import { mergeLocalIntoServer } from "@/lib/mergeLocal";
 import { DEF_SESSIONS, DEF_BLOCK_CONFIG } from "@/lib/exercises";
-import { getNutritionStrategy } from "@/lib/nutrition";
 import { todayKey } from "@/lib/date";
 import type {
   ExosMap, SetsMap, Session, BlockConfig, WellnessData,
-  BodyWeight, Goals, Injury, ArchivedBlock,
-  VisibilitySettings, SessionLog, FreeSession, NutritionStrategy,
+  BodyWeight, Goals, ArchivedBlock,
+  VisibilitySettings, SessionLog, FreeSession,
 } from "../types/athlete";
-import { supabase } from "@/integrations/supabase/client";
+import { readAppData, writeAppData } from "@/api/appData";
+import { listTestSessions } from "@/api/tests";
+import { listAthleteCycles } from "@/api/cycles";
 
 /**
  * Clé dont la lecture a échoué : comment la réappliquer une fois relue.
@@ -38,12 +39,12 @@ const DEF_VISIBILITY: VisibilitySettings = {
 async function determineActiveCycleId(athleteId: string): Promise<string | null> {
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const { data } = await supabase
-    .from("cycles")
-    .select("id, start_date, end_date")
-    .eq("athlete_id", athleteId)
-    .order("start_date", { ascending: false });
-  const rows = (data ?? []) as { id: string; start_date: string; end_date: string }[];
+  let rows: { id: string; start_date: string; end_date: string }[];
+  try {
+    rows = await listAthleteCycles(athleteId, { direct: true, newestFirst: true });
+  } catch {
+    return null; // comme avant : sans cycles lisibles, clés globales
+  }
   if (rows.length === 0) return null;
   const covering = rows.find((c) => c.start_date <= today && today <= c.end_date);
   return (covering ?? rows[0]).id;
@@ -114,7 +115,6 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   const [customMethods, setCustomMethodsRaw] = useState<unknown[]>([]);
   const [weightLog, setWeightLogRaw] = useState<Record<string, number>>({});
   const [weightMilestones, setWeightMilestonesRaw] = useState<Array<{ date: string; kg: number }>>([]);
-  const [injuries, setInjuriesRaw] = useState<Injury[]>([]);
   const [wellness, setWellnessRaw] = useState<WellnessData | null>(null);
   const [wellnessHistory, setWellnessHistoryRaw] = useState<Record<string, WellnessData>>({});
   const [bodyWeight, setBodyWeightRaw] = useState<BodyWeight>({ current: 0, target: 0 });
@@ -122,8 +122,6 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   const [weekSchedule, setWeekScheduleRaw] = useState<Record<string, unknown>>({});
   const [sessionLogs, setSessionLogsRaw] = useState<Record<string, SessionLog>>({});
   const [freeSessions, setFreeSessionsRaw] = useState<FreeSession[]>([]);
-  const [nutritionStrategy, setNutritionStrategy] = useState<NutritionStrategy | null>(null);
-  const [nutritionLog, setNutritionLogRaw] = useState<Record<string, unknown>>({});
   const [visibilitySettings, setVisibilityRaw] = useState<VisibilitySettings>(DEF_VISIBILITY);
   const [testSessions, setTestSessionsRaw] = useState<unknown[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -216,7 +214,7 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
         return fb;
       };
       const todayOnly = (v: WellnessData | null) => (v?.date === todayKey() ? v : null);
-      const [m, s, w, wh, bw, g, an, cm, wl, wmil, inj, bc, bh, ws, ns, nl, sl, fs] =
+      const [m, s, w, wh, bw, g, an, cm, wl, wmil, bc, bh, ws, sl, fs] =
         await Promise.all([
           tracked<Record<string, unknown>>(SKEYS.exMeta, {}, setExMetaRaw),
           tracked<SetsMap>(SKEYS.sets, {}, setSetsRaw),
@@ -228,12 +226,9 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
           tracked<unknown[]>(SKEYS.custMethods, [], setCustomMethodsRaw),
           tracked<Record<string, number>>(SKEYS.weightLog, {}, setWeightLogRaw),
           tracked<Array<{ date: string; kg: number }>>(SKEYS.weightMilestones, [], setWeightMilestonesRaw),
-          tracked<Injury[]>(SKEYS.injuries, [], setInjuriesRaw),
           tracked<BlockConfig>(SKEYS.blockConfig, DEF_BLOCK_CONFIG as BlockConfig, setBlockConfigRaw),
           tracked<ArchivedBlock[]>(SKEYS.blockHistory, [], setBlockHistoryRaw, (v) => v || []),
           tracked<Record<string, unknown>>(SKEYS.weekSchedule, {}, setWeekScheduleRaw, (v) => v || {}),
-          getNutritionStrategy(athleteId).catch(() => null),
-          tracked<Record<string, unknown>>("asp:nutrition_log", {}, setNutritionLogRaw, (v) => v || {}),
           tracked<Record<string, SessionLog>>(SKEYS.sessionLogs, {}, setSessionLogsRaw),
           tracked<FreeSession[]>(SKEYS.freeSessions, [], setFreeSessionsRaw),
         ]);
@@ -242,10 +237,10 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       setExMetaRaw(m); setSetsRaw(s); setWellnessRaw(todayW);
       setWellnessHistoryRaw(wh); setBodyWeightRaw(bw);
       setGoalsRaw(g); setAthleteNotesRaw(an); setCustomMethodsRaw(cm);
-      setWeightLogRaw(wl); setWeightMilestonesRaw(wmil); setInjuriesRaw(inj);
+      setWeightLogRaw(wl); setWeightMilestonesRaw(wmil);
       setBlockConfigRaw(bc); setBlockHistoryRaw(bh || []);
-      setWeekScheduleRaw(ws || {}); setNutritionStrategy(ns);
-      setNutritionLogRaw(nl || {}); setSessionLogsRaw(sl); setFreeSessionsRaw(fs);
+      setWeekScheduleRaw(ws || {});
+      setSessionLogsRaw(sl); setFreeSessionsRaw(fs);
 
       // ── Cycle ouvert + migration legacy → par-cycle (une seule fois) ────────
       const activeCycleId = await determineActiveCycleId(athleteId);
@@ -399,12 +394,12 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   // ── Visibility settings + test sessions from Supabase ────────────────────
   useEffect(() => {
     if (!athleteId) return;
-    supabase.from('test_sessions').select('id,type,title,date,completed')
-      .eq('athlete_id', athleteId).order('date', { ascending: true })
-      .then(({ data }) => { if (data) setTestSessionsRaw(data); });
-    supabase.from('app_data').select('value')
-      .eq('athlete_id', athleteId).eq('key', 'asp:visibility').maybeSingle()
-      .then(({ data }) => { if (data?.value) setVisibilityRaw(v => ({ ...v, ...(data.value as VisibilitySettings) })); });
+    listTestSessions(athleteId)
+      .then(setTestSessionsRaw)
+      .catch(() => { /* garde la liste déjà affichée */ });
+    readAppData<VisibilitySettings>(athleteId, 'asp:visibility')
+      .then(({ value }) => { if (value) setVisibilityRaw(v => ({ ...v, ...value })); })
+      .catch(() => { /* réglages par défaut : tout visible */ });
   }, [athleteId, refreshNonce]);
 
   // ── Wellness midnight reset ────────────────────────────────────────────────
@@ -466,31 +461,14 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     });
   }, [save, persist]);
 
-  // Accepte aussi la forme updater : AlimPage appelle setNutritionLog(prev => …).
-  // Avant, la fonction elle-même partait dans sSave → `value` disparaissait du
-  // JSON envoyé à Supabase → le journal nutrition du jour n'était jamais persisté.
-  const setNutritionLog = useCallback(
-    (v: Record<string, unknown> | ((prev: Record<string, unknown>) => Record<string, unknown>)) => {
-      setNutritionLogRaw(prev => {
-        const next = typeof v === "function" ? v(prev) : v;
-        persist(save("asp:nutrition_log", next));
-        return next;
-      });
-    },
-    [save, persist],
-  );
-
   const setVisibilitySettings = useCallback(async (settings: VisibilitySettings) => {
     setVisibilityRaw(settings);
-    const { error } = await supabase.from('app_data').upsert(
-      { athlete_id: athleteId, key: 'asp:visibility', value: settings, updated_at: new Date().toISOString() },
-      { onConflict: 'athlete_id,key' },
-    );
-    if (error) {
+    try {
+      await writeAppData(athleteId, 'asp:visibility', settings);
+      flash(true);
+    } catch {
       flash(false);
       toast.error("Sauvegarde échouée — vérifie ta connexion", { id: "asp-persist-error" });
-    } else {
-      flash(true);
     }
   }, [athleteId, flash]);
 
@@ -512,15 +490,13 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     setWeightMilestonesRaw(v); persist(save(SKEYS.weightMilestones, v));
   }, [save, persist]);
 
-  const setInjuries = useCallback((v: Injury[]) => { setInjuriesRaw(v); persist(save(SKEYS.injuries, v)); }, [save, persist]);
 
   return {
     // Raw state (read)
     exos, exMeta, sets, sessions, blockConfig, completedSessions, goals,
-    athleteNotes, customMethods, weightLog, weightMilestones, injuries,
+    athleteNotes, customMethods, weightLog, weightMilestones,
     wellness, wellnessHistory, bodyWeight, blockHistory, weekSchedule,
-    sessionLogs, freeSessions, nutritionStrategy, setNutritionStrategy,
-    nutritionLog, visibilitySettings, testSessions, setTestSessions: setTestSessionsRaw,
+    sessionLogs, freeSessions, visibilitySettings, testSessions, setTestSessions: setTestSessionsRaw,
     loaded, saveStatus,
     /** Clés app_data dont la lecture a échoué (écriture bloquée, relecture en cours). */
     unloadedKeys,
@@ -529,9 +505,9 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     // Wrapped setters (write + persist)
     setExos, setExMeta, setSets, setBodyWeight, setGoals, setCompletedSessions,
     setAthleteNotes, setCustomMethods, setSessions, setBlockConfig, setBlockHistory,
-    setWeekSchedule, setSessionLogs, setFreeSessions, setNutritionLog,
+    setWeekSchedule, setSessionLogs, setFreeSessions,
     setVisibilitySettings, setWellness, setWellnessHistory,
-    setWeightLog, setWeightMilestones, setInjuries,
+    setWeightLog, setWeightMilestones,
     // Internal raw setters needed by logic hooks
     _setBodyWeightRaw: setBodyWeightRaw,
     _setWeightLogRaw: setWeightLogRaw,

@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { C } from "@/lib/theme";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import { ChevronDown, Eye, EyeOff, Plus, Users } from "lucide-react";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
-import { useRemoveCoCoach } from "@/features/shared/hooks/useCoCoach";
+import { useRemoveCoCoach, useUnlinkAthlete } from "@/features/shared/hooks/useCoCoach";
 
 export default function AthletesListPage() {
   const { profile, athletes, user, loading, canCoachSelf, selfCoCoached, removeSelfAsAthlete, becomeSelfCoach, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete } = useAuth();
   const navigate = useNavigate();
   const removeCoCoach = useRemoveCoCoach();
+  const unlinkAthlete = useUnlinkAthlete();
   const isCoachAthlete = profile?.role === "coach" || profile?.role === "coach_athlete";
   // Coach-athlète : sa ligne perso dépend de coach_id (self = son propre athlète)
   const isHybrid = profile?.role === "coach_athlete";
@@ -169,7 +169,8 @@ export default function AthletesListPage() {
         toast.success("Tu ne co-coaches plus cet athlète");
         return;
       }
-      await supabase.rpc("unlink_athlete", { athlete_id: athleteId });
+      // Avant : l'erreur de la RPC était ignorée → « Athlète retiré » même en cas d'échec.
+      await unlinkAthlete.mutateAsync({ athleteId });
       toast.success("Athlète retiré");
       window.location.reload();
     } catch {

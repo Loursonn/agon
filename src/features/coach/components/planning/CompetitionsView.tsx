@@ -9,7 +9,7 @@ import { format, parseISO, isFuture, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { C } from "@/lib/theme";
-import { supabase } from "@/integrations/supabase/client";
+import { competitionKeys, listCompetitions } from "@/api/competitions";
 import { priorityLabel, COMPETITION_META } from "@/types/planning";
 import { CompetitionFormModal } from "./CompetitionFormModal";
 
@@ -40,19 +40,11 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 function useComps(athleteId: string) {
   return useQuery<Comp[]>({
-    queryKey: ["competitions", athleteId],
+    queryKey: competitionKeys.list(athleteId),
     enabled: !!athleteId,
     staleTime: 0,
     refetchOnMount: true,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("competitions")
-        .select("*")
-        .eq("athlete_id", athleteId)
-        .order("date", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Comp[];
-    },
+    queryFn: async () => (await listCompetitions(athleteId)) as unknown as Comp[],
   });
 }
 

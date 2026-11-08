@@ -5,7 +5,7 @@ import {
   eachDayOfInterval, parseISO, differenceInCalendarWeeks,
 } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { cycleKeys, listAthleteCycles } from "@/api/cycles";
 import type { BlockConfig, Session, WellnessData } from "@/features/shared/types/athlete";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { fr } from "date-fns/locale";
@@ -847,48 +847,19 @@ export function CalendarMonthView({
 
   // ── Fetch all cycles for athlete (to link blockConfig to a Frise cycle) ──
   const { data: allCycles = [] } = useQuery({
-    queryKey: ["athlete-cycles", athleteId],
+    queryKey: cycleKeys.athleteCycles(athleteId),
     enabled: !!athleteId,
     staleTime: 30_000,
-    queryFn: async () => {
-      type CycleRow = { id: string; name: string; start_date: string; end_date: string };
-
-      // Tous les cycles portant directement l'athlète (standalone OU rattachés à un
-      // méso mais avec athlete_id renseigné — cas des cycles créés par l'assistant).
-      const { data: sa } = await supabase
-        .from("cycles").select("id, name, start_date, end_date")
-        .eq("athlete_id", athleteId).order("start_date");
-
-      const { data: macros } = await supabase
-        .from("macrocycles").select("id").eq("athlete_id", athleteId);
-
-      let nested: CycleRow[] = [];
-      if (macros?.length) {
-        const macroIds = (macros as { id: string }[]).map(m => m.id);
-        const { data: mesos } = await supabase
-          .from("mesocycles").select("id").in("macrocycle_id", macroIds);
-        if (mesos?.length) {
-          const mesoIds = (mesos as { id: string }[]).map(m => m.id);
-          const { data: cycles } = await supabase
-            .from("cycles").select("id, name, start_date, end_date")
-            .in("mesocycle_id", mesoIds).order("start_date");
-          nested = (cycles ?? []) as CycleRow[];
-        }
-      }
-
-      const all = [...(sa ?? []), ...nested] as CycleRow[];
-      const seen = new Set<string>();
-      return all
-        .filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true; })
-        .sort((a, b) => a.start_date.localeCompare(b.start_date));
-    },
+    // Tous les cycles portant directement l'athlète (autonomes OU rattachés à un
+    // méso avec athlete_id renseigné — cycles de l'assistant) + ceux de ses mésos.
+    queryFn: () => listAthleteCycles(athleteId),
   });
 
   // ── Frise est maître : sync blockConfig depuis le cycle actif ────────────
   // Priorité : dernier cycle resizé/déplacé dans Frise > cycleId stocké > auto-détection (aujourd'hui)
   useEffect(() => {
     if (!allCycles.length || !setBlockConfig) return;
-    const lastResizedId = qc.getQueryData<string>(["active-cycle-id", athleteId]);
+    const lastResizedId = qc.getQueryData<string>(cycleKeys.activeCycleId(athleteId));
     const targetId = lastResizedId ?? blockConfig?.cycleId ?? findCurrentCycleId(allCycles);
     if (!targetId) return;
     const cycle = allCycles.find(c => c.id === targetId);

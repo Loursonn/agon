@@ -25,12 +25,11 @@ export default tseslint.config(
   },
   {
     // Couche données (docs/COUCHE_API.md) : seul src/api/ parle à Supabase.
-    // Avertissement tant que la migration est en cours ; une entité migrée
-    // ajoute ses fichiers à la liste en « error » ci-dessous.
+    // Migration terminée le 2026-11-08 : tout import direct est une erreur.
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/api/**", "src/integrations/**", "src/**/__tests__/**", "src/**/*.test.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["warn", {
+      "no-restricted-imports": ["error", {
         paths: [{
           name: "@/integrations/supabase/client",
           message: "Passe par src/api/<entité>.ts (docs/COUCHE_API.md).",

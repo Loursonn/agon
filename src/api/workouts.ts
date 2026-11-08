@@ -581,7 +581,8 @@ const ATHLETE_SCOPED = new Set<string>([
   "activePlan",               // plan actif
   "athleteModifications",     // ancienne clé Retours (avant workoutKeys.choices)
   "weeklyRetours", "monthlyRetours",
-  "energy-assignments",       // séances énergie affichées avec le statut
+  "energy",                   // séances énergie affichées avec le statut
+  "energy-assignments",       // ancienne clé, tant que des appelants la lisent
   "historique",               // onglet Données > Historique
   "session-week-logs",        // tiroir de la programmation
   "micro-stats", "meso-load", "timeline-data", "micro-days", "cycle-sessions", // planning (RPE, statuts)
@@ -661,5 +662,78 @@ export async function deletePlannedWorkouts(scope: PlannedWorkoutScope): Promise
   check(
     await query.neq("status", "completed").is("athlete_modifications", null).is("rpe_score", null),
     "Suppression des séances prévues impossible",
+  );
+}
+
+// ── Occurrences d'une séance-type ─────────────────────────────────────────────
+
+/**
+ * Rang (1-based) de la séance `sessionId` du `date` : nombre de séances non
+ * annulées de cette séance-type jusqu'à ce jour inclus (tous cycles). Les
+ * paramètres multi-semaines d'un exercice en dépendent. Jamais moins de 1.
+ */
+export async function countSessionOccurrence(athleteId: string, sessionId: string, date: IsoDay): Promise<number> {
+  const res = (await db().from("workout_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("athlete_id", athleteId)
+    .eq("session_id", sessionId)
+    .neq("status", "skipped")
+    .lte("scheduled_date", date)) as unknown as { count?: number | null; data?: unknown; error: { message: string; code?: string } | null };
+  if (res.error) throw new ApiError("Lecture de l'occurrence impossible", res.error);
+  const n = res.count ?? (Array.isArray(res.data) ? res.data.length : 0);
+  return Math.max(n || 1, 1);
+}
+
+/** Séances non annulées de ces séances-types jusqu'à `upTo` inclus, par date. */
+export async function listSessionOccurrenceLogs(
+  athleteId: string,
+  sessionIds: string[],
+  upTo: IsoDay,
+): Promise<{ id: string; session_id: string; scheduled_date: IsoDay }[]> {
+  const ids = [...new Set(sessionIds.filter(Boolean))];
+  if (ids.length === 0) return [];
+  // Une requête par séance : reste loin de la limite de 1000 lignes de PostgREST.
+  const results = await Promise.all(ids.map(async (sid) => unwrapRows<RawRow>(
+    (await db().from("workout_logs")
+      .select("id, session_id, scheduled_date")
+      .eq("athlete_id", athleteId)
+      .eq("session_id", sid)
+      .neq("status", "skipped")
+      .lte("scheduled_date", upTo)
+      .order("scheduled_date")) as never,
+    "Lecture des occurrences impossible",
+  )));
+  return results.flat().map((r) => ({
+    id: String(r.id), session_id: String(r.session_id), scheduled_date: String(r.scheduled_date).slice(0, 10),
+  }));
+}
+
+/**
+ * Pose une séance prévue sur chacune des dates données (séance récurrente du
+ * coach). Une séance déjà présente ce jour-là n'est pas touchée.
+ */
+export async function planWorkoutsIfAbsent(rows: {
+  athleteId: string;
+  coachId: string | null;
+  sessionId: string;
+  sessionName: string;
+  date: IsoDay;
+  microcycleId?: string | null;
+  weekNumber?: number | null;
+}[]): Promise<void> {
+  if (rows.length === 0) return;
+  check(
+    await db().from("workout_logs").upsert(rows.map((r) => ({
+      athlete_id: r.athleteId,
+      coach_id: r.coachId,
+      session_id: r.sessionId,
+      session_name: r.sessionName,
+      scheduled_date: r.date,
+      original_scheduled_date: r.date,
+      status: "planned",
+      ...(r.microcycleId ? { microcycle_id: r.microcycleId } : {}),
+      ...(r.weekNumber != null ? { week_number: r.weekNumber } : {}),
+    })), { onConflict: "athlete_id,session_id,scheduled_date", ignoreDuplicates: true }),
+    "Placement de la séance impossible",
   );
 }

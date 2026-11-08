@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getAthleteBankExercises } from "@/api/exercises";
 import { C, BT, BLOC_COLORS } from "@/lib/theme";
 import { RIR_OPTS, rL, rC, parseReps, e1rm, roundHalf, generateRows, clusterReps, fmtMR, BLOC_METHODS, fuzzyExMatch, MDEF } from "@/lib/exercises";
 import { getMC, mL, getSessionBlocs } from "@/lib/muscles";
@@ -152,7 +152,7 @@ function LogView({exos,sets,updSets,completedSessions,completeSession,uncomplete
   const[bankPick,setBankPick]=useState(null);
   const[bankForm,setBankForm]=useState({sets:3,repsRange:"10",kg:"",rir:2});
   const[videoEx,setVideoEx]=useState(null);
-  useEffect(()=>{supabase.from('exercises').select('id,name,target,ex_type,youtube_id,image_url').order('name').then(({data})=>{if(data)setBankExos(data);});},[]);
+  useEffect(()=>{getAthleteBankExercises().then(setBankExos,(e)=>console.error('LogView bank exercises error:',e));},[]);
   const bankFiltered=bankExos.filter(e=>!bankSearch||e.name.toLowerCase().includes(bankSearch.toLowerCase())).slice(0,30);
   const addFromBankConfirm=()=>{
     if(!bankPick||!sid)return;

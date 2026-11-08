@@ -2,8 +2,7 @@ import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
-import { QK } from "@/lib/queryKeys";
-import { supabase } from "@/integrations/supabase/client";
+import { invalidateDocs } from "@/api/docs";
 import { useAuth } from "@/hooks/useAuth";
 import { formatFileSize } from "@/lib/compressImage";
 import { FICHE_CATEGORIES, FICHE_CATEGORY_LABEL } from "@/features/shared/types/fiches";
@@ -93,7 +92,7 @@ export function StaffFichesTab({ link }: { link: MyStaffAthlete }) {
           athleteId={link.athleteId}
           staffId={user.id}
           onClose={() => setAdding(false)}
-          onDone={() => { qc.invalidateQueries({ queryKey: QK.docs }); setAdding(false); }}
+          onDone={() => { void invalidateDocs(qc, link.athleteId); setAdding(false); }}
         />
       )}
 
@@ -153,12 +152,9 @@ function AddFicheDialog({ coachId, athleteId, staffId, onClose, onDone }: {
       }
       if (!upload) return;
       setStep("Envoi…");
-      // Banque du coach principal (athlete_id null), puis attribution à l'athlète.
-      const doc = await uploadDoc({ file: upload, coachId, athleteId: null, uploadedBy: staffId, title: name, category });
-      const { error } = await supabase.from("doc_assignments").insert({
-        doc_id: doc.id, athlete_id: athleteId, assigned_by: staffId, source: "manuel",
-      });
-      if (error) throw error;
+      // Banque du coach principal (athlete_id null), attribuée à l'athlète ;
+      // retirée de la banque si l'attribution échoue.
+      await uploadDoc({ file: upload, coachId, athleteId: null, uploadedBy: staffId, title: name, category, assignTo: athleteId });
       toast.success("Fiche ajoutée et attribuée");
       onDone();
     } catch (e) {

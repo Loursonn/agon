@@ -11,12 +11,17 @@ import {
   patchWorkoutEntries,
   sendEntriesKeepalive,
 } from "@/api/workouts";
+import { classifyWriteError } from "@/lib/offline/writeQueue";
+import { pendingWrites, QUEUED_TOAST, submitWrite } from "@/lib/offline/writes";
 
 const DEBOUNCE_MS = 600;
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
 // Limite navigateur des requêtes `keepalive` : 64 Ko pour TOUTES celles en vol.
 const KEEPALIVE_MAX_BYTES = 60_000;
 const SAVE_ERROR_TOAST = "workout-save-error";
+const SAVE_QUEUED_TOAST = "workout-save-queued";
+
+const browserOffline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
 export interface SaveWorkoutSets {
   /** Écriture différée (600 ms) — pour la frappe et les clics en rafale. */
@@ -65,6 +70,9 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
   // saisie derrière était perdu).
   const pendingRef = useRef<PendingEntry | null>(null);
   const inFlightRef = useRef(false);
+  // Incrémenté par `discardPending` : un envoi parti AVANT l'abandon ne doit
+  // ni se remettre en file ni se relancer ensuite.
+  const epochRef = useRef(0);
   // Id figée dans un ref : au démontage (ou au changement de séance) la purge
   // doit viser la séance d'origine. Sans ça, naviguer d'une séance à l'autre
   // en moins de 600 ms faisait atterrir les séries de la séance A sur l'id B.
@@ -103,27 +111,64 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
   const write = useCallback(
     async (entry: PendingEntry) => {
       inFlightRef.current = true;
-      let ok = false;
-      let missing = false;
+      const epoch = epochRef.current;
+      let outcome: "sent" | "queued" | "missing" | "refused" | "retry" = "retry";
+      // File hors ligne : la saisie est COMPLÈTE (toute la séance) — la file
+      // remplace une saisie de même séance par la plus récente, et le serveur
+      // fusionne les clés de premier niveau (`patch_workout_entries`).
+      const viaQueue = async (): Promise<"sent" | "queued"> => {
+        const r = await submitWrite("workout.entries", { athleteId: entry.aid!, logId: entry.id, patch: entry.mods });
+        return r.status;
+      };
+      // En ligne mais derrière d'autres saisies en attente : la file envoie
+      // tout de suite, pas de toast « pas de réseau ».
+      const behindOthers = !browserOffline() && pendingWrites() > 0;
       try {
-        // Fusion côté serveur (RPC) : l'adaptation du coach posée pendant la
-        // séance n'est plus écrasée. Une séance disparue (supprimée
-        // entre-temps) lève « introuvable » au lieu de réussir en silence.
-        await patchWorkoutEntries(entry.id, entry.mods);
-        ok = true;
+        if (entry.aid && (browserOffline() || pendingWrites() > 0)) {
+          // Hors ligne, ou d'autres saisies attendent déjà : on passe derrière
+          // elles. Un envoi direct pourrait sinon être écrasé ensuite par une
+          // saisie plus ancienne de la même séance restée dans la file.
+          outcome = await viaQueue();
+        } else {
+          try {
+            // Fusion côté serveur (RPC) : l'adaptation du coach posée pendant la
+            // séance n'est plus écrasée. Une séance disparue (supprimée
+            // entre-temps) lève « introuvable » au lieu de réussir en silence.
+            await patchWorkoutEntries(entry.id, entry.mods);
+            outcome = "sent";
+          } catch (e) {
+            const kind = classifyWriteError(e, browserOffline());
+            if (isWorkoutNotFound(e)) outcome = "missing";
+            else if (kind === "permanent") outcome = "refused";
+            // Coupure réseau : en file plutôt que de boucler. Pas si la saisie a
+            // été abandonnée pendant l'envoi (séance validée entre-temps avec la
+            // saisie complète) : elle passerait APRÈS la validation et
+            // remettrait une version plus ancienne des séries.
+            else if (kind === "network" && entry.aid && epochRef.current === epoch) outcome = await viaQueue();
+          }
+        }
       } catch (e) {
-        ok = false;
-        missing = isWorkoutNotFound(e);
+        // submitWrite ne lève qu'un refus définitif du serveur.
+        outcome = isWorkoutNotFound(e) ? "missing" : "refused";
       } finally {
         inFlightRef.current = false;
       }
 
-      if (ok) {
+      if (outcome === "sent" || outcome === "queued") {
         retryAttemptRef.current = 0;
         clearTimeout(retryTimerRef.current);
-        if (entry.aid) markDraftSynced(workoutDraftKey(entry.aid, entry.id), entry.mods);
         toast.dismiss(SAVE_ERROR_TOAST);
-        void invalidateWorkouts(qc, { athleteId: entry.aid, logId: entry.id });
+        if (outcome === "sent") {
+          if (entry.aid) markDraftSynced(workoutDraftKey(entry.aid, entry.id), entry.mods);
+          toast.dismiss(SAVE_QUEUED_TOAST);
+          void invalidateWorkouts(qc, { athleteId: entry.aid, logId: entry.id });
+        } else {
+          // Gardée sur le téléphone : le brouillon local reste « non
+          // synchronisé » (filet si la file est perdue) ; l'écran garde sa
+          // saisie locale. Pas d'invalidation : hors ligne elle ne servirait à
+          // rien, et la file rafraîchit tout une fois vidée.
+          if (!behindOthers) toast.info(QUEUED_TOAST, { id: SAVE_QUEUED_TOAST });
+        }
         if (pendingRef.current === entry) {
           pendingRef.current = null;
         } else if (pendingRef.current) {
@@ -133,16 +178,23 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
         return;
       }
 
-      if (missing) {
-        // Séance supprimée (ou inaccessible) : réessayer ne servirait à rien.
+      if (outcome === "missing" || outcome === "refused") {
+        // Séance supprimée (ou saisie refusée) : réessayer ne servirait à rien.
         // Le brouillon local reste « non synchronisé ».
         if (pendingRef.current === entry) pendingRef.current = null;
-        toast.error("Saisie non enregistrée — séance introuvable", { id: SAVE_ERROR_TOAST });
+        toast.error(
+          outcome === "missing"
+            ? "Saisie non enregistrée — séance introuvable"
+            : "Saisie non enregistrée — refusée par le serveur",
+          { id: SAVE_ERROR_TOAST },
+        );
         return;
       }
 
-      // Échec réseau / serveur : la saisie reste en attente et sera renvoyée
-      // (délai croissant, retour du réseau, retour au premier plan, prochain montage).
+      // Échec serveur (5xx, droits pas encore rafraîchis…) : la saisie reste en
+      // attente et sera renvoyée (délai croissant, retour du réseau, retour au
+      // premier plan, prochain montage). Abandonnée entre-temps : rien à faire.
+      if (epochRef.current !== epoch) return;
       toast.error("Saisie non enregistrée — nouvel essai automatique", { id: SAVE_ERROR_TOAST });
       scheduleRetry();
     },
@@ -161,7 +213,13 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
       const entry = pendingRef.current;
       if (!entry) return;
       if (opts?.keepalive) {
-        sendKeepalive(entry, tokenRef.current);
+        // Hors ligne, ou des saisies attendent dans la file : on y range aussi
+        // la plus récente (sinon une saisie plus ancienne de la file, envoyée
+        // au retour du réseau, écraserait celle partie en keepalive).
+        if (entry.aid && (browserOffline() || pendingWrites() > 0)) {
+          void submitWrite("workout.entries", { athleteId: entry.aid, logId: entry.id, patch: entry.mods }).catch(() => {});
+        }
+        if (!browserOffline()) sendKeepalive(entry, tokenRef.current);
         return;
       }
       if (inFlightRef.current) return; // relancé à la fin de l'envoi en cours
@@ -185,6 +243,7 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
   );
 
   const discardPending = useCallback(() => {
+    epochRef.current++;
     clearTimeout(timerRef.current);
     clearTimeout(retryTimerRef.current);
     pendingRef.current = null;

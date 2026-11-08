@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { QK } from "@/lib/queryKeys";
+import {
+  accountKeys, getConsents, invalidateAccount, recordConsents,
+  type ConsentPurpose, type ConsentState,
+} from "@/api/account";
 import { useAuth } from "@/hooks/useAuth";
 import { CORE_CONSENT_SINCE, LEGAL_VERSION } from "@/lib/legal";
 
@@ -13,16 +15,7 @@ import { CORE_CONSENT_SINCE, LEGAL_VERSION } from "@/lib/legal";
  * finalité.
  */
 
-/** Finalités de traitement nécessitant un consentement distinct. */
-export type ConsentPurpose = "health_data" | "ai_programming" | "garmin_sync" | "coros_sync" | "staff_sharing";
-
-export interface ConsentState {
-  purpose: ConsentPurpose;
-  granted: boolean;
-  /** Version du document acceptée — peut être antérieure à LEGAL_VERSION. */
-  docVersion: string;
-  decidedAt: string;
-}
+export type { ConsentPurpose, ConsentState };
 
 /**
  * Libellés affichés à l'utilisateur.
@@ -70,38 +63,17 @@ export const CONSENT_COPY: Record<
   },
 };
 
-interface CurrentConsentRow {
-  purpose: ConsentPurpose;
-  granted: boolean;
-  doc_version: string;
-  decided_at: string;
-}
-
 /** État courant des consentements de l'utilisateur connecté. */
 export function useConsents() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: QK.consents(user?.id ?? "none"),
+    queryKey: accountKeys.consents(user?.id ?? "none"),
     enabled: !!user,
     // Le consentement change rarement, mais une lecture périmée bloquerait
     // l'accès à l'app après acceptation : on garde un staleTime court.
     staleTime: 30 * 1000,
-    queryFn: async (): Promise<ConsentState[]> => {
-      const { data, error } = await supabase
-        .from("current_consents")
-        .select("purpose, granted, doc_version, decided_at")
-        .eq("user_id", user!.id);
-
-      if (error) throw error;
-
-      return ((data ?? []) as CurrentConsentRow[]).map((r) => ({
-        purpose: r.purpose,
-        granted: r.granted,
-        docVersion: r.doc_version,
-        decidedAt: r.decided_at,
-      }));
-    },
+    queryFn: () => getConsents(user!.id),
   });
 }
 
@@ -118,24 +90,16 @@ export function useSetConsent() {
   return useMutation({
     mutationFn: async (decisions: Array<{ purpose: ConsentPurpose; granted: boolean }>) => {
       if (!user) throw new Error("Non connecté");
-
-      const rows = decisions.map((d) => ({
-        user_id: user.id,
+      await recordConsents(user.id, decisions.map((d) => ({
         purpose: d.purpose,
         granted: d.granted,
-        doc_version: LEGAL_VERSION,
+        docVersion: LEGAL_VERSION,
         statement: CONSENT_COPY[d.purpose].label,
-      }));
-
-      const { error } = await supabase.from("user_consents").insert(rows);
-      if (error) throw error;
+      })));
     },
-    onSuccess: (_data, decisions) => {
-      qc.invalidateQueries({ queryKey: QK.consents(user?.id ?? "none") });
-      // Bandeau « accord staff » de Mon staff (lu via staff_sharing_consented).
-      if (user && decisions.some((d) => d.purpose === "staff_sharing")) {
-        qc.invalidateQueries({ queryKey: QK.staffConsent(user.id) });
-      }
+    // Consentements et bandeau « accord staff » de Mon staff (staff_sharing_consented).
+    onSuccess: () => {
+      if (user) void invalidateAccount(qc, user.id);
     },
   });
 }

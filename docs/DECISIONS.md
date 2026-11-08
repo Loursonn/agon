@@ -1667,3 +1667,24 @@ interfaces » recommandé par Benjamin, sans serveur REST en plus : la RLS reste
 la barrière de sécurité (une API en Edge Functions la contournerait avec la clé
 service et obligerait à réécrire chaque règle d'accès), pas de latence
 supplémentaire, et le même module sert le web, Capacitor et `coach-api`.
+
+## 2026-11 — Saisies athlète sans réseau : file d'attente sur le téléphone
+
+**Décision** : fin de séance muscu, RPE, saisie des séries, séance énergie,
+wellness, nutrition et pesée passent par `submitWrite` (`src/lib/offline/writes.ts`).
+Sans réseau, la saisie est gardée dans IndexedDB (par utilisateur), affichée
+tout de suite, puis rejouée dans l'ordre au retour du réseau. Une saisie de
+même cible (même séance, même jour) remplace la précédente. Chaque écriture
+est une RPC idempotente, donc la rejouer ne double rien.
+- Séance déplacée par le coach : même id, la saisie s'y enregistre (fusion
+  serveur qui garde l'adaptation du coach). Séance supprimée (`P0002`) :
+  saisie abandonnée, l'athlète est prévenu.
+- Déconnexion avec des saisies en attente : confirmation, puis effacement.
+- Coach hors ligne : pas de file. Mutations en `networkMode: "always"`, elles
+  échouent tout de suite avec leur message ; bandeau « Hors ligne :
+  modifications désactivées ».
+
+**Pourquoi** : les athlètes saisissent à la salle, souvent sans réseau ; avant,
+la saisie restait en pause dans l'onglet et disparaissait à sa fermeture. Les
+écritures coach (programmation, planning) touchent beaucoup de lignes et se
+font au bureau : les rejouer plus tard ouvrirait des conflits pour peu de gain.

@@ -59,7 +59,7 @@ Les écritures « miroir » entre les deux sont la première source de régressi
 
 Conception et ordre : `docs/COUCHE_API.md`. Règles :
 - Une entité = `src/api/<entité>.ts` : lectures (lèvent en cas d'erreur, jamais `?? []` silencieux), écritures, clés React Query de l'entité (`<entité>Keys`, préfixe `['<entité>', athleteId, …]`) et **une** fonction `invalidate<Entité>(qc, athleteId)`.
-- Accès Supabase uniquement via `db()` / `unwrap` / `unwrapRows` / `check` de `src/api/client.ts`. ESLint avertit sur tout import de `@/integrations/supabase/client` ailleurs (136 fichiers au 2026-11-07, objectif 0).
+- Accès Supabase uniquement via `db()` / `unwrap` / `unwrapRows` / `check` de `src/api/client.ts`. ESLint refuse (erreur) tout import de `@/integrations/supabase/client` ailleurs (0 fichier depuis le 2026-11-08).
 - Calculs partagés coach / athlète / IA dans `supabase/functions/_shared/domain/` (pur, importé via `@shared/domain/...` et par les Edge Functions). Jours : toujours `"YYYY-MM-DD"` via `domain/dates.ts` (l'ancien stockage écrit `"YYYYMMDD"`).
 - Écritures concurrentes ou multi-champs : RPC Postgres atomique, jamais « relire le blob, modifier, réécrire ».
 - Tests : base simulée `supabase/functions/_shared/__tests__/fakeDb.ts` + `setDbForTests` (exemple : `src/api/__tests__/workouts.test.ts`).

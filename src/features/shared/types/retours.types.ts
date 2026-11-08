@@ -116,7 +116,7 @@ export interface WeeklyRetourData {
     id: string;
     session_name: string;
     scheduled_date: string;
-    status: 'planned' | 'completed' | 'missed' | 'skipped';
+    status: 'planned' | 'in_progress' | 'completed' | 'missed' | 'skipped';
     duration_s: number | null;
     notes: string | null;
     rpe_score: number | null;
@@ -185,7 +185,7 @@ export interface WorkoutDetail {
   id: string;
   session_name: string;
   scheduled_date: string;
-  status: 'planned' | 'completed' | 'missed' | 'skipped';
+  status: 'planned' | 'in_progress' | 'completed' | 'missed' | 'skipped';
   session_type: 'muscu' | 'specific';
   duration_s: number | null;
   notes: string | null;

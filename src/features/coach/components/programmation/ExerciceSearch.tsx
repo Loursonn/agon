@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { C } from "@/lib/theme"
-import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
+import { useAuth } from "@/hooks/useAuth"
+import { useCreateExercise, useExerciseSearch } from "@/features/shared/hooks/useExerciseLibrary"
 import { Search, Plus } from "lucide-react"
 import { EX_TYPES, exTypeLabel, exTypeColor } from "@/lib/exerciseTypes"
 
@@ -17,57 +18,30 @@ interface ExerciceSearchProps {
   showTypeFilter?: boolean
 }
 
-interface ExerciseRow {
-  id: string
-  name: string
-  ex_type?: string | null
-  youtube_id?: string | null
-}
-
 export function ExerciceSearch({ value, onSelect, onClose, onFreeText, showTypeFilter }: ExerciceSearchProps) {
   const [search, setSearch] = useState(value)
-  const [results, setResults] = useState<ExerciseRow[]>([])
-  const [loading, setLoading] = useState(false)
+  // Texte cherché, 300 ms après la dernière frappe
+  const [query, setQuery] = useState(value)
   const [typeFilter, setTypeFilter] = useState<string>("")
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
   const inputRef = useRef<HTMLInputElement>(null)
+  const { user } = useAuth()
+  const { results, isFetching: loading } = useExerciseSearch(query, typeFilter)
+  const create = useCreateExercise()
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
   useEffect(() => {
-    clearTimeout(timerRef.current)
-    // Avec un type sélectionné, on liste même sans texte de recherche
-    if (!search.trim() && !typeFilter) {
-      setResults([])
-      return
-    }
-    timerRef.current = setTimeout(async () => {
-      setLoading(true)
-      let q = supabase
-        .from('exercises')
-        .select('id, name, ex_type, youtube_id')
-        .limit(10)
-      if (search.trim()) q = q.ilike('name', `%${search.trim()}%`)
-      if (typeFilter) q = q.eq('ex_type', typeFilter)
-      const { data } = await q.order('name')
-      setResults((data ?? []) as ExerciseRow[])
-      setLoading(false)
-    }, 300)
-    return () => clearTimeout(timerRef.current)
-  }, [search, typeFilter])
+    const t = setTimeout(() => setQuery(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
 
   async function handleCreate() {
     const name = search.trim()
     if (!name) return
     try {
-      const { data, error } = await supabase
-        .from('exercises')
-        .insert({ name, is_verified: false })
-        .select('id, name, ex_type, youtube_id')
-        .single()
-      if (error) throw error
+      const data = await create.mutateAsync({ name, createdBy: user?.id })
       toast.success(`Exercice "${name}" créé`)
       onSelect({ id: data.id, name: data.name, ex_type: data.ex_type ?? undefined, youtube_id: data.youtube_id ?? undefined })
     } catch {
