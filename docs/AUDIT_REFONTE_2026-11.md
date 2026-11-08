@@ -228,24 +228,28 @@ Source : audit qualité.
 - [x] Supprimer le code mort (84 fichiers, 14 500 lignes) et 24 dépendances inutiles.
 
 ### Phase 2 — Garmin + Coros (priorité produit) · ~2-3 sem.
-- [ ] Coros : configurer `APP_URL` + secrets Vault, **première vraie connexion** (Hugo ou un athlète Coros), mettre la doc à jour avec ce qu'on observe.
-- [ ] Coros : corriger C1, C2, C3, C5, C6, S10, dédoublonnage serveur.
-- [ ] Lire les conditions Coros + **demander la Partner API Coros** en parallèle.
-- [ ] Base provider générique (OAuth commun + adaptateurs, callback/UI communs, `consent_purpose`, migrations §2.3).
-- [ ] Garmin : webhook (stockage brut → 200 → traitement), deregistration + permission change, cron de refresh, attribution « Garmin [modèle] ». Tests sur des exemples de données (clé Personal).
-- [ ] Faire compter les données montre dans le volume de course + rattacher aux séances prévues.
-- [ ] Aligner `GARMIN_DOSSIER.md` et le comportement de la déconnexion.
+- [x] Coros : configurer `APP_URL` + secrets Vault (fait le 2026-11-07).
+- [ ] Coros : **première vraie connexion** (Hugo ou un athlète Coros), mettre la doc à jour avec ce qu'on observe.
+- [x] Coros : corriger C1, C2, C3, C5, C6, S10, dédoublonnage serveur (PR #131).
+- [ ] Lire les conditions Coros + **demander la Partner API Coros** en parallèle (Hugo).
+- [x] Base provider générique (OAuth commun + adaptateurs, callback/UI communs, `consent_purpose`, migrations §2.3) (PR #131).
+- [x] Garmin : webhook (stockage brut → 200 → traitement), deregistration + permission change, cron de refresh, attribution « Garmin [modèle] ». Masqué tant que `VITE_GARMIN_ENABLED` ≠ true (PR #131).
+- [ ] Garmin : approbation du programme développeur, puis checklist « jour J » de `GARMIN_DOSSIER.md` (tests sur clé Personal).
+- [x] Faire compter les données montre dans le volume de course + rattacher aux séances prévues (PR #131).
+- [x] Aligner `GARMIN_DOSSIER.md` et le comportement de la déconnexion (suppression à la déconnexion, `provider-disconnect` déployée le 2026-11-08).
 - [x] Export RGPD : ajouter les données provider.
 
 ### Phase 3 — Confort athlète (hors ligne) · ~2 sem.
 - [ ] Phase 1 hors ligne : `vite-plugin-pwa`, manifest `standalone`, cache React Query persisté (IndexedDB), toutes les `queryFn` lèvent une erreur au lieu de renvoyer `null`.
 - [ ] Phase 2 hors ligne : file d'attente des écritures (IndexedDB), ids générés côté client, séparer `coachOverride` de `athlete_modifications`, indicateur « N saisies en attente ».
-- [ ] Sortir le backfill et les écritures miroir du démarrage.
+- [x] Sortir le backfill et les écritures miroir du démarrage (lot 0, 2026-11-07).
 
 ### Phase 4 — Couche données (fin des régressions) · ~3-4 sem., entité par entité
-- [ ] `src/api/` + RPC ciblées (§5.2), dans l'ordre du §5.3.
-- [ ] Corriger les 5 requêtes vers des tables inexistantes.
-- [ ] Fusion RPE, tests, poids ; suppression des tables mortes ; `migration repair` si validé.
+- [x] `src/api/` + RPC ciblées (§5.2) : séances, wellness, références, records, nutrition, blessures (PR #137, `docs/COUCHE_API.md`).
+- [ ] Migrer les 113 fichiers qui importent encore Supabase directement (planning, tests, compétitions, énergie, staff…), puis passer la règle ESLint en erreur.
+- [x] Corriger les requêtes vers des tables ou colonnes inexistantes (`nutrition_*`, `wellness_logs`, `reschedule_reason`, `coach_validated`).
+- [x] Fusion RPE (seule source `workout_logs.rpe_score`).
+- [ ] Fusion tests, poids ; suppression des tables mortes (`workout_rpe` après export) ; `migration repair` si validé.
 - [ ] Sortir santé puis programme d'`app_data`.
 
 ### Phase 5 — Design system · ~1-2 sem.
