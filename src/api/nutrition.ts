@@ -74,21 +74,14 @@ export async function getDays(athleteId: string, from: IsoDay, to: IsoDay): Prom
   return nutritionDays(await getLog(athleteId), from, to);
 }
 
-type UntypedRpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{
-  data: unknown;
-  error: { message: string; code?: string } | null;
-}>;
-
 /**
  * Enregistre UNE journée (athlète). Seule écriture du journal : la RPC remplace
  * ce jour-là et seulement lui, dans la même ligne, sans relire le blob.
  */
 export async function saveDay(athleteId: string, day: IsoDay, log: NutritionDailyLog): Promise<NutritionDailyLog> {
   if (!isIsoDay(day)) throw new ApiError("Journée nutrition invalide", { message: String(day), code: "22023" });
-  // `nutrition_save_day` n'est pas encore dans les types générés (migration 20261108130000).
-  const client = db() as unknown as { rpc: UntypedRpc };
   const saved = unwrap(
-    await client.rpc("nutrition_save_day", { p_athlete: athleteId, p_day: day, p_log: cleanDailyLog(log) }),
+    await db().rpc("nutrition_save_day", { p_athlete: athleteId, p_day: day, p_log: cleanDailyLog(log) }),
     "Enregistrement de la journée impossible",
   );
   return cleanDailyLog((saved ?? log) as NutritionDailyLog);

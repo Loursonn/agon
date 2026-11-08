@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { claimAthleteAccount } from "@/api/account";
 import { errorMessage } from "@/lib/errors";
 import { LEGAL_ROUTES } from "@/lib/legal";
+import { localIsoDay } from "@shared/domain/dates";
+import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { useClaimInfo } from "@/features/shared/hooks/useAthleteClaimLink";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 
 /**
  * Première connexion d'un athlète dont le coach a déjà préparé le compte.
- * Prénom, nom et code coach sont déjà connus : il ne choisit que son email et
- * son mot de passe. Le consentement RGPD est recueilli par ConsentGate à la
+ * Prénom, nom et code coach sont déjà connus : il choisit son email et son
+ * mot de passe, et donne sa date de naissance (âge minimum 15 ans, vérifié par
+ * l'API puis par l'Edge Function `claim-athlete`). Le consentement RGPD est recueilli par ConsentGate à la
  * première connexion, comme pour toute inscription.
  */
 export default function ClaimAthlete() {
@@ -30,13 +33,14 @@ export default function ClaimAthlete() {
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
+    const birthDate = String(form.get("birthDate") ?? "");
     if (password !== form.get("confirm")) {
       setError("Les mots de passe ne correspondent pas");
       return;
     }
     setLoading(true);
     try {
-      await claimAthleteAccount(token, email, password);
+      await claimAthleteAccount(token, email, password, birthDate);
       navigate("/");
     } catch (err) {
       setError(errorMessage(err));
@@ -89,6 +93,11 @@ export default function ClaimAthlete() {
                   <div className="space-y-1">
                     <Label htmlFor="coachCode">Code coach</Label>
                     <Input id="coachCode" value={info.coach_code ?? ""} readOnly />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="birthDate">Date de naissance</Label>
+                    <Input id="birthDate" name="birthDate" type="date" required min={OLDEST_BIRTH_DATE} max={localIsoDay()} />
+                    <p className="text-xs text-zinc-500">Agon est réservé aux personnes de {MIN_AGE} ans et plus.</p>
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="email">Email</Label>

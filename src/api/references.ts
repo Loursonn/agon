@@ -103,18 +103,6 @@ export function invalidateReferences(qc: QueryClient, athleteId: string): Promis
   ]);
 }
 
-// ── RPC pas encore dans les types générés ────────────────────────────────────
-
-type UntypedRpc = (
-  fn: string,
-  args: Record<string, unknown>,
-) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
-
-function rpc(fn: string, args: Record<string, unknown>) {
-  const call = db().rpc as unknown as UntypedRpc;
-  return call.call(db(), fn, args);
-}
-
 // ── Lectures ─────────────────────────────────────────────────────────────────
 
 const LOG_COLUMNS =
@@ -353,7 +341,7 @@ export interface ReferenceInput {
 export async function setReference(r: ReferenceInput): Promise<string> {
   if (!Number.isFinite(r.value)) throw new Error("Valeur invalide");
   const id = unwrap(
-    await rpc("set_performance_reference", {
+    await db().rpc("set_performance_reference", {
       p_athlete: r.athleteId,
       p_metric: normalizeMetricName(r.metricName),
       p_value: r.value,
@@ -375,7 +363,7 @@ export async function saveFcZones(athleteId: string, zones: Partial<Record<FcZon
     if (!isFcZoneKey(k)) throw new Error(`Zone FC inconnue : ${k}`);
     if (!Number.isFinite(v) || (v as number) < 0) throw new Error(`Valeur invalide pour ${k}`);
   }
-  const n = unwrap(await rpc("save_fc_zones", { p_athlete: athleteId, p_zones: zones }), "Zones FC non enregistrées");
+  const n = unwrap(await db().rpc("save_fc_zones", { p_athlete: athleteId, p_zones: zones }), "Zones FC non enregistrées");
   return Number(n ?? 0);
 }
 
@@ -385,7 +373,7 @@ export async function saveFcZones(athleteId: string, zones: Partial<Record<FcZon
  */
 export async function activateReference(athleteId: string, logId: string, metricName: string): Promise<void> {
   check(
-    await rpc("set_active_performance_reference", {
+    await db().rpc("set_active_performance_reference", {
       p_performance_log_id: logId,
       p_athlete_id: athleteId,
       p_metric_name: metricName,
@@ -405,7 +393,7 @@ export async function deleteMeasurement(id: string): Promise<void> {
  */
 export async function reviewMeasurement(notificationId: string, logId: string, approve: boolean): Promise<void> {
   check(
-    await rpc("review_performance_notification", { p_notification: notificationId, p_log: logId, p_approve: approve }),
+    await db().rpc("review_performance_notification", { p_notification: notificationId, p_log: logId, p_approve: approve }),
     approve ? "Validation impossible" : "Rejet impossible",
   );
 }

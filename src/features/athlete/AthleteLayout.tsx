@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { AgonIcon } from "@/components/ui/AgonIcon";
@@ -29,6 +29,13 @@ const TAIL_TABS = [
   { k: "profil",  l: "Profil",      icon: <svg {...ip}><circle cx="12" cy="7" r="3.5"/><path d="M5 21V19A7 7 0 0 1 19 19V21"/></svg> },
 ];
 
+// ── Mise en page PC (≥ 1024 px, préfixe Tailwind `lg:`) ─────────────────────
+// Mobile : inchangé (barre d'onglets fixe en bas, pleine largeur).
+// PC : cadre centré de 1100 px max = navigation latérale de 220 px + zone de
+// contenu bordée, dans laquelle les pages gardent leur colonne de 480 px.
+// Les éléments flottants (minuteur, bandeaux) se centrent sur cette zone :
+// son milieu est à 50 % + 110 px (moitié de la navigation) du viewport.
+
 /** "3 août" — libellé court pour le bandeau de rappel. */
 function formatPendingDate(iso: string): string {
   const d = new Date(iso + "T12:00:00");
@@ -47,6 +54,19 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [dismissedUnfinished, setDismissedUnfinished] = useState<string[]>([]);
+
+  // Hauteur du bandeau du haut (variable : bandeau hors ligne) → la navigation
+  // latérale PC reste collée juste en dessous.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerH, setHeaderH] = useState(46);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setHeaderH(el.offsetHeight));
+    ro.observe(el);
+    setHeaderH(el.offsetHeight);
+    return () => ro.disconnect();
+  }, []);
 
   const {
     athleteId, athleteProfile,
@@ -111,8 +131,8 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
     // overflowWrap hérité : les longues chaînes sans espace (grilles, allures…) reviennent à la ligne
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", overflowWrap: "anywhere" }}>
       {/* ── Sticky header ── */}
-      <div style={{ position: "sticky", top: 0, zIndex: 20, background: C.bg, borderBottom: "1px solid " + C.brd }}>
-        <div style={{ padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div ref={headerRef} style={{ position: "sticky", top: 0, zIndex: 20, background: C.bg, borderBottom: "1px solid " + C.brd }}>
+        <div className="w-full lg:mx-auto lg:max-w-[1100px]" style={{ padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <img src="/brand/agon-logo-horizontal-marbre.svg" alt="Agon" style={{ height: 20 }} />
             {saveStatus && (
@@ -151,17 +171,61 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         <OfflineBanner />
       </div>
 
-      {/* ── Page content (bottom-pad for fixed tabs + optional timer) ── */}
-      <div style={{ flex: 1, paddingBottom: (timerActive || timerFinished) ? 120 : 64 }}>
-        <Outlet />
+      <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-[1100px] lg:flex-row">
+        {/* ── Navigation latérale (PC uniquement) ── */}
+        <nav
+          aria-label="Navigation principale"
+          className="hidden lg:flex lg:w-[220px] lg:shrink-0 lg:flex-col lg:self-start"
+          style={{ position: "sticky", top: headerH, padding: "16px 0", gap: 2 }}
+        >
+          {ATH_TABS.map(t => {
+            const isActive = activeTab === t.k;
+            return (
+              <button
+                key={t.k}
+                onClick={() => navigate(t.k || ".")}
+                aria-current={isActive ? "page" : undefined}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 16px", border: "none",
+                  borderLeft: "2px solid " + (isActive ? C.ac : "transparent"),
+                  background: isActive ? C.acS : "transparent",
+                  color: isActive ? C.ac : C.tx2,
+                  fontSize: 13, fontWeight: isActive ? 600 : 400,
+                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                  transition: "color 150ms",
+                }}
+              >
+                <span style={{ display: "flex", alignItems: "center", position: "relative", flexShrink: 0 }}>
+                  {t.icon}
+                  {t.k === "profil" && staffUnseen > 0 && (
+                    <span aria-label="Nouveau dans ton staff" style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: C.ac }} />
+                  )}
+                </span>
+                <span>{t.l}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* ── Page content (bottom-pad for fixed tabs + optional timer) ── */}
+        {/* PC : zone bordée, sans barre du bas ; les pages y gardent leur colonne centrée. */}
+        <div
+          className={"min-w-0 flex-1 lg:border-x " + ((timerActive || timerFinished) ? "pb-[120px] lg:pb-20" : "pb-16 lg:pb-8")}
+          style={{ borderColor: C.brd }}
+        >
+          <Outlet />
+        </div>
       </div>
 
-      {/* ── Bottom tabs ── */}
+      {/* ── Bottom tabs (mobile / tablette) ── */}
       <div
+        // display dans la classe (et non en inline) pour que `lg:hidden` s'applique
+        className="flex lg:hidden"
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30,
           background: C.bg, borderTop: "1px solid " + C.brd,
-          display: "flex", height: 64,
+          height: 64,
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
@@ -195,7 +259,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── Timer overlay (above bottom tabs) ── */}
       {(timerActive || timerFinished) && (
-        <div style={{ position: "fixed", bottom: 64, left: "50%", transform: "translateX(-50%)", zIndex: 150, background: timerFinished ? "rgba(34,201,147,0.15)" : C.s1, border: "1px solid " + (timerFinished ? C.g : timerActive && timerLeft <= 10 ? C.r : C.ac) + "70", borderRadius: 50, padding: "9px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="bottom-16 left-1/2 lg:bottom-6 lg:left-[calc(50%+110px)]" style={{ position: "fixed", transform: "translateX(-50%)", zIndex: 150, background: timerFinished ? "rgba(34,201,147,0.15)" : C.s1, border: "1px solid " + (timerFinished ? C.g : timerActive && timerLeft <= 10 ? C.r : C.ac) + "70", borderRadius: 50, padding: "9px 18px", display: "flex", alignItems: "center", gap: 12 }}>
           {timerFinished ? <span style={{ fontSize: 16 }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span> : (
             <div style={{ width: 24, height: 24, position: "relative" }}>
               <svg viewBox="0 0 24 24" style={{ width: 24, height: 24, transform: "rotate(-90deg)" }}>
@@ -216,7 +280,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── "Reprendre" floating button (free session) ── */}
       {activeFreeSess && (
-        <div style={{ position: "fixed", bottom: 64, right: 16, zIndex: 140 }}>
+        <div className="bottom-16 right-4 lg:bottom-6 lg:right-[max(16px,calc(50%-534px))]" style={{ position: "fixed", zIndex: 140 }}>
           <button
             onClick={() => navigate("log", { state: { initialSess: activeFreeSess } })}
             style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 50, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
@@ -230,7 +294,10 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {/* Les saisies sont bien enregistrées, mais sans clôture la séance
           n'entre ni dans l'historique ni dans les stats. */}
       {!viewOnly && !isOnWorkoutPage && pendingFinish && (
-        <div style={{ position: "fixed", bottom: activeWorkout ? 132 : 72, left: 16, right: 16, zIndex: 141 }}>
+        <div
+          className={"left-4 right-4 lg:left-[calc(50%+110px)] lg:right-auto lg:w-[448px] lg:-translate-x-1/2 " + (activeWorkout ? "bottom-[132px] lg:bottom-[84px]" : "bottom-[72px] lg:bottom-6")}
+          style={{ position: "fixed", zIndex: 141 }}
+        >
           <div
             style={{
               display: "flex", alignItems: "center", gap: 10,
@@ -276,7 +343,10 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── "Revenir à la séance" floating button (musculation workout) ── */}
       {activeWorkout && !isOnWorkoutPage && (
-        <div style={{ position: "fixed", bottom: 72, left: 16, right: 16, zIndex: 140 }}>
+        <div
+          className="bottom-[72px] left-4 right-4 lg:bottom-6 lg:left-[calc(50%+110px)] lg:right-auto lg:w-[448px] lg:-translate-x-1/2"
+          style={{ position: "fixed", zIndex: 140 }}
+        >
           <button
             onClick={() => navigate(`program/workout/${activeWorkout.id}`)}
             style={{
@@ -325,7 +395,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {/* ── Bilan overlay ── */}
       {showBilan && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: C.bg, overflowY: "auto" }}>
-          <div style={{ padding: "40px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+          <div className="w-full lg:mx-auto lg:max-w-[600px]" style={{ padding: "40px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
             <div style={{ fontSize: 28, fontWeight: 800, textAlign: "center" }}>Bloc terminé !</div>
             <div style={{ fontSize: 14, color: C.tx2 }}>{totalDone} séances réalisées</div>
             <div style={{ display: "flex", gap: 12, width: "100%" }}>
@@ -373,27 +443,33 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {/* ── Wellness modal ── */}
       {showWellness && (
         <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid " + C.brd }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>Wellness du jour</div>
-            <button onClick={() => setShowWellness(false)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}>×</button>
+          {/* PC : panneau centré de 600 px au lieu de toute la largeur */}
+          <div className="lg:mx-auto lg:min-h-full lg:max-w-[600px] lg:border-x" style={{ borderColor: C.brd }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid " + C.brd }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Wellness du jour</div>
+              <button onClick={() => setShowWellness(false)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}>×</button>
+            </div>
+            <WellnessFlow
+              existing={wellness}
+              onSave={(data) => { saveWellness(data); setShowWellness(false); }}
+              sleepTarget={goals.sleepTarget}
+              weightLog={weightLog}
+            />
           </div>
-          <WellnessFlow
-            existing={wellness}
-            onSave={(data) => { saveWellness(data); setShowWellness(false); }}
-            sleepTarget={goals.sleepTarget}
-            weightLog={weightLog}
-          />
         </div>
       )}
 
       {/* ── App feedback modal ── */}
       {showAppFeedback && (
         <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>Avis sur l'app</div>
-            <button onClick={() => setShowAppFeedback(false)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}>×</button>
+          {/* PC : panneau centré de 600 px au lieu de toute la largeur */}
+          <div className="flex w-full flex-1 flex-col lg:mx-auto lg:max-w-[600px] lg:border-x" style={{ borderColor: C.brd }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Avis sur l'app</div>
+              <button onClick={() => setShowAppFeedback(false)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}>×</button>
+            </div>
+            <AppFbForm onClose={() => setShowAppFeedback(false)} />
           </div>
-          <AppFbForm onClose={() => setShowAppFeedback(false)} />
         </div>
       )}
 

@@ -439,10 +439,25 @@ export interface PlanWorkoutInput {
   weekNumber?: number | null;
   /** Séance démarrée hors programme par l'athlète. */
   byAthlete?: boolean;
+  /**
+   * Id choisi par le client (séance libre démarrée sans réseau). La création
+   * devient rejouable : un nouvel envoi ne crée jamais de doublon, et si la
+   * place (séance-type, jour) est déjà prise, la séance existante est renvoyée
+   * (son id peut alors différer de `id`).
+   */
+  id?: string;
 }
 
-/** Nouvelle séance prévue (coach qui assigne, ou athlète hors programme). */
+/**
+ * Nouvelle séance prévue (coach qui assigne, ou athlète hors programme).
+ *
+ * Avec `id` : `INSERT … ON CONFLICT (athlete_id, session_id, scheduled_date)
+ * DO NOTHING`, puis relecture. Aucune migration : la RLS d'insertion
+ * (`athlete_id = auth.uid()` ou `is_coach_of`) ne regarde pas l'id, et l'index
+ * unique `idx_workout_logs_unique` sert d'arbitre.
+ */
 export async function planWorkout(p: PlanWorkoutInput): Promise<WorkoutLog> {
+  if (p.id) return planWorkoutWithId(p as PlanWorkoutInput & { id: string });
   const row = unwrap<RawRow>(
     (await db().from("workout_logs").insert({
       athlete_id: p.athleteId,
@@ -458,6 +473,36 @@ export async function planWorkout(p: PlanWorkoutInput): Promise<WorkoutLog> {
     "Ajout de la séance impossible",
   );
   return toWorkoutLog(row!);
+}
+
+async function planWorkoutWithId(p: PlanWorkoutInput & { id: string }): Promise<WorkoutLog> {
+  const res = await db().from("workout_logs").upsert({
+    id: p.id,
+    athlete_id: p.athleteId,
+    coach_id: p.coachId,
+    session_id: p.sessionId,
+    session_name: p.sessionName,
+    scheduled_date: p.date,
+    original_scheduled_date: p.date,
+    status: "planned",
+    ...(p.byAthlete ? { rescheduled_by_athlete: true, coach_alert: false } : {}),
+    ...(p.weekNumber != null ? { week_number: p.weekNumber } : {}),
+  }, { onConflict: "athlete_id,session_id,scheduled_date", ignoreDuplicates: true });
+  // 23505 sur la clé primaire : cet id existe déjà (premier envoi arrivé, puis
+  // séance déplacée par le coach avant le rejeu) → on la relit ci-dessous.
+  if (res.error && (res.error as { code?: string }).code !== "23505") check(res, "Ajout de la séance impossible");
+  const mine = await getWorkoutLog(p.id);
+  if (mine) return mine;
+  // Place déjà prise par une autre séance (prévue par le coach, annulée…) :
+  // c'est elle que l'athlète fait.
+  const other = unwrap<RawRow>(
+    (await db().from("workout_logs").select(FULL_COLS)
+      .eq("athlete_id", p.athleteId).eq("session_id", p.sessionId).eq("scheduled_date", p.date)
+      .maybeSingle()) as never,
+    "Ajout de la séance impossible",
+  );
+  if (other) return toWorkoutLog(other);
+  throw new ApiError("Ajout de la séance impossible", { message: "séance introuvable après création", code: WORKOUT_NOT_FOUND });
 }
 
 /**

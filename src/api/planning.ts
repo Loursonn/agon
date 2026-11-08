@@ -1,7 +1,7 @@
 import { type IsoDay, addDays, localIsoDay } from "@shared/domain/dates";
 import { localISO } from "@/lib/date";
 import { computeOccurrences } from "@/lib/sessionOccurrence";
-import { check, db, unwrapRows } from "./client";
+import { listTestSessionsBetween } from "./tests";
 import { listCompetitions } from "./competitions";
 import { listLifeEvents } from "./lifeEvents";
 import { readAppData } from "./appData";
@@ -17,13 +17,9 @@ import { listSessionOccurrenceLogs, listWorkoutLogs, planWorkoutsIfAbsent, type 
  * l'athlète, calendrier unifié, placement d'une séance.
  *
  * Ce module ne possède aucune table : il assemble les lectures des modules
- * propriétaires (cycles, séances, énergie, compétitions, événements de vie).
- * Les écritures invalident par le module propriétaire (`invalidateWorkouts`,
- * `invalidateCycles`, `invalidateTests`…).
- *
- * Section « en attente » en bas : lectures/écritures de tables dont le module
- * n'expose pas encore la fonction (séances de test sur une plage, exercices
- * d'une séance, ancien stockage `asp:exos::`). À déplacer dans leur module.
+ * propriétaires (cycles, séances, énergie, tests, compétitions, événements de
+ * vie). Les écritures invalident par le module propriétaire
+ * (`invalidateWorkouts`, `invalidateCycles`, `invalidateTests`…).
  */
 
 // ── Clés React Query (noms historiques, invalidés par les modules) ───────────
@@ -560,69 +556,4 @@ export async function placeSession(p: {
     athleteId: p.athleteId, coachId: p.coachId, sessionId: session.id, sessionName: session.name,
     date: p.date, weekNumber: p.weekNumber ?? null,
   }]);
-}
-
-// ── En attente de leur module ─────────────────────────────────────────────────
-// Ces tables appartiennent à d'autres modules qui n'exposent pas encore ces
-// fonctions (tests.ts : plage de séances de test, création/déplacement ;
-// exercices d'une séance ; ancien stockage `asp:exos::`). À y déplacer.
-
-export interface TestSessionBrief {
-  id: string; title: string; type: string; date: string; completed: boolean;
-  description: string | null; results_note: string | null;
-}
-
-/** Séances de test d'un athlète sur une plage, par date. */
-export async function listTestSessionsBetween(athleteId: string, from: IsoDay, to: IsoDay): Promise<TestSessionBrief[]> {
-  const rows = unwrapRows<Record<string, unknown>>(
-    (await db().from("test_sessions").select("id, title, type, date, completed, description, results_note")
-      .eq("athlete_id", athleteId).gte("date", from).lte("date", to).order("date")) as never,
-    "Lecture des tests impossible",
-  );
-  return rows.map((t) => ({
-    id: String(t.id), title: String(t.title ?? ""), type: String(t.type ?? ""), date: String(t.date ?? "").slice(0, 10),
-    completed: t.completed === true,
-    description: (t.description as string | null) ?? null,
-    results_note: (t.results_note as string | null) ?? null,
-  }));
-}
-
-export async function createTestSession(p: { athleteId: string; coachId: string; title: string; type: string; date: IsoDay }): Promise<void> {
-  check(
-    await db().from("test_sessions").insert({
-      athlete_id: p.athleteId, coach_id: p.coachId, title: p.title, type: p.type, date: p.date, completed: false,
-    } as never),
-    "Création du test impossible",
-  );
-}
-
-export async function rescheduleTestSession(id: string, date: IsoDay): Promise<void> {
-  check(await db().from("test_sessions").update({ date } as never).eq("id", id), "Déplacement du test impossible");
-}
-
-export async function deleteTestSession(id: string): Promise<void> {
-  check(await db().from("test_sessions").delete().eq("id", id), "Suppression du test impossible");
-}
-
-export interface MacrocycleTestResult {
-  id: string; test_id: string; value: number; test_date: string; notes?: string | null;
-  test?: { name: string; unit?: string | null; higher_is_better: boolean } | null;
-}
-
-/** Résultats de tests rattachés à un macrocycle (ancienne table `test_results`). */
-export async function listMacrocycleTestResults(athleteId: string, macrocycleId: string): Promise<MacrocycleTestResult[]> {
-  return unwrapRows<MacrocycleTestResult>(
-    (await db().from("test_results")
-      .select("id, test_id, value, test_date, notes, test:tests(name, unit, higher_is_better)")
-      .eq("athlete_id", athleteId).eq("macrocycle_id", macrocycleId).order("test_date")) as never,
-    "Lecture des résultats de test impossible",
-  );
-}
-
-/** Ancien stockage des exercices par cycle (`app_data`, clés `asp:exos::<cycle>`). */
-export async function listLegacyCycleExercises(athleteId: string): Promise<{ key: string; value: unknown }[]> {
-  return unwrapRows<{ key: string; value: unknown }>(
-    (await db().from("app_data").select("key, value").eq("athlete_id", athleteId).like("key", "asp:exos::%")) as never,
-    "Lecture des anciens exercices impossible",
-  );
 }

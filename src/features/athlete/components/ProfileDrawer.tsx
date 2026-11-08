@@ -78,11 +78,12 @@ export default function ProfileDrawer({ onClose }: Props) {
   // Zoom overlay
   if (drawerZoom) return (
     <div style={{ position: "fixed", inset: 0, zIndex: 103, background: C.bg, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid " + C.brd, position: "sticky", top: 0, background: C.bg, zIndex: 2 }}>
+      {/* PC : vue zoom centrée (720 px max) plutôt qu'étirée sur tout l'écran */}
+      <div className="w-full lg:mx-auto lg:max-w-[720px]" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid " + C.brd, position: "sticky", top: 0, background: C.bg, zIndex: 2 }}>
         <button onClick={() => setDrawerZoom(null)} style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 18, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
         <div style={{ fontSize: 14, fontWeight: 700 }}>{drawerZoom === "weight" ? "Poids de corps" : drawerZoom === "wellness" ? "Forme & santé" : drawerZoom === "sleep" ? "Sommeil" : "Objectifs"}</div>
       </div>
-      <div style={{ padding: "16px" }}>
+      <div className="w-full lg:mx-auto lg:max-w-[720px]" style={{ padding: "16px" }}>
         {drawerZoom === "weight" && (
           <div style={{ background: C.s1, borderRadius: 6, padding: "16px", border: "1px solid " + C.brd }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -102,6 +103,9 @@ export default function ProfileDrawer({ onClose }: Props) {
   );
 
   return (
+    <>
+    {/* PC : fond assombri, un clic à côté du tiroir le ferme (mobile : inchangé, le tiroir couvre l'écran) */}
+    <div className="hidden lg:block" onClick={onClose} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 101, background: "rgba(0,0,0,0.5)" }} />
     <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(400px,94vw)", zIndex: 102, background: C.bg, overflowY: "auto", display: "flex", flexDirection: "column", borderLeft: "1px solid " + C.brd }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid " + C.brd, position: "sticky", top: 0, background: C.bg, zIndex: 2 }}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>Mon profil</div>
@@ -361,6 +365,7 @@ export default function ProfileDrawer({ onClose }: Props) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

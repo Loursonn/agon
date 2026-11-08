@@ -26,6 +26,7 @@ vi.mock("@/lib/offline/writes", () => ({
   submitWrite: writes.submitWrite,
   pendingWrites: writes.pendingWrites,
   QUEUED_TOAST: "en file",
+  resolveWorkoutId: (id: string) => id,
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), info: vi.fn(), dismiss: vi.fn(), success: vi.fn() } }));
 

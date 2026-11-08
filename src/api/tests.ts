@@ -10,6 +10,7 @@ import type {
   TestVariable,
   UpdateTestDefinitionInput,
 } from "@/features/shared/types/tests";
+import type { IsoDay } from "@shared/domain/dates";
 import { check, db, unwrap, unwrapRows } from "./client";
 import { invalidateReferences } from "./references";
 
@@ -96,18 +97,6 @@ export function invalidateTestDefinitions(qc: QueryClient): Promise<unknown> {
     qc.invalidateQueries({ queryKey: ["hyrox", "_battery"] }),
     qc.invalidateQueries({ queryKey: ["testDefinitions"] }), // ancienne clé
   ]);
-}
-
-// ── RPC pas encore dans les types générés ────────────────────────────────────
-
-type UntypedRpc = (
-  fn: string,
-  args: Record<string, unknown>,
-) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>;
-
-function rpc(fn: string, args: Record<string, unknown>) {
-  const call = db().rpc as unknown as UntypedRpc;
-  return call.call(db(), fn, args);
 }
 
 // Tables / colonnes partiellement absentes des types générés.
@@ -283,7 +272,7 @@ export async function saveTestResult(
   input: CreateTestResultInput & { resultId?: string | null },
 ): Promise<string> {
   const id = unwrap(
-    await rpc("save_athlete_test_result", {
+    await db().rpc("save_athlete_test_result", {
       p_athlete: athleteId,
       p_definition: input.test_definition_id,
       p_performed_at: input.performed_at,
@@ -575,4 +564,58 @@ export interface TestSessionWithResults {
   completed: boolean | null;
   results_note: string | null;
   results_structured: Record<string, unknown> | null;
+}
+
+// ── Séances de test du planning (frise, calendrier unifié) ───────────────────
+
+export interface TestSessionBrief {
+  id: string; title: string; type: string; date: string; completed: boolean;
+  description: string | null; results_note: string | null;
+}
+
+/** Séances de test d'un athlète sur une plage, par date. */
+export async function listTestSessionsBetween(athleteId: string, from: IsoDay, to: IsoDay): Promise<TestSessionBrief[]> {
+  const rows = unwrapRows<Record<string, unknown>>(
+    (await db().from("test_sessions").select("id, title, type, date, completed, description, results_note")
+      .eq("athlete_id", athleteId).gte("date", from).lte("date", to).order("date")) as never,
+    "Lecture des tests impossible",
+  );
+  return rows.map((t) => ({
+    id: String(t.id), title: String(t.title ?? ""), type: String(t.type ?? ""), date: String(t.date ?? "").slice(0, 10),
+    completed: t.completed === true,
+    description: (t.description as string | null) ?? null,
+    results_note: (t.results_note as string | null) ?? null,
+  }));
+}
+
+export async function createTestSession(p: { athleteId: string; coachId: string; title: string; type: string; date: IsoDay }): Promise<void> {
+  check(
+    await db().from("test_sessions").insert({
+      athlete_id: p.athleteId, coach_id: p.coachId, title: p.title, type: p.type, date: p.date, completed: false,
+    } as never),
+    "Création du test impossible",
+  );
+}
+
+export async function rescheduleTestSession(id: string, date: IsoDay): Promise<void> {
+  check(await db().from("test_sessions").update({ date } as never).eq("id", id), "Déplacement du test impossible");
+}
+
+export async function deleteTestSession(id: string): Promise<void> {
+  check(await db().from("test_sessions").delete().eq("id", id), "Suppression du test impossible");
+}
+
+export interface MacrocycleTestResult {
+  id: string; test_id: string; value: number; test_date: string; notes?: string | null;
+  test?: { name: string; unit?: string | null; higher_is_better: boolean } | null;
+}
+
+/** Résultats de tests rattachés à un macrocycle (ancienne table `test_results`). */
+export async function listMacrocycleTestResults(athleteId: string, macrocycleId: string): Promise<MacrocycleTestResult[]> {
+  return unwrapRows<MacrocycleTestResult>(
+    (await db().from("test_results")
+      .select("id, test_id, value, test_date, notes, test:tests(name, unit, higher_is_better)")
+      .eq("athlete_id", athleteId).eq("macrocycle_id", macrocycleId).order("test_date")) as never,
+    "Lecture des résultats de test impossible",
+  );
 }

@@ -255,9 +255,6 @@ export async function listCyclesEndingSoon(athleteIds: readonly string[], today:
 
 // ── Écritures ─────────────────────────────────────────────────────────────────
 
-type RpcRes = { data: unknown; error: { message: string; code?: string } | null };
-type RpcDb = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<RpcRes> };
-const rpc = async (fn: string, args: Record<string, unknown>) => (db() as unknown as RpcDb).rpc(fn, args);
 
 export interface CycleSessionInput {
   sessionId: string;
@@ -291,7 +288,7 @@ export async function createCycle(p: {
   sessions?: CycleSessionInput[];
 }): Promise<CreatedCycle> {
   const res = unwrap<{ cycle: Cycle; weeks: number; sessions: number }>(
-    (await rpc("create_cycle", {
+    (await db().rpc("create_cycle", {
       p_athlete: p.athleteId,
       p_name: p.name,
       p_start: p.start,
@@ -326,7 +323,7 @@ export async function setCycleDates(p: {
   trimAfterEnd?: boolean;
 }): Promise<Cycle> {
   const row = unwrap<Cycle>(
-    (await rpc("set_cycle_dates", {
+    (await db().rpc("set_cycle_dates", {
       p_cycle: p.cycleId,
       p_start: p.start,
       p_end: p.end,

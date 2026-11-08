@@ -1,6 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { droppedMessage, logoutWarning, mergeWriteArgs, writeKey } from "../writes";
+import { describe, it, expect, beforeEach } from "vitest";
+import { droppedMessage, logoutWarning, markSentDraft, mergeWriteArgs, resolveWorkoutId, workoutPlanCascade, writeKey, type WriteKind } from "../writes";
+import type { WriteOp } from "../writeQueue";
 import { ApiError } from "@/api/client";
+import { loadDraft, saveDraft, workoutDraftKey } from "@/lib/localDraft";
 
 describe("writeKey", () => {
   it("une clé par séance, par jour, et par type de saisie", () => {
@@ -49,5 +51,80 @@ describe("mergeWriteArgs", () => {
   });
   it("les autres saisies sont complètes : la plus récente remplace", () => {
     expect(mergeWriteArgs("wellness.day", { form: 1 }, { form: 2 })).toEqual({ form: 2 });
+  });
+});
+
+describe("séance libre hors ligne (workout.plan)", () => {
+  const op = (kind: WriteKind, args: object): WriteOp<WriteKind> => ({
+    id: kind, kind, key: writeKey(kind, args as never), args, createdAt: 0, attempts: 0,
+  });
+  const plan = op("workout.plan", { athleteId: "a", logId: "local", coachId: null, sessionId: "S", sessionName: "Haut", date: "2026-11-08" });
+  const entries = op("workout.entries", { athleteId: "a", logId: "local", patch: { sessionSets: {} } });
+  const other = op("wellness.day", { athleteId: "a", day: "2026-11-08", form: {} });
+
+  it("une clé par séance créée", () => {
+    expect(plan.key).toBe("workout.plan:local");
+  });
+
+  it("le serveur avait déjà une séance à cette place : les saisies suivantes vont vers elle", () => {
+    const f = workoutPlanCascade(plan, { ok: true, result: { id: "serveur" } })!;
+    const moved = f(entries)!;
+    expect(moved.args).toEqual({ athleteId: "a", logId: "serveur", patch: { sessionSets: {} }, draftLogId: "local" });
+    expect(moved.key).toBe("workout.entries:serveur");
+    expect(f(other)).toBe(other);
+  });
+
+  it("id du serveur retenu : l'écran resté sur l'id local lit et écrit la bonne séance", () => {
+    localStorage.clear();
+    expect(resolveWorkoutId("local")).toBe("local");
+    workoutPlanCascade(plan, { ok: true, result: { id: "serveur" } });
+    expect(resolveWorkoutId("local")).toBe("serveur");
+    expect(resolveWorkoutId("autre")).toBe("autre");
+    localStorage.clear();
+  });
+
+  it("même id côté serveur : rien à réécrire", () => {
+    expect(workoutPlanCascade(plan, { ok: true, result: { id: "local" } })).toBeNull();
+    expect(workoutPlanCascade(entries, { ok: true, result: null })).toBeNull();
+  });
+
+  it("création refusée : ses saisies sont retirées, pas les autres", () => {
+    const f = workoutPlanCascade(plan, { ok: false, error: new Error("non") })!;
+    expect(f(entries)).toBeNull();
+    expect(f(other)).toBe(other);
+  });
+
+  it("libellé du refus", () => {
+    expect(droppedMessage("workout.plan", new ApiError("x", { message: "non", code: "23502" }))).toBe("Séance ajoutée non enregistrée : le serveur l'a refusée.");
+  });
+});
+
+describe("markSentDraft (brouillon après envoi par la file)", () => {
+  beforeEach(() => localStorage.clear());
+  const key = workoutDraftKey("a", "L1");
+
+  it("saisie envoyée = brouillon : marqué synchronisé", () => {
+    saveDraft(key, { sessionSets: { e1: [{ done: true, kg: 50 }] } });
+    markSentDraft("workout.entries", { athleteId: "a", logId: "L1", patch: { sessionSets: { e1: [{ done: true, kg: 50 }] } } });
+    expect(loadDraft(key)?.synced).toBe(true);
+  });
+
+  it("brouillon modifié depuis l'envoi : reste à envoyer", () => {
+    saveDraft(key, { sessionSets: { e1: [{ done: true, kg: 55 }] } });
+    markSentDraft("workout.entries", { athleteId: "a", logId: "L1", patch: { sessionSets: { e1: [{ done: true, kg: 50 }] } } });
+    expect(loadDraft(key)?.synced).toBe(false);
+  });
+
+  it("séance redirigée vers l'id du serveur : le brouillon de l'écran (id local) est visé", () => {
+    const local = workoutDraftKey("a", "local");
+    saveDraft(local, { comment: "ok" });
+    markSentDraft("workout.complete", { athleteId: "a", logId: "serveur", draftLogId: "local", mods: { comment: "ok" } });
+    expect(loadDraft(local)?.synced).toBe(true);
+  });
+
+  it("autres saisies : rien", () => {
+    saveDraft(key, { comment: "ok" });
+    markSentDraft("workout.rpe", { athleteId: "a", logId: "L1", rpe: 7 });
+    expect(loadDraft(key)?.synced).toBe(false);
   });
 });

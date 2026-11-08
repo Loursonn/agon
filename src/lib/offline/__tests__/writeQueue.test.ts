@@ -5,6 +5,8 @@ import {
   createWriteQueue,
   MAX_TRANSIENT_ATTEMPTS,
   retryDelay,
+  type QueueBus,
+  type QueueLock,
   type WriteOp,
   type WriteQueueStore,
 } from "../writeQueue";
@@ -323,6 +325,193 @@ describe("createWriteQueue", () => {
     await q.setUser("u1");
     await q.flush();
     expect(onDropped).toHaveBeenCalledTimes(1);
+    expect(q.pending()).toBe(0);
+  });
+});
+
+// ── Plusieurs onglets sur le même stockage ───────────────────────────────────
+
+/** Stockage lent (lecture / écriture asynchrones) : fait apparaître les courses. */
+function slowStore(): WriteQueueStore & { data: Record<string, WriteOp[]> } {
+  const data: Record<string, WriteOp[]> = {};
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  return {
+    data,
+    get: async (u) => { await tick(); return [...(data[u] ?? [])]; },
+    set: async (u, ops) => { await tick(); data[u] = ops; },
+  };
+}
+
+/** `navigator.locks` simulé : une exécution à la fois par nom. */
+function fakeLocks(): QueueLock {
+  const tails = new Map<string, Promise<unknown>>();
+  return <T,>(name: string, fn: () => Promise<T>) => {
+    const prev = tails.get(name) ?? Promise.resolve();
+    const run = prev.then(fn, fn);
+    tails.set(name, run.catch(() => undefined));
+    return run;
+  };
+}
+
+/** `BroadcastChannel` simulé : l'onglet qui poste ne reçoit pas son message. */
+function fakeBus() {
+  const subs = new Set<(u: string) => void>();
+  return (): QueueBus => {
+    const mine = new Set<(u: string) => void>();
+    return {
+      post: (u) => { for (const s of subs) if (!mine.has(s)) setTimeout(() => s(u), 0); },
+      subscribe: (cb) => { mine.add(cb); subs.add(cb); return () => { subs.delete(cb); mine.delete(cb); }; },
+    };
+  };
+}
+
+function twoTabs(opts: { online?: boolean; exec?: (args: unknown) => Promise<unknown>; withLock?: boolean } = {}) {
+  let online = opts.online ?? false;
+  const store = slowStore();
+  const lock = opts.withLock === false ? undefined : fakeLocks();
+  const bus = fakeBus();
+  const sent: unknown[] = [];
+  const exec = vi.fn(opts.exec ?? (async (a: unknown) => { sent.push(a); return "ok"; }));
+  let n = 0;
+  const make = (tab: string) => createWriteQueue<"w">({
+    store, lock, bus: bus(),
+    executors: { w: exec as never },
+    isOnline: () => online,
+    newId: () => `${tab}${++n}`,
+  });
+  return { a: make("A"), b: make("B"), store, sent, exec, setOnline: (v: boolean) => { online = v; } };
+}
+
+describe("plusieurs onglets", () => {
+  it("deux saisies simultanées dans deux onglets : aucune n'écrase l'autre", async () => {
+    const { a, b, store } = twoTabs();
+    await Promise.all([a.setUser("u1"), b.setUser("u1")]);
+    await Promise.all([a.submit("w", "k1", "de A"), b.submit("w", "k2", "de B"), a.submit("w", "k3", "de A bis")]);
+    expect(store.data.u1.map((o) => o.args).sort()).toEqual(["de A", "de A bis", "de B"]);
+  });
+
+  it("le compteur de l'autre onglet suit (canal entre onglets)", async () => {
+    const { a, b } = twoTabs();
+    await a.setUser("u1");
+    await b.setUser("u1");
+    const cb = vi.fn();
+    b.subscribe(cb);
+    await a.submit("w", "k1", 1);
+    await vi.waitFor(() => expect(b.pending()).toBe(1));
+    expect(cb).toHaveBeenCalled();
+    await b.clearCurrent();
+    await vi.waitFor(() => expect(a.pending()).toBe(0));
+  });
+
+  it("même cible dans deux onglets : la plus récente gagne, une seule opération", async () => {
+    const { a, b, store } = twoTabs();
+    await a.setUser("u1");
+    await b.setUser("u1");
+    await a.submit("w", "k", "ancienne");
+    await b.submit("w", "k", "récente");
+    expect(store.data.u1.map((o) => o.args)).toEqual(["récente"]);
+  });
+
+  it("en ligne, un onglet qui n'a rien en mémoire passe derrière la file de l'autre", async () => {
+    const { a, b, sent, setOnline } = twoTabs();
+    await a.setUser("u1");
+    await b.setUser("u1");
+    await a.submit("w", "k1", "ancienne de A");
+    setOnline(true);
+    // B n'a pas encore reçu le message du canal : il relit le stockage.
+    expect((await b.submit("w", "k2", "de B")).status).toBe("queued");
+    await b.flush();
+    await a.flush();
+    expect(sent).toEqual(["ancienne de A", "de B"]);
+  });
+
+  it("deux onglets qui envoient en même temps : chaque saisie part une fois", async () => {
+    const { a, b, sent, setOnline, store } = twoTabs();
+    await a.setUser("u1");
+    await b.setUser("u1");
+    await a.submit("w", "k1", 1);
+    await b.submit("w", "k2", 2);
+    setOnline(true);
+    await Promise.all([a.flush(), b.flush()]);
+    expect(sent).toEqual([1, 2]);
+    expect(store.data.u1).toEqual([]);
+    expect(a.pending() + b.pending()).toBe(0);
+  });
+
+  it("saisie remplacée par l'autre onglet pendant l'envoi : la nouvelle reste à envoyer", async () => {
+    let release!: () => void;
+    const { a, b, sent, setOnline } = twoTabs({
+      exec: async (x) => {
+        sent.push(x);
+        if (sent.length === 1) await new Promise<void>((r) => { release = r; });
+        return null;
+      },
+    });
+    await a.setUser("u1");
+    await b.setUser("u1");
+    await a.submit("w", "k", "v1");
+    setOnline(true);
+    const running = a.flush();
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    await b.submit("w", "k", "v2");
+    release();
+    await running;
+    await a.flush();
+    expect(sent).toEqual(["v1", "v2"]);
+    expect(a.pending()).toBe(0);
+  });
+});
+
+describe("cascade (suite d'un envoi)", () => {
+  function setupCascade(exec: (a: { kind: string; id: string }) => Promise<unknown>) {
+    const store = memStore();
+    let online = false;
+    let n = 0;
+    const onDropped = vi.fn();
+    const seen: unknown[] = [];
+    const q = createWriteQueue<"plan" | "entries">({
+      store,
+      executors: {
+        plan: (async (a: { id: string }) => exec({ kind: "plan", id: a.id })) as never,
+        entries: (async (a: { id: string }) => { seen.push(a.id); return null; }) as never,
+      },
+      isOnline: () => online,
+      onDropped,
+      newId: () => `op${++n}`,
+      cascade: (op, outcome) => {
+        if (op.kind !== "plan") return null;
+        const clientId = (op.args as { id: string }).id;
+        if (!outcome.ok) return (o) => ((o.args as { id: string }).id === clientId ? null : o);
+        const serverId = (outcome.result as { id: string }).id;
+        return (o) => ((o.args as { id: string }).id === clientId
+          ? { ...o, key: `entries:${serverId}`, args: { id: serverId } } : o);
+      },
+    });
+    return { q, store, seen, onDropped, setOnline: (v: boolean) => { online = v; } };
+  }
+
+  it("id attribué par le serveur : les saisies suivantes visent la bonne séance", async () => {
+    const { q, seen, setOnline } = setupCascade(async () => ({ id: "serveur" }));
+    await q.setUser("u1");
+    await q.submit("plan", "plan:local", { id: "local" });
+    await q.submit("entries", "entries:local", { id: "local" });
+    await q.submit("entries", "entries:autre", { id: "autre" });
+    setOnline(true);
+    await q.flush();
+    expect(seen).toEqual(["serveur", "autre"]);
+    expect(q.pending()).toBe(0);
+  });
+
+  it("séance refusée : ses saisies sont retirées avec elle, pas les autres", async () => {
+    const { q, seen, setOnline, onDropped } = setupCascade(async () => { throw goneErr(); });
+    await q.setUser("u1");
+    await q.submit("plan", "plan:local", { id: "local" });
+    await q.submit("entries", "entries:local", { id: "local" });
+    await q.submit("entries", "entries:autre", { id: "autre" });
+    setOnline(true);
+    await q.flush();
+    expect(onDropped).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual(["autre"]);
     expect(q.pending()).toBe(0);
   });
 });

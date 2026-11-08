@@ -12,7 +12,7 @@ import {
   sendEntriesKeepalive,
 } from "@/api/workouts";
 import { classifyWriteError } from "@/lib/offline/writeQueue";
-import { pendingWrites, QUEUED_TOAST, submitWrite } from "@/lib/offline/writes";
+import { pendingWrites, QUEUED_TOAST, resolveWorkoutId, submitWrite } from "@/lib/offline/writes";
 
 const DEBOUNCE_MS = 600;
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
@@ -57,7 +57,7 @@ interface PendingEntry {
  * « non synchronisé » (renvoyé plus tard).
  */
 function sendKeepalive(entry: PendingEntry, token: string | null): void {
-  sendEntriesKeepalive({ logId: entry.id, mods: entry.mods, token, maxBytes: KEEPALIVE_MAX_BYTES });
+  sendEntriesKeepalive({ logId: resolveWorkoutId(entry.id), mods: entry.mods, token, maxBytes: KEEPALIVE_MAX_BYTES });
 }
 
 export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?: string | null): SaveWorkoutSets {
@@ -134,7 +134,7 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
             // Fusion côté serveur (RPC) : l'adaptation du coach posée pendant la
             // séance n'est plus écrasée. Une séance disparue (supprimée
             // entre-temps) lève « introuvable » au lieu de réussir en silence.
-            await patchWorkoutEntries(entry.id, entry.mods);
+            await patchWorkoutEntries(resolveWorkoutId(entry.id), entry.mods);
             outcome = "sent";
           } catch (e) {
             const kind = classifyWriteError(e, browserOffline());
@@ -164,9 +164,11 @@ export function useSaveWorkoutSets(workoutLogId: string | undefined, athleteId?:
           void invalidateWorkouts(qc, { athleteId: entry.aid, logId: entry.id });
         } else {
           // Gardée sur le téléphone : le brouillon local reste « non
-          // synchronisé » (filet si la file est perdue) ; l'écran garde sa
-          // saisie locale. Pas d'invalidation : hors ligne elle ne servirait à
-          // rien, et la file rafraîchit tout une fois vidée.
+          // synchronisé » (filet si la file est perdue) jusqu'à l'envoi par la
+          // file, qui le marque alors synchronisé s'il n'a pas changé
+          // (`markSentDraft`, writes.ts) ; l'écran garde sa saisie locale. Pas
+          // d'invalidation : hors ligne elle ne servirait à rien, et la file
+          // rafraîchit tout une fois vidée.
           if (!behindOthers) toast.info(QUEUED_TOAST, { id: SAVE_QUEUED_TOAST });
         }
         if (pendingRef.current === entry) {

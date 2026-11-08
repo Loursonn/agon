@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { purgeUserStorage, type StorageAdmin } from "../_shared/userStorage.ts";
 
 /**
  * Suppression définitive du compte de l'appelant — droit à l'effacement
@@ -30,9 +31,6 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-/** Buckets susceptibles de contenir des fichiers rattachés à un utilisateur. */
-const USER_BUCKETS = ["medical", "test-files", "garmin-screenshots", "test-media", "avatars", "docs"];
 
 function errMessage(err: unknown, fallback = "Erreur"): string {
   if (err instanceof Error) return err.message || fallback;
@@ -90,31 +88,9 @@ serve(async (req) => {
     });
 
     // ---- 2. Fichiers --------------------------------------------------------
-    /*
-      On interroge la base pour la liste exacte plutôt que de deviner les
-      chemins : les conventions de nommage ont varié selon les fonctionnalités,
-      et un préfixe oublié laisserait des fichiers derrière.
-    */
-    const { data: objects } = await admin.rpc("list_user_storage_objects", {
-      target_user: user.id,
-    });
-
-    const byBucket = new Map<string, string[]>();
-    for (const o of (objects ?? []) as Array<{ bucket_id: string; object_name: string }>) {
-      const list = byBucket.get(o.bucket_id) ?? [];
-      list.push(o.object_name);
-      byBucket.set(o.bucket_id, list);
-    }
-
-    const storageErrors: string[] = [];
-    for (const [bucket, names] of byBucket) {
-      if (!USER_BUCKETS.includes(bucket)) continue;
-      // L'API Storage limite la taille des lots : on découpe.
-      for (let i = 0; i < names.length; i += 100) {
-        const { error } = await admin.storage.from(bucket).remove(names.slice(i, i + 100));
-        if (error) storageErrors.push(`${bucket}: ${error.message}`);
-      }
-    }
+    // Liste exacte demandée à la base (les conventions de chemin ont varié
+    // selon les fonctionnalités) : voir `_shared/userStorage.ts`.
+    const storageErrors = await purgeUserStorage(admin as unknown as StorageAdmin, user.id);
 
     // ---- 3. Services connectés ---------------------------------------------
     /*

@@ -4,8 +4,9 @@ import { setDbForTests } from "@/api/client";
 import {
   createMeasurementLog, createProfileItem, deleteMeasurementLog, deleteProfileItem, getAiInsights,
   getArticularProfile, getCoachName, getMeasurementLogs, getMeasurementPhotoUrls, getProfile, getProfileItems,
-  getTrendSessions, groupArticular, invalidateProfile, profileKeys, recentWeights, recordWeightMilestone,
-  saveWeight, updateAthleteProfile, updateMeasurementLog, updateProfileItem,
+  getBodyWeightGoal, getTrendSessions, getWeightLog, getWeightMilestones, groupArticular, invalidateProfile,
+  profileKeys, recentWeights, recordWeightMilestone, saveWeight, toLegacyBodyWeight, toLegacyMilestones,
+  toLegacyWeightLog, updateAthleteProfile, updateMeasurementLog, updateProfileItem,
 } from "@/api/profile";
 import type { WellnessHistory } from "@shared/domain/wellness";
 
@@ -222,6 +223,83 @@ describe("api/profile — poids", () => {
     expect(await recordWeightMilestone("a", "2026-11-02", 66)).toEqual({ current: 66, target: 65 });
     world({}, { failOn: { table: "weight_set_day", op: "rpc" } });
     await expect(saveWeight("a", "2026-11-02", 70)).rejects.toThrow(/Enregistrement du poids impossible/);
+  });
+});
+
+describe("api/profile — poids (tables body_weight_*)", () => {
+  const tables = () => ({
+    body_weight_logs: [
+      { athlete_id: "a", day: "2026-11-03", kg: 71 },
+      { athlete_id: "a", day: "2026-11-01", kg: "70.5" },
+      { athlete_id: "b", day: "2026-11-01", kg: 90 },
+    ],
+    body_weight_milestones: [
+      { athlete_id: "a", day: "2026-11-03", kg: 71 },
+      { athlete_id: "a", day: "2026-10-01", kg: 69.5 },
+    ],
+    body_weight_goals: [
+      { athlete_id: "a", reference_kg: 71, target_kg: null },
+      { athlete_id: "c", reference_kg: null, target_kg: null },
+    ],
+    // Ancien stockage équivalent (lu seulement si les tables n'existent pas encore).
+    app_data: [
+      { athlete_id: "a", key: "asp:wlog", value: { "20261103": 71, "20261101": 70.5, "1": 3 } },
+      { athlete_id: "a", key: "asp:wmile", value: [{ date: "20261003", kg: 0 }, { date: "20261103", kg: 71 }, { date: "20261001", kg: 69.5 }, { date: "20261103", kg: 71 }] },
+      { athlete_id: "a", key: "asp:bw", value: { current: 71, target: 0 } },
+    ],
+  });
+
+  /** Comme PostgREST quand une table n'existe pas encore (migration pas appliquée). */
+  function withoutTables(t: Record<string, Row[]>, failOn?: { table: string; op: string }) {
+    const base = fakeDb(t, failOn);
+    const missing = { data: null, error: { message: "Could not find the table", code: "PGRST205" } };
+    const chain: Record<string, unknown> = {};
+    for (const m of ["select", "eq", "gte", "lte", "order"]) chain[m] = () => chain;
+    chain.then = (ok: (v: unknown) => unknown) => Promise.resolve(missing).then(ok);
+    setDbForTests({ ...base.db, from: (name: string) => (name.startsWith("body_weight_") ? chain : base.db.from(name)) });
+  }
+
+  afterEach(() => setDbForTests(null));
+
+  it("getWeightLog : pesées de l'athlète, jours croissants, bornes ; lève si la lecture échoue", async () => {
+    world(tables());
+    expect(await getWeightLog("a")).toEqual([{ day: "2026-11-01", kg: 70.5 }, { day: "2026-11-03", kg: 71 }]);
+    expect(await getWeightLog("a", { from: "2026-11-02" })).toEqual([{ day: "2026-11-03", kg: 71 }]);
+    expect(await getWeightLog("z")).toEqual([]);
+    world(tables(), { failOn: { table: "body_weight_logs", op: "select" } });
+    await expect(getWeightLog("a")).rejects.toThrow(/Lecture des pesées impossible/);
+  });
+
+  it("paliers et objectif : objectif absent → null (jamais 0) ; aucun → null", async () => {
+    world(tables());
+    expect(await getWeightMilestones("a")).toEqual([{ day: "2026-10-01", kg: 69.5 }, { day: "2026-11-03", kg: 71 }]);
+    expect(await getBodyWeightGoal("a")).toEqual({ referenceKg: 71, targetKg: null });
+    expect(await getBodyWeightGoal("c")).toBeNull();
+    expect(await getBodyWeightGoal("z")).toBeNull();
+  });
+
+  it("table absente : même résultat depuis app_data (clés parasites, 0 et doublons écartés)", async () => {
+    world(tables());
+    const fromTables = [await getWeightLog("a"), await getWeightMilestones("a"), await getBodyWeightGoal("a")];
+    withoutTables(tables());
+    expect([await getWeightLog("a"), await getWeightMilestones("a"), await getBodyWeightGoal("a")]).toEqual(fromTables);
+    expect(await getWeightLog("a", { to: "2026-11-02" })).toEqual([{ day: "2026-11-01", kg: 70.5 }]);
+    expect(await getBodyWeightGoal("z")).toBeNull();
+    withoutTables(tables(), { table: "app_data", op: "select" });
+    await expect(getWeightLog("a")).rejects.toThrow(/Lecture des pesées impossible/);
+  });
+
+  it("adaptateurs vers l'état historique (clés compactes, 0 par défaut)", () => {
+    const pts = [{ day: "2026-11-01", kg: 70.5 }, { day: "2026-11-03", kg: 71 }];
+    expect(toLegacyWeightLog(pts)).toEqual({ "20261101": 70.5, "20261103": 71 });
+    expect(toLegacyMilestones(pts)).toEqual([{ date: "20261101", kg: 70.5 }, { date: "20261103", kg: 71 }]);
+    expect(toLegacyBodyWeight({ referenceKg: 71, targetKg: null })).toEqual({ current: 71, target: 0 });
+    expect(toLegacyBodyWeight(null)).toEqual({ current: 0, target: 0 });
+  });
+
+  it("les clés de poids sont sous ['profile', aid] : invalidateProfile les couvre", () => {
+    expect(profileKeys.weightLog("a").slice(0, 2)).toEqual(["profile", "a"]);
+    expect(profileKeys.weightGoal("a").slice(0, 3)).toEqual(profileKeys.weight("a"));
   });
 });
 

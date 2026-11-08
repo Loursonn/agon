@@ -188,11 +188,10 @@ export async function deleteEnergyAssignment(id: string): Promise<void> {
 // ── Écritures : saisie de l'athlète (RPC) ─────────────────────────────────────
 
 type RpcRes = { data: unknown; error: { message: string; code?: string } | null };
-type RpcDb = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<RpcRes> };
-const rpc = async (fn: string, args: Record<string, unknown>) => (db() as unknown as RpcDb).rpc(fn, args);
 
-async function rpcAssignment(fn: string, args: Record<string, unknown>, what: string): Promise<EnergyAssignment> {
-  const row = unwrap<RawRow>((await rpc(fn, args)) as never, what);
+/** Ligne renvoyée par une RPC de saisie ; vide = séance disparue. */
+async function rpcAssignment(call: PromiseLike<RpcRes>, what: string): Promise<EnergyAssignment> {
+  const row = unwrap<RawRow>((await call) as never, what);
   if (!row || !row.id) throw new ApiError(what, { message: "réponse vide", code: ENERGY_NOT_FOUND });
   return toEnergyAssignment(row);
 }
@@ -220,7 +219,7 @@ export interface CompleteEnergyInput {
  */
 export function completeEnergyAssignment(id: string, input: CompleteEnergyInput = {}): Promise<EnergyAssignment> {
   const blank = (v: string | null | undefined) => (v == null || v.trim() === "" ? null : v);
-  return rpcAssignment("complete_energy_assignment", {
+  return rpcAssignment(db().rpc("complete_energy_assignment", {
     p_assignment: id,
     p_block_logs: input.block_logs ?? null,
     p_notes: blank(input.notes),
@@ -229,7 +228,7 @@ export function completeEnergyAssignment(id: string, input: CompleteEnergyInput 
     p_activity_type: input.activity_type ?? null,
     p_distance_km: input.distance_km ?? null,
     p_rpe: input.rpe_score ?? null,
-  }, "Validation de la séance impossible");
+  }), "Validation de la séance impossible");
 }
 
 /**
@@ -238,12 +237,12 @@ export function completeEnergyAssignment(id: string, input: CompleteEnergyInput 
  * course). Les notes et le lien d'activité sont gardés.
  */
 export function reopenEnergyAssignment(id: string): Promise<EnergyAssignment> {
-  return rpcAssignment("reopen_energy_assignment", { p_assignment: id }, "Annulation de la validation impossible");
+  return rpcAssignment(db().rpc("reopen_energy_assignment", { p_assignment: id }), "Annulation de la validation impossible");
 }
 
 /** RPE Foster 1-10 ; `null` = retirer. */
 export function setEnergyRpe(id: string, rpe: number | null): Promise<EnergyAssignment> {
-  return rpcAssignment("set_energy_rpe", { p_assignment: id, p_rpe: rpe }, "Enregistrement du RPE impossible");
+  return rpcAssignment(db().rpc("set_energy_rpe", { p_assignment: id, p_rpe: rpe }), "Enregistrement du RPE impossible");
 }
 
 // ── Bibliothèque (energy_sessions) ────────────────────────────────────────────
@@ -328,7 +327,7 @@ export type DeleteEnergySessionResult = "deleted" | "archived" | "not_found";
  */
 export async function deleteEnergySession(id: string): Promise<DeleteEnergySessionResult> {
   return unwrap<DeleteEnergySessionResult>(
-    (await rpc("delete_energy_session", { p_session_id: id })) as never,
+    (await db().rpc("delete_energy_session", { p_session_id: id })) as never,
     "Suppression de la séance impossible",
   ) ?? "not_found";
 }

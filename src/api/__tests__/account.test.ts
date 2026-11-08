@@ -5,7 +5,7 @@ import {
   AccountError, accountKeys, claimAthleteAccount, coachCodeExists, createInvitation, createPendingAthlete,
   deleteAccount, ensureCoachCode, generateCoachCode, getClaimInfo, getClaimToken, getCoachRoster, getConsents,
   invalidateAccount, invitationIsValid, linkToCoachByCode, pickFreeCoachCode, readOwnRows, recordConsents,
-  registerAthleteWithCode, registerAthleteWithInvitation, registerCoach, serverReason, setOwnCoach,
+  registerAthleteWithCode, registerAthleteWithInvitation, registerCoach, registerStaff, serverReason, setOwnCoach,
 } from "@/api/account";
 import type { Profile } from "@/api/profile";
 
@@ -24,6 +24,7 @@ function world(
   const base = fakeDb(tables, o.failOn, o.rpcs ?? {});
   const invoked: Invoked = [];
   const signIns: unknown[] = [];
+  const signUps: unknown[] = [];
   const db = {
     ...base.db,
     functions: {
@@ -33,12 +34,12 @@ function world(
       },
     },
     auth: {
-      signUp: () => Promise.resolve({ data: { user: o.user === undefined ? { id: "new" } : o.user, session: null }, error: null }),
+      signUp: (a: unknown) => (signUps.push(a), Promise.resolve({ data: { user: o.user === undefined ? { id: "new" } : o.user, session: null }, error: null })),
       signInWithPassword: (a: unknown) => (signIns.push(a), Promise.resolve({ data: { session: {}, user: {} }, error: null })),
     },
   };
   setDbForTests(db);
-  return { tables: base.tables, invoked, signIns };
+  return { tables: base.tables, invoked, signIns, signUps };
 }
 
 const raise = (message: string): FakeRpc => () => { throw new Error(message); };
@@ -103,38 +104,64 @@ describe("api/account — code coach et inscription", () => {
 
   it("registerCoach : profil coach avec code ; coach-athlète = son propre coach", async () => {
     const { tables } = world({}, { rpcs: { coach_code_exists: () => false } });
-    await registerCoach("a@b.c", "pw", "Agon Démo", true);
-    expect(tables.profiles[0]).toMatchObject({ id: "new", role: "coach_athlete", full_name: "Agon Démo", coach_id: "new" });
+    await registerCoach("a@b.c", "pw", "Agon Démo", "1990-04-12", true);
+    expect(tables.profiles[0]).toMatchObject({
+      id: "new", role: "coach_athlete", full_name: "Agon Démo", coach_id: "new", birth_date: "1990-04-12",
+    });
     expect(tables.profiles[0].coach_code).toMatch(/^[A-Z2-9]{6}$/);
   });
 
   it("registerAthleteWithCode : code inconnu refusé AVANT de créer le compte", async () => {
     const { tables } = world({}, { rpcs: { coach_code_exists: () => false } });
-    await expect(registerAthleteWithCode("a@b.c", "pw", "Léa", "zzz")).rejects.toThrow("Code coach invalide — vérifie auprès de ton coach");
+    await expect(registerAthleteWithCode("a@b.c", "pw", "Léa", "1998-04-12", "zzz")).rejects.toThrow("Code coach invalide — vérifie auprès de ton coach");
     expect(tables.profiles ?? []).toHaveLength(0);
   });
 
   it("registerAthleteWithCode : rattachement par la RPC, message d'origine si elle refuse", async () => {
     const linked: unknown[] = [];
     const { tables } = world({}, { rpcs: { coach_code_exists: () => true, link_to_coach_by_code: (a) => (linked.push(a.p_code), "coach") } });
-    await registerAthleteWithCode("a@b.c", "pw", "Léa Démo", "demo42");
-    expect(tables.profiles[0]).toEqual(expect.objectContaining({ id: "new", role: "athlete", full_name: "Léa Démo" }));
+    await registerAthleteWithCode("a@b.c", "pw", "Léa Démo", "1998-04-12", "demo42");
+    expect(tables.profiles[0]).toEqual(expect.objectContaining({ id: "new", role: "athlete", full_name: "Léa Démo", birth_date: "1998-04-12" }));
     expect(tables.profiles[0].coach_id).toBeUndefined();
     expect(linked).toEqual(["DEMO42"]);
 
     world({}, { rpcs: { coach_code_exists: () => true, link_to_coach_by_code: raise("Code coach invalide") } });
-    await expect(registerAthleteWithCode("a@b.c", "pw", "Léa", "X"))
+    await expect(registerAthleteWithCode("a@b.c", "pw", "Léa", "1998-04-12", "X"))
       .rejects.toThrow("Compte créé, mais le rattachement au coach a échoué : Code coach invalide");
   });
 
   it("registerAthleteWithInvitation : lien invalide (ou vérification en panne) refusé", async () => {
     world({}, { rpcs: { invitation_is_valid: () => false } });
-    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", "t")).rejects.toThrow("Lien d'invitation invalide ou déjà utilisé");
+    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", "1998-04-12", "t")).rejects.toThrow("Lien d'invitation invalide ou déjà utilisé");
     world({}, { failOn: { table: "invitation_is_valid", op: "rpc" } });
     expect(await invitationIsValid("t")).toBe(false);
     world({}, { rpcs: { invitation_is_valid: () => true, redeem_invitation: raise("déjà rattaché") } });
-    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", "t"))
+    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", "1998-04-12", "t"))
       .rejects.toThrow("Compte créé, mais le lien d'invitation n'a pas pu être utilisé : déjà rattaché");
+  });
+
+  it("âge minimum : moins de 15 ans ou date absente refusés AVANT de créer le compte (tous les parcours)", async () => {
+    const future = "2099-01-01";
+    const today = new Date();
+    const young = `${today.getFullYear() - 14}-01-01`;
+    const w = world({}, { rpcs: { coach_code_exists: () => true, invitation_is_valid: () => true } });
+    const msg = "Tu dois avoir au moins 15 ans pour utiliser Agon.";
+    await expect(registerCoach("a@b.c", "pw", "Coach", young)).rejects.toThrow(msg);
+    await expect(registerAthleteWithCode("a@b.c", "pw", "Léa", young, "DEMO42")).rejects.toThrow(msg);
+    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", young, "t")).rejects.toThrow(msg);
+    await expect(registerStaff("a@b.c", "pw", "Kiné", young, "kine")).rejects.toThrow(msg);
+    await expect(claimAthleteAccount("tok", "a@b.c", "pw", young)).rejects.toThrow(msg);
+    await expect(registerCoach("a@b.c", "pw", "Coach", "")).rejects.toThrow("Indique ta date de naissance.");
+    await expect(registerStaff("a@b.c", "pw", "Kiné", future, "kine")).rejects.toThrow("Date de naissance invalide.");
+    expect(w.signUps).toEqual([]);
+    expect(w.invoked).toEqual([]);
+    expect(w.tables.profiles ?? []).toHaveLength(0);
+  });
+
+  it("registerStaff : profil staff avec date de naissance et métier", async () => {
+    const { tables } = world();
+    await registerStaff("k@b.c", "pw", "Kiné Démo", "1985-06-01", "kine");
+    expect(tables.profiles[0]).toMatchObject({ id: "new", role: "staff", full_name: "Kiné Démo", birth_date: "1985-06-01", profession: "kine" });
   });
 
   it("linkToCoachByCode : AccountError dont `reason` garde le message du serveur", async () => {
@@ -144,14 +171,37 @@ describe("api/account — code coach et inscription", () => {
     expect(serverReason(e)).toBe("Tu ne peux pas entrer ton propre code coach");
   });
 
-  it("setOwnCoach : seulement null ou soi-même (jamais un autre coach en direct)", async () => {
-    const { tables } = world({ profiles: [{ id: "u", coach_id: "c" }] });
+  it("setOwnCoach : par la RPC set_own_coach, seulement null ou soi-même", async () => {
+    const calls: unknown[] = [];
+    const set_own_coach: FakeRpc = (a, t) => {
+      calls.push(a.p_coach);
+      t.profiles[0].coach_id = a.p_coach;
+      return a.p_coach;
+    };
+    const { tables } = world({ profiles: [{ id: "u", coach_id: "c" }] }, { rpcs: { set_own_coach } });
     await setOwnCoach("u", null);
     expect(tables.profiles[0].coach_id).toBeNull();
     await setOwnCoach("u", "u");
     expect(tables.profiles[0].coach_id).toBe("u");
     await expect(setOwnCoach("u", "autre")).rejects.toThrow(/passer par le code coach/);
+    expect(calls).toEqual([null, "u"]);
     expect(tables.profiles[0].coach_id).toBe("u");
+  });
+
+  it("setOwnCoach : refus de la RPC remonté, sans écriture directe", async () => {
+    const { tables } = world({ profiles: [{ id: "u", coach_id: "c" }] }, { rpcs: { set_own_coach: raise("Seul un coach peut être son propre coach") } });
+    await expect(setOwnCoach("u", "u")).rejects.toThrow(/Seul un coach/);
+    expect(tables.profiles[0].coach_id).toBe("c");
+  });
+
+  it("setOwnCoach : RPC pas encore en prod (PGRST202) → écriture directe d'avant", async () => {
+    const base = fakeDb({ profiles: [{ id: "u", coach_id: "c" }] });
+    setDbForTests({
+      ...base.db,
+      rpc: () => Promise.resolve({ data: null, error: { message: "Could not find the function", code: "PGRST202" } }),
+    });
+    await setOwnCoach("u", null);
+    expect(base.tables.profiles[0].coach_id).toBeNull();
   });
 
   it("ensureCoachCode : code tiré et enregistré ; rien si déjà là ou pas coach", async () => {
@@ -217,11 +267,13 @@ describe("api/account — lien de première connexion, export, suppression", () 
 
   it("claimAthleteAccount active puis connecte ; refus du serveur affiché tel quel", async () => {
     const w = world({}, { fn: () => ({ data: { ok: true }, error: null }) });
-    await claimAthleteAccount("tok", "lea@demo.fr", "pw");
-    expect(w.invoked[0]).toEqual({ fn: "claim-athlete", body: { token: "tok", email: "lea@demo.fr", password: "pw" } });
+    await claimAthleteAccount("tok", "lea@demo.fr", "pw", "1998-04-12");
+    expect(w.invoked[0]).toEqual({
+      fn: "claim-athlete", body: { token: "tok", email: "lea@demo.fr", password: "pw", birthDate: "1998-04-12" },
+    });
     expect(w.signIns).toEqual([{ email: "lea@demo.fr", password: "pw" }]);
     const w2 = world({}, { fn: () => ({ data: { error: "Email déjà utilisé" }, error: null }) });
-    await expect(claimAthleteAccount("tok", "x@y.z", "pw")).rejects.toThrow("Email déjà utilisé");
+    await expect(claimAthleteAccount("tok", "x@y.z", "pw", "1998-04-12")).rejects.toThrow("Email déjà utilisé");
     expect(w2.signIns).toEqual([]);
   });
 
@@ -230,6 +282,21 @@ describe("api/account — lien de première connexion, export, suppression", () 
     expect(await readOwnRows("habits", "athlete_id", "a")).toEqual([{ athlete_id: "a", name: "Eau" }]);
     world({}, { failOn: { table: "habits", op: "select" } });
     await expect(readOwnRows("habits", "athlete_id", "a")).rejects.toThrow(/Lecture de habits impossible/);
+  });
+
+  it("readOwnRows transmet la liste de colonnes (secrets écartés côté requête)", async () => {
+    const selected: string[] = [];
+    const base = fakeDb({ coach_api_keys: [{ id: "k", coach_id: "c" }] });
+    setDbForTests({
+      ...base.db,
+      from: (t: string) => {
+        const q = base.db.from(t);
+        return { ...q, select: (cols: string) => (selected.push(cols), q.select(cols)) };
+      },
+    });
+    await readOwnRows("coach_api_keys", "coach_id", "c", "id, name");
+    await readOwnRows("coach_api_keys", "coach_id", "c");
+    expect(selected).toEqual(["id, name", "*"]);
   });
 
   it("deleteAccount envoie le mot de confirmation, jamais un identifiant", async () => {

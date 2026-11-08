@@ -1,71 +1,99 @@
-/** Palette de couleurs globale de l'app (mode sombre fixe) — Agon "Tranchant B" */
+/**
+ * Palette de l'app (mode sombre fixe) — Agon "Tranchant B".
+ *
+ * Les valeurs viennent de src/styles/tokens.css (seule source, docs/DESIGN_TOKENS.md).
+ * `C` garde des chaînes `#RRGGBB` concrètes, pas des `var(--…)`, parce que le code
+ * existant ajoute l'opacité par concaténation (`C.r + "30"`, `${C.ac}40`) et passe ces
+ * couleurs à Recharts, au canvas, à `hexToRgba`… Nouveau code : classes Tailwind
+ * `*-agon-*` ; si un style inline est inévitable, `alpha(C.r, 0.2)`.
+ */
+import tokensCss from "@/styles/tokens.css?raw";
+import { parseTokens, resolveToken } from "@/styles/parseTokens";
+
+export const TOKENS = parseTokens(tokensCss);
+
+/** Valeur finale d'un token de tokens.css, ex. `token("--agon-accent")` → "#FFC933". */
+export const token = (name: string): string => resolveToken(TOKENS, name);
+const t = token;
+
 export const C = {
   // ── Fond & surfaces ──────────────────────────────────────────────────────────
-  bg:  "#0E0C0A",    // obsidienne profond
-  s1:  "#1E1A16",    // basalte (cards, drawers)
-  s2:  "#27221D",    // basalte 2 (inputs, skeletons)
+  bg:  t("--agon-bg"),           // obsidienne profond
+  s1:  t("--agon-s1"),           // basalte (cards, drawers)
+  s2:  t("--agon-s2"),           // basalte 2 (inputs, skeletons)
 
   // ── Bordures ─────────────────────────────────────────────────────────────────
-  brd:  "rgba(231,211,168,0.10)",
-  brdL: "rgba(231,211,168,0.18)",
+  brd:  t("--agon-brd"),
+  brdL: t("--agon-brd-l"),
 
   // ── Texte ────────────────────────────────────────────────────────────────────
-  tx:  "#FFFFFF",    // blanc pur
-  tx2: "#B9AE9C",   // secondaire / sable muted
-  tx3: "#7D7468",   // muted / placeholder
+  tx:  t("--agon-tx"),           // blanc pur
+  tx2: t("--agon-tx2"),          // secondaire / sable muted
+  tx3: t("--agon-tx3"),          // muted / placeholder
 
   // ── Accents principaux ───────────────────────────────────────────────────────
-  ac:   "#FFC933",               // PRIMARY — or vif
-  acS:  "rgba(255,201,51,0.12)",
+  ac:   t("--agon-accent"),      // PRIMARY — or vif
+  acS:  t("--agon-accent-doux"),
 
   // ── Sémantique ───────────────────────────────────────────────────────────────
-  g:  "#66F03C",  gS: "rgba(102,240,60,0.1)",    // success / vert vif
-  gV: "#66F03C",  gP: "#3D6B24",                  // vert vif / profond
-  o:  "#FF9500",  oS: "rgba(255,149,0,0.1)",      // alerte / ocre vif
-  oV: "#FF9500",  oP: "#94560F",                   // ocre vif / profond
-  y:  "#E6CB86",  yS: "rgba(230,203,134,0.1)",    // or clair (alias)
-  r:  "#FF5A33",  rS: "rgba(255,90,51,0.1)",      // danger / terracotta vif
-  rV: "#FF5A33",  rP: "#8E3220",                   // terracotta vif / profond
-  b:  "#33B5FF",  bS: "rgba(51,181,255,0.1)",     // info / ardoise vif
-  bV: "#33B5FF",  bP: "#25506B",                   // ardoise vif / profond
+  g:  t("--agon-succes"),  gS: t("--agon-succes-doux"),   // success / vert vif
+  gV: t("--agon-succes-vif"),  gP: t("--agon-succes-profond"),
+  o:  t("--agon-alerte"),  oS: t("--agon-alerte-doux"),   // alerte / ocre vif
+  oV: t("--agon-alerte-vif"),  oP: t("--agon-alerte-profond"),
+  y:  t("--agon-or-clair"), yS: t("--agon-or-clair-doux"), // or clair (alias)
+  r:  t("--agon-erreur"),  rS: t("--agon-erreur-doux"),   // danger / terracotta vif
+  rV: t("--agon-erreur-vif"),  rP: t("--agon-erreur-profond"),
+  b:  t("--agon-info"),    bS: t("--agon-info-doux"),     // info / ardoise vif
+  bV: t("--agon-info-vif"),    bP: t("--agon-info-profond"),
 
   // ── Accent — niveaux de contraste ───────────────────────────────────────────
-  acV: "#FFC933",  acP: "#8A6A2C",                 // or vif / profond
+  acV: t("--agon-or-vif"),  acP: t("--agon-or-profond"),
 
   // ── Couleurs étendues — niveaux de contraste ────────────────────────────────
-  pat:  "#1FF0B0",                                  // patine clair
-  patV: "#1FF0B0",  patP: "#1F5E47",               // patine vif / profond
-  ame:  "#F060C0",                                  // améthyste clair
-  ameV: "#F060C0",  ameP: "#5E2A48",               // améthyste vif / profond
+  pat:  t("--agon-patine"),
+  patV: t("--agon-patine-vif"),  patP: t("--agon-patine-profond"),
+  ame:  t("--agon-amethyste"),
+  ameV: t("--agon-amethyste-vif"),  ameP: t("--agon-amethyste-profond"),
 
   // ── Coach / secondaire ───────────────────────────────────────────────────────
-  coach:  "#FFC933",             // SECONDARY — or vif (coach = or)
-  coachS: "rgba(255,201,51,0.12)",
+  coach:  t("--agon-coach"),     // SECONDARY — or vif (coach = or)
+  coachS: t("--agon-coach-doux"),
 } as const;
+
+/**
+ * Ajoute une opacité (0-1) à une couleur. Même résultat que `C.r + "33"` pour un hex,
+ * et fonctionne aussi pour une couleur `rgba()`/`var()` (via `color-mix`).
+ */
+export function alpha(color: string, opacity: number): string {
+  const a = Math.min(1, Math.max(0, opacity));
+  if (/^#[0-9a-f]{6}$/i.test(color)) {
+    return color + Math.round(a * 255).toString(16).padStart(2, "0").toUpperCase();
+  }
+  return `color-mix(in srgb, ${color} ${Math.round(a * 1000) / 10}%, transparent)`;
+}
 
 // ── Raccourcis sémantiques (même valeur, alias lisibles) ──────────────────────
-export const PRIMARY   = C.ac;       // #FFC933 or vif
-export const SECONDARY = C.coach;    // #FFC933 or vif
-export const TERTIARY  = C.o;        // #FF9500 ocre
-export const NEUTRAL   = C.tx3;      // #7D7468 pierre
-export const SUCCESS   = C.g;        // #66F03C vert vif
+export const PRIMARY   = C.ac;       // or vif
+export const SECONDARY = C.coach;    // or vif
+export const TERTIARY  = C.o;        // ocre
+export const NEUTRAL   = C.tx3;      // pierre
+export const SUCCESS   = C.g;        // vert vif
+
+const cat = (n: number) => t(`--agon-cat-${n}`);
 
 export const BT = {
-  PERF:   { c: "#FF5A33", l: "Mvt principal" },   // terracotta vif
-  ESTH:   { c: "#FFC933", l: "Hypertrophie"  },   // or vif
-  BESOIN: { c: "#33B5FF", l: "Besoin indiv."  },   // ardoise vif
-  ASSOC:  { c: "#1FF0B0", l: "Muscles assoc." },   // patine vif
-  CORE:   { c: "#8E8780", l: "Core"           },   // pierre
+  PERF:   { c: cat(2),  l: "Mvt principal" },   // terracotta vif
+  ESTH:   { c: cat(1),  l: "Hypertrophie"  },   // or vif
+  BESOIN: { c: cat(4),  l: "Besoin indiv."  },  // ardoise vif
+  ASSOC:  { c: cat(6),  l: "Muscles assoc." },  // patine vif
+  CORE:   { c: cat(10), l: "Core"           },  // pierre
 } as const;
 
-export const BLOC_COLORS = [
-  "#FFC933","#FF5A33","#66F03C","#33B5FF","#A67C52",
-  "#1FF0B0","#F060C0","#FF9500","#E7D3A8","#8E8780",
-];
+/** Couleurs de blocs : --agon-cat-1 … --agon-cat-10, dans l'ordre. */
+export const BLOC_COLORS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(cat);
 
-export const HABIT_COLORS = [
-  "#FFC933","#66F03C","#33B5FF","#FF5A33","#FF9500","#1FF0B0","#F060C0","#E7D3A8",
-];
+/** Couleurs proposées pour une habitude (enregistrées telles quelles en base). */
+export const HABIT_COLORS = [1, 3, 4, 2, 8, 6, 7, 9].map(cat);
 
 export const HABIT_ICONS = [
   "musculation","course","wellness","hydratation","clipboard","sommeil",

@@ -1688,3 +1688,27 @@ est une RPC idempotente, donc la rejouer ne double rien.
 la saisie restait en pause dans l'onglet et disparaissait à sa fermeture. Les
 écritures coach (programmation, planning) touchent beaucoup de lignes et se
 font au bureau : les rejouer plus tard ouvrirait des conflits pour peu de gain.
+
+## 2026-11 — Âge minimum 15 ans vérifié à l'inscription
+
+**Décision** : date de naissance obligatoire à toute création de compte (coach,
+coach-athlète, athlète par code ou par lien, staff, activation d'un compte
+pré-créé par le coach). Moins de 15 ans : refus, message « Tu dois avoir au
+moins 15 ans pour utiliser Agon. ». Les comptes existants ne sont pas touchés.
+- Règle pure : `@shared/domain/age` (front via `src/lib/age.ts`, Edge Function
+  `claim-athlete`). Né un 29 février : 15 ans le 1er mars.
+- Le client vérifie AVANT `auth.signUp` (sinon un refus laisserait un compte
+  d'authentification sans profil). La date va dans `profiles.birth_date`.
+- Serveur : trigger `enforce_min_age_on_signup` sur `profiles` (INSERT, et
+  `is_pending` true → false). « Aujourd'hui » = UTC+14 (personne n'est refusé
+  à cause du fuseau). Autres mises à jour non contrôlées.
+- **Date absente** : acceptée tant que `main` ne l'envoie pas (phase 1,
+  migration 20261109160000, applicable tout de suite). Phase 2
+  (20261109170000 + `BIRTH_DATE_REQUIRED = true` dans `claim-athlete`) après
+  déploiement du nouveau client sur `main` : date absente refusée, sauf profils
+  créés côté serveur (athlète pré-créé, seed démo).
+
+**Pourquoi** : CGU et politique annoncent 15 ans (majorité numérique, art. 8
+RGPD / loi Informatique et libertés art. 45) sans aucun contrôle. Le
+contrôle serveur seul évite qu'on le contourne en appelant l'API directement ;
+la phase 1 évite de casser les inscriptions du client en production.

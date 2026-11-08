@@ -2,8 +2,11 @@ import { describe, it, expect } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import {
   applyOptimisticWorkout,
+  cachedNextOccurrence,
   draftAlreadyOnServer,
+  findCachedWeekLogs,
   findCachedWorkoutLogId,
+  seedPlannedWorkout,
   patchWorkoutInData,
   removeWorkoutFromList,
 } from "../optimisticWorkout";
@@ -129,5 +132,40 @@ describe("draftAlreadyOnServer", () => {
   it("faux dès qu'une valeur manque en base", () => {
     expect(draftAlreadyOnServer(server, { sessionSets: { e1: [{ kg: 55, reps: 5 }] } })).toBe(false);
     expect(draftAlreadyOnServer(null, { sessionSets: { e1: [] } })).toBe(false);
+  });
+});
+
+describe("séance libre sans réseau (cache)", () => {
+  function qcWith() {
+    const qc = new QueryClient();
+    qc.setQueryData(["workouts", "A", "list", { from: "2026-11-02" }], [
+      log({ id: "lun", scheduled_date: "2026-11-02", status: "completed" }),
+      log({ id: "annulee", scheduled_date: "2026-11-08", status: "skipped" }),
+      log({ id: "autre-seance", session_id: "S2", scheduled_date: "2026-11-05" }),
+      log({ id: "semaine-avant", scheduled_date: "2026-10-30" }),
+    ]);
+    qc.setQueryData(["workout-logs-week", "A", "2026-10-26"], [{ ...log({ id: "w", scheduled_date: "2026-10-30" }), occurrence: 6 }]);
+    qc.setQueryData(["session-occurrence", "A", "S1", "2026-11-02"], 7);
+    qc.setQueryData(["session-occurrence", "A", "S1", "2026-11-20"], 9); // après : ignorée
+    return qc;
+  }
+
+  it("semaine de la séance-type d'après le cache, annulées comprises", () => {
+    const logs = findCachedWeekLogs(qcWith(), { athleteId: "A", sessionId: "S1", from: "2026-11-02", to: "2026-11-08" });
+    expect(logs.map((l) => [l.id, l.status]).sort()).toEqual([["annulee", "skipped"], ["lun", "completed"]]);
+  });
+
+  it("occurrence suivante estimée depuis les occurrences déjà lues", () => {
+    expect(cachedNextOccurrence(qcWith(), { athleteId: "A", sessionId: "S1", date: "2026-11-08" })).toBe(8);
+    expect(cachedNextOccurrence(new QueryClient(), { athleteId: "A", sessionId: "S1", date: "2026-11-08" })).toBeNull();
+  });
+
+  it("séance créée en file : l'écran de séance la trouve dans le cache", () => {
+    const qc = qcWith();
+    seedPlannedWorkout(qc, { id: "local", athlete_id: "A", coach_id: null, session_id: "S1", session_name: "Haut", scheduled_date: "2026-11-08" });
+    expect(qc.getQueryData(["workout-log-detail", "local"])).toMatchObject({
+      id: "local", status: "planned", athlete_modifications: null, rescheduled_by_athlete: true, scheduled_date: "2026-11-08",
+    });
+    expect(qc.getQueryData(["session-occurrence", "A", "S1", "2026-11-08"])).toBe(8);
   });
 });

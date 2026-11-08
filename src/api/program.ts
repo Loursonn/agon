@@ -132,26 +132,20 @@ export function diffProgram(base: ProgSession[] | undefined, next: ProgSession[]
 export const PROGRAM_CONFLICT = "40001";
 export const isProgramConflict = (e: unknown) => e instanceof ApiError && e.code === PROGRAM_CONFLICT;
 
-type UntypedRpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{
-  data: unknown;
-  error: { message: string; code?: string } | null;
-}>;
-
 async function saveSessions(athleteId: string, d: ProgramDiff): Promise<ProgSession[]> {
-  // `program_save_sessions` n'est pas encore dans les types générés (migration 20261109110000).
-  const client = db() as unknown as { rpc: UntypedRpc };
+  // jsonb : les séances (interfaces) passent telles quelles.
   const saved = unwrap(
-    await client.rpc("program_save_sessions", {
+    await db().rpc("program_save_sessions", {
       p_athlete: athleteId,
-      p_upsert: d.upsert,
-      p_base: d.base,
+      p_upsert: d.upsert as never,
+      p_base: d.base as never,
       p_remove: d.remove,
       p_order: d.order,
     }),
     "Enregistrement du programme impossible",
   );
   if (!Array.isArray(saved)) throw new ApiError("Enregistrement du programme impossible", { message: "réponse inattendue" });
-  return saved as ProgSession[];
+  return saved as unknown as ProgSession[];
 }
 
 /**

@@ -235,3 +235,13 @@ export async function mergeExercises(keepId: string, deleteId: string): Promise<
   if (Object.keys(patch).length) await updateExercise(keepId, patch);
   await deleteExercise(deleteId);
 }
+
+// ── Ancien stockage (app_data) ───────────────────────────────────────────────
+
+/** Ancien stockage des exercices par cycle (`app_data`, clés `asp:exos::<cycle>`). */
+export async function listLegacyCycleExercises(athleteId: string): Promise<{ key: string; value: unknown }[]> {
+  return unwrapRows<{ key: string; value: unknown }>(
+    (await db().from("app_data").select("key, value").eq("athlete_id", athleteId).like("key", "asp:exos::%")) as never,
+    "Lecture des anciens exercices impossible",
+  );
+}

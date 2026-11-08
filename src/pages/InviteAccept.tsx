@@ -2,6 +2,8 @@ import { useState } from "react";
 import { errorMessage } from "@/lib/errors";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { localIsoDay } from "@shared/domain/dates";
+import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -34,6 +36,7 @@ export default function InviteAccept() {
         form.get("email") as string,
         password,
         form.get("fullName") as string,
+        form.get("birthDate") as string,
         token!
       );
       navigate("/");
@@ -62,6 +65,11 @@ export default function InviteAccept() {
               <div className="space-y-1">
                 <Label htmlFor="fullName">Nom complet</Label>
                 <Input id="fullName" name="fullName" required placeholder="Prénom Nom" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="birthDate">Date de naissance</Label>
+                <Input id="birthDate" name="birthDate" type="date" required min={OLDEST_BIRTH_DATE} max={localIsoDay()} />
+                <p className="text-xs text-zinc-500">Agon est réservé aux personnes de {MIN_AGE} ans et plus.</p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="email">Email</Label>

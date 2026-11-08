@@ -49,7 +49,8 @@ export default function Terms() {
           celui-ci lui transmet. Un même utilisateur peut cumuler les deux rôles.
         </P>
         <P>
-          Vous devez avoir au moins 15 ans. Entre 15 et 18 ans, l'accord de votre représentant
+          Vous devez avoir au moins 15 ans : votre date de naissance est demandée à l'inscription,
+          qui est refusée en dessous de cet âge. Entre 15 et 18 ans, l'accord de votre représentant
           légal est requis.
         </P>
         <P>

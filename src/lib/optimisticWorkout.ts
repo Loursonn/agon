@@ -187,3 +187,103 @@ function stableJson(v: unknown): string {
     isObj(x) ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x,
   );
 }
+
+// ── Séance libre démarrée sans réseau ────────────────────────────────────────
+
+/** Forme minimale d'une séance pour `planUnplannedStart`. */
+export interface CachedWeekLog {
+  id: string;
+  session_id: string;
+  scheduled_date: string;
+  status: string;
+}
+
+/**
+ * Séances (athlète, séance-type) entre `from` et `to` d'après le cache seul,
+ * annulées comprises — hors ligne, quand la semaine ne peut pas être relue.
+ */
+export function findCachedWeekLogs(
+  qc: QueryClient,
+  p: { athleteId: string; sessionId: string; from: string; to: string },
+): CachedWeekLog[] {
+  const byId = new Map<string, CachedWeekLog>();
+  for (const q of qc.getQueryCache().getAll()) {
+    if (q.state.data === undefined) continue;
+    const k = q.queryKey;
+    if (!keyHas(k, p.athleteId) && k[0] !== "workout-log-detail") continue;
+    for (const o of findWorkoutInData(q.state.data, (x) =>
+      x.athlete_id === p.athleteId &&
+      x.session_id === p.sessionId &&
+      typeof x.status === "string" &&
+      typeof x.scheduled_date === "string" &&
+      x.scheduled_date.slice(0, 10) >= p.from &&
+      x.scheduled_date.slice(0, 10) <= p.to,
+    )) {
+      const id = String(o.id);
+      if (!byId.has(id)) {
+        byId.set(id, { id, session_id: p.sessionId, scheduled_date: String(o.scheduled_date).slice(0, 10), status: String(o.status) });
+      }
+    }
+  }
+  return [...byId.values()];
+}
+
+/**
+ * Rang de la prochaine occurrence de la séance-type au jour `date`, d'après
+ * le cache (occurrences déjà lues des séances précédentes) ; `null` si le
+ * téléphone n'en sait rien. Best effort : les séances jamais ouvertes ne sont
+ * pas comptées, le serveur corrige au retour du réseau.
+ */
+export function cachedNextOccurrence(
+  qc: QueryClient,
+  p: { athleteId: string; sessionId: string; date: string },
+): number | null {
+  let best = 0;
+  for (const q of qc.getQueryCache().getAll()) {
+    const k = q.queryKey;
+    const data = q.state.data;
+    if (data === undefined) continue;
+    if (k[0] === "session-occurrence" && k[1] === p.athleteId && k[2] === p.sessionId) {
+      if (typeof k[3] === "string" && k[3] < p.date && typeof data === "number") best = Math.max(best, data);
+      continue;
+    }
+    if (!keyHas(k, p.athleteId)) continue;
+    for (const o of findWorkoutInData(data, (x) =>
+      x.athlete_id === p.athleteId && x.session_id === p.sessionId && typeof x.occurrence === "number" &&
+      x.status !== "skipped" && typeof x.scheduled_date === "string" && x.scheduled_date.slice(0, 10) < p.date,
+    )) best = Math.max(best, o.occurrence as number);
+  }
+  return best > 0 ? best + 1 : null;
+}
+
+/**
+ * Séance libre gardée en file (`workout.plan`) : l'écran de séance s'ouvre
+ * sur elle sans réseau (détail en cache, occurrence estimée). La file
+ * rafraîchit tout une fois vidée, le serveur fait alors foi.
+ */
+export function seedPlannedWorkout(
+  qc: QueryClient,
+  log: { id: string; athlete_id: string; coach_id: string | null; session_id: string; session_name: string; scheduled_date: string },
+): void {
+  qc.setQueryData(["workout-log-detail", log.id], {
+    ...log,
+    status: "planned",
+    started_at: null,
+    completed_at: null,
+    duration_s: null,
+    notes: null,
+    microcycle_id: null,
+    rpe_score: null,
+    athlete_modifications: null,
+    original_scheduled_date: log.scheduled_date,
+    rescheduled_by_athlete: true,
+    coach_alert: false,
+    week_number: null,
+    run_distance_km: null,
+  });
+  const occKey = ["session-occurrence", log.athlete_id, log.session_id, log.scheduled_date];
+  if (qc.getQueryData(occKey) === undefined) {
+    const occ = cachedNextOccurrence(qc, { athleteId: log.athlete_id, sessionId: log.session_id, date: log.scheduled_date });
+    if (occ != null) qc.setQueryData(occKey, occ);
+  }
+}
