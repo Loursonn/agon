@@ -254,18 +254,18 @@ Source : audit qualité.
 
 ### Phase 5 — Design system · ~1-2 sem.
 - [x] Récupérer la charte source (disque `AGON`, `agon-brand-kit/tokens/agon-tokens.css`).
-- [ ] Un seul fichier de tokens → `tailwind.config` + `theme.ts` dérivé (échelle typo ≥ 11 px) — tuyauterie en cours, valeurs finales quand la charte Claude Design est figée.
+- [x] Un seul fichier de tokens `src/styles/tokens.css` → `tailwind.config` + `theme.ts` dérivés (échelle typo ≥ 11 px). Tuyauterie faite ; valeurs finales à ajuster quand la charte Claude Design sera figée.
 - [x] Importer dans **Claude Design** ; toutes les maquettes partent de là (design system « Agon », 2026-11-08 ; charte en cours de finalisation).
-- [ ] Primitives `src/ui` stylées Agon sur shadcn (Button, Input, Select, Dialog/Sheet responsive, Module, Stat, Tag, EmptyState, Skeleton).
+- [x] Primitives `src/ui` stylées Agon sur shadcn (Button, Input, Select, Dialog/Sheet responsive, Module, Stat, Tag, EmptyState, Skeleton).
 
 ### Phase 6 — 4 fronts (coach PC/mobile, athlète mobile/PC) · écran par écran
-- [ ] Shell responsive par rôle.
+- [x] Shell responsive par rôle (`CoachShell.tsx`, `AthleteLayout.tsx`).
 - [ ] Migrer chaque écran inline → Tailwind avec breakpoints, à partir des maquettes Claude Design ; découper les gros fichiers.
 
 ### Phase 7 — Stores (janv.-fév. 2027)
 - [x] Décision **Capacitor** (recommandé : réutilise tout le code web et le hors-ligne ; plugins santé suffisants) vs React Native/Expo (réécriture de ~13 000 lignes d'UI athlète). À acter dans `DECISIONS.md` (CLAUDE.md dit encore Expo).
 - [ ] Comptes Apple (99 $/an) + Google (25 $ une fois). Attention : un compte Google personnel récent doit faire un test fermé (12 testeurs, 14 jours) avant la prod.
-- [ ] URL web de suppression de compte, compte démo stable, privacy labels / Data safety, vérification d'âge.
+- [ ] URL web de suppression de compte, compte démo stable, privacy labels / Data safety. (Vérification d'âge à l'inscription : faite, `src/lib/age.ts` + triggers `min_age_signup`.)
 - [ ] Avis juriste HDS si la feature kiné est ouverte largement.
 
 ---

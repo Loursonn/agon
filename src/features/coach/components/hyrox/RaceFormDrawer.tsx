@@ -45,7 +45,7 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
   // Segments stored as mm:ss strings
   const initSeg = (key: string) => {
     if (!race) return "";
-    const val = (race as Record<string, unknown>)[key + "_s"] as number | null;
+    const val = (race as unknown as Record<string, unknown>)[key + "_s"] as number | null;
     return val != null ? formatMmSs(val) : "";
   };
 

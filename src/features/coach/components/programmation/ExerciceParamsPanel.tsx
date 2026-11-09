@@ -690,7 +690,7 @@ export function ExerciceParamsPanel({
               const newMulti = !(exercice.multi_semaine ?? false)
               let newParams = exercice.params
               if (newMulti && typeof exercice.params === 'object' && 'mode' in exercice.params) {
-                newParams = { '1': exercice.params as ExerciceParams }
+                newParams = { '1': exercice.params as unknown as ExerciceParams }
               } else if (!newMulti && typeof exercice.params === 'object' && !('mode' in exercice.params)) {
                 const rec = exercice.params as Record<string, ExerciceParams>
                 newParams = Object.values(rec)[0] ?? defaultExerciceParams()

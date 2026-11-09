@@ -103,7 +103,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   // Active free session for "reprendre" button
   const activeFreeSess = sessions.find(s => {
     const k = `freeSession_${s.id}`;
-    return (freeSessions as Array<{ sessionKey: string; active: boolean }>).some(fs => fs.sessionKey === k && fs.active);
+    return (freeSessions as unknown as Array<{ sessionKey: string; active: boolean }>).some(fs => fs.sessionKey === k && fs.active);
   });
 
   // Active musculation workout session (persisted in localStorage)
@@ -111,7 +111,6 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   const isOnWorkoutPage = location.pathname.includes("/workout/");
 
   // Check localStorage on mount + route change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const check = () => {
       const stored = localStorage.getItem("activeWorkoutSession");
