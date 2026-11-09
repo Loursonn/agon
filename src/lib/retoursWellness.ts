@@ -3,17 +3,9 @@
  * `WellnessDay`, calculée depuis le domaine (`@shared/domain/wellness`).
  * Score recalculé, note absente = null (affichée « — », jamais 0).
  */
-import {
-  archivedWellnessOf, averageScore, parseWellnessHistory, wellnessScore,
-  type WellnessEntry, type WellnessHistory,
-} from "@shared/domain/wellness";
+import { averageScore, wellnessScore, type WellnessEntry, type WellnessHistory } from "@shared/domain/wellness";
 import { addDays, type IsoDay } from "@shared/domain/dates";
 import type { WellnessDay } from "@/features/shared/types/retours.types";
-
-/** `asp:wh` + wellness archivé des blocs (`asp:blockHistory`), indexé en jours ISO. */
-export function retoursWellnessHistory(wh: unknown, blockHistory: unknown): WellnessHistory {
-  return parseWellnessHistory(wh, archivedWellnessOf(blockHistory));
-}
 
 export function toWellnessDay(e: WellnessEntry): WellnessDay {
   return {

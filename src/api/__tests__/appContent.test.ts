@@ -112,9 +112,13 @@ describe("api/appContent", () => {
         { athlete_id: "b", status: "completed", completed_at: "2026-11-06T08:00:00Z" },
         { athlete_id: "z", status: "completed", completed_at: "2026-11-08T09:00:00Z" },
       ],
-      app_data: [
-        { athlete_id: "b", key: "asp:wh", updated_at: "2026-11-08T07:00:00Z" },
-        { athlete_id: "a", key: "asp:prog", updated_at: "2026-11-08T10:00:00Z" },
+      wellness_entries: [
+        { athlete_id: "b", day: "2026-11-07", archived: false, updated_at: "2026-11-08T07:00:00Z" },
+        { athlete_id: "b", day: "2026-11-06", archived: false, updated_at: "2026-11-07T07:00:00Z" },
+        // archivage d'un bloc : pas une saisie
+        { athlete_id: "a", day: "2026-09-01", archived: true, updated_at: "2026-11-08T10:00:00Z" },
+        // athlète hors liste
+        { athlete_id: "z", day: "2026-11-07", archived: false, updated_at: "2026-11-08T11:00:00Z" },
       ],
     });
     const rows = await listRecentActivity(["a", "b"], 10);

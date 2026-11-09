@@ -5,6 +5,7 @@ import type {
 import type { AppFeedbackEntry, CoachFeedbacks } from "@/features/shared/types/athlete";
 import { check, db, unwrap, unwrapRows } from "./client";
 import { readAppData, writeAppData } from "./appData";
+import { tableMissing } from "./wellness";
 
 /**
  * Contenu de l'app autour du coach et de l'athlète :
@@ -338,11 +339,36 @@ export interface ActivityRow {
 /**
  * Derniers événements (un par athlète et par type, le plus récent) :
  * séance validée (`workout_logs.completed_at`) et wellness rempli
- * (`app_data` `asp:wh`, mis à jour par la RPC `wellness_set_day`).
+ * (`wellness_entries.updated_at`, saisies courantes : seules les lignes qui
+ * changent bougent, l'archivage d'un bloc n'est pas une saisie).
  *
  * Avant : les séances étaient lues dans `asp:sessionlogs`, que plus rien
  * n'écrit (0 ligne en base) → « a enregistré une séance » n'apparaissait jamais.
  */
+/** Dernière saisie wellness de chaque athlète (une requête par athlète : le plus récent seulement). */
+async function lastWellnessUpdates(athleteIds: string[]): Promise<Array<{ athlete_id: string; updated_at: string }>> {
+  const what = "Lecture de l'activité impossible";
+  try {
+    const perAthlete = await Promise.all(athleteIds.map(async (aid) =>
+      unwrapRows(
+        await db().from("wellness_entries").select("athlete_id, updated_at")
+          .eq("athlete_id", aid).eq("archived", false)
+          .order("updated_at", { ascending: false }).limit(1),
+        what,
+      )));
+    return perAthlete.flat() as Array<{ athlete_id: string; updated_at: string }>;
+  } catch (e) {
+    if (!tableMissing(e)) throw e;
+    // Table pas encore créée (docs/SANTE_TABLES.md, étape 4 : à retirer).
+    return unwrapRows(
+      await db().from("app_data").select("athlete_id, updated_at")
+        .in("athlete_id", athleteIds).eq("key", "asp:wh")
+        .order("updated_at", { ascending: false }).limit(athleteIds.length),
+      what,
+    ) as Array<{ athlete_id: string; updated_at: string }>;
+  }
+}
+
 export async function listRecentActivity(athleteIds: string[], limit: number): Promise<ActivityRow[]> {
   if (athleteIds.length === 0) return [];
   const [logs, well] = await Promise.all([
@@ -352,16 +378,12 @@ export async function listRecentActivity(athleteIds: string[], limit: number): P
       .not("completed_at", "is", null)
       .order("completed_at", { ascending: false })
       .limit(limit * 3),
-    db().from("app_data").select("athlete_id, updated_at")
-      .in("athlete_id", athleteIds)
-      .eq("key", "asp:wh")
-      .order("updated_at", { ascending: false })
-      .limit(limit),
+    lastWellnessUpdates(athleteIds),
   ]);
   const rows: ActivityRow[] = [
     ...unwrapRows(logs, "Lecture de l'activité impossible")
       .map((r) => ({ athleteId: r.athlete_id, type: "session" as const, at: r.completed_at as string })),
-    ...unwrapRows(well, "Lecture de l'activité impossible")
+    ...well
       .map((r) => ({ athleteId: r.athlete_id, type: "wellness" as const, at: r.updated_at as string })),
   ];
   rows.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));

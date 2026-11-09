@@ -1,15 +1,16 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { type IsoDay, isIsoDay, localIsoDay } from "@shared/domain/dates";
+import { type IsoDay, isIsoDay, localIsoDay, toCompactDay } from "@shared/domain/dates";
 import {
   archivedWellnessOf,
   parseWellnessEntry,
   parseWellnessHistory,
-  readItem,
   toLegacyEntry,
-  type DomsPoint,
-  type HourMinute,
+  WELLNESS_ROW_COLUMNS,
+  wellnessRowsToHistory,
+  wellnessRowToEntry,
   type WellnessEntry,
   type WellnessHistory,
+  type WellnessRow,
 } from "@shared/domain/wellness";
 import { ApiError, db, unwrap, unwrapRows } from "./client";
 
@@ -31,8 +32,7 @@ import { ApiError, db, unwrap, unwrapRows } from "./client";
 const WH = "asp:wh";
 const ARCHIVE = "asp:blockHistory";
 const TABLE = "wellness_entries";
-const COLUMNS =
-  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived";
+const COLUMNS = WELLNESS_ROW_COLUMNS;
 
 export interface WellnessRange {
   from?: IsoDay | null;
@@ -53,27 +53,6 @@ export const wellnessKeys = {
 
 // ── Table `wellness_entries` ──────────────────────────────────────────────────
 
-/** Ligne de `wellness_entries` (numeric → nombre, time → "HH:MM:SS"). */
-export interface WellnessRow {
-  athlete_id: string;
-  day: string;
-  fatigue: number | string | null;
-  sommeil: number | string | null;
-  stress: number | string | null;
-  energie: number | string | null;
-  doms: number | string | null;
-  bedtime: string | null;
-  wake: string | null;
-  sleep_hours: number | string | null;
-  sleep_interrupted: boolean | null;
-  sleep_interrupt_note: string | null;
-  doms_zones: string[] | null;
-  doms_points: unknown;
-  injury_note: string | null;
-  weight_kg: number | string | null;
-  archived: boolean;
-}
-
 const entries = () => db().from(TABLE).select(COLUMNS);
 
 /** Table absente (migration pas encore appliquée) : PostgREST PGRST205, Postgres 42P01. */
@@ -81,66 +60,8 @@ export function tableMissing(e: unknown): boolean {
   return e instanceof ApiError && (e.code === "PGRST205" || e.code === "42P01");
 }
 
-function toNum(v: unknown): number | null {
-  const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
-  return typeof n === "number" && Number.isFinite(n) ? n : null;
-}
-
-function toHm(v: unknown): HourMinute | null {
-  const m = typeof v === "string" ? /^(\d{1,2}):(\d{2})/.exec(v) : null;
-  return m ? { h: Number(m[1]), m: Number(m[2]) } : null;
-}
-
-function toPoints(v: unknown): DomsPoint[] {
-  if (!Array.isArray(v)) return [];
-  return v.flatMap((p) => {
-    if (typeof p !== "object" || p === null) return [];
-    const o = p as Record<string, unknown>;
-    const x = toNum(o.x);
-    const y = toNum(o.y);
-    if (x == null || y == null || (o.side !== "front" && o.side !== "back")) return [];
-    const intensity = toNum(o.intensity);
-    return [{ id: String(o.id ?? `${o.side}-${x}-${y}`), x, y, side: o.side, ...(intensity != null ? { intensity } : {}) }];
-  });
-}
-
-/** Une ligne de la table → `WellnessEntry` (même forme que `parseWellnessEntry`). */
-export function wellnessRowToEntry(row: WellnessRow): WellnessEntry | null {
-  const day = typeof row.day === "string" ? row.day.slice(0, 10) : "";
-  if (!isIsoDay(day)) return null;
-  const hours = toNum(row.sleep_hours);
-  const kg = toNum(row.weight_kg);
-  return {
-    day,
-    items: {
-      fatigue: readItem(row.fatigue),
-      sommeil: readItem(row.sommeil),
-      stress: readItem(row.stress),
-      energie: readItem(row.energie),
-      doms: readItem(row.doms),
-    },
-    sleep: {
-      bedtime: toHm(row.bedtime),
-      wake: toHm(row.wake),
-      hours: hours != null && hours >= 0 && hours <= 24 ? hours : null,
-      interrupted: typeof row.sleep_interrupted === "boolean" ? row.sleep_interrupted : null,
-      interruptNote: row.sleep_interrupt_note?.trim() || null,
-    },
-    domsZones: Array.isArray(row.doms_zones) ? row.doms_zones.filter((z): z is string => typeof z === "string") : [],
-    domsPoints: toPoints(row.doms_points),
-    injuryNote: row.injury_note?.trim() || null,
-    weightKg: kg != null && kg > 0 ? kg : null,
-    archived: row.archived === true,
-  };
-}
-
-function rowsToHistory(rows: WellnessRow[]): WellnessHistory {
-  const out: WellnessHistory = {};
-  for (const e of rows.map(wellnessRowToEntry).filter((x): x is WellnessEntry => x !== null).sort((a, b) => a.day.localeCompare(b.day))) {
-    out[e.day] = e;
-  }
-  return out;
-}
+export { wellnessRowToEntry, type WellnessRow };
+const rowsToHistory = wellnessRowsToHistory;
 
 /** PostgREST renvoie au plus 1000 lignes par requête : lecture par pages. */
 const PAGE_SIZE = 1000;
@@ -231,6 +152,22 @@ export async function getWellnessHistories(
 export async function getTodayWellness(athleteId: string, day: IsoDay = localIsoDay()): Promise<WellnessEntry | null> {
   const h = await getWellnessHistory(athleteId, { from: day, to: day });
   return h[day] ?? null;
+}
+
+// Adaptateurs vers l'état historique de l'app (`useAthletePersistedState` :
+// `wellnessHistory` = ancien `asp:wh`, `wellness` = ancien `asp:wellness`).
+
+/** `{ "YYYYMMDD": WellnessData }` : l'ancienne forme d'`asp:wh` (clés compactes, `date` compacte). */
+export function toLegacyWellnessHistory(h: WellnessHistory): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const e of Object.values(h)) out[toCompactDay(e.day)] = toLegacyEntry(e);
+  return out;
+}
+
+/** Saisie du jour au format de l'ancien `asp:wellness` ; null si rien aujourd'hui. */
+export function toLegacyToday(h: WellnessHistory, day: IsoDay = localIsoDay()): Record<string, unknown> | null {
+  const e = h[day];
+  return e ? toLegacyEntry(e) : null;
 }
 
 // ── Écritures ─────────────────────────────────────────────────────────────────
