@@ -185,3 +185,6 @@ faute de fichier. Pour les valider, il faut au moins une activité dans le compt
 de l'appel, avec `raw.window_days`. Jamais accepté pour les FIT. Tests ajoutés dans
 `corosSync.test.ts`. **Non déployé** : `provider-coros-sync` en prod reste en v6 ;
 déploiement soumis à accord.
+
+**Déployé le 2026-11-09** par Titouan (accord donné dans la conversation) :
+`provider-coros-sync` depuis le worktree `docs-coros-p7`, commit `8f055f4`.
