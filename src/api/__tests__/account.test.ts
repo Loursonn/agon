@@ -5,7 +5,7 @@ import {
   AccountError, accountKeys, claimAthleteAccount, coachCodeExists, createInvitation, createPendingAthlete,
   deleteAccount, ensureCoachCode, generateCoachCode, getClaimInfo, getClaimToken, getCoachRoster, getConsents,
   invalidateAccount, invitationIsValid, linkToCoachByCode, pickFreeCoachCode, readOwnRows, recordConsents,
-  registerAthleteWithCode, registerAthleteWithInvitation, registerCoach, registerStaff, serverReason, setOwnCoach,
+  registerAthleteWithCode, registerAthleteWithInvitation, registerCoach, registerStaff, reportClientBuild, serverReason, setOwnCoach,
 } from "@/api/account";
 import type { Profile } from "@/api/profile";
 
@@ -202,6 +202,19 @@ describe("api/account — code coach et inscription", () => {
     });
     await expect(setOwnCoach("u", null)).rejects.toThrow();
     expect(base.tables.profiles[0].coach_id).toBe("c");
+  });
+
+  it("reportClientBuild : appelle la RPC report_client_build avec le build", async () => {
+    const seen: unknown[] = [];
+    const report_client_build: FakeRpc = (a) => { seen.push(a.p_build); return null; };
+    world({}, { rpcs: { report_client_build } });
+    await reportClientBuild("abc123");
+    expect(seen).toEqual(["abc123"]);
+  });
+
+  it("reportClientBuild : refus de la RPC remonté", async () => {
+    setDbForTests({ rpc: () => Promise.resolve({ data: null, error: { message: "Non connecté", code: "42501" } }) });
+    await expect(reportClientBuild("abc")).rejects.toThrow(/Non connecté/);
   });
 
   it("ensureCoachCode : code tiré et enregistré ; rien si déjà là ou pas coach", async () => {
