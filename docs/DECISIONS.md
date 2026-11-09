@@ -1734,13 +1734,13 @@ coach perdu (vérifié).
 Avant de lancer un test, vérifier `grep -n "^ROLLBACK;" <fichier>`.
 
 
-## 2026-11-09 — Âge minimum, phase 2 préparée (non appliquée)
+## 2026-11-09 — Âge minimum, phase 2 appliquée
 
-**Fait** : `main` envoie bien `birthDate` / `birth_date` (Login, InviteAccept,
-ClaimAthlete, StaffInviteAccept, useAuth, vérifié par `git show origin/main:…`).
-`BIRTH_DATE_REQUIRED = true` dans `claim-athlete` (code seulement, pas déployé).
-
-**Reste (accord d'Hugo requis)** : déployer `claim-athlete`, appliquer la
-migration 20261109170000, relancer `supabase/tests/min_age_signup.sql`. Cette
-entrée sera complétée de la date d'application une fois fait. Pas de
-« Nouveautés » : aucun coach ne remarque le changement.
+**Fait** (accord de Titouan) : `main` envoie bien `birthDate` / `birth_date`
+(Login, InviteAccept, ClaimAthlete, StaffInviteAccept, useAuth). Test à blanc
+phase 1 + 2 : 22 lignes ok. `claim-athlete` déployé avec
+`BIRTH_DATE_REQUIRED = true`, migration 20261109170000 appliquée, puis
+`supabase/tests/min_age_signup.sql` relancé en phase 2 : tout ok.
+Date de naissance désormais obligatoire côté serveur, sauf profils créés côté
+serveur (athlète pré-créé, seed démo). Pas de « Nouveautés » : aucun coach ne
+remarque le changement.
