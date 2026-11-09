@@ -1,81 +1,60 @@
-import { priorityLabel } from "@/types/planning";
 import { useState } from "react";
 import { Trophy } from "lucide-react";
-import { C } from "@/lib/theme";
+import { priorityLabel } from "@/types/planning";
+import { cn } from "@/lib/utils";
 import type { Competition } from "./hooks/useTimelineData";
 import type { useCalculatePosition } from "./hooks/useCalculatePosition";
 
-const LABEL_W = 88;
-
-const PRIORITY_COLOR: Record<string, string> = {
-  A: C.coach,
-  B: C.ac,
-  C: C.tx3,
+const PRIORITY_STYLE: Record<string, { bg: string; text: string; border: string }> = {
+  A: { bg: "bg-agon-coach", text: "text-agon-coach", border: "border-agon-coach/60" },
+  B: { bg: "bg-agon-accent", text: "text-agon-accent", border: "border-agon-accent/60" },
+  C: { bg: "bg-agon-tx3", text: "text-agon-tx3", border: "border-agon-tx3/60" },
 };
 
 interface Props {
   competitions: Competition[];
-  calc:         ReturnType<typeof useCalculatePosition>;
+  calc: ReturnType<typeof useCalculatePosition>;
+  /** Largeur de la colonne de libellés (px) : décalage du repère. */
+  labelWidth: number;
   totalRowHeight: number;
-  onSelect:     (comp: Competition) => void;
+  onSelect: (comp: Competition) => void;
 }
 
-export function CompetitionMarkers({ competitions, calc, totalRowHeight, onSelect }: Props) {
+export function CompetitionMarkers({ competitions, calc, labelWidth, totalRowHeight, onSelect }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
     <>
       {competitions.map((comp) => {
-        const x    = calc.dateToX(comp.date);
-        const color = PRIORITY_COLOR[comp.priority ?? "C"] ?? C.tx3;
-        const isH  = hovered === comp.id;
+        const x = calc.dateToX(comp.date);
+        const style = PRIORITY_STYLE[comp.priority ?? "C"] ?? PRIORITY_STYLE.C;
+        const isH = hovered === comp.id;
 
         return (
           <div
             key={comp.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`Compétition ${comp.name}`}
             onClick={() => onSelect(comp)}
+            onKeyDown={(e) => { if (e.key === "Enter") onSelect(comp); }}
             onMouseEnter={() => setHovered(comp.id)}
             onMouseLeave={() => setHovered(null)}
-            style={{
-              position: "absolute",
-              left: LABEL_W + x - 1,
-              top: 0,
-              height: totalRowHeight,
-              width: isH ? 3 : 2,
-              background: color,
-              cursor: "pointer",
-              zIndex: 5,
-              transition: "width 100ms",
-            }}
+            // Zone de toucher élargie (le trait ne fait que 2 px)
+            className={cn(
+              "absolute top-0 z-[5] cursor-pointer transition-[width] duration-100 before:absolute before:inset-y-0 before:-left-2 before:-right-2 before:content-['']",
+              style.bg, isH ? "w-[3px]" : "w-0.5",
+            )}
+            style={{ left: labelWidth + x - 1, height: totalRowHeight }}
           >
-            {/* Tooltip */}
             {isH && (
-              <div
-                style={{
-                  position: "absolute", top: 4, left: 6,
-                  background: C.s2, border: "1px solid " + color + "60",
-                  borderRadius: 6, padding: "3px 8px",
-                  fontSize: 10, fontWeight: 600, color,
-                  whiteSpace: "nowrap", pointerEvents: "none",
-                  zIndex: 20,
-                }}
-              >
+              <div className={cn("pointer-events-none absolute left-1.5 top-1 z-20 whitespace-nowrap rounded-md border bg-agon-s2 px-agon-sm py-agon-2xs text-agon-xs font-semibold", style.border, style.text)}>
                 {comp.name}
-                {comp.priority && (
-                  <span style={{ marginLeft: 4, opacity: 0.7 }}>· {priorityLabel(comp.priority)}</span>
-                )}
+                {comp.priority && <span className="ml-agon-xs opacity-70">· {priorityLabel(comp.priority)}</span>}
               </div>
             )}
 
-            {/* Icon at bottom */}
-            <div
-              style={{
-                position: "absolute",
-                bottom: -22,
-                left: "50%", transform: "translateX(-50%)",
-                color,
-              }}
-            >
+            <div className={cn("absolute -bottom-[22px] left-1/2 -translate-x-1/2", style.text)}>
               <Trophy size={14} />
             </div>
           </div>

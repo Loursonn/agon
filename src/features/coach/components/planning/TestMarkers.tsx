@@ -1,66 +1,43 @@
 import { useState } from "react";
 import { FlaskConical } from "lucide-react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { TLTestSession } from "./hooks/useTimelineData";
 import type { useCalculatePosition } from "./hooks/useCalculatePosition";
 
-const LABEL_W = 88;
-
 interface Props {
-  tests:          TLTestSession[];
-  calc:           ReturnType<typeof useCalculatePosition>;
+  tests: TLTestSession[];
+  calc: ReturnType<typeof useCalculatePosition>;
+  /** Largeur de la colonne de libellés (px) : décalage du repère. */
+  labelWidth: number;
   totalRowHeight: number;
 }
 
-export function TestMarkers({ tests, calc, totalRowHeight }: Props) {
+export function TestMarkers({ tests, calc, labelWidth, totalRowHeight }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
     <>
       {tests.map((t) => {
-        const x     = calc.dateToX(t.date);
-        const color = t.completed ? C.g : C.o;
-        const isH   = hovered === t.id;
+        const x = calc.dateToX(t.date);
+        const isH = hovered === t.id;
+        const bg = t.completed ? "bg-agon-succes" : "bg-agon-alerte";
+        const text = t.completed ? "text-agon-succes" : "text-agon-alerte";
+        const border = t.completed ? "border-agon-succes/60" : "border-agon-alerte/60";
 
         return (
           <div
             key={t.id}
             onMouseEnter={() => setHovered(t.id)}
             onMouseLeave={() => setHovered(null)}
-            style={{
-              position: "absolute",
-              left: LABEL_W + x - 1,
-              top: 0,
-              height: totalRowHeight,
-              width: isH ? 2 : 1,
-              background: color,
-              cursor: "default",
-              zIndex: 4,
-              opacity: 0.7,
-              transition: "width 100ms, opacity 100ms",
-            }}
+            className={cn("absolute top-0 z-[4] cursor-default opacity-70 transition-[width,opacity] duration-100", bg, isH ? "w-0.5" : "w-px")}
+            style={{ left: labelWidth + x - 1, height: totalRowHeight }}
           >
             {isH && (
-              <div
-                style={{
-                  position: "absolute", top: 4, left: 5,
-                  background: C.s2, border: "1px solid " + color + "60",
-                  borderRadius: 6, padding: "3px 8px",
-                  fontSize: 10, fontWeight: 600, color,
-                  whiteSpace: "nowrap", pointerEvents: "none",
-                  zIndex: 20,
-                }}
-              >
+              <div className={cn("pointer-events-none absolute left-[5px] top-1 z-20 whitespace-nowrap rounded-md border bg-agon-s2 px-agon-sm py-agon-2xs text-agon-xs font-semibold", border, text)}>
                 {t.title}{t.completed ? " ✓" : ""}
               </div>
             )}
-            <div
-              style={{
-                position: "absolute", bottom: -20,
-                left: "50%", transform: "translateX(-50%)",
-                color,
-              }}
-            >
+            <div className={cn("absolute -bottom-5 left-1/2 -translate-x-1/2", text)}>
               <FlaskConical size={12} />
             </div>
           </div>
