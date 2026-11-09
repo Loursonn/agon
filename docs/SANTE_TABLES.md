@@ -76,6 +76,8 @@ Le client de ce lot **retombe sur `app_data`** si la table n'existe pas (erreur 
 
 Mesure avant 3 et 4 : `git rev-list --count origin/main..origin/dev` (le client de prod vient de `main`) et ancienneté des PWA : aucune télémétrie de version aujourd'hui. Proposition : à l'étape 2, ajouter un contrôle de version au démarrage (fichier `version.json` servi par Vercel, rechargement forcé si l'app est plus vieille) ; l'étape 4 attend ensuite au moins 30 jours.
 
+**Fait (P4)** : `/version.json` + rechargement propre (`src/lib/versionCheck.ts`, `UpdatePrompt`). Reste le comptage serveur des vieux clients : proposition à valider par Hugo = colonnes `profiles.client_build text` + `profiles.client_build_at timestamptz`, écrites par une RPC `report_client_build(text)` appelée au démarrage ; `select client_build, count(*) … where client_build_at > now() - interval '30 days' group by 1`. Aucune migration appliquée.
+
 ### Lecteurs et écrivains encore branchés sur les clés legacy (à migrer à l'étape 2)
 
 Lecteurs :

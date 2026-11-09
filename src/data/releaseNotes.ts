@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-09-mise-a-jour-automatique",
+    date: "2026-11-09",
+    kind: "feature",
+    title: "Agon se met à jour tout seul",
+    summary: "L'application installée sur le téléphone récupère maintenant la dernière version dès qu'elle est ouverte, sans rien perdre de ce qui est en cours de saisie.",
+    sections: [
+      {
+        title: "Toujours à jour",
+        points: [
+          "En rouvrant Agon, la nouvelle version se charge automatiquement : plus besoin de fermer l'application ou de vider quoi que ce soit.",
+          "Rien n'est rechargé pendant qu'un athlète saisit sa séance ou tant que des saisies attendent le réseau : la mise à jour attend la fin.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-09-mobile-pc-et-hors-ligne",
     date: "2026-11-09",
     kind: "feature",
