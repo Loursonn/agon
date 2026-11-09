@@ -5,7 +5,8 @@ import { GRID_SET_V1, analyzeTests, gridSetFromRows, gridSetToRows, seedSql, pri
 import { isPickableTest } from "@/features/shared/types/tests";
 
 const MIGRATION = path.resolve(__dirname, "../../../supabase/migrations/20261101130000_hyrox_tests.sql");
-const sql = fs.readFileSync(MIGRATION, "utf8");
+// Windows : le checkout peut mettre des CRLF ; le contenu SQL reste le même.
+const sql = fs.readFileSync(MIGRATION, "utf8").split(String.fromCharCode(13, 10)).join(String.fromCharCode(10));
 
 describe("Tests HYROX : base", () => {
   it("GridSet -> lignes -> GridSet : aller-retour exact", () => {

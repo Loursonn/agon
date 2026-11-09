@@ -868,7 +868,7 @@ interface MethodBuilderProps {
 export function MethodBuilder({ initial, coachId: _coachId, onSubmit, onCancel, loading }: MethodBuilderProps) {
   const [step, setStep] = useState(1);
 
-  const initWC = (initial?.config as Record<string, unknown>)?.weekly_configs as FullWeekConfig[] | undefined;
+  const initWC = (initial?.config as unknown as Record<string, unknown>)?.weekly_configs as FullWeekConfig[] | undefined;
   const [multiWeek, setMultiWeek] = useState(() => !!initWC?.length);
   const [weekCount, setWeekCount] = useState(() => initWC?.length || 6);
   const [weeklyConfigs, setWeeklyConfigs] = useState<FullWeekConfig[]>(() =>

@@ -18,6 +18,7 @@ import {
   planSync,
   refreshTokens,
   resolveDateArgs,
+  buildLookbackArgs,
 } from "../coros";
 
 afterEach(() => {
@@ -181,6 +182,28 @@ describe("resolveDateArgs", () => {
   it("n'envoie pas de `limit` que le schéma ne publie pas", () => {
     const spec = resolveDateArgs({ name: "t", inputSchema: { properties: { from: { type: "string" }, to: { type: "string" } } } });
     expect(buildDateArgs(spec, "2026-11-01", "2026-11-07", 10)).toEqual({ from: "2026-11-01", to: "2026-11-07" });
+  });
+
+  it("outil « N derniers jours » (queryDailyHealthData : `days`), pour les données quotidiennes seulement", () => {
+    const tool = {
+      name: "queryDailyHealthData",
+      inputSchema: { properties: { days: { type: "integer", maximum: 30 } } },
+    };
+    const spec = resolveDateArgs(tool, { allowSingleDay: true });
+    expect(spec.lookbackKey).toBe("days");
+    expect(buildLookbackArgs(spec, 7)).toEqual({ days: 7 });
+    expect(buildLookbackArgs(spec, 90)).toEqual({ days: 30 });
+    // Jamais accepté pour les FIT (listés par fenêtres datées).
+    expect(() => resolveDateArgs(tool)).toThrow(/introuvables/);
+  });
+
+  it("`days` avec un autre paramètre obligatoire inconnu : erreur explicite", () => {
+    expect(() =>
+      resolveDateArgs(
+        { name: "t", inputSchema: { properties: { days: {}, userId: {} }, required: ["days", "userId"] } },
+        { allowSingleDay: true },
+      )
+    ).toThrow(/userId/);
   });
 
   it("erreur explicite si le schéma n'est pas publié", () => {

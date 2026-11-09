@@ -16,12 +16,11 @@ import { birthDateError, MIN_AGE_MESSAGE } from "../_shared/domain/age.ts";
  */
 
 /**
- * Le client de prod (`main`) n'envoie pas encore `birthDate` : tant que c'est
- * le cas, une activation sans date reste acceptée. Passer à `true` (et
- * redéployer) quand `main` sait l'envoyer — en même temps que la migration
- * 20261109170000 (phase 2).
+ * Phase 2 (2026-11-09) : le client de prod (`main`) envoie `birthDate`, donc
+ * une activation sans date est refusée. À déployer en même temps que la
+ * migration 20261109170000 (date obligatoire côté base).
  */
-const BIRTH_DATE_REQUIRED = false;
+const BIRTH_DATE_REQUIRED = true;
 
 /**
  * « Aujourd'hui » le plus avancé sur Terre (UTC+14) : personne n'est refusé

@@ -539,7 +539,7 @@ type UntypedRpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{
   data: unknown;
   error: { message: string; code?: string } | null;
 }>;
-// `weight_set_day` / `weight_record_milestone` ne sont pas encore dans les types générés (migration 20261109150000).
+// `weight_set_day` / `weight_record_milestone` / `weight_set_goal` ne sont pas encore dans les types générés (migration 20261109150000).
 const rpc: UntypedRpc = (fn, args) => (db() as unknown as { rpc: UntypedRpc }).rpc(fn, args);
 
 function checkWeight(day: IsoDay, kg: number) {
@@ -576,6 +576,20 @@ export async function recordWeightMilestone(athleteId: string, day: IsoDay, kg: 
   const bw = unwrap(await rpc("weight_record_milestone", { p_athlete: athleteId, p_day: day, p_kg: kg }), "Enregistrement du palier impossible") as
     { current?: unknown; target?: unknown } | null;
   return { current: Number(bw?.current ?? kg), target: Number(bw?.target ?? 0) || 0 };
+}
+
+/**
+ * Objectif de poids : pose UNIQUEMENT `asp:bw.target` (RPC atomique
+ * `weight_set_goal`), `current` et les paliers ne sont pas touchés.
+ * `null` ou 0 = pas d'objectif. Renvoie le poids de corps à jour.
+ */
+export async function saveWeightGoal(athleteId: string, targetKg: number | null): Promise<{ current: number; target: number }> {
+  if (targetKg != null && (!Number.isFinite(targetKg) || targetKg < 0 || targetKg >= 500)) {
+    throw new ApiError("Objectif de poids invalide", { message: String(targetKg), code: "22023" });
+  }
+  const bw = unwrap(await rpc("weight_set_goal", { p_athlete: athleteId, p_target_kg: targetKg }), "Enregistrement de l'objectif impossible") as
+    { current?: unknown; target?: unknown } | null;
+  return { current: Number(bw?.current ?? 0) || 0, target: Number(bw?.target ?? 0) || 0 };
 }
 
 // ── Tendances (Mon profil) ────────────────────────────────────────────────────

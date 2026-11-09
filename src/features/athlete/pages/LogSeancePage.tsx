@@ -79,7 +79,7 @@ interface EnergySessionCardProps {
 }
 
 function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCardProps) {
-  const es = (a as Record<string, unknown>).energy_sessions as {
+  const es = (a as unknown as Record<string, unknown>).energy_sessions as {
     name: string; session_kind: string; total_duration_s?: number | null; total_distance_m?: number | null; intervals?: EnergyStep[];
   } | null;
 
@@ -104,10 +104,10 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
     return init;
   });
   const [globalNote, setGlobalNote] = useState((a.notes ?? "") as string);
-  const [activityUrl, setActivityUrl] = useState(() => ((a as Record<string, unknown>).activity_url as string) ?? "");
+  const [activityUrl, setActivityUrl] = useState(() => ((a as unknown as Record<string, unknown>).activity_url as string) ?? "");
   const [actualDuration, setActualDuration] = useState<string>(() => {
-    if ((a as Record<string, unknown>).actual_duration_min != null)
-      return String((a as Record<string, unknown>).actual_duration_min);
+    if ((a as unknown as Record<string, unknown>).actual_duration_min != null)
+      return String((a as unknown as Record<string, unknown>).actual_duration_min);
     if (es?.total_duration_s != null) return String(Math.round(es.total_duration_s / 60));
     return "";
   });

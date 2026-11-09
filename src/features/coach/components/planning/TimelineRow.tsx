@@ -2,85 +2,70 @@ import { useState } from "react";
 import { Rnd } from "react-rnd";
 import { Plus, Eye } from "lucide-react";
 import { format, differenceInDays, parseISO, eachMonthOfInterval, getMonth } from "date-fns";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { useCalculatePosition } from "./hooks/useCalculatePosition";
+import { LEVEL_STYLE } from "./utils/timelineLevels";
 
-const LABEL_W   = 88;
-const ROW_H     = 52;
-const ITEM_H    = 36;
-const ITEM_Y    = (ROW_H - ITEM_H) / 2;
-const MIN_W_PX  = 32;
+const ROW_H = 52;
+const ITEM_H = 36;
+const ITEM_Y = (ROW_H - ITEM_H) / 2;
+const MIN_W_PX = 32;
 
 export type TLLevel = "macrocycle" | "mesocycle" | "cycle" | "microcycle";
 
-const LEVEL_COLOR: Record<TLLevel, string> = {
-  macrocycle: C.ac,
-  mesocycle:  C.coach,
-  cycle:      C.o,
-  microcycle: C.tx3,
-};
-
-const LEVEL_BG: Record<TLLevel, string> = {
-  macrocycle: C.acS,
-  mesocycle:  C.coachS,
-  cycle:      C.oS,
-  microcycle: "rgba(231,211,168,0.08)",
-};
-
 const LEVEL_LABEL: Record<TLLevel, string> = {
   macrocycle: "Macro",
-  mesocycle:  "Méso",
-  cycle:      "Cycle",
+  mesocycle: "Méso",
+  cycle: "Cycle",
   microcycle: "Micro",
 };
 
-// ── Resize grip handle (2 vertical lines, rendered inside the block) ──────────
+const DELOAD_HATCH =
+  "bg-[repeating-linear-gradient(45deg,transparent,transparent_5px,var(--agon-info-doux)_5px,var(--agon-info-doux)_10px)]";
 
-function GripHandle({ color }: { color: string }) {
+// ── Poignée de redimensionnement (deux traits, dans le bloc) ──────────────────
+
+function GripHandle({ level }: { level: TLLevel }) {
   return (
-    <div
-      style={{
-        width: "100%", height: "100%",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        gap: 3, cursor: "ew-resize",
-      }}
-    >
-      <div style={{ width: 2, height: 13, borderRadius: 1, background: color, opacity: 0.55 }} />
-      <div style={{ width: 2, height: 13, borderRadius: 1, background: color, opacity: 0.55 }} />
+    <div className="flex h-full w-full cursor-ew-resize items-center justify-center gap-[3px]">
+      <div className={cn("h-[13px] w-0.5 rounded-[1px] opacity-[.55]", LEVEL_STYLE[level].solid)} />
+      <div className={cn("h-[13px] w-0.5 rounded-[1px] opacity-[.55]", LEVEL_STYLE[level].solid)} />
     </div>
   );
 }
 
-// ── Single item ───────────────────────────────────────────────────────────────
+// ── Un bloc ───────────────────────────────────────────────────────────────────
 
 interface TLItemProps {
-  id:         string;
-  label:      string;
-  isDeload?:  boolean;
-  x:          number;
-  width:      number;
-  color:      string;
-  bg:         string;
-  onOpen:     () => void;
-  onAdd?:     () => void;
-  onZoom?:    () => void;
+  id: string;
+  level: TLLevel;
+  label: string;
+  isDeload?: boolean;
+  x: number;
+  width: number;
+  onOpen: () => void;
+  onAdd?: () => void;
+  onZoom?: () => void;
   onDragStop: (newX: number) => void;
   onResizeStop: (newX: number, newWidth: number) => void;
-  /** Lock the start date: no drag (move), no left-resize. Only the end can be resized. */
+  /** Verrouille le début : pas de déplacement, pas de redimensionnement à gauche. */
   lockStart?: boolean;
 }
 
-/** Handle zone width (px) — must match paddingLeft/paddingRight on content div */
+/** Largeur de la zone des poignées (px) : doit correspondre au padding du contenu. */
 const HANDLE_W = 14;
 
-function TLItem({ id, label, isDeload, x, width, color, bg, onOpen, onAdd, onZoom, onDragStop, onResizeStop, lockStart }: TLItemProps) {
+const MINI_BTN = "ml-agon-xs flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-sm border bg-transparent";
+
+function TLItem({ id, level, label, isDeload, x, width, onOpen, onAdd, onZoom, onDragStop, onResizeStop, lockStart }: TLItemProps) {
   const [dragging, setDragging] = useState(false);
+  const style = LEVEL_STYLE[level];
 
   return (
     <Rnd
       key={id}
       position={{ x, y: ITEM_Y }}
-      // -1px gap so adjacent items don't visually bleed into each other
+      // -1 px d'écart : deux blocs voisins ne se touchent pas visuellement
       size={{ width: Math.max(width - 1, MIN_W_PX), height: ITEM_H }}
       dragAxis="x"
       disableDragging={lockStart}
@@ -90,14 +75,14 @@ function TLItem({ id, label, isDeload, x, width, color, bg, onOpen, onAdd, onZoo
         top: false, bottom: false,
         topLeft: false, topRight: false, bottomLeft: false, bottomRight: false,
       }}
-      // Handles positioned INSIDE the block (left: 0 / right: 0, not at boundary)
+      // Poignées DANS le bloc (left: 0 / right: 0, pas à la frontière)
       resizeHandleStyles={{
-        left:  { position: "absolute", left: 0,  top: 0, width: HANDLE_W, height: "100%", zIndex: 5 },
+        left: { position: "absolute", left: 0, top: 0, width: HANDLE_W, height: "100%", zIndex: 5 },
         right: { position: "absolute", right: 0, top: 0, width: HANDLE_W, height: "100%", zIndex: 5 },
       }}
       resizeHandleComponent={{
-        left:  <GripHandle color={color} />,
-        right: <GripHandle color={color} />,
+        left: <GripHandle level={level} />,
+        right: <GripHandle level={level} />,
       }}
       onDragStart={() => setDragging(true)}
       onDragStop={(_e, d) => { setDragging(false); onDragStop(d.x); }}
@@ -109,70 +94,35 @@ function TLItem({ id, label, isDeload, x, width, color, bg, onOpen, onAdd, onZoo
     >
       <div
         onClick={(e) => { if (!dragging) { e.stopPropagation(); onOpen(); } }}
-        style={{
-          width: "100%", height: "100%",
-          background: bg,
-          border: `1px solid ${color}50`,
-          borderTop: `3px solid ${color}`,
-          borderRadius: 0, // rectangular
-          display: "flex", alignItems: "center",
-          // Padding matches handle zone so text never hides behind grips
-          paddingLeft: HANDLE_W + 4, paddingRight: HANDLE_W + 4,
-          cursor: lockStart ? "pointer" : (dragging ? "grabbing" : "grab"),
-          userSelect: "none",
-          overflow: "hidden",
-          opacity: dragging ? 0.78 : 1,
-          boxShadow: dragging ? `0 4px 16px ${color}40` : "none",
-          transition: "opacity 100ms, box-shadow 100ms",
-          position: "relative",
-          boxSizing: "border-box",
-        }}
-      >
-        {/* Deload hatching */}
-        {isDeload && (
-          <div
-            style={{
-              position: "absolute", inset: 0,
-              background: `repeating-linear-gradient(45deg, transparent, transparent 5px, ${C.b}18 5px, ${C.b}18 10px)`,
-              pointerEvents: "none",
-            }}
-          />
+        // Le bloc glisse sur l'axe X : on laisse le défilement vertical de la page au doigt.
+        className={cn(
+          "relative box-border flex h-full w-full select-none items-center overflow-hidden border border-t-[3px] px-[18px] transition-[opacity,box-shadow] duration-100 touch-pan-y",
+          style.block, style.top,
+          lockStart ? "cursor-pointer" : dragging ? "cursor-grabbing opacity-80 shadow-lg" : "cursor-grab",
         )}
-        <span
-          style={{
-            fontSize: 10, fontWeight: 700, color: "#fff",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            flex: 1, lineHeight: 1.2,
-          }}
-        >
-          {isDeload && <span style={{ color: C.b, marginRight: 3 }}>⟳</span>}
+      >
+        {isDeload && <div className={cn("pointer-events-none absolute inset-0", DELOAD_HATCH)} />}
+        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-agon-xs font-bold leading-tight text-agon-tx">
+          {isDeload && <span className="mr-agon-2xs text-agon-info">⟳</span>}
           {label}
         </span>
         {onZoom && (
           <button
-            onClick={(e) => { e.stopPropagation(); onZoom(); }}
+            type="button"
             title="Zoomer sur ce macrocycle"
-            style={{
-              width: 18, height: 18, borderRadius: 3, flexShrink: 0,
-              border: `1px solid ${color}60`, background: "transparent",
-              color, cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              marginLeft: 4,
-            }}
+            aria-label="Zoomer sur ce macrocycle"
+            onClick={(e) => { e.stopPropagation(); onZoom(); }}
+            className={cn(MINI_BTN, style.border, style.text)}
           >
             <Eye size={10} />
           </button>
         )}
         {onAdd && (
           <button
+            type="button"
+            aria-label="Ajouter"
             onClick={(e) => { e.stopPropagation(); onAdd(); }}
-            style={{
-              width: 18, height: 18, borderRadius: 3, flexShrink: 0,
-              border: `1px solid ${color}60`, background: "transparent",
-              color, cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              marginLeft: 4,
-            }}
+            className={cn(MINI_BTN, style.border, style.text)}
           >
             <Plus size={10} />
           </button>
@@ -182,105 +132,77 @@ function TLItem({ id, label, isDeload, x, width, color, bg, onOpen, onAdd, onZoo
   );
 }
 
-// ── Row ───────────────────────────────────────────────────────────────────────
+// ── Ligne ─────────────────────────────────────────────────────────────────────
 
 export interface TLRowItem {
-  id:         string;
-  label:      string;
-  startDate:  string;
-  endDate:    string;
-  isDeload?:  boolean;
+  id: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+  isDeload?: boolean;
   parentStart?: string;
-  parentEnd?:   string;
+  parentEnd?: string;
 }
 
 type CalcPos = ReturnType<typeof useCalculatePosition>;
 
 interface TimelineRowProps {
-  level:    TLLevel;
-  items:    TLRowItem[];
-  calc:     CalcPos;
+  level: TLLevel;
+  items: TLRowItem[];
+  calc: CalcPos;
   rangeStart: string;
-  rangeEnd:   string;
-  athleteId:  string;
-  onOpen:   (id: string) => void;
-  onAdd?:   (id: string) => void;
-  onZoom?:  (id: string) => void;
+  rangeEnd: string;
+  /** Largeur de la colonne de libellés (px). */
+  labelWidth: number;
+  onOpen: (id: string) => void;
+  onAdd?: (id: string) => void;
+  onZoom?: (id: string) => void;
   onNewRow?: () => void;
-  onDrag?:  (id: string, newStart: string, newEnd: string, parentStart?: string, parentEnd?: string) => void;
+  onDrag?: (id: string, newStart: string, newEnd: string, parentStart?: string, parentEnd?: string) => void;
   onResize?: (id: string, newStart: string, newEnd: string, parentStart?: string, parentEnd?: string) => void;
-  /** Render items as static chips — no drag, no resize */
+  /** Blocs statiques (pastilles) : ni déplacement ni redimensionnement. */
   readOnly?: boolean;
-  /** Increment to force all TLItems to remount (resets Rnd internal position) */
+  /** Incrémenter pour remonter tous les blocs (remet Rnd à sa position). */
   rowResetKey?: number;
-  /** Lock start date for all items: no drag, no left-resize (only end resize) */
+  /** Verrouille le début de tous les blocs : seule la fin se redimensionne. */
   lockStart?: boolean;
 }
 
 export function TimelineRow({
-  level, items, calc, rangeStart, rangeEnd, athleteId, onOpen, onAdd, onZoom, onNewRow, onDrag, onResize, readOnly, rowResetKey, lockStart,
+  level, items, calc, rangeStart, rangeEnd, labelWidth, onOpen, onAdd, onZoom, onNewRow, onDrag, onResize, readOnly, rowResetKey, lockStart,
 }: TimelineRowProps) {
-  const color = LEVEL_COLOR[level];
-  const bg    = LEVEL_BG[level];
+  const style = LEVEL_STYLE[level];
   const trackW = (calc as unknown as { totalDays: number; pixPerDay: number }).pixPerDay *
                  (calc as unknown as { totalDays: number }).totalDays;
 
   return (
-    <div style={{ display: "flex", borderBottom: "1px solid " + C.brd + "50" }}>
-      {/* Label */}
-      <div
-        style={{
-          width: LABEL_W, flexShrink: 0, height: ROW_H,
-          display: "flex", alignItems: "center", paddingLeft: 8, paddingRight: 4,
-          gap: 4,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 9, fontWeight: 700, color,
-            textTransform: "uppercase", letterSpacing: "0.5px", flex: 1,
-          }}
-        >
+    <div className="flex border-b border-agon-brd/50">
+      <div className="flex shrink-0 items-center gap-agon-xs pl-agon-sm pr-agon-xs" style={{ width: labelWidth, height: ROW_H }}>
+        <span className={cn("flex-1 truncate text-agon-xs font-bold uppercase tracking-wide", style.text)}>
           {LEVEL_LABEL[level]}
         </span>
         {onNewRow && (
           <button
+            type="button"
             onClick={onNewRow}
             title={`Nouveau ${LEVEL_LABEL[level].toLowerCase()}`}
-            style={{
-              width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-              border: `1px solid ${color}50`, background: "transparent",
-              color, cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
+            aria-label={`Nouveau ${LEVEL_LABEL[level].toLowerCase()}`}
+            className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-md border bg-transparent", style.border, style.text)}
           >
-            <Plus size={9} />
+            <Plus size={10} />
           </button>
         )}
       </div>
 
-      {/* Track */}
-      <div
-        style={{
-          flex: 1, height: ROW_H, position: "relative",
-          background: level === "macrocycle" ? C.ac + "04" : "transparent",
-        }}
-      >
-        {/* Month grid lines */}
+      <div className={cn("relative min-w-0 flex-1", level === "macrocycle" && "bg-agon-accent/[0.03]")} style={{ height: ROW_H }}>
+        {/* Lignes de mois */}
         {eachMonthOfInterval({ start: parseISO(rangeStart), end: parseISO(rangeEnd) }).map((m) => {
-          const x = calc.dateToX(format(m, "yyyy-MM-dd"));
           const isJan = getMonth(m) === 0;
           return (
             <div
               key={m.toISOString()}
-              style={{
-                position: "absolute",
-                left: x,
-                top: 0, bottom: 0, width: isJan ? 2 : 1,
-                background: isJan ? C.brd : C.brd,
-                opacity: isJan ? 0.9 : 0.4,
-                pointerEvents: "none",
-              }}
+              className={cn("pointer-events-none absolute inset-y-0 bg-agon-brd", isJan ? "w-0.5 opacity-90" : "w-px opacity-40")}
+              style={{ left: calc.dateToX(format(m, "yyyy-MM-dd")) }}
             />
           );
         })}
@@ -292,52 +214,39 @@ export function TimelineRow({
 
           const { x, width } = calc.position(item.startDate, item.endDate);
 
-          // ── Static chip (microcycles) ────────────────────────────────────
+          // ── Pastille statique (microcycles) ─────────────────────────────
           if (readOnly) {
             const CHIP_H = 20;
-            const CHIP_Y = (ROW_H - CHIP_H) / 2;
             return (
               <div
                 key={item.id}
                 onClick={() => onOpen(item.id)}
                 title={item.label}
-                style={{
-                  position: "absolute",
-                  left: x + 1, top: CHIP_Y,
-                  width: Math.max(width - 2, 6),
-                  height: CHIP_H,
-                  background: bg,
-                  border: `1px solid ${color}50`,
-                  borderTop: `2px solid ${color}`,
-                  borderRadius: 0,
-                  display: "flex", alignItems: "center",
-                  paddingLeft: 5, overflow: "hidden",
-                  cursor: "pointer", zIndex: 2,
-                  userSelect: "none",
-                }}
-              >
-                {item.isDeload && (
-                  <div style={{ position: "absolute", inset: 0, borderRadius: 4, background: `repeating-linear-gradient(45deg,transparent,transparent 4px,${C.b}18 4px,${C.b}18 8px)`, pointerEvents: "none" }} />
+                className={cn(
+                  "absolute z-[2] flex cursor-pointer select-none items-center overflow-hidden border border-t-2 pl-agon-xs",
+                  style.block, style.top,
                 )}
-                <span style={{ fontSize: 8, fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>
+                style={{ left: x + 1, top: (ROW_H - CHIP_H) / 2, width: Math.max(width - 2, 6), height: CHIP_H }}
+              >
+                {item.isDeload && <div className={cn("pointer-events-none absolute inset-0", DELOAD_HATCH)} />}
+                <span className="whitespace-nowrap text-agon-xs font-bold leading-none text-agon-tx">
                   {item.isDeload ? "⟳ " : ""}{item.label}
                 </span>
               </div>
             );
           }
 
-          // ── Interactive item (Rnd) ───────────────────────────────────────
+          // ── Bloc interactif (Rnd) ───────────────────────────────────────
           const dur = differenceInDays(parseISO(item.endDate), parseISO(item.startDate));
           return (
             <TLItem
               key={`${item.id}-${rowResetKey ?? 0}-${item.startDate}`}
               id={item.id}
+              level={level}
               label={item.label}
               isDeload={item.isDeload}
               x={x}
               width={width}
-              color={color}
-              bg={bg}
               onOpen={() => onOpen(item.id)}
               onAdd={onAdd ? () => onAdd(item.id) : undefined}
               onZoom={onZoom ? () => onZoom(item.id) : undefined}
@@ -351,10 +260,7 @@ export function TimelineRow({
                   fx = Math.max(0, Math.min(newX, trackW - width));
                 }
                 const newStart = calc.xToDateStr(fx);
-                const newEnd   = format(
-                  new Date(parseISO(newStart).getTime() + dur * 86400000),
-                  "yyyy-MM-dd",
-                );
+                const newEnd = format(new Date(parseISO(newStart).getTime() + dur * 86400000), "yyyy-MM-dd");
                 onDrag?.(item.id, newStart, newEnd, item.parentStart, item.parentEnd);
               }}
               onResizeStop={(newX, newW) => {
@@ -367,7 +273,7 @@ export function TimelineRow({
                   fw = Math.min(newW, trackW - fx);
                 }
                 const newStart = calc.xToDateStr(fx);
-                const newEnd   = calc.xToDateStr(fx + fw);
+                const newEnd = calc.xToDateStr(fx + fw);
                 onResize?.(item.id, newStart, newEnd, item.parentStart, item.parentEnd);
               }}
             />

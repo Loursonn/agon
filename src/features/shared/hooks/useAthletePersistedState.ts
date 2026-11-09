@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import {
   SKEYS, sLoadResult, sSave, cycleKey, sSaveCycle,
-  isKeyLoadFailed, isKeyNotLoadedError, KeyNotLoadedError,
+  isKeyLoadFailed, isKeyNotLoadedError, KeyNotLoadedError, markKeyLoad,
 } from "@/lib/storage";
 import { mergeLocalIntoServer } from "@/lib/mergeLocal";
 import { DEF_SESSIONS, DEF_BLOCK_CONFIG } from "@/lib/exercises";
@@ -16,6 +16,11 @@ import type {
 import { readAppData, writeAppData } from "@/api/appData";
 import { listTestSessions } from "@/api/tests";
 import { listAthleteCycles } from "@/api/cycles";
+import { getWellnessHistory, toLegacyToday, toLegacyWellnessHistory } from "@/api/wellness";
+import {
+  getBodyWeightGoal, getWeightLog, getWeightMilestones,
+  toLegacyBodyWeight, toLegacyMilestones, toLegacyWeightLog,
+} from "@/api/profile";
 
 /**
  * Clé dont la lecture a échoué : comment la réappliquer une fois relue.
@@ -25,6 +30,8 @@ import { listAthleteCycles } from "@/api/cycles";
 interface Reloader {
   fb: unknown;
   apply: (server: unknown, dirty: boolean) => void;
+  /** Relecture propre à la clé (tables santé via `src/api`) ; absent = `sLoadResult`. */
+  load?: () => Promise<{ ok: boolean; value?: unknown }>;
 }
 
 const NOT_LOADED_TOAST = "asp-not-loaded";
@@ -214,26 +221,58 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
         return fb;
       };
       const todayOnly = (v: WellnessData | null) => (v?.date === todayKey() ? v : null);
+      // Wellness, pesées, paliers, objectif : tables santé lues par `src/api`
+      // (docs/SANTE_TABLES.md), rendues dans la forme des anciennes clés
+      // `asp:*` que les composants attendent. Une lecture en erreur bloque
+      // l'écriture de la clé, comme `tracked`, jusqu'à une relecture réussie.
+      const trackedApi = async <T,>(
+        k: string, fb: T, setRaw: Dispatch<SetStateAction<T>>, read: () => Promise<T>, normalize?: (v: T) => T,
+      ): Promise<T> => {
+        const load = async (): Promise<{ ok: boolean; value?: unknown }> => {
+          try {
+            const value = await read();
+            markKeyLoad(k, athleteId, true);
+            return { ok: true, value };
+          } catch {
+            markKeyLoad(k, athleteId, false);
+            return { ok: false };
+          }
+        };
+        const r = await load();
+        if (r.ok) return r.value as T;
+        failedRef.current.set(k, { ...makeReloader(fb, setRaw, (v) => save(k, v), normalize), load });
+        return fb;
+      };
+      // Une seule lecture du wellness pour l'historique et la saisie du jour.
+      // (la relecture après une erreur, elle, refait la requête.)
+      const readWellness = () => getWellnessHistory(athleteId, { includeArchived: false });
+      let firstRead: ReturnType<typeof readWellness> | null = readWellness();
+      const wellnessRead = () => firstRead ?? readWellness();
       const [m, s, w, wh, bw, g, an, cm, wl, wmil, bc, bh, ws, sl, fs] =
         await Promise.all([
           tracked<Record<string, unknown>>(SKEYS.exMeta, {}, setExMetaRaw),
           tracked<SetsMap>(SKEYS.sets, {}, setSetsRaw),
-          tracked<WellnessData | null>(SKEYS.wellness, null, setWellnessRaw, todayOnly),
-          tracked<Record<string, WellnessData>>(SKEYS.wellnessHistory, {}, setWellnessHistoryRaw),
-          tracked<BodyWeight>(SKEYS.bw, { current: 0, target: 0 }, setBodyWeightRaw),
+          trackedApi<WellnessData | null>(SKEYS.wellness, null, setWellnessRaw,
+            async () => (toLegacyToday(await wellnessRead()) as WellnessData | null), todayOnly),
+          trackedApi<Record<string, WellnessData>>(SKEYS.wellnessHistory, {}, setWellnessHistoryRaw,
+            async () => toLegacyWellnessHistory(await wellnessRead()) as unknown as Record<string, WellnessData>),
+          trackedApi<BodyWeight>(SKEYS.bw, { current: 0, target: 0 }, setBodyWeightRaw,
+            async () => toLegacyBodyWeight(await getBodyWeightGoal(athleteId))),
           tracked<Goals>(SKEYS.goals, { sessionsPerWeek: 6, sleepTarget: 8 }, setGoalsRaw),
           tracked<Record<string, string>>(SKEYS.anotes, {}, setAthleteNotesRaw),
           tracked<unknown[]>(SKEYS.custMethods, [], setCustomMethodsRaw),
-          tracked<Record<string, number>>(SKEYS.weightLog, {}, setWeightLogRaw),
-          tracked<Array<{ date: string; kg: number }>>(SKEYS.weightMilestones, [], setWeightMilestonesRaw),
+          trackedApi<Record<string, number>>(SKEYS.weightLog, {}, setWeightLogRaw,
+            async () => toLegacyWeightLog(await getWeightLog(athleteId))),
+          trackedApi<Array<{ date: string; kg: number }>>(SKEYS.weightMilestones, [], setWeightMilestonesRaw,
+            async () => toLegacyMilestones(await getWeightMilestones(athleteId))),
           tracked<BlockConfig>(SKEYS.blockConfig, DEF_BLOCK_CONFIG as BlockConfig, setBlockConfigRaw),
           tracked<ArchivedBlock[]>(SKEYS.blockHistory, [], setBlockHistoryRaw, (v) => v || []),
           tracked<Record<string, unknown>>(SKEYS.weekSchedule, {}, setWeekScheduleRaw, (v) => v || {}),
           tracked<Record<string, SessionLog>>(SKEYS.sessionLogs, {}, setSessionLogsRaw),
           tracked<FreeSession[]>(SKEYS.freeSessions, [], setFreeSessionsRaw),
         ]);
+      firstRead = null;
       const todayW = todayOnly(w);
-      if (w && !todayW) save(SKEYS.wellness, null).catch(() => {});
       setExMetaRaw(m); setSetsRaw(s); setWellnessRaw(todayW);
       setWellnessHistoryRaw(wh); setBodyWeightRaw(bw);
       setGoalsRaw(g); setAthleteNotesRaw(an); setCustomMethodsRaw(cm);
@@ -349,7 +388,7 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     const aid = athleteId;
     try {
       const entries = [...failedRef.current.entries()];
-      const results = await Promise.all(entries.map(([k]) => sLoadResult(k, aid)));
+      const results = await Promise.all(entries.map(([k, r]) => (r.load ? r.load() : sLoadResult(k, aid))));
       if (aid !== athleteIdRef.current) return; // athlète changé pendant la relecture
       entries.forEach(([k, r], i) => {
         const res = results[i];
@@ -426,7 +465,6 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   }, [save, persist]);
 
   const setSets = useCallback((v: SetsMap) => { setSetsRaw(v); persist(save(SKEYS.sets, v)); }, [save, persist]);
-  const setBodyWeight = useCallback((v: BodyWeight) => { setBodyWeightRaw(v); persist(save(SKEYS.bw, v)); }, [save, persist]);
 
   const setGoals = useCallback((v: Goals | ((p: Goals) => Goals)) => {
     setGoalsRaw(prev => { const val = typeof v === 'function' ? v(prev) : v; persist(save(SKEYS.goals, val)); return val; });
@@ -482,10 +520,6 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     setWellnessHistoryRaw(v); return persist(save(SKEYS.wellnessHistory, v));
   }, [save, persist]);
 
-  const setWeightLog = useCallback((v: Record<string, number>): Promise<boolean> => {
-    setWeightLogRaw(v); return persist(save(SKEYS.weightLog, v));
-  }, [save, persist]);
-
   const setWeightMilestones = useCallback((v: Array<{ date: string; kg: number }>) => {
     setWeightMilestonesRaw(v); persist(save(SKEYS.weightMilestones, v));
   }, [save, persist]);
@@ -503,11 +537,11 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     // Cycle ouvert (stockage exos/séances scopé par cycle)
     openCycleId, setOpenCycleId,
     // Wrapped setters (write + persist)
-    setExos, setExMeta, setSets, setBodyWeight, setGoals, setCompletedSessions,
+    setExos, setExMeta, setSets, setGoals, setCompletedSessions,
     setAthleteNotes, setCustomMethods, setSessions, setBlockConfig, setBlockHistory,
     setWeekSchedule, setSessionLogs, setFreeSessions,
     setVisibilitySettings, setWellness, setWellnessHistory,
-    setWeightLog, setWeightMilestones,
+    setWeightMilestones,
     // Internal raw setters needed by logic hooks
     _setBodyWeightRaw: setBodyWeightRaw,
     _setWeightLogRaw: setWeightLogRaw,

@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute, { RoleRedirect } from "@/components/ProtectedRoute";
 import { OfflineQueryProvider } from "@/features/shared/components/OfflineQueryProvider";
 import UpdatePrompt from "@/features/shared/components/UpdatePrompt";
+import ClientBuildReporter from "@/features/shared/components/ClientBuildReporter";
 import { OFFLINE_CACHE_MAX_AGE_MS } from "@/lib/offline/offlineCache";
 import { startOfflinePersistence } from "@/lib/offline/offlinePersistence";
 import { pendingWrites, startWriteQueue } from "@/lib/offline/writes";

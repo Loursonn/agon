@@ -71,6 +71,15 @@ function markLoad(k: string, aid: string, ok: boolean): void {
   else failedKeys.add(regKey(aid, k));
 }
 
+/**
+ * Pour une clé lue ailleurs que par `sLoadResult` (lecture par `src/api` des
+ * tables santé) : réussie → écriture permise ; en erreur → bloquée, comme
+ * pour `sLoadResult`, tant qu'une relecture n'a pas réussi.
+ */
+export function markKeyLoad(k: string, aid: string, ok: boolean): void {
+  markLoad(k, aid, ok);
+}
+
 /** Tests uniquement. */
 export function _resetLoadGuard(): void {
   failedKeys.clear();

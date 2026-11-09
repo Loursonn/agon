@@ -1,11 +1,27 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
 // Version du build : invalide le cache hors ligne persisté (src/lib/offline)
 // après chaque déploiement, la forme des données pouvant avoir changé.
-const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || `local-${Date.now()}`;
+const BUILD_TIME = Date.now();
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || `local-${BUILD_TIME}`;
+
+// Écrit /version.json à la racine du build (src/lib/versionCheck.ts le relit
+// sans cache pour savoir si le bundle en cours est périmé). Non précaché par
+// le service worker (hors de globPatterns).
+const versionFile = (): Plugin => ({
+  name: "agon-version-file",
+  apply: "build",
+  generateBundle() {
+    this.emitFile({
+      type: "asset",
+      fileName: "version.json",
+      source: JSON.stringify({ id: BUILD_ID, builtAt: BUILD_TIME }),
+    });
+  },
+});
 
 export default defineConfig(() => ({
   server: {
@@ -17,9 +33,11 @@ export default defineConfig(() => ({
   },
   define: {
     __APP_BUILD_ID__: JSON.stringify(BUILD_ID),
+    __APP_BUILD_TIME__: JSON.stringify(BUILD_TIME),
   },
   plugins: [
     react(),
+    versionFile(),
     // App installable + ouverture hors ligne. Le SW précache l'app seulement ;
     // les données passent par le cache React Query persisté, jamais par le SW.
     // Enregistré par `UpdatePrompt` (src/lib/pwa.ts), pas en `npm run dev`,

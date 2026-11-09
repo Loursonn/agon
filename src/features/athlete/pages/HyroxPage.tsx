@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxFlag } from "@/features/shared/hooks/hyrox/useHyroxFlag";
 import RacesView from "@/features/coach/components/hyrox/RacesView";
@@ -9,11 +9,11 @@ import HyroxRadarView from "@/features/coach/components/hyrox/HyroxRadarView";
 import AthleteTestsView from "@/features/coach/components/hyrox/tests/AthleteTestsView";
 
 const TABS = [
-  { key: "courses",  label: "Courses"  },
+  { key: "courses", label: "Courses" },
   { key: "stations", label: "Stations" },
-  { key: "runs",     label: "Runs"     },
-  { key: "radar",    label: "Radar"    },
-  { key: "tests",    label: "Tests"    },
+  { key: "runs", label: "Runs" },
+  { key: "radar", label: "Radar" },
+  { key: "tests", label: "Tests" },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -25,35 +25,30 @@ export default function AthleteHyroxPage() {
 
   if (!enabled) {
     return (
-      <div style={{ padding: 40, textAlign: "center" }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, marginBottom: 8 }}>
-          Le suivi HYROX n'est pas activé
-        </div>
-        <div style={{ fontSize: 13, color: C.tx3 }}>
-          Demandez à votre coach d'activer le suivi HYROX depuis votre profil.
-        </div>
+      <div className="p-10 text-center font-ui">
+        <div className="mb-agon-sm text-agon-lg font-bold text-agon-tx">Le suivi HYROX n'est pas activé</div>
+        <div className="text-agon-base text-agon-tx3">Demandez à votre coach d'activer le suivi HYROX depuis votre profil.</div>
       </div>
     );
   }
 
+  // Téléphone : colonne de 480 px. PC : colonne élargie (les vues dessinent leurs grilles dedans).
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto" }}>
-      {/* Segmented control */}
-      <div style={{ display: "flex", padding: "8px 12px", gap: 0, borderBottom: "1px solid " + C.brd, overflowX: "auto" }}>
+    <div className="mx-auto w-full max-w-[480px] font-ui lg:max-w-4xl">
+      <div role="tablist" className="flex border-b border-agon-brd px-agon-md py-agon-sm lg:px-agon-xl">
         {TABS.map(t => {
           const active = t.key === tab;
           return (
             <button
               key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => setTab(t.key)}
-              style={{
-                flex: 1, padding: "8px 0", border: "none", background: "transparent",
-                borderBottom: "2px solid " + (active ? C.ac : "transparent"),
-                color: active ? C.ac : C.tx3,
-                fontSize: 12, fontWeight: active ? 700 : 400,
-                cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                transition: "color 150ms",
-              }}
+              className={cn(
+                "min-h-11 flex-1 whitespace-nowrap border-b-2 bg-transparent text-agon-sm transition-colors lg:flex-none lg:px-agon-xl",
+                active ? "border-agon-accent font-bold text-agon-accent" : "border-transparent font-normal text-agon-tx3",
+              )}
             >
               {t.label}
             </button>
@@ -61,12 +56,12 @@ export default function AthleteHyroxPage() {
         })}
       </div>
 
-      <div style={{ padding: "0 12px 40px" }}>
-        {tab === "courses"  && <RacesView />}
+      <div className="px-agon-md pb-10 lg:px-agon-xl">
+        {tab === "courses" && <RacesView />}
         {tab === "stations" && <StationsView />}
-        {tab === "runs"     && <RunsView />}
-        {tab === "radar"    && <HyroxRadarView />}
-        {tab === "tests"    && <AthleteTestsView />}
+        {tab === "runs" && <RunsView />}
+        {tab === "radar" && <HyroxRadarView />}
+        {tab === "tests" && <AthleteTestsView />}
       </div>
     </div>
   );

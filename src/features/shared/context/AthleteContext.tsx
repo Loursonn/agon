@@ -43,11 +43,11 @@ export interface AthleteContextValue {
   goals: Goals; setGoals: (v: Goals | ((p: Goals) => Goals)) => void;
   athleteNotes: Record<string, string>; setAthleteNotes: (v: Record<string, string>) => void;
   customMethods: unknown[]; setCustomMethods: (v: unknown[]) => void;
-  weightLog: Record<string, number>; setWeightLog: (v: Record<string, number>) => void;
+  weightLog: Record<string, number>;
   weightMilestones: Array<{ date: string; kg: number }>; setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
   wellness: WellnessData | null; setWellness: (v: WellnessData | null) => void;
   wellnessHistory: Record<string, WellnessData>; setWellnessHistory: (v: Record<string, WellnessData>) => void;
-  bodyWeight: BodyWeight; setBodyWeight: (v: BodyWeight) => void;
+  bodyWeight: BodyWeight;
   blockHistory: ArchivedBlock[]; setBlockHistory: (v: ArchivedBlock[]) => void;
   weekSchedule: Record<string, unknown>; setWeekSchedule: (v: Record<string, unknown>) => void;
   sessionLogs: Record<string, SessionLog>; setSessionLogs: (v: Record<string, SessionLog>) => void;
@@ -112,6 +112,8 @@ export interface AthleteContextValue {
   archiveAndNewBlock: (opts: NewBlockOpts) => void;
   applyAIEdit: (newSessions: ExosMap) => void;
   saveWellness: (data: WellnessData) => void | Promise<boolean>;
+  /** Pesée du jour (RPC atomique, file hors ligne) ; true = enregistrée ou gardée. */
+  saveWeighIn: (kg: number) => Promise<boolean>;
   updateSessionDay: (sessId: string, dayIdx: number) => void;
   updateSessionWeekDay: (sessId: string, blockWeek: number, dayIdx: number | null) => void;
   toggleHabitLog: (habitId: string, dateISO: string, logs: Record<string, string[]>, setLogs: (v: Record<string, string[]>) => void) => Promise<void>;
@@ -183,12 +185,12 @@ export function AthleteProvider({ athleteId, viewOnly = false, readOnly = false,
   };
 
   // timerLeft intentionnellement exclu — on veut démarrer l'intervalle uniquement quand timerActive change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!timerActive || timerLeft <= 0) return;
     const tid = setInterval(() => setTimerLeft(l => l - 1), 1000);
     timerRef.current = tid;
     return () => clearInterval(tid);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerActive]);
 
   useEffect(() => {

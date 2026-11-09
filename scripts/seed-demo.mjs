@@ -9,20 +9,24 @@
  *   node scripts/seed-demo.mjs --link coach
  *   node scripts/seed-demo.mjs --delete   # supprime les deux comptes démo et leurs données
  *
- * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité). DEMO_PASSWORD optionnel.
+ * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité). DEMO_PASSWORD optionnel (sinon mot de passe aléatoire).
+ * Les données santé (wellness, poids, palier, objectif) passent par les RPC avec la session de l'athlète démo ;
+ * `weight_set_goal` doit être appliquée en base (migration 20261110110000).
  */
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
-const root = path.resolve(new URL(".", import.meta.url).pathname, "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
   fs.readFileSync(path.join(root, ".env"), "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),
 );
 const URL_ = env.VITE_SUPABASE_URL, KEY = env.SUPABASE_SERVICE_ROLE_KEY;
-if (!URL_ || !KEY) { console.error("VITE_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants dans .env"); process.exit(1); }
+const ANON = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY;
+if (!URL_ || !KEY || !ANON) { console.error("VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY / SUPABASE_SERVICE_ROLE_KEY manquants dans .env"); process.exit(1); }
 const sb = createClient(URL_, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
 const COACH_EMAIL = "demo.coach@agon-demo.fr";
@@ -197,17 +201,27 @@ async function seed() {
   const freeDate = addDays(thisMon, -3); // vendredi dernier
   const appData = [
     ["asp:prog", [sBas, sHaut, sMob]],
-    ["asp:wellness", todayW],
-    ["asp:wh", wh],
-    ["asp:wlog", wlog],
-    ["asp:bw", { current: 78.4, target: 77 }],
-    ["asp:wmile", [{ date: ymdCompact(addDays(today, -30)), kg: 79.6 }]],
     ["asp:goals", { sessionsPerWeek: 3, sleepTarget: 8 }],
     ["asp:freesess", [{ id: "free_" + Date.now(), name: "Course", sport: "course", sportEmoji: "CO", date: ymd(freeDate), duration: 42, distance_km: 8.2, intensity: 6, note: "Footing tranquille avec Max", completed: true, exercises: [] }]],
     ["asp:nutrition_strategy", { strategy: "prise_de_masse", can_track_calories: true, calorie_mode: "active", deficit_mode: "range", nap: 1.5, total_calories_coach: 2850, total_calories_min: 2750, total_calories_max: 2950, tdee_ref: 2650, target_weight: 80, surplus_deficit_min: 5, surplus_deficit_max: 10, weekly_target_kg: 0.25, macros_glucides: 360, macros_lipides: 80, macros_proteines: 160, macros_glucides_pct: 50, macros_lipides_pct: 25, macros_proteines_pct: 25 }],
     ["asp:nutrition_log", nlog],
   ];
   await must(sb.from("app_data").upsert(appData.map(([key, value]) => ({ athlete_id: ATH, key, value })), { onConflict: "athlete_id,key" }), "app_data");
+
+  /* --- santé (wellness, poids, palier, objectif) : par les RPC, comme l'app ---
+     Les RPC contrôlent auth.uid() : on les appelle donc avec la session de l'athlète
+     (clé publique + mot de passe du compte de démo), pas avec la clé service. */
+  const asAthlete = createClient(URL_, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
+  await must(asAthlete.auth.signInWithPassword({ email: ATHLETE_EMAIL, password: PASSWORD }), "connexion athlète démo");
+  const rpc = (fn, args) => must(asAthlete.rpc(fn, args), fn);
+  for (const k of Object.keys(wh).sort()) {
+    const day = `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`;
+    await rpc("wellness_set_day", { p_athlete: ATH, p_day: day, p_entry: wh[k] });
+    await rpc("weight_set_day", { p_athlete: ATH, p_day: day, p_kg: wlog[k] });
+  }
+  // Palier franchi il y a 30 jours : pose aussi la référence (asp:bw.current = 79.6) ; puis l'objectif.
+  await rpc("weight_record_milestone", { p_athlete: ATH, p_day: ymd(addDays(today, -30)), p_kg: 79.6 });
+  await rpc("weight_set_goal", { p_athlete: ATH, p_target_kg: 77 });
 
   /* --- retours hebdo, thèmes, compétitions, événements --- */
   await must(sb.from("weekly_retours").insert([

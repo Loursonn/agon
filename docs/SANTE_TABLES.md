@@ -68,7 +68,7 @@ Pourquoi les RPC n'écrivent pas directement les tables à cette étape : avec d
 |---|---|---|---|
 | 0 ✅ | fait (2026-11-08/09) | RPC atomiques `wellness_set_day`, `wellness_delete_day`, `weight_set_day`, `weight_record_milestone` | tout |
 | **1** ✅ | fait le 2026-11-08 (314 wellness / 245 pesées / 23 paliers / 11 objectifs, 0 erreur, test 60/60, types régénérés) | appliquer `20261110100000_sante_tables.sql` (tables, RLS, triggers, copie) ; vérifier ; régénérer `types.ts` | main, dev, anciennes PWA : rien ne change pour eux |
-| **2** | après l'étape 1, via la PR dev → main | `src/api/wellness.ts` et `src/api/profile.ts` lisent les tables (fait dans ce lot) ; puis migrer les autres lecteurs (liste ci-dessous) | tout : les écritures restent les mêmes |
+| **2** ✅ (code) | après l'étape 1, via la PR dev → main | `src/api/wellness.ts` et `src/api/profile.ts` lisent les tables ; tous les autres lecteurs migrés (P5, liste ci-dessous) ; `coach-api` déployée en prod le 2026-11-09 | tout : les écritures restent les mêmes |
 | 3 | quand plus aucun client ne **lit** les clés legacy (main déployé + délai PWA, cf. ci-dessous) | inverser la source : nouvelles RPC qui écrivent les tables (`wellness_set_day` réécrit), trigger `app_data → tables` gardé pour les anciens écrivains, trigger `tables → app_data` pour les anciens lecteurs, garde anti-boucle par GUC `agon.health_sync` ; ajouter `weight_set_goal` (objectif) | tout |
 | 4 | plusieurs semaines après 3, export fait | suppression : fallback `app_data` retiré de `src/api`, triggers supprimés, clés `asp:wh`, `asp:wellness`, `asp:wlog`, `asp:wmile`, `asp:bw` exportées puis supprimées, `wellnessHistory` / `bodyWeight` retirés de `asp:blockHistory`, entrées retirées de `staff_app_data_domain` | seulement les versions ≥ étape 2 |
 
@@ -76,20 +76,28 @@ Le client de ce lot **retombe sur `app_data`** si la table n'existe pas (erreur 
 
 Mesure avant 3 et 4 : `git rev-list --count origin/main..origin/dev` (le client de prod vient de `main`) et ancienneté des PWA : aucune télémétrie de version aujourd'hui. Proposition : à l'étape 2, ajouter un contrôle de version au démarrage (fichier `version.json` servi par Vercel, rechargement forcé si l'app est plus vieille) ; l'étape 4 attend ensuite au moins 30 jours.
 
-### Lecteurs et écrivains encore branchés sur les clés legacy (à migrer à l'étape 2)
+**Fait (P4)** : `/version.json` + rechargement propre (`src/lib/versionCheck.ts`, `UpdatePrompt`) ; suivi serveur par `profiles.client_build` / `client_build_at` et la RPC `report_client_build` (migration `20261110110000_client_build.sql`, test `supabase/tests/client_build.sql`, appel `ClientBuildReporter`). Comptage : `select client_build, count(*) from profiles where client_build_at > now() - interval '30 days' group by 1 order by 2 desc;`. Test à blanc vert le 2026-11-09 ; migration à appliquer AVANT de merger vers `main` (sinon l'appel échoue en silence).
 
-Lecteurs :
-- `src/features/shared/hooks/useAthletePersistedState.ts` (`asp:wellness`, `asp:wh`, `asp:wlog`, `asp:wmile`, `asp:bw` via `sLoadResult`) → `getWellnessHistory`, `getWeightLog` + `toLegacyWeightLog`, `getWeightMilestones` + `toLegacyMilestones`, `getBodyWeightGoal` + `toLegacyBodyWeight`.
-- `useWeeklyRetours.ts`, `useMonthlyRetours.ts` (`asp:wh` + `asp:blockHistory` via `readAppDataKeys`) → `getWellnessHistory`.
-- `src/api/appContent.ts` `listRecentActivity` (`app_data.updated_at` de `asp:wh`) → `max(wellness_entries.updated_at)` (plus juste : seules les lignes changées bougent).
-- `supabase/functions/coach-api` + `_shared/coachApiRead.ts` (clé service : `asp:wh`, `asp:wlog`, `asp:bw`, `asp:blockHistory`) → tables (redéployer depuis le bon dossier).
-- Composants qui lisent l'état du contexte (`StatsCharts.jsx`, `WellnessFlow.jsx`, `NutritionView.tsx`, `ProfileDrawer.tsx`, `ProfilSportifPage.tsx`, `StaffWellnessTab.tsx`…) : rien à changer tant que le contexte garde ses formes.
 
-Écrivains qui réécrivent encore un blob entier (fonctionnent grâce au trigger, mais à passer par RPC) :
-- `ProfilPage.tsx` : `setWeightLog({...weightLog, [todayKey()]: weighIn})` → `saveWeight`.
-- `setBodyWeight` (objectif) → future RPC `weight_set_goal`.
-- `useAthleteLogic.archiveAndNewBlock` : `asp:wh = {}` après archivage (avec le trigger, les saisies passent `archived = true`, rien n'est perdu côté tables si l'écriture de `asp:blockHistory` réussit).
-- `scripts/seed-demo.mjs` (compte démo).
+### Lecteurs migrés (P5, 2026-11-09) et écrivains encore branchés sur les clés legacy
+
+Lecteurs : **plus aucun code ne lit `asp:wh`, `asp:wellness`, `asp:wlog`, `asp:wmile`, `asp:bw` ni les champs santé d'`asp:blockHistory`**, sauf le repli de `src/api` (table absente, à retirer à l'étape 4) :
+- ✅ `src/features/shared/hooks/useAthletePersistedState.ts` → `getWellnessHistory({ includeArchived: false })` (+ `toLegacyWellnessHistory`, `toLegacyToday`), `getWeightLog` + `toLegacyWeightLog`, `getWeightMilestones` + `toLegacyMilestones`, `getBodyWeightGoal` + `toLegacyBodyWeight`. Les composants reçoivent les mêmes formes qu'avant (clés compactes `YYYYMMDD`, `{ current, target }` à 0 si absent). Une lecture en erreur bloque l'écriture de la clé (`markKeyLoad` dans `src/lib/storage.ts`, même garde que `sLoadResult`) et relance la lecture automatique.
+- ✅ `useWeeklyRetours.ts`, `useMonthlyRetours.ts` → `getWellnessHistory` (archives comprises). `retoursWellnessHistory` supprimé.
+- ✅ `src/api/appContent.ts` `listRecentActivity` → dernier `wellness_entries.updated_at` non archivé de chaque athlète (repli `app_data` si table absente).
+- ✅ `supabase/functions/coach-api` + `_shared/coachApiRead.ts` → `_shared/coachApiHealth.ts` (`readSummaryHealth`) lit `wellness_entries`, `body_weight_logs`, `body_weight_goals` sur la période. `asp:goals` et `asp:prog` restent dans `app_data` (hors périmètre santé). **À redéployer** : `supabase functions deploy coach-api`, accord d'Hugo requis.
+- Composants qui lisent l'état du contexte (`StatsCharts.jsx`, `WellnessFlow.jsx`, `NutritionView.tsx`, `ProfileDrawer.tsx`, `ProfilSportifPage.tsx`, `StaffWellnessTab.tsx`…) : rien changé.
+- Lecture des lignes dans le domaine partagé : `wellnessRowToEntry` / `wellnessRowsToHistory` (`_shared/domain/wellness.ts`), réexportés par `src/api/wellness.ts`.
+
+Contrat de `coach-api` : sortie de `GET /athletes/:id/summary` strictement identique, figée par `_shared/__tests__/coachApiHealth.test.ts` contre `coachApiSummary.golden.json`, produit **avant** la migration par l'ancien code alimenté avec les clés `app_data`.
+
+Limite connue : `wellnessHistory` du contexte ne contient plus les clés parasites (`"1"`..`"4"`) ni les champs inconnus d'une saisie ; quand un écrivain réécrit encore le blob `asp:wh` entier, il l'écrit nettoyé (le trigger projette de toute façon l'état nettoyé). Sans effet sur les tables.
+
+Écrivains qui réécrivaient un blob entier : **P6 (2026-11-10) les a tous passés par RPC** (code ; migration `20261110110100_weight_set_goal.sql` à appliquer) :
+- `ProfilPage.tsx` → `saveWeighIn` (file hors ligne, RPC `weight_set_day`).
+- Objectif → `weight_set_goal` (`saveWeightGoal`) ; les setters blob sans appelant sont supprimés.
+- `useAthleteLogic.archiveAndNewBlock` : `asp:wh = {}` après archivage ; les saisies passent `archived = true` si elles sont dans `asp:blockHistory` (désormais toujours le cas quand il reste du wellness). Reste un écrivain blob (`asp:blockHistory`, programme) : hors santé, voir P17.
+- `scripts/seed-demo.mjs` → RPC, avec la session de l'athlète démo.
 
 ## 5. Fusion du poids (« poids ×3 »)
 

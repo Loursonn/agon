@@ -18,8 +18,9 @@ import type { ProgSession, Exercice, Bloc } from "@/features/coach/components/pr
 import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence";
 import { fetchOccurrencesForSessions } from "./useSessionOccurrence";
 import { startOfMonth, endOfMonth, format, eachDayOfInterval, addDays } from "date-fns";
-import { averageWellness, retoursWellnessHistory, toWellnessDay } from "@/lib/retoursWellness";
+import { averageWellness, toWellnessDay } from "@/lib/retoursWellness";
 import { wellnessScore } from "@shared/domain/wellness";
+import { getWellnessHistory } from "@/api/wellness";
 import { getDays as getNutritionDays, getStrategy as getNutritionStrategy } from "@/api/nutrition";
 
 
@@ -76,8 +77,10 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
   const end   = format(endOfMonth(monthStart),   "yyyy-MM-dd");
 
   // ── 1. Load app_data + DB tables in parallel ─────────────────────────────
-  const [appDataRes, workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy] = await Promise.all([
-    readAppDataKeys(athleteId, ["asp:wh", "asp:sets", "asp:exos", "asp:blockConfig", "asp:blockHistory", "asp:freesess", "asp:prog"]),
+  const [appDataRes, mergedWH, workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy] = await Promise.all([
+    readAppDataKeys(athleteId, ["asp:sets", "asp:exos", "asp:blockConfig", "asp:blockHistory", "asp:freesess", "asp:prog"]),
+    // Wellness du bloc courant + blocs archivés, en jours ISO (table `wellness_entries`)
+    getWellnessHistory(athleteId),
     listWorkoutLogs({ athleteIds: [athleteId], from: start, to: end, excludeStatuses: ["skipped"] }),
     listEnergyAssignments({ athleteIds: [athleteId], from: start, to: end, join: "summary" }),
     listTestSessionsWithResults(athleteId, start, end),
@@ -96,9 +99,6 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
   const currentBlockConfig: BlockConfig         = appDataMap["asp:blockConfig"] ?? {};
   const blockHistory: ArchivedBlock[]           = appDataMap["asp:blockHistory"] ?? [];
   const progSessions: ProgSession[]             = appDataMap["asp:prog"]        ?? [];
-
-  // Wellness du bloc courant + blocs archivés, en jours ISO (clés compactes en base)
-  const mergedWH = retoursWellnessHistory(appDataMap["asp:wh"], blockHistory);
 
   // ── 2. Exercise comments ─────────────────────────────────────────────────
   const workoutIds = workoutList.map((w) => w.id as string);

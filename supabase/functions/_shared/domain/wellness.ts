@@ -213,6 +213,76 @@ export function archivedWellnessOf(blockHistory: unknown): unknown[] {
   return blockHistory.map((b) => (isObj(b) ? b.wellnessHistory : null)).filter(isObj);
 }
 
+// ── Table `wellness_entries` ──────────────────────────────────────────────────
+
+/** Ligne de `wellness_entries` (numeric → nombre ou texte, time → "HH:MM:SS"). */
+export interface WellnessRow {
+  athlete_id: string;
+  day: string;
+  fatigue: number | string | null;
+  sommeil: number | string | null;
+  stress: number | string | null;
+  energie: number | string | null;
+  doms: number | string | null;
+  bedtime: string | null;
+  wake: string | null;
+  sleep_hours: number | string | null;
+  sleep_interrupted: boolean | null;
+  sleep_interrupt_note: string | null;
+  doms_zones: string[] | null;
+  doms_points: unknown;
+  injury_note: string | null;
+  weight_kg: number | string | null;
+  archived: boolean;
+}
+
+/** Colonnes à lire dans `wellness_entries` pour `wellnessRowToEntry`. */
+export const WELLNESS_ROW_COLUMNS =
+  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived";
+
+function toHm(v: unknown): HourMinute | null {
+  const m = typeof v === "string" ? /^(\d{1,2}):(\d{2})/.exec(v) : null;
+  return m ? { h: Number(m[1]), m: Number(m[2]) } : null;
+}
+
+/** Une ligne de la table → `WellnessEntry` (même forme que `parseWellnessEntry`). */
+export function wellnessRowToEntry(row: WellnessRow): WellnessEntry | null {
+  const day = typeof row.day === "string" ? row.day.slice(0, 10) : "";
+  if (!isIsoDay(day)) return null;
+  const hours = num(row.sleep_hours);
+  const kg = num(row.weight_kg);
+  return {
+    day,
+    items: {
+      fatigue: readItem(row.fatigue),
+      sommeil: readItem(row.sommeil),
+      stress: readItem(row.stress),
+      energie: readItem(row.energie),
+      doms: readItem(row.doms),
+    },
+    sleep: {
+      bedtime: toHm(row.bedtime),
+      wake: toHm(row.wake),
+      hours: hours != null && hours >= 0 && hours <= 24 ? hours : null,
+      interrupted: typeof row.sleep_interrupted === "boolean" ? row.sleep_interrupted : null,
+      interruptNote: row.sleep_interrupt_note?.trim() || null,
+    },
+    domsZones: Array.isArray(row.doms_zones) ? row.doms_zones.filter((z): z is string => typeof z === "string") : [],
+    domsPoints: points(row.doms_points),
+    injuryNote: row.injury_note?.trim() || null,
+    weightKg: kg != null && kg > 0 ? kg : null,
+    archived: row.archived === true,
+  };
+}
+
+/** Lignes de la table → historique indexé par jour ISO, jours croissants. */
+export function wellnessRowsToHistory(rows: readonly WellnessRow[]): WellnessHistory {
+  const out: WellnessHistory = {};
+  const entries = rows.map(wellnessRowToEntry).filter((x): x is WellnessEntry => x !== null);
+  for (const e of entries.sort((a, b) => a.day.localeCompare(b.day))) out[e.day] = e;
+  return out;
+}
+
 /** Entrées triées par jour croissant, éventuellement bornées (bornes incluses). */
 export function wellnessEntries(h: WellnessHistory, from?: IsoDay | null, to?: IsoDay | null): WellnessEntry[] {
   return Object.keys(h)

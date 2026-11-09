@@ -76,6 +76,10 @@ export interface RunEntry {
   km: number;
   /** Absent = saisie manuelle (compatibilité) */
   source?: RunSource;
+  /** Fournisseur de la sortie de montre (« garmin », « coros », « file_import »), pour l'attribution */
+  provider?: string;
+  /** Modèle de l'appareil, si connu (attribution « Garmin [modèle] ») */
+  device?: string | null;
 }
 
 /** Une activité de montre rattachée à une séance prévue. */
@@ -312,8 +316,13 @@ export function buildRunLedger(input: {
   const matchedFree = new Set(freeMatches.map((m) => m.ref.id));
 
   const entries: RunEntry[] = [];
-  const push = (date: string, km: number | null, source: RunSource) => {
-    if (positive(km)) entries.push({ date, km, source });
+  const push = (date: string, km: number | null, source: RunSource, activity?: WatchActivityInput) => {
+    if (!positive(km)) return;
+    entries.push(
+      activity && source === "watch"
+        ? { date, km, source, provider: activity.source, device: activity.deviceName ?? null }
+        : { date, km, source },
+    );
   };
 
   const matches: RunMatch[] = plannedMatches.map(({ activity, ref }) => {
@@ -321,7 +330,7 @@ export function buildRunLedger(input: {
     const manualKm = ref.activityType === "course" && positive(ref.manualKm) ? ref.manualKm : null;
     const countedKm = watchKm ?? manualKm;
     const countedSource: RunSource | null = watchKm != null ? "watch" : manualKm != null ? "manual" : null;
-    if (countedSource) push(activity.localDate, countedKm, countedSource);
+    if (countedSource) push(activity.localDate, countedKm, countedSource, activity);
     return {
       plannedId: ref.id,
       plannedLabel: ref.label,
@@ -338,7 +347,7 @@ export function buildRunLedger(input: {
 
   for (const { activity, ref } of freeMatches) {
     const watchKm = watchKmOf(activity);
-    if (watchKm != null) push(activity.localDate, watchKm, "watch");
+    if (watchKm != null) push(activity.localDate, watchKm, "watch", activity);
     else push(ref.date, ref.km, "manual");
   }
 
@@ -354,7 +363,7 @@ export function buildRunLedger(input: {
 
   // Sorties de montre sans séance en face : elles comptent seules
   for (const a of kept) {
-    if (!matchedActivity.has(a.id)) push(a.localDate, watchKmOf(a), "watch");
+    if (!matchedActivity.has(a.id)) push(a.localDate, watchKmOf(a), "watch", a);
   }
 
   entries.sort((x, y) => x.date.localeCompare(y.date));
