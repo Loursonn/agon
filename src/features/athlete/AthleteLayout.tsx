@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { Button } from "@/ui/Button";
+import { Dialog } from "@/ui/Dialog";
 import { AgonIcon } from "@/components/ui/AgonIcon";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
@@ -30,9 +33,10 @@ const TAIL_TABS = [
 ];
 
 // ── Mise en page PC (≥ 1024 px, préfixe Tailwind `lg:`) ─────────────────────
-// Mobile : inchangé (barre d'onglets fixe en bas, pleine largeur).
-// PC : cadre centré de 1100 px max = navigation latérale de 220 px + zone de
-// contenu bordée, dans laquelle les pages gardent leur colonne de 480 px.
+// Mobile : barre d'onglets fixe en bas, pleine largeur.
+// PC : cadre centré (1100 px, 1280 px dès `xl:`) = navigation latérale de 220 px +
+// zone de contenu bordée ; chaque page organise cette largeur (colonnes) au lieu
+// d'une colonne de téléphone.
 // Les éléments flottants (minuteur, bandeaux) se centrent sur cette zone :
 // son milieu est à 50 % + 110 px (moitié de la navigation) du viewport.
 
@@ -127,80 +131,81 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
     return () => window.removeEventListener("focus", check);
   }, [location.pathname]);
 
+  const timerUrgent = timerActive && timerLeft <= 10;
+  const timerTone = timerFinished ? "succes" : timerUrgent ? "erreur" : "accent";
+  const BADGE = "rounded-md px-agon-sm py-agon-2xs text-agon-xs font-semibold";
+  const NAV_DOT = "absolute -right-1 -top-0.5 h-[7px] w-[7px] rounded-full bg-agon-accent";
+
   return (
-    // overflowWrap hérité : les longues chaînes sans espace (grilles, allures…) reviennent à la ligne
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", overflowWrap: "anywhere" }}>
-      {/* ── Sticky header ── */}
-      <div ref={headerRef} style={{ position: "sticky", top: 0, zIndex: 20, background: C.bg, borderBottom: "1px solid " + C.brd }}>
-        <div className="w-full lg:mx-auto lg:max-w-[1100px]" style={{ padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img src="/brand/agon-logo-horizontal-marbre.svg" alt="Agon" style={{ height: 20 }} />
+    // overflow-wrap hérité : les longues chaînes sans espace (grilles, allures…) reviennent à la ligne
+    <div className="flex min-h-screen flex-col font-ui [overflow-wrap:anywhere]">
+      {/* ── En-tête collant ── */}
+      <div ref={headerRef} className="sticky top-0 z-20 border-b border-agon-brd bg-agon-bg">
+        <div className="flex w-full items-center justify-between px-agon-lg py-agon-sm lg:mx-auto lg:max-w-[1100px] xl:max-w-[1280px]">
+          <div className="flex min-w-0 items-center gap-agon-sm">
+            <img src="/brand/agon-logo-horizontal-marbre.svg" alt="Agon" className="h-5" />
             {saveStatus && (
-              <div style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: saveStatus === "saved" ? C.gS : C.rS, color: saveStatus === "saved" ? C.g : C.r }}>
+              <div className={cn(BADGE, saveStatus === "saved" ? "bg-agon-succes-doux text-agon-succes" : "bg-agon-erreur-doux text-agon-erreur")}>
                 {saveStatus === "saved" ? "OK" : "Err"}
               </div>
             )}
             {activeInjuries.length > 0 && (
-              <div style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: C.rS, color: C.r }}>{activeInjuries.length} bless.</div>
+              <div className={cn(BADGE, "bg-agon-erreur-doux text-agon-erreur")}>{activeInjuries.length} bless.</div>
             )}
             {viewOnly && (
-              <div style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: C.coachS, color: C.coach, border: "1px solid " + C.coach + "40" }}>Observation</div>
+              <div className={cn(BADGE, "border border-agon-coach/40 bg-agon-coach-doux text-agon-coach")}>Observation</div>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="flex shrink-0 items-center gap-agon-sm">
             {onSwitchMode && (
               <button
+                type="button"
                 onClick={onSwitchMode}
-                style={{
-                  padding: "5px 12px", borderRadius: 6,
-                  border: "1px solid " + C.ac + "40",
-                  background: C.acS, color: C.ac,
-                  fontSize: 11, fontWeight: 700, cursor: "pointer",
-                  fontFamily: "inherit", whiteSpace: "nowrap",
-                }}
+                className="whitespace-nowrap rounded-md border border-agon-accent/40 bg-agon-accent-doux px-agon-md py-agon-xs text-agon-xs font-bold text-agon-accent"
               >
                 Mode Coach
               </button>
             )}
-            <button onClick={() => setDrawerOpen(true)} title="Mon profil" style={{ width: 30, height: 30, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><AgonIcon name="menu" size={16} /></button>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              title="Mon profil"
+              aria-label="Mon profil"
+              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md border border-agon-brd-l text-agon-tx3"
+            >
+              <AgonIcon name="menu" size={16} />
+            </button>
             {userName && (
-              <div style={{ fontSize: 11, color: C.tx3, fontWeight: 500, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</div>
+              <div className="hidden max-w-[100px] truncate text-agon-xs font-medium text-agon-tx3 min-[420px]:block">{userName}</div>
             )}
           </div>
         </div>
         <OfflineBanner />
       </div>
 
-      <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-[1100px] lg:flex-row">
+      <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-[1100px] lg:flex-row xl:max-w-[1280px]">
         {/* ── Navigation latérale (PC uniquement) ── */}
         <nav
           aria-label="Navigation principale"
-          className="hidden lg:flex lg:w-[220px] lg:shrink-0 lg:flex-col lg:self-start"
-          style={{ position: "sticky", top: headerH, padding: "16px 0", gap: 2 }}
+          className="hidden lg:flex lg:w-[220px] lg:shrink-0 lg:flex-col lg:gap-agon-2xs lg:self-start lg:py-agon-lg sticky"
+          style={{ top: headerH }}
         >
           {ATH_TABS.map(t => {
             const isActive = activeTab === t.k;
             return (
               <button
                 key={t.k}
+                type="button"
                 onClick={() => navigate(t.k || ".")}
                 aria-current={isActive ? "page" : undefined}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 16px", border: "none",
-                  borderLeft: "2px solid " + (isActive ? C.ac : "transparent"),
-                  background: isActive ? C.acS : "transparent",
-                  color: isActive ? C.ac : C.tx2,
-                  fontSize: 13, fontWeight: isActive ? 600 : 400,
-                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-                  transition: "color 150ms",
-                }}
+                className={cn(
+                  "flex items-center gap-agon-md border-l-2 px-agon-lg py-agon-md text-left text-agon-base transition-colors",
+                  isActive ? "border-agon-accent bg-agon-accent-doux font-semibold text-agon-accent" : "border-transparent text-agon-tx2",
+                )}
               >
-                <span style={{ display: "flex", alignItems: "center", position: "relative", flexShrink: 0 }}>
+                <span className="relative flex shrink-0 items-center">
                   {t.icon}
-                  {t.k === "profil" && staffUnseen > 0 && (
-                    <span aria-label="Nouveau dans ton staff" style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: C.ac }} />
-                  )}
+                  {t.k === "profil" && staffUnseen > 0 && <span aria-label="Nouveau dans ton staff" className={NAV_DOT} />}
                 </span>
                 <span>{t.l}</span>
               </button>
@@ -208,132 +213,131 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
           })}
         </nav>
 
-        {/* ── Page content (bottom-pad for fixed tabs + optional timer) ── */}
-        {/* PC : zone bordée, sans barre du bas ; les pages y gardent leur colonne centrée. */}
-        <div
-          className={"min-w-0 flex-1 lg:border-x " + ((timerActive || timerFinished) ? "pb-[120px] lg:pb-20" : "pb-16 lg:pb-8")}
-          style={{ borderColor: C.brd }}
-        >
+        {/* ── Contenu (marge basse pour la barre d'onglets fixe et le minuteur) ── */}
+        {/* PC : zone bordée, sans barre du bas ; chaque page y organise sa largeur. */}
+        <div className={"min-w-0 flex-1 border-agon-brd lg:border-x " + ((timerActive || timerFinished) ? "pb-[120px] lg:pb-20" : "pb-16 lg:pb-8")}>
           <Outlet />
         </div>
       </div>
 
-      {/* ── Bottom tabs (mobile / tablette) ── */}
+      {/* ── Barre d'onglets du bas (mobile / tablette) ── */}
       <div
-        // display dans la classe (et non en inline) pour que `lg:hidden` s'applique
-        className="flex lg:hidden"
-        style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30,
-          background: C.bg, borderTop: "1px solid " + C.brd,
-          height: 64,
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
+        // display dans la classe pour que `lg:hidden` s'applique
+        className="fixed inset-x-0 bottom-0 z-30 flex h-16 border-t border-agon-brd bg-agon-bg pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         {ATH_TABS.map(t => {
           const isActive = activeTab === t.k;
           return (
             <button
               key={t.k}
+              type="button"
               onClick={() => navigate(t.k || ".")}
-              style={{
-                flex: 1, border: "none", background: "transparent",
-                color: isActive ? C.ac : C.tx3,
-                fontSize: 9, fontWeight: isActive ? 700 : 400,
-                cursor: "pointer", fontFamily: "inherit",
-                display: "flex", flexDirection: "column", alignItems: "center",
-                justifyContent: "center", gap: 3, minHeight: 44,
-                transition: "color 150ms",
-              }}
+              className={cn(
+                "flex min-h-11 flex-1 flex-col items-center justify-center gap-[3px] text-agon-xs transition-colors",
+                isActive ? "font-bold text-agon-accent" : "font-normal text-agon-tx3",
+              )}
             >
-              <span style={{ display: "flex", alignItems: "center", position: "relative" }}>
+              <span className="relative flex items-center">
                 {t.icon}
-                {t.k === "profil" && staffUnseen > 0 && (
-                  <span aria-label="Nouveau dans ton staff" style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: C.ac }} />
-                )}
+                {t.k === "profil" && staffUnseen > 0 && <span aria-label="Nouveau dans ton staff" className={NAV_DOT} />}
               </span>
-              <span style={{ letterSpacing: "0.2px" }}>{t.l}</span>
+              <span className="tracking-wide">{t.l}</span>
             </button>
           );
         })}
       </div>
 
-      {/* ── Timer overlay (above bottom tabs) ── */}
+      {/* ── Minuteur (au-dessus de la barre du bas) ── */}
       {(timerActive || timerFinished) && (
-        <div className="bottom-16 left-1/2 lg:bottom-6 lg:left-[calc(50%+110px)]" style={{ position: "fixed", transform: "translateX(-50%)", zIndex: 150, background: timerFinished ? "rgba(34,201,147,0.15)" : C.s1, border: "1px solid " + (timerFinished ? C.g : timerActive && timerLeft <= 10 ? C.r : C.ac) + "70", borderRadius: 50, padding: "9px 18px", display: "flex", alignItems: "center", gap: 12 }}>
-          {timerFinished ? <span style={{ fontSize: 16 }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span> : (
-            <div style={{ width: 24, height: 24, position: "relative" }}>
-              <svg viewBox="0 0 24 24" style={{ width: 24, height: 24, transform: "rotate(-90deg)" }}>
-                <circle cx="12" cy="12" r="9" fill="none" stroke={C.s2} strokeWidth="2.5" />
-                <circle cx="12" cy="12" r="9" fill="none" stroke={timerLeft <= 10 ? C.r : C.ac} strokeWidth="2.5"
+        <div
+          className={cn(
+            "fixed bottom-16 left-1/2 z-[150] flex -translate-x-1/2 items-center gap-agon-md rounded-full border px-[18px] py-[9px] lg:bottom-6 lg:left-[calc(50%+110px)]",
+            timerFinished ? "border-agon-succes/70 bg-agon-succes/15" : cn("bg-agon-s1", timerUrgent ? "border-agon-erreur/70" : "border-agon-accent/70"),
+          )}
+        >
+          {timerFinished ? (
+            <span className="text-agon-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            </span>
+          ) : (
+            <div className="relative h-6 w-6">
+              <svg viewBox="0 0 24 24" className="h-6 w-6 -rotate-90">
+                <circle cx="12" cy="12" r="9" fill="none" className="stroke-agon-s2" strokeWidth="2.5" />
+                <circle
+                  cx="12" cy="12" r="9" fill="none"
+                  className={timerUrgent ? "stroke-agon-erreur" : "stroke-agon-accent"}
+                  strokeWidth="2.5"
                   strokeDasharray={String(2 * Math.PI * 9)}
                   strokeDashoffset={String(2 * Math.PI * 9 * (1 - Math.min((timerDur - timerLeft) / timerDur, 1)))}
-                  strokeLinecap="round" />
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
           )}
-          <span style={{ fontSize: 13, fontWeight: 700, color: timerFinished ? C.g : timerLeft <= 10 ? C.r : C.tx, fontFamily: "monospace", minWidth: 42 }}>
+          <span className={cn("min-w-[42px] font-data text-agon-base font-bold", timerFinished ? "text-agon-succes" : timerUrgent ? "text-agon-erreur" : "text-agon-tx")}>
             {timerFinished ? "Repos OK !" : Math.floor(timerLeft / 60) + ":" + String(timerLeft % 60).padStart(2, "0")}
           </span>
-          <button onClick={timerStop} style={{ width: 22, height: 22, borderRadius: "50%", border: "none", background: (timerFinished ? C.g : C.r) + "25", color: timerFinished ? C.g : C.r, fontSize: 14, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
-        </div>
-      )}
-
-      {/* ── "Reprendre" floating button (free session) ── */}
-      {activeFreeSess && (
-        <div className="bottom-16 right-4 lg:bottom-6 lg:right-[max(16px,calc(50%-534px))]" style={{ position: "fixed", zIndex: 140 }}>
           <button
-            onClick={() => navigate("log", { state: { initialSess: activeFreeSess } })}
-            style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 50, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            type="button"
+            onClick={timerStop}
+            aria-label="Arrêter le minuteur"
+            className={cn(
+              "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-agon-lg",
+              timerFinished ? "bg-agon-succes/25 text-agon-succes" : "bg-agon-erreur/25 text-agon-erreur",
+            )}
           >
-            <span style={{ fontSize: 16 }}>▶</span><span>Reprendre — {activeFreeSess.name}</span>
+            ×
           </button>
         </div>
       )}
 
-      {/* ── Rappel "séance non terminée" ── */}
+      {/* ── Bouton flottant « Reprendre » (séance libre) ── */}
+      {activeFreeSess && (
+        <div className="fixed bottom-16 right-4 z-[140] lg:bottom-6 lg:right-[max(16px,calc(50%-534px))] xl:right-[max(16px,calc(50%-624px))]">
+          <button
+            type="button"
+            onClick={() => navigate("log", { state: { initialSess: activeFreeSess } })}
+            className="flex items-center gap-agon-sm rounded-full bg-agon-or-vif px-agon-lg py-agon-md text-agon-sm font-bold text-agon-ink"
+          >
+            <span className="text-agon-lg">▶</span><span>Reprendre — {activeFreeSess.name}</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Rappel « séance non terminée » ── */}
       {/* Les saisies sont bien enregistrées, mais sans clôture la séance
           n'entre ni dans l'historique ni dans les stats. */}
       {!viewOnly && !isOnWorkoutPage && pendingFinish && (
         <div
-          className={"left-4 right-4 lg:left-[calc(50%+110px)] lg:right-auto lg:w-[448px] lg:-translate-x-1/2 " + (activeWorkout ? "bottom-[132px] lg:bottom-[84px]" : "bottom-[72px] lg:bottom-6")}
-          style={{ position: "fixed", zIndex: 141 }}
+          className={cn(
+            "fixed inset-x-4 z-[141] lg:inset-x-auto lg:left-[calc(50%+110px)] lg:w-[448px] lg:-translate-x-1/2",
+            activeWorkout ? "bottom-[132px] lg:bottom-[84px]" : "bottom-[72px] lg:bottom-6",
+          )}
         >
-          <div
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "12px 14px", borderRadius: 6,
-              background: C.s1, border: "1px solid " + C.o + "70",
-            }}
-          >
-            <span style={{ fontSize: 18, lineHeight: 1 }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>
-                Séance non terminée
-              </div>
-              <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>
+          <div className="flex items-center gap-agon-md rounded-lg border border-agon-alerte/70 bg-agon-s1 px-agon-md py-agon-md">
+            <span className="text-agon-xl leading-none">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-agon-sm font-bold text-agon-tx">Séance non terminée</div>
+              <div className="mt-agon-2xs text-agon-xs text-agon-tx3">
                 {pendingFinish.sessionName} — {formatPendingDate(pendingFinish.scheduledDate)} ·{" "}
                 {pendingFinish.loggedSets} série{pendingFinish.loggedSets > 1 ? "s" : ""} saisie
                 {pendingFinish.loggedSets > 1 ? "s" : ""}
               </div>
             </div>
             <button
+              type="button"
               onClick={() => navigate(`program/workout/${pendingFinish.id}?finish=1`)}
-              style={{
-                padding: "8px 12px", borderRadius: 4, border: "none",
-                background: C.gV, color: "#0E0C0A", fontSize: 11, fontWeight: 700,
-                cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-              }}
+              className="min-h-10 shrink-0 rounded-md bg-agon-succes-vif px-agon-md text-agon-xs font-bold text-agon-ink"
             >
               Clôturer
             </button>
             <button
+              type="button"
               onClick={() => setDismissedUnfinished((prev) => [...prev, pendingFinish.id])}
               aria-label="Ignorer"
-              style={{
-                padding: "8px 6px", borderRadius: 4, border: "none",
-                background: "transparent", color: C.tx3, fontSize: 13,
-                cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-              }}
+              className="flex min-h-10 shrink-0 items-center px-agon-sm text-agon-base text-agon-tx3"
             >
               ✕
             </button>
@@ -341,26 +345,18 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         </div>
       )}
 
-      {/* ── "Revenir à la séance" floating button (musculation workout) ── */}
+      {/* ── Bouton flottant « Revenir à la séance » (musculation) ── */}
       {activeWorkout && !isOnWorkoutPage && (
-        <div
-          className="bottom-[72px] left-4 right-4 lg:bottom-6 lg:left-[calc(50%+110px)] lg:right-auto lg:w-[448px] lg:-translate-x-1/2"
-          style={{ position: "fixed", zIndex: 140 }}
-        >
+        <div className="fixed inset-x-4 bottom-[72px] z-[140] lg:inset-x-auto lg:bottom-6 lg:left-[calc(50%+110px)] lg:w-[448px] lg:-translate-x-1/2">
           <button
+            type="button"
             onClick={() => navigate(`program/workout/${activeWorkout.id}`)}
-            style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 10,
-              padding: "12px 16px", borderRadius: 6,
-              border: "none", background: "linear-gradient(135deg, #FFC933 0%, #FF9500 100%)",
-              color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer",
-              fontFamily: "inherit",
-            }}
+            className="flex w-full items-center gap-agon-md rounded-lg bg-gradient-to-br from-agon-or-vif to-agon-ocre-vif px-agon-lg py-agon-md text-agon-base font-bold text-agon-ink"
           >
-            <span style={{ fontSize: 18, lineHeight: 1 }}>▶</span>
-            <div style={{ flex: 1, textAlign: "left" }}>
+            <span className="text-agon-xl leading-none">▶</span>
+            <div className="flex-1 text-left">
               <div>Revenir à la séance</div>
-              <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 1 }}>
+              <div className="mt-agon-2xs text-agon-xs font-medium opacity-80">
                 {activeWorkout.name} — {Math.floor((Date.now() - activeWorkout.startedAt) / 60000)} min
               </div>
             </div>
@@ -368,58 +364,63 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         </div>
       )}
 
-      {/* ── Milestone notif ── */}
+      {/* ── Palier validé ── */}
       {milestoneNotif && (
-        <div style={{ position: "fixed", top: 60, left: "50%", transform: "translateX(-50%)", zIndex: 250, background: C.s1, border: "1px solid " + C.g + "50", borderRadius: 6, padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="fixed left-1/2 top-[60px] z-[250] flex -translate-x-1/2 items-center gap-agon-md rounded-lg border border-agon-succes/50 bg-agon-s1 px-5 py-agon-md">
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.g }}>Nouveau palier validé !</div>
-            <div style={{ fontSize: 11, color: C.tx2 }}>Poids mis à jour : {milestoneNotif} kg</div>
+            <div className="text-agon-base font-bold text-agon-succes">Nouveau palier validé !</div>
+            <div className="text-agon-xs text-agon-tx2">Poids mis à jour : {milestoneNotif} kg</div>
           </div>
         </div>
       )}
 
-
-      {/* ── Week completed overlay ── */}
+      {/* ── Semaine validée ── */}
       {weekJustCompleted && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.9)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-          <div style={{ fontSize: 26, fontWeight: 800, color: C.g }}>Semaine {weekJustCompleted} validée !</div>
-          <div style={{ fontSize: 14, color: C.tx2 }}>{weekJustCompleted < tw ? "En route pour S" + (weekJustCompleted + 1) : "Bloc terminé !"}</div>
-          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-agon-lg bg-black/90">
+          <div className="font-display text-agon-3xl font-extrabold text-agon-succes">Semaine {weekJustCompleted} validée !</div>
+          <div className="text-agon-base text-agon-tx2">{weekJustCompleted < tw ? "En route pour S" + (weekJustCompleted + 1) : "Bloc terminé !"}</div>
+          <div className="mt-agon-sm flex gap-1.5">
             {[...Array(tw)].map((_, i) => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: i < weekJustCompleted ? C.g : C.s2 }} />
+              <div key={i} className={cn("h-2.5 w-2.5 rounded-full", i < weekJustCompleted ? "bg-agon-succes" : "bg-agon-s2")} />
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Bilan overlay ── */}
+      {/* ── Bilan de bloc ── */}
       {showBilan && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: C.bg, overflowY: "auto" }}>
-          <div className="w-full lg:mx-auto lg:max-w-[600px]" style={{ padding: "40px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
-            <div style={{ fontSize: 28, fontWeight: 800, textAlign: "center" }}>Bloc terminé !</div>
-            <div style={{ fontSize: 14, color: C.tx2 }}>{totalDone} séances réalisées</div>
-            <div style={{ display: "flex", gap: 12, width: "100%" }}>
+        <div className="fixed inset-0 z-[200] overflow-y-auto bg-agon-bg">
+          <div className="flex w-full flex-col items-center gap-5 px-agon-xl py-10 lg:mx-auto lg:max-w-[600px]">
+            <div className="text-center font-display text-agon-3xl font-extrabold">Bloc terminé !</div>
+            <div className="text-agon-base text-agon-tx2">{totalDone} séances réalisées</div>
+            <div className="flex w-full gap-agon-md">
               {getBig3(exos).map(({ name, label, c }: { name: string; label: string; c: string }) => {
                 const pr = (prs as Record<string, { est?: string }>)[name];
                 return (
-                  <div key={label} style={{ flex: 1, background: C.s1, borderRadius: 6, padding: "14px 10px", textAlign: "center", border: "1px solid " + c + "30" }}>
-                    <div style={{ fontSize: 11, color: C.tx3, marginBottom: 4 }}>{label}</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: c }}>{pr?.est || "--"}</div>
-                    <div style={{ fontSize: 9, color: C.tx3 }}>kg est.</div>
+                  <div key={label} className="flex-1 rounded-lg border bg-agon-s1 px-agon-sm py-[14px] text-center" style={{ borderColor: alpha(c, 0.19) }}>
+                    <div className="mb-agon-xs text-agon-xs text-agon-tx3">{label}</div>
+                    <div className="font-data text-agon-2xl font-extrabold" style={{ color: c }}>{pr?.est || "--"}</div>
+                    <div className="text-agon-xs text-agon-tx3">kg est.</div>
                   </div>
                 );
               })}
             </div>
-            <div style={{ width: "100%", background: C.s1, borderRadius: 6, padding: 16, border: "1px solid " + C.brd }}>
+            <div className="w-full rounded-lg border border-agon-brd bg-agon-s1 p-agon-lg">
               <CombinedStatsChart data={combinedData as unknown[]} />
             </div>
-            <button onClick={() => { setShowBilan(false); setShowNewBlock(true); }} style={{ width: "100%", padding: "14px 0", borderRadius: 6, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Nouveau bloc</button>
-            <button onClick={() => setShowBilan(false)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Fermer</button>
+            <button
+              type="button"
+              onClick={() => { setShowBilan(false); setShowNewBlock(true); }}
+              className="min-h-12 w-full rounded-lg bg-agon-or-vif text-agon-base font-bold text-agon-ink"
+            >
+              Nouveau bloc
+            </button>
+            <button type="button" onClick={() => setShowBilan(false)} className="min-h-10 text-agon-sm text-agon-tx3">Fermer</button>
           </div>
         </div>
       )}
 
-      {/* ── New block modal ── */}
+      {/* ── Nouveau bloc ── */}
       {showNewBlock && (
         <NewBlockModal
           onStart={archiveAndNewBlock}
@@ -431,7 +432,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         />
       )}
 
-      {/* ── Block history ── */}
+      {/* ── Historique des blocs ── */}
       {showBlockHistory && (
         <BlockHistoryViewer
           blockHistory={blockHistory}
@@ -440,14 +441,14 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         />
       )}
 
-      {/* ── Wellness modal ── */}
+      {/* ── Wellness ── */}
       {showWellness && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto" }}>
+        <div className="fixed inset-0 z-[300] overflow-y-auto bg-agon-bg">
           {/* PC : panneau centré de 600 px au lieu de toute la largeur */}
-          <div className="lg:mx-auto lg:min-h-full lg:max-w-[600px] lg:border-x" style={{ borderColor: C.brd }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid " + C.brd }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Wellness du jour</div>
-              <button onClick={() => setShowWellness(false)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}>×</button>
+          <div className="border-agon-brd lg:mx-auto lg:min-h-full lg:max-w-[600px] lg:border-x">
+            <div className="flex items-center justify-between border-b border-agon-brd px-agon-lg py-agon-md">
+              <div className="text-agon-base font-bold">Wellness du jour</div>
+              <button type="button" onClick={() => setShowWellness(false)} aria-label="Fermer" className="flex h-10 w-10 items-center justify-center text-agon-2xl text-agon-tx3">×</button>
             </div>
             <WellnessFlow
               existing={wellness}
@@ -459,41 +460,47 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         </div>
       )}
 
-      {/* ── App feedback modal ── */}
+      {/* ── Avis sur l'app ── */}
       {showAppFeedback && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 300, background: C.bg, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <div className="fixed inset-0 z-[300] flex flex-col overflow-y-auto bg-agon-bg">
           {/* PC : panneau centré de 600 px au lieu de toute la largeur */}
-          <div className="flex w-full flex-1 flex-col lg:mx-auto lg:max-w-[600px] lg:border-x" style={{ borderColor: C.brd }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Avis sur l'app</div>
-              <button onClick={() => setShowAppFeedback(false)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 20, cursor: "pointer", fontFamily: "inherit" }}>×</button>
+          <div className="flex w-full flex-1 flex-col border-agon-brd lg:mx-auto lg:max-w-[600px] lg:border-x">
+            <div className="flex shrink-0 items-center justify-between border-b border-agon-brd px-agon-lg py-agon-md">
+              <div className="text-agon-base font-bold">Avis sur l'app</div>
+              <button type="button" onClick={() => setShowAppFeedback(false)} aria-label="Fermer" className="flex h-10 w-10 items-center justify-center text-agon-2xl text-agon-tx3">×</button>
             </div>
             <AppFbForm onClose={() => setShowAppFeedback(false)} />
           </div>
         </div>
       )}
 
-      {/* ── Profile drawer ── */}
       {drawerOpen && <ProfileDrawer onClose={() => setDrawerOpen(false)} />}
 
-      {/* ── Viewer de fiche ── */}
       <FicheViewerHost athleteId={athleteId} viewOnly={viewOnly} />
 
-      {/* ── Logout confirm ── */}
-      {showLogoutConfirm && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-          onClick={() => setShowLogoutConfirm(false)}>
-          <div style={{ background: C.s1, borderRadius: 6, padding: 24, maxWidth: 320, width: "100%", border: "1px solid " + C.brd }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Se déconnecter ?</div>
-            <div style={{ fontSize: 13, color: C.tx3, marginBottom: 20 }}>Êtes-vous sûr de vouloir vous déconnecter ?</div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowLogoutConfirm(false)} style={{ flex: 1, padding: "12px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-              <button onClick={async () => { const { confirmLogout, logoutDevice } = await import("@/lib/offline/logoutDevice"); if (!confirmLogout()) return; await logoutDevice().catch(() => {}); window.location.href = "/login"; }} style={{ flex: 1, padding: "12px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Déconnecter</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Confirmation de déconnexion ── */}
+      <Dialog
+        open={showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+        title="Se déconnecter ?"
+        description="Êtes-vous sûr de vouloir vous déconnecter ?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowLogoutConfirm(false)}>Annuler</Button>
+            <Button
+              className="bg-agon-erreur-vif text-agon-ink"
+              onClick={async () => {
+                const { confirmLogout, logoutDevice } = await import("@/lib/offline/logoutDevice");
+                if (!confirmLogout()) return;
+                await logoutDevice().catch(() => {});
+                window.location.href = "/login";
+              }}
+            >
+              Déconnecter
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }
