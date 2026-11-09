@@ -167,3 +167,12 @@ ouverte ») après la première synchro.
   `synced_through` toujours vide. Le côté FIT n'a donc rien importé ni ne s'est
   clairement arrêté : le journal de `provider-coros-sync` (ligne « outils disponibles »
   et suites) ou le compte rendu affiché par le bouton est nécessaire pour trancher.
+
+### Lecture du résultat
+
+Le compte COROS de Titouan est neuf : aucune activité, jamais utilisé. Les 0 activité et
+0 donnée quotidienne sont donc attendus. Ce test valide l'autorisation, le stockage des
+jetons (avec `refresh_token`), l'ouverture de session MCP, `tools/list` et la résolution
+des outils. Il ne valide **pas** le listing des FIT, leur téléchargement ni leur décodage,
+faute de fichier. Pour les valider, il faut au moins une activité dans le compte COROS
+(séance réelle, ou saisie manuelle dans l'app COROS), puis une nouvelle synchro.
