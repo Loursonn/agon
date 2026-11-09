@@ -1745,7 +1745,7 @@ migration 20261109170000, relancer `supabase/tests/min_age_signup.sql`. Cette
 entrée sera complétée de la date d'application une fois fait. Pas de
 « Nouveautés » : aucun coach ne remarque le changement.
 
-## 2026-11-10 — Derniers écrivains santé par RPC (P6), migration non appliquée
+## 2026-11-10 — Derniers écrivains santé par RPC (P6)
 
 **Fait (code)** : la pesée de la fiche profil (`ProfilPage`) passe par `saveWeighIn`
 → file hors ligne → RPC `weight_set_day`, plus aucune réécriture de `asp:wlog`.
@@ -1762,6 +1762,6 @@ et SUPPRIME celles qui ne sont plus nulle part. Cas perdant trouvé : un bloc sa
 programme saisi mais avec du wellness n'était pas archivé, puis `asp:wh` était
 vidé. Corrigé : on archive aussi quand il reste du wellness.
 
-**Reste (accord de Titouan)** : test à blanc puis application de la migration en
+**Appliquée en prod le 2026-11-10 (accord de Titouan)** : test à blanc vert, migration, types régénérés, test relancé (0 KO). Initialement prévu : test à blanc puis application de la migration en
 prod, régénération des types, relance du test. Migration purement additive
 (le client de `main` ne l'appelle pas). Pas de « Nouveautés » : invisible pour un coach.

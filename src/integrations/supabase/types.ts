@@ -5706,6 +5706,10 @@ export type Database = {
         Args: { p_athlete: string; p_day: string; p_kg: number }
         Returns: Json
       }
+      weight_set_goal: {
+        Args: { p_athlete: string; p_target_kg: number }
+        Returns: Json
+      }
       wellness_delete_day: {
         Args: { p_athlete: string; p_day: string }
         Returns: boolean
