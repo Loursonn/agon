@@ -3068,6 +3068,8 @@ export type Database = {
           birth_date: string | null
           body_fat_pct: number | null
           booking_url: string | null
+          client_build: string | null
+          client_build_at: string | null
           coach_code: string | null
           coach_hidden: boolean
           coach_id: string | null
@@ -3095,6 +3097,8 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          client_build?: string | null
+          client_build_at?: string | null
           coach_code?: string | null
           coach_hidden?: boolean
           coach_id?: string | null
@@ -3122,6 +3126,8 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          client_build?: string | null
+          client_build_at?: string | null
           coach_code?: string | null
           coach_hidden?: boolean
           coach_id?: string | null
@@ -5429,6 +5435,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      report_client_build: { Args: { p_build: string }; Returns: undefined }
       review_performance_notification: {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined

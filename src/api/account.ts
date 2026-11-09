@@ -220,6 +220,16 @@ export async function setOwnCoach(userId: string, coachId: null | string, what =
   check(await db().rpc("set_own_coach", { p_coach: coachId as string }), what);
 }
 
+/**
+ * Enregistre la version de l'app (build) que l'utilisateur connecté fait tourner :
+ * sert à compter les clients encore sur une vieille version (docs/SANTE_TABLES.md).
+ * RPC `report_client_build` : n'écrit que sur le profil de l'appelant et
+ * seulement si la valeur change ou date de plus d'une heure.
+ */
+export async function reportClientBuild(build: string): Promise<void> {
+  check(await db().rpc("report_client_build", { p_build: build }), "Version non enregistrée");
+}
+
 /** Lien d'invitation (ancien parcours `/invite/:token`) créé par le coach connecté ; renvoie le jeton. */
 export async function createInvitation(coachId: string): Promise<string> {
   const row = unwrap(
