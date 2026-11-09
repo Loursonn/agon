@@ -94,7 +94,7 @@ describe("buildRunLedger — rattachement", () => {
     const l = buildRunLedger({ activities: [act({ id: "w1", distanceM: 10_200 })], planned: [planned({ id: "p1" })] });
     expect(l.matches).toHaveLength(1);
     expect(l.matches[0]).toMatchObject({ plannedId: "p1", activityId: "w1", watchKm: 10.2, countedKm: 10.2, countedSource: "watch" });
-    expect(l.entries).toEqual([{ date: "2026-11-03", km: 10.2, source: "watch" }]);
+    expect(l.entries).toEqual([{ date: "2026-11-03", km: 10.2, source: "watch", provider: "coros", device: null }]);
   });
 
   it("ne rattache pas un autre jour, ni un autre sport", () => {
@@ -104,7 +104,7 @@ describe("buildRunLedger — rattachement", () => {
     });
     expect(l.matches).toHaveLength(0);
     // La sortie du lendemain compte quand même ; le vélo, non.
-    expect(l.entries).toEqual([{ date: "2026-11-04", km: 10, source: "watch" }]);
+    expect(l.entries).toEqual([{ date: "2026-11-04", km: 10, source: "watch", provider: "coros", device: null }]);
   });
 
   it("deux sorties, deux séances le même jour : chacune à la plus proche, une seule fois", () => {
@@ -161,7 +161,7 @@ describe("buildRunLedger — dédoublonnage avec la saisie", () => {
       activities: [act({ id: "w1", distanceM: 10_240 })],
       planned: [planned({ id: "p1", status: "completed", activityType: "course", manualKm: 10 })],
     });
-    expect(l.entries).toEqual([{ date: "2026-11-03", km: 10.24, source: "watch" }]);
+    expect(l.entries).toEqual([{ date: "2026-11-03", km: 10.24, source: "watch", provider: "coros", device: null }]);
   });
 
   it("montre sans distance (tapis sans capteur) : la saisie compte", () => {
@@ -179,7 +179,7 @@ describe("buildRunLedger — dédoublonnage avec la saisie", () => {
       planned: [planned({ id: "p1", status: "completed", activityType: "velo", manualKm: 30 })],
     });
     expect(l.matches).toHaveLength(0);
-    expect(l.entries).toEqual([{ date: "2026-11-03", km: 10, source: "watch" }]);
+    expect(l.entries).toEqual([{ date: "2026-11-03", km: 10, source: "watch", provider: "coros", device: null }]);
   });
 
   it("saisie sans montre : inchangé", () => {
@@ -196,7 +196,7 @@ describe("buildRunLedger — dédoublonnage avec la saisie", () => {
       planned: [],
       free: [{ id: "f1", date: "2026-11-03", sport: "course", km: 6, durationMin: 35 }],
     });
-    expect(l.entries).toEqual([{ date: "2026-11-03", km: 6.3, source: "watch" }]);
+    expect(l.entries).toEqual([{ date: "2026-11-03", km: 6.3, source: "watch", provider: "coros", device: null }]);
   });
 
   it("la séance prévue passe avant l'activité libre", () => {
