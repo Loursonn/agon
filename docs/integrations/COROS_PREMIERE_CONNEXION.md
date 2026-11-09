@@ -152,3 +152,18 @@ ouverte ») après la première synchro.
   `provider_fit_quota` vide. Le cron de 3 h 40 UTC n'a pas encore tourné depuis la connexion.
 - Reste à faire : synchro (bouton ou cron), puis compteurs, volume de course, format
   des FIT, liste réelle des outils MCP.
+
+### 2026-11-09 15:49 UTC — première synchro manuelle
+
+- La synchro a tourné (`last_sync_at` 15:48:59) et la connexion reste `active`.
+- **Premier écart avec la doc** : l'outil de données quotidiennes s'appelle
+  `queryDailyHealthData` (pas `queryDailyActivity`) et son schéma publié n'a pas de
+  paramètres de début / fin : il prend `days`. `resolveDateArgs` refuse de deviner, d'où
+  `last_error` = « données quotidiennes non lues : queryDailyHealthData : paramètres de
+  début / fin de période introuvables dans le schéma publié (days) ». Correctif à écrire
+  en local avec un test : accepter un paramètre `days` (nombre de jours en arrière) pour
+  cet outil. Redéploiement de `provider-coros-sync` : accord requis.
+- Compteurs juste après : 0 activité, 0 donnée quotidienne, quota FIT à 0,
+  `synced_through` toujours vide. Le côté FIT n'a donc rien importé ni ne s'est
+  clairement arrêté : le journal de `provider-coros-sync` (ligne « outils disponibles »
+  et suites) ou le compte rendu affiché par le bouton est nécessaire pour trancher.
