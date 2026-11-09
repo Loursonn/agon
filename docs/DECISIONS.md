@@ -1733,3 +1733,14 @@ coach perdu (vérifié).
 `BEGIN; … ROLLBACK;` (corrigé pour `db_hygiene.sql`, déjà le cas des autres).
 Avant de lancer un test, vérifier `grep -n "^ROLLBACK;" <fichier>`.
 
+
+## 2026-11-09 — Âge minimum, phase 2 préparée (non appliquée)
+
+**Fait** : `main` envoie bien `birthDate` / `birth_date` (Login, InviteAccept,
+ClaimAthlete, StaffInviteAccept, useAuth, vérifié par `git show origin/main:…`).
+`BIRTH_DATE_REQUIRED = true` dans `claim-athlete` (code seulement, pas déployé).
+
+**Reste (accord d'Hugo requis)** : déployer `claim-athlete`, appliquer la
+migration 20261109170000, relancer `supabase/tests/min_age_signup.sql`. Cette
+entrée sera complétée de la date d'application une fois fait. Pas de
+« Nouveautés » : aucun coach ne remarque le changement.
