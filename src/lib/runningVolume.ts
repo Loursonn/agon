@@ -1,5 +1,6 @@
 /** Volume de course à pied : agrégation par semaine (pur, testable). */
 import { summarizeKm, type RunEntry } from "@/lib/watchRunMatching";
+import { watchOrigins } from "@/lib/watchRunLabel";
 
 /** Une sortie comptée dans le volume (déjà dédoublonnée : voir `buildRunLedger`) */
 export type { RunEntry } from "@/lib/watchRunMatching";
@@ -25,6 +26,8 @@ export interface RunningVolume {
   weeks: RunningWeek[];
   /** Km mesurés par la montre sur les RUNNING_WEEKS semaines (provenance affichée) */
   watchKm: number;
+  /** Provenances de ces km de montre (« Garmin Forerunner 265 »…), pour l'attribution */
+  watchOrigins: string[];
 }
 
 export function iso(d: Date): string {
@@ -62,5 +65,6 @@ export function computeRunningVolume(runs: RunEntry[], now = new Date()): Runnin
     lastWeekKm: weeks[RUNNING_WEEKS - 2]?.km ?? 0,
     weeks,
     watchKm:    summarizeKm(runs, weeks[0].monday, windowEnd).watchKm,
+    watchOrigins: watchOrigins(runs, weeks[0].monday, windowEnd),
   };
 }

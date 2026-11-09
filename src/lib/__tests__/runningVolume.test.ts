@@ -26,3 +26,21 @@ describe("computeRunningVolume", () => {
     expect(v.weeks[0].km).toBe(7);
   });
 });
+
+describe("attribution des km de montre", () => {
+  it("nomme « Garmin [modèle] » quand des km Garmin sont comptés", () => {
+    const v = computeRunningVolume([
+      { date: "2026-10-12", km: 8, source: "watch", provider: "garmin", device: "Forerunner 265" },
+      { date: "2026-10-13", km: 6, source: "watch", provider: "garmin", device: "Garmin Forerunner 265" },
+      { date: "2026-10-14", km: 5, source: "manual" },
+    ], NOW);
+    expect(v.watchOrigins).toEqual(["Garmin Forerunner 265"]);
+  });
+
+  it("n'invente pas d'appareil quand le modèle est inconnu", () => {
+    const v = computeRunningVolume([
+      { date: "2026-10-12", km: 8, source: "watch", provider: "garmin", device: null },
+    ], NOW);
+    expect(v.watchOrigins).toEqual(["Garmin"]);
+  });
+});

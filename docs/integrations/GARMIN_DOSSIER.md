@@ -440,3 +440,55 @@ Lu : Start Guide 2.0, OAuth2 PKCE 2.0, Health API 2.1, Activity API 2.1
 
 Reste à confirmer au premier essai : acceptation de `?token=` dans l'URL du
 portail.
+
+---
+
+## Checklist « jour J » — contrôles P8 (09/11/2026)
+
+Légende : `[x]` vérifié, `[ ]` reste à faire, `[!]` écart constaté. Aucune valeur de
+secret, aucune donnée d'athlète lue. Rien déployé, rien écrit en prod.
+
+- [x] **Secrets Garmin posés.** `supabase secrets list` (projet de prod, noms et dates
+  seulement) : `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_WEBHOOK_TOKEN` et
+  `APP_URL` sont présents, posés le 09/11/2026 vers 12 h 19 UTC (`APP_URL` le 07/11).
+  Valeurs non lues. Le sondage HTTP confirme le jeton webhook (401, pas 503).
+- [ ] **Webhook reçoit / stocke / traite** (compteurs). Code relu : jeton d'URL → écriture
+  brute idempotente dans `provider_webhook_inbox` → 200 → `drainInbox` via `waitUntil`,
+  reprise par le cron ; `deregistrations` et `userPermissionsChange` traités. Tests Vitest
+  verts (`garmin.test.ts`, 26). **Compteurs en base non lus** (pas d'accès prod ici) —
+  requête à lancer par Hugo, sans lecture de contenu :
+  `select type, count(*) total, count(processed_at) traites, count(error) en_erreur from provider_webhook_inbox where provider='garmin' group by 1;`
+  puis `select count(*) from provider_activities where source='garmin';` et idem `provider_dailies`.
+- [x] **Endpoints obligatoires de la Partner Verification, présents dans le code** (l'outil
+  lui-même se lance depuis le portail Garmin, par Hugo) :
+  | Exigence | Où |
+  |---|---|
+  | Autorisation OAuth2 PKCE, `connect.garmin.com/oauth2Confirm` | `provider-garmin-connect` |
+  | Jeton `diauth.garmin.com/di-oauth2-service/oauth/token` | `providers/garmin.ts`, `provider-garmin-callback` |
+  | `GET /partner-gateway/rest/user/id` et `/user/permissions` | `provider-garmin-callback` |
+  | `DELETE /partner-gateway/rest/user/registration` | `provider-disconnect` (et `delete-account`) |
+  | Webhook 200 rapide, doublons acceptés, GET/HEAD → 200 | `provider-garmin-webhook` |
+  | `deregistrations` → effacement des données | `garminIngest.ts` |
+  | `userPermissionsChange` → arrêt d'import et effacement du type retiré | `garminIngest.ts` |
+  | Renouvellement du refresh token avant 90 j | `provider-garmin-maintenance` |
+  Sondage des fonctions déployées : webhook, connect, maintenance, disconnect répondent
+  401 sans jeton/JWT (comportement voulu), callback 302 vers `?garmin=parametres_manquants`.
+- [x] **Attribution « Garmin [modèle] ».** Conforme : ligne d'activité et récapitulatif
+  « Sources » (`ProviderActivityList`), pastille « Réalisée — … » (`watchRunLabel`), export
+  RGPD (champ `attribution`, `dataExport`). **Écart corrigé dans ce lot** : les totaux de
+  km de course (carte « Volume de course » du profil athlète et de la fiche coach, KPI
+  « Course à pied » de la page Retours) disaient « montre » sans nom. Ils affichent
+  maintenant « Garmin [modèle] » (`watchOrigins`, testé). `provider_dailies` n'est affiché
+  nulle part dans l'UI aujourd'hui (seulement l'export, qui porte l'attribution) : à
+  rattacher à l'attribution le jour où une vue sommeil/FC repos Garmin sera ajoutée.
+  API coach (`coach-api`) : n'expose pas Garmin (voir ligne suivante).
+- [x] **Données Garmin exclues de tout traitement IA.** `ai-program` : aucune lecture
+  base, corps de requête seul, et aucun appel côté front. `athlete-insights` : n'accepte
+  que des agrégats numériques filtrés par `sanitizeTrendStats`, calculés côté client à
+  partir du bien-être, du poids, des records et des séances saisis — jamais de
+  `provider_*`. `coach-api` (agents IA externes) : lit uniquement `ai_provider_activities` /
+  `ai_provider_dailies`, vues qui excluent `ai_allowed = false` (Garmin) ; trigger
+  `data_source_policies` en base (migrations `20261028090000`, `20261029100000`).
+  Non vérifié ici : l'état réel des vues en prod (lecture SQL à faire par Hugo si besoin).
+- [ ] **Partner Verification demandée dans le portail** — Hugo.
+- [ ] **`VITE_GARMIN_ENABLED=true`** sur Vercel (Preview puis Production) — Hugo uniquement.
