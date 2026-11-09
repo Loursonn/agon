@@ -8,7 +8,7 @@ import { STATION_KEYS, STATION_META, DIVISION_LOADS, REFERENCE_DIVISION, SEGMENT
 import { formatMmSs, formatDelta } from "@/lib/time";
 
 function getStation(r: HyroxResult, k: StationKey): number | null {
-  return (r as Record<string, unknown>)[k + "_s"] as number | null;
+  return (r as unknown as Record<string, unknown>)[k + "_s"] as number | null;
 }
 
 export default function StationsView() {

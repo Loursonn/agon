@@ -46,7 +46,7 @@ export default function HyroxRadarView() {
   const pctRun = runRef && rt != null ? percentile(rt, runRef) : null;
 
   const stationPcts = STATION_KEYS.map(k => {
-    const v = (race as Record<string, unknown>)[k + "_s"] as number | null;
+    const v = (race as unknown as Record<string, unknown>)[k + "_s"] as number | null;
     const ref = refLookup(refDiv, k, bracket);
     return v != null && ref ? percentile(v, ref) : null;
   }).filter(v => v != null) as number[];
@@ -163,7 +163,7 @@ function RankingTable({ race, refLookup }: { race: HyroxResult; refLookup: RefLo
 
   // 8 stations
   for (const k of STATION_KEYS) {
-    const v = (race as Record<string, unknown>)[k + "_s"] as number | null;
+    const v = (race as unknown as Record<string, unknown>)[k + "_s"] as number | null;
     rows.push(makeRow(STATION_META[k].label, v, refLookup(refDiv, k, bracket)));
   }
 

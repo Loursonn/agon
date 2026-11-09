@@ -183,12 +183,12 @@ export function AthleteProvider({ athleteId, viewOnly = false, readOnly = false,
   };
 
   // timerLeft intentionnellement exclu — on veut démarrer l'intervalle uniquement quand timerActive change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!timerActive || timerLeft <= 0) return;
     const tid = setInterval(() => setTimerLeft(l => l - 1), 1000);
     timerRef.current = tid;
     return () => clearInterval(tid);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerActive]);
 
   useEffect(() => {

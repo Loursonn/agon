@@ -50,7 +50,7 @@ export default function BlockHistoryViewer({ blockHistory, onClose, onDelete }: 
               {big3.length > 0 && (
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                   {big3.map(({ name, label, c }: { name: string; label: string; c: string }) => {
-                    const pr = (prs as Record<string, { est?: string }>)[name];
+                    const pr = (prs as unknown as Record<string, { est?: string }>)[name];
                     return (
                       <div key={label} style={{ flex: 1, background: C.s2, borderRadius: 4, padding: "10px 8px", textAlign: "center", border: "1px solid " + c + "20" }}>
                         <div style={{ fontSize: 9, color: C.tx3, marginBottom: 2 }}>{label}</div>
