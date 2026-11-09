@@ -4,7 +4,7 @@
 -- Après application de la migration :
 --   supabase db query --linked -f supabase/tests/weight_set_goal.sql
 -- Avant application (migration jouée dans la même transaction, puis annulée) :
---   (echo 'BEGIN;'; cat supabase/migrations/20261110110000_weight_set_goal.sql; \
+--   (echo 'BEGIN;'; cat supabase/migrations/20261110110100_weight_set_goal.sql; \
 --    sed '/^BEGIN;$/d' supabase/tests/weight_set_goal.sql) > "$TMPDIR/g.sql"
 --   supabase db query --linked -f "$TMPDIR/g.sql"
 -- Chaque ligne k → v : la valeur attendue est dans le libellé. Seules des valeurs

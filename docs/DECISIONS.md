@@ -1750,7 +1750,7 @@ remarque le changement.
 **Fait (code)** : la pesée de la fiche profil (`ProfilPage`) passe par `saveWeighIn`
 → file hors ligne → RPC `weight_set_day`, plus aucune réécriture de `asp:wlog`.
 L'objectif de poids a sa RPC `weight_set_goal(p_athlete, p_target_kg)`
-(`20261110110000_weight_set_goal.sql`, test `supabase/tests/weight_set_goal.sql`),
+(`20261110110100_weight_set_goal.sql`, test `supabase/tests/weight_set_goal.sql`),
 exposée par `saveWeightGoal` (`src/api/profile.ts`) ; les setters blob
 `setWeightLog` / `setBodyWeight` (sans autre appelant) sont supprimés.
 `seed-demo.mjs` écrit wellness, pesées, palier et objectif par les RPC avec la
