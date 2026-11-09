@@ -1,28 +1,29 @@
 /**
  * ProgSessionWeekDrawer
  * Bottom-sheet : navigation par occurrence (1re, 2e… fois que la séance est
- * planifiée) + 3 colonnes
- *   Prévu    — paramètres planifiés de l'occurrence (lecture seule)
- *   Réalisé  — séries athlète depuis workout_logs.athlete_modifications
- *   Séance +1 — éditeur SessionBlocEditor sur l'occurrence suivante ; la modif
- *               vaut pour toutes les occurrences suivantes jusqu'à la prochaine
- *               occurrence qui a ses propres valeurs
+ * planifiée) + 2 colonnes
+ *   Séance N   — prévu et réalisé (workout_logs.athlete_modifications) côte à côte,
+ *                par exercice, en lecture seule
+ *   Séance N+1 — lignes compactes séries / reps / charge / RIR ; la modif vaut
+ *                pour toutes les occurrences suivantes jusqu'à la prochaine
+ *                occurrence qui a ses propres valeurs. « Édition avancée »
+ *                ouvre l'éditeur complet (SessionBlocEditor).
  */
-import { useState, useRef, useEffect, useCallback, useMemo } from "react"
-import { X, Copy, AlertTriangle, Video, Link2, Link2Off } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { toast } from "sonner"
+import { X, Copy, AlertTriangle, Video } from "lucide-react"
 import { C } from "@/lib/theme"
-import type { ProgSession, Exercice, ExerciceParams, Bloc } from "./types"
+import type { ProgSession, Exercice, ExerciceParams, Bloc, ParamValue } from "./types"
 import { SessionBlocEditor } from "./SessionBlocEditor"
 import { useSessionWeekLogs } from "./hooks/useSessionWeekLogs"
 import type { SessionSetLog } from "@/features/shared/types/athlete"
 import { exerciseHasEntries } from "@shared/domain/athleteMods"
 import { maxDefinedWeek, resolveExerciceParams, resolveVideoRequest, toMultiWeekSession } from "@/lib/sessionOccurrence"
-import { formatReps, formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps"
+import { formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps"
 import { IsoBadge } from "@/features/shared/components/IsoBadge"
 import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride"
 
 const VIOLET  = "#FFC933"
-const VIOLET_S = "rgba(123,111,255,0.12)"
 const GREEN   = "#22c55e"
 const GREEN_S = "rgba(34,197,94,0.10)"
 const RED     = "#ef4444"
@@ -34,13 +35,6 @@ const BLOC_PALETTE = [
   "#FFC933", "#F97316", "#22C55E", "#EF4444",
   "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
 ]
-
-function hexToRgba(hex: string, alpha: number) {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r},${g},${b},${alpha})`
-}
 
 interface Props {
   session:    ProgSession
@@ -74,30 +68,33 @@ function fmtRIR(p: ExerciceParams): string {
   return p.rir.value === null ? "Libre" : `RIR ${p.rir.value}`
 }
 
-// ─── Chip ─────────────────────────────────────────────────────────────────────
-
-function Chip({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{
-      display: "flex", flexDirection: "column", gap: 2,
-      padding: "5px 9px", borderRadius: 7,
-      background: C.s1, border: "1px solid " + C.brdL,
-    }}>
-      <span style={{ fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
-        {label}
-      </span>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.tx }}>{value}</span>
-    </div>
-  )
+function pvAt<T>(pv: ParamValue<T> | undefined, i: number): T | null {
+  if (!pv) return null
+  return pv.mode === "global" ? pv.value : (pv.values?.[i] ?? null)
 }
 
-// ─── ExercicePreview (Prévu tab) ───────────────────────────────────────────────
+/** Passe en « par série » (n valeurs) puis écrit la série i. */
+function pvSetAt<T>(pv: ParamValue<T>, i: number, v: T, n: number): ParamValue<T> {
+  const fallback = pv.mode === "global" ? pv.value : (pv.values?.[pv.values.length - 1] as T)
+  const values = Array.from({ length: n }, (_, k) => (pv.mode === "global" ? pv.value : (pv.values?.[k] ?? fallback)) as T)
+  values[i] = v
+  return { mode: "par_serie", values }
+}
+
+/** Ajuste le nombre de séries (valeurs par série tronquées / complétées avec la dernière). */
+function pvResize<T>(pv: ParamValue<T>, n: number): ParamValue<T> {
+  if (pv.mode === "global") return pv
+  const last = pv.values[pv.values.length - 1]
+  return { mode: "par_serie", values: Array.from({ length: n }, (_, k) => (pv.values[k] ?? last) as T) }
+}
+
+// ─── Petits composants ────────────────────────────────────────────────────────
 
 function VideoBadge({ note, sent }: { note?: string; sent?: boolean }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 5, marginTop: 6,
-      padding: "4px 8px", borderRadius: 4,
+      padding: "3px 8px", borderRadius: 4,
       background: sent === true ? GREEN_S : AMBER_S,
       border: "1px solid " + (sent === true ? GREEN : AMBER) + "40",
       fontSize: 10, fontWeight: 700, color: sent === true ? GREEN : AMBER,
@@ -109,213 +106,28 @@ function VideoBadge({ note, sent }: { note?: string; sent?: boolean }) {
   )
 }
 
-function ExercicePreview({ exercice, params, week }: { exercice: Exercice; params: ExerciceParams; week: number }) {
-  const video = resolveVideoRequest(exercice, week)
-  return (
-    <div style={{
-      padding: "10px 12px", borderRadius: 4,
-      border: "1px solid " + C.brdL, background: C.s2, marginBottom: 6,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>
-          {exercice.exercise_name || "—"}
-        </span>
-        {exercice.mode === "methode" && (
-          <span style={{ fontSize: 9, fontWeight: 700, color: VIOLET, background: VIOLET_S, padding: "2px 6px", borderRadius: 4 }}>
-            MÉTHODE
-          </span>
-        )}
-        {hasIso(params) && <IsoBadge size={9} />}
-      </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-        <Chip label="Séries"  value={String(params.nb_series)} />
-        <Chip label={hasIso(params) ? "Durée" : "Reps"} value={formatReps(params)} />
-        <Chip label="Charge"  value={fmtCharge(params)} />
-        <Chip label="RIR"     value={fmtRIR(params)} />
-        {params.tempo?.mode === "global" && params.tempo.value && (
-          <Chip label="Tempo" value={params.tempo.value} />
-        )}
-      </div>
-      {video && <VideoBadge note={video.note} />}
-    </div>
-  )
-}
-
-// ─── SetRow (Réalisé tab) ─────────────────────────────────────────────────────
-
-function SetRow({
-  index, set, plannedReps, iso = false,
-}: {
-  index: number
-  set: SessionSetLog
-  plannedReps?: number
-  /** Série en isométrie : reps = secondes */
-  iso?: boolean
-}) {
-  const ok = set.done && (plannedReps === undefined || (set.reps !== undefined && set.reps >= plannedReps))
-  const color = !set.done ? RED : ok ? GREEN : AMBER
-
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 8,
-      padding: "5px 8px", borderRadius: 7, marginBottom: 3,
-      background: !set.done ? RED_S : ok ? GREEN_S : AMBER_S,
-      border: "1px solid " + color + "40",
-    }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.tx3, minWidth: 22 }}>S{index + 1}</span>
-      {set.done ? (
-        <>
-          {set.kg !== undefined && set.kg !== null && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{set.kg} kg</span>
-          )}
-          {set.reps !== undefined && (
-            <span style={{ fontSize: 12, color: C.tx }}>× {set.reps}{iso ? " s" : ""}</span>
-          )}
-          {set.rir !== null && set.rir !== undefined && (
-            <span style={{ fontSize: 11, color: C.tx3 }}>RIR {set.rir}</span>
-          )}
-          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color }}>
-            {ok ? "✓" : "~"}
-          </span>
-        </>
-      ) : (
-        <span style={{ fontSize: 11, color: RED }}>Non réalisé</span>
-      )}
-    </div>
-  )
-}
-
-// ─── ExerciceRealise ───────────────────────────────────────────────────────────
-
-function ExerciceRealise({
-  exercice, sets, params, athleteComment, week, videoSent,
-}: {
-  exercice: Exercice
-  sets: SessionSetLog[]
-  params: ExerciceParams | null
-  athleteComment?: string
-  week: number
-  videoSent: boolean
-}) {
-  const video = resolveVideoRequest(exercice, week)
-  const plannedReps: (number | undefined)[] = params
-    ? (params.reps.mode === "par_serie"
-        ? params.reps.values
-        : Array(params.nb_series).fill(params.reps.value))
-    : []
-
-  return (
-    <div style={{
-      padding: "10px 12px", borderRadius: 4,
-      border: "1px solid " + C.brdL, background: C.s2, marginBottom: 6,
-    }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 8 }}>
-        {exercice.exercise_name || "—"}
-      </div>
-
-      {sets.length === 0 ? (
-        <div>
-          <div style={{
-            padding: "7px 10px", borderRadius: 7,
-            background: RED_S, border: "1px solid " + RED + "40",
-            fontSize: 11, color: RED, fontWeight: 600,
-          }}>
-            Aucune série enregistrée
-          </div>
-          {params && (
-            <div style={{
-              padding: "6px 10px", borderRadius: 7, marginTop: 4,
-              background: C.s1, border: "1px dashed " + C.brdL,
-              fontSize: 10, color: C.tx3,
-            }}>
-              Prévu : {formatSetsReps(params)} · {fmtCharge(params)} · {fmtRIR(params)}
-            </div>
-          )}
-        </div>
-      ) : (
-        sets.map((set, i) => (
-          <SetRow key={i} index={i} set={set} plannedReps={plannedReps[i]} iso={isIsoAt(params, i)} />
-        ))
-      )}
-
-      {athleteComment && (
-        <div style={{
-          padding: "5px 8px", borderRadius: 6, marginTop: 4,
-          background: AMBER_S, border: "1px solid " + AMBER + "30",
-          fontSize: 10, color: C.tx2, fontStyle: "italic",
-        }}>
-          {athleteComment}
-        </div>
-      )}
-      {video && <VideoBadge note={video.note} sent={videoSent} />}
-    </div>
-  )
-}
-
-// ─── BlocSection ──────────────────────────────────────────────────────────────
-
-function BlocSection({ bloc, index, children }: { bloc: Bloc; index: number; children: React.ReactNode }) {
+function BlocLabel({ bloc, index }: { bloc: Bloc; index: number }) {
   const color = bloc.color ?? BLOC_PALETTE[index % BLOC_PALETTE.length]
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6,
-        marginBottom: 6,
-        padding: "4px 8px 4px 10px",
-        borderRadius: 6,
-        background: hexToRgba(color, 0.08),
-        borderLeft: `3px solid ${color}`,
-      }}>
-        <span style={{
-          fontSize: 10, fontWeight: 800, color,
-          textTransform: "uppercase" as const, letterSpacing: "0.5px",
-        }}>
-          {bloc.name || `Bloc ${index + 1}`}
-        </span>
-      </div>
-      {children}
+    <div style={{
+      fontSize: 10, fontWeight: 800, color, textTransform: "uppercase" as const, letterSpacing: "0.5px",
+      margin: "12px 0 5px", paddingLeft: 8, borderLeft: `3px solid ${color}`,
+    }}>
+      {bloc.name || `Bloc ${index + 1}`}
     </div>
   )
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
-
-function ColHeader({ label, right, color = VIOLET, linked, onToggleLink }: {
-  label: string; right?: React.ReactNode; color?: string
-  /** Défilement lié aux autres colonnes */
-  linked?: boolean
-  onToggleLink?: () => void
-}) {
+function ColHeader({ label, color, right }: { label: string; color: string; right?: React.ReactNode }) {
   return (
     <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "8px 10px",
-      borderBottom: "2px solid " + color,
-      background: color + "0A",
-      flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+      padding: "8px 12px", borderBottom: "2px solid " + color, background: color + "0A", flexShrink: 0,
     }}>
-      <span style={{ fontSize: 10, fontWeight: 800, color, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>
+      <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>
         {label}
       </span>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        {right}
-        {onToggleLink && (
-          <button
-            onClick={onToggleLink}
-            title={linked ? "Défilement lié aux autres colonnes — cliquer pour défiler seule" : "Défile seule — cliquer pour relier aux autres colonnes"}
-            style={{
-              width: 22, height: 22, borderRadius: 4, flexShrink: 0,
-              border: "1px solid " + (linked ? color + "60" : C.brdL),
-              background: linked ? color + "18" : "transparent",
-              color: linked ? color : C.tx3,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", padding: 0,
-            }}
-          >
-            {linked ? <Link2 size={12} /> : <Link2Off size={12} />}
-          </button>
-        )}
-      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{right}</div>
     </div>
   )
 }
@@ -329,63 +141,214 @@ function EmptyCol({ msg, sub }: { msg: string; sub?: string }) {
   )
 }
 
+function ActionBtn({ onClick, title, children, primary = false }: {
+  onClick: () => void; title: string; children: React.ReactNode; primary?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        display: "flex", alignItems: "center", gap: 4,
+        padding: "4px 9px", borderRadius: 5,
+        border: "1px solid " + AMBER + (primary ? "" : "60"),
+        background: primary ? AMBER : AMBER_S,
+        color: primary ? "#0E0C0A" : AMBER, fontSize: 10, fontWeight: 700,
+        cursor: "pointer", fontFamily: "inherit",
+      }}
+    >{children}</button>
+  )
+}
+
+// ─── Colonne 1 : une carte par exercice (prévu + réalisé) ─────────────────────
+
+function SetChip({ set, plannedReps, iso }: { set: SessionSetLog; plannedReps?: number; iso: boolean }) {
+  const ok = set.done && (plannedReps === undefined || (set.reps !== undefined && set.reps >= plannedReps))
+  const color = !set.done ? RED : ok ? GREEN : AMBER
+  const text = !set.done
+    ? "—"
+    : [
+        set.kg != null ? `${set.kg} kg` : null,
+        set.reps !== undefined ? `× ${set.reps}${iso ? " s" : ""}` : null,
+        set.rir != null ? `RIR ${set.rir}` : null,
+      ].filter(Boolean).join(" ")
+  return (
+    <span style={{
+      padding: "3px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, color: C.tx,
+      background: !set.done ? RED_S : ok ? GREEN_S : AMBER_S, border: "1px solid " + color + "40",
+    }}>{text}</span>
+  )
+}
+
+function ExerciceCard({ exercice, params, sets, comment, week, videoSent, showRealise }: {
+  exercice: Exercice
+  params: ExerciceParams | null
+  sets: SessionSetLog[]
+  comment?: string
+  week: number
+  videoSent: boolean
+  /** Une séance a été planifiée pour cette occurrence : « Non réalisé » a un sens */
+  showRealise: boolean
+}) {
+  const video = resolveVideoRequest(exercice, week)
+  const plannedReps: (number | undefined)[] = params
+    ? (params.reps.mode === "par_serie"
+        ? params.reps.values
+        : Array(params.nb_series).fill(params.reps.value))
+    : []
+  return (
+    <div style={{ padding: "9px 11px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, marginBottom: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{exercice.exercise_name || "—"}</span>
+        {params && hasIso(params) && <IsoBadge size={9} />}
+      </div>
+      <div style={{ fontSize: 11, color: C.tx3, marginTop: 3 }}>
+        {params
+          ? <>Prévu · <span style={{ color: C.tx2, fontWeight: 600 }}>{formatSetsReps(params)} · {fmtCharge(params)} · {fmtRIR(params)}</span></>
+          : exercice.libre_text || "Pas de paramètres"}
+      </div>
+      {sets.length > 0 ? (
+        <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 4, marginTop: 6 }}>
+          {sets.map((set, i) => <SetChip key={i} set={set} plannedReps={plannedReps[i]} iso={isIsoAt(params, i)} />)}
+        </div>
+      ) : showRealise && params ? (
+        <div style={{ fontSize: 11, color: RED, fontWeight: 600, marginTop: 5 }}>Non réalisé</div>
+      ) : null}
+      {comment && (
+        <div style={{ padding: "4px 8px", borderRadius: 6, marginTop: 6, background: AMBER_S, fontSize: 10, color: C.tx2, fontStyle: "italic" }}>
+          {comment}
+        </div>
+      )}
+      {video && <VideoBadge note={video.note} sent={sets.length > 0 || showRealise ? videoSent : undefined} />}
+    </div>
+  )
+}
+
+// ─── Colonne 2 : ligne compacte à programmer ──────────────────────────────────
+
+function CellInput({ value, onChange, step = 1, width = 56, placeholder }: {
+  value: number | null; onChange: (v: number | null) => void; step?: number; width?: number; placeholder?: string
+}) {
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      step={step}
+      min={0}
+      placeholder={placeholder}
+      value={value ?? ""}
+      onChange={e => onChange(e.target.value === "" ? null : Number(e.target.value))}
+      style={{
+        width, padding: "4px 6px", borderRadius: 5, fontSize: 12, fontWeight: 700,
+        border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontFamily: "inherit",
+      }}
+    />
+  )
+}
+
+const TH: React.CSSProperties = {
+  fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", textAlign: "left", padding: "0 4px 3px",
+}
+
+function NextRow({ exercice, params, onPatch }: {
+  exercice: Exercice
+  params: ExerciceParams | null
+  onPatch: (mutate: (p: ExerciceParams) => ExerciceParams) => void
+}) {
+  const n = params?.nb_series ?? 0
+  const iso = hasIso(params)
+  const showCharge = params?.charge_unit !== "PDC"
+  return (
+    <div style={{ padding: "9px 11px", borderRadius: 4, border: "1px solid " + AMBER + "30", background: C.s2, marginBottom: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: C.tx }}>{exercice.exercise_name || "—"}</span>
+        {params && !params.cluster && (
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              onClick={() => onPatch(p => {
+                const k = Math.max(1, p.nb_series - 1)
+                return { ...p, nb_series: k, reps: pvResize(p.reps, k), reps_max: p.reps_max && pvResize(p.reps_max, k), reps_mode: pvResize(p.reps_mode, k), charge: pvResize(p.charge, k), rir: pvResize(p.rir, k) }
+              })}
+              title="Retirer une série"
+              style={stepBtn}
+            >−</button>
+            <button
+              onClick={() => onPatch(p => {
+                const k = p.nb_series + 1
+                return { ...p, nb_series: k, reps: pvResize(p.reps, k), reps_max: p.reps_max && pvResize(p.reps_max, k), reps_mode: pvResize(p.reps_mode, k), charge: pvResize(p.charge, k), rir: pvResize(p.rir, k) }
+              })}
+              title="Ajouter une série"
+              style={stepBtn}
+            >+</button>
+          </div>
+        )}
+      </div>
+      {!params ? (
+        <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>{exercice.libre_text || "Pas de paramètres"}</div>
+      ) : params.cluster ? (
+        <div style={{ fontSize: 11, color: C.tx2, marginTop: 4 }}>
+          {formatSetsReps(params)} · {fmtCharge(params)} · {fmtRIR(params)}
+          <span style={{ color: C.tx3 }}> — cluster : voir « Édition avancée »</span>
+        </div>
+      ) : (
+        <table style={{ borderCollapse: "collapse", marginTop: 6 }}>
+          <thead>
+            <tr>
+              <th style={TH}>Série</th>
+              <th style={TH}>{iso ? "Durée min" : "Reps min"}</th>
+              <th style={TH}>{iso ? "Durée max" : "Reps max"}</th>
+              {showCharge && <th style={TH}>{params.charge_unit === "%RM" ? "Charge %" : "Charge kg"}</th>}
+              <th style={TH}>RIR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: n }, (_, i) => (
+              <tr key={i}>
+                <td style={{ fontSize: 11, fontWeight: 700, color: C.tx3, padding: "2px 6px 2px 4px" }}>S{i + 1}</td>
+                <td style={{ padding: "2px 4px" }}>
+                  <CellInput width={54} value={pvAt(params.reps, i)}
+                    onChange={v => onPatch(p => ({ ...p, reps: pvSetAt(p.reps, i, v ?? 0, p.nb_series) }))} />
+                </td>
+                <td style={{ padding: "2px 4px" }}>
+                  <CellInput width={54} placeholder="—" value={pvAt(params.reps_max, i)}
+                    onChange={v => onPatch(p => ({
+                      ...p,
+                      reps_max: pvSetAt<number | null>(p.reps_max ?? { mode: "global", value: null }, i, v, p.nb_series),
+                    }))} />
+                </td>
+                {showCharge && (
+                  <td style={{ padding: "2px 4px" }}>
+                    <CellInput width={66} step={0.5} value={pvAt(params.charge, i)}
+                      onChange={v => onPatch(p => ({ ...p, charge: pvSetAt(p.charge, i, v, p.nb_series) }))} />
+                  </td>
+                )}
+                <td style={{ padding: "2px 4px" }}>
+                  <CellInput width={46} value={pvAt(params.rir, i)}
+                    onChange={v => onPatch(p => ({ ...p, rir: pvSetAt(p.rir, i, v, p.nb_series) }))} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+const stepBtn: React.CSSProperties = {
+  width: 24, height: 24, borderRadius: 5, border: "1px solid " + C.brdL, background: "transparent",
+  color: C.tx2, fontSize: 14, fontWeight: 700, lineHeight: 1, cursor: "pointer", fontFamily: "inherit", padding: 0,
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, onClose, initialWeek = 1 }: Props) {
   const [activeWeek, setActiveWeek] = useState(initialWeek)
   useEffect(() => { setActiveWeek(initialWeek) }, [initialWeek])
+  const [advanced, setAdvanced] = useState(false)
   const { mutate: saveOverride, isPending: clearingOverride } = useCoachSessionOverride()
   // Bandeau « modif ponctuelle » masqué pour ces logs (choix « Garder »)
   const [keptOverrides, setKeptOverrides] = useState<Set<string>>(new Set())
-
-  // Défilement synchronisé des colonnes liées (🔗) ; une colonne déliée défile seule
-  const col1Ref = useRef<HTMLDivElement>(null)
-  const col2Ref = useRef<HTMLDivElement>(null)
-  const col3Ref = useRef<HTMLDivElement>(null)
-  const [linked, setLinked] = useState<[boolean, boolean, boolean]>([true, true, true])
-  const linkedRef = useRef(linked)
-  linkedRef.current = linked
-  // Colonnes déplacées par la synchro : leur prochain évènement scroll est ignoré
-  const programmatic = useRef(new Set<HTMLDivElement>())
-
-  const syncScroll = useCallback((source: HTMLDivElement) => {
-    if (programmatic.current.delete(source)) return
-    const refs = [col1Ref, col2Ref, col3Ref]
-    const srcIdx = refs.findIndex(r => r.current === source)
-    if (srcIdx === -1 || !linkedRef.current[srcIdx]) return
-    const top = source.scrollTop
-    refs.forEach((ref, i) => {
-      const col = ref.current
-      if (!col || col === source || !linkedRef.current[i]) return
-      if (Math.abs(col.scrollTop - top) < 1) return
-      const before = col.scrollTop
-      programmatic.current.add(col)
-      col.scrollTop = top
-      // Colonne déjà en butée (plus courte) : pas d'évènement scroll à ignorer
-      if (col.scrollTop === before) programmatic.current.delete(col)
-    })
-  }, [])
-
-  function toggleLink(i: 0 | 1 | 2) {
-    setLinked(prev => {
-      const next = [...prev] as [boolean, boolean, boolean]
-      next[i] = !next[i]
-      return next
-    })
-  }
-
-  useEffect(() => {
-    const cols = [col1Ref.current, col2Ref.current, col3Ref.current]
-    const handlers = cols.map(col => {
-      if (!col) return null
-      const handler = () => syncScroll(col)
-      col.addEventListener("scroll", handler, { passive: true })
-      return { col, handler }
-    })
-    return () => {
-      handlers.forEach(h => h?.col.removeEventListener("scroll", h.handler))
-    }
-  }, [syncScroll])
 
   const { logs, getLogForWeek, getStatusForWeek, isLoading: loadingLogs } = useSessionWeekLogs(athleteId, session.id)
 
@@ -407,17 +370,57 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
   // occurrence (sans changer son contenu) pour ne pas réécrire le passé.
   const editableSession = useMemo(() => toMultiWeekSession(session), [session])
 
-  function duplicateWeekToNext() {
-    const updatedBlocs = editableSession.blocs.map(bloc => ({
+  /** Applique `mutate` aux params de l'occurrence suivante d'un exercice. */
+  function patchNext(exId: string, mutate: (p: ExerciceParams) => ExerciceParams) {
+    onChange({
+      ...editableSession,
+      blocs: editableSession.blocs.map(bloc => ({
+        ...bloc,
+        exercices: bloc.exercices.map(ex => {
+          if (ex.id !== exId) return ex
+          const base = resolveParams(ex, nextWeek)
+          if (!base) return ex
+          const rec = ex.params as Record<string, ExerciceParams>
+          return { ...ex, params: { ...rec, [String(nextWeek)]: mutate(structuredClone(base)) } }
+        }),
+      })),
+    })
+  }
+
+  /** Copie sur la séance N+1 : le prévu de N (`prevu`) ou le prévu de N avec les charges réalisées (`realise`). */
+  function copyToNext(source: "prevu" | "realise") {
+    let touched = 0
+    // Source = ce que l'athlète a eu (override coach éventuel), sinon le modèle
+    const sourceByExo = new Map<string, Exercice>()
+    for (const b of prevuBlocs) for (const ex of b.exercices) sourceByExo.set(ex.id, ex)
+
+    const blocs = editableSession.blocs.map(bloc => ({
       ...bloc,
       exercices: bloc.exercices.map(ex => {
-        const rec = ex.params as Record<string, ExerciceParams>
-        const thisWeek = resolveParams(ex, activeWeek)
+        const src = sourceByExo.get(ex.id) ?? ex
+        const thisWeek = resolveParams(src, activeWeek) ?? resolveParams(ex, activeWeek)
         if (!thisWeek) return ex
-        return { ...ex, params: { ...rec, [String(nextWeek)]: structuredClone(thisWeek) } }
+        const next = structuredClone(thisWeek)
+        if (source === "realise") {
+          const sets = (atMods?.sessionSets?.[ex.id] ?? []) as SessionSetLog[]
+          const kgs = sets.filter(s => s.done && s.kg != null).map(s => s.kg as number)
+          if (kgs.length) {
+            next.charge_unit = "kg"
+            next.charge = { mode: "global", value: Math.max(...kgs) }
+          }
+        }
+        touched++
+        const rec = ex.params as Record<string, ExerciceParams>
+        return { ...ex, params: { ...rec, [String(nextWeek)]: next } }
       }),
     }))
-    onChange({ ...editableSession, blocs: updatedBlocs })
+    if (!touched) { toast.error(`Rien à copier depuis la séance ${activeWeek}`); return }
+    onChange({ ...editableSession, blocs })
+    toast.success(
+      source === "realise"
+        ? `Séance ${nextWeek} : prévu de la séance ${activeWeek} + charges réalisées`
+        : `Séance ${nextWeek} : reprise du prévu de la séance ${activeWeek}`,
+    )
   }
 
   function clearNextOverride() {
@@ -427,10 +430,9 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
   }
 
   const totalExos = session.blocs.reduce((s, b) => s + b.exercices.length, 0)
-  // « Rien réalisé » = aucune série saisie (charge ou reps), règle unique du cron.
-  const noRealise = prevuBlocs.every(b =>
-    b.exercices.every(ex => !exerciseHasEntries(atMods, ex.id)),
-  )
+  const hasAnySets = prevuBlocs.some(b => b.exercices.some(ex => exerciseHasEntries(atMods, ex.id)))
+  const dateLabel = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+    new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", opts)
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "flex-end" }}>
@@ -442,37 +444,23 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
         display: "flex", flexDirection: "column", overflow: "hidden",
       }}>
 
-        {/* ── Header ── */}
+        {/* ── Header + navigation par séance ── */}
         <div style={{
-          padding: "14px 16px 10px",
-          borderBottom: "1px solid " + C.brd,
-          display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
+          padding: "12px 16px", borderBottom: "1px solid " + C.brd,
+          display: "flex", alignItems: "center", gap: 12, flexShrink: 0, flexWrap: "wrap" as const,
         }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: "1 1 160px", minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>{session.name}</div>
             <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
-              {session.blocs.length} bloc{session.blocs.length !== 1 ? "s" : ""} · {totalExos} exercice{totalExos !== 1 ? "s" : ""}
+              {totalExos} exercice{totalExos !== 1 ? "s" : ""}
               {logs.length > 0 ? ` · planifiée ${logs.length} fois` : ""}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 32, height: 32, borderRadius: 4,
-              border: "1px solid " + C.brdL, background: "transparent",
-              color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}
-          ><X size={14} /></button>
-        </div>
-
-        {/* ── Week nav ── */}
-        {weekCount > 1 && (
-          <div style={{ padding: "8px 16px 8px", borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 5 }}>
-              Séance n°
-            </div>
-            <div style={{ display: "flex", gap: 5, overflowX: "auto" as const }}>
+          {weekCount > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, overflowX: "auto" as const, maxWidth: "100%" }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginRight: 2 }}>
+                Séance n°
+              </span>
               {Array.from({ length: weekCount }, (_, i) => i + 1).map(week => {
                 const status = getStatusForWeek(week)
                 const active = activeWeek === week
@@ -481,12 +469,12 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                   <button
                     key={week}
                     onClick={() => setActiveWeek(week)}
-                    title={log ? new Date(log.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "Pas encore planifiée"}
+                    title={log ? dateLabel(log.scheduledDate, { weekday: "short", day: "numeric", month: "short" }) : "Pas encore planifiée"}
                     style={{
                       position: "relative" as const,
-                      padding: "5px 12px", borderRadius: 7, flexShrink: 0,
+                      padding: "5px 11px", borderRadius: 7, flexShrink: 0,
                       border: "1px solid " + (active ? VIOLET : C.brdL),
-                      background: active ? VIOLET_S : "transparent",
+                      background: active ? "rgba(255,201,51,0.12)" : "transparent",
                       color: active ? VIOLET : C.tx3,
                       fontSize: 11, fontWeight: active ? 700 : 500,
                       cursor: "pointer", fontFamily: "inherit",
@@ -505,153 +493,112 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                 )
               })}
             </div>
-          </div>
-        )}
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              width: 32, height: 32, borderRadius: 4,
+              border: "1px solid " + C.brdL, background: "transparent",
+              color: C.tx3, cursor: "pointer", fontFamily: "inherit",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}
+          ><X size={14} /></button>
+        </div>
 
-        {/* ── 3 colonnes ── */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden", borderTop: "1px solid " + C.brd }}>
+        {/* ── 2 colonnes ── */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-          {/* ── Col 1 : PRÉVU ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: "1px solid " + C.brd, overflow: "hidden" }}>
+          {/* ── Col 1 : SÉANCE N — prévu et réalisé ── */}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", borderRight: "1px solid " + C.brd, overflow: "hidden" }}>
             <ColHeader
-              label={`Prévu · Séance ${activeWeek}`}
-              color={VIOLET}
-              linked={linked[0]}
-              onToggleLink={() => toggleLink(0)}
-              right={currentOverride ? (
-                <span style={{ fontSize: 9, fontWeight: 700, color: AMBER }}>Modif ponctuelle</span>
-              ) : undefined}
-            />
-            <div ref={col1Ref} style={{ flex: 1, overflowY: "auto", padding: "10px 10px", paddingBottom: 32 }}>
-              {prevuBlocs.length === 0 ? (
-                <EmptyCol msg="Aucun bloc" />
-              ) : prevuBlocs.map((bloc, bi) => (
-                <BlocSection key={bloc.id} bloc={bloc} index={bi}>
-                  {bloc.exercices.map(ex => {
-                    const params = resolveParams(ex, activeWeek)
-                    if (!params) return (
-                      <div key={ex.id} style={{
-                        padding: "7px 10px", borderRadius: 4, marginBottom: 5,
-                        border: "1px solid " + C.brdL, background: C.s2,
-                        fontSize: 10, color: C.tx3,
-                      }}>
-                        {ex.exercise_name} — pas de paramètres
-                      </div>
-                    )
-                    return <ExercicePreview key={ex.id} exercice={ex} params={params} week={activeWeek} />
-                  })}
-                </BlocSection>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Col 2 : RÉALISÉ ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: "1px solid " + C.brd, overflow: "hidden" }}>
-            <ColHeader
-              label={`Réalisé · Séance ${activeWeek}`}
+              label={`Séance ${activeWeek} · Prévu et réalisé`}
               color={GREEN}
-              linked={linked[1]}
-              onToggleLink={() => toggleLink(1)}
               right={
                 currentLog?.status === "completed" ? (
                   <span style={{ fontSize: 10, color: C.tx3 }}>
                     {currentLog.rpeScore !== null ? `RPE ${currentLog.rpeScore} · ` : ""}
-                    {new Date(currentLog.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    {dateLabel(currentLog.scheduledDate, { day: "numeric", month: "short" })}
                   </span>
                 ) : currentLog ? (
-                  getStatusForWeek(activeWeek) === "missed" ? (
-                    <span style={{ fontSize: 10, color: RED, fontWeight: 700 }}>Manquée</span>
-                  ) : (
-                    <span style={{ fontSize: 10, color: C.tx3 }}>
-                      Prévue le {new Date(currentLog.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                    </span>
-                  )
+                  getStatusForWeek(activeWeek) === "missed"
+                    ? <span style={{ fontSize: 10, color: RED, fontWeight: 700 }}>Manquée</span>
+                    : <span style={{ fontSize: 10, color: C.tx3 }}>Prévue le {dateLabel(currentLog.scheduledDate, { day: "numeric", month: "short" })}</span>
                 ) : (
-                  <span style={{ fontSize: 10, color: C.tx3 }}>{loadingLogs ? "…" : "Non réalisée"}</span>
+                  <span style={{ fontSize: 10, color: C.tx3 }}>{loadingLogs ? "…" : "Non planifiée"}</span>
                 )
               }
             />
-            <div ref={col2Ref} style={{ flex: 1, overflowY: "auto", padding: "10px 10px", paddingBottom: 32 }}>
-              {/* Session forme + comment */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 32px" }}>
               {(atMods?.sessionForme != null || atMods?.sessionComment) && (
                 <div style={{
-                  padding: "7px 10px", borderRadius: 4, marginBottom: 8,
-                  border: "1px solid " + C.brdL, background: C.s2,
-                  display: "flex", flexDirection: "column", gap: 4,
+                  display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" as const,
+                  padding: "6px 10px", borderRadius: 4, margin: "8px 0 0",
+                  border: "1px solid " + C.brdL, background: C.s2, fontSize: 11, color: C.tx,
                 }}>
                   {atMods?.sessionForme != null && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>Forme</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 5,
-                        background: atMods.sessionForme >= 4 ? GREEN_S : atMods.sessionForme >= 3 ? AMBER_S : RED_S,
-                        color: atMods.sessionForme >= 4 ? GREEN : atMods.sessionForme >= 3 ? AMBER : RED,
-                      }}>
-                        {atMods.sessionForme}/5
-                      </span>
-                    </div>
+                    <span style={{
+                      fontWeight: 700, padding: "1px 6px", borderRadius: 5,
+                      background: atMods.sessionForme >= 4 ? GREEN_S : atMods.sessionForme >= 3 ? AMBER_S : RED_S,
+                      color: atMods.sessionForme >= 4 ? GREEN : atMods.sessionForme >= 3 ? AMBER : RED,
+                    }}>Forme {atMods.sessionForme}/5</span>
                   )}
-                  {atMods?.sessionComment && (
-                    <div>
-                      <div style={{ fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 2 }}>
-                        Commentaire athlète
-                      </div>
-                      <div style={{ fontSize: 11, color: C.tx, fontStyle: "italic" }}>« {atMods.sessionComment} »</div>
-                    </div>
-                  )}
+                  {atMods?.sessionComment && <span style={{ fontStyle: "italic" }}>« {atMods.sessionComment} »</span>}
                 </div>
               )}
-              {loadingLogs ? (
-                <EmptyCol msg="Chargement…" />
-              ) : noRealise && !currentLog ? (
-                <EmptyCol msg="Aucune donnée" sub="Séance non encore réalisée" />
-              ) : (
-                prevuBlocs.map((bloc, bi) => (
-                  <BlocSection key={bloc.id} bloc={bloc} index={bi}>
-                    {bloc.exercices.map(ex => {
-                      const sets = (atMods?.sessionSets?.[ex.id] ?? []) as SessionSetLog[]
-                      const params = resolveParams(ex, activeWeek)
-                      return <ExerciceRealise key={ex.id} exercice={ex} sets={sets} params={params} athleteComment={atMods?.exerciceComments?.[ex.id]} week={activeWeek} videoSent={!!atMods?.videoSent?.[ex.id]} />
-                    })}
-                  </BlocSection>
-                ))
+              {currentOverride && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: AMBER, marginTop: 8 }}>Modif ponctuelle appliquée à cette séance</div>
               )}
+              {prevuBlocs.length === 0 ? (
+                <EmptyCol msg="Aucun bloc" />
+              ) : loadingLogs ? (
+                <EmptyCol msg="Chargement…" />
+              ) : prevuBlocs.map((bloc, bi) => (
+                <div key={bloc.id}>
+                  <BlocLabel bloc={bloc} index={bi} />
+                  {bloc.exercices.map(ex => (
+                    <ExerciceCard
+                      key={ex.id}
+                      exercice={ex}
+                      params={resolveParams(ex, activeWeek)}
+                      sets={(atMods?.sessionSets?.[ex.id] ?? []) as SessionSetLog[]}
+                      comment={atMods?.exerciceComments?.[ex.id]}
+                      week={activeWeek}
+                      videoSent={!!atMods?.videoSent?.[ex.id]}
+                      showRealise={!!currentLog && (currentLog.status === "completed" || hasAnySets)}
+                    />
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* ── Col 3 : SÉANCE +1 ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* ── Col 2 : SÉANCE N+1 — à programmer ── */}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <ColHeader
-              label={`Séance ${nextWeek} · Adapter`}
+              label={`Séance ${nextWeek} · À programmer`}
               color={AMBER}
-              linked={linked[2]}
-              onToggleLink={() => toggleLink(2)}
               right={
-                <button
-                  onClick={duplicateWeekToNext}
-                  title={`Remplacer la séance ${nextWeek} par le prévu de la séance ${activeWeek}`}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 3,
-                    padding: "3px 8px", borderRadius: 5,
-                    border: "1px solid " + AMBER + "60", background: AMBER_S,
-                    color: AMBER, fontSize: 9, fontWeight: 700,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}
-                >
-                  <Copy size={9} />
-                  Copier séance {activeWeek}
-                </button>
+                <>
+                  <ActionBtn onClick={() => copyToNext("prevu")} title={`Reprendre le prévu de la séance ${activeWeek} sur la séance ${nextWeek}`}>
+                    <Copy size={10} /> Copier le prévu
+                  </ActionBtn>
+                  {hasAnySets && (
+                    <ActionBtn primary onClick={() => copyToNext("realise")} title={`Prévu de la séance ${activeWeek} avec les charges réellement soulevées`}>
+                      <Copy size={10} /> Copier avec le réalisé
+                    </ActionBtn>
+                  )}
+                </>
               }
             />
-            <div style={{ padding: "6px 10px", fontSize: 10, color: C.tx3, borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
+            <div style={{ padding: "6px 12px", fontSize: 10, color: C.tx3, borderBottom: "1px solid " + C.brd, flexShrink: 0 }}>
               {nextLog
-                ? `Prévue le ${new Date(nextLog.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}`
+                ? `Prévue le ${dateLabel(nextLog.scheduledDate, { weekday: "short", day: "numeric", month: "short" })}`
                 : "Pas encore planifiée"}
-              {" · s'applique aussi aux séances suivantes"}
+              {" · vaut aussi pour les séances suivantes"}
             </div>
             {showOverrideBanner && nextOverride && (
               <div style={{
-                margin: "8px 10px 0", padding: "8px 10px", borderRadius: 4,
+                margin: "8px 12px 0", padding: "8px 10px", borderRadius: 4,
                 border: "1px solid " + AMBER + "60", background: AMBER_S,
                 display: "flex", flexDirection: "column", gap: 6, flexShrink: 0,
               }}>
@@ -675,15 +622,41 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                 </div>
               </div>
             )}
-            <div ref={col3Ref} style={{ flex: 1, overflowY: "auto", paddingBottom: 32 }}>
-              <SessionBlocEditor
-                session={editableSession}
-                cycleId={cycleId}
-                athleteId={athleteId}
-                onChange={onChange}
-                initialWeek={nextWeek}
-                hideWeekNav
-              />
+            <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 32px" }}>
+              {editableSession.blocs.map((bloc, bi) => (
+                <div key={bloc.id}>
+                  <BlocLabel bloc={bloc} index={bi} />
+                  {bloc.exercices.map(ex => (
+                    <NextRow
+                      key={ex.id}
+                      exercice={ex}
+                      params={resolveParams(ex, nextWeek)}
+                      onPatch={mutate => patchNext(ex.id, mutate)}
+                    />
+                  ))}
+                </div>
+              ))}
+
+              <button
+                onClick={() => setAdvanced(v => !v)}
+                style={{
+                  marginTop: 14, padding: "6px 10px", borderRadius: 5, width: "100%",
+                  border: "1px dashed " + C.brdL, background: "transparent",
+                  color: C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                }}
+              >{advanced ? "Masquer l'édition avancée" : "Édition avancée (fiches, vidéo, méthodes, bloc…)"}</button>
+              {advanced && (
+                <div style={{ marginTop: 10 }}>
+                  <SessionBlocEditor
+                    session={editableSession}
+                    cycleId={cycleId}
+                    athleteId={athleteId}
+                    onChange={onChange}
+                    initialWeek={nextWeek}
+                    hideWeekNav
+                  />
+                </div>
+              )}
             </div>
           </div>
 
