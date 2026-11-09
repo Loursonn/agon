@@ -8,7 +8,15 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "../oauth";
-import { drainInbox, processInboxRow, type FindDuplicate, type InboxRow } from "../providers/garminIngest";
+import {
+  activityFileDownloader,
+  drainInbox,
+  processInboxRow,
+  type DownloadActivityFile,
+  type FindDuplicate,
+  type InboxRow,
+} from "../providers/garminIngest";
+import { gunzip } from "../providers/rawStore";
 
 type Row = Record<string, unknown>;
 
@@ -16,6 +24,9 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
   const t: Record<string, Row[]> = structuredClone(init);
   const tab = (n: string) => (t[n] ??= []);
   const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+  /** Bucket provider-raw simulé : chemin → contenu. */
+  const files = new Map<string, Uint8Array>();
+  const inList = (v: unknown) => String(v).replace(/^\(|\)$/g, "").split(",");
 
   const db: Db = {
     rpc(name: string, args: Record<string, unknown> = {}) {
@@ -36,9 +47,16 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
         const conn = tab("provider_connections").find((c) => c.athlete_id === args.p_athlete && c.provider === args.p_provider);
         t.provider_activities = tab("provider_activities").filter((a) => !(a.athlete_id === args.p_athlete && a.source === args.p_provider));
         t.provider_dailies = tab("provider_dailies").filter((a) => !(a.athlete_id === args.p_athlete && a.source === args.p_provider));
+        t.provider_raw_records = tab("provider_raw_records").filter((a) => !(a.athlete_id === args.p_athlete && a.source === args.p_provider));
         if (conn) t.provider_webhook_inbox = tab("provider_webhook_inbox").filter((i) => i.external_user_id !== conn.external_user_id);
         t.provider_connections = tab("provider_connections").filter((c) => c !== conn);
         return Promise.resolve({ data: { activities: 0, dailies: 0, inbox: 0, connection: conn ? 1 : 0 }, error: null });
+      }
+      if (name === "provider_raw_objects") {
+        const prefix = `${args.p_athlete}/${args.p_provider}/`;
+        const types = args.p_types as string[] | null;
+        const names = [...files.keys()].filter((n) => n.startsWith(prefix) && (!types || types.includes(n.split("/")[2])));
+        return Promise.resolve({ data: names.map((object_name) => ({ object_name })), error: null });
       }
       if (name === "provider_inbox_claim") {
         const ids = args.p_ids as string[] | null;
@@ -66,6 +84,16 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
           filters.push((r) => r[col] === val);
           return chain;
         },
+        filter: (col: string, op: string, val: unknown) => {
+          if (op !== "in") throw new Error(`filtre ${op} non simulé`);
+          filters.push((r) => inList(val).includes(String(r[col])));
+          return chain;
+        },
+        not: (col: string, op: string, val: unknown) => {
+          if (op !== "in") throw new Error(`filtre not ${op} non simulé`);
+          filters.push((r) => !inList(val).includes(String(r[col])));
+          return chain;
+        },
         maybeSingle: () => Promise.resolve({ data: matches()[0] ?? null, error: null }),
         update: (p: Row) => {
           op = "update";
@@ -76,9 +104,10 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
           op = "delete";
           return chain;
         },
-        upsert: (row: Row) => {
+        upsert: (row: Row, o: { onConflict?: string } = {}) => {
           const rows = tab(table);
-          const i = rows.findIndex((r) => r.athlete_id === row.athlete_id && r.source === row.source && r.external_id === row.external_id);
+          const keys = (o.onConflict ?? "athlete_id,source,external_id").split(",");
+          const i = rows.findIndex((r) => keys.every((k) => r[k] === row[k]));
           if (i >= 0) rows[i] = { ...rows[i], ...row };
           else rows.push({ id: `a${rows.length + 1}`, ...row });
           return Promise.resolve({ error: null });
@@ -88,7 +117,20 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
       return chain;
     },
   };
-  return { db, t, rpcCalls };
+  (db as Db & { storage: unknown }).storage = {
+    from: (bucket: string) => ({
+      upload: (path: string, body: Uint8Array) => {
+        if (bucket !== "provider-raw") throw new Error("bucket inattendu");
+        files.set(path, body);
+        return Promise.resolve({ error: null });
+      },
+      remove: (paths: string[]) => {
+        for (const p of paths) files.delete(p);
+        return Promise.resolve({ error: null });
+      },
+    }),
+  };
+  return { db, t, rpcCalls, files };
 }
 
 const ATHLETE = "ath-1";
@@ -282,6 +324,178 @@ describe("drainInbox", () => {
     const rows = [inbox("activities", activityEntry, "1"), inbox("dailies", { userId: "x", calendarDate: "2025-11-07" }, "2"), inbox("bodyComps", { userId: GARMIN_USER }, "3")];
     const { db } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: rows });
     const counts = await drainInbox({ db, findDuplicate: noDup });
-    expect(counts).toMatchObject({ imported: 1, unknown_user: 1, skipped: 1, error: 0 });
+    expect(counts).toMatchObject({ imported: 1, stored: 1, unknown_user: 1, error: 0 });
+  });
+});
+
+describe("stockage brut de tout ce qu'envoie Garmin", () => {
+  const raw = (t: Record<string, Row[]>) => t.provider_raw_records ?? [];
+
+  it("un type sans traitement Agon (stressDetails) est stocké tel quel", async () => {
+    const entry = { userId: GARMIN_USER, summaryId: "sd-1", calendarDate: "2025-11-07", timeOffsetBodyBatteryValues: { "0": 55 } };
+    const row = inbox("stressDetails", entry);
+    const { db, t } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: [row] });
+    expect(await processInboxRow(row, { db, findDuplicate: noDup })).toBe("stored");
+    expect(raw(t)).toHaveLength(1);
+    expect(raw(t)[0]).toMatchObject({ athlete_id: ATHLETE, source: "garmin", summary_type: "stressDetails", summary_id: "sd-1", payload: entry });
+    expect(t.provider_webhook_inbox[0].processed_at).toBeTruthy();
+    expect(t.provider_webhook_inbox[0].error).toBeNull();
+  });
+
+  it("un résumé sans summaryId reçoit une empreinte stable (pas de doublon au rejeu)", async () => {
+    const entry = { userId: GARMIN_USER, calendarDate: "2025-11-07", valueInML: 500 };
+    const { db, t } = memoryDb({ provider_connections: [connection()] });
+    await processInboxRow(inbox("hydration", entry, "a"), { db, findDuplicate: noDup });
+    await processInboxRow(inbox("hydration", entry, "b"), { db, findDuplicate: noDup });
+    expect(raw(t)).toHaveLength(1);
+    expect(raw(t)[0].summary_id).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("les données dailies sont stockées brutes ET fusionnées dans provider_dailies", async () => {
+    const { db, t } = memoryDb({ provider_connections: [connection()] });
+    await processInboxRow(inbox("dailies", { userId: GARMIN_USER, summaryId: "d1", calendarDate: "2025-11-07", steps: 9000 }), { db, findDuplicate: noDup });
+    expect(raw(t)).toHaveLength(1);
+    expect(t.provider_dailies).toHaveLength(1);
+  });
+
+  it("activityDetails : échantillons seconde par seconde compressés dans Storage, activité importée", async () => {
+    const samples = Array.from({ length: 600 }, (_, i) => ({ startTimeInSeconds: 1762500000 + i, heartRate: 140 + (i % 20), speedMetersPerSecond: 3.3, powerInWatts: 250 }));
+    const entry = { userId: GARMIN_USER, summaryId: "777-detail", activityId: 777, summary: { activityType: "RUNNING", startTimeInSeconds: 1762500000, durationInSeconds: 600 }, samples };
+    const row = inbox("activityDetails", entry);
+    const { db, t, files } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: [row] });
+    const outcome = await processInboxRow(row, { db, findDuplicate: noDup });
+    expect(t.provider_webhook_inbox[0].error ?? null).toBeNull();
+    expect(outcome).toBe("imported");
+    const r = raw(t)[0];
+    expect(r.samples_path).toBe(`${ATHLETE}/garmin/activityDetails/777-detail.json.gz`);
+    expect(r.samples_count).toBe(600);
+    expect(r.payload).not.toHaveProperty("samples");
+    const stored = files.get(r.samples_path as string)!;
+    expect(stored.length).toBeLessThan(JSON.stringify(samples).length / 5);
+    expect(JSON.parse(new TextDecoder().decode(await gunzip(stored)))).toEqual(samples);
+  });
+
+  const fileEntry = {
+    userId: GARMIN_USER,
+    summaryId: "10010727180-file",
+    fileType: "FIT",
+    callbackURL: "https://apis.garmin.com/wellness-api/rest/activityFile?id=1&token=secret",
+    activityId: 777,
+    startTimeInSeconds: 1762500000,
+    manual: false,
+  };
+
+  it("activityFiles : télécharge le .FIT, le range, ne garde jamais l'URL à jeton", async () => {
+    const fit = new Uint8Array([14, 16, 1, 2, 3, 4]);
+    const download = vi.fn<DownloadActivityFile>(async () => fit);
+    const row = inbox("activityFiles", fileEntry);
+    const { db, t, files } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: [row] });
+    expect(await processInboxRow(row, { db, findDuplicate: noDup, downloadActivityFile: download })).toBe("stored");
+    expect(download).toHaveBeenCalledWith(fileEntry.callbackURL, "conn-1");
+    const r = raw(t)[0];
+    expect(r).toMatchObject({ summary_type: "activityFiles", file_type: "FIT", file_bytes: 6, file_path: `${ATHLETE}/garmin/activityFiles/10010727180-file.fit` });
+    expect(r.payload).not.toHaveProperty("callbackURL");
+    expect(files.get(r.file_path as string)).toEqual(fit);
+  });
+
+  it("activityFiles déjà téléchargé (410) : le résumé est gardé, le fichier existant n'est pas effacé", async () => {
+    const { db, t, files } = memoryDb({ provider_connections: [connection()] });
+    await processInboxRow(inbox("activityFiles", fileEntry, "a"), { db, findDuplicate: noDup, downloadActivityFile: async () => new Uint8Array([1]) });
+    const row = inbox("activityFiles", { ...fileEntry, manual: true }, "b");
+    t.provider_webhook_inbox = [row];
+    expect(await processInboxRow(row, { db, findDuplicate: noDup, downloadActivityFile: async () => null })).toBe("stored");
+    expect(raw(t)).toHaveLength(1);
+    expect(raw(t)[0].file_path).toBeTruthy();
+    expect(files.size).toBe(1);
+    expect(t.provider_webhook_inbox[0].error).toContain("410");
+  });
+
+  it("activityFiles : un échec de téléchargement garde le résumé et laisse la ligne à reprendre", async () => {
+    const row = inbox("activityFiles", fileEntry);
+    const { db, t } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: [row] });
+    const failing: DownloadActivityFile = async () => {
+      throw new Error("fichier d'activité : HTTP 503");
+    };
+    expect(await processInboxRow(row, { db, findDuplicate: noDup, downloadActivityFile: failing })).toBe("error");
+    expect(raw(t)).toHaveLength(1);
+    expect(t.provider_webhook_inbox[0].processed_at).toBeFalsy();
+    expect(t.provider_webhook_inbox[0].error).toContain("503");
+  });
+
+  it("rien n'est stocké sans consentement ni pour un inconnu", async () => {
+    const { db, t } = memoryDb({ provider_connections: [connection()] }, { consent: false });
+    await processInboxRow(inbox("epochs", { userId: GARMIN_USER, summaryId: "e1" }), { db, findDuplicate: noDup });
+    await processInboxRow(inbox("epochs", { userId: "inconnu", summaryId: "e2" }), { db, findDuplicate: noDup });
+    expect(raw(t)).toHaveLength(0);
+  });
+
+  it("santé brute refusée sans HEALTH_EXPORT", async () => {
+    const { db, t } = memoryDb({ provider_connections: [connection({ granted_scopes: ["ACTIVITY_EXPORT"] })] });
+    expect(await processInboxRow(inbox("pulseox", { userId: GARMIN_USER, summaryId: "p1" }), { db, findDuplicate: noDup })).toBe("skipped");
+    expect(raw(t)).toHaveLength(0);
+  });
+
+  async function seeded() {
+    const m = memoryDb({ provider_connections: [connection()] });
+    const deps = { db: m.db, findDuplicate: noDup, downloadActivityFile: async () => new Uint8Array([1, 2]) };
+    await processInboxRow(inbox("activityFiles", fileEntry, "f"), deps);
+    await processInboxRow(inbox("activityDetails", { userId: GARMIN_USER, summaryId: "777-detail", activityId: 777, summary: { activityType: "RUNNING", startTimeInSeconds: 1762500000 }, samples: [{ heartRate: 150 }] }, "d"), deps);
+    await processInboxRow(inbox("moveIQActivities", { userId: GARMIN_USER, summaryId: "m1" }, "m"), deps);
+    await processInboxRow(inbox("sleeps", { userId: GARMIN_USER, summaryId: "s1", calendarDate: "2025-11-07", durationInSeconds: 25200 }, "s"), deps);
+    await processInboxRow(inbox("bodyComps", { userId: GARMIN_USER, summaryId: "b1", weightInGrams: 70000 }, "b"), deps);
+    expect(m.files.size).toBe(2);
+    return m;
+  }
+
+  it("ACTIVITY_EXPORT retirée : supprime activités brutes et fichiers, garde la santé", async () => {
+    const { db, t, files } = await seeded();
+    const row = inbox("userPermissionsChange", { userId: GARMIN_USER, permissions: ["HEALTH_EXPORT"] });
+    await processInboxRow(row, { db, findDuplicate: noDup });
+    expect(raw(t).map((r) => r.summary_type).sort()).toEqual(["bodyComps", "sleeps"]);
+    expect(files.size).toBe(0);
+  });
+
+  it("HEALTH_EXPORT retirée : supprime toute la santé brute, garde les activités", async () => {
+    const { db, t, files } = await seeded();
+    const row = inbox("userPermissionsChange", { userId: GARMIN_USER, permissions: ["ACTIVITY_EXPORT"] });
+    await processInboxRow(row, { db, findDuplicate: noDup });
+    expect(raw(t).map((r) => r.summary_type).sort()).toEqual(["activityDetails", "activityFiles", "moveIQActivities"]);
+    expect(files.size).toBe(2);
+  });
+
+  it("désinscription Garmin : lignes brutes et fichiers supprimés", async () => {
+    const { db, t, files } = await seeded();
+    expect(await processInboxRow(inbox("deregistrations", { userId: GARMIN_USER }), { db, findDuplicate: noDup })).toBe("forgotten");
+    expect(raw(t)).toHaveLength(0);
+    expect(files.size).toBe(0);
+  });
+});
+
+describe("activityFileDownloader", () => {
+  const url = "https://apis.garmin.com/wellness-api/rest/activityFile?id=1&token=x";
+
+  it("appelle Garmin avec le jeton de l'utilisateur", async () => {
+    const fetchImpl = vi.fn(async () => new Response(new Uint8Array([7, 8]), { status: 200 }));
+    const dl = activityFileDownloader({ fetchImpl, accessToken: async () => "tok" });
+    expect(await dl(url, "conn-1")).toEqual(new Uint8Array([7, 8]));
+    const init = fetchImpl.mock.calls[0][1] as RequestInit;
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok");
+  });
+
+  it("410 = déjà téléchargé ou expiré : null", async () => {
+    const dl = activityFileDownloader({ fetchImpl: async () => new Response("", { status: 410 }), accessToken: async () => "tok" });
+    expect(await dl(url, "c")).toBeNull();
+  });
+
+  it("refuse une URL hors de apis.garmin.com (le jeton ne part jamais ailleurs)", async () => {
+    const fetchImpl = vi.fn();
+    const dl = activityFileDownloader({ fetchImpl, accessToken: async () => "tok" });
+    await expect(dl("https://evil.example/activityFile", "c")).rejects.toThrow(/refusée/);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("une autre erreur HTTP lève (la ligne sera reprise)", async () => {
+    const dl = activityFileDownloader({ fetchImpl: async () => new Response("", { status: 500 }), accessToken: async () => "tok" });
+    await expect(dl(url, "c")).rejects.toThrow(/500/);
   });
 });

@@ -1733,3 +1733,11 @@ coach perdu (vérifié).
 `BEGIN; … ROLLBACK;` (corrigé pour `db_hygiene.sql`, déjà le cas des autres).
 Avant de lancer un test, vérifier `grep -n "^ROLLBACK;" <fichier>`.
 
+
+## 2026-11-09 — Garmin : tout ce qui est reçu est stocké brut
+
+- **Choix (Hugo)** : stocker intégralement chaque résumé Garmin, exploité ou non, pour pouvoir tout analyser plus tard. Détail des séances gardé **deux fois** : échantillons seconde par seconde (FC, vitesse/allure, puissance, cadence, altitude, GPS) en `.json.gz`, et fichier `.FIT` d'origine.
+- **Où** : table `provider_raw_records` (une ligne par résumé, JSON complet, upsert sur `summary_id`) + bucket privé `provider-raw` (`<athlete>/garmin/<type>/<summaryId>.json.gz|.fit`). Migration `20261110120000_provider_raw_records.sql`, tests `supabase/tests/provider_raw_records.sql`.
+- **Garanties** : `ai_allowed=false` imposé ; écriture service_role seulement ; l'athlète lit ses lignes (export RGPD) ; retrait de permission, désinscription, déconnexion et suppression de compte effacent lignes et fichiers.
+- **Fichiers .FIT** : URL de rappel valable 24 h, un seul téléchargement (410 ensuite) ; jamais stockée (porte un jeton).
+- **Capacité** : plan Supabase gratuit (500 Mo base, 1 Go Storage). Storage saturera en premier (~4 mois à 50 athlètes). Alerte hebdomadaire locale (tâche `alerte-capacite-supabase`) ; passage Pro à décider quand elle sonne.

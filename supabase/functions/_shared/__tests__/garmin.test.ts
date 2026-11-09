@@ -246,6 +246,12 @@ describe("permissions", () => {
     expect(permissionFor("activityDetails")).toBe("ACTIVITY_EXPORT");
     expect(permissionFor("sleeps")).toBe("HEALTH_EXPORT");
     expect(permissionFor("deregistrations")).toBeNull();
+    expect(permissionFor("activityFiles")).toBe("ACTIVITY_EXPORT");
+    expect(permissionFor("moveIQActivities")).toBe("ACTIVITY_EXPORT");
+    expect(permissionFor("stressDetails")).toBe("HEALTH_EXPORT");
+    expect(permissionFor("epochs")).toBe("HEALTH_EXPORT");
+    // Type inconnu ajouté plus tard par Garmin : traité comme santé (le plus protecteur).
+    expect(permissionFor("nouveauType")).toBe("HEALTH_EXPORT");
   });
 });
 

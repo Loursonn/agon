@@ -18,6 +18,8 @@
  * change rien. Voir docs/DECISIONS.md, 2026-11.
  */
 
+import { removeRawFiles } from "./providers/rawStore.ts";
+
 // ─────────────────────────────── Types ───────────────────────────────────────
 
 /** Client Supabase (supabase-js v2), typé au plus large : partagé Deno / Node. */
@@ -426,22 +428,32 @@ export function canonicalJson(value: unknown): string {
 export interface ForgetReport {
   activities: number;
   dailies: number;
+  /** Résumés bruts (`provider_raw_records`). */
+  raw: number;
+  /** Fichiers bruts supprimés du bucket `provider-raw`. */
+  files: number;
   inbox: number;
   connection: number;
 }
 
 /**
  * Supprime ce que le fournisseur a apporté à cet athlète, en une transaction
- * (`provider_forget`) : activités et données quotidiennes de cette source,
+ * (`provider_forget`) : activités, données quotidiennes et résumés bruts de cette source,
+ * fichiers bruts (bucket `provider-raw`, supprimés juste avant),
  * messages en attente, connexion et jetons (cascade + trigger Vault). Les
  * activités `file_import` ne sont jamais touchées.
  */
 export async function forgetProvider(db: Db, athleteId: string, provider: ProviderName): Promise<ForgetReport> {
+  // Fichiers d'abord : s'ils résistent, rien n'est supprimé et l'opération sera rejouée.
+  const files = await removeRawFiles(db, athleteId, provider);
   const { data, error } = await db.rpc("provider_forget", { p_athlete: athleteId, p_provider: provider });
   if (error) throw new Error(`suppression des données ${provider} : ${error.message}`);
   const r = (data ?? {}) as Record<string, unknown>;
   const n = (k: string) => (typeof r[k] === "number" ? (r[k] as number) : 0);
-  return { activities: n("activities"), dailies: n("dailies"), inbox: n("inbox"), connection: n("connection") };
+  return {
+    activities: n("activities"), dailies: n("dailies"), raw: n("raw"), files,
+    inbox: n("inbox"), connection: n("connection"),
+  };
 }
 
 /**
