@@ -93,11 +93,11 @@ Contrat de `coach-api` : sortie de `GET /athletes/:id/summary` strictement ident
 
 Limite connue : `wellnessHistory` du contexte ne contient plus les clés parasites (`"1"`..`"4"`) ni les champs inconnus d'une saisie ; quand un écrivain réécrit encore le blob `asp:wh` entier, il l'écrit nettoyé (le trigger projette de toute façon l'état nettoyé). Sans effet sur les tables.
 
-Écrivains qui réécrivent encore un blob entier (fonctionnent grâce au trigger, mais à passer par RPC) :
-- `ProfilPage.tsx` : `setWeightLog({...weightLog, [todayKey()]: weighIn})` → `saveWeight`.
-- `setBodyWeight` (objectif) → future RPC `weight_set_goal`.
-- `useAthleteLogic.archiveAndNewBlock` : `asp:wh = {}` après archivage (avec le trigger, les saisies passent `archived = true`, rien n'est perdu côté tables si l'écriture de `asp:blockHistory` réussit).
-- `scripts/seed-demo.mjs` (compte démo).
+Écrivains qui réécrivaient un blob entier : **P6 (2026-11-10) les a tous passés par RPC** (code ; migration `20261110110000_weight_set_goal.sql` à appliquer) :
+- `ProfilPage.tsx` → `saveWeighIn` (file hors ligne, RPC `weight_set_day`).
+- Objectif → `weight_set_goal` (`saveWeightGoal`) ; les setters blob sans appelant sont supprimés.
+- `useAthleteLogic.archiveAndNewBlock` : `asp:wh = {}` après archivage ; les saisies passent `archived = true` si elles sont dans `asp:blockHistory` (désormais toujours le cas quand il reste du wellness). Reste un écrivain blob (`asp:blockHistory`, programme) : hors santé, voir P17.
+- `scripts/seed-demo.mjs` → RPC, avec la session de l'athlète démo.
 
 ## 5. Fusion du poids (« poids ×3 »)
 
