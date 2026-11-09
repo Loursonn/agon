@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { C } from "@/lib/theme";
 import { SW_UPDATE_CHECK_MS, currentSwEnvironment, shouldRegisterServiceWorker } from "@/lib/pwa";
+import {
+  VERSION_RETRY_MS, canReloadNow, currentBuild, fetchServedBuild, isNewerBuild, shouldCheckNow,
+} from "@/lib/versionCheck";
+import { pendingWrites } from "@/lib/offline/writes";
 
 let registered = false;
 
 /**
  * Enregistre le service worker et propose la nouvelle version quand elle est
- * prête : « Nouvelle version disponible — Recharger ». Jamais de rechargement
- * automatique (séance en cours). Les brouillons locaux protègent la saisie si
- * l'athlète recharge en pleine séance.
+ * prête : « Nouvelle version disponible — Recharger ». Les brouillons locaux
+ * protègent la saisie si l'athlète recharge en pleine séance.
+ *
+ * Rechargement automatique uniquement quand `/version.json` annonce un build
+ * plus récent (src/lib/versionCheck.ts) ET qu'aucune écriture n'attend le
+ * réseau ET qu'aucune saisie de séance n'est ouverte ; sinon l'invite reste.
  */
 export default function UpdatePrompt() {
   const [needRefresh, setNeedRefresh] = useState(false);
@@ -17,6 +24,11 @@ export default function UpdatePrompt() {
   const [dismissed, setDismissed] = useState(false);
   const [reloading, setReloading] = useState(false);
   const updateRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const needRefreshRef = useRef(false);
+  // Le serveur sert un build plus récent que le bundle en cours (version.json).
+  const staleRef = useRef(false);
+  const lastCheckRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (registered || !shouldRegisterServiceWorker(currentSwEnvironment())) return;
@@ -25,18 +37,51 @@ export default function UpdatePrompt() {
     import("virtual:pwa-register")
       .then(({ registerSW }) => {
         updateRef.current = registerSW({
-          onNeedRefresh: () => setNeedRefresh(true),
+          onNeedRefresh: () => { needRefreshRef.current = true; setNeedRefresh(true); },
           onRegisteredSW: (_url, registration) => {
             if (!registration) return;
+            registrationRef.current = registration;
             interval = setInterval(() => {
               if (navigator.onLine) registration.update().catch(() => { /* réessai à la prochaine heure */ });
             }, SW_UPDATE_CHECK_MS);
+            void checkVersion();
           },
         });
       })
       .catch(() => { /* pas de SW : l'app marche comme avant, en ligne */ });
     return () => { if (interval) clearInterval(interval); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Contrôle de version (P4) : au démarrage, au retour au premier plan, puis
+  // rechargement propre dès que plus rien n'est en cours de saisie.
+  function applyIfSafe() {
+    if (!staleRef.current || !needRefreshRef.current) return;
+    if (!canReloadNow({ pendingWrites: pendingWrites(), pathname: window.location.pathname })) return;
+    staleRef.current = false;
+    void updateRef.current?.(true);
+  }
+
+  async function checkVersion() {
+    const now = Date.now();
+    if (!registrationRef.current || !navigator.onLine || !shouldCheckNow(lastCheckRef.current, now)) return;
+    lastCheckRef.current = now;
+    const served = await fetchServedBuild();
+    if (!isNewerBuild(served, currentBuild())) return;
+    staleRef.current = true;
+    try { await registrationRef.current.update(); } catch { /* réessai au prochain contrôle */ }
+    applyIfSafe();
+  }
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") void checkVersion(); };
+    document.addEventListener("visibilitychange", onVisible);
+    const retry = setInterval(applyIfSafe, VERSION_RETRY_MS);
+    return () => { document.removeEventListener("visibilitychange", onVisible); clearInterval(retry); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { applyIfSafe(); }, [needRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!needRefresh || !dismissed) return;
