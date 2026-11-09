@@ -136,9 +136,19 @@ ouverte ») après la première synchro.
 
 ## 5. Observations de la connexion réelle
 
-*(à remplir après « connecté »)*
+### 2026-11-09, après la connexion de Titouan (lecture seule)
 
-- Résultat de l'autorisation (`?coros=` ) :
-- Comptes (connexions / activités / dailies) pour ce compte :
-- Volume de course (`useRunningVolume`, `useWeeklyDistances`) :
-- Délai, quotas, format des fichiers FIT, erreurs :
+- **Autorisation réussie.** Une ligne `provider_connections` COROS : `status = active`,
+  hôte `mcpeu.coros.com`, scopes accordés `mcp.tools`, `openid`, `offline_access`
+  (donc un `refresh_token` a été délivré), `last_error` vide, mise à jour à 15:45 UTC.
+  Le client enregistré avant ce jour a été accepté : le cas « redirect_uri rejeté » ne
+  s'est pas produit.
+- **Plusieurs tentatives.** `provider_oauth_states` garde deux états COROS non consommés
+  (15:11 expiré, 15:43 encore valide à la lecture) : des départs vers COROS sans retour
+  (page fermée, ou clic répété). La connexion à 15:45 vient d'un autre état, consommé.
+  La purge de 3 h 10 les nettoiera.
+- **Aucune synchro encore faite** : `last_sync_at` et `synced_through` vides,
+  `provider_activities` = 0 et `provider_dailies` = 0 pour `source = 'coros'`,
+  `provider_fit_quota` vide. Le cron de 3 h 40 UTC n'a pas encore tourné depuis la connexion.
+- Reste à faire : synchro (bouton ou cron), puis compteurs, volume de course, format
+  des FIT, liste réelle des outils MCP.
