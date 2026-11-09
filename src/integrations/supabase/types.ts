@@ -3068,6 +3068,8 @@ export type Database = {
           birth_date: string | null
           body_fat_pct: number | null
           booking_url: string | null
+          client_build: string | null
+          client_build_at: string | null
           coach_code: string | null
           coach_hidden: boolean
           coach_id: string | null
@@ -3095,6 +3097,8 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          client_build?: string | null
+          client_build_at?: string | null
           coach_code?: string | null
           coach_hidden?: boolean
           coach_id?: string | null
@@ -3122,6 +3126,8 @@ export type Database = {
           birth_date?: string | null
           body_fat_pct?: number | null
           booking_url?: string | null
+          client_build?: string | null
+          client_build_at?: string | null
           coach_code?: string | null
           coach_hidden?: boolean
           coach_id?: string | null
@@ -3447,6 +3453,68 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "provider_oauth_states_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_raw_records: {
+        Row: {
+          ai_allowed: boolean
+          athlete_id: string
+          external_user_id: string | null
+          file_bytes: number | null
+          file_path: string | null
+          file_type: string | null
+          id: string
+          payload: Json
+          received_at: string
+          samples_count: number | null
+          samples_path: string | null
+          source: Database["public"]["Enums"]["data_source"]
+          summary_id: string
+          summary_type: string
+          updated_at: string
+        }
+        Insert: {
+          ai_allowed?: boolean
+          athlete_id: string
+          external_user_id?: string | null
+          file_bytes?: number | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          payload: Json
+          received_at?: string
+          samples_count?: number | null
+          samples_path?: string | null
+          source: Database["public"]["Enums"]["data_source"]
+          summary_id: string
+          summary_type: string
+          updated_at?: string
+        }
+        Update: {
+          ai_allowed?: boolean
+          athlete_id?: string
+          external_user_id?: string | null
+          file_bytes?: number | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          payload?: Json
+          received_at?: string
+          samples_count?: number | null
+          samples_path?: string | null
+          source?: Database["public"]["Enums"]["data_source"]
+          summary_id?: string
+          summary_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_raw_records_athlete_id_fkey"
             columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -5330,6 +5398,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      provider_raw_objects: {
+        Args: {
+          p_athlete: string
+          p_provider: Database["public"]["Enums"]["data_source"]
+          p_types?: string[]
+        }
+        Returns: {
+          object_name: string
+        }[]
+      }
       provider_sync_try_lock: {
         Args: { p_connection_id: string; p_ttl_seconds?: number }
         Returns: string
@@ -5429,6 +5507,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      report_client_build: { Args: { p_build: string }; Returns: undefined }
       review_performance_notification: {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined
@@ -5704,6 +5783,10 @@ export type Database = {
       }
       weight_set_day: {
         Args: { p_athlete: string; p_day: string; p_kg: number }
+        Returns: Json
+      }
+      weight_set_goal: {
+        Args: { p_athlete: string; p_target_kg: number }
         Returns: Json
       }
       wellness_delete_day: {

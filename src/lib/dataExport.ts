@@ -103,6 +103,9 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
     "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, connected_at, last_sync_at, synced_through, last_error, updated_at",
   ),
   job("provider_dailies", "athlete_id"),
+  // Tout ce que Garmin a envoyé, tel quel (échantillons et .FIT : chemins
+  // vers le bucket privé `provider-raw`, lisible par l'athlète lui-même).
+  job("provider_raw_records", "athlete_id"),
   job("retours", "athlete_id"),
   job("seasons", "athlete_id"),
   job("staff_invitations", "athlete_id", STAFF_INVITATION_COLUMNS),
@@ -191,12 +194,15 @@ export interface ExportResult {
  * dit pour une machine ; `attribution` le dit pour une personne.
  */
 export function withAttribution(table: string, rows: unknown[]): unknown[] {
-  if (table !== "provider_activities" && table !== "provider_dailies") return rows;
+  if (table !== "provider_activities" && table !== "provider_dailies" && table !== "provider_raw_records") return rows;
   return rows.map((r) => {
     if (!r || typeof r !== "object") return r;
     const row = r as Record<string, unknown>;
     if (typeof row.source !== "string") return row;
-    const device = typeof row.device_name === "string" ? row.device_name : null;
+    const payload = row.payload && typeof row.payload === "object" ? (row.payload as Record<string, unknown>) : {};
+    const device = typeof row.device_name === "string"
+      ? row.device_name
+      : typeof payload.deviceName === "string" ? payload.deviceName : null;
     return { attribution: providerAttribution(row.source, device), ...row };
   });
 }

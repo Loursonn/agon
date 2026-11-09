@@ -281,7 +281,7 @@ describe("revokeAndForget", () => {
     expect(order).toEqual(["revoke", "forget"]);
     expect(r.revoked).toBe(false);
     expect(r.warnings.join(" ")).toContain("pas confirmé");
-    expect(r.forgotten).toEqual({ activities: 3, dailies: 2, inbox: 0, connection: 1 });
+    expect(r.forgotten).toEqual({ activities: 3, dailies: 2, raw: 0, files: 0, inbox: 0, connection: 1 });
   });
 });
 

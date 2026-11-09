@@ -19,9 +19,9 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { findCrossSourceDuplicate } from "../_shared/activityDedup.ts";
 import { garminFromEnv } from "../_shared/garminConfig.ts";
 import { freshAccessToken, OAuthTokenError, refreshTokenDue, revokeAndForget } from "../_shared/oauth.ts";
+import { garminIngestDeps } from "../_shared/garminIngestDeps.ts";
 import { drainInbox } from "../_shared/providers/garminIngest.ts";
 import { isServiceRoleBearer } from "../_shared/auth.ts";
 
@@ -51,7 +51,7 @@ serve(async (req) => {
   try {
     // ── 1. Inbox ──────────────────────────────────────────────────────────
     report.inbox = await drainInbox(
-      { db: admin, findDuplicate: (_db, c) => findCrossSourceDuplicate(admin, c) },
+      garminIngestDeps(admin),
       { limit: 300, deadlineMs: 90_000 },
     );
 
