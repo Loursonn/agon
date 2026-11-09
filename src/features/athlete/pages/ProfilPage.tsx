@@ -70,7 +70,7 @@ export default function ProfilPage() {
   const { profile, updateAthleteProfile } = useAuth();
   const {
     athleteId, athleteProfile, viewOnly, freeSessions,
-    weightLog, setWeightLog, nutritionStrategy, bodyWeight,
+    weightLog, saveWeighIn, nutritionStrategy, bodyWeight,
   } = useAthleteContext();
 
   const [editing, setEditing] = useState(false);
@@ -105,7 +105,8 @@ export default function ProfilPage() {
             onSave={async (fields, weighIn) => {
               await updateAthleteProfile(athleteId, fields);
               if (weighIn != null && weighIn !== currentWeight) {
-                setWeightLog({ ...weightLog, [todayKey()]: weighIn });
+                // Une seule pesée côté serveur (RPC), jamais le journal entier.
+                await saveWeighIn(weighIn);
               }
               setEditing(false);
               toast.success("Profil mis à jour");

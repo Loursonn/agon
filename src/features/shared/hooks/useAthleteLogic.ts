@@ -54,9 +54,7 @@ interface LogicDeps {
   _setWeightLogRaw: (v: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void;
   _setWeightMilestonesRaw: (v: Array<{ date: string; kg: number }>) => void;
   _setBodyWeightRaw: (v: BodyWeight) => void;
-  setWeightLog: (v: Record<string, number>) => void | Promise<boolean>;
   setWeightMilestones: (v: Array<{ date: string; kg: number }>) => void;
-  setBodyWeight: (v: BodyWeight) => void;
   setVisibilitySettings: (v: VisibilitySettings) => Promise<void>;
   setMilestoneNotif: (v: number | null) => void;
   setWeekJustCompleted: (v: number | null) => void;
@@ -73,7 +71,7 @@ export function useAthleteLogic(d: LogicDeps) {
     tw, dw, weeksArr, weeklyTarget, loaded,
     setExos, setSets, setSessions, setBlockConfig, setGoals, setCompletedSessions,
     setAthleteNotes, setBlockHistory, setWellness, setWellnessHistory,
-    setWeightLog, setWeightMilestones, setBodyWeight,
+    setWeightMilestones,
     setMilestoneNotif, setWeekJustCompleted, setShowBilan, setAW, save,
     _setWellnessRaw, _setWellnessHistoryRaw, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw,
   } = d;
@@ -156,7 +154,12 @@ export function useAthleteLogic(d: LogicDeps) {
 
   const archiveAndNewBlock = useCallback((opts: NewBlockOpts) => {
     const hasData = Object.values(exos).flat().length > 0 || Object.values(completedSessions).flat().length > 0;
-    if (hasData) {
+    // Le wellness est vidé plus bas : s'il n'est archivé nulle part, le trigger
+    // `app_data → wellness_entries` supprimerait ces saisies (une entrée archivée
+    // passe `archived = true`, une saisie absente de l'archive disparaît).
+    // On archive donc aussi un bloc sans programme quand il reste du wellness.
+    const hasWellness = Object.keys(wellnessHistory ?? {}).length > 0;
+    if (hasData || hasWellness) {
       const archived: ArchivedBlock = {
         id: "blk_" + Date.now(), archivedAt: new Date().toISOString(),
         exos, sets, completedSessions, sessions, blockConfig, goals,
@@ -189,6 +192,46 @@ export function useAthleteLogic(d: LogicDeps) {
     Object.entries(newSessions).forEach(([sid, exList]) => { merged[sid] = exList; });
     setExos(merged);
   }, [exos, setExos]);
+
+  // Une seule pesée, côté serveur (RPC `weight_set_day`) : le journal n'est
+  // plus réécrit en entier depuis l'état de l'appareil. Vérifie ensuite si un
+  // palier est franchi (RPC `weight_record_milestone`). `queued` = gardée sur le
+  // téléphone sans réseau.
+  const pushWeight = useCallback((iso: string, kg: number): Promise<{ ok: boolean; queued: boolean }> => {
+    return submitWrite("weight.day", { athleteId, day: iso, kg }).then(async (r) => {
+      if (r.status === "queued") {
+        // Affichée tout de suite, le palier sera vérifié à la prochaine pesée
+        // faite avec du réseau.
+        _setWeightLogRaw((prev) => ({ ...prev, [toCompactDay(iso)]: kg }));
+        return { ok: true, queued: true };
+      }
+      const log = r.result as Record<string, number>;
+      _setWeightLogRaw(log);
+      // Poids de référence ou paliers non chargés (réseau) : bodyWeight vaut
+      // le défaut 0, tout serait un « palier ». On attend une vraie lecture.
+      const refUnknown = isKeyLoadFailed(SKEYS.bw, athleteId) || isKeyLoadFailed(SKEYS.weightMilestones, athleteId);
+      const milestone = refUnknown ? null : checkMilestone(log, bodyWeight.current);
+      if (milestone && milestone > bodyWeight.current) {
+        const bw = await recordWeightMilestone(athleteId, iso, milestone);
+        _setWeightMilestonesRaw([...weightMilestones, { date: toCompactDay(iso), kg: milestone }]);
+        _setBodyWeightRaw(bw);
+        setMilestoneNotif(milestone);
+        setTimeout(() => setMilestoneNotif(null), 3500);
+      }
+      return { ok: true, queued: false };
+    }).catch((e) => {
+      console.error("[saveWeight]", e);
+      toast.error("Pesée non enregistrée : réessaie dans un instant.");
+      return { ok: false, queued: false };
+    });
+  }, [athleteId, bodyWeight, weightMilestones, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw, setMilestoneNotif]);
+
+  /** Pesée du jour saisie hors wellness (fiche profil). true = enregistrée ou gardée sans réseau. */
+  const saveWeighIn = useCallback(async (kg: number): Promise<boolean> => {
+    const r = await pushWeight(localISO(), kg);
+    if (r.queued) notifyQueued();
+    return r.ok;
+  }, [pushWeight]);
 
   // Renvoie true quand l'écriture du wellness (et du poids saisi) est faite
   // OU gardée sur le téléphone sans réseau (file `src/lib/offline/writes.ts`,
@@ -227,36 +270,7 @@ export function useAthleteLogic(d: LogicDeps) {
       });
     const writes: Array<void | Promise<boolean>> = [wellnessWrite];
     if (data.poids) {
-      // Une seule pesée, côté serveur (RPC `weight_set_day`) : le journal n'est
-      // plus réécrit en entier depuis l'état de l'appareil.
-      const kg = data.poids;
-      writes.push(submitWrite("weight.day", { athleteId, day: iso, kg }).then(async (r) => {
-        if (r.status === "queued") {
-          // Gardée sur le téléphone : affichée tout de suite, le palier sera
-          // vérifié à la prochaine pesée faite avec du réseau.
-          queued = true;
-          _setWeightLogRaw((prev) => ({ ...prev, [toCompactDay(iso)]: kg }));
-          return true;
-        }
-        const log = r.result as Record<string, number>;
-        _setWeightLogRaw(log);
-        // Poids de référence ou paliers non chargés (réseau) : bodyWeight vaut
-        // le défaut 0, tout serait un « palier ». On attend une vraie lecture.
-        const refUnknown = isKeyLoadFailed(SKEYS.bw, athleteId) || isKeyLoadFailed(SKEYS.weightMilestones, athleteId);
-        const milestone = refUnknown ? null : checkMilestone(log, bodyWeight.current);
-        if (milestone && milestone > bodyWeight.current) {
-          const bw = await recordWeightMilestone(athleteId, iso, milestone);
-          _setWeightMilestonesRaw([...weightMilestones, { date: toCompactDay(iso), kg: milestone }]);
-          _setBodyWeightRaw(bw);
-          setMilestoneNotif(milestone);
-          setTimeout(() => setMilestoneNotif(null), 3500);
-        }
-        return true;
-      }).catch((e) => {
-        console.error("[saveWeight]", e);
-        toast.error("Pesée non enregistrée : réessaie dans un instant.");
-        return false;
-      }));
+      writes.push(pushWeight(iso, data.poids).then((r) => { if (r.queued) queued = true; return r.ok; }));
     }
     return Promise.all(writes.map((w) => Promise.resolve(w ?? true))).then((oks) => {
       const ok = oks.every(Boolean);
@@ -265,7 +279,7 @@ export function useAthleteLogic(d: LogicDeps) {
       if (queued) notifyQueued();
       return ok;
     });
-  }, [athleteId, qc, bodyWeight, weightMilestones, _setWellnessRaw, _setWellnessHistoryRaw, _setWeightLogRaw, _setWeightMilestonesRaw, _setBodyWeightRaw, setMilestoneNotif]);
+  }, [athleteId, qc, pushWeight, _setWellnessRaw, _setWellnessHistoryRaw]);
 
   const updateSessionDay = useCallback((sessId: string, dayIdx: number) => {
     setSessions(prev => prev.map(s => s.id === sessId ? { ...s, day_of_week: dayIdx } : s));
@@ -296,7 +310,7 @@ export function useAthleteLogic(d: LogicDeps) {
 
   return {
     completeSession, uncompleteSession,
-    archiveAndNewBlock, applyAIEdit, saveWellness, updateSessionDay,
+    archiveAndNewBlock, applyAIEdit, saveWellness, saveWeighIn, updateSessionDay,
     updateSessionWeekDay, toggleHabitLog, updSets,
   };
 }

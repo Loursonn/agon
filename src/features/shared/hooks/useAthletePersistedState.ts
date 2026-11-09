@@ -465,7 +465,6 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   }, [save, persist]);
 
   const setSets = useCallback((v: SetsMap) => { setSetsRaw(v); persist(save(SKEYS.sets, v)); }, [save, persist]);
-  const setBodyWeight = useCallback((v: BodyWeight) => { setBodyWeightRaw(v); persist(save(SKEYS.bw, v)); }, [save, persist]);
 
   const setGoals = useCallback((v: Goals | ((p: Goals) => Goals)) => {
     setGoalsRaw(prev => { const val = typeof v === 'function' ? v(prev) : v; persist(save(SKEYS.goals, val)); return val; });
@@ -521,10 +520,6 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     setWellnessHistoryRaw(v); return persist(save(SKEYS.wellnessHistory, v));
   }, [save, persist]);
 
-  const setWeightLog = useCallback((v: Record<string, number>): Promise<boolean> => {
-    setWeightLogRaw(v); return persist(save(SKEYS.weightLog, v));
-  }, [save, persist]);
-
   const setWeightMilestones = useCallback((v: Array<{ date: string; kg: number }>) => {
     setWeightMilestonesRaw(v); persist(save(SKEYS.weightMilestones, v));
   }, [save, persist]);
@@ -542,11 +537,11 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     // Cycle ouvert (stockage exos/séances scopé par cycle)
     openCycleId, setOpenCycleId,
     // Wrapped setters (write + persist)
-    setExos, setExMeta, setSets, setBodyWeight, setGoals, setCompletedSessions,
+    setExos, setExMeta, setSets, setGoals, setCompletedSessions,
     setAthleteNotes, setCustomMethods, setSessions, setBlockConfig, setBlockHistory,
     setWeekSchedule, setSessionLogs, setFreeSessions,
     setVisibilitySettings, setWellness, setWellnessHistory,
-    setWeightLog, setWeightMilestones,
+    setWeightMilestones,
     // Internal raw setters needed by logic hooks
     _setBodyWeightRaw: setBodyWeightRaw,
     _setWeightLogRaw: setWeightLogRaw,
