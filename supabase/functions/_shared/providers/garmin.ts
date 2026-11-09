@@ -134,10 +134,23 @@ export function normalizePermissions(body: unknown): string[] {
 
 // ─────────────────────────── Notifications push ──────────────────────────────
 
-/** Types de résumé traités. Les autres sont stockés puis ignorés. */
+/** Types transformés en activités Agon (`provider_activities`). */
 export const ACTIVITY_TYPES = ["activities", "manuallyUpdatedActivities", "activityDetails"] as const;
+/** Types fusionnés dans `provider_dailies`. */
 export const DAILY_TYPES = ["dailies", "sleeps", "hrv"] as const;
 export const CONTROL_TYPES = ["deregistrations", "userPermissionsChange"] as const;
+
+/**
+ * Tous les types relevant de la permission ACTIVITY_EXPORT. Tout autre type
+ * de données (dailies, epochs, sleeps, stressDetails, userMetrics, bodyComps,
+ * pulseox, allDayRespiration, healthSnapshot, hrv, bloodPressures, skinTemp,
+ * nutrition, hydration…, et ceux que Garmin ajoutera) relève de HEALTH_EXPORT.
+ * Chaque résumé reçu est stocké brut (`provider_raw_records`), traité ou non.
+ */
+export const ACTIVITY_PERMISSION_TYPES = [...ACTIVITY_TYPES, "activityFiles", "moveIQActivities"] as const;
+
+/** Types dont un fichier lourd est rangé dans le bucket `provider-raw`. */
+export const RAW_FILE_TYPES = ["activityDetails", "activityFiles"] as const;
 
 export type GarminSummaryKind =
   | (typeof ACTIVITY_TYPES)[number]
@@ -447,7 +460,7 @@ export function mapGarminDaily(kind: string, e: Record<string, unknown>): Garmin
 
 /** Permission nécessaire pour importer un type de résumé. */
 export function permissionFor(kind: string): string | null {
-  if ((ACTIVITY_TYPES as readonly string[]).includes(kind)) return GARMIN_PERMISSIONS.activity;
-  if ((DAILY_TYPES as readonly string[]).includes(kind)) return GARMIN_PERMISSIONS.health;
-  return null;
+  if ((CONTROL_TYPES as readonly string[]).includes(kind)) return null;
+  if ((ACTIVITY_PERMISSION_TYPES as readonly string[]).includes(kind)) return GARMIN_PERMISSIONS.activity;
+  return GARMIN_PERMISSIONS.health;
 }

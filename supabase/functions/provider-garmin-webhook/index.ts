@@ -23,10 +23,10 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { findCrossSourceDuplicate } from "../_shared/activityDedup.ts";
 import { garminWebhookToken } from "../_shared/garminConfig.ts";
 import { canonicalJson, sha256Hex, timingSafeEqual } from "../_shared/oauth.ts";
 import { splitNotification } from "../_shared/providers/garmin.ts";
+import { garminIngestDeps } from "../_shared/garminIngestDeps.ts";
 import { drainInbox } from "../_shared/providers/garminIngest.ts";
 
 /** Taille maximale acceptée. Un `activityDetails` avec échantillons reste en dessous. */
@@ -101,7 +101,7 @@ serve(async (req) => {
 
   if (ids.length > 0) {
     const work = drainInbox(
-      { db: admin, findDuplicate: (_db, c) => findCrossSourceDuplicate(admin, c) },
+      garminIngestDeps(admin),
       { ids, limit: ids.length, deadlineMs: 50_000 },
     ).then((counts) => {
       // Décomptes seulement : aucune donnée personnelle dans les journaux.

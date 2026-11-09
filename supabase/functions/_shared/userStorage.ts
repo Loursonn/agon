@@ -13,7 +13,7 @@
  */
 
 /** Buckets susceptibles de contenir des fichiers rattachés à un utilisateur. */
-export const USER_BUCKETS = ["medical", "test-files", "garmin-screenshots", "test-media", "avatars", "docs"];
+export const USER_BUCKETS = ["medical", "test-files", "garmin-screenshots", "test-media", "avatars", "docs", "provider-raw"];
 
 /** Le strict nécessaire du client service_role (testable sans supabase-js). */
 export interface StorageAdmin {

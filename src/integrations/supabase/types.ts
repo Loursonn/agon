@@ -3460,6 +3460,68 @@ export type Database = {
           },
         ]
       }
+      provider_raw_records: {
+        Row: {
+          ai_allowed: boolean
+          athlete_id: string
+          external_user_id: string | null
+          file_bytes: number | null
+          file_path: string | null
+          file_type: string | null
+          id: string
+          payload: Json
+          received_at: string
+          samples_count: number | null
+          samples_path: string | null
+          source: Database["public"]["Enums"]["data_source"]
+          summary_id: string
+          summary_type: string
+          updated_at: string
+        }
+        Insert: {
+          ai_allowed?: boolean
+          athlete_id: string
+          external_user_id?: string | null
+          file_bytes?: number | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          payload: Json
+          received_at?: string
+          samples_count?: number | null
+          samples_path?: string | null
+          source: Database["public"]["Enums"]["data_source"]
+          summary_id: string
+          summary_type: string
+          updated_at?: string
+        }
+        Update: {
+          ai_allowed?: boolean
+          athlete_id?: string
+          external_user_id?: string | null
+          file_bytes?: number | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          payload?: Json
+          received_at?: string
+          samples_count?: number | null
+          samples_path?: string | null
+          source?: Database["public"]["Enums"]["data_source"]
+          summary_id?: string
+          summary_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_raw_records_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_tokens: {
         Row: {
           access_expires_at: string | null
@@ -5335,6 +5397,16 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      provider_raw_objects: {
+        Args: {
+          p_athlete: string
+          p_provider: Database["public"]["Enums"]["data_source"]
+          p_types?: string[]
+        }
+        Returns: {
+          object_name: string
+        }[]
       }
       provider_sync_try_lock: {
         Args: { p_connection_id: string; p_ttl_seconds?: number }
