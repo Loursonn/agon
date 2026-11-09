@@ -19,6 +19,7 @@ import {
   type VideoBank, type VideoBankEntry, videoKey,
 } from "../_shared/coachApiOps.ts";
 import { ApplyConflict, applyDraft, parseUndo, UndoConflict, undoSteps } from "../_shared/coachApiApply.ts";
+import { readSummaryHealth } from "../_shared/coachApiHealth.ts";
 import { buildFiches, buildHabits, buildPeriodisation, buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
 import type { CareState } from "../_shared/coachApiCare.ts";
 import { cleanText, Invalid, isObj, oneOf, onlyKeys, reqText } from "../_shared/coachApiCheck.ts";
@@ -368,8 +369,10 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
 
   await logAccess(admin, caller, "GET /athletes/:id/summary", athlete.id);
 
-  const [{ values }, logs, prs, acts, days, themes, energy, comps, tests, life, injuries] = await Promise.all([
-    appData(admin, athlete.id, ["asp:goals", "asp:bw", "asp:wh", "asp:wlog", "asp:blockHistory", "asp:prog"]),
+  const [{ values }, health, logs, prs, acts, days, themes, energy, comps, tests, life, injuries] = await Promise.all([
+    appData(admin, athlete.id, ["asp:goals", "asp:prog"]),
+    // Wellness (archives comprises), pesées, objectif de poids : tables santé.
+    readSummaryHealth(admin, athlete.id, from, to),
     admin.from("workout_logs")
       .select("scheduled_date, session_id, session_name, status, rpe_score, duration_s, athlete_modifications")
       .eq("athlete_id", athlete.id).gte("scheduled_date", from).lte("scheduled_date", to)
@@ -424,6 +427,7 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
     from,
     to,
     appData: values,
+    health,
     prog: values["asp:prog"],
     workoutLogs: logs.data ?? [],
     prs: prs.data ?? [],

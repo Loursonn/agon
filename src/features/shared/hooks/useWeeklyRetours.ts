@@ -18,8 +18,9 @@ import type { ProgSession, Exercice, Bloc } from "@/features/coach/components/pr
 import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence";
 import { fetchOccurrencesForSessions } from "./useSessionOccurrence";
 import { startOfWeek, endOfWeek, subWeeks, format, addDays } from "date-fns";
-import { averageWellness, dailyWellness, retoursWellnessHistory } from "@/lib/retoursWellness";
-import { wellnessScore } from "@shared/domain/wellness";
+import { averageWellness, dailyWellness } from "@/lib/retoursWellness";
+import { wellnessScore, type WellnessHistory } from "@shared/domain/wellness";
+import { getWellnessHistory } from "@/api/wellness";
 import { getDays as getNutritionDays, getStrategy as getNutritionStrategy } from "@/api/nutrition";
 
 
@@ -34,14 +35,18 @@ export function useWeeklyRetours(athleteId: string, weekStartDate: Date) {
       const prevStart = startOfWeek(subWeeks(weekStartDate, 1), { weekStartsOn: 1 });
       const prevEnd   = endOfWeek(subWeeks(weekStartDate, 1),   { weekStartsOn: 1 });
 
-      // Load app_data once (shared between current + previous week)
+      // Load app_data once (shared between current + previous week), et le
+      // wellness (bloc courant + blocs archivés) depuis sa table, jours ISO.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const appDataMap: Record<string, any> = await readAppDataKeys(athleteId,
-        ["asp:wh", "asp:sets", "asp:exos", "asp:blockConfig", "asp:sessionlogs", "asp:blockHistory", "asp:freesess", "asp:prog"]);
+      const [appDataMap, wellness]: [Record<string, any>, WellnessHistory] = await Promise.all([
+        readAppDataKeys(athleteId,
+          ["asp:sets", "asp:exos", "asp:blockConfig", "asp:sessionlogs", "asp:blockHistory", "asp:freesess", "asp:prog"]),
+        getWellnessHistory(athleteId),
+      ]);
 
       const [currentWeek, previousWeek] = await Promise.all([
-        fetchWeekData(athleteId, curStart, curEnd, appDataMap),
-        fetchWeekData(athleteId, prevStart, prevEnd, appDataMap),
+        fetchWeekData(athleteId, curStart, curEnd, appDataMap, wellness),
+        fetchWeekData(athleteId, prevStart, prevEnd, appDataMap, wellness),
       ]);
 
       return { current_week: currentWeek, previous_week: previousWeek };
@@ -101,6 +106,7 @@ async function fetchWeekData(
   endDate: Date,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   appDataMap: Record<string, any>,
+  mergedWH: WellnessHistory,
 ): Promise<WeeklyRetourData> {
   const start = format(startDate, "yyyy-MM-dd");
   const end   = format(endDate,   "yyyy-MM-dd");
@@ -111,9 +117,6 @@ async function fetchWeekData(
   const currentBlockConfig: BlockConfig             = appDataMap["asp:blockConfig"]   ?? {};
   const progSessions: ProgSession[]                 = appDataMap["asp:prog"]          ?? [];
   const blockHistory: ArchivedBlock[]               = appDataMap["asp:blockHistory"]  ?? [];
-
-  // Wellness du bloc courant + blocs archivés, en jours ISO (clés compactes en base)
-  const mergedWH = retoursWellnessHistory(appDataMap["asp:wh"], blockHistory);
 
   // ── Parallel DB queries ──────────────────────────────────────────────────────
   const [workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy] = await Promise.all([
