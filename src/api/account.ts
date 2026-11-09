@@ -227,9 +227,7 @@ export async function setOwnCoach(userId: string, coachId: null | string, what =
  * seulement si la valeur change ou date de plus d'une heure.
  */
 export async function reportClientBuild(build: string): Promise<void> {
-  // La RPC n'est dans les types générés qu'après application de la migration
-  // 20261110110000_client_build.sql et régénération de types.ts.
-  check(await db().rpc("report_client_build" as never, { p_build: build } as never), "Version non enregistrée");
+  check(await db().rpc("report_client_build", { p_build: build }), "Version non enregistrée");
 }
 
 /** Lien d'invitation (ancien parcours `/invite/:token`) créé par le coach connecté ; renvoie le jeton. */
