@@ -6,26 +6,26 @@
  * qui le rend testable par Vitest avec des exemples de payloads.
  *
  * VÉRIFIÉ dans la spec officielle « OAuth2.0 PKCE Specification » (PDF du
- * portail Garmin, lu le 07/11/2026) :
+ * portail Garmin, v2.0 du 15/10/2026, relue le 09/11/2026) :
  *   - autorisation : GET https://connect.garmin.com/oauth2Confirm
  *     (response_type=code, client_id, code_challenge, code_challenge_method=S256,
  *     redirect_uri, state) ;
- *   - jeton : POST https://connectapi.garmin.com/di-oauth2-service/oauth/token,
+ *   - jeton : POST https://diauth.garmin.com/di-oauth2-service/oauth/token,
  *     formulaire, `client_secret` OBLIGATOIRE (≠ COROS) ;
  *   - expires_in = 86 400 s (24 h), refresh_token_expires_in ≈ 7 776 000 s
  *     (90 j), nouveau refresh token à chaque rafraîchissement, marge
  *     recommandée de 600 s ;
  *   - scope imposé par Garmin, non paramétrable (« PARTNER_WRITE PARTNER_READ
  *     CONNECT_READ CONNECT_WRITE ») : on n'en demande pas ;
- *   - GET  /wellness-api/rest/user/id          → {"userId": "…"} (stable d'un
+ *   - GET  /partner-gateway/rest/user/id          → {"userId": "…"} (stable d'un
  *     jeton à l'autre) ;
- *   - DELETE /wellness-api/rest/user/registration — OBLIGATOIRE quand l'app
+ *   - DELETE /partner-gateway/rest/user/registration — OBLIGATOIRE quand l'app
  *     offre « Disconnect » ou « Delete my account » ;
- *   - GET  /wellness-api/rest/user/permissions → ["ACTIVITY_EXPORT",
+ *   - GET  /partner-gateway/rest/user/permissions → {"permissions": ["ACTIVITY_EXPORT",
  *     "HEALTH_EXPORT", "WORKOUT_IMPORT", …].
  *
- * SUPPOSÉ (documentation Health/Activity API réservée aux partenaires,
- * inaccessible avant approbation) — forme des notifications push :
+ * VÉRIFIÉ dans Health API 2.1 et Activity API 2.1 (PDF du portail, lus le
+ * 09/11/2026) — forme des notifications push :
  *   - objet JSON dont chaque clé de premier niveau est un type de résumé
  *     (`activities`, `dailies`, `sleeps`, `hrv`, `deregistrations`,
  *     `userPermissionsChange`…) portant un tableau d'entrées ;
@@ -47,10 +47,10 @@ import type { FetchLike, OAuthClientConfig, ProviderAdapter } from "../oauth.ts"
 
 export const GARMIN_ENDPOINTS = {
   authorize: "https://connect.garmin.com/oauth2Confirm",
-  token: "https://connectapi.garmin.com/di-oauth2-service/oauth/token",
-  userId: "https://apis.garmin.com/wellness-api/rest/user/id",
-  permissions: "https://apis.garmin.com/wellness-api/rest/user/permissions",
-  registration: "https://apis.garmin.com/wellness-api/rest/user/registration",
+  token: "https://diauth.garmin.com/di-oauth2-service/oauth/token",
+  userId: "https://apis.garmin.com/partner-gateway/rest/user/id",
+  permissions: "https://apis.garmin.com/partner-gateway/rest/user/permissions",
+  registration: "https://apis.garmin.com/partner-gateway/rest/user/registration",
 } as const;
 
 /** Hôte conservé dans `provider_connections.api_host` et l'état OAuth. */
@@ -335,7 +335,8 @@ export function mapGarminActivity(input: Record<string, unknown>): GarminActivit
     max_hr: heartRate(s.maxHeartRateInBeatsPerMinute),
     avg_pace_s_per_km: pace,
     calories: count(s.activeKilocalories),
-    device_name: text(s.deviceName),
+    // « unknown » = activité saisie à la main sur Garmin Connect (Activity API 2.1).
+    device_name: /^unknown$/i.test(String(s.deviceName ?? "").trim()) ? null : text(s.deviceName),
     details: {
       provider: "garmin",
       activityName: text(s.activityName, 200),
@@ -405,8 +406,9 @@ export function mapGarminDaily(kind: string, e: Record<string, unknown>): Garmin
         steps,
         // Garmin code « pas de mesure » par -1 / -2 sur le stress : pas un niveau.
         stress_avg: stress === null || stress < 0 || stress > 100 ? null : Math.round(stress),
-        body_battery_min: battery(e.bodyBatteryLowestValue),
-        body_battery_max: battery(e.bodyBatteryHighestValue),
+        // Body battery mini/maxi : absent des `dailies` (Health API 2.1 n'y met
+        // que bodyBatteryChargedValue / DrainedValue) ; il faudrait les
+        // `stressDetails`. Non affiché aujourd'hui : on ne l'invente pas.
       },
       raw: e,
     };
@@ -441,11 +443,6 @@ export function mapGarminDaily(kind: string, e: Record<string, unknown>): Garmin
   }
 
   return null;
-}
-
-function battery(v: unknown): number | null {
-  const n = finite(v);
-  return n === null || n < 0 || n > 100 ? null : Math.round(n);
 }
 
 /** Permission nécessaire pour importer un type de résumé. */

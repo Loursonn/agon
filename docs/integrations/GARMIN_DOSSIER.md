@@ -414,15 +414,29 @@ qui annonce cette suppression.
 - Jusqu'à la vérification, l'app reste « unverified » avec un plafond de
   connexions : n'ouvrir qu'aux athlètes volontaires.
 
-### À vérifier dès l'accès au portail
+### Vérifié dans la doc du portail (09/11/2026)
 
-Faute d'accès à la doc partenaire, ces points sont supposés :
+Lu : Start Guide 2.0, OAuth2 PKCE 2.0, Health API 2.1, Activity API 2.1
+(PDF confidentiels du portail, non versionnés).
 
-- forme exacte des notifications push et noms de champs (`deviceName`,
-  `activityType`, `restingHeartRateInBeatsPerMinute`, `overallSleepScore`,
-  `lastNightAvg`…) ;
-- présence d'un en-tête `garmin-client-id` (vérifié seulement s'il est là) ;
-- acceptation d'un paramètre `?token=` dans l'URL du portail ;
-- délai de réponse exigé et politique de rejeu ;
-- durée de vie réelle du refresh token (on suppose ~90 jours, conforme à
-  `refresh_token_expires_in = 7775998` de la spec).
+- **Corrigé** : jeton sur `https://diauth.garmin.com/di-oauth2-service/oauth/token`
+  (et non `connectapi.garmin.com`) ; routes utilisateur sous
+  `https://apis.garmin.com/partner-gateway/rest/user/{id,permissions,registration}`
+  (et non `/wellness-api/`).
+- **Corrigé** : les `dailies` ne portent pas de body battery mini/maxi (seulement
+  `bodyBatteryChargedValue` / `DrainedValue`) ; le mapping ne l'invente plus.
+- **Conforme** : forme des notifications (clé = type, liste d'entrées avec
+  `userId`, `summaryId`), champs d'activité (`deviceName`, `activityType`…),
+  sommeil (`overallSleepScore.value`), HRV (`lastNightAvg`), `deregistrations`,
+  `userPermissionsChange` (`permissions`), réponse `{"permissions": […]}`.
+- **Délai et rejeu** : 30 s pour répondre 200 ; rejeu une fois par heure
+  pendant 7 jours sinon. Plages IP d'émission publiées dans la Health API §4.
+- **En-tête** : les notifications portent le client ID en en-tête (contrôle
+  `garmin-client-id` conservé).
+- `deviceName` vaut « unknown » pour une activité saisie à la main, et peut
+  déjà commencer par « Garmin » : `providerAttribution` gère le second cas.
+- Starter : **un seul client ID** par licencié ; tout nouveau domaine déclaré
+  dans API Tools passe une revue de sécurité de 24 à 48 h.
+
+Reste à confirmer au premier essai : acceptation de `?token=` dans l'URL du
+portail.

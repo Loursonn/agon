@@ -163,11 +163,14 @@ describe("mapGarminDaily", () => {
       steps: 11250,
       restingHeartRateInBeatsPerMinute: 47,
       averageStressLevel: 31,
-      bodyBatteryHighestValue: 92,
-      bodyBatteryLowestValue: 18,
     })!;
     expect(d.day).toBe("2025-11-06");
-    expect(d.fields).toEqual({ resting_hr: 47, steps: 11250, stress_avg: 31, body_battery_min: 18, body_battery_max: 92 });
+    expect(d.fields).toEqual({ resting_hr: 47, steps: 11250, stress_avg: 31 });
+  });
+
+  it("activité : deviceName « unknown » (saisie manuelle) ne nomme aucun appareil", () => {
+    const a = mapGarminActivity({ userId: "u", summaryId: "s1", activityId: 1, startTimeInSeconds: 1762400000, durationInSeconds: 600, deviceName: "unknown" });
+    expect(a?.device_name ?? null).toBeNull();
   });
 
   it("dailies : -1 de stress (« pas de mesure » chez Garmin) devient null", () => {
@@ -251,10 +254,10 @@ describe("garminAdapter", () => {
     expect(() => garminAdapter({ clientId: "id" })).toThrow(/client_secret/);
   });
 
-  it("autorise sur connect.garmin.com et échange sur connectapi.garmin.com", () => {
+  it("autorise sur connect.garmin.com et échange sur diauth.garmin.com", () => {
     const a = garminAdapter({ clientId: "id", clientSecret: "s" });
     expect(a.endpoints.authorize).toBe("https://connect.garmin.com/oauth2Confirm");
-    expect(a.endpoints.token).toBe("https://connectapi.garmin.com/di-oauth2-service/oauth/token");
+    expect(a.endpoints.token).toBe("https://diauth.garmin.com/di-oauth2-service/oauth/token");
     expect(a.scopes).toBeUndefined();
   });
 
@@ -272,7 +275,7 @@ describe("garminAdapter", () => {
     const a = garminAdapter({ clientId: "id", clientSecret: "s" }, ok);
     expect(await a.revoke({ accessToken: "tok" })).toBe(true);
     const [url, init] = ok.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://apis.garmin.com/wellness-api/rest/user/registration");
+    expect(url).toBe("https://apis.garmin.com/partner-gateway/rest/user/registration");
     expect(init.method).toBe("DELETE");
 
     const gone = garminAdapter({ clientId: "id", clientSecret: "s" }, vi.fn(async () => new Response(null, { status: 404 })));
