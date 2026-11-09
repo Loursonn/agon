@@ -448,13 +448,10 @@ portail.
 Légende : `[x]` vérifié, `[ ]` reste à faire, `[!]` écart constaté. Aucune valeur de
 secret, aucune donnée d'athlète lue. Rien déployé, rien écrit en prod.
 
-- [~] **Secrets Garmin posés.** CLI Supabase absent de ce poste : sondage HTTP sans jeton
-  des fonctions déployées. `GARMIN_WEBHOOK_TOKEN` : **posé** (≥ 32 car.) — le webhook répond
-  401 « non autorisé » à un mauvais jeton, et non 503 « garmin non configuré ».
-  `GARMIN_CLIENT_ID` / `GARMIN_CLIENT_SECRET` : **non prouvable de l'extérieur** (`connect`
-  exige un JWT, `callback` teste ses paramètres avant l'adaptateur). Implicitement posés
-  puisque la connexion fonctionne ; confirmation par Hugo :
-  `supabase secrets list | grep -E "GARMIN_|APP_URL"` (noms seulement).
+- [x] **Secrets Garmin posés.** `supabase secrets list` (projet de prod, noms et dates
+  seulement) : `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_WEBHOOK_TOKEN` et
+  `APP_URL` sont présents, posés le 09/11/2026 vers 12 h 19 UTC (`APP_URL` le 07/11).
+  Valeurs non lues. Le sondage HTTP confirme le jeton webhook (401, pas 503).
 - [ ] **Webhook reçoit / stocke / traite** (compteurs). Code relu : jeton d'URL → écriture
   brute idempotente dans `provider_webhook_inbox` → 200 → `drainInbox` via `waitUntil`,
   reprise par le cron ; `deregistrations` et `userPermissionsChange` traités. Tests Vitest
