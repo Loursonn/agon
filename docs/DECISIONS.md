@@ -1762,6 +1762,6 @@ et SUPPRIME celles qui ne sont plus nulle part. Cas perdant trouvé : un bloc sa
 programme saisi mais avec du wellness n'était pas archivé, puis `asp:wh` était
 vidé. Corrigé : on archive aussi quand il reste du wellness.
 
-**Appliquée en prod le 2026-11-10 (accord de Titouan)** : test à blanc vert, migration, types régénérés, test relancé (0 KO). Initialement prévu : test à blanc puis application de la migration en
-prod, régénération des types, relance du test. Migration purement additive
-(le client de `main` ne l'appelle pas). Pas de « Nouveautés » : invisible pour un coach.
+**Appliquée en prod le 2026-11-10 (accord de Titouan)** : test à blanc vert, migration, types
+régénérés, test relancé (0 KO). Migration purement additive (le client de `main` ne l'appelle pas).
+Pas de « Nouveautés » : invisible pour un coach.
