@@ -452,13 +452,7 @@ secret, aucune donnée d'athlète lue. Rien déployé, rien écrit en prod.
   seulement) : `GARMIN_CLIENT_ID`, `GARMIN_CLIENT_SECRET`, `GARMIN_WEBHOOK_TOKEN` et
   `APP_URL` sont présents, posés le 09/11/2026 vers 12 h 19 UTC (`APP_URL` le 07/11).
   Valeurs non lues. Le sondage HTTP confirme le jeton webhook (401, pas 503).
-- [ ] **Webhook reçoit / stocke / traite** (compteurs). Code relu : jeton d'URL → écriture
-  brute idempotente dans `provider_webhook_inbox` → 200 → `drainInbox` via `waitUntil`,
-  reprise par le cron ; `deregistrations` et `userPermissionsChange` traités. Tests Vitest
-  verts (`garmin.test.ts`, 26). **Compteurs en base non lus** (pas d'accès prod ici) —
-  requête à lancer par Hugo, sans lecture de contenu :
-  `select type, count(*) total, count(processed_at) traites, count(error) en_erreur from provider_webhook_inbox where provider='garmin' group by 1;`
-  puis `select count(*) from provider_activities where source='garmin';` et idem `provider_dailies`.
+- [!] **Webhook reçoit / stocke / traite** — **rien reçu à ce jour (09/11/2026, lecture seule)**. Compteurs prod : 1 connexion Garmin `active` (12 h 24 UTC, 3 permissions, jamais synchronisée, sans erreur), `provider_webhook_inbox` vide, 0 activité, 0 journée, 0 en attente. Aucune notification n'a donc atteint le webhook : soit l'URL n'est pas (ou mal) déclarée dans le portail Garmin (mode push, `?token=` ou /<token>), soit aucune activité n'a été enregistrée depuis la connexion. À refaire après un essai. Code relu : jeton d'URL → écriture brute idempotente → 200 → traitement via `waitUntil`, reprise par le cron. Tests Vitest verts.
 - [x] **Endpoints obligatoires de la Partner Verification, présents dans le code** (l'outil
   lui-même se lance depuis le portail Garmin, par Hugo) :
   | Exigence | Où |
