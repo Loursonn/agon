@@ -59,7 +59,7 @@ export function TimeAxis({ rangeStart, rangeEnd, containerWidth, labelWidth }: T
             className="pointer-events-none absolute -bottom-1.5 top-0 w-0.5 rounded-sm bg-agon-accent"
             style={{ left: todayX }}
           >
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-sm bg-agon-accent-doux px-agon-xs text-agon-xs font-extrabold text-agon-accent">
+            <div className="absolute -top-3 left-1/2 hidden md:block -translate-x-1/2 whitespace-nowrap rounded-sm bg-agon-accent-doux px-agon-xs text-agon-xs font-extrabold text-agon-accent">
               Auj.
             </div>
           </div>
