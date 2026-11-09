@@ -136,9 +136,65 @@ ouverte ») après la première synchro.
 
 ## 5. Observations de la connexion réelle
 
-*(à remplir après « connecté »)*
+### 2026-11-09, après la connexion de Titouan (lecture seule)
 
-- Résultat de l'autorisation (`?coros=` ) :
-- Comptes (connexions / activités / dailies) pour ce compte :
-- Volume de course (`useRunningVolume`, `useWeeklyDistances`) :
-- Délai, quotas, format des fichiers FIT, erreurs :
+- **Autorisation réussie.** Une ligne `provider_connections` COROS : `status = active`,
+  hôte `mcpeu.coros.com`, scopes accordés `mcp.tools`, `openid`, `offline_access`
+  (donc un `refresh_token` a été délivré), `last_error` vide, mise à jour à 15:45 UTC.
+  Le client enregistré avant ce jour a été accepté : le cas « redirect_uri rejeté » ne
+  s'est pas produit.
+- **Plusieurs tentatives.** `provider_oauth_states` garde deux états COROS non consommés
+  (15:11 expiré, 15:43 encore valide à la lecture) : des départs vers COROS sans retour
+  (page fermée, ou clic répété). La connexion à 15:45 vient d'un autre état, consommé.
+  La purge de 3 h 10 les nettoiera.
+- **Aucune synchro encore faite** : `last_sync_at` et `synced_through` vides,
+  `provider_activities` = 0 et `provider_dailies` = 0 pour `source = 'coros'`,
+  `provider_fit_quota` vide. Le cron de 3 h 40 UTC n'a pas encore tourné depuis la connexion.
+- Reste à faire : synchro (bouton ou cron), puis compteurs, volume de course, format
+  des FIT, liste réelle des outils MCP.
+
+### 2026-11-09 15:49 UTC — première synchro manuelle
+
+- La synchro a tourné (`last_sync_at` 15:48:59) et la connexion reste `active`.
+- **Premier écart avec la doc** : l'outil de données quotidiennes s'appelle
+  `queryDailyHealthData` (pas `queryDailyActivity`) et son schéma publié n'a pas de
+  paramètres de début / fin : il prend `days`. `resolveDateArgs` refuse de deviner, d'où
+  `last_error` = « données quotidiennes non lues : queryDailyHealthData : paramètres de
+  début / fin de période introuvables dans le schéma publié (days) ». Correctif à écrire
+  en local avec un test : accepter un paramètre `days` (nombre de jours en arrière) pour
+  cet outil. Redéploiement de `provider-coros-sync` : accord requis.
+- Compteurs juste après : 0 activité, 0 donnée quotidienne, quota FIT à 0,
+  `synced_through` toujours vide. Le côté FIT n'a donc rien importé ni ne s'est
+  clairement arrêté : le journal de `provider-coros-sync` (ligne « outils disponibles »
+  et suites) ou le compte rendu affiché par le bouton est nécessaire pour trancher.
+
+### Lecture du résultat
+
+Le compte COROS de Titouan est neuf : aucune activité, jamais utilisé. Les 0 activité et
+0 donnée quotidienne sont donc attendus. Ce test valide l'autorisation, le stockage des
+jetons (avec `refresh_token`), l'ouverture de session MCP, `tools/list` et la résolution
+des outils. Il ne valide **pas** le listing des FIT, leur téléchargement ni leur décodage,
+faute de fichier. Pour les valider, il faut au moins une activité dans le compte COROS
+(séance réelle, ou saisie manuelle dans l'app COROS), puis une nouvelle synchro.
+
+### Correctif local : outil quotidien à paramètre `days`
+
+`resolveDateArgs` (avec `allowSingleDay`) reconnaît maintenant un outil sans dates mais avec
+`days` (`queryDailyHealthData`) : un seul appel pour les `COROS_DAILY_DAYS` derniers jours
+(plafonné au `maximum` publié), réponse en prose rangée dans `provider_dailies` sous le jour
+de l'appel, avec `raw.window_days`. Jamais accepté pour les FIT. Tests ajoutés dans
+`corosSync.test.ts`. **Non déployé** : `provider-coros-sync` en prod reste en v6 ;
+déploiement soumis à accord.
+
+**Déployé le 2026-11-09** par Titouan (accord donné dans la conversation) :
+`provider-coros-sync` depuis le worktree `docs-coros-p7`, commit `8f055f4`.
+
+### 2026-11-09 16:01 UTC — synchro après le correctif (v7)
+
+- `last_error` vide, connexion `active`, `provider_dailies` = 1 ligne COROS (l'appel `days`
+  fonctionne), `provider_activities` = 0 (compte neuf).
+- **Point à surveiller** : `synced_through` reste vide malgré une synchro sans erreur. Sur un
+  compte sans activité, la liste de FIT vide devrait faire avancer le curseur ; il ne le fait
+  pas (ou le passage s'est arrêté sur un état « en attente » non stocké). À relire avec le
+  journal de `provider-coros-sync` à la première vraie activité.
+- Toujours non validé : listing / téléchargement / décodage des FIT, volume de course.
