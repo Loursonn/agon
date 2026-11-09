@@ -11,7 +11,7 @@
  * sans le jeton nécessaire pour réessayer — et un accès resterait ouvert sans
  * que personne ne puisse plus le fermer.
  *   - COROS : révocation RFC 7009 des deux jetons (`/oauth2/revoke`).
- *   - Garmin : `DELETE /wellness-api/rest/user/registration`, obligatoire chez
+ *   - Garmin : `DELETE /partner-gateway/rest/user/registration`, obligatoire chez
  *     Garmin dès que l'app offre « Disconnect » ou « Delete my account »
  *     (spec OAuth2 PKCE). Le jeton d'accès (24 h) est rafraîchi d'abord s'il
  *     a expiré ; le cron `garmin-maintenance` garde le refresh token vivant.
