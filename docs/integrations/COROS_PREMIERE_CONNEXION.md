@@ -188,3 +188,13 @@ déploiement soumis à accord.
 
 **Déployé le 2026-11-09** par Titouan (accord donné dans la conversation) :
 `provider-coros-sync` depuis le worktree `docs-coros-p7`, commit `8f055f4`.
+
+### 2026-11-09 16:01 UTC — synchro après le correctif (v7)
+
+- `last_error` vide, connexion `active`, `provider_dailies` = 1 ligne COROS (l'appel `days`
+  fonctionne), `provider_activities` = 0 (compte neuf).
+- **Point à surveiller** : `synced_through` reste vide malgré une synchro sans erreur. Sur un
+  compte sans activité, la liste de FIT vide devrait faire avancer le curseur ; il ne le fait
+  pas (ou le passage s'est arrêté sur un état « en attente » non stocké). À relire avec le
+  journal de `provider-coros-sync` à la première vraie activité.
+- Toujours non validé : listing / téléchargement / décodage des FIT, volume de course.
