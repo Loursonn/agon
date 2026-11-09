@@ -602,6 +602,7 @@ interface JsonSchemaProp {
   format?: string;
   pattern?: string;
   description?: string;
+  maximum?: number;
 }
 
 /** Ce que `tools/list` publie pour un outil (seuls les champs lus ici). */
@@ -628,6 +629,14 @@ export interface DateArgsSpec {
   format: DateFormat;
   /** Paramètre de taille de page, seulement s'il est publié. */
   limitKey: string | null;
+  /**
+   * Outil « les N derniers jours » (`days`), sans dates : un seul appel couvre
+   * la période, et la réponse n'est pas ventilée par jour. Observé sur
+   * `queryDailyHealthData` à la première connexion réelle (2026-11-09).
+   */
+  lookbackKey?: string;
+  /** Plafond publié par le schéma pour ce paramètre (`maximum`), s'il existe. */
+  lookbackMax?: number;
 }
 
 /** Le schéma publié ne permet pas d'appeler l'outil sans deviner. */
@@ -642,6 +651,7 @@ const START_RE = /^(start|begin|from)[_-]?(date|day|time)?$/i;
 const END_RE = /^(end|to|until)[_-]?(date|day|time)?$/i;
 const LIMIT_RE = /^(limit|page[_-]?size|size|max[_-]?results|count)$/i;
 const DAY_RE = /^(date|day|query[_-]?date)$/i;
+const LOOKBACK_RE = /^(days?|num[_-]?(of[_-]?)?days|number[_-]?of[_-]?days|lookback[_-]?days)$/i;
 
 function dateFormatOf(name: string, prop: JsonSchemaProp, tool: string): DateFormat {
   const types = Array.isArray(prop.type) ? prop.type : [prop.type];
@@ -700,6 +710,31 @@ export function resolveDateArgs(
     return { tool: tool.name, start: day, end: day, single: true, format, limitKey: null };
   }
 
+  /*
+    Outil « N derniers jours » : un paramètre `days`, pas de dates. Réservé aux
+    données quotidiennes (jamais aux FIT, qu'on liste par fenêtres datées).
+  */
+  const lookback = names.find((n) => LOOKBACK_RE.test(n));
+  if ((!start || !end) && !day && lookback && opts.allowSingleDay) {
+    const unknown = (tool.inputSchema?.required ?? []).filter((r) => r !== lookback);
+    if (unknown.length > 0) {
+      throw new CorosSchemaError(
+        `${tool.name} exige des paramètres que la synchronisation ne sait pas remplir : ${unknown.join(", ")}.`,
+      );
+    }
+    const max = props[lookback].maximum;
+    return {
+      tool: tool.name,
+      start: lookback,
+      end: lookback,
+      single: true,
+      format: "int",
+      limitKey: null,
+      lookbackKey: lookback,
+      lookbackMax: typeof max === "number" && max > 0 ? max : undefined,
+    };
+  }
+
   if (!start || !end) {
     throw new CorosSchemaError(
       `${tool.name} : paramètres de début / fin de période introuvables dans le schéma publié (${names.join(", ")}).`,
@@ -725,6 +760,15 @@ export function resolveDateArgs(
   }
 
   return { tool: tool.name, start, end, single: false, format, limitKey };
+}
+
+/** Arguments d'appel d'un outil « N derniers jours » (`spec.lookbackKey`). */
+export function buildLookbackArgs(spec: DateArgsSpec, days: number): Record<string, unknown> {
+  if (!spec.lookbackKey) {
+    throw new CorosSchemaError(`${spec.tool} n'est pas un outil « N derniers jours ».`);
+  }
+  const n = Math.max(1, Math.min(days, spec.lookbackMax ?? days));
+  return { [spec.lookbackKey]: n };
 }
 
 /** Arguments d'appel pour une plage `from`–`to` (jours ISO inclus). */

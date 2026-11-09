@@ -30,6 +30,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { hasConsent, isServiceRoleBearer } from "../_shared/auth.ts";
 import {
   buildDateArgs,
+  buildLookbackArgs,
   classifyFitListing,
   COROS_FIT_LIMITS,
   COROS_TOOLS,
@@ -404,6 +405,33 @@ async function ingestDailies(
   today: string,
 ): Promise<number> {
   let stored = 0;
+
+  /*
+    Outil « N derniers jours » (`days`), sans dates : un seul appel, et la
+    réponse n'est pas ventilée par jour. Elle est rangée sous le jour de
+    l'appel, avec la période demandée, pour ne pas laisser croire qu'elle
+    décrit un seul jour. Même règle que le reste : prose brute, pas d'IA.
+  */
+  if (spec.lookbackKey) {
+    const args = buildLookbackArgs(spec, DAILY_DAYS);
+    const result = await mcp.callTool(spec.tool, args);
+    if (result.isError || !result.text.trim()) return 0;
+    const { error } = await admin.from("provider_dailies").upsert(
+      {
+        athlete_id: athleteId,
+        source: "coros",
+        day: today,
+        raw: {
+          tool: spec.tool,
+          text: result.text,
+          window_days: args[spec.lookbackKey],
+          queried_at: new Date().toISOString(),
+        },
+      },
+      { onConflict: "athlete_id,source,day" },
+    );
+    return error ? 0 : 1;
+  }
 
   for (let i = 1; i <= DAILY_DAYS; i++) {
     const day = shiftDay(today, -i);

@@ -176,3 +176,12 @@ jetons (avec `refresh_token`), l'ouverture de session MCP, `tools/list` et la r�
 des outils. Il ne valide **pas** le listing des FIT, leur téléchargement ni leur décodage,
 faute de fichier. Pour les valider, il faut au moins une activité dans le compte COROS
 (séance réelle, ou saisie manuelle dans l'app COROS), puis une nouvelle synchro.
+
+### Correctif local : outil quotidien à paramètre `days`
+
+`resolveDateArgs` (avec `allowSingleDay`) reconnaît maintenant un outil sans dates mais avec
+`days` (`queryDailyHealthData`) : un seul appel pour les `COROS_DAILY_DAYS` derniers jours
+(plafonné au `maximum` publié), réponse en prose rangée dans `provider_dailies` sous le jour
+de l'appel, avec `raw.window_days`. Jamais accepté pour les FIT. Tests ajoutés dans
+`corosSync.test.ts`. **Non déployé** : `provider-coros-sync` en prod reste en v6 ;
+déploiement soumis à accord.
