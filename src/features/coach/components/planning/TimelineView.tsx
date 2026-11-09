@@ -1,1125 +1,52 @@
 import { useState, useRef, useLayoutEffect, useCallback } from "react";
-import { startOfMonth, addMonths, subMonths, format, parseISO, startOfISOWeek, endOfISOWeek, addWeeks, addDays } from "date-fns";
+import { startOfMonth, addMonths, subMonths, format, parseISO, addWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, X, Plus, Eye, Pencil, Trash2, Check, ChevronDown } from "lucide-react";
-import { snapMonday, snapSunday, keepWeeks, chainNextStart, endFromWeeks, computeCascade } from "./utils/planningHelpers";
-import { PERIOD_DEFAULTS } from "@/types/planning";
-import { PeriodConflictDialog } from "./dialogs/PeriodConflictDialog";
-import { ChildOverflowDialog } from "./dialogs/ChildOverflowDialog";
-import { ChangeParentDialog } from "./dialogs/ChangeParentDialog";
-import { usePlanningKeyboardShortcuts } from "./hooks/usePlanningKeyboardShortcuts";
-import { C } from "@/lib/theme";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  createCycle, createMacrocycle, createMesocycle, createMicrocycle, cycleKeys, deleteCycle, deletePeriod,
-  invalidateCycles, setCycleDates, updatePeriod, type PeriodLevel,
-} from "@/api/cycles";
+import { ChevronLeft, ChevronRight, X, Plus, Eye } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { cycleKeys, invalidateCycles, updatePeriod, type PeriodLevel } from "@/api/cycles";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useDeleteCompetition } from "@/hooks/useCompetitions";
+import { cn } from "@/lib/utils";
+import { Button } from "@/ui/Button";
+import { EmptyState } from "@/ui/EmptyState";
+import { snapMonday, snapSunday, keepWeeks, chainNextStart, endFromWeeks } from "./utils/planningHelpers";
+import {
+  LEVEL_STYLE, CREATE_LEVELS,
+  type CreateLevel, type CreateState, type DrawerType, type NoParentDragState, type ParentOption,
+  type SnapConflict, type SnapDragDialogState,
+} from "./utils/timelineLevels";
+import { usePlanningKeyboardShortcuts } from "./hooks/usePlanningKeyboardShortcuts";
+import { useTimelineData } from "./hooks/useTimelineData";
+import { useCalculatePosition } from "./hooks/useCalculatePosition";
+import { useDragCycle } from "./hooks/useDragCycle";
+import { useResizeCycle } from "./hooks/useResizeCycle";
+import type { Mesocycle, Cycle, Competition, TimelineData } from "./hooks/useTimelineData";
+import { TimeAxis } from "./TimeAxis";
+import { TimelineRow } from "./TimelineRow";
+import type { TLRowItem } from "./TimelineRow";
+import { CompetitionMarkers } from "./CompetitionMarkers";
+import { TestMarkers } from "./TestMarkers";
 import { CompetitionFormModal } from "./CompetitionFormModal";
 import { CreateCycleAssistant } from "./CreateCycleAssistant";
-
-import { useTimelineData }      from "./hooks/useTimelineData";
-import { useCalculatePosition } from "./hooks/useCalculatePosition";
-import { useDragCycle }         from "./hooks/useDragCycle";
-import { useResizeCycle }       from "./hooks/useResizeCycle";
-import type {
-  Macrocycle, Mesocycle, Cycle, Microcycle, Competition, TimelineData,
-} from "./hooks/useTimelineData";
-
-import { TimeAxis }            from "./TimeAxis";
-import { TimelineRow }         from "./TimelineRow";
-import type { TLRowItem }      from "./TimelineRow";
-import { CompetitionMarkers }  from "./CompetitionMarkers";
-import { TestMarkers }         from "./TestMarkers";
-
-import { MacrocycleDrawer }    from "./drawers/MacrocycleDrawer";
-import { MesocycleDrawer }     from "./drawers/MesocycleDrawer";
-import { CycleDrawer }         from "./drawers/CycleDrawer";
-import { MicrocycleDrawer }    from "./drawers/MicrocycleDrawer";
-import { CompetitionDrawer }   from "./drawers/CompetitionDrawer";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const MIN_WIDTH    = 600;
-const ROW_H        = 52;
-const ROWS_COUNT   = 4;
-const TOTAL_ROW_H  = ROW_H * ROWS_COUNT;
-
-const LEVEL_COLORS = {
-  macrocycle: C.ac,
-  mesocycle:  C.coach,
-  cycle:      C.o,
-  microcycle: C.tx3,
-} as const;
-
-// ── Drawer host ───────────────────────────────────────────────────────────────
-
-type DrawerType = "macrocycle" | "mesocycle" | "cycle" | "microcycle" | "competition";
-
-interface DrawerState {
-  type:  DrawerType;
-  id:    string;
-}
-
-function DrawerShell({
-  state, onClose, data, athleteId, rangeStart, rangeEnd, onEditComp, onDeleteComp,
-}: {
-  state:          DrawerState;
-  onClose:        () => void;
-  data:           ReturnType<typeof useTimelineData>["data"];
-  athleteId:      string;
-  rangeStart:     string;
-  rangeEnd:       string;
-  onEditComp?:    (comp: Competition) => void;
-  onDeleteComp?:  (comp: Competition) => void;
-}) {
-  const qc = useQueryClient();
-  const [renaming, setRenaming] = useState(false);
-  const [renameDraft, setRenameDraft] = useState("");
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [working, setWorking] = useState(false);
-
-  if (!data) return null;
-
-  const canRename = state.type !== "competition" && state.type !== "microcycle";
-  const canDelete = state.type !== "competition";
-
-  const TABLE_MAP: Partial<Record<DrawerType, PeriodLevel>> = {
-    macrocycle: "macrocycles",
-    mesocycle:  "mesocycles",
-    cycle:      "cycles",
-    microcycle: "microcycles",
-  };
-
-  async function handleRename() {
-    if (!renameDraft.trim() || !canRename) return;
-    setWorking(true);
-    const table = TABLE_MAP[state.type];
-    if (!table) { setWorking(false); return; }
-    try {
-      await updatePeriod(table, state.id, { name: renameDraft.trim() });
-    } catch {
-      setWorking(false);
-      toast.error("Erreur lors du renommage");
-      return;
-    }
-    setWorking(false);
-    void invalidateCycles(qc, athleteId);
-    toast.success("Renommé");
-    setRenaming(false);
-  }
-
-  async function handleDelete() {
-    setWorking(true);
-    try {
-      // Les niveaux inférieurs suivent (clés étrangères en cascade) ; les
-      // séances restent, détachées de leurs semaines.
-      if (state.type === "macrocycle") await deletePeriod("macrocycles", state.id);
-      else if (state.type === "mesocycle") await deletePeriod("mesocycles", state.id);
-      else if (state.type === "cycle") await deleteCycle(state.id);
-      else if (state.type === "microcycle") await deletePeriod("microcycles", state.id);
-      void invalidateCycles(qc, athleteId);
-      toast.success("Supprimé");
-      onClose();
-    } catch {
-      toast.error("Erreur lors de la suppression");
-    } finally {
-      setWorking(false);
-    }
-  }
-
-  const LEVEL_COLOR: Record<DrawerType, string> = {
-    macrocycle:  C.ac,
-    mesocycle:   C.coach,
-    cycle:       C.o,
-    microcycle:  C.tx3,
-    competition: C.coach,
-  };
-  const color = LEVEL_COLOR[state.type];
-
-  let title    = "";
-  let subtitle = "";
-  let content: React.ReactNode = null;
-
-  switch (state.type) {
-    case "macrocycle": {
-      const m = data.macrocycles.find((x) => x.id === state.id);
-      if (!m) return null;
-      title    = m.name;
-      subtitle = `${format(parseISO(m.start_date), "d MMM yyyy", { locale: fr })} → ${format(parseISO(m.end_date), "d MMM yyyy", { locale: fr })}`;
-      content  = (
-        <MacrocycleDrawer
-          macro={m}
-          siblings={[...data.macrocycles].sort((a, b) => a.start_date.localeCompare(b.start_date))}
-          athleteId={athleteId}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          onClose={onClose}
-        />
-      );
-      break;
-    }
-    case "mesocycle": {
-      const m = data.mesocycles.find((x) => x.id === state.id);
-      if (!m) return null;
-      title    = m.name;
-      subtitle = `${format(parseISO(m.start_date), "d MMM", { locale: fr })} → ${format(parseISO(m.end_date), "d MMM", { locale: fr })}`;
-      const mesoSiblings = [...data.mesocycles]
-        .filter((s) => s.macrocycle_id === m.macrocycle_id)
-        .sort((a, b) => a.start_date.localeCompare(b.start_date));
-      content  = (
-        <MesocycleDrawer
-          meso={m}
-          siblings={mesoSiblings}
-          allMacros={[...data.macrocycles].sort((a, b) => a.start_date.localeCompare(b.start_date))}
-          athleteId={athleteId}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-        />
-      );
-      break;
-    }
-    case "cycle": {
-      const c = data.cycles.find((x) => x.id === state.id);
-      if (!c) return null;
-      const parentMeso = data.mesocycles.find((m) => m.id === c.mesocycle_id);
-      const cycleSiblings = [...data.cycles]
-        .filter((s) => s.mesocycle_id === c.mesocycle_id)
-        .sort((a, b) => a.start_date.localeCompare(b.start_date));
-      title    = c.name;
-      subtitle = `${format(parseISO(c.start_date), "d MMM", { locale: fr })} → ${format(parseISO(c.end_date), "d MMM", { locale: fr })}`;
-      content  = (
-        <CycleDrawer
-          cycle={c}
-          parentMeso={parentMeso}
-          siblings={cycleSiblings}
-          allMesos={data.mesocycles}
-          athleteId={athleteId}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          onClose={onClose}
-        />
-      );
-      break;
-    }
-    case "microcycle": {
-      const mi = data.microcycles.find((x) => x.id === state.id);
-      if (!mi) return null;
-      const siblings = data.microcycles
-        .filter((m) => m.cycle_id === mi.cycle_id)
-        .sort((a, b) => a.week_number - b.week_number);
-      const idx       = siblings.findIndex((m) => m.id === mi.id);
-      const prevMicro = idx > 0 ? siblings[idx - 1] : undefined;
-      title    = `Semaine ${mi.week_number}`;
-      subtitle = `${format(parseISO(mi.start_date), "d MMM", { locale: fr })} → ${format(parseISO(mi.end_date), "d MMM", { locale: fr })}`;
-      content  = <MicrocycleDrawer micro={mi} prevMicro={prevMicro} athleteId={athleteId} />;
-      break;
-    }
-    case "competition": {
-      const c = data.competitions.find((x) => x.id === state.id);
-      if (!c) return null;
-      title    = c.name;
-      subtitle = format(parseISO(c.date), "d MMMM yyyy", { locale: fr });
-      content  = (
-        <CompetitionDrawer
-          comp={c}
-          onEdit={onEditComp ? () => onEditComp(c) : undefined}
-          onDelete={onDeleteComp ? () => { onDeleteComp(c); onClose(); } : undefined}
-        />
-      );
-      break;
-    }
-  }
-
-  const btnBase: React.CSSProperties = {
-    width: 32, height: 32, borderRadius: 4,
-    border: "1px solid " + C.brdL, background: "transparent",
-    color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    flexShrink: 0,
-  };
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 40, background: "rgba(0,0,0,0.5)" }} />
-      <div
-        style={{
-          position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 50,
-          width: 480, maxWidth: "92vw",
-          background: C.s1, borderLeft: "1px solid " + C.brd,
-          display: "flex", flexDirection: "column",
-          animation: "tlDrawerIn 200ms ease-out",
-        }}
-      >
-        <style>{`@keyframes tlDrawerIn { from { transform:translateX(100%); opacity:0 } to { transform:translateX(0); opacity:1 } }`}</style>
-
-        {/* Header */}
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-          <div style={{ width: 6, height: 36, borderRadius: 4, background: color, flexShrink: 0 }} />
-
-          {/* Title / rename area */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              {state.type === "competition" ? "Compétition" : state.type.charAt(0).toUpperCase() + state.type.slice(1)}
-            </div>
-            {renaming ? (
-              <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
-                <input
-                  autoFocus
-                  value={renameDraft}
-                  onChange={(e) => setRenameDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setRenaming(false); }}
-                  style={{
-                    flex: 1, padding: "5px 9px", borderRadius: 7,
-                    border: "1px solid " + color + "60", background: C.s2,
-                    color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none",
-                  }}
-                />
-                <button onClick={handleRename} disabled={working} style={{ ...btnBase, border: "none", background: color, color: "#fff" }}>
-                  {working ? "…" : <Check size={14} />}
-                </button>
-                <button onClick={() => setRenaming(false)} style={btnBase}>
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {title}
-                </div>
-                {canRename && (
-                  <button
-                    onClick={() => { setRenameDraft(title); setRenaming(true); setDeleteConfirm(false); }}
-                    title="Renommer"
-                    style={{ ...btnBase, width: 22, height: 22, border: "none", background: "transparent", color: C.tx3, flexShrink: 0 }}
-                  >
-                    <Pencil size={12} />
-                  </button>
-                )}
-              </div>
-            )}
-            <div style={{ fontSize: 10, color: C.tx3 }}>{subtitle}</div>
-          </div>
-
-          {/* Action buttons */}
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-            {canDelete && !renaming && (
-              <button
-                onClick={() => { setDeleteConfirm((v) => !v); setRenaming(false); }}
-                title="Supprimer"
-                style={{ ...btnBase, color: deleteConfirm ? C.r : C.tx3, borderColor: deleteConfirm ? C.r + "60" : C.brdL }}
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-            <button onClick={onClose} style={btnBase}>
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Delete confirm banner */}
-        {deleteConfirm && (
-          <div style={{
-            padding: "10px 20px", borderBottom: "1px solid " + C.r + "30",
-            background: C.r + "12", display: "flex", alignItems: "center", gap: 10,
-          }}>
-            <span style={{ fontSize: 12, color: C.tx2, flex: 1 }}>
-              Supprimer ce bloc et tous ses sous-blocs ?
-            </span>
-            <button
-              onClick={() => setDeleteConfirm(false)}
-              style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={working}
-              style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: working ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: working ? 0.7 : 1 }}
-            >
-              {working ? "…" : "Supprimer"}
-            </button>
-          </div>
-        )}
-
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px", scrollbarWidth: "none" }}>
-          {content}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── Microcycle auto-generation helper ─────────────────────────────────────────
-
-// Generates one microcycle per ISO week (Mon→Sun) covering the cycle range.
-// First week = Monday of the week containing startDate.
-// Last week = week whose Monday is still ≤ endDate.
-// ── Create modal ──────────────────────────────────────────────────────────────
-
-type CreateLevel = "macrocycle" | "mesocycle" | "cycle" | "microcycle";
-
-interface ParentOption {
-  id:         string;
-  label:      string;
-  start_date: string; // parent start, used as fallback
-}
-
-interface CreateState {
-  level:          CreateLevel;
-  parentId?:      string;
-  parentOptions?: ParentOption[]; // if set: show parent picker
-  siblingItems?:  Array<{ parentId: string; end_date: string }>; // all children across all parents (for auto-chain)
-  defaultStart:   string;
-  defaultEnd:     string;
-  minStart?:      string; // hard floor: prevent overlapping with previous sibling
-  /** All same-level periods with parentId for client-side overlap detection */
-  existingSiblings?: Array<{ id: string; name: string; start_date: string; end_date: string; parentId: string }>;
-  /** Cascade shift fn: shift conflict + all subsequent same-parent periods +1 week */
-  cascadeShiftFn?: (conflictStartDate: string, parentId: string) => Promise<void>;
-}
-
-function CreateModal({
-  state, athleteId, coachId, rangeStart, rangeEnd, onClose,
-}: {
-  state:      CreateState;
-  athleteId:  string;
-  coachId:    string;
-  rangeStart: string;
-  rangeEnd:   string;
-  onClose:    () => void;
-}) {
-  const qc = useQueryClient();
-
-  const [name,      setName]      = useState("");
-  const [weekNum,   setWeekNum]   = useState(1);
-  const [isDeload,  setIsDeload]  = useState(false);
-  const [startDate, setStartDate] = useState(() =>
-    state.defaultStart ? snapMonday(state.defaultStart) : state.defaultStart,
-  );
-  const [endDate, setEndDate] = useState(() =>
-    state.defaultEnd ? snapSunday(state.defaultEnd) : state.defaultEnd,
-  );
-  const [saving,    setSaving]    = useState(false);
-  const [selectedParentId, setSelectedParentId] = useState(state.parentId ?? state.parentOptions?.[0]?.id ?? "");
-  const [snapPrompt, setSnapPrompt] = useState<{
-    conflict:         SnapConflict;
-    snapAfterStart:   string;
-    snapAfterEnd:     string;
-    snapBeforeEnd:    string | null;
-    movingStart:      string;
-    onCascadeShift?:  () => Promise<void>;
-  } | null>(null);
-
-  const defaultWeeks = PERIOD_DEFAULTS[state.level as keyof typeof PERIOD_DEFAULTS] ?? 4;
-
-  function handleParentChange(newParentId: string) {
-    setSelectedParentId(newParentId);
-    if (state.siblingItems) {
-      const siblings = state.siblingItems
-        .filter((s) => s.parentId === newParentId)
-        .sort((a, b) => b.end_date.localeCompare(a.end_date));
-      const last = siblings[0];
-      if (last) {
-        const autoStart = chainNextStart(last.end_date);
-        setStartDate(autoStart);
-        setEndDate(endFromWeeks(autoStart, defaultWeeks));
-      } else {
-        const opt = state.parentOptions?.find((o) => o.id === newParentId);
-        const fallback = opt ? snapMonday(opt.start_date) : rangeStart;
-        setStartDate(fallback);
-        setEndDate(endFromWeeks(fallback, defaultWeeks));
-      }
-    }
-  }
-
-  /** Adjust endDate by adding/subtracting weeks from current startDate */
-  function shiftEnd(weeks: number) {
-    if (!startDate) return;
-    const current = endDate ? endDate : startDate;
-    const diffWeeks = Math.max(1, Math.round(
-      (new Date(current).getTime() - new Date(startDate).getTime()) / (7 * 86400_000)
-    ) + 1 + weeks);
-    setEndDate(endFromWeeks(startDate, diffWeeks));
-  }
-
-  const LEVEL_COLOR: Record<CreateLevel, string> = {
-    macrocycle: C.ac, mesocycle: C.coach, cycle: C.o, microcycle: C.tx3,
-  };
-  const color = LEVEL_COLOR[state.level];
-
-  const LEVEL_LABEL: Record<CreateLevel, string> = {
-    macrocycle: "Macrocycle", mesocycle: "Mésocycle", cycle: "Cycle", microcycle: "Microcycle",
-  };
-
-  async function handleSubmit(opts?: { start: string; end: string }) {
-    const sDate = opts?.start ?? startDate;
-    const eDate = opts?.end   ?? endDate;
-
-    if (!sDate || !eDate) { toast.error("Dates requises"); return; }
-    if (state.level !== "microcycle" && !name.trim()) { toast.error("Nom requis"); return; }
-    if ((state.level === "mesocycle" || state.level === "cycle" || state.level === "microcycle") && !selectedParentId) {
-      toast.error("Sélectionne un parent"); return;
-    }
-    // Hard overlap guard: start must be ≥ minStart (next sibling floor)
-    if (state.minStart && sDate < state.minStart) {
-      toast.error(`Début doit être ≥ ${state.minStart} (pas de chevauchement)`);
-      return;
-    }
-
-    // Client-side overlap check (skip if called with explicit snap overrides)
-    if (!opts && state.existingSiblings) {
-      const sameParent = state.level === "macrocycle"
-        ? state.existingSiblings
-        : state.existingSiblings.filter((s) => s.parentId === selectedParentId);
-      const conflicts = sameParent.filter((s) => s.start_date <= eDate && s.end_date >= sDate);
-      if (conflicts.length > 0) {
-        const conflict = conflicts[0];
-        const originalWeeks = Math.max(1, Math.round(
-          (parseISO(eDate).getTime() - parseISO(sDate).getTime()) / (7 * 86400_000),
-        ) + 1);
-        const afterStart = chainNextStart(conflict.end_date);
-        const afterEnd   = endFromWeeks(afterStart, originalWeeks);
-        const beforeEnd  = format(addDays(parseISO(conflict.start_date), -1), "yyyy-MM-dd");
-        const capturedParentId = selectedParentId;
-        setSnapPrompt({
-          conflict:       { name: conflict.name, start_date: conflict.start_date, end_date: conflict.end_date },
-          snapAfterStart: afterStart,
-          snapAfterEnd:   afterEnd,
-          snapBeforeEnd:  beforeEnd >= sDate ? beforeEnd : null,
-          movingStart:    sDate,
-          onCascadeShift: state.cascadeShiftFn
-            ? async () => {
-                await state.cascadeShiftFn!(conflict.start_date, capturedParentId);
-                setSnapPrompt(null);
-                await handleSubmit({ start: sDate, end: eDate });
-              }
-            : undefined,
-        });
-        return;
-      }
-    }
-
-    setSaving(true);
-    try {
-      switch (state.level) {
-        case "macrocycle":
-          await createMacrocycle({ athleteId, coachId, name: name.trim(), start: sDate, end: eDate });
-          break;
-        case "mesocycle":
-          await createMesocycle({ macrocycleId: selectedParentId, name: name.trim(), start: sDate, end: eDate });
-          break;
-        case "cycle":
-          // Cycle + une semaine par semaine ISO, en une écriture.
-          await createCycle({ athleteId, mesocycleId: selectedParentId, name: name.trim(), start: sDate, end: eDate });
-          break;
-        case "microcycle":
-          await createMicrocycle({ cycleId: selectedParentId, weekNumber: weekNum, start: sDate, end: eDate, isDeload });
-          break;
-      }
-    } catch {
-      setSaving(false);
-      toast.error("Erreur lors de la création");
-      return;
-    }
-    setSaving(false);
-    void invalidateCycles(qc, athleteId);
-    toast.success(`${LEVEL_LABEL[state.level]} créé`);
-    onClose();
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 4,
-    border: "1px solid " + C.brdL, background: C.s2,
-    color: C.tx, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box",
-  };
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)" }} />
-      <div
-        style={{
-          position: "fixed", top: "50%", left: "50%", zIndex: 61,
-          transform: "translate(-50%, -50%)",
-          width: 400, maxWidth: "92vw",
-          background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
-          padding: "20px 24px",
-          animation: "fadeScaleIn 150ms ease-out",
-        }}
-      >
-        <style>{`@keyframes fadeScaleIn { from { opacity:0; transform:translate(-50%,-50%) scale(0.95) } to { opacity:1; transform:translate(-50%,-50%) scale(1) } }`}</style>
-
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <div style={{ width: 4, height: 28, borderRadius: 3, background: color, flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Nouveau
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>{LEVEL_LABEL[state.level]}</div>
-          </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Snap prompt banner */}
-        {snapPrompt && (
-          <div style={{ marginBottom: 16, padding: "12px 14px", borderRadius: 4, background: C.oS, border: "1px solid " + C.o + "50" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.o, marginBottom: 6 }}>
-              Chevauche « {snapPrompt.conflict.name} »
-            </div>
-            <div style={{ fontSize: 10, color: C.tx3, marginBottom: 10 }}>
-              {snapPrompt.conflict.start_date} → {snapPrompt.conflict.end_date}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => { setSnapPrompt(null); handleSubmit({ start: snapPrompt.snapAfterStart, end: snapPrompt.snapAfterEnd }); }}
-                style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.oV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-              >
-                Coller après ({snapPrompt.snapAfterStart})
-              </button>
-              {snapPrompt.snapBeforeEnd && (
-                <button
-                  type="button"
-                  onClick={() => { setSnapPrompt(null); handleSubmit({ start: snapPrompt.movingStart, end: snapPrompt.snapBeforeEnd! }); }}
-                  style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s2, color: C.tx2, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-                >
-                  Coller avant (→ {snapPrompt.snapBeforeEnd})
-                </button>
-              )}
-              {snapPrompt.onCascadeShift && (
-                <button
-                  type="button"
-                  onClick={snapPrompt.onCascadeShift}
-                  style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s2, color: C.tx2, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
-                >
-                  Décaler « {snapPrompt.conflict.name} » +1 sem.
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSnapPrompt(null)}
-                style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
-              >
-                Modifier manuellement
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Form */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-          {/* Parent picker */}
-          {state.parentOptions && state.parentOptions.length > 0 && (
-            <div>
-              <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4 }}>
-                {state.level === "mesocycle" ? "Macrocycle parent" : state.level === "cycle" ? "Mésocycle parent" : "Parent"}
-              </label>
-              <select
-                value={selectedParentId}
-                onChange={(e) => handleParentChange(e.target.value)}
-                style={{ ...inputStyle }}
-              >
-                {state.parentOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {state.level === "microcycle" ? (
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <label style={{ fontSize: 11, color: C.tx3, flexShrink: 0 }}>Semaine n°</label>
-              <input
-                type="number" min={1} max={52}
-                value={weekNum}
-                onChange={(e) => setWeekNum(parseInt(e.target.value) || 1)}
-                style={{ ...inputStyle, width: 80 }}
-              />
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.tx3, cursor: "pointer" }}>
-                <input
-                  type="checkbox" checked={isDeload}
-                  onChange={(e) => setIsDeload(e.target.checked)}
-                  style={{ accentColor: C.b }}
-                />
-                Deload
-              </label>
-            </div>
-          ) : (
-            <div>
-              <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4 }}>Nom</label>
-              <input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-                placeholder={`Nom du ${LEVEL_LABEL[state.level].toLowerCase()}…`}
-                style={inputStyle}
-              />
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4 }}>
-                Début <span style={{ fontSize: 9, opacity: 0.6 }}>(snap lundi)</span>
-              </label>
-              <input
-                type="date" value={startDate}
-                min={state.minStart}
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  const snapped = snapMonday(e.target.value);
-                  // enforce no-overlap: clamp to minStart
-                  const clamped = state.minStart && snapped < state.minStart ? state.minStart : snapped;
-                  setStartDate(clamped);
-                }}
-                style={inputStyle}
-              />
-              {state.minStart && (
-                <div style={{ fontSize: 9, color: C.tx3, marginTop: 2 }}>
-                  ≥ {state.minStart} (pas de chevauchement)
-                </div>
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4 }}>
-                Fin <span style={{ fontSize: 9, opacity: 0.6 }}>(snap dimanche)</span>
-              </label>
-              <input
-                type="date" value={endDate}
-                onChange={(e) => { if (e.target.value) setEndDate(snapSunday(e.target.value)); }}
-                style={inputStyle}
-              />
-            </div>
-          </div>
-
-          {/* Quick duration buttons */}
-          <div>
-            <div style={{ fontSize: 9, color: C.tx3, marginBottom: 4 }}>Ajuster la durée</div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {([-4, -1, 1, 4, 13, 26, 52] as const).map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => shiftEnd(w)}
-                  style={{
-                    padding: "3px 8px", borderRadius: 6,
-                    border: "1px solid " + C.brdL, background: C.s2,
-                    color: C.tx3, fontSize: 10, fontWeight: 600,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}
-                >
-                  {w > 0 ? "+" : ""}{w}s
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
-          <button
-            onClick={onClose}
-            style={{ padding: "8px 16px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-          >
-            Annuler
-          </button>
-          <button
-            onClick={() => handleSubmit()}
-            disabled={saving}
-            style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: color, color: "#fff", fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: saving ? 0.7 : 1 }}
-          >
-            {saving ? "…" : "Créer"}
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── Add dropdown ─────────────────────────────────────────────────────────────
-
-function AddDropdown({
-  onSelect,
-}: {
-  onSelect: (level: CreateLevel) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  const items: Array<{ level: CreateLevel; label: string; color: string }> = [
-    { level: "macrocycle", label: "Macrocycle",  color: C.ac    },
-    { level: "mesocycle",  label: "Mésocycle",   color: C.coach },
-    { level: "cycle",      label: "Cycle",        color: C.o     },
-    { level: "microcycle", label: "Microcycle",   color: C.tx3   },
-  ];
-
-  return (
-    <div style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "6px 12px", borderRadius: 4,
-          border: "1px solid " + C.ac + "60", background: C.ac,
-          color: "#fff", fontSize: 11, fontWeight: 700,
-          cursor: "pointer", fontFamily: "inherit",
-        }}
-      >
-        <Plus size={12} />
-        Ajouter
-        <ChevronDown size={10} style={{ opacity: 0.8 }} />
-      </button>
-
-      {open && (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
-          <div style={{
-            position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 31,
-            background: C.s1, border: "1px solid " + C.brd, borderRadius: 4,
-            padding: "4px", minWidth: 160,
-          }}>
-            {items.map(({ level, label, color }) => (
-              <button
-                key={level}
-                onClick={() => { setOpen(false); onSelect(level); }}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", gap: 8,
-                  padding: "8px 12px", borderRadius: 7, border: "none",
-                  background: "transparent", color: C.tx,
-                  fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  fontFamily: "inherit", textAlign: "left",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = C.s2)}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                <div style={{ width: 8, height: 8, borderRadius: 3, background: color, flexShrink: 0 }} />
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── No-parent drag modal ──────────────────────────────────────────────────────
-
-interface NoParentDragState {
-  cycleId:  string;
-  newStart: string;
-  newEnd:   string;
-}
-
-function NoParentDragModal({
-  state, macrocycles, mesocycles, athleteId, onClose,
-}: {
-  state:       NoParentDragState;
-  macrocycles: Macrocycle[];
-  mesocycles:  Mesocycle[];
-  athleteId:   string;
-  onClose:     () => void;
-}) {
-  const qc = useQueryClient();
-  const [mesoName, setMesoName] = useState(() =>
-    format(parseISO(state.newStart), "MMMM yyyy", { locale: fr }),
-  );
-  const [saving, setSaving] = useState(false);
-
-  // Existing meso whose dates contain newStart (reassign without creating)
-  const overlappingMeso = mesocycles.find(
-    (m) => state.newStart >= m.start_date && state.newStart <= m.end_date,
-  );
-  // Macro that contains newStart
-  const targetMacro = macrocycles.find(
-    (m) => state.newStart >= m.start_date && state.newStart <= m.end_date,
-  );
-
-  async function handleCreateAndMove() {
-    if (!mesoName.trim()) { toast.error("Nom requis"); return; }
-    if (!targetMacro) { toast.error("Crée d'abord un macrocycle pour cette période"); return; }
-    setSaving(true);
-
-    let newMesoId: string;
-    try {
-      newMesoId = (await createMesocycle({
-        macrocycleId: targetMacro.id, name: mesoName.trim(), start: state.newStart, end: state.newEnd,
-      })).id;
-    } catch {
-      toast.error("Erreur création mésocycle"); setSaving(false); return;
-    }
-
-    try {
-      // Dates + rattachement + semaines régénérées en une écriture (séances gardées).
-      await setCycleDates({
-        cycleId: state.cycleId, start: state.newStart, end: state.newEnd,
-        mesocycleId: newMesoId, dropPlanned: false,
-      });
-    } catch {
-      toast.error("Erreur mise à jour cycle"); setSaving(false); return;
-    }
-
-    void invalidateCycles(qc, athleteId);
-    toast.success("Mésocycle créé — cycle déplacé");
-    setSaving(false);
-    onClose();
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 4,
-    border: "1px solid " + C.brdL, background: C.s2,
-    color: C.tx, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box",
-  };
-  const btnBase: React.CSSProperties = {
-    padding: "8px 16px", borderRadius: 4, fontSize: 12, fontWeight: 600,
-    cursor: "pointer", fontFamily: "inherit", border: "none",
-  };
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)" }} />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", zIndex: 61,
-        transform: "translate(-50%, -50%)",
-        width: 420, maxWidth: "92vw",
-        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
-        padding: "20px 24px",
-        animation: "fadeScaleIn 150ms ease-out",
-      }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <div style={{ width: 4, height: 28, borderRadius: 3, background: C.coach, flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 9, color: C.coach, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Aucun mésocycle ici
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>Que faire ?</div>
-          </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <X size={14} />
-          </button>
-        </div>
-
-        <div style={{ fontSize: 12, color: C.tx2, marginBottom: 16 }}>
-          Nouvelle position :{" "}
-          <b style={{ color: C.tx }}>
-            {format(parseISO(state.newStart), "d MMM", { locale: fr })} → {format(parseISO(state.newEnd), "d MMM yyyy", { locale: fr })}
-          </b>
-        </div>
-
-        {overlappingMeso ? (
-          // Existing meso covers this range — just confirm reassign
-          <div style={{ fontSize: 12, color: C.tx2, marginBottom: 16, padding: "10px 12px", borderRadius: 4, background: C.s2 }}>
-            Mésocycle existant trouvé : <b style={{ color: C.coach }}>{overlappingMeso.name}</b>
-            <br />Le cycle sera rattaché à ce mésocycle.
-          </div>
-        ) : targetMacro ? (
-          // No meso but a macro exists — offer to create meso
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4 }}>
-              Nom du nouveau mésocycle
-            </label>
-            <input
-              autoFocus
-              value={mesoName}
-              onChange={(e) => setMesoName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreateAndMove()}
-              style={inputStyle}
-            />
-            <div style={{ fontSize: 10, color: C.tx3, marginTop: 4 }}>
-              Parent macrocycle : <b>{targetMacro.name}</b>
-            </div>
-          </div>
-        ) : (
-          // No macro either
-          <div style={{ fontSize: 12, color: C.o, padding: "10px 12px", borderRadius: 4, background: C.oS, marginBottom: 16 }}>
-            Aucun macrocycle pour cette période. Crée d'abord un macrocycle puis déplace à nouveau ce cycle.
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ ...btnBase, background: "transparent", border: "1px solid " + C.brdL, color: C.tx2 }}>
-            Annuler
-          </button>
-          {overlappingMeso && (
-            <button
-              disabled={saving}
-              onClick={async () => {
-                setSaving(true);
-                try {
-                  await setCycleDates({
-                    cycleId: state.cycleId, start: state.newStart, end: state.newEnd,
-                    mesocycleId: overlappingMeso.id, dropPlanned: false,
-                  });
-                } catch {
-                  toast.error("Erreur mise à jour cycle"); setSaving(false); return;
-                }
-                void invalidateCycles(qc, athleteId);
-                toast.success("Cycle déplacé");
-                setSaving(false);
-                onClose();
-              }}
-              style={{ ...btnBase, background: C.acV, color: "#0E0C0A", opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
-            >
-              {saving ? "…" : "Déplacer"}
-            </button>
-          )}
-          {targetMacro && !overlappingMeso && (
-            <button
-              onClick={handleCreateAndMove}
-              disabled={saving}
-              style={{ ...btnBase, background: C.acV, color: "#0E0C0A", opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
-            >
-              {saving ? "…" : "Créer et déplacer"}
-            </button>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── Snap-to-adjacent dialog (overlap detected on drag/resize/create) ──────────
-
-interface SnapConflict {
-  name:       string;
-  start_date: string;
-  end_date:   string;
-}
-
-interface SnapDragDialogState {
-  movingLabel: string;
-  movingStart: string;  // snapped tentative start
-  movingEnd:   string;  // snapped tentative end
-  conflict:    SnapConflict;
-  onConfirmSnap:    (newStart: string, newEnd: string) => void;
-  /** Shift conflict + all subsequent siblings +1 week, then place moving item */
-  onCascadeShift?:  () => Promise<void>;
-  onCancel:         () => void;
-}
-
-function SnapDragDialog({ state }: { state: SnapDragDialogState }) {
-  const [cascading, setCascading] = useState(false);
-
-  const originalWeeks = Math.max(1, Math.round(
-    (parseISO(state.movingEnd).getTime() - parseISO(state.movingStart).getTime()) / (7 * 86400_000),
-  ) + 1);
-
-  const afterStart = chainNextStart(state.conflict.end_date);
-  const afterEnd   = endFromWeeks(afterStart, originalWeeks);
-
-  // "Coller avant" = end right before conflict.start (conflict starts Monday → Sunday before)
-  const beforeEnd   = format(addDays(parseISO(state.conflict.start_date), -1), "yyyy-MM-dd");
-  const beforeValid = beforeEnd >= state.movingStart; // needs at least 1 week of room
-
-  const btnBase: React.CSSProperties = {
-    padding: "8px 14px", borderRadius: 4, fontSize: 12, fontWeight: 600,
-    cursor: "pointer", fontFamily: "inherit", border: "none",
-  };
-
-  return (
-    <>
-      <div onClick={state.onCancel} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(0,0,0,0.55)" }} />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", zIndex: 71,
-        transform: "translate(-50%,-50%)",
-        width: 420, maxWidth: "92vw",
-        background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
-        padding: "20px 24px",
-        animation: "fadeScaleIn 150ms ease-out",
-      }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <div style={{ width: 4, height: 28, borderRadius: 3, background: C.o, flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: 9, color: C.o, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Chevauchement
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>Que faire ?</div>
-          </div>
-          <button onClick={state.onCancel} style={{ marginLeft: "auto", width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Info */}
-        <div style={{ padding: "10px 12px", borderRadius: 4, background: C.oS, marginBottom: 16, fontSize: 12, color: C.tx2 }}>
-          <b style={{ color: C.tx }}>{state.movingLabel}</b> chevauche{" "}
-          <b style={{ color: C.tx }}>{state.conflict.name}</b>
-          <div style={{ marginTop: 4, fontSize: 10, color: C.tx3 }}>
-            {state.conflict.start_date} → {state.conflict.end_date}
-          </div>
-        </div>
-
-        {/* Options */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-          <button
-            onClick={() => state.onConfirmSnap(afterStart, afterEnd)}
-            style={{ ...btnBase, background: C.oV, color: "#0E0C0A", textAlign: "left", padding: "10px 14px" }}
-          >
-            <div style={{ fontSize: 11, opacity: 0.85 }}>Coller après</div>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>{state.conflict.name}</div>
-            <div style={{ fontSize: 10, opacity: 0.8, marginTop: 2 }}>{afterStart} → {afterEnd}</div>
-          </button>
-
-          {beforeValid && (
-            <button
-              onClick={() => state.onConfirmSnap(state.movingStart, beforeEnd)}
-              style={{ ...btnBase, background: C.s2, color: C.tx, border: "1px solid " + C.brdL, textAlign: "left", padding: "10px 14px" }}
-            >
-              <div style={{ fontSize: 11, color: C.tx3 }}>Coller avant</div>
-              <div style={{ fontSize: 13, fontWeight: 800 }}>{state.conflict.name}</div>
-              <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>{state.movingStart} → {beforeEnd}</div>
-            </button>
-          )}
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          {/* Cascade shift option */}
-          {state.onCascadeShift && (
-            <button
-              onClick={async () => {
-                setCascading(true);
-                await state.onCascadeShift!();
-                setCascading(false);
-              }}
-              disabled={cascading}
-              style={{
-                ...btnBase, background: C.s2, color: C.tx2,
-                border: "1px solid " + C.brdL, fontSize: 11,
-                opacity: cascading ? 0.6 : 1, cursor: cascading ? "not-allowed" : "pointer",
-              }}
-              title="Décale « conflict » et tous les blocs suivants de 1 semaine, puis place la période à sa nouvelle position"
-            >
-              {cascading ? "…" : `Décaler « ${state.conflict.name} » +1 sem. → cascade`}
-            </button>
-          )}
-
-          <button
-            onClick={state.onCancel}
-            style={{ ...btnBase, background: "transparent", border: "1px solid " + C.brdL, color: C.tx3 }}
-          >
-            Annuler
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
+import { AddPeriodMenu } from "./AddPeriodMenu";
+import { CreatePeriodDialog } from "./dialogs/CreatePeriodDialog";
+import { NoParentDragDialog } from "./dialogs/NoParentDragDialog";
+import { SnapDragDialog } from "./dialogs/SnapDragDialog";
+import { PeriodDrawer, type DrawerState } from "./drawers/PeriodDrawer";
 
 // ── TimelineView ──────────────────────────────────────────────────────────────
 
 interface TimelineViewProps { athleteId: string }
 
-const MONTHS_SHOWN = 18;
+/** Mois affichés : 6 sur téléphone (la frise tient dans l'écran), 18 sur PC. */
+const MONTHS_MOBILE = 6;
+const MONTHS_DESKTOP = 18;
+const LABEL_W_MOBILE = 60;
+const LABEL_W_DESKTOP = 88;
+const ROW_H = 52;
+const TOTAL_ROW_H = ROW_H * 4;
 
 export function TimelineView({ athleteId }: TimelineViewProps) {
   const [windowStart,    setWindowStart]    = useState(() => startOfMonth(new Date()));
@@ -1137,30 +64,33 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
   const [selectedId,     setSelectedId]     = useState<string | null>(null);
   const [snapDragDialog, setSnapDragDialog] = useState<SnapDragDialogState | null>(null);
   const [cycleRowResetKey, setCycleRowResetKey] = useState(0);
+  const isMobile = useIsMobile();
 
   const qc = useQueryClient();
   const { user } = useAuth();
   const { mutate: deleteComp } = useDeleteCompetition();
 
   const rangeStart = zoomMacro ? zoomMacro.start : windowStart;
-  const rangeEnd   = zoomMacro ? zoomMacro.end   : addMonths(windowStart, MONTHS_SHOWN);
+  const monthsShown = isMobile ? MONTHS_MOBILE : MONTHS_DESKTOP;
+  const labelW      = isMobile ? LABEL_W_MOBILE : LABEL_W_DESKTOP;
+  const rangeEnd    = zoomMacro ? zoomMacro.end : addMonths(windowStart, monthsShown);
   const rsStr      = format(rangeStart, "yyyy-MM-dd");
   const reStr      = format(rangeEnd,   "yyyy-MM-dd");
 
   const containerRef    = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(MIN_WIDTH);
+  const [width, setWidth] = useState(320);
 
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     const obs = new ResizeObserver(([entry]) => {
-      setWidth(Math.max(MIN_WIDTH, entry.contentRect.width));
+      setWidth(Math.max(240, entry.contentRect.width));
     });
     obs.observe(containerRef.current);
     return () => obs.disconnect();
   }, []);
 
   const { data, isLoading, isError, refetch } = useTimelineData(athleteId, { start: rangeStart, end: rangeEnd });
-  const calc = useCalculatePosition(rangeStart, rangeEnd, width - 88); // subtract label col
+  const calc = useCalculatePosition(rangeStart, rangeEnd, width - labelW);
 
   const { mutate: _drag }   = useDragCycle();
   const { mutate: _resize } = useResizeCycle();
@@ -1651,7 +581,7 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
     return { id: mi.id, label: `S${mi.week_number}`, startDate: mi.start_date, endDate: mi.end_date, isDeload: mi.is_deload, parentStart: parent?.start_date, parentEnd: parent?.end_date };
   });
 
-  const sharedRowProps = { calc, athleteId, rangeStart: rsStr, rangeEnd: reStr };
+  const sharedRowProps = { calc, labelWidth: labelW, rangeStart: rsStr, rangeEnd: reStr };
 
   /** Build ParentOption[] for cycle creation (no pre-computed dates, computed dynamically) */
   function buildCycleParentOptions(): ParentOption[] {
@@ -1691,55 +621,52 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
     return { defaultStart: s, defaultEnd: endFromWeeks(s, 4) };
   }
 
+
+  const NAV_BTN = "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-agon-brd-l text-agon-tx3 hover:bg-agon-s2 hover:text-agon-tx md:h-8 md:w-8";
+  const monthStep = isMobile ? 3 : 6;
+
   return (
     <>
-      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
-        {/* ── Header ── */}
-        <div style={{ padding: "12px 20px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="overflow-hidden rounded-lg border border-agon-brd bg-agon-s1 font-ui text-agon-tx">
+        {/* ── En-tête ── */}
+        <div className="flex flex-wrap items-center justify-between gap-agon-md border-b border-agon-brd px-agon-md py-agon-md md:px-5">
+          <div className="flex min-w-0 flex-wrap items-center gap-agon-sm">
             {zoomMacro ? (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 4, background: C.acS, border: "1px solid " + C.ac + "50" }}>
-                  <Eye size={12} color={C.ac} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.ac }}>MACROCYCLE EN COURS</span>
-                  <span style={{ fontSize: 11, color: C.tx3 }}>·</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: C.tx }}>{zoomMacro.label}</span>
+                <div className="flex min-w-0 items-center gap-agon-xs rounded-md border border-agon-accent/50 bg-agon-accent-doux px-agon-sm py-agon-xs">
+                  <Eye size={12} className="shrink-0 text-agon-accent" />
+                  <span className="text-agon-xs font-bold text-agon-accent">MACROCYCLE EN COURS</span>
+                  <span className="text-agon-xs text-agon-tx3">·</span>
+                  <span className="truncate text-agon-xs font-semibold">{zoomMacro.label}</span>
                 </div>
-                <button
-                  onClick={() => setZoomMacro(null)}
-                  title="Quitter le zoom"
-                  style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
+                <button type="button" title="Quitter le zoom" aria-label="Quitter le zoom" onClick={() => setZoomMacro(null)} className={NAV_BTN}>
                   <X size={13} />
                 </button>
               </>
             ) : (
               <>
-                <button onClick={() => setWindowStart((d) => subMonths(d, 6))} style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button type="button" aria-label="Période précédente" onClick={() => setWindowStart((d) => subMonths(d, monthStep))} className={NAV_BTN}>
                   <ChevronLeft size={16} />
                 </button>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, minWidth: 160, textAlign: "center" }}>
+                <div className="min-w-[130px] text-center text-agon-base font-bold md:min-w-40">
                   {format(rangeStart, "MMM yyyy", { locale: fr })} — {format(rangeEnd, "MMM yyyy", { locale: fr })}
                 </div>
-                <button onClick={() => setWindowStart((d) => addMonths(d, 6))} style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button type="button" aria-label="Période suivante" onClick={() => setWindowStart((d) => addMonths(d, monthStep))} className={NAV_BTN}>
                   <ChevronRight size={16} />
                 </button>
-                <button
-                  onClick={() => setWindowStart(startOfMonth(new Date()))}
-                  style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-                >
-                  Auj.
-                </button>
+                <Button size="sm" variant="secondary" onClick={() => setWindowStart(startOfMonth(new Date()))}>Auj.</Button>
                 {undoStack.length > 0 && (
-                  <button
-                    onClick={handleUndo}
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     title="Annuler la dernière action (drag/resize)"
-                    style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + C.o + "60", background: C.o + "15", color: C.o, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
+                    className="border-agon-alerte/60 bg-agon-alerte/15 text-agon-alerte hover:bg-agon-alerte/25 hover:text-agon-alerte"
+                    onClick={() => void handleUndo()}
                   >
                     ↩ Annuler
-                  </button>
+                  </Button>
                 )}
-                <AddDropdown
+                <AddPeriodMenu
                   onSelect={(level) => {
                     if (level === "macrocycle") {
                       openCreate("macrocycle", undefined, rsStr, reStr);
@@ -1767,20 +694,19 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
               </>
             )}
           </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {(["macrocycle", "mesocycle", "cycle", "microcycle"] as const).map((lvl) => (
-              <div key={lvl} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 3, background: LEVEL_COLORS[lvl] }} />
-                <span style={{ fontSize: 9, color: C.tx3, textTransform: "capitalize" }}>{lvl}</span>
-              </div>
+          <ul className="flex flex-wrap gap-x-agon-md gap-y-agon-xs">
+            {CREATE_LEVELS.map((lvl) => (
+              <li key={lvl} className="flex items-center gap-agon-xs">
+                <span className={cn("h-2.5 w-2.5 rounded-sm", LEVEL_STYLE[lvl].solid)} />
+                <span className="text-agon-xs capitalize text-agon-tx3">{lvl}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
-        {/* ── Breadcrumb (contexte période sélectionnée) ── */}
+        {/* ── Fil d'Ariane (période sélectionnée) ── */}
         {drawer && data && (
-          <div style={{ padding: "6px 20px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            {/* Macrocycle */}
+          <nav aria-label="Contexte" className="flex flex-wrap items-center gap-agon-xs border-b border-agon-brd px-agon-md py-agon-xs md:px-5">
             {(() => {
               let macro: typeof data.macrocycles[number] | undefined;
               let meso: typeof data.mesocycles[number] | undefined;
@@ -1790,92 +716,80 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
               if (drawer.type === "macrocycle") {
                 macro = data.macrocycles.find((m) => m.id === drawer.id);
               } else if (drawer.type === "mesocycle") {
-                meso  = data.mesocycles.find((m) => m.id === drawer.id);
+                meso = data.mesocycles.find((m) => m.id === drawer.id);
                 macro = meso ? data.macrocycles.find((m) => m.id === meso!.macrocycle_id) : undefined;
               } else if (drawer.type === "cycle") {
                 cycle = data.cycles.find((c) => c.id === drawer.id);
-                meso  = cycle?.mesocycle_id ? data.mesocycles.find((m) => m.id === cycle!.mesocycle_id) : undefined;
+                meso = cycle?.mesocycle_id ? data.mesocycles.find((m) => m.id === cycle!.mesocycle_id) : undefined;
                 macro = meso ? data.macrocycles.find((m) => m.id === meso!.macrocycle_id) : undefined;
               } else if (drawer.type === "microcycle") {
                 micro = data.microcycles.find((m) => m.id === drawer.id);
                 cycle = micro ? data.cycles.find((c) => c.id === micro!.cycle_id) : undefined;
-                meso  = cycle?.mesocycle_id ? data.mesocycles.find((m) => m.id === cycle!.mesocycle_id) : undefined;
+                meso = cycle?.mesocycle_id ? data.mesocycles.find((m) => m.id === cycle!.mesocycle_id) : undefined;
                 macro = meso ? data.macrocycles.find((m) => m.id === meso!.macrocycle_id) : undefined;
               }
 
-              const crumbs: Array<{ label: string; type: DrawerType; id: string; color: string }> = [];
-              if (macro) crumbs.push({ label: macro.name, type: "macrocycle", id: macro.id, color: LEVEL_COLORS.macrocycle });
-              if (meso)  crumbs.push({ label: meso.name,  type: "mesocycle",  id: meso.id,  color: LEVEL_COLORS.mesocycle });
-              if (cycle) crumbs.push({ label: cycle.name, type: "cycle",      id: cycle.id, color: LEVEL_COLORS.cycle });
-              if (micro) crumbs.push({ label: `S${micro.week_number}`, type: "microcycle", id: micro.id, color: LEVEL_COLORS.microcycle });
+              const crumbs: Array<{ label: string; type: DrawerType; id: string }> = [];
+              if (macro) crumbs.push({ label: macro.name, type: "macrocycle", id: macro.id });
+              if (meso) crumbs.push({ label: meso.name, type: "mesocycle", id: meso.id });
+              if (cycle) crumbs.push({ label: cycle.name, type: "cycle", id: cycle.id });
+              if (micro) crumbs.push({ label: `S${micro.week_number}`, type: "microcycle", id: micro.id });
 
-              return crumbs.map((crumb, i) => (
-                <span key={crumb.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  {i > 0 && <span style={{ fontSize: 9, color: C.tx3 }}>›</span>}
-                  <button
-                    onClick={() => open(crumb.type, crumb.id)}
-                    style={{
-                      padding: "2px 8px", borderRadius: 5,
-                      border: "none", background: crumb.id === drawer.id ? crumb.color + "30" : "transparent",
-                      color: crumb.id === drawer.id ? crumb.color : C.tx3,
-                      fontSize: 10, fontWeight: crumb.id === drawer.id ? 700 : 400,
-                      cursor: "pointer", fontFamily: "inherit",
-                    }}
-                  >
-                    {crumb.label}
-                  </button>
-                </span>
-              ));
+              return crumbs.map((crumb, i) => {
+                const active = crumb.id === drawer.id;
+                return (
+                  <span key={crumb.id} className="flex items-center gap-agon-xs">
+                    {i > 0 && <span className="text-agon-xs text-agon-tx3">›</span>}
+                    <button
+                      type="button"
+                      onClick={() => open(crumb.type, crumb.id)}
+                      className={cn(
+                        "min-h-8 rounded-md px-agon-sm text-agon-xs",
+                        active ? cn("font-bold", LEVEL_STYLE[crumb.type].crumb, LEVEL_STYLE[crumb.type].text) : "font-normal text-agon-tx3",
+                      )}
+                    >
+                      {crumb.label}
+                    </button>
+                  </span>
+                );
+              });
             })()}
-          </div>
+          </nav>
         )}
 
-        {/* ── Scrollable area ── */}
-        <div style={{ overflowX: "auto", paddingBottom: 40 }}>
-          <div ref={containerRef} style={{ width: "100%" }}>
-            {/* TimeAxis */}
-            <div style={{ padding: "10px 0 0" }}>
-              <TimeAxis rangeStart={rangeStart} rangeEnd={rangeEnd} containerWidth={width} />
+        {/* ── Frise : elle se cale sur la largeur disponible, jamais de défilement horizontal ── */}
+        <div className="pb-10">
+          <div ref={containerRef} className="w-full">
+            <div className="pt-agon-md">
+              <TimeAxis rangeStart={rangeStart} rangeEnd={rangeEnd} containerWidth={width} labelWidth={labelW} />
             </div>
 
             {isLoading ? (
-              <div style={{ padding: "60px 0", textAlign: "center" }}>
-                <div style={{ width: 24, height: 24, border: "2px solid " + C.brdL, borderTopColor: C.ac, borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto" }} />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <div className="py-[60px] text-center">
+                <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-agon-brd-l border-t-agon-accent" />
               </div>
             ) : isError && !data ? (
               // Lecture en échec : surtout pas « Aucun macrocycle » (le coach recréerait un doublon).
-              <div style={{ padding: "60px 0", textAlign: "center" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>La frise n'a pas pu être chargée</div>
-                <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 16 }}>Vérifie ta connexion puis réessaie.</div>
-                <button
-                  onClick={() => void refetch()}
-                  style={{ padding: "9px 18px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
-                >
-                  Réessayer
-                </button>
-              </div>
+              <EmptyState
+                className="py-12"
+                title="La frise n'a pas pu être chargée"
+                description="Vérifie ta connexion puis réessaie."
+                action={<Button variant="secondary" onClick={() => void refetch()}>Réessayer</Button>}
+              />
             ) : (data?.macrocycles ?? []).length === 0 ? (
-              <div style={{ padding: "60px 0", textAlign: "center" }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}></div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>Aucun macrocycle sur cette période</div>
-                <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 16 }}>Crée un macrocycle pour visualiser la frise.</div>
-                <button
-                  onClick={() => openCreate("macrocycle", undefined, rsStr, reStr)}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "9px 18px", borderRadius: 4,
-                    border: "none", background: C.ac,
-                    color: "#fff", fontSize: 12, fontWeight: 700,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}
-                >
-                  <Plus size={13} /> Créer un macrocycle
-                </button>
-              </div>
+              <EmptyState
+                className="py-12"
+                title="Aucun macrocycle sur cette période"
+                description="Crée un macrocycle pour visualiser la frise."
+                action={
+                  <Button className="gap-agon-xs" onClick={() => openCreate("macrocycle", undefined, rsStr, reStr)}>
+                    <Plus size={13} /> Créer un macrocycle
+                  </Button>
+                }
+              />
             ) : (
-              /* Relative container for absolute markers */
-              <div style={{ position: "relative" }}>
+              /* Conteneur relatif pour les repères verticaux en absolu */
+              <div className="relative">
                 <TimelineRow level="macrocycle" items={macroRows} {...sharedRowProps}
                   onOpen={(id) => open("macrocycle", id)}
                   onZoom={(id) => {
@@ -1912,16 +826,18 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
                   onOpen={(id) => open("microcycle", id)}
                 />
 
-                {/* Vertical markers (position absolute over all rows) */}
+                {/* Repères verticaux (en absolu sur toutes les lignes) */}
                 <CompetitionMarkers
                   competitions={data?.competitions ?? []}
                   calc={calc}
+                  labelWidth={labelW}
                   totalRowHeight={TOTAL_ROW_H}
                   onSelect={(c: Competition) => open("competition", c.id)}
                 />
                 <TestMarkers
                   tests={data?.tests ?? []}
                   calc={calc}
+                  labelWidth={labelW}
                   totalRowHeight={TOTAL_ROW_H}
                 />
               </div>
@@ -1929,18 +845,17 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
           </div>
         </div>
 
-        {/* Footer hint */}
-        <div style={{ padding: "8px 20px", borderTop: "1px solid " + C.brd, fontSize: 9, color: C.tx3, textAlign: "center" }}>
-          Drag axe X pour déplacer · Poignées colorées pour redimensionner · + pour détails · Compétitions: rose(A) violet(B) gris(C)
-        </div>
+        <p className="border-t border-agon-brd px-agon-md py-agon-sm text-center text-agon-xs text-agon-tx3 md:px-5">
+          <span className="hidden md:inline">Drag axe X pour déplacer · Poignées colorées pour redimensionner · + pour détails · Compétitions: rose(A) violet(B) gris(C)</span>
+          <span className="md:hidden">Touche un bloc pour ses détails · poignées pour redimensionner</span>
+        </p>
       </div>
 
-      {/* Snap-to-adjacent dialog (overlap on drag/resize) */}
+      {/* Chevauchement au déplacement / redimensionnement */}
       {snapDragDialog && <SnapDragDialog state={snapDragDialog} />}
 
-      {/* No-parent drag modal */}
       {noParentModal && (
-        <NoParentDragModal
+        <NoParentDragDialog
           state={noParentModal}
           macrocycles={data?.macrocycles ?? []}
           mesocycles={data?.mesocycles ?? []}
@@ -1949,19 +864,17 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
         />
       )}
 
-      {/* Create modal */}
       {createModal && (
-        <CreateModal
+        <CreatePeriodDialog
           state={createModal}
           athleteId={athleteId}
           coachId={user?.id ?? ""}
           rangeStart={rsStr}
-          rangeEnd={reStr}
           onClose={() => setCreateModal(null)}
         />
       )}
 
-      {/* Cycle creation assistant (reuse last cycle's sessions/exos) */}
+      {/* Assistant de création de cycle (réutilise les séances du dernier cycle) */}
       {cycleAssistant && (
         <CreateCycleAssistant
           athleteId={athleteId}
@@ -1974,9 +887,8 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
         />
       )}
 
-      {/* Drawer */}
       {drawer && data && (
-        <DrawerShell
+        <PeriodDrawer
           state={drawer}
           onClose={() => setDrawer(null)}
           data={data}
@@ -1988,7 +900,6 @@ export function TimelineView({ athleteId }: TimelineViewProps) {
         />
       )}
 
-      {/* Competition edit modal */}
       {editingComp && (
         <CompetitionFormModal
           athleteId={editingComp.athlete_id ?? athleteId}
