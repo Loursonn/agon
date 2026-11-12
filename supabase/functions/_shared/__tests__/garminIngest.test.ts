@@ -58,6 +58,10 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
         const names = [...files.keys()].filter((n) => n.startsWith(prefix) && (!types || types.includes(n.split("/")[2])));
         return Promise.resolve({ data: names.map((object_name) => ({ object_name })), error: null });
       }
+      if (name === "provider_intraday_merge") {
+        tab("provider_intraday").push({ athlete_id: args.p_athlete, source: args.p_source, day: args.p_day, measure: args.p_measure, offsets: args.p_offsets, values: args.p_values });
+        return Promise.resolve({ data: null, error: null });
+      }
       if (name === "provider_inbox_claim") {
         const ids = args.p_ids as string[] | null;
         const rows = tab("provider_webhook_inbox").filter((r) => !r.processed_at && (!ids || ids.includes(r.id as string)));
@@ -342,7 +346,7 @@ describe("désinscription et permissions", () => {
 
 describe("drainInbox", () => {
   it("traite le lot pris et compte les issues", async () => {
-    const rows = [inbox("activities", activityEntry, "1"), inbox("dailies", { userId: "x", calendarDate: "2025-11-07" }, "2"), inbox("bodyComps", { userId: GARMIN_USER }, "3")];
+    const rows = [inbox("activities", activityEntry, "1"), inbox("dailies", { userId: "x", calendarDate: "2025-11-07" }, "2"), inbox("healthSnapshot", { userId: GARMIN_USER }, "3")];
     const { db } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: rows });
     const counts = await drainInbox({ db, findDuplicate: noDup });
     expect(counts).toMatchObject({ imported: 1, stored: 1, unknown_user: 1, error: 0 });
@@ -352,15 +356,32 @@ describe("drainInbox", () => {
 describe("stockage brut de tout ce qu'envoie Garmin", () => {
   const raw = (t: Record<string, Row[]>) => t.provider_raw_records ?? [];
 
-  it("un type sans traitement Agon (stressDetails) est stocké tel quel", async () => {
+  it("un type sans traitement Agon (healthSnapshot) est stocké tel quel", async () => {
     const entry = { userId: GARMIN_USER, summaryId: "sd-1", calendarDate: "2025-11-07", timeOffsetBodyBatteryValues: { "0": 55 } };
-    const row = inbox("stressDetails", entry);
+    const row = inbox("healthSnapshot", entry);
     const { db, t } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: [row] });
     expect(await processInboxRow(row, { db, findDuplicate: noDup })).toBe("stored");
     expect(raw(t)).toHaveLength(1);
-    expect(raw(t)[0]).toMatchObject({ athlete_id: ATHLETE, source: "garmin", summary_type: "stressDetails", summary_id: "sd-1", payload: entry });
+    expect(raw(t)[0]).toMatchObject({ athlete_id: ATHLETE, source: "garmin", summary_type: "healthSnapshot", summary_id: "sd-1", payload: entry });
     expect(t.provider_webhook_inbox[0].processed_at).toBeTruthy();
     expect(t.provider_webhook_inbox[0].error).toBeNull();
+  });
+
+  it("stressDetails : brut stocké ET séries stress / Body Battery rangées par jour", async () => {
+    const entry = {
+      userId: GARMIN_USER, summaryId: "sd-1", calendarDate: "2025-11-07",
+      startTimeInSeconds: Date.parse("2025-11-06T23:00:00Z") / 1000, startTimeOffsetInSeconds: 3600,
+      timeOffsetStressLevelValues: { "0": 20, "180": -1, "360": 35 }, timeOffsetBodyBatteryValues: { "0": 55 },
+    };
+    const row = inbox("stressDetails", entry);
+    const { db, t } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: [row] });
+    expect(await processInboxRow(row, { db, findDuplicate: noDup })).toBe("imported");
+    expect(raw(t)).toHaveLength(1);
+    expect(t.provider_intraday.map((s) => [s.day, s.measure, s.offsets, s.values])).toEqual([
+      ["2025-11-07", "stress", [0, 360], [20, 35]],
+      ["2025-11-07", "body_battery", [0], [55]],
+    ]);
+    expect(t.provider_dailies).toHaveLength(1);
   });
 
   it("un résumé sans summaryId reçoit une empreinte stable (pas de doublon au rejeu)", async () => {

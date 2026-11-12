@@ -31,6 +31,7 @@ import {
 } from "./garmin.ts";
 import { gzip, putRaw, rawPath, removeRawFiles, storageOf } from "./rawStore.ts";
 import { garminActivityIdOf, refreshGarminActivityDetail } from "./activityDetail.ts";
+import { mapGarminIntraday, mapGarminMoveIQ } from "./garminHealth.ts";
 
 export interface InboxRow {
   id: string;
@@ -273,11 +274,17 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
         .eq("athlete_id", conn.athlete_id).eq("source", "garmin")
         .filter("summary_type", "in", activityTypes);
       if (e3) throw new Error(`suppression des activités brutes : ${e3.message}`);
+      const { error: e5 } = await db.from("provider_moveiq").delete()
+        .eq("athlete_id", conn.athlete_id).eq("source", "garmin");
+      if (e5) throw new Error(`suppression des activités détectées : ${e5.message}`);
     }
     if (!permissions.includes(GARMIN_PERMISSIONS.health)) {
       const { error: e2 } = await db.from("provider_dailies").delete()
         .eq("athlete_id", conn.athlete_id).eq("source", "garmin");
       if (e2) throw new Error(`suppression des données quotidiennes : ${e2.message}`);
+      const { error: e6 } = await db.from("provider_intraday").delete()
+        .eq("athlete_id", conn.athlete_id).eq("source", "garmin");
+      if (e6) throw new Error(`suppression des séries santé : ${e6.message}`);
       const { error: e4 } = await db.from("provider_raw_records").delete()
         .eq("athlete_id", conn.athlete_id).eq("source", "garmin")
         .not("summary_type", "in", activityTypes);
@@ -329,6 +336,15 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
   }
 
   const note = await storeRaw(row, entry, conn, userId, deps);
+
+  if (row.type === "moveIQActivities") {
+    const miq = mapGarminMoveIQ(entry);
+    if (miq) {
+      const { error } = await db.from("provider_moveiq")
+        .upsert({ athlete_id: conn.athlete_id, ...miq }, { onConflict: "athlete_id,source,external_id" });
+      if (error) throw new Error(`activité détectée : ${error.message}`);
+    }
+  }
 
   if (!isActivity && !isDaily) {
     const detailNote = row.type === "activityFiles" ? await storeDetail(db, conn.athlete_id, entry) : null;
@@ -382,6 +398,7 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
       p_raw: daily.raw,
     });
     if (error) throw new Error(`données quotidiennes : ${error.message}`);
+    await storeIntraday(db, conn.athlete_id, row.type, entry);
   }
 
   await db.from("provider_connections")
@@ -389,6 +406,25 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
     .eq("id", conn.id);
   await markDone(db, row.id, null, now);
   return "imported";
+}
+
+/** Séries de la journée (FC 15 s, stress, Body Battery, respiration, SpO2…), fusionnées par jour. */
+export async function storeIntraday(db: Db, athleteId: string, kind: string, entry: Record<string, unknown>): Promise<number> {
+  let n = 0;
+  for (const s of mapGarminIntraday(kind, entry)) {
+    const { error } = await db.rpc("provider_intraday_merge", {
+      p_athlete: athleteId,
+      p_source: "garmin",
+      p_day: s.day,
+      p_measure: s.measure,
+      p_offsets: s.offsets,
+      p_values: s.values,
+      p_utc_offset_s: s.utcOffsetS,
+    });
+    if (error) throw new Error(`séries santé : ${error.message}`);
+    n++;
+  }
+  return n;
 }
 
 /**

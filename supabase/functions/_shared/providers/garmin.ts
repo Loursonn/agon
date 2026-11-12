@@ -41,6 +41,7 @@
  * absente donne `null`, jamais 0.
  */
 import { sportFromLabel } from "../activityFiles/sports.ts";
+import { HEALTH_DAILY_TYPES } from "./garminHealth.ts";
 import type { FetchLike, OAuthClientConfig, ProviderAdapter } from "../oauth.ts";
 
 // ─────────────────────────────── Endpoints ───────────────────────────────────
@@ -136,8 +137,8 @@ export function normalizePermissions(body: unknown): string[] {
 
 /** Types transformés en activités Agon (`provider_activities`). */
 export const ACTIVITY_TYPES = ["activities", "manuallyUpdatedActivities", "activityDetails"] as const;
-/** Types fusionnés dans `provider_dailies`. */
-export const DAILY_TYPES = ["dailies", "sleeps", "hrv"] as const;
+/** Types fusionnés dans `provider_dailies` (et `provider_intraday` pour leurs séries). */
+export const DAILY_TYPES = HEALTH_DAILY_TYPES;
 export const CONTROL_TYPES = ["deregistrations", "userPermissionsChange"] as const;
 
 /**
@@ -371,92 +372,8 @@ function withoutSamples(input: Record<string, unknown>): Record<string, unknown>
   return { ...rest, samplesDropped: (samples as unknown[]).length };
 }
 
-/** Champs de `provider_dailies` renseignés par un type de résumé. */
-export type DailyFields = Partial<Record<
-  | "resting_hr" | "hrv_ms" | "sleep_total_min" | "sleep_deep_min" | "sleep_rem_min" | "sleep_score"
-  | "steps" | "stress_avg" | "body_battery_min" | "body_battery_max" | "vo2max" | "training_load",
-  number | null
->>;
-
-export interface GarminDaily {
-  kind: "dailies" | "sleeps" | "hrv";
-  day: string;
-  fields: DailyFields;
-  raw: Record<string, unknown>;
-}
-
-const minutes = (sec: unknown): number | null => {
-  const n = finite(sec);
-  return n === null || n < 0 ? null : Math.round(n / 60);
-};
-
-const calendarDate = (e: Record<string, unknown>): string | null => {
-  const d = e.calendarDate;
-  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  const start = finite(e.startTimeInSeconds);
-  return start !== null && start > 0 ? localDay(start, finite(e.startTimeOffsetInSeconds)) : null;
-};
-
-/**
- * Résumé quotidien Garmin → champs `provider_dailies`.
- *
- * Seuls les champs que ce type de résumé sait renseigner sont présents dans
- * `fields` : un résumé de sommeil ne doit pas effacer les pas de la journée
- * (voir `provider_daily_merge`). Une mesure absente vaut `null`.
- */
-export function mapGarminDaily(kind: string, e: Record<string, unknown>): GarminDaily | null {
-  const day = calendarDate(e);
-  if (!day) return null;
-
-  if (kind === "dailies") {
-    const steps = count(e.steps);
-    const stress = finite(e.averageStressLevel);
-    return {
-      kind,
-      day,
-      fields: {
-        resting_hr: heartRate(e.restingHeartRateInBeatsPerMinute, 20, 150),
-        steps,
-        // Garmin code « pas de mesure » par -1 / -2 sur le stress : pas un niveau.
-        stress_avg: stress === null || stress < 0 || stress > 100 ? null : Math.round(stress),
-        // Body battery mini/maxi : absent des `dailies` (Health API 2.1 n'y met
-        // que bodyBatteryChargedValue / DrainedValue) ; il faudrait les
-        // `stressDetails`. Non affiché aujourd'hui : on ne l'invente pas.
-      },
-      raw: e,
-    };
-  }
-
-  if (kind === "sleeps") {
-    const total = minutes(e.durationInSeconds);
-    const score = e.overallSleepScore && typeof e.overallSleepScore === "object"
-      ? finite((e.overallSleepScore as Record<string, unknown>).value)
-      : finite(e.sleepScore);
-    return {
-      kind,
-      day,
-      fields: {
-        sleep_total_min: total === null || total === 0 || total > 1440 ? null : total,
-        sleep_deep_min: minutes(e.deepSleepDurationInSeconds),
-        sleep_rem_min: minutes(e.remSleepInSeconds ?? e.remSleepDurationInSeconds),
-        sleep_score: score === null || score < 0 || score > 100 ? null : Math.round(score),
-      },
-      raw: e,
-    };
-  }
-
-  if (kind === "hrv") {
-    const avg = finite(e.lastNightAvg);
-    return {
-      kind,
-      day,
-      fields: { hrv_ms: avg === null || avg <= 0 || avg > 500 ? null : Math.round(avg * 100) / 100 },
-      raw: e,
-    };
-  }
-
-  return null;
-}
+/** Santé (résumé du jour, séries, Move IQ) : voir `garminHealth.ts`. */
+export { HEALTH_DAILY_TYPES, mapGarminDaily, type DailyFields, type GarminDaily } from "./garminHealth.ts";
 
 /** Permission nécessaire pour importer un type de résumé. */
 export function permissionFor(kind: string): string | null {
