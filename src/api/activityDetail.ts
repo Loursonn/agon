@@ -49,6 +49,7 @@ export interface LapDraft {
   origin: LapOrigin;
   status: LapStatus;
   needsReview?: boolean;
+  comment?: string | null;
 }
 
 export class LapsConflictError extends ApiError {
@@ -70,6 +71,7 @@ const toRow = (l: LapDraft) => ({
   origin: l.origin,
   status: l.status,
   needs_review: l.needsReview ?? false,
+  comment: l.comment?.trim() || null,
 });
 
 function raiseConflict(res: { error: { message: string; code?: string } | null }): void {
@@ -131,6 +133,7 @@ function toStream(r: Record<string, unknown>): ActivityStream {
 type LapRow = {
   start_s: number; end_s: number; name: string | null; exercise_id: string | null; planned_block_ref: string | null;
   distance_override_m: unknown; reps: number | null; load_kg: unknown; origin: string; status: string; needs_review: boolean | null;
+  comment?: string | null;
 };
 
 const fromLapRow = (r: LapRow): DetailLap => ({
@@ -145,6 +148,7 @@ const fromLapRow = (r: LapRow): DetailLap => ({
   origin: r.origin as LapOrigin,
   status: r.status as LapStatus,
   needsReview: r.needs_review ?? false,
+  comment: r.comment ?? null,
 });
 
 type SetRow = {
@@ -218,7 +222,7 @@ export async function getActivityDetail(activityId: string): Promise<ActivityDet
     db().from("activity_streams").select("*").eq("activity_id", activityId).maybeSingle()
       .then((r) => unwrap(r, "série de la séance")),
     db().from("activity_laps")
-      .select("start_s, end_s, name, exercise_id, planned_block_ref, distance_override_m, reps, load_kg, origin, status, needs_review")
+      .select("start_s, end_s, name, exercise_id, planned_block_ref, distance_override_m, reps, load_kg, origin, status, needs_review, comment")
       .eq("activity_id", activityId).order("position", { ascending: true })
       .then((r) => unwrapRows(r, "tours")),
     db().from("activity_sets")

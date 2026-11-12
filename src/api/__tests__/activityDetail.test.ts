@@ -35,6 +35,18 @@ describe("saveLaps", () => {
     expect((sent!.p_laps as Array<Record<string, unknown>>)[0]).toMatchObject({ origin: "agon_proposal", needs_review: true });
   });
 
+  it("commentaire par station : espaces retirés, vide → null", async () => {
+    let sent: Record<string, unknown> | null = null;
+    const { db } = fakeDb({}, undefined, { save_activity_laps: (a) => ((sent = a), 1) });
+    setDbForTests(db);
+    await saveLaps("act", 0, [
+      { startS: 0, endS: 10, origin: "manual", status: "validated", comment: "  Poignées glissantes  " },
+      { startS: 10, endS: 20, origin: "manual", status: "validated", comment: "   " },
+      { startS: 20, endS: 30, origin: "manual", status: "validated" },
+    ]);
+    expect((sent!.p_laps as Array<Record<string, unknown>>).map((l) => l.comment)).toEqual(["Poignées glissantes", null, null]);
+  });
+
   it("version périmée → LapsConflictError (rien n'est écrasé)", async () => {
     setDbForTests({
       rpc: () => Promise.resolve({ data: null, error: { message: "modifiés entre-temps", code: "40001" } }),
@@ -86,6 +98,15 @@ function hyroxTables(opts: { lapsEdited?: boolean; watchLaps?: Array<[number, nu
 const zones = { hr_zone_bounds_at: () => [{ model_id: "m", kind: "three", bounds: [150, 165] }] };
 
 describe("getActivityDetail", () => {
+  it("relit le commentaire d'un tour", async () => {
+    const t = hyroxTables({ lapsEdited: true });
+    (t.activity_laps[1] as Record<string, unknown>).comment = "J'ai lâché 2 fois";
+    const { db } = fakeDb(t, undefined, zones);
+    setDbForTests(db);
+    const d = await getActivityDetail("act");
+    expect(d.laps.map((l) => l.comment ?? null)).toEqual([null, "J'ai lâché 2 fois", null, null]);
+  });
+
   it("HYROX : tours nommés d'après la séance prévue, métriques, zones, lien, attribution", async () => {
     const { db } = fakeDb(hyroxTables(), undefined, zones);
     setDbForTests(db);

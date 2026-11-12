@@ -17,6 +17,7 @@ import { SeanceZoneCard } from "./SeanceZoneCard";
 import { SeanceFeedbackCard } from "./SeanceFeedbackCard";
 import { SeanceLapsTable } from "./SeanceLapsTable";
 import { HyroxLapsTable } from "./HyroxLapsTable";
+import { HyroxConfirmSheet, type ConfirmPatch } from "./HyroxConfirmSheet";
 import { SeanceLapsMobile } from "./SeanceLapsMobile";
 import { SeanceLapEditor } from "./SeanceLapEditor";
 import { HyroxLapPanel } from "./HyroxLapPanel";
@@ -43,7 +44,7 @@ const sameLaps = (a: readonly DetailLap[], b: readonly DetailLap[]) =>
   a.length === b.length && a.every((l, i) => {
     const o = b[i];
     return l.startS === o.startS && l.endS === o.endS && l.name === o.name && l.exerciseId === o.exerciseId
-      && l.reps === o.reps && l.loadKg === o.loadKg && l.distanceOverrideM === o.distanceOverrideM && l.status === o.status;
+      && l.reps === o.reps && l.loadKg === o.loadKg && l.distanceOverrideM === o.distanceOverrideM && l.status === o.status && (l.comment ?? null) === (o.comment ?? null);
   });
 
 const stripMetrics = (l: DetailLap | DetailLapWithMetrics): DetailLap => {
@@ -67,6 +68,8 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
   const [selected, setSelected] = useState(0);
   const [cutAtS, setCutAtS] = useState<number | null>(null);
   const [override, setOverride] = useState<DetailLap[] | null>(null);
+  // « C'est bien cette séance » (téléphone, HYROX) : vérifier puis valider.
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const saveTimer = useRef<number | null>(null);
 
   // Une nouvelle version enregistrée remplace les corrections locales.
@@ -128,6 +131,11 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
     save.mutate({ version: detail.lapsVersion, laps: laps.map((l) => ({ ...l })) }, { onSuccess: () => after?.() });
 
   const validateProposal = () => persist(baseLaps.map((l) => ({ ...l, status: "validated" as const, needsReview: false })));
+  const validateConfirmed = (patches: Record<number, ConfirmPatch>) =>
+    persist(
+      baseLaps.map((l, i) => ({ ...l, ...patches[i], status: "validated" as const, needsReview: false })),
+      () => setConfirmOpen(false),
+    );
 
   const patchLap = (i: number, patch: Partial<DetailLap>) => {
     const next = baseLaps.map((l, k) => (k === i ? { ...l, ...patch } : l));
@@ -148,7 +156,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
       if (!draft) return;
       const at = cutAtS ?? Math.round((draft[selected].startS + draft[selected].endS) / 2);
       const next = cutLapAt(draft, at, (h, part) => markManual(part
-        ? { ...h, name: null, exerciseId: null, plannedBlockRef: null, reps: null, loadKg: null, distanceOverrideM: null }
+        ? { ...h, name: null, exerciseId: null, plannedBlockRef: null, reps: null, loadKg: null, distanceOverrideM: null, comment: null }
         : h));
       setDraft(next);
       setSelected(Math.max(0, lapIndexAt(next, at)));
@@ -236,7 +244,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
       namedOnly={detail.lapsNamedFromPlan}
       summary={describeKinds(kinds, names)}
       onAdjust={() => { startEdit(); if (compact) setPhoneView("tours"); }}
-      onValidate={validateProposal}
+      onValidate={compact && hyrox ? () => setConfirmOpen(true) : validateProposal}
       saving={save.isPending}
       compact={compact}
     />
@@ -300,6 +308,18 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
         )}
         {zoneCard}
         {feedback}
+        {confirmOpen && (
+          <HyroxConfirmSheet
+            laps={lapsM}
+            names={names}
+            kinds={kinds}
+            blocks={blocks}
+            device="montre"
+            saving={save.isPending}
+            onClose={() => setConfirmOpen(false)}
+            onValidate={validateConfirmed}
+          />
+        )}
         {shown.length > 0 && (
           <button
             type="button"

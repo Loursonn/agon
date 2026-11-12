@@ -36,6 +36,8 @@ export interface DetailLap {
   origin: LapOrigin;
   status: LapStatus;
   needsReview: boolean;
+  /** Mot de l'athlète ou du coach sur ce tour / cette station (« Poignées glissantes… »). */
+  comment?: string | null;
 }
 
 export interface DetailLapWithMetrics extends DetailLap {

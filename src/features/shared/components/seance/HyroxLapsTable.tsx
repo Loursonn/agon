@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useState, type CSSProperties } from "react";
 import type { ExpectedBlock } from "@shared/domain/hyroxLaps";
 import { C, alpha } from "@/lib/theme";
 import { DASH, fmtClock, fmtInt, plannedLabel, SERIES_COLORS, zoneColor, type LapKind } from "@/lib/seance";
@@ -45,8 +45,8 @@ export function HyroxLapsTable({ laps, names, kinds, blocks, zonesN, active, onS
         const planned = b ? (done.field === "reps" ? b.reps : b.distanceM) : null;
         const differs = done.value != null && planned != null && done.value !== planned;
         return (
+          <Fragment key={`${l.startS}-${i}`}>
           <div
-            key={`${l.startS}-${i}`}
             role="row"
             onClick={() => onSelect(i)}
             style={{
@@ -85,6 +85,12 @@ export function HyroxLapsTable({ laps, names, kinds, blocks, zonesN, active, onS
             <span style={{ ...cell, textAlign: "right", color: C.tx2 }}>{fmtInt(l.metrics.maxHr)}</span>
             <span style={{ textAlign: "right" }}><ZonePill zone={l.metrics.meanZone} n={zonesN} /></span>
           </div>
+          {l.comment && (
+            <div style={{ padding: "0 14px 10px 50px", fontSize: 12, color: C.tx2, background: on ? alpha(C.ac, 0.1) : "transparent" }}>
+              « {l.comment} »
+            </div>
+          )}
+          </Fragment>
         );
       })}
       {groups.map((g, k) => (

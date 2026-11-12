@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-hyrox-confirmer-seance",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "HYROX : l'athlète confirme sa séance et commente une station",
+    summary: "Au téléphone, « Valider » ouvre « C'est bien cette séance » : votre athlète vérifie reps, distances et charges station par station, et peut laisser un mot.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque station montre prévu → fait et la charge ; un écart s'affiche « À corriger ».",
+          "Les courses sont résumées en une ligne, les stations conformes au prévu sont repliées quand une autre demande l'attention.",
+          "Les commentaires apparaissent sous la station dans le détail des tours, au téléphone comme sur ordinateur.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-wellness-seance-hier",
     date: "2026-11-13",
     kind: "feature",

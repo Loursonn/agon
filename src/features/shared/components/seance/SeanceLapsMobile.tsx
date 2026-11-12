@@ -17,7 +17,7 @@ interface Props {
   zonesN: number;
   open: number | null;
   onOpen: (i: number | null) => void;
-  onPatch?: (i: number, patch: Partial<Pick<DetailLap, "reps" | "distanceOverrideM" | "loadKg">>) => void;
+  onPatch?: (i: number, patch: Partial<Pick<DetailLap, "reps" | "distanceOverrideM" | "loadKg" | "comment">>) => void;
   /** Vélo : vitesse (km/h) au lieu de l'allure. */
   speed?: boolean;
 }
@@ -73,6 +73,9 @@ export function SeanceLapsMobile({ laps, names, kinds, blocks, hyrox, zonesN, op
               )}
               {on ? <ChevronUp size={14} color={C.tx3} /> : <ChevronDown size={14} color={C.tx3} />}
             </button>
+            {!on && l.comment && (
+              <div style={{ fontSize: 12, color: C.tx2, padding: "0 0 10px 26px", marginTop: -4 }}>« {l.comment} »</div>
+            )}
 
             {on && !hyrox && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, padding: "2px 0 12px 26px" }}>
@@ -104,6 +107,20 @@ export function SeanceLapsMobile({ laps, names, kinds, blocks, hyrox, zonesN, op
                 {kind === "station" && onPatch && (
                   <Stepper label="Charge" value={l.loadKg ?? b?.loadKg ?? null} unit="kg" step={1} onChange={(v) => onPatch(i, { loadKg: v })} />
                 )}
+                {kind === "station" && onPatch ? (
+                  <textarea
+                    key={l.comment ?? ""}
+                    aria-label={`${names[i]} : commentaire`}
+                    defaultValue={l.comment ?? ""}
+                    maxLength={500}
+                    rows={2}
+                    placeholder="+ Commentaire pour ton coach"
+                    onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (l.comment ?? null)) onPatch(i, { comment: v }); }}
+                    style={{ padding: "8px 10px", borderRadius: 10, background: C.bg, border: `1px solid ${alpha(C.ac, 0.33)}`, color: C.tx, fontSize: 12.5, fontFamily: "inherit", resize: "vertical" }}
+                  />
+                ) : l.comment ? (
+                  <div style={{ fontSize: 12, color: C.tx2 }}>« {l.comment} »</div>
+                ) : null}
               </div>
             )}
           </div>
