@@ -41,8 +41,8 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     id: "2026-11-13-athlete-tests-profil-hyrox-look",
     date: "2026-11-13",
     kind: "feature",
-    title: "App athlète : Tests, Profil et courses HYROX plus lisibles",
-    summary: "Trois écrans de l'athlète reprennent le nouveau style de l'app, sans rien changer à leurs données.",
+    title: "App athlète : Tests, Profil, Alimentation et courses HYROX plus lisibles",
+    summary: "Quatre écrans de l'athlète reprennent le nouveau style de l'app, sans rien changer à leurs données.",
     sections: [
       {
         title: "Ce que voit l'athlète",
@@ -50,6 +50,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Tests : chaque valeur porte le picto de sa dominante, et l'historique se lit comme une frise.",
           "Profil : poids du jour en grand avec les trois dernières pesées ; le tuto Strava s'ouvre d'un toucher.",
           "HYROX › Courses : toutes les courses dans une seule liste, une case à cocher pour en comparer deux.",
+          "Alimentation : total du jour en anneau, une barre par macro, et la série en cours à côté du poids.",
         ],
       },
     ],

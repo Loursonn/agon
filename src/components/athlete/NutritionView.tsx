@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { errorMessage } from "@/lib/errors";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
-import { EmojiIcon } from "@/components/ui/AgonIcon";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { addDays, localIsoDay } from "@shared/domain/dates";
 import {
   calorieMode,
@@ -17,11 +17,47 @@ import {
 import { useNutritionLog, useSaveNutritionDay } from "@/features/shared/hooks/useNutrition";
 import { notifyQueued } from "@/lib/offline/writes";
 
-const STRATEGY_META: Record<string, { label: string; color: string; icon: string; verb: string }> = {
-  maintenance:    { label: "Maintenance",    color: C.b, icon: "balance", verb: "Écart visé" },
-  seche:          { label: "Sèche",          color: C.r, icon: "flamme", verb: "Déficit visé" },
-  prise_de_masse: { label: "Prise de masse", color: C.g, icon: "musculation", verb: "Surplus visé" },
+const INK = "#0E0C0A";
+const ROUGE_VIF = "#FF3B1F";
+const PROTEINES = "#FF5A33";
+
+/** Pictos de la planche « Nutrition athlète » (traits carrés, 24×24). */
+const STRATEGY_ICON: Record<string, JSX.Element> = {
+  maintenance: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.8" fill={INK} /></>,
+  seche: <path d="M12 22C7.6 22 5 19 5 15.2C5 11 9 9 9 4C12 6 14 8 14 11C15 10 15.5 9 15.5 8C18 10 19 12.6 19 15.2C19 19 16.4 22 12 22Z" />,
+  prise_de_masse: <path d="M13 2L4 14H11L10 22L20 9H13Z" />,
 };
+
+// Planche : maintenance en vert ; sèche en rouge ; prise de masse en bleu.
+const STRATEGY_META: Record<string, { label: string; color: string; verb: string }> = {
+  maintenance:    { label: "Maintenance",    color: C.g, verb: "Écart visé" },
+  seche:          { label: "Sèche",          color: C.r, verb: "Déficit visé" },
+  prise_de_masse: { label: "Prise de masse", color: C.b, verb: "Surplus visé" },
+};
+
+/** Fond teinté des cartes de la planche. */
+const tint = (color: string, a = "29", b = "0F") => `linear-gradient(160deg, ${color}${a}, ${color}${b}), ${C.s1}`;
+const KICK: React.CSSProperties = { ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.tx2 };
+
+function SectionTitle({ n, children }: { n: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+      <h2 style={{ margin: 0, height: 20, display: "flex", alignItems: "center", ...MONO, fontWeight: 400, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>
+        <span style={{ color: C.ac }}>{n} —</span>&nbsp;{children}
+      </h2>
+      <div style={{ height: 1, background: C.brd }} />
+    </div>
+  );
+}
+
+function IconSquare({ color, size = 32, children, glow }: { color: string; size?: number; children: React.ReactNode; glow?: boolean }) {
+  const inner = Math.round(size * 0.5);
+  return (
+    <span aria-hidden style={{ width: size, height: size, flex: "none", borderRadius: 10, background: color, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: glow ? `0 0 14px ${color}66` : undefined }}>
+      <svg width={inner} height={inner} viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="1.8" strokeLinecap="square">{children}</svg>
+    </span>
+  );
+}
 
 // Jour LOCAL : `toISOString` datait la saisie de la veille entre minuit et ~2 h.
 const isoDaysAgo = (today: string, n: number) => addDays(today, -n);
@@ -30,14 +66,16 @@ function fmtKcal(n: number) {
   return n.toLocaleString("fr-FR");
 }
 
+const sign = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "");
+const frNum = (v: number, decimals: number) => Math.abs(v).toLocaleString("fr-FR", { maximumFractionDigits: decimals });
+
 function fmtPct(v: number, decimals = 1) {
-  return (v > 0 ? "+" : "") + v.toFixed(decimals) + "%";
+  return `${sign(v)}${frNum(v, decimals)} %`;
 }
 
 function fmtWindow(wMin: number, wMax: number) {
-  if (wMin === wMax) return fmtPct(wMin, wMin % 1 === 0 ? 0 : 1);
-  const f = (v: number) => (v > 0 ? "+" : "") + (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1));
-  return `${f(wMin)} à ${f(wMax)}%`;
+  if (wMin === wMax) return fmtPct(wMin, 1);
+  return `${sign(wMin)}${frNum(wMin, 1)} à ${sign(wMax)}${frNum(wMax, 1)} %`;
 }
 
 interface Props {
@@ -108,7 +146,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
   }
 
   const strat = nutritionStrategy;
-  const meta = STRATEGY_META[strat.strategy] || { label: strat.strategy, color: C.ac, icon: "nutrition", verb: "Objectif" };
+  const meta = STRATEGY_META[strat.strategy] || { label: strat.strategy, color: C.ac, verb: "Objectif" };
 
   // ── Dépense & évaluation du jour ───────────────────────────────────────────
   const mode = calorieMode(strat);
@@ -130,25 +168,11 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
   // ── Macros ─────────────────────────────────────────────────────────────────
   const macroTargets = [
     { key: "glucides_consumed" as const,  label: "Glucides",  targetG: strat.macros_glucides,  targetPct: strat.macros_glucides_pct,  color: C.b },
-    { key: "lipides_consumed"  as const,  label: "Lipides",   targetG: strat.macros_lipides,   targetPct: strat.macros_lipides_pct,   color: C.o },
-    { key: "proteines_consumed" as const, label: "Protéines", targetG: strat.macros_proteines, targetPct: strat.macros_proteines_pct, color: C.g },
+    { key: "lipides_consumed"  as const,  label: "Lipides",   targetG: strat.macros_lipides,   targetPct: strat.macros_lipides_pct,   color: C.ac },
+    { key: "proteines_consumed" as const, label: "Protéines", targetG: strat.macros_proteines, targetPct: strat.macros_proteines_pct, color: PROTEINES },
   ];
   const hasMacroTargets = macroTargets.some(m => m.targetG || m.targetPct);
   const hasPcts = macroTargets.every(m => m.targetPct != null && m.targetPct > 0);
-
-  // ── Jauge (espace %) : zone = fenêtre ±2 pts, échelle fenêtre ±10 pts ──────
-  const gauge = (() => {
-    if (!displayEval) return null;
-    const lo = wMin - 10, hi = wMax + 10;
-    const span = hi - lo;
-    const pct = (v: number) => Math.min(100, Math.max(0, ((v - lo) / span) * 100));
-    return {
-      zoneStart: pct(wMin - NUTRITION_TOLERANCE_PCT),
-      zoneEnd: pct(wMax + NUTRITION_TOLERANCE_PCT),
-      zero: wMin <= 0 && 0 <= wMax ? null : pct(0),
-      cursor: evalDay ? pct(evalDay.actualPct) : null,
-    };
-  })();
 
   const statusColor = evalDay?.status === "ok" ? C.g : evalDay?.status === "close" ? C.o : evalDay ? C.r : C.tx3;
 
@@ -196,131 +220,122 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
     ? (strat.strategy === "seche" ? weightData.delta <= 0 : strat.strategy === "prise_de_masse" ? weightData.delta >= 0 : Math.abs(weightData.delta) <= 0.5)
     : true;
 
+  // Anneau « Total du jour » : part de la borne haute de la zone.
+  const ringPct = targetMax > 0 ? Math.min(1, calConsumed / targetMax) : 0;
+  const R = 73, CIRC = 2 * Math.PI * R;
+
   return (
-    <div style={{ padding: "24px 20px 40px" }}>
+    <div style={{ padding: "24px 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Titre et date : en-tête de page (AlimPage) */}
 
       {/* ── Objectif ── */}
-      <div style={card}>
-        {/* Stratégie en grand */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid " + C.brd }}>
-          <div style={{ width: 46, height: 46, borderRadius: 6, background: meta.color + "1C", border: "1px solid " + meta.color + "40", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-            <EmojiIcon value={meta.icon} size={22} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 19, fontWeight: 900, color: meta.color, letterSpacing: "-0.3px", lineHeight: 1.1 }}>{meta.label}</div>
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, padding: 16, border: `1px solid ${meta.color}73`, background: tint(meta.color) }}>
+        <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, background: meta.color }} />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <IconSquare color={meta.color} size={40}>{STRATEGY_ICON[strat.strategy] ?? STRATEGY_ICON.maintenance}</IconSquare>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ ...DISPLAY, fontSize: 17, letterSpacing: "0.06em", fontWeight: 400, color: C.tx, lineHeight: 1.2 }}>{meta.label}</div>
             {hasWindow && (
-              <div style={{ fontSize: 12, color: C.tx2, marginTop: 3 }}>
-                {meta.verb} : <span style={{ fontWeight: 800, color: C.tx }}>{fmtWindow(wMin, wMax)}</span>
-                <span style={{ color: C.tx3 }}> vs dépense</span>
+              <div style={{ fontSize: 12, color: C.tx2, marginTop: 3, lineHeight: 1.45 }}>
+                {meta.verb} : <span style={{ ...MONO, color: C.tx }}>{fmtWindow(wMin, wMax)}</span> vs dépense
               </div>
             )}
           </div>
           {strat.target_weight && (
-            <div style={{ textAlign: "center", padding: "6px 12px", borderRadius: 6, background: C.s2, border: "1px solid " + C.brdL }}>
-              <div style={{ fontSize: 9, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>Poids cible</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.ac }}>{strat.target_weight}<span style={{ fontSize: 10, color: C.tx3 }}> kg</span></div>
+            <div style={{ textAlign: "right", flex: "none" }}>
+              <div style={KICK}>Poids cible</div>
+              <div style={{ ...MONO, fontSize: 22, color: meta.color, marginTop: 4 }}>
+                {Number(strat.target_weight).toLocaleString("fr-FR")}<span style={{ fontSize: 11, color: C.tx2 }}> kg</span>
+              </div>
             </div>
           )}
         </div>
 
         {/* Zone kcal estimée */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>
-              {dynamicDepense != null ? "Zone du jour (BMR + activité saisie)" : "Zone kcal estimée"}
+        <div style={{ marginTop: 18 }}>
+          <div style={KICK}>{dynamicDepense != null ? "Zone du jour (BMR + activité)" : "Zone kcal estimée"}</div>
+          {targetMin > 0 ? (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6, ...MONO }}>
+              <span style={{ fontSize: 30, lineHeight: 1, color: C.tx }}>{fmtKcal(targetMin)}</span>
+              {targetMin !== targetMax && <><span style={{ fontSize: 13, color: C.tx3 }}>–</span><span style={{ fontSize: 30, lineHeight: 1, color: C.tx }}>{fmtKcal(targetMax)}</span></>}
+              <span style={{ fontSize: 12, color: C.tx2 }}>kcal</span>
             </div>
-            {targetMin > 0 ? (
-              targetMin !== targetMax ? (
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                  <span style={{ fontSize: 24, fontWeight: 900, color: C.tx, lineHeight: 1 }}>{fmtKcal(targetMin)}</span>
-                  <span style={{ fontSize: 13, color: C.tx3, fontWeight: 600 }}>–</span>
-                  <span style={{ fontSize: 24, fontWeight: 900, color: C.tx, lineHeight: 1 }}>{fmtKcal(targetMax)}</span>
-                  <span style={{ fontSize: 11, color: C.tx3 }}>kcal</span>
-                </div>
-              ) : (
-                <div style={{ fontSize: 26, fontWeight: 900, color: C.tx, lineHeight: 1 }}>
-                  {fmtKcal(targetMin)}<span style={{ fontSize: 12, color: C.tx3, fontWeight: 400 }}> kcal</span>
-                </div>
-              )
-            ) : (
-              <div style={{ fontSize: 24, fontWeight: 900, color: C.tx3 }}>—</div>
-            )}
-            <div style={{ fontSize: 10, color: C.tx3, marginTop: 4 }}>
-              {dynamicDepense != null
-                ? `Dépense : BMR ${fmtKcal(bmr!)} + ${fmtKcal(activeCal)} actives = ${fmtKcal(dynamicDepense)} kcal`
-                : showActiveCal ? "S'ajuste quand tu saisis tes calories actives" : displayEval ? `Base dépense ${fmtKcal(displayEval.reference)} kcal` : ""}
-            </div>
+          ) : (
+            <div style={{ ...MONO, fontSize: 30, color: C.tx3, marginTop: 6 }}>—</div>
+          )}
+          <div style={{ fontSize: 12, color: C.tx2, marginTop: 6 }}>
+            {dynamicDepense != null
+              ? `Dépense : BMR ${fmtKcal(bmr!)} + ${fmtKcal(activeCal)} actives = ${fmtKcal(dynamicDepense)} kcal`
+              : showActiveCal ? "S'ajuste quand tu saisis tes calories actives" : displayEval ? `Base dépense ${fmtKcal(displayEval.reference)} kcal` : ""}
           </div>
         </div>
 
-        {/* Répartition macros cible — une ligne */}
+        {/* Répartition macros cible */}
         {hasMacroTargets && (
           <div style={{ marginTop: 14 }}>
             {hasPcts && (
-              <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", marginBottom: 8, background: C.s2 }}>
+              <div style={{ display: "flex", gap: 4, height: 8, marginBottom: 10 }}>
                 {macroTargets.map(m => (
-                  <div key={m.key} style={{ width: (m.targetPct || 0) + "%", background: m.color }} />
+                  <div key={m.key} style={{ width: (m.targetPct || 0) + "%", background: m.color, borderRadius: 4 }} />
                 ))}
               </div>
             )}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
               {macroTargets.map(m => (
-                <div key={m.key} style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: m.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: C.tx2 }}>
-                    <span style={{ fontWeight: 800, color: C.tx }}>{m.targetG ?? "—"}</span> g
-                    {m.targetPct != null && <span style={{ color: C.tx3 }}> · {m.targetPct}%</span>}
-                  </span>
-                </div>
+                <span key={m.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.tx2, whiteSpace: "nowrap" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: m.color, flex: "none" }} />
+                  <span style={{ ...MONO, fontSize: 13, color: C.tx }}>{m.targetG ?? "—"}</span>
+                  <span style={{ ...MONO }}>g{m.targetPct != null ? ` · ${m.targetPct} %` : ""}</span>
+                </span>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Streak + poids ── */}
+      {/* ── Série + poids ── */}
       {(streakData || weightData) && (
-        <div style={{ ...card, display: "flex", gap: 14 }}>
-          {/* Streak */}
+        <div style={{ display: "grid", gridTemplateColumns: streakData && weightData ? "1fr 1fr" : "1fr", gap: 10 }}>
           {streakData && (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Série en cours</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: streakData.streak > 0 ? C.o : C.tx3, lineHeight: 1 }}>
-                  {streakData.streak > 0 ? "" + streakData.streak : "0"}
-                </span>
-                <span style={{ fontSize: 11, color: C.tx3 }}>jour{streakData.streak > 1 ? "s" : ""} dans l'objectif</span>
+            <div style={{ borderRadius: 14, padding: 14, border: `1px solid ${C.o}66`, background: tint(C.o, "24", "0D"), display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <IconSquare color={C.o} size={24}>{STRATEGY_ICON.seche}</IconSquare>
+                <span style={KICK}>Série en cours</span>
               </div>
-              {/* 14 derniers jours */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ ...MONO, fontSize: 40, lineHeight: 1, color: streakData.streak > 0 ? C.o : C.tx3 }}>{streakData.streak}</span>
+                <span style={{ fontSize: 12, color: C.tx2, lineHeight: 1.3 }}>jour{streakData.streak > 1 ? "s" : ""} dans l'objectif</span>
+              </div>
               <div style={{ display: "flex", gap: 3 }}>
                 {streakData.days.map(d => (
                   <div key={d.iso} title={d.iso} style={{
-                    flex: 1, height: 16, borderRadius: 4,
-                    background: d.status === "ok" ? C.g : d.status === "close" ? C.o : d.status === "off" ? C.r + "70" : C.s2,
-                    border: d.iso === today ? "1px solid " + C.tx2 : "1px solid transparent",
+                    flex: 1, height: 20, borderRadius: 4, boxSizing: "border-box",
+                    background: d.status === "ok" ? C.g : d.status === "close" ? C.o : d.status === "off" ? ROUGE_VIF : "transparent",
+                    border: d.status ? "none" : `1px dashed ${C.tx3}`,
                   }} />
                 ))}
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: C.tx3, marginTop: 3 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", ...MONO, fontSize: 10, color: C.tx3 }}>
                 <span>J−13</span><span>aujourd'hui</span>
               </div>
             </div>
           )}
 
-          {/* Poids */}
           {weightData && (
-            <div style={{ flex: 1, minWidth: 0, paddingLeft: streakData ? 14 : 0, borderLeft: streakData ? "1px solid " + C.brd : "none" }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Poids</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
-                <span style={{ fontSize: 28, fontWeight: 900, color: C.tx, lineHeight: 1 }}>{weightData.current}</span>
-                <span style={{ fontSize: 11, color: C.tx3 }}>kg</span>
-                {weightData.delta !== 0 && (
-                  <span style={{ fontSize: 11, fontWeight: 800, color: deltaGood ? C.g : C.o, marginLeft: "auto" }}>
-                    {weightData.delta > 0 ? "▲ +" : "▼ "}{weightData.delta} kg
-                  </span>
-                )}
+            <div style={{ borderRadius: 14, padding: 14, border: `1px solid ${C.b}66`, background: tint(C.b, "24", "0D"), display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <IconSquare color={C.b} size={24}><path d="M5 20H19L17 8H7Z" /><circle cx="12" cy="5" r="2" /></IconSquare>
+                <span style={KICK}>Poids</span>
               </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ ...MONO, fontSize: 36, lineHeight: 1, color: C.tx }}>{weightData.current.toLocaleString("fr-FR", { maximumFractionDigits: 1 })}</span>
+                <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>kg</span>
+              </div>
+              {weightData.delta !== 0 && (
+                <span style={{ alignSelf: "flex-start", ...MONO, fontSize: 11, letterSpacing: "0.06em", color: INK, background: deltaGood ? C.g : C.o, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>
+                  {weightData.delta > 0 ? "▲ +" : "▼ −"}{Math.abs(weightData.delta).toLocaleString("fr-FR")} kg
+                </span>
+              )}
               {weightData.series.length >= 2 ? (() => {
                 const vs = weightData.series.map(p => p.v);
                 const min = Math.min(...vs), max = Math.max(...vs);
@@ -332,8 +347,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
                 }).join(" ");
                 return (
                   <svg viewBox="0 0 100 26" preserveAspectRatio="none" style={{ width: "100%", height: 26, display: "block" }}>
-                    <polyline points={pts} fill="none" stroke={C.ac} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-                    <circle cx={100} cy={22 - ((vs[vs.length - 1] - min) / span) * 18} r="2.2" fill={C.ac} vectorEffect="non-scaling-stroke" />
+                    <polyline points={pts} fill="none" stroke={C.b} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                   </svg>
                 );
               })() : (
@@ -344,14 +358,12 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
         </div>
       )}
 
-      {/* ── Mon suivi ── */}
-      <div style={card}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 14 }}>
-          Mon suivi du jour
-        </div>
+      {/* ── Mon suivi du jour ── */}
+      <section style={{ marginTop: 8 }}>
+        <SectionTitle n="01">Mon suivi du jour</SectionTitle>
 
         {logLoading ? (
-          <div style={{ color: C.tx3, fontSize: 13, textAlign: "center", padding: "14px 0" }}>Chargement...</div>
+          <div style={{ color: C.tx3, fontSize: 13, textAlign: "center", padding: "14px 0" }}>Chargement…</div>
         ) : logQuery.isError ? (
           <div style={{ color: C.tx3, fontSize: 13, textAlign: "center", padding: "14px 0" }}>
             Impossible de charger ton journal.{" "}
@@ -360,127 +372,118 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
             </button>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
             {/* Calories actives */}
             {showActiveCal && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 6, background: C.s2, border: "1px solid " + C.brdL }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.tx2 }}>⌚ Calories actives brûlées</div>
-                  <div style={{ fontSize: 9, color: C.tx3, marginTop: 1 }}>montre / app{mode === "hybrid" ? " — optionnel" : ""}</div>
-                </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14, border: `1px solid ${ROUGE_VIF}73`, background: tint(ROUGE_VIF) }}>
+                <IconSquare color={ROUGE_VIF} size={32}>{STRATEGY_ICON.seche}</IconSquare>
+                <span style={{ flex: 1, fontSize: 13 }}>
+                  Calories actives brûlées
+                  {mode === "hybrid" && <span style={{ display: "block", fontSize: 11, color: C.tx3 }}>optionnel</span>}
+                </span>
                 <input
-                  style={{ width: 100, padding: "8px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 15, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
-                  type="number" min={0} max={5000} placeholder="0"
+                  aria-label="Calories actives brûlées"
+                  style={{ width: 74, height: 34, boxSizing: "border-box", padding: "0 10px", borderRadius: 8, border: `1px solid ${ROUGE_VIF}80`, background: C.s2, color: ROUGE_VIF, ...MONO, fontSize: 15, outline: "none", textAlign: "right" }}
+                  type="number" inputMode="numeric" min={0} max={5000} placeholder="0"
                   value={log.active_calories ?? ""}
                   onChange={viewOnly ? undefined : (e => upd("active_calories", e.target.value ? parseInt(e.target.value) : null))}
                   readOnly={viewOnly}
                 />
-              </div>
+                <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>kcal</span>
+              </label>
             )}
 
-            {/* Macros — une seule ligne */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {/* Total du jour + macros */}
+            <div style={{ background: C.s1, border: `1px solid ${C.brdL}`, borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ position: "relative", width: 160, height: 160, flex: "none" }}>
+                  <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden>
+                    <defs><linearGradient id="nutri-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor={C.o} /><stop offset="1" stopColor={C.ac} /></linearGradient></defs>
+                    <circle cx="80" cy="80" r={R} fill="none" stroke={C.brd} strokeWidth="14" />
+                    {ringPct > 0 && <circle cx="80" cy="80" r={R} fill="none" stroke="url(#nutri-ring)" strokeWidth="14" strokeLinecap="round" strokeDasharray={`${(ringPct * CIRC).toFixed(1)} ${CIRC.toFixed(1)}`} transform="rotate(-90 80 80)" />}
+                  </svg>
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                    <span style={KICK}>Total du jour</span>
+                    <span style={{ ...MONO, fontSize: 32, lineHeight: 1.15, color: calConsumed > 0 ? C.tx : C.tx3 }}>{calConsumed > 0 ? fmtKcal(calConsumed) : "—"}</span>
+                    {targetMin > 0 && (
+                      <span style={{ ...MONO, fontSize: 10, color: C.tx2, textAlign: "center", lineHeight: 1.4 }}>
+                        / {fmtKcal(targetMin)}{targetMin !== targetMax ? `–${fmtKcal(targetMax)}` : ""}<br />kcal
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {calConsumed > 0 && evalDay && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                    <span style={KICK}>{evalDay.actualPct <= 0 ? "Déficit réel" : "Surplus réel"}</span>
+                    <span style={{ ...MONO, fontSize: 30, lineHeight: 1, color: statusColor }}>{fmtPct(evalDay.actualPct, 0)}</span>
+                  </div>
+                )}
+              </div>
+
               {macroTargets.map(m => {
                 const consumed = log[m.key] ?? null;
                 const target = m.targetG;
                 const ratio = consumed != null && target ? consumed / target : null;
-                const pct = ratio != null ? Math.min(Math.round(ratio * 100), 100) : 0;
+                const pct = ratio != null ? Math.round(ratio * 100) : null;
                 const over = ratio != null && ratio > 1.05;
-
                 return (
-                  <div key={m.key} style={{ background: C.s2, borderRadius: 6, padding: "10px 8px 8px", border: "1px solid " + m.color + "22", display: "flex", flexDirection: "column", gap: 7 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: "50%", background: m.color }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: m.color, textTransform: "uppercase", letterSpacing: "0.4px" }}>{m.label}</span>
-                    </div>
-                    <input
-                      style={{ width: "100%", padding: "9px 4px", borderRadius: 4, border: "1px solid " + m.color + (consumed != null ? "55" : "30"), background: C.s1, color: over ? C.o : C.tx, fontSize: 17, fontWeight: 800, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, textAlign: "center" as const }}
-                      type="number" min={0} max={1000} placeholder="—"
-                      value={log[m.key] ?? ""}
-                      onChange={viewOnly ? undefined : (e => upd(m.key, e.target.value ? parseInt(e.target.value) : null))}
-                      readOnly={viewOnly}
-                    />
-                    <div style={{ textAlign: "center", fontSize: 9, color: C.tx3, minHeight: 12 }}>
-                      {target != null ? `/ ${target} g` : "g"}
-                    </div>
+                  <div key={m.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: m.color, flex: "none" }} />
+                      <span style={{ fontSize: 13, color: C.tx2, width: 72 }}>{m.label}</span>
+                      <input
+                        aria-label={`${m.label} consommés (g)`}
+                        style={{ width: 64, height: 32, boxSizing: "border-box", padding: "0 8px", borderRadius: 8, border: `1px solid ${m.color}${consumed != null ? "80" : "40"}`, background: C.s2, color: over ? C.o : m.color, ...MONO, fontSize: 18, outline: "none", textAlign: "right" }}
+                        type="number" inputMode="numeric" min={0} max={1000} placeholder="—"
+                        value={log[m.key] ?? ""}
+                        onChange={viewOnly ? undefined : (e => upd(m.key, e.target.value ? parseInt(e.target.value) : null))}
+                        readOnly={viewOnly}
+                      />
+                      <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{target != null ? `/ ${target} g` : "g"}</span>
+                      <span style={{ flex: 1 }} />
+                      <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>{pct != null ? `${pct} %` : ""}</span>
+                    </label>
                     {target != null && (
-                      <div style={{ height: 3, background: C.s1, borderRadius: 2, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: pct + "%", background: over ? C.o : m.color, borderRadius: 2, transition: "width 0.3s" }} />
+                      <div style={{ height: 10, borderRadius: 5, background: m.color + "26" }}>
+                        <div style={{ height: 10, width: Math.min(pct ?? 0, 100) + "%", borderRadius: 5, background: over ? C.o : m.color, transition: "width 0.3s" }} />
                       </div>
                     )}
                   </div>
                 );
               })}
+
+              {!viewOnly && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={{ height: 54, width: "100%", borderRadius: 12, border: "none", background: saving ? C.s2 : C.ac, color: saving ? C.tx3 : INK, fontSize: 14, fontWeight: 600, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
+                >
+                  {saving ? "Enregistrement…" : "Enregistrer ma journée"}
+                </button>
+              )}
             </div>
-
-            {/* Total calculé + jauge % */}
-            {calConsumed > 0 && evalDay && (
-              <div style={{ padding: "12px 14px", borderRadius: 6, background: C.s2, border: "1px solid " + statusColor + "35" }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: gauge ? 10 : 0 }}>
-                  <div>
-                    <div style={{ fontSize: 10, color: C.tx3, marginBottom: 2 }}>Total du jour</div>
-                    <div style={{ fontSize: 22, fontWeight: 900, color: statusColor, lineHeight: 1 }}>
-                      {fmtKcal(calConsumed)}
-                      <span style={{ fontSize: 11, color: C.tx3, fontWeight: 400 }}> kcal</span>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 10, color: C.tx3, marginBottom: 2 }}>{evalDay.actualPct <= 0 ? "Déficit réel" : "Surplus réel"}</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: statusColor }}>{fmtPct(evalDay.actualPct)}</div>
-                  </div>
-                </div>
-
-                {/* Jauge : zone verte = fenêtre % ±2 pts, curseur = % réel */}
-                {gauge && (
-                  <div style={{ position: "relative", height: 22 }}>
-                    <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 6, borderRadius: 3, background: C.s1 }} />
-                    <div style={{ position: "absolute", top: 8, left: gauge.zoneStart + "%", width: (gauge.zoneEnd - gauge.zoneStart) + "%", height: 6, borderRadius: 3, background: "linear-gradient(90deg, " + C.g + "70, " + C.g + ")" }} />
-                    {gauge.zero != null && (
-                      <div style={{ position: "absolute", top: 6, left: `calc(${gauge.zero}% - 1px)`, width: 1, height: 10, background: C.tx3 }} title="dépense (0%)" />
-                    )}
-                    {gauge.cursor != null && (
-                      <div style={{ position: "absolute", top: 3, left: `calc(${gauge.cursor}% - 2px)`, width: 4, height: 16, borderRadius: 2, background: statusColor + statusColor + "90", transition: "left 0.3s" }} />
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!viewOnly && (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{ width: "100%", padding: "14px 0", borderRadius: 6, border: "none", background: saving ? C.s2 : C.ac, color: saving ? C.tx3 : "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
-              >
-                {saving ? "Enregistrement..." : "Enregistrer ma journée"}
-              </button>
-            )}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* ── Feedback objectif ── */}
+      {/* ── Retour sur l'objectif ── */}
       {evalDay && (() => {
-        const objectif = hasWindow ? `objectif ${fmtWindow(wMin, wMax)} (±${NUTRITION_TOLERANCE_PCT} pts)` : `cible ${fmtKcal(evalDay.target)} kcal ±${NUTRITION_TOLERANCE_PCT}%`;
+        const objectif = hasWindow ? `Objectif ${fmtWindow(wMin, wMax)} (±${NUTRITION_TOLERANCE_PCT} pts)` : `Cible ${fmtKcal(evalDay.target)} kcal ±${NUTRITION_TOLERANCE_PCT} %`;
         const reel = `${evalDay.actualPct <= 0 ? "Déficit" : "Surplus"} réel ${fmtPct(evalDay.actualPct)}`;
-
-        let bg: string, border: string, color: string, icon: string, title: string;
-        if (evalDay.status === "ok") {
-          bg = C.gS; border = C.g + "40"; color = C.g;
-          icon = "ok"; title = `Objectif ${meta.label} atteint !`;
-        } else if (evalDay.status === "close") {
-          bg = C.oS; border = C.o + "40"; color = C.o;
-          icon = "~"; title = `Proche de l'objectif (${fmtPct(evalDay.diffPct)} d'écart)`;
-        } else {
-          bg = C.rS; border = C.r + "40"; color = C.r;
-          icon = "alerte"; title = `Hors objectif (${fmtPct(evalDay.diffPct)} d'écart)`;
-        }
-
+        const bg = evalDay.status === "ok" ? C.g : evalDay.status === "close" ? C.o : ROUGE_VIF;
+        const title = evalDay.status === "ok"
+          ? `Objectif ${meta.label} atteint`
+          : evalDay.status === "close" ? `Proche de l'objectif (${fmtPct(evalDay.diffPct)} d'écart)` : `Hors objectif (${fmtPct(evalDay.diffPct)} d'écart)`;
         return (
-          <div style={{ ...card, background: bg, border: "1px solid " + border, marginBottom: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color, marginBottom: 4 }}>{icon} {title}</div>
-            <div style={{ fontSize: 11, color: C.tx2 }}>{reel} · {objectif} · {fmtKcal(calConsumed)} kcal vs dépense {fmtKcal(evalDay.reference)} kcal</div>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "14px 16px", borderRadius: 14, background: bg, color: INK }}>
+            <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2" strokeLinecap="square" style={{ flex: "none", marginTop: 1 }}>
+              {evalDay.status === "ok" ? <path d="M4 12.5L9.5 18L20 6" /> : <><path d="M12 3L22 20H2Z" /><path d="M12 10V14M12 17V17.5" /></>}
+            </svg>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{title}</div>
+              <div style={{ fontSize: 12, marginTop: 3, lineHeight: 1.5 }}>{objectif} · {reel}</div>
+            </div>
           </div>
         );
       })()}
