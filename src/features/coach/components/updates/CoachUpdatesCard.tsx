@@ -1,5 +1,6 @@
 /**
- * CoachUpdatesCard — accueil coach : nouveautés non vues, bouton « J'ai vu ».
+ * CoachUpdatesCard — accueil coach : la plus récente des nouveautés non vues
+ * (maquette « Accueil coach »), bouton « J'ai vu » qui fait passer à la suivante.
  * Une fois vues, elles restent consultables dans la page Nouveautés (sidebar).
  */
 import { useState } from "react";
@@ -25,8 +26,8 @@ export function CoachUpdatesCard() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {unseen.map((note, i) => {
-        const open = expanded === note.id || (expanded === null && i === 0);
+      {unseen.slice(0, 1).map((note) => {
+        const open = expanded === note.id;
         return (
           <div key={note.id} style={{
             background: C.s1,
@@ -62,7 +63,7 @@ export function CoachUpdatesCard() {
                 minHeight: 40, padding: "8px 14px", borderRadius: 4, border: "none",
                 background: "transparent", color: C.tx3, fontSize: 12, fontWeight: 600,
                 cursor: "pointer", fontFamily: "inherit",
-              }}>Toutes les nouveautés →</button>
+              }}>{unseen.length > 1 ? `Toutes les nouveautés (${unseen.length - 1} autre${unseen.length > 2 ? "s" : ""}) →` : "Toutes les nouveautés →"}</button>
             </div>
           </div>
         );

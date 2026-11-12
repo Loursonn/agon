@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-accueil-coach",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Accueil plus clair",
+    summary: "Votre accueil suit un ordre fixe et numéroté, et une seule nouveauté s'affiche à la fois.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "En haut : la date, « Bonjour », la citation du jour, puis les séances manquées hier et les tests à venir.",
+          "Une seule nouveauté à la fois : « J'ai vu » passe à la suivante, et le lien indique combien il en reste.",
+          "Les rubriques sont numérotées dans l'ordre (Aujourd'hui, Blessé / malade, À traiter, Alertes wellness…) ; celles qui sont vides disparaissent.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-fiches-athlete-ordinateur",
     date: "2026-11-12",
     kind: "feature",

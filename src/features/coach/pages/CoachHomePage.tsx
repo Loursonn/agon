@@ -23,6 +23,7 @@ import { useWellnessAlerts } from "@/features/shared/hooks/useWellnessAlerts";
 import { formatAssessment } from "@/lib/wellnessBaseline";
 import { useAuth } from "@/hooks/useAuth";
 import { C } from "@/lib/theme";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { localISO } from "@/lib/date";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
 import { CoachUpdatesCard } from "@/features/coach/components/updates/CoachUpdatesCard";
@@ -61,10 +62,10 @@ function initials(name: string) {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function SectionTitle({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
+function SectionTitle({ n, children }: { n?: number; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.6px] text-[#7D7468] mb-3 flex items-center gap-1.5">
-      {icon && <span className="flex items-center">{icon}</span>}
+    <p className="mb-3 flex items-center gap-1.5" style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2 }}>
+      {n != null && <span style={{ color: C.ac }}>{String(n).padStart(2, "0")} —</span>}
       {children}
     </p>
   );
@@ -130,6 +131,10 @@ export default function CoachHomePage() {
   const firstName  = profile?.full_name?.split(" ")[0] ?? "Coach";
   const todayLabel = format(new Date(), "EEEE d MMMM", { locale: fr });
 
+  // Sections numérotées dans l'ordre d'affichage (les sections vides ne comptent pas)
+  let sec = 0;
+  const nx = () => ++sec;
+
   const compA  = competitions.filter((c) => c.priority === "A" && c.daysUntil <= 14);
   const compBC = competitions.filter((c) => !(c.priority === "A" && c.daysUntil <= 14));
 
@@ -139,20 +144,16 @@ export default function CoachHomePage() {
       {/* ── Header ── */}
       <motion.div variants={stagger} initial="hidden" animate="show" className="mb-8">
         <motion.div variants={fadeUp}>
-          <h1 className="text-xl font-extrabold tracking-tight" style={{ color: C.tx }}>
-            Bonjour, {firstName}
-          </h1>
-          <p className="text-[12px] mt-1 capitalize" style={{ color: C.tx3 }}>
+          <p className="capitalize" style={{ ...MONO, fontSize: 11, letterSpacing: "0.1em", color: C.tx3 }}>
             {todayLabel} · {athletes.length} athlète{athletes.length !== 1 ? "s" : ""}
             {isCoachAthlete && canCoachSelf ? " · ton programme inclus" : ""}
           </p>
+          <h1 className="mt-1" style={{ ...DISPLAY, fontSize: 28, color: C.tx }}>
+            Bonjour, {firstName}
+          </h1>
         </motion.div>
 
-        <div className="mt-5">
-          <CoachUpdatesCard />
-        </div>
-
-        <motion.div variants={fadeUp} className="mt-5 mb-5">
+        <motion.div variants={fadeUp} className="mt-5">
           <CitationDuJour />
         </motion.div>
 
@@ -175,6 +176,10 @@ export default function CoachHomePage() {
             onClick={() => navigate("/coach/athletes")}
           />
         </motion.div>
+
+        <div className="mt-5">
+          <CoachUpdatesCard />
+        </div>
       </motion.div>
 
       {/* ── Two-column grid ── */}
@@ -185,7 +190,7 @@ export default function CoachHomePage() {
 
           {/* ── Aujourd'hui ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle icon={<Calendar size={11} style={{ color: "#7D7468" }} />}>Aujourd'hui</SectionTitle>
+            <SectionTitle n={nx()} icon={<Calendar size={11} style={{ color: "#7D7468" }} />}>Aujourd'hui</SectionTitle>
             <Card>
               {isLoadingToday ? (
                 <SkeletonRows n={3} />
@@ -284,7 +289,7 @@ export default function CoachHomePage() {
           {/* ── Blessé / malade — réponse du wellness (aujourd'hui ou hier) ── */}
           {wellnessInjuries.length > 0 && (
             <motion.div variants={fadeUp}>
-              <SectionTitle icon={<AlertTriangle size={11} style={{ color: C.r }} />}>Blessé / malade</SectionTitle>
+              <SectionTitle n={nx()} icon={<AlertTriangle size={11} style={{ color: C.r }} />}>Blessé / malade</SectionTitle>
               <Card>
                 {wellnessInjuries.map((a, i) => (
                   <div
@@ -315,7 +320,7 @@ export default function CoachHomePage() {
           {/* ── À traiter — séances manquées ── */}
           {missedSessions.length > 0 && (
             <motion.div variants={fadeUp}>
-              <SectionTitle icon={<AlertTriangle size={11} style={{ color: C.o }} />}>À traiter</SectionTitle>
+              <SectionTitle n={nx()} icon={<AlertTriangle size={11} style={{ color: C.o }} />}>À traiter</SectionTitle>
               <Card>
                 {missedSessions.map((m, i) => (
                   <div
@@ -346,7 +351,7 @@ export default function CoachHomePage() {
           {/* ── Alertes wellness — écart à l'habitude de l'athlète ── */}
           {wellnessAlerts.length > 0 && (
             <motion.div variants={fadeUp}>
-              <SectionTitle icon={<Heart size={11} style={{ color: C.r }} />}>Alertes wellness</SectionTitle>
+              <SectionTitle n={nx()} icon={<Heart size={11} style={{ color: C.r }} />}>Alertes wellness</SectionTitle>
               <Card>
                 {wellnessAlerts.map((a, i) => {
                   const accent = a.assessment.level === "alerte" ? C.r : C.o;
@@ -381,7 +386,7 @@ export default function CoachHomePage() {
           {/* ── Séances à clôturer ── */}
           {unfinished.length > 0 && (
             <motion.div variants={fadeUp}>
-              <SectionTitle icon={<Flag size={11} style={{ color: "#7D7468" }} />}>Séances à clôturer</SectionTitle>
+              <SectionTitle n={nx()} icon={<Flag size={11} style={{ color: "#7D7468" }} />}>Séances à clôturer</SectionTitle>
               <Card>
                 {unfinished.slice(0, 8).map((w, i) => {
                   const name = athleteNameById.get(w.athleteId)
@@ -416,7 +421,7 @@ export default function CoachHomePage() {
 
           {/* ── Activité récente ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle icon={<Clock size={11} style={{ color: "#7D7468" }} />}>Activité récente</SectionTitle>
+            <SectionTitle n={nx()} icon={<Clock size={11} style={{ color: "#7D7468" }} />}>Activité récente</SectionTitle>
             <Card>
               {loadActivity ? (
                 <SkeletonRows n={4} />
@@ -502,7 +507,7 @@ export default function CoachHomePage() {
 
           {/* ── À anticiper ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle icon={<CalendarDays size={11} style={{ color: "#7D7468" }} />}>À anticiper</SectionTitle>
+            <SectionTitle n={nx()} icon={<CalendarDays size={11} style={{ color: "#7D7468" }} />}>À anticiper</SectionTitle>
             <Card>
               {loadMargin ? (
                 <SkeletonRows n={3} />
@@ -569,7 +574,7 @@ export default function CoachHomePage() {
 
           {/* ── Records & tests ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle icon={<Medal size={11} style={{ color: "#7D7468" }} />}>Records & tests</SectionTitle>
+            <SectionTitle n={nx()} icon={<Medal size={11} style={{ color: "#7D7468" }} />}>Records & tests</SectionTitle>
             <Card>
               {loadRecords ? (
                 <SkeletonRows n={3} />
@@ -619,7 +624,7 @@ export default function CoachHomePage() {
 
           {/* ── Compétitions ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle icon={<Trophy size={11} style={{ color: "#7D7468" }} />}>Compétitions</SectionTitle>
+            <SectionTitle n={nx()} icon={<Trophy size={11} style={{ color: "#7D7468" }} />}>Compétitions</SectionTitle>
             <Card>
               {loadCompet ? (
                 <SkeletonRows n={3} />
