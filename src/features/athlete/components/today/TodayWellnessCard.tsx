@@ -3,6 +3,7 @@ import { C } from "@/lib/theme";
 import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import type { ReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import type { WellnessData } from "@/features/shared/types/athlete";
+import { DOMS_LEVEL_COLOR, levelsList } from "@/lib/bodyZones";
 
 /** Les 5 notes du matin (1 = mauvais, 5 = très bien pour toutes), libellés courts. */
 const ITEMS: Array<{ key: string; label: string }> = [
@@ -72,6 +73,14 @@ export function TodayWellnessCard({
     return { ...it, v: Number.isFinite(v) && v > 0 ? v : null };
   });
   const fraicheur = values.find((x) => x.key === "doms")?.v ?? null;
+  // Écran 2 du wellness : zones de courbatures, douleur, malade ; envie (hors score).
+  const zones = levelsList(wellness?.domsLevels);
+  const envie = typeof wellness?.envie === "number" ? wellness.envie : null;
+  const pain = typeof wellness?.pain === "number" && wellness.pain > 0 ? wellness.pain : null;
+  const sick = wellness?.sick === true;
+  const chip = (key: string, text: string, col: string) => (
+    <span key={key} style={{ ...MONO, fontSize: 11, color: col, border: `1px solid ${col}66`, background: `${col}1A`, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>{text}</span>
+  );
 
   return (
     <div style={{ borderRadius: 14, border: `1px solid ${color}66`, background: `${color}1A`, overflow: "hidden" }}>
@@ -108,13 +117,23 @@ export function TodayWellnessCard({
         <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>Muscles {fraicheur ?? "—"}/5</span>
       </button>
       {open && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, padding: "4px 14px 14px" }}>
+        <div style={{ padding: "4px 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
           {values.map((x) => (
             <div key={x.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 2px", borderRadius: 10, background: C.s1, border: `1px solid ${C.brd}` }}>
               <span style={{ ...MONO, fontSize: 16, color: x.v == null ? C.tx3 : itemColor(x.v) }}>{x.v ?? "—"}</span>
               <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3 }}>{x.label}</span>
             </div>
           ))}
+        </div>
+        {(envie != null || pain != null || sick || zones.length > 0) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {envie != null && chip("envie", `Envie ${envie}/5`, itemColor(envie))}
+            {pain != null && chip("pain", `Douleur ${pain}/10`, pain >= 6 ? "#FF3B1F" : pain >= 3 ? "#FF9500" : "#FFC933")}
+            {sick && chip("sick", "Malade", "#FF3B1F")}
+            {zones.map((z) => chip(z.id, z.label, DOMS_LEVEL_COLOR[z.level]))}
+          </div>
+        )}
         </div>
       )}
     </div>
