@@ -39,7 +39,7 @@ import { SessionPreviewModal } from "@/features/coach/components/energy/SessionP
 import type { EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
 import { Check, Zap, Dumbbell } from "lucide-react";
 import { AgonIcon } from "@/components/ui/AgonIcon";
-import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
+import { TestEntryPage } from "@/features/athlete/components/TestEntryPage";
 import { MensurationsDrawer } from "@/features/athlete/components/MensurationsDrawer";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { priorityLabel } from "@/types/planning";
@@ -880,7 +880,7 @@ export default function TodayPage() {
   const workouts = todayDay?.sessions ?? [];
   const todayTests = todayDay?.tests ?? [];
 
-  // Mesure biométrique planifiée → formulaire Mensurations/Photos, sinon TestFillDrawer
+  // Mesure biométrique planifiée → formulaire Mensurations/Photos, sinon TestEntryPage
   const openTest = (id: string) => {
     const t = weekDays.flatMap((d) => d.tests).find((x) => x.id === id);
     if (t?.type === "biometric") setMensuOpen(true);
@@ -1564,9 +1564,10 @@ export default function TodayPage() {
       />
 
       {/* Test preview / fill drawer */}
-      <TestFillDrawer
+      <TestEntryPage
         testId={testPreviewId}
         athleteId={athleteId ?? ""}
+        coachName={coachName}
         onClose={() => setTestPreviewId(null)}
       />
 

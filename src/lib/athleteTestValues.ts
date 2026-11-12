@@ -14,6 +14,12 @@ export interface TestPoint {
   value: number;
   testName: string;
   notes: string | null;
+  /** Ressenti de l'athlète (1 = très dur … 5 = facile). */
+  feeling?: number | null;
+  /** Mot de l'athlète sur ce test. */
+  comment?: string | null;
+  /** Saisie du résultat (ISO), pour « Nouveau ». */
+  createdAt?: string | null;
 }
 
 export interface TestValueCard {
@@ -71,7 +77,7 @@ export function formatTestDelta(delta: number | null, type: ValueType): string {
   return sign + nf(Math.abs(delta));
 }
 
-function isBetter(a: number, b: number, when: BetterWhen): boolean {
+export function isBetter(a: number, b: number, when: BetterWhen): boolean {
   return when === "lower" ? a < b : a > b;
 }
 
@@ -111,7 +117,10 @@ export function buildTestValueCards(results: AthleteTestResult[]): TestValueCard
         };
         byVar.set(v.variable_id, entry);
       }
-      entry.pts.push({ resultId: r.id, date: r.performed_at.slice(0, 10), value, testName: r.test_definitions?.name ?? "", notes: r.notes });
+      entry.pts.push({
+        resultId: r.id, date: r.performed_at.slice(0, 10), value, testName: r.test_definitions?.name ?? "", notes: r.notes,
+        feeling: r.feeling ?? null, comment: r.comment ?? null, createdAt: r.created_at ?? null,
+      });
     }
   }
   const cards: TestValueCard[] = [];

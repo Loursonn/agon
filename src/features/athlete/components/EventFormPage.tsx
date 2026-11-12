@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { CalendarDays, ChevronLeft, MapPin } from "lucide-react";
+import { ChevronLeft, MapPin } from "lucide-react";
+import { DateBox, FIELD_BOX } from "./DateBox";
 import { toast } from "sonner";
 import { C, alpha } from "@/lib/theme";
 import { ROUGE, TYPE_COLOR } from "@/lib/peps";
@@ -36,17 +37,7 @@ interface Props {
 
 const LABEL: CSSProperties = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3, whiteSpace: "nowrap" };
 
-const BOX: CSSProperties = {
-  height: 48, boxSizing: "border-box", borderRadius: 12, border: `1px solid ${alpha(C.tx, 0.18)}`, background: C.s1,
-  display: "flex", alignItems: "center", gap: 10, padding: "0 14px", position: "relative",
-};
-
-/** « Dim. 22 nov. 2026 » (avec l'année) ou « Mer. 18 nov. » (sans). */
-function fmtLongDay(iso: string, withYear: boolean): string {
-  const d = new Date(iso + "T12:00:00");
-  const s = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) });
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+const BOX = FIELD_BOX;
 
 function Field({ label, right, children }: { label: string; right?: ReactNode; children: ReactNode }) {
   return (
@@ -57,27 +48,6 @@ function Field({ label, right, children }: { label: string; right?: ReactNode; c
       </div>
       {children}
     </div>
-  );
-}
-
-/** Champ date au look de la maquette : texte formaté, sélecteur natif par-dessus (invisible). */
-function DateBox({ value, min, onChange, label, withYear }: { value: string; min?: string; onChange: (v: string) => void; label: string; withYear: boolean }) {
-  return (
-    <label style={{ ...BOX, cursor: "pointer" }}>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: value ? C.tx : C.tx3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        {value ? fmtLongDay(value, withYear) : "Choisir"}
-      </span>
-      <CalendarDays size={18} color={C.tx3} strokeWidth={1.75} />
-      <input
-        type="date"
-        aria-label={label}
-        value={value}
-        min={min}
-        onChange={(e) => onChange(e.target.value)}
-        onClick={(e) => { try { (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); } catch { /* navigateur sans showPicker */ } }}
-        style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer", colorScheme: "dark" }}
-      />
-    </label>
   );
 }
 

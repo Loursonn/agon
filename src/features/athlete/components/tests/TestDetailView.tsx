@@ -3,6 +3,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { C } from "@/lib/theme";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { ROUGE, TYPE_COLOR } from "@/lib/peps";
+import { isFreshResult } from "@/lib/testEntry";
 import {
   TEST_GROUP_LABEL, displayUnit, fmtTestDate, formatPace, formatTestDelta, formatTestValue, paceAtVma, type TestValueCard,
 } from "@/lib/athleteTestValues";
@@ -149,15 +150,24 @@ export function TestDetailView({ card, color, onBack }: { card: TestValueCard; c
             return (
               <div key={p.resultId + p.date} style={{ borderRadius: 12, border: `1px solid ${C.brd}`, background: C.s1, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 12.5, color: C.tx2, flex: 1 }}>{fmtTestDate(p.date)}</span>
+                  <span style={{ fontSize: 12.5, color: C.tx2, flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
+                    {fmtTestDate(p.date)}
+                    {isFreshResult(p.createdAt) && (
+                      <span style={{ display: "inline-flex", alignItems: "center", height: 20, padding: "0 7px", borderRadius: 999, background: C.ac, color: C.bg, ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500 }}>Nouveau</span>
+                    )}
+                  </span>
                   <span style={{ ...MONO, fontSize: 16, color: C.tx }}>{formatTestValue(p.value, card.valueType)}</span>
                   <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{unit}</span>
                   <span style={{ ...MONO, fontSize: 11, minWidth: 44, textAlign: "right", color: better == null ? C.tx3 : better ? TYPE_COLOR.fait : ROUGE }}>
                     {formatTestDelta(d, card.valueType)}
                   </span>
                 </div>
-                {p.testName && p.testName !== card.title && <span style={{ fontSize: 11.5, color: C.tx3 }}>{p.testName}</span>}
-                {p.notes && <span style={{ fontSize: 12.5, color: C.tx2, fontStyle: "italic" }}>« {p.notes} »</span>}
+                {((p.testName && p.testName !== card.title) || p.feeling) && (
+                  <span style={{ fontSize: 11.5, color: C.tx3 }}>
+                    {[p.testName && p.testName !== card.title ? p.testName : null, p.feeling ? `ressenti ${p.feeling} / 5` : null].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+                {(p.comment || p.notes) && <span style={{ fontSize: 12.5, color: C.tx2, fontStyle: "italic" }}>« {p.comment || p.notes} »</span>}
               </div>
             );
           })}

@@ -860,7 +860,9 @@ export type Database = {
       athlete_test_results: {
         Row: {
           athlete_id: string
+          comment: string | null
           created_at: string | null
+          feeling: number | null
           id: string
           notes: string | null
           performed_at: string
@@ -869,7 +871,9 @@ export type Database = {
         }
         Insert: {
           athlete_id: string
+          comment?: string | null
           created_at?: string | null
+          feeling?: number | null
           id?: string
           notes?: string | null
           performed_at?: string
@@ -878,7 +882,9 @@ export type Database = {
         }
         Update: {
           athlete_id?: string
+          comment?: string | null
           created_at?: string | null
+          feeling?: number | null
           id?: string
           notes?: string | null
           performed_at?: string

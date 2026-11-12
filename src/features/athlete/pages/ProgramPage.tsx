@@ -15,6 +15,7 @@ import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
 import { DayThemePill } from "@/features/shared/components/DayThemePill";
 import { dayThemeFullLabel, indexDayThemesByDate, isDayThemeEmpty, type DayThemeLike } from "@/lib/dayTheme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
+import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { useActivePlan } from "@/features/shared/hooks/useActivePlan";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useRescheduleWorkout } from "@/features/shared/hooks/useRescheduleWorkout";
@@ -30,7 +31,7 @@ import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTa
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
-import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
+import { TestEntryPage } from "@/features/athlete/components/TestEntryPage";
 import { CompetitionDayCard } from "@/features/athlete/components/CompetitionDayCard";
 import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
@@ -908,6 +909,7 @@ function ProgramSessionsView() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
   const { athleteId, viewOnly, freeSessions, setFreeSessions, athleteProfile } = useAthleteContext();
+  const { data: athleteCoaches } = useAthleteCoaches(athleteId);
   const myCoachId = athleteProfile?.coach_id ?? null;
   const [weekOffset, setWeekOffset] = useState(0);
   const { data, isLoading, isPlaceholderData } = useActivePlan(athleteId ?? "", weekOffset);
@@ -1211,9 +1213,10 @@ function ProgramSessionsView() {
       )}
 
       {/* Test preview / fill drawer */}
-      <TestFillDrawer
+      <TestEntryPage
         testId={testPreviewId}
         athleteId={athleteId ?? ""}
+        coachName={athleteCoaches?.referent?.full_name ?? null}
         onClose={() => setTestPreviewId(null)}
       />
 

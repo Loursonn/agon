@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useAthleteContext } from '@/features/shared/context/AthleteContext';
@@ -79,7 +80,13 @@ export default function AthleteTestPage() {
 
   const { data: results = [], isLoading: loadingResults } = useAthleteTestResults(athleteId);
   const groups = useMemo(() => groupTestCards(buildTestValueCards(results)), [results]);
-  const [openVar, setOpenVar] = useState<string | null>(null);
+  // « Voir le détail du test » après une saisie : /athlete/test?valeur=<variable>.
+  const [params, setParams] = useSearchParams();
+  const [openVar, setOpenVarState] = useState<string | null>(() => params.get('valeur'));
+  const setOpenVar = (id: string | null) => {
+    setOpenVarState(id);
+    if (!id && params.has('valeur')) { params.delete('valeur'); setParams(params, { replace: true }); }
+  };
   const openCard = openVar ? groups.flatMap((g) => g.cards).find((c) => c.variableId === openVar) ?? null : null;
 
   if (openCard) {

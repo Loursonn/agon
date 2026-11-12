@@ -105,6 +105,10 @@ export interface AthleteTestResult {
   test_definition_id: string;
   performed_at: string;
   notes: string | null;
+  /** Ressenti de l'athlète (1 = très dur … 5 = facile). */
+  feeling?: number | null;
+  /** Mot de l'athlète sur ce test. */
+  comment?: string | null;
   created_at: string;
   updated_at: string;
   test_definitions?: TestDefinitionWithVariables;

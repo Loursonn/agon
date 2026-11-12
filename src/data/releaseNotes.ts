@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-saisie-test",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : nouvelle saisie des tests",
+    summary: "Votre athlète saisit son résultat sur un écran clair, note son ressenti de 1 à 5, laisse un mot et voit tout de suite s'il bat son record.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le clavier s'adapte à la valeur : nombre, allure (min ’ s /km), durée (min : s) ou échelle de 1 à 5.",
+          "Son record s'affiche sous la case ; s'il le bat, « Nouveau record » en grand avec l'écart.",
+          "Il peut corriger la date s'il a fait le test un autre jour : le résultat suit.",
+          "Dans le détail du test, chaque résultat montre son ressenti et son commentaire.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-evenements",
     date: "2026-11-13",
     kind: "feature",
