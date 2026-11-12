@@ -3845,60 +3845,6 @@ export type Database = {
           },
         ]
       }
-      provider_workout_pushes: {
-        Row: {
-          athlete_id: string
-          attempts: number
-          external_schedule_id: string | null
-          external_workout_id: string | null
-          id: string
-          last_error: string | null
-          payload_hash: string | null
-          provider: Database["public"]["Enums"]["data_source"]
-          scheduled_date: string
-          sent_at: string | null
-          source_id: string
-          source_kind: string
-          status: string
-          updated_at: string
-          warnings: string[]
-        }
-        Insert: {
-          athlete_id: string
-          attempts?: number
-          external_schedule_id?: string | null
-          external_workout_id?: string | null
-          id?: string
-          last_error?: string | null
-          payload_hash?: string | null
-          provider: Database["public"]["Enums"]["data_source"]
-          scheduled_date: string
-          sent_at?: string | null
-          source_id: string
-          source_kind: string
-          status: string
-          updated_at?: string
-          warnings?: string[]
-        }
-        Update: {
-          athlete_id?: string
-          attempts?: number
-          external_schedule_id?: string | null
-          external_workout_id?: string | null
-          id?: string
-          last_error?: string | null
-          payload_hash?: string | null
-          provider?: Database["public"]["Enums"]["data_source"]
-          scheduled_date?: string
-          sent_at?: string | null
-          source_id?: string
-          source_kind?: string
-          status?: string
-          updated_at?: string
-          warnings?: string[]
-        }
-        Relationships: []
-      }
       provider_dailies: {
         Row: {
           active_kcal: number | null
@@ -4428,6 +4374,68 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      provider_workout_pushes: {
+        Row: {
+          athlete_id: string
+          attempts: number
+          external_schedule_id: string | null
+          external_workout_id: string | null
+          id: string
+          last_error: string | null
+          payload_hash: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          scheduled_date: string
+          sent_at: string | null
+          source_id: string
+          source_kind: string
+          status: string
+          updated_at: string
+          warnings: string[]
+        }
+        Insert: {
+          athlete_id: string
+          attempts?: number
+          external_schedule_id?: string | null
+          external_workout_id?: string | null
+          id?: string
+          last_error?: string | null
+          payload_hash?: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          scheduled_date: string
+          sent_at?: string | null
+          source_id: string
+          source_kind: string
+          status: string
+          updated_at?: string
+          warnings?: string[]
+        }
+        Update: {
+          athlete_id?: string
+          attempts?: number
+          external_schedule_id?: string | null
+          external_workout_id?: string | null
+          id?: string
+          last_error?: string | null
+          payload_hash?: string | null
+          provider?: Database["public"]["Enums"]["data_source"]
+          scheduled_date?: string
+          sent_at?: string | null
+          source_id?: string
+          source_kind?: string
+          status?: string
+          updated_at?: string
+          warnings?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_workout_pushes_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       retours: {
         Row: {
@@ -6609,13 +6617,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      set_workout_push: {
-        Args: {
-          p_enabled: boolean
-          p_provider: Database["public"]["Enums"]["data_source"]
-        }
-        Returns: boolean
-      }
       set_energy_rpe: {
         Args: { p_assignment: string; p_rpe: number }
         Returns: {
@@ -6654,6 +6655,13 @@ export type Database = {
           p_value: number
         }
         Returns: string
+      }
+      set_workout_push: {
+        Args: {
+          p_enabled: boolean
+          p_provider: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: boolean
       }
       set_workout_rpe: {
         Args: { p_log: string; p_rpe: number }
@@ -6779,6 +6787,7 @@ export type Database = {
       }
       trigger_coros_sync: { Args: never; Returns: undefined }
       trigger_garmin_maintenance: { Args: never; Returns: undefined }
+      trigger_garmin_workouts: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
       weight_record_milestone: {
         Args: { p_athlete: string; p_day: string; p_kg: number }
