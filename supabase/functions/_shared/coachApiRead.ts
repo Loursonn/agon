@@ -16,8 +16,8 @@
  * Module pur, testé par vitest.
  */
 import { exportableInjuries } from "./domain/injuries.ts";
-import { byIsoDay } from "./domain/dates.ts";
-import { archivedWellnessOf, parseWellnessHistory, wellnessEntries, wellnessScore } from "./domain/wellness.ts";
+import { wellnessEntries, wellnessScore } from "./domain/wellness.ts";
+import type { SummaryHealth } from "./coachApiHealth.ts";
 import { cleanText, type ExerciceParamsShape, isWeekRecord, type ProgSessionShape } from "./coachApiOps.ts";
 
 type Obj = Record<string, unknown>;
@@ -147,8 +147,10 @@ export interface SummaryInput {
   athlete: { id: string; first_name: string | null; full_name: string | null };
   from: string;
   to: string;
-  /** Valeurs `app_data` par clé : asp:goals, asp:bw, asp:wh, asp:wlog, asp:blockHistory. */
+  /** Valeurs `app_data` par clé : asp:goals. */
   appData: Record<string, unknown>;
+  /** Wellness, pesées et objectif de poids : tables santé (`readSummaryHealth`). */
+  health: SummaryHealth;
   prog: unknown;
   workoutLogs: Array<{
     scheduled_date: string;
@@ -242,16 +244,10 @@ function testValues(raw: unknown): Record<string, number> | null {
 }
 
 export function buildSummary(input: SummaryInput) {
-  const { from, to, appData } = input;
+  const { from, to, appData, health } = input;
   const goals = obj(appData["asp:goals"]);
-  const bw = obj(appData["asp:bw"]);
-  // `asp:wh` et `asp:wlog` sont indexés en "YYYYMMDD" : lus via le domaine, en jours ISO.
-  const wellness = wellnessEntries(
-    parseWellnessHistory(appData["asp:wh"], archivedWellnessOf(appData["asp:blockHistory"])),
-    from,
-    to,
-  );
-  const wlog = byIsoDay(obj(appData["asp:wlog"]));
+  // Jours ISO, bornés à la période.
+  const wellness = wellnessEntries(health.wellness, from, to);
   const names = exerciseNames(input.prog);
 
   return {
@@ -269,7 +265,7 @@ export function buildSummary(input: SummaryInput) {
       sommeil_cible_h: num(goals.sleepTarget, 0, 24),
       coucher: hm(goals.sleepBedtime),
       lever: hm(goals.sleepWakeup),
-      poids_cible_kg: num(bw.target, 20, 400),
+      poids_cible_kg: num(health.targetKg, 20, 400),
     },
     bien_etre: wellness.map((e) => ({
       date: e.day,
@@ -283,10 +279,10 @@ export function buildSummary(input: SummaryInput) {
       // Oui / non seulement : le commentaire est du texte libre.
       blesse_malade: e.injuryNote != null,
     })),
-    poids: Object.entries(wlog)
-      .filter(([d]) => inRange(d, from, to))
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, kg]) => ({ date, kg: num(kg, 20, 400) }))
+    poids: health.weights
+      .filter((p) => inRange(p.day, from, to))
+      .sort((a, b) => a.day.localeCompare(b.day))
+      .map((p) => ({ date: p.day, kg: num(p.kg, 20, 400) }))
       .filter((p) => p.kg !== null),
     blessures: exportableInjuries(input.injuries ?? [], from, to),
     seances: input.workoutLogs

@@ -15,8 +15,9 @@ const TOKENS = parseTokens(readFileSync(fileURLToPath(new URL("./src/styles/toke
  */
 const cssColor =
   (variable: string) =>
-  ({ opacityValue }: { opacityValue?: string }) =>
-    opacityValue === undefined || opacityValue.startsWith("var(")
+  ({ opacityValue }: { opacityValue?: string | number }) =>
+    // Les dégradés (`from-*`, `to-*`) passent un nombre (0) : d'où le String().
+    opacityValue === undefined || String(opacityValue).startsWith("var(")
       ? `var(${variable})`
       : `color-mix(in srgb, var(${variable}) calc(${opacityValue} * 100%), transparent)`;
 

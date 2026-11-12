@@ -1,0 +1,162 @@
+{
+  "athlete": {
+    "id": "a1",
+    "prenom": "Léa"
+  },
+  "periode": {
+    "du": "2026-10-01",
+    "au": "2026-10-28"
+  },
+  "echelles": {
+    "fatigue_sommeil_stress_energie_fraicheur_musculaire": "1 à 5, 5 = mieux",
+    "score_bien_etre": "0 à 100",
+    "rpe": "1 à 10",
+    "rir": "répétitions en réserve",
+    "douleur": "0 à 10"
+  },
+  "objectifs": {
+    "seances_par_semaine": 4,
+    "sommeil_cible_h": 8,
+    "coucher": "22:30",
+    "lever": null,
+    "poids_cible_kg": 60
+  },
+  "bien_etre": [
+    {
+      "date": "2026-10-02",
+      "score": null,
+      "fatigue": 3,
+      "sommeil": 4,
+      "stress": null,
+      "energie": 4,
+      "fraicheur_musculaire": 5,
+      "sommeil_h": 7.5,
+      "blesse_malade": true
+    },
+    {
+      "date": "2026-10-03",
+      "score": 80,
+      "fatigue": 4,
+      "sommeil": 4,
+      "stress": 4,
+      "energie": 4,
+      "fraicheur_musculaire": 4,
+      "sommeil_h": null,
+      "blesse_malade": false
+    },
+    {
+      "date": "2026-10-05",
+      "score": 100,
+      "fatigue": 5,
+      "sommeil": 5,
+      "stress": 5,
+      "energie": 5,
+      "fraicheur_musculaire": 5,
+      "sommeil_h": null,
+      "blesse_malade": false
+    }
+  ],
+  "poids": [
+    {
+      "date": "2026-10-02",
+      "kg": 62.4
+    },
+    {
+      "date": "2026-10-03",
+      "kg": 61.8
+    }
+  ],
+  "blessures": [
+    {
+      "zone": "Genou G",
+      "type": null,
+      "statut": "en_cours",
+      "douleur": 4,
+      "impact": null,
+      "debut": "2026-09-20",
+      "retour": null
+    }
+  ],
+  "seances": [
+    {
+      "date": "2026-10-02",
+      "session_id": "s1",
+      "nom": "A",
+      "statut": "completed",
+      "rpe": 8,
+      "duree_min": 60,
+      "forme": 4,
+      "exercices": [
+        {
+          "exercice": "Squat",
+          "series": [
+            {
+              "kg": 100,
+              "reps": 5,
+              "rir": 2,
+              "faite": true
+            },
+            {
+              "kg": null,
+              "reps": null,
+              "rir": null,
+              "faite": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "evenements": {
+    "competitions": [
+      {
+        "id": "c1",
+        "date": "2026-10-10",
+        "nom": "Hyrox Paris",
+        "type": "competition",
+        "priorite": "A",
+        "lieu": "Paris"
+      }
+    ],
+    "competitions_a_venir": [],
+    "tests": [
+      {
+        "id": "t1",
+        "date": "2026-10-12",
+        "titre": "Squat 1RM",
+        "type": "musculation",
+        "fait": true,
+        "resultats": {
+          "1rm": 140
+        }
+      }
+    ],
+    "vie": [
+      {
+        "du": "2026-10-20",
+        "au": "2026-10-22",
+        "titre": "Partiels"
+      }
+    ]
+  },
+  "themes_du_jour": [
+    {
+      "date": "2026-10-05",
+      "label": "Jambes lourdes",
+      "intensite": "hard",
+      "dominante": "force"
+    }
+  ],
+  "seances_energie": [],
+  "records": [
+    {
+      "date": "2026-10-02",
+      "exercice": "Squat",
+      "kg": 110
+    }
+  ],
+  "montre": {
+    "activites": [],
+    "journees": []
+  }
+}

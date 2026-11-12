@@ -5,7 +5,7 @@ import {
   createMeasurementLog, createProfileItem, deleteMeasurementLog, deleteProfileItem, getAiInsights,
   getArticularProfile, getCoachName, getMeasurementLogs, getMeasurementPhotoUrls, getProfile, getProfileItems,
   getBodyWeightGoal, getTrendSessions, getWeightLog, getWeightMilestones, groupArticular, invalidateProfile,
-  profileKeys, recentWeights, recordWeightMilestone, saveWeight, toLegacyBodyWeight, toLegacyMilestones,
+  profileKeys, recentWeights, recordWeightMilestone, saveWeight, saveWeightGoal, toLegacyBodyWeight, toLegacyMilestones,
   toLegacyWeightLog, updateAthleteProfile, updateMeasurementLog, updateProfileItem,
 } from "@/api/profile";
 import type { WellnessHistory } from "@shared/domain/wellness";
@@ -223,6 +223,33 @@ describe("api/profile — poids", () => {
     expect(await recordWeightMilestone("a", "2026-11-02", 66)).toEqual({ current: 66, target: 65 });
     world({}, { failOn: { table: "weight_set_day", op: "rpc" } });
     await expect(saveWeight("a", "2026-11-02", 70)).rejects.toThrow(/Enregistrement du poids impossible/);
+  });
+});
+
+describe("api/profile — objectif de poids", () => {
+  const rpcs: Record<string, FakeRpc> = {
+    weight_set_goal: (a, t) => {
+      const rows = (t.app_data ??= []);
+      let row = rows.find((r) => r.athlete_id === a.p_athlete && r.key === "asp:bw");
+      if (!row) rows.push((row = { athlete_id: a.p_athlete, key: "asp:bw", value: { current: 0 } }));
+      row.value = { ...(row.value as object), target: a.p_target_kg ?? 0 };
+      return row.value;
+    },
+  };
+
+  it("saveWeightGoal : ne change que target, current gardé ; null = pas d'objectif", async () => {
+    const { tables } = world({ app_data: [{ athlete_id: "a", key: "asp:bw", value: { current: 70, target: 0 } }] }, { rpcs });
+    expect(await saveWeightGoal("a", 65.5)).toEqual({ current: 70, target: 65.5 });
+    expect(tables.app_data[0].value).toEqual({ current: 70, target: 65.5 });
+    expect(await saveWeightGoal("a", null)).toEqual({ current: 70, target: 0 });
+  });
+
+  it("saveWeightGoal : objectif invalide refusé avant l'appel, refus du serveur remonté", async () => {
+    world({}, { rpcs });
+    await expect(saveWeightGoal("a", -1)).rejects.toThrow(/Objectif de poids invalide/);
+    await expect(saveWeightGoal("a", 500)).rejects.toThrow(/Objectif de poids invalide/);
+    world({}, { failOn: { table: "weight_set_goal", op: "rpc" } });
+    await expect(saveWeightGoal("a", 65)).rejects.toThrow(/Enregistrement de l'objectif impossible/);
   });
 });
 

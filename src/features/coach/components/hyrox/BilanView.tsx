@@ -67,7 +67,7 @@ function buildSegmentSummaries(
     ...STATION_KEYS.map(k => ({
       key: k,
       label: STATION_META[k].label,
-      getter: (r: HyroxResult) => (r as Record<string, unknown>)[k + "_s"] as number | null,
+      getter: (r: HyroxResult) => (r as unknown as Record<string, unknown>)[k + "_s"] as number | null,
     })),
     { key: "roxzone_total", label: "Roxzone", getter: roxzoneTotal },
   ];
@@ -133,7 +133,7 @@ export default function BilanView() {
   const rt = runTotal(latest);
   const pctRun = runRef && rt != null ? percentile(rt, runRef) : null;
   const stationPcts = STATION_KEYS.map(k => {
-    const v = (latest as Record<string, unknown>)[k + "_s"] as number | null;
+    const v = (latest as unknown as Record<string, unknown>)[k + "_s"] as number | null;
     const ref = refLookup(refDiv, k, bracketOf(latest.total_s));
     return v != null && ref ? percentile(v, ref) : null;
   }).filter(v => v != null) as number[];

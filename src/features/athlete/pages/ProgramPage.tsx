@@ -5,6 +5,9 @@ import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, Tr
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { ProgramHeader } from "@/features/athlete/components/program/ProgramHeader";
+import { ProgramSkeleton } from "@/features/athlete/components/program/ProgramSkeleton";
 import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
 import { DayThemePill } from "@/features/shared/components/DayThemePill";
 import { dayThemeFullLabel, indexDayThemesByDate, isDayThemeEmpty, type DayThemeLike } from "@/lib/dayTheme";
@@ -38,6 +41,8 @@ import { DayFiches } from "@/features/shared/components/fiches/DayFiches";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+const SECTION_TITLE = "mb-agon-md text-agon-xs font-bold uppercase tracking-wide text-agon-tx3";
+const WEEK_NAV_BTN = "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-agon-brd-l bg-agon-s2 text-agon-tx";
 const MONTHS_FR    = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
 const DOW_FULL_FR  = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
@@ -58,43 +63,6 @@ function sessionColor(s: WeekSession): string {
   return s.kind === "energy"
     ? (ENERGY_KIND_COLOR[s.sessionKind ?? ""] ?? "#FFC933")
     : C.ac;
-}
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
-function ProgramSkeleton() {
-  const pulse: React.CSSProperties = {
-    background: "rgba(255,255,255,0.06)", borderRadius: 4,
-    animation: "pulse 1.5s ease-in-out infinite",
-  };
-  return (
-    <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 16 }}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
-      <div style={{ background: C.s1, borderRadius: 6, padding: 20, border: "1px solid " + C.brd, display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ ...pulse, width: 80, height: 22 }} />
-          <div style={{ ...pulse, width: 60, height: 16 }} />
-        </div>
-        <div style={{ ...pulse, width: "70%", height: 22 }} />
-        <div style={{ ...pulse, width: "100%", height: 4 }} />
-        <div style={{ display: "flex", gap: 12 }}>
-          {[0,1,2].map(i => (
-            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ ...pulse, width: "60%", height: 18 }} />
-              <div style={{ ...pulse, width: "80%", height: 12 }} />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{ ...pulse, width: 160, height: 22 }} />
-      {[0,1,2,3,4,5,6].map(i => (
-        <div key={i} style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ ...pulse, width: 80, height: 14 }} />
-          <div style={{ ...pulse, width: "100%", height: 44 }} />
-        </div>
-      ))}
-    </div>
-  );
 }
 
 // ── Energy active session — interactive step validation ───────────────────────
@@ -1240,12 +1208,6 @@ function weekRangeLabel(days: WeekDay[]): string {
   return `${fmtShort(days[0].date)} → ${fmtShort(days[days.length - 1].date)}`;
 }
 
-const weekNavBtn: React.CSSProperties = {
-  width: 36, height: 36, borderRadius: 4, flexShrink: 0,
-  display: "flex", alignItems: "center", justifyContent: "center",
-  background: C.s2, border: "1px solid " + C.brdL, color: C.tx, cursor: "pointer",
-};
-
 function ProgramSessionsView() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
@@ -1356,58 +1318,44 @@ function ProgramSessionsView() {
     : rescheduleEnergy.isPending;
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", scrollbarWidth: "none" }}>
-      {/* Sticky header */}
-      <div style={{
-        position: "sticky", top: 45, zIndex: 5,
-        background: "linear-gradient(135deg, rgba(255,201,51,0.18) 0%, rgba(21,18,15,0.98) 70%)",
-        borderBottom: "1px solid rgba(255,201,51,0.25)",
-        padding: "14px 16px", textAlign: "center",
-      }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, letterSpacing: "-0.2px" }}>Programme</div>
-        <ProgramViewSwitch />
-      </div>
+    <div className="mx-auto w-full max-w-[480px] font-ui text-agon-tx lg:max-w-none">
+      <ProgramHeader />
 
       {isLoading ? (
         <ProgramSkeleton />
       ) : (
-        <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
-
-          {/* ── Plan actif ── */}
-          <section>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>
-              Plan actif
-            </div>
-            {data?.cycle ? (
-              <ActivePlanCard meso={data.cycle} weekSessionCount={data.weekSessionCount} />
-            ) : (
-              <EmptyState
-                icon={CalendarDays}
-                title="Aucun cycle en cours"
-                description="Tu n'es dans aucun cycle pour le moment. Ton coach programmera la suite."
-              />
-            )}
-          </section>
-
-          {/* ── Cycles précédents ── */}
-          {data?.pastCycles && data.pastCycles.length > 0 && (
+        // Téléphone : une colonne. PC : rail du plan à gauche, semaine à droite.
+        <div className="grid grid-cols-1 gap-agon-xl px-agon-lg pb-8 pt-agon-lg lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:px-agon-xl">
+          <div className="flex flex-col gap-agon-xl lg:sticky lg:top-[105px]">
             <section>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>
-                Cycles précédents
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {data.pastCycles.map((c) => <PastCycleCard key={c.id} cycle={c} />)}
-              </div>
+              <h2 className={SECTION_TITLE}>Plan actif</h2>
+              {data?.cycle ? (
+                <ActivePlanCard meso={data.cycle} weekSessionCount={data.weekSessionCount} />
+              ) : (
+                <EmptyState
+                  icon={CalendarDays}
+                  title="Aucun cycle en cours"
+                  description="Tu n'es dans aucun cycle pour le moment. Ton coach programmera la suite."
+                />
+              )}
             </section>
-          )}
 
-          {/* ── Cette semaine ── */}
+            {data?.pastCycles && data.pastCycles.length > 0 && (
+              <section>
+                <h2 className={SECTION_TITLE}>Cycles précédents</h2>
+                <div className="flex flex-col gap-agon-sm">
+                  {data.pastCycles.map((c) => <PastCycleCard key={c.id} cycle={c} />)}
+                </div>
+              </section>
+            )}
+          </div>
+
           <section>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <div className="mb-agon-lg flex items-center gap-agon-sm">
               <button
                 type="button"
                 aria-label="Semaine précédente"
-                style={weekNavBtn}
+                className={WEEK_NAV_BTN}
                 onClick={() => { haptic(); setWeekOffset(o => o - 1); }}
               >
                 <ChevronLeft size={18} />
@@ -1416,29 +1364,29 @@ function ProgramSessionsView() {
                 type="button"
                 onClick={() => setWeekOffset(0)}
                 disabled={weekOffset === 0}
-                style={{ flex: 1, minWidth: 0, background: "none", border: "none", padding: 0, textAlign: "center", cursor: weekOffset === 0 ? "default" : "pointer" }}
+                className={cn("min-w-0 flex-1 bg-transparent p-0 text-center", weekOffset === 0 ? "cursor-default" : "cursor-pointer")}
               >
-                <div style={{ fontSize: 20, fontWeight: 800, color: C.tx }}>{weekLabel(weekOffset)}</div>
-                <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
+                <div className="font-display text-agon-2xl font-extrabold">{weekLabel(weekOffset)}</div>
+                <div className="mt-agon-2xs text-agon-xs text-agon-tx3">
                   {weekRangeLabel(data?.weekDays ?? [])}
-                  {weekOffset !== 0 && <span style={{ color: C.ac }}> · revenir à aujourd'hui</span>}
+                  {weekOffset !== 0 && <span className="text-agon-accent"> · revenir à aujourd'hui</span>}
                 </div>
               </button>
               <button
                 type="button"
                 aria-label="Semaine suivante"
-                style={weekNavBtn}
+                className={WEEK_NAV_BTN}
                 onClick={() => { haptic(); setWeekOffset(o => o + 1); }}
               >
                 <ChevronRight size={18} />
               </button>
             </div>
             {!data?.weekDays.length ? (
-              <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "24px 16px", textAlign: "center", color: C.tx3, fontSize: 12 }}>
+              <div className="rounded-lg border border-agon-brd bg-agon-s1 px-agon-lg py-agon-xl text-center text-agon-sm text-agon-tx3">
                 Aucune séance cette semaine
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, opacity: isPlaceholderData ? 0.5 : 1, transition: "opacity 150ms" }}>
+              <div className={cn("flex flex-col gap-agon-md transition-opacity duration-150", isPlaceholderData && "opacity-50")}>
                 {data.weekDays.map(day => (
                   <DayRow
                     key={day.date}
@@ -1459,7 +1407,6 @@ function ProgramSessionsView() {
               </div>
             )}
           </section>
-
         </div>
       )}
 
@@ -1558,51 +1505,12 @@ function ProgramSessionsView() {
   );
 }
 
-// ── Sélecteur Séances | Fiches (?vue=fiches) ──────────────────────────────────
-
-function ProgramViewSwitch() {
-  const [params, setParams] = useSearchParams();
-  const vue = params.get("vue") === "fiches" ? "fiches" : "seances";
-  const go = (v: "seances" | "fiches") => {
-    const next = new URLSearchParams(params);
-    if (v === "fiches") next.set("vue", "fiches");
-    else next.delete("vue");
-    setParams(next, { replace: true });
-  };
-  return (
-    <div role="tablist" style={{ display: "flex", gap: 2, background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: 3, marginTop: 10 }}>
-      {([["seances", "Séances"], ["fiches", "Fiches"]] as const).map(([k, l]) => (
-        <button
-          key={k}
-          role="tab"
-          aria-selected={vue === k}
-          onClick={() => go(k)}
-          style={{
-            flex: 1, minHeight: 36, borderRadius: 4, border: "none",
-            background: vue === k ? C.acS : "transparent",
-            color: vue === k ? C.ac : C.tx3, fontSize: 13, fontWeight: 700,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
-        >{l}</button>
-      ))}
-    </div>
-  );
-}
-
 export default function ProgramPage() {
   const [params] = useSearchParams();
   if (params.get("vue") !== "fiches") return <ProgramSessionsView />;
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto" }}>
-      <div style={{
-        position: "sticky", top: 45, zIndex: 5,
-        background: "linear-gradient(135deg, rgba(255,201,51,0.18) 0%, rgba(21,18,15,0.98) 70%)",
-        borderBottom: "1px solid rgba(255,201,51,0.25)",
-        padding: "14px 16px", textAlign: "center",
-      }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: C.tx, letterSpacing: "-0.2px" }}>Programme</div>
-        <ProgramViewSwitch />
-      </div>
+    <div className="mx-auto w-full max-w-[480px] font-ui lg:max-w-4xl">
+      <ProgramHeader />
       <AthleteFichesView />
     </div>
   );

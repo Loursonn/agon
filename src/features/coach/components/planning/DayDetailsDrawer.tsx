@@ -46,6 +46,7 @@ const TYPE_COLOR: Record<CalEvent["type"], string> = {
   competition:   C.r,        // terracotta — compétitions
   energy:        C.b,        // ardoise — énergie
   free_activity: FREE_COLOR, // patine — activités libres
+  life_event:    C.tx3,      // même repli qu'avant (`?? C.tx3` à l'usage)
 };
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {

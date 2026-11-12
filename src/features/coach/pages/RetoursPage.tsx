@@ -30,6 +30,7 @@ import { useMedicalEntries } from "@/features/shared/hooks/useMedicalEntries";
 import { activeInjuries, fmtInjuryDate, injuryFacts, injurySummary } from "@/lib/injuryDetails";
 import { DECLARED_BY_LABEL, MEDICAL_STATUS_LABEL } from "@/features/shared/types/medical";
 import type { EnergySessionDetail } from "@/features/shared/types/retours.types";
+import { watchOrigins } from "@/lib/watchRunLabel";
 
 type ViewMode = "month" | "week";
 type DetailView = "wellness" | "workouts" | "tests" | "competitions" | "nutrition" | null;
@@ -107,8 +108,10 @@ export default function RetoursPage() {
   const periodStart = format(viewMode === "month" ? selectedMonth : selectedWeek, "yyyy-MM-dd");
   const periodEnd   = format(viewMode === "month" ? endOfMonth(selectedMonth) : addDays(selectedWeek, 6), "yyyy-MM-dd");
   // Même calcul que le volume du profil : saisie + montre, une sortie comptée une fois.
-  const { summaryBetween, matchByPlanned } = useRunningVolume(athleteId, freeSessions, periodStart);
+  const { runs, summaryBetween, matchByPlanned } = useRunningVolume(athleteId, freeSessions, periodStart);
   const { km: runKm, watchKm: runWatchKm } = summaryBetween(periodStart, periodEnd);
+  // « Garmin [modèle] » : attribution exigée là où un total inclut des km Garmin.
+  const runOrigins = watchOrigins(runs, periodStart, periodEnd);
 
   if (isLoading) return <PageSkeleton />;
   // Lecture en échec : le dire, plutôt qu'afficher une période vide trompeuse.
@@ -266,7 +269,7 @@ export default function RetoursPage() {
           { icon: <Heart size={14} style={{ color: "#66F03C" }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
           { icon: <Dumbbell size={14} style={{ color: C.ac }} />,            title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate}%` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
           { icon: <FlaskConical size={14} style={{ color: C.b }} />,         title: "Tests",           value: testsVal,    subtitle: undefined,                                                onClick: () => setDetailView("tests")        },
-          { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km", subtitle2: runWatchKm > 0 ? `dont ${runWatchKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} montre` : undefined },
+          { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km", subtitle2: runWatchKm > 0 ? `dont ${runWatchKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} ${runOrigins.length ? runOrigins.join(", ") : "montre"}` : undefined },
           { icon: <Trophy size={14} style={{ color: "#F5A623" }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
           { icon: <UtensilsCrossed size={14} style={{ color: "#F59E0B" }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
         ].map((kpi) => (

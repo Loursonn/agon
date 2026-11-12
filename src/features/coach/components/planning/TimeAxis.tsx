@@ -1,75 +1,52 @@
 import { eachMonthOfInterval, format, getMonth } from "date-fns";
 import { fr } from "date-fns/locale";
-import { C } from "@/lib/theme";
-
-const LABEL_W = 88;
+import { cn } from "@/lib/utils";
 
 interface TimeAxisProps {
-  rangeStart:     Date;
-  rangeEnd:       Date;
+  rangeStart: Date;
+  rangeEnd: Date;
   containerWidth: number;
+  /** Largeur de la colonne de libellés (px), identique à celle des lignes. */
+  labelWidth: number;
 }
 
-export function TimeAxis({ rangeStart, rangeEnd, containerWidth }: TimeAxisProps) {
-  const months     = eachMonthOfInterval({ start: rangeStart, end: rangeEnd });
-  const trackWidth = containerWidth - LABEL_W;
-  const colW       = trackWidth / months.length;
+export function TimeAxis({ rangeStart, rangeEnd, containerWidth, labelWidth }: TimeAxisProps) {
+  const months = eachMonthOfInterval({ start: rangeStart, end: rangeEnd });
+  const trackWidth = containerWidth - labelWidth;
+  const colW = trackWidth / months.length;
 
-  const todayMs    = Date.now();
-  const rangeMs    = rangeEnd.getTime() - rangeStart.getTime();
-  const elapsedMs  = todayMs - rangeStart.getTime();
-  const todayX     = Math.max(0, Math.min(1, elapsedMs / rangeMs)) * trackWidth;
-  const isInRange  = todayMs >= rangeStart.getTime() && todayMs <= rangeEnd.getTime();
+  const todayMs = Date.now();
+  const rangeMs = rangeEnd.getTime() - rangeStart.getTime();
+  const elapsedMs = todayMs - rangeStart.getTime();
+  const todayX = Math.max(0, Math.min(1, elapsedMs / rangeMs)) * trackWidth;
+  const isInRange = todayMs >= rangeStart.getTime() && todayMs <= rangeEnd.getTime();
+  const now = new Date();
 
   return (
-    <div
-      style={{
-        display: "flex",
-        position: "relative",
-        borderBottom: "1px solid " + C.brd,
-        paddingBottom: 6,
-      }}
-    >
-      {/* Left label spacer */}
-      <div style={{ width: LABEL_W, flexShrink: 0 }} />
+    <div className="relative flex border-b border-agon-brd pb-agon-xs">
+      <div className="shrink-0" style={{ width: labelWidth }} />
 
-      {/* Month cols */}
-      <div style={{ flex: 1, display: "flex", position: "relative" }}>
+      <div className="relative flex flex-1">
         {months.map((month, i) => {
           const isJan = getMonth(month) === 0;
-          const now = new Date();
-          const isCurrentMonth =
-            month.getFullYear() === now.getFullYear() &&
-            month.getMonth() === now.getMonth();
+          const isCurrentMonth = month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
 
           return (
             <div
               key={month.toISOString()}
-              style={{
-                width: colW, flexShrink: 0,
-                textAlign: "center", position: "relative",
-                paddingTop: isJan ? 2 : 4,
-              }}
+              className={cn("relative shrink-0 text-center", isJan ? "pt-agon-2xs" : "pt-agon-xs")}
+              style={{ width: colW }}
             >
-              {/* Year label on January (or first month) */}
               {(isJan || i === 0) && (
-                <div
-                  style={{
-                    fontSize: 8, fontWeight: 800, color: C.tx2,
-                    textTransform: "uppercase", letterSpacing: "0.3px",
-                    lineHeight: 1, marginBottom: 2,
-                  }}
-                >
+                <div className="mb-agon-2xs text-agon-xs font-extrabold uppercase leading-none tracking-wide text-agon-tx2">
                   {format(month, "yyyy")}
                 </div>
               )}
               <div
-                style={{
-                  fontSize: 9,
-                  fontWeight: isCurrentMonth ? 700 : isJan ? 600 : 500,
-                  color: isCurrentMonth ? C.ac : isJan ? C.tx2 : C.tx3,
-                  textTransform: "uppercase", letterSpacing: "0.5px",
-                }}
+                className={cn(
+                  "text-agon-xs uppercase tracking-wide",
+                  isCurrentMonth ? "font-bold text-agon-accent" : isJan ? "font-semibold text-agon-tx2" : "font-medium text-agon-tx3",
+                )}
               >
                 {format(month, "MMM", { locale: fr })}
               </div>
@@ -77,28 +54,12 @@ export function TimeAxis({ rangeStart, rangeEnd, containerWidth }: TimeAxisProps
           );
         })}
 
-        {/* Today marker */}
         {isInRange && (
           <div
-            style={{
-              position: "absolute",
-              left: todayX,
-              top: 0, bottom: -6,
-              width: 2,
-              background: C.ac,
-              borderRadius: 1,
-              pointerEvents: "none",
-            }}
+            className="pointer-events-none absolute -bottom-1.5 top-0 w-0.5 rounded-sm bg-agon-accent"
+            style={{ left: todayX }}
           >
-            <div
-              style={{
-                position: "absolute", top: -12, left: "50%",
-                transform: "translateX(-50%)",
-                fontSize: 7, fontWeight: 800, color: C.ac,
-                background: C.acS, borderRadius: 3, padding: "1px 4px",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <div className="absolute -top-3 left-1/2 hidden md:block -translate-x-1/2 whitespace-nowrap rounded-sm bg-agon-accent-doux px-agon-xs text-agon-xs font-extrabold text-agon-accent">
               Auj.
             </div>
           </div>

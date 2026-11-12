@@ -27,171 +27,12 @@ import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 import { SchemaViewerWithZoom } from "@/features/coach/components/energy/SchemaViewer";
 import { formatSLong } from "@/lib/energy/formatTarget";
+import { cn } from "@/lib/utils";
+import { ClassiqueBlockPreview } from "@/features/athlete/components/specific/ClassiqueBlockPreview";
+import { WodBlockPreview } from "@/features/athlete/components/specific/WodBlockPreview";
+import { ClassiqueBlockExecution } from "@/features/athlete/components/specific/ClassiqueBlockExecution";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 
-// ── Colors ──────────────────────────────────────────────────────────────────
-const C = {
-  bg: "var(--bg, #0E0C0A)",
-  card: "var(--card, #0E0C0A)",
-  border: "var(--border, #2E2D33)",
-  tx: "#F2F1F5",
-  tx2: "#8B8A92",
-  orange: "#F5A623",
-  green: "#66F03C",
-  purple: "#FFC933",
-};
-
-// ── Classique block preview ─────────────────────────────────────────────────
-function ClassiqueBlockPreview({ block }: { block: ClassiqueBlock }) {
-  return (
-    <div style={{
-      background: C.card, border: `1px solid ${C.border}`,
-      borderLeft: `4px solid ${C.green}`,
-      borderRadius: 6, padding: "12px 14px", marginBottom: 10,
-    }}>
-      <div style={{
-        fontSize: 11, fontWeight: 700, color: C.green,
-        textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8,
-      }}>
-        {block.title || "Bloc classique"}
-      </div>
-      {block.instructions && (
-        <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 8 }}>
-          {block.instructions}
-        </div>
-      )}
-      {block.items.map((item) => (
-        <div key={item.id} style={{
-          display: "flex", gap: 8, alignItems: "baseline",
-          padding: "4px 0", borderBottom: `1px solid ${C.border}`,
-        }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: C.tx, flex: 1, minWidth: 0 }}>
-            {item.name}
-          </span>
-          {item.prescription && (
-            <span style={{ fontSize: 12, color: C.tx2, textAlign: "right", maxWidth: "55%", whiteSpace: "pre-wrap" }}>
-              {item.prescription}
-            </span>
-          )}
-        </div>
-      ))}
-      {block.items.length > 0 && block.items[block.items.length - 1].rest && (
-        <div style={{ fontSize: 11, color: C.tx2, marginTop: 4 }}>
-          Repos : {block.items[block.items.length - 1].rest}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WodBlockPreview({ block, vma }: { block: WodBlock; vma?: number | null }) {
-  return (
-    <div style={{
-      border: `1px dashed ${C.orange}`,
-      borderRadius: 6, padding: 10, marginBottom: 10,
-      background: "rgba(245,166,35,0.03)",
-    }}>
-      <div style={{
-        fontSize: 11, fontWeight: 700, color: C.orange,
-        textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6,
-        padding: "0 4px",
-      }}>
-        {block.title || "Bloc WOD"}
-        <span style={{ fontWeight: 400, marginLeft: 8, fontSize: 10, color: C.tx2 }}>
-          {block.steps.length} étape{block.steps.length > 1 ? "s" : ""}
-        </span>
-      </div>
-      {block.instructions && (
-        <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 6 }}>
-          {block.instructions}
-        </div>
-      )}
-      <div style={{ marginLeft: 6 }}>
-        <StepTimeline steps={block.steps} vma={vma} />
-      </div>
-    </div>
-  );
-}
-
-// ── Classique execution (checklist per block) ───────────────────────────────
-function ClassiqueBlockExecution({
-  block,
-  blockLogs,
-  onToggle,
-}: {
-  block: ClassiqueBlock;
-  blockLogs: Record<string, boolean>;
-  onToggle: (itemId: string) => void;
-}) {
-  const allDone = block.items.every((item) => blockLogs[item.id]);
-  return (
-    <div style={{
-      background: C.card, border: `1px solid ${C.border}`,
-      borderLeft: `4px solid ${allDone ? C.green : C.tx2}`,
-      borderRadius: 6, padding: "12px 14px", marginBottom: 10,
-      opacity: allDone ? 0.7 : 1, transition: "opacity 200ms",
-    }}>
-      <div style={{
-        fontSize: 11, fontWeight: 700, color: allDone ? C.green : C.tx2,
-        textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8,
-      }}>
-        {block.title || "Bloc classique"}
-        {allDone && " ✓"}
-      </div>
-      {block.instructions && (
-        <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", marginBottom: 8 }}>
-          {block.instructions}
-        </div>
-      )}
-      {block.items.map((item) => {
-        const done = !!blockLogs[item.id];
-        return (
-          <button
-            key={item.id}
-            onClick={() => onToggle(item.id)}
-            style={{
-              display: "flex", gap: 8, alignItems: "center", width: "100%",
-              padding: "8px 4px", borderBottom: `1px solid ${C.border}`,
-              background: "none", border: "none", cursor: "pointer",
-              fontFamily: "inherit", textAlign: "left",
-              opacity: done ? 0.5 : 1,
-            }}
-          >
-            <span style={{
-              width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-              border: `2px solid ${done ? C.green : C.tx2}`,
-              background: done ? C.green + "20" : "transparent",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 13, color: C.green,
-            }}>
-              {done ? "✓" : ""}
-            </span>
-            <span style={{
-              fontSize: 14, fontWeight: 600, color: C.tx, flex: 1, minWidth: 0,
-              textDecoration: done ? "line-through" : "none",
-            }}>
-              {item.name}
-            </span>
-            {item.prescription && (
-              <span style={{ fontSize: 12, color: C.tx2, textAlign: "right", maxWidth: "55%", whiteSpace: "pre-wrap" }}>
-                {item.prescription}
-              </span>
-            )}
-          </button>
-        );
-      })}
-      {block.items.some((it) => it.notes) && (
-        <div style={{ marginTop: 6 }}>
-          {block.items.filter((it) => it.notes).map((it) => (
-            <div key={it.id} style={{ fontSize: 11, color: C.tx2, padding: "2px 0", whiteSpace: "pre-wrap" }}>
-              Note — {it.name} : {it.notes}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function SpecificExecutionPage() {
@@ -270,7 +111,7 @@ export default function SpecificExecutionPage() {
 
   if (!assignment || !session) {
     return (
-      <div style={{ padding: 32, color: C.tx2, fontSize: 13, textAlign: "center" }}>
+      <div className="p-8 text-center font-ui text-agon-sm text-agon-tx2">
         {!assignmentId ? "ID manquant" : "Chargement…"}
       </div>
     );
@@ -320,209 +161,156 @@ export default function SpecificExecutionPage() {
     } catch { /* Error handled by mutation toast */ }
   }
 
+
+  const PILL = "rounded-full border px-agon-md py-agon-xs text-agon-xs font-semibold";
+  const NEUTRAL_PILL = cn(PILL, "border-agon-brd bg-agon-tx2/10 text-agon-tx2");
+
+  // Téléphone : une colonne de 480 px. PC : colonne large, blocs sur deux colonnes.
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: C.bg, color: C.tx,
-      padding: "20px 16px 110px",
-    }}>
-      <div style={{ maxWidth: 480, margin: "0 auto" }}>
-        {/* Back */}
+    <div className="min-h-screen bg-agon-bg px-agon-lg pb-6 pt-5 font-ui text-agon-tx lg:px-agon-2xl lg:pt-agon-xl">
+      <div className="mx-auto w-full max-w-[480px] lg:max-w-5xl">
         <button
+          type="button"
           onClick={() => navigate(-1)}
-          style={{
-            color: C.tx2, fontSize: 13, marginBottom: 10,
-            background: "none", border: "none", cursor: "pointer",
-            fontFamily: "inherit",
-          }}
+          className="mb-agon-sm min-h-10 text-agon-base text-agon-tx2"
         >
           ← Retour
         </button>
 
-        {/* Title */}
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>{sessionName}</h1>
+        <h1 className="mb-agon-sm font-display text-agon-2xl font-bold">{sessionName}</h1>
 
-        {/* Meta pills */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 99,
-            background: "rgba(245,166,35,0.12)", color: C.orange,
-            border: "1px solid rgba(245,166,35,0.3)",
-          }}>
-            Spécifique
-          </span>
+        <div className="mb-agon-lg flex flex-wrap gap-agon-sm">
+          <span className={cn(PILL, "border-agon-alerte/30 bg-agon-alerte/10 text-agon-alerte")}>Spécifique</span>
           {isClassique && (
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 99,
-              background: "rgba(34,201,147,0.12)", color: C.green,
-              border: "1px solid rgba(34,201,147,0.3)",
-            }}>
+            <span className={cn(PILL, "border-agon-succes/30 bg-agon-succes/10 text-agon-succes")}>
               {blocks.length} bloc{blocks.length > 1 ? "s" : ""}
             </span>
           )}
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 99,
-            background: "rgba(139,138,146,0.12)", color: C.tx2,
-            border: `1px solid ${C.border}`,
-          }}>
-            {totalSteps} élément{totalSteps > 1 ? "s" : ""}
-          </span>
+          <span className={NEUTRAL_PILL}>{totalSteps} élément{totalSteps > 1 ? "s" : ""}</span>
           {session.total_duration_s != null && session.total_duration_s > 0 && (
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 99,
-              background: "rgba(139,138,146,0.12)", color: C.tx2,
-              border: `1px solid ${C.border}`,
-            }}>
-              ~{formatSLong(session.total_duration_s)}
-            </span>
+            <span className={NEUTRAL_PILL}>~{formatSLong(session.total_duration_s)}</span>
           )}
         </div>
 
-        {/* Coach notes */}
-        {session.notes && (
-          <div style={{
-            background: C.card, border: `1px solid ${C.border}`,
-            borderLeft: `3px solid ${C.orange}`,
-            borderRadius: 6, padding: "12px 14px", fontSize: 13,
-            marginBottom: 16, whiteSpace: "pre-wrap",
-          }}>
-            <strong style={{ display: "block", fontSize: 11, color: C.orange, textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 4 }}>
-              Note coach
-            </strong>
-            {session.notes}
-          </div>
-        )}
+        {/* Note du coach, fiches, schéma : en tête, pleine largeur */}
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-agon-lg">
+          {session.notes && (
+            <div className="mb-agon-lg whitespace-pre-wrap rounded-md border border-l-[3px] border-agon-brd border-l-agon-alerte bg-agon-bg px-agon-md py-agon-md text-agon-base">
+              <strong className="mb-agon-xs block text-agon-xs uppercase tracking-wide text-agon-alerte">Note coach</strong>
+              {session.notes}
+            </div>
+          )}
 
-        {/* Fiches */}
-        {session.fiches?.length ? (
-          <div style={{ marginBottom: 16 }}>
-            <FicheLinks title="Fiches" attachments={session.fiches} athleteId={user?.id} compact />
-          </div>
-        ) : null}
+          {session.fiches?.length ? (
+            <div className="mb-agon-lg">
+              <FicheLinks title="Fiches" attachments={session.fiches} athleteId={user?.id} compact />
+            </div>
+          ) : null}
 
-        {/* Schema */}
-        {session.schema && (
-          <div style={{ marginBottom: 16, borderRadius: 6, overflow: "hidden", border: `1px solid ${C.border}` }}>
-            <SchemaViewerWithZoom schema={session.schema} />
-          </div>
-        )}
+          {session.schema && (
+            <div className="mb-agon-lg overflow-hidden rounded-md border border-agon-brd lg:col-span-2">
+              <SchemaViewerWithZoom schema={session.schema} />
+            </div>
+          )}
+        </div>
 
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* ── PREVIEW ── */}
+        {/* ── APERÇU ── */}
         {effectivePhase === "preview" && (
           <>
             {isClassique ? (
-              blocks.map((b) =>
-                isWodBlock(b)
-                  ? <WodBlockPreview key={b.id} block={b} vma={vma} />
-                  : <ClassiqueBlockPreview key={b.id} block={b} />,
-              )
+              <div className="lg:columns-2 lg:gap-agon-lg">
+                {blocks.map((b) =>
+                  isWodBlock(b)
+                    ? <WodBlockPreview key={b.id} block={b} vma={vma} />
+                    : <ClassiqueBlockPreview key={b.id} block={b} />,
+                )}
+              </div>
             ) : (
-              <StepTimeline steps={allIntervals} vma={vma} />
+              <div className="lg:mx-auto lg:max-w-2xl">
+                <StepTimeline steps={allIntervals} vma={vma} />
+              </div>
             )}
 
-            {/* Sticky start button */}
-            <div style={{
-              position: "fixed", bottom: 0, left: 0, right: 0,
-              background: `linear-gradient(transparent, ${C.bg} 30%)`,
-              padding: "22px 16px 18px",
-            }}>
-              <div style={{ maxWidth: 480, margin: "0 auto" }}>
-                <button
-                  onClick={effectiveStart}
-                  style={{
-                    width: "100%", background: C.orange, color: "#1a1204",
-                    border: "none", borderRadius: 6, padding: 15,
-                    fontSize: 16, fontWeight: 700, cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Démarrer la séance
-                </button>
-              </div>
+            {/* Bouton de départ : collé au bas de l'écran, au-dessus de la barre d'onglets sur téléphone */}
+            <div className="sticky bottom-16 z-10 -mx-agon-lg mt-agon-lg bg-gradient-to-t from-agon-bg from-70% to-transparent px-agon-lg pb-agon-md pt-6 lg:bottom-0 lg:mx-0 lg:px-0">
+              <button
+                type="button"
+                onClick={effectiveStart}
+                className="min-h-12 w-full rounded-md bg-agon-alerte p-[15px] text-agon-lg font-bold text-agon-ink lg:mx-auto lg:block lg:max-w-md"
+              >
+                Démarrer la séance
+              </button>
             </div>
           </>
         )}
 
-        {/* ── EXECUTING ── */}
+        {/* ── EN COURS ── */}
         {effectivePhase === "executing" && (
-          <div style={{ marginTop: 12 }}>
-            {/* Elapsed */}
-            <div style={{ textAlign: "center", fontSize: 12, color: C.tx2, marginBottom: 12 }}>
-              Temps écoulé : <strong style={{ color: C.tx }}>{formatSLong(elapsedTotal)}</strong>
+          <div className="mt-agon-md">
+            <div className="mb-agon-md text-center text-agon-sm text-agon-tx2">
+              Temps écoulé : <strong className="text-agon-tx">{formatSLong(elapsedTotal)}</strong>
             </div>
 
             {isClassique ? (
               <>
-                {/* Render all blocks as checklists / WOD execution */}
-                {blocks.map((b) =>
-                  isWodBlock(b) ? (
-                    <WodBlockPreview key={b.id} block={b} />
-                  ) : (
-                    <ClassiqueBlockExecution
-                      key={b.id}
-                      block={b}
-                      blockLogs={itemChecks}
-                      onToggle={toggleItem}
-                    />
-                  ),
-                )}
+                <div className="lg:columns-2 lg:gap-agon-lg">
+                  {blocks.map((b) =>
+                    isWodBlock(b) ? (
+                      <WodBlockPreview key={b.id} block={b} />
+                    ) : (
+                      <ClassiqueBlockExecution key={b.id} block={b} blockLogs={itemChecks} onToggle={toggleItem} />
+                    ),
+                  )}
+                </div>
 
-                {/* WOD timer execution (if any WOD blocks exist) */}
-                {hasWodSteps && exec.phase === "preview" && (
-                  <button
-                    onClick={exec.start}
-                    style={{
-                      width: "100%", background: C.orange, color: "#1a1204",
-                      border: "none", borderRadius: 6, padding: 12,
-                      fontSize: 14, fontWeight: 700, cursor: "pointer",
-                      fontFamily: "inherit", marginTop: 12,
-                    }}
-                  >
-                    ▶ Lancer les chronos WOD
-                  </button>
-                )}
-                {hasWodSteps && exec.phase === "executing" && exec.currentFlatStep && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ textAlign: "center", fontSize: 11, color: C.tx2, marginBottom: 8 }}>
-                      WOD — Étape {exec.currentIndex + 1}/{exec.flatSteps.length}
+                <div className="lg:mx-auto lg:max-w-md">
+                  {hasWodSteps && exec.phase === "preview" && (
+                    <button
+                      type="button"
+                      onClick={exec.start}
+                      className="mt-agon-md min-h-12 w-full rounded-md bg-agon-alerte p-agon-md text-agon-base font-bold text-agon-ink"
+                    >
+                      ▶ Lancer les chronos WOD
+                    </button>
+                  )}
+                  {hasWodSteps && exec.phase === "executing" && exec.currentFlatStep && (
+                    <div className="mt-agon-md">
+                      <div className="mb-agon-sm text-center text-agon-xs text-agon-tx2">
+                        WOD — Étape {exec.currentIndex + 1}/{exec.flatSteps.length}
+                      </div>
+                      <ExecutionCard
+                        current={exec.currentFlatStep}
+                        next={exec.nextFlatStep}
+                        secondsLeft={exec.secondsLeft}
+                        isLastStep={exec.isLastStep}
+                        onNext={exec.next}
+                        onSkip={exec.skip}
+                        vma={vma}
+                      />
                     </div>
-                    <ExecutionCard
-                      current={exec.currentFlatStep}
-                      next={exec.nextFlatStep}
-                      secondsLeft={exec.secondsLeft}
-                      isLastStep={exec.isLastStep}
-                      onNext={exec.next}
-                      onSkip={exec.skip}
-                      vma={vma}
-                    />
-                  </div>
-                )}
+                  )}
 
-                {/* Finish button */}
-                <button
-                  onClick={() => {
-                    if (isClassique && !hasWodSteps) setClassiquePhase("completed");
-                    else if (exec.phase !== "executing") setClassiquePhase("completed");
-                  }}
-                  disabled={hasWodSteps && exec.phase === "executing"}
-                  style={{
-                    width: "100%", marginTop: 16,
-                    background: (hasWodSteps && exec.phase === "executing") ? C.tx2 + "30" : C.green,
-                    color: (hasWodSteps && exec.phase === "executing") ? C.tx2 : "#0a2618",
-                    border: "none", borderRadius: 6, padding: 14,
-                    fontSize: 15, fontWeight: 700, cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Terminer la séance
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isClassique && !hasWodSteps) setClassiquePhase("completed");
+                      else if (exec.phase !== "executing") setClassiquePhase("completed");
+                    }}
+                    disabled={hasWodSteps && exec.phase === "executing"}
+                    className={cn(
+                      "mt-agon-lg min-h-12 w-full rounded-md p-[14px] text-agon-base font-bold",
+                      hasWodSteps && exec.phase === "executing" ? "bg-agon-tx2/20 text-agon-tx2" : "bg-agon-succes text-agon-ink",
+                    )}
+                  >
+                    Terminer la séance
+                  </button>
+                </div>
               </>
             ) : (
-              /* Legacy WOD format */
+              /* Ancien format WOD */
               exec.currentFlatStep && (
-                <>
-                  <div style={{ textAlign: "center", fontSize: 12, color: C.tx2, marginBottom: 12 }}>
+                <div className="lg:mx-auto lg:max-w-md">
+                  <div className="mb-agon-md text-center text-agon-sm text-agon-tx2">
                     Étape {exec.currentIndex + 1}/{exec.flatSteps.length}
                   </div>
                   <ExecutionCard
@@ -534,28 +322,20 @@ export default function SpecificExecutionPage() {
                     onSkip={exec.skip}
                     vma={vma}
                   />
-                </>
+                </div>
               )
             )}
           </div>
         )}
 
-        {/* ── COMPLETED ── */}
+        {/* ── TERMINÉE ── */}
         {effectivePhase === "completed" && (
-          <div style={{ marginTop: 12 }}>
-            <h2 style={{
-              fontSize: 13, color: C.tx2, textTransform: "uppercase" as const,
-              letterSpacing: "0.05em", marginBottom: 12,
-            }}>
-              Fin de séance — retour athlète
-            </h2>
-            <div style={{ marginBottom: 14 }}>
+          <div className="mt-agon-md lg:mx-auto lg:max-w-md">
+            <h2 className="mb-agon-md text-agon-base uppercase tracking-wide text-agon-tx2">Fin de séance — retour athlète</h2>
+            <div className="mb-agon-md">
               <RunDistanceInput value={runDist} onChange={setRunDist} />
             </div>
-            <SessionEndForm
-              onSubmit={handleEndSubmit}
-              isPending={completeMutation.isPending}
-            />
+            <SessionEndForm onSubmit={handleEndSubmit} isPending={completeMutation.isPending} />
           </div>
         )}
       </div>

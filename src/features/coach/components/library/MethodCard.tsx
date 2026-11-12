@@ -42,7 +42,7 @@ export function MethodCard({
   const [confirmDel, setConfirmDel] = useState(false);
 
   const scopeColor = SCOPE_COLOR[method.scope] ?? C.tx3;
-  const weeklyConfigs = (method.config as Record<string, unknown>)?.weekly_configs as FullWeekConfig[] | undefined;
+  const weeklyConfigs = (method.config as unknown as Record<string, unknown>)?.weekly_configs as FullWeekConfig[] | undefined;
   const weekCount = weeklyConfigs?.length ?? 0;
 
   return (

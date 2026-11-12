@@ -6,6 +6,16 @@
  */
 import { describe, expect, it } from "vitest";
 import { buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../coachApiRead";
+import { wellnessRowsToHistory, type WellnessRow } from "../domain/wellness";
+
+/** Ligne de `wellness_entries` : tout à null sauf ce qui est donné. */
+function wrow(day: string, over: Partial<WellnessRow> = {}): WellnessRow {
+  return {
+    athlete_id: "a1", day, fatigue: null, sommeil: null, stress: null, energie: null, doms: null,
+    bedtime: null, wake: null, sleep_hours: null, sleep_interrupted: null, sleep_interrupt_note: null,
+    doms_zones: [], doms_points: [], injury_note: null, weight_kg: null, archived: false, ...over,
+  };
+}
 
 function input(over: Partial<SummaryInput> = {}): SummaryInput {
   return {
@@ -14,15 +24,17 @@ function input(over: Partial<SummaryInput> = {}): SummaryInput {
     to: "2026-10-28",
     appData: {
       "asp:goals": { sessionsPerWeek: 4, sleepTarget: 8, sleepBedtime: { h: 22, m: 30 } },
-      "asp:bw": { current: 62, target: 60 },
-      "asp:wh": {
-        "2026-09-30": { fatigue: 2 },
-        "2026-10-02": {
-          score: 71, fatigue: 3, sommeil: 4, stress: 9, sleepDur: 7.5,
-          sleepInterruptNote: "réveillée par une crise", injComment: "douleur au genou depuis l'IRM",
-        },
-      },
-      "asp:wlog": { "2026-10-02": 62.4, "2026-10-03": "n'importe quoi" },
+    },
+    health: {
+      wellness: wellnessRowsToHistory([
+        wrow("2026-09-30", { fatigue: 2 }),
+        wrow("2026-10-02", {
+          fatigue: 3, sommeil: 4, stress: null, sleep_hours: "7.5",
+          sleep_interrupt_note: "réveillée par une crise", injury_note: "douleur au genou depuis l'IRM",
+        }),
+      ]),
+      weights: [{ day: "2026-10-02", kg: "62.4" }, { day: "2026-10-03", kg: 600 }],
+      targetKg: "60",
     },
     injuries: [
       { kind: "blessure", status: "en_cours", zone: "Genou G", date: "2026-09-20", pain_level: 4, title: "tendinite après l'IRM" },
@@ -71,14 +83,14 @@ describe("buildSummary", () => {
     expect(s.poids).toEqual([{ date: "2026-10-02", kg: 62.4 }]);
   });
 
-  it("lit le wellness et le poids stockés en clés compactes (format réel)", () => {
+  it("lit le wellness et le poids des tables santé", () => {
     const base = input();
     const s = buildSummary({
       ...base,
-      appData: {
-        ...base.appData,
-        "asp:wh": { "20261002": { fatigue: 4, sommeil: 4, stress: 3, energie: 4, doms: 5, injComment: "genou" } },
-        "asp:wlog": { "20261002": 62.4 },
+      health: {
+        wellness: wellnessRowsToHistory([wrow("2026-10-02", { fatigue: "4", sommeil: 4, stress: 3, energie: 4, doms: 5, injury_note: "genou" })]),
+        weights: [{ day: "2026-10-02", kg: 62.4 }],
+        targetKg: 60,
       },
     });
     expect(s.bien_etre).toHaveLength(1);

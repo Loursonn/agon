@@ -1734,6 +1734,38 @@ coach perdu (vérifié).
 Avant de lancer un test, vérifier `grep -n "^ROLLBACK;" <fichier>`.
 
 
+## 2026-11-09 — Âge minimum, phase 2 appliquée
+
+**Fait** (accord de Titouan) : `main` envoie bien `birthDate` / `birth_date`
+(Login, InviteAccept, ClaimAthlete, StaffInviteAccept, useAuth). Test à blanc
+phase 1 + 2 : 22 lignes ok. `claim-athlete` déployé avec
+`BIRTH_DATE_REQUIRED = true`, migration 20261109170000 appliquée, puis
+`supabase/tests/min_age_signup.sql` relancé en phase 2 : tout ok.
+Date de naissance désormais obligatoire côté serveur, sauf profils créés côté
+serveur (athlète pré-créé, seed démo). Pas de « Nouveautés » : aucun coach ne
+remarque le changement.
+
+## 2026-11-10 — Derniers écrivains santé par RPC (P6)
+
+**Fait (code)** : la pesée de la fiche profil (`ProfilPage`) passe par `saveWeighIn`
+→ file hors ligne → RPC `weight_set_day`, plus aucune réécriture de `asp:wlog`.
+L'objectif de poids a sa RPC `weight_set_goal(p_athlete, p_target_kg)`
+(`20261110110100_weight_set_goal.sql`, test `supabase/tests/weight_set_goal.sql`),
+exposée par `saveWeightGoal` (`src/api/profile.ts`) ; les setters blob
+`setWeightLog` / `setBodyWeight` (sans autre appelant) sont supprimés.
+`seed-demo.mjs` écrit wellness, pesées, palier et objectif par les RPC avec la
+session de l'athlète démo (mot de passe : `DEMO_PASSWORD` ou aléatoire).
+
+**`archiveAndNewBlock`** : le trigger `app_data → wellness_entries` passe en
+`archived = true` les saisies présentes dans `asp:blockHistory[].wellnessHistory`
+et SUPPRIME celles qui ne sont plus nulle part. Cas perdant trouvé : un bloc sans
+programme saisi mais avec du wellness n'était pas archivé, puis `asp:wh` était
+vidé. Corrigé : on archive aussi quand il reste du wellness.
+
+**Appliquée en prod le 2026-11-10 (accord de Titouan)** : test à blanc vert, migration, types
+régénérés, test relancé (0 KO). Migration purement additive (le client de `main` ne l'appelle pas).
+Pas de « Nouveautés » : invisible pour un coach.
+
 ## 2026-11-09 — Garmin : tout ce qui est reçu est stocké brut
 
 - **Choix (Hugo)** : stocker intégralement chaque résumé Garmin, exploité ou non, pour pouvoir tout analyser plus tard. Détail des séances gardé **deux fois** : échantillons seconde par seconde (FC, vitesse/allure, puissance, cadence, altitude, GPS) en `.json.gz`, et fichier `.FIT` d'origine.

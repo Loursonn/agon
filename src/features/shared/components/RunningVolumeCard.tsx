@@ -70,7 +70,7 @@ export function RunningVolumeCard({ volume, isLoading }: { volume: RunningVolume
           {/* Provenance : d'où viennent les km (décision « la provenance des chiffres est affichée ») */}
           <div style={{ fontSize: 9, color: C.tx3, marginTop: 6, lineHeight: 1.4 }}>
             {volume.watchKm > 0
-              ? `Dont ${fmtKm(volume.watchKm)} mesurés par la montre ou un fichier importé. Une sortie aussi saisie en fin de séance n'est comptée qu'une fois, à la mesure de la montre.`
+              ? `Dont ${fmtKm(volume.watchKm)} mesurés par la montre ou un fichier importé${volume.watchOrigins.length ? ` (${volume.watchOrigins.join(", ")})` : ""}. Une sortie aussi saisie en fin de séance n'est comptée qu'une fois, à la mesure de la montre.`
               : "Km saisis en fin de séance. Les sorties d'une montre connectée ou d'un fichier importé s'ajoutent ici."}
           </div>
         </>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { averageWellness, dailyWellness, retoursWellnessHistory } from "../retoursWellness";
+import { archivedWellnessOf, parseWellnessHistory } from "@shared/domain/wellness";
+import { averageWellness, dailyWellness } from "../retoursWellness";
 
 // Format réel de la prod : clés compactes "YYYYMMDD".
 const wh = {
@@ -11,7 +12,7 @@ const wh = {
 const blockHistory = [{ wellnessHistory: { "20261001": { fatigue: 3, sommeil: 3, stress: 3, energie: 3, doms: 3 } } }];
 
 describe("retoursWellness", () => {
-  const h = retoursWellnessHistory(wh, blockHistory);
+  const h = parseWellnessHistory(wh, archivedWellnessOf(blockHistory));
 
   it("lit les clés compactes et l'archive, écarte les clés non datées", () => {
     expect(Object.keys(h).sort()).toEqual(["2026-10-01", "2026-11-02", "2026-11-04", "2026-11-05"]);
