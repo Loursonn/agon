@@ -234,15 +234,15 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               type="button"
               onClick={() => navigate(t.k || ".")}
               className={cn(
-                "flex min-h-11 flex-1 flex-col items-center justify-center gap-[3px] text-agon-xs transition-colors",
-                isActive ? "font-bold text-agon-accent" : "font-normal text-agon-tx3",
+                "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-[3px] text-[10px] transition-colors",
+                isActive ? "font-semibold text-agon-accent" : "font-normal text-agon-tx3",
               )}
             >
               <span className="relative flex items-center">
                 {t.icon}
                 {t.k === "profil" && staffUnseen > 0 && <span aria-label="Nouveau dans ton staff" className={NAV_DOT} />}
               </span>
-              <span className="tracking-wide">{t.l}</span>
+              <span className="whitespace-nowrap">{t.l}</span>
             </button>
           );
         })}

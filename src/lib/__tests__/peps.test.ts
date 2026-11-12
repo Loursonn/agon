@@ -37,3 +37,13 @@ describe("peps : couleurs fixes par type (canvas 12/11)", () => {
     expect(typeOfEvent("free_activity")).toBe("libre");
   });
 });
+
+describe("dayTint", () => {
+  it("prend la couleur de l'intensité, sinon celle du coach, sinon rien", async () => {
+    const { dayTint, INTENSITY_COLOR } = await import("@/lib/peps");
+    expect(dayTint({ intensity: "hard", color: "#123456" })).toBe(INTENSITY_COLOR.hard);
+    expect(dayTint({ label: "Jambes", color: "#123456" })).toBe("#123456");
+    expect(dayTint({ color: "#123456" })).toBeNull();
+    expect(dayTint(null)).toBeNull();
+  });
+});

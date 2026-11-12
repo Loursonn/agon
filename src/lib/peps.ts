@@ -1,4 +1,5 @@
 import { token } from "@/lib/theme";
+import { isDayThemeEmpty, isDayThemeIntensity, safeThemeColor, type DayThemeLike } from "@/lib/dayTheme";
 
 /**
  * Direction « peps » (canvas Agon, validée le 12/11) : une couleur fixe par
@@ -37,6 +38,28 @@ export const MACRO_COLOR = {
   l: token("--agon-macro-l"),
   p: token("--agon-macro-p"),
 } as const;
+
+/**
+ * Intensité du thème du jour (semaine de l'accueil athlète) : Hard rouge,
+ * Moyen orange, Easy vert, Récup bleu, Repos gris (maquette « Aujourd'hui »).
+ */
+export const INTENSITY_COLOR: Record<string, string> = {
+  hard: token("--agon-rouge"),
+  moyen: token("--agon-ocre-vif"),
+  easy: token("--agon-vert-vif"),
+  recup_active: token("--agon-ardoise-vif"),
+  repos: token("--agon-pierre"),
+};
+
+/**
+ * Teinte d'un jour de la semaine (accueil athlète) : couleur de son intensité,
+ * sinon la couleur choisie par le coach ; null si le jour n'a pas de thème.
+ */
+export function dayTint(theme: DayThemeLike | null | undefined): string | null {
+  if (!theme || isDayThemeEmpty(theme)) return null;
+  if (isDayThemeIntensity(theme.intensity)) return INTENSITY_COLOR[theme.intensity];
+  return safeThemeColor(theme.color);
+}
 
 /** Dominantes de tests : HYROX rose, Biométrie bleu (12/11). */
 export const DOMINANTE_COLOR = {

@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-accueil-athlete",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "L'accueil de vos athlètes, réorganisé",
+    summary: "Sur le téléphone, la journée se lit de haut en bas : wellness, votre retour, la semaine et le thème du jour, ses événements, la nutrition, puis les séances.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Le wellness du matin tient en une carte : le score, le niveau et un conseil ; le détail des cinq notes se déplie d'un tap.",
+          "La semaine prend la couleur du thème que vous avez posé chaque jour (dur, moyen, facile, récup, repos) et le thème du jour s'affiche juste dessous.",
+          "Chaque séance montre d'abord son nom ; « Aperçu » déplie la liste des exercices avec séries, répétitions et charge, puis le bouton pour démarrer.",
+          "Le bloc « Hier » disparaît de l'accueil : la séance faite et le wellness d'hier restent dans le Programme et le Profil.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-couleurs-par-type",
     date: "2026-11-12",
     kind: "feature",

@@ -3,13 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { C } from "@/lib/theme";
+import { TodaySection, SectionLink, SectionAdd } from "@/features/athlete/components/today/TodaySection";
+import { TodayWellnessCard } from "@/features/athlete/components/today/TodayWellnessCard";
+import { TodayWeekStrip, type WeekStripDay } from "@/features/athlete/components/today/TodayWeekStrip";
+import { TodayThemeCard } from "@/features/athlete/components/today/TodayThemeCard";
+import { TodaySessionCard } from "@/features/athlete/components/today/TodaySessionCard";
+import { TintCard } from "@/features/athlete/components/today/TintCard";
+import { TypePill } from "@/features/athlete/components/today/TypePill";
+import { TYPE_COLOR, TYPE_LABEL, ROUGE, MACRO_COLOR } from "@/lib/peps";
+import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
 import { DayThemeBanner } from "@/features/shared/components/DayThemePill";
 import {
-  dayThemeColors,
-  dayThemeFullLabel,
   indexDayThemesByDate,
-  isDayThemeEmpty,
   type DayThemeLike,
 } from "@/lib/dayTheme";
 import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
@@ -27,12 +33,12 @@ import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useCompleteEnergyAssignment, useUpdateEnergyAssignment, useUpsertEnergyRpe } from "@/features/shared/hooks/useEnergyAssignments";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import type { EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
-import { Check, Moon, Zap, AlertTriangle, Dumbbell, Heart, Info } from "lucide-react";
+import { Check, Zap, Dumbbell } from "lucide-react";
 import { AgonIcon } from "@/components/ui/AgonIcon";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import { MensurationsDrawer } from "@/features/athlete/components/MensurationsDrawer";
 import { useCompetitions } from "@/hooks/useCompetitions";
-import { COMPETITION_META, priorityLabel } from "@/types/planning";
+import { priorityLabel } from "@/types/planning";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
 import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
@@ -42,11 +48,11 @@ import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { evaluateNutritionDay, type NutritionStrategy, type NutritionDailyLog } from "@/lib/nutrition";
 import { localISO, normalizeDayMap } from "@/lib/date";
-import { calcScore, wellnessColor } from "@/lib/wellness";
+import { calcScore, wellnessColor, getReco } from "@/lib/wellness";
 import { averageScore, wellnessBand } from "@shared/domain/wellness";
 import { loadDraft, saveDraft, clearDraft, energyDraftKey } from "@/lib/localDraft";
 import { queueIsDurable } from "@/lib/offline/writes";
-import { FreeActivityModal, SPORTS } from "@/features/athlete/components/FreeActivityModal";
+import { FreeActivityModal } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
@@ -55,7 +61,7 @@ import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
 import { LifeEventFormModal } from "@/features/athlete/components/LifeEventFormModal";
 import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
 import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
-import { Plus, Trash2, CalendarDays, Trophy } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -71,57 +77,10 @@ function todayFr(): string {
   return `${DAYS_FR[(d.getDay() + 6) % 7]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
 }
 
-// ── Readiness circle (SVG) ────────────────────────────────────────────────────
-
-function ReadinessCircle({ score, color }: { score: number; color: string }) {
-  const r = 54;
-  const circ = 2 * Math.PI * r;
-  // Use gradient for score > 70 (violet→rose), solid color otherwise
-  const useGradient = score > 70;
-  const gradientId = "scoreGradient";
-  return (
-    <div style={{ position: "relative", width: 136, height: 136, flexShrink: 0 }}>
-      <svg width={136} height={136} viewBox="0 0 136 136" style={{ transform: "rotate(-90deg)" }}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FFC933" />
-            <stop offset="100%" stopColor="#FFC933" />
-          </linearGradient>
-        </defs>
-        <circle cx={68} cy={68} r={r} fill="none" stroke="rgba(231,211,168,0.2)" strokeWidth={10} />
-        <circle
-          cx={68} cy={68} r={r} fill="none"
-          stroke={useGradient ? `url(#${gradientId})` : color}
-          strokeWidth={10}
-          strokeDasharray={String(circ)}
-          strokeDashoffset={String(circ * (1 - score / 100))}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.6s ease" }}
-        />
-      </svg>
-      <div style={{
-        position: "absolute", inset: 0,
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-      }}>
-        <div style={{ fontSize: 30, fontWeight: 900, color: useGradient ? "#FFC933" : color, lineHeight: 1 }}>{score}</div>
-        <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>/ 100</div>
-      </div>
-    </div>
-  );
+/** « 18 NOV. » : jour court d'une date ISO, pour les cartes de l'accueil. */
+function fmtShortDay(iso: string): string {
+  return new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
-
-
-
-// ── Wellness field labels (for readiness display) ─────────────────────────────
-
-const WELL_FIELDS: Array<{ key: string; label: string; icon: React.ReactNode; inv: boolean }> = [
-  { key: "fatigue", label: "Fatigue",  icon: <AgonIcon name="fatigue" size={12} />, inv: true  },
-  { key: "sommeil", label: "Sommeil",  icon: <Moon size={12} />, inv: false },
-  { key: "stress",  label: "Stress",   icon: <AlertTriangle size={12} />, inv: true  },
-  { key: "energie", label: "Énergie",  icon: <Zap size={12} />, inv: false },
-  { key: "doms",    label: "DOMS",     icon: <Dumbbell size={12} />, inv: true  },
-];
 
 // FreeActivityModal + SPORTS imported from @/features/athlete/components/FreeActivityModal
 
@@ -920,7 +879,6 @@ export default function TodayPage() {
     if (t?.type === "biometric") setMensuOpen(true);
     else setTestPreviewId(id);
   };
-  const nextWorkout = workouts.find((w) => !w.isCompleted) ?? null;
   const allDoneToday = workouts.length > 0 && workouts.every((w) => w.isCompleted);
   const restDay = workouts.length === 0 && todayEnergySessions.length === 0;
 
@@ -934,21 +892,6 @@ export default function TodayPage() {
       );
     });
   }, [activePlanData, today]);
-
-  // Badge "2 séances aujourd'hui" : si activePlan a plusieurs workout sessions aujourd'hui
-  const todayActivePlanSessions = useMemo((): WeekSession[] => {
-    return activePlanData?.weekDays
-      .find((d) => d.date === today)
-      ?.sessions.filter((s) => s.kind === "workout") ?? [];
-  }, [activePlanData, today]);
-  const hasTwoSessionsToday = todayActivePlanSessions.length >= 2;
-
-  // ── Coach id (for unplanned session insert) ───────────────────────────────
-  // Not directly in AthleteContext — we extract from first workout_log if available
-  const coachIdForUnplanned = activePlanData?.weekDays
-    .flatMap((d) => d.sessions)
-    .find((s) => s.kind === "workout")
-    ?.id ? null : null; // No coach_id available in WeekSession — use null
 
   // ── Compétitions par jour (posées dans le planning comme une séance) ─────
   const competitionsByDate = useMemo(() => {
@@ -968,15 +911,6 @@ export default function TodayPage() {
   const uncommentedComps = allCompetitions
     .filter((c) => c.date < today && !c.athlete_comment)
     .map((c) => competitionsByDate.get(c.date)!.find((x) => x.id === c.id)!);
-
-  // ── Yesterday's recap ─────────────────────────────────────────────────────
-  const yesterdayISO = localISO(new Date(Date.now() - 86400000));
-  const yesterdayRaw = wellnessByISO?.[yesterdayISO] ?? null;
-  const yesterdayWellness = yesterdayRaw ? { score: calcScore(yesterdayRaw) } : null;
-  const yesterdayDay = weekDays.find((d) => d.date === yesterdayISO);
-  // Seule une séance réellement clôturée compte : une séance prévue mais pas faite
-  // n'a rien à faire sous une coche verte.
-  const yesterdaySessName = yesterdayDay?.sessions.find((s) => s.isCompleted)?.session.name ?? null;
 
   // ── Wellness trend (last 14 days) ────────────────────────────────────────
   const wellnessTrend = Array.from({ length: 14 }, (_, i) => {
@@ -1023,360 +957,313 @@ export default function TodayPage() {
       .sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1))[0] ?? null;
   }, [coachFeedbacks]);
 
+  // Numérotation des sections visibles (« 01 — », « 02 — »…), dans l'ordre d'affichage.
+  let secNum = 0;
+  const sec = () => ++secNum;
+
+  // Semaine de l'accueil : teinte du thème, une pastille par séance (couleur du type).
+  const weekStripDays: WeekStripDay[] = weekDays.map((day) => {
+    const dayEnergy = energyByDate.get(day.date) ?? [];
+    const dayFree = freeSessions.filter((f) => f.date === day.date && f.sport);
+    const dots = [
+      ...day.sessions.map((x) => (x.isCompleted ? TYPE_COLOR.fait : TYPE_COLOR.muscu)),
+      ...dayEnergy.map((ev) => (ev.status === "completed" ? TYPE_COLOR.fait : ev.sessionKind === "specifique" ? TYPE_COLOR.hyrox : TYPE_COLOR.energie)),
+      ...day.tests.map((t) => (t.completed ? TYPE_COLOR.fait : TYPE_COLOR.test)),
+      ...dayFree.map(() => TYPE_COLOR.fait),
+    ];
+    const planned = day.sessions.length + dayEnergy.length;
+    const done = day.sessions.filter((x) => x.isCompleted).length + dayEnergy.filter((ev) => ev.status === "completed").length;
+    return {
+      day,
+      theme: dayThemesByDate[day.date] ?? null,
+      dots,
+      allDone: planned > 0 && done === planned,
+      empty: dots.length === 0,
+      isCompetition: competitionsByDate.has(day.date),
+    };
+  });
+  const weekCount = weekDays.reduce(
+    (acc, day) => {
+      const dayEnergy = energyByDate.get(day.date) ?? [];
+      acc.planned += day.sessions.length + dayEnergy.length;
+      acc.done += day.sessions.filter((x) => x.isCompleted).length + dayEnergy.filter((ev) => ev.status === "completed").length;
+      return acc;
+    },
+    { planned: 0, done: 0 },
+  );
+
   return (
     <>
       <div
         style={{
-          maxWidth: 480, margin: "0 auto", padding: "16px 16px 32px",
-          scrollbarWidth: "none",
+          maxWidth: 480, margin: "0 auto", padding: "16px 16px 40px",
+          scrollbarWidth: "none", display: "flex", flexDirection: "column", gap: 28,
         }}
       >
-        {/* Section 1 — Greeting + Readiness */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: C.tx3, marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+        {/* En-tête — date, prénom, citation */}
+        <header style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>
             {todayFr()}
           </div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: C.tx, letterSpacing: "-0.4px", marginBottom: 16 }}>
-            Bonjour, {athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlete"}
-          </div>
-
+          <h1 style={{ margin: 0, ...DISPLAY, fontWeight: 400, fontSize: 30, lineHeight: 1.05, color: C.tx }}>
+            Bonjour, {athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlète"}
+          </h1>
           {show("quote") && (
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginTop: 6 }}>
               <CitationDuJour />
             </div>
           )}
+        </header>
 
-          {unreadRetours.length > 0 && (
-            <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-              {unreadRetours.map((r) => (
-                <CoachRetourCard
-                  key={r.id}
-                  retour={r}
-                  onReact={viewOnly || !athleteId ? undefined : (reaction) => {
-                    haptic();
-                    reactRetour({ retourId: r.id, athleteId, reaction });
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {show("wellness") && (<>
-          {readiness ? (
-            <div
-              style={{
-                background: C.s1, borderRadius: 6, padding: 16,
-                border: "1px solid " + C.brd,
-                display: "flex", alignItems: "center", gap: 20,
-              }}
-            >
-              <ReadinessCircle score={readiness.score} color={readiness.color} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: readiness.color, marginBottom: 4 }}>
-                  {readiness.label}
-                </div>
-                <div style={{ fontSize: 11, color: C.tx3, marginBottom: 12 }}>Readiness du jour</div>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  {WELL_FIELDS.map((f) => {
-                    const v = (wellness as Record<string, number> | null)?.[f.key as string];
-                    if (v == null) return null;
-                    return (
-                      <div key={f.key as string} style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: 10 }}>{f.icon}</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{v}</div>
-                        <div style={{ fontSize: 8, color: C.tx3 }}>{f.label.slice(0, 3)}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => { setShowWellness(true); haptic(); }}
-              style={{
-                width: "100%", padding: "16px", borderRadius: 6,
-                border: "1.5px dashed " + C.coach + "60", background: C.coachS,
-                color: C.coach, fontSize: 13, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit", minHeight: 44,
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              }}
-            >
-              <Heart size={14} /> Logger mon wellness du jour
-            </button>
-          )}
-
-          {readiness && (
-            <button
-              onClick={() => { setShowWellness(true); haptic(); }}
-              style={{
-                marginTop: 8, fontSize: 11, color: C.tx3,
-                background: "none", border: "none", cursor: "pointer",
-                fontFamily: "inherit", padding: 0, textDecoration: "underline",
-              }}
-            >
-              Modifier
-            </button>
-          )}
-          </>)}
-        </div>
-
-        {/* Section 1a — Message du coach */}
-        {recentFb && (
-          <button
-            onClick={() => { setFbExpanded((v) => !v); haptic(); }}
-            style={{
-              width: "100%", marginBottom: 20, padding: "13px 16px",
-              background: C.s1, borderRadius: 6,
-              border: "1px solid " + C.coach + "40",
-              cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-            }}
+        {/* 01 — Wellness du jour, replié */}
+        {show("wellness") && (
+          <TodaySection
+            num={sec()}
+            title="Wellness du jour"
+            right={readiness ? <SectionLink onClick={() => { setShowWellness(true); haptic(); }}>Modifier</SectionLink> : undefined}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: C.coach }}>Retour du coach</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 9, color: C.tx3 }}>{new Date(recentFb.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                <span style={{ fontSize: 11, color: C.coach }}>{fbExpanded ? "–" : "+"}</span>
-              </div>
-            </div>
-            <div style={fbExpanded
-              ? { fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", whiteSpace: "pre-wrap" as const }
-              : { fontSize: 11, color: C.tx2, lineHeight: 1.55, fontStyle: "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
-              "{recentFb.note}"
-            </div>
-          </button>
+            <TodayWellnessCard
+              readiness={readiness}
+              advice={readiness ? getReco(readiness.score).desc : null}
+              wellness={wellness}
+              onLog={() => { setShowWellness(true); haptic(); }}
+            />
+          </TodaySection>
         )}
 
-        {/* Section 1b — Nutrition du jour */}
+        {/* 02 — Retour du coach */}
+        {(unreadRetours.length > 0 || recentFb) && (
+          <TodaySection
+            num={sec()}
+            title="Retour du coach"
+            right={unreadRetours.length > 0 ? <TypePill color={TYPE_COLOR.energie}>Nouveau</TypePill> : undefined}
+          >
+            {unreadRetours.map((r) => (
+              <CoachRetourCard
+                key={r.id}
+                retour={r}
+                onReact={viewOnly || !athleteId ? undefined : (reaction) => {
+                  haptic();
+                  reactRetour({ retourId: r.id, athleteId, reaction });
+                }}
+              />
+            ))}
+            {recentFb && (
+              <button
+                onClick={() => { setFbExpanded((v) => !v); haptic(); }}
+                style={{
+                  position: "relative", overflow: "hidden", width: "100%", padding: "12px 14px 12px 17px",
+                  background: C.s1, borderRadius: 12, border: "1px solid " + C.brd,
+                  cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
+                }}
+              >
+                <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
+                <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3, marginBottom: 6 }}>
+                  Sur ta séance du {new Date(recentFb.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                </div>
+                <div style={fbExpanded
+                  ? { fontSize: 13, color: C.tx2, lineHeight: 1.55, whiteSpace: "pre-wrap" as const }
+                  : { fontSize: 13, color: C.tx2, lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                  « {recentFb.note} »
+                </div>
+              </button>
+            )}
+          </TodaySection>
+        )}
+
+        {/* 03 — Cette semaine + thème du jour */}
+        {show("week") && (
+          <TodaySection
+            num={sec()}
+            title="Cette semaine"
+            right={weekCount.planned > 0 ? <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{weekCount.done} / {weekCount.planned} faites</span> : undefined}
+          >
+            <TodayWeekStrip days={weekStripDays} today={today} onSelect={(d) => { setSelectedDay(d); haptic(); }} />
+            <TodayThemeCard theme={todayTheme} />
+          </TodaySection>
+        )}
+        {!show("week") && todayTheme && <TodayThemeCard theme={todayTheme} />}
+
+        {/* 04 — Mes événements */}
+        {show("events") && (
+          <TodaySection
+            num={sec()}
+            title="Mes événements"
+            right={<SectionAdd label="Ajouter un événement" onClick={() => setShowLifeEventForm(true)} />}
+          >
+            {(() => {
+              const upcoming = lifeEvents.filter((e) => e.date_end >= today);
+              if (upcoming.length === 0) return (
+                <div style={{ borderRadius: 12, padding: 14, border: "1px dashed " + C.brdL, textAlign: "center" }}>
+                  <div style={{ fontSize: 13, color: C.tx2 }}>Aucun événement prévu</div>
+                  <div style={{ fontSize: 12, color: C.tx3, marginTop: 4 }}>Ajoute tes indisponibilités pour que ton coach adapte le planning</div>
+                </div>
+              );
+              return upcoming.map((evt) => (
+                <div key={evt.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <TintCard color={TYPE_COLOR.hyrox}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{evt.title}</div>
+                      <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3, marginTop: 2 }}>
+                        {fmtShortDay(evt.date_start)}{evt.date_end !== evt.date_start ? ` → ${fmtShortDay(evt.date_end)}` : ""} · Indisponible
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelEvt((cur) => (cur === evt.id ? null : evt.id)); }}
+                      aria-label="Supprimer l'événement"
+                      style={{ width: 32, height: 32, flex: "none", borderRadius: 8, border: "1px solid " + C.brdL, background: "none", cursor: "pointer", color: confirmDelEvt === evt.id ? ROUGE : C.tx3, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </TintCard>
+                  {confirmDelEvt === evt.id && (
+                    <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + ROUGE + "66" }}>
+                      <div style={{ fontSize: 13, color: C.tx2, marginBottom: 10 }}>Supprimer cet événement ? Ton coach ne le verra plus sur le planning.</div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => setConfirmDelEvt(null)} style={{ flex: 1, height: 40, borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+                        <button onClick={() => { deleteLifeEvent({ id: evt.id, athlete_id: athleteId ?? "" }); setConfirmDelEvt(null); }} style={{ flex: 1, height: 40, borderRadius: 10, border: "1px solid " + ROUGE + "66", background: "transparent", color: ROUGE, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ));
+            })()}
+          </TodaySection>
+        )}
+
+        {/* 05 — Nutrition */}
         {show("nutrition") && todayNutrition && (() => {
           const { consumed, ev, zone, meta, log: nl } = todayNutrition;
-          const statusC = ev ? (ev.status === "ok" ? C.g : ev.status === "close" ? C.o : C.r) : null;
+          const tint = TYPE_COLOR.hyrox;
           const zoneLabel = zone
             ? (zone.targetMin !== zone.targetMax
               ? `${zone.targetMin.toLocaleString("fr-FR")}–${zone.targetMax.toLocaleString("fr-FR")}`
               : zone.targetMin.toLocaleString("fr-FR"))
             : null;
+          const scale = zone ? zone.targetMax * 1.15 : 0;
+          const pct = (v: number) => `${Math.max(0, Math.min(100, (v / scale) * 100))}%`;
+          const left = zone && consumed < zone.targetMin
+            ? (zone.targetMin !== zone.targetMax
+              ? `Il reste ${(zone.targetMin - consumed).toLocaleString("fr-FR")} à ${(zone.targetMax - consumed).toLocaleString("fr-FR")} kcal pour la zone cible.`
+              : `Il reste ${(zone.targetMin - consumed).toLocaleString("fr-FR")} kcal pour la cible.`)
+            : null;
           return (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-                Nutrition du jour
-              </div>
-              <button
-                onClick={() => { navigate("/athlete/alim"); haptic(); }}
-                style={{
-                  width: "100%", background: C.s1, borderRadius: 6, padding: "13px 16px",
-                  border: "1px solid " + (statusC ? statusC + "40" : C.brd),
-                  cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: consumed > 0 ? 10 : 6 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.5"/><path d="M7 11L10 6M17 11L14 6"/></svg>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.tx2 }}>Alimentation</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: meta.color + "18", border: "1px solid " + meta.color + "40", color: meta.color }}>
-                    {meta.label}
-                  </span>
-                  <span style={{ marginLeft: "auto", fontSize: 10, color: C.ac }}>Détail →</span>
+            <TodaySection num={sec()} title="Nutrition" right={<SectionLink onClick={() => { navigate("/athlete/alim"); haptic(); }}>Détail →</SectionLink>}>
+              <div style={{ borderRadius: 12, border: `1px solid ${tint}73`, background: `${tint}1F`, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ ...MONO, fontSize: 24, color: C.tx }}>{consumed > 0 ? consumed.toLocaleString("fr-FR") : "—"}</span>
+                  {zoneLabel && <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>/ {zoneLabel} kcal</span>}
+                  <span style={{ flex: 1 }} />
+                  <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: meta.color, border: `1px solid ${meta.color}`, borderRadius: 999, padding: "2px 8px" }}>{meta.label}</span>
                 </div>
-
+                {zone && (
+                  <div style={{ position: "relative", height: 8, borderRadius: 4, background: "rgba(231,211,168,0.10)", overflow: "hidden" }}>
+                    <span aria-hidden style={{ position: "absolute", top: 0, bottom: 0, left: pct(zone.targetMin), width: `calc(${pct(zone.targetMax)} - ${pct(zone.targetMin)})`, background: TYPE_COLOR.fait + "40" }} />
+                    <span aria-hidden style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: pct(consumed), background: tint, borderRadius: 4 }} />
+                  </div>
+                )}
                 {consumed <= 0 ? (
-                  <div style={{ fontSize: 11, color: C.tx3 }}>
-                    Aucune saisie aujourd'hui{zoneLabel ? ` · zone cible ${zoneLabel} kcal` : ""}
-                  </div>
+                  <div style={{ fontSize: 13, color: C.tx3 }}>Aucune saisie aujourd'hui.</div>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div>
-                      <span style={{ fontSize: 20, fontWeight: 900, color: statusC ?? C.tx }}>{consumed.toLocaleString("fr-FR")}</span>
-                      {zoneLabel && <span style={{ fontSize: 10, color: C.tx3 }}> / {zoneLabel} kcal</span>}
-                    </div>
-                    <div style={{ display: "flex", gap: 10, marginLeft: "auto" }}>
-                      {[
-                        { l: "G", v: nl?.glucides_consumed, c: C.b },
-                        { l: "L", v: nl?.lipides_consumed, c: C.o },
-                        { l: "P", v: nl?.proteines_consumed, c: C.g },
-                      ].map(m => (
-                        <div key={m.l} style={{ textAlign: "center" }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: m.c }}>{m.v ?? "—"}</div>
-                          <div style={{ fontSize: 8, color: C.tx3 }}>{m.l} (g)</div>
-                        </div>
-                      ))}
-                    </div>
+                  <div style={{ display: "flex", gap: 14 }}>
+                    {[
+                      { l: "G", v: nl?.glucides_consumed, c: MACRO_COLOR.g },
+                      { l: "L", v: nl?.lipides_consumed, c: MACRO_COLOR.l },
+                      { l: "P", v: nl?.proteines_consumed, c: MACRO_COLOR.p },
+                    ].map((m) => (
+                      <span key={m.l} style={{ display: "flex", alignItems: "center", gap: 5, ...MONO, fontSize: 12, color: C.tx2 }}>
+                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: m.c }} />
+                        {m.l} {m.v ?? "—"} g
+                      </span>
+                    ))}
                   </div>
                 )}
-
-                {ev && (
-                  <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: statusC!, padding: "5px 10px", borderRadius: 7, background: statusC + "12" }}>
+                {left && <div style={{ fontSize: 13, color: C.tx2 }}>{left}</div>}
+                {!left && ev && (
+                  <div style={{ fontSize: 13, color: ev.status === "ok" ? TYPE_COLOR.fait : ev.status === "close" ? TYPE_COLOR.hyrox : ROUGE }}>
                     {ev.status === "ok"
-                      ? `Dans l'objectif — ${ev.actualPct <= 0 ? "déficit" : "surplus"} réel ${ev.actualPct > 0 ? "+" : ""}${ev.actualPct.toFixed(1)}%`
-                      : ev.status === "close"
-                      ? `Proche de l'objectif (${ev.diffPct > 0 ? "+" : ""}${ev.diffPct.toFixed(1)}% d'écart)`
-                      : `Hors objectif (${ev.diffPct > 0 ? "+" : ""}${ev.diffPct.toFixed(1)}% d'écart)`}
+                      ? "Dans l'objectif."
+                      : `${ev.status === "close" ? "Proche de l'objectif" : "Hors objectif"} (${ev.diffPct > 0 ? "+" : ""}${ev.diffPct.toFixed(1)} % d'écart).`}
                   </div>
                 )}
-              </button>
-            </div>
+              </div>
+            </TodaySection>
           );
         })()}
 
-        {/* Section 1b — Test / biométrie du jour (au-dessus de la séance) */}
-        {show("test") && todayTests.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-              {todayTests.length > 1 ? "Tests du jour" : "Test du jour"}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {todayTests.map((t) => {
-                const bio = t.type === "biometric";
-                const tc = t.completed ? C.g : bio ? "#66F03C" : C.ac;
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => { openTest(t.id); haptic(); }}
-                    style={{ width: "100%", background: t.completed ? C.gS : tc + "12", borderRadius: 6, padding: "14px 16px", border: "1px solid " + tc + "40", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
-                  >
-                    <div style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0, background: tc + "20", display: "flex", alignItems: "center", justifyContent: "center" }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</div>
-                      <div style={{ fontSize: 10, color: C.tx3, marginTop: 1, textTransform: "capitalize" }}>{bio ? "Biométrie" : t.type + " · Test"}</div>
-                    </div>
-                    {t.completed
-                      ? <span style={{ fontSize: 16, color: C.g, flexShrink: 0 }}>✓</span>
-                      : <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: tc + "20", color: tc, flexShrink: 0 }}>Remplir →</span>
-                    }
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Section 1b — Jour de compétition (en tête, séances éventuelles dessous) */}
+        {/* Jour de compétition (avant les séances) */}
         {todayComps.length > 0 && (
-          <div style={{ marginBottom: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {todayComps.map((c) => (
               <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
             ))}
           </div>
         )}
 
-        {/* Thème du jour posé par le coach : il cadre la journée, donc il passe
-            avant la séance. Hors de la section « Séance du jour », qui se
-            court-circuite les jours de test ou de compétition — le thème, lui,
-            vaut tous les jours, repos compris. */}
-        {todayTheme && (
-          <div style={{ marginBottom: 20 }}>
-            <DayThemeBanner theme={todayTheme} />
-          </div>
-        )}
-
-        {/* Section 2 — Séance du jour */}
+        {/* 06 — Séances du jour : nom → aperçu → détail */}
         {(() => {
-          const EKC: Record<string, string> = { vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B", footing: "#10B981", fartlek: "#EF4444", specifique: "#F5A623", autre: "#6B7280", custom: "#6B7280" };
-          const EKL: Record<string, string> = { vo2: "VO₂", tempo: "Tempo", seuil: "Seuil", footing: "Footing", fartlek: "Fartlek", specifique: "Spécifique", autre: "Autre", custom: "Custom" };
-
+          const EKL: Record<string, string> = { vo2: "VO₂", tempo: "Tempo", seuil: "Seuil", footing: "Footing", fartlek: "Fartlek", specifique: "HYROX", autre: "Énergie", custom: "Énergie" };
           const pendingWorkouts = workouts.filter(w => !w.isCompleted);
           const pendingEnergy   = todayEnergySessions.filter(ev => ev.status !== "completed");
           const totalToday      = workouts.length + todayEnergySessions.length;
           const hasPending      = pendingWorkouts.length > 0 || pendingEnergy.length > 0;
+          const showOther = !viewOnly && (allDoneToday || restDay) && otherUndoneSessions.length > 0;
 
-          // Jour avec uniquement test/biométrie : la section test suffit
-          if (totalToday === 0 && (todayTests.length > 0 || todayComps.length > 0)) return null;
+          // Jour avec uniquement test/biométrie/compétition : leur section suffit
+          if (totalToday === 0 && !showOther && (todayTests.length > 0 || todayComps.length > 0)) return null;
 
           return (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-                Séance du jour
-              </div>
-
+            <TodaySection
+              num={sec()}
+              title="Séances du jour"
+              right={totalToday > 0 ? <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{totalToday} prévue{totalToday > 1 ? "s" : ""}</span> : undefined}
+            >
               {totalToday === 0 ? (
-                /* ── Repos ── */
-                <div style={{ background: C.s1, borderRadius: 6, padding: "18px 16px", border: "1px solid " + C.brd, textAlign: "center" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 2 }}>Récupération</div>
-                  <div style={{ fontSize: 11, color: C.tx3 }}>Rien de prévu — profite pour te reposer</div>
+                <div style={{ borderRadius: 12, padding: "16px 14px", border: "1px solid " + C.brd, background: C.s1, textAlign: "center" }}>
+                  <div style={{ ...DISPLAY, fontSize: 16, color: C.tx, marginBottom: 4 }}>Récupération</div>
+                  <div style={{ fontSize: 13, color: C.tx3 }}>Rien de prévu, profite pour te reposer.</div>
                 </div>
-
               ) : !hasPending ? (
-                /* ── Tout terminé ── */
-                <div style={{ background: C.gS, borderRadius: 6, padding: "18px 16px", border: "1px solid " + C.g + "40", textAlign: "center" }}>
-                  <div style={{ marginBottom: 6 }}><Check size={28} color={C.g} /></div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: C.g }}>
+                <div style={{ borderRadius: 12, padding: "16px 14px", border: "1px solid " + TYPE_COLOR.fait + "73", background: TYPE_COLOR.fait + "1F", textAlign: "center" }}>
+                  <div style={{ marginBottom: 6 }}><Check size={26} color={TYPE_COLOR.fait} /></div>
+                  <div style={{ ...DISPLAY, fontSize: 16, color: TYPE_COLOR.fait }}>
                     {totalToday > 1 ? "Séances terminées" : "Séance terminée"}
                   </div>
-                  <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>Bien joué, récupère bien</div>
+                  <div style={{ fontSize: 13, color: C.tx3, marginTop: 4 }}>Bien joué, récupère bien.</div>
                 </div>
-
               ) : (
-                /* ── Items à faire ── */
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {/* Workouts en attente */}
+                <>
                   {pendingWorkouts.map((w, wi) => (
-                    <div key={w.session.id} style={{ position: "relative", overflow: "hidden", background: C.s1, borderRadius: 6, padding: 16, border: "1px solid " + C.ac + "59" }}>
-                      {wi === 0 && <div aria-hidden style={{ position: "absolute", top: 0, right: 0, width: 320, height: 320, backgroundImage: "url(/brand/agon-pattern-arene-sombre.svg)", backgroundSize: "700px", backgroundRepeat: "no-repeat", backgroundPosition: "top right", opacity: 0.35, pointerEvents: "none", zIndex: 0, maskImage: "radial-gradient(circle at 80% 20%, #000 0%, transparent 70%)", WebkitMaskImage: "radial-gradient(circle at 80% 20%, #000 0%, transparent 70%)" }} />}
-                      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0, background: C.coachS, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Dumbbell size={18} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.session.name}</div>
-                          <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>
-                            Musculation · {w.session.short}
-                          </div>
-                        </div>
-                      </div>
-                      {w.workoutLogId && <TodayWorkoutFiches workoutLogId={w.workoutLogId} athleteId={athleteId} />}
-                      {!viewOnly && (
-                        <button
-                          onClick={() => { haptic(); navigate("/athlete/program/workout/" + w.workoutLogId); }}
-                          style={{ position: "relative", zIndex: 1, width: "100%", padding: "13px 0", borderRadius: 6, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 44 }}
-                        >
-                          Démarrer ▶
-                        </button>
-                      )}
-                    </div>
+                    <TodaySessionCard
+                      key={w.session.id}
+                      color={TYPE_COLOR.muscu}
+                      typeLabel={TYPE_LABEL.muscu}
+                      title={w.session.name}
+                      items={w.items}
+                      defaultOpen={wi === 0 && pendingWorkouts.length + pendingEnergy.length === 1}
+                      extra={w.workoutLogId ? <TodayWorkoutFiches workoutLogId={w.workoutLogId} athleteId={athleteId} /> : undefined}
+                      onDetail={todayDay ? () => { setSelectedDay(todayDay); haptic(); } : undefined}
+                      onStart={viewOnly || !w.workoutLogId ? undefined : () => { haptic(); navigate("/athlete/program/workout/" + w.workoutLogId); }}
+                    />
                   ))}
-
-                  {/* Energy en attente */}
                   {pendingEnergy.map((ev) => {
-                    const kc = EKC[ev.sessionKind ?? ""] ?? "#FFC933";
-                    const kl = EKL[ev.sessionKind ?? ""] ?? ev.sessionKind ?? "Énergie";
+                    const hyrox = ev.sessionKind === "specifique";
+                    const color = hyrox ? TYPE_COLOR.hyrox : TYPE_COLOR.energie;
+                    const open = () => { if (hyrox && !viewOnly) navigate(`/athlete/specific/${ev.id}`); else setEnergyPreview(ev); haptic(); };
                     return (
-                      <button
+                      <TodaySessionCard
                         key={ev.id}
-                        onClick={() => { if (ev.sessionKind === "specifique" && !viewOnly) { navigate(`/athlete/specific/${ev.id}`); } else { setEnergyPreview(ev); } haptic(); }}
-                        style={{ width: "100%", background: kc + "12", borderRadius: 6, padding: "14px 16px", border: "1px solid " + kc + "40", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
-                      >
-                        <div style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center" }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter"><path d="M13 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM7 21l3-9 3 2v7M5 16l3-4 3 2M14 8l4 2 3-3"/></svg></div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</div>
-                          <div style={{ fontSize: 10, color: kc, marginTop: 1, fontWeight: 600 }}>{kl}</div>
-                        </div>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: kc + "20", color: kc, flexShrink: 0 }}>Voir →</span>
-                      </button>
+                        color={color}
+                        typeLabel={EKL[ev.sessionKind ?? ""] ?? TYPE_LABEL.energie}
+                        title={ev.title}
+                        onDetail={open}
+                      />
                     );
                   })}
-
-                </div>
+                </>
               )}
-            </div>
-          );
-        })()}
-
-        {/* Section 2b — Badge 2 séances aujourd'hui */}
-        {hasTwoSessionsToday && (
-          <div style={{
-            marginBottom: 12, padding: "8px 14px", borderRadius: 4,
-            background: "rgba(59,141,240,0.1)", border: "1px solid rgba(59,141,240,0.3)",
-            fontSize: 12, fontWeight: 600, color: "#33B5FF",
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            <Info size={13} style={{ flexShrink: 0 }} /> {todayActivePlanSessions.length} séances prévues aujourd'hui
-          </div>
-        )}
-
-        {/* Section 2c — Faire une autre séance */}
         {!viewOnly && (allDoneToday || restDay) && otherUndoneSessions.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
+          <div>
             <button
               onClick={() => { setShowOtherSessions((v) => !v); haptic(); }}
               style={{
@@ -1440,343 +1327,88 @@ export default function TodayPage() {
             )}
           </div>
         )}
+            </TodaySection>
+          );
+        })()}
 
-        {/* Section 3 — Planning semaine horizontal */}
-        {show("week") && (<>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-            Cette semaine
-          </div>
-          <div
-            style={{
-              display: "flex", gap: 6,
-              overflowX: "auto", scrollbarWidth: "none",
-              paddingBottom: 2,
-            }}
-          >
-            {weekDays.map((day) => {
-              const isToday = day.date === today;
-              const hasSess = day.sessions.length > 0;
-              const hasTest = day.tests.length > 0;
-              const dayEnergy = energyByDate.get(day.date) ?? [];
-              const dayFree = freeSessions.filter((f) => f.date === day.date && f.sport);
-              const allDone = hasSess && day.sessions.every(s => s.isCompleted);
-              const isCompDay = competitionsByDate.has(day.date);
-              const DOW_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
-              // Thème du jour : la case fait 40 px de large, aucun libellé n'y
-              // tient. On pose donc un bandeau de couleur sur l'arête haute et
-              // on met le texte dans le title — la couleur suffit à repérer les
-              // jours durs d'un coup d'œil, le détail est à un tap.
-              const dayTheme = dayThemesByDate[day.date] ?? null;
-              const showTheme = !isDayThemeEmpty(dayTheme);
+        {/* 07 — Test du jour */}
+        {show("test") && todayTests.length > 0 && (
+          <TodaySection num={sec()} title={todayTests.length > 1 ? "Tests du jour" : "Test du jour"}>
+            {todayTests.map((t) => {
+              const bio = t.type === "biometric";
+              const tc = t.completed ? TYPE_COLOR.fait : TYPE_COLOR.test;
               return (
-                <button
-                  key={day.date}
-                  onClick={() => { setSelectedDay(day); haptic(); }}
-                  title={showTheme ? dayThemeFullLabel(dayTheme) : undefined}
-                  style={{
-                    position: "relative",
-                    overflow: "hidden",
-                    flex: "1 0 0",
-                    minWidth: 40,
-                    padding: "8px 4px",
-                    borderRadius: 6,
-                    border: "1px solid " + (isCompDay ? C.r + "80" : isToday ? C.coach + "60" : C.brd),
-                    background: isCompDay ? C.rS : isToday ? C.coachS : C.s1,
-                    cursor: "pointer", fontFamily: "inherit",
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                  }}
-                >
-                  {showTheme && (
-                    <div
-                      aria-hidden
-                      style={{
-                        position: "absolute", top: 0, left: 0, right: 0, height: 3,
-                        background: dayThemeColors(dayTheme).bg,
-                      }}
-                    />
-                  )}
-                  {/* Day letter */}
-                  <div style={{ fontSize: 9, fontWeight: 600, color: isToday ? C.coach : C.tx3 }}>
-                    {DOW_SHORT[day.dow]}
+                <TintCard key={t.id} as="button" color={tc} onClick={() => { openTest(t.id); haptic(); }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>{bio ? "Biométrie" : "Test"}</div>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: C.tx, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</div>
                   </div>
-                  {/* Date number */}
-                  <div
-                    style={{
-                      width: 26, height: 26, borderRadius: "50%",
-                      background: isToday ? C.coach : "transparent",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 12, fontWeight: 700,
-                      color: isToday ? "#fff" : (hasSess || hasTest || dayEnergy.length > 0 || dayFree.length > 0) ? C.tx : C.tx3,
-                    }}
-                  >
-                    {new Date(day.date + "T12:00:00").getDate()}
-                  </div>
-                  {/* Dots: sessions + energy + tests + free activities */}
-                  <div style={{ display: "flex", gap: 3, height: 6, alignItems: "center" }}>
-                    {day.sessions.map((s) => (
-                      <div
-                        key={s.session.id}
-                        style={{
-                          width: 5, height: 5, borderRadius: "50%",
-                          background: s.isCompleted ? "#66F03C" : C.coach,
-                        }}
-                      />
-                    ))}
-                    {dayEnergy.map((ev) => (
-                      <div
-                        key={ev.id}
-                        style={{
-                          width: 5, height: 5, borderRadius: "50%",
-                          background: ev.status === "completed" ? "#66F03C" : "#FFC933",
-                        }}
-                      />
-                    ))}
-                    {day.tests.map((t) => (
-                      <div
-                        key={t.id}
-                        style={{
-                          width: 5, height: 5, borderRadius: "50%",
-                          background: t.completed ? "#66F03C" : C.ac,
-                        }}
-                      />
-                    ))}
-                    {dayFree.map((f) => (
-                      <div
-                        key={f.id}
-                        style={{
-                          width: 5, height: 5, borderRadius: "50%",
-                          background: "#66F03C",
-                        }}
-                      />
-                    ))}
-                  </div>
-                  {/* Compétition / "Repos" label / done check */}
-                  {isCompDay ? (
-                    <Trophy size={10} color={C.r} />
-                  ) : allDone ? (
-                    <div style={{ fontSize: 8, color: "#66F03C", fontWeight: 700 }}>✓</div>
-                  ) : !hasSess && !hasTest && dayFree.length === 0 ? (
-                    <div style={{ fontSize: 8, color: C.tx3 }}>—</div>
-                  ) : null}
-                </button>
+                  {t.completed
+                    ? <Check size={18} color={TYPE_COLOR.fait} />
+                    : <TypePill color={tc}>Remplir →</TypePill>}
+                </TintCard>
               );
             })}
-          </div>
-        </div>
-        </>)}
-
-        {/* Section 4 — Récap hier */}
-        {show("yesterday") && (yesterdayWellness || yesterdaySessName) && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-              Hier
-            </div>
-            <div
-              style={{
-                background: C.s1, borderRadius: 6, padding: "12px 16px",
-                border: "1px solid " + C.brd,
-                display: "flex", alignItems: "center", gap: 16,
-              }}
-            >
-              {yesterdaySessName && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Check size={14} color={C.g} />
-                  <div>
-                    <div style={{ fontSize: 10, color: C.tx3 }}>Séance</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{yesterdaySessName}</div>
-                  </div>
-                </div>
-              )}
-              {yesterdayWellness?.score != null && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Heart size={14} color={C.r} />
-                  <div>
-                    <div style={{ fontSize: 10, color: C.tx3 }}>Wellness</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{yesterdayWellness.score}/100</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          </TodaySection>
         )}
 
-        {/* Section 4 — Prochaine compétition */}
-        {show("next_comp") && (<>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Prochaine compétition
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              {allCompetitions.length > 0 && (
-                <button
-                  onClick={() => setShowAllComps(true)}
-                  style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, fontWeight: 700 }}
-                >
-                  Toutes ({allCompetitions.length}) →
-                </button>
-              )}
-              {myCoachId && (
-                <button
-                  onClick={() => setShowCompForm(true)}
-                  style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 3 }}
-                >
-                  <Plus size={12} /> Ajouter
-                </button>
-              )}
-            </div>
-          </div>
-          {nextComp ? (
-            <div
-              onClick={() => setShowAllComps(true)}
-              style={{
-                background: C.s1, borderRadius: 6, padding: 16,
-                border: "1px solid " + C.coach + "40",
-                display: "flex", alignItems: "center", gap: 14,
-                cursor: "pointer",
-              }}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: 4, background: C.coachS, display: "flex", alignItems: "center", justifyContent: "center" }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={C.coach} strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter"><path d="M6 9V2H18V9A6 6 0 0 1 6 9ZM4 2H6M18 2H20M12 15V19M8 22H16M8 19H16"/></svg></div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>{nextComp.name}</div>
-                  <span
-                    style={{
-                      fontSize: 9, fontWeight: 700,
-                      padding: "2px 7px", borderRadius: 6,
-                      background: nextComp.priority === "A" ? C.coachS : C.oS,
-                      color: nextComp.priority === "A" ? C.coach : C.o,
-                    }}
-                  >
-                    {priorityLabel(nextComp.priority)}
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: C.tx3 }}>
-                  J-{nextComp.daysUntil} · {nextComp.date}
-                  {nextComp.location ? ` · ${nextComp.location}` : ""}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={{ background: C.s1, borderRadius: 6, padding: 20, border: "1px dashed " + C.brd, textAlign: "center" }}>
-              <div style={{ fontSize: 12, color: C.tx3, marginBottom: myCoachId ? 10 : 0 }}>Aucune compétition prévue</div>
-              {myCoachId && (
-                <button
-                  onClick={() => setShowCompForm(true)}
-                  style={{
-                    padding: "10px 20px", borderRadius: 6, border: "none",
-                    background: C.ac, color: "#fff",
-                    fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                  }}
-                >
-                  Ajouter une compétition
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        </>)}
-
-        {/* Section 4b — Compétitions à commenter (jusqu'à ce que le bilan soit rempli) */}
-        {uncommentedComps.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-              {uncommentedComps.length > 1 ? "Compétitions à commenter" : "Compétition à commenter"}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {uncommentedComps.map((comp) => (
-                <CompetitionDayCard key={comp.id} competition={comp} viewOnly={viewOnly} showDate />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Section 4c — Mes événements (life events) */}
-        {show("events") && (<>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Mes événements
-            </div>
-            <button
-              onClick={() => setShowLifeEventForm(true)}
-              style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 3 }}
-            >
-              <Plus size={12} /> Ajouter
-            </button>
-          </div>
-          {(() => {
-            const upcoming = lifeEvents.filter((e) => e.date_end >= today);
-            if (upcoming.length === 0) return (
-              <div style={{ background: C.s1, borderRadius: 6, padding: 16, border: "1px dashed " + C.brd, textAlign: "center" }}>
-                <div style={{ fontSize: 12, color: C.tx3 }}>Aucun événement prévu</div>
-                <div style={{ fontSize: 10, color: C.tx3, marginTop: 4 }}>Ajoute tes indisponibilités pour que ton coach adapte le planning</div>
-              </div>
-            );
-            return (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {upcoming.map((evt) => (
-                  <div key={evt.id} style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd }}>
-                  <div
-                    style={{
-                      padding: "10px 14px",
-                      display: "flex", alignItems: "center", gap: 10,
-                    }}
-                  >
-                    <CalendarDays size={14} style={{ color: "#9194A0", flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {evt.title}
-                      </div>
-                      <div style={{ fontSize: 10, color: C.tx3 }}>
-                        {evt.date_start === evt.date_end
-                          ? evt.date_start
-                          : `${evt.date_start} → ${evt.date_end}`}
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfirmDelEvt((cur) => (cur === evt.id ? null : evt.id)); }}
-                      aria-label="Supprimer l'événement"
-                      style={{ background: "none", border: "none", cursor: "pointer", color: confirmDelEvt === evt.id ? C.r : C.tx3, padding: 4, flexShrink: 0 }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+        {/* 08 — Prochaine compétition (+ compétitions à commenter) */}
+        {show("next_comp") && (
+          <TodaySection
+            num={sec()}
+            title="Prochaine compétition"
+            right={<>
+              {allCompetitions.length > 0 && <SectionLink onClick={() => setShowAllComps(true)}>Toutes ({allCompetitions.length})</SectionLink>}
+              {myCoachId && <SectionAdd label="Ajouter une compétition" onClick={() => setShowCompForm(true)} />}
+            </>}
+          >
+            {nextComp ? (
+              <TintCard as="button" color={TYPE_COLOR.competition} onClick={() => setShowAllComps(true)} padding="14px 14px 14px 17px">
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div><TypePill color={TYPE_COLOR.competition}>{priorityLabel(nextComp.priority)}</TypePill></div>
+                  <div style={{ ...DISPLAY, fontSize: 17, fontWeight: 400, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nextComp.name}</div>
+                  <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3 }}>
+                    {fmtShortDay(nextComp.date)}{nextComp.location ? ` · ${nextComp.location}` : ""}
                   </div>
-                  {confirmDelEvt === evt.id && (
-                    <div style={{ margin: "0 10px 10px", padding: "10px 12px", borderRadius: 4, background: C.rS, border: "1px solid " + C.r + "40" }}>
-                      <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cet événement ? Ton coach ne le verra plus sur le planning.</div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => setConfirmDelEvt(null)} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-                        <button onClick={() => { deleteLifeEvent({ id: evt.id, athlete_id: athleteId ?? "" }); setConfirmDelEvt(null); }} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "none", background: C.r, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
-                      </div>
-                    </div>
-                  )}
-                  </div>
+                </div>
+                <div style={{ ...MONO, fontSize: 30, color: TYPE_COLOR.competition, flex: "none" }}>
+                  {nextComp.daysUntil === 0 ? "J" : `J-${nextComp.daysUntil}`}
+                </div>
+              </TintCard>
+            ) : (
+              <div style={{ borderRadius: 12, padding: 16, border: "1px dashed " + C.brdL, textAlign: "center" }}>
+                <div style={{ fontSize: 13, color: C.tx3, marginBottom: myCoachId ? 10 : 0 }}>Aucune compétition prévue</div>
+                {myCoachId && (
+                  <button
+                    onClick={() => setShowCompForm(true)}
+                    style={{ height: 44, padding: "0 18px", borderRadius: 12, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    Ajouter une compétition
+                  </button>
+                )}
+              </div>
+            )}
+            {uncommentedComps.length > 0 && (
+              <>
+                <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: TYPE_COLOR.competition, marginTop: 4 }}>
+                  {uncommentedComps.length > 1 ? "Compétitions à commenter" : "Compétition à commenter"}
+                </div>
+                {uncommentedComps.map((comp) => (
+                  <CompetitionDayCard key={comp.id} competition={comp} viewOnly={viewOnly} showDate />
                 ))}
-              </div>
-            );
-          })()}
-        </div>
-        </>)}
+              </>
+            )}
+          </TodaySection>
+        )}
+        {!show("next_comp") && uncommentedComps.length > 0 && uncommentedComps.map((comp) => (
+          <CompetitionDayCard key={comp.id} competition={comp} viewOnly={viewOnly} showDate />
+        ))}
 
-        {/* Section 5 — Tendance de forme */}
+        {/* 09 — Tendance de forme */}
         {show("trend") && wellnessTrendHasData && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Tendance de forme
-              </div>
-              <button
-                onClick={() => navigate("profil")}
-                style={{ fontSize: 10, color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}
-              >
-                Historique →
-              </button>
-            </div>
-
+          <TodaySection num={sec()} title="Tendance de forme" right={<SectionLink onClick={() => navigate("profil")}>Historique →</SectionLink>}>
             {/* Score + graph */}
-            <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, marginBottom: 10 }}>
+            <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: 11, color: C.tx3, marginBottom: 2 }}>Forme moyenne · 7j</div>
@@ -1871,7 +1503,7 @@ export default function TodayPage() {
                 </div>
               </div>
             )}
-          </div>
+          </TodaySection>
         )}
       </div>
 

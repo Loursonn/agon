@@ -6,17 +6,16 @@ import { appContentKeys, getHomeHiddenSections, invalidateHomeSections, setHomeH
 export const HOME_SECTIONS = [
   { key: "quote",     label: "Citation du jour" },
   { key: "wellness",  label: "Wellness du jour" },
+  { key: "week",      label: "Cette semaine" },
+  { key: "events",    label: "Mes événements" },
   { key: "nutrition", label: "Alimentation du jour" },
   { key: "test",      label: "Test / mesure du jour" },
-  { key: "week",      label: "Cette semaine" },
-  { key: "yesterday", label: "Hier" },
   { key: "next_comp", label: "Prochaine compétition" },
-  { key: "events",    label: "Mes événements" },
   { key: "trend",     label: "Tendance de forme" },
 ] as const;
 
 /** Toujours visibles, non masquables */
-export const HOME_LOCKED_SECTIONS = ["Séance du jour", "Message du coach", "Jour de compétition / à commenter"];
+export const HOME_LOCKED_SECTIONS = ["Retour du coach", "Séances du jour", "Jour de compétition / à commenter"];
 
 export type HomeSectionKey = (typeof HOME_SECTIONS)[number]["key"];
 
