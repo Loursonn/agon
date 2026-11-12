@@ -110,6 +110,9 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
     "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, connected_at, last_sync_at, synced_through, last_error, updated_at",
   ),
   job("provider_dailies", "athlete_id"),
+  // Séries de la journée (FC, stress, Body Battery, SpO2…) et activités détectées.
+  job("provider_intraday", "athlete_id"),
+  job("provider_moveiq", "athlete_id"),
   // Tout ce que Garmin a envoyé, tel quel (échantillons et .FIT : chemins
   // vers le bucket privé `provider-raw`, lisible par l'athlète lui-même).
   job("provider_raw_records", "athlete_id"),
