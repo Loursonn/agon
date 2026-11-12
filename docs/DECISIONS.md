@@ -2018,3 +2018,13 @@ puis relecture par id.
 **Pourquoi** : un id attribué par la base obligeait à attendre le réseau pour
 écrire la première série. Un id client rend chaque écriture autonome et
 rejouable, sans table de correspondance à tenir (sauf le cas « place prise »).
+
+## 2026-11-12 — Identifiant des apps : `com.agontraining.app`
+
+**Décision** : bundle id iOS et package Android `com.agontraining.app`, nom affiché
+« Agon ». Capacitor 8, projets `ios/` et `android/` suivis dans git. Les liens
+`https://agon-training.com/...` ouvriront l'app (liens universels / App Links).
+
+**Pourquoi** : l'identifiant ne peut plus changer après publication ; il dérive du
+domaine possédé `agon-training.com` (Android refuse le tiret). Mode d'emploi et
+reste à faire : `docs/MOBILE_CAPACITOR.md`.

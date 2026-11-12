@@ -31,3 +31,17 @@ dist-ssr
 
 # Deno (deno check local)
 deno.lock
+
+# Capacitor (apps natives) : builds générés, jamais de clé de signature
+# (ios/.gitignore et android/.gitignore couvrent le reste des builds).
+*.jks
+*.keystore
+keystore.properties
+*.p8
+*.p12
+*.mobileprovision
+*.ipa
+*.aab
+*.apk
+google-services.json
+GoogleService-Info.plist
