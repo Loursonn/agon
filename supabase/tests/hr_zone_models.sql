@@ -70,10 +70,11 @@ SELECT 'résumé stocké : secondes par zone + bornes utilisées',
        concat_ws(' ', z.seconds::text, z.bounds::text)
   FROM activity_zone_summaries z JOIN t_ids ON z.activity_id = t_ids.act;
 
--- Séance antérieure au modèle : pas ces bornes.
+-- Séance antérieure à tout modèle : le modèle actuel (P42, décision 7 d'Hugo :
+-- l'historique importé est calculé avec les seuils actuels).
 INSERT INTO t_res (name, ok, detail)
-SELECT 'avant valid_from : pas de modèle 3 zones',
-       NOT EXISTS (SELECT 1 FROM public.hr_zone_bounds_at(t_ids.athlete, '2025-12-31') b WHERE b.kind = 'three'), ''
+SELECT 'avant tout modèle : modèle actuel (historique)',
+       EXISTS (SELECT 1 FROM public.hr_zone_bounds_at(t_ids.athlete, '2001-01-01') b WHERE b.kind = 'three'), ''
   FROM t_ids;
 
 -- ---------- Autre coach : ni lecture ni écriture ----------

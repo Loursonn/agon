@@ -17,6 +17,7 @@ import {
   type ProviderActivity,
 } from "@/features/shared/hooks/useProviderActivities";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
+import { useGearTotals } from "@/features/shared/hooks/useGearTotals";
 
 /**
  * Sorties remontées par une montre ou importées depuis un fichier.
@@ -251,7 +252,8 @@ export function ProviderActivitySummary({
   semaines?: number;
 }) {
   const { data: activities } = useProviderActivities(athleteId, { limit: 200 });
-  if (!activities || activities.length === 0) return null;
+  // Historique importé sans sortie récente : le matériel reste affiché.
+  if (!activities || activities.length === 0) return <GearTotals athleteId={athleteId} />;
 
   const depuis = new Date();
   depuis.setDate(depuis.getDate() - semaines * 7);
@@ -272,7 +274,7 @@ export function ProviderActivitySummary({
     parSport.set(clef, acc);
   }
 
-  if (parSport.size === 0) return null;
+  if (parSport.size === 0) return <GearTotals athleteId={athleteId} />;
 
   const lignes = [...parSport.entries()].sort((a, b) => b[1].durationS - a[1].durationS);
 
@@ -292,6 +294,27 @@ export function ProviderActivitySummary({
       <div style={{ fontSize: 10, color: C.tx3 }}>
         Sources : {[...provenances].sort().join(", ")}
       </div>
+      <GearTotals athleteId={athleteId} />
+    </div>
+  );
+}
+
+/** Kilométrage par matériel (chaussures, vélo), d'après le matériel noté sur les sorties. */
+function GearTotals({ athleteId }: { athleteId: string | undefined }) {
+  const { data } = useGearTotals(athleteId);
+  if (!data || data.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+      <div style={{ fontSize: 10, color: C.tx3 }}>Matériel (km cumulés)</div>
+      {data.slice(0, 8).map((g) => (
+        <div key={g.name} style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: 11 }}>
+          <span style={{ color: C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {g.name}
+          </span>
+          <span style={{ color: C.tx2 }}>{g.outings} sortie{g.outings > 1 ? "s" : ""}</span>
+          <span style={{ color: C.tx2 }}>{g.distanceM > 0 ? formatDistance(g.distanceM) : "—"}</span>
+        </div>
+      ))}
     </div>
   );
 }

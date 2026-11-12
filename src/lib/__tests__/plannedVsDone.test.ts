@@ -54,3 +54,39 @@ describe("buildPlannedVsDone", () => {
     expect(daysBetween("2026-03-28", "2026-03-30")).toEqual(["2026-03-28", "2026-03-29", "2026-03-30"]);
   });
 });
+
+describe("effectiveRpe (P42)", () => {
+  it("l'RPE d'Agon l'emporte, sinon celui de Strava, sinon rien", async () => {
+    const { effectiveRpe } = await import("@/lib/plannedVsDone");
+    expect(effectiveRpe(7, 4)).toEqual({ value: 7, source: "agon" });
+    expect(effectiveRpe(null, 4)).toEqual({ value: 4, source: "strava" });
+    expect(effectiveRpe(undefined, null)).toBeNull();
+    expect(effectiveRpe(0, 11)).toBeNull();
+  });
+
+  it("buildPlannedVsDone : RPE Strava de la sortie rattachée si la séance n'en a pas", async () => {
+    const { buildPlannedVsDone } = await import("@/lib/plannedVsDone");
+    const days = buildPlannedVsDone({
+      from: "2026-10-03", to: "2026-10-03",
+      planned: [
+        { kind: "energy", id: "p1", date: "2026-10-03", label: "Footing", status: "planned", agonRpe: null },
+        { kind: "workout", id: "p2", date: "2026-10-03", label: "Muscu", status: "completed", agonRpe: 8 },
+      ],
+      activities: [
+        { id: "a1", date: "2026-10-03", startedAt: "2026-10-03T07:00:00Z", source: "garmin", sport: "running",
+          distanceM: 8000, durationS: 2800, deviceName: null, rpe: 5 },
+        { id: "a2", date: "2026-10-03", startedAt: "2026-10-03T18:00:00Z", source: "file_import", sport: "training",
+          distanceM: null, durationS: 3600, deviceName: null, rpe: 3 },
+      ],
+      links: [
+        { id: "l1", activityId: "a1", plannedKind: "energy", plannedId: "p1", status: "auto" },
+        { id: "l2", activityId: "a2", plannedKind: "workout", plannedId: "p2", status: "confirmed" },
+      ],
+      zoneSummaries: [],
+    });
+    expect(days[0].planned.map((p) => p.rpe)).toEqual([
+      { value: 5, source: "strava" },
+      { value: 8, source: "agon" },
+    ]);
+  });
+});

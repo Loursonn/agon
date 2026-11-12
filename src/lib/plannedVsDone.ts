@@ -24,6 +24,8 @@ export interface PlannedInput {
   label: string;
   /** Statut de la séance prévue (`planned`, `completed`, `skipped`, `missed`…). */
   status: string;
+  /** RPE saisi dans Agon (`rpe_score`), `null` si absent. */
+  agonRpe?: number | null;
 }
 
 export interface ActivityInput {
@@ -35,6 +37,8 @@ export interface ActivityInput {
   distanceM: number | null;
   durationS: number | null;
   deviceName: string | null;
+  /** Effort ressenti noté dans Strava (archive), `null` si absent. */
+  rpe?: number | null;
 }
 
 export interface LinkInput {
@@ -62,6 +66,27 @@ export interface PlannedItem extends PlannedInput {
   linkStatus: Exclude<PlanLinkStatus, "rejected"> | null;
   /** Réalisée : validée par l'athlète OU activité rattachée. */
   done: boolean;
+  /** RPE retenu pour la séance : celui d'Agon, sinon celui de la sortie rattachée. */
+  rpe: EffectiveRpe | null;
+}
+
+export interface EffectiveRpe {
+  value: number;
+  source: "agon" | "strava";
+}
+
+/**
+ * RPE d'une séance (décision P42) : celui saisi dans Agon l'emporte toujours ;
+ * à défaut, l'effort ressenti noté dans Strava sur la sortie rattachée.
+ * Calculé à la lecture, jamais recopié dans `rpe_score` : une écriture miroir
+ * ferait passer l'RPE Strava pour une saisie de l'athlète, et un lien refusé
+ * plus tard laisserait une valeur orpheline.
+ */
+export function effectiveRpe(agon: number | null | undefined, activity: number | null | undefined): EffectiveRpe | null {
+  const ok = (v: number | null | undefined): v is number => typeof v === "number" && v >= 1 && v <= 10;
+  if (ok(agon)) return { value: agon, source: "agon" };
+  if (ok(activity)) return { value: activity, source: "strava" };
+  return null;
 }
 
 export interface PlannedVsDoneDay {
@@ -118,6 +143,7 @@ export function buildPlannedVsDone(input: {
       linkId: l?.id ?? null,
       linkStatus: l ? (l.status as "auto" | "confirmed") : null,
       done: p.status === "completed" || activity !== null,
+      rpe: effectiveRpe(p.agonRpe, activity?.rpe),
     });
   }
   for (const a of acts.values()) {

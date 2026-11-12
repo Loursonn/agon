@@ -19,6 +19,7 @@ export const providerKeys = {
   all: (aid: string) => ["providers", aid] as const,
   connections: (aid: string) => ["providers", aid, "connections"] as const,
   activities: (aid: string, limit: number) => ["providers", aid, "activities", limit] as const,
+  gear: (aid: string) => ["providers", aid, "gear"] as const,
   /** Sorties de montre lues pour le volume de course. */
   runs: (aid: string, from: string) => ["providers", aid, "runs", from] as const,
   /**
@@ -434,6 +435,27 @@ export async function insertActivitiesReturning(
     .select("id, external_id");
   if (res.error) throw new ApiError("Insertion des activités impossible", res.error);
   return (res.data ?? []) as Array<{ id: string; external_id: string }>;
+}
+
+/** Sorties qui portent un matériel, pour le kilométrage par paire (`gearTotals`). Paginé. */
+export async function getGearOutings(
+  athleteId: string,
+): Promise<Array<{ gear: string | null; distanceM: number | null; localDate: string }>> {
+  const out: Array<{ gear: string | null; distanceM: number | null; localDate: string }> = [];
+  for (let page = 0; ; page++) {
+    const rows = unwrapRows(
+      await db().from("provider_activities")
+        .select("id, gear, distance_m, local_date")
+        .eq("athlete_id", athleteId)
+        .not("gear", "is", null)
+        .order("id", { ascending: true })
+        .range(page * KNOWN_PAGE, page * KNOWN_PAGE + KNOWN_PAGE - 1),
+      "Lecture du matériel impossible",
+    );
+    for (const r of rows) out.push({ gear: r.gear, distanceM: num(r.distance_m), localDate: r.local_date });
+    if (rows.length < KNOWN_PAGE) break;
+  }
+  return out;
 }
 
 /**

@@ -75,8 +75,11 @@ export async function getPlannedVsDone(athleteId: string, from: IsoDay, to: IsoD
       date: e.scheduled_date,
       label: (e.energy_sessions as { name?: string } | null | undefined)?.name ?? "Séance",
       status: e.status,
+      agonRpe: e.rpe_score ?? null,
     })),
-    ...workouts.map((w) => ({ kind: "workout" as const, id: w.id, date: w.scheduled_date, label: w.session_name, status: w.status })),
+    ...workouts.map((w) => ({
+      kind: "workout" as const, id: w.id, date: w.scheduled_date, label: w.session_name, status: w.status, agonRpe: w.rpe_score,
+    })),
     ...tests.map((t) => ({
       kind: "test" as const, id: t.id, date: t.date, label: t.title, status: t.completed ? "completed" : "planned",
     })),
@@ -95,6 +98,7 @@ export async function getPlannedVsDone(athleteId: string, from: IsoDay, to: IsoD
       distanceM: a.distanceM,
       durationS: a.durationS,
       deviceName: a.deviceName,
+      rpe: a.rpe ?? null,
     })),
     links,
     zoneSummaries,
