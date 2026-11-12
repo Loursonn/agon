@@ -38,6 +38,40 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-archive-strava-fusion",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Tout l'historique Strava d'un athlète, sans doublon",
+    summary: "L'archive Strava d'un athlète s'importe en entier, et une même sortie venue de plusieurs sources n'apparaît plus qu'une fois, complétée par chacune.",
+    sections: [
+      {
+        title: "Importer l'archive Strava",
+        points: [
+          "L'athlète demande son archive à Strava (Paramètres > Mon compte > Télécharger ou supprimer votre compte), puis la dépose dans Agon telle quelle : le fichier .zip complet.",
+          "Vous pouvez aussi la déposer pour lui, depuis sa fiche > Données.",
+          "Agon reprend le titre, la description, l'effort ressenti, le matériel et les trajets. La note privée Strava n'est jamais importée.",
+          "Les sorties saisies à la main dans Strava (sans fichier) arrivent aussi, avec leur durée et leur distance.",
+        ],
+      },
+      {
+        title: "Une sortie = une seule ligne",
+        points: [
+          "Une sortie déjà reçue de la montre n'est plus écartée ni doublée : l'archive la complète (titre, effort ressenti, courbe plus précise).",
+          "La courbe la plus précise est gardée (fichier montre avant GPX), et les tours que vous avez modifiés à la main ne sont jamais touchés.",
+          "Déposer deux fois la même archive ne change rien : le compte rendu affiche « déjà complètes ».",
+        ],
+      },
+      {
+        title: "Effort ressenti et matériel",
+        points: [
+          "L'effort ressenti noté dans Agon reste prioritaire ; celui de Strava ne sert que s'il n'y en a pas.",
+          "Les kilomètres par paire de chaussures et par vélo s'affichent sous la liste des sorties.",
+          "L'historique ancien est classé en zones avec les seuils actuels de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-09-mobile-pc-et-hors-ligne",
     date: "2026-11-09",
     kind: "feature",

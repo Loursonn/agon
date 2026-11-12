@@ -1815,3 +1815,62 @@ avant), 19 résumés Garmin sur 20 avec les champs étendus, 6 lignes
 `provider_moveiq`.
 
 **En attente d'Hugo** : lot H (export Garmin).
+
+## 2026-11-12 — Archive Strava et fusion des sources d'une sortie (P42)
+
+Décisions d'Hugo (brief P42) et choix pris en route. Pas d'API Strava : seule
+l'archive RGPD déposée par l'athlète (ou par son coach, `is_coach_of`).
+
+**Fusion, plus d'écartement.** Une sortie = une ligne de `provider_activities`,
+quelle que soit la source et l'ordre d'arrivée (Garmin puis Strava = Strava puis
+Garmin, testé dans `supabase/tests/activity_merge.sql`). Toute écriture passe
+par `merge_provider_activity` (Garmin, COROS, fichiers, archive ; lot de 100
+max via `merge_provider_activities`), verrou par athlète. Même sortie : départ
+à ±2 min et sports compatibles (`activity_sport_family` ; HYROX ↔ renfo
+compatibles) ; deux identifiants différents d'une même API ne fusionnent
+jamais. Chaque source complète les champs vides, n'écrase jamais une valeur ;
+même source + même identifiant = correction du fournisseur, qui l'emporte.
+
+**Qualité de la courbe** : FIT > TCX / JSON Garmin > GPX > résumé
+(`origin_quality`, `stream_quality_rank`). `activity_detail_upsert` refuse une
+courbe moins bonne ; à égalité, seule la synchro serveur remplace. Tours
+modifiés à la main jamais touchés.
+
+**Source de la ligne** : la meilleure (garmin / coros > fichier) ; les sources
+présentes sont listées dans `sources` (`garmin`, `coros`, `file`,
+`strava_archive`, `garmin_export`, `manual`). Conséquence assumée : une sortie
+Garmin complétée par l'archive suit les règles Garmin — exclue de l'IA, et
+**supprimée si l'athlète retire Agon chez Garmin** (`provider_forget` efface
+`source = 'garmin'`). Redéposer l'archive la recrée (sans la courbe Garmin).
+
+**RPE** : celui saisi dans Agon gagne toujours ; celui de Strava est rangé
+sur la sortie (`provider_activities.rpe`) et ne sert qu'à défaut, **calculé à
+la lecture** (`effectiveRpe`, `src/lib/plannedVsDone.ts`). Écart au brief :
+pas de recopie dans `workout_logs.rpe_score` (écriture miroir interdite ; un
+lien refusé laisserait une valeur orpheline). Aucun écran ne l'affiche encore
+côté séance prévue.
+
+**Note privée Strava** jamais lue (colonne ignorée par le décodeur) ; la
+description publique est importée.
+
+**IA** (réponse d'Hugo) : une sortie enregistrée par une montre Garmin n'est
+jamais envoyée à l'IA, quelle que soit sa source (fabricant FIT = 1, créateur
+TCX/GPX, appareil, source Garmin fusionnée). Déclencheur
+`provider_activities_ai_zz_garmin_device`, qui ne peut que retirer l'accord.
+
+**Matériel** : km cumulés par paire / vélo (`gear`, `src/lib/gearTotals.ts`).
+**Trajets** (`commute`) gardés, marqués « Trajet ». **Planning** : rapprochement
+de l'historique en `auto` (« à confirmer ») seulement. **Zones** : une sortie
+antérieure à tout modèle de zones est classée avec le modèle actuel.
+
+**À vérifier sur une vraie archive** (celle d'Hugo, pas encore reçue) : en-têtes
+CSV français (alias écrits sans exemple réel) ; « Activity Date » supposée en
+UTC ; date locale d'une sortie sans fichier = fuseau de l'appareil qui dépose
+(le CSV n'a pas de décalage horaire).
+
+**Écritures en prod** (accord d'Hugo à chaque fois, test à blanc avant) :
+migrations 20261112150000 (fusion) et 20261112160000 (zones de l'historique,
+IA Garmin) ; Edge Functions provider-garmin-webhook / -maintenance et
+provider-coros-sync redéployées ; démo : `scripts/demo-strava-archive.mjs
+--import` sur Léa Démo (30 sorties fictives, 2ᵉ import 100 % « déjà
+complètes », 9 contrôles OK).
