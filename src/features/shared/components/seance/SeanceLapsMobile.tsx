@@ -89,11 +89,14 @@ export function SeanceLapsMobile({ laps, names, kinds, blocks, hyrox, zonesN, op
             )}
             {on && hyrox && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "2px 0 14px 26px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  <Fig k="FC moy." v={fmtInt(m.avgHr)} />
-                  <Fig k="FC max" v={fmtInt(m.maxHr)} />
-                  <Fig k="Zone" v={m.meanZone ? `Z${m.meanZone}` : DASH} />
-                </div>
+                {/* Station : la planche (HyroxToursTel) ne garde que reps, charge et commentaire. */}
+                {(kind !== "station" || !onPatch) && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                    <Fig k="FC moy." v={fmtInt(m.avgHr)} />
+                    <Fig k="FC max" v={fmtInt(m.maxHr)} />
+                    <Fig k="Zone" v={m.meanZone ? `Z${m.meanZone}` : DASH} />
+                  </div>
+                )}
                 {kind === "station" && onPatch && done.field && (
                   <Stepper
                     label={done.field === "reps" ? `Reps faites${b?.reps ? ` (prévu ${b.reps})` : ""}` : `Distance faite${b?.distanceM ? ` (prévu ${b.distanceM} m)` : ""}`}
@@ -114,7 +117,7 @@ export function SeanceLapsMobile({ laps, names, kinds, blocks, hyrox, zonesN, op
                     defaultValue={l.comment ?? ""}
                     maxLength={500}
                     rows={2}
-                    placeholder="+ Commentaire pour ton coach"
+                    placeholder="Ajouter un commentaire sur cette station…"
                     onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (l.comment ?? null)) onPatch(i, { comment: v }); }}
                     style={{ padding: "8px 10px", borderRadius: 10, background: C.bg, border: `1px solid ${alpha(C.ac, 0.33)}`, color: C.tx, fontSize: 12.5, fontFamily: "inherit", resize: "vertical" }}
                   />

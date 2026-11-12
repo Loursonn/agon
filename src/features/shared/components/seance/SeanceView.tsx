@@ -283,7 +283,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
             {hasStream && <button type="button" style={buttonStyle()} onClick={startEdit}><Pencil size={14} />{hyrox ? "Ajuster" : "Modifier"}</button>}
           </div>
           <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{shown.length} tours · {detail.attribution}</div>
-          {hyrox && <div style={{ fontSize: 12, color: C.tx2 }}>Touche une station pour corriger les reps, la distance ou la charge.</div>}
+          {hyrox && <div style={{ fontSize: 12, color: C.tx2 }}>Touche une station pour corriger les reps, la distance ou la charge, ou laisser un commentaire.</div>}
           <SeanceLapsMobile
             laps={lapsM} names={names} kinds={kinds} blocks={blocks} hyrox={hyrox} zonesN={zonesN} speed={bike}
             open={openLap}
@@ -329,7 +329,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
             <span style={{ flex: 1 }}>
               <span style={{ display: "block", fontSize: 14, fontWeight: 500 }}>Détail des tours</span>
               <span style={{ fontSize: 12, color: C.tx2 }}>
-                {shown.length} tours · {hyrox ? "prévu / réalisé, charges" : "allure, FC, cadence par tour"}
+                {shown.length} tours · {hyrox ? "prévu / réalisé, charges, commentaires" : "allure, FC, cadence par tour"}
               </span>
             </span>
             <span style={{ fontSize: 12.5, color: C.ac }}>Voir</span>
