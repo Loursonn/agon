@@ -9,7 +9,7 @@ import { cycleKeys, listAthleteCycles } from "@/api/cycles";
 import type { BlockConfig, Session, WellnessData } from "@/features/shared/types/athlete";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Target, Ruler, Trophy, X as XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Target, Ruler, Trophy, Watch, X as XIcon } from "lucide-react";
 import { competitionDayLabel } from "@/types/planning";
 import {
   DndContext,
@@ -51,6 +51,9 @@ import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewer
 import { QuickAddDialog } from "./QuickAddDialog";
 import { buildProjectionCoverage, isProjectionCovered } from "@/lib/planningProjection";
 import { athleteMoveTitle } from "@/lib/athleteChoices";
+import { useNavigate } from "react-router-dom";
+import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
+import { watchCardsOfDay, type PlanningCardModel, type PlanningCardState } from "@/lib/planningCard";
 
 // ── Cycle auto-detection ──────────────────────────────────────────────────────
 
@@ -121,12 +124,21 @@ const STATUS_OPACITY: Record<string, number> = {
 
 // ── EventChip ─────────────────────────────────────────────────────────────────
 
+/** Repère montre sur une séance du mois (P34) : à confirmer (or) ou réalisée (vert). */
+const WATCH_MARK: Partial<Record<PlanningCardState, { color: string; title: string }>> = {
+  toConfirm: { color: C.ac, title: "Activité de montre à confirmer" },
+  done:      { color: C.g,  title: "Réalisée (montre)" },
+  syncing:   { color: C.b,  title: "Synchro en cours" },
+};
+
 function EventChip({
   event,
   compact = false,
+  watch,
 }: {
   event: CalEvent;
   compact?: boolean;
+  watch?: PlanningCardState;
 }) {
   const isProjected = event.raw?.source === "block_plan";
   const st = event.status;
@@ -197,20 +209,47 @@ function EventChip({
       {event.rpe != null && (
         <span style={{ flexShrink: 0, opacity: 0.85, fontWeight: 700, marginLeft: 2 }}>RPE {event.rpe}</span>
       )}
+      {watch && WATCH_MARK[watch] && (
+        <span title={WATCH_MARK[watch]!.title} aria-label={WATCH_MARK[watch]!.title} style={{ flexShrink: 0, display: "inline-flex", marginLeft: 2, color: WATCH_MARK[watch]!.color }}>
+          <Watch size={compact ? 9 : 10} strokeWidth={2} />
+        </span>
+      )}
     </div>
+  );
+}
+
+/** Activité de montre sans séance prévue, dans une case du mois : ouvre l'onglet Séance. */
+function WatchFreeChip({ card, athleteId }: { card: PlanningCardModel; athleteId: string }) {
+  const navigate = useNavigate();
+  return (
+    <button
+      type="button"
+      title={`${card.title} · ${card.summary} · ${card.attribution ?? ""}`}
+      onClick={(e) => { e.stopPropagation(); if (card.activityId) navigate(`/coach/athletes/${athleteId}/seance/${card.activityId}`); }}
+      style={{
+        display: "flex", alignItems: "center", gap: 3, width: "100%", minWidth: 0, padding: "1px 5px",
+        border: "none", borderLeft: `2px dashed ${FREE_COLOR}`, borderRadius: "0 4px 4px 0",
+        background: FREE_COLOR + "14", color: FREE_COLOR, fontSize: 9, fontWeight: 500, fontFamily: "inherit",
+        cursor: "pointer", textAlign: "left",
+      }}
+    >
+      <Watch size={9} strokeWidth={2} style={{ flexShrink: 0 }} />
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.title}</span>
+    </button>
   );
 }
 
 // ── DraggableEventChip ───────────────────────────────────────────────────────
 
 function DraggableEventChip({
-  event, compact = false, athleteId = "", coachId = "", onEventClick,
+  event, compact = false, athleteId = "", coachId = "", onEventClick, watch,
 }: {
   event: CalEvent;
   compact?: boolean;
   athleteId?: string;
   coachId?: string;
   onEventClick?: (event: CalEvent) => void;
+  watch?: PlanningCardState;
 }) {
   const [hovered, setHovered] = useState(false);
   const draggable = event.type === "workout" || event.type === "energy" || event.type === "test";
@@ -241,7 +280,7 @@ function DraggableEventChip({
           paddingRight: hovered && deletable ? 14 : 0,
         }}
       >
-        <EventChip event={event} compact={compact} />
+        <EventChip event={event} compact={compact} watch={watch} />
       </div>
       {hovered && deletable && !isDragging && (
         <button
@@ -339,6 +378,7 @@ function DroppableDay({
   nutritionLogged,
   dayTheme,
   dayFiches = [],
+  watchCards = [],
 }: {
   date: Date;
   events: CalEvent[];
@@ -353,9 +393,13 @@ function DroppableDay({
   dayTheme?: DayThemeLike | null;
   /** Fiches posées sur ce jour (staff ou coach) */
   dayFiches?: ScheduledDoc[];
+  /** Montre (P34) : séances rattachées et activités libres du jour. */
+  watchCards?: PlanningCardModel[];
 }) {
   const dateStr = format(date, "yyyy-MM-dd");
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
+  const watchByPlanned = new Map(watchCards.filter((c) => c.planned).map((c) => [`${c.planned!.kind}:${c.planned!.id}`, c.state]));
+  const watchFree = watchCards.filter((c) => !c.planned);
 
   const today     = isToday(date);
   const maxVisible = 3;
@@ -459,12 +503,17 @@ function DroppableDay({
         // Les fiches du jour prennent une ligne (la case fait 110 px, overflow caché).
         const ficheLines = dayFiches.length > 0 ? 1 : 0;
         const maxAfterLife = Math.max(1, maxVisible - lifeCount - ficheLines);
-        const overflow = Math.max(0, regularEvents.length - maxAfterLife);
+        const overflow = Math.max(0, regularEvents.length + watchFree.length - maxAfterLife);
+        const freeShown = watchFree.slice(0, Math.max(0, maxAfterLife - regularEvents.length));
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
             {regularEvents.slice(0, maxAfterLife).map((ev) => (
-              <DraggableEventChip key={ev.id} event={ev} compact athleteId={athleteId} coachId={coachId} onEventClick={onEventClick} />
+              <DraggableEventChip
+                key={ev.id} event={ev} compact athleteId={athleteId} coachId={coachId} onEventClick={onEventClick}
+                watch={watchByPlanned.get(`${ev.type}:${ev.id}`)}
+              />
             ))}
+            {freeShown.map((c) => <WatchFreeChip key={c.key} card={c} athleteId={athleteId} />)}
             {overflow > 0 && (
               <div style={{ fontSize: 9, color: C.tx3, paddingLeft: 4 }}>
                 +{overflow} autre{overflow > 1 ? "s" : ""}
@@ -828,6 +877,12 @@ export function CalendarMonthView({
 
   const qc = useQueryClient();
   const { data: rawEvents = [], isLoading } = useUnifiedCalendar(athleteId, monthRange);
+  // Montre (P34) : séances rattachées et activités libres du mois affiché.
+  const { data: watchMonth } = usePlannedVsDone(athleteId, monthRange.start, monthRange.end);
+  const watchByDate = useMemo(() => {
+    const now = Date.now();
+    return new Map((watchMonth ?? []).map((d) => [d.date, watchCardsOfDay(d, now)]));
+  }, [watchMonth]);
   // Un seul appel pour toute la grille, indexé par date : la case ne requête pas.
   const { data: dayThemeRows = [] } = useDayThemesRange(athleteId, monthRange.start, monthRange.end);
   const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
@@ -1256,6 +1311,7 @@ export function CalendarMonthView({
                       nutritionLogged={nLogged}
                       dayTheme={dayThemesByDate[dateStr] ?? null}
                       dayFiches={fichesByDate.get(dateStr)}
+                      watchCards={watchByDate.get(dateStr)}
                     />
                   );
                 })}

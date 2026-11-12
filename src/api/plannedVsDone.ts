@@ -66,7 +66,8 @@ export async function getPlannedVsDone(athleteId: string, from: IsoDay, to: IsoD
     getActivitiesBetween(athleteId, from, to),
     listPlanLinks(athleteId, from, to),
   ]);
-  const zoneSummaries = await getZoneSummaries(athleteId, activities.map((a) => a.id));
+  const ids = activities.map((a) => a.id);
+  const [zoneSummaries, withStream] = await Promise.all([getZoneSummaries(athleteId, ids), activitiesWithStream(ids)]);
 
   const planned: PlannedInput[] = [
     ...energy.map((e) => ({
@@ -99,10 +100,24 @@ export async function getPlannedVsDone(athleteId: string, from: IsoDay, to: IsoD
       durationS: a.durationS,
       deviceName: a.deviceName,
       rpe: a.rpe ?? null,
+      title: a.title ?? null,
+      avgPaceSPerKm: a.avgPaceSPerKm,
+      avgHr: a.avgHr,
+      hasStream: withStream.has(a.id),
     })),
     links,
     zoneSummaries,
   });
+}
+
+/** Activités dont le fichier (courbes) est arrivé. */
+async function activitiesWithStream(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const rows = unwrapRows(
+    await db().from("activity_streams").select("activity_id").in("activity_id", ids),
+    "courbes des activités",
+  );
+  return new Set(rows.map((r) => r.activity_id as string));
 }
 
 /** Confirme le rattachement proposé (athlète ou coach). */

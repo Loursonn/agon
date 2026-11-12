@@ -26,6 +26,9 @@ import { ATHLETE_CHOICE_LABEL } from "@/lib/athleteChoices";
 import { formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps";
 import { IsoBadge } from "@/features/shared/components/IsoBadge";
 import { DayThemeEditor } from "./DayThemeEditor";
+import { WatchCard } from "@/features/shared/components/planning/WatchCard";
+import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
+import { watchCardsOfDay } from "@/lib/planningCard";
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -968,6 +971,10 @@ export function DayDetailsDrawer({
     setWorkoutRecapEvent(null);
   }, [day, initialSelectedEvent]);
 
+  // Montre (P34) : une séance rattachée à une activité devient sa carte (jamais deux cartes).
+  const watchDate = day ? format(day, "yyyy-MM-dd") : undefined;
+  const { data: watchDays } = usePlannedVsDone(open ? athleteId : undefined, watchDate, watchDate);
+
   if (!open || !day) return null;
 
   const dateStr = format(day, "yyyy-MM-dd");
@@ -978,6 +985,17 @@ export function DayDetailsDrawer({
   const energyEvents = dayEvents.filter((e) => e.type === "energy");
   const freeEvents   = dayEvents.filter((e) => e.type === "free_activity");
   const lifeEvents   = dayEvents.filter((e) => e.type === "life_event");
+  const watchDay     = watchDays?.[0];
+  const watchCards   = watchCardsOfDay(watchDay, Date.now());
+  const linkedCard   = new Map(watchCards.filter((c) => c.planned).map((c) => [`${c.planned!.kind}:${c.planned!.id}`, c]));
+  const freeWatch    = watchCards.filter((c) => !c.planned);
+  const seancePath   = (id: string) => `/coach/athletes/${athleteId}/seance/${id}`;
+  const eventOrWatch = (e: CalEvent) => {
+    const c = linkedCard.get(`${e.type}:${e.id}`);
+    return c
+      ? <WatchCard key={e.id} card={c} day={watchDay} athleteId={athleteId} seancePath={seancePath} />
+      : <EventCard key={e.id} event={e} athleteId={athleteId} coachId={coachId} onSelect={setSelectedEvent} />;
+  };
 
   const wKey = dateStr.replace(/-/g, "");
   const wellnessDay = (wellnessHistory?.[wKey] ?? wellnessHistory?.[dateStr]) ?? null;
@@ -1040,9 +1058,9 @@ export function DayDetailsDrawer({
             <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
               {selectedEvent
                 ? format(day, "d MMMM yyyy", { locale: fr })
-                : dayEvents.length === 0
+                : dayEvents.length + freeWatch.length === 0
                   ? "Aucun événement"
-                  : `${dayEvents.length} événement${dayEvents.length > 1 ? "s" : ""}`}
+                  : `${dayEvents.length + freeWatch.length} événement${dayEvents.length + freeWatch.length > 1 ? "s" : ""}`}
             </div>
           </div>
           <button
@@ -1145,7 +1163,7 @@ export function DayDetailsDrawer({
                 );
               })}
 
-              {dayEvents.length === 0 && (
+              {dayEvents.length === 0 && freeWatch.length === 0 && (
                 <div style={{ textAlign: "center", padding: "40px 0", color: C.tx3, fontSize: 13 }}>
                   Journée libre
                 </div>
@@ -1160,9 +1178,7 @@ export function DayDetailsDrawer({
                     Séances muscu
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {workouts.map((e) => (
-                      <EventCard key={e.id} event={e} athleteId={athleteId} coachId={coachId} onSelect={setSelectedEvent} />
-                    ))}
+                    {workouts.map(eventOrWatch)}
                   </div>
                 </section>
               )}
@@ -1173,9 +1189,7 @@ export function DayDetailsDrawer({
                     Séances énergétiques
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {energyEvents.map((e) => (
-                      <EventCard key={e.id} event={e} athleteId={athleteId} coachId={coachId} onSelect={setSelectedEvent} />
-                    ))}
+                    {energyEvents.map(eventOrWatch)}
                   </div>
                 </section>
               )}
@@ -1193,15 +1207,26 @@ export function DayDetailsDrawer({
                 </section>
               )}
 
+              {freeWatch.length > 0 && (
+                <section>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: FREE_COLOR, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                    Montre · séances libres
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {freeWatch.map((c) => (
+                      <WatchCard key={c.key} card={c} day={watchDay} athleteId={athleteId} seancePath={seancePath} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {tests.length > 0 && (
                 <section>
                   <div style={{ fontSize: 10, fontWeight: 700, color: TEST_COLOR, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
                     Tests
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {tests.map((e) => (
-                      <EventCard key={e.id} event={e} athleteId={athleteId} coachId={coachId} onSelect={setSelectedEvent} />
-                    ))}
+                    {tests.map(eventOrWatch)}
                   </div>
                 </section>
               )}

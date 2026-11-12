@@ -39,6 +39,12 @@ export interface ActivityInput {
   deviceName: string | null;
   /** Effort ressenti noté dans Strava (archive), `null` si absent. */
   rpe?: number | null;
+  /** Carte du planning (P34) : titre de la sortie, allure et FC moyennes. */
+  title?: string | null;
+  avgPaceSPerKm?: number | null;
+  avgHr?: number | null;
+  /** Le fichier (courbes) est arrivé. `false` juste après la montre = « Synchro en cours ». */
+  hasStream?: boolean;
 }
 
 export interface LinkInput {

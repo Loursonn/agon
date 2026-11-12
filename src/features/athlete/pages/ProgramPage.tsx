@@ -38,6 +38,10 @@ import { AthleteFichesView } from "@/features/athlete/components/fiches/AthleteF
 import { invalidateSessionStatus } from "@/features/shared/hooks/invalidateSessionStatus";
 import { groupScheduleByDate, useDocSchedule, type ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
 import { DayFiches } from "@/features/shared/components/fiches/DayFiches";
+import { WatchCard } from "@/features/shared/components/planning/WatchCard";
+import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
+import { watchCardsOfDay } from "@/lib/planningCard";
+import type { PlannedVsDoneDay } from "@/lib/plannedVsDone";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1015,7 +1019,7 @@ function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPres
 function DayRow({
   day, today, onSessionPress, onReschedule, onTestPress,
   freeActivities, onAddActivity, onEditActivity, onAddCompetition, viewOnly,
-  dayTheme, dayFiches = [],
+  dayTheme, dayFiches = [], watch,
 }: {
   day: WeekDay;
   today: string;
@@ -1031,13 +1035,22 @@ function DayRow({
   dayTheme?: DayThemeLike | null;
   /** Fiches posées sur ce jour par un pro du staff ou le coach */
   dayFiches?: ScheduledDoc[];
+  /** Montre (P34) : prévu / réalisé / libre du jour. */
+  watch?: { day: PlannedVsDoneDay | undefined; athleteId: string; now: number };
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
   const d       = new Date(day.date + "T12:00:00");
   const dateNum = d.getDate();
   const isCompDay = day.competitions.length > 0;
-  const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0 && dayFiches.length === 0;
+  // Une séance rattachée à une activité de montre devient sa carte (jamais deux cartes).
+  const watchCards = watch ? watchCardsOfDay(watch.day, watch.now) : [];
+  const linkedCard = new Map(watchCards.filter((c) => c.planned).map((c) => [`${c.planned!.kind}:${c.planned!.id}`, c]));
+  const freeWatch = watchCards.filter((c) => !c.planned);
+  const watchCard = (c: (typeof watchCards)[number]) => (
+    <WatchCard key={c.key} card={c} day={watch!.day} athleteId={watch!.athleteId} seancePath={(id) => `/athlete/program/activity/${id}`} />
+  );
+  const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0 && dayFiches.length === 0 && freeWatch.length === 0;
 
   return (
     <div style={{
@@ -1115,14 +1128,19 @@ function DayRow({
       {/* Session list */}
       {day.sessions.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "6px 0 6px 14px" }}>
-          {day.sessions.map(s => (
-            <SessionChip
-              key={s.id}
-              session={s}
-              onPress={onSessionPress}
-              onReschedule={onReschedule}
-            />
-          ))}
+          {day.sessions.map(s => {
+            const c = linkedCard.get(`${s.kind}:${s.id}`);
+            return c ? (
+              <div key={s.id} style={{ paddingRight: 14 }}>{watchCard(c)}</div>
+            ) : (
+              <SessionChip
+                key={s.id}
+                session={s}
+                onPress={onSessionPress}
+                onReschedule={onReschedule}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -1141,6 +1159,13 @@ function DayRow({
           {freeActivities.map(f => (
             <FreeActivityChip key={f.id} activity={f} onPress={onEditActivity} />
           ))}
+        </div>
+      )}
+
+      {/* Activités de montre sans séance prévue */}
+      {freeWatch.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "6px 14px" }}>
+          {freeWatch.map(watchCard)}
         </div>
       )}
 
@@ -1241,6 +1266,10 @@ function ProgramSessionsView() {
     athleteId ?? undefined, weekBounds?.start, weekBounds?.end,
   );
   const dayThemesByDate = useMemo(() => indexDayThemesByDate(dayThemeRows), [dayThemeRows]);
+  const { data: watchWeek } = usePlannedVsDone(athleteId ?? undefined, weekBounds?.start, weekBounds?.end);
+  const watchByDate = useMemo(() => new Map((watchWeek ?? []).map((d) => [d.date, d])), [watchWeek]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const watchNow = useMemo(() => Date.now(), [watchWeek]);
   const { data: scheduledDocs = [] } = useDocSchedule(
     weekBounds ? athleteId : null, weekBounds ?? { start: "", end: "" },
   );
@@ -1402,6 +1431,7 @@ function ProgramSessionsView() {
                     viewOnly={viewOnly}
                     dayTheme={dayThemesByDate[day.date] ?? null}
                     dayFiches={fichesByDate.get(day.date)}
+                    watch={athleteId ? { day: watchByDate.get(day.date), athleteId, now: watchNow } : undefined}
                   />
                 ))}
               </div>

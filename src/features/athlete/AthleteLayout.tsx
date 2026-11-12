@@ -102,7 +102,9 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   // Derive active tab from pathname
   const pathSegments = location.pathname.split("/").filter(Boolean);
   const lastSegment = pathSegments[pathSegments.length - 1] || "";
-  const activeTab = ATH_TABS.some(t => t.k === lastSegment) ? lastSegment : "";
+  // Sous-page d'un onglet (/athlete/program/activity/:id) : l'onglet parent reste actif.
+  const tabSegment = ATH_TABS.some(t => t.k === lastSegment) ? lastSegment : pathSegments[1] ?? "";
+  const activeTab = ATH_TABS.some(t => t.k === tabSegment) ? tabSegment : "";
 
   // Active free session for "reprendre" button
   const activeFreeSess = sessions.find(s => {

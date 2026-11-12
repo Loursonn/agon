@@ -38,6 +38,34 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-onglet-seance-cartes-planning",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Chaque séance de montre a son onglet Séance",
+    summary: "Ouvrez une séance enregistrée par la montre : courbes, temps par zone, tours modifiables. Dans le planning, la séance réalisée remplace la séance prévue.",
+    sections: [
+      {
+        title: "L'onglet Séance",
+        points: [
+          "Allure (ou vitesse à vélo), fréquence cardiaque colorée selon les zones SV1 / SV2 et altitude sur un même graphique. Cliquez un tour pour zoomer dessus.",
+          "Temps passé dans chaque zone, ressenti de l'athlète et tableau des tours avec un total.",
+          "« Modifier les tours » : couper un tour, fusionner, déplacer une limite à la seconde près, renommer. Les tours de la montre restent récupérables.",
+          "HYROX : Agon découpe la séance d'après celle que vous avez programmée. L'athlète vérifie, corrige les reps et la charge, puis valide.",
+          "Sans SV1 / SV2 saisis, les zones ne s'affichent pas : un lien mène au test « Seuils ventilatoires ».",
+        ],
+      },
+      {
+        title: "Dans le planning",
+        points: [
+          "Une activité de montre qui ressemble à la séance prévue du jour s'affiche « À confirmer » : « C'est bien cette séance » la valide, « Ce n'est pas cette séance » la laisse en séance libre.",
+          "Une fois confirmée, une seule carte « Réalisée » : distance, durée, allure, barre des zones et montre utilisée.",
+          "Une activité sans séance prévue apparaît en « Séance libre » ; on peut l'associer plus tard à une séance du jour.",
+          "Dans votre planning du mois, une icône montre marque les séances concernées. Le détail du jour montre les cartes complètes.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-archive-strava-fusion",
     date: "2026-11-12",
     kind: "feature",
