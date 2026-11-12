@@ -10,6 +10,8 @@ import RaceFormDrawer from "./RaceFormDrawer";
 import RaceSheet from "./RaceSheet";
 import RaceCompare from "./RaceCompare";
 import { Plus, HelpCircle } from "lucide-react";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { RaceCard } from "./RaceCard";
 
 export default function RacesView() {
   const { athleteId } = useAthleteContext();
@@ -20,6 +22,9 @@ export default function RacesView() {
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [comparing, setComparing] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+
+  const toggleCompare = (id: string) =>
+    setCompareIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 2 ? [...prev, id] : [prev[1], id]);
 
   // KPI data
   const officialFinished = races.filter(r => r.is_official && r.status === "finished");
@@ -42,7 +47,7 @@ export default function RacesView() {
     <>
       {/* KPI row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 16, marginBottom: 16 }}>
-        <KPICard label="Record" value={record ? formatMmSs(record.total_s, { hours: true }) : "—"} sub={record ? `${FORMAT_LABEL[record.format as keyof typeof FORMAT_LABEL] ?? record.format} · ${record.event_name}` : ""} />
+        <KPICard accent label="Record" value={record ? formatMmSs(record.total_s, { hours: true }) : "—"} sub={record ? `${FORMAT_LABEL[record.format as keyof typeof FORMAT_LABEL] ?? record.format} · ${record.event_name}` : ""} />
         <KPICard label="Courses" value={String(races.length)} sub={`${officialFinished.length} officielles`} />
         <KPICard label="Dernier chrono" value={latest ? formatMmSs(latest.total_s, { hours: true }) : "—"} sub={ecartRecord != null ? `+${formatMmSs(ecartRecord)} vs record` : ""} />
       </div>
@@ -53,8 +58,8 @@ export default function RacesView() {
           onClick={() => { setEditRace(null); setShowForm(true); }}
           style={{
             display: "flex", alignItems: "center", gap: 6,
-            padding: "8px 14px", borderRadius: 6, border: "none",
-            background: C.ac, color: "#0E0C0A", fontSize: 12, fontWeight: 700,
+            height: 40, padding: "0 14px", borderRadius: 10, border: "none",
+            background: C.ac, color: "#0E0C0A", fontSize: 13, fontWeight: 600,
             cursor: "pointer", fontFamily: "inherit",
           }}
         >
@@ -81,7 +86,7 @@ export default function RacesView() {
               cursor: "pointer", fontFamily: "inherit",
             }}
           >
-            Comparer ({compareIds.length})
+            Comparer ({compareIds.length}) ›
           </button>
         )}
       </div>
@@ -121,7 +126,20 @@ export default function RacesView() {
           <div style={{ fontSize: 12, color: C.tx3 }}>Ajoutez votre première course pour commencer le suivi.</div>
         </div>
       ) : (
-        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
+        <>
+        <div className="flex flex-col gap-2.5 sm:hidden">
+          {races.map(r => (
+            <RaceCard
+              key={r.id}
+              race={r}
+              isRecord={record?.id === r.id}
+              checked={compareIds.includes(r.id)}
+              onToggle={() => toggleCompare(r.id)}
+              onOpen={() => setSelectedRace(r)}
+            />
+          ))}
+        </div>
+        <div className="hidden sm:block" style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid " + C.brd, color: C.tx3, fontSize: 10, fontWeight: 600 }}>
@@ -155,11 +173,7 @@ export default function RacesView() {
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => {
-                          setCompareIds(prev =>
-                            prev.includes(r.id) ? prev.filter(x => x !== r.id) : prev.length < 2 ? [...prev, r.id] : [prev[1], r.id]
-                          );
-                        }}
+                        onChange={() => toggleCompare(r.id)}
                         style={{ width: 14, height: 14, cursor: "pointer" }}
                       />
                     </td>
@@ -184,6 +198,7 @@ export default function RacesView() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {showForm && (
@@ -196,15 +211,15 @@ export default function RacesView() {
   );
 }
 
-function KPICard({ label, value, sub }: { label: string; value: string; sub: string }) {
+function KPICard({ label, value, sub, accent }: { label: string; value: string; sub: string; accent?: boolean }) {
   return (
     <div style={{
-      background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
-      padding: "12px 14px",
+      background: accent ? C.ac + "1F" : C.s1, borderRadius: 14, border: "1px solid " + (accent ? C.ac + "73" : C.brd),
+      padding: "12px 12px", minWidth: 0,
     }}>
-      <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: C.tx, fontFamily: "monospace" }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>{sub}</div>}
+      <div style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.tx3, marginBottom: 6 }}>{label}</div>
+      <div style={{ ...MONO, fontSize: 18, color: accent ? C.ac : C.tx, whiteSpace: "nowrap" }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.tx3, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
     </div>
   );
 }

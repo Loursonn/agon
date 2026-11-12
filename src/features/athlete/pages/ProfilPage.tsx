@@ -97,7 +97,7 @@ export default function ProfilPage() {
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 40px", scrollbarWidth: "none" }}>
       {/* ── Profil ── */}
       <div style={{ marginBottom: 24 }}>
-        <div style={sectionTitle}>Profil</div>
+        <div style={sectionTitle}><span style={{ color: C.ac }}>01 — </span>Profil</div>
         {editing && athleteId ? (
           <ProfileEditForm
             profile={displayProfile}
@@ -191,7 +191,7 @@ export default function ProfilPage() {
       {/* ── Antécédents médicaux ── */}
       {athleteId && (
         <div style={{ marginBottom: 24 }}>
-          <div style={sectionTitle}>Antécédents médicaux</div>
+          <div style={sectionTitle}><span style={{ color: C.ac }}>02 — </span>Antécédents médicaux</div>
           <MedicalEntriesSection athleteId={athleteId} canEdit />
         </div>
       )}
@@ -199,7 +199,7 @@ export default function ProfilPage() {
       {/* ── Mes coachs (double coach) ── */}
       {!viewOnly && athleteId && (
         <div id="mes-coachs" style={{ marginBottom: 24, scrollMarginTop: 56 }}>
-          <div style={sectionTitle}>Mes coachs</div>
+          <div style={sectionTitle}><span style={{ color: C.ac }}>03 — </span>Mes coachs</div>
           <CoCoachPanel athleteId={athleteId} athleteName={displayProfile?.full_name ?? "toi"} mode="athlete" />
         </div>
       )}
@@ -207,21 +207,21 @@ export default function ProfilPage() {
       {/* ── Mon staff (kiné, ostéo, nutritionniste…) ── */}
       {!viewOnly && athleteId && (
         <div id="mon-staff" style={{ marginBottom: 24 }}>
-          <div style={sectionTitle}>Mon staff</div>
+          <div style={sectionTitle}><span style={{ color: C.ac }}>04 — </span>Mon staff</div>
           <AthleteStaffPanel athleteId={athleteId} athleteName={displayProfile?.full_name ?? "toi"} mode="athlete" />
         </div>
       )}
 
       {/* ── Volume de course à pied ── */}
       <div style={{ marginBottom: 24 }}>
-        <div style={sectionTitle}>Volume de course à pied</div>
+        <div style={sectionTitle}><span style={{ color: C.ac }}>05 — </span>Volume de course à pied</div>
         <RunningVolumeCard volume={volume} isLoading={volumeLoading} />
       </div>
 
       {/* ── Données Strava ── */}
       {!viewOnly && (
         <div style={{ marginBottom: 24 }}>
-          <div style={sectionTitle}>Données Strava</div>
+          <div style={sectionTitle}><span style={{ color: C.ac }}>06 — </span>Données Strava</div>
           <StravaExportTutorial />
         </div>
       )}

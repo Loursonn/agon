@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-hyrox-fiches-athlete",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "HYROX et fiches plus lisibles sur téléphone",
+    summary: "Les courses HYROX de vos athlètes s'affichent en cartes sur téléphone, et leurs fiches mettent en avant la dernière que vous avez envoyée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "HYROX › Courses : sur téléphone, une carte par course avec le chrono, la course, les stations, la Roxzone et le rang. On coche deux cartes pour les comparer. Sur ordinateur, le tableau reste le même.",
+          "Programme › Fiches : la fiche nouvelle est en tête avec votre mot et un bouton « Lire la fiche ». La recherche et les filtres par catégorie marchent sur toutes ses fiches.",
+          "La bibliothèque en libre accès s'appelle maintenant « Bibliothèque du coach ».",
+          "HYROX › Radar : le classement se fait défiler sur le côté au lieu d'être écrasé.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-tests-athlete-dominante",
     date: "2026-11-12",
     kind: "feature",
