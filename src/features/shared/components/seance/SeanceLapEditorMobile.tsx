@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { GitMerge, Minus, Pencil, Plus, RotateCcw, Scissors, Sparkles } from "lucide-react";
+import { GitMerge, Pencil, RotateCcw, Scissors, Sparkles } from "lucide-react";
 import { C, alpha } from "@/lib/theme";
 import { fmtClock, fmtInt, fmtKm, fmtPaceOrSpeed, SERIES_COLORS, zoneColor } from "@/lib/seance";
 import type { DetailLapWithMetrics } from "@/lib/activityDetail";
@@ -113,15 +113,12 @@ export function SeanceLapEditorMobile(p: Props) {
             <Action icon={<RotateCcw size={18} />} label="Tours montre" onClick={p.onResetWatch} />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 12, color: C.tx2, flex: 1 }}>Couper à</span>
-            <StepBtn onClick={() => p.onCutAtChange(cut - 1)}><Minus size={16} /></StepBtn>
-            <span style={{ ...MONO, fontSize: 18, minWidth: 92, textAlign: "center" }}>
-              {Math.floor(cut / 60)} <span style={{ fontSize: 11, color: C.tx3 }}>min</span> {String(cut % 60).padStart(2, "0")} <span style={{ fontSize: 11, color: C.tx3 }}>s</span>
-            </span>
-            <StepBtn onClick={() => p.onCutAtChange(cut + 1)}><Plus size={16} /></StepBtn>
+          {/* Limites du tour et coupe saisies à la main (min s), comme « Début / Fin » à l'ordinateur. */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+            <MinSecField label="Début" value={lap.startS} disabled={p.selected === 0} onCommit={(v) => p.onSetBounds(v, lap.endS)} />
+            <MinSecField label="Fin" value={lap.endS} disabled={p.selected === p.laps.length - 1} onCommit={(v) => p.onSetBounds(lap.startS, v)} />
+            <MinSecField label="Couper à" value={cut} onCommit={p.onCutAtChange} accent />
           </div>
-          <div style={{ fontSize: 11, color: C.tx3 }}>− / + = 1 seconde ; ou touche la courbe pour placer la coupe.</div>
         </div>
       )}
     </div>
@@ -145,10 +142,47 @@ function Action({ icon, label, onClick, disabled }: { icon: ReactNode; label: st
   );
 }
 
-function StepBtn({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+/** Temps en minutes + secondes, chacun dans son champ (clavier numérique). Validé à la sortie du champ. */
+function MinSecInputs({ value, onCommit, disabled, accent }: { value: number; onCommit: (v: number) => void; disabled?: boolean; accent?: boolean }) {
+  const [min, setMin] = useState(String(Math.floor(value / 60)));
+  const [sec, setSec] = useState(String(value % 60).padStart(2, "0"));
+  useEffect(() => { setMin(String(Math.floor(value / 60))); setSec(String(value % 60).padStart(2, "0")); }, [value]);
+  const commit = () => {
+    const m = Number(min || 0);
+    const sc = Number(sec || 0);
+    if (!Number.isInteger(m) || !Number.isInteger(sc) || m < 0 || sc < 0 || sc > 59) {
+      setMin(String(Math.floor(value / 60)));
+      setSec(String(value % 60).padStart(2, "0"));
+      return;
+    }
+    const v = m * 60 + sc;
+    if (v !== value) onCommit(v);
+  };
+  const box = (val: string, set: (v: string) => void, label: string, w: number) => (
+    <input
+      aria-label={label}
+      value={val}
+      disabled={disabled}
+      inputMode="numeric"
+      onChange={(e) => set(e.target.value.replace(/\D/g, "").slice(0, 3))}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      style={{ ...MONO, width: w, height: 36, padding: 0, borderRadius: 8, background: C.bg, border: `1px solid ${accent ? alpha(C.ac, 0.6) : C.brdL}`, color: disabled ? C.tx3 : C.tx, fontSize: 16, textAlign: "center", outline: "none" }}
+    />
+  );
   return (
-    <button type="button" onClick={onClick} style={{ width: 44, height: 44, borderRadius: 10, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-      {children}
-    </button>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+      {box(min, setMin, "minutes", 38)}<span style={{ fontSize: 15, color: C.tx3 }}>:</span>
+      {box(sec, setSec, "secondes", 34)}
+    </span>
+  );
+}
+
+function MinSecField({ label, value, onCommit, disabled, accent }: { label: string; value: number; onCommit: (v: number) => void; disabled?: boolean; accent?: boolean }) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4, opacity: disabled ? 0.5 : 1, minWidth: 0 }}>
+      <span style={{ fontSize: 11, color: accent ? C.ac : C.tx3 }}>{label} <span style={{ color: C.tx3 }}>(min:s)</span></span>
+      <MinSecInputs value={value} onCommit={onCommit} disabled={disabled} accent={accent} />
+    </label>
   );
 }

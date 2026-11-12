@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-seance-hyrox-tours",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance HYROX : tableau des tours allégé, temps saisi à la main sur téléphone",
+    summary: "La page d'une séance HYROX va à l'essentiel, et ajuster un tour au téléphone se fait au clavier.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sous le tableau des tours, seule la ligne Total reste : les sous-totaux Course / Sled push / Wall balls sont retirés.",
+          "Au téléphone, « Ajuster les tours » : début, fin et coupe d'un tour se tapent en minutes et secondes.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-seances-sur-la-montre-garmin",
     date: "2026-11-13",
     kind: "feature",

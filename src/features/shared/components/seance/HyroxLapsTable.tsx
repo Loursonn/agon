@@ -23,10 +23,12 @@ interface Props {
 const COLS = "36px minmax(150px,1.8fr) 70px 86px 86px 60px minmax(80px,1fr) 60px 60px 48px";
 const HEAD = ["N°", "Nom", "Prévu", "Réalisé", "Charge", "Temps", "Allure / rythme", "FC moy.", "FC max", "Zone"];
 
-/** Tableau des tours HYROX (ordinateur) : prévu, réalisé et charge corrigeables, totaux par type. */
+/** Tableau des tours HYROX (ordinateur) : prévu, réalisé et charge corrigeables, total de la séance. */
 export function HyroxLapsTable({ laps, names, kinds, blocks, zonesN, active, onSelect, onPatch }: Props) {
   const cell: CSSProperties = { ...MONO, fontSize: 12.5, whiteSpace: "nowrap" };
-  const groups = groupTotals(laps, names, kinds, blocks);
+  // Seulement la ligne Total : les lignes par type (Course / Sled push / Wall balls…)
+  // sont retirées (retour d'Hugo, 12/11) ; le détail se lit tour par tour au-dessus.
+  const groups = groupTotals(laps, names, kinds, blocks).filter((g) => g.label === "Total");
   return (
     <div style={{ border: `1px solid ${C.brd}`, borderRadius: 12, overflow: "hidden", background: C.s1 }} role="table">
       <div style={{ display: "grid", gridTemplateColumns: COLS, gap: 8, padding: "10px 14px", borderBottom: `1px solid ${C.brd}` }} role="row">
