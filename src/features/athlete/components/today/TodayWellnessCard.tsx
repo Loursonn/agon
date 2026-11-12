@@ -4,20 +4,18 @@ import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import type { ReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import type { WellnessData } from "@/features/shared/types/athlete";
 
-/** Les 5 items du matin, dans l'ordre de la saisie. `inv` : plus haut = moins bien. */
-const ITEMS: Array<{ key: string; label: string; inv: boolean }> = [
-  { key: "sommeil", label: "Sommeil", inv: false },
-  { key: "energie", label: "Énergie", inv: false },
-  { key: "fatigue", label: "Fatigue", inv: true },
-  { key: "stress", label: "Stress", inv: true },
-  { key: "doms", label: "DOMS", inv: true },
+/** Les 5 notes du matin (1 = mauvais, 5 = très bien pour toutes), libellés courts. */
+const ITEMS: Array<{ key: string; label: string }> = [
+  { key: "fatigue", label: "Récup" },
+  { key: "sommeil", label: "Sommeil" },
+  { key: "stress", label: "Mental" },
+  { key: "energie", label: "Énergie" },
+  { key: "doms", label: "Muscles" },
 ];
 
-/** Couleur d'un item 1-5 : vert si bon, orange moyen, rouge mauvais (sens inversé pour fatigue, stress, DOMS). */
-function itemColor(v: number, inv: boolean): string {
-  const good = inv ? 6 - v : v;
-  return good >= 4 ? C.g : good === 3 ? C.o : C.r;
-}
+/** Échelle 1 → 5 du formulaire wellness : rouge → vert. */
+const SCALE5 = ["#FF3B1F", "#FF7A45", "#FF9500", "#B8F03C", "#66F03C"];
+const itemColor = (v: number): string => SCALE5[Math.min(5, Math.max(1, Math.round(v))) - 1];
 
 function Ring({ score, color }: { score: number; color: string }) {
   const r = 26;
@@ -73,7 +71,7 @@ export function TodayWellnessCard({
     const v = Number((wellness as Record<string, unknown> | null)?.[it.key]);
     return { ...it, v: Number.isFinite(v) && v > 0 ? v : null };
   });
-  const doms = values.find((x) => x.key === "doms")?.v ?? null;
+  const fraicheur = values.find((x) => x.key === "doms")?.v ?? null;
 
   return (
     <div style={{ borderRadius: 14, border: `1px solid ${color}66`, background: `${color}1A`, overflow: "hidden" }}>
@@ -104,16 +102,16 @@ export function TodayWellnessCard({
         <span style={{ flex: 1 }} />
         <span style={{ display: "flex", gap: 4 }} aria-hidden>
           {values.map((x) => (
-            <span key={x.key} style={{ width: 6, height: 6, borderRadius: "50%", background: x.v == null ? C.brdL : itemColor(x.v, x.inv) }} />
+            <span key={x.key} style={{ width: 6, height: 6, borderRadius: "50%", background: x.v == null ? C.brdL : itemColor(x.v) }} />
           ))}
         </span>
-        <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>DOMS {doms ?? "—"}/5</span>
+        <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>Muscles {fraicheur ?? "—"}/5</span>
       </button>
       {open && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, padding: "4px 14px 14px" }}>
           {values.map((x) => (
             <div key={x.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 2px", borderRadius: 10, background: C.s1, border: `1px solid ${C.brd}` }}>
-              <span style={{ ...MONO, fontSize: 16, color: x.v == null ? C.tx3 : itemColor(x.v, x.inv) }}>{x.v ?? "—"}</span>
+              <span style={{ ...MONO, fontSize: 16, color: x.v == null ? C.tx3 : itemColor(x.v) }}>{x.v ?? "—"}</span>
               <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3 }}>{x.label}</span>
             </div>
           ))}

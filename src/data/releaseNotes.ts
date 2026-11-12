@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-wellness-deux-ecrans",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Le wellness du matin en deux écrans",
+    summary: "Vos athlètes remplissent leur wellness plus vite : un écran pour la nuit et les cinq notes, un écran pour le corps, puis le bilan.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Premier écran : heures de coucher et de réveil, puis les cinq notes sur une seule page ; le score de forme s'affiche dès la dernière réponse.",
+          "Aucune note n'est cochée d'avance : chaque ligne demande une vraie réponse.",
+          "Second écran : courbatures sur la silhouette, blessure ou maladie avec un mot pour vous, poids à jeun.",
+          "Les réponses envoyées restent les mêmes : rien ne change de votre côté.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-accueil-athlete",
     date: "2026-11-12",
     kind: "feature",
