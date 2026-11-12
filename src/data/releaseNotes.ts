@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-fiches-athlete-ordinateur",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Fiches : lecture à côté de la liste sur ordinateur",
+    summary: "Quand un athlète ouvre ses fiches sur ordinateur, la fiche s'affiche à droite de la liste au lieu de prendre tout l'écran.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Programme › Fiches sur ordinateur : la liste à gauche, la fiche ouverte à droite, avec votre note et les commentaires.",
+          "Sur téléphone, rien ne change : la fiche s'ouvre en plein écran.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-hyrox-fiches-athlete",
     date: "2026-11-12",
     kind: "feature",

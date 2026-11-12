@@ -1357,7 +1357,7 @@ export default function ProgramPage() {
   const [params] = useSearchParams();
   if (params.get("vue") !== "fiches") return <ProgramSessionsView />;
   return (
-    <div className="mx-auto w-full max-w-[480px] font-ui lg:max-w-4xl">
+    <div className="mx-auto w-full max-w-[480px] font-ui lg:max-w-6xl">
       <ProgramHeader />
       <AthleteFichesView />
     </div>

@@ -17,6 +17,8 @@ import type { Doc, FicheCategory } from "@/features/shared/types/fiches";
 import { CATEGORY_COLOR, btnGhost, chip, input, sectionTitle } from "@/features/shared/components/fiches/ficheStyles";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import type { AssignedDoc } from "@/api/docs";
+import { useIsWide } from "@/hooks/useIsWide";
+import { FicheViewer } from "@/features/shared/components/fiches/FicheViewer";
 
 const fmtShort = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
@@ -103,6 +105,7 @@ export function AthleteFichesView() {
   const upload = useUploadDoc();
   const del = useDeleteOwnDoc();
   const viewer = useFicheViewer();
+  const wide = useIsWide();
 
   const [cat, setCat] = useState<FicheCategory | "all">("all");
   const [search, setSearch] = useState("");
@@ -142,8 +145,8 @@ export function AthleteFichesView() {
 
   const unseen = (mine?.assigned ?? []).filter(a => !a.seenAt).length;
 
-  return (
-    <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
+  const list = (
+    <div style={{ padding: wide ? "16px 0 32px" : "16px 16px 32px", display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
       {/* ── Mes fiches ── */}
       <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -248,6 +251,30 @@ export function AthleteFichesView() {
           </div>
         )}
       </section>
+    </div>
+  );
+
+  if (!wide) return list;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 5fr) minmax(0, 7fr)", gap: 24, padding: "0 24px", alignItems: "start" }}>
+      {list}
+      <div style={{ paddingTop: 16 }}>
+        {viewer.openDocId && athleteId ? (
+          <FicheViewer
+            key={viewer.openDocId}
+            inline
+            docId={viewer.openDocId}
+            athleteId={athleteId}
+            viewOnly={viewOnly}
+            onClose={viewer.close}
+            onSwapVariant={viewer.swap}
+          />
+        ) : (
+          <div style={{ borderRadius: 14, border: "1px dashed " + C.brdL, padding: "48px 24px", textAlign: "center", fontSize: 13, color: C.tx3 }}>
+            Choisis une fiche à gauche pour la lire ici.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -20,9 +20,11 @@ interface Props {
   viewOnly?: boolean;
   onClose: () => void;
   onSwapVariant: (docId: string) => void;
+  /** Ordinateur : la fiche s'affiche dans la page, à côté de la liste. */
+  inline?: boolean;
 }
 
-export function FicheViewer({ docId, athleteId, viewOnly, onClose, onSwapVariant }: Props) {
+export function FicheViewer({ docId, athleteId, viewOnly, onClose, onSwapVariant, inline = false }: Props) {
   const { user, profile } = useAuth();
   const { data: doc, isLoading } = useDoc(docId);
   const { data: family = [] } = useDocVariants(doc ? doc.origin_id ?? doc.id : null);
@@ -43,16 +45,20 @@ export function FicheViewer({ docId, athleteId, viewOnly, onClose, onSwapVariant
 
   // Bloque le scroll de la page sous le viewer
   useEffect(() => {
+    if (inline) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
-  }, []);
+  }, [inline]);
 
   // Coach propriétaire du dossier Storage (coach_athlete : son propre dossier)
   const coachId = doc?.coach_id ?? profile?.coach_id ?? user?.id ?? "";
 
   return (
-    <div role="dialog" aria-modal="true" style={{
+    <div role={inline ? "region" : "dialog"} aria-modal={inline ? undefined : true} aria-label={doc?.title ?? "Fiche"} style={inline ? {
+      background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, overflow: "hidden",
+      display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 140px)", position: "sticky", top: 16,
+    } : {
       position: "fixed", inset: 0, zIndex: 250, background: C.bg,
       display: "flex", flexDirection: "column",
     }}>
@@ -61,10 +67,10 @@ export function FicheViewer({ docId, athleteId, viewOnly, onClose, onSwapVariant
         paddingTop: "max(8px, env(safe-area-inset-top))",
         borderBottom: "1px solid " + C.brd, flexShrink: 0,
       }}>
-        <button onClick={onClose} aria-label="Retour" style={{
+        <button onClick={onClose} aria-label={inline ? "Fermer la fiche" : "Retour"} style={{
           minWidth: 44, minHeight: 44, borderRadius: 4, border: "1px solid " + C.brdL,
           background: "transparent", color: C.tx, fontSize: 18, cursor: "pointer", fontFamily: "inherit",
-        }}>←</button>
+        }}>{inline ? "×" : "←"}</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {doc?.title ?? (isLoading ? "Chargement…" : "Fiche indisponible")}
