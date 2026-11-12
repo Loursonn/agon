@@ -23,6 +23,10 @@ import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hooks/useWorkoutSession";
 import { useSaveWorkoutSets } from "@/features/shared/hooks/useSaveWorkoutSets";
 import { loadDraft, clearDraft, workoutDraftKey } from "@/lib/localDraft";
+import { FinishWorkoutSheet } from "@/features/athlete/components/workout/FinishWorkoutSheet";
+import { FocusInputBar } from "@/features/athlete/components/workout/FocusInputBar";
+import { RirAfterSetSheet } from "@/features/athlete/components/workout/RirAfterSetSheet";
+import { firstPendingBloc, nextPendingSet, stepValue, type FocusExercise } from "@/lib/workoutFocus";
 import { formatRepsAt, formatSetsReps, hasIso, isAllIso, isIsoAt } from "@/lib/formatSetsReps";
 import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
 import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
@@ -52,7 +56,7 @@ const FIELD_CFG = {
 
 interface SetState { kg: string; reps: string; rir: string; done: boolean; skipped: boolean; }
 type AllSets = Record<string, SetState[]>;
-interface PadTarget { exId: string; setIdx: number; field: "kg" | "reps" | "rir"; chargeUnit: string; clusterNb?: number; isIso?: boolean; }
+interface PadTarget { exId: string; setIdx: number; field: "kg" | "reps" | "rir"; chargeUnit: string; clusterNb?: number; isIso?: boolean; /** Saisie depuis la zone du bas : ne valide pas la série. */ noAuto?: boolean; }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -1310,6 +1314,8 @@ function ExerciceCard({
                 canRemove={canEdit && i >= params.nb_series}
                 onRemoveSet={canEdit && i >= params.nb_series ? () => onRemoveSet(i) : undefined}
               />
+              {/* Récup : seulement après une série validée (ou passée), entre deux séries */}
+              {(s?.done || s?.skipped || restActiveKey === stripKey) && i < sets.length - 1 && (
               <InlineRestStrip
                 myKey={stripKey}
                 seconds={stripSec}
@@ -1321,6 +1327,7 @@ function ExerciceCard({
                 onStop={onStopRest}
                 canEdit={canEdit}
               />
+              )}
             </div>
           );
         })}
@@ -1778,36 +1785,8 @@ function RestTimer({ left, total, nextInfo, loop, onDismiss }: RestTimerProps) {
   );
 }
 
-// ── FinishDialog ───────────────────────────────────────────────────────────────
-
-interface FinishDialogProps {
-  blocs: WorkoutBlocData[];
-  allSets: AllSets;
-  sessionComment: string;
-  sessionForme: number | undefined;
-  onCommentChange: (c: string) => void;
-  onFormeChange: (f: number) => void;
-  /** Km courus pendant la séance (facultatif, saisie brute) */
-  runKm: string;
-  onRunKmChange: (v: string) => void;
-  onConfirm: () => void;
-  onClose: () => void;
-  completing: boolean;
-}
-
-function FinishDialog({
-  blocs,
-  allSets,
-  sessionComment,
-  sessionForme,
-  onCommentChange,
-  onFormeChange,
-  runKm,
-  onRunKmChange,
-  onConfirm,
-  onClose,
-  completing,
-}: FinishDialogProps) {
+/** Séries faites / passées / prévues de la séance (fin de séance). */
+function countSets(blocs: WorkoutBlocData[], allSets: AllSets) {
   let totalSets = 0, doneSets = 0, skippedSets = 0;
   for (const bloc of blocs) {
     for (const ex of bloc.exercices) {
@@ -1817,213 +1796,7 @@ function FinishDialog({
       skippedSets += exSets.filter((s) => s?.skipped).length;
     }
   }
-
-  const FORME_LABELS = ["1", "2", "3", "4", "5"];
-
-  return (
-    <>
-      <div
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.7)",
-          zIndex: 50,
-        }}
-      />
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 51,
-          background: C.bg,
-          borderRadius: "6px 6px 0 0",
-          padding: "24px 20px 40px",
-          maxWidth: 480,
-          margin: "0 auto",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 18,
-            fontWeight: 900,
-            color: C.tx,
-            textAlign: "center",
-            marginBottom: 14,
-          }}
-        >
-          Terminer la séance ?
-        </div>
-
-        {/* Stats */}
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            justifyContent: "center",
-            marginBottom: 16,
-          }}
-        >
-          <div
-            style={{
-              textAlign: "center",
-              background: C.gS,
-              borderRadius: 6,
-              padding: "8px 16px",
-            }}
-          >
-            <div style={{ fontSize: 20, fontWeight: 900, color: C.g }}>{doneSets}</div>
-            <div style={{ fontSize: 9, color: C.g }}>Séries ok</div>
-          </div>
-          {skippedSets > 0 && (
-            <div
-              style={{
-                textAlign: "center",
-                background: hexToRgba(ACCENT_ALT, 0.1),
-                borderRadius: 6,
-                padding: "8px 16px",
-              }}
-            >
-              <div style={{ fontSize: 20, fontWeight: 900, color: ACCENT_ALT }}>{skippedSets}</div>
-              <div style={{ fontSize: 9, color: ACCENT_ALT }}>Passées</div>
-            </div>
-          )}
-          <div
-            style={{
-              textAlign: "center",
-              background: C.s1,
-              borderRadius: 6,
-              padding: "8px 16px",
-              border: `1px solid ${C.brd}`,
-            }}
-          >
-            <div style={{ fontSize: 20, fontWeight: 900, color: C.tx }}>{totalSets}</div>
-            <div style={{ fontSize: 9, color: C.tx3 }}>Total</div>
-          </div>
-        </div>
-
-        {/* Forme */}
-        <div style={{ marginBottom: 12 }}>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: C.tx3,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              marginBottom: 8,
-            }}
-          >
-            État de forme
-          </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {FORME_LABELS.map((emoji, i) => (
-              <button
-                key={i}
-                onClick={() => onFormeChange(i + 1)}
-                style={{
-                  flex: 1,
-                  padding: "8px 4px",
-                  borderRadius: 4,
-                  border: `1px solid ${sessionForme === i + 1 ? ACCENT : C.brdL}`,
-                  background:
-                    sessionForme === i + 1 ? hexToRgba(ACCENT, 0.15) : C.s2,
-                  fontSize: 18,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  minHeight: 44,
-                }}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Comment */}
-        <textarea
-          value={sessionComment}
-          onChange={(e) => onCommentChange(e.target.value)}
-          placeholder="Comment s'est passée la séance ?"
-          rows={2}
-          style={{
-            width: "100%",
-            background: C.s2,
-            border: `1px solid ${C.brdL}`,
-            borderRadius: 4,
-            padding: "10px 12px",
-            color: C.tx,
-            fontSize: 13,
-            fontFamily: "inherit",
-            outline: "none",
-            resize: "none",
-            boxSizing: "border-box",
-            marginBottom: 12,
-          }}
-        />
-
-        {/* Km courus (échauffement, finisher…) → volume de course */}
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <span style={{ fontSize: 12, color: C.tx2, flex: 1 }}>J'ai couru pendant la séance <span style={{ color: C.tx3 }}>(facultatif)</span></span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={runKm}
-            onChange={(e) => onRunKmChange(e.target.value)}
-            placeholder="0"
-            style={{
-              width: 70, padding: "8px 10px", borderRadius: 4, textAlign: "right",
-              border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx,
-              fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none",
-            }}
-          />
-          <span style={{ fontSize: 12, color: C.tx3 }}>km</span>
-        </label>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={onClose}
-            style={{
-              flex: 1,
-              padding: "12px 0",
-              borderRadius: 6,
-              border: `1px solid ${C.brdL}`,
-              background: "transparent",
-              color: C.tx2,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Continuer
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={completing}
-            style={{
-              flex: 2,
-              padding: "12px 0",
-              borderRadius: 6,
-              border: "none",
-              background: ACCENT,
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: completing ? "default" : "pointer",
-              fontFamily: "inherit",
-              opacity: completing ? 0.7 : 1,
-            }}
-          >
-            {completing ? "Enregistrement…" : "Terminer ✓"}
-          </button>
-        </div>
-      </div>
-    </>
-  );
+  return { doneSets, skippedSets, totalSets };
 }
 
 // ── RPE sheet ──────────────────────────────────────────────────────────────────
@@ -2223,6 +1996,10 @@ export default function WorkoutDetailPage() {
   const [localMods, setLocalMods] = useState<AthleteModifications>({});
   const [padTarget, setPadTarget] = useState<PadTarget | null>(null);
   const [padVal, setPadVal] = useState("");
+  // Mode « un bloc à la fois » + zone de saisie du bas (maquette « Séance en cours »).
+  const [focusMode, setFocusMode] = useState(true);
+  const [focusBloc, setFocusBloc] = useState<number | null>(null);
+  const [rirAsk, setRirAsk] = useState<{ exId: string; setIdx: number; exName: string; target: string | null } | null>(null);
   const [restLeft, setRestLeft] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(REST_DEFAULT);
   const [restNextInfo, setRestNextInfo] = useState<string | null>(null);
@@ -2627,6 +2404,22 @@ export default function WorkoutDetailPage() {
     [prevSets, startRest, stopRest, saveWorkoutSets],
   );
 
+  // ── Changer une valeur sans valider la série (zone du bas, RIR après coup) ──
+  const setSetField = useCallback(
+    (exId: string, setIdx: number, field: "kg" | "reps" | "rir", value: string) => {
+      const prev = setsRef.current;
+      const exSets = [...(prev[exId] ?? [])];
+      while (exSets.length <= setIdx) exSets.push({ ...BLANK_SET });
+      exSets[setIdx] = { ...normalizeSet(exSets[setIdx]), [field]: value };
+      const next = { ...prev, [exId]: exSets };
+      const mods = allSetsToMods(next, localModsRef.current);
+      setSets(next);
+      setLocalMods(mods);
+      saveWorkoutSets(mods);
+    },
+    [saveWorkoutSets],
+  );
+
   // ── Open NumPad ──────────────────────────────────────────────────────────
   const openPad = useCallback(
     (exId: string, setIdx: number, field: "kg" | "reps" | "rir", chargeUnit: string, clusterNb?: number, isIso?: boolean) => {
@@ -2642,6 +2435,12 @@ export default function WorkoutDetailPage() {
     (value: string) => {
       if (!padTarget) return;
       const { exId, setIdx, field } = padTarget;
+      if (padTarget.noAuto) {
+        setSetField(exId, setIdx, field, value);
+        setPadTarget(null);
+        setPadVal("");
+        return;
+      }
 
       const prev = setsRef.current;
       const exSets = [...(prev[exId] ?? [])];
@@ -2679,7 +2478,7 @@ export default function WorkoutDetailPage() {
       setPadTarget(null);
       setPadVal("");
     },
-    [padTarget, prevSets, saveWorkoutSets],
+    [padTarget, prevSets, saveWorkoutSets, setSetField],
   );
 
   // ── Add bonus set ────────────────────────────────────────────────────────
@@ -2895,6 +2694,19 @@ export default function WorkoutDetailPage() {
     return rows.length > 0 && rows.every((s) => s.done || s.skipped);
   }, [sets]);
 
+  // ── Mode « un bloc à la fois » ─────────────────────────────────────────
+  const focusBlocs = useMemo<FocusExercise[][]>(
+    () => workout.blocs.map((b) => b.exercices.map((e) => ({
+      id: e.id,
+      supersetWithNext: !!e.superset_with_next,
+      skip: e.mode === "libre" || !!e.params?.cluster,
+      nbSets: e.mode === "libre" ? 1 : (e.params?.nb_series ?? 0),
+    }))),
+    [workout.blocs],
+  );
+  const autoBloc = useMemo(() => firstPendingBloc(focusBlocs, sets), [focusBlocs, sets]);
+  const activeBloc = Math.min(focusBloc ?? autoBloc, Math.max(0, workout.blocs.length - 1));
+
   // ── Early returns ────────────────────────────────────────────────────────
   if (workout.isLoading) {
     return (
@@ -2930,8 +2742,40 @@ export default function WorkoutDetailPage() {
     );
   }
 
+  const focusOn = canEdit && focusMode && workout.blocs.length > 0;
+  const focus = (() => {
+    if (!focusOn) return null;
+    const bloc = workout.blocs[activeBloc];
+    if (!bloc) return null;
+    const pend = nextPendingSet(focusBlocs[activeBloc] ?? [], sets);
+    const restSec = blocRestSeconds(bloc);
+    const letter = String.fromCharCode(65 + activeBloc);
+    const blocLabel = bloc.name && bloc.name.trim() !== letter ? `${letter} · ${bloc.name}` : `Bloc ${letter}`;
+    if (!pend) return { bloc, blocLabel, restSec, pending: null as null };
+    const exIdx = bloc.exercices.findIndex((e) => e.id === pend.exId);
+    const ex = bloc.exercices[exIdx];
+    const isSS = pend.chain.length > 1;
+    const lastOfChain = bloc.exercices.findIndex((e) => e.id === pend.chain[pend.chain.length - 1]);
+    const after = isSS ? bloc.exercices[lastOfChain + 1] : bloc.exercices[exIdx + 1];
+    const st = normalizeSet((sets[ex.id] ?? [])[pend.setIdx]);
+    const prevStr = prevSets[ex.id]?.[pend.setIdx] ?? "";
+    return {
+      bloc, blocLabel, restSec,
+      pending: {
+        ex, setIdx: pend.setIdx, chain: isSS ? pend.chain : [],
+        nextInfo: after ? after.exercise_name : null,
+        kg: st.kg || (prevStr ? parsePrevVal(prevStr, "kg") : ""),
+        reps: st.reps || (prevStr ? parsePrevVal(prevStr, "reps") : ""),
+        rir: st.rir,
+        iso: isIsoAt(ex.params, pend.setIdx),
+        ssTag: isSS ? `Superset · ex. ${pend.chain.indexOf(ex.id) + 1} / ${pend.chain.length}` : undefined,
+      },
+    };
+  })();
+  const fmtRest = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}` : `${sec} s`);
+
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 140, scrollbarWidth: "none" }}>
+    <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: focusOn ? 300 : 140, scrollbarWidth: "none" }}>
       {/* ── Header ── */}
       <div
         style={{
@@ -3069,6 +2913,16 @@ export default function WorkoutDetailPage() {
           gap: 16,
         }}
       >
+        {canEdit && !focusMode && workout.blocs.length > 0 && (
+          <button
+            type="button"
+            onClick={() => { setFocusMode(true); window.scrollTo(0, 0); }}
+            style={{ alignSelf: "flex-start", background: "none", border: "1px solid " + C.brdL, borderRadius: 10, height: 36, padding: "0 12px", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Un bloc à la fois
+          </button>
+        )}
+
         {/* Fiches de la séance (variante de la semaine) */}
         <FicheLinks
           title="Fiches de la séance"
@@ -3092,6 +2946,7 @@ export default function WorkoutDetailPage() {
           </div>
         ) : (
           workout.blocs.map((bloc, blocIdx) => {
+            if (focusOn && blocIdx !== activeBloc) return null;
             const bColor = blocColor(bloc.color, blocIdx);
             const timing = timingLabel(bloc);
             const restSec = blocRestSeconds(bloc);
@@ -3482,8 +3337,62 @@ export default function WorkoutDetailPage() {
         </div>
       )}
 
+      {/* ── Zone de saisie « Un pouce » (mode un bloc à la fois) ── */}
+      {focusOn && focus && (
+        <FocusInputBar
+          blocLabel={focus.blocLabel}
+          blocIndex={activeBloc}
+          blocCount={workout.blocs.length}
+          onPrev={() => { setFocusBloc(Math.max(0, activeBloc - 1)); window.scrollTo(0, 0); }}
+          onNext={() => { setFocusBloc(Math.min(workout.blocs.length - 1, activeBloc + 1)); window.scrollTo(0, 0); }}
+          pending={focus.pending ? {
+            exName: focus.pending.ex.exercise_name,
+            setNumber: focus.pending.setIdx + 1,
+            setCount: Math.max(focus.pending.ex.params.nb_series ?? 0, (sets[focus.pending.ex.id] ?? []).length),
+            kg: focus.pending.kg,
+            reps: focus.pending.reps,
+            unit: focus.pending.ex.params.charge_unit === "kg" ? "kg" : focus.pending.ex.params.charge_unit === "%RM" ? "%" : "",
+            isIso: focus.pending.iso,
+            supersetTag: focus.pending.ssTag,
+          } : null}
+          kgStep={2.5}
+          onKgStep={(d) => { const p = focus.pending; if (p) { haptic(); setSetField(p.ex.id, p.setIdx, "kg", stepValue(p.kg, d)); } }}
+          onRepsStep={(d) => { const p = focus.pending; if (p) { haptic(); setSetField(p.ex.id, p.setIdx, "reps", stepValue(p.reps, d)); } }}
+          onKgTap={() => { const p = focus.pending; if (p) { setPadTarget({ exId: p.ex.id, setIdx: p.setIdx, field: "kg", chargeUnit: p.ex.params.charge_unit, isIso: p.iso, noAuto: true }); setPadVal(p.kg); } }}
+          onRepsTap={() => { const p = focus.pending; if (p) { setPadTarget({ exId: p.ex.id, setIdx: p.setIdx, field: "reps", chargeUnit: p.ex.params.charge_unit, isIso: p.iso, noAuto: true }); setPadVal(p.reps); } }}
+          onValidate={() => {
+            const p = focus.pending;
+            if (!p) return;
+            haptic();
+            const st = normalizeSet((sets[p.ex.id] ?? [])[p.setIdx]);
+            // Valeurs affichées (pré-remplies) écrites avant la validation.
+            if (!st.kg && p.kg) setSetField(p.ex.id, p.setIdx, "kg", p.kg);
+            if (!st.reps && p.reps) setSetField(p.ex.id, p.setIdx, "reps", p.reps);
+            toggleAndPersist(p.ex.id, p.setIdx, focus.restSec, p.nextInfo, focus.bloc.timing_mode, focus.bloc.id, focus.bloc.exercices.map((e) => e.id), undefined, p.chain);
+            if (!p.iso) setRirAsk({ exId: p.ex.id, setIdx: p.setIdx, exName: p.ex.exercise_name, target: p.rir || null });
+          }}
+          restLabel={focus.restSec > 0 && focus.bloc.timing_mode !== "depart" ? `Lance la récup de ${fmtRest(focus.restSec)}` : null}
+          rest={restLeft !== null ? { left: restLeft, total: restTotal, next: restNextInfo, onStop: stopRest } : null}
+          allDone={allSetsHandled}
+          onFinish={() => setShowFinish(true)}
+          onShowAll={() => setFocusMode(false)}
+        />
+      )}
+
+      {/* ── RIR après « Valider série » ── */}
+      {rirAsk && (
+        <RirAfterSetSheet
+          exName={rirAsk.exName}
+          setNumber={rirAsk.setIdx + 1}
+          target={rirAsk.target}
+          value={normalizeSet((sets[rirAsk.exId] ?? [])[rirAsk.setIdx]).rir}
+          onPick={(v) => { setSetField(rirAsk.exId, rirAsk.setIdx, "rir", v); setRirAsk(null); }}
+          onSkip={() => setRirAsk(null)}
+        />
+      )}
+
       {/* ── Sticky "Terminer" button ── */}
-      {canEdit && (
+      {canEdit && !focusOn && (
         <div
           style={{
             position: "fixed",
@@ -3550,8 +3459,8 @@ export default function WorkoutDetailPage() {
         />
       ) : null}
 
-      {/* ── Rest timer ── */}
-      {restLeft !== null && (
+      {/* ── Rest timer (dans la zone du bas en mode un bloc à la fois) ── */}
+      {restLeft !== null && !focusOn && (
         <RestTimer
           left={restLeft}
           total={restTotal}
@@ -3590,11 +3499,10 @@ export default function WorkoutDetailPage() {
 
       {/* ── Finish dialog ── */}
       {showFinish && (
-        <FinishDialog
-          blocs={workout.blocs}
-          allSets={sets}
-          sessionComment={localMods.sessionComment ?? ""}
-          sessionForme={localMods.sessionForme}
+        <FinishWorkoutSheet
+          {...countSets(workout.blocs, sets)}
+          comment={localMods.sessionComment ?? ""}
+          forme={localMods.sessionForme}
           onCommentChange={updateSessionComment}
           onFormeChange={updateForme}
           runKm={runKm}

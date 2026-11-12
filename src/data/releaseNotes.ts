@@ -38,6 +38,26 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-seance-en-cours",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Séance en cours : un bloc à la fois, saisie au pouce",
+    summary: "Pendant la séance, l'athlète voit un seul bloc et saisit chaque série depuis une zone en bas de l'écran, avec la récup qui démarre seule.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Un seul bloc à l'écran ; les flèches passent au bloc précédent ou suivant. « Toute la séance » réaffiche tout, comme avant.",
+          "En bas : la série à faire, charge et répétitions déjà remplies avec ce que vous avez prescrit, boutons − / + et un gros bouton « Valider la série ».",
+          "Après chaque série validée, il indique combien de répétitions il avait encore en réserve (0 à 4+, au demi près) ; votre consigne est entourée d'or. Il peut passer.",
+          "La récup se lance seule, seulement après une série validée, avec un compte à rebours dans la même zone.",
+          "En superset, la zone enchaîne exercice 1 puis exercice 2 avant la récup.",
+          "La fin de séance montre la part des séries faites, la forme du jour, un mot pour vous et les km courus.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-programme-athlete-semaine",
     date: "2026-11-12",
     kind: "feature",
