@@ -1741,3 +1741,72 @@ Avant de lancer un test, vérifier `grep -n "^ROLLBACK;" <fichier>`.
 - **Garanties** : `ai_allowed=false` imposé ; écriture service_role seulement ; l'athlète lit ses lignes (export RGPD) ; retrait de permission, désinscription, déconnexion et suppression de compte effacent lignes et fichiers.
 - **Fichiers .FIT** : URL de rappel valable 24 h, un seul téléchargement (410 ensuite) ; jamais stockée (porte un jeton).
 - **Capacité** : plan Supabase gratuit (500 Mo base, 1 Go Storage). Storage saturera en premier (~4 mois à 50 athlètes). Alerte hebdomadaire locale (tâche `alerte-capacite-supabase`) ; passage Pro à décider quand elle sonne.
+
+## 2026-11-12 — Séances de montre et santé rangées en tables (P41)
+
+**Choix validés par Hugo (Q1-Q8, 2026-11-11)** :
+- Séries seconde par seconde : **une ligne par activité** avec des tableaux
+  (`activity_streams`), pas une ligne par seconde. Tours (`activity_laps`) et
+  séries de muscu (`activity_sets`) en lignes.
+- Zones FC : table dédiée `hr_zone_models` (modèle `five` lu dans les
+  références `FCzone_*`, `three` = SV1 / SV2, `custom`), bornes **datées** : une
+  séance utilise les bornes valides à sa date. Temps par zone calculé en TS
+  (`domain/hrZones.ts`), résumé stocké (`activity_zone_summaries`) pour le
+  planning.
+- Toutes les séries de la journée sont gardées (`provider_intraday`).
+- Export de compte Garmin (lot H, à venir) : source `garmin_export`, exclue de
+  l'IA, gardée à la déconnexion ; le push l'emporte sur l'export.
+- Poids Garmin (`bodyComps`) : reste à part, n'alimente pas le suivi de poids.
+- HYROX : WOD et Classique ; stations dans la banque `exercises`.
+
+**Calculs** :
+- D+ / D− : altitude lissée ±2 s puis hystérésis 1 m. Calibré sur un FIT de
+  course d'Hugo (6 tours) : 0,17 m d'écart moyen par tour avec la montre ;
+  séance D+ 4 / D− 3 contre 5 / 4. Variante pic à pic écartée (1,25 m).
+- Allure max : vitesses plausibles seulement (12,5 m/s à pied, 40 m/s sinon,
+  sauts > 4 m/s écartés) ; = la montre sur le fichier de calibration.
+- Tour identique à un tour de la montre (±1 s) : valeurs de la montre ;
+  sinon calculées par Agon. Station HYROX : pas d'allure.
+- Écart de plus de 10 s entre deux points : compté « sans FC », pas dans une
+  zone.
+- Séries de la journée : décalages en secondes **depuis minuit local** du jour
+  (négatifs pour le coucher de la veille). Nuit datée au jour du réveil.
+- Affichage : série allégée à ≤ 3 000 points, min / max par seau (pics
+  conservés) ; la série complète reste chargée pour recalculer les tours.
+
+**Rapprochement planning** : calculé en base (`auto_link_day`, triggers
+protégés qui n'écrivent que dans `activity_plan_links`). Familles : muscu =
+`strength` ; HYROX accepte HYROX, course, renfo, rameur ; séance « Autre » ou
+sans sport jamais rapprochée automatiquement. Une séance rapprochée n'est
+jamais supprimée par une opération de planification.
+
+### Choix pris de nuit, à relire (11 → 12/11)
+
+1. **Test global « Seuils ventilatoires (FC) »** (id `…00f1`, variables
+   `sv1_hr` / `sv2_hr`) créé : les préréglages SV1/SV2 évoqués en 2026-04
+   n'existaient pas en prod. Il apparaît dans la banque de **tous** les coachs.
+2. Série stockée uniquement pour les fichiers isolés (une activité = une
+   série) ; activité multisport : première séance seulement.
+3. Message FIT `user_profile` ignoré (données personnelles inutiles).
+4. Staff : lecture des séances via le droit `seances`.
+5. Fin de tour FIT = début + durée quand l'horodatage du tour vaut son début
+   (bug de certaines montres) — 9 tours corrigés au rattrapage.
+6. Exercices publics ajoutés : SkiErg, Sled Pull, Course (stations HYROX
+   manquantes).
+7. Brut rangé dans `provider_dailies.raw` allégé (sans les grandes séries,
+   déjà dans `provider_raw_records` et `provider_intraday`).
+8. `provider_daily_merge` : liste blanche de colonnes (`provider_daily_columns()`),
+   clé inconnue ignorée.
+9. Démo : `scripts/seed-demo-montre.mjs` (additif) ajoute à Léa Démo une
+   course, une séance HYROX, des zones FC et 7 jours de santé fictifs.
+
+**Écritures en prod de la nuit** (toutes additives, test à blanc puis lecture) :
+migrations 20261112090000 (détail des activités), 20261112100000 (zones),
+20261112110000 (édition des tours), 20261112120000 (rapprochement planning),
+20261112130000 (exercices HYROX), 20261112140000 (santé Garmin) ; rattrapage
+du détail des activités (8 activités) ; Edge Functions provider-garmin-webhook,
+provider-garmin-maintenance, provider-coros-sync redéployées ; démo Léa Démo.
+
+**En attente d'Hugo** : `node scripts/backfill-garmin-health.mjs --apply`
+(rattrapage santé : met à jour des lignes existantes de `provider_dailies` ;
+à blanc : 1 697 résumés, 5 518 séries, 0 erreur) ; lot H (export Garmin).

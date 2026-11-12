@@ -440,3 +440,31 @@ Lu : Start Guide 2.0, OAuth2 PKCE 2.0, Health API 2.1, Activity API 2.1
 
 Reste à confirmer au premier essai : acceptation de `?token=` dans l'URL du
 portail.
+
+### Types de résumé : où ils vont dans Agon (P41, 12/11/2026)
+
+Tout ce que Garmin pousse est d'abord stocké brut (`provider_raw_records`),
+puis rangé :
+
+| Type (API Tools) | Activé | Rangé dans |
+|---|---|---|
+| Activities, Manually updated activities | oui | `provider_activities` |
+| Activity Details, Activity Files (.FIT) | oui | `activity_streams`, `activity_laps`, `activity_sets` |
+| Move IQ | oui | `provider_moveiq` (hors planning) |
+| Dailies | oui | `provider_dailies` + série `hr` |
+| Sleeps | oui | `provider_dailies` (phases, horaires, sous-scores) + séries `sleep_stage`, `sleep_respiration`, `sleep_spo2` |
+| HRV | oui | `provider_dailies` (`hrv_ms`, `hrv_peak_5min_ms`) + série `hrv` |
+| Stress Details | oui | séries `stress`, `body_battery` (min / max du jour calculés) |
+| All-day Respiration | oui | série `respiration` (moyenne du jour) |
+| Pulse Ox | oui | série `spo2` (moyenne / minimum du jour) |
+| Epochs | oui | séries `steps`, `distance`, `active_kcal`, `met`, `intensity` |
+| Skin Temperature | oui | `skin_temp_delta_c` |
+| User Metrics | oui | `vo2max`, `vo2max_cycling`, `fitness_age` |
+| Hydration | oui | `hydration_ml` |
+| **Body Compositions** | **à activer** | `weight_kg`, `body_fat_pct`, `bmi`, masses (à part du suivi de poids d'Agon) |
+| **Blood Pressure** | **à activer** | `bp_systolic`, `bp_diastolic`, `bp_pulse` |
+| Health Snapshot, Nutrition, Breathing Variations | facultatif | brut seulement (pas encore rangé) |
+
+Toutes ces données : `ai_allowed = false`, supprimées au retrait de la
+permission `HEALTH_EXPORT` (ou `ACTIVITY_EXPORT` pour Move IQ), à la
+désinscription et à la déconnexion, exportées dans l'export RGPD.
