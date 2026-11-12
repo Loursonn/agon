@@ -90,3 +90,41 @@ export function paceFrom(distanceM: number | null, durationS: number | null): nu
   if (!distanceM || !durationS || distanceM < 100) return null;
   return Math.round((durationS / (distanceM / 1000)) * 100) / 100;
 }
+
+/**
+ * Qualité de la courbe d'origine d'une sortie, de la meilleure à la moins
+ * bonne : FIT (fichier de la montre) > TCX > GPX > résumé seul (ligne CSV,
+ * saisie à la main). Une série de meilleure qualité remplace une moins bonne,
+ * jamais l'inverse (décision P42 du 2026-11-12). Même ordre en base
+ * (`origin_quality_rank`).
+ */
+export type OriginQuality = "fit" | "tcx" | "gpx" | "summary";
+
+export const ORIGIN_QUALITY_RANK: Record<OriginQuality, number> = { summary: 0, gpx: 1, tcx: 2, fit: 3 };
+
+/** Qualité d'une activité décodée, d'après le format lu. */
+export function qualityOf(act: ParsedActivity): OriginQuality {
+  const f = (act.raw as { format?: unknown } | null)?.format;
+  return f === "fit" || f === "tcx" || f === "gpx" ? f : "summary";
+}
+
+/**
+ * Ce que l'athlète a écrit dans Strava, et que la montre ne sait pas. Champs
+ * texte affichés tels quels : une donnée, jamais une instruction.
+ */
+export interface ActivityExtras {
+  title: string | null;
+  description: string | null;
+  /** Effort ressenti Strava 1-10. L'RPE saisi dans Agon l'emporte toujours. */
+  rpe: number | null;
+  gear: string | null;
+  commute: boolean | null;
+  /** Identifiant Strava : un ré-import de la même archive ne crée rien. */
+  stravaActivityId: string | null;
+}
+
+/** Activité prête à être fusionnée en base (`merge_provider_activity`). */
+export interface ImportActivity extends ParsedActivity {
+  quality: OriginQuality;
+  extras: ActivityExtras | null;
+}

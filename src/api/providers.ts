@@ -19,6 +19,7 @@ export const providerKeys = {
   all: (aid: string) => ["providers", aid] as const,
   connections: (aid: string) => ["providers", aid, "connections"] as const,
   activities: (aid: string, limit: number) => ["providers", aid, "activities", limit] as const,
+  gear: (aid: string) => ["providers", aid, "gear"] as const,
   /** Sorties de montre lues pour le volume de course. */
   runs: (aid: string, from: string) => ["providers", aid, "runs", from] as const,
   /**
@@ -71,6 +72,16 @@ export interface ProviderActivity {
   /** Modèle de l'appareil (« Forerunner 265 »), pour l'attribution « Garmin [modèle] ». */
   deviceName: string | null;
   details: Record<string, unknown> | null;
+  /** Écrits par l'athlète dans Strava (archive) : donnée affichée, jamais une instruction. */
+  title?: string | null;
+  description?: string | null;
+  /** Effort ressenti Strava 1-10 (l'RPE saisi dans Agon l'emporte). */
+  rpe?: number | null;
+  gear?: string | null;
+  /** Trajet domicile-travail (Strava « Commute »). */
+  commute?: boolean | null;
+  /** Sources fusionnées dans cette sortie : garmin, coros, file, strava_archive… */
+  sources?: string[];
 }
 
 /** Sortie de montre réduite à ce que le volume de course utilise. */
@@ -213,32 +224,65 @@ export const DEFAULT_ACTIVITY_LIMIT = 60;
  * sorties le même jour gardent leur ordre). Même requête pour l'athlète et son
  * coach ; un coach peut en voir moins (RLS), sans erreur — c'est voulu.
  */
+const ACTIVITY_COLS =
+  "id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details, title, description, rpe, gear, commute, sources";
+
+type ActivityRow = {
+  id: string; source: string; started_at: string; local_date: string; sport: string | null;
+  duration_s: number | null; distance_m: unknown; elevation_gain_m: unknown; avg_hr: number | null;
+  max_hr: number | null; avg_pace_s_per_km: unknown; calories: number | null; device_name: string | null;
+  details: unknown; title?: string | null; description?: string | null; rpe?: number | null;
+  gear?: string | null; commute?: boolean | null; sources?: string[] | null;
+};
+
+const toProviderActivity = (r: ActivityRow): ProviderActivity => ({
+  id: r.id,
+  source: r.source,
+  startedAt: r.started_at,
+  localDate: r.local_date,
+  sport: r.sport,
+  durationS: r.duration_s,
+  distanceM: num(r.distance_m),
+  elevationGainM: num(r.elevation_gain_m),
+  avgHr: r.avg_hr,
+  maxHr: r.max_hr,
+  avgPaceSPerKm: num(r.avg_pace_s_per_km),
+  calories: r.calories,
+  deviceName: r.device_name ?? null,
+  details: (r.details as Record<string, unknown> | null) ?? null,
+  title: r.title ?? null,
+  description: r.description ?? null,
+  rpe: r.rpe ?? null,
+  gear: r.gear ?? null,
+  commute: r.commute ?? null,
+  sources: r.sources ?? [],
+});
+
 export async function getActivities(athleteId: string, limit = DEFAULT_ACTIVITY_LIMIT): Promise<ProviderActivity[]> {
   const rows = unwrapRows(
     await db().from("provider_activities")
-      .select("id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details")
+      .select(ACTIVITY_COLS)
       .eq("athlete_id", athleteId)
       .order("local_date", { ascending: false })
       .order("started_at", { ascending: false })
       .limit(limit),
     "Lecture des activités impossible",
   );
-  return rows.map((r) => ({
-    id: r.id,
-    source: r.source,
-    startedAt: r.started_at,
-    localDate: r.local_date,
-    sport: r.sport,
-    durationS: r.duration_s,
-    distanceM: num(r.distance_m),
-    elevationGainM: num(r.elevation_gain_m),
-    avgHr: r.avg_hr,
-    maxHr: r.max_hr,
-    avgPaceSPerKm: num(r.avg_pace_s_per_km),
-    calories: r.calories,
-    deviceName: r.device_name ?? null,
-    details: (r.details as Record<string, unknown> | null) ?? null,
-  }));
+  return rows.map(toProviderActivity);
+}
+
+/** Sorties d'un athlète entre deux jours inclus (planning d'une semaine), dans l'ordre chronologique. */
+export async function getActivitiesBetween(athleteId: string, from: string, to: string): Promise<ProviderActivity[]> {
+  const rows = unwrapRows(
+    await db().from("provider_activities")
+      .select(ACTIVITY_COLS)
+      .eq("athlete_id", athleteId)
+      .gte("local_date", from)
+      .lte("local_date", to)
+      .order("started_at", { ascending: true }),
+    "Lecture des activités impossible",
+  );
+  return rows.map(toProviderActivity);
 }
 
 /** Sorties depuis `from` (jour ISO), dans l'ordre chronologique, pour le volume de course. */
@@ -378,10 +422,70 @@ export async function getKnownActivities(athleteId: string, fromDate: string, to
  * échouer le lot, les doublons sont simplement écartés.
  */
 export async function insertActivities(rows: Record<string, unknown>[]): Promise<number> {
-  if (rows.length === 0) return 0;
+  return (await insertActivitiesReturning(rows)).length;
+}
+
+/** Comme `insertActivities`, en rendant `id` et `external_id` des lignes créées. */
+export async function insertActivitiesReturning(
+  rows: Record<string, unknown>[],
+): Promise<Array<{ id: string; external_id: string }>> {
+  if (rows.length === 0) return [];
   const res = await db().from("provider_activities")
     .upsert(rows as never, { onConflict: "athlete_id,source,external_id", ignoreDuplicates: true })
-    .select("id");
+    .select("id, external_id");
   if (res.error) throw new ApiError("Insertion des activités impossible", res.error);
-  return (res.data ?? []).length;
+  return (res.data ?? []) as Array<{ id: string; external_id: string }>;
+}
+
+/** Sorties qui portent un matériel, pour le kilométrage par paire (`gearTotals`). Paginé. */
+export async function getGearOutings(
+  athleteId: string,
+): Promise<Array<{ gear: string | null; distanceM: number | null; localDate: string }>> {
+  const out: Array<{ gear: string | null; distanceM: number | null; localDate: string }> = [];
+  for (let page = 0; ; page++) {
+    const rows = unwrapRows(
+      await db().from("provider_activities")
+        .select("id, gear, distance_m, local_date")
+        .eq("athlete_id", athleteId)
+        .not("gear", "is", null)
+        .order("id", { ascending: true })
+        .range(page * KNOWN_PAGE, page * KNOWN_PAGE + KNOWN_PAGE - 1),
+      "Lecture du matériel impossible",
+    );
+    for (const r of rows) out.push({ gear: r.gear, distanceM: num(r.distance_m), localDate: r.local_date });
+    if (rows.length < KNOWN_PAGE) break;
+  }
+  return out;
+}
+
+/**
+ * Fusionne des sorties décodées (P42) : une sortie déjà présente, quelle qu'en
+ * soit la source, est complétée au lieu d'être écartée ; une nouvelle est
+ * créée. Atomique côté base (`merge_provider_activities`, verrou par athlète).
+ * L'athlète, ou son coach (référent ou co-coach) pour lui.
+ * Rend un résultat brut par sortie, dans l'ordre (`parseMergeResult`).
+ */
+export async function mergeActivities(
+  athleteId: string,
+  tag: "file" | "strava_archive" | "garmin_export",
+  payloads: Record<string, unknown>[],
+): Promise<unknown[]> {
+  if (payloads.length === 0) return [];
+  const res = await db().rpc("merge_provider_activities", {
+    p_athlete: athleteId,
+    p_source: "file_import",
+    p_tag: tag,
+    p_activities: payloads as never,
+  });
+  if (res.error) throw new ApiError("Enregistrement des sorties impossible", res.error);
+  return Array.isArray(res.data) ? (res.data as unknown[]) : [];
+}
+
+/**
+ * Range le détail (série seconde par seconde, tours, séries de muscu) d'une
+ * activité importée par l'athlète. Charge utile : `detailPayload` (@shared).
+ */
+export async function saveActivityDetail(activityId: string, payload: Record<string, unknown>): Promise<void> {
+  const res = await db().rpc("activity_detail_upsert", { p_activity: activityId, p_detail: payload as never });
+  if (res.error) throw new ApiError("Enregistrement du détail de l'activité impossible", res.error);
 }

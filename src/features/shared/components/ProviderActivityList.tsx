@@ -17,6 +17,7 @@ import {
   type ProviderActivity,
 } from "@/features/shared/hooks/useProviderActivities";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
+import { useGearTotals } from "@/features/shared/hooks/useGearTotals";
 
 /**
  * Sorties remontées par une montre ou importées depuis un fichier.
@@ -124,6 +125,7 @@ function Ligne({
   if (a.elevationGainM !== null) mesures.push({ label: "D+", valeur: formatElevation(a.elevationGainM) });
   if (a.avgHr !== null || a.maxHr !== null) mesures.push({ label: "FC", valeur: formatHr(a.avgHr, a.maxHr) });
   if (a.calories !== null) mesures.push({ label: "kcal", valeur: String(a.calories) });
+  if (a.rpe != null) mesures.push({ label: "RPE", valeur: `${a.rpe}/10` });
 
   return (
     <div style={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 4, overflow: "hidden" }}>
@@ -144,8 +146,14 @@ function Ligne({
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {sportLabel(a.sport)}
+            {a.title ?? sportLabel(a.sport)}
+            {a.title && <span style={{ fontWeight: 400, color: C.tx3 }}> · {sportLabel(a.sport)}</span>}
           </span>
+          {a.commute && (
+            <span style={{ fontSize: 9, color: C.tx3, border: "1px solid " + C.brd, borderRadius: 8, padding: "1px 6px", flexShrink: 0 }}>
+              Trajet
+            </span>
+          )}
           <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
             {formatActivityDate(a.localDate)}
           </span>
@@ -194,6 +202,19 @@ function Ligne({
             })}
           </div>
 
+          {a.description && (
+            <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{a.description}</div>
+          )}
+          {a.gear && (
+            <div style={{ fontSize: 11, color: C.tx2 }}>
+              <span style={{ color: C.tx3 }}>Matériel : </span>
+              {a.gear}
+            </div>
+          )}
+          {a.sources && a.sources.includes("strava_archive") && (
+            <div style={{ fontSize: 10, color: C.tx3 }}>Complétée par l'archive Strava de l'athlète</div>
+          )}
+
           {provenances.length > 0 ? (
             <>
               <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>D'où viennent ces chiffres</div>
@@ -231,7 +252,8 @@ export function ProviderActivitySummary({
   semaines?: number;
 }) {
   const { data: activities } = useProviderActivities(athleteId, { limit: 200 });
-  if (!activities || activities.length === 0) return null;
+  // Historique importé sans sortie récente : le matériel reste affiché.
+  if (!activities || activities.length === 0) return <GearTotals athleteId={athleteId} />;
 
   const depuis = new Date();
   depuis.setDate(depuis.getDate() - semaines * 7);
@@ -252,7 +274,7 @@ export function ProviderActivitySummary({
     parSport.set(clef, acc);
   }
 
-  if (parSport.size === 0) return null;
+  if (parSport.size === 0) return <GearTotals athleteId={athleteId} />;
 
   const lignes = [...parSport.entries()].sort((a, b) => b[1].durationS - a[1].durationS);
 
@@ -272,6 +294,27 @@ export function ProviderActivitySummary({
       <div style={{ fontSize: 10, color: C.tx3 }}>
         Sources : {[...provenances].sort().join(", ")}
       </div>
+      <GearTotals athleteId={athleteId} />
+    </div>
+  );
+}
+
+/** Kilométrage par matériel (chaussures, vélo), d'après le matériel noté sur les sorties. */
+function GearTotals({ athleteId }: { athleteId: string | undefined }) {
+  const { data } = useGearTotals(athleteId);
+  if (!data || data.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+      <div style={{ fontSize: 10, color: C.tx3 }}>Matériel (km cumulés)</div>
+      {data.slice(0, 8).map((g) => (
+        <div key={g.name} style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: 11 }}>
+          <span style={{ color: C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {g.name}
+          </span>
+          <span style={{ color: C.tx2 }}>{g.outings} sortie{g.outings > 1 ? "s" : ""}</span>
+          <span style={{ color: C.tx2 }}>{g.distanceM > 0 ? formatDistance(g.distanceM) : "—"}</span>
+        </div>
+      ))}
     </div>
   );
 }

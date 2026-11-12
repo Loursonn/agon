@@ -32,6 +32,17 @@ function seed() {
 afterEach(() => setDbForTests(null));
 
 describe("deletePlannedWorkouts", () => {
+  it("garde une séance prévue rattachée à une activité de montre", async () => {
+    const { db, tables } = fakeDb(
+      { microcycles: [{ id: "m1" }], workout_logs: [log("prevue", {}), log("liee", {})] },
+      undefined,
+      { linked_planned_ids: (args) => (args.p_ids as string[]).filter((id) => id === "liee") },
+    );
+    setDbForTests(db);
+    await deletePlannedWorkouts({ microcycleIds: ["m1"] });
+    expect(tables.workout_logs.map((r) => r.id)).toEqual(["liee"]);
+  });
+
   it("par semaine : ne retire que les séances prévues sans trace de l'athlète", async () => {
     const { db, tables } = seed();
     setDbForTests(db);
@@ -55,7 +66,7 @@ describe("deletePlannedWorkouts", () => {
   });
 
   it("lève une erreur lisible si la base refuse", async () => {
-    const { db } = fakeDb({ workout_logs: [] }, { table: "workout_logs", op: "delete" });
+    const { db } = fakeDb({ workout_logs: [log("prevue", {})] }, { table: "workout_logs", op: "delete" });
     setDbForTests(db);
     await expect(deletePlannedWorkouts({ microcycleIds: ["m1"] })).rejects.toThrow(/Suppression des séances prévues impossible/);
   });

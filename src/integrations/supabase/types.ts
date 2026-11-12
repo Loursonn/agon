@@ -66,6 +66,449 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_laps: {
+        Row: {
+          activity_id: string
+          ai_allowed: boolean
+          athlete_id: string
+          created_at: string
+          distance_override_m: number | null
+          end_s: number
+          exercise_id: string | null
+          id: string
+          load_kg: number | null
+          name: string | null
+          needs_review: boolean
+          origin: string
+          planned_block_ref: string | null
+          position: number
+          reps: number | null
+          source: Database["public"]["Enums"]["data_source"]
+          start_s: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          ai_allowed?: boolean
+          athlete_id: string
+          created_at?: string
+          distance_override_m?: number | null
+          end_s: number
+          exercise_id?: string | null
+          id?: string
+          load_kg?: number | null
+          name?: string | null
+          needs_review?: boolean
+          origin: string
+          planned_block_ref?: string | null
+          position: number
+          reps?: number | null
+          source: Database["public"]["Enums"]["data_source"]
+          start_s: number
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          ai_allowed?: boolean
+          athlete_id?: string
+          created_at?: string
+          distance_override_m?: number | null
+          end_s?: number
+          exercise_id?: string | null
+          id?: string
+          load_kg?: number | null
+          name?: string | null
+          needs_review?: boolean
+          origin?: string
+          planned_block_ref?: string | null
+          position?: number
+          reps?: number | null
+          source?: Database["public"]["Enums"]["data_source"]
+          start_s?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_laps_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_laps_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_laps_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_laps_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_plan_links: {
+        Row: {
+          activity_id: string
+          ai_allowed: boolean
+          athlete_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          cost: number | null
+          created_at: string
+          id: string
+          local_date: string
+          planned_id: string
+          planned_kind: string
+          source: Database["public"]["Enums"]["data_source"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          ai_allowed?: boolean
+          athlete_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          cost?: number | null
+          created_at?: string
+          id?: string
+          local_date: string
+          planned_id: string
+          planned_kind: string
+          source: Database["public"]["Enums"]["data_source"]
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          ai_allowed?: boolean
+          athlete_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          cost?: number | null
+          created_at?: string
+          id?: string
+          local_date?: string
+          planned_id?: string
+          planned_kind?: string
+          source?: Database["public"]["Enums"]["data_source"]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_plan_links_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_plan_links_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_plan_links_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_plan_links_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_sets: {
+        Row: {
+          activity_id: string
+          ai_allowed: boolean
+          athlete_id: string
+          category: number[] | null
+          category_subtype: number[] | null
+          created_at: string
+          duration_s: number | null
+          id: string
+          position: number
+          reps: number | null
+          set_type: string | null
+          source: Database["public"]["Enums"]["data_source"]
+          start_s: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          activity_id: string
+          ai_allowed?: boolean
+          athlete_id: string
+          category?: number[] | null
+          category_subtype?: number[] | null
+          created_at?: string
+          duration_s?: number | null
+          id?: string
+          position: number
+          reps?: number | null
+          set_type?: string | null
+          source: Database["public"]["Enums"]["data_source"]
+          start_s?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          activity_id?: string
+          ai_allowed?: boolean
+          athlete_id?: string
+          category?: number[] | null
+          category_subtype?: number[] | null
+          created_at?: string
+          duration_s?: number | null
+          id?: string
+          position?: number
+          reps?: number | null
+          set_type?: string | null
+          source?: Database["public"]["Enums"]["data_source"]
+          start_s?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_sets_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_sets_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_sets_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_streams: {
+        Row: {
+          activity_id: string
+          ai_allowed: boolean
+          alt: number[] | null
+          athlete_id: string
+          cadence: number[] | null
+          created_at: string
+          device: Json | null
+          dist: number[] | null
+          hr: number[] | null
+          laps_edited: boolean
+          laps_version: number
+          lat: number[] | null
+          lon: number[] | null
+          normalized_from: string
+          power: number[] | null
+          sample_count: number
+          source: Database["public"]["Enums"]["data_source"]
+          speed: number[] | null
+          splits: Json
+          sport: string | null
+          stance: number[] | null
+          started_at: string
+          step_len: number[] | null
+          t: number[]
+          temp: number[] | null
+          timer: number[] | null
+          updated_at: string
+          utc_offset_s: number | null
+          vosc: number[] | null
+          vratio: number[] | null
+          watch_laps: Json
+          watch_time_in_zone: Json
+        }
+        Insert: {
+          activity_id: string
+          ai_allowed?: boolean
+          alt?: number[] | null
+          athlete_id: string
+          cadence?: number[] | null
+          created_at?: string
+          device?: Json | null
+          dist?: number[] | null
+          hr?: number[] | null
+          laps_edited?: boolean
+          laps_version?: number
+          lat?: number[] | null
+          lon?: number[] | null
+          normalized_from: string
+          power?: number[] | null
+          sample_count: number
+          source: Database["public"]["Enums"]["data_source"]
+          speed?: number[] | null
+          splits?: Json
+          sport?: string | null
+          stance?: number[] | null
+          started_at: string
+          step_len?: number[] | null
+          t: number[]
+          temp?: number[] | null
+          timer?: number[] | null
+          updated_at?: string
+          utc_offset_s?: number | null
+          vosc?: number[] | null
+          vratio?: number[] | null
+          watch_laps?: Json
+          watch_time_in_zone?: Json
+        }
+        Update: {
+          activity_id?: string
+          ai_allowed?: boolean
+          alt?: number[] | null
+          athlete_id?: string
+          cadence?: number[] | null
+          created_at?: string
+          device?: Json | null
+          dist?: number[] | null
+          hr?: number[] | null
+          laps_edited?: boolean
+          laps_version?: number
+          lat?: number[] | null
+          lon?: number[] | null
+          normalized_from?: string
+          power?: number[] | null
+          sample_count?: number
+          source?: Database["public"]["Enums"]["data_source"]
+          speed?: number[] | null
+          splits?: Json
+          sport?: string | null
+          stance?: number[] | null
+          started_at?: string
+          step_len?: number[] | null
+          t?: number[]
+          temp?: number[] | null
+          timer?: number[] | null
+          updated_at?: string
+          utc_offset_s?: number | null
+          vosc?: number[] | null
+          vratio?: number[] | null
+          watch_laps?: Json
+          watch_time_in_zone?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_streams_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_streams_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_streams_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_zone_summaries: {
+        Row: {
+          activity_id: string
+          ai_allowed: boolean
+          athlete_id: string
+          bounds: number[]
+          computed_at: string
+          kind: string
+          model_id: string | null
+          no_hr_s: number
+          seconds: number[]
+          source: Database["public"]["Enums"]["data_source"]
+        }
+        Insert: {
+          activity_id: string
+          ai_allowed?: boolean
+          athlete_id: string
+          bounds: number[]
+          computed_at?: string
+          kind: string
+          model_id?: string | null
+          no_hr_s?: number
+          seconds: number[]
+          source: Database["public"]["Enums"]["data_source"]
+        }
+        Update: {
+          activity_id?: string
+          ai_allowed?: boolean
+          athlete_id?: string
+          bounds?: number[]
+          computed_at?: string
+          kind?: string
+          model_id?: string | null
+          no_hr_s?: number
+          seconds?: number[]
+          source?: Database["public"]["Enums"]["data_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_zone_summaries_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_zone_summaries_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_zone_summaries_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_zone_summaries_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "hr_zone_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_data: {
         Row: {
           athlete_id: string
@@ -1726,6 +2169,80 @@ export type Database = {
           },
         ]
       }
+      hr_zone_models: {
+        Row: {
+          athlete_id: string
+          bounds: number[] | null
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          kind: string
+          origin: string
+          status: string
+          test_result_id: string | null
+          valid_from: string
+        }
+        Insert: {
+          athlete_id: string
+          bounds?: number[] | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          kind: string
+          origin?: string
+          status?: string
+          test_result_id?: string | null
+          valid_from?: string
+        }
+        Update: {
+          athlete_id?: string
+          bounds?: number[] | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          kind?: string
+          origin?: string
+          status?: string
+          test_result_id?: string | null
+          valid_from?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_zone_models_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_zone_models_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_zone_models_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_zone_models_test_result_id_fkey"
+            columns: ["test_result_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_test_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hyrox_axes_params: {
         Row: {
           created_at: string
@@ -3166,20 +3683,28 @@ export type Database = {
           avg_hr: number | null
           avg_pace_s_per_km: number | null
           calories: number | null
+          commute: boolean | null
+          description: string | null
           details: Json | null
           device_name: string | null
           distance_m: number | null
           duration_s: number | null
           elevation_gain_m: number | null
           external_id: string
+          gear: string | null
           id: string
           imported_at: string
           local_date: string
           max_hr: number | null
+          origin_quality: string | null
           raw: Json | null
+          rpe: number | null
           source: Database["public"]["Enums"]["data_source"]
+          sources: string[]
           sport: string | null
           started_at: string
+          strava_activity_id: string | null
+          title: string | null
         }
         Insert: {
           ai_allowed?: boolean
@@ -3187,20 +3712,28 @@ export type Database = {
           avg_hr?: number | null
           avg_pace_s_per_km?: number | null
           calories?: number | null
+          commute?: boolean | null
+          description?: string | null
           details?: Json | null
           device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
           external_id: string
+          gear?: string | null
           id?: string
           imported_at?: string
           local_date: string
           max_hr?: number | null
+          origin_quality?: string | null
           raw?: Json | null
+          rpe?: number | null
           source: Database["public"]["Enums"]["data_source"]
+          sources?: string[]
           sport?: string | null
           started_at: string
+          strava_activity_id?: string | null
+          title?: string | null
         }
         Update: {
           ai_allowed?: boolean
@@ -3208,20 +3741,28 @@ export type Database = {
           avg_hr?: number | null
           avg_pace_s_per_km?: number | null
           calories?: number | null
+          commute?: boolean | null
+          description?: string | null
           details?: Json | null
           device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
           external_id?: string
+          gear?: string | null
           id?: string
           imported_at?: string
           local_date?: string
           max_hr?: number | null
+          origin_quality?: string | null
           raw?: Json | null
+          rpe?: number | null
           source?: Database["public"]["Enums"]["data_source"]
+          sources?: string[]
           sport?: string | null
           started_at?: string
+          strava_activity_id?: string | null
+          title?: string | null
         }
         Relationships: [
           {
@@ -3294,67 +3835,196 @@ export type Database = {
       }
       provider_dailies: {
         Row: {
+          active_kcal: number | null
+          active_time_min: number | null
           ai_allowed: boolean
           athlete_id: string
+          bmi: number | null
+          bmr_kcal: number | null
+          body_battery_charged: number | null
+          body_battery_drained: number | null
           body_battery_max: number | null
           body_battery_min: number | null
+          body_fat_pct: number | null
+          body_water_pct: number | null
+          bone_mass_kg: number | null
+          bp_diastolic: number | null
+          bp_pulse: number | null
+          bp_systolic: number | null
           day: string
+          distance_m: number | null
+          fitness_age: number | null
+          floors_climbed: number | null
+          hr_avg: number | null
+          hr_max: number | null
+          hr_min: number | null
           hrv_ms: number | null
+          hrv_peak_5min_ms: number | null
+          hydration_ml: number | null
           id: string
           imported_at: string
+          intensity_moderate_min: number | null
+          intensity_vigorous_min: number | null
+          muscle_mass_kg: number | null
           raw: Json | null
+          respiration_day_avg: number | null
+          respiration_sleep_avg: number | null
           resting_hr: number | null
+          skin_temp_delta_c: number | null
+          sleep_awake_min: number | null
           sleep_deep_min: number | null
+          sleep_end_at: string | null
+          sleep_light_min: number | null
+          sleep_nap_min: number | null
           sleep_rem_min: number | null
           sleep_score: number | null
+          sleep_start_at: string | null
+          sleep_subscores: Json | null
           sleep_total_min: number | null
           source: Database["public"]["Enums"]["data_source"]
+          spo2_avg: number | null
+          spo2_min: number | null
           steps: number | null
+          stress_activity_min: number | null
           stress_avg: number | null
+          stress_high_min: number | null
+          stress_low_min: number | null
+          stress_max: number | null
+          stress_medium_min: number | null
+          stress_rest_min: number | null
+          total_kcal: number | null
           training_load: number | null
           vo2max: number | null
+          vo2max_cycling: number | null
+          weight_kg: number | null
         }
         Insert: {
+          active_kcal?: number | null
+          active_time_min?: number | null
           ai_allowed?: boolean
           athlete_id: string
+          bmi?: number | null
+          bmr_kcal?: number | null
+          body_battery_charged?: number | null
+          body_battery_drained?: number | null
           body_battery_max?: number | null
           body_battery_min?: number | null
+          body_fat_pct?: number | null
+          body_water_pct?: number | null
+          bone_mass_kg?: number | null
+          bp_diastolic?: number | null
+          bp_pulse?: number | null
+          bp_systolic?: number | null
           day: string
+          distance_m?: number | null
+          fitness_age?: number | null
+          floors_climbed?: number | null
+          hr_avg?: number | null
+          hr_max?: number | null
+          hr_min?: number | null
           hrv_ms?: number | null
+          hrv_peak_5min_ms?: number | null
+          hydration_ml?: number | null
           id?: string
           imported_at?: string
+          intensity_moderate_min?: number | null
+          intensity_vigorous_min?: number | null
+          muscle_mass_kg?: number | null
           raw?: Json | null
+          respiration_day_avg?: number | null
+          respiration_sleep_avg?: number | null
           resting_hr?: number | null
+          skin_temp_delta_c?: number | null
+          sleep_awake_min?: number | null
           sleep_deep_min?: number | null
+          sleep_end_at?: string | null
+          sleep_light_min?: number | null
+          sleep_nap_min?: number | null
           sleep_rem_min?: number | null
           sleep_score?: number | null
+          sleep_start_at?: string | null
+          sleep_subscores?: Json | null
           sleep_total_min?: number | null
           source: Database["public"]["Enums"]["data_source"]
+          spo2_avg?: number | null
+          spo2_min?: number | null
           steps?: number | null
+          stress_activity_min?: number | null
           stress_avg?: number | null
+          stress_high_min?: number | null
+          stress_low_min?: number | null
+          stress_max?: number | null
+          stress_medium_min?: number | null
+          stress_rest_min?: number | null
+          total_kcal?: number | null
           training_load?: number | null
           vo2max?: number | null
+          vo2max_cycling?: number | null
+          weight_kg?: number | null
         }
         Update: {
+          active_kcal?: number | null
+          active_time_min?: number | null
           ai_allowed?: boolean
           athlete_id?: string
+          bmi?: number | null
+          bmr_kcal?: number | null
+          body_battery_charged?: number | null
+          body_battery_drained?: number | null
           body_battery_max?: number | null
           body_battery_min?: number | null
+          body_fat_pct?: number | null
+          body_water_pct?: number | null
+          bone_mass_kg?: number | null
+          bp_diastolic?: number | null
+          bp_pulse?: number | null
+          bp_systolic?: number | null
           day?: string
+          distance_m?: number | null
+          fitness_age?: number | null
+          floors_climbed?: number | null
+          hr_avg?: number | null
+          hr_max?: number | null
+          hr_min?: number | null
           hrv_ms?: number | null
+          hrv_peak_5min_ms?: number | null
+          hydration_ml?: number | null
           id?: string
           imported_at?: string
+          intensity_moderate_min?: number | null
+          intensity_vigorous_min?: number | null
+          muscle_mass_kg?: number | null
           raw?: Json | null
+          respiration_day_avg?: number | null
+          respiration_sleep_avg?: number | null
           resting_hr?: number | null
+          skin_temp_delta_c?: number | null
+          sleep_awake_min?: number | null
           sleep_deep_min?: number | null
+          sleep_end_at?: string | null
+          sleep_light_min?: number | null
+          sleep_nap_min?: number | null
           sleep_rem_min?: number | null
           sleep_score?: number | null
+          sleep_start_at?: string | null
+          sleep_subscores?: Json | null
           sleep_total_min?: number | null
           source?: Database["public"]["Enums"]["data_source"]
+          spo2_avg?: number | null
+          spo2_min?: number | null
           steps?: number | null
+          stress_activity_min?: number | null
           stress_avg?: number | null
+          stress_high_min?: number | null
+          stress_low_min?: number | null
+          stress_max?: number | null
+          stress_medium_min?: number | null
+          stress_rest_min?: number | null
+          total_kcal?: number | null
           training_load?: number | null
           vo2max?: number | null
+          vo2max_cycling?: number | null
+          weight_kg?: number | null
         }
         Relationships: [
           {
@@ -3391,6 +4061,97 @@ export type Database = {
             columns: ["connection_id"]
             isOneToOne: false
             referencedRelation: "provider_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_intraday: {
+        Row: {
+          ai_allowed: boolean
+          athlete_id: string
+          day: string
+          measure: string
+          offsets: number[]
+          source: Database["public"]["Enums"]["data_source"]
+          updated_at: string
+          utc_offset_s: number | null
+          values: number[]
+        }
+        Insert: {
+          ai_allowed?: boolean
+          athlete_id: string
+          day: string
+          measure: string
+          offsets: number[]
+          source: Database["public"]["Enums"]["data_source"]
+          updated_at?: string
+          utc_offset_s?: number | null
+          values: number[]
+        }
+        Update: {
+          ai_allowed?: boolean
+          athlete_id?: string
+          day?: string
+          measure?: string
+          offsets?: number[]
+          source?: Database["public"]["Enums"]["data_source"]
+          updated_at?: string
+          utc_offset_s?: number | null
+          values?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_intraday_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_moveiq: {
+        Row: {
+          activity_type: string | null
+          ai_allowed: boolean
+          athlete_id: string
+          day: string
+          duration_s: number | null
+          external_id: string
+          id: string
+          imported_at: string
+          source: Database["public"]["Enums"]["data_source"]
+          started_at: string
+        }
+        Insert: {
+          activity_type?: string | null
+          ai_allowed?: boolean
+          athlete_id: string
+          day: string
+          duration_s?: number | null
+          external_id: string
+          id?: string
+          imported_at?: string
+          source: Database["public"]["Enums"]["data_source"]
+          started_at: string
+        }
+        Update: {
+          activity_type?: string | null
+          ai_allowed?: boolean
+          athlete_id?: string
+          day?: string
+          duration_s?: number | null
+          external_id?: string
+          id?: string
+          imported_at?: string
+          source?: Database["public"]["Enums"]["data_source"]
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_moveiq_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4975,6 +5736,28 @@ export type Database = {
         }
       }
       accept_staff_invitation: { Args: { p_token: string }; Returns: string }
+      activity_detail_upsert: {
+        Args: { p_activity: string; p_detail: Json }
+        Returns: Json
+      }
+      activity_detail_visible: {
+        Args: {
+          p_athlete: string
+          p_source: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: boolean
+      }
+      activity_laps_editor: { Args: { p_athlete: string }; Returns: boolean }
+      activity_sport_family: { Args: { p_sport: string }; Returns: string }
+      activity_zone_seconds: {
+        Args: {
+          p_bounds: number[]
+          p_hr: number[]
+          p_t: number[]
+          p_timer: number[]
+        }
+        Returns: number[]
+      }
       add_co_coach: {
         Args: { p_athlete: string; p_coach_code: string }
         Returns: Json
@@ -4982,6 +5765,10 @@ export type Database = {
       ai_eligible_sources: {
         Args: { p_athlete: string }
         Returns: Database["public"]["Enums"]["data_source"][]
+      }
+      auto_link_day: {
+        Args: { p_athlete: string; p_day: string }
+        Returns: number
       }
       can_coach_athlete: { Args: { athlete_uuid: string }; Returns: boolean }
       can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
@@ -5124,6 +5911,14 @@ export type Database = {
       current_user_is_admin: { Args: never; Returns: boolean }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
+      decide_hr_zone_model: {
+        Args: { p_accept: boolean; p_id: string }
+        Returns: undefined
+      }
+      decide_plan_link: {
+        Args: { p_confirm: boolean; p_link: string }
+        Returns: undefined
+      }
       delete_energy_session: { Args: { p_session_id: string }; Returns: string }
       diag:
         | {
@@ -5247,6 +6042,15 @@ export type Database = {
       health_sync_weight: { Args: { p_athlete: string }; Returns: undefined }
       health_sync_wellness: { Args: { p_athlete: string }; Returns: undefined }
       health_text: { Args: { p: Json }; Returns: string }
+      hr_bounds_valid: { Args: { b: number[] }; Returns: boolean }
+      hr_zone_bounds_at: {
+        Args: { p_athlete: string; p_day: string }
+        Returns: {
+          bounds: number[]
+          kind: string
+          model_id: string
+        }[]
+      }
       in_todo: { Args: never; Returns: boolean }
       invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
       is_athlete_coach: {
@@ -5259,7 +6063,17 @@ export type Database = {
       is_coach_partner: { Args: { p_coach: string }; Returns: boolean }
       is_empty: { Args: { "": string }; Returns: string }
       isnt_empty: { Args: { "": string }; Returns: string }
+      jsonb_int_array: { Args: { j: Json }; Returns: number[] }
+      jsonb_real_array: { Args: { j: Json }; Returns: number[] }
+      link_activity_to_plan: {
+        Args: { p_activity: string; p_kind: string; p_planned: string }
+        Returns: string
+      }
       link_to_coach_by_code: { Args: { p_code: string }; Returns: string }
+      linked_planned_ids: {
+        Args: { p_ids: string[]; p_kind: string }
+        Returns: string[]
+      }
       list_user_storage_objects: {
         Args: { target_user: string }
         Returns: {
@@ -5270,6 +6084,24 @@ export type Database = {
       lives_ok: { Args: { "": string }; Returns: string }
       mark_doc_seen: { Args: { doc_uuid: string }; Returns: undefined }
       mark_missed_workouts: { Args: never; Returns: number }
+      merge_provider_activities: {
+        Args: {
+          p_activities: Json
+          p_athlete: string
+          p_source: Database["public"]["Enums"]["data_source"]
+          p_tag: string
+        }
+        Returns: Json
+      }
+      merge_provider_activity: {
+        Args: {
+          p_activity: Json
+          p_athlete: string
+          p_source: Database["public"]["Enums"]["data_source"]
+          p_tag: string
+        }
+        Returns: Json
+      }
       mesocycle_athlete_id: {
         Args: { p_mesocycle_id: string }
         Returns: string
@@ -5293,7 +6125,12 @@ export type Database = {
         Args: { p_athlete: string; p_day: string; p_log: Json }
         Returns: Json
       }
+      origin_quality_rank: { Args: { q: string }; Returns: number }
       os_name: { Args: never; Returns: string }
+      outing_sports_compatible: {
+        Args: { a: string; b: string }
+        Returns: boolean
+      }
       pass:
         | { Args: never; Returns: string }
         | { Args: { "": string }; Returns: string }
@@ -5332,6 +6169,24 @@ export type Database = {
       pg_version: { Args: never; Returns: string }
       pg_version_num: { Args: never; Returns: number }
       pgtap_version: { Args: never; Returns: number }
+      plan_family_accepts: {
+        Args: { p_activity: string; p_planned: string }
+        Returns: boolean
+      }
+      plan_match_cost: {
+        Args: { a_dist: number; a_dur: number; p_dist: number; p_dur: number }
+        Returns: number
+      }
+      planned_sessions_of_day: {
+        Args: { p_athlete: string; p_day: string }
+        Returns: {
+          distance_m: number
+          duration_s: number
+          family: string
+          id: string
+          kind: string
+        }[]
+      }
       program_save_sessions: {
         Args: {
           p_athlete: string
@@ -5341,6 +6196,13 @@ export type Database = {
           p_upsert: Json
         }
         Returns: Json
+      }
+      provider_daily_columns: {
+        Args: never
+        Returns: {
+          col: string
+          typ: string
+        }[]
       }
       provider_daily_merge: {
         Args: {
@@ -5398,6 +6260,18 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      provider_intraday_merge: {
+        Args: {
+          p_athlete: string
+          p_day: string
+          p_measure: string
+          p_offsets: number[]
+          p_source: Database["public"]["Enums"]["data_source"]
+          p_utc_offset_s: number
+          p_values: number[]
+        }
+        Returns: number
+      }
       provider_raw_objects: {
         Args: {
           p_athlete: string
@@ -5447,6 +6321,14 @@ export type Database = {
         Returns: undefined
       }
       redeem_invitation: { Args: { p_token: string }; Returns: string }
+      refresh_activity_zone_summary: {
+        Args: { p_activity: string }
+        Returns: undefined
+      }
+      refresh_athlete_zone_summaries: {
+        Args: { p_athlete: string; p_from: string }
+        Returns: number
+      }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
       reopen_energy_assignment: {
         Args: { p_assignment: string }
@@ -5508,6 +6390,10 @@ export type Database = {
         }
       }
       report_client_build: { Args: { p_build: string }; Returns: undefined }
+      reset_activity_laps_to_watch: {
+        Args: { p_activity: string; p_expected_version: number }
+        Returns: number
+      }
       review_performance_notification: {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined
@@ -5522,6 +6408,10 @@ export type Database = {
       runtests:
         | { Args: never; Returns: string[] }
         | { Args: { "": string }; Returns: string[] }
+      save_activity_laps: {
+        Args: { p_activity: string; p_expected_version: number; p_laps: Json }
+        Returns: number
+      }
       save_athlete_test_result: {
         Args: {
           p_athlete: string
@@ -5536,6 +6426,15 @@ export type Database = {
       save_fc_zones: {
         Args: { p_athlete: string; p_zones: Json }
         Returns: number
+      }
+      save_hr_zone_model: {
+        Args: {
+          p_athlete: string
+          p_bounds: number[]
+          p_kind: string
+          p_valid_from?: string
+        }
+        Returns: string
       }
       schedule_doc: {
         Args: {
@@ -5703,6 +6602,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      source_rank: {
+        Args: { s: Database["public"]["Enums"]["data_source"] }
+        Returns: number
+      }
       staff_app_data_domain: { Args: { p_key: string }; Returns: string }
       staff_apply_to_all: { Args: { p_link_id: string }; Returns: number }
       staff_athlete_profiles: {
@@ -5756,6 +6659,7 @@ export type Database = {
         Args: { athlete_uuid: string }
         Returns: boolean
       }
+      stream_quality_rank: { Args: { q: string }; Returns: number }
       sync_doc_assignments: {
         Args: { p_athlete: string; p_doc_ids: string[]; p_source: string }
         Returns: undefined

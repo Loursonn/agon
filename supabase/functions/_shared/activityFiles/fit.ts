@@ -14,13 +14,13 @@
  * un séparateur, une unité ou une traduction change. Un FIT casse franchement
  * ou pas du tout.
  *
- * Ce qui est décodé : l'en-tête, les messages de définition, et les messages
- * de données `file_id` (0), `session` (18) et `activity` (34). Les autres sont
- * sautés en utilisant leur taille déclarée — c'est ce qui permet d'ignorer sans
- * risque les milliers de messages `record` par seconde dont nous ne faisons
- * rien.
+ * Ce qui est décodé ici : les messages `file_id` (0), `session` (18) et
+ * `activity` (34), pour le résumé de séance. La série seconde par seconde, les
+ * tours et les séries de muscu sont lus par `decodeFitDetail` (fitDetail.ts),
+ * sur le même lecteur binaire (fitReader.ts).
  */
 import { sportFromFitCode } from "./sports.ts";
+import { FIT_EPOCH_MS, walkFit } from "./fitReader.ts";
 import {
   contentFingerprint,
   localDateOf,
@@ -29,189 +29,23 @@ import {
   type ParseResult,
 } from "./types.ts";
 
-/*
-  Les horodatages FIT comptent les secondes depuis le 31 décembre 1989 à
-  00:00:00 UTC, et non depuis l'époque Unix. Confondre les deux décale tout de
-  vingt ans, ce qui donne des activités en 1970 — assez visible pour être
-  repéré, contrairement à un décalage d'une heure.
-*/
-const FIT_EPOCH_MS = 631_065_600_000;
-
-/** Types de base FIT : taille en octets et valeur signifiant « absent ». */
-const BASE_TYPES: Record<number, { size: number; read: (v: DataView, o: number, le: boolean) => number | null }> = {
-  0x00: { size: 1, read: (v, o) => nz(v.getUint8(o), 0xff) },               // enum
-  0x01: { size: 1, read: (v, o) => nz(v.getInt8(o), 0x7f) },                // sint8
-  0x02: { size: 1, read: (v, o) => nz(v.getUint8(o), 0xff) },               // uint8
-  0x03: { size: 2, read: (v, o, le) => nz(v.getInt16(o, le), 0x7fff) },     // sint16
-  0x04: { size: 2, read: (v, o, le) => nz(v.getUint16(o, le), 0xffff) },    // uint16
-  0x05: { size: 4, read: (v, o, le) => nz(v.getInt32(o, le), 0x7fffffff) }, // sint32
-  0x06: { size: 4, read: (v, o, le) => nz(v.getUint32(o, le), 0xffffffff) },// uint32
-  0x07: { size: 1, read: (v, o) => nz(v.getUint8(o), 0x00) },               // string (traité à part)
-  0x08: { size: 4, read: (v, o, le) => finite(v.getFloat32(o, le)) },       // float32
-  0x09: { size: 8, read: (v, o, le) => finite(v.getFloat64(o, le)) },       // float64
-  0x0a: { size: 1, read: (v, o) => nz(v.getUint8(o), 0x00) },               // uint8z
-  0x0b: { size: 2, read: (v, o, le) => nz(v.getUint16(o, le), 0x0000) },    // uint16z
-  0x0c: { size: 4, read: (v, o, le) => nz(v.getUint32(o, le), 0x00000000) },// uint32z
-  0x0d: { size: 1, read: (v, o) => nz(v.getUint8(o), 0xff) },               // byte
-  0x0e: { size: 8, read: (v, o, le) => big(v.getBigInt64(o, le)) },         // sint64
-  0x0f: { size: 8, read: (v, o, le) => big(v.getBigUint64(o, le)) },        // uint64
-  0x10: { size: 8, read: (v, o, le) => big(v.getBigUint64(o, le)) },        // uint64z
-};
-
-/** Valeur « absente » → `null`, pour ne jamais confondre avec un zéro mesuré. */
-const nz = (value: number, invalid: number): number | null =>
-  value === invalid ? null : value;
-
-const finite = (value: number): number | null => (Number.isFinite(value) ? value : null);
-
-const big = (value: bigint): number | null => {
-  const n = Number(value);
-  return Number.isSafeInteger(n) ? n : null;
-};
-
-interface FieldDef {
-  num: number;
-  size: number;
-  baseType: number;
-}
-
-interface MessageDef {
-  globalNum: number;
-  littleEndian: boolean;
-  fields: FieldDef[];
-  /** Taille totale du message de données, pour pouvoir le sauter d'un bloc. */
-  totalSize: number;
-}
-
 type Fields = Map<number, number | null>;
 
 /**
- * Parcourt un FIT et rend les messages qui nous intéressent.
- *
- * Les messages inconnus sont sautés par leur taille déclarée dans leur
- * définition : c'est la seule façon d'avancer dans un flux où tout est
- * variable, et c'est aussi ce qui rend le décodeur insensible aux extensions
- * propriétaires des fabricants.
+ * Parcourt un FIT et rend les messages qui nous intéressent (premier élément
+ * de chaque champ). Le format binaire est lu par `walkFit`, seule
+ * implémentation partagée avec `decodeFitDetail`.
  */
 function decodeMessages(bytes: Uint8Array): Map<number, Fields[]> {
-  if (bytes.length < 14) throw new Error("fichier trop court pour être un FIT");
-
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-
-  const headerSize = view.getUint8(0);
-  if (headerSize !== 12 && headerSize !== 14) {
-    throw new Error(`en-tête FIT de taille inattendue (${headerSize})`);
-  }
-  const signature = String.fromCharCode(...bytes.subarray(8, 12));
-  if (signature !== ".FIT") {
-    throw new Error("signature .FIT absente — ce n'est pas un fichier FIT");
-  }
-
-  const dataSize = view.getUint32(4, true);
-  /*
-    Borne haute prise dans le fichier mais plafonnée à sa taille réelle. Un
-    `data_size` corrompu ou tronqué (téléchargement interrompu) ferait sinon
-    lire au-delà du tampon.
-  */
-  const end = Math.min(headerSize + dataSize, bytes.length);
-
-  const defs = new Map<number, MessageDef>();
   const collected = new Map<number, Fields[]>();
   // Seuls ces messages nous servent. Collecter le reste ferait exploser la
   // mémoire sur un fichier d'ultra-trail de plusieurs mégaoctets.
   const wanted = new Set([0, 18, 34]);
-
-  let offset = headerSize;
-  while (offset < end) {
-    const header = view.getUint8(offset);
-    offset += 1;
-
-    // En-tête à horodatage compressé : pas de définition, message de données
-    // d'un type local déjà connu.
-    const compressed = (header & 0x80) !== 0;
-    const isDefinition = !compressed && (header & 0x40) !== 0;
-    const localType = compressed ? (header >> 5) & 0x03 : header & 0x0f;
-
-    if (isDefinition) {
-      const littleEndian = view.getUint8(offset + 1) === 0;
-      const globalNum = view.getUint16(offset + 2, littleEndian);
-      const fieldCount = view.getUint8(offset + 4);
-      offset += 5;
-
-      const fields: FieldDef[] = [];
-      let totalSize = 0;
-      for (let i = 0; i < fieldCount; i++) {
-        const num = view.getUint8(offset);
-        const size = view.getUint8(offset + 1);
-        const baseType = view.getUint8(offset + 2) & 0x1f;
-        offset += 3;
-        fields.push({ num, size, baseType });
-        totalSize += size;
-      }
-
-      /*
-        Champs de développeur : taille à comptabiliser pour pouvoir sauter le
-        message, contenu ignoré. Ce sont des extensions propres à une
-        application (Stryd, Xert…) dont le sens n'est connu que de celle-ci.
-      */
-      if ((header & 0x20) !== 0) {
-        const devCount = view.getUint8(offset);
-        offset += 1;
-        for (let i = 0; i < devCount; i++) {
-          totalSize += view.getUint8(offset + 1);
-          offset += 3;
-        }
-      }
-
-      defs.set(localType, { globalNum, littleEndian, fields, totalSize });
-      continue;
-    }
-
-    const def = defs.get(localType);
-    /*
-      Message de données sans définition préalable : le fichier est incohérent
-      et toute lecture suivante serait du hasard. On s'arrête plutôt que
-      d'inventer — un import partiel silencieux est plus nuisible qu'un refus.
-    */
-    if (!def) throw new Error(`message de type local ${localType} sans définition`);
-
-    // L'horodatage compressé occupe les 5 bits bas de l'en-tête, pas le corps.
-    if (!wanted.has(def.globalNum)) {
-      offset += def.totalSize;
-      continue;
-    }
-
-    const fields: Fields = new Map();
-    let cursor = offset;
-    for (const f of def.fields) {
-      const base = BASE_TYPES[f.baseType];
-      if (!base) {
-        cursor += f.size;
-        continue;
-      }
-      if (f.baseType === 0x07) {
-        // Chaîne : non conservée. Les seules qui nous intéresseraient
-        // (nom d'activité) ne sont pas dans les messages lus ici.
-        cursor += f.size;
-        continue;
-      }
-      /*
-        Un champ plus large que son type de base est un tableau. On ne garde
-        que le premier élément : les champs tableau des messages `session` sont
-        des découpages par zone (temps en zone de fréquence cardiaque) dont
-        nous ne faisons rien, et en garder un élément vaut mieux que de rejeter
-        le message entier.
-      */
-      fields.set(f.num, base.read(view, cursor, def.littleEndian));
-      cursor += f.size;
-    }
-    offset += def.totalSize;
-
-    const list = collected.get(def.globalNum) ?? [];
-    list.push(fields);
-    collected.set(def.globalNum, list);
-  }
-
+  walkFit(bytes, (n) => wanted.has(n), (msg) => {
+    const list = collected.get(msg.globalNum) ?? [];
+    list.push(new Map(msg.entries()));
+    collected.set(msg.globalNum, list);
+  });
   return collected;
 }
 

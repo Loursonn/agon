@@ -1,102 +1,22 @@
-import type { ParsedActivity } from "@shared/activityFiles/index.ts";
+import type { ImportActivity, NormalizedActivity } from "@shared/activityFiles/index.ts";
 
 /**
- * Tri des activités décodées avant insertion : ce qui est nouveau, ce qui est
- * déjà là, et à quel titre.
+ * Import de fichiers : ce que le navigateur envoie à la fusion en base
+ * (`merge_provider_activities`), et comment il lit la réponse.
  *
- * Séparé du hook qui fait les requêtes parce que c'est la partie où une erreur
- * se paie cher et ne se voit pas : une sortie avalée à tort disparaît du suivi
- * sans message, et personne ne va la chercher.
+ * Plus de tri « nouveau / doublon » ici (P42) : c'est la base qui décide,
+ * sous verrou, si la sortie existe déjà et ce que la nouvelle source
+ * complète. Deux règles locales ne peuvent pas voir ce qu'un autre onglet ou
+ * la synchro Garmin vient d'écrire ; la base, si.
  */
 
-/**
- * Fenêtre de rapprochement entre deux enregistrements d'une même sortie.
- *
- * `external_id` est l'empreinte du *contenu* du fichier : le FIT et le GPX
- * d'une même sortie ont des octets différents, donc des empreintes
- * différentes, et la contrainte d'unicité en base ne peut rien y voir. Or
- * Strava exporte parfois les deux, et un athlète qui dépose « tout » aurait
- * chaque sortie en double sans qu'aucun chiffre n'explique pourquoi.
- *
- * Deux minutes, et non dix : un export GPX perd les secondes antérieures à la
- * première position GPS, donc son début peut arriver après celui du FIT, mais
- * jamais de beaucoup.
- */
-export const SAME_OUTING_MS = 120 * 1000;
+/** Étiquette de provenance, gardée dans `provider_activities.sources`. */
+export type ImportTag = "file" | "strava_archive" | "garmin_export";
 
-/** Un départ déjà en base, pour le rapprochement de sortie. */
-export interface KnownStart {
-  ms: number;
-  sport: string | null;
-}
-
-/**
- * Vrai si cette sortie est déjà présente sous une autre forme.
- *
- * Le sport doit correspondre quand les deux sont connus : sans cette
- * condition, la transition d'un triathlon — natation puis vélo démarrés à une
- * minute d'intervalle — ferait disparaître la seconde discipline. Deux sports
- * connus et différents sont deux activités, jamais un doublon.
- */
-export function isSameOuting(act: ParsedActivity, known: KnownStart[]): boolean {
-  const ms = Date.parse(act.startedAt);
-  if (!Number.isFinite(ms)) return false;
-
-  return known.some((k) => {
-    if (!Number.isFinite(k.ms)) return false;
-    if (Math.abs(k.ms - ms) > SAME_OUTING_MS) return false;
-    if (k.sport && act.sport && k.sport !== act.sport) return false;
-    return true;
-  });
-}
-
-export interface ImportSplit {
-  /** À insérer, dans l'ordre reçu. */
-  toInsert: ParsedActivity[];
-  /** Fichiers déjà importés auparavant, reconnus à l'empreinte. */
-  duplicates: number;
-  /** Sorties déjà présentes via une autre source ou un autre format. */
-  alreadyKnown: number;
-}
-
-/**
- * Répartit les activités décodées face à ce que l'athlète a déjà.
- *
- * `knownIds` et `knownStarts` sont enrichis au fil du tri : l'athlète qui
- * dépose le FIT *et* le GPX de la même sortie dans le même geste serait sinon
- * le seul cas que le rapprochement ne verrait pas — les deux fichiers sont
- * nouveaux vis-à-vis de la base, et c'est l'un par rapport à l'autre qu'ils
- * font doublon.
- */
-export function splitNewActivities(
-  parsed: ParsedActivity[],
-  knownIds: Set<string>,
-  knownStarts: KnownStart[],
-): ImportSplit {
-  const split: ImportSplit = { toInsert: [], duplicates: 0, alreadyKnown: 0 };
-
-  for (const act of parsed) {
-    if (knownIds.has(act.externalId)) {
-      split.duplicates++;
-      continue;
-    }
-    if (isSameOuting(act, knownStarts)) {
-      split.alreadyKnown++;
-      continue;
-    }
-    knownIds.add(act.externalId);
-    knownStarts.push({ ms: Date.parse(act.startedAt), sport: act.sport });
-    split.toInsert.push(act);
-  }
-
-  return split;
-}
-
-/** Ligne `provider_activities` correspondant à une activité décodée. */
-export function activityRow(athleteId: string, act: ParsedActivity) {
+/** Charge utile d'une sortie pour `merge_provider_activity`. */
+export function mergePayload(act: ImportActivity): Record<string, unknown> {
+  const raw = act.raw as Record<string, unknown> | null;
   return {
-    athlete_id: athleteId,
-    source: "file_import" as const,
     external_id: act.externalId,
     started_at: act.startedAt,
     local_date: act.localDate,
@@ -109,8 +29,98 @@ export function activityRow(athleteId: string, act: ParsedActivity) {
     avg_pace_s_per_km: act.avgPaceSPerKm,
     calories: act.calories,
     details: act.details,
-    raw: act.raw,
-    // `ai_allowed` est délibérément absent : un trigger le pose depuis
-    // `data_source_policies`. L'envoyer d'ici serait au mieux ignoré.
+    raw,
+    origin_quality: act.quality,
+    title: act.extras?.title ?? null,
+    description: act.extras?.description ?? null,
+    rpe: act.extras?.rpe ?? null,
+    gear: act.extras?.gear ?? null,
+    commute: act.extras?.commute ?? null,
+    strava_activity_id: act.extras?.stravaActivityId ?? null,
+    // `ai_allowed` absent : posé en base (politique de la source, appareil).
   };
+}
+
+export type MergeStatus = "created" | "merged" | "unchanged" | "error";
+
+export interface MergeResult {
+  id?: string;
+  status: MergeStatus;
+  /** Qualité de la série déjà en base (0 = aucune) : `stream_quality_rank`. */
+  streamRank: number;
+  error?: string;
+}
+
+export function parseMergeResult(raw: unknown): MergeResult {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const status = r.status === "created" || r.status === "merged" || r.status === "unchanged" ? r.status : "error";
+  return {
+    id: typeof r.id === "string" ? r.id : undefined,
+    status,
+    streamRank: typeof r.stream_rank === "number" ? r.stream_rank : 0,
+    error: typeof r.error === "string" ? r.error : undefined,
+  };
+}
+
+/** Même ordre que `public.stream_quality_rank`. */
+export function streamQualityRank(source: NormalizedActivity["source"] | string | null | undefined): number {
+  switch (source) {
+    case "fit": return 3;
+    case "garmin_json":
+    case "tcx": return 2;
+    case "gpx": return 1;
+    default: return 0;
+  }
+}
+
+/** Envoyer la série ? Seulement si elle est meilleure que celle déjà rangée. */
+export function wantsDetail(detail: NormalizedActivity | null, result: MergeResult): boolean {
+  if (!detail || !result.id || result.status === "error") return false;
+  return streamQualityRank(detail.source) > result.streamRank;
+}
+
+/** Compte rendu d'un dépôt : « X nouvelles · Y complétées · Z déjà complètes · N erreurs ». */
+export interface ImportReport {
+  created: number;
+  merged: number;
+  unchanged: number;
+  /** Séries (courbes) ajoutées ou remplacées par une meilleure. */
+  detailsSaved: number;
+  /** Fichiers d'activité examinés. */
+  files: number;
+  /** Membres d'archive ignorés sans examen (profil, médias). */
+  ignored: number;
+  /** Fichiers illisibles et sorties refusées par la base. */
+  rejected: Array<{ name: string; reason: string }>;
+  /** Problème de lecture d'`activities.csv` (titres, RPE non importés). */
+  csvError: string | null;
+}
+
+export const emptyReport = (): ImportReport => ({
+  created: 0,
+  merged: 0,
+  unchanged: 0,
+  detailsSaved: 0,
+  files: 0,
+  ignored: 0,
+  rejected: [],
+  csvError: null,
+});
+
+export function countResult(report: ImportReport, name: string, r: MergeResult): void {
+  if (r.status === "error") report.rejected.push({ name, reason: r.error ?? "refusée par la base" });
+  else report[r.status]++;
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
+
+/** Résumé d'une ligne pour l'écran. */
+export function reportSummary(r: ImportReport): string {
+  const parts = [
+    plural(r.created, "nouvelle", "nouvelles"),
+    plural(r.merged, "complétée", "complétées"),
+    plural(r.unchanged, "déjà complète", "déjà complètes"),
+    plural(r.rejected.length, "erreur", "erreurs"),
+  ];
+  return parts.join(" · ");
 }

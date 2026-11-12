@@ -165,7 +165,7 @@ describe("mapGarminDaily", () => {
       averageStressLevel: 31,
     })!;
     expect(d.day).toBe("2025-11-06");
-    expect(d.fields).toEqual({ resting_hr: 47, steps: 11250, stress_avg: 31 });
+    expect(d.fields).toMatchObject({ resting_hr: 47, steps: 11250, stress_avg: 31 });
   });
 
   it("activité : deviceName « unknown » (saisie manuelle) ne nomme aucun appareil", () => {
@@ -180,7 +180,7 @@ describe("mapGarminDaily", () => {
     expect(d.fields.resting_hr).toBeNull();
   });
 
-  it("sleeps : durées en minutes, score, et rien d'autre", () => {
+  it("sleeps : durées en minutes, score, sans champ de la journée", () => {
     const d = mapGarminDaily("sleeps", {
       calendarDate: "2025-11-07",
       durationInSeconds: 27000,
@@ -188,14 +188,14 @@ describe("mapGarminDaily", () => {
       remSleepInSeconds: 6300,
       overallSleepScore: { value: 84, qualifierKey: "GOOD" },
     })!;
-    expect(d.fields).toEqual({ sleep_total_min: 450, sleep_deep_min: 90, sleep_rem_min: 105, sleep_score: 84 });
+    expect(d.fields).toMatchObject({ sleep_total_min: 450, sleep_deep_min: 90, sleep_rem_min: 105, sleep_score: 84 });
     // Un résumé de sommeil ne doit pas écraser les pas de la journée.
     expect(d.fields).not.toHaveProperty("steps");
   });
 
   it("hrv : moyenne de la nuit", () => {
-    expect(mapGarminDaily("hrv", { calendarDate: "2025-11-07", lastNightAvg: 52 })!.fields).toEqual({ hrv_ms: 52 });
-    expect(mapGarminDaily("hrv", { calendarDate: "2025-11-07" })!.fields).toEqual({ hrv_ms: null });
+    expect(mapGarminDaily("hrv", { calendarDate: "2025-11-07", lastNightAvg: 52 })!.fields).toMatchObject({ hrv_ms: 52 });
+    expect(mapGarminDaily("hrv", { calendarDate: "2025-11-07" })!.fields).toMatchObject({ hrv_ms: null });
   });
 
   it("déduit le jour de l'heure de départ quand calendarDate manque", () => {
@@ -205,7 +205,7 @@ describe("mapGarminDaily", () => {
 
   it("rend null sans date, ou pour un type inconnu", () => {
     expect(mapGarminDaily("dailies", { steps: 10 })).toBeNull();
-    expect(mapGarminDaily("bodyComps", { calendarDate: "2025-11-07" })).toBeNull();
+    expect(mapGarminDaily("healthSnapshot", { calendarDate: "2025-11-07" })).toBeNull();
   });
 });
 

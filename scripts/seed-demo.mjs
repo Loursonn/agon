@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Jeu de démo Agon : un coach « Agon Démo » + une athlète « Léa Démo » avec un bloc en cours,
- * des séances faites et à faire, wellness, retour hebdo, fiche, événements, compétition, tests, HYROX, nutrition.
+ * des séances faites et à faire, wellness, retour hebdo, fiche, événements, compétition, tests, HYROX, nutrition,
+ * séances de montre (course, HYROX) et 7 jours de santé (scripts/seed-demo-montre.mjs).
  *
  * Usage :
  *   node scripts/seed-demo.mjs            # (re)crée tout, à rejouer le jour des captures (dates relatives à aujourd'hui)
@@ -18,6 +19,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { seedWatchDemo } from "./seed-demo-montre.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
@@ -68,6 +70,7 @@ async function remove() {
     // tables sans cascade possible : on nettoie explicitement par athlete_id / coach_id
     const byAth = ["app_data", "workout_rpe", "workout_logs", "energy_session_assignments", "weekly_retours", "day_themes", "competitions",
       "athlete_life_events", "doc_schedule", "doc_comments", "doc_assignments", "athlete_test_values", "athlete_test_results", "test_sessions",
+      "provider_intraday", "provider_moveiq", "provider_dailies", "provider_activities", "hr_zone_models",
       "performance_logs", "medical_entries", "exercise_pr_logs", "hyrox_results", "measurement_logs", "microcycles", "cycles", "user_consents"];
     for (const t of byAth) {
       const col = t === "user_consents" ? "user_id" : t === "microcycles" ? null : "athlete_id";
@@ -288,6 +291,10 @@ async function seed() {
   await must(sb.from("medical_entries").insert({ athlete_id: ATH, kind: "blessure", title: "Entorse cheville gauche", zone: "Cheville gauche", date: ymd(addDays(today, -120)), status: "gueri", injury_type: "traumatique", training_impact: "adapte", days_off: 10, declared_by: "athlete", created_by: ATH }), "medical");
   await must(sb.from("hyrox_results").insert({ athlete_id: ATH, date: ymd(addDays(today, -60)), format: "solo", division: "women", status: "finished", source: "manual", event_name: "HYROX Paris", venue: "Paris", total_s: 4368, run_1_s: 268, run_2_s: 292, run_3_s: 300, run_4_s: 298, run_5_s: 305, run_6_s: 310, run_7_s: 312, run_8_s: 305, ski_s: 262, sled_push_s: 215, sled_pull_s: 262, bbj_s: 300, row_s: 270, farmers_s: 138, lunges_s: 250, wall_balls_s: 355, roxzone_total_s: 216, penalties_s: 0, created_by: ATH }), "hyrox");
   await must(sb.from("measurement_logs").insert({ athlete_id: ATH, date: ymd(addDays(today, -2)), weight_kg: 78.4, bras_g: 31, bras_d: 31.5, epaules: 108, poitrine: 94, taille: 74, hanche: 98, cuisse_g: 58, cuisse_d: 58.5, mollet_g: 37, mollet_d: 37, photos: {} }), "measurements");
+
+
+  /* --- montre : course, HYROX, 7 jours de santé (fictifs) --- */
+  await seedWatchDemo(sb, ATH, COACH);
 
   console.log("\n✓ Démo créée : coach Agon Démo (code DEMO42) + athlète Léa Démo.");
   console.log("  Aujourd'hui :", ymd(today), "| séance du jour : Bas du corps · Force | hier : Gainage non clôturé");

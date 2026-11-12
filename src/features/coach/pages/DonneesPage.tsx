@@ -4,6 +4,7 @@ import {
   ProviderActivityList,
   ProviderActivitySummary,
 } from "@/features/shared/components/ProviderActivityList";
+import { ActivityFileImport } from "@/features/shared/components/ActivityFileImport";
 import { C } from "@/lib/theme";
 
 /** Onglet Historique (route legacy "donnees"). Stratégie vit dans Profil athlète. */
@@ -24,6 +25,7 @@ export default function DonneesPage() {
         <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
           <ProviderActivitySummary athleteId={athleteId} />
           <ProviderActivityList athleteId={athleteId} limit={30} />
+          <ActivityFileImport athleteId={athleteId} forCoach />
         </div>
       )}
 

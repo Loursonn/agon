@@ -681,7 +681,8 @@ export function invalidateWorkouts(
 
 /**
  * Une séance est « réelle » dès que l'athlète y a laissé une trace : validée,
- * saisie commencée (`athlete_modifications`) ou RPE donné. Une opération de
+ * saisie commencée (`athlete_modifications`), RPE donné, ou rattachée à une
+ * activité de montre (`activity_plan_links`). Une opération de
  * planification (raccourcir, déplacer ou supprimer un cycle) ne doit jamais
  * l'effacer : le 2026-11-07, 38 séances réelles rattachées à une semaine de
  * cycle étaient exposées à cette suppression.
@@ -695,20 +696,46 @@ export type PlannedWorkoutScope =
 
 export async function deletePlannedWorkouts(scope: PlannedWorkoutScope): Promise<void> {
   if ("microcycleIds" in scope && scope.microcycleIds.length === 0) return;
-  let query = db().from("workout_logs").delete();
+  let sel = db().from("workout_logs").select("id");
   if ("microcycleIds" in scope) {
-    query = query.in("microcycle_id", scope.microcycleIds);
+    sel = sel.in("microcycle_id", scope.microcycleIds);
   } else {
-    query = query
+    sel = sel
       .eq("athlete_id", scope.athleteId)
       .gt("scheduled_date", scope.after)
       .lte("scheduled_date", scope.until);
   }
-  check(
-    await query.neq("status", "completed").is("athlete_modifications", null).is("rpe_score", null),
+  const candidates = unwrapRows<{ id: string }>(
+    (await sel.neq("status", "completed").is("athlete_modifications", null).is("rpe_score", null)) as never,
     "Suppression des séances prévues impossible",
-  );
+  ).map((r) => r.id);
+
+  /*
+    Une séance rattachée à une activité de montre (lien `auto` ou `confirmed`)
+    compte comme réalisée : jamais supprimée. RPC : le coach doit la voir même
+    sans consentement à voir l'activité.
+  */
+  for (let i = 0; i < candidates.length; i += DELETE_CHUNK) {
+    const chunk = candidates.slice(i, i + DELETE_CHUNK);
+    const linked = new Set(
+      (unwrap<string[]>(
+        (await db().rpc("linked_planned_ids", { p_kind: "workout", p_ids: chunk })) as never,
+        "Suppression des séances prévues impossible",
+      ) ?? []).map(String),
+    );
+    const ids = chunk.filter((id) => !linked.has(id));
+    if (ids.length === 0) continue;
+    // Mêmes conditions à la suppression : une séance commencée entre-temps reste.
+    check(
+      await db().from("workout_logs").delete().in("id", ids)
+        .neq("status", "completed").is("athlete_modifications", null).is("rpe_score", null),
+      "Suppression des séances prévues impossible",
+    );
+  }
 }
+
+/** Taille des lots d'identifiants (longueur d'URL PostgREST). */
+const DELETE_CHUNK = 100;
 
 // ── Occurrences d'une séance-type ─────────────────────────────────────────────
 
