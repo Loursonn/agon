@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-programme-athlete-semaine",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Le Programme de vos athlètes, plus lisible",
+    summary: "La semaine se lit jour par jour, chaque séance dans la couleur de son type, et l'athlète peut démarrer la séance du jour en un tap.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "En haut, le plan en cours tient sur une carte : son nom, la semaine (S4 / 7) et la part des séances faites.",
+          "Sous le titre de la semaine, le compte des séances faites (« 2 / 4 faites »).",
+          "Le bouton ⋯ d'une séance ouvre « Déplacer au » avec les deux semaines à venir, puis « Voir le détail ». Vous voyez toujours le changement dans votre planning.",
+          "Les cycles terminés sont rangés tout en bas, repliés.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-wellness-deux-ecrans",
     date: "2026-11-12",
     kind: "feature",

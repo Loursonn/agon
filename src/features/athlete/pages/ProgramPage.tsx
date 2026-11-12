@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Plus, TrendingUp, Trophy, X, Zap } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Trophy, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
+import { TYPE_COLOR, TYPE_LABEL } from "@/lib/peps";
+import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
+import { ProgramSessionCard } from "@/features/athlete/components/program/ProgramSessionCard";
 import { cn } from "@/lib/utils";
 import { ProgramHeader } from "@/features/athlete/components/program/ProgramHeader";
 import { ProgramSkeleton } from "@/features/athlete/components/program/ProgramSkeleton";
@@ -27,7 +30,6 @@ import { stepDistanceM } from "@/lib/energy/paceEquivalents";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 import { TestFillDrawer } from "@/features/athlete/components/TestFillDrawer";
 import { CompetitionDayCard } from "@/features/athlete/components/CompetitionDayCard";
-import { competitionDayLabel } from "@/types/planning";
 import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
 import type { ActiveMesocycle, PastCycle, WeekDay, WeekSession, TestBrief } from "@/features/shared/hooks/useActivePlan";
 import type { EnergyStep, EnergySessionRow } from "@/types/energy";
@@ -45,15 +47,9 @@ import type { PlannedVsDoneDay } from "@/lib/plannedVsDone";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const SECTION_TITLE = "mb-agon-md text-agon-xs font-bold uppercase tracking-wide text-agon-tx3";
 const WEEK_NAV_BTN = "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-agon-brd-l bg-agon-s2 text-agon-tx";
 const MONTHS_FR    = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
-const DOW_FULL_FR  = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
-const ENERGY_KIND_COLOR: Record<string, string> = {
-  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-  footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
-};
 const ENERGY_KIND_LABEL: Record<string, string> = {
   vo2: "VO₂", tempo: "Tempo", seuil: "Seuil",
   footing: "Footing", fartlek: "Fartlek", autre: "Autre", custom: "Custom",
@@ -63,11 +59,6 @@ const ENERGY_KIND_LABEL: Record<string, string> = {
 
 function haptic() { if (navigator.vibrate) navigator.vibrate(10); }
 
-function sessionColor(s: WeekSession): string {
-  return s.kind === "energy"
-    ? (ENERGY_KIND_COLOR[s.sessionKind ?? ""] ?? "#FFC933")
-    : C.ac;
-}
 
 // ── Energy active session — interactive step validation ───────────────────────
 
@@ -262,7 +253,7 @@ function EnergyActiveSession({
   const { data: refs } = useAthleteReferences(athleteId);
   const vma = refs?.VMA ?? null;
 
-  const kc = ENERGY_KIND_COLOR[session.session_kind] ?? "#6B7280";
+  const kc = session.session_kind === "specifique" ? TYPE_COLOR.hyrox : TYPE_COLOR.energie;
 
   function setStatus(id: string, status: StepStatus) {
     setStepStates(prev => {
@@ -462,78 +453,30 @@ function EnergyPreviewOverlay({
 
 // ── Plan actif card ───────────────────────────────────────────────────────────
 
-function ActivePlanCard({ meso, weekSessionCount }: { meso: ActiveMesocycle; weekSessionCount: number }) {
-  const color = C.ac;
+function ActivePlanCard({ meso }: { meso: ActiveMesocycle }) {
+  const total = Math.max(1, meso.totalWeeks);
   return (
-    <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brdL, overflow: "hidden" }}>
-      <div style={{ padding: "18px 18px 0" }}>
-        {/* Pill + duration */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "3px 10px", borderRadius: 6,
-            background: color + "18", color,
-            fontSize: 11, fontWeight: 700,
-          }}>
-            <Dumbbell size={12} style={{ display: "inline", verticalAlign: "middle" }} /> Programme
-          </span>
-          <span style={{ fontSize: 11, color: C.tx3 }}>{meso.totalWeeks} semaines</span>
+    <div style={{ borderRadius: 14, border: "1px solid " + C.brd, background: C.s1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>Plan actif</div>
+          <div style={{ fontSize: 14, color: C.tx, marginTop: 2 }}>{meso.name}</div>
+          {(meso.macroName || meso.objective) && (
+            <div style={{ fontSize: 12, color: C.tx3, marginTop: 2 }}>{[meso.macroName, meso.objective].filter(Boolean).join(" · ")}</div>
+          )}
         </div>
-
-        {/* Meso name */}
-        <div style={{ fontSize: 18, fontWeight: 700, color: C.tx, marginBottom: 12, lineHeight: 1.3 }}>
-          {meso.name}
-        </div>
-
-        {/* Week progress */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <span style={{ fontSize: 12, color: C.tx3 }}>
-            Semaine {meso.currentWeek} sur {meso.totalWeeks}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 700, color }}>{meso.progressPct}%</span>
-        </div>
-        <div style={{ width: "100%", height: 5, borderRadius: 99, background: "rgba(255,255,255,0.08)", marginBottom: 18, overflow: "hidden" }}>
-          <div style={{ height: "100%", borderRadius: 99, background: C.acV, width: meso.progressPct + "%", transition: "width 0.6s ease" }} />
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: C.brd, marginBottom: 16 }} />
-
-        {/* 3 stats */}
-        <div style={{ display: "flex", marginBottom: 18 }}>
-          {[
-            { label: "Complétion",     value: meso.completionPct + "%" },
-            { label: "Fréquence",      value: meso.frequency != null ? meso.frequency + "/sem" : "—" },
-            { label: "Séances / sem",  value: String(weekSessionCount) },
-          ].map((stat, i) => (
-            <div key={stat.label} style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-              borderLeft: i > 0 ? "1px solid " + C.brd : "none", paddingTop: 2,
-            }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: C.tx, lineHeight: 1.1 }}>{stat.value}</span>
-              <span style={{ fontSize: 10, color: C.tx3, marginTop: 3 }}>{stat.label}</span>
-            </div>
-          ))}
-        </div>
+        <span style={{ ...MONO, fontSize: 13, color: C.tx, flex: "none" }}>
+          S{meso.currentWeek} <span style={{ color: C.tx3 }}>/ {meso.totalWeeks}</span>
+        </span>
       </div>
-
-      {/* Phase sub-card */}
-      {(meso.objective || meso.macroName) && (
-        <div style={{
-          margin: "0 12px 12px",
-          background: C.bS, border: "1px solid " + C.b + "30",
-          borderRadius: 6, padding: "11px 14px",
-          display: "flex", alignItems: "flex-start", gap: 10,
-        }}>
-          <TrendingUp size={16} style={{ marginTop: 1, flexShrink: 0 }} color={C.b} />
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: C.b, marginBottom: 2 }}>{meso.macroName}</div>
-            {meso.objective && (
-              <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.4 }}>{meso.objective}</div>
-            )}
-          </div>
-        </div>
-      )}
+      <div aria-label={`Semaine ${meso.currentWeek} sur ${meso.totalWeeks}`} style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(total, 24)}, 1fr)`, gap: 4 }}>
+        {Array.from({ length: Math.min(total, 24) }, (_, i) => (
+          <span key={i} style={{ height: 4, borderRadius: 2, background: i + 1 < meso.currentWeek ? C.ac : i + 1 === meso.currentWeek ? "rgba(255,201,51,0.5)" : "rgba(231,211,168,0.12)" }} />
+        ))}
+      </div>
+      <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>
+        {meso.completionPct} % des séances faites{meso.frequency != null ? ` · ${meso.frequency} par semaine` : ""}
+      </div>
     </div>
   );
 }
@@ -580,44 +523,38 @@ type RescheduleDay = { iso: string; dow: number; num: number };
 
 function WeekRow({
   days,
-  nextWeek,
   selected,
   scheduledDate,
   onSelect,
 }: {
   days: RescheduleDay[];
-  nextWeek?: boolean;
   selected: string;
   scheduledDate: string;
   onSelect: (iso: string) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 4 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
       {days.map(d => {
         const isSel = d.iso === selected;
         const isCur = d.iso === scheduledDate;
         return (
           <button
             key={d.iso}
+            type="button"
+            aria-pressed={isSel}
+            aria-label={new Date(d.iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
             onClick={() => onSelect(d.iso)}
             style={{
-              flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", padding: "7px 2px", borderRadius: 4,
-              cursor: "pointer", fontFamily: "inherit",
-              border: "1px solid " + (isSel ? C.ac : nextWeek ? "#F59E0B30" : C.brd),
-              background: isSel ? C.acS : nextWeek ? "rgba(245,158,11,0.04)" : C.s2,
-              position: "relative",
+              height: 52, borderRadius: 10, cursor: "pointer", fontFamily: "inherit", position: "relative",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+              border: isSel ? "none" : "1px solid " + C.brd,
+              background: isSel ? C.ac : C.s2,
+              color: isSel ? C.bg : C.tx,
             }}
           >
-            <span style={{ fontSize: 9, fontWeight: 600, color: isSel ? C.ac : C.tx3, textTransform: "uppercase" }}>
-              {DOW_SHORT_FR[d.dow]}
-            </span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: isSel ? C.ac : C.tx, lineHeight: 1.2 }}>
-              {d.num}
-            </span>
-            {isCur && (
-              <span style={{ position: "absolute", bottom: 3, width: 4, height: 4, borderRadius: "50%", background: C.ac }} />
-            )}
+            <span style={{ ...MONO, fontSize: 9.5, color: isSel ? C.bg : C.tx3 }}>{DOW_SHORT_FR[d.dow].charAt(0)}</span>
+            <span style={{ ...MONO, fontSize: 15 }}>{d.num}</span>
+            {isCur && !isSel && <span style={{ position: "absolute", bottom: 4, width: 4, height: 4, borderRadius: "50%", background: C.ac }} />}
           </button>
         );
       })}
@@ -629,14 +566,20 @@ function RescheduleDrawer({
   sessionName,
   scheduledDate,
   weekMondayISO,
+  typeColor,
+  typeLabel,
   onConfirm,
+  onDetail,
   isPending,
   onClose,
 }: {
   sessionName: string;
   scheduledDate: string;
   weekMondayISO: string;
+  typeColor: string;
+  typeLabel: string;
   onConfirm: (newDate: string, reason?: string) => void;
+  onDetail?: () => void;
   isPending?: boolean;
   onClose: () => void;
 }) {
@@ -655,62 +598,52 @@ function RescheduleDrawer({
     };
   }, [weekMondayISO]);
 
-  const isNextWeek  = week2.some(d => d.iso === selected);
-  const canConfirm  = selected !== scheduledDate && !isPending;
+  const canConfirm = selected !== scheduledDate && !isPending;
+  const fmtDay = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
 
   return (
     <Drawer open onOpenChange={(v) => !v && onClose()}>
-      <DrawerContent style={{ background: C.s1, borderTop: "1px solid " + C.brd, padding: "0 0 32px" }}>
-        <DrawerHeader style={{ padding: "16px 20px 8px" }}>
-          <DrawerTitle style={{ fontSize: 15, fontWeight: 700, color: C.tx }}>
-            Déplacer
-            <span style={{ fontSize: 12, fontWeight: 400, color: C.tx3, marginLeft: 8 }}>{sessionName}</span>
-          </DrawerTitle>
+      <DrawerContent style={{ background: C.s1, borderTop: "1px solid " + C.brd, padding: "0 0 28px" }}>
+        <DrawerHeader style={{ padding: "14px 20px 6px", textAlign: "left" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.bg, background: typeColor, borderRadius: 999, padding: "2px 7px" }}>{typeLabel}</span>
+            <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>Prévue {fmtDay(scheduledDate)}</span>
+          </div>
+          <DrawerTitle style={{ ...DISPLAY, fontSize: 18, color: C.tx, marginTop: 6, textAlign: "left" }}>{sessionName}</DrawerTitle>
         </DrawerHeader>
 
-        <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Week 1 */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
-              Cette semaine
-            </div>
-            <WeekRow days={week1} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} />
-          </div>
+        <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2 }}>Déplacer au</div>
+          <WeekRow days={week1} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} />
+          <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: C.tx3 }}>Semaine suivante</div>
+          <WeekRow days={week2} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} />
+          <div style={{ fontSize: 12, color: C.tx3 }}>Ton coach verra le changement dans son planning.</div>
 
-          {/* Week 2 */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-              Semaine suivante <span style={{ fontSize: 9 }}>notifie le coach</span>
-            </div>
-            <WeekRow days={week2} nextWeek selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} />
-          </div>
-
-          {/* Raison */}
           <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Raison (optionnel) — blessure, compétition…"
-            style={{
-              width: "100%", padding: "9px 12px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: C.s2,
-              color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
-              boxSizing: "border-box",
-            }}
+            placeholder="Raison (facultatif) : blessure, compétition…"
+            style={{ width: "100%", height: 44, padding: "0 12px", borderRadius: 12, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           />
 
           <button
+            type="button"
             onClick={() => onConfirm(selected, reason.trim() || undefined)}
             disabled={!canConfirm}
-            style={{
-              width: "100%", padding: "13px 0", borderRadius: 6, border: "none",
-              background: canConfirm ? C.ac : C.s2,
-              color: canConfirm ? "#fff" : C.tx3,
-              fontSize: 14, fontWeight: 700, cursor: canConfirm ? "pointer" : "default",
-              fontFamily: "inherit", minHeight: 44,
-            }}
+            style={{ width: "100%", height: 52, borderRadius: 12, border: "none", background: canConfirm ? C.ac : C.s2, color: canConfirm ? C.bg : C.tx3, fontSize: 15, fontWeight: 600, cursor: canConfirm ? "pointer" : "default", fontFamily: "inherit" }}
           >
-            {isPending ? "Déplacement…" : "Confirmer"}
+            {isPending ? "Déplacement…" : selected === scheduledDate ? "Choisis un autre jour" : `Déplacer au ${fmtDay(selected)}`}
           </button>
+
+          {onDetail && (
+            <button
+              type="button"
+              onClick={onDetail}
+              style={{ width: "100%", height: 48, borderRadius: 12, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Voir le détail
+            </button>
+          )}
         </div>
       </DrawerContent>
     </Drawer>
@@ -866,119 +799,59 @@ function WorkoutPreviewDrawer({
 
 function SessionChip({
   session,
+  today,
   onPress,
   onReschedule,
+  onStart,
 }: {
   session: WeekSession;
+  today: string;
   onPress: (s: WeekSession) => void;
   onReschedule?: (s: WeekSession) => void;
+  /** Jour même, séance de musculation à faire : démarre directement. */
+  onStart?: (s: WeekSession) => void;
 }) {
-  const color = sessionColor(session);
-  const isDone    = session.status === "completed";
-  const isMissed  = session.status === "missed";
-  const isMuscu   = session.kind === "workout";
-
-  const meta = session.kind === "energy"
-    ? (ENERGY_KIND_LABEL[session.sessionKind ?? ""] ?? "Énergie")
-    : "Musculation";
+  const isDone   = session.status === "completed";
+  const isMissed = session.status === "missed";
+  const hyrox    = session.kind === "energy" && session.sessionKind === "specifique";
+  const color    = session.kind === "workout" ? TYPE_COLOR.muscu : hyrox ? TYPE_COLOR.hyrox : TYPE_COLOR.energie;
+  const typeLabel = session.kind === "workout"
+    ? TYPE_LABEL.muscu
+    : hyrox ? TYPE_LABEL.hyrox : (ENERGY_KIND_LABEL[session.sessionKind ?? ""] ?? TYPE_LABEL.energie);
+  const moved = session.rescheduledByAthlete && session.originalScheduledDate && !isDone
+    ? `Déplacée du ${DOW_SHORT_FR[(new Date(session.originalScheduledDate + "T12:00:00").getDay() + 6) % 7].toLowerCase()}.`
+    : null;
+  const isToday = session.scheduledDate === today;
+  const canAct = !isDone && !isMissed;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-      <button
-        onClick={() => { haptic(); onPress(session); }}
-        style={{
-          flex: 1, display: "flex", alignItems: "center", gap: 12,
-          background: isDone ? C.gS : color + "12",
-          border: "none", borderLeft: "4px solid " + (isDone ? C.gV : color),
-          borderRadius: "0 10px 10px 0",
-          padding: "10px 12px",
-          cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-          minHeight: 44,
-          opacity: isMissed ? 0.55 : 1,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 13, fontWeight: 700, color: C.tx,
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            {session.sessionName}
-          </div>
-          <div style={{ fontSize: 10, color: isDone ? C.g : C.tx3, marginTop: 2 }}>
-            {meta}
-            {isDone ? " · Complétée ✓" : isMissed ? " · Manquée" : " · Planifiée"}
-            {session.rescheduledByAthlete && session.originalScheduledDate && !isDone && (
-              <span style={{ color: "#F59E0B" }}> · Déplacée</span>
-            )}
-          </div>
-        </div>
-        {!isDone && !isMissed && (
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-            background: color + "20", color, flexShrink: 0,
-          }}>
-            {session.kind === "energy" ? "Voir →" : "Démarrer ▶"}
-          </span>
-        )}
-        {isDone && <span style={{ fontSize: 14, color: C.g, flexShrink: 0 }}>✓</span>}
-      </button>
-
-      {/* ⋯ reschedule button — workout and energy (not completed/missed) */}
-      {!isDone && !isMissed && onReschedule && (
-        <button
-          onClick={(e) => { e.stopPropagation(); haptic(); onReschedule(session); }}
-          title="Déplacer la séance"
-          style={{
-            width: 36, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
-            background: "transparent", border: "none", cursor: "pointer",
-            color: C.tx3, fontSize: 16, fontFamily: "inherit", flexShrink: 0,
-          }}
-        >
-          ⋯
-        </button>
-      )}
-    </div>
+    <ProgramSessionCard
+      color={color}
+      typeLabel={typeLabel}
+      title={session.sessionName}
+      done={isDone}
+      muted={isMissed}
+      status={isMissed ? "Manquée" : moved}
+      statusColor={isMissed ? C.tx3 : TYPE_COLOR.hyrox}
+      highlight={isToday && canAct}
+      onPress={() => { haptic(); onPress(session); }}
+      onStart={canAct && isToday && session.kind === "workout" && onStart ? () => { haptic(); onStart(session); } : undefined}
+      onMenu={canAct && onReschedule ? () => { haptic(); onReschedule(session); } : undefined}
+    />
   );
 }
 
 // ── Test chip ─────────────────────────────────────────────────────────────────
 
-const TEST_TYPE_COLOR: Record<string, string> = {
-  musculation: "#FFC933", endurance: "#33B5FF", vitesse: "#EF4444",
-  puissance: "#F59E0B", souplesse: "#10B981", autre: "#6B7280",
-};
-
 function TestChip({ test, onPress }: { test: TestBrief; onPress: (id: string) => void }) {
-  const tc = TEST_TYPE_COLOR[test.type] ?? "#6B7280";
   return (
-    <button
-      onClick={() => { haptic(); onPress(test.id); }}
-      style={{
-        flex: 1, display: "flex", alignItems: "center", gap: 12,
-        background: test.completed ? C.gS : tc + "12",
-        border: "none", borderLeft: "4px solid " + (test.completed ? C.g : tc),
-        borderRadius: "0 10px 10px 0",
-        padding: "10px 12px",
-        cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-        minHeight: 44,
-      }}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {test.title}
-        </div>
-        <div style={{ fontSize: 10, color: test.completed ? C.g : C.tx3, marginTop: 2, textTransform: "capitalize" }}>
-          {test.type}{test.completed ? " · Réalisé ✓" : " · À faire"}
-        </div>
-      </div>
-      {!test.completed && (
-        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: tc + "20", color: tc, flexShrink: 0 }}>
-          Remplir →
-        </span>
-      )}
-      {test.completed && <span style={{ fontSize: 14, color: C.g, flexShrink: 0 }}>✓</span>}
-    </button>
+    <ProgramSessionCard
+      color={TYPE_COLOR.test}
+      typeLabel={test.type === "biometric" ? "Biométrie" : TYPE_LABEL.test}
+      title={test.title}
+      done={test.completed}
+      onPress={() => { haptic(); onPress(test.id); }}
+    />
   );
 }
 
@@ -986,38 +859,24 @@ function TestChip({ test, onPress }: { test: TestBrief; onPress: (id: string) =>
 
 function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPress: (f: FreeSession) => void }) {
   const sportMeta = SPORTS.find(s => s.key === activity.sport);
-  const color = "#1FF0B0";
+  const detail = [
+    activity.duration ? `${activity.duration} min` : null,
+    activity.distance_km ? `${String(activity.distance_km).replace(".", ",")} km` : null,
+  ].filter(Boolean).join(" · ");
   return (
-    <button
-      onClick={() => { haptic(); onPress(activity); }}
-      style={{
-        flex: 1, display: "flex", alignItems: "center", gap: 12,
-        background: color + "12",
-        border: "none", borderLeft: "4px solid " + color,
-        borderRadius: "0 10px 10px 0",
-        padding: "10px 12px",
-        cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-        minHeight: 44,
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {activity.name}
-        </div>
-        <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
-          {sportMeta?.label ?? activity.sport}
-          {activity.duration ? ` · ${activity.duration} min` : ""}
-          {activity.distance_km ? ` · ${activity.distance_km} km` : ""}
-          {" · ✓"}
-        </div>
-      </div>
-      <span style={{ fontSize: 14, color: C.g, flexShrink: 0 }}>✓</span>
-    </button>
+    <ProgramSessionCard
+      color={TYPE_COLOR.libre}
+      typeLabel={sportMeta?.label ?? activity.sport ?? TYPE_LABEL.libre}
+      title={activity.name}
+      done
+      status={detail || undefined}
+      onPress={() => { haptic(); onPress(activity); }}
+    />
   );
 }
 
 function DayRow({
-  day, today, onSessionPress, onReschedule, onTestPress,
+  day, today, onSessionPress, onReschedule, onStart, onTestPress,
   freeActivities, onAddActivity, onEditActivity, onAddCompetition, viewOnly,
   dayTheme, dayFiches = [], watch,
 }: {
@@ -1025,6 +884,7 @@ function DayRow({
   today: string;
   onSessionPress: (s: WeekSession) => void;
   onReschedule: (s: WeekSession) => void;
+  onStart?: (s: WeekSession) => void;
   onTestPress: (id: string) => void;
   freeActivities: FreeSession[];
   onAddActivity: (date: string) => void;
@@ -1050,165 +910,99 @@ function DayRow({
   const watchCard = (c: (typeof watchCards)[number]) => (
     <WatchCard key={c.key} card={c} day={watch!.day} athleteId={watch!.athleteId} seancePath={(id) => `/athlete/program/activity/${id}`} />
   );
+  const [showAdd, setShowAdd] = useState(false);
   const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0 && dayFiches.length === 0 && freeWatch.length === 0;
 
   return (
-    <div style={{
-      background: C.s1,
-      borderRadius: 6,
-      border: "1px solid " + (isCompDay ? C.r + "70" : isToday ? C.ac + "50" : C.brdL),
-      overflow: "hidden",
-    }}>
-      {/* Day header */}
-      <div style={{
-        padding: "10px 14px",
-        background: isToday ? C.acS : "transparent",
-        display: "flex", alignItems: "center", gap: 12,
-      }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 4, flexShrink: 0,
-          background: isToday ? C.acV : C.s2,
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        }}>
-          <span style={{ fontSize: 8, fontWeight: 600, color: isToday ? "#0E0C0A" : C.tx3, textTransform: "uppercase" }}>
-            {DOW_FULL_FR[day.dow].slice(0, 3)}
-          </span>
-          <span style={{ fontSize: 16, fontWeight: 800, color: isToday ? "#0E0C0A" : C.tx, lineHeight: 1.1 }}>
-            {dateNum}
-          </span>
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+      {/* Colonne du jour : « Jeu / 5 », pleine en or aujourd'hui ; « + » ouvre l'ajout */}
+      <div style={{ width: 40, flex: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+        <div
+          aria-hidden
+          style={{
+            width: 40, height: 44, borderRadius: 10,
+            background: isToday ? C.ac : "transparent",
+            color: isToday ? C.bg : isPast ? C.tx3 : C.tx,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+          }}
+        >
+          <span style={{ ...MONO, fontSize: 9.5, color: isToday ? C.bg : C.tx3 }}>{DOW_SHORT_FR[day.dow]}</span>
+          <span style={{ ...MONO, fontSize: 16 }}>{dateNum}</span>
         </div>
-        <div style={{ flex: 1 }}>
-          {isToday && (
-            <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 1 }}>
-              Aujourd'hui
-            </div>
-          )}
-          {isCompDay ? (
-            <div style={{ fontSize: 12, fontWeight: 700, color: C.r }}>
-              {competitionDayLabel(day.competitions[0].type)}
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, fontWeight: isEmpty ? 400 : 600, color: isEmpty ? C.tx3 : C.tx }}>
-              {isEmpty
-                ? (isPast ? "Repos" : "Aucune séance")
-                : day.sessions.length === 0 && dayFiches.length > 0
-                  ? `${dayFiches.length} fiche${dayFiches.length > 1 ? "s" : ""}`
-                  : `${day.sessions.length} séance${day.sessions.length > 1 ? "s" : ""}`}
-            </div>
-          )}
-          {/* Thème du coach, sous le décompte : il qualifie la journée même
-              quand aucune séance n'y est posée. */}
-          {!isDayThemeEmpty(dayTheme) && (
-            <div style={{ marginTop: 3, display: "flex" }}>
-              <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />
-            </div>
-          )}
-        </div>
-        {day.sessions.length > 0 && (
-          <div style={{ display: "flex", gap: 4 }}>
-            {day.sessions.map(s => (
-              <div key={s.id} style={{
-                width: 6, height: 6, borderRadius: "50%",
-                background: s.status === "completed" ? C.gV : sessionColor(s),
-              }} />
-            ))}
-          </div>
+        {!viewOnly && (
+          <button
+            type="button"
+            aria-expanded={showAdd}
+            aria-label={`Ajouter le ${DOW_SHORT_FR[day.dow].toLowerCase()}. ${dateNum} : activité libre ou compétition`}
+            onClick={() => { haptic(); setShowAdd((v) => !v); }}
+            style={{ width: 28, height: 24, borderRadius: 8, border: "1px solid " + (showAdd ? C.ac : C.brd), background: "transparent", color: showAdd ? C.ac : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+          >
+            <Plus size={12} />
+          </button>
         )}
       </div>
 
-      {/* Jour de compétition — en tête, séances éventuelles dessous */}
-      {isCompDay && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "6px 14px 4px" }}>
-          {day.competitions.map(c => (
-            <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
-          ))}
-        </div>
-      )}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        {(isToday || !isDayThemeEmpty(dayTheme)) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 16 }}>
+            {isToday && <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ac }}>Aujourd’hui</span>}
+            {!isDayThemeEmpty(dayTheme) && <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />}
+          </div>
+        )}
 
-      {/* Session list */}
-      {day.sessions.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "6px 0 6px 14px" }}>
-          {day.sessions.map(s => {
-            const c = linkedCard.get(`${s.kind}:${s.id}`);
-            return c ? (
-              <div key={s.id} style={{ paddingRight: 14 }}>{watchCard(c)}</div>
-            ) : (
-              <SessionChip
-                key={s.id}
-                session={s}
-                onPress={onSessionPress}
-                onReschedule={onReschedule}
-              />
-            );
-          })}
-        </div>
-      )}
+        {/* Jour de compétition — en tête, séances éventuelles dessous */}
+        {isCompDay && day.competitions.map(c => (
+          <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
+        ))}
 
-      {/* Test list */}
-      {day.tests.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "6px 0 6px 14px" }}>
-          {day.tests.map(t => (
-            <TestChip key={t.id} test={t} onPress={onTestPress} />
-          ))}
-        </div>
-      )}
+        {day.sessions.map(s => {
+          const c = linkedCard.get(`${s.kind}:${s.id}`);
+          return c ? (
+            <div key={s.id}>{watchCard(c)}</div>
+          ) : (
+            <SessionChip
+              key={s.id}
+              session={s}
+              today={today}
+              onPress={onSessionPress}
+              onReschedule={viewOnly ? undefined : onReschedule}
+              onStart={viewOnly ? undefined : onStart}
+            />
+          );
+        })}
 
-      {/* Free activities */}
-      {freeActivities.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "6px 0 6px 14px" }}>
-          {freeActivities.map(f => (
-            <FreeActivityChip key={f.id} activity={f} onPress={onEditActivity} />
-          ))}
-        </div>
-      )}
+        {day.tests.map(t => <TestChip key={t.id} test={t} onPress={onTestPress} />)}
+        {freeActivities.map(f => <FreeActivityChip key={f.id} activity={f} onPress={onEditActivity} />)}
+        {freeWatch.map(watchCard)}
+        {dayFiches.length > 0 && <DayFiches items={dayFiches} />}
 
-      {/* Activités de montre sans séance prévue */}
-      {freeWatch.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "6px 14px" }}>
-          {freeWatch.map(watchCard)}
-        </div>
-      )}
+        {isEmpty && !isCompDay && (
+          <div style={{ height: 40, padding: "0 12px", borderRadius: 12, border: "1px dashed rgba(231,211,168,0.16)", display: "flex", alignItems: "center", fontSize: 13, color: C.tx3 }}>
+            Repos
+          </div>
+        )}
 
-      {/* Fiches posées sur ce jour (staff ou coach) */}
-      {dayFiches.length > 0 && (
-        <div style={{ padding: "6px 14px 6px 14px" }}>
-          <DayFiches items={dayFiches} />
-        </div>
-      )}
-
-      {/* Add activity / competition buttons */}
-      {!viewOnly && (
-        <div style={{ padding: "4px 14px 8px", display: "flex", gap: 6 }}>
-          <button
-            onClick={() => { haptic(); onAddActivity(day.date); }}
-            style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              padding: "8px 0", borderRadius: 6,
-              border: "1px dashed " + C.brdL, background: "transparent",
-              color: C.tx3, fontSize: 11, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            <Plus size={12} />
-            Activité libre
-          </button>
-          {onAddCompetition && !isCompDay && (
+        {!viewOnly && showAdd && (
+          <div style={{ display: "flex", gap: 8 }}>
             <button
-              onClick={() => { haptic(); onAddCompetition(day.date); }}
-              style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                padding: "8px 0", borderRadius: 6,
-                border: "1px dashed " + C.r + "60", background: "transparent",
-                color: C.r, fontSize: 11, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+              type="button"
+              onClick={() => { haptic(); setShowAdd(false); onAddActivity(day.date); }}
+              style={{ flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, borderRadius: 10, border: "1px dashed " + C.brdL, background: "none", color: C.tx2, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
             >
-              <Trophy size={12} />
-              Compétition
+              <Plus size={12} /> Activité libre
             </button>
-          )}
-        </div>
-      )}
+            {onAddCompetition && !isCompDay && (
+              <button
+                type="button"
+                onClick={() => { haptic(); setShowAdd(false); onAddCompetition(day.date); }}
+                style={{ flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, borderRadius: 10, border: "1px dashed " + TYPE_COLOR.competition + "73", background: "none", color: TYPE_COLOR.competition, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                <Trophy size={12} /> Compétition
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1248,6 +1042,7 @@ function ProgramSessionsView() {
   const [activityDate,     setActivityDate]     = useState<string | null>(null);
   const [editActivity,     setEditActivity]     = useState<FreeSession | null>(null);
   const [compDate,         setCompDate]         = useState<string | null>(null);
+  const [showPastCycles,   setShowPastCycles]   = useState(false);
 
   const today         = useMemo(() => {
     const d = new Date();
@@ -1274,6 +1069,10 @@ function ProgramSessionsView() {
     weekBounds ? athleteId : null, weekBounds ?? { start: "", end: "" },
   );
   const fichesByDate = useMemo(() => groupScheduleByDate(scheduledDocs), [scheduledDocs]);
+  const weekDone = useMemo(() => {
+    const all = (data?.weekDays ?? []).flatMap((d) => d.sessions);
+    return { planned: all.length, done: all.filter((x) => x.status === "completed").length };
+  }, [data?.weekDays]);
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -1356,31 +1155,19 @@ function ProgramSessionsView() {
         // Téléphone : une colonne. PC : rail du plan à gauche, semaine à droite.
         <div className="grid grid-cols-1 gap-agon-xl px-agon-lg pb-8 pt-agon-lg lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:px-agon-xl">
           <div className="flex flex-col gap-agon-xl lg:sticky lg:top-[105px]">
-            <section>
-              <h2 className={SECTION_TITLE}>Plan actif</h2>
-              {data?.cycle ? (
-                <ActivePlanCard meso={data.cycle} weekSessionCount={data.weekSessionCount} />
-              ) : (
-                <EmptyState
-                  icon={CalendarDays}
-                  title="Aucun cycle en cours"
-                  description="Tu n'es dans aucun cycle pour le moment. Ton coach programmera la suite."
-                />
-              )}
-            </section>
-
-            {data?.pastCycles && data.pastCycles.length > 0 && (
-              <section>
-                <h2 className={SECTION_TITLE}>Cycles précédents</h2>
-                <div className="flex flex-col gap-agon-sm">
-                  {data.pastCycles.map((c) => <PastCycleCard key={c.id} cycle={c} />)}
-                </div>
-              </section>
+            {data?.cycle ? (
+              <ActivePlanCard meso={data.cycle} />
+            ) : (
+              <EmptyState
+                icon={CalendarDays}
+                title="Aucun cycle en cours"
+                description="Tu n'es dans aucun cycle pour le moment. Ton coach programmera la suite."
+              />
             )}
           </div>
 
-          <section>
-            <div className="mb-agon-lg flex items-center gap-agon-sm">
+          <section className="flex flex-col gap-[18px]">
+            <div className="flex items-center gap-agon-md">
               <button
                 type="button"
                 aria-label="Semaine précédente"
@@ -1393,12 +1180,15 @@ function ProgramSessionsView() {
                 type="button"
                 onClick={() => setWeekOffset(0)}
                 disabled={weekOffset === 0}
-                className={cn("min-w-0 flex-1 bg-transparent p-0 text-center", weekOffset === 0 ? "cursor-default" : "cursor-pointer")}
+                className={cn("min-w-0 flex-1 bg-transparent p-0 text-left", weekOffset === 0 ? "cursor-default" : "cursor-pointer")}
               >
-                <div className="font-display text-agon-2xl font-extrabold">{weekLabel(weekOffset)}</div>
-                <div className="mt-agon-2xs text-agon-xs text-agon-tx3">
+                <div style={{ ...DISPLAY, fontSize: 15, color: C.tx }}>{weekLabel(weekOffset)}</div>
+                <div style={{ ...MONO, fontSize: 11, color: C.tx3, marginTop: 2 }}>
                   {weekRangeLabel(data?.weekDays ?? [])}
-                  {weekOffset !== 0 && <span className="text-agon-accent"> · revenir à aujourd'hui</span>}
+                  {weekDone.planned > 0 && (
+                    <> · <span style={{ color: TYPE_COLOR.fait }}>{weekDone.done}</span> / {weekDone.planned} faites</>
+                  )}
+                  {weekOffset !== 0 && <span style={{ color: C.ac }}> · revenir à aujourd'hui</span>}
                 </div>
               </button>
               <button
@@ -1415,7 +1205,7 @@ function ProgramSessionsView() {
                 Aucune séance cette semaine
               </div>
             ) : (
-              <div className={cn("flex flex-col gap-agon-md transition-opacity duration-150", isPlaceholderData && "opacity-50")}>
+              <div className={cn("flex flex-col gap-[14px] transition-opacity duration-150", isPlaceholderData && "opacity-50")}>
                 {data.weekDays.map(day => (
                   <DayRow
                     key={day.date}
@@ -1423,6 +1213,7 @@ function ProgramSessionsView() {
                     today={today}
                     onSessionPress={handleSessionPress}
                     onReschedule={setRescheduleTarget}
+                    onStart={(s) => navigate("/athlete/program/workout/" + s.id)}
                     onTestPress={(id) => setTestPreviewId(id)}
                     freeActivities={freeSessions.filter(f => f.date === day.date && f.sport)}
                     onAddActivity={setActivityDate}
@@ -1434,6 +1225,30 @@ function ProgramSessionsView() {
                     watch={athleteId ? { day: watchByDate.get(day.date), athleteId, now: watchNow } : undefined}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* Cycles précédents : en bas, repliés */}
+            {data?.pastCycles && data.pastCycles.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  aria-expanded={showPastCycles}
+                  onClick={() => setShowPastCycles((v) => !v)}
+                  className="flex h-12 w-full items-center gap-agon-sm bg-transparent px-1 text-left"
+                  style={{ fontFamily: "inherit", cursor: "pointer" }}
+                >
+                  <span style={{ fontSize: 13, color: C.tx2 }}>
+                    Cycles précédents <span style={{ ...MONO, color: C.tx3 }}>({data.pastCycles.length})</span>
+                  </span>
+                  <span style={{ flex: 1 }} />
+                  <ChevronRight size={16} color={C.tx3} style={{ transform: showPastCycles ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+                </button>
+                {showPastCycles && (
+                  <div className="flex flex-col gap-agon-sm">
+                    {data.pastCycles.map((c) => <PastCycleCard key={c.id} cycle={c} />)}
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -1493,6 +1308,9 @@ function ProgramSessionsView() {
           sessionName={rescheduleTarget.sessionName}
           scheduledDate={rescheduleTarget.scheduledDate}
           weekMondayISO={weekMondayISO}
+          typeColor={rescheduleTarget.kind === "workout" ? TYPE_COLOR.muscu : rescheduleTarget.sessionKind === "specifique" ? TYPE_COLOR.hyrox : TYPE_COLOR.energie}
+          typeLabel={rescheduleTarget.kind === "workout" ? TYPE_LABEL.muscu : rescheduleTarget.sessionKind === "specifique" ? TYPE_LABEL.hyrox : TYPE_LABEL.energie}
+          onDetail={() => { const t = rescheduleTarget; setRescheduleTarget(null); handleSessionPress(t); }}
           onConfirm={handleRescheduleConfirm}
           isPending={reschedulePending}
           onClose={() => setRescheduleTarget(null)}
