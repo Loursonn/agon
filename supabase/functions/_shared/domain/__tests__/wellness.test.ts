@@ -11,6 +11,7 @@ import {
   wellnessBand,
   wellnessEntries,
   wellnessScore,
+  wellnessRowToEntry,
 } from "../wellness";
 
 /** Saisie telle qu'écrite par `WellnessFlow` (clé compacte, `date` compacte). */
@@ -177,5 +178,20 @@ describe("planche 12/11 : zones, envie, douleur, malade", () => {
     const e = parseWellnessEntry({ envie: 2, pain: 0, sick: false, domsLevels: { lombaires: 3 } }, "20261112")!;
     const out = toLegacyEntry(e);
     expect(out).toMatchObject({ envie: 2, pain: 0, sick: false, domsLevels: { lombaires: 3 } });
+  });
+});
+
+describe("séance d'hier rattachée aux courbatures", () => {
+  const id = "0b9c2f7e-1d2a-4c3b-9e8f-112233445566";
+  it("lit, réécrit et relit depuis la table", () => {
+    const e = parseWellnessEntry({ domsLevels: { quads_f: 2 }, domsWorkout: { id, name: "  Force · chaîne postérieure " } }, "20261112")!;
+    expect(e.domsWorkout).toEqual({ id, name: "Force · chaîne postérieure" });
+    expect(toLegacyEntry(e).domsWorkout).toEqual({ id, name: "Force · chaîne postérieure" });
+    expect(wellnessRowToEntry({ day: "2026-11-12", doms_workout_id: id, doms_workout_name: "X" } as never)?.domsWorkout).toEqual({ id, name: "X" });
+  });
+  it("id illisible ou absent → null", () => {
+    expect(parseWellnessEntry({ domsWorkout: { id: "pas-un-uuid", name: "X" } }, "20261112")?.domsWorkout).toBeNull();
+    expect(parseWellnessEntry({ fatigue: 3 }, "20261112")?.domsWorkout).toBeNull();
+    expect("domsWorkout" in toLegacyEntry(parseWellnessEntry({ fatigue: 3 }, "20261112")!)).toBe(false);
   });
 });

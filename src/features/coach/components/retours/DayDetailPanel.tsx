@@ -197,6 +197,11 @@ function DomsDisplay({ wellness }: { wellness: WellnessDay }) {
             <span key={t} style={{ padding: "3px 9px", borderRadius: 999, fontSize: 10, background: C.s2, border: "1px solid " + C.brd, color: C.tx2 }}>{t}</span>
           ))}
         </div>
+        {leveled.length > 0 && wellness.domsWorkout && (
+          <div style={{ fontSize: 11, color: C.tx2, marginTop: 6 }}>
+            Après la séance de la veille : <span style={{ color: C.tx }}>{wellness.domsWorkout.name ?? "séance"}</span>
+          </div>
+        )}
       </div>
     );
   }

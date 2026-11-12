@@ -67,6 +67,20 @@ export interface WellnessSleep {
   interruptNote: string | null;
 }
 
+export interface DomsWorkout {
+  id: string;
+  name: string | null;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `{ id, name }` lisible, sinon null (même règle que la projection SQL). */
+export function readDomsWorkout(v: unknown): DomsWorkout | null {
+  if (!isObj(v) || typeof v.id !== "string" || !UUID_RE.test(v.id)) return null;
+  const name = typeof v.name === "string" && v.name.trim() ? v.name.trim().slice(0, 200) : null;
+  return { id: v.id, name };
+}
+
 export interface WellnessEntry {
   /** Jour local de la saisie, "YYYY-MM-DD". */
   day: IsoDay;
@@ -82,6 +96,8 @@ export interface WellnessEntry {
   pain: number | null;
   /** « Malade ou fiévreux·se ? » */
   sick: boolean | null;
+  /** Séance de la veille à laquelle les courbatures sont rattachées (nom gardé tel quel). */
+  domsWorkout: DomsWorkout | null;
   /** Réponse « Es-tu blessé/malade ? » : le commentaire, sinon null. */
   injuryNote: string | null;
   /** Poids saisi avec le wellness, tel quel (la courbe de poids reste `asp:wlog`). */
@@ -179,6 +195,7 @@ export function parseWellnessEntry(raw: unknown, key?: string | null, archived =
       ...raw, day, archived: raw.archived || archived,
       domsLevels: readDomsLevels(raw.domsLevels), envie: readItem(raw.envie), pain: readPain(raw.pain),
       sick: typeof raw.sick === "boolean" ? raw.sick : null,
+      domsWorkout: readDomsWorkout(raw.domsWorkout),
     };
   }
   if (!isObj(raw)) return null;
@@ -203,6 +220,7 @@ export function parseWellnessEntry(raw: unknown, key?: string | null, archived =
     envie: readItem(isObj(raw.items) ? raw.items.envie : raw.envie),
     pain: readPain(raw.pain),
     sick: typeof raw.sick === "boolean" ? raw.sick : null,
+    domsWorkout: readDomsWorkout(raw.domsWorkout),
     injuryNote: text(raw.injComment) ?? text(raw.injuryNote),
     weightKg: (() => {
       const w = num(raw.poids ?? raw.weightKg);
@@ -274,11 +292,13 @@ export interface WellnessRow {
   pain?: number | string | null;
   sick?: boolean | null;
   doms_levels?: unknown;
+  doms_workout_id?: string | null;
+  doms_workout_name?: string | null;
 }
 
 /** Colonnes à lire dans `wellness_entries` pour `wellnessRowToEntry`. */
 export const WELLNESS_ROW_COLUMNS =
-  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels";
+  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name";
 
 function toHm(v: unknown): HourMinute | null {
   const m = typeof v === "string" ? /^(\d{1,2}):(\d{2})/.exec(v) : null;
@@ -313,6 +333,7 @@ export function wellnessRowToEntry(row: WellnessRow): WellnessEntry | null {
     envie: readItem(row.envie),
     pain: readPain(row.pain),
     sick: typeof row.sick === "boolean" ? row.sick : null,
+    domsWorkout: readDomsWorkout({ id: row.doms_workout_id, name: row.doms_workout_name }),
     injuryNote: row.injury_note?.trim() || null,
     weightKg: kg != null && kg > 0 ? kg : null,
     archived: row.archived === true,
@@ -353,6 +374,7 @@ export function toLegacyEntry(e: WellnessEntry): Record<string, unknown> {
   if (e.envie != null) out.envie = e.envie;
   if (e.pain != null) out.pain = e.pain;
   if (e.sick != null) out.sick = e.sick;
+  if (e.domsWorkout) out.domsWorkout = e.domsWorkout;
   if (e.sleep.bedtime) out.coucher = e.sleep.bedtime;
   if (e.sleep.wake) out.reveil = e.sleep.wake;
   if (e.sleep.hours != null) out.sleepDur = e.sleep.hours;

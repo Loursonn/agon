@@ -113,6 +113,7 @@ describe("lecture (table wellness_entries)", () => {
       envie: null,
       pain: null,
       sick: null,
+      domsWorkout: null,
       injuryNote: "Genou",
       weightKg: 72.4,
       archived: false,

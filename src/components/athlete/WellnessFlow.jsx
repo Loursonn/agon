@@ -7,6 +7,7 @@ import { useOptionalAthleteContext } from "@/features/shared/context/AthleteCont
 import { loadDraft, saveDraft, wellnessDraftKey } from "@/lib/localDraft";
 import { BodyZoneMap } from "@/features/athlete/components/wellness/BodyZoneMap";
 import { DOMS_LEVEL_COLOR, PAIN_COLORS, levelsList } from "@/lib/bodyZones";
+import { useYesterdayWorkout } from "@/features/athlete/hooks/useYesterdayWorkout";
 
 // ── Wellness du matin (planche « Wellness athlète » retenue, 12/11) ─────────
 // Écran 1 « Comment tu te sens » : readiness, nuit, 6 lignes (la 6ᵉ, envie de
@@ -171,6 +172,8 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
   const [domsPoints] = useState(existing?.domsPoints || []);
   const [levels, setLevels] = useState(draft?.domsLevels ?? (existing?.domsLevels || {}));
   const [selZone, setSelZone] = useState(null);
+  // Séance d'hier (planche) : les courbatures y sont rattachées pour le coach.
+  const { data: yesterday } = useYesterdayWorkout(athleteId);
   const [pain, setPain] = useState(draft ? draft.pain ?? null : existing?.pain ?? null);
   const [sick, setSick] = useState(draft ? draft.sick ?? null : existing?.sick ?? null);
   const [coucher, setCoucher] = useState(draft?.coucher ?? (existing?.coucher || { h: 23, m: 0 }));
@@ -298,6 +301,21 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
             </span>
           </div>
 
+          {yesterday && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "#1E1A16", border: "1px solid rgba(231,211,168,0.10)" }}>
+                <span style={{ width: 4, alignSelf: "stretch", borderRadius: 2, background: "#FFC933" }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={KICK_S}>Séance d’hier</span>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginTop: 4, color: "#FFFFFF" }}>{yesterday.name}</div>
+                  {yesterday.detail && <div style={{ fontSize: 12, color: TX3, marginTop: 2 }}>{yesterday.detail}</div>}
+                </div>
+                <span style={{ ...MONO_S, fontSize: 11, color: TX2, whiteSpace: "nowrap" }}>J+1</span>
+              </div>
+              <div style={{ fontSize: 11.5, color: TX3, marginTop: -4 }}>Les zones sont rattachées à cette séance pour ton coach.</div>
+            </>
+          )}
+
           <button type="button" onClick={() => setStep(2)} style={{ ...bigBtn(true), marginTop: 6 }}>Voir mon bilan</button>
         </div>
       </div>
@@ -363,6 +381,8 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
             domsPoints,
             domsLevels: levels,
             pain, sick,
+            // Rattachement seulement s'il y a des courbatures notées.
+            domsWorkout: yesterday && Object.keys(levels).length > 0 ? { id: yesterday.id, name: yesterday.name } : null,
             coucher, reveil, sleepDur,
             poids: +poids || null, score,
             injComment,

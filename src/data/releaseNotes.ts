@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-wellness-seance-hier",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Courbatures rattachées à la séance de la veille",
+    summary: "Quand votre athlète note des courbatures le matin, l'app lui montre sa séance de la veille et vous dit après quelle séance elles sont apparues.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans son wellness, l'athlète voit une carte « Séance d'hier » (nom, exercices, séries, RPE) juste avant son bilan.",
+          "Dans le détail d'un jour (Retours), sous les zones du corps : « Après la séance de la veille : … ».",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-seance-hyrox-tours",
     date: "2026-11-13",
     kind: "feature",

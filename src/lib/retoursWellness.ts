@@ -21,6 +21,7 @@ export function toWellnessDay(e: WellnessEntry): WellnessDay {
     envie: e.envie,
     pain: e.pain,
     sick: e.sick,
+    domsWorkout: e.domsWorkout,
     coucher: e.sleep.bedtime ?? undefined,
     reveil: e.sleep.wake ?? undefined,
     sleepDur: e.sleep.hours ?? undefined,

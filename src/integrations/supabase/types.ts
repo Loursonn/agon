@@ -71,6 +71,7 @@ export type Database = {
           activity_id: string
           ai_allowed: boolean
           athlete_id: string
+          comment: string | null
           created_at: string
           distance_override_m: number | null
           end_s: number
@@ -92,6 +93,7 @@ export type Database = {
           activity_id: string
           ai_allowed?: boolean
           athlete_id: string
+          comment?: string | null
           created_at?: string
           distance_override_m?: number | null
           end_s: number
@@ -113,6 +115,7 @@ export type Database = {
           activity_id?: string
           ai_allowed?: boolean
           athlete_id?: string
+          comment?: string | null
           created_at?: string
           distance_override_m?: number | null
           end_s?: number
@@ -5284,6 +5287,8 @@ export type Database = {
           doms: number | null
           doms_levels: Json
           doms_points: Json
+          doms_workout_id: string | null
+          doms_workout_name: string | null
           doms_zones: string[]
           energie: number | null
           envie: number | null
@@ -5310,6 +5315,8 @@ export type Database = {
           doms?: number | null
           doms_levels?: Json
           doms_points?: Json
+          doms_workout_id?: string | null
+          doms_workout_name?: string | null
           doms_zones?: string[]
           energie?: number | null
           envie?: number | null
@@ -5336,6 +5343,8 @@ export type Database = {
           doms?: number | null
           doms_levels?: Json
           doms_points?: Json
+          doms_workout_id?: string | null
+          doms_workout_name?: string | null
           doms_zones?: string[]
           energie?: number | null
           envie?: number | null
@@ -6105,6 +6114,8 @@ export type Database = {
           doms: number | null
           doms_levels: Json
           doms_points: Json
+          doms_workout_id: string | null
+          doms_workout_name: string | null
           doms_zones: string[]
           energie: number | null
           envie: number | null

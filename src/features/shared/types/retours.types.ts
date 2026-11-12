@@ -61,6 +61,8 @@ export interface WellnessDay {
   envie?: number | null;
   pain?: number | null;
   sick?: boolean | null;
+  /** Séance de la veille à laquelle les courbatures sont rattachées. */
+  domsWorkout?: { id: string; name: string | null } | null;
   domsPoints?: Array<{ id: string; x: number; y: number; side: "front" | "back"; intensity?: number }>;
   coucher?:   { h: number; m: number };
   reveil?:    { h: number; m: number };
