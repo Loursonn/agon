@@ -386,7 +386,12 @@ export default function PrivacyPolicy() {
             </>,
             <>
               <strong>Effacement (« droit à l'oubli »)</strong> — supprimer définitivement votre
-              compte et l'ensemble de vos données. Disponible depuis votre profil.
+              compte et l'ensemble de vos données. Disponible depuis votre profil, ou sans
+              l'application sur la page{" "}
+              <a href={LEGAL_ROUTES.deletion} style={{ color: ACCENT }}>
+                Supprimer votre compte
+              </a>
+              .
             </>,
             <>
               <strong>Portabilité</strong> — récupérer vos données dans un format structuré et

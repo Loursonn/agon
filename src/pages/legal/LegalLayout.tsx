@@ -227,6 +227,9 @@ export default function LegalLayout({
           <Link to={LEGAL_ROUTES.notice} style={{ color: S.tx2, textDecoration: "none" }}>
             Mentions légales
           </Link>
+          <Link to={LEGAL_ROUTES.deletion} style={{ color: S.tx2, textDecoration: "none" }}>
+            Supprimer mon compte
+          </Link>
           <Link to="/login" style={{ color: S.tx3, textDecoration: "none", marginLeft: "auto" }}>
             Retour à l'application
           </Link>

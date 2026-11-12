@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound.tsx";
 const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy.tsx"));
 const Terms         = lazy(() => import("./pages/legal/Terms.tsx"));
 const LegalNotice   = lazy(() => import("./pages/legal/LegalNotice.tsx"));
+const AccountDeletion = lazy(() => import("./pages/legal/AccountDeletion.tsx"));
 
 // Layouts (lazy — chargés après auth)
 const AthleteApp       = lazy(() => import("./pages/athlete/AthleteApp.tsx"));
@@ -183,9 +184,11 @@ function AppRoutes() {
           <Route path="/confidentialite"  element={<Page><PrivacyPolicy /></Page>} />
           <Route path="/cgu"              element={<Page><Terms /></Page>} />
           <Route path="/mentions-legales" element={<Page><LegalNotice /></Page>} />
+          <Route path="/suppression-compte" element={<Page><AccountDeletion /></Page>} />
           {/* Alias anglais : les formulaires partenaires et les robots les attendent souvent */}
           <Route path="/privacy" element={<Navigate to="/confidentialite" replace />} />
           <Route path="/terms"   element={<Navigate to="/cgu" replace />} />
+          <Route path="/delete-account" element={<Navigate to="/suppression-compte" replace />} />
 
           {/* Redirection selon le rôle */}
           <Route path="/" element={<ProtectedRoute><RoleRedirect /></ProtectedRoute>} />

@@ -1991,3 +1991,30 @@ palette (`#F97316`, `#22C55E`…) s'affichent dans leur équivalent peps
   séance inchangée ne coûte aucun appel ; modifiée = supprimée puis recréée.
   Une séance faite ou commencée n'est jamais retirée.
 - Détail technique : `docs/integrations/GARMIN_TRAINING.md`.
+
+## 2026-11-12 — Séance libre démarrée sans réseau : id choisi sur le téléphone
+
+**Décision** : l'id de la séance (uuid) est tiré sur le téléphone au démarrage
+(`useStartUnplannedSession`) et sert à toutes les saisies en file. La création
+(`workout.plan` → `planWorkout` avec id) passe en tête, avant les séries, la
+fin et la note de cette séance. Rejouer = ne rien créer de plus :
+`INSERT … ON CONFLICT (athlete_id, session_id, scheduled_date) DO NOTHING`
+puis relecture par id.
+- Réponse perdue, onglet fermé, double appui : même id, une seule séance.
+- Séance déjà créée puis déplacée par le coach : le rejeu lève 23505 sur la
+  clé primaire, la séance est relue par son id et reçoit les saisies.
+- Place déjà prise ce jour-là (séance du coach, prévue ou annulée) : rien n'est
+  créé, les saisies vont sur la séance existante (id local → id serveur gardé
+  dans `localStorage`, brouillon laissé sous l'id local). Une séance annulée
+  par le coach peut donc être validée si l'athlète l'a faite sans réseau :
+  on garde la saisie plutôt que de la perdre.
+- Création refusée par le serveur : ses saisies sont retirées avec elle (un seul
+  message), le brouillon local reste.
+- Pas de migration : index unique et RLS `workout_logs_self` déjà en prod,
+  vérifiés par `supabase/tests/free_session_offline.sql` (à blanc, 13/13).
+- Limite connue : déplacer à aujourd'hui une séance prévue un autre jour reste
+  à faire en ligne (elle change la séance du coach).
+
+**Pourquoi** : un id attribué par la base obligeait à attendre le réseau pour
+écrire la première série. Un id client rend chaque écriture autonome et
+rejouable, sans table de correspondance à tenir (sauf le cas « place prise »).
