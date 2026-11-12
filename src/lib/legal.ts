@@ -99,6 +99,8 @@ export const LEGAL_ROUTES = {
   privacy: "/confidentialite",
   terms: "/cgu",
   notice: "/mentions-legales",
+  /** Exigence Google Play : URL web publique de suppression du compte. */
+  deletion: "/suppression-compte",
 } as const;
 
 /** Hébergeur — à citer en mentions légales (art. 6 III LCEN). */
