@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-sante-montre",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : page Santé (nuit et récupération de la montre)",
+    summary: "Depuis son wellness, votre athlète ouvre « Santé » : sommeil, VFC, FC de repos, stress, Body Battery, SpO2, respiration, chacun comparé à sa propre moyenne.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Une carte par mesure : valeur de la nuit, état Normal / Bas / Haut par rapport à ses 28 derniers jours, courbe sur 7 ou 28 jours.",
+          "Toucher une mesure ouvre son détail : plus bas, moyenne, plus haut, nuits de suite hors de la zone habituelle et une explication simple.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-seuils-montres",
     date: "2026-11-13",
     kind: "feature",

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import type { ReadinessScore } from "@/features/shared/hooks/useReadinessScore";
@@ -134,6 +135,10 @@ export function TodayWellnessCard({
             {zones.map((z) => chip(z.id, z.label, DOMS_LEVEL_COLOR[z.level]))}
           </div>
         )}
+        {/* Planche Ath2Sante : la page Santé s'ouvre depuis le wellness. */}
+        <Link to="/athlete/sante" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, color: C.ac, textDecoration: "none" }}>
+          Santé de la nuit (montre)<span aria-hidden>›</span>
+        </Link>
         </div>
       )}
     </div>
