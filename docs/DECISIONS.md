@@ -1807,6 +1807,11 @@ migrations 20261112090000 (détail des activités), 20261112100000 (zones),
 du détail des activités (8 activités) ; Edge Functions provider-garmin-webhook,
 provider-garmin-maintenance, provider-coros-sync redéployées ; démo Léa Démo.
 
-**En attente d'Hugo** : `node scripts/backfill-garmin-health.mjs --apply`
-(rattrapage santé : met à jour des lignes existantes de `provider_dailies` ;
-à blanc : 1 697 résumés, 5 518 séries, 0 erreur) ; lot H (export Garmin).
+**Rattrapage santé appliqué le 2026-11-12 avec l'accord d'Hugo** :
+`node scripts/backfill-garmin-health.mjs --apply` — 1 957 enregistrements
+rejoués, 6 283 séries fusionnées, 6 activités Move IQ, 0 erreur. Lecture
+après : 205 lignes `provider_intraday` (119 204 points, contre 84 / 37 342
+avant), 19 résumés Garmin sur 20 avec les champs étendus, 6 lignes
+`provider_moveiq`.
+
+**En attente d'Hugo** : lot H (export Garmin).
