@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ConnectError, disconnectProvider, getConnections, invalidateProviders, providerKeys,
-  startCorosAuthorization, startGarminAuthorization, syncCoros,
+  ConnectError, disconnectProvider, getConnections, getWorkoutPushes, invalidateProviders, providerKeys,
+  setWorkoutPush, startCorosAuthorization, startGarminAuthorization, syncCoros,
   type DisconnectResult, type ProviderConnection, type ProviderName, type ProviderStatus, type SyncReport,
+  type WorkoutPush,
 } from "@/api/providers";
 import { useAuth } from "@/hooks/useAuth";
+import { localIsoDay } from "@shared/domain/dates";
 
 export { ConnectError };
-export type { DisconnectResult, ProviderConnection, ProviderName, ProviderStatus, SyncReport };
+export type { DisconnectResult, ProviderConnection, ProviderName, ProviderStatus, SyncReport, WorkoutPush };
 
 /**
  * Services connectés de l'athlète (montres COROS et Garmin).
@@ -136,6 +138,36 @@ export function useDisconnectProvider() {
 
   return useMutation<DisconnectResult, Error, ProviderName>({
     mutationFn: (provider) => disconnectProvider(provider),
+    onSuccess: () => { if (user) void invalidateProviders(qc, user.id); },
+  });
+}
+
+/**
+ * Séances envoyées sur la montre à partir d'aujourd'hui (athlète connecté, ou
+ * `athleteId` donné pour le coach : la RLS l'autorise via `is_coach_of`).
+ */
+export function useWorkoutPushes(athleteId?: string) {
+  const { user } = useAuth();
+  const aid = athleteId ?? user?.id;
+  const from = localIsoDay();
+  return useQuery({
+    queryKey: providerKeys.workoutPushes(aid ?? "none", from),
+    enabled: !!aid,
+    staleTime: 60 * 1000,
+    queryFn: () => getWorkoutPushes(aid!, from),
+  });
+}
+
+/**
+ * Coupe ou rouvre l'envoi des séances sur la montre. Couper ne retire rien
+ * tout de suite : le serveur retire les séances à venir de la montre à son
+ * prochain passage (toutes les 10 minutes).
+ */
+export function useSetWorkoutPush() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<boolean, Error, { provider: ProviderName; enabled: boolean }>({
+    mutationFn: ({ provider, enabled }) => setWorkoutPush(provider, enabled),
     onSuccess: () => { if (user) void invalidateProviders(qc, user.id); },
   });
 }

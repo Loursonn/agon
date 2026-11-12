@@ -23,6 +23,7 @@ export function TodaySessionCard({
   extra,
   defaultOpen = false,
   time,
+  badge,
   pattern = false,
 }: {
   color: string;
@@ -38,6 +39,8 @@ export function TodaySessionCard({
   defaultOpen?: boolean;
   /** Heure prévue (« 9 H 00 »), si connue. */
   time?: string;
+  /** Petite mention dans l'en-tête (« Sur ta montre »). */
+  badge?: ReactNode;
   /** Motif doré en fond (séance de musculation, maquette). */
   pattern?: boolean;
 }) {
@@ -66,6 +69,7 @@ export function TodaySessionCard({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <TypePill color={color}>{typeLabel}</TypePill>
             {time && <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.08em", color: C.tx2 }}>{time}</span>}
+            {badge}
           </div>
           <div style={{ ...DISPLAY, fontSize: 14, fontWeight: 500, lineHeight: 1.3, letterSpacing: "0.06em", color: C.tx, overflowWrap: "anywhere" }}>{title}</div>
         </div>

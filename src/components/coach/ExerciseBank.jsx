@@ -7,6 +7,7 @@ import { C } from "@/lib/theme";
 import { MTREE, getMC, mL, ALL_MIDS, normPrimary } from "@/lib/muscles";
 import { normalizeExName, normForMatch, fuzzyExMatch } from "@/lib/exercises";
 import { EX_TYPES, exTypeLabel, exTypeColor } from "@/lib/exerciseTypes";
+import { GarminEquivalentField } from "@/features/coach/components/GarminEquivalentField";
 const parseYtId=v=>{const m=(v||'').match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);return m?m[1]:v.trim();};
 function ExerciseCreateModal({coachId,onSave,onClose}){
   const{profile}=useAuth();
@@ -193,6 +194,7 @@ function ExerciseDetailModal({ex,coachId,onClose,onAdd,onDelete,onMergeClick,onR
           </div>
           {(isOwner||isCertified)&&<button onClick={()=>setShowEdit(v=>!v)} style={{width:'100%',padding:'8px 0',borderRadius:4,border:'1px solid '+C.brdL,background:showEdit?C.s2:'transparent',color:C.tx2,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',marginBottom:10}}>{showEdit?'Fermer l\'édition':'Modifier les caractéristiques'}</button>}
           {(isOwner||isCertified)&&showEdit&&<ExerciseCharacteristicsPanel ex={ex} onSaved={onRefresh}/>}
+          {(isOwner||isCertified)&&showEdit&&<GarminEquivalentField ex={ex} onSaved={onRefresh}/>}
           {ex.instructions&&<div style={{marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:C.tx3,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:6}}>Instructions</div><div style={{fontSize:12,color:C.tx2,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{ex.instructions}</div></div>}
           {ex.tips&&<div style={{marginBottom:16,padding:'10px 12px',borderRadius:4,background:C.oS,border:'1px solid '+C.o+'30'}}><div style={{fontSize:10,fontWeight:700,color:C.o,marginBottom:4}}>Conseils</div><div style={{fontSize:12,color:C.tx2,lineHeight:1.6}}>{ex.tips}</div></div>}
           <button onClick={onAdd} style={{width:'100%',padding:'12px 0',borderRadius:6,border:'none',background:C.ac,color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit',marginBottom:8}}>+ Ajouter à mes exercices</button>

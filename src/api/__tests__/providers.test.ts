@@ -3,7 +3,7 @@ import { fakeDb, type Row } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
 import {
   ConnectError, connectError, disconnectProvider, getActivities, getConnections, getKnownActivities,
-  getManualRunSources, getWatchRuns, insertActivities, invalidateProviders, providerKeys,
+  getManualRunSources, getWatchRuns, getWorkoutPushes, insertActivities, invalidateProviders, providerKeys,
   startCorosAuthorization, startGarminAuthorization, syncCoros,
 } from "@/api/providers";
 
@@ -36,15 +36,29 @@ const act = (id: string, o: Row = {}) => ({
 describe("api/providers — lectures", () => {
   it("getConnections : forme de l'interface, scopes vides par défaut ; lève si illisible", async () => {
     world({ provider_connections: [
-      { id: "c1", athlete_id: "a", provider: "coros", status: "needs_reauth", granted_scopes: null, connected_at: "t", last_sync_at: null, synced_through: null, last_error: "401", api_host: "secret" },
+      { id: "c1", athlete_id: "a", provider: "coros", status: "needs_reauth", granted_scopes: null, connected_at: "t", last_sync_at: null, synced_through: null, last_error: "401", push_workouts: false, api_host: "secret" },
       { id: "c2", athlete_id: "b", provider: "garmin", status: "active" },
     ] });
     expect(await getConnections("a")).toEqual([{
       id: "c1", provider: "coros", status: "needs_reauth", grantedScopes: [], connectedAt: "t",
-      lastSyncAt: null, syncedThrough: null, lastError: "401",
+      lastSyncAt: null, syncedThrough: null, lastError: "401", pushWorkouts: false,
     }]);
     world({}, { failOn: { table: "provider_connections", op: "select" } });
     await expect(getConnections("a")).rejects.toThrow(/montres connectées/);
+  });
+
+  it("getWorkoutPushes : séances de l'athlète à partir du jour donné, avertissements vides par défaut", async () => {
+    world({ provider_workout_pushes: [
+      { id: "p1", athlete_id: "a", provider: "garmin", source_kind: "energy", source_id: "s1", scheduled_date: "2026-11-14", status: "sent", warnings: null, last_error: null, sent_at: "t" },
+      { id: "p0", athlete_id: "a", provider: "garmin", source_kind: "strength", source_id: "s0", scheduled_date: "2026-11-10", status: "sent", warnings: [], last_error: null, sent_at: "t" },
+      { id: "p2", athlete_id: "b", provider: "garmin", source_kind: "energy", source_id: "s2", scheduled_date: "2026-11-14", status: "error", warnings: [], last_error: "x", sent_at: null },
+    ] });
+    expect(await getWorkoutPushes("a", "2026-11-12")).toEqual([{
+      id: "p1", provider: "garmin", sourceKind: "energy", sourceId: "s1", scheduledDate: "2026-11-14",
+      status: "sent", warnings: [], lastError: null, sentAt: "t",
+    }]);
+    world({}, { failOn: { table: "provider_workout_pushes", op: "select" } });
+    await expect(getWorkoutPushes("a", "2026-11-12")).rejects.toThrow(/envoyées sur la montre/);
   });
 
   it("getActivities : `numeric` en chaîne converti (sinon distance « — »), limite respectée", async () => {

@@ -38,6 +38,40 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-seances-sur-la-montre-garmin",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Les séances partent sur la montre Garmin de l'athlète",
+    summary: "Une séance programmée dans Agon arrive dans le calendrier Garmin Connect de l'athlète, puis sur sa montre, avec les allures, zones et charges calculées par Agon.",
+    sections: [
+      {
+        title: "Ce qui part sur la montre",
+        points: [
+          "Course, vélo, natation, rameur, muscu, HYROX et séances spécifiques des 7 prochains jours, envoyées automatiquement.",
+          "Les cibles viennent d'Agon : zones de FC en bpm, % VMA en allure, % FC max en bpm, % FTP en watts, % RM en kg avec le record de l'athlète.",
+          "S'il manque une donnée (VMA, 1RM…), la consigne part en texte : aucun chiffre n'est inventé.",
+          "HYROX et spécifique : format course, chaque atelier est une étape validée au bouton Tour, avec sa consigne.",
+          "Une séance déplacée, modifiée ou supprimée est mise à jour sur la montre. Une séance faite ou commencée n'est jamais retirée.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Éditeur de séance énergie : nouveau choix du sport (course par défaut), c'est l'activité lancée sur la montre.",
+          "Banque d'exercices › Modifier les caractéristiques : « Équivalent Garmin », proposé depuis le nom de l'exercice, à valider ou corriger. Sans équivalent, la montre affiche le nom Agon.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Profil › Services connectés › Garmin : « Envoyer mes séances sur ma montre », activé par défaut, désactivable à tout moment.",
+          "Aujourd'hui : la mention « Sur ta montre » sur chaque séance envoyée.",
+          "L'athlète doit avoir autorisé l'import de séances au moment de connecter Garmin ; sinon l'écran lui dit quoi faire.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-tests-profil-hyrox-look",
     date: "2026-11-13",
     kind: "feature",

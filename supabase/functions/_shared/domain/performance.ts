@@ -128,6 +128,55 @@ export function recordRefOf(ex: RecordRefSource): string | null {
   return name || null;
 }
 
+/**
+ * Liens « exercice → record » posés par le coach (`rm_ref` sur les exercices
+ * des lignes `asp:exos` / `asp:exos::…` d'`app_data`). Clé : nom d'exercice en
+ * minuscules, et `id:<exercise_id>` quand l'exercice vient de la banque.
+ * Le programme du moment (`asp:exos`) l'emporte sur les cycles archivés.
+ */
+export type RecordLinks = Record<string, string>;
+
+export function parseRecordLinks(rows: ReadonlyArray<{ key: string; value: unknown }>): RecordLinks {
+  const sorted = [...rows].sort((a, b) => (a.key === "asp:exos" ? 1 : 0) - (b.key === "asp:exos" ? 1 : 0));
+  const links: RecordLinks = {};
+  for (const row of sorted) {
+    const value = row.value as Record<string, unknown> | null;
+    if (!value || typeof value !== "object") continue;
+    for (const list of Object.values(value)) {
+      if (!Array.isArray(list)) continue;
+      for (const ex of list as { name?: string; exercise_id?: string; rm_ref?: string }[]) {
+        const ref = ex?.rm_ref?.trim();
+        if (!ref) continue;
+        if (ex.name?.trim()) links[ex.name.trim().toLowerCase()] = ref;
+        if (ex.exercise_id) links[`id:${ex.exercise_id}`] = ref;
+      }
+    }
+  }
+  return links;
+}
+
+/** Référence de record d'un exercice programmé, en tenant compte des liens du coach. */
+export function resolveRecordRef(
+  ex: { exercise_name?: string | null; exercise_id?: string | null; rm_ref?: string | null },
+  links: RecordLinks = {},
+): string | null {
+  if (ex.rm_ref?.trim()) return ex.rm_ref.trim();
+  const byId = ex.exercise_id ? links[`id:${ex.exercise_id}`] : undefined;
+  const byName = ex.exercise_name ? links[ex.exercise_name.trim().toLowerCase()] : undefined;
+  return byId ?? byName ?? recordRefOf({ exercise_name: ex.exercise_name });
+}
+
+/** Meilleure charge (kg) par référence de record. */
+export function bestKgByRef(records: ReadonlyArray<{ exercise_ref: string; kg: number }>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of records) {
+    const kg = Number(r.kg);
+    if (!Number.isFinite(kg)) continue;
+    if (out[r.exercise_ref] === undefined || kg > out[r.exercise_ref]) out[r.exercise_ref] = kg;
+  }
+  return out;
+}
+
 /** Une série réalisée, rattachée à sa référence de record. */
 export interface RecordSet {
   ref: string;

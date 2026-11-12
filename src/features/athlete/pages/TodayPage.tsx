@@ -27,6 +27,7 @@ import { useTodayWellness } from "@/features/shared/hooks/useTodayWellness";
 import { useReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import { useUpcomingCompetition } from "@/features/shared/hooks/useUpcomingCompetition";
 import { useWeekProgram } from "@/features/shared/hooks/useWeekProgram";
+import { WatchPushBadge } from "@/features/athlete/components/today/WatchPushBadge";
 import { TodayWorkoutFiches } from "@/features/athlete/components/fiches/TodayWorkoutFiches";
 import { useActivePlan } from "@/features/shared/hooks/useActivePlan";
 import { useStartUnplannedSession } from "@/features/shared/hooks/useStartUnplannedSession";
@@ -1255,6 +1256,7 @@ export default function TodayPage() {
                       items={w.items}
                       defaultOpen={wi === 0 && pendingWorkouts.length + pendingEnergy.length === 1}
                       extra={w.workoutLogId ? <TodayWorkoutFiches workoutLogId={w.workoutLogId} athleteId={athleteId} /> : undefined}
+                      badge={<WatchPushBadge athleteId={athleteId} kind="strength" sourceId={w.workoutLogId} />}
                       onDetail={todayDay ? () => { setSelectedDay(todayDay); haptic(); } : undefined}
                       onStart={viewOnly || !w.workoutLogId ? undefined : () => { haptic(); navigate("/athlete/program/workout/" + w.workoutLogId); }}
                     />
@@ -1270,6 +1272,7 @@ export default function TodayPage() {
                         typeLabel={EKL[ev.sessionKind ?? ""] ?? TYPE_LABEL.energie}
                         title={ev.title}
                         onDetail={open}
+                        badge={<WatchPushBadge athleteId={athleteId} kind="energy" sourceId={ev.id} />}
                       />
                     );
                   })}

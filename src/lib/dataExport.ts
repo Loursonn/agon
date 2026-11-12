@@ -107,8 +107,10 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("hr_zone_models", "athlete_id"),
   job(
     "provider_connections", "athlete_id",
-    "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, connected_at, last_sync_at, synced_through, last_error, updated_at",
+    "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, push_workouts, connected_at, last_sync_at, synced_through, last_error, updated_at",
   ),
+  // Séances Agon publiées sur la montre (identifiants Garmin, état, dernière erreur).
+  job("provider_workout_pushes", "athlete_id"),
   job("provider_dailies", "athlete_id"),
   // Séries de la journée (FC, stress, Body Battery, SpO2…) et activités détectées.
   job("provider_intraday", "athlete_id"),

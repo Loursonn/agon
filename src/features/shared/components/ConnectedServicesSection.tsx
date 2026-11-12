@@ -16,7 +16,9 @@ import {
   useConnectGarmin,
   useDisconnectProvider,
   useProviderConnections,
+  useSetWorkoutPush,
   useSyncCoros,
+  useWorkoutPushes,
   type CorosRegion,
   type ProviderConnection,
   type ProviderName,
@@ -514,6 +516,84 @@ function DisconnectBlock({ provider }: { provider: ProviderName }) {
 }
 
 /**
+ * Erreur d'envoi lisible par l'athlète : la partie française seulement (le
+ * corps brut renvoyé par Garmin reste pour le diagnostic), et la marche à
+ * suivre quand l'autorisation « séances » manque.
+ */
+function pushErrorText(raw: string): string {
+  if (raw.includes("(412)")) {
+    return "autorise l'import de séances dans Garmin Connect (reconnecte ton compte et coche cette autorisation).";
+  }
+  if (raw.includes("(401)")) return "reconnecte ton compte Garmin.";
+  return raw.split(" — ")[0];
+}
+
+/**
+ * Envoi des séances programmées sur la montre Garmin.
+ *
+ * Actif par défaut ; l'athlète peut le couper. Les séances des 7 prochains
+ * jours partent dans le calendrier Garmin Connect, puis sur la montre à la
+ * prochaine synchronisation. Couper l'envoi retire les séances à venir déjà
+ * envoyées (au prochain passage du serveur, toutes les 10 minutes).
+ */
+function WorkoutPushBlock({ connection }: { connection: ProviderConnection }) {
+  const setPush = useSetWorkoutPush();
+  const { data: pushes } = useWorkoutPushes();
+  const on = connection.pushWorkouts;
+  const sent = (pushes ?? []).filter((p) => p.provider === "garmin" && p.status === "sent");
+  const failed = (pushes ?? []).filter((p) => p.provider === "garmin" && p.status !== "sent");
+
+  const toggle = () =>
+    setPush.mutate(
+      { provider: "garmin", enabled: !on },
+      {
+        onSuccess: () =>
+          toast.success(on ? "Envoi sur la montre coupé" : "Envoi sur la montre activé", {
+            description: on
+              ? "Les séances déjà envoyées pour les prochains jours vont être retirées de ta montre."
+              : "Tes séances des 7 prochains jours partent sur Garmin Connect dans les minutes qui viennent.",
+          }),
+        onError: (e) => toast.error("Réglage non enregistré", { description: e.message }),
+      },
+    );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 12px", borderRadius: 8, border: "1px solid " + C.brd, background: C.s2 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Envoyer mes séances sur ma montre</div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="Envoyer mes séances sur ma montre"
+          onClick={toggle}
+          disabled={setPush.isPending}
+          style={{ position: "relative", width: 38, height: 22, flexShrink: 0, borderRadius: 11, border: "none", padding: 0, background: on ? C.g : C.brd, cursor: setPush.isPending ? "wait" : "pointer", transition: "background .15s" }}
+        >
+          <span style={{ position: "absolute", top: 3, left: on ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+        {on
+          ? "Les séances programmées par ton coach pour les 7 prochains jours arrivent dans ton calendrier Garmin Connect, puis sur ta montre à la synchronisation. Une séance modifiée ou supprimée est mise à jour."
+          : "Tes séances ne sont pas envoyées sur ta montre."}
+      </div>
+      {on && sent.length > 0 && (
+        <div style={{ fontSize: 11, color: C.g, lineHeight: 1.5 }}>
+          {sent.length === 1 ? "1 séance à venir envoyée" : `${sent.length} séances à venir envoyées`}
+        </div>
+      )}
+      {on && failed.length > 0 && (
+        <div style={{ fontSize: 11, color: C.o, lineHeight: 1.5 }}>
+          {failed.length === 1 ? "1 séance n'a pas pu être envoyée" : `${failed.length} séances n'ont pas pu être envoyées`}
+          {failed[0].lastError ? ` : ${pushErrorText(failed[0].lastError)}` : "."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Ligne Garmin.
  *
  * Tant que `VITE_GARMIN_ENABLED` n'est pas activé (dossier Garmin en cours
@@ -602,6 +682,7 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
             {connection.lastError}
           </div>
         )}
+        {connection.status === "active" && <WorkoutPushBlock connection={connection} />}
         {connection.status === "active" ? historique : (
           <>
             <button

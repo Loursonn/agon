@@ -1973,3 +1973,21 @@ palette (`#F97316`, `#22C55E`…) s'affichent dans leur équivalent peps
 - Retirés (absents de la planche) : « Réveillé·e cette nuit ? » + sa note,
   commentaire libre de blessure, boutons −/+ du poids.
 - Migration `20261113090000_wellness_planche.sql` (additive) appliquée le 2026-11-13.
+
+## 2026-11-13 — Séances envoyées sur la montre (Garmin Training API)
+
+- **Garmin d'abord**, COROS ensuite. Tous les types de séance, en un lot.
+- **Automatique, coupable par l'athlète** (`provider_connections.push_workouts`,
+  vrai par défaut, RPC `set_workout_push`). Couper retire les séances à venir.
+- **Tout part d'Agon** : zones FC d'Agon (`hr_zone_bounds_at`) en bpm, %VMA en
+  allure, %FCmax en bpm, %FTP en watts, %RM en kg (record, sinon 1RM du coach).
+  Donnée absente → consigne en texte, jamais un chiffre inventé.
+- **Sport** : champ `energy_sessions.modality` (course par défaut). HYROX et
+  spécifique = séance de course, ateliers au bouton Tour avec leur consigne.
+- **Exercices** : `exercises.garmin_category` / `garmin_exercise` choisis par le
+  coach ; sinon proposition depuis le nom (`_shared/garminTraining/exercises.ts`),
+  sinon l'étape part sous le nom Agon. Pas d'écriture en masse dans la banque.
+- **Fenêtre** : 7 jours. Cron toutes les 10 min, empreinte par séance : une
+  séance inchangée ne coûte aucun appel ; modifiée = supprimée puis recréée.
+  Une séance faite ou commencée n'est jamais retirée.
+- Détail technique : `docs/integrations/GARMIN_TRAINING.md`.

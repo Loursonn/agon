@@ -1967,6 +1967,8 @@ export type Database = {
           difficulty: string | null
           equipment: string | null
           ex_type: string | null
+          garmin_category: string | null
+          garmin_exercise: string | null
           gif_url: string | null
           id: string
           image_url: string | null
@@ -1993,6 +1995,8 @@ export type Database = {
           difficulty?: string | null
           equipment?: string | null
           ex_type?: string | null
+          garmin_category?: string | null
+          garmin_exercise?: string | null
           gif_url?: string | null
           id?: string
           image_url?: string | null
@@ -2019,6 +2023,8 @@ export type Database = {
           difficulty?: string | null
           equipment?: string | null
           ex_type?: string | null
+          garmin_category?: string | null
+          garmin_exercise?: string | null
           gif_url?: string | null
           id?: string
           image_url?: string | null
@@ -3788,6 +3794,7 @@ export type Database = {
           last_error: string | null
           last_sync_at: string | null
           provider: Database["public"]["Enums"]["data_source"]
+          push_workouts: boolean
           status: Database["public"]["Enums"]["provider_status"]
           sync_lock_token: string | null
           sync_locked_until: string | null
@@ -3804,6 +3811,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           provider: Database["public"]["Enums"]["data_source"]
+          push_workouts?: boolean
           status?: Database["public"]["Enums"]["provider_status"]
           sync_lock_token?: string | null
           sync_locked_until?: string | null
@@ -3820,6 +3828,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           provider?: Database["public"]["Enums"]["data_source"]
+          push_workouts?: boolean
           status?: Database["public"]["Enums"]["provider_status"]
           sync_lock_token?: string | null
           sync_locked_until?: string | null
@@ -3835,6 +3844,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      provider_workout_pushes: {
+        Row: {
+          athlete_id: string
+          attempts: number
+          external_schedule_id: string | null
+          external_workout_id: string | null
+          id: string
+          last_error: string | null
+          payload_hash: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          scheduled_date: string
+          sent_at: string | null
+          source_id: string
+          source_kind: string
+          status: string
+          updated_at: string
+          warnings: string[]
+        }
+        Insert: {
+          athlete_id: string
+          attempts?: number
+          external_schedule_id?: string | null
+          external_workout_id?: string | null
+          id?: string
+          last_error?: string | null
+          payload_hash?: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          scheduled_date: string
+          sent_at?: string | null
+          source_id: string
+          source_kind: string
+          status: string
+          updated_at?: string
+          warnings?: string[]
+        }
+        Update: {
+          athlete_id?: string
+          attempts?: number
+          external_schedule_id?: string | null
+          external_workout_id?: string | null
+          id?: string
+          last_error?: string | null
+          payload_hash?: string | null
+          provider?: Database["public"]["Enums"]["data_source"]
+          scheduled_date?: string
+          sent_at?: string | null
+          source_id?: string
+          source_kind?: string
+          status?: string
+          updated_at?: string
+          warnings?: string[]
+        }
+        Relationships: []
       }
       provider_dailies: {
         Row: {
@@ -6545,6 +6608,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_workout_push: {
+        Args: {
+          p_enabled: boolean
+          p_provider: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: boolean
       }
       set_energy_rpe: {
         Args: { p_assignment: string; p_rpe: number }

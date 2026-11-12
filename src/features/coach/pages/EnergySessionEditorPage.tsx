@@ -22,6 +22,7 @@ import type { FicheAttachment } from "@/features/shared/types/fiches";
 import { makeRootGroup, genId } from "@/lib/energy/treeUtils";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 import { formatSLong } from "@/lib/energy/formatTarget";
+import { ENERGY_SPORTS, energySportOf, type EnergySport } from "@/lib/energy/sports";
 import type { EnergyGroup, EnergyStep, SessionKind, StructureType, FieldSchema, SessionImage } from "@/types/energy";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadEnergySessionImage } from "@/api/energy";
@@ -247,6 +248,7 @@ export default function EnergySessionEditorPage() {
   const [name, setName] = useState("");
   const [sessionKind, setSessionKind] = useState<SessionKind>(kindFromUrl ?? "vo2");
   const [customKind, setCustomKind] = useState("vo2");
+  const [sport, setSport] = useState<EnergySport>("course");
   const [structureType, setStructureType] = useState<StructureType>("fractionne");
   const [root, setRoot] = useState<EnergyGroup>(makeRootGroup);
   const [fieldSchema, setFieldSchema] = useState<FieldSchema | null>(null);
@@ -289,6 +291,7 @@ export default function EnergySessionEditorPage() {
       setName(existingSession.name);
       setSessionKind(existingSession.session_kind);
       setCustomKind(existingSession.custom_kind || "vo2");
+      setSport(energySportOf(existingSession.modality));
       setStructureType(existingSession.structure_type);
       // Wrap intervals in a root group
       const rootG: EnergyGroup = {
@@ -315,6 +318,7 @@ export default function EnergySessionEditorPage() {
     setSessionKind(session.session_kind);
     setCustomKind(session.custom_kind || "vo2");
     setCustomKind(session.custom_kind ?? "");
+    setSport(energySportOf(session.modality));
     setStructureType(session.structure_type);
     setNotes(session.notes ?? "");
     const clonedChildren = deepCloneIntervals(session.intervals ?? []);
@@ -438,7 +442,8 @@ export default function EnergySessionEditorPage() {
       custom_kind: sessionKind === "specifique"
         ? (existingSession?.custom_kind ?? null)
         : (sessionKind === "custom" ? customKind : null),
-      modality: null,
+      // Spécifique : séance « course sur tapis » côté montre, le sport n'est pas demandé.
+      modality: isSpecifique ? (existingSession?.modality ?? null) : sport,
       notes: notes.trim() || null,
       structure_type: structureType,
       intervals: root.children,
@@ -578,6 +583,17 @@ export default function EnergySessionEditorPage() {
                 <SelectContent>
                   {SESSION_KINDS.map((k) => (
                     <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* Sport : décide du mode de la montre (Garmin) */}
+              <Select value={sport} onValueChange={(v) => setSport(v as EnergySport)}>
+                <SelectTrigger aria-label="Sport" style={{ width: 130, background: C.s2, border: `1px solid ${C.brd}`, color: C.tx, fontSize: 12 }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENERGY_SPORTS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

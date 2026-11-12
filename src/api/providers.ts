@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { ApiError, db, unwrapRows } from "./client";
+import { ApiError, db, unwrap, unwrapRows } from "./client";
 
 /**
  * Montres connectées et activités importées : tables BRUTES
@@ -27,6 +27,8 @@ export const providerKeys = {
    * `invalidateWorkouts` et `useEnergyAssignments` invalident `['runningVolume', aid]`.
    */
   manualRuns: (aid: string, from: string) => ["runningVolume", aid, from] as const,
+  /** Séances envoyées sur la montre (suivi de l'envoi). */
+  workoutPushes: (aid: string, from: string) => ["providers", aid, "workoutPushes", from] as const,
 };
 
 /** Après un import, une synchro, une déconnexion : connexions, sorties, volume de course montre. */
@@ -54,6 +56,8 @@ export interface ProviderConnection {
   lastSyncAt: string | null;
   syncedThrough: string | null;
   lastError: string | null;
+  /** Envoi des séances programmées sur la montre (Garmin), coupable par l'athlète. */
+  pushWorkouts: boolean;
 }
 
 export interface ProviderActivity {
@@ -112,7 +116,7 @@ export const num = (v: unknown): number | null => {
 export async function getConnections(athleteId: string): Promise<ProviderConnection[]> {
   const rows = unwrapRows(
     await db().from("provider_connections")
-      .select("id, provider, status, granted_scopes, connected_at, last_sync_at, synced_through, last_error")
+      .select("id, provider, status, granted_scopes, connected_at, last_sync_at, synced_through, last_error, push_workouts")
       .eq("athlete_id", athleteId),
     "Lecture des montres connectées impossible",
   );
@@ -125,6 +129,57 @@ export async function getConnections(athleteId: string): Promise<ProviderConnect
     lastSyncAt: r.last_sync_at,
     syncedThrough: r.synced_through,
     lastError: r.last_error,
+    pushWorkouts: r.push_workouts ?? true,
+  }));
+}
+
+// ── Envoi des séances sur la montre ──────────────────────────────────────────
+
+/** Une séance Agon envoyée (ou refusée) sur la montre, telle que le serveur la suit. */
+export interface WorkoutPush {
+  id: string;
+  provider: ProviderName;
+  sourceKind: "energy" | "strength";
+  sourceId: string;
+  scheduledDate: string;
+  status: "sent" | "error" | "rejected";
+  warnings: string[];
+  lastError: string | null;
+  sentAt: string | null;
+}
+
+/**
+ * Coupe ou rouvre l'envoi des séances sur la montre. Seul l'athlète décide
+ * (la fonction SQL ne touche que sa propre connexion). Renvoie `false` si
+ * aucune connexion n'a été modifiée.
+ */
+export async function setWorkoutPush(provider: ProviderName, enabled: boolean): Promise<boolean> {
+  return !!unwrap(
+    await db().rpc("set_workout_push", { p_provider: provider, p_enabled: enabled }),
+    "Réglage de l'envoi sur la montre impossible",
+  );
+}
+
+/** Séances envoyées à partir d'un jour (`YYYY-MM-DD`). Lève si la lecture échoue. */
+export async function getWorkoutPushes(athleteId: string, from: string): Promise<WorkoutPush[]> {
+  const rows = unwrapRows(
+    await db().from("provider_workout_pushes")
+      .select("id, provider, source_kind, source_id, scheduled_date, status, warnings, last_error, sent_at")
+      .eq("athlete_id", athleteId)
+      .gte("scheduled_date", from)
+      .order("scheduled_date"),
+    "Lecture des séances envoyées sur la montre impossible",
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    provider: r.provider as ProviderName,
+    sourceKind: r.source_kind as WorkoutPush["sourceKind"],
+    sourceId: r.source_id,
+    scheduledDate: r.scheduled_date,
+    status: r.status as WorkoutPush["status"],
+    warnings: r.warnings ?? [],
+    lastError: r.last_error,
+    sentAt: r.sent_at,
   }));
 }
 
