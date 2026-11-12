@@ -18,6 +18,8 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { WeightChart } from "@/components/athlete/StatsCharts";
 import { PRLogsSection } from "@/features/coach/components/PRLogsSection";
 import { useActiveReferences, useDeleteMeasurement, useSaveFcZones, useSetReference } from "@/features/shared/hooks/useReferences";
+import { ZoneModelPanel } from "@/features/coach/components/zones/ZoneModelPanel";
+import { defaultFiveZoneMaxes, fiveZoneBounds } from "@shared/domain/hrZones";
 import { storedFcZones as pickFcZones } from "@/api/references";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -71,12 +73,7 @@ const FC_ZONES_DEF: FcZoneDef[] = [
   { label: "Z5 — VO₂max",       color: "#EF4444", zoneKey: "FCzone_Z5_max" },
 ];
 
-function computeDefaultFcZones(fcmax: number, fcrep = 0) {
-  const fcr = fcrep || 0;
-  const reserve = fcmax - fcr;
-  const k = (pct: number) => fcrep ? Math.round(fcr + reserve * pct) : Math.round(fcmax * pct);
-  return [k(0.60), k(0.70), k(0.80), k(0.90), fcmax];
-}
+const computeDefaultFcZones = defaultFiveZoneMaxes;
 
 function vmaZones(vma: number) {
   const p = (pct: number) => {
@@ -765,8 +762,12 @@ export default function ProfilSportifPage() {
                     ),
                   )}
                 </MetricGrid>
-                {fcmax && (
-                  <>
+                <ZoneModelPanel
+                  athleteId={athleteId!}
+                  fcmax={fcmax ?? null}
+                  fcrep={fcrep ?? null}
+                  fiveBounds={fiveZoneBounds(storedFcZones)}
+                  fiveEditor={fcmax ? (
                     <FcZoneEditor
                       fcmax={fcmax}
                       fcrep={fcrep}
@@ -774,11 +775,10 @@ export default function ProfilSportifPage() {
                       onSaveZones={saveZones}
                       saving={saveFcZones.isPending}
                     />
-                    <div style={{ padding: "10px 14px", borderRadius: 4, background: C.ac + "10", border: "1px solid " + C.ac + "30", fontSize: 11, color: C.tx2 }}>
-                      Les zones FC personnalisées s'appliquent dans l'aperçu de séance et le calendrier planning. Les bornes définissent l'interpolation d'intensité pour les cibles en bpm.
-                    </div>
-                  </>
-                )}
+                  ) : (
+                    <div style={{ fontSize: 12, color: C.tx3 }}>Renseigne la FC max pour régler les 5 zones.</div>
+                  )}
+                />
               </Panel>
 
               {/* ── VITESSE - PUISSANCE - ÉNERGÉTIQUE ── */}

@@ -1,7 +1,7 @@
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -191,6 +191,16 @@ export default function ProfilPage() {
           </div>
         )}
       </div>
+
+      {!viewOnly && (
+        <Link
+          to="/athlete/zones"
+          style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: -12, marginBottom: 24, textDecoration: "none", color: C.tx, fontSize: 14, fontWeight: 600 }}
+        >
+          Mes seuils et zones FC
+          <span aria-hidden style={{ color: C.tx3 }}>›</span>
+        </Link>
+      )}
 
       {/* ── Antécédents médicaux ── */}
       {athleteId && (

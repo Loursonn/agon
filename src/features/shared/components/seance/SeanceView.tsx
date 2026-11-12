@@ -220,6 +220,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
       bounds={detail.bounds?.bounds ?? null}
       hasHr={hasHr}
       thresholdsLink={thresholdsLink}
+      thresholdsLabel={role === "athlete" ? "Mes seuils et zones" : "Définir les seuils"}
       totalS={detail.total?.durationS ?? a.durationS ?? null}
       compact={compact}
     />

@@ -1937,3 +1937,25 @@ Ces valeurs priment sur `tokens.json` du design system (bloc-perf terracotta,
 bloc-core pierre), plus ancien. Les blocs déjà enregistrés avec l'ancienne
 palette (`#F97316`, `#22C55E`…) s'affichent dans leur équivalent peps
 (`blocColor`), sans réécrire la base.
+
+## 2026-11-12 — Zones FC fixées par le coach (3 / 5 / 7 zones)
+
+- **Qui** : seul le coach (référent ou co-coach, `is_coach_of`) enregistre un
+  modèle (`save_hr_zone_model`) ou accepte une proposition de test
+  (`decide_hr_zone_model`). L'athlète lit seulement (`/athlete/zones`).
+- **7 zones = `custom` à 6 bornes**, pas de nouveau kind. Bornes proposées
+  (`sevenZoneBounds`) : 55 / 65 / 75 / 82 / 89 / 95 % de la FC max, en
+  Karvonen si la FC repos est connue ; chaque borne reste modifiable.
+  5 zones = références `FCzone_*` (éditeur historique), défaut 60/70/80/90 %.
+- **Dater** : un modèle vaut à partir du jour où il est enregistré ; une
+  proposition acceptée prend la date du jour (pas celle du test). Les séances
+  passées gardent leurs zones.
+- **« Appliquer aussi aux séances passées »** (`apply_hr_zone_model_to_past`) :
+  le modèle actif devient valable depuis le 2000-01-01, les modèles plus
+  anciens passent à `replaced` (gardés dans l'historique). Un modèle 5 zones
+  fige alors les références `FCzone_*` du jour (`refs_day`). Usage : corriger
+  une erreur de saisie.
+- **Couleurs** (`zoneColor`) — 3 zones : vert, orange, rouge (inchangé).
+  5 zones : `#33B5FF` `#66F03C` `#FFC933` `#FF9500` `#FF3B1F`.
+  7 zones : `#33B5FF` `#2EE6C5` `#66F03C` `#FFC933` `#FF9500` `#FF3B1F` `#F060C0`.
+  À valider par Hugo.

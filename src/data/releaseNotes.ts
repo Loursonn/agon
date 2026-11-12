@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-zones-fc-coach",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Zones de fréquence cardiaque : 3, 5 ou 7 zones",
+    summary: "Vous choisissez le modèle de zones de chaque athlète, il s'applique à toutes ses séances à partir du jour du changement.",
+    sections: [
+      {
+        title: "Où le trouver",
+        points: [
+          "Fiche de l'athlète → Profil sportif → « Zones de fréquence cardiaque ».",
+          "3 zones : vous saisissez SV1 et SV2. 5 zones : les bornes habituelles. 7 zones : bornes proposées depuis la FC max (et la FC repos si connue), ajustables une à une.",
+          "Un changement compte à partir d'aujourd'hui : les séances passées gardent leurs zones. « Appliquer aussi aux séances passées » sert à corriger une erreur de saisie.",
+          "Les SV1 / SV2 trouvés par un test vous sont proposés : vous les acceptez ou les refusez. L'historique des changements reste consultable.",
+          "Vos athlètes voient leurs zones dans Profil → « Mes seuils et zones FC », sans pouvoir les modifier.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-app-athlete-nouveau-look",
     date: "2026-11-12",
     kind: "feature",

@@ -125,3 +125,57 @@ export function zoneShares(t: TimeInZones | null): number[] | null {
   if (total <= 0) return null;
   return t.seconds.map((s) => Math.round((s / total) * 1000) / 10);
 }
+
+/** Nombre de zones d'un modèle (bornes = zones 2..N). */
+export function zoneCount(bounds: readonly number[] | null | undefined): number | null {
+  return bounds && bounds.length > 0 ? bounds.length + 1 : null;
+}
+
+/**
+ * Bornes hautes incluses des zones 1..5 (références `FCzone_Z1..Z5_max`)
+ * proposées depuis FC max (et FC repos si connue, méthode de Karvonen) :
+ * 60 / 70 / 80 / 90 % puis FC max. Même règle que l'éditeur historique.
+ */
+export function defaultFiveZoneMaxes(fcmax: number, fcrep?: number | null): number[] {
+  const r = fcrep && fcrep > 0 ? fcrep : 0;
+  const k = (pct: number) => (r ? Math.round(r + (fcmax - r) * pct) : Math.round(fcmax * pct));
+  return [k(0.6), k(0.7), k(0.8), k(0.9), Math.round(fcmax)];
+}
+
+/** Pourcentages (de la réserve, ou de FC max sans FC repos) des bornes basses des zones 2..7. */
+export const SEVEN_ZONE_PCTS = [0.55, 0.65, 0.75, 0.82, 0.89, 0.95] as const;
+
+/**
+ * 7 zones proposées depuis FC max et FC repos (Karvonen) : bornes basses des
+ * zones 2..7 à 55 / 65 / 75 / 82 / 89 / 95 % de la réserve (de FC max si la
+ * FC repos manque). `null` si FC max absente ou bornes incohérentes.
+ */
+export function sevenZoneBounds(fcmax: number | null | undefined, fcrep?: number | null): number[] | null {
+  if (!fcmax || !Number.isFinite(fcmax)) return null;
+  const r = fcrep && fcrep > 0 && fcrep < fcmax ? fcrep : 0;
+  return validBounds(SEVEN_ZONE_PCTS.map((p) => (r ? r + (fcmax - r) * p : fcmax * p)));
+}
+
+/** Noms des zones selon le modèle (3, 5 ou 7) ; autre nombre : « Zone n ». */
+export function zoneNames(n: number): string[] {
+  if (n === 3) return ["Sous SV1", "Entre SV1 et SV2", "Au-dessus de SV2"];
+  if (n === 5) return ["Récupération", "Endurance", "Tempo", "Seuil", "VO₂max"];
+  if (n === 7) return ["Récupération", "Endurance fondamentale", "Endurance active", "Tempo", "Seuil", "VO₂max", "Anaérobie"];
+  return Array.from({ length: n }, (_, i) => `Zone ${i + 1}`);
+}
+
+/**
+ * Modèle actif à une date parmi des lignes datées (même règle que
+ * `hr_zone_bounds_at` : dernier modèle actif dont valid_from ≤ jour).
+ */
+export function activeModelAt<T extends { status: string; validFrom: string; createdAt?: string | null }>(
+  rows: readonly T[],
+  day: string,
+): T | null {
+  let best: T | null = null;
+  for (const r of rows) {
+    if (r.status !== "active" || r.validFrom > day) continue;
+    if (!best || r.validFrom > best.validFrom || (r.validFrom === best.validFrom && (r.createdAt ?? "") > (best.createdAt ?? ""))) best = r;
+  }
+  return best;
+}

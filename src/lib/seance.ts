@@ -19,8 +19,17 @@ export const DASH = "—";
 
 /** Zone 1 (sous SV1) · Zone 2 (SV1 → SV2) · Zone 3 (au-dessus de SV2). */
 export const ZONE_COLORS_3 = [token("--agon-zone-1"), token("--agon-zone-2"), token("--agon-zone-3")];
-/** Modèles à 5 zones ou personnalisés : du plus facile au plus dur. */
-const ZONE_COLORS_N = [token("--agon-info"), token("--agon-zone-1"), token("--agon-accent"), token("--agon-zone-2"), token("--agon-zone-3")];
+/**
+ * Couleurs des zones, du froid au chaud, cohérentes avec les 3 zones
+ * (vert / orange / rouge). Un seul endroit dans le code.
+ * - 5 zones : bleu, vert, or, orange, rouge ;
+ * - 7 zones : bleu, turquoise, vert, or, orange, rouge, rose.
+ */
+export const ZONE_COLORS_5 = [token("--agon-info"), token("--agon-zone-1"), token("--agon-accent"), token("--agon-zone-2"), token("--agon-zone-3")];
+export const ZONE_COLORS_7 = [
+  token("--agon-info"), token("--agon-cadence"), token("--agon-zone-1"), token("--agon-accent"),
+  token("--agon-zone-2"), token("--agon-zone-3"), token("--agon-amethyste-vif"),
+];
 
 export const SERIES_COLORS = {
   pace: token("--agon-info"),
@@ -33,8 +42,11 @@ export const SERIES_COLORS = {
 export function zoneColor(zone: number | null | undefined, n = 3): string {
   if (!zone || zone < 1) return token("--agon-pierre");
   if (n <= 3) return ZONE_COLORS_3[Math.min(zone, 3) - 1];
-  const i = Math.round(((zone - 1) / Math.max(1, n - 1)) * (ZONE_COLORS_N.length - 1));
-  return ZONE_COLORS_N[Math.min(ZONE_COLORS_N.length - 1, Math.max(0, i))];
+  if (n === 5) return ZONE_COLORS_5[Math.min(zone, 5) - 1];
+  if (n === 7) return ZONE_COLORS_7[Math.min(zone, 7) - 1];
+  // Autre nombre de zones : réparties sur la suite à 7 couleurs.
+  const i = Math.round(((zone - 1) / Math.max(1, n - 1)) * (ZONE_COLORS_7.length - 1));
+  return ZONE_COLORS_7[Math.min(ZONE_COLORS_7.length - 1, Math.max(0, i))];
 }
 
 // ── Formats ────────────────────────────────────────────────────────────────

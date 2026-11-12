@@ -91,3 +91,40 @@ describe("temps par zone", () => {
     expect(meanZone(160, [152, 172])).toBe(2);
   });
 });
+
+describe("modèles 5 et 7 zones", () => {
+  it("7 zones depuis FC max et FC repos (Karvonen)", async () => {
+    const { sevenZoneBounds } = await import("../domain/hrZones");
+    // réserve 195 - 55 = 140 : 55 % → 132, 65 % → 146, 75 % → 160, 82 % → 170, 89 % → 180, 95 % → 188
+    expect(sevenZoneBounds(195, 55)).toEqual([132, 146, 160, 170, 180, 188]);
+    expect(sevenZoneBounds(200)).toEqual([110, 130, 150, 164, 178, 190]);
+    expect(sevenZoneBounds(null)).toBeNull();
+  });
+
+  it("5 zones proposées comme l'éditeur historique", async () => {
+    const { defaultFiveZoneMaxes } = await import("../domain/hrZones");
+    expect(defaultFiveZoneMaxes(200)).toEqual([120, 140, 160, 180, 200]);
+    expect(defaultFiveZoneMaxes(195, 55)).toEqual([139, 153, 167, 181, 195]);
+  });
+
+  it("nombre et noms de zones", async () => {
+    const { zoneCount, zoneNames } = await import("../domain/hrZones");
+    expect(zoneCount([152, 172])).toBe(3);
+    expect(zoneCount(null)).toBeNull();
+    expect(zoneNames(7)).toHaveLength(7);
+    expect(zoneNames(4)[3]).toBe("Zone 4");
+  });
+
+  it("modèle actif à une date", async () => {
+    const { activeModelAt } = await import("../domain/hrZones");
+    const rows = [
+      { id: "a", status: "active", validFrom: "2026-10-01", createdAt: "1" },
+      { id: "b", status: "active", validFrom: "2026-11-12", createdAt: "2" },
+      { id: "c", status: "proposed", validFrom: "2026-11-01", createdAt: "3" },
+      { id: "d", status: "replaced", validFrom: "2026-09-01", createdAt: "0" },
+    ];
+    expect(activeModelAt(rows, "2026-11-05")?.id).toBe("a");
+    expect(activeModelAt(rows, "2026-11-12")?.id).toBe("b");
+    expect(activeModelAt(rows, "2026-09-15")).toBeNull();
+  });
+});

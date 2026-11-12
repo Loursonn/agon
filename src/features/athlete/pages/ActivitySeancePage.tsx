@@ -12,7 +12,7 @@ export default function ActivitySeancePage() {
       activityId={activityId}
       role="athlete"
       back={{ to: "/athlete/program", label: "Programme" }}
-      thresholdsLink="/athlete/test"
+      thresholdsLink="/athlete/zones"
     />
   );
 }

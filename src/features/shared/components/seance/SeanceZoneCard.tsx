@@ -11,6 +11,8 @@ interface Props {
   hasHr: boolean;
   /** Lien vers la saisie du test « Seuils ventilatoires (FC) ». */
   thresholdsLink: string | null;
+  /** Texte du lien (« Définir les seuils » côté coach, « Mes seuils et zones » côté athlète). */
+  thresholdsLabel?: string;
   /** Durée affichée en haut à droite (« 48 min 10 s »). */
   totalS: number | null;
   compact: boolean;
@@ -19,7 +21,7 @@ interface Props {
 const SUB = ["sous SV1", "SV1 → SV2", "au-dessus de SV2"];
 
 /** Temps par zone (modèle Agon à 3 zones, ou N zones) ; « — » sans FC ou sans seuils. */
-export function SeanceZoneCard({ zones, bounds, hasHr, thresholdsLink, totalS, compact }: Props) {
+export function SeanceZoneCard({ zones, bounds, hasHr, thresholdsLink, thresholdsLabel = "Définir les seuils", totalS, compact }: Props) {
   const n = bounds ? bounds.length + 1 : 3;
   const shares = zoneShares(zones);
   const empty = !zones || !bounds || !shares;
@@ -54,8 +56,8 @@ export function SeanceZoneCard({ zones, bounds, hasHr, thresholdsLink, totalS, c
           "Pas de fréquence cardiaque sur cette activité."
         ) : !bounds ? (
           <span style={{ fontFamily: "var(--agon-font-ui)", fontSize: 12, color: C.tx2 }}>
-            SV1 et SV2 pas encore saisis.{" "}
-            {thresholdsLink && <Link to={thresholdsLink} style={{ color: C.ac, textDecoration: "none" }}>Définir mes seuils ›</Link>}
+            Zones FC pas encore fixées.{" "}
+            {thresholdsLink && <Link to={thresholdsLink} style={{ color: C.ac, textDecoration: "none" }}>{thresholdsLabel} ›</Link>}
           </span>
         ) : bounds.length === 2 ? (
           `SV1 ${bounds[0]} bpm · SV2 ${bounds[1]} bpm`

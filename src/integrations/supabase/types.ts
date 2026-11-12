@@ -2180,6 +2180,7 @@ export type Database = {
           id: string
           kind: string
           origin: string
+          refs_day: string | null
           status: string
           test_result_id: string | null
           valid_from: string
@@ -2194,6 +2195,7 @@ export type Database = {
           id?: string
           kind: string
           origin?: string
+          refs_day?: string | null
           status?: string
           test_result_id?: string | null
           valid_from?: string
@@ -2208,6 +2210,7 @@ export type Database = {
           id?: string
           kind?: string
           origin?: string
+          refs_day?: string | null
           status?: string
           test_result_id?: string | null
           valid_from?: string
@@ -5747,6 +5750,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      activity_from_garmin_device: {
+        Args: {
+          p_device: string
+          p_raw: Json
+          p_source: Database["public"]["Enums"]["data_source"]
+          p_sources: string[]
+        }
+        Returns: boolean
+      }
       activity_laps_editor: { Args: { p_athlete: string }; Returns: boolean }
       activity_sport_family: { Args: { p_sport: string }; Returns: string }
       activity_zone_seconds: {
@@ -5766,6 +5778,7 @@ export type Database = {
         Args: { p_athlete: string }
         Returns: Database["public"]["Enums"]["data_source"][]
       }
+      apply_hr_zone_model_to_past: { Args: { p_id: string }; Returns: number }
       auto_link_day: {
         Args: { p_athlete: string; p_day: string }
         Returns: number

@@ -40,6 +40,13 @@ describe("zones", () => {
     expect(zoneColor(null)).toBe("#8E8780");
   });
 
+  it("5 et 7 zones : du froid au chaud", () => {
+    expect([1, 2, 3, 4, 5].map((z) => zoneColor(z, 5))).toEqual(["#33B5FF", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F"]);
+    expect([1, 2, 3, 4, 5, 6, 7].map((z) => zoneColor(z, 7))).toEqual(
+      ["#33B5FF", "#2EE6C5", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F", "#F060C0"],
+    );
+  });
+
   it("regroupe les points consécutifs de même zone", () => {
     expect(zoneRuns([1, 1, 2, 2, 2, null, 3])).toEqual([
       { from: 0, to: 1, zone: 1 },
