@@ -25,18 +25,21 @@ export function TodayThemeCard({ theme }: { theme: DayThemeLike | null | undefin
   const title = normalizeDayThemeLabel(theme.label) || dominante || intensity || "";
   const note = (theme.note ?? "").trim();
   return (
-    <div style={{ borderRadius: 12, border: `1px solid ${tint}73`, background: `${tint}1F`, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3, marginRight: 4 }}>Thème du jour</span>
+    <div style={{ position: "relative", overflow: "hidden", borderRadius: 12, border: `1px solid ${tint}73`, background: `${tint}21`, padding: "12px 14px 12px 17px", display: "flex", flexDirection: "column", gap: 4 }}>
+      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: tint }} />
+      <div aria-hidden style={{ position: "absolute", inset: 0, background: "url(/maquette/theme-frise.svg) left center/auto 100% repeat-x", opacity: 0.12 }} />
+      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: tint }}>Thème du jour</span>
+        <span style={{ flex: 1 }} />
         {intensity && <TypePill color={tint}>{intensity}</TypePill>}
         {dominante && (
-          <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: tint, border: `1px solid ${tint}`, borderRadius: 999, padding: "2px 8px" }}>
+          <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: tint, border: `1px solid ${tint}73`, borderRadius: 999, padding: "2px 8px" }}>
             {dominante}
           </span>
         )}
       </div>
-      {title && <div style={{ ...DISPLAY, fontSize: 18, color: C.tx }}>{title}</div>}
-      {note && <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{note}</div>}
+      {title && <div style={{ position: "relative", ...DISPLAY, fontSize: 15, color: C.tx }}>{title}</div>}
+      {note && <div style={{ position: "relative", fontSize: 12, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{note}</div>}
     </div>
   );
 }

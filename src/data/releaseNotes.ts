@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-app-athlete-nouveau-look",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "App athlète : nouveau look sur téléphone",
+    summary: "Les pages de vos athlètes prennent le style des nouvelles maquettes : grand titre, date en haut, barre du bas plus nette.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "Chaque page (Aujourd'hui, Programme, Tests, HYROX, Alimentation, Profil) a son propre en-tête avec la date ; le menu reste accessible par la petite icône à côté de la date.",
+          "Aujourd'hui : la citation est mise en avant sous « Bonjour », votre retour de la semaine se lit avec quatre réponses en mots (Bien reçu, Motivé, À fond, Merci).",
+          "La séance du jour se déplie pour montrer les exercices, puis « Démarrer la séance ». La prochaine compétition affiche le compte à rebours en grand, et la courbe de forme est plus lisible.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-accueil-coach",
     date: "2026-11-12",
     kind: "feature",

@@ -97,8 +97,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
 
   if (!nutritionStrategy) {
     return (
-      <div style={{ padding: "16px 16px 40px" }}>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 16 }}>Alimentation</div>
+      <div style={{ padding: "24px 20px 40px" }}>
         <div style={{ ...card, textAlign: "center", padding: "32px 20px" }}>
           <div style={{ fontSize: 28, marginBottom: 12 }}></div>
           <div style={{ fontSize: 14, fontWeight: 600, color: C.tx, marginBottom: 6 }}>Pas encore de plan nutritionnel</div>
@@ -198,15 +197,8 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
     : true;
 
   return (
-    <div style={{ padding: "16px 16px 40px" }}>
-
-      {/* ── Header ── */}
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px", color: C.tx }}>Alimentation</div>
-        <div style={{ fontSize: 11, color: C.tx3 }}>
-          {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-        </div>
-      </div>
+    <div style={{ padding: "24px 20px 40px" }}>
+      {/* Titre et date : en-tête de page (AlimPage) */}
 
       {/* ── Objectif ── */}
       <div style={card}>

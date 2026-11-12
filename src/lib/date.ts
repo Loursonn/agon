@@ -90,3 +90,14 @@ export const checkMilestone = (
     ? parseFloat((last3.reduce((s, [, kg]) => s + kg, 0) / 3).toFixed(1))
     : null;
 };
+
+/**
+ * Date de l'en-tête des pages athlète (maquettes) : « Dim. 8 nov. » (court)
+ * ou « Dimanche 8 novembre » (long). Affichée en majuscules par le style.
+ */
+export function headerDate(d: Date = new Date(), style: "short" | "long" = "short"): string {
+  const s = d.toLocaleDateString("fr-FR", style === "short"
+    ? { weekday: "short", day: "numeric", month: "short" }
+    : { weekday: "long", day: "numeric", month: "long" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}

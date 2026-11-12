@@ -1,56 +1,71 @@
-import { MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
 import { C } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { RETOUR_REACTIONS, reactionEmoji, type RetourReaction, type WeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 
 function weekLabel(weekStart: string): string {
   const d = new Date(weekStart + "T12:00:00");
-  return "Semaine du " + d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  return "Sem. du " + d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
 interface CoachRetourCardProps {
-  retour: WeeklyRetour;
+  /** Retour de la semaine ; absent = carte avec seulement le retour de séance (`children`). */
+  retour?: WeeklyRetour | null;
+  coachName?: string | null;
   /** Absent = lecture seule (déjà vu, ou coach en mode athlète) */
   onReact?: (reaction: RetourReaction) => void;
+  /** Retour sur une séance, sous le retour de la semaine. */
+  children?: ReactNode;
 }
 
-/** Retour hebdo du coach. Réagir = « vu » : la carte quitte l'accueil et reste dans le panneau latéral. */
-export function CoachRetourCard({ retour, onReact }: CoachRetourCardProps) {
-  const seenEmoji = reactionEmoji(retour.athlete_reaction);
-  const unread = !retour.athlete_reaction;
+/**
+ * Retour du coach (maquette « Aujourd'hui ») : carte neutre à filet or,
+ * nom du coach et semaine, texte, 4 réactions en mots, puis le retour sur la
+ * dernière séance. Réagir = « vu » : la carte quitte l'accueil et reste dans
+ * le panneau latéral.
+ */
+export function CoachRetourCard({ retour, coachName, onReact, children }: CoachRetourCardProps) {
+  const seen = retour ? RETOUR_REACTIONS.find((x) => x.key === retour.athlete_reaction) : undefined;
+  const unread = !!retour && !retour.athlete_reaction;
 
   return (
-    <div style={{
-      background: unread ? C.acS : C.s1, borderRadius: 6,
-      border: "1px solid " + (unread ? C.ac + "30" : C.brd), padding: "12px 14px",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-        <MessageSquare size={12} color={C.ac} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: C.ac }}>Retour de ton coach</span>
-        <span style={{ fontSize: 10, color: C.tx3, marginLeft: "auto" }}>{weekLabel(retour.week_start)}</span>
-        {seenEmoji && <span style={{ fontSize: 13 }} title="Ta réaction">{seenEmoji}</span>}
-      </div>
-      <div style={{ fontSize: 13, color: C.tx, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-        {retour.comment}
-      </div>
-      {onReact && unread && (
-        <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          {RETOUR_REACTIONS.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => onReact(r.key)}
-              title={r.label}
-              aria-label={r.label}
-              style={{
-                flex: 1, minHeight: 40, borderRadius: 6,
-                border: "1px solid " + C.brdL, background: C.s1,
-                fontSize: 18, cursor: "pointer", fontFamily: "inherit",
-              }}
-            >
-              {r.emoji}
-            </button>
-          ))}
-        </div>
+    <div
+      style={{
+        position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", gap: 10,
+        border: "1px solid rgba(231,211,168,0.18)", borderRadius: 14, background: "#1E1A16", padding: "12px 14px 12px 17px",
+      }}
+    >
+      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
+      {retour && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, color: C.tx, fontWeight: 500 }}>{coachName || "Ton coach"}</span>
+            <span style={{ flex: 1 }} />
+            <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx3 }}>{weekLabel(retour.week_start)}</span>
+            {seen && <span style={{ fontSize: 13 }} title={"Ta réaction : " + seen.label}>{reactionEmoji(seen.key)}</span>}
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{retour.comment}</p>
+          {onReact && unread && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+              {RETOUR_REACTIONS.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => onReact(r.key)}
+                  style={{
+                    height: 32, background: "none", border: "1px solid rgba(231,211,168,0.18)", borderRadius: 8, padding: 0,
+                    color: C.tx, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                  }}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
+      {retour && children && <div style={{ height: 1, background: "rgba(231,211,168,0.10)" }} />}
+      {children}
     </div>
   );
 }

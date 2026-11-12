@@ -66,3 +66,12 @@ describe("normalizeDayMap", () => {
     expect(normalizeDayMap(undefined)).toEqual({});
   });
 });
+
+describe("headerDate", () => {
+  it("formate court et long", async () => {
+    const { headerDate } = await import("../date");
+    const d = new Date(2026, 10, 8, 12);
+    expect(headerDate(d)).toBe("Dim. 8 nov.");
+    expect(headerDate(d, "long")).toBe("Dimanche 8 novembre");
+  });
+});

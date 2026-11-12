@@ -1,3 +1,5 @@
+import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { C } from "@/lib/theme";
@@ -94,7 +96,9 @@ export default function ProfilPage() {
   const targetWeight = nutritionStrategy?.target_weight ?? (bodyWeight?.target || null);
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 40px", scrollbarWidth: "none" }}>
+    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+    <AthletePageHeader title="Profil" background={headerGlow(undefined, "#33B5FF")} />
+    <div style={{ padding: "24px 20px 40px", scrollbarWidth: "none" }}>
       {/* ── Profil ── */}
       <div style={{ marginBottom: 24 }}>
         <div style={sectionTitle}><span style={{ color: C.ac }}>01 — </span>Profil</div>
@@ -247,6 +251,7 @@ export default function ProfilPage() {
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 }

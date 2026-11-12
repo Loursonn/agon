@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { alpha } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ import { CombinedStatsChart } from "@/components/athlete/StatsCharts";
 import BlockHistoryViewer from "@/features/coach/components/BlockHistoryViewer";
 import { getBig3 } from "@/lib/calculations";
 import OfflineBanner from "@/features/shared/components/OfflineBanner";
+import { AthleteChromeContext, type AthleteChrome } from "./context/AthleteChromeContext";
 
 const ip = { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "square" as const, strokeLinejoin: "miter" as const };
 
@@ -56,6 +57,13 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  // Pages qui dessinent leur propre en-tête (maquettes) : sur téléphone, la
+  // barre globale du haut se masque.
+  const [pageHeaders, setPageHeaders] = useState(0);
+  const registerHeader = useCallback(() => {
+    setPageHeaders((n) => n + 1);
+    return () => setPageHeaders((n) => n - 1);
+  }, []);
 
   const [dismissedUnfinished, setDismissedUnfinished] = useState<string[]>([]);
 
@@ -137,12 +145,36 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   const BADGE = "rounded-md px-agon-sm py-agon-2xs text-agon-xs font-semibold";
   const NAV_DOT = "absolute -right-1 -top-0.5 h-[7px] w-[7px] rounded-full bg-agon-accent";
 
+  const pageBadges = (saveStatus || activeInjuries.length > 0 || viewOnly) ? (
+    <>
+      {saveStatus && (
+        <span className={cn(BADGE, saveStatus === "saved" ? "bg-agon-succes-doux text-agon-succes" : "bg-agon-erreur-doux text-agon-erreur")}>
+          {saveStatus === "saved" ? "OK" : "Err"}
+        </span>
+      )}
+      {activeInjuries.length > 0 && (
+        <span className={cn(BADGE, "bg-agon-erreur-doux text-agon-erreur")}>{activeInjuries.length} bless.</span>
+      )}
+      {viewOnly && (
+        <span className={cn(BADGE, "border border-agon-coach/40 bg-agon-coach-doux text-agon-coach")}>Observation</span>
+      )}
+    </>
+  ) : null;
+  const chrome = useMemo<AthleteChrome>(() => ({
+    openMenu: () => setDrawerOpen(true),
+    onSwitchMode,
+    badges: pageBadges,
+    register: registerHeader,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [onSwitchMode, registerHeader, saveStatus, activeInjuries.length, viewOnly]);
+
   return (
-    // overflow-wrap hérité : les longues chaînes sans espace (grilles, allures…) reviennent à la ligne
+    <AthleteChromeContext.Provider value={chrome}>
+    {/* overflow-wrap hérité : les longues chaînes sans espace (grilles, allures…) reviennent à la ligne */}
     <div className="flex min-h-screen flex-col font-ui [overflow-wrap:anywhere]">
       {/* ── En-tête collant ── */}
-      <div ref={headerRef} className="sticky top-0 z-20 border-b border-agon-brd bg-agon-bg">
-        <div className="flex w-full items-center justify-between px-agon-lg py-agon-sm lg:mx-auto lg:max-w-[1100px] xl:max-w-[1280px]">
+      <div ref={headerRef} className={cn("sticky top-0 z-20 bg-agon-bg lg:border-b lg:border-agon-brd", pageHeaders > 0 ? "" : "border-b border-agon-brd")}>
+        <div className={cn("w-full items-center justify-between px-agon-lg py-agon-sm lg:mx-auto lg:flex lg:max-w-[1100px] xl:max-w-[1280px]", pageHeaders > 0 ? "hidden" : "flex")}>
           <div className="flex min-w-0 items-center gap-agon-sm">
             <img src="/brand/agon-logo-horizontal-marbre.svg" alt="Agon" className="h-5" />
             {saveStatus && (
@@ -216,15 +248,20 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
         {/* ── Contenu (marge basse pour la barre d'onglets fixe et le minuteur) ── */}
         {/* PC : zone bordée, sans barre du bas ; chaque page y organise sa largeur. */}
-        <div className={"min-w-0 flex-1 border-agon-brd lg:border-x " + ((timerActive || timerFinished) ? "pb-[120px] lg:pb-20" : "pb-16 lg:pb-8")}>
+        <div className={"min-w-0 flex-1 border-agon-brd lg:border-x " + ((timerActive || timerFinished) ? "pb-[136px] lg:pb-20" : "pb-[88px] lg:pb-8")}>
           <Outlet />
         </div>
       </div>
 
-      {/* ── Barre d'onglets du bas (mobile / tablette) ── */}
-      <div
+      {/* ── Barre d'onglets du bas (mobile / tablette), copiée de la maquette ── */}
+      <nav
+        aria-label="Onglets"
         // display dans la classe pour que `lg:hidden` s'applique
-        className="fixed inset-x-0 bottom-0 z-30 flex h-16 border-t border-agon-brd bg-agon-bg pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex lg:hidden"
+        style={{
+          minHeight: 80, boxSizing: "border-box", borderTop: "1px solid rgba(231,211,168,0.10)",
+          background: "rgba(14,12,10,0.96)", padding: "0 4px max(14px, env(safe-area-inset-bottom))",
+        }}
       >
         {ATH_TABS.map(t => {
           const isActive = activeTab === t.k;
@@ -233,26 +270,27 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               key={t.k}
               type="button"
               onClick={() => navigate(t.k || ".")}
-              className={cn(
-                "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-[3px] text-[10px] transition-colors",
-                isActive ? "font-semibold text-agon-accent" : "font-normal text-agon-tx3",
-              )}
+              aria-label={t.l}
+              aria-current={isActive ? "page" : undefined}
+              className="relative flex min-w-0 flex-1 flex-col items-center gap-[4px] border-none bg-transparent pt-[10px]"
+              style={{ color: isActive ? "#FFC933" : "rgba(231,211,168,0.55)" }}
             >
-              <span className="relative flex items-center">
+              {isActive && <span aria-hidden className="absolute top-0 h-px w-[22px]" style={{ background: "#FFC933" }} />}
+              <span className="relative flex items-center [&>svg]:h-[22px] [&>svg]:w-[22px]">
                 {t.icon}
                 {t.k === "profil" && staffUnseen > 0 && <span aria-label="Nouveau dans ton staff" className={NAV_DOT} />}
               </span>
-              <span className="whitespace-nowrap">{t.l}</span>
+              <span className="whitespace-nowrap text-[10px]" style={{ fontWeight: isActive ? 500 : 400 }}>{t.l}</span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* ── Minuteur (au-dessus de la barre du bas) ── */}
       {(timerActive || timerFinished) && (
         <div
           className={cn(
-            "fixed bottom-16 left-1/2 z-[150] flex -translate-x-1/2 items-center gap-agon-md rounded-full border px-[18px] py-[9px] lg:bottom-6 lg:left-[calc(50%+110px)]",
+            "fixed bottom-[88px] left-1/2 z-[150] flex -translate-x-1/2 items-center gap-agon-md rounded-full border px-[18px] py-[9px] lg:bottom-6 lg:left-[calc(50%+110px)]",
             timerFinished ? "border-agon-succes/70 bg-agon-succes/15" : cn("bg-agon-s1", timerUrgent ? "border-agon-erreur/70" : "border-agon-accent/70"),
           )}
         >
@@ -294,7 +332,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── Bouton flottant « Reprendre » (séance libre) ── */}
       {activeFreeSess && (
-        <div className="fixed bottom-16 right-4 z-[140] lg:bottom-6 lg:right-[max(16px,calc(50%-534px))] xl:right-[max(16px,calc(50%-624px))]">
+        <div className="fixed bottom-[88px] right-4 z-[140] lg:bottom-6 lg:right-[max(16px,calc(50%-534px))] xl:right-[max(16px,calc(50%-624px))]">
           <button
             type="button"
             onClick={() => navigate("log", { state: { initialSess: activeFreeSess } })}
@@ -312,7 +350,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         <div
           className={cn(
             "fixed inset-x-4 z-[141] lg:inset-x-auto lg:left-[calc(50%+110px)] lg:w-[448px] lg:-translate-x-1/2",
-            activeWorkout ? "bottom-[132px] lg:bottom-[84px]" : "bottom-[72px] lg:bottom-6",
+            activeWorkout ? "bottom-[156px] lg:bottom-[84px]" : "bottom-[92px] lg:bottom-6",
           )}
         >
           <div className="flex items-center gap-agon-md rounded-lg border border-agon-alerte/70 bg-agon-s1 px-agon-md py-agon-md">
@@ -348,7 +386,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── Bouton flottant « Revenir à la séance » (musculation) ── */}
       {activeWorkout && !isOnWorkoutPage && (
-        <div className="fixed inset-x-4 bottom-[72px] z-[140] lg:inset-x-auto lg:bottom-6 lg:left-[calc(50%+110px)] lg:w-[448px] lg:-translate-x-1/2">
+        <div className="fixed inset-x-4 bottom-[92px] z-[140] lg:inset-x-auto lg:bottom-6 lg:left-[calc(50%+110px)] lg:w-[448px] lg:-translate-x-1/2">
           <button
             type="button"
             onClick={() => navigate(`program/workout/${activeWorkout.id}`)}
@@ -503,5 +541,6 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         }
       />
     </div>
+    </AthleteChromeContext.Provider>
   );
 }

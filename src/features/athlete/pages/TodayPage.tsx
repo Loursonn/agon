@@ -8,6 +8,7 @@ import { TodayWellnessCard } from "@/features/athlete/components/today/TodayWell
 import { TodayWeekStrip, type WeekStripDay } from "@/features/athlete/components/today/TodayWeekStrip";
 import { TodayThemeCard } from "@/features/athlete/components/today/TodayThemeCard";
 import { TodaySessionCard } from "@/features/athlete/components/today/TodaySessionCard";
+import { TodayFormeTrend } from "@/features/athlete/components/today/TodayFormeTrend";
 import { TintCard } from "@/features/athlete/components/today/TintCard";
 import { TypePill } from "@/features/athlete/components/today/TypePill";
 import { TYPE_COLOR, TYPE_LABEL, ROUGE, MACRO_COLOR } from "@/lib/peps";
@@ -18,7 +19,9 @@ import {
   indexDayThemesByDate,
   type DayThemeLike,
 } from "@/lib/dayTheme";
-import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
+import { CitationFigure } from "@/features/shared/components/CitationDuJour";
+import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { TodayDial } from "@/features/athlete/components/today/TodayDial";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useTodayWellness } from "@/features/shared/hooks/useTodayWellness";
 import { useReadinessScore } from "@/features/shared/hooks/useReadinessScore";
@@ -55,6 +58,7 @@ import { queueIsDurable } from "@/lib/offline/writes";
 import { FreeActivityModal } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
+import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
 import { watchRunMeasure, watchRunText } from "@/lib/watchRunLabel";
 import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
@@ -401,7 +405,7 @@ function getFormeAdvice(wellness: Record<string, number> | null): Array<{ icon: 
     if (v == null) continue;
     const tip = f.advice(v);
     if (!tip) continue;
-    tips.push({ icon: FORM_FIELDS_ICONS[f.key], label: f.label, text: tip.text, color: tip.tone === "bad" ? C.r : C.g });
+    tips.push({ icon: FORM_FIELDS_ICONS[f.key], label: f.label, text: tip.text, color: tip.tone === "bad" ? "#FF9500" : "#66F03C" });
   }
   return tips;
 }
@@ -811,6 +815,8 @@ export default function TodayPage() {
   // Retours coach pas encore vus (= sans réaction), toutes semaines confondues
   const { data: coachRetours = [] } = useAthleteRetours(athleteId ?? undefined);
   const unreadRetours = coachRetours.filter((r) => !r.athlete_reaction);
+  const { data: athleteCoaches } = useAthleteCoaches(athleteId);
+  const coachName = athleteCoaches?.referent?.full_name ?? null;
   const { mutate: reactRetour } = useReactWeeklyRetour();
   const { data: lifeEvents = [] } = useLifeEvents(athleteId ?? "");
   const { mutate: deleteLifeEvent } = useDeleteLifeEvent();
@@ -917,7 +923,7 @@ export default function TodayPage() {
     const iso = localISO(new Date(Date.now() - (13 - i) * 86400000));
     // Score unique (domaine wellness) : null si une note manque, jamais inventé.
     const score = calcScore(wellnessByISO?.[iso] ?? null);
-    return { d: iso.slice(5), score };
+    return { d: iso.slice(5), iso, score };
   });
   const wellnessTrendHasData = wellnessTrend.some((d) => d.score !== null);
 
@@ -994,26 +1000,24 @@ export default function TodayPage() {
 
   return (
     <>
+      <div style={{ maxWidth: 480, margin: "0 auto" }}>
+      {/* En-tête — symbole, date, prénom, citation (maquette « Aujourd'hui ») */}
+      <AthletePageHeader
+        title={<>Bonjour,<br />{athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlète"}</>}
+        titleSize={30}
+        titleGap={24}
+        padding="52px 20px 22px"
+        background={`${C.bg} url(/maquette/accueil-fond.svg) center/cover no-repeat`}
+        decor={<TodayDial />}
+      >
+        {show("quote") && <CitationFigure />}
+      </AthletePageHeader>
       <div
         style={{
-          maxWidth: 480, margin: "0 auto", padding: "16px 16px 40px",
+          padding: "22px 20px 24px",
           scrollbarWidth: "none", display: "flex", flexDirection: "column", gap: 28,
         }}
       >
-        {/* En-tête — date, prénom, citation */}
-        <header style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>
-            {todayFr()}
-          </div>
-          <h1 style={{ margin: 0, ...DISPLAY, fontWeight: 400, fontSize: 30, lineHeight: 1.05, color: C.tx }}>
-            Bonjour, {athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlète"}
-          </h1>
-          {show("quote") && (
-            <div style={{ marginTop: 6 }}>
-              <CitationDuJour />
-            </div>
-          )}
-        </header>
 
         {/* 01 — Wellness du jour, replié */}
         {show("wellness") && (
@@ -1032,44 +1036,52 @@ export default function TodayPage() {
         )}
 
         {/* 02 — Retour du coach */}
-        {(unreadRetours.length > 0 || recentFb) && (
-          <TodaySection
-            num={sec()}
-            title="Retour du coach"
-            right={unreadRetours.length > 0 ? <TypePill color={TYPE_COLOR.energie}>Nouveau</TypePill> : undefined}
-          >
-            {unreadRetours.map((r) => (
-              <CoachRetourCard
-                key={r.id}
-                retour={r}
-                onReact={viewOnly || !athleteId ? undefined : (reaction) => {
-                  haptic();
-                  reactRetour({ retourId: r.id, athleteId, reaction });
-                }}
-              />
-            ))}
-            {recentFb && (
-              <button
-                onClick={() => { setFbExpanded((v) => !v); haptic(); }}
-                style={{
-                  position: "relative", overflow: "hidden", width: "100%", padding: "12px 14px 12px 17px",
-                  background: C.s1, borderRadius: 12, border: "1px solid " + C.brd,
-                  cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-                }}
-              >
-                <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
-                <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3, marginBottom: 6 }}>
-                  Sur ta séance du {new Date(recentFb.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                </div>
-                <div style={fbExpanded
-                  ? { fontSize: 13, color: C.tx2, lineHeight: 1.55, whiteSpace: "pre-wrap" as const }
-                  : { fontSize: 13, color: C.tx2, lineHeight: 1.55, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
-                  « {recentFb.note} »
-                </div>
-              </button>
-            )}
-          </TodaySection>
-        )}
+        {(unreadRetours.length > 0 || recentFb) && (() => {
+          const fbBlock = recentFb ? (
+            <button
+              type="button"
+              onClick={() => { setFbExpanded((v) => !v); haptic(); }}
+              style={{ display: "flex", flexDirection: "column", gap: 4, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
+            >
+              <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>
+                Sur ta séance du {new Date(recentFb.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+              </span>
+              <span style={fbExpanded
+                ? { fontSize: 13, color: C.tx, lineHeight: 1.5, whiteSpace: "pre-wrap" as const, fontStyle: "italic" }
+                : { fontSize: 13, color: C.tx, lineHeight: 1.5, fontStyle: "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                « {recentFb.note} »
+              </span>
+            </button>
+          ) : null;
+          return (
+            <TodaySection
+              num={sec()}
+              title="Retour du coach"
+              right={unreadRetours.length > 0 ? (
+                <span style={{ display: "flex", alignItems: "center", gap: 6, ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: TYPE_COLOR.energie }}>
+                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: "50%", background: TYPE_COLOR.energie }} />
+                  Nouveau
+                </span>
+              ) : undefined}
+            >
+              {unreadRetours.length === 0 ? (
+                <CoachRetourCard>{fbBlock}</CoachRetourCard>
+              ) : unreadRetours.map((r, i) => (
+                <CoachRetourCard
+                  key={r.id}
+                  retour={r}
+                  coachName={coachName}
+                  onReact={viewOnly || !athleteId ? undefined : (reaction) => {
+                    haptic();
+                    reactRetour({ retourId: r.id, athleteId, reaction });
+                  }}
+                >
+                  {i === 0 ? fbBlock : null}
+                </CoachRetourCard>
+              ))}
+            </TodaySection>
+          );
+        })()}
 
         {/* 03 — Cette semaine + thème du jour */}
         {show("week") && (
@@ -1239,6 +1251,7 @@ export default function TodayPage() {
                       color={TYPE_COLOR.muscu}
                       typeLabel={TYPE_LABEL.muscu}
                       title={w.session.name}
+                      pattern
                       items={w.items}
                       defaultOpen={wi === 0 && pendingWorkouts.length + pendingEnergy.length === 1}
                       extra={w.workoutLogId ? <TodayWorkoutFiches workoutLogId={w.workoutLogId} athleteId={athleteId} /> : undefined}
@@ -1363,18 +1376,30 @@ export default function TodayPage() {
             </>}
           >
             {nextComp ? (
-              <TintCard as="button" color={TYPE_COLOR.competition} onClick={() => setShowAllComps(true)} padding="14px 14px 14px 17px">
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div><TypePill color={TYPE_COLOR.competition}>{priorityLabel(nextComp.priority)}</TypePill></div>
-                  <div style={{ ...DISPLAY, fontSize: 17, fontWeight: 400, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nextComp.name}</div>
-                  <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3 }}>
+              <button
+                type="button"
+                onClick={() => setShowAllComps(true)}
+                style={{
+                  position: "relative", overflow: "hidden", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: C.tx,
+                  borderRadius: 14, border: `1px solid ${ROUGE}73`, background: "#2A1D17 url(/maquette/competition-fond.svg) center/cover",
+                  padding: "12px 14px 12px 17px", display: "flex", flexDirection: "column", gap: 6,
+                }}
+              >
+                <span aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(21,18,15,0.72)" }} />
+                <span aria-hidden style={{ position: "absolute", inset: 0, background: `${ROUGE}1A` }} />
+                <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: ROUGE }} />
+                <span style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, width: "100%", whiteSpace: "nowrap" }}>
+                  <span style={{ ...DISPLAY, fontSize: 14, fontWeight: 500, letterSpacing: "0.08em", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{nextComp.name}</span>
+                  <span style={{ flex: 1 }} />
+                  <TypePill color={ROUGE}>{priorityLabel(nextComp.priority)}</TypePill>
+                </span>
+                <span style={{ position: "relative", display: "flex", alignItems: "baseline", gap: 10, minWidth: 0 }}>
+                  <span style={{ ...MONO, fontSize: 22, color: ROUGE, flex: "none" }}>{nextComp.daysUntil === 0 ? "J" : `J-${nextComp.daysUntil}`}</span>
+                  <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {fmtShortDay(nextComp.date)}{nextComp.location ? ` · ${nextComp.location}` : ""}
-                  </div>
-                </div>
-                <div style={{ ...MONO, fontSize: 30, color: TYPE_COLOR.competition, flex: "none" }}>
-                  {nextComp.daysUntil === 0 ? "J" : `J-${nextComp.daysUntil}`}
-                </div>
-              </TintCard>
+                  </span>
+                </span>
+              </button>
             ) : (
               <div style={{ borderRadius: 12, padding: 16, border: "1px dashed " + C.brdL, textAlign: "center" }}>
                 <div style={{ fontSize: 13, color: C.tx3, marginBottom: myCoachId ? 10 : 0 }}>Aucune compétition prévue</div>
@@ -1407,104 +1432,54 @@ export default function TodayPage() {
         {/* 09 — Tendance de forme */}
         {show("trend") && wellnessTrendHasData && (
           <TodaySection num={sec()} title="Tendance de forme" right={<SectionLink onClick={() => navigate("profil")}>Historique →</SectionLink>}>
-            {/* Score + graph */}
-            <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: C.tx3, marginBottom: 2 }}>Forme moyenne · 7j</div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: formeColor }}>
-                    {avgFormeScore ?? "—"}
-                    {avgFormeScore != null && <span style={{ fontSize: 12, fontWeight: 400, color: C.tx3 }}>/100</span>}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    padding: "5px 12px", borderRadius: 6,
-                    background: formeColor + "18", border: "1px solid " + formeColor + "40",
-                    fontSize: 12, fontWeight: 700, color: formeColor,
-                  }}
-                >
-                  {formeLabel}
-                </div>
-              </div>
-
-              {/* 14-day line chart */}
-              <ResponsiveContainer width="100%" height={80}>
-                <LineChart data={wellnessTrend} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                  <ReferenceLine y={60} stroke={C.brd} strokeDasharray="3 3" />
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    stroke={formeColor}
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
-                  />
-                  <XAxis
-                    dataKey="d"
-                    tick={{ fontSize: 9, fill: C.tx3 }}
-                    axisLine={false} tickLine={false}
-                    interval={3}
-                  />
-                  <YAxis domain={[0, 100]} hide />
-                  <Tooltip
-                    contentStyle={{ background: C.s1, border: "none", borderRadius: 4, fontSize: 11 }}
-                    labelStyle={{ color: C.tx3 }}
-                    formatter={(v: number) => [`${v}/100`, "Forme"]}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>Forme moyenne · 7 j</span>
+              <span style={{ flex: 1 }} />
+              <span style={{ ...MONO, fontSize: 18, lineHeight: 1, color: formeColor }}>
+                {avgFormeScore ?? "—"}
+                {avgFormeScore != null && <span style={{ fontSize: 11, color: C.tx3 }}> / 100</span>}
+              </span>
+              {avgFormeScore != null && <TypePill color={formeColor}>{formeLabel}</TypePill>}
+            </div>
+            <TodayFormeTrend scores={wellnessTrend.map((d) => d.score)} color={formeColor} />
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              {[wellnessTrend[0].iso, wellnessTrend[wellnessTrend.length - 1].iso].map((iso) => (
+                <span key={iso} style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>
+                  {new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                </span>
+              ))}
             </div>
 
-            {/* Advice cards */}
-            {formeAdvice.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {formeAdvice.map((tip) => (
+            {(formeAdvice.length > 0 || wellnessBand(avgFormeScore)?.tone === "good") && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {(formeAdvice.length > 0
+                  ? formeAdvice
+                  : [{ icon: <Check size={16} />, label: "Forme", text: "bonne, continue sur ta lancée.", color: C.g }]
+                ).map((tip) => (
                   <div
                     key={tip.label}
                     style={{
-                      background: C.s1, borderRadius: 6, padding: "12px 14px",
-                      border: "1px solid " + tip.color + "30",
-                      display: "flex", gap: 12, alignItems: "flex-start",
+                      position: "relative", overflow: "hidden", display: "flex", alignItems: "center", gap: 10,
+                      padding: "9px 12px 9px 15px", borderRadius: 10, border: `1px solid ${tip.color}66`, background: `${tip.color}1A`,
                     }}
                   >
-                    <div
-                      style={{
-                        width: 34, height: 34, borderRadius: 4, flexShrink: 0,
-                        background: tip.color + "15",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 18,
-                      }}
-                    >
-                      {tip.icon}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: tip.color, marginBottom: 3 }}>
-                        {tip.label}
-                      </div>
-                      <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.4 }}>{tip.text}</div>
+                    <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: tip.color }} />
+                    <span style={{ display: "flex", flex: "none", color: tip.color }}>{tip.icon}</span>
+                    <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4 }}>
+                      <span style={{ color: tip.color, fontWeight: 500 }}>{tip.label}</span> · {tip.text}
                     </div>
                   </div>
                 ))}
               </div>
             )}
-
-            {formeAdvice.length === 0 && wellnessBand(avgFormeScore)?.tone === "good" && (
-              <div
-                style={{
-                  background: C.gS, borderRadius: 6, padding: "12px 14px",
-                  border: "1px solid " + C.g + "30",
-                  display: "flex", gap: 10, alignItems: "center",
-                }}
-              >
-                <Check size={20} color={C.g} />
-                <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.4 }}>
-                  Ton état de forme est bon. Continue sur ta lancée et maintiens tes bonnes habitudes !
-                </div>
-              </div>
-            )}
           </TodaySection>
         )}
+
+        <div aria-hidden style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "6px 0 0", opacity: 0.55 }}>
+          <img src="/maquette/agon-grec.svg" alt="" style={{ height: 14 }} />
+          <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.2em", color: C.tx3 }}>LA PROGRESSION PAR LE PLAN</span>
+        </div>
+      </div>
       </div>
 
       {/* Day preview BottomSheet */}

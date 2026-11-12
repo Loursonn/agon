@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useAthleteContext } from '@/features/shared/context/AthleteContext';
 import { useAthleteTestResults } from '@/features/shared/hooks/tests/useAthleteTests';
 import { ListSkeleton, CardSkeleton } from '@/features/shared/components/skeletons';
@@ -68,7 +70,9 @@ export default function AthleteTestPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[480px] px-agon-lg pb-[60px] pt-5 font-ui text-agon-tx lg:max-w-none lg:px-agon-2xl lg:pt-agon-xl">
+    <div className="mx-auto w-full max-w-[480px] font-ui text-agon-tx lg:max-w-none">
+      <AthletePageHeader title="Tests" background={headerGlow("#F060C0", "#33B5FF")} />
+      <div className="px-5 pb-[60px] pt-6 lg:px-agon-2xl lg:pt-agon-xl">
       <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-agon-2xl">
         <div>
           {/* Test permanent : Mensurations / Photos */}
@@ -132,6 +136,7 @@ export default function AthleteTestPage() {
             </div>
           )}
         </section>
+      </div>
       </div>
 
       {mensuOpen && <MensurationsDrawer athleteId={athleteId} viewOnly={viewOnly} onClose={() => setMensuOpen(false)} />}
