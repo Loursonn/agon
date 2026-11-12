@@ -213,32 +213,58 @@ export const DEFAULT_ACTIVITY_LIMIT = 60;
  * sorties le même jour gardent leur ordre). Même requête pour l'athlète et son
  * coach ; un coach peut en voir moins (RLS), sans erreur — c'est voulu.
  */
+const ACTIVITY_COLS =
+  "id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details";
+
+type ActivityRow = {
+  id: string; source: string; started_at: string; local_date: string; sport: string | null;
+  duration_s: number | null; distance_m: unknown; elevation_gain_m: unknown; avg_hr: number | null;
+  max_hr: number | null; avg_pace_s_per_km: unknown; calories: number | null; device_name: string | null;
+  details: unknown;
+};
+
+const toProviderActivity = (r: ActivityRow): ProviderActivity => ({
+  id: r.id,
+  source: r.source,
+  startedAt: r.started_at,
+  localDate: r.local_date,
+  sport: r.sport,
+  durationS: r.duration_s,
+  distanceM: num(r.distance_m),
+  elevationGainM: num(r.elevation_gain_m),
+  avgHr: r.avg_hr,
+  maxHr: r.max_hr,
+  avgPaceSPerKm: num(r.avg_pace_s_per_km),
+  calories: r.calories,
+  deviceName: r.device_name ?? null,
+  details: (r.details as Record<string, unknown> | null) ?? null,
+});
+
 export async function getActivities(athleteId: string, limit = DEFAULT_ACTIVITY_LIMIT): Promise<ProviderActivity[]> {
   const rows = unwrapRows(
     await db().from("provider_activities")
-      .select("id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details")
+      .select(ACTIVITY_COLS)
       .eq("athlete_id", athleteId)
       .order("local_date", { ascending: false })
       .order("started_at", { ascending: false })
       .limit(limit),
     "Lecture des activités impossible",
   );
-  return rows.map((r) => ({
-    id: r.id,
-    source: r.source,
-    startedAt: r.started_at,
-    localDate: r.local_date,
-    sport: r.sport,
-    durationS: r.duration_s,
-    distanceM: num(r.distance_m),
-    elevationGainM: num(r.elevation_gain_m),
-    avgHr: r.avg_hr,
-    maxHr: r.max_hr,
-    avgPaceSPerKm: num(r.avg_pace_s_per_km),
-    calories: r.calories,
-    deviceName: r.device_name ?? null,
-    details: (r.details as Record<string, unknown> | null) ?? null,
-  }));
+  return rows.map(toProviderActivity);
+}
+
+/** Sorties d'un athlète entre deux jours inclus (planning d'une semaine), dans l'ordre chronologique. */
+export async function getActivitiesBetween(athleteId: string, from: string, to: string): Promise<ProviderActivity[]> {
+  const rows = unwrapRows(
+    await db().from("provider_activities")
+      .select(ACTIVITY_COLS)
+      .eq("athlete_id", athleteId)
+      .gte("local_date", from)
+      .lte("local_date", to)
+      .order("started_at", { ascending: true }),
+    "Lecture des activités impossible",
+  );
+  return rows.map(toProviderActivity);
 }
 
 /** Sorties depuis `from` (jour ISO), dans l'ordre chronologique, pour le volume de course. */

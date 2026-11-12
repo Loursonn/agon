@@ -161,6 +161,86 @@ export type Database = {
           },
         ]
       }
+      activity_plan_links: {
+        Row: {
+          activity_id: string
+          ai_allowed: boolean
+          athlete_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          cost: number | null
+          created_at: string
+          id: string
+          local_date: string
+          planned_id: string
+          planned_kind: string
+          source: Database["public"]["Enums"]["data_source"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          ai_allowed?: boolean
+          athlete_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          cost?: number | null
+          created_at?: string
+          id?: string
+          local_date: string
+          planned_id: string
+          planned_kind: string
+          source: Database["public"]["Enums"]["data_source"]
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          ai_allowed?: boolean
+          athlete_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          cost?: number | null
+          created_at?: string
+          id?: string
+          local_date?: string
+          planned_id?: string
+          planned_kind?: string
+          source?: Database["public"]["Enums"]["data_source"]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_plan_links_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_plan_links_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_plan_links_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_plan_links_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_sets: {
         Row: {
           activity_id: string
@@ -5424,6 +5504,7 @@ export type Database = {
         Returns: boolean
       }
       activity_laps_editor: { Args: { p_athlete: string }; Returns: boolean }
+      activity_sport_family: { Args: { p_sport: string }; Returns: string }
       activity_zone_seconds: {
         Args: {
           p_bounds: number[]
@@ -5440,6 +5521,10 @@ export type Database = {
       ai_eligible_sources: {
         Args: { p_athlete: string }
         Returns: Database["public"]["Enums"]["data_source"][]
+      }
+      auto_link_day: {
+        Args: { p_athlete: string; p_day: string }
+        Returns: number
       }
       can_coach_athlete: { Args: { athlete_uuid: string }; Returns: boolean }
       can_read_doc: { Args: { doc_uuid: string }; Returns: boolean }
@@ -5584,6 +5669,10 @@ export type Database = {
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
       decide_hr_zone_model: {
         Args: { p_accept: boolean; p_id: string }
+        Returns: undefined
+      }
+      decide_plan_link: {
+        Args: { p_confirm: boolean; p_link: string }
         Returns: undefined
       }
       delete_energy_session: { Args: { p_session_id: string }; Returns: string }
@@ -5732,7 +5821,15 @@ export type Database = {
       isnt_empty: { Args: { "": string }; Returns: string }
       jsonb_int_array: { Args: { j: Json }; Returns: number[] }
       jsonb_real_array: { Args: { j: Json }; Returns: number[] }
+      link_activity_to_plan: {
+        Args: { p_activity: string; p_kind: string; p_planned: string }
+        Returns: string
+      }
       link_to_coach_by_code: { Args: { p_code: string }; Returns: string }
+      linked_planned_ids: {
+        Args: { p_ids: string[]; p_kind: string }
+        Returns: string[]
+      }
       list_user_storage_objects: {
         Args: { target_user: string }
         Returns: {
@@ -5805,6 +5902,24 @@ export type Database = {
       pg_version: { Args: never; Returns: string }
       pg_version_num: { Args: never; Returns: number }
       pgtap_version: { Args: never; Returns: number }
+      plan_family_accepts: {
+        Args: { p_activity: string; p_planned: string }
+        Returns: boolean
+      }
+      plan_match_cost: {
+        Args: { a_dist: number; a_dur: number; p_dist: number; p_dur: number }
+        Returns: number
+      }
+      planned_sessions_of_day: {
+        Args: { p_athlete: string; p_day: string }
+        Returns: {
+          distance_m: number
+          duration_s: number
+          family: string
+          id: string
+          kind: string
+        }[]
+      }
       program_save_sessions: {
         Args: {
           p_athlete: string

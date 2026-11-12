@@ -100,6 +100,7 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("provider_activities", "athlete_id"),
   // Détail des activités : séries seconde par seconde, tours, séries de muscu.
   job("activity_laps", "athlete_id"),
+  job("activity_plan_links", "athlete_id"),
   job("activity_sets", "athlete_id"),
   job("activity_streams", "athlete_id"),
   job("activity_zone_summaries", "athlete_id"),
