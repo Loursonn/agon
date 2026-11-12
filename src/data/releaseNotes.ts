@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-deplacer-seance-manquee",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Replacer une séance manquée",
+    summary: "Une séance prévue et pas faite peut être replacée à aujourd'hui ou à un jour suivant, par vous ou par l'athlète.",
+    sections: [
+      {
+        title: "Comment",
+        points: [
+          "Vous : planning → cliquez le jour → « Déplacer » sur la séance manquée, choisissez le nouveau jour. Le glisser-déposer marche aussi.",
+          "L'athlète : Programme → menu ⋯ de la séance manquée → choix du jour. Vous voyez le changement dans votre planning.",
+          "Une séance réalisée, commencée ou notée ne peut pas être déplacée : rien de ce que l'athlète a saisi n'est perdu.",
+          "Le menu de l'athlète ne montre plus la liste « activités importées » : ses sorties de montre et ses fichiers apparaissent dans ses séances et dans votre planning.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-zones-fc-coach",
     date: "2026-11-12",
     kind: "feature",

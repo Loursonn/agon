@@ -519,6 +519,11 @@ function isoFromDate(d: Date): string {
 
 // ── Reschedule drawer ─────────────────────────────────────────────────────────
 
+/** Séance ratée : manquée, ou prévue un jour passé (le cron ne l'a pas encore marquée). */
+function isMissedWeekSession(s: WeekSession, today: string): boolean {
+  return s.status === "missed" || (s.status === "planned" && s.scheduledDate < today);
+}
+
 type RescheduleDay = { iso: string; dow: number; num: number };
 
 function WeekRow({
@@ -526,26 +531,32 @@ function WeekRow({
   selected,
   scheduledDate,
   onSelect,
+  minDate,
 }: {
   days: RescheduleDay[];
   selected: string;
   scheduledDate: string;
   onSelect: (iso: string) => void;
+  /** Jours antérieurs grisés (séance manquée : on la replace aujourd'hui ou après). */
+  minDate?: string;
 }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
       {days.map(d => {
         const isSel = d.iso === selected;
         const isCur = d.iso === scheduledDate;
+        const off = !!minDate && d.iso < minDate;
         return (
           <button
             key={d.iso}
             type="button"
+            disabled={off}
             aria-pressed={isSel}
             aria-label={new Date(d.iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
             onClick={() => onSelect(d.iso)}
             style={{
-              height: 52, borderRadius: 10, cursor: "pointer", fontFamily: "inherit", position: "relative",
+              opacity: off ? 0.35 : 1,
+              height: 52, borderRadius: 10, cursor: off ? "default" : "pointer", fontFamily: "inherit", position: "relative",
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
               border: isSel ? "none" : "1px solid " + C.brd,
               background: isSel ? C.ac : C.s2,
@@ -572,7 +583,9 @@ function RescheduleDrawer({
   onDetail,
   isPending,
   onClose,
+  minDate,
 }: {
+  minDate?: string;
   sessionName: string;
   scheduledDate: string;
   weekMondayISO: string;
@@ -607,16 +620,16 @@ function RescheduleDrawer({
         <DrawerHeader style={{ padding: "14px 20px 6px", textAlign: "left" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.bg, background: typeColor, borderRadius: 999, padding: "2px 7px" }}>{typeLabel}</span>
-            <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>Prévue {fmtDay(scheduledDate)}</span>
+            <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{minDate && scheduledDate < minDate ? "Manquée" : "Prévue"} {fmtDay(scheduledDate)}</span>
           </div>
           <DrawerTitle style={{ ...DISPLAY, fontSize: 18, color: C.tx, marginTop: 6, textAlign: "left" }}>{sessionName}</DrawerTitle>
         </DrawerHeader>
 
         <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2 }}>Déplacer au</div>
-          <WeekRow days={week1} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} />
+          <WeekRow days={week1} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} minDate={minDate} />
           <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: C.tx3 }}>Semaine suivante</div>
-          <WeekRow days={week2} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} />
+          <WeekRow days={week2} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} minDate={minDate} />
           <div style={{ fontSize: 12, color: C.tx3 }}>Ton coach verra le changement dans son planning.</div>
 
           <input
@@ -668,6 +681,7 @@ function WorkoutPreviewDrawer({
 }) {
   const workout = useWorkoutSession(session.id);
   const isPast = session.scheduledDate < today;
+  const canMove = !isPast || isMissedWeekSession(session, today);
 
   return (
     <Drawer open onOpenChange={(v) => !v && onClose()}>
@@ -776,7 +790,7 @@ function WorkoutPreviewDrawer({
             </button>
           )}
 
-          {!isPast && (
+          {canMove && (
             <button
               onClick={onReschedule}
               style={{
@@ -812,7 +826,7 @@ function SessionChip({
   onStart?: (s: WeekSession) => void;
 }) {
   const isDone   = session.status === "completed";
-  const isMissed = session.status === "missed";
+  const isMissed = isMissedWeekSession(session, today);
   const hyrox    = session.kind === "energy" && session.sessionKind === "specifique";
   const color    = session.kind === "workout" ? TYPE_COLOR.muscu : hyrox ? TYPE_COLOR.hyrox : TYPE_COLOR.energie;
   const typeLabel = session.kind === "workout"
@@ -836,7 +850,7 @@ function SessionChip({
       highlight={isToday && canAct}
       onPress={() => { haptic(); onPress(session); }}
       onStart={canAct && isToday && session.kind === "workout" && onStart ? () => { haptic(); onStart(session); } : undefined}
-      onMenu={canAct && onReschedule ? () => { haptic(); onReschedule(session); } : undefined}
+      onMenu={(canAct || isMissed) && onReschedule ? () => { haptic(); onReschedule(session); } : undefined}
     />
   );
 }
@@ -1314,6 +1328,7 @@ function ProgramSessionsView() {
           onConfirm={handleRescheduleConfirm}
           isPending={reschedulePending}
           onClose={() => setRescheduleTarget(null)}
+          minDate={isMissedWeekSession(rescheduleTarget, today) ? today : undefined}
         />
       )}
 

@@ -7,7 +7,9 @@ import { useQuery } from "@tanstack/react-query";
 import { C } from "@/lib/theme";
 import { TYPE_COLOR as PEPS } from "@/lib/peps";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
-import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
+import { useDeleteCalendarEvent, useRescheduleWorkout } from "@/features/shared/hooks/useUnifiedCalendar";
+import { useUpdateEnergyAssignment } from "@/features/shared/hooks/useEnergyAssignments";
+import { localIsoDay } from "@shared/domain/dates";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useAuth } from "@/hooks/useAuth";
 import { competitionDayLabel, type Competition } from "@/types/planning";
@@ -579,6 +581,21 @@ function EventCard({
   const isEnergy = event.type === "energy";
   const color = event.partial && isEnergy ? "#33B5FF" : TYPE_COLOR[event.type] ?? C.tx3;
   const { mutate: del } = useDeleteCalendarEvent();
+  const { mutate: moveWorkout, isPending: movingWorkout } = useRescheduleWorkout();
+  const { mutate: moveEnergy, isPending: movingEnergy } = useUpdateEnergyAssignment();
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveDate, setMoveDate] = useState("");
+  const today = localIsoDay();
+  // Séance ratée (manquée, ou prévue un jour passé) : le coach la replace à
+  // aujourd'hui ou plus tard. Le serveur refuse si elle a une saisie.
+  const isMissed = (event.type === "workout" || event.type === "energy")
+    && (event.status === "missed" || (event.status === "planned" && event.date < today));
+  const moveTo = (newDate: string) => {
+    if (!newDate || newDate < today) return;
+    const done = { onSuccess: () => setMoveOpen(false) };
+    if (event.type === "energy") moveEnergy({ id: event.id, athleteId, scheduled_date: newDate }, done);
+    else moveWorkout({ event, newDate, athleteId, coachId }, done);
+  };
 
   const rawBlockLogs = isEnergy
     ? (event.raw?.block_logs as Record<string, { done: boolean }> | null | undefined) ?? null
@@ -652,6 +669,21 @@ function EventCard({
           </div>
         </div>
 
+        {isMissed && (
+          <button
+            type="button"
+            onClick={(ev) => { ev.stopPropagation(); setMoveOpen((v) => !v); }}
+            aria-expanded={moveOpen}
+            style={{
+              height: 28, padding: "0 10px", borderRadius: 4, flexShrink: 0,
+              border: "1px solid " + C.brdL, background: "transparent",
+              color: C.tx2, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            Déplacer
+          </button>
+        )}
+
         {isDeletable && (
           <button
             onClick={(ev) => {
@@ -680,6 +712,35 @@ function EventCard({
           </button>
         )}
       </div>
+
+      {isMissed && moveOpen && (
+        <label
+          onClick={(ev) => ev.stopPropagation()}
+          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: C.tx2 }}
+        >
+          Nouveau jour
+          <input
+            type="date"
+            min={today}
+            disabled={movingWorkout || movingEnergy}
+            value={moveDate}
+            onChange={(ev) => setMoveDate(ev.target.value)}
+            style={{ height: 32, padding: "0 8px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontFamily: "inherit", fontSize: 12, colorScheme: "dark" }}
+          />
+          <button
+            type="button"
+            disabled={!moveDate || moveDate < today || movingWorkout || movingEnergy}
+            onClick={() => moveTo(moveDate)}
+            style={{
+              height: 32, padding: "0 12px", borderRadius: 4, border: "none", fontFamily: "inherit", fontSize: 12, fontWeight: 600,
+              background: moveDate && moveDate >= today ? C.ac : C.s2, color: moveDate && moveDate >= today ? C.bg : C.tx3,
+              cursor: moveDate && moveDate >= today ? "pointer" : "default",
+            }}
+          >
+            {movingWorkout || movingEnergy ? "…" : "Valider"}
+          </button>
+        </label>
+      )}
     </div>
   );
 }

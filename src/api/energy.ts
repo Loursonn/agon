@@ -176,7 +176,19 @@ export async function updateEnergyAssignment(id: string, patch: EnergyAssignment
   return toEnergyAssignment(row);
 }
 
-export function moveEnergyAssignment(id: string, date: IsoDay): Promise<EnergyAssignment> {
+/**
+ * Déplace une séance énergie. Refusé si elle a été réalisée, commencée
+ * (un bloc fait) ou notée : on ne déplace jamais une saisie.
+ */
+export async function moveEnergyAssignment(id: string, date: IsoDay): Promise<EnergyAssignment> {
+  const cur = await getEnergyAssignment(id);
+  if (cur) {
+    const logs = (cur.block_logs ?? null) as Record<string, { done?: boolean }> | null;
+    const started = !!logs && Object.values(logs).some((b) => b?.done);
+    if (cur.status === "completed" || started || cur.rpe_score != null) {
+      throw new ApiError("Déplacement refusé", { message: "séance réalisée, commencée ou notée", code: "42501" });
+    }
+  }
   return updateEnergyAssignment(id, { scheduled_date: date });
 }
 

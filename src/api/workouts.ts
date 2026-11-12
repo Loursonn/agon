@@ -9,6 +9,7 @@ import {
 } from "@shared/domain/athleteMods";
 import { workoutStats, type WorkoutStats } from "@shared/domain/workoutStats";
 import { ApiError, check, db, unwrap, unwrapRows } from "./client";
+import { isUntouchedSession } from "@/lib/missedSession";
 
 /**
  * Séances réalisées (`workout_logs`) — seule source des séances (lot 2,
@@ -551,7 +552,13 @@ export async function moveWorkoutByCoach(p: {
   if (target.some((w) => w.status === "completed")) {
     throw new ApiError("Déplacement refusé", { message: "cette séance est déjà réalisée à la nouvelle date", code: "42501" });
   }
-  if (p.logId) await skipWorkout(p.logId);
+  if (p.logId) {
+    const cur = await getWorkoutLog(p.logId);
+    if (cur && !isUntouchedSession(cur)) {
+      throw new ApiError("Déplacement refusé", { message: "séance réalisée, commencée ou notée", code: "42501" });
+    }
+    await skipWorkout(p.logId);
+  }
   else {
     check(
       await db().from("workout_logs").insert({
@@ -585,9 +592,14 @@ export async function rescheduleWorkoutByAthlete(p: {
 }): Promise<WorkoutLog> {
   const cur = await getWorkoutLog(p.logId);
   if (!cur) throw new ApiError("Déplacement impossible", { message: "séance introuvable", code: WORKOUT_NOT_FOUND });
+  if (!isUntouchedSession(cur)) {
+    throw new ApiError("Déplacement refusé", { message: "séance réalisée, commencée ou notée", code: "42501" });
+  }
   const row = unwrap<RawRow>(
     (await db().from("workout_logs").update({
       scheduled_date: p.newDate,
+      // Une séance manquée déplacée redevient prévue à sa nouvelle date.
+      ...(cur.status === "missed" ? { status: "planned" } : {}),
       original_scheduled_date: cur.original_scheduled_date ?? cur.scheduled_date,
       rescheduled_by_athlete: true,
       coach_alert: p.coachAlert || cur.coach_alert,
