@@ -225,7 +225,7 @@ export async function deleteTestDefinition(id: string): Promise<void> {
 const RESULT_SELECT = `
   *,
   test_definitions (
-    id, name, kind, category, description,
+    id, name, kind, category, description, battery,
     test_variables (id, key, label, unit, value_type, better_when)
   ),
   athlete_test_values (

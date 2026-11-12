@@ -1,32 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAthleteContext } from '@/features/shared/context/AthleteContext';
-import { useAthleteCurrentValues, useAthleteTestResults } from '@/features/shared/hooks/tests/useAthleteTests';
+import { useAthleteTestResults } from '@/features/shared/hooks/tests/useAthleteTests';
 import { ListSkeleton, CardSkeleton } from '@/features/shared/components/skeletons';
 import { EmptyState } from '@/features/shared/components/EmptyState';
 import { FlaskConical, Trophy, Ruler, ChevronRight } from 'lucide-react';
 import { MensurationsDrawer } from '@/features/athlete/components/MensurationsDrawer';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { AthleteCurrentValue, AthleteTestResult } from '@/features/shared/types/tests';
+import type { AthleteTestResult } from '@/features/shared/types/tests';
+import { C } from '@/lib/theme';
+import { MONO } from '@/features/shared/components/seance/seanceUi';
+import { TEST_GROUP_COLOR, TEST_GROUP_LABEL, buildTestValueCards, groupTestCards } from '@/lib/athleteTestValues';
+import { TestValueTile } from '@/features/athlete/components/tests/TestValueTile';
+import { TestDetailView } from '@/features/athlete/components/tests/TestDetailView';
 
 const SECTION_TITLE = 'text-agon-xs font-bold uppercase tracking-wider text-agon-tx3';
-
-// ── Valeur courante ───────────────────────────────────────────────────────────
-
-function ValueChip({ cv }: { cv: AthleteCurrentValue }) {
-  return (
-    <div className="rounded-md border border-agon-brd bg-agon-s1 px-agon-md py-agon-md text-center">
-      <div className="mb-agon-xs text-agon-xs font-semibold uppercase tracking-wide text-agon-tx3">{cv.label}</div>
-      <div className="font-data text-agon-2xl font-extrabold leading-tight text-agon-accent">
-        {cv.current_value % 1 === 0 ? cv.current_value : Number(cv.current_value).toFixed(1)}
-      </div>
-      <div className="mt-agon-2xs text-agon-xs text-agon-tx3">{cv.unit}</div>
-      <div className="mt-agon-xs text-agon-xs text-agon-tx3">
-        {format(new Date(cv.best_performed_at), 'd MMM yyyy', { locale: fr })}
-      </div>
-    </div>
-  );
-}
 
 // ── Résultat (lecture seule) ──────────────────────────────────────────────────
 
@@ -66,8 +54,18 @@ export default function AthleteTestPage() {
   const { athleteId, viewOnly } = useAthleteContext();
   const [mensuOpen, setMensuOpen] = useState(false);
 
-  const { data: currentValues = [], isLoading: loadingCurrent } = useAthleteCurrentValues(athleteId);
   const { data: results = [], isLoading: loadingResults } = useAthleteTestResults(athleteId);
+  const groups = useMemo(() => groupTestCards(buildTestValueCards(results)), [results]);
+  const [openVar, setOpenVar] = useState<string | null>(null);
+  const openCard = openVar ? groups.flatMap((g) => g.cards).find((c) => c.variableId === openVar) ?? null : null;
+
+  if (openCard) {
+    return (
+      <div className="mx-auto w-full max-w-[480px] px-agon-lg pb-[60px] pt-5 font-ui text-agon-tx lg:max-w-[760px] lg:pt-agon-xl">
+        <TestDetailView card={openCard} color={TEST_GROUP_COLOR[openCard.group]} onBack={() => setOpenVar(null)} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-[480px] px-agon-lg pb-[60px] pt-5 font-ui text-agon-tx lg:max-w-none lg:px-agon-2xl lg:pt-agon-xl">
@@ -95,13 +93,27 @@ export default function AthleteTestPage() {
               <Trophy size={14} className="text-agon-accent" />
               <h2 className={SECTION_TITLE}>Mes valeurs</h2>
             </div>
-            {loadingCurrent ? (
+            <p className="mb-agon-md text-agon-xs text-agon-tx3">Rangées par dominante. Touche une valeur pour voir tous tes tests et leur évolution.</p>
+            {loadingResults ? (
               <div className="flex gap-agon-md">{[0, 1, 2].map(i => <CardSkeleton key={i} />)}</div>
-            ) : currentValues.length === 0 ? (
+            ) : groups.length === 0 ? (
               <div className="py-agon-md text-agon-sm text-agon-tx3">Aucune valeur enregistrée pour le moment.</div>
             ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-agon-md">
-                {currentValues.map(cv => <ValueChip key={cv.variable_id} cv={cv} />)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {groups.map(g => (
+                  <div key={g.group} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                      <span aria-hidden style={{ width: 4, height: 16, borderRadius: 2, background: TEST_GROUP_COLOR[g.group] }} />
+                      <span style={{ fontSize: 14, color: C.tx }}>{TEST_GROUP_LABEL[g.group]}</span>
+                      <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{g.cards.length} test{g.cards.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
+                      {g.cards.map(c => (
+                        <TestValueTile key={c.variableId} card={c} color={TEST_GROUP_COLOR[g.group]} onOpen={() => setOpenVar(c.variableId)} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </section>

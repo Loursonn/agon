@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-tests-athlete-dominante",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Tests de l'athlète rangés par dominante",
+    summary: "Dans l'onglet Tests, vos athlètes retrouvent leurs valeurs rangées par dominante (force, endurance, explosivité, HYROX…), avec l'évolution de chaque test.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Chaque valeur montre le dernier résultat, sa date et l'écart avec le test précédent (vert si c'est mieux).",
+          "Toucher une valeur ouvre son détail : dernier résultat, record, progrès depuis le premier test et une courbe où chaque point porte sa valeur et sa date.",
+          "Pour la VMA, les allures à 100, 90, 80 et 70 % sont calculées automatiquement.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-seance-en-cours",
     date: "2026-11-12",
     kind: "feature",
