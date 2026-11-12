@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { Component, ReactNode } from "react";
 import App from "./App.tsx";
 import "./index.css";
+import { initNativeShell } from "./lib/native";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -31,6 +32,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     return this.props.children;
   }
 }
+
+// App Store / Play Store : liens entrants, bouton retour Android (sans effet sur le web).
+initNativeShell();
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
