@@ -10,6 +10,7 @@
  *                ouvre l'éditeur complet (SessionBlocEditor).
  */
 import { useState, useEffect, useMemo } from "react"
+import { blocColor } from "@/lib/peps";
 import { toast } from "sonner"
 import { X, Copy, AlertTriangle, Video } from "lucide-react"
 import { C } from "@/lib/theme"
@@ -31,10 +32,6 @@ const RED_S   = "rgba(239,68,68,0.10)"
 const AMBER   = "#f59e0b"
 const AMBER_S = "rgba(245,158,11,0.10)"
 
-const BLOC_PALETTE = [
-  "#FFC933", "#F97316", "#22C55E", "#EF4444",
-  "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
-]
 
 interface Props {
   session:    ProgSession
@@ -107,7 +104,7 @@ function VideoBadge({ note, sent }: { note?: string; sent?: boolean }) {
 }
 
 function BlocLabel({ bloc, index }: { bloc: Bloc; index: number }) {
-  const color = bloc.color ?? BLOC_PALETTE[index % BLOC_PALETTE.length]
+  const color = blocColor(bloc.color, index)
   return (
     <div style={{
       fontSize: 10, fontWeight: 800, color, textTransform: "uppercase" as const, letterSpacing: "0.5px",

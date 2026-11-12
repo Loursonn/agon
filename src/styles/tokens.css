@@ -22,6 +22,7 @@
   --agon-or-clair: #E6CB86;
   --agon-sable: #E7D3A8;
   --agon-pierre: #8E8780;
+  /* Or poli : réservé au logo (canvas 12/11). Aucun bouton, filet ni halo ne l'utilise. */
   --agon-or-poli: linear-gradient(135deg, #8A6A2C, #E9CF8A 45%, #C9A14A 70%, #9C7A34);
 
   /* ── Niveaux de contraste : vif (aplats, accents) · profond (texte sur clair / sur or) ── */
@@ -95,8 +96,36 @@
      graphique, barre de temps par zone, tableau des tours, carte du planning (P33-P34). */
   --agon-zone-1: var(--agon-vert-vif);      /* sous SV1 */
   --agon-zone-2: var(--agon-ocre-vif);      /* SV1 → SV2 */
-  --agon-zone-3: #FF3B1F;                   /* au-dessus de SV2 (maquette, plus rouge que terracotta) */
+  --agon-zone-3: var(--agon-rouge);         /* au-dessus de SV2 (maquette, plus rouge que terracotta) */
   --agon-cadence: #2EE6C5;                  /* courbe de cadence */
+
+  /* ── Direction « peps » (canvas, validée le 12/11) : une couleur fixe par type ──
+     Lue par src/lib/peps.ts. Mêmes couleurs athlète / coach, téléphone / ordinateur. */
+  --agon-rouge: #FF3B1F;                    /* rouge vif : compétition, Z3, bouton danger */
+  --agon-type-muscu: var(--agon-or-vif);
+  --agon-type-energie: var(--agon-ardoise-vif);
+  --agon-type-hyrox: var(--agon-ocre-vif);
+  --agon-type-test: var(--agon-amethyste-vif);
+  --agon-type-competition: var(--agon-rouge);
+  --agon-type-fait: var(--agon-vert-vif);
+  --agon-type-libre: var(--agon-patine-vif);
+  /* Types de bloc d'une séance de musculation */
+  --agon-bloc-perf: var(--agon-or-vif);     /* Mvt principal */
+  --agon-bloc-esth: var(--agon-amethyste-vif); /* Hypertrophie */
+  --agon-bloc-besoin: var(--agon-ardoise-vif); /* Besoin indiv. */
+  --agon-bloc-assoc: #2EE6C5;               /* Muscles assoc. */
+  --agon-bloc-core: #FF7A45;                /* Core */
+  /* Macros (glucides, lipides, protéines) */
+  --agon-macro-g: var(--agon-ardoise-vif);
+  --agon-macro-l: var(--agon-or-vif);
+  --agon-macro-p: var(--agon-terracotta-vif);
+  /* Pictos HYROX : stations, course, transition / autre exercice */
+  --agon-hyrox-station: var(--agon-ocre-vif);
+  --agon-hyrox-course: #FFB54D;
+  --agon-hyrox-neutre: var(--agon-tx2);
+  /* Dominantes de tests (HYROX rose, Biométrie bleu : validé le 12/11) */
+  --agon-dominante-hyrox: var(--agon-amethyste-vif);
+  --agon-dominante-bio: var(--agon-ardoise-vif);
 
   /* ── Composants shadcn (src/components/ui) : valeurs historiques ─────
      Elles diffèrent très légèrement des couleurs ci-dessus (ex. or hsl(43 100% 60%)

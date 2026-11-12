@@ -26,6 +26,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { C } from "@/lib/theme";
+import { TYPE_COLOR as PEPS } from "@/lib/peps";
 import {
   useUnifiedCalendar,
   useAssignWorkout,
@@ -71,8 +72,8 @@ function findCurrentCycleId(cycles: Array<{ id: string; start_date: string; end_
 
 const DOW_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-const FREE_COLOR    = "#1FF0B0";   // patine (DA)
-const TEST_COLOR    = "#A67C52";   // bronze (DA)
+const FREE_COLOR    = PEPS.libre;  // patine (peps)
+const TEST_COLOR    = PEPS.test;   // rose (peps)
 const BIO_COLOR     = "#66F03C";   // olivier (DA)
 const BIO_BANK_ID   = "bio-mensurations";
 const BIO_TITLE     = "Mensurations / Photos";
@@ -81,8 +82,9 @@ function isBiometric(event: CalEvent): boolean {
   return event.type === "test" && event.raw?.type === "biometric";
 }
 
-function energyChipColor(_event: CalEvent): string {
-  return C.b;  // ardoise — distinct from muscu (or)
+function energyChipColor(event: CalEvent): string {
+  // Peps : énergie bleu, séance spécifique (HYROX) orange.
+  return event.sessionKind === "specifique" ? PEPS.hyrox : PEPS.energie;
 }
 
 // Le curseur décide du jour ciblé, pas le rectangle de la vignette déplacée :
@@ -99,7 +101,7 @@ const LIFE_EVENT_COLOR = "#9194A0";
 const TYPE_COLOR: Record<CalEvent["type"], string> = {
   workout:       C.ac,            // or — muscu
   test:          TEST_COLOR,      // bronze — tests
-  competition:   C.r,             // terracotta — compétitions
+  competition:   PEPS.competition,             // rouge (peps) — compétitions
   energy:        C.b,             // ardoise — énergie
   free_activity: FREE_COLOR,      // patine — activités libres
   life_event:    LIFE_EVENT_COLOR, // gris — événements vie

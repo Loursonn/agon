@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { BLOC_PALETTE } from "@/lib/peps";
 import { C } from "@/lib/theme"
 import type { Bloc, BlocCategory } from "./types"
 import { BLOC_CATEGORIES } from "./types"
@@ -6,10 +7,6 @@ import { BLOC_CATEGORIES } from "./types"
 const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
-const BLOC_PALETTE = [
-  "#FFC933", "#F97316", "#22C55E", "#EF4444",
-  "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
-]
 
 type BlocFormData = Omit<Bloc, 'id' | 'exercices' | 'sort_order'>
 

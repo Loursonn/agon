@@ -53,7 +53,7 @@ export function buttonStyle(kind: "primary" | "ghost" = "ghost", disabled = fals
     : {
         display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
         height: 36, padding: "0 14px", borderRadius: 10, border: `1px solid ${C.brdL}`,
-        background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+        background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
         whiteSpace: "nowrap",
       };
   return disabled ? { ...base, opacity: 0.4, cursor: "default" } : base;

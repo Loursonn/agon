@@ -113,7 +113,7 @@ export default function ProfileDrawer({ onClose }: Props) {
       </div>
       <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
         {/* ── En-tête : identité + KPIs ── */}
-        <div style={{ background: "linear-gradient(135deg, " + C.acS + " 0%, " + C.s1 + " 75%)", borderRadius: 6, border: "1px solid " + C.ac + "30", padding: "14px 16px" }}>
+        <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.acS, border: "2px solid " + C.ac + "40", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: C.ac }}>
               {name.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?"}

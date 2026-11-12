@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react"
+import { blocColor } from "@/lib/peps";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -18,10 +19,6 @@ import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/Fich
 const VIOLET = "#FFC933"
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
-const BLOC_PALETTE = [
-  "#FFC933", "#F97316", "#22C55E", "#EF4444",
-  "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
-]
 
 function hexToRgba(hex: string, alpha: number) {
   const r = parseInt(hex.slice(1, 3), 16)
@@ -159,7 +156,7 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
 
   const exCount = bloc.exercices.length
   const timing = timingLabel(bloc)
-  const bColor = bloc.color ?? BLOC_PALETTE[index % BLOC_PALETTE.length]
+  const bColor = blocColor(bloc.color, index)
 
   return (
     <div style={{

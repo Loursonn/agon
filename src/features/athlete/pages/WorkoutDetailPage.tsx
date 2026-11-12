@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { blocColor } from "@/lib/peps";
 import { parseKm } from "@/features/shared/components/RunDistanceInput";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,10 +41,6 @@ const REST_DEFAULT = 90;
 const RING_R = 18;
 const RING_C = 2 * Math.PI * RING_R; // ≈ 113.097
 
-const BLOC_PALETTE = [
-  "#FFC933", "#F97316", "#22C55E", "#EF4444",
-  "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
-];
 
 const FIELD_CFG = {
   kg:   { label: "Charge",                unit: "kg",   steps: [-2.5, -1.25, 1.25, 2.5] as number[] },
@@ -3095,7 +3092,7 @@ export default function WorkoutDetailPage() {
           </div>
         ) : (
           workout.blocs.map((bloc, blocIdx) => {
-            const bColor = bloc.color ?? BLOC_PALETTE[blocIdx % BLOC_PALETTE.length];
+            const bColor = blocColor(bloc.color, blocIdx);
             const timing = timingLabel(bloc);
             const restSec = blocRestSeconds(bloc);
 

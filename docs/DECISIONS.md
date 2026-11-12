@@ -1906,3 +1906,34 @@ IA Garmin) ; Edge Functions provider-garmin-webhook / -maintenance et
 provider-coros-sync redéployées ; démo : `scripts/demo-strava-archive.mjs
 --import` sur Léa Démo (30 sorties fictives, 2ᵉ import 100 % « déjà
 complètes », 9 contrôles OK).
+
+---
+
+## 2026-11-12 — Style « peps » et choix de la planche « À valider » (P43, lot 0)
+
+Hugo : « les maquettes sont prêtes ». Les choix de la planche « À valider »
+du canvas sont **pris tels que maquettés, 12/11** :
+
+- **Boutons** : aplat or `#FFC933` (texte noir, Geist demi-gras, casse
+  normale, un seul par écran), secondaire en contour fin, lien en texte or,
+  « Valider » en vert Fait `#66F03C` (séance en cours uniquement), danger en
+  contour rouge jamais plein. 52 px au pouce pour l'action principale, 48 px
+  pour les autres. **Plus aucun dégradé doré** : l'or poli est réservé au
+  logo. Les filets et halos dorés partent aussi. Titres d'écran en Archivo
+  gardés. Composant : `src/ui/Button.tsx`.
+- **Pictos HYROX** : 8 stations + course + transition (Roxzone) + « autre
+  exercice », dessinés sur la planche. Composant
+  `src/features/shared/components/HyroxPicto.tsx`.
+- **Superset** : la récup s'affiche sur l'exercice 1.
+- **Dominantes de tests** : HYROX rose `#F060C0`, Biométrie bleu `#33B5FF`.
+
+**Couleur fixe par type** (note « peps » du canvas) : Musculation `#FFC933`,
+Énergie `#33B5FF`, HYROX `#FF9500`, Test `#F060C0`, Compétition `#FF3B1F`,
+Fait `#66F03C`. Blocs : Mvt principal `#FFC933`, Hypertrophie `#F060C0`,
+Besoin indiv. `#33B5FF`, Muscles assoc. `#2EE6C5`, Core `#FF7A45`. Macros :
+G `#33B5FF`, L `#FFC933`, P `#FF5A33`. Un seul endroit : `src/styles/tokens.css`
+(`--agon-type-*`, `--agon-bloc-*`, `--agon-macro-*`), lu par `src/lib/peps.ts`.
+Ces valeurs priment sur `tokens.json` du design system (bloc-perf terracotta,
+bloc-core pierre), plus ancien. Les blocs déjà enregistrés avec l'ancienne
+palette (`#F97316`, `#22C55E`…) s'affichent dans leur équivalent peps
+(`blocColor`), sans réécrire la base.

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { X, Trash2, Plus, ChevronLeft, Pencil, ChevronDown, ChevronUp, Check, Minus, Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { C } from "@/lib/theme";
+import { TYPE_COLOR as PEPS } from "@/lib/peps";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
@@ -35,8 +36,8 @@ import { watchCardsOfDay } from "@/lib/planningCard";
 function rpeColor(v: number) { return v <= 4 ? C.g : v <= 7 ? C.o : C.r; }
 function rpeBg(v: number)    { return v <= 4 ? C.gS : v <= 7 ? C.oS : C.rS; }
 
-const FREE_COLOR  = "#1FF0B0";   // patine (DA)
-const TEST_COLOR  = "#A67C52";   // bronze (DA)
+const FREE_COLOR  = PEPS.libre;  // patine (peps)
+const TEST_COLOR  = PEPS.test;   // rose (peps)
 
 const ENERGY_KIND_LABEL: Record<string, string> = {
   vo2: "VO₂max", tempo: "Tempo", seuil: "Seuil",
@@ -46,7 +47,7 @@ const ENERGY_KIND_LABEL: Record<string, string> = {
 const TYPE_COLOR: Record<CalEvent["type"], string> = {
   workout:       C.ac,       // or — muscu
   test:          TEST_COLOR, // bronze — tests
-  competition:   C.r,        // terracotta — compétitions
+  competition:   PEPS.competition,        // rouge (peps) — compétitions
   energy:        C.b,        // ardoise — énergie
   free_activity: FREE_COLOR, // patine — activités libres
   life_event:    C.tx3,      // même repli qu'avant (`?? C.tx3` à l'usage)

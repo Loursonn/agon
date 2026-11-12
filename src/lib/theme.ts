@@ -81,12 +81,13 @@ export const SUCCESS   = C.g;        // vert vif
 
 const cat = (n: number) => t(`--agon-cat-${n}`);
 
+/** Types de bloc d'une séance (direction « peps », 12/11) : --agon-bloc-* de tokens.css. */
 export const BT = {
-  PERF:   { c: cat(2),  l: "Mvt principal" },   // terracotta vif
-  ESTH:   { c: cat(1),  l: "Hypertrophie"  },   // or vif
-  BESOIN: { c: cat(4),  l: "Besoin indiv."  },  // ardoise vif
-  ASSOC:  { c: cat(6),  l: "Muscles assoc." },  // patine vif
-  CORE:   { c: cat(10), l: "Core"           },  // pierre
+  PERF:   { c: t("--agon-bloc-perf"),   l: "Mvt principal" },   // or
+  ESTH:   { c: t("--agon-bloc-esth"),   l: "Hypertrophie"  },   // rose
+  BESOIN: { c: t("--agon-bloc-besoin"), l: "Besoin indiv."  },  // bleu
+  ASSOC:  { c: t("--agon-bloc-assoc"),  l: "Muscles assoc." },  // turquoise
+  CORE:   { c: t("--agon-bloc-core"),   l: "Core"           },  // orange
 } as const;
 
 /** Couleurs de blocs : --agon-cat-1 … --agon-cat-10, dans l'ordre. */

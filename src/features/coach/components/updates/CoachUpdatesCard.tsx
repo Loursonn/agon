@@ -29,7 +29,7 @@ export function CoachUpdatesCard() {
         const open = expanded === note.id || (expanded === null && i === 0);
         return (
           <div key={note.id} style={{
-            background: "linear-gradient(135deg, " + C.acS + " 0%, " + C.s1 + " 70%)",
+            background: C.s1,
             border: "1px solid " + C.ac + "40", borderRadius: 6, padding: "14px 16px",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>

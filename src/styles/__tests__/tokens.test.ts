@@ -47,7 +47,6 @@ const LEGACY_OTHER: Record<string, string> = {
   "--font-display": '"Archivo", system-ui, sans-serif',
   "--font-ui": '"Geist", system-ui, sans-serif',
   "--font-data": '"Geist Mono", ui-monospace, monospace',
-  "--gold-gradient": "linear-gradient(135deg, #8A6A2C, #E9CF8A 45%, #C9A14A 70%, #9C7A34)",
 };
 
 const norm = (v: string) => v.replace(/\s+/g, "").toUpperCase();
@@ -61,7 +60,8 @@ describe("tokens — rendu historique", () => {
   it("alias, blocs, habitudes et types de bloc inchangés", () => {
     expect([PRIMARY, SECONDARY, TERTIARY, NEUTRAL, SUCCESS]).toEqual(["#FFC933", "#FFC933", "#FF9500", "#7D7468", "#66F03C"]);
     expect(Object.fromEntries(Object.entries(BT).map(([k, v]) => [k, v.c]))).toEqual({
-      PERF: "#FF5A33", ESTH: "#FFC933", BESOIN: "#33B5FF", ASSOC: "#1FF0B0", CORE: "#8E8780",
+      // Direction « peps » (12/11) : Mvt principal or, Hypertrophie rose, Besoin bleu, Assoc. turquoise, Core orange.
+      PERF: "#FFC933", ESTH: "#F060C0", BESOIN: "#33B5FF", ASSOC: "#2EE6C5", CORE: "#FF7A45",
     });
     expect(BLOC_COLORS).toEqual(["#FFC933", "#FF5A33", "#66F03C", "#33B5FF", "#A67C52", "#1FF0B0", "#F060C0", "#FF9500", "#E7D3A8", "#8E8780"]);
     expect(HABIT_COLORS).toEqual(["#FFC933", "#66F03C", "#33B5FF", "#FF5A33", "#FF9500", "#1FF0B0", "#F060C0", "#E7D3A8"]);

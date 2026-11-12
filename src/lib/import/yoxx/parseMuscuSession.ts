@@ -16,6 +16,7 @@
  * Référence complète : docs/format-seance-yoxx.md
  */
 import type { Bloc, BlocCategory, Exercice, ExerciceParams, ProgSession } from "@/features/coach/components/programmation/types";
+import { BLOC_PALETTE } from "@/lib/peps";
 import {
   A_SAISIR,
   cleanTypography,
@@ -67,7 +68,6 @@ const CATEGORIES: Record<string, BlocCategory> = {
 };
 
 /** Mêmes couleurs que BlocForm (palette de l'app), attribuées dans l'ordre des blocs */
-const BLOC_PALETTE = ["#FFC933", "#F97316", "#22C55E", "#EF4444", "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6"];
 
 const DAYS: Record<string, number> = {
   lundi: 0, lun: 0, mardi: 1, mar: 1, mercredi: 2, mer: 2, jeudi: 3, jeu: 3,

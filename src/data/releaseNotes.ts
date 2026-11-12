@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-12-couleurs-par-type",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Une couleur par type de séance, partout",
+    summary: "Musculation en or, énergie en bleu, HYROX en orange, tests en rose, compétitions en rouge : chaque type garde sa couleur dans le planning, les séances et l'app de vos athlètes.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les types de blocs ont aussi leur couleur fixe : mouvement principal en or, hypertrophie en rose, besoin individuel en bleu, muscles associés en turquoise, gainage en orange. Vos blocs existants prennent la nouvelle teinte la plus proche.",
+          "Les boutons sont plus sobres : l'action principale en or plein, les autres en contour.",
+          "Les stations HYROX ont chacune leur picto (SkiErg, sled push, rameur, wall balls…), au-dessus du graphique et dans le tableau des tours.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-onglet-seance-cartes-planning",
     date: "2026-11-12",
     kind: "feature",

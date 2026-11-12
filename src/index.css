@@ -45,9 +45,6 @@
     --font-ui: var(--agon-font-ui);
     --font-data: var(--agon-font-data);
 
-    /* Dégradé or (bouton principal + records) */
-    --gold-gradient: var(--agon-or-poli);
-
     --sidebar-background: var(--agon-ui-bg);
     --sidebar-foreground: var(--agon-ui-tx3);
     --sidebar-primary: var(--agon-ui-accent);
