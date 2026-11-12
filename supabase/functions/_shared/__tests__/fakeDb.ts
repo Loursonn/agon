@@ -113,6 +113,11 @@ export function fakeDb(
               Object.assign(found, p);
               out.push(found);
             } else {
+              // Comme Postgres : `onConflict` sur d'autres colonnes ne couvre
+              // pas la clé primaire, un id déjà pris lève 23505.
+              if (p.id != null && rows.some((r) => r.id === p.id)) {
+                return { data: null, error: { message: "duplicate key value violates unique constraint", code: "23505" } };
+              }
               const row = { id: `row-${++seq}`, ...p };
               rows.push(row);
               out.push(row);

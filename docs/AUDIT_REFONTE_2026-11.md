@@ -241,7 +241,8 @@ Source : audit qualité.
 
 ### Phase 3 — Confort athlète (hors ligne) · ~2 sem.
 - [x] Phase 1 hors ligne : `vite-plugin-pwa`, manifest `standalone`, cache React Query persisté (IndexedDB), toutes les `queryFn` lèvent une erreur au lieu de renvoyer `null` (2026-11-08, PR #138).
-- [x] Phase 2 hors ligne : file d'attente des écritures (IndexedDB, `src/lib/offline/writes.ts`), `coachOverride` séparé (`set_coach_override`), indicateur « N saisies en attente » (2026-11-08, PR #138). Reste : ids côté client pour une séance libre démarrée hors ligne.
+- [x] Phase 2 hors ligne : file d'attente des écritures (IndexedDB, `src/lib/offline/writes.ts`), `coachOverride` séparé (`set_coach_override`), indicateur « N saisies en attente » (2026-11-08, PR #138).
+- [x] Ids côté client pour une séance libre démarrée hors ligne : id choisi sur le téléphone, création rejouable (`workout.plan` → `planWorkout` avec id, `ON CONFLICT DO NOTHING`), placée avant ses saisies dans la file ; scénario complet testé (`src/lib/offline/__tests__/freeSessionOffline.test.ts`) et garanties base vérifiées à blanc en prod (`supabase/tests/free_session_offline.sql`), sans migration (2026-11-12).
 - [x] Sortir le backfill et les écritures miroir du démarrage (lot 0, 2026-11-07).
 
 ### Phase 4 — Couche données (fin des régressions) · ~3-4 sem., entité par entité

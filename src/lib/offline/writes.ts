@@ -79,7 +79,8 @@ export interface WriteArgs {
 }
 export type WriteKind = keyof WriteArgs;
 
-const EXECUTORS: { [K in WriteKind]: (a: WriteArgs[K]) => Promise<unknown> } = {
+/** Exécutant de chaque saisie (exporté pour les tests de scénario). */
+export const EXECUTORS: { [K in WriteKind]: (a: WriteArgs[K]) => Promise<unknown> } = {
   "workout.plan": (a) => planWorkout({
     id: a.logId, athleteId: a.athleteId, coachId: a.coachId, sessionId: a.sessionId,
     sessionName: a.sessionName, date: a.date, byAthlete: true,
@@ -365,6 +366,16 @@ function getQueue(): WriteQueue<WriteKind> {
  * Lève seulement un refus définitif (séance retirée, saisie invalide).
  */
 export function submitWrite<K extends WriteKind>(kind: K, args: WriteArgs[K]): Promise<SubmitResult> {
+  const w = prepareWrite(kind, args);
+  return getQueue().submit(kind, w.key, w.args);
+}
+
+/**
+ * Clé et arguments d'une saisie avant mise en file : une séance libre déjà
+ * fusionnée par le serveur avec une autre (id local → id serveur) reçoit ses
+ * saisies sur l'id serveur, le brouillon reste sous l'id local.
+ */
+export function prepareWrite<K extends WriteKind>(kind: K, args: WriteArgs[K]): { key: string; args: WriteArgs[K] } {
   let a = args;
   const logId = (args as { logId?: unknown }).logId;
   if (kind !== "workout.plan" && typeof logId === "string") {
@@ -374,7 +385,7 @@ export function submitWrite<K extends WriteKind>(kind: K, args: WriteArgs[K]): P
       a = { ...args, logId: real, draftLogId: prev.draftLogId ?? logId } as WriteArgs[K];
     }
   }
-  return getQueue().submit(kind, writeKey(kind, a), a);
+  return { key: writeKey(kind, a), args: a };
 }
 
 /** Saisies en attente d'envoi pour l'utilisateur connecté. */
