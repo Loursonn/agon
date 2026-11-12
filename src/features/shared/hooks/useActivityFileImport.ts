@@ -1,79 +1,52 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getKnownActivities, insertActivitiesReturning, invalidateProviders, saveActivityDetail } from "@/api/providers";
+import { invalidateProviders, mergeActivities, saveActivityDetail } from "@/api/providers";
 import { useAuth } from "@/hooks/useAuth";
-import { activityRow, splitNewActivities } from "@/lib/activityImport";
-import type { ParsedActivity } from "@shared/activityFiles/index.ts";
+import {
+  countResult,
+  emptyReport,
+  mergePayload,
+  parseMergeResult,
+  wantsDetail,
+  type ImportReport,
+  type ImportTag,
+} from "@/lib/activityImport";
+import type { ImportActivity, NormalizedActivity } from "@shared/activityFiles/index.ts";
+
+export type { ImportReport };
 
 /**
- * Import de fichiers d'activité déposés par l'athlète.
+ * Import de fichiers d'activité : archive d'export Strava (fichiers +
+ * `activities.csv`), FIT, TCX, GPX.
  *
- * Tout se passe dans le navigateur : les octets ne quittent pas l'appareil,
- * seules les valeurs décodées partent en base. Ce n'est pas une optimisation
- * mais la seule façon honnête de le faire — une archive d'export Strava pèse
- * couramment plusieurs centaines de mégaoctets, et la téléverser pour en
- * extraire huit nombres par sortie coûterait à l'athlète son forfait mobile
- * pour un résultat identique. Accessoirement, aucune limite de taille de
- * requête ni de durée d'Edge Function ne s'applique.
+ * Tout est lu dans le navigateur : les octets ne quittent pas l'appareil,
+ * seules les valeurs décodées partent en base. Une archive pèse couramment
+ * plusieurs centaines de mégaoctets : la téléverser coûterait à l'athlète son
+ * forfait mobile pour un résultat identique.
  *
- * Les décodeurs sont ceux de la synchronisation automatique (`@shared`), pas
- * une seconde implémentation : deux parseurs du même format divergent
- * toujours, et c'est alors l'écart entre un import manuel et une synchro du
- * *même* fichier qui devient impossible à expliquer.
+ * Fusion, pas écartement (P42) : chaque sortie est envoyée à
+ * `merge_provider_activities`, qui la crée ou complète celle qui existe déjà
+ * (Garmin, autre fichier). La série seconde par seconde n'est envoyée que si
+ * elle est meilleure que celle déjà rangée.
+ *
+ * Reprise : l'archive est traitée par paquets de 25. Si l'onglet se ferme,
+ * redéposer la même archive reprend là où on en était — ce qui est déjà
+ * fusionné revient « déjà complète », sans rien réécrire.
  */
 
-/**
- * Décodeurs chargés à la demande.
- *
- * Les quatre formats réunis pèsent plus que l'écran de séance, et l'immense
- * majorité des ouvertures de l'application n'importe aucun fichier : les
- * inclure dans le paquet de l'athlète ferait payer à chaque démarrage, sur
- * réseau mobile, un code utilisé une fois. L'import, lui, est déjà un geste
- * long — quelques centaines de millisecondes de chargement y sont invisibles.
- */
 const decoders = () => import("@shared/activityFiles/index.ts");
+const archives = () => import("@shared/activityFiles/stravaArchive.ts");
 
-/** Signature d'un zip (`PK\x03\x04`), pour reconnaître une archive. */
 const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04];
-
-/** Lignes envoyées par requête. Borne la taille du corps, pas le débit. */
-const INSERT_CHUNK = 50;
+/** Sorties par requête : borne la taille du corps et la mémoire des séries en attente. */
+const BATCH = 25;
 
 export interface ImportProgress {
-  /** Ce qui est en cours, pour que l'attente dise quelque chose. */
-  phase: "lecture" | "insertion";
-  /** Fichier (ou membre d'archive) en cours. */
+  phase: "lecture" | "enregistrement";
   current: string;
   done: number;
   total: number;
 }
-
-export interface ImportReport {
-  /** Activités réellement ajoutées. */
-  imported: number;
-  /** Fichiers déjà importés auparavant, reconnus à l'empreinte. */
-  duplicates: number;
-  /**
-   * Sorties déjà présentes sous un autre format ou via une autre source.
-   * Comptées à part : « déjà importé » et « déjà là, mais venu de la montre »
-   * n'appellent pas la même conclusion.
-   */
-  alreadyKnown: number;
-  /** Fichiers d'activité examinés. */
-  files: number;
-  /** Membres d'archive ignorés sans examen (profil, flux, médias). */
-  ignored: number;
-  rejected: Array<{ name: string; reason: string }>;
-}
-
-const emptyReport = (): ImportReport => ({
-  imported: 0,
-  duplicates: 0,
-  alreadyKnown: 0,
-  files: 0,
-  ignored: 0,
-  rejected: [],
-});
 
 async function startsWithZipMagic(file: File): Promise<boolean> {
   if (file.size < 4) return false;
@@ -81,137 +54,128 @@ async function startsWithZipMagic(file: File): Promise<boolean> {
   return ZIP_MAGIC.every((b, i) => head[i] === b);
 }
 
+/** Décalage horaire de l'appareil à une date (sorties sans fichier : le CSV ne le donne pas). */
+const deviceOffsetAt = (ms: number) => -new Date(ms).getTimezoneOffset() * 60;
+
+interface Pending {
+  name: string;
+  activity: ImportActivity;
+  detail: NormalizedActivity | null;
+}
+
 /**
- * Décode puis insère les fichiers déposés.
- *
- * L'avancement est exposé par un état du hook plutôt que par le résultat de la
- * mutation : il faut l'afficher *pendant*, et une archive de quatre cents
- * sorties prend assez longtemps pour qu'une interface muette passe pour figée.
+ * Dépôt de fichiers. `athleteId` : l'athlète pour qui on importe (le coach,
+ * depuis la fiche de son athlète) ; par défaut l'utilisateur connecté.
  */
-export function useActivityFileImport() {
+export function useActivityFileImport(athleteId?: string) {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const target = athleteId ?? user?.id;
   const [progress, setProgress] = useState<ImportProgress | null>(null);
 
   const reset = useCallback(() => setProgress(null), []);
 
   const mutation = useMutation<ImportReport, Error, File[]>({
     mutationFn: async (files) => {
-      if (!user) throw new Error("Session expirée : reconnecte-toi.");
+      if (!user || !target) throw new Error("Session expirée : reconnecte-toi.");
       if (files.length === 0) throw new Error("Aucun fichier à importer.");
 
       const report = emptyReport();
-      const parsed: ParsedActivity[] = [];
-      /** Détail des fichiers isolés d'une seule séance, par `externalId`. */
-      const details = new Map<string, Record<string, unknown>>();
-
-      const { activityDetailOf, blobSource, detailPayload, looksLikeActivityName, parseActivityArchive, parseActivityFile } =
+      const { activityDetailOf, blobSource, detailPayload, looksLikeActivityName, parseActivityFile, qualityOf } =
         await decoders();
 
-      // ── Décodage ──
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setProgress({ phase: "lecture", current: file.name, done: i, total: files.length });
+      let done = 0;
+      let total = 0;
 
+      /** Envoie un paquet : fusion, puis séries meilleures que celles en base. */
+      const flush = async (batch: Pending[], tag: ImportTag) => {
+        if (batch.length === 0) return;
+        setProgress({ phase: "enregistrement", current: batch[0].activity.localDate, done, total });
+        const raw = await mergeActivities(target, tag, batch.map((p) => mergePayload(p.activity)));
+        for (let i = 0; i < batch.length; i++) {
+          const result = parseMergeResult(raw[i]);
+          countResult(report, batch[i].name, result);
+          const detail = batch[i].detail;
+          if (detail && wantsDetail(detail, result)) {
+            try {
+              await saveActivityDetail(result.id!, detailPayload(detail));
+              report.detailsSaved++;
+            } catch {
+              /* le résumé est enregistré ; la courbe pourra être redéposée */
+            }
+          }
+        }
+        done += batch.length;
+      };
+
+      const singles: Pending[] = [];
+
+      for (const file of files) {
         try {
           if (await startsWithZipMagic(file)) {
-            /*
-              `blobSource` lit par tranches : seule la plage demandée est
-              chargée. C'est ce qui permet de traiter une archive plus grosse
-              que la mémoire disponible — sur un téléphone, ce n'est pas un cas
-              théorique.
-            */
-            const res = await parseActivityArchive(blobSource(file), {
-              onProgress: (p) =>
-                setProgress({
-                  phase: "lecture",
-                  current: p.current,
-                  done: p.done,
-                  total: p.total,
-                }),
-            });
-            parsed.push(...res.activities);
-            report.rejected.push(...res.rejected);
-            report.files += res.files;
-            report.ignored += res.ignored;
-          } else {
-            /*
-              Un nom qui n'annonce rien d'exploitable est écarté avant d'être
-              lu : sans ce filtre, glisser un dossier ferait décoder les photos
-              et les PDF qu'il contient pour conclure « format non reconnu » —
-              un refus juste, mais noyé dans trente autres.
-            */
-            if (!looksLikeActivityName(file.name)) {
-              report.ignored++;
+            const { openStravaArchive } = await archives();
+            let opened;
+            try {
+              opened = await openStravaArchive(blobSource(file), { withDetail: true, utcOffsetAt: deviceOffsetAt });
+            } catch (e) {
+              report.rejected.push({ name: file.name, reason: e instanceof Error ? e.message : String(e) });
               continue;
             }
-            const bytes = new Uint8Array(await file.arrayBuffer());
-            const res = await parseActivityFile(file.name, bytes);
-            if (res.activities.length === 1) {
-              const detail = await activityDetailOf(file.name, bytes);
-              if (detail) details.set(res.activities[0].externalId, detailPayload(detail));
+            const { scan, items } = opened;
+            report.files += scan.files;
+            report.ignored += scan.ignored;
+            report.csvError ??= scan.csvError;
+            const tag: ImportTag = scan.csvRows > 0 ? "strava_archive" : "file";
+            total += scan.total;
+
+            let batch: Pending[] = [];
+            for await (const item of items()) {
+              if (item.kind === "rejected") {
+                report.rejected.push({ name: item.name, reason: item.reason });
+                done++;
+                continue;
+              }
+              setProgress({ phase: "lecture", current: item.name, done: done + batch.length, total });
+              batch.push(item);
+              if (batch.length >= BATCH) {
+                await flush(batch, tag);
+                batch = [];
+              }
             }
-            parsed.push(...res.activities);
-            report.rejected.push(...res.rejected);
-            report.files++;
+            await flush(batch, tag);
+            continue;
           }
-        } catch (e) {
-          // Un fichier illisible ne doit pas annuler le dépôt : sur quatre
-          // cents sorties, une seule abîmée ferait tout perdre sans que
-          // l'athlète sache laquelle retirer.
-          report.rejected.push({
-            name: file.name,
-            reason: e instanceof Error ? e.message : String(e),
-          });
+
+          if (!looksLikeActivityName(file.name)) {
+            report.ignored++;
+            continue;
+          }
           report.files++;
+          setProgress({ phase: "lecture", current: file.name, done, total: total + files.length });
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const res = await parseActivityFile(file.name, bytes);
+          report.rejected.push(...res.rejected);
+          const detail = res.activities.length === 1 ? await activityDetailOf(file.name, bytes) : null;
+          res.activities.forEach((a, i) =>
+            singles.push({
+              name: file.name,
+              activity: { ...a, quality: qualityOf(a), extras: null },
+              detail: i === 0 ? detail : null,
+            })
+          );
+        } catch (e) {
+          report.rejected.push({ name: file.name, reason: e instanceof Error ? e.message : String(e) });
         }
       }
 
-      if (parsed.length === 0) return report;
-
-      // ── Déduplication, puis insertion ──
-      const dates = parsed.map((a) => a.localDate).sort();
-      const { ids, starts } = await getKnownActivities(user.id, dates[0], dates[dates.length - 1]);
-
-      const split = splitNewActivities(parsed, ids, starts);
-      const toInsert = split.toInsert;
-      report.duplicates += split.duplicates;
-      report.alreadyKnown += split.alreadyKnown;
-
-      for (let i = 0; i < toInsert.length; i += INSERT_CHUNK) {
-        const chunk = toInsert.slice(i, i + INSERT_CHUNK);
-        setProgress({
-          phase: "insertion",
-          current: chunk[0].localDate,
-          done: i,
-          total: toInsert.length,
-        });
-
-        // Doublons écartés par la base (`ignoreDuplicates`) : deux onglets ou
-        // un dépôt relancé après une coupure ne font pas échouer le lot.
-        const inserted = await insertActivitiesReturning(chunk.map((a) => activityRow(user.id, a)));
-        report.imported += inserted.length;
-        report.duplicates += chunk.length - inserted.length;
-        /*
-          Détail (série, tours) : meilleur effort. L'activité est déjà
-          enregistrée ; un échec ici ne doit pas faire croire à un import raté.
-        */
-        for (const row of inserted) {
-          const payload = details.get(row.external_id);
-          if (!payload) continue;
-          try {
-            await saveActivityDetail(row.id, payload);
-          } catch {
-            /* le résumé reste ; le détail pourra être redéposé */
-          }
-        }
-      }
+      total += singles.length;
+      for (let i = 0; i < singles.length; i += BATCH) await flush(singles.slice(i, i + BATCH), "file");
 
       return report;
     },
     onSettled: () => {
       setProgress(null);
-      if (user) void invalidateProviders(qc, user.id);
+      if (target) void invalidateProviders(qc, target);
     },
   });
 

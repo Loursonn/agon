@@ -47,11 +47,6 @@ export interface DedupCandidate {
   externalId?: string | null;
 }
 
-export type FindDuplicate = (
-  db: Db,
-  c: DedupCandidate,
-) => Promise<{ id: string; source: string } | null>;
-
 /**
  * Télécharge un fichier d'activité (.FIT…) depuis l'URL de rappel Garmin.
  * Renvoie `null` si Garmin répond 410 (déjà téléchargé ou expiré : l'URL vaut
@@ -61,7 +56,6 @@ export type DownloadActivityFile = (url: string, connectionId: string) => Promis
 
 export interface IngestDeps {
   db: Db;
-  findDuplicate: FindDuplicate;
   downloadActivityFile?: DownloadActivityFile;
   now?: () => Date;
 }
@@ -361,19 +355,19 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
       await markDone(db, row.id, "résumé d'activité inexploitable (identifiant ou départ absent)", now);
       return "skipped";
     }
-    const hit = await deps.findDuplicate(db, {
-      athleteId: conn.athlete_id,
-      sport: mapped.sport,
-      startedAt: mapped.started_at,
-      externalId: mapped.external_id,
+    /*
+      Fusion (P42) : si la même sortie est déjà là (archive Strava, fichier,
+      autre envoi), elle est complétée au lieu d'être écartée, et devient une
+      ligne `garmin` (meilleure source). Même règle et même verrou que
+      l'import de fichiers : `merge_provider_activity`.
+    */
+    const { source: _source, ...fields } = mapped;
+    const { error } = await db.rpc("merge_provider_activity", {
+      p_athlete: conn.athlete_id,
+      p_source: "garmin",
+      p_tag: "garmin",
+      p_activity: { ...fields, origin_quality: "fit" },
     });
-    if (hit && hit.source !== "garmin") {
-      await markDone(db, row.id, `doublon d'une activité ${hit.source}`, now);
-      return "duplicate";
-    }
-    const { error } = await db
-      .from("provider_activities")
-      .upsert({ athlete_id: conn.athlete_id, ...mapped }, { onConflict: "athlete_id,source,external_id" });
     if (error) throw new Error(`activité : ${error.message}`);
     const detailNote = await storeDetail(db, conn.athlete_id, entry);
     if (detailNote) {

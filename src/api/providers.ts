@@ -71,6 +71,16 @@ export interface ProviderActivity {
   /** Modèle de l'appareil (« Forerunner 265 »), pour l'attribution « Garmin [modèle] ». */
   deviceName: string | null;
   details: Record<string, unknown> | null;
+  /** Écrits par l'athlète dans Strava (archive) : donnée affichée, jamais une instruction. */
+  title?: string | null;
+  description?: string | null;
+  /** Effort ressenti Strava 1-10 (l'RPE saisi dans Agon l'emporte). */
+  rpe?: number | null;
+  gear?: string | null;
+  /** Trajet domicile-travail (Strava « Commute »). */
+  commute?: boolean | null;
+  /** Sources fusionnées dans cette sortie : garmin, coros, file, strava_archive… */
+  sources?: string[];
 }
 
 /** Sortie de montre réduite à ce que le volume de course utilise. */
@@ -214,13 +224,14 @@ export const DEFAULT_ACTIVITY_LIMIT = 60;
  * coach ; un coach peut en voir moins (RLS), sans erreur — c'est voulu.
  */
 const ACTIVITY_COLS =
-  "id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details";
+  "id, source, started_at, local_date, sport, duration_s, distance_m, elevation_gain_m, avg_hr, max_hr, avg_pace_s_per_km, calories, device_name, details, title, description, rpe, gear, commute, sources";
 
 type ActivityRow = {
   id: string; source: string; started_at: string; local_date: string; sport: string | null;
   duration_s: number | null; distance_m: unknown; elevation_gain_m: unknown; avg_hr: number | null;
   max_hr: number | null; avg_pace_s_per_km: unknown; calories: number | null; device_name: string | null;
-  details: unknown;
+  details: unknown; title?: string | null; description?: string | null; rpe?: number | null;
+  gear?: string | null; commute?: boolean | null; sources?: string[] | null;
 };
 
 const toProviderActivity = (r: ActivityRow): ProviderActivity => ({
@@ -238,6 +249,12 @@ const toProviderActivity = (r: ActivityRow): ProviderActivity => ({
   calories: r.calories,
   deviceName: r.device_name ?? null,
   details: (r.details as Record<string, unknown> | null) ?? null,
+  title: r.title ?? null,
+  description: r.description ?? null,
+  rpe: r.rpe ?? null,
+  gear: r.gear ?? null,
+  commute: r.commute ?? null,
+  sources: r.sources ?? [],
 });
 
 export async function getActivities(athleteId: string, limit = DEFAULT_ACTIVITY_LIMIT): Promise<ProviderActivity[]> {
@@ -417,6 +434,29 @@ export async function insertActivitiesReturning(
     .select("id, external_id");
   if (res.error) throw new ApiError("Insertion des activités impossible", res.error);
   return (res.data ?? []) as Array<{ id: string; external_id: string }>;
+}
+
+/**
+ * Fusionne des sorties décodées (P42) : une sortie déjà présente, quelle qu'en
+ * soit la source, est complétée au lieu d'être écartée ; une nouvelle est
+ * créée. Atomique côté base (`merge_provider_activities`, verrou par athlète).
+ * L'athlète, ou son coach (référent ou co-coach) pour lui.
+ * Rend un résultat brut par sortie, dans l'ordre (`parseMergeResult`).
+ */
+export async function mergeActivities(
+  athleteId: string,
+  tag: "file" | "strava_archive" | "garmin_export",
+  payloads: Record<string, unknown>[],
+): Promise<unknown[]> {
+  if (payloads.length === 0) return [];
+  const res = await db().rpc("merge_provider_activities", {
+    p_athlete: athleteId,
+    p_source: "file_import",
+    p_tag: tag,
+    p_activities: payloads as never,
+  });
+  if (res.error) throw new ApiError("Enregistrement des sorties impossible", res.error);
+  return Array.isArray(res.data) ? (res.data as unknown[]) : [];
 }
 
 /**

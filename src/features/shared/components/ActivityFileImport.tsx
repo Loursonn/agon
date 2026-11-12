@@ -5,6 +5,7 @@ import {
   useActivityFileImport,
   type ImportReport,
 } from "@/features/shared/hooks/useActivityFileImport";
+import { reportSummary } from "@/lib/activityImport";
 
 /**
  * Dépôt de fichiers d'activité (archive d'export, FIT, TCX, GPX).
@@ -79,12 +80,16 @@ async function filesFromDrop(dt: DataTransfer): Promise<File[]> {
 const plural = (n: number, singulier: string, pluriel = singulier + "s") =>
   `${n} ${n > 1 ? pluriel : singulier}`;
 
-export function ActivityFileImport() {
+/**
+ * `athleteId` : le coach importe pour son athlète (fiche de l'athlète) ; les
+ * sorties sont enregistrées au nom de l'athlète. Absent : l'athlète lui-même.
+ */
+export function ActivityFileImport({ athleteId, forCoach = false }: { athleteId?: string; forCoach?: boolean } = {}) {
   const input = useRef<HTMLInputElement>(null);
   const [survol, setSurvol] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [detailsOuverts, setDetailsOuverts] = useState(false);
-  const { mutate, isPending, progress } = useActivityFileImport();
+  const { mutate, isPending, progress } = useActivityFileImport(athleteId);
 
   const lancer = (files: File[]) => {
     if (files.length === 0) return;
@@ -100,27 +105,20 @@ export function ActivityFileImport() {
     mutate(files, {
       onSuccess: (r) => {
         setReport(r);
-        if (r.imported === 0 && r.files === 0) {
+        const entered = r.created + r.merged + r.unchanged;
+        if (entered === 0 && r.files === 0) {
           toast.warning("Aucun fichier d'activité reconnu", {
             description: "Attendu une archive d'export, ou des fichiers .fit, .tcx ou .gpx.",
           });
           return;
         }
-        if (r.imported === 0) {
+        if (r.created + r.merged === 0) {
           toast.success("Rien de nouveau", {
-            description: "Toutes ces sorties étaient déjà dans ton historique.",
+            description: "Toutes ces sorties étaient déjà complètes dans l'historique.",
           });
           return;
         }
-        toast[r.rejected.length > 0 ? "warning" : "success"](
-          `${plural(r.imported, "activité importée", "activités importées")}`,
-          {
-            description:
-              r.rejected.length > 0
-                ? `${plural(r.rejected.length, "fichier non lu", "fichiers non lus")} — voir le détail.`
-                : undefined,
-          },
-        );
+        toast[r.rejected.length > 0 ? "warning" : "success"]("Import terminé", { description: reportSummary(r) });
       },
       onError: (e) => toast.error("Import impossible", { description: e.message }),
     });
@@ -129,11 +127,15 @@ export function ActivityFileImport() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div>
-        <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Importer mes fichiers</div>
+        <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>
+          {forCoach ? "Importer l'historique de l'athlète" : "Importer mes fichiers"}
+        </div>
         <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5, marginTop: 4 }}>
-          Dépose l'archive de ton export Strava ou Garmin, ou des fichiers .fit, .tcx et .gpx. Tout
-          est lu sur ton appareil : seules les valeurs des sorties (durée, distance, fréquence
-          cardiaque, dénivelé) sont enregistrées, pas les fichiers eux-mêmes.
+          {forCoach ? "Dépose l'archive d'export Strava de l'athlète" : "Dépose l'archive de ton export Strava"}, ou
+          des fichiers .fit, .tcx et .gpx. Une sortie déjà présente (montre Garmin, autre fichier) est
+          complétée, jamais dupliquée : titre, description, effort ressenti et matériel s'ajoutent, et la
+          meilleure courbe est gardée. Tout est lu sur l'appareil : les fichiers ne sont pas envoyés,
+          seules les valeurs des sorties sont enregistrées. La note privée Strava n'est pas importée.
         </div>
       </div>
 
@@ -195,7 +197,7 @@ export function ActivityFileImport() {
             <div
               style={{
                 height: "100%",
-                width: progress.total > 0 ? `${(progress.done / progress.total) * 100}%` : "15%",
+                width: progress.total > 0 ? `${Math.min(100, (progress.done / progress.total) * 100)}%` : "15%",
                 background: C.ac,
                 transition: "width 0.2s",
               }}
@@ -211,8 +213,8 @@ export function ActivityFileImport() {
               whiteSpace: "nowrap",
             }}
           >
-            {progress.phase === "insertion" ? "Enregistrement" : "Lecture"} {progress.done}/
-            {progress.total} · {progress.current}
+            {progress.phase === "enregistrement" ? "Enregistrement" : "Lecture"}{" "}
+            {Math.min(progress.done, progress.total)}/{progress.total} · {progress.current}
           </div>
         </div>
       )}
@@ -233,10 +235,8 @@ function Rapport({
   ouvert: boolean;
   onToggle: () => void;
 }) {
-  const lignes: string[] = [];
-  if (report.imported > 0) lignes.push(plural(report.imported, "activité importée", "activités importées"));
-  if (report.duplicates > 0) lignes.push(`${plural(report.duplicates, "fichier déjà importé", "fichiers déjà importés")}`);
-  if (report.alreadyKnown > 0) lignes.push(`${plural(report.alreadyKnown, "sortie déjà connue", "sorties déjà connues")} (montre ou autre format)`);
+  const lignes: string[] = [reportSummary(report)];
+  if (report.detailsSaved > 0) lignes.push(`${plural(report.detailsSaved, "courbe ajoutée", "courbes ajoutées")}`);
   if (report.ignored > 0) lignes.push(`${plural(report.ignored, "élément ignoré", "éléments ignorés")}`);
 
   const refuses = report.rejected;
@@ -253,7 +253,12 @@ function Rapport({
         lineHeight: 1.6,
       }}
     >
-      <div>{lignes.length > 0 ? lignes.join(" · ") : "Aucune activité reconnue dans ce dépôt."}</div>
+      <div>{lignes.join(" · ")}</div>
+      {report.csvError && (
+        <div style={{ color: C.o, marginTop: 4 }}>
+          Titres, descriptions et effort ressenti non lus : {report.csvError}
+        </div>
+      )}
 
       {refuses.length > 0 && (
         <>
@@ -272,7 +277,7 @@ function Rapport({
               textDecoration: "underline",
             }}
           >
-            {plural(refuses.length, "fichier non lu", "fichiers non lus")} {ouvert ? "−" : "+"}
+            {plural(refuses.length, "erreur", "erreurs")} — détail {ouvert ? "−" : "+"}
           </button>
 
           {ouvert && (

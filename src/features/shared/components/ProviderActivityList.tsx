@@ -124,6 +124,7 @@ function Ligne({
   if (a.elevationGainM !== null) mesures.push({ label: "D+", valeur: formatElevation(a.elevationGainM) });
   if (a.avgHr !== null || a.maxHr !== null) mesures.push({ label: "FC", valeur: formatHr(a.avgHr, a.maxHr) });
   if (a.calories !== null) mesures.push({ label: "kcal", valeur: String(a.calories) });
+  if (a.rpe != null) mesures.push({ label: "RPE", valeur: `${a.rpe}/10` });
 
   return (
     <div style={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 4, overflow: "hidden" }}>
@@ -144,8 +145,14 @@ function Ligne({
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {sportLabel(a.sport)}
+            {a.title ?? sportLabel(a.sport)}
+            {a.title && <span style={{ fontWeight: 400, color: C.tx3 }}> · {sportLabel(a.sport)}</span>}
           </span>
+          {a.commute && (
+            <span style={{ fontSize: 9, color: C.tx3, border: "1px solid " + C.brd, borderRadius: 8, padding: "1px 6px", flexShrink: 0 }}>
+              Trajet
+            </span>
+          )}
           <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
             {formatActivityDate(a.localDate)}
           </span>
@@ -193,6 +200,19 @@ function Ligne({
               year: "numeric",
             })}
           </div>
+
+          {a.description && (
+            <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{a.description}</div>
+          )}
+          {a.gear && (
+            <div style={{ fontSize: 11, color: C.tx2 }}>
+              <span style={{ color: C.tx3 }}>Matériel : </span>
+              {a.gear}
+            </div>
+          )}
+          {a.sources && a.sources.includes("strava_archive") && (
+            <div style={{ fontSize: 10, color: C.tx3 }}>Complétée par l'archive Strava de l'athlète</div>
+          )}
 
           {provenances.length > 0 ? (
             <>

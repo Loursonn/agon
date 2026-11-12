@@ -45,7 +45,6 @@ import {
   ymd,
 } from "../_shared/coros.ts";
 import { McpClient, McpError, type McpTool, resolveTool } from "../_shared/mcp.ts";
-import { findCrossSourceDuplicate } from "../_shared/activityDedup.ts";
 import { looksLikeFit, parseFit } from "../_shared/activityFiles/fit.ts";
 import type { ParsedActivity } from "../_shared/activityFiles/types.ts";
 import { normalizeActivity } from "../_shared/activityFiles/normalize.ts";
@@ -265,9 +264,11 @@ async function freshAccessToken(
 // ──────────────────────────────── Ingestion ──────────────────────────────────
 
 /**
- * Insère une activité, en refusant les doublons inter-sources : même
- * empreinte, ou même sortie (départ à ±2 min, sport compatible) déjà
- * enregistrée par une autre source — archive Strava, Garmin…
+ * Fusionne une activité (P42) : si la même sortie est déjà là (archive
+ * Strava, fichier, Garmin), elle est complétée au lieu d'être écartée. Même
+ * règle et même verrou que l'import de fichiers : `merge_provider_activity`.
+ * « inserted » = nouvelle sortie ; « duplicate » = sortie déjà connue
+ * (complétée ou déjà complète).
  */
 async function insertActivity(
   admin: SupabaseClient,
@@ -275,39 +276,31 @@ async function insertActivity(
   act: ParsedActivity,
   detail: NormalizedActivity | null = null,
 ): Promise<"inserted" | "duplicate" | { rejected: string }> {
-  // Lève si la base ne répond pas : traité en échec passager par l'appelant.
-  const dup = await findCrossSourceDuplicate(admin, {
-    athleteId,
-    sport: act.sport,
-    startedAt: act.startedAt,
-    externalId: act.externalId,
+  const { data, error } = await admin.rpc("merge_provider_activity", {
+    p_athlete: athleteId,
+    p_source: "coros",
+    p_tag: "coros",
+    p_activity: {
+      external_id: act.externalId,
+      started_at: act.startedAt,
+      local_date: act.localDate,
+      sport: act.sport,
+      duration_s: act.durationS,
+      distance_m: act.distanceM,
+      elevation_gain_m: act.elevationGainM,
+      avg_hr: act.avgHr,
+      max_hr: act.maxHr,
+      avg_pace_s_per_km: act.avgPaceSPerKm,
+      calories: act.calories,
+      details: act.details,
+      raw: act.raw,
+      origin_quality: "fit",
+      // `ai_allowed` est délibérément absent : posé en base.
+    },
   });
-  if (dup) return "duplicate";
-
-  const { data: inserted, error } = await admin.from("provider_activities").insert({
-    athlete_id: athleteId,
-    source: "coros",
-    external_id: act.externalId,
-    started_at: act.startedAt,
-    local_date: act.localDate,
-    sport: act.sport,
-    duration_s: act.durationS,
-    distance_m: act.distanceM,
-    elevation_gain_m: act.elevationGainM,
-    avg_hr: act.avgHr,
-    max_hr: act.maxHr,
-    avg_pace_s_per_km: act.avgPaceSPerKm,
-    calories: act.calories,
-    details: act.details,
-    raw: act.raw,
-    // `ai_allowed` est délibérément absent : un trigger le pose depuis
-    // `data_source_policies`. L'envoyer d'ici serait au mieux ignoré.
-  }).select("id").single();
 
   if (error) {
     const code = (error as { code?: string }).code ?? "";
-    // 23505 = violation d'unicité : une autre exécution l'a déjà inséré.
-    if (code === "23505") return "duplicate";
     /*
       22xxx / 23xxx (valeur hors bornes, contrainte de vraisemblance) : le
       fichier est en cause, pas la base. Réessayer donnerait le même refus et
@@ -316,23 +309,23 @@ async function insertActivity(
     if (code.startsWith("22") || code.startsWith("23")) {
       return { rejected: `activité refusée par la base : ${error.message}` };
     }
-    throw new Error(`insertion de l'activité : ${error.message}`);
+    throw new Error(`fusion de l'activité : ${error.message}`);
   }
+  const res = (data ?? {}) as { id?: string; status?: string; stream_rank?: number };
 
   /*
-    Détail (série seconde par seconde, tours, séries de muscu) rangé en
-    tables. Meilleur effort : le résumé est déjà enregistré, et le FIT n'est
-    pas conservé chez nous — un échec ici est journalisé, sans donnée perso.
+    Détail (série seconde par seconde, tours) : seulement s'il est meilleur
+    que celui déjà rangé. Meilleur effort : le résumé est déjà enregistré.
   */
-  if (detail && inserted?.id) {
+  if (detail && res.id && (res.stream_rank ?? 0) < 3) {
     const { error: e2 } = await admin.rpc("activity_detail_upsert", {
-      p_activity: inserted.id,
+      p_activity: res.id,
       p_detail: detailPayload(detail),
     });
     if (e2) console.error("provider-coros-sync: détail non rangé", e2.code ?? "");
   }
 
-  return "inserted";
+  return res.status === "created" ? "inserted" : "duplicate";
 }
 
 /**

@@ -14,6 +14,8 @@ import { looksLikeTcx, parseTcx } from "./tcx.ts";
 import type { ParsedActivity, ParseResult } from "./types.ts";
 
 export type { ParsedActivity, ParseResult };
+export type { ActivityExtras, ImportActivity, OriginQuality } from "./types.ts";
+export { qualityOf } from "./types.ts";
 import { normalizeActivity } from "./normalize.ts";
 import type { NormalizedActivity } from "./stream.ts";
 export { bytesSource, blobSource } from "./archive.ts";
