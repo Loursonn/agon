@@ -112,7 +112,9 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   const lastSegment = pathSegments[pathSegments.length - 1] || "";
   // Sous-page d'un onglet (/athlete/program/activity/:id) : l'onglet parent reste actif.
   const tabSegment = ATH_TABS.some(t => t.k === lastSegment) ? lastSegment : pathSegments[1] ?? "";
-  const activeTab = ATH_TABS.some(t => t.k === tabSegment) ? tabSegment : "";
+  // Pages ouvertes depuis Profil (seuils et zones, montres) : Profil reste actif.
+  const PROFIL_CHILDREN = ["zones", "montres"];
+  const activeTab = ATH_TABS.some(t => t.k === tabSegment) ? tabSegment : PROFIL_CHILDREN.includes(tabSegment) ? "profil" : "";
 
   // Active free session for "reprendre" button
   const activeFreeSess = sessions.find(s => {

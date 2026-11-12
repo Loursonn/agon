@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-seuils-montres",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : seuils, zones et montres en clair",
+    summary: "Dans son Profil, votre athlète voit ses seuils (SV1, SV2, FC max, FC de repos) et une page « Montres et données ».",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Mes seuils et mes zones » : qui les a fixés, les 4 seuils, le modèle choisi et une barre de 100 bpm à la FC max.",
+          "« Montres et données » : une carte par montre, l'accord de partage et l'import de l'historique (archive Strava ou export Garmin).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-hyrox-confirmer-seance",
     date: "2026-11-13",
     kind: "feature",

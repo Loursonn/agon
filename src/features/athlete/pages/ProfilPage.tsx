@@ -11,7 +11,6 @@ import { todayKey } from "@/lib/date";
 import { MedicalEntriesSection } from "@/features/shared/components/medical/MedicalEntriesSection";
 import { RunningVolumeCard } from "@/features/shared/components/RunningVolumeCard";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
-import { StravaExportTutorial } from "@/features/athlete/components/StravaExportTutorial";
 import { AthleteStaffPanel } from "@/features/staff/components/AthleteStaffPanel";
 import { CoCoachPanel } from "@/features/shared/components/CoCoachPanel";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
@@ -217,6 +216,15 @@ export default function ProfilPage() {
           <span aria-hidden style={{ color: C.tx3 }}>›</span>
         </Link>
       )}
+      {!viewOnly && (
+        <Link
+          to="/athlete/montres"
+          style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: -16, marginBottom: 24, textDecoration: "none", color: C.tx, fontSize: 14, fontWeight: 600 }}
+        >
+          Montres et données
+          <span aria-hidden style={{ color: C.tx3 }}>›</span>
+        </Link>
+      )}
 
       {/* ── Antécédents médicaux ── */}
       {athleteId && (
@@ -248,13 +256,7 @@ export default function ProfilPage() {
         <RunningVolumeCard volume={volume} isLoading={volumeLoading} />
       </div>
 
-      {/* ── Données Strava ── */}
-      {!viewOnly && (
-        <div style={{ marginBottom: 24 }}>
-          <SectionTitle n="06">Données Strava</SectionTitle>
-          <StravaExportTutorial />
-        </div>
-      )}
+      {/* Données Strava : déplacées dans « Montres et données » (planche Ath2Montres). */}
 
       {/* ── Déconnexion ── */}
       {!viewOnly && (

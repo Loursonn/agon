@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { ActivityFileImport } from "@/features/shared/components/ActivityFileImport";
@@ -127,11 +127,8 @@ const STATUS_COPY: Record<ProviderConnection["status"], { label: string; tone: "
   revoked: { label: "Accès révoqué", tone: "bad" },
 };
 
-export function ConnectedServicesSection() {
-  const [open, setOpen] = useState(false);
-  const { data: connections, isLoading } = useProviderConnections();
-  const coros = connectionFor(connections, "coros");
-  const garmin = connectionFor(connections, "garmin");
+/** Résultat de l'autorisation posé dans l'URL par la fonction de retour : toast, puis retiré. */
+function useProviderOutcomes(onProblem: () => void) {
 
   /*
     Le résultat de l'autorisation arrive dans l'URL, posé par la fonction de
@@ -148,7 +145,7 @@ export function ConnectedServicesSection() {
       const outcomes = outcomesFor(provider);
       const copy = outcomes[outcome] ?? outcomes.erreur;
       toast[copy.kind](copy.title, { description: copy.detail });
-      if (copy.kind !== "success") setOpen(true);
+      if (copy.kind !== "success") onProblem();
       params.delete(provider);
       touched = true;
     }
@@ -160,7 +157,55 @@ export function ConnectedServicesSection() {
       "",
       window.location.pathname + (q ? `?${q}` : "") + window.location.hash,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+}
+
+/** Dans une carte de « Montres et données », le nom est déjà dans l'en-tête de la carte. */
+const InCard = createContext(false);
+function RowTitle({ children }: { children: ReactNode }) {
+  return useContext(InCard) ? null : <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>{children}</div>;
+}
+
+const CARD_S: CSSProperties = { borderRadius: 14, background: C.s1, border: "1px solid " + C.brd, padding: "14px 14px 16px" };
+
+/**
+ * Page « Montres et données » (planche Ath2Montres) : une carte par montre,
+ * mêmes accords et mêmes actions que le panneau replié du tiroir.
+ */
+export function ProviderCards() {
+  const { data: connections, isLoading } = useProviderConnections();
+  useProviderOutcomes(() => {});
+  if (isLoading) return <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>;
+  const garmin = connectionFor(connections, "garmin");
+  const coros = connectionFor(connections, "coros");
+  // Montre connectée en premier (planche : Garmin connectée, COROS à connecter).
+  const order = coros?.status === "active" && garmin?.status !== "active" ? (["coros", "garmin"] as const) : (["garmin", "coros"] as const);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {order.map((p) => (
+        <div key={p} style={CARD_S}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <span style={{ width: 36, height: 36, borderRadius: 10, background: C.s2, border: "1px solid " + C.brd, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--agon-font-data)", fontSize: 10.5, color: C.tx2, flex: "none" }}>
+              {p === "garmin" ? "GRM" : "CRS"}
+            </span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{PROVIDER_LABEL[p]}</span>
+          </div>
+          <InCard.Provider value>
+            {p === "garmin" ? <GarminRow connection={garmin} /> : <CorosRow connection={coros} />}
+          </InCard.Provider>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ConnectedServicesSection() {
+  const [open, setOpen] = useState(false);
+  const { data: connections, isLoading } = useProviderConnections();
+  const coros = connectionFor(connections, "coros");
+  const garmin = connectionFor(connections, "garmin");
+  useProviderOutcomes(() => setOpen(true));
 
   return (
     <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
@@ -330,7 +375,7 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>COROS</div>
+          <RowTitle>COROS</RowTitle>
           <div style={{ fontSize: 11, color: tone }}>{status.label}</div>
         </div>
 
@@ -398,7 +443,7 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>COROS</div>
+      <RowTitle>COROS</RowTitle>
       <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
         Récupère automatiquement tes activités, ta fréquence cardiaque, ton sommeil et tes
         indicateurs de récupération, et les partage avec ton coach.
@@ -638,7 +683,7 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
     return (
       <div style={{ opacity: 0.6 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
+          <RowTitle>Garmin</RowTitle>
           <div style={{ fontSize: 11, color: C.tx3 }}>Bientôt disponible</div>
         </div>
         <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5, marginTop: 4 }}>
@@ -668,7 +713,7 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
+          <RowTitle>Garmin</RowTitle>
           <div style={{ fontSize: 11, color: tone }}>{status.label}</div>
         </div>
         <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
@@ -706,7 +751,7 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Garmin</div>
+      <RowTitle>Garmin</RowTitle>
       <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
         Récupère automatiquement tes activités, ta fréquence cardiaque, ton sommeil et tes
         indicateurs de récupération, et les partage avec ton coach. Les données Garmin ne sont

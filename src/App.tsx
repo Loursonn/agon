@@ -48,6 +48,7 @@ const LogSeancePage   = lazy(() => import("./features/athlete/pages/LogSeancePag
 const AlimPage        = lazy(() => import("./features/athlete/pages/AlimPage.tsx"));
 const AthleteTestPage = lazy(() => import("./features/athlete/pages/AthleteTestPage.tsx"));
 const AthleteZonesPage = lazy(() => import("./features/athlete/pages/AthleteZonesPage.tsx"));
+const AthleteMontresPage = lazy(() => import("./features/athlete/pages/AthleteMontresPage.tsx"));
 const AthleteHyroxPage = lazy(() => import("./features/athlete/pages/HyroxPage.tsx"));
 const SpecificExecutionPage = lazy(() => import("./features/athlete/pages/SpecificExecutionPage.tsx"));
 
@@ -200,6 +201,7 @@ function AppRoutes() {
             <Route path="alim" element={<Page><AlimPage /></Page>} />
             <Route path="test" element={<Page><AthleteTestPage /></Page>} />
             <Route path="zones" element={<Page><AthleteZonesPage /></Page>} />
+            <Route path="montres" element={<Page><AthleteMontresPage /></Page>} />
             <Route path="hyrox" element={<Page><AthleteHyroxPage /></Page>} />
             <Route path="specific/:assignmentId" element={<Page><SpecificExecutionPage /></Page>} />
           </Route>
