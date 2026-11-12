@@ -609,6 +609,19 @@ export async function rescheduleWorkoutByAthlete(p: {
   return toWorkoutLog(row!);
 }
 
+/**
+ * L'athlète passe une séance en repos (planche « déplacer ») : elle est
+ * retirée de sa journée (`skipped`). Refusé si elle a une saisie.
+ */
+export async function restWorkoutByAthlete(logId: string): Promise<void> {
+  const cur = await getWorkoutLog(logId);
+  if (!cur) throw new ApiError("Repos impossible", { message: "séance introuvable", code: WORKOUT_NOT_FOUND });
+  if (!isUntouchedSession(cur)) {
+    throw new ApiError("Repos refusé", { message: "séance réalisée, commencée ou notée", code: "42501" });
+  }
+  await skipWorkout(logId);
+}
+
 /** Séances d'une séance-type sur une semaine (démarrage hors programme). */
 export function listSessionLogsBetween(p: { athleteId: string; sessionId: string; from: IsoDay; to: IsoDay }): Promise<WorkoutLog[]> {
   return listWorkoutLogs({ athleteIds: [p.athleteId], sessionId: p.sessionId, from: p.from, to: p.to, withMods: false });

@@ -67,6 +67,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         points: [
           "Vous : planning → cliquez le jour → « Déplacer » sur la séance manquée, choisissez le nouveau jour. Le glisser-déposer marche aussi.",
           "L'athlète : Programme → menu ⋯ de la séance manquée → choix du jour. Vous voyez le changement dans votre planning.",
+          "L'athlète peut aussi « Passer en repos » une séance pas encore commencée : elle est retirée de sa journée.",
           "Une séance réalisée, commencée ou notée ne peut pas être déplacée : rien de ce que l'athlète a saisi n'est perdu.",
           "Le menu de l'athlète ne montre plus la liste « activités importées » : ses sorties de montre et ses fichiers apparaissent dans ses séances et dans votre planning.",
         ],

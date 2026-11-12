@@ -22,7 +22,9 @@ import { formatReps, hasIso, isAllIso } from "@/lib/formatSetsReps";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import { SessionPreviewModal, ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
 import { EmptyState } from "@/features/shared/components/EmptyState";
-import { invalidateEnergy, moveEnergyAssignment, reopenEnergyAssignment } from "@/api/energy";
+import { invalidateEnergy, moveEnergyAssignment, reopenEnergyAssignment, restEnergyAssignment } from "@/api/energy";
+import { RescheduleSheet } from "@/features/athlete/components/program/RescheduleSheet";
+import { invalidateWorkouts, restWorkoutByAthlete } from "@/api/workouts";
 import { useCompleteEnergyAssignment } from "@/features/shared/hooks/useEnergyAssignments";
 import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
@@ -524,145 +526,6 @@ function isMissedWeekSession(s: WeekSession, today: string): boolean {
   return s.status === "missed" || (s.status === "planned" && s.scheduledDate < today);
 }
 
-type RescheduleDay = { iso: string; dow: number; num: number };
-
-function WeekRow({
-  days,
-  selected,
-  scheduledDate,
-  onSelect,
-  minDate,
-}: {
-  days: RescheduleDay[];
-  selected: string;
-  scheduledDate: string;
-  onSelect: (iso: string) => void;
-  /** Jours antérieurs grisés (séance manquée : on la replace aujourd'hui ou après). */
-  minDate?: string;
-}) {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-      {days.map(d => {
-        const isSel = d.iso === selected;
-        const isCur = d.iso === scheduledDate;
-        const off = !!minDate && d.iso < minDate;
-        return (
-          <button
-            key={d.iso}
-            type="button"
-            disabled={off}
-            aria-pressed={isSel}
-            aria-label={new Date(d.iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-            onClick={() => onSelect(d.iso)}
-            style={{
-              opacity: off ? 0.35 : 1,
-              height: 52, borderRadius: 10, cursor: off ? "default" : "pointer", fontFamily: "inherit", position: "relative",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
-              border: isSel ? "none" : "1px solid " + C.brd,
-              background: isSel ? C.ac : C.s2,
-              color: isSel ? C.bg : C.tx,
-            }}
-          >
-            <span style={{ ...MONO, fontSize: 9.5, color: isSel ? C.bg : C.tx3 }}>{DOW_SHORT_FR[d.dow].charAt(0)}</span>
-            <span style={{ ...MONO, fontSize: 15 }}>{d.num}</span>
-            {isCur && !isSel && <span style={{ position: "absolute", bottom: 4, width: 4, height: 4, borderRadius: "50%", background: C.ac }} />}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function RescheduleDrawer({
-  sessionName,
-  scheduledDate,
-  weekMondayISO,
-  typeColor,
-  typeLabel,
-  onConfirm,
-  onDetail,
-  isPending,
-  onClose,
-  minDate,
-}: {
-  minDate?: string;
-  sessionName: string;
-  scheduledDate: string;
-  weekMondayISO: string;
-  typeColor: string;
-  typeLabel: string;
-  onConfirm: (newDate: string, reason?: string) => void;
-  onDetail?: () => void;
-  isPending?: boolean;
-  onClose: () => void;
-}) {
-  const [selected, setSelected] = useState(scheduledDate);
-  const [reason, setReason]     = useState("");
-
-  const { week1, week2 } = useMemo(() => {
-    const mon = new Date(weekMondayISO + "T12:00:00");
-    const makeDay = (offset: number) => {
-      const d = new Date(mon); d.setDate(mon.getDate() + offset);
-      return { iso: isoFromDate(d), dow: (d.getDay() + 6) % 7, num: d.getDate() };
-    };
-    return {
-      week1: Array.from({ length: 7 }, (_, i) => makeDay(i)),
-      week2: Array.from({ length: 7 }, (_, i) => makeDay(7 + i)),
-    };
-  }, [weekMondayISO]);
-
-  const canConfirm = selected !== scheduledDate && !isPending;
-  const fmtDay = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
-
-  return (
-    <Drawer open onOpenChange={(v) => !v && onClose()}>
-      <DrawerContent style={{ background: C.s1, borderTop: "1px solid " + C.brd, padding: "0 0 28px" }}>
-        <DrawerHeader style={{ padding: "14px 20px 6px", textAlign: "left" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.bg, background: typeColor, borderRadius: 999, padding: "2px 7px" }}>{typeLabel}</span>
-            <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{minDate && scheduledDate < minDate ? "Manquée" : "Prévue"} {fmtDay(scheduledDate)}</span>
-          </div>
-          <DrawerTitle style={{ ...DISPLAY, fontSize: 18, color: C.tx, marginTop: 6, textAlign: "left" }}>{sessionName}</DrawerTitle>
-        </DrawerHeader>
-
-        <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2 }}>Déplacer au</div>
-          <WeekRow days={week1} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} minDate={minDate} />
-          <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: C.tx3 }}>Semaine suivante</div>
-          <WeekRow days={week2} selected={selected} scheduledDate={scheduledDate} onSelect={setSelected} minDate={minDate} />
-          <div style={{ fontSize: 12, color: C.tx3 }}>Ton coach verra le changement dans son planning.</div>
-
-          <input
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Raison (facultatif) : blessure, compétition…"
-            style={{ width: "100%", height: 44, padding: "0 12px", borderRadius: 12, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
-          />
-
-          <button
-            type="button"
-            onClick={() => onConfirm(selected, reason.trim() || undefined)}
-            disabled={!canConfirm}
-            style={{ width: "100%", height: 52, borderRadius: 12, border: "none", background: canConfirm ? C.ac : C.s2, color: canConfirm ? C.bg : C.tx3, fontSize: 15, fontWeight: 600, cursor: canConfirm ? "pointer" : "default", fontFamily: "inherit" }}
-          >
-            {isPending ? "Déplacement…" : selected === scheduledDate ? "Choisis un autre jour" : `Déplacer au ${fmtDay(selected)}`}
-          </button>
-
-          {onDetail && (
-            <button
-              type="button"
-              onClick={onDetail}
-              style={{ width: "100%", height: 48, borderRadius: 12, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              Voir le détail
-            </button>
-          )}
-        </div>
-      </DrawerContent>
-    </Drawer>
-  );
-}
-
 // ── Workout preview drawer ────────────────────────────────────────────────────
 
 
@@ -1143,6 +1006,19 @@ function ProgramSessionsView() {
     }
   }
 
+  const restSession = useMutation({
+    mutationFn: async (t: WeekSession) => {
+      if (t.kind === "workout") await restWorkoutByAthlete(t.id);
+      else await restEnergyAssignment(t.id);
+    },
+    onSuccess: () => {
+      setRescheduleTarget(null);
+      if (athleteId) { void invalidateWorkouts(qc, { athleteId }); void invalidateEnergy(qc, athleteId); }
+      toast.success("Séance passée en repos");
+    },
+    onError: () => toast.error("Impossible : la séance a déjà une saisie"),
+  });
+
   function handleRescheduleConfirm(newDate: string, reason?: string) {
     if (!rescheduleTarget) return;
     if (rescheduleTarget.kind === "workout") {
@@ -1318,17 +1194,19 @@ function ProgramSessionsView() {
 
       {/* Reschedule drawer (workout + energy) */}
       {rescheduleTarget && (
-        <RescheduleDrawer
+        <RescheduleSheet
           sessionName={rescheduleTarget.sessionName}
           scheduledDate={rescheduleTarget.scheduledDate}
+          today={today}
           weekMondayISO={weekMondayISO}
           typeColor={rescheduleTarget.kind === "workout" ? TYPE_COLOR.muscu : rescheduleTarget.sessionKind === "specifique" ? TYPE_COLOR.hyrox : TYPE_COLOR.energie}
           typeLabel={rescheduleTarget.kind === "workout" ? TYPE_LABEL.muscu : rescheduleTarget.sessionKind === "specifique" ? TYPE_LABEL.hyrox : TYPE_LABEL.energie}
+          missed={isMissedWeekSession(rescheduleTarget, today)}
           onDetail={() => { const t = rescheduleTarget; setRescheduleTarget(null); handleSessionPress(t); }}
-          onConfirm={handleRescheduleConfirm}
-          isPending={reschedulePending}
+          onRest={() => restSession.mutate(rescheduleTarget)}
+          onConfirm={(d) => handleRescheduleConfirm(d)}
+          isPending={reschedulePending || restSession.isPending}
           onClose={() => setRescheduleTarget(null)}
-          minDate={isMissedWeekSession(rescheduleTarget, today) ? today : undefined}
         />
       )}
 
