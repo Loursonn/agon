@@ -102,6 +102,8 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("activity_laps", "athlete_id"),
   job("activity_sets", "athlete_id"),
   job("activity_streams", "athlete_id"),
+  job("activity_zone_summaries", "athlete_id"),
+  job("hr_zone_models", "athlete_id"),
   job(
     "provider_connections", "athlete_id",
     "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, connected_at, last_sync_at, synced_through, last_error, updated_at",

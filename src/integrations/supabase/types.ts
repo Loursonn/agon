@@ -361,6 +361,74 @@ export type Database = {
           },
         ]
       }
+      activity_zone_summaries: {
+        Row: {
+          activity_id: string
+          ai_allowed: boolean
+          athlete_id: string
+          bounds: number[]
+          computed_at: string
+          kind: string
+          model_id: string | null
+          no_hr_s: number
+          seconds: number[]
+          source: Database["public"]["Enums"]["data_source"]
+        }
+        Insert: {
+          activity_id: string
+          ai_allowed?: boolean
+          athlete_id: string
+          bounds: number[]
+          computed_at?: string
+          kind: string
+          model_id?: string | null
+          no_hr_s?: number
+          seconds: number[]
+          source: Database["public"]["Enums"]["data_source"]
+        }
+        Update: {
+          activity_id?: string
+          ai_allowed?: boolean
+          athlete_id?: string
+          bounds?: number[]
+          computed_at?: string
+          kind?: string
+          model_id?: string | null
+          no_hr_s?: number
+          seconds?: number[]
+          source?: Database["public"]["Enums"]["data_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_zone_summaries_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_zone_summaries_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_zone_summaries_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_zone_summaries_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "hr_zone_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_data: {
         Row: {
           athlete_id: string
@@ -2017,6 +2085,80 @@ export type Database = {
             columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_zone_models: {
+        Row: {
+          athlete_id: string
+          bounds: number[] | null
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          kind: string
+          origin: string
+          status: string
+          test_result_id: string | null
+          valid_from: string
+        }
+        Insert: {
+          athlete_id: string
+          bounds?: number[] | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          kind: string
+          origin?: string
+          status?: string
+          test_result_id?: string | null
+          valid_from?: string
+        }
+        Update: {
+          athlete_id?: string
+          bounds?: number[] | null
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          kind?: string
+          origin?: string
+          status?: string
+          test_result_id?: string | null
+          valid_from?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_zone_models_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_zone_models_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_zone_models_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_zone_models_test_result_id_fkey"
+            columns: ["test_result_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_test_results"
             referencedColumns: ["id"]
           },
         ]
@@ -5281,6 +5423,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      activity_zone_seconds: {
+        Args: {
+          p_bounds: number[]
+          p_hr: number[]
+          p_t: number[]
+          p_timer: number[]
+        }
+        Returns: number[]
+      }
       add_co_coach: {
         Args: { p_athlete: string; p_coach_code: string }
         Returns: Json
@@ -5430,6 +5581,10 @@ export type Database = {
       current_user_is_admin: { Args: never; Returns: boolean }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
+      decide_hr_zone_model: {
+        Args: { p_accept: boolean; p_id: string }
+        Returns: undefined
+      }
       delete_energy_session: { Args: { p_session_id: string }; Returns: string }
       diag:
         | {
@@ -5553,6 +5708,15 @@ export type Database = {
       health_sync_weight: { Args: { p_athlete: string }; Returns: undefined }
       health_sync_wellness: { Args: { p_athlete: string }; Returns: undefined }
       health_text: { Args: { p: Json }; Returns: string }
+      hr_bounds_valid: { Args: { b: number[] }; Returns: boolean }
+      hr_zone_bounds_at: {
+        Args: { p_athlete: string; p_day: string }
+        Returns: {
+          bounds: number[]
+          kind: string
+          model_id: string
+        }[]
+      }
       in_todo: { Args: never; Returns: boolean }
       invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
       is_athlete_coach: {
@@ -5755,6 +5919,14 @@ export type Database = {
         Returns: undefined
       }
       redeem_invitation: { Args: { p_token: string }; Returns: string }
+      refresh_activity_zone_summary: {
+        Args: { p_activity: string }
+        Returns: undefined
+      }
+      refresh_athlete_zone_summaries: {
+        Args: { p_athlete: string; p_from: string }
+        Returns: number
+      }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
       reopen_energy_assignment: {
         Args: { p_assignment: string }
@@ -5844,6 +6016,15 @@ export type Database = {
       save_fc_zones: {
         Args: { p_athlete: string; p_zones: Json }
         Returns: number
+      }
+      save_hr_zone_model: {
+        Args: {
+          p_athlete: string
+          p_bounds: number[]
+          p_kind: string
+          p_valid_from?: string
+        }
+        Returns: string
       }
       schedule_doc: {
         Args: {
