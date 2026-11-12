@@ -290,8 +290,14 @@ export function decodeFitDetail(bytes: Uint8Array): NormalizedActivity {
   for (let i = 0; i < laps.length; i++) {
     const l = laps[i];
     const startS = rel(l.start) ?? (i === 0 ? 0 : watchLaps[i - 1]?.endS ?? 0);
-    const endFromElapsed = l.watch.elapsedS !== null ? startS + l.watch.elapsedS : null;
-    const endS = rel(l.end) ?? endFromElapsed ?? startS;
+    const endFromElapsed = l.watch.elapsedS !== null ? startS + Math.round(l.watch.elapsedS) : null;
+    /*
+      Fin = horodatage du message, sauf s'il n'est pas après le début : certaines
+      montres écrivent un horodatage de tour égal au départ de l'activité (vu sur
+      un vrai fichier Garmin). On prend alors début + durée écoulée.
+    */
+    const endTs = rel(l.end);
+    const endS = (endTs !== null && endTs > startS ? endTs : null) ?? endFromElapsed ?? startS;
     watchLaps.push({ startS, endS: Math.max(startS, endS), trigger: l.trigger, intensity: l.intensity, watch: l.watch });
   }
 

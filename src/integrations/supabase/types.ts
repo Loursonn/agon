@@ -5423,6 +5423,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      activity_laps_editor: { Args: { p_athlete: string }; Returns: boolean }
       activity_zone_seconds: {
         Args: {
           p_bounds: number[]
@@ -5988,6 +5989,10 @@ export type Database = {
         }
       }
       report_client_build: { Args: { p_build: string }; Returns: undefined }
+      reset_activity_laps_to_watch: {
+        Args: { p_activity: string; p_expected_version: number }
+        Returns: number
+      }
       review_performance_notification: {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined
@@ -6002,6 +6007,10 @@ export type Database = {
       runtests:
         | { Args: never; Returns: string[] }
         | { Args: { "": string }; Returns: string[] }
+      save_activity_laps: {
+        Args: { p_activity: string; p_expected_version: number; p_laps: Json }
+        Returns: number
+      }
       save_athlete_test_result: {
         Args: {
           p_athlete: string

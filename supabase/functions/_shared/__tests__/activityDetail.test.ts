@@ -148,6 +148,21 @@ function course(): Uint8Array {
   return f.build();
 }
 
+describe("tours FIT dont l'horodatage vaut le départ", () => {
+  it("fin = début + durée écoulée", () => {
+    const f = new Fit()
+      .define(0, 0, [{ num: 1, ty: "uint16" }, { num: 2, ty: "uint16" }])
+      .data(0, [1, 3121])
+      .define(1, 20, [{ num: 253, ty: "uint32" }, { num: 3, ty: "uint8" }]);
+    for (let i = 0; i <= 20; i++) f.data(1, [T0 + i, 150]);
+    f.define(2, 19, [{ num: 253, ty: "uint32" }, { num: 2, ty: "uint32" }, { num: 7, ty: "uint32" }])
+      .data(2, [T0, T0, 12_400])
+      .data(2, [T0, T0 + 12, 8_200]);
+    const a = normalizeActivity({ kind: "fit", bytes: f.build() });
+    expect(a.laps.map((l) => [l.startS, l.endS])).toEqual([[0, 12], [12, 20]]);
+  });
+});
+
 describe("normalizeActivity — FIT complet", () => {
   const a = normalizeActivity({ kind: "fit", bytes: course() });
 
