@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DOMS_LEVEL_COLOR, DOMS_LEVEL_LABEL, levelsList } from "@/lib/bodyZones";
 import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { X, Moon, Sunrise, CheckCircle2, Zap, ChevronDown, ChevronUp, Footprints, BarChart2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -169,7 +170,36 @@ function SleepTunnel({ wellness }: { wellness: WellnessDay }) {
 // ── DOMS ──────────────────────────────────────────────────────────────────────
 
 function DomsDisplay({ wellness }: { wellness: WellnessDay }) {
+  const leveled = levelsList(wellness.domsLevels);
   const zones = wellness.domsZones;
+  const extras = [
+    wellness.pain != null ? `Douleur ${wellness.pain}/10` : null,
+    wellness.envie != null ? `Envie ${wellness.envie}/5` : null,
+    wellness.sick ? "Malade" : null,
+  ].filter(Boolean) as string[];
+  if (leveled.length > 0 || extras.length > 0) {
+    return (
+      <div style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
+          Corps
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+          {leveled.map((z) => (
+            <span key={z.id} style={{
+              display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 999, fontSize: 10,
+              background: DOMS_LEVEL_COLOR[z.level] + "1F", border: "1px solid " + DOMS_LEVEL_COLOR[z.level] + "55", color: C.tx,
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: DOMS_LEVEL_COLOR[z.level] }} />
+              {z.label} · {DOMS_LEVEL_LABEL[z.level].toLowerCase()}
+            </span>
+          ))}
+          {extras.map((t) => (
+            <span key={t} style={{ padding: "3px 9px", borderRadius: 999, fontSize: 10, background: C.s2, border: "1px solid " + C.brd, color: C.tx2 }}>{t}</span>
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (!zones?.length) return null;
 
   return (

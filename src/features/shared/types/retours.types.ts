@@ -56,6 +56,11 @@ export interface WellnessDay {
   /** Réponse « blessé / malade » du wellness : le commentaire, sinon null. */
   injuryNote?: string | null;
   domsZones?: string[];
+  /** Zones notées 1 légère / 2 marquée / 3 intense (wellness depuis le 12/11). */
+  domsLevels?: Record<string, 1 | 2 | 3>;
+  envie?: number | null;
+  pain?: number | null;
+  sick?: boolean | null;
   domsPoints?: Array<{ id: string; x: number; y: number; side: "front" | "back"; intensity?: number }>;
   coucher?:   { h: number; m: number };
   reveil?:    { h: number; m: number };

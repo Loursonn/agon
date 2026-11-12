@@ -485,11 +485,9 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         <div className="fixed inset-0 z-[300] overflow-y-auto bg-agon-bg">
           {/* PC : panneau centré de 600 px au lieu de toute la largeur */}
           <div className="border-agon-brd lg:mx-auto lg:min-h-full lg:max-w-[600px] lg:border-x">
-            <div className="flex items-center justify-between border-b border-agon-brd px-agon-lg py-agon-md">
-              <div className="text-agon-base font-bold">Wellness du jour</div>
-              <button type="button" onClick={() => setShowWellness(false)} aria-label="Fermer" className="flex h-10 w-10 items-center justify-center text-agon-2xl text-agon-tx3">×</button>
-            </div>
+            {/* Pas de barre : le chevron de l'écran 1 ferme (planche wellness). */}
             <WellnessFlow
+              onClose={() => setShowWellness(false)}
               existing={wellness}
               onSave={(data) => { saveWellness(data); setShowWellness(false); }}
               sleepTarget={goals.sleepTarget}

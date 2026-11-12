@@ -5211,12 +5211,16 @@ export type Database = {
           created_at: string
           day: string
           doms: number | null
+          doms_levels: Json
           doms_points: Json
           doms_zones: string[]
           energie: number | null
+          envie: number | null
           fatigue: number | null
           injury_note: string | null
+          pain: number | null
           score: number | null
+          sick: boolean | null
           sleep_hours: number | null
           sleep_interrupt_note: string | null
           sleep_interrupted: boolean | null
@@ -5233,12 +5237,16 @@ export type Database = {
           created_at?: string
           day: string
           doms?: number | null
+          doms_levels?: Json
           doms_points?: Json
           doms_zones?: string[]
           energie?: number | null
+          envie?: number | null
           fatigue?: number | null
           injury_note?: string | null
+          pain?: number | null
           score?: number | null
+          sick?: boolean | null
           sleep_hours?: number | null
           sleep_interrupt_note?: string | null
           sleep_interrupted?: boolean | null
@@ -5255,12 +5263,16 @@ export type Database = {
           created_at?: string
           day?: string
           doms?: number | null
+          doms_levels?: Json
           doms_points?: Json
           doms_zones?: string[]
           energie?: number | null
+          envie?: number | null
           fatigue?: number | null
           injury_note?: string | null
+          pain?: number | null
           score?: number | null
+          sick?: boolean | null
           sleep_hours?: number | null
           sleep_interrupt_note?: string | null
           sleep_interrupted?: boolean | null
@@ -6020,12 +6032,16 @@ export type Database = {
           created_at: string
           day: string
           doms: number | null
+          doms_levels: Json
           doms_points: Json
           doms_zones: string[]
           energie: number | null
+          envie: number | null
           fatigue: number | null
           injury_note: string | null
+          pain: number | null
           score: number | null
+          sick: boolean | null
           sleep_hours: number | null
           sleep_interrupt_note: string | null
           sleep_interrupted: boolean | null

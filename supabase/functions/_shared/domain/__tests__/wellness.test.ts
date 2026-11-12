@@ -164,3 +164,18 @@ describe("score et paliers", () => {
     expect(averageItem(es, "stress")).toBeNull();
   });
 });
+
+describe("planche 12/11 : zones, envie, douleur, malade", () => {
+  it("relit les nouveaux champs et écarte les valeurs hors échelle", () => {
+    const e = parseWellnessEntry({ fatigue: 4, envie: 5, pain: 3, sick: true, domsLevels: { ischios: 2, fessiers: 9, mollets: "1" } }, "20261112");
+    expect(e?.envie).toBe(5);
+    expect(e?.pain).toBe(3);
+    expect(e?.sick).toBe(true);
+    expect(e?.domsLevels).toEqual({ ischios: 2, mollets: 1 });
+  });
+  it("les réécrit dans l'ancien format", () => {
+    const e = parseWellnessEntry({ envie: 2, pain: 0, sick: false, domsLevels: { lombaires: 3 } }, "20261112")!;
+    const out = toLegacyEntry(e);
+    expect(out).toMatchObject({ envie: 2, pain: 0, sick: false, domsLevels: { lombaires: 3 } });
+  });
+});

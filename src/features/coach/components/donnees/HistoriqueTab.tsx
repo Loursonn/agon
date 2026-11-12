@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { bodyZoneLabel, levelsList } from "@/lib/bodyZones";
 import { ChevronDown, ChevronRight, Copy, Trash2 } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -233,7 +234,11 @@ function WellnessRow({ e, onDelete, deleting }: { e: WellnessEntry; onDelete: ()
           })}
         </div>
         {e.domsZones.length > 0 && (
-          <div style={{ fontSize: 9, color: C.tx3, marginTop: 3 }}>Zones : {e.domsZones.join(", ")}</div>
+          <div style={{ fontSize: 9, color: C.tx3, marginTop: 3 }}>
+            Zones : {levelsList(e.domsLevels).length > 0
+              ? levelsList(e.domsLevels).map((z) => `${z.label} ${z.level}`).join(", ")
+              : e.domsZones.map(bodyZoneLabel).join(", ")}
+          </div>
         )}
         {e.injuryNote && (
           <div style={{ fontSize: 10, color: C.r, marginTop: 4, lineHeight: 1.4 }}>

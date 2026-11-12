@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-wellness-nouvelle-saisie",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Wellness du matin : nouvelle saisie",
+    summary: "Vos athlètes notent leurs courbatures par zone du corps et indiquent leur envie de s'entraîner, une douleur éventuelle et s'ils sont malades.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Corps : l'athlète touche une zone (ischios, quadriceps, lombaires…) et choisit légère, marquée ou intense. Plus de points à placer à la main.",
+          "Nouvelle ligne « Envie de t'entraîner » de 1 à 5. Elle ne change pas le score de forme, qui reste calculé sur les 5 notes habituelles.",
+          "Douleur autre que les courbatures de 0 à 10, et « Malade ou fiévreux·se ? ». Une douleur ou une maladie apparaît dans votre rubrique Blessé / malade.",
+          "Dans vos Retours, le détail du jour montre les zones notées avec leur intensité, la douleur et l'envie.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-deplacer-seance-manquee",
     date: "2026-11-12",
     kind: "feature",

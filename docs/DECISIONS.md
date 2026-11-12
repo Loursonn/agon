@@ -1959,3 +1959,17 @@ palette (`#F97316`, `#22C55E`…) s'affichent dans leur équivalent peps
   5 zones : `#33B5FF` `#66F03C` `#FFC933` `#FF9500` `#FF3B1F`.
   7 zones : `#33B5FF` `#2EE6C5` `#66F03C` `#FFC933` `#FF9500` `#FF3B1F` `#F060C0`.
   À valider par Hugo.
+
+## 2026-11-13 — Wellness copié de la planche retenue
+
+- Planche `AthleteWellness` (complète, retenue le 12/11) copiée telle quelle.
+- **Corps par zones** (`src/lib/bodyZones.ts`, rectangles de la planche) notées
+  1 légère `#FFC933` / 2 marquée `#FF9500` / 3 intense `#FF3B1F`, stockées dans
+  `domsLevels` (colonne `wellness_entries.doms_levels`). Les points libres ne
+  sont plus saisis ; les anciens restent lus. `domsZones` = les zones notées.
+- **Envie de t'entraîner** 1-5 (`envie`) : hors score, le score reste les 5 notes.
+- **Douleur** 0-10 (`pain`) et **malade** (`sick`). La note « blessé / malade »
+  lue par le coach est déduite (« Malade… · Douleur n/10 (zones) »).
+- Retirés (absents de la planche) : « Réveillé·e cette nuit ? » + sa note,
+  commentaire libre de blessure, boutons −/+ du poids.
+- Migration `20261113090000_wellness_planche.sql` (additive) appliquée le 2026-11-13.
