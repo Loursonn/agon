@@ -46,15 +46,44 @@ export interface OutingStart {
   sport: string | null;
 }
 
-function normSport(s: string | null | undefined): string | null {
-  const v = typeof s === "string" ? s.trim().toLowerCase() : "";
-  return v === "" ? null : v;
+/**
+ * Famille de sport, même règle que `public.activity_sport_family` (SQL,
+ * P41 lot E) : run, hyrox, bike, row, swim, strength, other.
+ */
+export function sportFamily(sport: string | null | undefined): string | null {
+  const k = (sport ?? "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+  if (k === "") return null;
+  if (RUN.has(k)) return "run";
+  if (k.includes("hyrox")) return "hyrox";
+  if (k.includes("cycling") || k.includes("biking") || ["ride", "virtualride", "bike", "cyclocross"].includes(k)) return "bike";
+  if (k.includes("rowing")) return "row";
+  if (k.includes("swim")) return "swim";
+  if (STRENGTH.has(k)) return "strength";
+  return "other";
+}
+
+const RUN = new Set(["running", "run", "trailrunning", "trailrun", "treadmillrunning", "treadmill", "indoorrunning",
+  "trackrunning", "streetrunning", "virtualrun", "virtualrunning", "ultrarun", "ultrarunning", "obstaclerun"]);
+const STRENGTH = new Set(["training", "strengthtraining", "strength", "hiit", "cardio", "cardiotraining", "indoorcardio",
+  "fitnessequipment", "crossfit", "functionaltraining", "bootcamp"]);
+
+/**
+ * Deux sports compatibles pour une même sortie (même règle que
+ * `public.outing_sports_compatible`) : l'un inconnu, même famille, ou HYROX /
+ * renforcement (une séance HYROX enregistrée « Entraînement » sur Strava).
+ * Natation et vélo d'un triathlon restent deux sorties.
+ */
+export function sportsCompatible(a: string | null | undefined, b: string | null | undefined): boolean {
+  const fa = sportFamily(a);
+  const fb = sportFamily(b);
+  if (fa === null || fb === null || fa === fb) return true;
+  const hs = (f: string) => f === "hyrox" || f === "strength";
+  return hs(fa) && hs(fb);
 }
 
 /**
  * Vrai si `a` et `b` sont deux enregistrements de la même sortie : départs à
- * `toleranceSec` près, et sports compatibles (un sport inconnu est compatible
- * avec tout ; deux sports connus doivent être identiques).
+ * `toleranceSec` près, et sports compatibles (`sportsCompatible`).
  */
 export function isSameOuting(
   a: OutingStart,
@@ -65,10 +94,7 @@ export function isSameOuting(
   const mb = Date.parse(b.startedAt);
   if (!Number.isFinite(ma) || !Number.isFinite(mb)) return false;
   if (Math.abs(ma - mb) > toleranceSec * 1000) return false;
-  const sa = normSport(a.sport);
-  const sb = normSport(b.sport);
-  if (sa && sb && sa !== sb) return false;
-  return true;
+  return sportsCompatible(a.sport, b.sport);
 }
 
 /**

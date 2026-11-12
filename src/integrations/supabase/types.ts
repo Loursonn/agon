@@ -3683,20 +3683,28 @@ export type Database = {
           avg_hr: number | null
           avg_pace_s_per_km: number | null
           calories: number | null
+          commute: boolean | null
+          description: string | null
           details: Json | null
           device_name: string | null
           distance_m: number | null
           duration_s: number | null
           elevation_gain_m: number | null
           external_id: string
+          gear: string | null
           id: string
           imported_at: string
           local_date: string
           max_hr: number | null
+          origin_quality: string | null
           raw: Json | null
+          rpe: number | null
           source: Database["public"]["Enums"]["data_source"]
+          sources: string[]
           sport: string | null
           started_at: string
+          strava_activity_id: string | null
+          title: string | null
         }
         Insert: {
           ai_allowed?: boolean
@@ -3704,20 +3712,28 @@ export type Database = {
           avg_hr?: number | null
           avg_pace_s_per_km?: number | null
           calories?: number | null
+          commute?: boolean | null
+          description?: string | null
           details?: Json | null
           device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
           external_id: string
+          gear?: string | null
           id?: string
           imported_at?: string
           local_date: string
           max_hr?: number | null
+          origin_quality?: string | null
           raw?: Json | null
+          rpe?: number | null
           source: Database["public"]["Enums"]["data_source"]
+          sources?: string[]
           sport?: string | null
           started_at: string
+          strava_activity_id?: string | null
+          title?: string | null
         }
         Update: {
           ai_allowed?: boolean
@@ -3725,20 +3741,28 @@ export type Database = {
           avg_hr?: number | null
           avg_pace_s_per_km?: number | null
           calories?: number | null
+          commute?: boolean | null
+          description?: string | null
           details?: Json | null
           device_name?: string | null
           distance_m?: number | null
           duration_s?: number | null
           elevation_gain_m?: number | null
           external_id?: string
+          gear?: string | null
           id?: string
           imported_at?: string
           local_date?: string
           max_hr?: number | null
+          origin_quality?: string | null
           raw?: Json | null
+          rpe?: number | null
           source?: Database["public"]["Enums"]["data_source"]
+          sources?: string[]
           sport?: string | null
           started_at?: string
+          strava_activity_id?: string | null
+          title?: string | null
         }
         Relationships: [
           {
@@ -6060,6 +6084,24 @@ export type Database = {
       lives_ok: { Args: { "": string }; Returns: string }
       mark_doc_seen: { Args: { doc_uuid: string }; Returns: undefined }
       mark_missed_workouts: { Args: never; Returns: number }
+      merge_provider_activities: {
+        Args: {
+          p_activities: Json
+          p_athlete: string
+          p_source: Database["public"]["Enums"]["data_source"]
+          p_tag: string
+        }
+        Returns: Json
+      }
+      merge_provider_activity: {
+        Args: {
+          p_activity: Json
+          p_athlete: string
+          p_source: Database["public"]["Enums"]["data_source"]
+          p_tag: string
+        }
+        Returns: Json
+      }
       mesocycle_athlete_id: {
         Args: { p_mesocycle_id: string }
         Returns: string
@@ -6083,7 +6125,12 @@ export type Database = {
         Args: { p_athlete: string; p_day: string; p_log: Json }
         Returns: Json
       }
+      origin_quality_rank: { Args: { q: string }; Returns: number }
       os_name: { Args: never; Returns: string }
+      outing_sports_compatible: {
+        Args: { a: string; b: string }
+        Returns: boolean
+      }
       pass:
         | { Args: never; Returns: string }
         | { Args: { "": string }; Returns: string }
@@ -6555,6 +6602,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      source_rank: {
+        Args: { s: Database["public"]["Enums"]["data_source"] }
+        Returns: number
+      }
       staff_app_data_domain: { Args: { p_key: string }; Returns: string }
       staff_apply_to_all: { Args: { p_link_id: string }; Returns: number }
       staff_athlete_profiles: {
@@ -6608,6 +6659,7 @@ export type Database = {
         Args: { athlete_uuid: string }
         Returns: boolean
       }
+      stream_quality_rank: { Args: { q: string }; Returns: number }
       sync_doc_assignments: {
         Args: { p_athlete: string; p_doc_ids: string[]; p_source: string }
         Returns: undefined

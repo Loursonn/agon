@@ -94,7 +94,8 @@ EXCEPTION WHEN insufficient_privilege THEN
 END $$;
 RESET ROLE;
 
--- La synchro ne remplace plus des tours modifiés.
+-- La synchro (serveur : sans jeton) ne remplace plus des tours modifiés.
+SELECT set_config('request.jwt.claims', '', true);
 SELECT public.activity_detail_upsert(act, jsonb_build_object(
   'source', 'fit',
   'stream', jsonb_build_object('t', (SELECT jsonb_agg(i) FROM generate_series(0, 99) i)),

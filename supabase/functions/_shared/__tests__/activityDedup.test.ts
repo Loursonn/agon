@@ -127,3 +127,15 @@ describe("findCrossSourceDuplicate", () => {
     ).rejects.toThrow(/heure de départ/);
   });
 });
+
+describe("sportsCompatible (même règle que outing_sports_compatible en SQL)", () => {
+  it("rapproche HYROX et entraînement, sépare course et vélo", async () => {
+    const { sportsCompatible, sportFamily } = await import("../activityDedup");
+    expect(sportsCompatible("hyrox", "training")).toBe(true);
+    expect(sportsCompatible("running", "trail_running")).toBe(true);
+    expect(sportsCompatible("cycling", "e_biking")).toBe(true);
+    expect(sportsCompatible("swimming", "cycling")).toBe(false);
+    expect(sportsCompatible(null, "cycling")).toBe(true);
+    expect(sportFamily("kiteboarding_v2")).toBe("other");
+  });
+});
