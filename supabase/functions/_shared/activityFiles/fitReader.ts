@@ -265,7 +265,7 @@ export function walkFit(
       lastTimestamp = ts;
     } else if (compressed && lastTimestamp !== null) {
       const offset5 = header & 0x1f;
-      let rebuilt = (lastTimestamp & ~0x1f) + offset5;
+      let rebuilt: number = (lastTimestamp & ~0x1f) + offset5;
       if (offset5 < (lastTimestamp & 0x1f)) rebuilt += 0x20;
       ts = rebuilt;
       lastTimestamp = rebuilt;

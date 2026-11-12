@@ -266,3 +266,22 @@ export function toStepsPerMinute(a: NormalizedActivity): NormalizedActivity {
     ),
   };
 }
+
+/**
+ * Charge utile de `activity_detail_upsert` (RPC SQL) : la forme normalisée,
+ * sérialisée telle que la fonction SQL la lit.
+ */
+export function detailPayload(a: NormalizedActivity): Record<string, unknown> {
+  return {
+    source: a.source,
+    started_at: new Date(a.startedAtMs).toISOString(),
+    utc_offset_s: a.utcOffsetS,
+    sport: a.sport,
+    stream: a.stream,
+    laps: a.laps,
+    sets: a.sets,
+    splits: a.splits,
+    watch_time_in_zone: a.watchTimeInZone,
+    device: a.device,
+  };
+}

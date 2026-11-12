@@ -14,6 +14,8 @@ import { looksLikeTcx, parseTcx } from "./tcx.ts";
 import type { ParsedActivity, ParseResult } from "./types.ts";
 
 export type { ParsedActivity, ParseResult };
+import { normalizeActivity } from "./normalize.ts";
+import type { NormalizedActivity } from "./stream.ts";
 export { bytesSource, blobSource } from "./archive.ts";
 
 /** Vrai si ce nom vaut la peine d'être ouvert. Sur le nom, donc indicatif. */
@@ -55,6 +57,27 @@ export async function parseActivityFile(name: string, bytes: Uint8Array): Promis
     }],
   };
 }
+
+/**
+ * Détail (série, tours, séries) d'un fichier isolé, pour `activity_detail_upsert`.
+ * Pas calculé pour les archives : quatre cents séries en mémoire sur un
+ * téléphone, c'est plusieurs centaines de Mo. `null` si illisible.
+ */
+export async function activityDetailOf(name: string, bytes: Uint8Array): Promise<NormalizedActivity | null> {
+  let content = bytes;
+  try {
+    if (/\.gz$/i.test(name) || isGzip(bytes)) content = await gunzip(bytes, name);
+    if (looksLikeFit(content)) return normalizeActivity({ kind: "fit", bytes: content });
+    if (looksLikeTcx(content)) return normalizeActivity({ kind: "tcx", bytes: content });
+    if (looksLikeGpx(content)) return normalizeActivity({ kind: "gpx", bytes: content });
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export { detailPayload } from "./stream.ts";
+export type { NormalizedActivity } from "./stream.ts";
 
 /** En-tête gzip, pour reconnaître un fichier compressé dont le nom ne le dit pas. */
 function isGzip(bytes: Uint8Array): boolean {

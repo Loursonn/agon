@@ -48,6 +48,8 @@ import { McpClient, McpError, type McpTool, resolveTool } from "../_shared/mcp.t
 import { findCrossSourceDuplicate } from "../_shared/activityDedup.ts";
 import { looksLikeFit, parseFit } from "../_shared/activityFiles/fit.ts";
 import type { ParsedActivity } from "../_shared/activityFiles/types.ts";
+import { normalizeActivity } from "../_shared/activityFiles/normalize.ts";
+import { detailPayload, type NormalizedActivity } from "../_shared/activityFiles/stream.ts";
 import { type IngestOutcome, type Rejection, type SweepResult, sweepFitWindows } from "./sweep.ts";
 
 const corsHeaders = {
@@ -271,6 +273,7 @@ async function insertActivity(
   admin: SupabaseClient,
   athleteId: string,
   act: ParsedActivity,
+  detail: NormalizedActivity | null = null,
 ): Promise<"inserted" | "duplicate" | { rejected: string }> {
   // Lève si la base ne répond pas : traité en échec passager par l'appelant.
   const dup = await findCrossSourceDuplicate(admin, {
@@ -281,7 +284,7 @@ async function insertActivity(
   });
   if (dup) return "duplicate";
 
-  const { error } = await admin.from("provider_activities").insert({
+  const { data: inserted, error } = await admin.from("provider_activities").insert({
     athlete_id: athleteId,
     source: "coros",
     external_id: act.externalId,
@@ -299,7 +302,7 @@ async function insertActivity(
     raw: act.raw,
     // `ai_allowed` est délibérément absent : un trigger le pose depuis
     // `data_source_policies`. L'envoyer d'ici serait au mieux ignoré.
-  });
+  }).select("id").single();
 
   if (error) {
     const code = (error as { code?: string }).code ?? "";
@@ -314,6 +317,19 @@ async function insertActivity(
       return { rejected: `activité refusée par la base : ${error.message}` };
     }
     throw new Error(`insertion de l'activité : ${error.message}`);
+  }
+
+  /*
+    Détail (série seconde par seconde, tours, séries de muscu) rangé en
+    tables. Meilleur effort : le résumé est déjà enregistré, et le FIT n'est
+    pas conservé chez nous — un échec ici est journalisé, sans donnée perso.
+  */
+  if (detail && inserted?.id) {
+    const { error: e2 } = await admin.rpc("activity_detail_upsert", {
+      p_activity: inserted.id,
+      p_detail: detailPayload(detail),
+    });
+    if (e2) console.error("provider-coros-sync: détail non rangé", e2.code ?? "");
   }
 
   return "inserted";
@@ -367,9 +383,19 @@ async function ingestFit(
   const rejected: Rejection[] = [...parsed.rejected];
   let imported = 0;
   let duplicates = 0;
+  // Détail seulement pour un fichier d'une seule séance (pas de multisport).
+  let detail: NormalizedActivity | null = null;
+  if (parsed.activities.length === 1) {
+    try {
+      detail = normalizeActivity({ kind: "fit", bytes });
+    } catch {
+      detail = null;
+    }
+  }
+
   for (const act of parsed.activities) {
     try {
-      const outcome = await insertActivity(admin, athleteId, act);
+      const outcome = await insertActivity(admin, athleteId, act, detail);
       if (outcome === "inserted") imported++;
       else if (outcome === "duplicate") duplicates++;
       else rejected.push({ name, reason: outcome.rejected });

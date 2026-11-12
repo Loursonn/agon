@@ -98,6 +98,10 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   // `provider_tokens`, illisible côté client, et dans le Vault), activités et
   // données quotidiennes, avec la mention de provenance « Garmin [appareil] ».
   job("provider_activities", "athlete_id"),
+  // Détail des activités : séries seconde par seconde, tours, séries de muscu.
+  job("activity_laps", "athlete_id"),
+  job("activity_sets", "athlete_id"),
+  job("activity_streams", "athlete_id"),
   job(
     "provider_connections", "athlete_id",
     "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, connected_at, last_sync_at, synced_through, last_error, updated_at",
@@ -194,7 +198,9 @@ export interface ExportResult {
  * dit pour une machine ; `attribution` le dit pour une personne.
  */
 export function withAttribution(table: string, rows: unknown[]): unknown[] {
-  if (table !== "provider_activities" && table !== "provider_dailies" && table !== "provider_raw_records") return rows;
+  // Toute table de données de montre : provider_* (sauf connexions) et activity_*.
+  const watchData = (table.startsWith("provider_") && table !== "provider_connections") || table.startsWith("activity_");
+  if (!watchData) return rows;
   return rows.map((r) => {
     if (!r || typeof r !== "object") return r;
     const row = r as Record<string, unknown>;

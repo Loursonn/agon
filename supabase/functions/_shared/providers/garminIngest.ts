@@ -30,6 +30,7 @@ import {
   permissionFor,
 } from "./garmin.ts";
 import { gzip, putRaw, rawPath, removeRawFiles, storageOf } from "./rawStore.ts";
+import { garminActivityIdOf, refreshGarminActivityDetail } from "./activityDetail.ts";
 
 export interface InboxRow {
   id: string;
@@ -330,10 +331,11 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
   const note = await storeRaw(row, entry, conn, userId, deps);
 
   if (!isActivity && !isDaily) {
+    const detailNote = row.type === "activityFiles" ? await storeDetail(db, conn.athlete_id, entry) : null;
     await db.from("provider_connections")
       .update({ last_sync_at: now.toISOString(), last_error: null })
       .eq("id", conn.id);
-    await markDone(db, row.id, note, now);
+    await markDone(db, row.id, [note, detailNote].filter(Boolean).join(" ; ") || null, now);
     return "stored";
   }
 
@@ -357,6 +359,14 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
       .from("provider_activities")
       .upsert({ athlete_id: conn.athlete_id, ...mapped }, { onConflict: "athlete_id,source,external_id" });
     if (error) throw new Error(`activité : ${error.message}`);
+    const detailNote = await storeDetail(db, conn.athlete_id, entry);
+    if (detailNote) {
+      await db.from("provider_connections")
+        .update({ last_sync_at: now.toISOString(), last_error: null })
+        .eq("id", conn.id);
+      await markDone(db, row.id, detailNote, now);
+      return "imported";
+    }
   } else {
     const daily = mapGarminDaily(row.type, entry);
     if (!daily) {
@@ -379,6 +389,22 @@ async function handle(row: InboxRow, deps: IngestDeps, now: Date): Promise<Outco
     .eq("id", conn.id);
   await markDone(db, row.id, null, now);
   return "imported";
+}
+
+/**
+ * Détail (série, tours, séries de muscu) rangé en tables dès que l'activité et
+ * son brut sont là. Un échec ici n'empêche pas l'import du résumé : il est
+ * noté sur la ligne d'inbox, et le rattrapage le reprendra.
+ */
+async function storeDetail(db: Db, athleteId: string, entry: Record<string, unknown>): Promise<string | null> {
+  const id = garminActivityIdOf(entry);
+  if (!id) return null;
+  try {
+    await refreshGarminActivityDetail(db, athleteId, id);
+    return null;
+  } catch (e) {
+    return `détail non rangé : ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
+  }
 }
 
 /** Prend un lot (bail SQL) et le traite. Renvoie le décompte par issue. */

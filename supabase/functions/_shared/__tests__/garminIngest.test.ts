@@ -63,6 +63,14 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
         const rows = tab("provider_webhook_inbox").filter((r) => !r.processed_at && (!ids || ids.includes(r.id as string)));
         return Promise.resolve({ data: rows, error: null });
       }
+      if (name === "activity_detail_upsert") {
+        const rows = tab("activity_streams");
+        const i = rows.findIndex((r) => r.activity_id === args.p_activity);
+        const row = { activity_id: args.p_activity, detail: args.p_detail };
+        if (i >= 0) rows[i] = row;
+        else rows.push(row);
+        return Promise.resolve({ data: { samples: 0 }, error: null });
+      }
       return Promise.resolve({ data: null, error: null });
     },
     from(table: string) {
@@ -76,12 +84,21 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
           const gone = new Set(matches());
           t[table] = tab(table).filter((r) => !gone.has(r));
         }
-        return { data: null, error: null };
+        return { data: op === "select" ? matches() : null, error: null };
       };
       const chain = {
         select: () => chain,
         eq: (col: string, val: unknown) => {
-          filters.push((r) => r[col] === val);
+          const path = col.split("->>");
+          filters.push((r) =>
+            path.length === 2
+              ? String((r[path[0]] as Row | undefined)?.[path[1]] ?? "") === String(val)
+              : r[col] === val
+          );
+          return chain;
+        },
+        in: (col: string, vals: unknown[]) => {
+          filters.push((r) => vals.includes(r[col]));
           return chain;
         },
         filter: (col: string, op: string, val: unknown) => {
@@ -127,6 +144,10 @@ function memoryDb(init: Record<string, Row[]>, opts: { consent?: boolean } = {})
       remove: (paths: string[]) => {
         for (const p of paths) files.delete(p);
         return Promise.resolve({ error: null });
+      },
+      download: (path: string) => {
+        const f = files.get(path);
+        return Promise.resolve(f ? { data: { arrayBuffer: () => Promise.resolve(f.slice().buffer) }, error: null } : { data: null, error: { message: "absent" } });
       },
     }),
   };
@@ -370,6 +391,11 @@ describe("stockage brut de tout ce qu'envoie Garmin", () => {
     expect(r.samples_path).toBe(`${ATHLETE}/garmin/activityDetails/777-detail.json.gz`);
     expect(r.samples_count).toBe(600);
     expect(r.payload).not.toHaveProperty("samples");
+    // Détail rangé en tables depuis les échantillons (série de 600 points, ≥ 1 s).
+    const stream = t.activity_streams?.[0]?.detail as { source: string; stream: { t: number[]; hr: number[] } };
+    expect(stream.source).toBe("garmin_json");
+    expect(stream.stream.t).toHaveLength(600);
+    expect(stream.stream.hr[1]).toBe(141);
     const stored = files.get(r.samples_path as string)!;
     expect(stored.length).toBeLessThan(JSON.stringify(samples).length / 5);
     expect(JSON.parse(new TextDecoder().decode(await gunzip(stored)))).toEqual(samples);

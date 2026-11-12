@@ -378,10 +378,26 @@ export async function getKnownActivities(athleteId: string, fromDate: string, to
  * échouer le lot, les doublons sont simplement écartés.
  */
 export async function insertActivities(rows: Record<string, unknown>[]): Promise<number> {
-  if (rows.length === 0) return 0;
+  return (await insertActivitiesReturning(rows)).length;
+}
+
+/** Comme `insertActivities`, en rendant `id` et `external_id` des lignes créées. */
+export async function insertActivitiesReturning(
+  rows: Record<string, unknown>[],
+): Promise<Array<{ id: string; external_id: string }>> {
+  if (rows.length === 0) return [];
   const res = await db().from("provider_activities")
     .upsert(rows as never, { onConflict: "athlete_id,source,external_id", ignoreDuplicates: true })
-    .select("id");
+    .select("id, external_id");
   if (res.error) throw new ApiError("Insertion des activités impossible", res.error);
-  return (res.data ?? []).length;
+  return (res.data ?? []) as Array<{ id: string; external_id: string }>;
+}
+
+/**
+ * Range le détail (série seconde par seconde, tours, séries de muscu) d'une
+ * activité importée par l'athlète. Charge utile : `detailPayload` (@shared).
+ */
+export async function saveActivityDetail(activityId: string, payload: Record<string, unknown>): Promise<void> {
+  const res = await db().rpc("activity_detail_upsert", { p_activity: activityId, p_detail: payload as never });
+  if (res.error) throw new ApiError("Enregistrement du détail de l'activité impossible", res.error);
 }

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getKnownActivities, insertActivities, invalidateProviders } from "@/api/providers";
+import { getKnownActivities, insertActivitiesReturning, invalidateProviders, saveActivityDetail } from "@/api/providers";
 import { useAuth } from "@/hooks/useAuth";
 import { activityRow, splitNewActivities } from "@/lib/activityImport";
 import type { ParsedActivity } from "@shared/activityFiles/index.ts";
@@ -102,8 +102,10 @@ export function useActivityFileImport() {
 
       const report = emptyReport();
       const parsed: ParsedActivity[] = [];
+      /** Détail des fichiers isolés d'une seule séance, par `externalId`. */
+      const details = new Map<string, Record<string, unknown>>();
 
-      const { blobSource, looksLikeActivityName, parseActivityArchive, parseActivityFile } =
+      const { activityDetailOf, blobSource, detailPayload, looksLikeActivityName, parseActivityArchive, parseActivityFile } =
         await decoders();
 
       // ── Décodage ──
@@ -145,6 +147,10 @@ export function useActivityFileImport() {
             }
             const bytes = new Uint8Array(await file.arrayBuffer());
             const res = await parseActivityFile(file.name, bytes);
+            if (res.activities.length === 1) {
+              const detail = await activityDetailOf(file.name, bytes);
+              if (detail) details.set(res.activities[0].externalId, detailPayload(detail));
+            }
             parsed.push(...res.activities);
             report.rejected.push(...res.rejected);
             report.files++;
@@ -183,9 +189,22 @@ export function useActivityFileImport() {
 
         // Doublons écartés par la base (`ignoreDuplicates`) : deux onglets ou
         // un dépôt relancé après une coupure ne font pas échouer le lot.
-        const inserted = await insertActivities(chunk.map((a) => activityRow(user.id, a)));
-        report.imported += inserted;
-        report.duplicates += chunk.length - inserted;
+        const inserted = await insertActivitiesReturning(chunk.map((a) => activityRow(user.id, a)));
+        report.imported += inserted.length;
+        report.duplicates += chunk.length - inserted.length;
+        /*
+          Détail (série, tours) : meilleur effort. L'activité est déjà
+          enregistrée ; un échec ici ne doit pas faire croire à un import raté.
+        */
+        for (const row of inserted) {
+          const payload = details.get(row.external_id);
+          if (!payload) continue;
+          try {
+            await saveActivityDetail(row.id, payload);
+          } catch {
+            /* le résumé reste ; le détail pourra être redéposé */
+          }
+        }
       }
 
       return report;
