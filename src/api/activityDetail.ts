@@ -162,33 +162,40 @@ const fromSetRow = (r: SetRow): StrengthSet => ({
   categorySubtype: r.category_subtype ?? null,
 });
 
-/** Séance prévue rattachée : nom et blocs attendus (HYROX / WOD / Classique). */
-async function plannedOf(kind: PlanLinkInfo["plannedKind"], id: string): Promise<{ name: string | null; blocks: ExpectedBlock[] | null }> {
+/** Séance prévue rattachée : nom, blocs attendus (HYROX / WOD / Classique) et retour de l'athlète. */
+type PlannedInfo = { name: string | null; blocks: ExpectedBlock[] | null; rpe: number | null; comment: string | null };
+
+async function plannedOf(kind: PlanLinkInfo["plannedKind"], id: string): Promise<PlannedInfo> {
+  const none: PlannedInfo = { name: null, blocks: null, rpe: null, comment: null };
   if (kind === "energy") {
     const a = unwrap(
-      await db().from("energy_session_assignments").select("energy_session_id").eq("id", id).maybeSingle(),
+      await db().from("energy_session_assignments").select("energy_session_id, rpe_score, notes").eq("id", id).maybeSingle(),
       "séance prévue",
     );
-    if (!a?.energy_session_id) return { name: null, blocks: null };
+    if (!a?.energy_session_id) return none;
+    const feedback = { rpe: num(a.rpe_score), comment: a.notes?.trim() || null };
     const s = unwrap(
       await db().from("energy_sessions").select("name, format, intervals, classique_structure")
         .eq("id", a.energy_session_id).maybeSingle(),
       "séance prévue",
     );
-    if (!s) return { name: null, blocks: null };
+    if (!s) return { ...none, ...feedback };
     const blocks = flattenPlannedSession({
       format: s.format,
       intervals: (s.intervals as PlanStep[] | null) ?? null,
       classique_structure: (s.classique_structure as { blocks: PlanBlock[] } | null) ?? null,
     });
-    return { name: s.name ?? null, blocks: blocks.length ? blocks : null };
+    return { name: s.name ?? null, blocks: blocks.length ? blocks : null, ...feedback };
   }
   if (kind === "workout") {
-    const w = unwrap(await db().from("workout_logs").select("session_name").eq("id", id).maybeSingle(), "séance prévue");
-    return { name: w?.session_name ?? null, blocks: null };
+    const w = unwrap(
+      await db().from("workout_logs").select("session_name, rpe_score, notes").eq("id", id).maybeSingle(),
+      "séance prévue",
+    );
+    return { name: w?.session_name ?? null, blocks: null, rpe: num(w?.rpe_score), comment: w?.notes?.trim() || null };
   }
   const t = unwrap(await db().from("test_sessions").select("title").eq("id", id).maybeSingle(), "test prévu");
-  return { name: t?.title ?? null, blocks: null };
+  return { ...none, name: t?.title ?? null };
 }
 
 /**
@@ -201,7 +208,7 @@ async function plannedOf(kind: PlanLinkInfo["plannedKind"], id: string): Promise
 export async function getActivityDetail(activityId: string): Promise<ActivityDetail> {
   const a = unwrap(
     await db().from("provider_activities")
-      .select("id, athlete_id, source, sport, started_at, local_date, device_name")
+      .select("id, athlete_id, source, sport, started_at, local_date, device_name, distance_m, duration_s, avg_hr, max_hr, imported_at, title")
       .eq("id", activityId).maybeSingle(),
     "séance",
   );
@@ -232,6 +239,7 @@ export async function getActivityDetail(activityId: string): Promise<ActivityDet
     link = {
       id: linkRow.id, plannedKind: kind, plannedId: linkRow.planned_id,
       status: linkRow.status as PlanLinkInfo["status"], plannedName: p.name,
+      feedbackRpe: p.rpe, feedbackComment: p.comment,
     };
     plannedBlocks = p.blocks;
   }
@@ -241,6 +249,8 @@ export async function getActivityDetail(activityId: string): Promise<ActivityDet
     activity: {
       id: a.id, athleteId: a.athlete_id, source: a.source, sport: a.sport ?? (s?.sport as string | null) ?? null,
       startedAt: a.started_at, localDate: a.local_date, deviceName: a.device_name ?? null,
+      distanceM: num(a.distance_m), durationS: num(a.duration_s), avgHr: num(a.avg_hr), maxHr: num(a.max_hr),
+      importedAt: a.imported_at ?? null, title: a.title ?? null,
     },
     stream: s ? toStream(s) : null,
     watchLaps: Array.isArray(s?.watch_laps) ? (s.watch_laps as WatchLap[]) : [],

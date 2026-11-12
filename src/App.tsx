@@ -42,6 +42,7 @@ const TodayPage          = lazy(() => import("./features/athlete/pages/TodayPage
 const ProgramPage        = lazy(() => import("./features/athlete/pages/ProgramPage.tsx"));
 const WorkoutDetailPage  = lazy(() => import("./features/athlete/pages/WorkoutDetailPage.tsx"));
 const ProfilPage         = lazy(() => import("./features/athlete/pages/ProfilPage.tsx"));
+const ActivitySeancePage = lazy(() => import("./features/athlete/pages/ActivitySeancePage.tsx"));
 // Legacy pages still accessible via direct navigation
 const LogSeancePage   = lazy(() => import("./features/athlete/pages/LogSeancePage.tsx"));
 const AlimPage        = lazy(() => import("./features/athlete/pages/AlimPage.tsx"));
@@ -73,6 +74,7 @@ const FichesPage                = lazy(() => import("./features/coach/pages/Fich
 const CoachUpdatesPage          = lazy(() => import("./features/coach/pages/CoachUpdatesPage.tsx"));
 const AthleteFichesPage         = lazy(() => import("./features/coach/pages/AthleteFichesPage.tsx"));
 const CoachStaffPage            = lazy(() => import("./features/staff/pages/CoachStaffPage.tsx"));
+const CoachSeancePage           = lazy(() => import("./features/coach/pages/SeancePage.tsx"));
 
 // staleTime : une donnée lue il y a moins de 30 s n'est pas re-téléchargée à
 // chaque ouverture de page (les mutations invalident explicitement leurs clés).
@@ -190,6 +192,7 @@ function AppRoutes() {
             <Route index element={<Page><TodayPage /></Page>} />
             <Route path="program" element={<Page><ProgramPage /></Page>} />
             <Route path="program/workout/:id" element={<Page><WorkoutDetailPage /></Page>} />
+            <Route path="program/activity/:activityId" element={<Page><ActivitySeancePage /></Page>} />
             <Route path="profil" element={<Page><ProfilPage /></Page>} />
             {/* Legacy routes kept for backward compat */}
             <Route path="log" element={<Page><LogSeancePage /></Page>} />
@@ -239,6 +242,7 @@ function AppRoutes() {
               <Route path="fiches"        element={<Page><AthleteFichesPage /></Page>} />
               <Route path="staff"         element={<Page><CoachStaffPage /></Page>} />
               <Route path="athlete-view"  element={<Page><AthleteViewPage /></Page>} />
+              <Route path="seance/:activityId" element={<Page><CoachSeancePage /></Page>} />
             </Route>
 
             {/* Éditeur séances énergie par athlète (hors ContextBar) */}

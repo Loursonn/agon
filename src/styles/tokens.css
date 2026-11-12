@@ -91,6 +91,12 @@
   --agon-cat-8: var(--agon-ocre-vif);
   --agon-cat-9: var(--agon-sable);
   --agon-cat-10: var(--agon-pierre);
+  /* ── Zones de fréquence cardiaque (modèle Agon SV1 / SV2) : mêmes couleurs partout ──
+     graphique, barre de temps par zone, tableau des tours, carte du planning (P33-P34). */
+  --agon-zone-1: var(--agon-vert-vif);      /* sous SV1 */
+  --agon-zone-2: var(--agon-ocre-vif);      /* SV1 → SV2 */
+  --agon-zone-3: #FF3B1F;                   /* au-dessus de SV2 (maquette, plus rouge que terracotta) */
+  --agon-cadence: #2EE6C5;                  /* courbe de cadence */
 
   /* ── Composants shadcn (src/components/ui) : valeurs historiques ─────
      Elles diffèrent très légèrement des couleurs ci-dessus (ex. or hsl(43 100% 60%)

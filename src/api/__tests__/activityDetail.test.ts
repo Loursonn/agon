@@ -138,5 +138,7 @@ describe("attribution", () => {
     expect(attributionOf("garmin", "Garmin Venu 3")).toBe("Garmin Venu 3");
     expect(attributionOf("garmin", "unknown")).toBe("Garmin");
     expect(attributionOf("coros", null)).toBe("COROS");
+    expect(attributionOf("file_import", null)).toBe("Import fichier");
+    expect(attributionOf("file_import", "Wahoo ELEMNT")).toBe("Import fichier · Wahoo ELEMNT");
   });
 });
