@@ -58,8 +58,8 @@ export default function RacesView() {
           onClick={() => { setEditRace(null); setShowForm(true); }}
           style={{
             display: "flex", alignItems: "center", gap: 6,
-            height: 40, padding: "0 14px", borderRadius: 10, border: "none",
-            background: C.ac, color: "#0E0C0A", fontSize: 13, fontWeight: 600,
+            height: 48, padding: "0 18px", borderRadius: 12, border: "1px solid " + C.brdL,
+            background: "transparent", color: C.tx, fontSize: 14, fontWeight: 600, whiteSpace: "nowrap",
             cursor: "pointer", fontFamily: "inherit",
           }}
         >
@@ -70,20 +70,20 @@ export default function RacesView() {
           title="Comment ajouter une course ?"
           style={{
             display: "flex", alignItems: "center", justifyContent: "center",
-            width: 30, height: 30, borderRadius: "50%", border: "1px solid " + C.brdL,
+            flex: "none", width: 48, height: 48, borderRadius: 12, border: "1px solid " + C.brdL,
             background: showHelp ? C.ac + "20" : "transparent", color: showHelp ? C.ac : C.tx3,
             cursor: "pointer", padding: 0,
           }}
         >
-          <HelpCircle size={16} />
+          <HelpCircle size={15} />
         </button>
+        <span style={{ flex: 1 }} />
         {compareIds.length === 2 && (
           <button
             onClick={() => setComparing(true)}
             style={{
-              padding: "8px 14px", borderRadius: 6, border: "1px solid " + C.brdL,
-              background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
+              padding: 0, border: "none", background: "transparent", whiteSpace: "nowrap",
+              color: C.ac, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
             }}
           >
             Comparer ({compareIds.length}) ›
@@ -128,16 +128,28 @@ export default function RacesView() {
       ) : (
         <>
         <div className="flex flex-col gap-2.5 sm:hidden">
-          {races.map(r => (
-            <RaceCard
-              key={r.id}
-              race={r}
-              isRecord={record?.id === r.id}
-              checked={compareIds.includes(r.id)}
-              onToggle={() => toggleCompare(r.id)}
-              onOpen={() => setSelectedRace(r)}
-            />
-          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: 20, whiteSpace: "nowrap" }}>
+            <h2 style={{ margin: 0, ...MONO, fontWeight: 400, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2 }}>
+              <span style={{ color: C.ac }}>01 —</span> Courses
+            </h2>
+            <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>
+              {compareIds.length} cochée{compareIds.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div style={{ height: 1, background: C.brd }} />
+          <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 14, overflow: "hidden" }}>
+            {races.map((r, i) => (
+              <RaceCard
+                key={r.id}
+                race={r}
+                isRecord={record?.id === r.id}
+                checked={compareIds.includes(r.id)}
+                onToggle={() => toggleCompare(r.id)}
+                onOpen={() => setSelectedRace(r)}
+                last={i === races.length - 1}
+              />
+            ))}
+          </div>
         </div>
         <div className="hidden sm:block" style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>

@@ -1,65 +1,76 @@
 import { C } from "@/lib/theme";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { TYPE_COLOR } from "@/lib/peps";
 import { formatMmSs } from "@/lib/time";
 import { runTotal, stationsTotal, roxzoneTotal } from "@/lib/hyrox/calc";
-import { DIVISION_LABEL } from "@/features/shared/types/hyrox";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
 
-/** Une course HYROX en carte (maquette « HYROX athlète · courses ») : téléphone. */
+/** Une course HYROX en ligne de liste (planche « HYROX athlète · courses ») : téléphone. */
 export function RaceCard({
   race,
   isRecord,
   checked,
   onToggle,
   onOpen,
+  last,
 }: {
   race: HyroxResult;
   isRecord: boolean;
   checked: boolean;
   onToggle: () => void;
   onOpen: () => void;
+  last?: boolean;
 }) {
   const color = race.is_official ? TYPE_COLOR.competition : TYPE_COLOR.hyrox;
   const [y, m, d] = (race.date ?? "").split("-");
-  const stat = (label: string, value: string, col: string) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-      <span style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx3 }}>{label}</span>
-      <span style={{ ...MONO, fontSize: 13.5, color: col }}>{value}</span>
-    </div>
+  const stat = (label: string, value: string, col: string, right?: boolean) => (
+    <span style={{ display: "block", textAlign: right ? "right" : "left", minWidth: 0 }}>
+      <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: C.tx3 }}>{label}</span>
+      <span style={{ ...MONO, display: "block", fontSize: 13, color: col, marginTop: 2 }}>{value}</span>
+    </span>
   );
   return (
-    <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, border: `1px solid ${checked ? C.ac : color + "59"}`, background: `${color}14` }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 12px 10px 15px" }}>
-        <label style={{ display: "flex", paddingTop: 2, cursor: "pointer" }} title="Cocher pour comparer">
-          <input type="checkbox" checked={checked} onChange={onToggle} aria-label={`Comparer ${race.event_name}`} style={{ width: 18, height: 18, accentColor: C.ac, cursor: "pointer" }} />
-        </label>
-        <button type="button" onClick={onOpen} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10, background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}>
-          <span style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 5 }}>
-              <span style={{ ...DISPLAY, fontSize: 16, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{race.event_name}</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.bg, background: color, borderRadius: 999, padding: "2px 7px" }}>
-                  {race.is_official ? "Compétition" : "Simulation"}
-                </span>
-                <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{d && m && y ? `${d}/${m}/${y}` : race.date}</span>
-                <span style={{ fontSize: 11, color: C.tx3 }}>{DIVISION_LABEL[race.division as keyof typeof DIVISION_LABEL] ?? race.division}</span>
+    <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12, borderBottom: last ? "none" : `1px solid ${C.brd}` }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={checked}
+          aria-label={`Comparer ${race.event_name}`}
+          title="Cocher pour comparer"
+          onClick={onToggle}
+          style={{
+            width: 18, height: 18, flex: "none", boxSizing: "border-box", borderRadius: 5, padding: 0, cursor: "pointer",
+            background: checked ? C.ac : "transparent", border: checked ? "none" : `1.5px solid ${C.tx3}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          {checked && (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0E0C0A" strokeWidth="2.4" strokeLinecap="square"><path d="M4 12.5L9.5 18L20 6" /></svg>
+          )}
+        </button>
+        <button type="button" onClick={onOpen} style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", gap: 12, background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: C.tx }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 500, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{race.event_name}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+              <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none", color: "#0E0C0A", background: color, borderRadius: 999, padding: "2px 8px" }}>
+                {race.is_official ? "Compétition" : "Simulation"}
               </span>
-            </span>
-            <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <span style={{ ...MONO, fontSize: 20, color: C.tx }}>{formatMmSs(race.total_s, { hours: true })}</span>
-              {isRecord && <span style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.bg, background: C.ac, borderRadius: 999, padding: "2px 7px" }}>Record</span>}
+              <span style={{ ...MONO, fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>{d && m && y ? `${d}/${m}/${y}` : race.date}</span>
             </span>
           </span>
-          <span style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, paddingTop: 8, borderTop: `1px solid ${C.brd}` }}>
-            {stat("Course", formatMmSs(runTotal(race)), C.b)}
-            {stat("Stations", formatMmSs(stationsTotal(race)), C.ac)}
-            {stat("Roxzone", formatMmSs(roxzoneTotal(race)), C.tx2)}
-            {stat("Rang", race.rank_overall ? `${race.rank_overall}/${race.participants_overall ?? "?"}` : "—", C.tx2)}
+          <span style={{ display: "block", textAlign: "right" }}>
+            <span style={{ ...MONO, display: "block", fontSize: 16, lineHeight: "18px", whiteSpace: "nowrap" }}>{formatMmSs(race.total_s, { hours: true })}</span>
+            {isRecord && <span style={{ ...MONO, display: "block", fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.g, marginTop: 2 }}>Record</span>}
           </span>
         </button>
       </div>
+      <button type="button" onClick={onOpen} style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", background: "none", border: "none", padding: 0, marginLeft: 30, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+        {stat("Course", formatMmSs(runTotal(race)), C.b)}
+        {stat("Stations", formatMmSs(stationsTotal(race)), C.o)}
+        {stat("Roxzone", formatMmSs(roxzoneTotal(race)), C.tx2)}
+        {stat("Rang", race.rank_overall ? `${race.rank_overall}/${race.participants_overall ?? "?"}` : "—", C.tx2, true)}
+      </button>
     </div>
   );
 }

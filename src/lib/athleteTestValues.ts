@@ -80,7 +80,7 @@ function cardTitle(testName: string | undefined, label: string, nbVars: number):
   return nbVars <= 1 ? testName : `${testName} · ${label}`;
 }
 
-function groupOf(def: AthleteTestResult["test_definitions"]): TestGroup {
+export function testGroupOf(def: AthleteTestResult["test_definitions"]): TestGroup {
   if (def?.battery === "hyrox_v3" || def?.battery === "hyrox_legacy") return "hyrox";
   const c = def?.category;
   return c && (TEST_CATEGORY_ORDER as string[]).includes(c) ? c : "autres";
@@ -105,7 +105,7 @@ export function buildTestValueCards(results: AthleteTestResult[]): TestValueCard
             unit: tv.unit ?? "",
             valueType: tv.value_type,
             betterWhen: tv.better_when,
-            group: groupOf(r.test_definitions),
+            group: testGroupOf(r.test_definitions),
           },
           pts: [],
         };

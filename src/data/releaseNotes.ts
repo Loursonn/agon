@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-tests-profil-hyrox-look",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "App athlète : Tests, Profil et courses HYROX plus lisibles",
+    summary: "Trois écrans de l'athlète reprennent le nouveau style de l'app, sans rien changer à leurs données.",
+    sections: [
+      {
+        title: "Ce que voit l'athlète",
+        points: [
+          "Tests : chaque valeur porte le picto de sa dominante, et l'historique se lit comme une frise.",
+          "Profil : poids du jour en grand avec les trois dernières pesées ; le tuto Strava s'ouvre d'un toucher.",
+          "HYROX › Courses : toutes les courses dans une seule liste, une case à cocher pour en comparer deux.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-wellness-nouvelle-saisie",
     date: "2026-11-13",
     kind: "feature",
