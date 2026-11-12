@@ -18,6 +18,8 @@ export interface Competition {
   location: string | null;
   notes: string | null;
   priority: CompetitionPriority;
+  /** Dernier jour d'une compétition sur plusieurs jours (null = un jour). */
+  date_end?: string | null;
   athlete_comment?: string | null;
   created_at: string;
 }
@@ -48,12 +50,26 @@ export const BLOCK_COLORS = [
 
 // ── Life events ──────────────────────────────────────────────────────────────
 
+export type LifeEventKind = 'stage' | 'voyage' | 'examen' | 'autre';
+
+export const LIFE_EVENT_LABEL: Record<LifeEventKind, string> = {
+  stage: 'Stage',
+  voyage: 'Voyage',
+  examen: 'Examen',
+  autre: 'Autre',
+};
+
 export interface LifeEvent {
   id: string;
   athlete_id: string;
   date_start: string;
   date_end: string;
   title: string;
+  /** Absent sur les lignes d'avant 2026-11-13 lues par d'anciens écrans : « autre ». */
+  kind?: LifeEventKind;
+  location?: string | null;
+  /** L'athlète ne peut pas s'entraîner ces jours-là (vrai par défaut). */
+  unavailable?: boolean;
   created_at: string;
 }
 

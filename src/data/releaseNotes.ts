@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-evenements",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : un seul formulaire pour ses événements",
+    summary: "Compétition, stage, voyage, examen ou autre : votre athlète ajoute tout au même endroit, et vous le voyez sur son planning.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Compétition : priorité A (tout vise ce jour), B (on allège avant) ou C (rien ne change), lieu et date de fin si elle dure plusieurs jours.",
+          "Hors compétition : du / au, lieu, et « Indisponible pour m’entraîner » quand il ne peut pas s’entraîner ces jours-là.",
+          "Sur son accueil, « Mes événements » montre aussi ses compétitions, et « Prochaine compétition » annonce la suivante.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-sante-montre",
     date: "2026-11-13",
     kind: "feature",

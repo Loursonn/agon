@@ -693,7 +693,10 @@ export type Database = {
           date_end: string
           date_start: string
           id: string
+          kind: string
+          location: string | null
           title: string
+          unavailable: boolean
         }
         Insert: {
           athlete_id: string
@@ -701,7 +704,10 @@ export type Database = {
           date_end: string
           date_start: string
           id?: string
+          kind?: string
+          location?: string | null
           title: string
+          unavailable?: boolean
         }
         Update: {
           athlete_id?: string
@@ -709,7 +715,10 @@ export type Database = {
           date_end?: string
           date_start?: string
           id?: string
+          kind?: string
+          location?: string | null
           title?: string
+          unavailable?: boolean
         }
         Relationships: [
           {
@@ -1222,6 +1231,7 @@ export type Database = {
           coach_id: string
           created_at: string
           date: string
+          date_end: string | null
           id: string
           location: string | null
           macrocycle_id: string | null
@@ -1238,6 +1248,7 @@ export type Database = {
           coach_id: string
           created_at?: string
           date: string
+          date_end?: string | null
           id?: string
           location?: string | null
           macrocycle_id?: string | null
@@ -1254,6 +1265,7 @@ export type Database = {
           coach_id?: string
           created_at?: string
           date?: string
+          date_end?: string | null
           id?: string
           location?: string | null
           macrocycle_id?: string | null

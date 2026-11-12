@@ -63,10 +63,11 @@ import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
 import { watchRunMeasure, watchRunText } from "@/lib/watchRunLabel";
 import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
-import { LifeEventFormModal } from "@/features/athlete/components/LifeEventFormModal";
+import { EventFormPage } from "@/features/athlete/components/EventFormPage";
+import { competitionAfter, eventTag, upcomingEvents } from "@/lib/athleteEvents";
 import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
-import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
-import { Trash2 } from "lucide-react";
+import { CalendarDays, GraduationCap, Plane, Trash2, Trophy } from "lucide-react";
+import { daysUntil } from "@/api/competitions";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -790,8 +791,7 @@ export default function TodayPage() {
   const [showOtherSessions, setShowOtherSessions] = useState(false);
   const [testPreviewId, setTestPreviewId] = useState<string | null>(null);
   const [mensuOpen, setMensuOpen] = useState(false);
-  const [showLifeEventForm, setShowLifeEventForm] = useState(false);
-  const [showCompForm, setShowCompForm] = useState(false);
+  const [eventForm, setEventForm] = useState<null | "competition" | "voyage">(null);
   const [showAllComps, setShowAllComps] = useState(false);
 
   const {
@@ -1102,34 +1102,44 @@ export default function TodayPage() {
           <TodaySection
             num={sec()}
             title="Mes événements"
-            right={<SectionAdd label="Ajouter un événement" onClick={() => setShowLifeEventForm(true)} />}
+            right={<SectionAdd label="Ajouter un événement" onClick={() => setEventForm(myCoachId ? "competition" : "voyage")} />}
           >
             {(() => {
-              const upcoming = lifeEvents.filter((e) => e.date_end >= today);
+              const upcoming = upcomingEvents(allCompetitions, lifeEvents, today);
               if (upcoming.length === 0) return (
                 <div style={{ borderRadius: 12, padding: 14, border: "1px dashed " + C.brdL, textAlign: "center" }}>
                   <div style={{ fontSize: 13, color: C.tx2 }}>Aucun événement prévu</div>
-                  <div style={{ fontSize: 12, color: C.tx3, marginTop: 4 }}>Ajoute tes indisponibilités pour que ton coach adapte le planning</div>
+                  <div style={{ fontSize: 12, color: C.tx3, marginTop: 4 }}>Ajoute tes compétitions et indisponibilités pour que ton coach adapte le planning</div>
                 </div>
               );
-              return upcoming.map((evt) => (
-                <div key={evt.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <TintCard color={TYPE_COLOR.hyrox}>
+              return upcoming.map((evt) => {
+                const isComp = evt.source === "competition";
+                const tint = isComp ? ROUGE : TYPE_COLOR.hyrox;
+                const Icon = isComp ? Trophy : evt.kind === "voyage" ? Plane : evt.kind === "examen" ? GraduationCap : CalendarDays;
+                return (
+                <div key={evt.source + evt.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <TintCard color={tint} onClick={isComp ? () => setShowAllComps(true) : undefined}>
+                    <Icon size={18} color={tint} strokeWidth={1.75} style={{ flex: "none" }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{evt.title}</div>
-                      <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3, marginTop: 2 }}>
-                        {fmtShortDay(evt.date_start)}{evt.date_end !== evt.date_start ? ` → ${fmtShortDay(evt.date_end)}` : ""} · Indisponible
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{evt.title}</span>
+                        {evt.isNew && <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, background: C.ac, color: C.bg, ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500, whiteSpace: "nowrap", flex: "none" }}>Nouveau</span>}
+                      </div>
+                      <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {fmtShortDay(evt.start)}{evt.end !== evt.start ? ` → ${fmtShortDay(evt.end)}` : ""} · <span style={{ color: tint }}>{eventTag(evt)}</span>
                       </div>
                     </div>
+                    {!isComp && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmDelEvt((cur) => (cur === evt.id ? null : evt.id)); }}
                       aria-label="Supprimer l'événement"
-                      style={{ width: 32, height: 32, flex: "none", borderRadius: 8, border: "1px solid " + C.brdL, background: "none", cursor: "pointer", color: confirmDelEvt === evt.id ? ROUGE : C.tx3, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ width: 28, height: 28, flex: "none", borderRadius: 8, border: "1px solid " + C.brdL, background: "none", cursor: "pointer", color: confirmDelEvt === evt.id ? ROUGE : C.tx3, display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
+                    )}
                   </TintCard>
-                  {confirmDelEvt === evt.id && (
+                  {!isComp && confirmDelEvt === evt.id && (
                     <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + ROUGE + "66" }}>
                       <div style={{ fontSize: 13, color: C.tx2, marginBottom: 10 }}>Supprimer cet événement ? Ton coach ne le verra plus sur le planning.</div>
                       <div style={{ display: "flex", gap: 8 }}>
@@ -1139,7 +1149,8 @@ export default function TodayPage() {
                     </div>
                   )}
                 </div>
-              ));
+                );
+              });
             })()}
           </TodaySection>
         )}
@@ -1375,7 +1386,7 @@ export default function TodayPage() {
             title="Prochaine compétition"
             right={<>
               {allCompetitions.length > 0 && <SectionLink onClick={() => setShowAllComps(true)}>Toutes ({allCompetitions.length})</SectionLink>}
-              {myCoachId && <SectionAdd label="Ajouter une compétition" onClick={() => setShowCompForm(true)} />}
+              {myCoachId && <SectionAdd label="Ajouter une compétition" onClick={() => setEventForm("competition")} />}
             </>}
           >
             {nextComp ? (
@@ -1403,12 +1414,27 @@ export default function TodayPage() {
                   </span>
                 </span>
               </button>
-            ) : (
+            ) : null}
+            {nextComp && (() => {
+              const then = competitionAfter(allCompetitions, nextComp.id, today);
+              if (!then) return null;
+              const j = daysUntil(then.date, today);
+              return (
+                <button type="button" onClick={() => setShowAllComps(true)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 12, background: C.s1, border: `1px solid ${C.brd}`, whiteSpace: "nowrap", width: "100%", cursor: "pointer", fontFamily: "inherit", color: C.tx, textAlign: "left" }}>
+                  <span style={{ fontSize: 12, color: C.tx3 }}>Puis</span>
+                  <span style={{ ...DISPLAY, fontSize: 12.5, letterSpacing: "0.08em", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{then.name}</span>
+                  <span style={{ flex: 1 }} />
+                  <span style={{ ...MONO, fontSize: 12, color: ROUGE }}>{j === 0 ? "J" : `J-${j}`}</span>
+                  <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>· {then.priority}</span>
+                </button>
+              );
+            })()}
+            {!nextComp && (
               <div style={{ borderRadius: 12, padding: 16, border: "1px dashed " + C.brdL, textAlign: "center" }}>
                 <div style={{ fontSize: 13, color: C.tx3, marginBottom: myCoachId ? 10 : 0 }}>Aucune compétition prévue</div>
                 {myCoachId && (
                   <button
-                    onClick={() => setShowCompForm(true)}
+                    onClick={() => setEventForm("competition")}
                     style={{ height: 44, padding: "0 18px", borderRadius: 12, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
                   >
                     Ajouter une compétition
@@ -1554,11 +1580,14 @@ export default function TodayPage() {
         />
       )}
 
-      {/* Life event form */}
-      {showLifeEventForm && (
-        <LifeEventFormModal
+      {/* Nouvel événement (compétition, stage, voyage, examen, autre) */}
+      {eventForm && (
+        <EventFormPage
           athleteId={athleteId ?? ""}
-          onClose={() => setShowLifeEventForm(false)}
+          coachId={myCoachId}
+          coachName={coachName}
+          initialType={eventForm}
+          onClose={() => setEventForm(null)}
         />
       )}
 
@@ -1571,14 +1600,6 @@ export default function TodayPage() {
         />
       )}
 
-      {/* Competition form (athlete self-add) */}
-      {showCompForm && myCoachId && (
-        <CompetitionFormModal
-          athleteId={athleteId ?? ""}
-          coachId={myCoachId}
-          onClose={() => setShowCompForm(false)}
-        />
-      )}
     </>
   );
 }
