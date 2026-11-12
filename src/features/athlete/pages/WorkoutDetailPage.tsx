@@ -3500,6 +3500,7 @@ export default function WorkoutDetailPage() {
       {/* ── Finish dialog ── */}
       {showFinish && (
         <FinishWorkoutSheet
+          title={workout.sessionName}
           {...countSets(workout.blocs, sets)}
           comment={localMods.sessionComment ?? ""}
           forme={localMods.sessionForme}

@@ -50,6 +50,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Chaque page (Aujourd'hui, Programme, Tests, HYROX, Alimentation, Profil) a son propre en-tête avec la date ; le menu reste accessible par la petite icône à côté de la date.",
           "Aujourd'hui : la citation est mise en avant sous « Bonjour », votre retour de la semaine se lit avec quatre réponses en mots (Bien reçu, Motivé, À fond, Merci).",
           "La séance du jour se déplie pour montrer les exercices, puis « Démarrer la séance ». La prochaine compétition affiche le compte à rebours en grand, et la courbe de forme est plus lisible.",
+          "Fin de séance : pourcentage réalisé en grand, séries faites / passées, forme de 1 à 5 en couleur, commentaire et kilomètres courus, puis « Terminer ».",
         ],
       },
     ],
