@@ -25,7 +25,8 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { WeekLoadPanel } from "@/features/coach/components/load/WeekLoadPanel";
 import { TYPE_COLOR as PEPS } from "@/lib/peps";
 import {
   useUnifiedCalendar,
@@ -241,13 +242,75 @@ function WatchFreeChip({ card, athleteId }: { card: PlanningCardModel; athleteId
   );
 }
 
-// ── DraggableEventChip ───────────────────────────────────────────────────────
+const CARD_KIND_LABEL: Record<CalEvent["type"], string> = {
+  workout: "Musculation", energy: "Énergie", test: "Test", competition: "Compétition", free_activity: "Activité libre", life_event: "",
+};
+const CARD_MONO = "'Geist Mono', ui-monospace, monospace";
+
+/**
+ * Carte de séance de la vue Semaine (planche CoachPlanningLarge3) : type en
+ * capitales, titre sur deux lignes, statut. Même code couleur que les pastilles du mois.
+ */
+function EventCard({ event, watch }: { event: CalEvent; watch?: PlanningCardState }) {
+  const isProjected = event.raw?.source === "block_plan";
+  const st = event.status;
+  const bio = isBiometric(event);
+  const spec = event.type === "energy" && event.sessionKind === "specifique";
+  const color = spec ? "#F5A623" : event.type === "energy" ? C.b : bio ? BIO_COLOR : TYPE_COLOR[event.type];
+  const label = spec ? "Spécifique" : bio ? "Biométrie" : CARD_KIND_LABEL[event.type];
+  const blockLogs = event.type === "energy" && event.partial
+    ? (event.raw?.block_logs as Record<string, { done: boolean }> | null | undefined)
+    : null;
+  const bl = blockLogs ? Object.values(blockLogs) : [];
+  const status = st === "completed" ? null : st === "missed" ? { t: "Manquée", c: C.r }
+    : bl.length ? { t: `${bl.filter((b) => b.done).length}/${bl.length} blocs`, c: C.b }
+    : isProjected ? { t: "Prévue · programme", c: C.tx3 } : null;
+  return (
+    <div
+      style={{
+        position: "relative", overflow: "hidden", borderRadius: 10,
+        background: alpha(color, st === "completed" ? 0.14 : 0.08),
+        border: `1px ${isProjected && st !== "completed" ? "dashed" : "solid"} ${alpha(color, st === "missed" ? 0.25 : 0.4)}`,
+        padding: "8px 9px 8px 12px", display: "flex", flexDirection: "column", gap: 4,
+        opacity: st === "missed" ? 0.7 : 1, minWidth: 0,
+      }}
+    >
+      <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: color, color: "#0E0C0A", borderRadius: 999, padding: "1px 7px", fontSize: 10, fontWeight: 600 }}>{label}</span>
+        {st === "completed" && <span style={{ fontSize: 10, fontWeight: 600, color: C.g, border: `1px solid ${alpha(C.g, 0.5)}`, borderRadius: 999, padding: "0 6px" }}>Réalisée</span>}
+        <span style={{ flex: 1 }} />
+        {event.type === "workout" && event.rescheduledByAthlete && (
+          <span title={athleteMoveTitle(event.date, event.originalScheduledDate)} style={{ fontSize: 10, fontWeight: 800, color: "#F59E0B" }}>↷</span>
+        )}
+        {watch && WATCH_MARK[watch] && (
+          <span title={WATCH_MARK[watch]!.title} aria-label={WATCH_MARK[watch]!.title} style={{ display: "inline-flex", color: WATCH_MARK[watch]!.color }}>
+            <Watch size={11} strokeWidth={2} />
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 12.5, fontWeight: 600, color: C.tx, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: isProjected && st !== "completed" ? "italic" : "normal" }}>
+        {event.type === "free_activity" && event.sportEmoji ? event.sportEmoji + " " : ""}{event.title}
+      </div>
+      {(status || event.rpe != null) && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", fontFamily: CARD_MONO, fontSize: 10, color: C.tx3 }}>
+          {status && <span style={{ color: status.c }}>{status.t}</span>}
+          {event.rpe != null && <span>RPE {event.rpe}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DraggableEventChip ─────────────────────────────────────────────────────
 
 function DraggableEventChip({
-  event, compact = false, athleteId = "", coachId = "", onEventClick, watch,
+  event, compact = false, card = false, athleteId = "", coachId = "", onEventClick, watch,
 }: {
   event: CalEvent;
   compact?: boolean;
+  /** Vue Semaine : carte au lieu de la pastille. */
+  card?: boolean;
   athleteId?: string;
   coachId?: string;
   onEventClick?: (event: CalEvent) => void;
@@ -282,7 +345,7 @@ function DraggableEventChip({
           paddingRight: hovered && deletable ? 14 : 0,
         }}
       >
-        <EventChip event={event} compact={compact} watch={watch} />
+        {card ? <EventCard event={event} watch={watch} /> : <EventChip event={event} compact={compact} watch={watch} />}
       </div>
       {hovered && deletable && !isDragging && (
         <button
@@ -301,10 +364,10 @@ function DraggableEventChip({
           }}
           style={{
             position: "absolute", top: 0, right: 0,
-            width: 14, height: "100%", minHeight: 14,
+            width: card ? 18 : 14, height: "100%", minHeight: 14,
             display: "flex", alignItems: "center", justifyContent: "center",
             background: C.r + "cc", border: "none",
-            borderRadius: "0 4px 4px 0",
+            borderRadius: card ? "0 10px 10px 0" : "0 4px 4px 0",
             cursor: "pointer", padding: 0,
             color: "#fff",
             zIndex: 1,
@@ -321,14 +384,23 @@ function DraggableEventChip({
 
 type BankItemType = "workout" | "energy" | "specifique" | "test" | "biometric";
 
+const BANK_TYPE_LABEL: Record<BankItemType, string> = {
+  workout: "Musculation", energy: "Énergie", specifique: "Spécifique", test: "Test", biometric: "Biométrie",
+};
+
 function DraggableSession({
   session,
   sessionType,
   isDragging,
+  variant = "chip",
+  meta,
 }: {
   session: { id: string; name?: string; label?: string };
   sessionType: BankItemType;
   isDragging: boolean;
+  /** "card" : petite carte du bandeau (vue Semaine). */
+  variant?: "chip" | "card";
+  meta?: string | null;
 }) {
   const color  = sessionType === "energy" ? C.b : sessionType === "specifique" ? "#F5A623" : sessionType === "test" ? TEST_COLOR : sessionType === "biometric" ? BIO_COLOR : C.ac;
   const colorS = sessionType === "energy" ? C.bS : sessionType === "specifique" ? "#F5A62320" : sessionType === "test" ? TEST_COLOR + "20" : sessionType === "biometric" ? BIO_COLOR + "20" : C.acS;
@@ -339,6 +411,29 @@ function DraggableSession({
     data: { ...session, sessionType },
   });
   const name = session.name ?? session.label ?? "Séance";
+
+  if (variant === "card") {
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        title={name}
+        style={{
+          width: 186, flex: "none", minHeight: 84, boxSizing: "border-box",
+          padding: "10px 12px", borderRadius: 12, position: "relative", overflow: "hidden",
+          border: "1px solid " + alpha(color, 0.35),
+          background: `linear-gradient(135deg, ${alpha(color, 0.16)} 0%, ${C.s2} 62%)`,
+          cursor: "grab", userSelect: "none", opacity: isDragging ? 0.45 : 1,
+          display: "flex", flexDirection: "column", gap: 6,
+        }}
+      >
+        <span style={{ fontFamily: CARD_MONO, fontSize: 9.5, letterSpacing: "0.12em", textTransform: "uppercase", color }}>{BANK_TYPE_LABEL[sessionType]}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: C.tx, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{name}</span>
+        {meta && <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, color: C.tx3, letterSpacing: "0.06em", textTransform: "uppercase", marginTop: "auto" }}>{meta}</span>}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -381,7 +476,10 @@ function DroppableDay({
   dayTheme,
   dayFiches = [],
   watchCards = [],
+  tall = false,
 }: {
+  /** Vue Semaine : colonne haute, cartes de séance, rien de masqué. */
+  tall?: boolean;
   date: Date;
   events: CalEvent[];
   isCurrentMonth: boolean;
@@ -404,7 +502,7 @@ function DroppableDay({
   const watchFree = watchCards.filter((c) => !c.planned);
 
   const today     = isToday(date);
-  const maxVisible = 3;
+  const maxVisible = tall ? 99 : 3;
   const comps     = events.filter((e) => e.type === "competition");
   const isCompDay = comps.length > 0;
 
@@ -413,7 +511,8 @@ function DroppableDay({
       ref={setNodeRef}
       onClick={onClick}
       style={{
-        height: 110,
+        height: tall ? undefined : 110,
+        minHeight: tall ? 440 : undefined,
         overflow: "hidden",
         background: isOver
           ? C.acS
@@ -425,13 +524,13 @@ function DroppableDay({
           ? C.s2 + "80"
           : "transparent",
         border: "1px solid " + (isOver ? C.ac + "60" : isCompDay ? C.r + "70" : today ? C.ac + "40" : C.brd),
-        borderRadius: 4,
-        padding: "6px 7px",
+        borderRadius: tall ? 12 : 4,
+        padding: tall ? "10px 8px" : "6px 7px",
         cursor: "pointer",
         transition: "background 120ms, border-color 120ms",
         display: "flex",
         flexDirection: "column",
-        gap: 3,
+        gap: tall ? 6 : 3,
         position: "relative",
         opacity: 1,
       }}
@@ -439,6 +538,17 @@ function DroppableDay({
       {/* Numéro du jour + thème du jour.
           La pastille partage la ligne du numéro : la case fait 110 px en
           `overflow: hidden`, une ligne de plus chasserait un événement. */}
+      {tall ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, paddingBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: today ? C.ac : C.tx3 }}>
+              {format(date, "EEE", { locale: fr }).replace(".", "")}
+            </span>
+            <span style={{ fontFamily: CARD_MONO, fontSize: 20, color: today ? C.ac : C.tx }}>{format(date, "d")}</span>
+          </div>
+          {dayTheme && <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />}
+        </div>
+      ) : (
       <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
         <div
           style={{
@@ -456,6 +566,7 @@ function DroppableDay({
           <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />
         </div>
       </div>
+      )}
 
       {/* Jour de compétition — bandeau en tête du jour */}
       {comps.map((cp) => (
@@ -508,10 +619,10 @@ function DroppableDay({
         const overflow = Math.max(0, regularEvents.length + watchFree.length - maxAfterLife);
         const freeShown = watchFree.slice(0, Math.max(0, maxAfterLife - regularEvents.length));
         return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: tall ? 6 : 2, flex: 1 }}>
             {regularEvents.slice(0, maxAfterLife).map((ev) => (
               <DraggableEventChip
-                key={ev.id} event={ev} compact athleteId={athleteId} coachId={coachId} onEventClick={onEventClick}
+                key={ev.id} event={ev} compact={!tall} card={tall} athleteId={athleteId} coachId={coachId} onEventClick={onEventClick}
                 watch={watchByPlanned.get(`${ev.type}:${ev.id}`)}
               />
             ))}
@@ -574,11 +685,16 @@ function DroppableDay({
       {isOver && (
         <div
           style={{
-            position: "absolute", inset: 0, borderRadius: 4,
+            position: "absolute", inset: 0, borderRadius: tall ? 12 : 4,
             border: "2px dashed " + C.ac,
             pointerEvents: "none",
           }}
         />
+      )}
+      {tall && isOver && (
+        <div style={{ border: "1px dashed " + alpha(C.ac, 0.6), borderRadius: 10, padding: "14px 8px", textAlign: "center", fontFamily: CARD_MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.ac }}>
+          Déposer ici · {format(date, "EEE d", { locale: fr }).replace(".", "")}
+        </div>
       )}
     </div>
   );
@@ -829,6 +945,106 @@ function PlanningBank({
   );
 }
 
+/**
+ * Banque en bandeau au-dessus de la semaine (planche CoachPlanningLarge3, P24) :
+ * catégories en pastilles, recherche, petites cartes qui défilent en continu
+ * et se glissent sur un jour. Mêmes éléments que la colonne du mois.
+ */
+function PlanningBankBand({
+  sessions,
+  energySessions,
+  testDefinitions,
+  activeDragId,
+}: {
+  sessions: Array<{ id: string; name: string }>;
+  energySessions: EnergySessionRow[];
+  testDefinitions: Array<{ id: string; name: string; kind?: string; category?: string | null }>;
+  activeDragId: string | null;
+}) {
+  const [tab, setTab] = useState<BankTab>("workout");
+  const [search, setSearch] = useState("");
+  const [folded, setFolded] = useState(false);
+  const q = search.trim().toLowerCase();
+  const muscu = sessions.filter((s) => s.name.toLowerCase().includes(q));
+  const energy = energySessions.filter((s) => s.session_kind !== "specifique" && s.name.toLowerCase().includes(q));
+  const spec = energySessions.filter((s) => s.session_kind === "specifique" && s.name.toLowerCase().includes(q));
+  const tests = testDefinitions.filter((t) => t.name.toLowerCase().includes(q));
+  const counts: Record<BankTab, number> = { workout: muscu.length, energy: energy.length, specifique: spec.length, tests: tests.length + 1 };
+  const minutes = (sec: number | null | undefined) => (sec != null && sec > 0 ? `${Math.round(sec / 60)} min` : null);
+  const shown = counts[tab];
+
+  const cards = (() => {
+    if (tab === "workout") return muscu.map((s) => <DraggableSession key={s.id} variant="card" session={s} sessionType="workout" isDragging={activeDragId === s.id} />);
+    if (tab === "energy") return energy.map((s) => (
+      <DraggableSession key={s.id} variant="card" session={{ id: s.id, name: s.name }} sessionType="energy" isDragging={activeDragId === s.id}
+        meta={[minutes(s.total_duration_s), ENERGY_KIND_LABEL[s.session_kind] ?? null].filter(Boolean).join(" · ") || null} />
+    ));
+    if (tab === "specifique") return spec.map((s) => (
+      <DraggableSession key={s.id} variant="card" session={{ id: s.id, name: s.name }} sessionType="specifique" isDragging={activeDragId === s.id}
+        meta={[minutes(s.total_duration_s), s.format === "classique" ? "Blocs" : "WOD"].filter(Boolean).join(" · ")} />
+    ));
+    return [
+      <DraggableSession key={BIO_BANK_ID} variant="card" session={{ id: BIO_BANK_ID, name: BIO_TITLE }} sessionType="biometric" isDragging={activeDragId === BIO_BANK_ID} meta="Saisie de l'athlète" />,
+      ...tests.map((t) => (
+        <DraggableSession key={t.id} variant="card" session={{ id: t.id, name: t.name }} sessionType="test" isDragging={activeDragId === t.id}
+          meta={t.category ? TEST_CATEGORY_LABEL[t.category as keyof typeof TEST_CATEGORY_LABEL] ?? null : null} />
+      )),
+    ];
+  })();
+
+  return (
+    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", flexWrap: "wrap", borderBottom: folded ? "none" : "1px solid " + C.brd }}>
+        <span style={{ fontFamily: CARD_MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac, marginRight: 4 }}>Programmer</span>
+        {BANK_TABS.map(({ key, label, color }) => {
+          const on = tab === key;
+          const c = key === "workout" ? C.ac : key === "energy" ? C.b : color;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => { setTab(key); setFolded(false); }}
+              aria-pressed={on}
+              style={{
+                height: 30, padding: "0 12px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 6,
+                border: "1px solid " + (on ? alpha(c, 0.6) : C.brdL), background: on ? alpha(c, 0.14) : "transparent",
+                color: on ? c : C.tx2, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              {key === "workout" ? "Musculation" : label}
+              <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, opacity: 0.7 }}>{counts[key]}</span>
+            </button>
+          );
+        })}
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher dans la banque…"
+          aria-label="Rechercher dans la banque"
+          style={{ width: 260, height: 32, marginLeft: "auto", padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: C.bg, color: C.tx, fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+        />
+        <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, color: C.tx3, letterSpacing: "0.06em" }}>
+          {shown} élément{shown > 1 ? "s" : ""} · glisse sur un jour
+        </span>
+        <button
+          type="button"
+          onClick={() => setFolded((f) => !f)}
+          style={{ height: 30, padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          {folded ? "Déplier" : "Replier"}
+        </button>
+      </div>
+      {!folded && (
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "12px 16px 14px", scrollbarWidth: "thin" }}>
+          {cards.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: C.tx3, padding: "18px 0" }}>{q ? "Aucun résultat" : "Rien dans la banque pour cette catégorie."}</div>
+          ) : cards}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── CalendarMonthView ─────────────────────────────────────────────────────────
 
 interface CalendarMonthViewProps {
@@ -843,6 +1059,8 @@ interface CalendarMonthViewProps {
   currentWeek?: number;
   wellnessHistory?: Record<string, WellnessData>;
   nutritionLog?: Record<string, unknown>;
+  /** "week" : semaine pleine largeur, banque en bandeau, charge dessous (P24). */
+  layout?: "month" | "week";
 }
 
 export function CalendarMonthView({
@@ -857,8 +1075,11 @@ export function CalendarMonthView({
   currentWeek = 1,
   wellnessHistory,
   nutritionLog,
+  layout = "month",
 }: CalendarMonthViewProps) {
+  const isWeek = layout === "week";
   const [month, setMonth]               = useState(new Date());
+  const [weekStart, setWeekStart]       = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [drawerDay, setDrawerDay]       = useState<Date | null>(null);
   const [drawerInitialEvent, setDrawerInitialEvent] = useState<CalEvent | null>(null);
   const [quickAddDay, setQuickAddDay]   = useState<Date | null>(null);
@@ -868,14 +1089,14 @@ export function CalendarMonthView({
   const { monthRange, gridStartDate, gridEndDate } = useMemo(() => {
     const monthStart = startOfMonth(month);
     const monthEnd   = endOfMonth(month);
-    const gs = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const ge = endOfWeek(monthEnd,   { weekStartsOn: 1 });
+    const gs = isWeek ? weekStart : startOfWeek(monthStart, { weekStartsOn: 1 });
+    const ge = isWeek ? addDays(weekStart, 6) : endOfWeek(monthEnd,   { weekStartsOn: 1 });
     return {
       monthRange:   { start: format(gs, "yyyy-MM-dd"), end: format(ge, "yyyy-MM-dd") },
       gridStartDate: gs,
       gridEndDate:   ge,
     };
-  }, [month]);
+  }, [month, isWeek, weekStart]);
 
   const qc = useQueryClient();
   const { data: rawEvents = [], isLoading } = useUnifiedCalendar(athleteId, monthRange);
@@ -1021,6 +1242,18 @@ export function CalendarMonthView({
   // Build calendar grid — includes days from adjacent months to complete the ISO weeks
   const gridDays = eachDayOfInterval({ start: gridStartDate, end: gridEndDate });
 
+  // Vue Semaine : « Semaine 2 » dans le bloc en cours, sinon numéro de semaine de l'année.
+  const blockWeek = blockConfig?.startDate
+    ? differenceInCalendarWeeks(weekStart, parseISO(blockConfig.startDate), { weekStartsOn: 1 }) + 1
+    : null;
+  const weekTitle = blockWeek != null && blockWeek >= 1 && blockWeek <= (blockConfig?.totalWeeks ?? 0)
+    ? `Semaine ${blockWeek}`
+    : `Semaine ${format(weekStart, "I")}`;
+  const weekEnd = addDays(weekStart, 6);
+  const weekRangeLabel = isSameMonth(weekStart, weekEnd)
+    ? `${format(weekStart, "d")} → ${format(weekEnd, "d MMM", { locale: fr })}`
+    : `${format(weekStart, "d MMM", { locale: fr })} → ${format(weekEnd, "d MMM", { locale: fr })}`;
+
   // Group events by date
   const eventsByDate = events.reduce<Record<string, CalEvent[]>>((acc, ev) => {
     (acc[ev.date] ??= []).push(ev);
@@ -1123,6 +1356,41 @@ export function CalendarMonthView({
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
+          {isWeek ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button type="button" aria-label="Semaine précédente" onClick={() => setWeekStart((w) => addDays(w, -7))} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ChevronLeft size={18} />
+              </button>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, minWidth: 0 }}>
+                <span style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 300, fontSize: 22, color: C.tx }}>
+                  {weekTitle}
+                </span>
+                <span style={{ fontFamily: CARD_MONO, fontSize: 12, color: C.tx2 }}>{weekRangeLabel}</span>
+              </div>
+              <button type="button" aria-label="Semaine suivante" onClick={() => setWeekStart((w) => addDays(w, 7))} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ChevronRight size={18} />
+              </button>
+              {!isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 })) && (
+                <button type="button" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))} style={{ height: 32, padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                  Cette semaine
+                </button>
+              )}
+              <div style={{ marginLeft: "auto", display: "flex", gap: 12, flexWrap: "wrap" }}>
+                {[
+                  { label: "Musculation", color: C.ac },
+                  { label: "Énergie", color: C.b },
+                  { label: "Spécifique", color: "#F5A623" },
+                  { label: "Test", color: TEST_COLOR },
+                  { label: "Compétition", color: C.r },
+                ].map(({ label, color }) => (
+                  <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, color: C.tx3 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />{label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Month navigation — pleine largeur */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <button
@@ -1168,6 +1436,9 @@ export function CalendarMonthView({
               <ChevronRight size={18} />
             </button>
           </div>
+
+          </>
+          )}
 
           {/* Block-program start-date prompt / legend */}
           {blockConfig && (
@@ -1250,19 +1521,28 @@ export function CalendarMonthView({
             </div>
           )}
 
+          {isWeek && (
+            <PlanningBankBand
+              sessions={progSessions}
+              energySessions={energySessions}
+              testDefinitions={pickableTests}
+              activeDragId={activeDragId}
+            />
+          )}
+
           {/* ── Rangée : calendrier + banque (alignés en haut) ── */}
           <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
 
           {/* Grid */}
           <div
-            style={{
+            style={isWeek ? undefined : {
               background: C.s1, borderRadius: 6,
               border: "1px solid " + C.brd, overflow: "hidden",
             }}
           >
             {/* DOW header */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+            {!isWeek && <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
               {DOW_LABELS.map((d) => (
                 <div
                   key={d}
@@ -1276,7 +1556,7 @@ export function CalendarMonthView({
                   {d}
                 </div>
               ))}
-            </div>
+            </div>}
 
             {/* Day cells */}
             {isLoading ? (
@@ -1292,7 +1572,7 @@ export function CalendarMonthView({
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, padding: 2 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: isWeek ? 8 : 2, padding: isWeek ? 0 : 2 }}>
                 {gridDays.map((day) => {
                   const dateStr = format(day, "yyyy-MM-dd");
                   const wKey = dateStr.replace(/-/g, "");
@@ -1303,7 +1583,8 @@ export function CalendarMonthView({
                       key={dateStr}
                       date={day}
                       events={eventsByDate[dateStr] ?? []}
-                      isCurrentMonth={isSameMonth(day, month)}
+                      isCurrentMonth={isWeek || isSameMonth(day, month)}
+                      tall={isWeek}
                       isActive={!!(drawerDay && isSameDay(day, drawerDay))}
                       onClick={() => { setDrawerDay(day); setDrawerInitialEvent(null); }}
                       onEventClick={(ev) => handleEventClick(day, ev)}
@@ -1322,7 +1603,7 @@ export function CalendarMonthView({
           </div>
 
           {/* Stats bar */}
-          {events.length > 0 && (
+          {!isWeek && events.length > 0 && (
             <div
               style={{
                 display: "flex", gap: 16,
@@ -1348,13 +1629,18 @@ export function CalendarMonthView({
         </div>
 
           {/* ── Bank sidebar (panneau unifié 4 catégories, aligné au calendrier) ── */}
-          <PlanningBank
-            sessions={progSessions}
-            energySessions={energySessions}
-            testDefinitions={pickableTests}
-            activeDragId={activeDragId}
-          />
+          {!isWeek && (
+            <PlanningBank
+              sessions={progSessions}
+              energySessions={energySessions}
+              testDefinitions={pickableTests}
+              activeDragId={activeDragId}
+            />
+          )}
           </div>
+
+          {/* Sous la semaine : séances, km, zones, charge et ratio aigu / chronique (P25, P28) */}
+          {isWeek && athleteId && <WeekLoadPanel athleteId={athleteId} weekStart={format(weekStart, "yyyy-MM-dd")} />}
       </div>
 
       {/* Drag overlay — ghost of the dragged item */}

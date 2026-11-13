@@ -13,16 +13,19 @@ import { SummaryView } from "@/features/coach/components/planning/SummaryView";
 import { CompetitionsView } from "@/features/coach/components/planning/CompetitionsView";
 import { WeekLoadPanel } from "@/features/coach/components/load/WeekLoadPanel";
 import { mondayOf } from "@/lib/trainingLoadWeek";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 // ── View types ────────────────────────────────────────────────────────────────
 
-type PlanView = "timeline" | "month" | "summary" | "competitions";
+type PlanView = "timeline" | "month" | "week" | "summary" | "competitions";
 
 // ── PlanningPage ──────────────────────────────────────────────────────────────
 
 export default function PlanningPage() {
   const [searchParams] = useSearchParams();
-  const view = (searchParams.get("view") as PlanView) ?? "month";
+  const isDesktop = useIsDesktop();
+  // Ordinateur : semaine pleine largeur par défaut (P24) ; téléphone : le mois.
+  const view = (searchParams.get("view") as PlanView) ?? (isDesktop ? "week" : "month");
 
   const { user } = useAuth();
   const { athleteId, loaded, sessions, blockConfig, setBlockConfig, exos, sets, completedSessions, currentWeek, wellnessHistory, nutritionLog } = useAthleteContext();
@@ -45,8 +48,10 @@ export default function PlanningPage() {
           <TimelineView athleteId={athleteId} />
         )}
 
-        {view === "month" && (
+        {(view === "month" || view === "week") && (
           <CalendarMonthView
+            key={view}
+            layout={view}
             athleteId={athleteId}
             coachId={user?.id ?? ""}
             sessions={sessions}

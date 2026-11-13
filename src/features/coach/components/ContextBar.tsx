@@ -8,6 +8,7 @@ import { countAthleteChoices, workoutKeys } from "@/api/workouts";
 import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
 import { C } from "@/lib/theme";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import {
   Popover,
@@ -41,6 +42,7 @@ const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: b
 const SUB_TABS: Record<string, { key: string; label: string }[]> = {
   planning: [
     { key: "month",        label: "Mois"          },
+    { key: "week",         label: "Semaine"       },
     { key: "timeline",     label: "Frise"         },
     { key: "summary",      label: "Synthèse"      },
     { key: "competitions", label: "Compétitions"  },
@@ -97,7 +99,9 @@ export default function ContextBar() {
   const searchParams = new URLSearchParams(location.search);
   const activeSubView = searchParams.get("view");
   const subTabs = SUB_TABS[activeTab] ?? [];
-  const defaultSubView = subTabs[0]?.key ?? null;
+  const isDesktop = useIsDesktop();
+  // Planning : la semaine pleine largeur est la vue par défaut à l'ordinateur (P24), le mois au téléphone.
+  const defaultSubView = activeTab === "planning" && isDesktop ? "week" : subTabs[0]?.key ?? null;
   const activeSubTab = activeSubView ?? defaultSubView;
 
   function goTab(key: string) {

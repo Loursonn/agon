@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-planning-semaine",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Planning : la semaine en pleine largeur",
+    summary: "À l'ordinateur, le planning s'ouvre sur la semaine : sept grandes colonnes, la banque de séances en bandeau au-dessus, et la charge de la semaine juste en dessous.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque jour est une colonne haute avec ses séances en cartes : musculation, énergie, spécifique, test, compétition.",
+          "La banque passe en bandeau : choisissez Musculation, Énergie, Spécifique ou Tests, faites défiler les cartes et glissez-en une sur un jour.",
+          "Sous la semaine : séances, volume de course, zones et charge, avec le rapport aigu / chronique.",
+          "Le mois reste disponible dans l'onglet « Mois », et c'est toujours la vue par défaut au téléphone.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-editeur-energie-ordi",
     date: "2026-11-13",
     kind: "feature",
