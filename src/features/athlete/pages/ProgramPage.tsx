@@ -1,10 +1,11 @@
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Trophy, X, Zap } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 import { TYPE_COLOR, TYPE_LABEL } from "@/lib/peps";
 import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import { ProgramSessionCard } from "@/features/athlete/components/program/ProgramSessionCard";
@@ -756,7 +757,7 @@ function FreeActivityChip({ activity, onPress }: { activity: FreeSession; onPres
 function DayRow({
   day, today, onSessionPress, onReschedule, onStart, onTestPress,
   freeActivities, onAddActivity, onEditActivity, onAddCompetition, viewOnly,
-  dayTheme, dayFiches = [], watch,
+  dayTheme, dayFiches = [], watch, vertical = false,
 }: {
   day: WeekDay;
   today: string;
@@ -775,6 +776,8 @@ function DayRow({
   dayFiches?: ScheduledDoc[];
   /** Montre (P34) : prévu / réalisé / libre du jour. */
   watch?: { day: PlannedVsDoneDay | undefined; athleteId: string; now: number };
+  /** Ordinateur (planche AthOrdiAProgramme) : une colonne par jour, date en tête. */
+  vertical?: boolean;
 }) {
   const isToday = day.date === today;
   const isPast  = day.date < today;
@@ -792,9 +795,13 @@ function DayRow({
   const isEmpty = day.sessions.length === 0 && day.tests.length === 0 && freeActivities.length === 0 && dayFiches.length === 0 && freeWatch.length === 0;
 
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+    <div style={vertical
+      ? { display: "flex", flexDirection: "column", gap: 8, minWidth: 0, padding: 8, borderRadius: 14, minHeight: 220, background: isToday ? alpha(C.ac, 0.05) : "transparent", border: `1px solid ${isToday ? alpha(C.ac, 0.45) : C.brd}` }
+      : { display: "flex", gap: 10, alignItems: "flex-start" }}>
       {/* Colonne du jour : « Jeu / 5 », pleine en or aujourd'hui ; « + » ouvre l'ajout */}
-      <div style={{ width: 40, flex: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <div style={vertical
+        ? { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }
+        : { width: 40, flex: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
         <div
           aria-hidden
           style={{
@@ -906,6 +913,7 @@ function weekRangeLabel(days: WeekDay[]): string {
 }
 
 function ProgramSessionsView() {
+  const isDesktop = useIsDesktop();
   const navigate  = useNavigate();
   const qc        = useQueryClient();
   const { athleteId, viewOnly, freeSessions, setFreeSessions, athleteProfile } = useAthleteContext();
@@ -1045,8 +1053,8 @@ function ProgramSessionsView() {
         <ProgramSkeleton />
       ) : (
         // Téléphone : une colonne. PC : rail du plan à gauche, semaine à droite.
-        <div className="grid grid-cols-1 gap-agon-xl px-agon-lg pb-8 pt-agon-lg lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:px-agon-xl">
-          <div className="flex flex-col gap-agon-xl lg:sticky lg:top-[105px]">
+        <div className="grid grid-cols-1 gap-agon-xl px-agon-lg pb-8 pt-agon-lg lg:px-0">
+          <div className="flex flex-col gap-agon-xl lg:max-w-[420px]">
             {data?.cycle ? (
               <ActivePlanCard meso={data.cycle} />
             ) : (
@@ -1097,7 +1105,7 @@ function ProgramSessionsView() {
                 Aucune séance cette semaine
               </div>
             ) : (
-              <div className={cn("flex flex-col gap-[14px] transition-opacity duration-150", isPlaceholderData && "opacity-50")}>
+              <div className={cn("flex flex-col gap-[14px] transition-opacity duration-150 lg:grid lg:grid-cols-7 lg:items-stretch lg:gap-2", isPlaceholderData && "opacity-50")}>
                 {data.weekDays.map(day => (
                   <DayRow
                     key={day.date}
@@ -1115,6 +1123,7 @@ function ProgramSessionsView() {
                     dayTheme={dayThemesByDate[day.date] ?? null}
                     dayFiches={fichesByDate.get(day.date)}
                     watch={athleteId ? { day: watchByDate.get(day.date), athleteId, now: watchNow } : undefined}
+                    vertical={isDesktop}
                   />
                 ))}
               </div>

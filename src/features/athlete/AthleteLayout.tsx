@@ -39,11 +39,10 @@ const TAIL_TABS = [
 
 // ── Mise en page PC (≥ 1024 px, préfixe Tailwind `lg:`) ─────────────────────
 // Mobile : barre d'onglets fixe en bas, pleine largeur.
-// PC : cadre centré (1100 px, 1280 px dès `xl:`) = navigation latérale de 220 px +
-// zone de contenu bordée ; chaque page organise cette largeur (colonnes) au lieu
-// d'une colonne de téléphone.
-// Les éléments flottants (minuteur, bandeaux) se centrent sur cette zone :
-// son milieu est à 50 % + 110 px (moitié de la navigation) du viewport.
+// PC (planche AthOrdiAAujourdhui) : barre du haut avec les onglets, contenu
+// centré sur 1440 px (marges de 48 px) ; chaque page organise cette largeur
+// (colonnes) au lieu d'une colonne de téléphone. Les éléments flottants
+// (minuteur, bandeaux) se centrent sur le viewport.
 
 /** "3 août" — libellé court pour le bandeau de rappel. */
 function formatPendingDate(iso: string): string {
@@ -71,18 +70,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
   const [dismissedUnfinished, setDismissedUnfinished] = useState<string[]>([]);
 
-  // Hauteur du bandeau du haut (variable : bandeau hors ligne) → la navigation
-  // latérale PC reste collée juste en dessous.
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerH, setHeaderH] = useState(46);
-  useEffect(() => {
-    const el = headerRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => setHeaderH(el.offsetHeight));
-    ro.observe(el);
-    setHeaderH(el.offsetHeight);
-    return () => ro.disconnect();
-  }, []);
 
   const {
     athleteId, athleteProfile,
@@ -190,7 +178,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
     <div className="flex min-h-screen flex-col font-ui [overflow-wrap:anywhere]">
       {/* ── En-tête collant ── */}
       <div ref={headerRef} className={cn("sticky top-0 z-20 bg-agon-bg lg:border-b lg:border-agon-brd", pageHeaders > 0 ? "" : "border-b border-agon-brd")}>
-        <div className={cn("w-full items-center justify-between px-agon-lg py-agon-sm lg:mx-auto lg:flex lg:max-w-[1100px] xl:max-w-[1280px]", pageHeaders > 0 ? "hidden" : "flex")}>
+        <div className={cn("w-full items-center justify-between px-agon-lg py-agon-sm lg:mx-auto lg:flex lg:h-16 lg:max-w-[1440px] lg:px-12 lg:py-0", pageHeaders > 0 ? "hidden" : "flex")}>
           <div className="flex min-w-0 items-center gap-agon-sm">
             <img src="/brand/agon-logo-horizontal-marbre.svg" alt="Agon" className="h-5" />
             {saveStatus && (
@@ -205,6 +193,27 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               <div className={cn(BADGE, "border border-agon-coach/40 bg-agon-coach-doux text-agon-coach")}>Observation</div>
             )}
           </div>
+          {/* PC (planche AthOrdiAAujourdhui) : onglets dans la barre du haut, soulignés d'or */}
+          <nav aria-label="Navigation principale" className="hidden flex-1 items-stretch self-stretch lg:ml-12 lg:flex">
+            {ATH_TABS.map(t => {
+              const isActive = activeTab === t.k;
+              return (
+                <button
+                  key={t.k}
+                  type="button"
+                  onClick={() => navigate(t.k || ".")}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "relative mr-[30px] flex items-center whitespace-nowrap text-[13.5px] transition-colors",
+                    isActive ? "text-agon-tx shadow-[inset_0_-2px_0_var(--agon-accent)]" : "text-agon-tx2 hover:text-agon-tx",
+                  )}
+                >
+                  {t.l}
+                  {t.k === "profil" && staffUnseen > 0 && <span aria-label="Nouveau dans ton staff" className={NAV_DOT} />}
+                </button>
+              );
+            })}
+          </nav>
           <div className="flex shrink-0 items-center gap-agon-sm">
             {onSwitchMode && (
               <button
@@ -232,39 +241,11 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
         <OfflineBanner />
       </div>
 
-      <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-[1100px] lg:flex-row xl:max-w-[1280px]">
-        {/* ── Navigation latérale (PC uniquement) ── */}
-        <nav
-          aria-label="Navigation principale"
-          className="hidden lg:flex lg:w-[220px] lg:shrink-0 lg:flex-col lg:gap-agon-2xs lg:self-start lg:py-agon-lg sticky"
-          style={{ top: headerH }}
-        >
-          {ATH_TABS.map(t => {
-            const isActive = activeTab === t.k;
-            return (
-              <button
-                key={t.k}
-                type="button"
-                onClick={() => navigate(t.k || ".")}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-agon-md border-l-2 px-agon-lg py-agon-md text-left text-agon-base transition-colors",
-                  isActive ? "border-agon-accent bg-agon-accent-doux font-semibold text-agon-accent" : "border-transparent text-agon-tx2",
-                )}
-              >
-                <span className="relative flex shrink-0 items-center">
-                  {t.icon}
-                  {t.k === "profil" && staffUnseen > 0 && <span aria-label="Nouveau dans ton staff" className={NAV_DOT} />}
-                </span>
-                <span>{t.l}</span>
-              </button>
-            );
-          })}
-        </nav>
+      <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-[1440px] lg:px-12">
 
         {/* ── Contenu (marge basse pour la barre d'onglets fixe et le minuteur) ── */}
         {/* PC : zone bordée, sans barre du bas ; chaque page y organise sa largeur. */}
-        <div className={"min-w-0 flex-1 border-agon-brd lg:border-x " + ((timerActive || timerFinished) ? "pb-[136px] lg:pb-20" : "pb-[88px] lg:pb-8")}>
+        <div className={"min-w-0 flex-1 " + ((timerActive || timerFinished) ? "pb-[136px] lg:pb-20" : "pb-[88px] lg:pb-8")}>
           <Outlet />
         </div>
       </div>
@@ -306,7 +287,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {(timerActive || timerFinished) && (
         <div
           className={cn(
-            "fixed bottom-[88px] left-1/2 z-[150] flex -translate-x-1/2 items-center gap-agon-md rounded-full border px-[18px] py-[9px] lg:bottom-6 lg:left-[calc(50%+110px)]",
+            "fixed bottom-[88px] left-1/2 z-[150] flex -translate-x-1/2 items-center gap-agon-md rounded-full border px-[18px] py-[9px] lg:bottom-6 lg:left-1/2",
             timerFinished ? "border-agon-succes/70 bg-agon-succes/15" : cn("bg-agon-s1", timerUrgent ? "border-agon-erreur/70" : "border-agon-accent/70"),
           )}
         >
@@ -348,7 +329,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── Bouton flottant « Reprendre » (séance libre) ── */}
       {activeFreeSess && (
-        <div className="fixed bottom-[88px] right-4 z-[140] lg:bottom-6 lg:right-[max(16px,calc(50%-534px))] xl:right-[max(16px,calc(50%-624px))]">
+        <div className="fixed bottom-[88px] right-4 z-[140] lg:bottom-6 lg:right-[max(48px,calc(50%-672px))]">
           <button
             type="button"
             onClick={() => navigate("log", { state: { initialSess: activeFreeSess } })}
@@ -365,7 +346,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {!viewOnly && !isOnWorkoutPage && pendingFinish && (
         <div
           className={cn(
-            "fixed inset-x-4 z-[141] lg:inset-x-auto lg:left-[calc(50%+110px)] lg:w-[448px] lg:-translate-x-1/2",
+            "fixed inset-x-4 z-[141] lg:inset-x-auto lg:left-1/2 lg:w-[448px] lg:-translate-x-1/2",
             activeWorkout ? "bottom-[156px] lg:bottom-[84px]" : "bottom-[92px] lg:bottom-6",
           )}
         >
@@ -402,7 +383,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── Bouton flottant « Revenir à la séance » (musculation) ── */}
       {activeWorkout && !isOnWorkoutPage && (
-        <div className="fixed inset-x-4 bottom-[92px] z-[140] lg:inset-x-auto lg:bottom-6 lg:left-[calc(50%+110px)] lg:w-[448px] lg:-translate-x-1/2">
+        <div className="fixed inset-x-4 bottom-[92px] z-[140] lg:inset-x-auto lg:bottom-6 lg:left-1/2 lg:w-[448px] lg:-translate-x-1/2">
           <button
             type="button"
             onClick={() => navigate(`program/workout/${activeWorkout.id}`)}

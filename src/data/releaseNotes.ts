@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-ordi-accueil",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète sur ordinateur : onglets en haut, accueil sur 3 colonnes",
+    summary: "Sur ordinateur, l'app athlète met ses onglets dans la barre du haut et l'accueil range ses rubriques sur 3 colonnes : tout tient sur un écran.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Wellness et retour du coach à gauche, semaine, événements et nutrition au centre, test et compétition à droite.",
+          "En dessous : les séances du jour et la tendance de forme.",
+          "Programme : la semaine s'affiche en 7 colonnes, une par jour.",
+          "Sur téléphone, rien ne change.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-acces-inscription",
     date: "2026-11-13",
     kind: "feature",

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { C } from "@/lib/theme";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { TodaySection, SectionLink, SectionAdd } from "@/features/athlete/components/today/TodaySection";
 import { TodayWellnessCard } from "@/features/athlete/components/today/TodayWellnessCard";
 import { TodayWeekStrip, type WeekStripDay } from "@/features/athlete/components/today/TodayWeekStrip";
@@ -784,6 +785,7 @@ function localMonday(): string {
 
 export default function TodayPage() {
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
   const [selectedDay, setSelectedDay] = useState<DayProgram | null>(null);
   const [activityDate, setActivityDate] = useState<string | null>(null);
   const [editActivity, setEditActivity] = useState<FreeSession | null>(null);
@@ -1004,7 +1006,7 @@ export default function TodayPage() {
 
   return (
     <>
-      <div style={{ maxWidth: 480, margin: "0 auto" }}>
+      <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
       {/* En-tête — symbole, date, prénom, citation (maquette « Aujourd'hui ») */}
       <AthletePageHeader
         title={<>Bonjour,<br />{athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlète"}</>}
@@ -1023,6 +1025,8 @@ export default function TodayPage() {
         }}
       >
 
+        {(() => {
+          const s01 = (<>
         {/* 01 — Wellness du jour, replié */}
         {show("wellness") && (
           <TodaySection
@@ -1039,6 +1043,8 @@ export default function TodayPage() {
           </TodaySection>
         )}
 
+          </>);
+          const s02 = (<>
         {/* 02 — Retour du coach */}
         {(unreadRetours.length > 0 || recentFb) && (() => {
           const fbBlock = recentFb ? (
@@ -1087,6 +1093,8 @@ export default function TodayPage() {
           );
         })()}
 
+          </>);
+          const s03 = (<>
         {/* 03 — Cette semaine + thème du jour */}
         {show("week") && (
           <TodaySection
@@ -1100,6 +1108,8 @@ export default function TodayPage() {
         )}
         {!show("week") && todayTheme && <TodayThemeCard theme={todayTheme} />}
 
+          </>);
+          const s04 = (<>
         {/* 04 — Mes événements */}
         {show("events") && (
           <TodaySection
@@ -1158,6 +1168,8 @@ export default function TodayPage() {
           </TodaySection>
         )}
 
+          </>);
+          const s05 = (<>
         {/* 05 — Nutrition */}
         {show("nutrition") && todayNutrition && (() => {
           const { consumed, ev, zone, meta, log: nl } = todayNutrition;
@@ -1218,6 +1230,8 @@ export default function TodayPage() {
           );
         })()}
 
+          </>);
+          const sComp = (<>
         {/* Jour de compétition (avant les séances) */}
         {todayComps.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1227,6 +1241,8 @@ export default function TodayPage() {
           </div>
         )}
 
+          </>);
+          const s06 = (<>
         {/* 06 — Séances du jour : nom → aperçu → détail */}
         {(() => {
           const EKL: Record<string, string> = { vo2: "VO₂", tempo: "Tempo", seuil: "Seuil", footing: "Footing", fartlek: "Fartlek", specifique: "HYROX", autre: "Énergie", custom: "Énergie" };
@@ -1361,6 +1377,8 @@ export default function TodayPage() {
           );
         })()}
 
+          </>);
+          const s07 = (<>
         {/* 07 — Test du jour */}
         {show("test") && todayTests.length > 0 && (
           <TodaySection num={sec()} title={todayTests.length > 1 ? "Tests du jour" : "Test du jour"}>
@@ -1382,6 +1400,8 @@ export default function TodayPage() {
           </TodaySection>
         )}
 
+          </>);
+          const s08 = (<>
         {/* 08 — Prochaine compétition (+ compétitions à commenter) */}
         {show("next_comp") && (
           <TodaySection
@@ -1461,6 +1481,8 @@ export default function TodayPage() {
           <CompetitionDayCard key={comp.id} competition={comp} viewOnly={viewOnly} showDate />
         ))}
 
+          </>);
+          const s09 = (<>
         {/* 09 — Tendance de forme */}
         {show("trend") && wellnessTrendHasData && (
           <TodaySection num={sec()} title="Tendance de forme" right={<SectionLink onClick={() => navigate("profil")}>Historique →</SectionLink>}>
@@ -1506,6 +1528,24 @@ export default function TodayPage() {
             )}
           </TodaySection>
         )}
+          </>);
+          if (!isDesktop) return <>{s01}{s02}{s03}{s04}{s05}{sComp}{s06}{s07}{s08}{s09}</>;
+          // Ordinateur (planche AthOrdiAAujourdhui) : 3 colonnes, puis séances du jour + tendance.
+          const col = { display: "flex", flexDirection: "column", gap: 28, minWidth: 0 } as const;
+          return (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 24, alignItems: "start" }}>
+                <div style={col}>{s01}{s02}</div>
+                <div style={col}>{s03}{s04}{s05}</div>
+                <div style={col}>{sComp}{s07}{s08}</div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", gap: 24, alignItems: "start" }}>
+                <div style={col}>{s06}</div>
+                <div style={col}>{s09}</div>
+              </div>
+            </>
+          );
+        })()}
 
         <div aria-hidden style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "6px 0 0", opacity: 0.55 }}>
           <img src="/maquette/agon-grec.svg" alt="" style={{ height: 14 }} />
