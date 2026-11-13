@@ -1052,6 +1052,22 @@ $$;
 ALTER FUNCTION "public"."coach_code_exists"("p_code" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."coach_preview_by_code"("p_code" "text") RETURNS "text"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT coalesce(nullif(trim(full_name), ''), 'Ton coach')
+    FROM public.profiles
+   WHERE length(trim(coalesce(p_code, ''))) = 6
+     AND coach_code = upper(trim(p_code))
+     AND role IN ('coach', 'coach_athlete')
+   LIMIT 1;
+$$;
+
+
+ALTER FUNCTION "public"."coach_preview_by_code"("p_code" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."coach_profile_visible"("p_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2314,6 +2330,14 @@ BEGIN
    WHERE h.athlete_id = p_athlete AND h.status = 'active' AND h.valid_from <= p_day
    ORDER BY h.valid_from DESC, h.created_at DESC LIMIT 1;
   m_found := FOUND;
+  IF NOT m_found THEN
+    -- Historique antérieur à tout modèle : le modèle actuel (P42).
+    SELECT h.id, h.kind, h.bounds, h.refs_day INTO m
+      FROM public.hr_zone_models h
+     WHERE h.athlete_id = p_athlete AND h.status = 'active'
+     ORDER BY h.valid_from DESC, h.created_at DESC LIMIT 1;
+    m_found := FOUND;
+  END IF;
   IF m_found AND m.kind <> 'five' THEN
     RETURN QUERY SELECT m.id, m.kind, m.bounds;
     RETURN;
@@ -2321,9 +2345,14 @@ BEGIN
   v_day := CASE WHEN m_found AND m.refs_day IS NOT NULL THEN m.refs_day ELSE p_day END;
   SELECT ARRAY(
     SELECT (round(x.v) + 1)::smallint FROM (
-      SELECT k, (SELECT pl.value FROM public.performance_logs pl
-                  WHERE pl.athlete_id = p_athlete AND pl.metric_name = k AND pl.date <= v_day
-                  ORDER BY pl.date DESC, pl.created_at DESC LIMIT 1) AS v, o
+      SELECT k, coalesce(
+               (SELECT pl.value FROM public.performance_logs pl
+                 WHERE pl.athlete_id = p_athlete AND pl.metric_name = k AND pl.date <= v_day
+                 ORDER BY pl.date DESC, pl.created_at DESC LIMIT 1),
+               -- Historique antérieur aux premières zones saisies : les actuelles (P42).
+               (SELECT pl.value FROM public.performance_logs pl
+                 WHERE pl.athlete_id = p_athlete AND pl.metric_name = k
+                 ORDER BY pl.date DESC, pl.created_at DESC LIMIT 1)) AS v, o
         FROM unnest(ARRAY['FCzone_Z1_max','FCzone_Z2_max','FCzone_Z3_max','FCzone_Z4_max']) WITH ORDINALITY u(k, o)
     ) x ORDER BY x.o) INTO z;
   IF z IS NULL OR cardinality(z) <> 4 OR EXISTS (SELECT 1 FROM unnest(z) v WHERE v IS NULL)
@@ -2363,15 +2392,25 @@ $$;
 ALTER FUNCTION "public"."hyrox_test_analyses_freeze"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."invitation_is_valid"("p_token" "text") RETURNS boolean
+CREATE OR REPLACE FUNCTION "public"."invitation_coach_name"("p_token" "text") RETURNS "text"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.invitations
-     WHERE token = p_token AND used_at IS NULL
-  );
+  SELECT coalesce(nullif(trim(p.full_name), ''), 'Ton coach')
+    FROM public.invitations i
+    JOIN public.profiles p ON p.id = i.coach_id
+   WHERE i.token = p_token AND i.used_at IS NULL
+   LIMIT 1;
 $$;
+
+
+ALTER FUNCTION "public"."invitation_coach_name"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."invitation_is_valid"("p_token" "text") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$ SELECT false $$;
 
 
 ALTER FUNCTION "public"."invitation_is_valid"("p_token" "text") OWNER TO "postgres";
@@ -2655,6 +2694,23 @@ ALTER FUNCTION "public"."mark_missed_workouts"() OWNER TO "postgres";
 
 COMMENT ON FUNCTION "public"."mark_missed_workouts"() IS 'Marque missed les séances passées SANS aucune saisie. Les séances travaillées sont clôturées par close_unfinished_workouts().';
 
+
+
+CREATE OR REPLACE FUNCTION "public"."mark_onboarded"() RETURNS timestamp with time zone
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE v timestamptz;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'non connecté' USING ERRCODE = '42501'; END IF;
+  UPDATE public.profiles SET onboarded_at = coalesce(onboarded_at, now())
+   WHERE id = auth.uid() RETURNING onboarded_at INTO v;
+  RETURN v;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."mark_onboarded"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."merge_provider_activities"("p_athlete" "uuid", "p_source" "public"."data_source", "p_tag" "text", "p_activities" "jsonb") RETURNS "jsonb"
@@ -3849,38 +3905,8 @@ CREATE OR REPLACE FUNCTION "public"."redeem_invitation"("p_token" "text") RETURN
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-DECLARE
-  v_me    uuid := auth.uid();
-  v_coach uuid;
-  v_rows  int;
 BEGIN
-  IF v_me IS NULL THEN
-    RAISE EXCEPTION 'Non connecté' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT coach_id INTO v_coach
-    FROM public.invitations
-   WHERE token = p_token AND used_at IS NULL
-   FOR UPDATE;
-
-  IF v_coach IS NULL THEN
-    RAISE EXCEPTION 'Lien d''invitation invalide ou déjà utilisé' USING ERRCODE = 'P0002';
-  END IF;
-  IF v_coach = v_me THEN
-    RAISE EXCEPTION 'Invitation invalide' USING ERRCODE = '22023';
-  END IF;
-
-  PERFORM set_config('agon.coach_link', 'on', true);
-  UPDATE public.profiles SET coach_id = v_coach WHERE id = v_me AND coach_id IS NULL;
-  GET DIAGNOSTICS v_rows = ROW_COUNT;
-  PERFORM set_config('agon.coach_link', 'off', true);
-
-  IF v_rows = 0 THEN
-    RAISE EXCEPTION 'Profil introuvable ou déjà rattaché à un coach' USING ERRCODE = 'P0002';
-  END IF;
-
-  UPDATE public.invitations SET used_at = now() WHERE token = p_token;
-  RETURN v_coach;
+  RAISE EXCEPTION 'Ce lien d''invitation n''est plus valable : demande le code coach.' USING ERRCODE = '42501';
 END;
 $$;
 
@@ -7889,6 +7915,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "hyrox_category" "text",
     "client_build" "text",
     "client_build_at" timestamp with time zone,
+    "onboarded_at" timestamp with time zone,
     CONSTRAINT "profiles_booking_url_chk" CHECK ((("booking_url" IS NULL) OR ("booking_url" ~ '^https://([a-z0-9-]+\.)*calendly\.com/[^\s]+$'::"text"))),
     CONSTRAINT "profiles_gender_check" CHECK (("gender" = ANY (ARRAY['male'::"text", 'female'::"text"]))),
     CONSTRAINT "profiles_hyrox_category_check" CHECK (("hyrox_category" = ANY (ARRAY['open'::"text", 'pro'::"text"]))),
@@ -7925,6 +7952,10 @@ COMMENT ON COLUMN "public"."profiles"."is_pending" IS 'true = compte pré-créé
 
 
 COMMENT ON COLUMN "public"."profiles"."hyrox_category" IS 'Catégorie HYROX de l''athlète (open / pro) : fixe les charges de course des tests (sleds, wall balls).';
+
+
+
+COMMENT ON COLUMN "public"."profiles"."onboarded_at" IS 'Fin (ou saut) du premier lancement athlète ; null = à montrer';
 
 
 
@@ -9087,7 +9118,19 @@ ALTER TABLE ONLY "public"."workout_rpe"
 
 
 
+CREATE INDEX "activity_laps_athlete_id_fk_idx" ON "public"."activity_laps" USING "btree" ("athlete_id");
+
+
+
+CREATE INDEX "activity_laps_exercise_id_fk_idx" ON "public"."activity_laps" USING "btree" ("exercise_id");
+
+
+
 CREATE INDEX "activity_plan_links_athlete_day" ON "public"."activity_plan_links" USING "btree" ("athlete_id", "local_date");
+
+
+
+CREATE INDEX "activity_plan_links_confirmed_by_fk_idx" ON "public"."activity_plan_links" USING "btree" ("confirmed_by");
 
 
 
@@ -9099,11 +9142,19 @@ CREATE UNIQUE INDEX "activity_plan_links_one_per_planned" ON "public"."activity_
 
 
 
+CREATE INDEX "activity_sets_athlete_id_fk_idx" ON "public"."activity_sets" USING "btree" ("athlete_id");
+
+
+
 CREATE INDEX "activity_streams_athlete_started" ON "public"."activity_streams" USING "btree" ("athlete_id", "started_at" DESC);
 
 
 
 CREATE INDEX "activity_zone_summaries_athlete" ON "public"."activity_zone_summaries" USING "btree" ("athlete_id");
+
+
+
+CREATE INDEX "activity_zone_summaries_model_id_fk_idx" ON "public"."activity_zone_summaries" USING "btree" ("model_id");
 
 
 
@@ -9248,6 +9299,18 @@ CREATE INDEX "health_sync_errors_created_idx" ON "public"."health_sync_errors" U
 
 
 CREATE INDEX "hr_zone_models_athlete_from" ON "public"."hr_zone_models" USING "btree" ("athlete_id", "valid_from" DESC, "created_at" DESC);
+
+
+
+CREATE INDEX "hr_zone_models_created_by_fk_idx" ON "public"."hr_zone_models" USING "btree" ("created_by");
+
+
+
+CREATE INDEX "hr_zone_models_decided_by_fk_idx" ON "public"."hr_zone_models" USING "btree" ("decided_by");
+
+
+
+CREATE INDEX "hr_zone_models_test_result_id_fk_idx" ON "public"."hr_zone_models" USING "btree" ("test_result_id");
 
 
 
@@ -14765,6 +14828,13 @@ GRANT ALL ON FUNCTION "public"."coach_code_exists"("p_code" "text") TO "service_
 
 
 
+REVOKE ALL ON FUNCTION "public"."coach_preview_by_code"("p_code" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."coach_preview_by_code"("p_code" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."coach_preview_by_code"("p_code" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."coach_preview_by_code"("p_code" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."coach_profile_visible"("p_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."coach_profile_visible"("p_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."coach_profile_visible"("p_id" "uuid") TO "service_role";
@@ -18100,6 +18170,13 @@ GRANT ALL ON FUNCTION "public"."indexes_are"("name", "name", "name"[], "text") T
 
 
 
+REVOKE ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "authenticated";
@@ -19461,6 +19538,12 @@ GRANT ALL ON FUNCTION "public"."mark_doc_seen"("doc_uuid" "uuid") TO "service_ro
 
 REVOKE ALL ON FUNCTION "public"."mark_missed_workouts"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."mark_missed_workouts"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."mark_onboarded"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."mark_onboarded"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."mark_onboarded"() TO "service_role";
 
 
 

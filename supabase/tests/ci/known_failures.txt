@@ -2,15 +2,6 @@
 # Format : fichier.sql|début du libellé du cas|raison   (« * » = fichier entier, en dernier recours)
 # Chaque ligne est une dette à solder : corriger la base ou le script, puis retirer la ligne.
 
-# Régression réelle en prod : 20261112200000_hr_zone_models_coach a recréé hr_zone_bounds_at à partir d'une
-# version antérieure à 20261112160000_history_zones_garmin_ai et a perdu le repli « modèle actuel » (P42 lot D) :
-# une sortie antérieure à tout modèle de zones reste sans résumé.
-history_zones_garmin_ai.sql|zones : sortie de 2001 calculée avec le modèle actuel|régression prod : repli « modèle actuel » de hr_zone_bounds_at perdu par 20261112200000_hr_zone_models_coach
-
-# Écart réel du schéma de prod : des FK ajoutées par les migrations récentes (activity_laps, activity_sets,
-# hr_zone_models, athlete_staff.staff_id, activity_zone_summaries.model_id…) n'ont pas d'index.
-db_hygiene.sql|index: plus aucune FK sans index|schéma prod : 8 FK sans index ajoutées depuis la migration d'hygiène
-
 # Propriété de données réelles de la prod (un nom de métrique personnalisé précis), sans équivalent fictif honnête.
 references_rpcs.sql|données: nom personnalisé gardé|vérifie une ligne réelle de la prod (performance_logs « Semi Bilbao »)
 

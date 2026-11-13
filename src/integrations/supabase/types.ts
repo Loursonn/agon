@@ -5902,6 +5902,7 @@ export type Database = {
       close_unfinished_workouts: { Args: never; Returns: number }
       coach_api_hit: { Args: { p_key: string }; Returns: number }
       coach_code_exists: { Args: { p_code: string }; Returns: boolean }
+      coach_preview_by_code: { Args: { p_code: string }; Returns: string }
       coach_profile_visible: { Args: { p_id: string }; Returns: boolean }
       col_is_null:
         | {
@@ -6184,6 +6185,7 @@ export type Database = {
         }[]
       }
       in_todo: { Args: never; Returns: boolean }
+      invitation_coach_name: { Args: { p_token: string }; Returns: string }
       invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
       is_athlete_coach: {
         Args: { athlete_uuid: string; p_coach: string }
