@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-programmation-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Programmation : nouveau look sur ordinateur",
+    summary: "La page Programmation d'un athlète reprend le style des autres pages.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le cycle en cours s'affiche dans un bandeau doré avec la semaine en cours.",
+          "Les onglets Musculation, Énergétique et Spécifique ont chacun leur couleur.",
+          "Les cartes de séance sont plus lisibles : jour et code de la séance en pastilles, la séance ouverte ressort en doré.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-logo-agon",
     date: "2026-11-13",
     kind: "fix",

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { C, alpha } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { Skeleton } from "@/ui/Skeleton";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,9 +21,9 @@ import { ConfirmTrashDialog } from "@/features/coach/components/programmation/Co
 import { DayPickerSheet } from "@/features/coach/components/programmation/DayPickerSheet";
 
 const SUB_TABS = [
-  { k: "muscu", l: "Musculation" },
-  { k: "energie", l: "Énergétique" },
-  { k: "specifique", l: "Spécifique" },
+  { k: "muscu", l: "Musculation", color: C.ac },
+  { k: "energie", l: "Énergétique", color: C.b },
+  { k: "specifique", l: "Spécifique", color: C.o },
 ];
 
 export default function ProgrammationPage() {
@@ -165,22 +165,30 @@ export default function ProgrammationPage() {
         }}
       />
 
-      <div role="tablist" className="mb-agon-lg flex border-b border-agon-brd">
-        {SUB_TABS.map((t) => (
-          <button
-            key={t.k}
-            type="button"
-            role="tab"
-            aria-selected={subTab === t.k}
-            onClick={() => setSubTab(t.k)}
-            className={cn(
-              "min-h-11 flex-1 border-b-2 px-agon-sm font-ui text-agon-xs font-semibold uppercase tracking-wide transition-colors md:flex-none md:px-[18px]",
-              subTab === t.k ? "border-agon-coach text-agon-coach" : "border-transparent text-agon-tx3",
-            )}
-          >
-            {t.l}
-          </button>
-        ))}
+      {/* Onglets de la planche CoachProgrammation : carré de couleur par type, soulignement or */}
+      <div role="tablist" style={{ display: "flex", borderBottom: `1px solid ${C.brd}`, marginBottom: 16, overflowX: "auto" }}>
+        {SUB_TABS.map((t) => {
+          const on = subTab === t.k;
+          return (
+            <button
+              key={t.k}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setSubTab(t.k)}
+              style={{
+                height: 40, display: "flex", alignItems: "center", gap: 8, padding: "0 16px", border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 13, fontWeight: on ? 500 : 400, whiteSpace: "nowrap",
+                color: on ? C.tx : C.tx2,
+                boxShadow: on ? `inset 0 -3px 0 ${C.ac}` : "none",
+                background: on ? `linear-gradient(0deg, ${alpha(C.ac, 0.12)}, transparent 70%)` : "transparent",
+              }}
+            >
+              <span aria-hidden style={{ width: 9, height: 9, borderRadius: 2, flex: "none", background: t.color }} />
+              {t.l}
+            </button>
+          );
+        })}
       </div>
 
       {subTab === "muscu" && (

@@ -9,7 +9,8 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { C } from "@/lib/theme"
+import { C, alpha } from "@/lib/theme"
+import { MONO } from "@/features/shared/components/ordi/OrdiUi"
 import { Plus, Pencil, X, ChevronDown, ChevronUp, CalendarPlus, Copy, Library, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useProgrammation } from "./hooks/useProgrammation"
@@ -85,13 +86,17 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 6, border: "1px solid " + (isOpen ? VIOLET + "60" : C.brdL),
-      overflow: "hidden", marginBottom: 8,
+      position: "relative", borderRadius: 14, overflow: "hidden", marginBottom: 10,
+      border: "1px solid " + (isOpen ? alpha(C.ac, 0.6) : C.brd),
+      background: isOpen
+        ? `radial-gradient(120% 140% at 0% 0%, ${alpha(C.ac, 0.2)}, transparent 60%), linear-gradient(${alpha(C.ac, 0.1)}, ${alpha(C.ac, 0.1)}), ${C.s1}`
+        : C.s1,
       transition: "border-color 150ms",
     }}>
-      {/* Card header */}
+      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isOpen ? C.ac : alpha(C.ac, 0.5) }} />
+      {/* Card header (planche CoachProgrammation : 64 px) */}
       <div
-        style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer" }}
+        style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 64, boxSizing: "border-box", padding: "0 16px 0 19px", cursor: "pointer" }}
         onClick={onToggle}
       >
         {/* Drag handle */}
@@ -113,9 +118,9 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
         {/* Day badge */}
         {session.day_of_week !== undefined ? (
           <div style={{
-            padding: "3px 8px", borderRadius: 6,
-            background: VIOLET_S, color: VIOLET,
-            fontSize: 10, fontWeight: 800, flexShrink: 0,
+            minWidth: 40, height: 24, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center",
+            borderRadius: 6, background: C.s2, border: "1px solid " + C.brdL, color: C.tx,
+            ...MONO, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", flexShrink: 0,
           }}>
             {DOW[session.day_of_week]}
           </div>
@@ -132,10 +137,8 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
         {/* Short badge — hidden when no code defined */}
         {session.short && session.short !== "?" && (
           <div style={{
-            padding: "3px 8px", borderRadius: 6,
-            background: C.s2, color: C.tx2,
-            fontSize: 10, fontWeight: 700, flexShrink: 0,
-            border: "1px solid " + C.brdL,
+            height: 24, display: "flex", alignItems: "center", padding: "0 8px", borderRadius: 6,
+            background: C.ac, color: "#0E0C0A", ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", flexShrink: 0,
           }}>
             {session.short}
           </div>
@@ -143,10 +146,10 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
 
         {/* Name + meta */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 15, fontWeight: 500, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {session.name || "Séance sans nom"}
           </div>
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 1 }}>
+          <div style={{ ...MONO, fontSize: 11, color: C.tx2, marginTop: 2 }}>
             {session.blocs.length} bloc{session.blocs.length !== 1 ? "s" : ""} · {totalExercices(session)} exercice{totalExercices(session) !== 1 ? "s" : ""}
             {session.multi_semaine && session.nb_semaines ? ` · ${session.nb_semaines} sem.` : ""}
           </div>
@@ -156,19 +159,19 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
           <button
             onClick={onEdit}
-            style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: alpha(C.bg, 0.45), color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           ><Pencil size={12} /></button>
 
           <button
             onClick={() => { setShowPlace(p => !p); setShowDuplicate(false) }}
             title="Placer dans le planning"
-            style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: showPlace ? VIOLET_S : "transparent", color: showPlace ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
+            style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: showPlace ? VIOLET_S : alpha(C.bg, 0.45), color: showPlace ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
           ><CalendarPlus size={12} /></button>
 
           <button
             onClick={() => { setShowDuplicate(p => !p); setShowPlace(false) }}
             title="Dupliquer chez un autre athlète"
-            style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: showDuplicate ? VIOLET_S : "transparent", color: showDuplicate ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: showDuplicate ? VIOLET_S : alpha(C.bg, 0.45), color: showDuplicate ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           ><Copy size={12} /></button>
 
           {confirmDelete ? (
@@ -179,13 +182,13 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
               >Supprimer</button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: alpha(C.bg, 0.45), color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               ><X size={12} /></button>
             </>
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.r + "40", background: C.rS, color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + alpha(C.r, 0.55), background: alpha(C.r, 0.12), color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             ><X size={12} /></button>
           )}
         </div>
@@ -472,11 +475,11 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
           onClick={() => { setShowSessionBank(p => !p); setIsAddingSession(false); setBankTemplate(null) }}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "8px 16px", borderRadius: 4,
-            border: "1px solid " + (showSessionBank ? VIOLET : C.brdL),
-            background: showSessionBank ? VIOLET + "0F" : "transparent",
-            color: showSessionBank ? VIOLET : C.tx3,
-            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+            height: 34, boxSizing: "border-box", padding: "0 14px", borderRadius: 10,
+            border: "1px solid " + (showSessionBank ? C.ac : C.brdL),
+            background: showSessionBank ? alpha(C.ac, 0.08) : "transparent",
+            color: showSessionBank ? C.ac : C.tx2,
+            fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
           <Library size={13} />
@@ -487,9 +490,9 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
           title="Coller une séance écrite au format YOXX"
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "8px 16px", borderRadius: 4,
-            border: "1px solid " + C.ac + "40", background: C.ac + "12", color: C.ac,
-            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+            height: 34, boxSizing: "border-box", padding: "0 14px", borderRadius: 10,
+            border: "1px solid " + C.brdL, background: "transparent", color: C.tx2,
+            fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
           Importer un texte
@@ -498,9 +501,9 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
           onClick={() => { setIsAddingSession(true); setEditingSessionId(null); setShowSessionBank(false); setBankTemplate(null) }}
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "8px 16px", borderRadius: 4,
-            border: "none", background: VIOLET, color: "#fff",
-            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+            height: 34, boxSizing: "border-box", padding: "0 18px", borderRadius: 10,
+            border: "none", background: C.ac, color: "#0E0C0A", boxShadow: `0 6px 22px ${alpha(C.ac, 0.3)}`,
+            fontSize: 11, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
           <Plus size={13} />
