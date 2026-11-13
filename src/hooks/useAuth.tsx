@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { getSession, isAuthNetworkError, onAuthChange, signIn, type User } from "@/api/auth";
 import {
-  createInvitation, createPendingAthlete as apiCreatePendingAthlete, ensureCoachCode, getCoachRoster,
+  createPendingAthlete as apiCreatePendingAthlete, ensureCoachCode, getCoachRoster,
   linkToCoachByCode, normalizeCoachCode, registerAthleteWithCode as apiRegisterAthleteWithCode,
-  registerAthleteWithInvitation, registerCoach as apiRegisterCoach, registerStaff as apiRegisterStaff,
+  registerCoach as apiRegisterCoach, registerStaff as apiRegisterStaff,
   removePendingAthlete as apiRemovePendingAthlete, serverReason, setAthleteHidden as apiSetAthleteHidden, setOwnCoach,
 } from "@/api/account";
 import { getProfile, updateAthleteProfile as apiUpdateAthleteProfile, type AthleteProfileFields, type Profile } from "@/api/profile";
@@ -54,7 +54,6 @@ interface AuthContextType {
   setActiveAthleteId: (id: string | null) => void;
   login: (email: string, password: string) => Promise<void>;
   registerCoach: (email: string, password: string, fullName: string, birthDate: string, isCoachAthlete?: boolean) => Promise<void>;
-  registerAthlete: (email: string, password: string, fullName: string, birthDate: string, token: string) => Promise<void>;
   registerAthleteWithCode: (email: string, password: string, fullName: string, birthDate: string, coachCode: string) => Promise<void>;
   /** Compte professionnel (kiné, ostéo…) — gratuit, sans athlètes à lui. */
   registerStaff: (email: string, password: string, fullName: string, birthDate: string, profession: string) => Promise<void>;
@@ -64,7 +63,6 @@ interface AuthContextType {
   becomeSelfCoach: () => Promise<void>;
   /** Déconnecte cet appareil puis recharge sur `redirectTo` (défaut /login). */
   logout: (redirectTo?: string) => Promise<void>;
-  createInviteLink: () => Promise<string>;
   updateAthleteProfile: (athleteId: string, fields: AthleteProfileFields) => Promise<void>;
 }
 
@@ -193,10 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await apiRegisterCoach(email, password, fullName, birthDate, isCoachAthlete);
   }
 
-  async function registerAthlete(email: string, password: string, fullName: string, birthDate: string, token: string) {
-    await registerAthleteWithInvitation(email, password, fullName, birthDate, token);
-  }
-
   async function registerAthleteWithCode(email: string, password: string, fullName: string, birthDate: string, coachCode: string) {
     await apiRegisterAthleteWithCode(email, password, fullName, birthDate, coachCode);
   }
@@ -276,18 +270,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function createInviteLink(): Promise<string> {
-    if (!user) throw new Error("Non connecté");
-    const token = await createInvitation(user.id);
-    return `${window.location.origin}/invite/${token}`;
-  }
-
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
       athletes, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
-      login, registerCoach, registerAthlete, registerAthleteWithCode, registerStaff,
-      canCoachSelf, selfCoCoached, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, createInviteLink, updateAthleteProfile,
+      login, registerCoach, registerAthleteWithCode, registerStaff,
+      canCoachSelf, selfCoCoached, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, updateAthleteProfile,
     }}>
       {children}
     </AuthContext.Provider>

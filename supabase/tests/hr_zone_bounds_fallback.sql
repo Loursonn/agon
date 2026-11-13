@@ -1,9 +1,9 @@
--- Tests de 20261113160000_hr_zone_bounds_fallback.sql : hr_zone_bounds_at garde les modèles
+-- Tests de 20261113160100_hr_zone_bounds_fallback.sql : hr_zone_bounds_at garde les modèles
 -- datés (P43, 3/5/7 zones, refs_day) ET le repli « modèle actuel » de l'historique (P42).
 -- Toujours annulé. Athlète fictif créé dans la transaction (@example.invalid).
 --
 -- Avant application (doit échouer sur R1 et R2 : c'est la régression) :
---   (echo 'BEGIN;'; cat supabase/migrations/20261113160000_hr_zone_bounds_fallback.sql; \
+--   (echo 'BEGIN;'; cat supabase/migrations/20261113160100_hr_zone_bounds_fallback.sql; \
 --    sed -e '/^BEGIN;$/d' supabase/tests/hr_zone_bounds_fallback.sql) > "$TMPDIR/hz.sql"
 --   supabase db query --linked -f "$TMPDIR/hz.sql"
 -- Après application : supabase db query --linked -f supabase/tests/hr_zone_bounds_fallback.sql

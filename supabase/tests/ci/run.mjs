@@ -12,6 +12,7 @@
 //   - colonnes `k`, `v` : la valeur attendue est entre parenthèses à la fin du libellé
 //     (« … (0) », « … (true) », « … (>0) ») ; « refusé (OK) » / « ACCEPTÉ (KO) » se lisent tels quels ;
 //   - fiches_rls : le bloc lève « RESULTS ok=N ko=M » ; il faut ko=0.
+//   - aucune ligne : RAISE NOTICE « … N / N » en fin de bloc DO (une exception = un échec).
 import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
@@ -141,7 +142,13 @@ for (const file of files) {
     // Toujours dans une transaction annulée, même pour les scripts écrits pour être enveloppés à la main.
     const out = await client.query(`BEGIN;\n${sql}\n;ROLLBACK;`);
     for (const res of Array.isArray(out) ? out : [out]) cases += judgeResult(res, fails);
-    if (cases === 0) fails.push({ label: "", text: "aucune ligne de résultat lue" });
+    // Scripts sans ligne de résultat : un bloc DO lève une exception au premier cas en échec
+    // et finit par RAISE NOTICE '… : N / N'. Pas d'erreur + « N / N » = N cas verts.
+    if (cases === 0) {
+      const tally = notices.map(n => /(\d+)\s*\/\s*(\d+)\s*$/.exec(n)).find(Boolean);
+      if (tally && tally[1] === tally[2] && Number(tally[1]) > 0) cases = Number(tally[1]);
+      else fails.push({ label: "", text: "aucune ligne de résultat lue" });
+    }
   } catch (e) {
     const m = /RESULTS ok=(\d+) ko=(\d+) \| (.*)/s.exec(e.message);
     if (m) {

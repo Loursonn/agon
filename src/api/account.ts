@@ -9,7 +9,7 @@ import { signupBirthDateError } from "@/lib/age";
  * première connexion, consentements RGPD, export et suppression du compte.
  *
  * `profiles.coach_id` (CLAUDE.md) : un coach n'est posé que par les RPC
- * `link_to_coach_by_code` / `redeem_invitation` ou par les Edge Functions.
+ * `link_to_coach_by_code` ou par les Edge Functions.
  * `setOwnCoach` (RPC `set_own_coach`) n'accepte que les deux valeurs que le
  * trigger `guard_profile_privileged_fields` laisse passer : `null` (quitter
  * son coach) et soi-même (coach-athlète qui se coache).
@@ -87,12 +87,6 @@ export async function coachPreviewByCode(code: string): Promise<string | null> {
   return (name as string | null) ?? null;
 }
 
-/** Nom du coach d'un lien d'invitation encore valable, null sinon (page « … t'invite »). */
-export async function invitationCoachName(token: string): Promise<string | null> {
-  const name = must(await db().rpc("invitation_coach_name", { p_token: token }), "Vérification du lien impossible");
-  return (name as string | null) ?? null;
-}
-
 export async function pickFreeCoachCode(random: () => number = Math.random): Promise<string> {
   let code = generateCoachCode(random);
   for (let attempts = 0; attempts < 5; attempts++) {
@@ -101,15 +95,6 @@ export async function pickFreeCoachCode(random: () => number = Math.random): Pro
     code = generateCoachCode(random);
   }
   return code;
-}
-
-/** Lien d'invitation valide et non utilisé ? Faux si la vérification échoue. */
-export async function invitationIsValid(token: string): Promise<boolean> {
-  try {
-    return !!must(await db().rpc("invitation_is_valid", { p_token: token }), "Vérification de l'invitation impossible");
-  } catch {
-    return false;
-  }
 }
 
 type NewProfile = {
@@ -125,11 +110,6 @@ async function insertProfile(row: NewProfile): Promise<void> {
 /** Rattache l'utilisateur connecté au coach de ce code (RPC). `reason` : « Code coach invalide », « …propre code… ». */
 export async function linkToCoachByCode(code: string): Promise<string> {
   return must(await db().rpc("link_to_coach_by_code", { p_code: normalizeCoachCode(code) }), "Rattachement au coach impossible") as string;
-}
-
-/** Utilise l'invitation : rattache l'athlète connecté (sans coach) au coach qui l'a créée (RPC). */
-export async function redeemInvitation(token: string): Promise<string> {
-  return must(await db().rpc("redeem_invitation", { p_token: token }), "Invitation inutilisable") as string;
 }
 
 /** Les erreurs d'inscription gardent le message affiché jusqu'ici. */
@@ -164,20 +144,6 @@ export async function registerCoach(
     // Coach-athlète : son propre coach par défaut (apparaît dans ses athlètes)
     ...(isCoachAthlete ? { coach_id: user.id } : {}),
   }).catch((e) => { throw plain(reasonOf(e)); });
-  return user.id;
-}
-
-export async function registerAthleteWithInvitation(
-  email: string, password: string, fullName: string, birthDate: string, token: string,
-): Promise<string> {
-  const birth_date = assertBirthDate(birthDate);
-  if (!(await invitationIsValid(token))) throw plain("Lien d'invitation invalide ou déjà utilisé");
-  const user = await signUp(email, password);
-  await insertProfile({ id: user.id, role: "athlete", full_name: fullName, birth_date }).catch((e) => { throw plain(reasonOf(e)); });
-  // Le rattachement au coach passe par le serveur (contrôle du lien)
-  await redeemInvitation(token).catch((e) => {
-    throw plain("Compte créé, mais le lien d'invitation n'a pas pu être utilisé : " + reasonOf(e));
-  });
   return user.id;
 }
 
@@ -243,16 +209,6 @@ export async function setOwnCoach(userId: string, coachId: null | string, what =
  */
 export async function reportClientBuild(build: string): Promise<void> {
   check(await db().rpc("report_client_build", { p_build: build }), "Version non enregistrée");
-}
-
-/** Lien d'invitation (ancien parcours `/invite/:token`) créé par le coach connecté ; renvoie le jeton. */
-export async function createInvitation(coachId: string): Promise<string> {
-  const row = unwrap(
-    await db().from("invitations").insert({ coach_id: coachId }).select("token").single(),
-    "Création du lien d'invitation impossible",
-  );
-  if (!row?.token) throw new ApiError("Création du lien d'invitation impossible", { message: "jeton absent" });
-  return row.token;
 }
 
 // ── Roster du coach ───────────────────────────────────────────────────────────
