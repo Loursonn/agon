@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-staff-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Coachs & staff : nouvelle page à l'ordinateur",
+    summary: "La page Coachs & staff d'un athlète est plus claire : coachs, professionnels, droits et invitations sont réunis et se règlent sans quitter la page.",
+    sections: [
+      {
+        title: "Pour vous",
+        points: [
+          "Chaque professionnel a sa carte : métier, date d'ajout et ce qu'il peut écrire ou seulement consulter.",
+          "Régler les droits ouvre une grille sur deux colonnes ; les lignes changées sont signalées avant d'enregistrer.",
+          "Retirer un accès demande une confirmation et rappelle que ce qu'il a créé reste dans votre banque.",
+          "Les invitations en attente montrent leur date d'expiration et se copient en un clic.",
+        ],
+      },
+      {
+        title: "Pour le professionnel invité",
+        points: [
+          "La page d'invitation affiche ce qu'il pourra faire avant de créer son compte, et jusqu'à quand le lien est valable.",
+          "Son espace liste ses athlètes avec leurs blessures en cours, et chaque fiche montre ses accès sur le côté.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-suppression-photos-seances",
     date: "2026-11-13",
     kind: "fix",

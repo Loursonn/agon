@@ -135,3 +135,12 @@ export function summarizePermissions(p: StaffPermissions): string {
 export function staffInviteUrl(token: string): string {
   return `${publicWebOrigin()}/staff-invite/${token}`;
 }
+
+/** Domaines en écriture / en lecture, libellés, dans l'ordre d'affichage de la planche. */
+export function permissionLists(p: StaffPermissions): { write: string[]; read: string[] } {
+  const order: StaffDomain[] = ["seances", "planification", "logs", "wellness", "medical", "nutrition", "tests", "fiches", "commentaires"];
+  return {
+    write: order.filter((d) => p[d] === "write").map((d) => DOMAIN_LABEL[d]),
+    read: order.filter((d) => p[d] === "read").map((d) => DOMAIN_LABEL[d]),
+  };
+}

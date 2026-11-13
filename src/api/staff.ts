@@ -67,6 +67,9 @@ export interface StaffInvitationPreview {
   invited_by_role: "coach" | "athlete";
   profession: StaffProfession;
   status: "valid" | "used" | "expired";
+  /** Droits de l'invitation (absents tant que la migration 20261113200000 n'est pas en prod). */
+  permissions?: StaffPermissions | null;
+  expires_at?: string | null;
 }
 
 /** Lien actif du pro connecté vers un athlète (colonnes lues par le pro). */
@@ -238,7 +241,9 @@ export async function getStaffInvitationPreview(token: string): Promise<StaffInv
     await db().rpc("get_staff_invitation", { p_token: token }),
     "Lecture de l'invitation impossible",
   );
-  return (rows[0] as unknown as StaffInvitationPreview | undefined) ?? null;
+  const row = rows[0] as unknown as (Omit<StaffInvitationPreview, "permissions"> & { permissions?: unknown }) | undefined;
+  if (!row) return null;
+  return { ...row, permissions: row.permissions == null ? null : toPermissions(row.permissions) };
 }
 
 /** Accepte une invitation ; renvoie l'id de l'athlète. Message de refus de la base tel quel. */
