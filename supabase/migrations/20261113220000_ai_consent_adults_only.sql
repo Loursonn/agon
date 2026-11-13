@@ -16,10 +16,8 @@
 --      lectures serveur (`hasConsent`, `coach-api`, `ai_eligible_sources`) passent par
 --      `current_consents` : elles voient le refus aussitôt.
 --
--- Compatible avec le client de `main` : applicable tout de suite (accord d'Hugo requis).
--- NE PAS mettre dans supabase/migrations avant application (le job R2 comparerait au schéma de
--- la prod). Après application : déplacer ici → supabase/migrations/, `migration repair`,
--- rafraîchir supabase/tests/ci/schema.sql, ajouter le test à supabase/tests/.
+-- Compatible avec le client de `main`. Appliquée en prod le 2026-11-13 avec l'accord d'Hugo.
+-- Test : supabase/tests/ai_consent_adults_only.sql.
 
 CREATE OR REPLACE FUNCTION public.ai_consent_adults_only()
 RETURNS trigger

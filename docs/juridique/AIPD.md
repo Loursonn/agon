@@ -60,7 +60,7 @@ Storage, Edge Functions Deno, Vault) ; Vercel ne sert que le code du site. Donn�
 | Droits (art. 15-22) | Export JSON complet en libre-service, suppression en libre-service (app et page web), retrait des accords en un clic | Conforme |
 | Sous-traitance (art. 28) | DPA Supabase non signé, statut Vercel et Gemini à vérifier | **Non conforme tant que H1-H3 ne sont pas faits** |
 | Transferts (chap. V) | Vercel et Google certifiés DPF ; Supabase par clauses types | Conforme après H2 |
-| Mineurs (art. 8, loi I&L art. 45) | 15 ans minimum vérifié en base ; IA ouverte aux 15-17 ans alors que Gemini et Claude l'interdisent | **Corrigé côté client, trigger à appliquer** (C2) |
+| Mineurs (art. 8, loi I&L art. 45) | 15 ans minimum vérifié en base ; IA ouverte aux 15-17 ans alors que Gemini et Claude l'interdisent | **Corrigé** : client et trigger en base (C2) |
 | Hébergement de santé (CSP L.1111-8) | Fonctions de suivi médical (diagnostic, traitement, documents médicaux) sur un hébergeur non certifié HDS | **Non conforme** (C1) |
 
 ## 4. Risques
@@ -125,8 +125,8 @@ dans `docs/DECISIONS.md`).
 
 | # | Action | Qui | Échéance |
 |---|---|---|---|
-| C1 | Données de soins (aujourd'hui : 1 diagnostic et 2 traitements saisis par les athlètes, 0 document) : retirer les champs diagnostic / traitement / antécédents / documents médicaux (ou les réserver à un hébergeur HDS) | Hugo décide, dev | Avant toute nouvelle saisie ; avant les stores au plus tard |
-| C2 | Accord IA 18 ans : client (fait, sur `dev`), trigger en base (prêt : `a-appliquer/`) | Hugo valide l'application | Dès que possible |
+| C1 | Décidé le 13/11 (Hugo) : retirer. Données de soins (aujourd'hui : 1 diagnostic et 2 traitements saisis par les athlètes, 0 document) : retirer les champs diagnostic / traitement / antécédents / documents médicaux (ou les réserver à un hébergeur HDS) | Hugo décide, dev | Avant toute nouvelle saisie ; avant les stores au plus tard |
+| C2 | Accord IA 18 ans : client (fait, sur `dev`), trigger en base appliqué le 13/11 | — | Fait |
 | H1-H3 | DPA Supabase signé, facturation Gemini active, offre Vercel compatible | Hugo | Avant les stores |
 | A1 | Finir la correction des règles trop larges | session `policies-prod-trop-large` | En cours |
 | A2 | Test CI : aucun bucket public hors liste blanche (`energy-exercise-photos`, `exercise-*`, `public-assets`) | dev | Prochain lot |

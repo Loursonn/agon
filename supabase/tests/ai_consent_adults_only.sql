@@ -1,8 +1,12 @@
--- Partie test (après le corps de la migration, dans la même transaction annulée).
+-- Accord IA réservé aux 18 ans et plus (migration 20261113220000, revue juridique C2).
+-- Toujours annulé (ROLLBACK final) : rien ne reste en base.
+--   supabase db query --linked -f supabase/tests/ai_consent_adults_only.sql
+-- Chaque ligne k → v : la valeur attendue est dans le libellé. Aucune donnée personnelle
+-- n'est affichée (booléens et comptes seulement).
+BEGIN;
+
 CREATE TEMP TABLE r(n serial, k text, v text) ON COMMIT DROP;
 GRANT ALL ON r TO authenticated; GRANT ALL ON SEQUENCE r_n_seq TO authenticated;
-INSERT INTO r(k,v) SELECT '00 refus de rattrapage ajoutés (nombre, info)', count(*)::text
-  FROM user_consents WHERE statement LIKE 'Refus enregistré automatiquement le 2026-11-13%';
 INSERT INTO r(k,v) SELECT '01 mineurs avec accord IA courant après rattrapage (0)', count(*)::text
   FROM current_consents c JOIN profiles p ON p.id = c.user_id
   WHERE c.purpose = 'ai_programming' AND c.granted AND p.birth_date > current_date - interval '18 years';

@@ -579,6 +579,36 @@ $$;
 ALTER FUNCTION "public"."add_co_coach"("p_athlete" "uuid", "p_coach_code" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."ai_consent_adults_only"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_birth date;
+BEGIN
+  IF NEW.purpose <> 'ai_programming' OR NOT NEW.granted THEN
+    RETURN NEW;
+  END IF;
+  SELECT birth_date INTO v_birth FROM public.profiles WHERE id = NEW.user_id;
+  -- « Aujourd'hui » = UTC-12 : personne n'est déclaré majeur trop tôt à cause du fuseau.
+  IF v_birth IS NOT NULL
+     AND v_birth > ((now() AT TIME ZONE 'Etc/GMT+12')::date - interval '18 years')::date THEN
+    NEW.granted := false;
+    NEW.statement := 'Refus enregistré automatiquement : accord IA réservé aux 18 ans et plus. '
+                     || 'Libellé affiché : ' || coalesce(NEW.statement, '');
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."ai_consent_adults_only"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."ai_consent_adults_only"() IS 'Accord ai_programming réservé aux 18 ans et plus (conditions Gemini et Claude) : un accord donné avant 18 ans est enregistré en refus. Revue juridique 2026-11, risque C2.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."ai_eligible_sources"("p_athlete" "uuid") RETURNS "public"."data_source"[]
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
@@ -10239,6 +10269,10 @@ CREATE OR REPLACE TRIGGER "trg_sync_test_session" AFTER INSERT OR UPDATE ON "pub
 
 
 
+CREATE OR REPLACE TRIGGER "user_consents_ai_adults_only" BEFORE INSERT ON "public"."user_consents" FOR EACH ROW EXECUTE FUNCTION "public"."ai_consent_adults_only"();
+
+
+
 CREATE OR REPLACE TRIGGER "user_consents_halt_sync" AFTER INSERT ON "public"."user_consents" FOR EACH ROW EXECUTE FUNCTION "public"."halt_sync_on_consent_withdrawal"();
 
 
@@ -14594,6 +14628,11 @@ GRANT ALL ON FUNCTION "public"."add_result"(boolean, boolean, "text", "text", "t
 GRANT ALL ON FUNCTION "public"."add_result"(boolean, boolean, "text", "text", "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."add_result"(boolean, boolean, "text", "text", "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."add_result"(boolean, boolean, "text", "text", "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."ai_consent_adults_only"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."ai_consent_adults_only"() TO "service_role";
 
 
 

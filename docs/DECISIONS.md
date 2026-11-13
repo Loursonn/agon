@@ -2289,10 +2289,12 @@ et son README.
   `REGISTRE_VIOLATIONS.md` (procédure, incident `test-media` inscrit).
 - **HDS (D7)** : sport, bien-être et montres hors champ de l'art. L.1111-8 CSP ; diagnostics et traitements écrits
   par un professionnel de santé, antécédents et documents médicaux **dans le champ**. Recommandation : retirer ces
-  champs (coût nul) plutôt qu'un hébergeur HDS. Décision d'Hugo attendue (C1).
+  champs (coût nul) plutôt qu'un hébergeur HDS. **Décision d'Hugo (13/11) : retirer ces champs** (C1).
 - **IA réservée aux 18 ans** (conditions Gemini et Claude) : accord non proposé aux 15-17 ans côté client
-  (`canOfferAiConsent`, `@shared/domain/age`). Trigger en base prêt dans `docs/juridique/a-appliquer/`, à appliquer
-  avec l'accord d'Hugo (hors `supabase/migrations` tant qu'il n'est pas appliqué, sinon le job R2 rougit).
+  (`canOfferAiConsent`, `@shared/domain/age`) ; trigger `user_consents_ai_adults_only` (accord IA avant 18 ans
+  enregistré en refus, sans erreur, donc compatible avec `main`). **Appliqué en prod le 13/11 avec l'accord d'Hugo**
+  (migration 20261113220000, `migration repair`, `schema.sql` rafraîchi, test `ai_consent_adults_only.sql` vert en
+  prod ; 0 mineur avait dit oui). Date de naissance inconnue (19 profils sur 36) : non couverte.
 - **Incident `test-media`** : violation inscrite au registre, risque jugé improbable (adresse impossible à deviner ni à
   lister, jamais produite par l'app) → pas de notification CNIL ; information des athlètes concernés recommandée.
 - **Pages légales** : corrections regroupées **sans nouvelle montée** : `LEGAL_VERSION` reste `2026-11-13`, version
