@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-tests-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Banque de tests : rubriques numérotées",
+    summary: "La banque de tests est rangée en rubriques numérotées par catégorie (bilan articulaire, endurance, force…), vos tests personnalisés à la fin.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-wellness-nuit-montre",
     date: "2026-11-13",
     kind: "feature",
