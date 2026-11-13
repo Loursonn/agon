@@ -226,3 +226,234 @@ export function crossRaceWithWatch(
 
   return { segments, freshPaceSPerKm: fresh, runDrift, raceMaxHr, roxzoneEstimated: tl.roxzoneEstimated, flags };
 }
+
+// ─────────────────────── Constats complémentaires ────────────────────────────
+
+/** Valeur moyenne d'une colonne sur [from, to[ (secondes de la série). */
+function meanAt(stream: ActivityStream, col: Array<number | null> | null, from: number, to: number): number | null {
+  return mean(window(stream, col, from, to).vals);
+}
+
+/**
+ * Efficacité des runs : mètres parcourus par battement (1 000 m ÷ battements
+ * du run). Run 1 → dernier run mesuré ; la baisse dit la dérive cardiaque.
+ */
+export function runEfficiency(a: RaceWatchAnalysis): { first: number; last: number; pct: number } | null {
+  const runs = a.segments.filter((s) => s.kind === "run" && s.avgHr != null);
+  if (runs.length < 2 || runs[0].key !== "run_1") return null;
+  const mpb = (s: SegmentWatch) => 1000 / ((s.avgHr as number) * (s.officialS / 60));
+  const first = mpb(runs[0]);
+  const last = mpb(runs[runs.length - 1]);
+  return { first, last, pct: last / first - 1 };
+}
+
+/** Part du temps (course entière, et stations seules) au-dessus d'un seuil de FC (SV2). */
+export function timeAboveHr(
+  a: RaceWatchAnalysis,
+  stream: ActivityStream | null,
+  thresholdBpm: number | null,
+  offsetS = 0,
+): { totalS: number; share: number; stationShare: number } | null {
+  if (!stream || thresholdBpm == null || !stream.hr) return null;
+  let above = 0;
+  let measured = 0;
+  let stAbove = 0;
+  let stMeasured = 0;
+  for (const s of a.segments) {
+    const w = window(stream, stream.hr, offsetS + s.startS, offsetS + s.endS);
+    const up = w.vals.filter((v) => v > thresholdBpm).length;
+    above += up;
+    measured += w.vals.length;
+    if (s.kind === "station") {
+      stAbove += up;
+      stMeasured += w.vals.length;
+    }
+  }
+  if (measured === 0) return null;
+  return { totalS: above, share: above / measured, stationShare: stMeasured ? stAbove / stMeasured : 0 };
+}
+
+/**
+ * Récupération en roxzone : baisse de FC dans les 60 s qui suivent la fin de
+ * chaque station (moyenne des 5 dernières secondes de station → moyenne de
+ * 55 à 60 s après). Rend la moins bonne.
+ */
+export function roxzoneRecovery(
+  a: RaceWatchAnalysis,
+  stream: ActivityStream | null,
+  offsetS = 0,
+): { avgDrop: number; worst: { station: string; drop: number } } | null {
+  if (!stream || !stream.hr) return null;
+  const drops: Array<{ station: string; drop: number }> = [];
+  for (const s of a.segments) {
+    if (s.kind !== "station") continue;
+    const end = offsetS + s.endS;
+    const at = meanAt(stream, stream.hr, end - 5, end);
+    const after = meanAt(stream, stream.hr, end + 55, end + 60);
+    if (at != null && after != null) drops.push({ station: s.label, drop: Math.round(at - after) });
+  }
+  if (drops.length === 0) return null;
+  const worst = drops.reduce((w, d) => (d.drop < w.drop ? d : w));
+  return { avgDrop: Math.round(drops.reduce((n, d) => n + d.drop, 0) / drops.length), worst };
+}
+
+/** Course compromise : perte moyenne des runs 2 à 8 par rapport au run 1, et la pire. */
+export function compromisedRunning(a: RaceWatchAnalysis): { avgSPerKm: number; worst: { key: string; after: string | null; sPerKm: number } } | null {
+  const runs = a.segments.filter((s) => s.kind === "run");
+  if (runs.length < 2) return null;
+  const fresh = runs[0].officialS;
+  const rest = runs.slice(1).map((s) => {
+    const i = a.segments.indexOf(s);
+    let after: string | null = null;
+    for (let j = i - 1; j >= 0; j--) if (a.segments[j].kind === "station") { after = a.segments[j].label; break; }
+    return { key: s.key, after, sPerKm: Math.round(s.officialS - fresh) };
+  });
+  const worst = rest.reduce((w, r) => (r.sPerKm > w.sPerKm ? r : w));
+  return { avgSPerKm: Math.round(rest.reduce((n, r) => n + r.sPerKm, 0) / rest.length), worst };
+}
+
+// ───────────────────────────── Où gagner du temps ────────────────────────────
+
+/** Référence d'un segment : médiane (p50) du niveau, et au-delà si connue. */
+export type MedianLookup = (segment: string) => number | null;
+
+export interface GainItem {
+  key: string;
+  label: string;
+  athleteS: number;
+  medianS: number;
+  gainS: number;
+}
+
+/** Écart au-dessous duquel un point n'est pas cité (bruit de chronométrage). */
+export const GAIN_THRESHOLD_S = 10;
+
+/**
+ * Cascade « du chrono actuel au chrono possible » : chaque point où
+ * l'athlète est derrière la médiane de son niveau, du plus gros au plus petit.
+ * Les runs sont regroupés (« Runs 6 à 8 ») : un run isolé est rarement un
+ * levier à lui seul.
+ */
+export function raceGains(r: HyroxResult, median: MedianLookup): { currentS: number; possibleS: number; items: GainItem[] } {
+  const items: GainItem[] = [];
+  const rox = r.roxzone_total_s;
+  const roxMed = median("roxzone_total");
+  if (rox != null && roxMed != null && rox - roxMed >= GAIN_THRESHOLD_S) {
+    items.push({ key: "roxzone", label: "Roxzone", athleteS: rox, medianS: roxMed, gainS: rox - roxMed });
+  }
+  for (const k of Object.keys(STATION_META) as StationKey[]) {
+    const v = segValue(r, k);
+    const m = median(k);
+    if (v != null && m != null && v - m >= GAIN_THRESHOLD_S) {
+      items.push({ key: k, label: STATION_META[k].label, athleteS: v, medianS: m, gainS: v - m });
+    }
+  }
+  const slowRuns: number[] = [];
+  let runGain = 0;
+  let runAth = 0;
+  let runMed = 0;
+  for (let i = 1; i <= 8; i++) {
+    const v = segValue(r, `run_${i}` as SegmentKey);
+    const m = median(`run_${i}`);
+    if (v != null && m != null && v > m) {
+      slowRuns.push(i);
+      runGain += v - m;
+      runAth += v;
+      runMed += m;
+    }
+  }
+  if (runGain >= GAIN_THRESHOLD_S) {
+    const label = slowRuns.length === 1
+      ? `Run ${slowRuns[0]}`
+      : slowRuns.every((n, i) => i === 0 || n === slowRuns[i - 1] + 1)
+        ? `Runs ${slowRuns[0]} à ${slowRuns[slowRuns.length - 1]}`
+        : `Runs ${slowRuns.join(", ")}`;
+    items.push({ key: "runs", label, athleteS: runAth, medianS: runMed, gainS: runGain });
+  }
+  items.sort((a, b) => b.gainS - a.gainS);
+  const total = items.reduce((n, x) => n + x.gainS, 0);
+  return { currentS: r.total_s, possibleS: r.total_s - total, items };
+}
+
+// ─────────────────────────── Constats de l'athlète ───────────────────────────
+
+export interface Finding {
+  /** Chiffre mis en avant (« +31 », « 82 »), et son unité. */
+  value: string;
+  unit: string;
+  text: string;
+}
+
+const fmtMs = (s: number) => {
+  const m = Math.floor(s / 60);
+  const r = Math.round(s - m * 60);
+  return `${m} min ${String(r).padStart(2, "0")} s`;
+};
+
+/**
+ * Trois constats au plus, dans l'ordre : course compromise (dernier run vs
+ * run 1), stations au-dessus de SV2, Roxzone vs médiane. Phrases calculées.
+ */
+export function athleteFindings(input: {
+  analysis: RaceWatchAnalysis;
+  above: ReturnType<typeof timeAboveHr>;
+  gains: ReturnType<typeof raceGains> | null;
+  sv2: number | null;
+}): Finding[] {
+  const out: Finding[] = [];
+  const { analysis, above, gains, sv2 } = input;
+  const runs = analysis.segments.filter((s) => s.kind === "run");
+  const last = runs[runs.length - 1];
+  const delta = Math.round(last.officialS - analysis.freshPaceSPerKm);
+  if (delta > 0) {
+    const i = analysis.segments.indexOf(last);
+    const st = analysis.segments.slice(0, i).reverse().find((s) => s.kind === "station");
+    out.push({
+      value: `+${delta}`,
+      unit: "s/km",
+      text: `${st ? `Après ${st.label.toLowerCase()}, ton` : "Ton"} dernier km a ralenti de ${delta} s/km par rapport au premier.`,
+    });
+  }
+  if (above && sv2 != null && above.stationShare > 0) {
+    out.push({
+      value: String(Math.round(above.stationShare * 100)),
+      unit: "%",
+      text: `Part des stations passée au-dessus de ${sv2} bpm (SV2).`,
+    });
+  }
+  const rox = gains?.items.find((x) => x.key === "roxzone");
+  if (rox) {
+    out.push({
+      value: `+${Math.round(rox.gainS)}`,
+      unit: "s",
+      text: `Roxzone : ${fmtMs(rox.athleteS)}, soit ${Math.round(rox.gainS)} s de plus que la médiane de ton niveau.`,
+    });
+  }
+  return out.slice(0, 3);
+}
+
+/**
+ * Activité de montre la plus probable pour une course : le même jour, durée
+ * la plus proche du chrono (au moins 80 % du chrono : sinon ce n'est pas la course).
+ */
+export function pickRaceActivity<T extends { durationS: number | null }>(candidates: readonly T[], totalS: number): T | null {
+  let best: T | null = null;
+  let gap = Infinity;
+  for (const c of candidates) {
+    if (c.durationS == null || c.durationS < totalS * 0.8) continue;
+    const g = Math.abs(c.durationS - totalS);
+    if (g < gap) { gap = g; best = c; }
+  }
+  return best;
+}
+
+/**
+ * Départ de la course dans la série : l'échauffement enregistré avant décale
+ * tout. Par défaut, la course est supposée finir avec l'enregistrement si
+ * l'activité est plus longue que le chrono de plus de 2 min, sinon partir à 0.
+ */
+export function defaultRaceOffset(stream: ActivityStream | null, totalS: number): number {
+  if (!stream || stream.t.length === 0) return 0;
+  const end = stream.t[stream.t.length - 1];
+  return end - totalS > 120 ? Math.max(0, Math.round(end - totalS)) : 0;
+}

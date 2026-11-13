@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ActivityStream } from "@shared/activityFiles/stream";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
-import { crossRaceWithWatch, raceTimeline } from "@/lib/hyrox/raceWatch";
+import {
+  athleteFindings, compromisedRunning, crossRaceWithWatch, defaultRaceOffset, pickRaceActivity, raceGains,
+  raceTimeline, roxzoneRecovery, runEfficiency, timeAboveHr,
+} from "@/lib/hyrox/raceWatch";
 
 const result = (o: Partial<HyroxResult> = {}): HyroxResult => ({
   id: "r1", athlete_id: "lea", competition_id: null, created_by: null, date: "2026-10-04",
@@ -88,5 +91,65 @@ describe("crossRaceWithWatch", () => {
     expect(a.segments.find((x) => x.key === "wall_balls")!.avgHr).toBeNull();
     const f = a.flags.find((x) => x.kind === "montre_incomplete")!;
     expect(f.text).toMatch(/^Montre incomplète sur \d+ segment\(s\)/);
+  });
+});
+
+describe("constats complémentaires", () => {
+  const tl = raceTimeline(result())!;
+  const inSeg = (t: number, kind: string) => tl.segments.some((s) => s.kind === kind && t >= s.startS && t < s.endS);
+  // Stations à 180 bpm, runs à 160 (run 8 à 170), roxzone à 150.
+  const run8 = tl.segments.find((s) => s.key === "run_8")!;
+  const s = stream(5200, (t) => (t >= run8.startS && t < run8.endS ? 170 : inSeg(t, "station") ? 180 : inSeg(t, "run") ? 160 : 150));
+  const a = crossRaceWithWatch(result(), s)!;
+
+  it("efficacité : mètres par battement, run 1 → run 8", () => {
+    const e = runEfficiency(a)!;
+    expect(e.first).toBeCloseTo(1000 / (160 * 5), 4);
+    expect(e.last).toBeCloseTo(1000 / (170 * 6), 4);
+    expect(e.pct).toBeLessThan(0);
+  });
+
+  it("temps au-dessus de SV2 : stations seules à 100 %", () => {
+    const t = timeAboveHr(a, s, 172)!;
+    expect(t.stationShare).toBe(1);
+    expect(t.share).toBeGreaterThan(0.3);
+    expect(timeAboveHr(a, s, null)).toBeNull();
+  });
+
+  it("récupération 60 s après chaque station : la moins bonne est nommée", () => {
+    const r = roxzoneRecovery(a, s)!;
+    // 60 s après les fentes, l'athlète court déjà le run 8 (170 bpm).
+    expect(r.worst).toEqual({ station: "Sandbag lunges", drop: 10 });
+  });
+
+  it("course compromise : moyenne et pire run", () => {
+    const c = compromisedRunning(a)!;
+    expect(c.worst).toEqual({ key: "run_8", after: "Sandbag lunges", sPerKm: 60 });
+    expect(c.avgSPerKm).toBe(Math.round((10 + 20 + 40 + 30 + 45 + 50 + 60) / 7));
+  });
+
+  it("gains : du plus gros au plus petit, runs regroupés, seuil 10 s", () => {
+    const med: Record<string, number> = { roxzone_total: 400, wall_balls: 330, sled_push: 175, ski: 260, run_6: 330, run_7: 335, run_8: 340 };
+    const g = raceGains(result({ total_s: 4715 }), (k) => med[k] ?? 10_000);
+    expect(g.items.map((x) => [x.label, x.gainS])).toEqual([["Roxzone", 50], ["Runs 6 à 8", 50], ["Wall balls", 30], ["SkiErg", 10]]);
+    expect(g.possibleS).toBe(4715 - 140);
+  });
+
+  it("trois constats au plus, phrases calculées", () => {
+    const g = raceGains(result(), (k) => (k === "roxzone_total" ? 404 : null));
+    const f = athleteFindings({ analysis: a, above: timeAboveHr(a, s, 172), gains: g, sv2: 172 });
+    expect(f.map((x) => x.value)).toEqual(["+60", "100", "+46"]);
+    expect(f[0].text).toBe("Après sandbag lunges, ton dernier km a ralenti de 60 s/km par rapport au premier.");
+    expect(f[2].text).toBe("Roxzone : 7 min 30 s, soit 46 s de plus que la médiane de ton niveau.");
+  });
+
+  it("activité de la course : durée la plus proche du chrono, au moins 80 %", () => {
+    expect(pickRaceActivity([{ durationS: 1200 }, { durationS: 5400 }, { durationS: 4900 }], 5000)).toEqual({ durationS: 4900 });
+    expect(pickRaceActivity([{ durationS: 1200 }], 5000)).toBeNull();
+  });
+
+  it("départ supposé : fin de l'enregistrement si échauffement, sinon 0", () => {
+    expect(defaultRaceOffset(stream(5800, () => 150), 5115)).toBe(5799 - 5115);
+    expect(defaultRaceOffset(stream(5150, () => 150), 5115)).toBe(0);
   });
 });

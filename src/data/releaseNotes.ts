@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-analyse-course-hyrox",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Analyse de course HYROX : le résultat officiel croisé avec la montre",
+    summary: "Dans HYROX › Courses, ouvrez une course puis « Analyse de course ». Les temps officiels sont placés sur une frise, avec la fréquence cardiaque et la cadence de la montre si l'athlète a enregistré la course. Même écran pour vous et pour l'athlète.",
+    sections: [
+      {
+        title: "Ce que vous y trouvez",
+        points: [
+          "Course : la frise des 17 segments avec la FC, jusqu'à 3 constats chiffrés, et ce que dit la montre (course compromise après chaque station, dérive cardiaque, récupération en Roxzone, temps au-dessus de SV2).",
+          "Runs : l'allure de chaque km comparée au run 1, avec la station juste avant, pour voir laquelle coûte le plus.",
+          "Gains : combien de temps l'athlète gagnerait en revenant à la médiane de son niveau, station par station.",
+          "Partager : une image prête pour les réseaux (chrono, record, rang, stations, « Coaché par »), fond sombre ou clair, FC masquable. Elle est créée sur le téléphone, rien n'est envoyé.",
+          "Les constats sont des règles calculées par Agon, sans IA. Sans montre ce jour-là, seuls les temps sont analysés.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-programmation-ordi",
     date: "2026-11-13",
     kind: "feature",
