@@ -2392,30 +2392,6 @@ $$;
 ALTER FUNCTION "public"."hyrox_test_analyses_freeze"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."invitation_coach_name"("p_token" "text") RETURNS "text"
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-  SELECT coalesce(nullif(trim(p.full_name), ''), 'Ton coach')
-    FROM public.invitations i
-    JOIN public.profiles p ON p.id = i.coach_id
-   WHERE i.token = p_token AND i.used_at IS NULL
-   LIMIT 1;
-$$;
-
-
-ALTER FUNCTION "public"."invitation_coach_name"("p_token" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."invitation_is_valid"("p_token" "text") RETURNS boolean
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$ SELECT false $$;
-
-
-ALTER FUNCTION "public"."invitation_is_valid"("p_token" "text") OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."is_athlete_coach"("athlete_uuid" "uuid", "p_coach" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -3899,19 +3875,6 @@ $$;
 
 
 ALTER FUNCTION "public"."react_weekly_retour"("p_retour_id" "uuid", "p_reaction" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."redeem_invitation"("p_token" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-BEGIN
-  RAISE EXCEPTION 'Ce lien d''invitation n''est plus valable : demande le code coach.' USING ERRCODE = '42501';
-END;
-$$;
-
-
-ALTER FUNCTION "public"."redeem_invitation"("p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."refresh_activity_zone_summary"("p_activity" "uuid") RETURNS "void"
@@ -7616,19 +7579,6 @@ COMMENT ON TABLE "public"."hyrox_work_axes_rules" IS 'Règles d''axes de travail
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."invitations" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "coach_id" "uuid" NOT NULL,
-    "token" "text" DEFAULT ("gen_random_uuid"())::"text" NOT NULL,
-    "email" "text",
-    "used_at" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."invitations" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."macrocycles" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8160,30 +8110,6 @@ ALTER TABLE "public"."provider_workout_pushes" OWNER TO "postgres";
 
 COMMENT ON TABLE "public"."provider_workout_pushes" IS 'Séances Agon publiées dans le calendrier de la montre (Garmin Training API). status : sent (à jour), error (réessai au passage suivant), rejected (refusée par la traduction, ex. > 100 étapes ; réessayée si la séance change).';
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."retours" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "athlete_id" "uuid" NOT NULL,
-    "content" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
-
-
-ALTER TABLE "public"."retours" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."retours_votes" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "retour_id" "uuid" NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "vote" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "retours_votes_vote_check" CHECK (("vote" = ANY (ARRAY['like'::"text", 'dislike'::"text"])))
-);
-
-
-ALTER TABLE "public"."retours_votes" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."roadmap_items" (
@@ -8793,16 +8719,6 @@ ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
 
 
 
-ALTER TABLE ONLY "public"."invitations"
-    ADD CONSTRAINT "invitations_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."invitations"
-    ADD CONSTRAINT "invitations_token_key" UNIQUE ("token");
-
-
-
 ALTER TABLE ONLY "public"."macrocycles"
     ADD CONSTRAINT "macrocycles_pkey" PRIMARY KEY ("id");
 
@@ -8965,21 +8881,6 @@ ALTER TABLE ONLY "public"."provider_workout_pushes"
 
 ALTER TABLE ONLY "public"."provider_workout_pushes"
     ADD CONSTRAINT "provider_workout_pushes_provider_source_kind_source_id_key" UNIQUE ("provider", "source_kind", "source_id");
-
-
-
-ALTER TABLE ONLY "public"."retours"
-    ADD CONSTRAINT "retours_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_retour_id_user_id_key" UNIQUE ("retour_id", "user_id");
 
 
 
@@ -9586,10 +9487,6 @@ CREATE INDEX "idx_planning_blocks_season" ON "public"."planning_blocks" USING "b
 
 
 
-CREATE INDEX "idx_retours_athlete_created" ON "public"."retours" USING "btree" ("athlete_id", "created_at" DESC);
-
-
-
 CREATE INDEX "idx_seasons_athlete" ON "public"."seasons" USING "btree" ("athlete_id");
 
 
@@ -9655,10 +9552,6 @@ CREATE UNIQUE INDEX "idx_workout_logs_unique" ON "public"."workout_logs" USING "
 
 
 CREATE INDEX "idx_workout_rpe_athlete" ON "public"."workout_rpe" USING "btree" ("athlete_id");
-
-
-
-CREATE INDEX "invitations_coach_id_fk_idx" ON "public"."invitations" USING "btree" ("coach_id");
 
 
 
@@ -9767,10 +9660,6 @@ CREATE INDEX "provider_webhook_inbox_user_idx" ON "public"."provider_webhook_inb
 
 
 CREATE INDEX "provider_workout_pushes_athlete_idx" ON "public"."provider_workout_pushes" USING "btree" ("athlete_id", "provider", "scheduled_date");
-
-
-
-CREATE INDEX "retours_votes_user_id_fk_idx" ON "public"."retours_votes" USING "btree" ("user_id");
 
 
 
@@ -10646,11 +10535,6 @@ ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
 
 
 
-ALTER TABLE ONLY "public"."invitations"
-    ADD CONSTRAINT "invitations_coach_id_fkey" FOREIGN KEY ("coach_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."macrocycles"
     ADD CONSTRAINT "macrocycles_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -10822,21 +10706,6 @@ ALTER TABLE ONLY "public"."provider_tokens"
 
 ALTER TABLE ONLY "public"."provider_workout_pushes"
     ADD CONSTRAINT "provider_workout_pushes_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."retours"
-    ADD CONSTRAINT "retours_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_retour_id_fkey" FOREIGN KEY ("retour_id") REFERENCES "public"."retours"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -11019,37 +10888,11 @@ CREATE POLICY "Coach can unlink own athletes" ON "public"."profiles" FOR UPDATE 
 
 
 
-CREATE POLICY "Création retour par l'athlète lui-même" ON "public"."retours" FOR INSERT WITH CHECK (("auth"."uid"() = "athlete_id"));
-
-
-
-CREATE POLICY "Lecture votes pour utilisateurs authentifiés" ON "public"."retours_votes" FOR SELECT USING (("auth"."uid"() IS NOT NULL));
-
-
-
-CREATE POLICY "Mise à jour vote par l'utilisateur lui-même" ON "public"."retours_votes" FOR UPDATE USING (("auth"."uid"() = "user_id"));
-
-
-
 CREATE POLICY "Service write" ON "public"."exercises" USING (("auth"."role"() = 'service_role'::"text"));
 
 
 
-CREATE POLICY "Suppression par l'auteur ou un admin" ON "public"."retours" FOR DELETE USING ((("auth"."uid"() = "athlete_id") OR (EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
-
-
-
-CREATE POLICY "Suppression vote par l'utilisateur lui-même" ON "public"."retours_votes" FOR DELETE USING (("auth"."uid"() = "user_id"));
-
-
-
 CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
-
-
-
-CREATE POLICY "Vote par l'utilisateur lui-même" ON "public"."retours_votes" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -11946,13 +11789,6 @@ CREATE POLICY "hyrox_work_axes_rules_update" ON "public"."hyrox_work_axes_rules"
 
 
 
-ALTER TABLE "public"."invitations" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "invitations_coach" ON "public"."invitations" USING (("coach_id" = "auth"."uid"()));
-
-
-
 CREATE POLICY "life_events_delete" ON "public"."athlete_life_events" FOR DELETE USING (("athlete_id" = "auth"."uid"()));
 
 
@@ -12285,18 +12121,6 @@ CREATE POLICY "provider_workout_pushes_coach_read" ON "public"."provider_workout
 
 CREATE POLICY "provider_workout_pushes_own_read" ON "public"."provider_workout_pushes" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
 
-
-
-ALTER TABLE "public"."retours" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "retours_select" ON "public"."retours" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
-
-
-
-ALTER TABLE "public"."retours_votes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."roadmap_items" ENABLE ROW LEVEL SECURITY;
@@ -18170,20 +17994,6 @@ GRANT ALL ON FUNCTION "public"."indexes_are"("name", "name", "name"[], "text") T
 
 
 
-REVOKE ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "service_role";
-
-
-
-REVOKE ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."is"("anyelement", "anyelement") TO "postgres";
 GRANT ALL ON FUNCTION "public"."is"("anyelement", "anyelement") TO "anon";
 GRANT ALL ON FUNCTION "public"."is"("anyelement", "anyelement") TO "authenticated";
@@ -20141,12 +19951,6 @@ GRANT ALL ON FUNCTION "public"."react_weekly_retour"("p_retour_id" "uuid", "p_re
 
 
 
-REVOKE ALL ON FUNCTION "public"."redeem_invitation"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."redeem_invitation"("p_token" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."redeem_invitation"("p_token" "text") TO "service_role";
-
-
-
 REVOKE ALL ON FUNCTION "public"."refresh_activity_zone_summary"("p_activity" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."refresh_activity_zone_summary"("p_activity" "uuid") TO "service_role";
 
@@ -22058,12 +21862,6 @@ GRANT ALL ON TABLE "public"."hyrox_work_axes_rules" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."invitations" TO "anon";
-GRANT ALL ON TABLE "public"."invitations" TO "authenticated";
-GRANT ALL ON TABLE "public"."invitations" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."macrocycles" TO "anon";
 GRANT ALL ON TABLE "public"."macrocycles" TO "authenticated";
 GRANT ALL ON TABLE "public"."macrocycles" TO "service_role";
@@ -22178,18 +21976,6 @@ GRANT ALL ON TABLE "public"."provider_tokens" TO "service_role";
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."provider_workout_pushes" TO "anon";
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."provider_workout_pushes" TO "authenticated";
 GRANT ALL ON TABLE "public"."provider_workout_pushes" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."retours" TO "anon";
-GRANT ALL ON TABLE "public"."retours" TO "authenticated";
-GRANT ALL ON TABLE "public"."retours" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."retours_votes" TO "anon";
-GRANT ALL ON TABLE "public"."retours_votes" TO "authenticated";
-GRANT ALL ON TABLE "public"."retours_votes" TO "service_role";
 
 
 

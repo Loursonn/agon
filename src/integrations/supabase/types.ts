@@ -2928,41 +2928,6 @@ export type Database = {
           },
         ]
       }
-      invitations: {
-        Row: {
-          coach_id: string
-          created_at: string | null
-          email: string | null
-          id: string
-          token: string
-          used_at: string | null
-        }
-        Insert: {
-          coach_id: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          token?: string
-          used_at?: string | null
-        }
-        Update: {
-          coach_id?: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          token?: string
-          used_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invitations_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       macrocycles: {
         Row: {
           athlete_id: string
@@ -4455,74 +4420,6 @@ export type Database = {
           {
             foreignKeyName: "provider_workout_pushes_athlete_id_fkey"
             columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      retours: {
-        Row: {
-          athlete_id: string
-          content: string
-          created_at: string
-          id: string
-        }
-        Insert: {
-          athlete_id: string
-          content: string
-          created_at?: string
-          id?: string
-        }
-        Update: {
-          athlete_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "retours_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      retours_votes: {
-        Row: {
-          created_at: string
-          id: string
-          retour_id: string
-          user_id: string
-          vote: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          retour_id: string
-          user_id: string
-          vote: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          retour_id?: string
-          user_id?: string
-          vote?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "retours_votes_retour_id_fkey"
-            columns: ["retour_id"]
-            isOneToOne: false
-            referencedRelation: "retours"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "retours_votes_user_id_fkey"
-            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -6185,8 +6082,6 @@ export type Database = {
         }[]
       }
       in_todo: { Args: never; Returns: boolean }
-      invitation_coach_name: { Args: { p_token: string }; Returns: string }
-      invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
       is_athlete_coach: {
         Args: { athlete_uuid: string; p_coach: string }
         Returns: boolean
@@ -6455,7 +6350,6 @@ export type Database = {
         Args: { p_reaction: string; p_retour_id: string }
         Returns: undefined
       }
-      redeem_invitation: { Args: { p_token: string }; Returns: string }
       refresh_activity_zone_summary: {
         Args: { p_activity: string }
         Returns: undefined
