@@ -185,3 +185,14 @@ export async function sweepFitWindows(
 
   return stop("done");
 }
+
+/**
+ * Réglage numérique lu dans l'environnement. Absent ou vide → valeur par
+ * défaut : `Number("")` vaut 0, et un délai de 0 ms arrêtait chaque
+ * synchronisation avant le premier appel (P7, 13/11/2026).
+ */
+export function parseEnvNumber(raw: string | undefined | null, fallback: number): number {
+  if (raw == null || raw.trim() === "") return fallback;
+  const v = Number(raw);
+  return Number.isFinite(v) && v >= 0 ? v : fallback;
+}

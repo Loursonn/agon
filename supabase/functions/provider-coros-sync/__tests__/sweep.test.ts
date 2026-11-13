@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { FitListing, FitWindow } from "../../_shared/coros";
-import { type IngestOutcome, type SweepDeps, sweepFitWindows } from "../sweep";
+import { type IngestOutcome, parseEnvNumber, type SweepDeps, sweepFitWindows } from "../sweep";
 
 /** Un fichier par jour listé dans `files` (jour → nombre de fichiers). */
 function harness(opts: {
@@ -220,5 +220,21 @@ describe("sweepFitWindows — temps", () => {
     const h = harness({ files: { "2026-01-05": 1 } });
     const r = await sweepFitWindows(h.deps, "2026-01-01", "2026-03-31", OPTS);
     expect(r).toMatchObject({ windows: 3, lists: 3, processedThrough: "2026-03-31" });
+  });
+});
+
+describe("parseEnvNumber", () => {
+  it("variable absente ou vide : valeur par défaut, jamais 0", () => {
+    expect(parseEnvNumber(undefined, 110_000)).toBe(110_000);
+    expect(parseEnvNumber(null, 365)).toBe(365);
+    expect(parseEnvNumber("", 365)).toBe(365);
+    expect(parseEnvNumber("  ", 2)).toBe(2);
+  });
+
+  it("valeur lisible : prise ; négative ou illisible : défaut", () => {
+    expect(parseEnvNumber("90", 365)).toBe(90);
+    expect(parseEnvNumber("0", 2)).toBe(0);
+    expect(parseEnvNumber("-5", 2)).toBe(2);
+    expect(parseEnvNumber("abc", 2)).toBe(2);
   });
 });

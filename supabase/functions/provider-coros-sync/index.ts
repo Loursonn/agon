@@ -50,7 +50,7 @@ import { looksLikeFit, parseFit } from "../_shared/activityFiles/fit.ts";
 import type { ParsedActivity } from "../_shared/activityFiles/types.ts";
 import { normalizeActivity } from "../_shared/activityFiles/normalize.ts";
 import { detailPayload, type NormalizedActivity } from "../_shared/activityFiles/stream.ts";
-import { type IngestOutcome, type Rejection, type SweepResult, sweepFitWindows } from "./sweep.ts";
+import { type IngestOutcome, parseEnvNumber, type Rejection, type SweepResult, sweepFitWindows } from "./sweep.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,10 +64,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const envNumber = (name: string, fallback: number) => {
-  const v = Number(Deno.env.get(name) ?? "");
-  return Number.isFinite(v) && v >= 0 ? v : fallback;
-};
+const envNumber = (name: string, fallback: number) => parseEnvNumber(Deno.env.get(name), fallback);
 
 /*
   Profondeur d'historique récupérée à la première synchronisation. Réglable par
