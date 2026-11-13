@@ -1,4 +1,5 @@
--- Tests de 20261112100000_hr_zone_models.sql (modèles de zones, temps par zone).
+-- Tests de 20261112100000_hr_zone_models.sql (modèles de zones, temps par zone),
+-- à jour du contrat de 20261112200000_hr_zone_models_coach (enregistrement et validation par le coach).
 -- Toujours annulé. Données fictives uniquement.
 --
 -- Avant application :
@@ -45,9 +46,17 @@ SELECT 'activity_zone_seconds : 152 = zone 2, trou plafonné à 10 s, pause = 0'
        public.activity_zone_seconds(ARRAY[0,1,2,3,13,14,15], ARRAY[0,1,2,3,13,13,14],
                                     ARRAY[140,151,152,175,172,180,NULL]::smallint[], ARRAY[152,172]::smallint[])::text;
 
--- ---------- Modèle à 3 zones enregistré par l'athlète ----------
+-- ---------- Modèle à 3 zones : l'athlète ne l'enregistre pas, son coach oui ----------
+-- (depuis 20261112200000_hr_zone_models_coach, l'enregistrement est réservé au coach)
 SELECT set_config('request.jwt.claims', json_build_object('sub', athlete, 'role', 'authenticated')::text, true) FROM t_ids;
 SET LOCAL ROLE authenticated;
+DO $$ BEGIN
+  PERFORM public.save_hr_zone_model((SELECT athlete FROM t_ids), 'three', ARRAY[152,172], '2026-01-01');
+  INSERT INTO t_res (name, ok, detail) VALUES ('rpc: l''athlète n''enregistre pas ses zones', false, 'accepté');
+EXCEPTION WHEN insufficient_privilege THEN
+  INSERT INTO t_res (name, ok, detail) VALUES ('rpc: l''athlète n''enregistre pas ses zones', true, SQLERRM);
+END $$;
+SELECT set_config('request.jwt.claims', json_build_object('sub', coach, 'role', 'authenticated')::text, true) FROM t_ids;
 UPDATE t_ids SET model = public.save_hr_zone_model(athlete, 'three', ARRAY[152,172], '2026-01-01');
 DO $$ BEGIN
   PERFORM public.save_hr_zone_model((SELECT athlete FROM t_ids), 'three', ARRAY[172,152], '2026-01-01');
@@ -128,8 +137,10 @@ SELECT public.decide_hr_zone_model((SELECT id FROM t_prop), true);
 RESET ROLE;
 
 INSERT INTO t_res (name, ok, detail)
-SELECT 'proposition validée → bornes du test à partir du 05/11',
-       (SELECT b.bounds FROM public.hr_zone_bounds_at(t_ids.athlete, '2026-11-06') b) = ARRAY[150,170]::smallint[]
+-- Depuis hr_zone_models_coach, une proposition validée vaut à partir du jour de validation
+-- (« appliquer au passé » est un geste séparé du coach).
+SELECT 'proposition validée → bornes du test à partir du jour de validation',
+       (SELECT b.bounds FROM public.hr_zone_bounds_at(t_ids.athlete, current_date) b) = ARRAY[150,170]::smallint[]
        AND (SELECT b.bounds FROM public.hr_zone_bounds_at(t_ids.athlete, '2026-11-03') b) = ARRAY[152,172]::smallint[],
        '' FROM t_ids;
 INSERT INTO t_res (name, ok, detail)

@@ -7,7 +7,7 @@
 
 BEGIN;
 
-SELECT plan(12);
+SELECT plan(13);
 
 -- ── Setup : deux coachs, deux athlètes ──────────────────────────────────────
 
@@ -148,12 +148,15 @@ SELECT ok(
 );
 
 -- ── Test 12 : workout_logs — Coach B ne voit pas les logs de l'athlète A ──────
+-- La ligne de test est créée en propriétaire (la RLS refuserait, à juste titre, Coach B).
+RESET ROLE;
 INSERT INTO public.workout_logs
   (athlete_id, session_id, session_name, scheduled_date, status)
 VALUES
   ('aaaaaaaa-1111-0000-0000-000000000003', 'sess_1', 'Séance Push', CURRENT_DATE, 'planned')
 ON CONFLICT DO NOTHING;
 
+SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims TO '{"sub": "bbbbbbbb-0000-0000-0000-000000000002", "role": "authenticated"}';
 
 SELECT ok(

@@ -30,8 +30,8 @@ DO $$ DECLARE n int; BEGIN
   SELECT count(*) INTO n FROM (SELECT athlete_id, metric_name FROM performance_logs WHERE is_active_reference
                                 GROUP BY 1, 2 HAVING count(*) > 1) d;
   INSERT INTO t_res VALUES ('données: une référence active par métrique', n = 0, n::text);
-  SELECT count(*) INTO n FROM performance_logs WHERE metric_name = 'Semi Bilbao';
-  INSERT INTO t_res VALUES ('données: nom personnalisé gardé', n = 1, n::text);
+  -- Un nom libre (course, test maison) n'est pas renommé par la normalisation.
+  INSERT INTO t_res VALUES ('normalize: nom personnalisé gardé', normalize_metric_name('Semi Bilbao') = 'Semi Bilbao', normalize_metric_name('Semi Bilbao'));
   INSERT INTO t_res VALUES ('normalize: FC Max', normalize_metric_name('FC Max') = 'FCmax', normalize_metric_name('FC Max'));
   INSERT INTO t_res VALUES ('normalize: vitesse critique', normalize_metric_name(' vitesse critique ') = 'VC', normalize_metric_name(' vitesse critique '));
   INSERT INTO t_res VALUES ('normalize: VO₂max', normalize_metric_name('VO₂max') = 'VO2max', normalize_metric_name('VO₂max'));

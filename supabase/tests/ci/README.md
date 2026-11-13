@@ -58,11 +58,6 @@ node supabase/tests/ci/run.mjs supabase/tests/staff_rls.sql   # un seul
 
 ## Échecs connus
 
-`known_failures.txt` liste les cas (ou, en dernier recours, les fichiers) que le job signale « ignoré (connu) » sans échouer. Chaque ligne est une dette : corriger la base ou le script, puis retirer la ligne. Au 2026-11-13 :
-
-- **Régression en prod** : `20261112200000_hr_zone_models_coach` a recréé `hr_zone_bounds_at` sans le repli « modèle actuel » ajouté par `20261112160000_history_zones_garmin_ai` (une sortie antérieure à tout modèle de zones n'a pas de résumé de zones).
-- **Schéma de prod** : 8 clés étrangères ajoutées depuis la migration d'hygiène n'ont pas d'index.
-- **Donnée réelle** : un cas de `references_rpcs.sql` vérifie une ligne précise de la prod.
-- **Scripts à corriger** (fichiers entiers ignorés) : `hr_zone_models.sql` (périmé depuis que seul le coach enregistre les zones), `rls_coach_isolation.sql` (INSERT exécuté sous l'identité du mauvais coach), `sante_tables.sql` (profil de test sans date de naissance créé avec un jwt encore posé).
+`known_failures.txt` liste les cas (ou, en dernier recours, les fichiers) que le job signale « ignoré (connu) » sans échouer. Chaque ligne est une dette : corriger la base ou le script, puis retirer la ligne. Vide depuis le 2026-11-13.
 
 Image Postgres : le workflow force la version de la prod (`17.6.1.084`) ; l'image par défaut de la CLI 2.95.4 plante sur « permission denied for function ».
