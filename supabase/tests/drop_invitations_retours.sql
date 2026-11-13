@@ -1,4 +1,4 @@
--- Tests de 20261113163000_drop_invitations_retours.sql : plus aucune trace des liens d'invitation coach
+-- Tests de 20261113170100_drop_invitations_retours.sql : plus aucune trace des liens d'invitation coach
 -- ni de l'ancien fil « retours » ; weekly_retours et staff_invitations intacts. Toujours annulé.
 BEGIN;
 SELECT 'D1 table invitations supprimée' AS name, to_regclass('public.invitations') IS NULL AS ok
