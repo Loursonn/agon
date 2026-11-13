@@ -8,7 +8,7 @@ BEGIN;
 CREATE TEMP TABLE r(n serial, k text, v text) ON COMMIT DROP;
 GRANT ALL ON r TO authenticated, anon; GRANT ALL ON SEQUENCE r_n_seq TO authenticated, anon;
 
--- Un athlète qui a des photos de mensurations, son coach, et un autre coach.
+-- Un athlète suivi, son coach, et un autre coach.
 CREATE TEMP TABLE ids ON COMMIT DROP AS
 SELECT a.id AS athlete, a.coach_id AS coach,
   (SELECT p.id FROM profiles p
@@ -17,10 +17,11 @@ SELECT a.id AS athlete, a.coach_id AS coach,
     ORDER BY p.created_at LIMIT 1) AS other_coach
 FROM profiles a
 WHERE a.coach_id IS NOT NULL AND a.coach_id <> a.id
-  AND EXISTS (SELECT 1 FROM storage.objects o
-               WHERE o.bucket_id = 'test-media' AND o.name LIKE a.id::text || '/mensurations/%')
 ORDER BY a.created_at LIMIT 1;
 GRANT SELECT ON ids TO authenticated, anon;
+-- Photo fictive (annulée avec la transaction) : le test ne dépend d'aucun fichier réel.
+INSERT INTO storage.objects(bucket_id, name)
+SELECT 'test-media', athlete::text || '/mensurations/test-fixture/face.jpg' FROM ids;
 INSERT INTO r(k,v) SELECT '00 jeu de test (true)', (athlete IS NOT NULL AND coach IS NOT NULL AND other_coach IS NOT NULL)::text FROM ids;
 INSERT INTO r(k,v) SELECT '01 bucket test-media public (false)', public::text FROM storage.buckets WHERE id = 'test-media';
 

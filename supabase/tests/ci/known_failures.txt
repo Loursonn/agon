@@ -2,3 +2,4 @@
 # Format : fichier.sql|début du libellé du cas|raison   (« * » = fichier entier, en dernier recours)
 # Chaque ligne est une dette à solder : corriger la base ou le script, puis retirer la ligne.
 # Vide depuis le 2026-11-13 (régression zones, index des FK et 4 scripts corrigés).
+test_media_storage.sql|*|migrations 20261113190000 / 20261113190100 (bucket test-media privé) en attente de l'accord d'Hugo ; après application : rafraîchir platform.sql et retirer cette ligne
