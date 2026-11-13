@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athletes-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Liste des athlètes rafraîchie",
+    summary: "La page Athlètes prend le style des autres pages sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Votre code coach est mis en avant en haut de page, avec un bouton pour le copier.",
+          "Chaque athlète a sa carte : « 2 coachs » ou « Co-coach » en pastille, et les athlètes en attente de première connexion ressortent en orange avec le lien à leur envoyer.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-editeur-energie-cartes",
     date: "2026-11-13",
     kind: "feature",

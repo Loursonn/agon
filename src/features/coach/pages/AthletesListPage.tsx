@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { DISPLAY, KICK, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { EmptyState } from "@/features/shared/components/EmptyState";
-import { ChevronDown, Eye, EyeOff, Plus, Users } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Eye, EyeOff, Plus, Users, X } from "lucide-react";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import { useRemoveCoCoach, useUnlinkAthlete } from "@/features/shared/hooks/useCoCoach";
 
@@ -60,81 +61,79 @@ export default function AthletesListPage() {
   }
 
   function renderAthleteRow(a: (typeof athletes)[number], hidden: boolean) {
+    // Planche CoachAthletes : carte 68 px, liseré or (orange si en attente), pastille 2 coachs / co-coach.
+    const pending = !!a.is_pending;
+    const tone = pending ? C.o : C.ac;
+    const tag = a.co_coached_by_me ? { label: "Co-coach", color: C.pat } : a.co_coach_id ? { label: "2 coachs", color: C.b } : null;
+    const line = [a.age ? `${a.age} ans` : null, a.height_cm ? `${a.height_cm} cm` : null].filter(Boolean).join(" · ");
     return (
-      <div
-        key={a.id}
-        style={{ display: "flex", alignItems: "center", gap: 8, opacity: hidden ? 0.7 : 1 }}
-      >
+      <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, opacity: hidden ? 0.6 : 1 }}>
         <button
           onClick={() => navigate(`/coach/athletes/${a.id}/planning`)}
           style={{
-            flex: 1, display: "flex", alignItems: "center", gap: 12,
-            padding: "12px 16px", borderRadius: 6,
-            border: "1px solid " + C.brdL, background: C.s1,
-            cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-            transition: "border-color 150ms",
+            position: "relative", overflow: "hidden", flex: 1, minWidth: 0, height: 68, boxSizing: "border-box",
+            display: "flex", alignItems: "center", gap: 14, padding: "0 16px 0 18px", borderRadius: 14,
+            border: `1px solid ${pending ? alpha(C.o, 0.45) : C.brd}`,
+            background: pending
+              ? `radial-gradient(60% 200% at 0% 50%, ${alpha(C.o, 0.22)}, transparent 60%), linear-gradient(${alpha(C.o, 0.12)}, ${alpha(C.o, 0.12)}), ${C.s1}`
+              : `linear-gradient(90deg, ${alpha(C.ac, 0.07)}, ${alpha(C.ac, 0)} 45%), ${C.s1}`,
+            cursor: "pointer", fontFamily: "inherit", textAlign: "left", color: C.tx,
           }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.coach + "60")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brdL)}
         >
-          <div
-            style={{
-              width: 38, height: 38, borderRadius: "50%",
-              background: C.coach + "25", border: "1px solid " + C.coach + "40",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 15, fontWeight: 700, color: C.coach, flexShrink: 0,
-            }}
-          >
+          <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: tone }} />
+          <span style={{
+            width: 40, height: 40, boxSizing: "border-box", borderRadius: "50%", flex: "none",
+            display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${tone}`,
+            background: pending ? `radial-gradient(circle at 30% 25%, ${alpha(C.o, 0.4)}, ${alpha(C.o, 0.1)} 70%)` : "transparent",
+            color: C.tx, fontWeight: 500, ...MONO, fontSize: 13,
+          }}>
             {a.full_name.charAt(0).toUpperCase()}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.tx, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              {a.full_name}
-              {(a.co_coached_by_me || a.co_coach_id) && (
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 500, lineHeight: "20px", whiteSpace: "nowrap" }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{a.full_name}</span>
+              {tag && (
                 <span
                   title={a.co_coached_by_me ? "Tu es co-coach de cet athlète" : "Cet athlète a un co-coach"}
-                  style={{ fontSize: 10, fontWeight: 700, color: C.coach, background: C.coach + "1A", border: "1px solid " + C.coach + "40", borderRadius: 3, padding: "1px 6px", letterSpacing: "0.3px" }}
+                  style={{ ...MONO, fontSize: 10.5, fontWeight: 500, lineHeight: "14px", letterSpacing: "0.10em", textTransform: "uppercase", flex: "none", color: "#0E0C0A", background: tag.color, borderRadius: 999, padding: "2px 9px" }}
                 >
-                  {a.co_coached_by_me ? "CO-COACH" : "2 COACHS"}
+                  {tag.label}
                 </span>
               )}
-            </div>
-            <div style={{ fontSize: 11, color: a.is_pending ? C.b : C.tx3 }}>
-              {a.is_pending ? "En attente de première connexion" : [a.age ? `${a.age} ans` : null, a.height_cm ? `${a.height_cm} cm` : null]
-                .filter(Boolean).join(" · ") || "Profil non renseigné"}
-            </div>
-          </div>
-          <span style={{ fontSize: 16, color: C.tx3 }}>›</span>
+            </span>
+            {pending ? (
+              <span style={{ display: "block", marginTop: 3, lineHeight: "16px" }}>
+                <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#0E0C0A", background: C.o, borderRadius: 999, padding: "1px 8px" }}>
+                  En attente de première connexion
+                </span>
+              </span>
+            ) : (
+              <span style={{ display: "block", ...MONO, fontSize: 11.5, lineHeight: "16px", color: C.tx2, marginTop: 3, whiteSpace: "nowrap" }}>
+                {line || "Profil non renseigné"}
+              </span>
+            )}
+          </span>
+          <ChevronRight size={18} color={C.tx3} />
         </button>
 
-        {!a.co_coached_by_me && <ClaimLinkButton athleteId={a.id} pending={!!a.is_pending} />}
+        {!a.co_coached_by_me && pending ? <ClaimLinkButton athleteId={a.id} pending color={C.o} /> : <span style={{ width: 32, flex: "none" }} />}
 
         <button
           onClick={() => handleToggleHidden(a.id, !hidden)}
           title={hidden ? "Réafficher" : "Masquer"}
           aria-label={hidden ? `Réafficher ${a.full_name}` : `Masquer ${a.full_name}`}
-          style={{
-            width: 36, height: 36, borderRadius: 4, flexShrink: 0,
-            border: "1px solid " + C.brdL, background: "transparent",
-            color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}
+          style={squareBtn(C.brdL, C.s1, C.tx3)}
         >
-          {hidden ? <Eye size={16} /> : <EyeOff size={16} />}
+          {hidden ? <Eye size={15} /> : <EyeOff size={15} />}
         </button>
 
         <button
           onClick={() => setConfirmRemove(a.id)}
           title="Retirer"
-          style={{
-            width: 36, height: 36, borderRadius: 4, flexShrink: 0,
-            border: "1px solid " + C.r + "40", background: "rgba(239,75,75,0.08)",
-            color: C.r, fontSize: 16, cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "background 150ms",
-          }}
+          aria-label={`Retirer ${a.full_name}`}
+          style={squareBtn(alpha(C.r, 0.55), alpha(C.r, 0.12), C.r)}
         >
-          ×
+          <X size={15} />
         </button>
       </div>
     );
@@ -197,60 +196,57 @@ export default function AthletesListPage() {
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: 720, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.tx }}>Athlètes</div>
-          <div style={{ fontSize: 12, color: C.tx3, marginTop: 2 }}>
-            {otherAthletes.length} athlète{otherAthletes.length > 1 ? "s" : ""} liés à ton compte
-          </div>
+    <div style={{ padding: "40px 24px 60px", maxWidth: 760, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <h1 style={{ margin: 0, ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx }}>Athlètes</h1>
+          <span style={{ ...KICK }}>
+            <span style={{ color: C.ac }}>{otherAthletes.length}</span> athlète{otherAthletes.length > 1 ? "s" : ""} liés à ton compte
+          </span>
         </div>
         <button
           onClick={() => setAddOpen(true)}
           title="Ajouter un athlète"
           aria-label="Ajouter un athlète"
           style={{
-            width: 36, height: 36, borderRadius: 6, flexShrink: 0,
-            border: "1px solid " + C.coach + "50", background: C.coachS,
-            color: C.coach, cursor: "pointer", fontFamily: "inherit",
+            width: 44, height: 44, boxSizing: "border-box", borderRadius: 11, flexShrink: 0, border: "none",
+            background: C.ac, boxShadow: `0 6px 22px ${alpha(C.ac, 0.35)}`, color: "#0E0C0A", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <Plus size={18} />
+          <Plus size={20} />
         </button>
       </div>
 
       {/* Code coach */}
-      <div
-        style={{
-          background: C.s1, borderRadius: 6, padding: "14px 16px",
-          border: "1px solid " + C.brd, marginBottom: 20,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>
-            Code coach
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: C.coach, letterSpacing: "0.2em" }}>
+      <div style={{
+        position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+        padding: "20px 22px 20px 25px", borderRadius: 14, border: `1px solid ${alpha(C.ac, 0.45)}`,
+        background: `linear-gradient(90deg, ${alpha(C.ac, 0.14)}, ${alpha(C.ac, 0.03)}), ${C.s1}`,
+      }}>
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ ...KICK, color: C.tx2 }}>Code coach</span>
+          <span style={{ ...MONO, fontSize: 32, lineHeight: 1.1, letterSpacing: "0.24em", color: C.ac, textShadow: `0 0 24px ${alpha(C.ac, 0.35)}` }}>
             {profile?.coach_code || "------"}
-          </div>
+          </span>
         </div>
         <button
           onClick={handleCopyCode}
           style={{
-            padding: "6px 14px", borderRadius: 4,
-            border: "1px solid " + C.coach + "50", background: C.coachS,
-            color: C.coach, fontSize: 12, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit",
+            height: 34, boxSizing: "border-box", display: "inline-flex", alignItems: "center", gap: 8, padding: "0 14px",
+            borderRadius: 10, border: `1px solid ${alpha(C.ac, 0.55)}`, background: alpha(C.bg, 0.55),
+            color: C.ac, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
-          Copier
+          <Copy size={14} /> Copier
         </button>
       </div>
 
+      <SectionHead n={1} title="Mes athlètes" />
+
       {/* Athlete list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: -8 }}>
         {loading ? (
           <>
             <Skeleton style={{ height: 64, borderRadius: 6, background: C.s1 }} />
@@ -262,7 +258,7 @@ export default function AthletesListPage() {
               <button
                 onClick={handleAddSelf}
                 style={{
-                  padding: "12px 16px", borderRadius: 6,
+                  padding: "14px 18px", borderRadius: 14,
                   border: "1px dashed " + C.ac + "60", background: "transparent",
                   color: C.ac, fontSize: 13, fontWeight: 600,
                   cursor: "pointer", fontFamily: "inherit", textAlign: "left",
@@ -276,7 +272,7 @@ export default function AthletesListPage() {
               <div
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
-                  padding: "12px 16px", borderRadius: 6,
+                  height: 68, boxSizing: "border-box", padding: "0 16px 0 18px", borderRadius: 14,
                   border: "1px solid " + C.ac + "40", background: C.acS,
                 }}
               >
@@ -338,10 +334,10 @@ export default function AthletesListPage() {
                   onClick={() => setShowHidden((v) => !v)}
                   aria-expanded={showHidden}
                   style={{
-                    display: "flex", alignItems: "center", gap: 6,
+                    display: "flex", alignItems: "center", gap: 8,
                     background: "none", border: "none", padding: "4px 2px",
-                    color: C.tx3, fontSize: 12, fontWeight: 600,
-                    cursor: "pointer", fontFamily: "inherit",
+                    color: C.tx3, ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                    cursor: "pointer",
                   }}
                 >
                   <ChevronDown
@@ -508,4 +504,12 @@ export default function AthletesListPage() {
       })()}
     </div>
   );
+}
+
+function squareBtn(border: string, background: string, color: string): React.CSSProperties {
+  return {
+    width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, flexShrink: 0,
+    border: `1px solid ${border}`, background, color, cursor: "pointer", fontFamily: "inherit",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
 }
