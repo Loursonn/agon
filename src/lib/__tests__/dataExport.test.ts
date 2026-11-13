@@ -134,6 +134,16 @@ describe("buildDataExport", () => {
     expect((r.payload as Record<string, unknown[]>).app_data).toHaveLength(1);
   });
 
+  it("table morte supprimée (workout_rpe, seasons…) : ignorée sans échec ; une autre table absente reste signalée", async () => {
+    const { ApiError } = await import("@/api/client");
+    rowsFor = (c) => {
+      if (["workout_rpe", "seasons", "habits"].includes(c.table)) throw new ApiError("lecture", { message: "table absente", code: "PGRST205" });
+      return [];
+    };
+    const r = await buildDataExport("u1");
+    expect(r.failures.map((f) => f.table)).toEqual(["habits.athlete_id"]);
+  });
+
   it("garde l'attribution Garmin sur les activités", async () => {
     rowsFor = (c) => (c.table === "provider_activities" ? [{ id: "a", source: "garmin", device_name: "Edge 840" }] : []);
     const r = await buildDataExport("u1");

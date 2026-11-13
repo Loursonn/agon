@@ -123,6 +123,13 @@ Méthode réversible pour chacun : **export → retrait des lecteurs dans le cod
 
 Ordre conseillé : `check_microcycle_dates` et clés mortes (aucun lecteur) → `workout_rpe` → `planning_blocks` / `seasons` → `tests` / `test_results` (avec T4).
 
+**Avancement (2026-11-13)** :
+- `workout_rpe` : plus aucun écrivain ni lecteur dans le code (dev et main), dernière écriture le 2026-11-09 ; 136 lignes, toutes rattachées à une séance, 1 seule valeur différente de `workout_logs.rpe_score` (qui fait foi). Le seed démo ne l'écrit plus. Restent `supabase/tests/db_hygiene.sql` (policies) à adapter le jour du `DROP`.
+- `seasons` : la requête staff n'est plus dans dev ; **encore dans main** (`src/api/staff.ts:294`) → suppression après le prochain déploiement de main.
+- Export RGPD : `workout_rpe`, `planning_blocks`, `seasons`, `test_results` sont tolérés absents (`OPTIONAL_TABLES`) : à déployer sur main **avant** toute suppression.
+- `tests` / `test_results` : encore lus par `src/api/tests.ts` (progression d'un macrocycle) → T4 d'abord.
+- Prochaine écriture en prod, à faire valider par Hugo (export CSV puis suppression irréversible) : `check_microcycle_dates`, clés `app_data` `test` et `asp:blocs`, `workout_rpe` (après déploiement de main), puis `planning_blocks` / `seasons` (colonnes FK vides comprises).
+
 ---
 
 ## 3. `supabase migration repair` (décision 7)

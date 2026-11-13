@@ -83,7 +83,7 @@ async function findUser(email) {
 /** Efface les données et le profil d'un compte démo ; le compte de connexion reste. */
 async function wipeData(u) {
     // tables sans cascade possible : on nettoie explicitement par athlete_id / coach_id
-    const byAth = ["app_data", "workout_rpe", "workout_logs", "energy_session_assignments", "weekly_retours", "day_themes", "competitions",
+    const byAth = ["app_data", "workout_logs", "energy_session_assignments", "weekly_retours", "day_themes", "competitions",
       "athlete_life_events", "doc_schedule", "doc_comments", "doc_assignments", "athlete_test_values", "athlete_test_results", "test_sessions",
       "provider_intraday", "provider_moveiq", "provider_dailies", "provider_activities", "hr_zone_models",
       "performance_logs", "medical_entries", "exercise_pr_logs", "hyrox_results", "measurement_logs", "microcycles", "cycles", "user_consents"];
@@ -236,7 +236,6 @@ async function seed() {
   // semaines suivantes
   for (let w = 1; w <= 2; w++) { const mon = mondayOf(w); logs.push(logRow(sHaut, mon, w, "planned")); logs.push(logRow(sBas, addDays(mon, 2), w, "planned")); logs.push(logRow(sMob, addDays(mon, 4), w, "planned")); }
   await must(sb.from("workout_logs").insert(logs), "workout_logs");
-  await must(sb.from("workout_rpe").insert(logs.filter((l) => l.rpe_score).map((l) => ({ workout_log_id: l.id, athlete_id: ATH, rpe_score: l.rpe_score }))), "workout_rpe");
 
   /* --- app_data --- */
   const wh = {}, wlog = {};

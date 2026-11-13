@@ -54,8 +54,15 @@ const job = (table: string, column: string, select?: string): ExportJob => ({ ta
  * La nutrition et le wellness vivent dans `app_data` (clés `asp:*`), exporté
  * en entier.
  */
-/** Tables de la migration santé (20261110100000), absentes tant qu'elle n'est pas appliquée. */
-const OPTIONAL_TABLES = new Set(["wellness_entries", "body_weight_logs", "body_weight_milestones", "body_weight_goals", "weekly_reviews"]);
+/**
+ * Tables qui peuvent manquer sans que ce soit une erreur : santé (20261110100000) et weekly
+ * review, absentes tant que leur migration n'est pas appliquée ; tables mortes, vides ou plus
+ * écrites, à supprimer (P18) : l'export ne doit pas casser le jour de leur suppression.
+ */
+const OPTIONAL_TABLES = new Set([
+  "wellness_entries", "body_weight_logs", "body_weight_milestones", "body_weight_goals", "weekly_reviews",
+  "workout_rpe", "planning_blocks", "seasons", "test_results",
+]);
 
 export const EXPORT_JOBS: readonly ExportJob[] = [
   // ── Athlète : tout ce qui le concerne (`athlete_id`) ─────────────────────
