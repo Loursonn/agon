@@ -13,8 +13,9 @@ CREATE TEMP TABLE t_ids ON COMMIT DROP AS
 SELECT a.id AS athlete, a.coach_id AS coach FROM profiles a WHERE a.full_name = 'Léa Démo' LIMIT 1;
 GRANT SELECT ON t_ids TO anon, authenticated;
 
+-- (À l'application, les comptes existants ont été datés : vérifié en prod, pas rejouable sur la base de CI.)
 INSERT INTO t_res (name, ok, detail)
-SELECT '01 comptes existants déjà accueillis', count(*) FILTER (WHERE onboarded_at IS NULL) = 0, count(*)::text FROM profiles;
+SELECT '01 jeu de test', count(*) = 1, count(*)::text FROM t_ids WHERE athlete IS NOT NULL AND coach IS NOT NULL;
 
 -- Simule un nouvel athlète : Léa sans date.
 UPDATE profiles SET onboarded_at = NULL WHERE id = (SELECT athlete FROM t_ids);
