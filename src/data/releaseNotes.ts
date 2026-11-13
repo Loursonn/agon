@@ -38,6 +38,30 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-editeur-energie-cartes",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance d'énergie : des blocs en cartes",
+    summary: "L'éditeur de séance d'énergie se remplit bloc par bloc, et s'enregistre directement au bon jour.",
+    sections: [
+      {
+        title: "Les blocs",
+        points: [
+          "Ajoutez un échauffement, des intervalles, une récup ou un retour au calme : chaque bloc est une carte que vous dépliez pour régler répétitions, effort (durée ou distance), cible (allure, FC, zone ou watts) et récup entre les répétitions.",
+          "Glissez une carte pour changer l'ordre, dupliquez-la ou supprimez-la d'un clic.",
+          "Les séances déjà créées s'ouvrent telles quelles. Un bloc plus complexe (groupe dans un groupe, départ fixe) s'ouvre dans l'éditeur détaillé.",
+        ],
+      },
+      {
+        title: "Enregistrer",
+        points: [
+          "Choisissez la date directement dans l'éditeur : la séance arrive au planning de l'athlète.",
+          "« Garder aussi une copie dans ma banque » pour la réutiliser avec d'autres athlètes, ou « Ma banque seulement » pour la programmer plus tard.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-tuto-import-strava",
     date: "2026-11-13",
     kind: "feature",
