@@ -2184,3 +2184,88 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   dans une fenêtre in-app (`@capacitor/browser`).
 - `public/.well-known` (AASA, assetlinks) est publié avec des valeurs à remplacer (Team ID Apple, empreinte Play).
 - Icônes et écran de lancement tirés de `public/brand`.
+
+## 2026-11-13 — Retirer d'Agon une activité de montre (P38)
+
+- **Pourquoi** : Garmin et COROS ne préviennent pas quand une activité est
+  supprimée dans leur application. Sans action, elle reste dans Agon, le
+  volume et le planning.
+- **Qui** : l'athlète, ou son coach (référent ou co-coach, `is_coach_of`) pour
+  une activité qu'il voit (même règle que `provider_activities_coach_read`).
+  Un autre coach reçoit « introuvable », comme pour une ligne absente.
+- **Comment** : RPC `remove_provider_activity` (migration `20261113180000`).
+  Elle supprime la ligne ; courbe, tours, séries, résumés de zones et liens au
+  planning partent en cascade. La séance Agon rapprochée garde son statut, ses
+  séries et ses notes : seul le lien part. Refusée si la ligne porte la source
+  `manual` (séance saisie dans Agon).
+- **Gardé** : le brut (`provider_raw_records`, fichiers `provider-raw`), stocké
+  par choix d'Hugo (09/11), part à la déconnexion, au retrait de permission ou
+  à la suppression du compte. À relire si Hugo préfère l'effacer aussi (il
+  faudrait passer par une Edge Function : l'athlète n'écrit pas dans ce bucket).
+- **Limite connue** : une correction envoyée plus tard par Garmin
+  (`manuallyUpdatedActivities`) ou un nouvel import du même fichier recrée
+  l'activité.
+- **Écran** : bouton « Retirer d'Agon » au dépli d'une sortie
+  (`RemoveActivityButton`, partagé athlète / coach), confirmation en deux temps.
+
+## 2026-11-13 — Export RGPD : fichiers bruts de montre par liens signés (P37)
+
+- L'export JSON liste les fichiers du bucket `provider-raw` cités par
+  `provider_raw_records` (`samples_path` .json.gz, `file_path` .FIT) dans
+  `provider_raw_files`, avec un **lien signé valable 7 jours** et l'attribution
+  « Garmin ».
+- **Pourquoi des liens et pas un zip** : plusieurs centaines de fichiers par
+  athlète, construits dans le navigateur d'un téléphone ; un zip tiendrait
+  tout en mémoire. Les liens se signent avec les droits de l'utilisateur
+  (policy existante `provider_raw_own_read`, dossier = son id) : pas de clé
+  service_role, même principe que le reste de l'export.
+- Lien expiré : refaire un export. Fichier absent ou signature en panne :
+  listé sans lien et signalé dans `tables_unreadable`.
+
+## 2026-11-13 — Séances Agon vers la montre COROS : bloqué, l'API ne sait pas retirer
+
+Lu le 13/11/2026 : guide des outils `coroslab/COROS-MCP` (`docs/en/tools.md`)
+et son README.
+
+- **Ce que COROS permet** : `createScheduledWorkout` (une séance à une date,
+  ≤ 90 jours), `createSingleWorkout` + `scheduleWorkout`, `updateScheduledWorkout`
+  (contenu d'une date), `queryTrainingSchedule`. Sports : **course, vélo, trail
+  seulement** (pas de muscu, pas de natation à la création).
+- **Ce qu'il ne permet pas** : *« No tool in this set deletes content »* —
+  aucune suppression, aucun déplacement, aucune sortie de plan ; il faut le
+  faire dans l'app COROS. Le format de `course` (étapes, cibles, répétitions)
+  n'est pas documenté (« complete workout content »).
+- **Pourquoi c'est bloquant** : la réconciliation de `_shared/garminTraining`
+  (`plan.ts`) repose sur « modifiée = supprimée puis recréée » et « annulée ou
+  déplacée = retirée ». Avec COROS, une séance déplacée ou annulée par le coach
+  resterait sur la montre à l'ancienne date : l'athlète s'entraînerait sur une
+  version périmée, ce que la règle Garmin (DECISIONS 2026-11-13) interdit.
+  La muscu et le HYROX (la moitié des séances Agon) ne passeraient pas.
+- **Droits** : le README présente le MCP pour l'usage d'un assistant IA choisi
+  par l'athlète ; il ne restreint pas les intégrations tierces, renvoie aux CGU
+  COROS. Notre connexion actuelle est en lecture (synchro) ; l'écriture au
+  calendrier serait une nouvelle finalité à annoncer à l'athlète.
+- **Pistes, à décider par Hugo** : (a) attendre un outil de suppression
+  (demande à COROS) ; (b) envoi partiel : course / vélo / trail, contenu mis à
+  jour sur la même date, et une séance déplacée ou annulée remplacée par un
+  contenu « Annulée — voir Agon » (rien d'inventé, mais l'entrée reste au
+  calendrier) ; (c) abandonner COROS pour l'envoi. Avant (b), lire le schéma
+  réel de `course` par `tools/list` avec le compte COROS d'Hugo.
+## 2026-11-13 — Weekly review (P22, P23, P39) ; D16 et D17 tranchées
+
+- **Table `weekly_reviews`** (une par athlète et par semaine, lundi → dimanche) : `answers` (jsonb) pour
+  la saisie, `auto` = bilan figé à l'envoi, `light` = feu du matin au moment de l'envoi. Seule écriture :
+  la RPC `save_weekly_review`, par l'athlète, du dimanche au lundi soir (heure de Paris), refusée après
+  l'envoi. Brouillon enregistré à chaque champ (repris après fermeture).
+- **Lecture** : l'athlète (brouillons compris) ; coach, co-coach (`is_coach_of`) et staff ayant
+  « wellness » en lecture : reviews envoyées seulement.
+- **Bilan** (`src/lib/weekly-review/`) : séances faites / prévues (activités libres hors compte), durée et
+  distance (séances faites + libres, pas de tonnage), RPE moyen, séance la plus dure avec la note de
+  l'athlète, moyennes du wellness à partir de 3 jours (sinon « — »). Aucune IA.
+- **D16 (Hugo, 13/11)** : la question douleur apparaît si le feu du matin est orange ou rouge ; relance
+  par bannière seule (dimanche et lundi) ; après le lundi soir, fermée et « non faite ».
+- **D17 (Hugo, 13/11)** : la réponse du coach reste le retour hebdo (`weekly_retours.comment`) ; menu
+  « Reviews » (tous les athlètes) + onglet « Review » par athlète ; staff en lecture avec le droit
+  « bien-être », pas de nouveau domaine.
+- **P39** : export (`weekly_reviews`), suppression par cascade, aucune donnée envoyée à l'IA. Texte de la
+  politique de confidentialité à compléter par la session « légal » (`LEGAL_VERSION` inchangée).

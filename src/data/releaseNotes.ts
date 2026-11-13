@@ -55,6 +55,112 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     ],
   },
   {
+    id: "2026-11-13-activite-libre-hors-ligne",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Activités libres gardées sans réseau",
+    summary: "Une activité libre (footing, vélo…) ajoutée par un athlète sans réseau n'est plus perdue : elle part toute seule au retour du réseau.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Avant, l'athlète voyait « Sauvegarde échouée » et l'activité disparaissait au prochain chargement.",
+          "Maintenant, comme pour le wellness ou la pesée, l'activité est gardée sur le téléphone et vous arrive dès que le réseau revient.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-coach-telephone-fiches-banque",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Fiches et banque d'exercices sur téléphone",
+    summary: "Depuis « Plus » sur votre téléphone : lisez et partagez vos fiches, et retrouvez un exercice de la banque pour montrer sa vidéo à un athlète.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Fiches : rangées par catégorie, avec recherche. Vous voyez à qui chaque fiche est partagée et si elle a été lue.",
+          "Partagez une fiche à un ou plusieurs athlètes en une fois, avec un mot facultatif. Ceux qui l'ont déjà sont grisés.",
+          "Banque d'exercices en lecture : recherche, type, muscle, équipement, niveau ; chaque exercice montre sa vidéo, ses consignes et ses muscles.",
+          "Les reviews de la semaine sont aussi accessibles depuis « Plus » et l'onglet « Review » de chaque athlète.",
+          "Importer ou modifier une fiche ou un exercice reste sur ordinateur.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-coach-telephone",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "L'espace coach sur téléphone",
+    summary: "Sur téléphone, l'espace coach a maintenant ses propres écrans : l'essentiel de la journée, vos athlètes et leur suivi, à une main. Sur ordinateur, rien ne change.",
+    sections: [
+      {
+        title: "Ce que vous trouvez sur téléphone",
+        points: [
+          "Accueil : ce qui est à traiter, les séances d'hier faites ou non avec les retours, celles du jour et les prochaines compétitions.",
+          "Athlètes : recherche, filtres Alerte et Compétition, ajout d'un athlète et partage de votre code coach.",
+          "Fiche d'un athlète : planning de la semaine, programmation, retours, wellness, santé (montre) et tests.",
+          "Planning : touchez une séance pour la déplacer, la dupliquer, la passer en repos, la retirer ou la modifier.",
+          "Modifier une séance : séries, répétitions, charge, RIR, tempo et repos, pour ce jour seulement ou à partir de cette séance.",
+          "Tests : saisissez un résultat ou faites passer un test prévu depuis votre téléphone.",
+          "Plus : nouveautés, outils, paramètres et mode athlète.",
+        ],
+      },
+      {
+        title: "Restent sur ordinateur",
+        points: [
+          "Les banques, l'import de texte, la gestion des co-coachs et le détail des retours séance par séance.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-weekly-review",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Weekly review : le bilan de la semaine de chaque athlète",
+    summary: "Chaque dimanche, l'athlète fait le point sur sa semaine depuis son téléphone. Le lundi, tu lis toutes les reviews sur une seule page et tu réponds.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Ouverte du dimanche matin au lundi soir, avec un rappel sur l'accueil.",
+          "Le bilan se remplit tout seul : séances faites sur prévues, durée, distance, RPE moyen, séance la plus dure et moyenne du wellness.",
+          "L'athlète note sa semaine de 1 à 5 (note, énergie, motivation, charge de vie, nutrition), dit s'il a tenu ses engagements, répond à 3 questions et prend 3 engagements pour la semaine suivante.",
+          "Si son feu est orange ou rouge, on lui demande aussi sa douleur (zone et niveau de 0 à 10).",
+          "Sa review est enregistrée au fur et à mesure : il peut s'arrêter et reprendre plus tard.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Menu « Reviews » : une ligne par athlète (reçue, en attente, non faite), avec le feu, la note, les séances et la douleur.",
+          "Onglet « Review » de l'athlète : sa review complète et ta réponse, qui reste ton retour de la semaine, visible sur son accueil.",
+          "Le co-coach voit la même chose. Un membre du staff avec l'accès « bien-être » la lit, sans pouvoir la modifier.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-retirer-activite-montre",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retirer une activité de montre supprimée",
+    summary: "Une sortie supprimée dans Garmin Connect ou COROS restait dans Agon. Vous pouvez maintenant la retirer depuis la liste des sorties de l'athlète.",
+    sections: [
+      {
+        title: "Comment faire",
+        points: [
+          "Ouvrez la sortie dans la liste des activités, puis « Retirer d'Agon » et confirmez. L'athlète peut le faire aussi.",
+          "La courbe, les tours et les zones partent avec elle. La séance prévue à laquelle elle était rattachée reste, avec ce que l'athlète y a saisi.",
+          "Une séance enregistrée dans Agon ne peut pas être retirée de cette façon.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-retours-sante",
     date: "2026-11-13",
     kind: "feature",

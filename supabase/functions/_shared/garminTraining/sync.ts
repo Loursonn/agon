@@ -322,14 +322,61 @@ export async function executeActions(
   return report;
 }
 
-/** Un athlète, de bout en bout. `pushEnabled = false` : retire ce qui est à venir. */
+/** Permission Garmin « Workout Import » (envoi de séances) : sans elle, chaque appel répond 412. */
+export const WORKOUT_IMPORT = "WORKOUT_IMPORT";
+
+export const WORKOUT_IMPORT_MISSING =
+  "envoi non autorisé : l'athlète n'a pas coché « Workout Import » dans Garmin Connect";
+
+/**
+ * État de la permission d'envoi. Liste vide = inconnue (lecture échouée au
+ * callback, ou connexion antérieure à la lecture) : on n'en déduit rien.
+ */
+export function workoutImportPermission(scopes: readonly string[] | null | undefined): "granted" | "missing" | "unknown" {
+  if (!scopes || scopes.length === 0) return "unknown";
+  return scopes.includes(WORKOUT_IMPORT) ? "granted" : "missing";
+}
+
+/**
+ * Permissions connues de la connexion. Inconnues → relues chez Garmin
+ * (`GET /user/permissions`) et rangées dans `granted_scopes`. Une lecture qui
+ * échoue ou revient vide laisse la liste telle quelle : jamais d'écriture d'un
+ * « rien » qui ressemblerait à un retrait.
+ */
+export async function ensureKnownScopes(
+  db: Db,
+  connectionId: string,
+  scopes: readonly string[] | null | undefined,
+  readPermissions: () => Promise<string[]>,
+): Promise<string[]> {
+  const current = [...(scopes ?? [])];
+  if (current.length > 0) return current;
+  let fresh: string[];
+  try {
+    fresh = await readPermissions();
+  } catch {
+    return current;
+  }
+  if (fresh.length === 0) return current;
+  const { error } = await db.from("provider_connections").update({ granted_scopes: fresh }).eq("id", connectionId);
+  fail("permissions Garmin", error);
+  return fresh;
+}
+
+/**
+ * Un athlète, de bout en bout. `pushEnabled = false` : retire ce qui est à venir.
+ * `scopes` connus sans `WORKOUT_IMPORT` : aucun appel (ils répondraient 412).
+ */
 export async function syncAthleteWorkouts(
   db: Db,
   garmin: GarminTrainingClient,
   athleteId: string,
   pushEnabled: boolean,
-  opts: { today?: IsoDay; now?: number } = {},
+  opts: { today?: IsoDay; now?: number; scopes?: readonly string[] | null } = {},
 ): Promise<ExecuteReport> {
+  if (workoutImportPermission(opts.scopes) === "missing") {
+    return { created: 0, replaced: 0, removed: 0, rejected: 0, forgotten: 0, errors: [], stopped: WORKOUT_IMPORT_MISSING };
+  }
   const today = opts.today ?? parisDay();
   const pushed = await loadPushed(db, athleteId);
   // Envoi coupé sans rien sur Garmin : rien à lire.

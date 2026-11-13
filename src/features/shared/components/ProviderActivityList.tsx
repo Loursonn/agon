@@ -18,6 +18,7 @@ import {
 } from "@/features/shared/hooks/useProviderActivities";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
 import { useGearTotals } from "@/features/shared/hooks/useGearTotals";
+import { RemoveActivityButton } from "@/features/shared/components/RemoveActivityButton";
 
 /**
  * Sorties remontées par une montre ou importées depuis un fichier.
@@ -84,6 +85,7 @@ export function ProviderActivityList({
           {activities.map((a) => (
             <Ligne
               key={a.id}
+              athleteId={athleteId}
               activity={a}
               seance={matchByActivity.get(a.id)}
               ouverte={ouverte === a.id}
@@ -98,11 +100,13 @@ export function ProviderActivityList({
 
 /** Une sortie : l'essentiel sur une ligne, la provenance au dépli. */
 function Ligne({
+  athleteId,
   activity: a,
   seance,
   ouverte,
   onToggle,
 }: {
+  athleteId: string;
   activity: ProviderActivity;
   /** Séance prévue du même jour à laquelle cette sortie est rattachée */
   seance?: RunMatch;
@@ -230,6 +234,7 @@ function Ligne({
               {provenanceFallback(a.source, a.deviceName)}
             </div>
           )}
+          <RemoveActivityButton athleteId={athleteId} activityId={a.id} sources={a.sources} />
         </div>
       )}
     </div>

@@ -5,6 +5,8 @@ import { AthleteProvider, useAthleteContext } from "@/features/shared/context/At
 import { SelectedAthleteProvider } from "@/features/coach/context/SelectedAthleteContext";
 import ContextBar from "@/features/coach/components/ContextBar";
 import AthleteProfileForm from "@/components/coach/AthleteProfileForm";
+import { useIsPhone } from "@/hooks/useIsPhone";
+import CoachPhoneAthleteHeader from "@/features/coach/phone/CoachPhoneAthleteHeader";
 
 /**
  * Wrapper monté sur /coach/athletes/:athleteId/*.
@@ -15,6 +17,7 @@ export default function CoachAthleteArea() {
   const { athleteId } = useParams<{ athleteId: string }>();
   const { user, profile, athletes, hiddenAthletes, canCoachSelf } = useAuth();
   const [editProfileTab, setEditProfileTab] = useState<"profil" | "nutrition" | null>(null);
+  const isPhone = useIsPhone();
 
   if (!athleteId || !user) return null;
 
@@ -33,7 +36,8 @@ export default function CoachAthleteArea() {
         userName={profile?.full_name}
         onEditProfile={(tab) => setEditProfileTab(tab ?? "profil")}
       >
-        <ContextBar />
+        {/* Téléphone : en-tête et onglets des planches « Coach tél. » */}
+        {isPhone ? <CoachPhoneAthleteHeader /> : <ContextBar />}
         <div style={{ flex: 1 }}>
           <Outlet />
         </div>

@@ -628,6 +628,11 @@ function WorkoutPushBlock({ connection }: { connection: ProviderConnection }) {
           {sent.length === 1 ? "1 séance à venir envoyée" : `${sent.length} séances à venir envoyées`}
         </div>
       )}
+      {on && connection.grantedScopes.length > 0 && !connection.grantedScopes.includes("WORKOUT_IMPORT") && (
+        <div style={{ fontSize: 11, color: C.o, lineHeight: 1.5 }}>
+          Envoi bloqué : {pushErrorText("(412)")}
+        </div>
+      )}
       {on && failed.length > 0 && (
         <div style={{ fontSize: 11, color: C.o, lineHeight: 1.5 }}>
           {failed.length === 1 ? "1 séance n'a pas pu être envoyée" : `${failed.length} séances n'ont pas pu être envoyées`}

@@ -11,7 +11,7 @@ import { useTrainingMethods } from "@/features/shared/hooks/useTrainingMethods"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 import { loadFromPctRm } from "@shared/domain/performance"
 import type { TrainingMethod } from "@/types/trainingMethods"
-import { methodConfigToExerciceParams } from "@/features/coach/components/library/MethodPreview"
+import { methodConfigToExerciceParams } from "@/features/coach/components/library/methodConfigConvert";
 import { isWeekRecord, resolveExerciceParams, resolveVideoRequest, setVideoRequest } from "@/lib/sessionOccurrence"
 
 const VIOLET = "#FFC933"
@@ -268,7 +268,7 @@ export function ExerciceParamsPanel({
 
   // rir can be null (Libre mode)
   const rirIsGlobal = params.rir.mode === 'global'
-  const rirGlobal: number | null = rirIsGlobal ? params.rir.value : 2
+  const rirGlobal: number | null = params.rir.mode === 'global' ? params.rir.value : 2
   const rirValues = params.rir.mode === 'par_serie'
     ? ensureLength(params.rir.values as (number | null)[], nb, 2)
     : Array(nb).fill(rirGlobal ?? 2)

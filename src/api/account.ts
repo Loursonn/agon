@@ -397,6 +397,28 @@ export async function readOwnRows(table: string, column: string, value: string, 
   return unwrapRows(await q.from(table).select(columns).eq(column, value), `Lecture de ${table} impossible`);
 }
 
+/** Bucket des données brutes de montre (`<athlete>/<source>/<type>/<id>.json.gz|.fit`). */
+export const PROVIDER_RAW_BUCKET = "provider-raw";
+
+/**
+ * Liens signés vers ses propres fichiers bruts de montre (export RGPD, P37).
+ * La policy `provider_raw_own_read` ne laisse signer que les chemins qui
+ * commencent par l'id de l'utilisateur. Par lots de 100. Un chemin non signé
+ * (fichier absent) est simplement omis du résultat ; une panne lève.
+ */
+export async function signOwnRawFiles(paths: string[], expiresInS: number): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  for (let i = 0; i < paths.length; i += 100) {
+    const chunk = paths.slice(i, i + 100);
+    const data = unwrap(
+      await db().storage.from(PROVIDER_RAW_BUCKET).createSignedUrls(chunk, expiresInS),
+      "Liens vers les fichiers de montre impossibles",
+    );
+    for (const d of data ?? []) if (d.path && d.signedUrl && !d.error) out[d.path] = d.signedUrl;
+  }
+  return out;
+}
+
 export interface DeleteAccountResult {
   success: boolean;
   /** Étapes qui n'ont pas abouti (ex. révocation d'un provider injoignable). */

@@ -5,7 +5,8 @@
 import { useState } from "react";
 import { Pencil, Copy, Trash2, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { C } from "@/lib/theme";
-import { MethodPreview, methodConfigToText } from "./MethodPreview";
+import { MethodPreview } from "./MethodPreview";
+import { methodConfigToText } from "./methodConfigConvert";
 import type { TrainingMethod, MethodScope, FullWeekConfig, MethodConfig } from "@/types/trainingMethods";
 
 // ─── Labels / colors ──────────────────────────────────────────────────────────

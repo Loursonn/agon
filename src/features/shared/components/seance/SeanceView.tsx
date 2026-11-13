@@ -11,7 +11,8 @@ import {
 import { useActivityDetail, useSaveLaps } from "@/features/shared/hooks/useActivityDetail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeanceHeader } from "./SeanceHeader";
-import { SeanceKeyFigures, seanceFigures } from "./SeanceKeyFigures";
+import { SeanceKeyFigures } from "./SeanceKeyFigures";
+import { seanceFigures } from "./seanceFigures";
 import { SeanceChartCard } from "./SeanceChartCard";
 import { SeanceZoneCard } from "./SeanceZoneCard";
 import { SeanceFeedbackCard } from "./SeanceFeedbackCard";

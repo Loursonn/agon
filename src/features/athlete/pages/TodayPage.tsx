@@ -47,7 +47,8 @@ import { useCompetitions } from "@/hooks/useCompetitions";
 import { priorityLabel } from "@/types/planning";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
 import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
-import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
+import { RunDistanceInput } from "@/features/shared/components/RunDistanceInput";
+import { initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/runDistance";
 import type { DayProgram, SessionPreviewItem } from "@/features/shared/hooks/useWeekProgram";
 import { formatSetsReps, hasIso } from "@/lib/formatSetsReps";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
@@ -61,6 +62,7 @@ import { queueIsDurable } from "@/lib/offline/writes";
 import { FreeActivityModal } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
+import { WeeklyReviewBanner } from "@/features/athlete/components/today/WeeklyReviewBanner";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
 import { watchRunMeasure, watchRunText } from "@/lib/watchRunLabel";
@@ -1026,6 +1028,8 @@ export default function TodayPage() {
           scrollbarWidth: "none", display: "flex", flexDirection: "column", gap: 28,
         }}
       >
+
+        {!viewOnly && <WeeklyReviewBanner athleteId={athleteId} />}
 
         {(() => {
           const s01 = (<>

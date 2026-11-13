@@ -23,6 +23,8 @@ import { useCommandPalette } from "./context/CommandPaletteContext";
 import { Search } from "lucide-react";
 import { useAppUpdates } from "@/features/shared/hooks/useAppUpdates";
 import OfflineBanner from "@/features/shared/components/OfflineBanner";
+import { useIsPhone } from "@/hooks/useIsPhone";
+import CoachPhoneShell from "./phone/CoachPhoneShell";
 
 // ── Agon brand icons (inline SVG, currentColor) ─────────────────────────────
 
@@ -46,6 +48,7 @@ const AgonIcons = {
 const NAV_ITEMS = [
   { icon: AgonIcons.stats,       label: "Home",          path: "/coach",            exact: true,  certified: false, roadmap: false },
   { icon: AgonIcons.groupe,      label: "Athlètes",      path: "/coach/athletes",   exact: false, certified: false, roadmap: false },
+  { icon: AgonIcons.message,     label: "Reviews",       path: "/coach/reviews",    exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.barre,       label: "Banque",         path: "/coach/library",    exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.test,        label: "Tests",          path: "/coach/tests",      exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.fiche,       label: "Fiches",         path: "/coach/fiches",     exact: false, certified: false, roadmap: false },
@@ -367,7 +370,10 @@ function CoachShellInner() {
 export default function CoachShell() {
   const { profile } = useAuth();
   // Compte professionnel uniquement : pas d'espace coach.
+  const isPhone = useIsPhone();
   if (profile?.role === "staff") return <Navigate to="/staff" replace />;
+  // Téléphone : app coach à part (barre du bas, en-têtes des planches « Coach tél. »).
+  if (isPhone) return <CoachPhoneShell />;
   return (
     <CommandPaletteProvider>
       <CoachShellInner />

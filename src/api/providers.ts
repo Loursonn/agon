@@ -550,3 +550,26 @@ export async function saveActivityDetail(activityId: string, payload: Record<str
   const res = await db().rpc("activity_detail_upsert", { p_activity: activityId, p_detail: payload as never });
   if (res.error) throw new ApiError("Enregistrement du détail de l'activité impossible", res.error);
 }
+
+// ── Retirer une activité (P38) ───────────────────────────────────────────────
+
+export interface RemovedActivity {
+  removed: boolean;
+  /** Liens vers une séance prévue retirés avec elle (la séance reste). */
+  unlinked: number;
+}
+
+/**
+ * Retire d'Agon une activité de montre ou de fichier (supprimée dans Garmin
+ * Connect, doublon, erreur). Athlète, ou son coach (`is_coach_of`). La RPC
+ * `remove_provider_activity` supprime la ligne et ses détails (courbe, tours,
+ * séries, zones, lien au planning) ; elle refuse une séance saisie dans Agon.
+ * Après : `invalidateProviders`, `invalidateActivityDetail`, `invalidatePlanLinks`.
+ */
+export async function removeProviderActivity(activityId: string): Promise<RemovedActivity> {
+  const data = unwrap(
+    await db().rpc("remove_provider_activity", { p_activity: activityId }),
+    "Activité non retirée",
+  ) as { removed?: unknown; unlinked?: unknown } | null;
+  return { removed: data?.removed === true, unlinked: Number(data?.unlinked ?? 0) || 0 };
+}

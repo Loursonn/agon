@@ -14,11 +14,13 @@ import { nameKey } from "@/lib/import/yoxx/matchExercise";
 import { resolveMuscuImport } from "@/lib/import/yoxx/resolveMuscuImport";
 import type { ImportIssue } from "@/lib/import/yoxx/common";
 import type { ProgSession } from "../programmation/types";
-import { methodConfigToExerciceParams } from "../library/MethodPreview";
+import { methodConfigToExerciceParams } from "../library/methodConfigConvert";
 import { useTrainingMethods } from "@/features/shared/hooks/useTrainingMethods";
-import ImportIssueList, { issueCounts } from "./ImportIssueList";
+import ImportIssueList from "./ImportIssueList";
+import { issueCounts } from "./importIssues";
 import ImportTextDialogShell, { SectionTitle } from "./ImportTextDialogShell";
-import { useExerciseChoices, ExerciseChoiceList } from "./ExerciseChoices";
+import { ExerciseChoiceList } from "./ExerciseChoices";
+import { useExerciseChoices } from "./useExerciseChoices";
 
 const DAY_LABEL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 

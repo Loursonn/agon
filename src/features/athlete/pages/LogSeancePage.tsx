@@ -15,7 +15,9 @@ import {
 import { RpeSheet } from "@/features/athlete/components/RpeSheet";
 import type { EnergySessionAssignmentRow, EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
 import { localISO } from "@/lib/date";
-import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
+import type { ExosMap } from "@/features/shared/types/athlete";
+import { RunDistanceInput } from "@/features/shared/components/RunDistanceInput";
+import { initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/runDistance";
 
 const KIND_COLOR: Record<string, string> = {
   vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
@@ -508,7 +510,7 @@ export default function LogSeancePage() {
           onTimerStart={timerStart} onTimerStop={timerStop}
           viewOnly={viewOnly} sessionLogs={sessionLogs} setSessionLogs={setSessionLogs}
           freeSessions={freeSessions} setFreeSessions={setFreeSessions}
-          onAddExercise={(sessId: string, ex: unknown) => setExos(prev => ({ ...prev, [sessId]: [...(prev[sessId] || []), ex] }))}
+          onAddExercise={(sessId: string, ex: unknown) => setExos(prev => ({ ...prev, [sessId]: [...(prev[sessId] || []), ex as ExosMap[string][number]] }))}
           weekSchedule={weekSchedule}
           onSessionCompleted={(sid: string, wk: number) => setRpePending({ sessionId: sid, scheduledDate: computeScheduledDate(sid, wk) })}
         />

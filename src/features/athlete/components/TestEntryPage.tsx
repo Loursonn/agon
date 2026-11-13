@@ -15,13 +15,19 @@ import {
 } from "@/lib/athleteTestValues";
 import { formatNumberFr, joinSeconds, parseNumberFr, recordOutcome, splitSeconds, type RecordOutcome } from "@/lib/testEntry";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
-import { DateBox, FIELD_BOX, fmtLongDay } from "./DateBox";
+import { DateBox } from "./DateBox";
+import { FIELD_BOX, fmtLongDay } from "./dateFormat";
 
 interface Props {
   testId: string | null;
   athleteId: string;
   coachName?: string | null;
   onClose: () => void;
+  /**
+   * Page du détail d'une valeur après l'enregistrement. Par défaut celle de
+   * l'athlète ; `null` (saisie par le coach) : pas de lien, « Retour » seul.
+   */
+  resultPath?: ((variableId: string) => string) | null;
 }
 
 const PINK = TYPE_COLOR.test;
@@ -179,7 +185,7 @@ interface Saved {
  * ouverte depuis « Test du jour » ou le Programme. Valeur(s) au bon format,
  * date du test, ressenti 1 à 5, un mot ; puis confirmation (record ou écart).
  */
-export function TestEntryPage({ testId, athleteId, coachName, onClose }: Props) {
+export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPath = (id) => `/athlete/test?valeur=${id}` }: Props) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [test, setTest] = useState<TestSessionFill | null>(null);
@@ -361,8 +367,10 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose }: Props) 
         </div>
       </>,
       <>
-        {primaryBtn("Voir le détail du test", () => { onClose(); navigate(`/athlete/test?valeur=${saved.variableId}`); })}
-        <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: C.ac, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Retour à Aujourd’hui</button>
+        {resultPath
+          ? primaryBtn("Voir le détail du test", () => { onClose(); navigate(resultPath(saved.variableId)); })
+          : primaryBtn("Retour aux tests", onClose)}
+        {resultPath && <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: C.ac, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Retour à Aujourd’hui</button>}
       </>,
     );
   }

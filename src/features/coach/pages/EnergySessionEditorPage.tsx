@@ -49,7 +49,7 @@ import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuali
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
 import { toast } from "sonner";
 import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
-import { issueCounts } from "../components/import/ImportIssueList";
+import { issueCounts } from "../components/import/importIssues";
 import ImportReportPanel from "../components/import/ImportReportPanel";
 import ImportSpecificTextDialog, { type SpecificImportApply } from "../components/import/ImportSpecificTextDialog";
 import type { EnergyImportResult } from "@/lib/import/yoxx/parseEnergySession";
@@ -130,7 +130,6 @@ const KIND_COLOR: Record<string, string> = {
 function deepCloneIntervals(steps: EnergyStep[]): EnergyStep[] {
   return steps.map((s): EnergyStep => {
     if (s.type === "interval" || s.type === "exercise") return { ...s, id: genId() };
-    if (s.type === "interval") return { ...s, id: genId() };
     return {
       ...s,
       id: genId(),
@@ -435,7 +434,7 @@ export default function EnergySessionEditorPage() {
   }
 
   async function handleSave(andPlan = false) {
-    const effectiveKind = sessionKind === "custom" ? "custom" : sessionKind;
+    const effectiveKind: SessionKind = sessionKind;
     const payload = {
       name: name.trim() || "Séance sans titre",
       session_kind: effectiveKind,

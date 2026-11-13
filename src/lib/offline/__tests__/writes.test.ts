@@ -16,6 +16,14 @@ describe("writeKey", () => {
       writeKey("weight.day", { athleteId: "a", day: "2026-11-09", kg: 70 }),
     );
   });
+  it("activités libres : une seule saisie en attente par athlète (la liste la plus récente remplace)", () => {
+    expect(writeKey("freeSessions.set", { athleteId: "a", sessions: [] })).toBe("freeSessions.set:a");
+    expect(writeKey("freeSessions.set", { athleteId: "a", sessions: [{ id: "1" }] }))
+      .toBe(writeKey("freeSessions.set", { athleteId: "a", sessions: [] }));
+    expect(mergeWriteArgs("freeSessions.set", { athleteId: "a", sessions: [1] }, { athleteId: "a", sessions: [1, 2] }))
+      .toEqual({ athleteId: "a", sessions: [1, 2] });
+    expect(droppedMessage("freeSessions.set", new ApiError("x", { message: "non", code: "22023" }))).toContain("Activité libre non enregistrée");
+  });
 });
 
 describe("droppedMessage", () => {

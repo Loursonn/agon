@@ -82,6 +82,8 @@ export interface ExerciseMethodConfig {
     values?: number[]
     /** 'pct' = les valeurs sont des % du 1RM auto ; absent = valeur absolue */
     values_unit?: 'pct'
+    /** Charge de référence en texte libre (ex : "75kg"), affichée dans l'aperçu */
+    reference?: string
   }
   tempo?: {
     eccentric_s?: number

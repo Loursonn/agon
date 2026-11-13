@@ -10,7 +10,7 @@ import { CardSkeleton } from "@/features/shared/components/skeletons"
 import { toast } from "sonner"
 import ImportMuscuTextDialog from "../import/ImportMuscuTextDialog"
 import ImportReportPanel from "../import/ImportReportPanel"
-import { scrollToStep } from "../import/ImportIssueList"
+import { scrollToStep } from "../import/importIssues";
 import type { ImportIssue } from "@/lib/import/yoxx/common"
 
 const VIOLET = "#FFC933"

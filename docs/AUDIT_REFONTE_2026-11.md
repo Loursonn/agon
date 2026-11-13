@@ -211,7 +211,7 @@ Source : audit qualité.
 > Dates : Claude Max s'arrête le **11 novembre** → les chantiers lourds et transverses (beaucoup de fichiers, beaucoup d'agents) passent avant. App stores : janvier-février 2027.
 
 ### Phase 0 — Urgences (avant le 11/11) · ~1-2 j
-- [ ] Dump BDD + vérif PITR.
+- [ ] Dump BDD + vérif PITR. PITR non activé (constaté le 2026-11-13, `docs/QUESTIONS_JURISTE_HDS.md`).
 - [x] Lot sécurité S1→S10 (une migration, tests pgTAP associés).
 - [x] P1 : `sLoad` ne renvoie plus de valeur par défaut sur erreur + blocage des écritures non chargées.
 - [x] P2/P3 : brouillon local de la séance en cours (+ énergie, wellness).
@@ -219,11 +219,11 @@ Source : audit qualité.
 - [x] `App.tsx` : retirer la remontée à chaque navigation + `Suspense` par shell + réglages `QueryClient`. (Gain de vitesse immédiat, ~1 h.)
 
 ### Phase 1 — Garde-fous (avant le 11/11) · ~1-2 j
-- [x] CI GitHub Actions (`npm run check` : `tsc` ≤ `.tsc-baseline` (99), lint, vitest, build) + Dependabot (vers `dev`).
-- [ ] Protection de `main` + secret scanning (réglages GitHub, à faire par le propriétaire du repo).
+- [x] CI GitHub Actions (`npm run check` : `tsc` ≤ `.tsc-baseline` (99), lint, vitest, build) + Dependabot (vers `dev`). **2026-11-13 : 0 erreur TypeScript (`.tsc-baseline` = 0), 0 avertissement ESLint (P3).**
+- [ ] Protection de `main` + secret scanning (réglages GitHub, à faire par le propriétaire du repo). Vérifié le 2026-11-13 : `main` toujours sans protection.
 - [x] Régénérer `types.ts`.
 - [x] Réécrire `CLAUDE.md` à partir du réel ; y mettre les règles de la mémoire d'Hugo ; supprimer `docs/CLAUDE.md` et `AUTOMATISATION PUSH`.
-- [ ] Sortir `settings.local.json` de git (JSON invalide ligne 80 : virgule manquante avant les lignes Windows) — décision Hugo/Tito.
+- [ ] Sortir `settings.local.json` de git (JSON invalide ligne 80 : virgule manquante avant les lignes Windows) — décision Hugo/Tito. Toujours suivi par git et toujours invalide le 2026-11-13 (ligne 81).
 - [x] Créer les skills projet (§8) : `.claude/skills/`.
 - [x] Supprimer le code mort (84 fichiers, 14 500 lignes) et 24 dépendances inutiles.
 
@@ -250,8 +250,8 @@ Source : audit qualité.
 - [x] Migrer les 113 fichiers qui importent encore Supabase directement (planning, tests, compétitions, énergie, staff…), puis passer la règle ESLint en erreur (2026-11-08, PR #138).
 - [x] Corriger les requêtes vers des tables ou colonnes inexistantes (`nutrition_*`, `wellness_logs`, `reschedule_reason`, `coach_validated`).
 - [x] Fusion RPE (seule source `workout_logs.rpe_score`).
-- [ ] Fusion tests, poids ; suppression des tables mortes (`workout_rpe` après export) ; `migration repair` si validé.
-- [ ] Sortir santé puis programme d'`app_data`.
+- [ ] Fusion tests, poids (poids fait : `body_weight_*`, RPC `weight_set_day` / `weight_set_goal`) ; suppression des tables mortes (`workout_rpe` après export) ; `migration repair` si validé.
+- [ ] Sortir santé puis programme d'`app_data`. Santé : étapes 1-2 faites (lecteurs P5, écrivains P6) ; étapes 3-4 attendent 30 jours de comptage des versions clientes (`profiles.client_build`, remontée réparée le 2026-11-13).
 
 ### Phase 5 — Design system · ~1-2 sem.
 - [x] Récupérer la charte source (disque `AGON`, `agon-brand-kit/tokens/agon-tokens.css`).
@@ -266,7 +266,7 @@ Source : audit qualité.
 ### Phase 7 — Stores (janv.-fév. 2027)
 - [x] Décision **Capacitor** (recommandé : réutilise tout le code web et le hors-ligne ; plugins santé suffisants) vs React Native/Expo (réécriture de ~13 000 lignes d'UI athlète). À acter dans `DECISIONS.md` (CLAUDE.md dit encore Expo).
 - [ ] Comptes Apple (99 $/an) + Google (25 $ une fois). Attention : un compte Google personnel récent doit faire un test fermé (12 testeurs, 14 jours) avant la prod.
-- [ ] URL web de suppression de compte, compte démo stable, privacy labels / Data safety. (Vérification d'âge à l'inscription : faite, `src/lib/age.ts` + triggers `min_age_signup`.)
+- [ ] ~~URL web de suppression de compte~~ (`/suppression-compte`), ~~compte démo stable~~ (`scripts/seed-demo.mjs`), privacy labels / Data safety (inventaire prêt : `docs/stores/DONNEES_COLLECTEES.md`). (Vérification d'âge à l'inscription : faite, `src/lib/age.ts` + triggers `min_age_signup`.)
 - [ ] Avis juriste HDS si la feature kiné est ouverte largement.
 
 ---

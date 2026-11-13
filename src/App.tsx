@@ -19,6 +19,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import StaffInviteAccept from "./features/staff/pages/StaffInviteAccept.tsx";
 import ClaimAthlete from "./pages/ClaimAthlete.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import PhoneOr from "./features/coach/phone/PhoneOr.tsx";
 
 // Pages légales publiques (lazy — rarement ouvertes, mais doivent rester
 // accessibles sans authentification : les programmes partenaires Garmin et
@@ -48,6 +49,7 @@ const LogSeancePage   = lazy(() => import("./features/athlete/pages/LogSeancePag
 const AlimPage        = lazy(() => import("./features/athlete/pages/AlimPage.tsx"));
 const AthleteTestPage = lazy(() => import("./features/athlete/pages/AthleteTestPage.tsx"));
 const AthleteZonesPage = lazy(() => import("./features/athlete/pages/AthleteZonesPage.tsx"));
+const WeeklyReviewPage = lazy(() => import("./features/athlete/pages/WeeklyReviewPage.tsx"));
 const AthleteSantePage = lazy(() => import("./features/athlete/pages/AthleteSantePage.tsx"));
 const AthleteMontresPage = lazy(() => import("./features/athlete/pages/AthleteMontresPage.tsx"));
 const AthleteHyroxPage = lazy(() => import("./features/athlete/pages/HyroxPage.tsx"));
@@ -68,6 +70,8 @@ const PlanningPage      = lazy(() => import("./features/coach/pages/PlanningPage
 const ProgrammationPage = lazy(() => import("./features/coach/pages/ProgrammationPage.tsx"));
 const DonneesPage       = lazy(() => import("./features/coach/pages/DonneesPage.tsx"));
 const RetoursPage       = lazy(() => import("./features/coach/pages/RetoursPage.tsx"));
+const CoachReviewsPage = lazy(() => import("./features/coach/pages/CoachReviewsPage.tsx"));
+const CoachAthleteReviewPage = lazy(() => import("./features/coach/pages/CoachAthleteReviewPage.tsx"));
 const AthleteViewPage           = lazy(() => import("./features/coach/pages/AthleteViewPage.tsx"));
 const EnergySessionEditorPage   = lazy(() => import("./features/coach/pages/EnergySessionEditorPage.tsx"));
 const ProfilAthletePage         = lazy(() => import("./features/coach/pages/ProfilAthletePage.tsx"));
@@ -78,6 +82,18 @@ const CoachUpdatesPage          = lazy(() => import("./features/coach/pages/Coac
 const AthleteFichesPage         = lazy(() => import("./features/coach/pages/AthleteFichesPage.tsx"));
 const CoachStaffPage            = lazy(() => import("./features/staff/pages/CoachStaffPage.tsx"));
 const CoachSeancePage           = lazy(() => import("./features/coach/pages/SeancePage.tsx"));
+// Coach sur téléphone (planches « Coach tél. ») : écrans à part, même route
+const CoachPhoneHome     = lazy(() => import("./features/coach/phone/CoachPhoneHome.tsx"));
+const CoachPhoneAthletes = lazy(() => import("./features/coach/phone/CoachPhoneAthletes.tsx"));
+const CoachPhonePlus     = lazy(() => import("./features/coach/phone/CoachPhonePlus.tsx"));
+const CoachPhonePlanning = lazy(() => import("./features/coach/phone/CoachPhonePlanning.tsx"));
+const CoachPhoneRetours  = lazy(() => import("./features/coach/phone/CoachPhoneRetours.tsx"));
+const CoachPhoneWellness = lazy(() => import("./features/coach/phone/CoachPhoneWellness.tsx"));
+const CoachPhoneSante    = lazy(() => import("./features/coach/phone/CoachPhoneSante.tsx"));
+const CoachPhoneTests    = lazy(() => import("./features/coach/phone/CoachPhoneTests.tsx"));
+const CoachPhoneProgrammation = lazy(() => import("./features/coach/phone/CoachPhoneProgrammation.tsx"));
+const CoachPhoneFiches   = lazy(() => import("./features/coach/phone/CoachPhoneFiches.tsx"));
+const CoachPhoneBanque   = lazy(() => import("./features/coach/phone/CoachPhoneBanque.tsx"));
 
 // staleTime : une donnée lue il y a moins de 30 s n'est pas re-téléchargée à
 // chaque ouverture de page (les mutations invalident explicitement leurs clés).
@@ -205,6 +221,7 @@ function AppRoutes() {
             <Route path="alim" element={<Page><AlimPage /></Page>} />
             <Route path="test" element={<Page><AthleteTestPage /></Page>} />
             <Route path="zones" element={<Page><AthleteZonesPage /></Page>} />
+            <Route path="review" element={<Page><WeeklyReviewPage /></Page>} />
             <Route path="montres" element={<Page><AthleteMontresPage /></Page>} />
             <Route path="sante" element={<Page><AthleteSantePage /></Page>} />
             <Route path="hyrox" element={<Page><AthleteHyroxPage /></Page>} />
@@ -220,13 +237,15 @@ function AppRoutes() {
           {/* Vue coach — sidebar + toutes sous-routes */}
           <Route path="/coach" element={<ProtectedRoute><CoachShell /></ProtectedRoute>}>
             {/* Page d'accueil coach */}
-            <Route index element={<Page><CoachHomePage /></Page>} />
+            <Route index element={<Page><PhoneOr phone={<CoachPhoneHome />} desktop={<CoachHomePage />} /></Page>} />
 
             {/* Pages globales */}
-            <Route path="athletes" element={<Page><AthletesListPage /></Page>} />
-            <Route path="library"  element={<Page><LibraryPage /></Page>} />
+            <Route path="reviews"  element={<Page><CoachReviewsPage /></Page>} />
+            <Route path="athletes" element={<Page><PhoneOr phone={<CoachPhoneAthletes />} desktop={<AthletesListPage />} /></Page>} />
+            <Route path="plus"     element={<Page><PhoneOr phone={<CoachPhonePlus />} desktop={<Navigate to="/coach/settings" replace />} /></Page>} />
+            <Route path="library"  element={<Page><PhoneOr phone={<CoachPhoneBanque />} desktop={<LibraryPage />} /></Page>} />
             <Route path="tests"    element={<Page><CoachTestsBankPage /></Page>} />
-            <Route path="fiches"   element={<Page><FichesPage /></Page>} />
+            <Route path="fiches"   element={<Page><PhoneOr phone={<CoachPhoneFiches />} desktop={<FichesPage />} /></Page>} />
             <Route path="nouveautes" element={<Page><CoachUpdatesPage /></Page>} />
             <Route path="coaches"  element={<Page><CoachesListPage /></Page>} />
             <Route path="roadmap"  element={<Page><RoadmapPage /></Page>} />
@@ -240,13 +259,17 @@ function AppRoutes() {
             {/* Vue par athlète (ContextBar + AthleteProvider) */}
             <Route path="athletes/:athleteId" element={<AthleteScoped><CoachAthleteArea /></AthleteScoped>}>
               <Route index element={<Navigate to="planning" replace />} />
-              <Route path="planning"       element={<Page><PlanningPage /></Page>} />
-              <Route path="programmation"  element={<Page><ProgrammationPage /></Page>} />
+              <Route path="planning"       element={<Page><PhoneOr phone={<CoachPhonePlanning />} desktop={<PlanningPage />} /></Page>} />
+              <Route path="programmation"  element={<Page><PhoneOr phone={<CoachPhoneProgrammation />} desktop={<ProgrammationPage />} /></Page>} />
               <Route path="profil-sportif" element={<Page><ProfilAthletePage /></Page>} />
               <Route path="donnees"       element={<Page><DonneesPage /></Page>} />
-              <Route path="retours"       element={<Page><RetoursPage /></Page>} />
+              <Route path="review"        element={<Page><CoachAthleteReviewPage /></Page>} />
+              <Route path="retours"       element={<Page><PhoneOr phone={<CoachPhoneRetours />} desktop={<RetoursPage />} /></Page>} />
+              {/* Téléphone : onglet Wellness à part (ordinateur : dans Retours) */}
+              <Route path="wellness"      element={<Page><PhoneOr phone={<CoachPhoneWellness />} desktop={<Navigate to="../retours?detail=wellness" replace />} /></Page>} />
               {/* Legacy : Tests vit maintenant dans Profil athlète → Suivi Testing */}
-              <Route path="tests"         element={<Navigate to="../profil-sportif?view=testing" replace />} />
+              <Route path="tests"         element={<Page><PhoneOr phone={<CoachPhoneTests />} desktop={<Navigate to="../profil-sportif?view=testing" replace />} /></Page>} />
+              <Route path="sante"         element={<Page><PhoneOr phone={<CoachPhoneSante />} desktop={<Navigate to="../donnees" replace />} /></Page>} />
               <Route path="hyrox"         element={<Page><CoachHyroxPage /></Page>} />
               <Route path="fiches"        element={<Page><AthleteFichesPage /></Page>} />
               <Route path="staff"         element={<Page><CoachStaffPage /></Page>} />
@@ -279,6 +302,7 @@ const App = () => (
       />
       <BrowserRouter>
         <AuthProvider>
+          <ClientBuildReporter />
           <Suspense fallback={<PageLoader />}>
             <AppRoutes />
           </Suspense>

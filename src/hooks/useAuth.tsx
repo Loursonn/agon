@@ -190,6 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearOfflineProfile(safeStorage());
       }
     });
+    // Abonnement unique au montage : fetchProfile ne lit que des setters stables.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function login(email: string, password: string) {

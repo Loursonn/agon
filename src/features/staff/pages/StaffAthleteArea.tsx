@@ -28,6 +28,7 @@ import { StaffFichesTab } from "../components/tabs/StaffFichesTab";
 import { StaffLogsTab } from "../components/tabs/StaffLogsTab";
 import { StaffPlanningTab } from "../components/tabs/StaffPlanningTab";
 import { StaffWellnessTab } from "../components/tabs/StaffWellnessTab";
+import { StaffReviewsSection } from "../components/tabs/StaffReviewsSection";
 import { StaffCommentsTab } from "../components/tabs/StaffCommentsTab";
 import { StaffProgramTab } from "../components/program/StaffProgramTab";
 
@@ -129,7 +130,7 @@ function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: My
     case "logs":
       return <StaffLogsTab athleteId={link.athleteId} />;
     case "wellness":
-      return <StaffWellnessTab />;
+      return <><StaffWellnessTab /><StaffReviewsSection athleteId={link.athleteId} /></>;
     case "medical": {
       const write = canWrite(link.permissions, "medical");
       return (
