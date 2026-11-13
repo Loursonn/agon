@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-seance-en-cours-precedent",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : la dernière fois, sous les yeux pendant la séance",
+    summary: "Pendant une séance de musculation, la zone de saisie affiche la charge de la dernière fois, l'écart avec aujourd'hui et le RIR que vous avez prescrit.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Au-dessus des boutons charge et reps : « Précédent 115 × 3 · Écart +5 kg · RIR visé 2 ».",
+          "Sous le bloc en cours, « À suivre » liste les exercices des blocs suivants ; une tape ouvre le bloc.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-seance-specifique",
     date: "2026-11-13",
     kind: "feature",

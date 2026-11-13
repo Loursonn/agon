@@ -24,6 +24,8 @@ import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hoo
 import { useSaveWorkoutSets } from "@/features/shared/hooks/useSaveWorkoutSets";
 import { loadDraft, clearDraft, workoutDraftKey } from "@/lib/localDraft";
 import { FinishWorkoutSheet } from "@/features/athlete/components/workout/FinishWorkoutSheet";
+import { blocLetter, prescriptionLine } from "@/lib/todayPreview";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { FocusInputBar } from "@/features/athlete/components/workout/FocusInputBar";
 import { RirAfterSetSheet } from "@/features/athlete/components/workout/RirAfterSetSheet";
 import { firstPendingBloc, nextPendingSet, stepValue, type FocusExercise } from "@/lib/workoutFocus";
@@ -2769,9 +2771,12 @@ export default function WorkoutDetailPage() {
         rir: st.rir,
         iso: isIsoAt(ex.params, pend.setIdx),
         ssTag: isSS ? `Superset · ex. ${pend.chain.indexOf(ex.id) + 1} / ${pend.chain.length}` : undefined,
+        prev: prevStr,
       },
     };
   })();
+  // « 115×3 » (stockage) → « 115 × 3 ».
+  const fmtPrev = (v: string) => (v && v !== "—" ? v.replace(/\s*×\s*/, " × ") : undefined);
   const fmtRest = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}` : `${sec} s`);
 
   return (
@@ -3270,6 +3275,39 @@ export default function WorkoutDetailPage() {
           })
         )}
 
+        {/* À suivre : blocs après celui en cours (planche AthleteSeanceA) */}
+        {focusOn && activeBloc < workout.blocs.length - 1 && (() => {
+          const rest = workout.blocs.slice(activeBloc + 1);
+          const n = rest.reduce((k, b) => k + b.exercices.length, 0);
+          return (
+            <div style={{ margin: "12px 16px 0", padding: "12px 14px", borderRadius: 14, background: C.s1, border: "1px solid " + C.brd }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+                <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>À suivre</span>
+                <span style={{ fontSize: 12, color: C.tx3 }}>{n} exercice{n > 1 ? "s" : ""}</span>
+              </div>
+              {rest.map((b, bi) => {
+                const idx = activeBloc + 1 + bi;
+                return b.exercices.map((e, ei) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => setFocusBloc(idx)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 0", borderTop: bi === 0 && ei === 0 ? "none" : "1px solid " + C.brd, borderLeft: "none", borderRight: "none", borderBottom: "none", background: "transparent", color: C.tx, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.exercise_name}</span>
+                      <span style={{ display: "block", ...MONO, fontSize: 11.5, color: C.tx3, marginTop: 1 }}>{prescriptionLine(e.mode, e.params)}</span>
+                    </span>
+                    <span style={{ ...MONO, fontSize: 11, color: C.tx3, flex: "none" }}>
+                      {b.exercices.length > 1 ? `Superset ${ei + 1}/${b.exercices.length}` : `Bloc ${blocLetter(idx)}`}
+                    </span>
+                  </button>
+                ));
+              })}
+            </div>
+          );
+        })()}
+
         {/* Completed session comment */}
         {isCompleted && localMods.sessionComment && (
           <div
@@ -3354,6 +3392,8 @@ export default function WorkoutDetailPage() {
             unit: focus.pending.ex.params.charge_unit === "kg" ? "kg" : focus.pending.ex.params.charge_unit === "%RM" ? "%" : "",
             isIso: focus.pending.iso,
             supersetTag: focus.pending.ssTag,
+            prev: fmtPrev(focus.pending.prev),
+            rirTarget: focus.pending.rir || undefined,
           } : null}
           kgStep={2.5}
           onKgStep={(d) => { const p = focus.pending; if (p) { haptic(); setSetField(p.ex.id, p.setIdx, "kg", stepValue(p.kg, d)); } }}

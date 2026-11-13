@@ -1,6 +1,7 @@
 import { C } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { TYPE_COLOR } from "@/lib/peps";
+import { loadDelta } from "@/lib/loadDelta";
 
 export interface FocusPending {
   exName: string;
@@ -15,6 +16,19 @@ export interface FocusPending {
   isIso: boolean;
   /** Superset : « Superset · ex. 2 / 2 ». */
   supersetTag?: string;
+  /** Même série la dernière fois, ex. « 115 × 3 » (vide = jamais faite). */
+  prev?: string;
+  /** RIR prescrit par le coach. */
+  rirTarget?: string;
+}
+
+function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+      <span style={{ ...MONO, fontSize: 10.5, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</span>
+      <span style={{ ...MONO, fontSize: 14, color: color ?? C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
+    </div>
+  );
 }
 
 const fmt = (v: string) => (v ? String(v).replace(".", ",") : "—");
@@ -113,6 +127,16 @@ export function FocusInputBar({
 
         {pending ? (
           <>
+            {(pending.prev || pending.rirTarget) && (() => {
+              const delta = loadDelta(pending.kg, pending.prev, pending.unit);
+              return (
+                <div style={{ display: "flex", gap: 12, padding: "8px 12px", borderRadius: 12, background: C.s1, border: "1px solid " + C.brd }}>
+                  <Stat label="Précédent" value={pending.prev ? fmt(pending.prev) : "—"} />
+                  <Stat label="Écart" value={delta ?? "—"} color={delta && delta.startsWith("+") ? TYPE_COLOR.fait : delta && delta.startsWith("−") ? C.o : undefined} />
+                  <Stat label="RIR visé" value={pending.rirTarget ? fmt(pending.rirTarget) : "—"} color={pending.rirTarget ? C.ac : undefined} />
+                </div>
+              );
+            })()}
             <div style={{ display: "flex", gap: 12 }}>
               <Stepper
                 label={pending.unit === "%" ? "Charge (%)" : "Charge"}
