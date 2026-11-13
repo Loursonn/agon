@@ -6564,6 +6564,7 @@ export type Database = {
         Returns: undefined
       }
       set_coach_athlete: { Args: { p_enabled: boolean }; Returns: string }
+      set_my_birth_date: { Args: { p_birth: string }; Returns: string }
       set_coach_override: {
         Args: { p_log: string; p_override: Json }
         Returns: {

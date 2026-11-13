@@ -7,7 +7,7 @@ import {
   removePendingAthlete as apiRemovePendingAthlete, serverReason, setAthleteHidden as apiSetAthleteHidden,
   setCoachAthlete as apiSetCoachAthlete, setOwnCoach,
 } from "@/api/account";
-import { getProfile, updateAthleteProfile as apiUpdateAthleteProfile, type AthleteProfileFields, type Profile } from "@/api/profile";
+import { getProfile, setMyBirthDate as apiSetMyBirthDate, updateAthleteProfile as apiUpdateAthleteProfile, type AthleteProfileFields, type Profile } from "@/api/profile";
 import { clearOfflineProfile, readOfflineProfile, readStoredAuthUser, saveOfflineProfile } from "@/lib/offline/offlineCache";
 import { confirmLogout, logoutDevice } from "@/lib/offline/logoutDevice";
 
@@ -67,6 +67,8 @@ interface AuthContextType {
   /** Déconnecte cet appareil puis recharge sur `redirectTo` (défaut /login). */
   logout: (redirectTo?: string) => Promise<void>;
   updateAthleteProfile: (athleteId: string, fields: AthleteProfileFields) => Promise<void>;
+  /** Date de naissance d'un compte qui n'en a pas (saisie unique), puis recharge le profil. */
+  setMyBirthDate: (day: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -281,12 +283,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function setMyBirthDate(day: string) {
+    await apiSetMyBirthDate(day);
+    if (user) await fetchProfile(user.id);
+  }
+
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
       athletes, hiddenAthletes, setAthleteHidden, refreshAthletes, setCoachAthleteMode, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
       login, registerCoach, registerAthleteWithCode, registerStaff,
-      canCoachSelf, selfCoCoached, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, updateAthleteProfile,
+      canCoachSelf, selfCoCoached, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, updateAthleteProfile, setMyBirthDate,
     }}>
       {children}
     </AuthContext.Provider>

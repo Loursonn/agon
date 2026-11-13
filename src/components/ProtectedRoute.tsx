@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import ConsentGate from "@/components/ConsentGate";
+import BirthDateGate from "@/components/BirthDateGate";
 
 // Redirige vers /login si non connecté
 // Redirige vers /coach ou /athlete selon le rôle une fois connecté
@@ -31,9 +32,17 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     écrit pour un athlète, ne s'applique donc pas à lui. Un coach qui est aussi
     pro (double casquette) garde son rôle coach et passe toujours la barrière.
   */
-  if (profile?.role === "staff") return <>{children}</>;
+  /*
+    Date de naissance d'abord, pour tous les rôles (comptes créés avant le
+    contrôle d'âge) : l'écran des accords en dépend (accord IA réservé aux 18 ans).
+  */
+  if (profile?.role === "staff") return <BirthDateGate>{children}</BirthDateGate>;
 
-  return <ConsentGate>{children}</ConsentGate>;
+  return (
+    <BirthDateGate>
+      <ConsentGate>{children}</ConsentGate>
+    </BirthDateGate>
+  );
 }
 
 // Redirige selon le rôle depuis la page d'accueil "/"

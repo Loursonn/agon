@@ -80,11 +80,13 @@ export function birthDateError(birthDate: unknown, today: string, min: number = 
 export const AI_MIN_AGE = 18;
 
 /**
- * L'accord IA peut-il être proposé ? Date de naissance inconnue (comptes créés
- * avant le contrôle d'âge) : oui, comme en base — on ne peut rien en déduire.
+ * L'accord IA peut-il être proposé ? Seulement si l'on sait que la personne a
+ * 18 ans : date de naissance inconnue (comptes créés avant le contrôle d'âge)
+ * ou illisible = non. Ces comptes saisissent leur date au lancement suivant
+ * (`BirthDateGate`, RPC `set_my_birth_date`) ; l'accord leur est proposé après.
  */
 export function canOfferAiConsent(birthDate: string | null | undefined, today: string): boolean {
-  if (!birthDate) return true;
+  if (!birthDate) return false;
   const age = ageOn(birthDate, today);
-  return age === null ? true : age >= AI_MIN_AGE;
+  return age !== null && age >= AI_MIN_AGE;
 }

@@ -4909,6 +4909,63 @@ $$;
 ALTER FUNCTION "public"."set_energy_rpe"("p_assignment" "uuid", "p_rpe" smallint) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."set_my_birth_date"("p_birth" "date") RETURNS "date"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_current date;
+  v_found boolean;
+  -- Jour le plus tardif du globe pour le seuil de 15 ans (comme enforce_min_age_on_signup),
+  -- le plus précoce pour celui de 18 ans (comme ai_consent_adults_only) : jamais trop strict à
+  -- l'inscription, jamais majeur trop tôt pour l'IA.
+  v_today_min date := ((now() AT TIME ZONE 'UTC') + interval '14 hours')::date;
+  v_today_ai date := (now() AT TIME ZONE 'Etc/GMT+12')::date;
+  v_msg text;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'non connecté' USING ERRCODE = '42501';
+  END IF;
+  IF p_birth IS NULL THEN
+    RAISE EXCEPTION 'Indique ta date de naissance.' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT birth_date, true INTO v_current, v_found FROM public.profiles WHERE id = v_uid FOR UPDATE;
+  IF NOT coalesce(v_found, false) THEN
+    RAISE EXCEPTION 'Profil introuvable' USING ERRCODE = 'P0002';
+  END IF;
+  IF v_current IS NOT NULL THEN
+    RAISE EXCEPTION 'Date de naissance déjà renseignée' USING ERRCODE = '23505';
+  END IF;
+
+  v_msg := public.signup_birth_date_error(p_birth, v_today_min);
+  IF v_msg IS NOT NULL THEN
+    RAISE EXCEPTION '%', v_msg USING ERRCODE = '23514';
+  END IF;
+
+  UPDATE public.profiles SET birth_date = p_birth WHERE id = v_uid;
+
+  IF p_birth > (v_today_ai - interval '18 years')::date THEN
+    INSERT INTO public.user_consents (user_id, purpose, granted, doc_version, statement)
+    SELECT c.user_id, 'ai_programming', false, c.doc_version,
+           'Refus enregistré automatiquement à la saisie de la date de naissance : accord IA réservé aux 18 ans et plus.'
+      FROM public.current_consents c
+     WHERE c.user_id = v_uid AND c.purpose = 'ai_programming' AND c.granted;
+  END IF;
+
+  RETURN p_birth;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."set_my_birth_date"("p_birth" "date") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."set_my_birth_date"("p_birth" "date") IS 'Saisie unique de la date de naissance par un compte qui n''en a pas (contrôle 15 ans ; accord IA retiré avant 18 ans). Revue juridique 2026-11, C2.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."set_own_coach"("p_coach" "uuid") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -20976,6 +21033,9 @@ GRANT ALL ON FUNCTION "public"."set_hasnt"("text", "text", "text") TO "service_r
 
 
 
+REVOKE ALL ON FUNCTION "public"."set_my_birth_date"("p_birth" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_my_birth_date"("p_birth" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_my_birth_date"("p_birth" "date") TO "service_role";
 GRANT ALL ON FUNCTION "public"."set_ne"("text", "anyarray") TO "postgres";
 GRANT ALL ON FUNCTION "public"."set_ne"("text", "anyarray") TO "anon";
 GRANT ALL ON FUNCTION "public"."set_ne"("text", "anyarray") TO "authenticated";

@@ -7,7 +7,7 @@ import { hasDecidedSince, type ConsentState } from "@/features/shared/hooks/useC
 
 // Pas de réseau : l'auth et la lecture des accords sont remplacées par des
 // valeurs fixes ; les fonctions pures (hasDecided, hasValidCoreConsent…) restent les vraies.
-const auth = { profile: { role: "athlete" } as { role: string; birth_date?: string | null }, logout: vi.fn() };
+const auth = { profile: { role: "athlete", birth_date: "1990-01-01" } as { role: string; birth_date?: string | null }, logout: vi.fn() };
 let consents: ConsentState[] = [];
 const mutation = { mutateAsync: vi.fn(), isPending: false };
 
@@ -40,7 +40,7 @@ function renderGate() {
 }
 
 beforeEach(() => {
-  auth.profile = { role: "athlete" };
+  auth.profile = { role: "athlete", birth_date: "1990-01-01" };
   mutation.mutateAsync.mockReset();
 });
 
@@ -71,6 +71,14 @@ describe("ConsentGate · accord IA", () => {
     }
   });
 
+  it("date de naissance inconnue : pas d'écran IA (BirthDateGate la demande avant)", () => {
+    auth.profile = { role: "athlete", birth_date: null };
+    consents = [core, staff];
+    renderGate();
+    expect(screen.getByText("APP")).toBeInTheDocument();
+    expect(screen.queryByText("L'IA dans ton suivi")).not.toBeInTheDocument();
+  });
+
   it("athlète de moins de 18 ans : pas d'écran IA, ni de case IA à l'inscription (conditions Gemini et Claude)", () => {
     const sixteen = new Date();
     sixteen.setFullYear(sixteen.getFullYear() - 16);
@@ -89,7 +97,7 @@ describe("ConsentGate · accord IA", () => {
 
   it("coach_athlete est concerné, coach et staff ne le sont pas", () => {
     consents = [core, staff];
-    auth.profile = { role: "coach_athlete" };
+    auth.profile = { role: "coach_athlete", birth_date: "1990-01-01" };
     const a = renderGate();
     expect(screen.getByText("L'IA dans ton suivi")).toBeInTheDocument();
     a.unmount();

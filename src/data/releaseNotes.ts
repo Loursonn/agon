@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-date-de-naissance-anciens-comptes",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Date de naissance demandée aux comptes qui n'en ont pas",
+    summary: "Les comptes créés avant le contrôle d'âge saisissent leur date de naissance au prochain lancement, une seule fois. Elle permet de réserver les analyses par intelligence artificielle aux 18 ans et plus, comme l'exigent Google (Gemini) et Anthropic (Claude).",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Un écran court demande la date de naissance avant d'ouvrir l'app, à toi comme à tes athlètes. Il ne revient plus une fois la date enregistrée.",
+          "Tant qu'un athlète n'a pas donné sa date, l'accord pour l'intelligence artificielle ne lui est pas proposé ; le reste de l'app fonctionne normalement.",
+          "Un athlète de moins de 18 ans qui avait accepté l'IA voit cet accord retiré automatiquement à la saisie de sa date.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-nouveautes-relookees",
     date: "2026-11-13",
     kind: "fix",

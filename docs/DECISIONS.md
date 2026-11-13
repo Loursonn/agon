@@ -2385,3 +2385,19 @@ et son README.
   l'effacement, désormais partagée (`_shared/accountDeletion.ts`, aussi utilisée par `delete-account`). Double
   verrou : tâche cron créée inactive + secret `RETENTION_ENABLED`. Aucun service d'e-mail n'existe : sans lui,
   aucun compte inactif n'est supprimé. Aujourd'hui en prod : 0 compte visé. Détail : `docs/PURGE_COMPTES.md`.
+
+## 2026-11-14 — Date de naissance des anciens comptes (revue juridique C2)
+
+- **Constat** (prod, 13/11) : 19 profils sur 36 sans date de naissance (dont 16 athlètes), 7 avec un accord IA actif.
+  Le garde-fou « IA réservée aux 18 ans » (20261113220000) ne peut rien pour eux.
+- **Écran** `BirthDateGate` (avant `ConsentGate`, tous les rôles, staff compris) : demande la date une fois, sans
+  bouton pour passer. Jamais bloquant pour une raison technique : hors ligne, ou fonction absente du serveur, l'app
+  s'ouvre et la question revient. Moins de 15 ans : refus affiché (règle des CGU), seule sortie « Se déconnecter ».
+- **Écriture** : RPC `set_my_birth_date` (migration additive 20261114110000) : une seule fois (refus si une date
+  existe), même contrôle qu'à l'inscription, et avant 18 ans refus IA ajouté au journal dans la même transaction.
+  Corriger une date ensuite passe par la fiche, comme avant.
+- **Sans date, pas d'IA** : côté client, `canOfferAiConsent` ne propose plus l'accord IA si la date est inconnue.
+  Côté serveur, en **deux temps** : la phase 2 (`supabase/pending/20261114120000_ai_requires_birth_date.sql`) rend
+  l'accord IA sans effet dans `current_consents` tant que la date manque (et il revient seul une fois la date saisie,
+  18 ans ou plus) ; elle ne s'applique qu'après la mise en production de l'écran, sinon ces comptes perdraient l'IA
+  sans pouvoir saisir leur date. Les migrations en attente vivent dans `supabase/pending/` pour garder le job R2 vert.

@@ -80,9 +80,11 @@ describe("accord IA réservé aux 18 ans et plus (conditions Gemini et Claude)",
     expect(canOfferAiConsent("2008-11-14", "2026-11-13")).toBe(false);
     expect(canOfferAiConsent("2011-01-01", "2026-11-13")).toBe(false);
   });
-  it("date inconnue (compte créé avant le contrôle d'âge) : proposé, comme en base", async () => {
+  it("date inconnue (compte créé avant le contrôle d'âge) ou illisible : pas proposé (saisie de la date d'abord)", async () => {
     const { canOfferAiConsent } = await import("@/lib/age");
-    expect(canOfferAiConsent(null, "2026-11-13")).toBe(true);
-    expect(canOfferAiConsent(undefined, "2026-11-13")).toBe(true);
+    expect(canOfferAiConsent(null, "2026-11-13")).toBe(false);
+    expect(canOfferAiConsent(undefined, "2026-11-13")).toBe(false);
+    expect(canOfferAiConsent("", "2026-11-13")).toBe(false);
+    expect(canOfferAiConsent("pas une date", "2026-11-13")).toBe(false);
   });
 });
