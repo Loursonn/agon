@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { tipPlacement } from "@/lib/onboarding";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 const DOW_LETTER = ["L", "M", "M", "J", "V", "S", "D"];
@@ -35,6 +37,19 @@ export function RescheduleSheet({
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState("");
+  // Ordinateur (planche AthOrdiAProgramme) : popover ancré sur le bouton qui l'a ouvert.
+  const isDesktop = useIsDesktop();
+  const [anchor] = useState(() => {
+    const el = typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+    const r = el && el !== document.body ? el.getBoundingClientRect() : null;
+    return r && r.width > 0 ? { top: r.top, bottom: r.bottom, left: r.left, width: r.width } : null;
+  });
+  useEffect(() => {
+    if (!isDesktop) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isDesktop, onClose]);
   const days = useMemo(() => {
     const mon = new Date(weekMondayISO + "T12:00:00");
     const make = (i: number) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return { iso: isoOf(d), dow: (d.getDay() + 6) % 7, num: d.getDate() }; };
@@ -90,17 +105,19 @@ export function RescheduleSheet({
     </button>
   );
 
-  return (
-    <Drawer open onOpenChange={(v) => !v && onClose()}>
-      <DrawerContent aria-describedby={undefined} style={{ background: "#1E1A16", borderTop: "1px solid rgba(231,211,168,0.18)", borderRadius: "24px 24px 0 0", padding: 0 }}>
-        <div style={{ padding: "10px 20px 34px", display: "flex", flexDirection: "column", gap: 18 }}>
+  const titleStyle = { fontSize: 17, fontWeight: 500, lineHeight: 1.25, color: "#FFFFFF", textAlign: "left" as const };
+  const titleEl = isDesktop
+    ? <div id="reschedule-title" style={titleStyle}>{sessionName}</div>
+    : <DrawerTitle style={titleStyle}>{sessionName}</DrawerTitle>;
+  const content = (
+      <div style={{ padding: "10px 20px 34px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ ...MONO, fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#0E0C0A", background: typeColor, borderRadius: 999, padding: "2px 7px", lineHeight: 1.3 }}>{typeLabel}</span>
                 <span style={{ ...MONO, fontSize: 11, color: TX3, whiteSpace: "nowrap" }}>{missed ? "Manquée" : "Prévue"} {fmtDay(scheduledDate)}</span>
               </div>
-              <DrawerTitle style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.25, color: "#FFFFFF", textAlign: "left" }}>{sessionName}</DrawerTitle>
+              {titleEl}
             </div>
             <button type="button" aria-label="Fermer" onClick={onClose} style={{ width: 32, height: 32, flex: "none", borderRadius: 9, background: "#27221D", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TX2} strokeWidth="2" strokeLinecap="square" aria-hidden><path d="M5 5L19 19M19 5L5 19" /></svg>
@@ -138,6 +155,31 @@ export function RescheduleSheet({
             </div>
           )}
         </div>
+  );
+
+  if (isDesktop) {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const place = anchor ? tipPlacement(anchor, vw, vh, 400) : null;
+    return (
+      <>
+        <div aria-hidden onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.25)" }} />
+        <div role="dialog" aria-modal="true" aria-labelledby="reschedule-title" style={{
+          position: "fixed", zIndex: 301, width: place?.width ?? 400, maxHeight: "calc(100vh - 32px)", overflowY: "auto",
+          background: "#1E1A16", border: "1px solid rgba(231,211,168,0.18)", borderRadius: 18, boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
+          ...(place
+            ? { left: place.left, ...(place.below ? { top: Math.min(place.y, vh - 16 - 420) } : { bottom: place.y }) }
+            : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" }),
+        }}>
+          {content}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <Drawer open onOpenChange={(v) => !v && onClose()}>
+      <DrawerContent aria-describedby={undefined} style={{ background: "#1E1A16", borderTop: "1px solid rgba(231,211,168,0.18)", borderRadius: "24px 24px 0 0", padding: 0 }}>
+        {content}
       </DrawerContent>
     </Drawer>
   );

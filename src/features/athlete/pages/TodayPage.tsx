@@ -1245,7 +1245,7 @@ export default function TodayPage() {
         )}
 
           </>);
-          const s06 = (<>
+          const s06 = (<div data-tip="seance" style={{ display: "contents" }}>
         {/* 06 — Séances du jour : nom → aperçu → détail */}
         {(() => {
           const EKL: Record<string, string> = { vo2: "VO₂", tempo: "Tempo", seuil: "Seuil", footing: "Footing", fartlek: "Fartlek", specifique: "HYROX", autre: "Énergie", custom: "Énergie" };
@@ -1380,7 +1380,7 @@ export default function TodayPage() {
           );
         })()}
 
-          </>);
+          </div>);
           const s07 = (<>
         {/* 07 — Test du jour */}
         {show("test") && todayTests.length > 0 && (

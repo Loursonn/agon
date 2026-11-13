@@ -202,6 +202,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               return (
                 <button
                   key={t.k}
+                  data-tip={`tab-${t.k}`}
                   type="button"
                   onClick={() => navigate(t.k || ".")}
                   aria-current={isActive ? "page" : undefined}
@@ -267,6 +268,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
           return (
             <button
               key={t.k}
+              data-tip={`tab-${t.k}`}
               type="button"
               onClick={() => navigate(t.k || ".")}
               aria-label={t.l}
