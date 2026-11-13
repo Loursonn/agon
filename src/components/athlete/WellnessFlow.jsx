@@ -8,6 +8,7 @@ import { loadDraft, saveDraft, wellnessDraftKey } from "@/lib/localDraft";
 import { BodyZoneMap } from "@/features/athlete/components/wellness/BodyZoneMap";
 import { DOMS_LEVEL_COLOR, PAIN_COLORS, levelsList } from "@/lib/bodyZones";
 import { useYesterdayWorkout } from "@/features/athlete/hooks/useYesterdayWorkout";
+import { WellnessTrendCard } from "@/features/athlete/components/wellness/WellnessTrendCard";
 
 // ── Wellness du matin (planche « Wellness athlète » retenue, 12/11) ─────────
 // Écran 1 « Comment tu te sens » : readiness, nuit, 6 lignes (la 6ᵉ, envie de
@@ -156,7 +157,7 @@ function injuryNoteOf(sick, pain, levels) {
   return parts.length ? parts.join(" · ") : null;
 }
 
-function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
+function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide = false }) {
   const tgt = sleepTarget || 8;
   // Brouillon local du formulaire en cours (par athlète + jour) : restauré à la
   // réouverture si l'app a été fermée/tuée avant l'enregistrement, purgé par
@@ -202,43 +203,178 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
   const fmtH = (h) => { const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`; };
   const ringColor = score != null ? reco.c : TX3;
 
+  const poidsOn = poids !== "" && poids != null;
+  const zones = levelsList(levels);
+  const injComment = injuryNoteOf(sick, pain, levels);
+  const save = () => onSave({
+            ...vals,
+            domsZones: zones.length ? zones.map((z) => z.id) : domsZones,
+            domsPoints,
+            domsLevels: levels,
+            pain, sick,
+            // Rattachement seulement s'il y a des courbatures notées.
+            domsWorkout: yesterday && Object.keys(levels).length > 0 ? { id: yesterday.id, name: yesterday.name } : null,
+            coucher, reveil, sleepDur,
+            poids: +poids || null, score,
+            injComment,
+            sleepInterrupt: existing?.sleepInterrupt ?? null,
+            sleepInterruptNote: existing?.sleepInterruptNote ?? null,
+  });
+
+  const readinessCard = (
+    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 14, border: "1px solid " + (score != null ? ringColor + "73" : "rgba(231,211,168,0.10)"), background: score != null ? `radial-gradient(120% 120% at 0% 0%,${ringColor}2E,transparent 60%),#1E1A16` : "#1E1A16" }}>
+      <ScoreRing score={score} color={ringColor} />
+      <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={KICK_S}>Readiness</span>
+          {score != null && <span style={{ ...PILL_S, color: "#0E0C0A", background: ringColor }}>{reco.label}</span>}
+        </div>
+        <div style={{ fontSize: 12, color: TX2, marginTop: 4 }}>{score != null ? "Se met à jour à chaque réponse." : `Se calcule à la 5ᵉ réponse (${Math.min(answered, 5)}/5).`}</div>
+      </div>
+    </div>
+  );
+  const nightCard = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 14px", borderRadius: 14, background: "linear-gradient(135deg,rgba(51,181,255,0.14),rgba(51,181,255,0.03)),#1E1A16", border: "1px solid rgba(51,181,255,0.4)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", whiteSpace: "nowrap" }}>
+        <span style={KICK_S}>Cette nuit</span>
+        <span style={{ ...MONO_S, fontSize: 10.5, color: TX3 }}>objectif {fmtH(tgt)}</span>
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        <TimePick label="Coucher" time={coucher} setTime={setCoucher} />
+        <TimePick label="Réveil" time={reveil} setTime={setReveil} />
+        <div style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: 10, background: "#27221D", display: "flex", flexDirection: "column", gap: 3, justifyContent: "center" }}>
+          <span style={{ fontSize: 10.5, color: TX3, whiteSpace: "nowrap" }}>Sommeil</span>
+          <span style={{ ...MONO_S, fontSize: 20, color: "#FFFFFF", whiteSpace: "nowrap" }}>{fmtH(sleepDur)}</span>
+          <span style={{ fontSize: 10.5, color: sleepC, whiteSpace: "nowrap" }}>{diff === 0 ? "objectif atteint" : `${diff > 0 ? "+" : ""}${String(diff).replace(".", ",")} h`}</span>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: TX3 }}>Sans montre, tu indiques tes heures de sommeil. Montre reliée : rien à saisir.</div>
+    </div>
+  );
+  const rowsList = ROWS.map((it, i) => (
+      <RatingRow key={it.k} item={it} index={i} value={vals[it.k]} onPick={(n) => setVals((v) => ({ ...v, [it.k]: n }))} />
+  ));
+  const bodyBlock = (
+    <>
+    <BodyZoneMap levels={levels} onChange={setLevels} selected={selZone} onSelect={setSelZone} />
+
+    <div style={{ ...CARD_S, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>Douleur</span>
+        <span style={{ fontSize: 11.5, color: TX3 }}>autre que les courbatures</span>
+      </div>
+      <div role="radiogroup" aria-label="Douleur de 0 à 10" style={{ display: "flex", gap: 3 }}>
+        {PAIN_COLORS.map((col, n) => {
+          const sel = pain === n;
+          return (
+            <button key={n} type="button" role="radio" aria-checked={sel} onClick={() => setPain(n)}
+              style={{ flex: 1, minWidth: 0, height: 36, borderRadius: 8, padding: 0, ...MONO_S, fontSize: 13, cursor: "pointer", border: sel ? "none" : "1px solid " + col + "40", background: sel ? col : col + "14", color: sel ? "#0E0C0A" : col, fontWeight: sel ? 500 : 400 }}>
+              {n}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: TX3 }}><span>Aucune</span><span>Insupportable</span></div>
+      <div style={{ fontSize: 11.5, color: TX3 }}>Au-dessus de 0, tu touches la zone sur la carte.</div>
+    </div>
+
+    <div style={{ ...CARD_S, display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>Malade ou fiévreux·se ?</div>
+      <YesNo value={sick} onYes={() => setSick(true)} onNo={() => setSick(false)} />
+    </div>
+
+    <div style={{ ...CARD_S, display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <span style={KICK_S}>Poids</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
+          <input
+            type="number" inputMode="decimal" step="0.1" aria-label="Poids en kg"
+            value={poids} onChange={(e) => setPoids(e.target.value)}
+            placeholder={prevPoids ? String(prevPoids).replace(".", ",") : "—"}
+            style={{ width: `${Math.max(String(poids !== "" && poids != null ? poids : prevPoids ?? "—").length, 1) + 0.6}ch`, padding: 0, border: "none", background: "transparent", color: "#FFFFFF", ...MONO_S, fontSize: 24, outline: "none" }}
+          />
+          <span style={{ ...MONO_S, fontSize: 11, color: TX3 }}>kg</span>
+        </div>
+      </div>
+      <span style={{ display: "flex", gap: 6 }}>
+        <span style={{ ...PILL_S, color: poidsOn ? "#0E0C0A" : TX2, background: poidsOn ? "#66F03C" : "rgba(231,211,168,0.08)", border: poidsOn ? "none" : "1px solid rgba(231,211,168,0.10)" }}>À jeun</span>
+        <button type="button" aria-pressed={!poidsOn} onClick={() => setPoids("")} style={{ ...PILL_S, fontSize: 11, fontWeight: 400, color: TX2, background: !poidsOn ? "rgba(231,211,168,0.16)" : "rgba(231,211,168,0.08)", border: "1px solid rgba(231,211,168,0.10)", cursor: "pointer", fontFamily: "var(--agon-font-data)" }}>Pas de pesée</button>
+      </span>
+    </div>
+
+    {yesterday && (
+      <>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "#1E1A16", border: "1px solid rgba(231,211,168,0.10)" }}>
+          <span style={{ width: 4, alignSelf: "stretch", borderRadius: 2, background: "#FFC933" }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={KICK_S}>Séance d’hier</span>
+            <div style={{ fontSize: 14, fontWeight: 500, marginTop: 4, color: "#FFFFFF" }}>{yesterday.name}</div>
+            {yesterday.detail && <div style={{ fontSize: 12, color: TX3, marginTop: 2 }}>{yesterday.detail}</div>}
+          </div>
+          <span style={{ ...MONO_S, fontSize: 11, color: TX2, whiteSpace: "nowrap" }}>J+1</span>
+        </div>
+        <div style={{ fontSize: 11.5, color: TX3, marginTop: -4 }}>Les zones sont rattachées à cette séance pour ton coach.</div>
+      </>
+    )}
+    </>
+  );
+
+  // ── Ordinateur (planche AthOrdiAWellness) : tout sur une page, 756 + 420 ──
+  if (wide) {
+    const sectionHead = (num, title, right) => (
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", padding: "4px 0 2px", borderTop: "1px solid rgba(231,211,168,0.10)", paddingTop: 16 }}>
+        <span style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+          <span style={{ ...MONO_S, fontSize: 11, color: "#FFC933", letterSpacing: "0.14em" }}>{num} —</span>
+          <span style={{ ...DISPLAY_S, fontSize: 16, color: "#FFFFFF" }}>{title}</span>
+        </span>
+        {right}
+      </div>
+    );
+    return (
+      <div style={{ maxWidth: 1248, margin: "0 auto", padding: "28px 48px 48px", boxSizing: "border-box" }}>
+        <nav style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: TX3 }}>
+          <button type="button" onClick={onClose} style={{ border: "none", background: "none", padding: 0, color: TX2, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Aujourd’hui</button>
+          <span aria-hidden>›</span>
+          <span style={{ color: "#FFFFFF" }}>Wellness</span>
+        </nav>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 24, margin: "14px 0 24px" }}>
+          <div>
+            <h1 style={{ margin: 0, ...DISPLAY_S, fontSize: 30, color: "#FFFFFF" }}>Wellness du jour</h1>
+            <div style={{ fontSize: 13.5, color: TX2, marginTop: 6 }}>Une tape par ligne, 30 secondes. La montre fait le reste.</div>
+          </div>
+          <span style={{ ...MONO_S, fontSize: 12, color: TX2, whiteSpace: "nowrap" }}>{headerDay()}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 756fr) minmax(0, 420fr)", gap: 48, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {sectionHead("01", "Comment tu te sens", <span style={{ ...MONO_S, fontSize: 11, color: allAnswered ? "#66F03C" : TX3 }}>{answered} / {ROWS.length}</span>)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>{rowsList}</div>
+            <div style={{ marginTop: 14 }}>{sectionHead("02", "Corps", <span style={{ fontSize: 12, color: TX3 }}>Touche une zone pour la noter</span>)}</div>
+            {bodyBlock}
+            {injComment && <div style={{ ...CARD_S, borderColor: "rgba(255,59,31,0.45)", fontSize: 13, color: "#FFFFFF" }}><span style={{ ...KICK_S, color: "#FF3B1F", display: "block", marginBottom: 4 }}>Pour ton coach</span>{injComment}</div>}
+            {allAnswered && alerts.map((a, i) => <div key={i} style={{ padding: "8px 12px", borderRadius: 10, background: C.o + "14", border: "1px solid " + C.o + "40", fontSize: 12, color: "#FFFFFF" }}>{a}</div>)}
+            <button type="button" disabled={!allAnswered} onClick={save} style={{ ...bigBtn(allAnswered), marginTop: 10 }}>
+              {allAnswered ? "Enregistrer mon wellness" : `Encore ${ROWS.length - answered} ligne${ROWS.length - answered > 1 ? "s" : ""}`}
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "sticky", top: 24 }}>
+            {readinessCard}
+            {nightCard}
+            <WellnessTrendCard athleteId={athleteId} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── Écran 1 : comment tu te sens ──
   if (step === 0) {
     return (
       <div style={{ paddingBottom: 32 }}>
         <StepHeader step={0} total={2} title="Comment tu te sens" subtitle="Une tape par ligne, 30 secondes." onBack={onClose} backLabel="Fermer" />
         <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px 20px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 14, border: "1px solid " + (score != null ? ringColor + "73" : "rgba(231,211,168,0.10)"), background: score != null ? `radial-gradient(120% 120% at 0% 0%,${ringColor}2E,transparent 60%),#1E1A16` : "#1E1A16" }}>
-            <ScoreRing score={score} color={ringColor} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={KICK_S}>Readiness</span>
-                {score != null && <span style={{ ...PILL_S, color: "#0E0C0A", background: ringColor }}>{reco.label}</span>}
-              </div>
-              <div style={{ fontSize: 12, color: TX2, marginTop: 4 }}>{score != null ? "Se met à jour à chaque réponse." : `Se calcule à la 5ᵉ réponse (${Math.min(answered, 5)}/5).`}</div>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 14px", borderRadius: 14, background: "linear-gradient(135deg,rgba(51,181,255,0.14),rgba(51,181,255,0.03)),#1E1A16", border: "1px solid rgba(51,181,255,0.4)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", whiteSpace: "nowrap" }}>
-              <span style={KICK_S}>Cette nuit</span>
-              <span style={{ ...MONO_S, fontSize: 10.5, color: TX3 }}>objectif {fmtH(tgt)}</span>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <TimePick label="Coucher" time={coucher} setTime={setCoucher} />
-              <TimePick label="Réveil" time={reveil} setTime={setReveil} />
-              <div style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: 10, background: "#27221D", display: "flex", flexDirection: "column", gap: 3, justifyContent: "center" }}>
-                <span style={{ fontSize: 10.5, color: TX3, whiteSpace: "nowrap" }}>Sommeil</span>
-                <span style={{ ...MONO_S, fontSize: 20, color: "#FFFFFF", whiteSpace: "nowrap" }}>{fmtH(sleepDur)}</span>
-                <span style={{ fontSize: 10.5, color: sleepC, whiteSpace: "nowrap" }}>{diff === 0 ? "objectif atteint" : `${diff > 0 ? "+" : ""}${String(diff).replace(".", ",")} h`}</span>
-              </div>
-            </div>
-            <div style={{ fontSize: 11, color: TX3 }}>Sans montre, tu indiques tes heures de sommeil. Montre reliée : rien à saisir.</div>
-          </div>
-
-          {ROWS.map((it, i) => (
-            <RatingRow key={it.k} item={it} index={i} value={vals[it.k]} onPick={(n) => setVals((v) => ({ ...v, [it.k]: n }))} />
-          ))}
+          {readinessCard}
+          {nightCard}
+          {rowsList}
 
           <button type="button" disabled={!allAnswered} onClick={() => setStep(1)} style={{ ...bigBtn(allAnswered), marginTop: 6 }}>
             {allAnswered ? "Suivant · corps" : `Encore ${ROWS.length - answered} ligne${ROWS.length - answered > 1 ? "s" : ""}`}
@@ -250,71 +386,11 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
 
   // ── Écran 2 : corps ──
   if (step === 1) {
-    const poidsOn = poids !== "" && poids != null;
     return (
       <div style={{ paddingBottom: 32 }}>
         <StepHeader step={1} total={2} title="Corps" subtitle="Courbatures, douleur, santé. Touche une zone pour la noter." onBack={() => setStep(0)} />
         <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px 20px 20px" }}>
-          <BodyZoneMap levels={levels} onChange={setLevels} selected={selZone} onSelect={setSelZone} />
-
-          <div style={{ ...CARD_S, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", whiteSpace: "nowrap" }}>
-              <span style={{ fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>Douleur</span>
-              <span style={{ fontSize: 11.5, color: TX3 }}>autre que les courbatures</span>
-            </div>
-            <div role="radiogroup" aria-label="Douleur de 0 à 10" style={{ display: "flex", gap: 3 }}>
-              {PAIN_COLORS.map((col, n) => {
-                const sel = pain === n;
-                return (
-                  <button key={n} type="button" role="radio" aria-checked={sel} onClick={() => setPain(n)}
-                    style={{ flex: 1, minWidth: 0, height: 36, borderRadius: 8, padding: 0, ...MONO_S, fontSize: 13, cursor: "pointer", border: sel ? "none" : "1px solid " + col + "40", background: sel ? col : col + "14", color: sel ? "#0E0C0A" : col, fontWeight: sel ? 500 : 400 }}>
-                    {n}
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: TX3 }}><span>Aucune</span><span>Insupportable</span></div>
-            <div style={{ fontSize: 11.5, color: TX3 }}>Au-dessus de 0, tu touches la zone sur la carte.</div>
-          </div>
-
-          <div style={{ ...CARD_S, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>Malade ou fiévreux·se ?</div>
-            <YesNo value={sick} onYes={() => setSick(true)} onNo={() => setSick(false)} />
-          </div>
-
-          <div style={{ ...CARD_S, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={KICK_S}>Poids</span>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
-                <input
-                  type="number" inputMode="decimal" step="0.1" aria-label="Poids en kg"
-                  value={poids} onChange={(e) => setPoids(e.target.value)}
-                  placeholder={prevPoids ? String(prevPoids).replace(".", ",") : "—"}
-                  style={{ width: `${Math.max(String(poids !== "" && poids != null ? poids : prevPoids ?? "—").length, 1) + 0.6}ch`, padding: 0, border: "none", background: "transparent", color: "#FFFFFF", ...MONO_S, fontSize: 24, outline: "none" }}
-                />
-                <span style={{ ...MONO_S, fontSize: 11, color: TX3 }}>kg</span>
-              </div>
-            </div>
-            <span style={{ display: "flex", gap: 6 }}>
-              <span style={{ ...PILL_S, color: poidsOn ? "#0E0C0A" : TX2, background: poidsOn ? "#66F03C" : "rgba(231,211,168,0.08)", border: poidsOn ? "none" : "1px solid rgba(231,211,168,0.10)" }}>À jeun</span>
-              <button type="button" aria-pressed={!poidsOn} onClick={() => setPoids("")} style={{ ...PILL_S, fontSize: 11, fontWeight: 400, color: TX2, background: !poidsOn ? "rgba(231,211,168,0.16)" : "rgba(231,211,168,0.08)", border: "1px solid rgba(231,211,168,0.10)", cursor: "pointer", fontFamily: "var(--agon-font-data)" }}>Pas de pesée</button>
-            </span>
-          </div>
-
-          {yesterday && (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "#1E1A16", border: "1px solid rgba(231,211,168,0.10)" }}>
-                <span style={{ width: 4, alignSelf: "stretch", borderRadius: 2, background: "#FFC933" }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={KICK_S}>Séance d’hier</span>
-                  <div style={{ fontSize: 14, fontWeight: 500, marginTop: 4, color: "#FFFFFF" }}>{yesterday.name}</div>
-                  {yesterday.detail && <div style={{ fontSize: 12, color: TX3, marginTop: 2 }}>{yesterday.detail}</div>}
-                </div>
-                <span style={{ ...MONO_S, fontSize: 11, color: TX2, whiteSpace: "nowrap" }}>J+1</span>
-              </div>
-              <div style={{ fontSize: 11.5, color: TX3, marginTop: -4 }}>Les zones sont rattachées à cette séance pour ton coach.</div>
-            </>
-          )}
+          {bodyBlock}
 
           <button type="button" onClick={() => setStep(2)} style={{ ...bigBtn(true), marginTop: 6 }}>Voir mon bilan</button>
         </div>
@@ -323,8 +399,6 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
   }
 
   // ── Bilan ──
-  const zones = levelsList(levels);
-  const injComment = injuryNoteOf(sick, pain, levels);
   return (
     <div style={{ paddingBottom: 32 }}>
       <StepHeader step={2} total={2} title="Bilan du jour" onBack={() => setStep(1)} />
@@ -375,20 +449,7 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose }) {
         {alerts.map((a, i) => <div key={i} style={{ padding: "8px 12px", borderRadius: 10, background: C.o + "14", border: "1px solid " + C.o + "40", fontSize: 12, color: "#FFFFFF" }}>{a}</div>)}
         <button
           type="button"
-          onClick={() => onSave({
-            ...vals,
-            domsZones: zones.length ? zones.map((z) => z.id) : domsZones,
-            domsPoints,
-            domsLevels: levels,
-            pain, sick,
-            // Rattachement seulement s'il y a des courbatures notées.
-            domsWorkout: yesterday && Object.keys(levels).length > 0 ? { id: yesterday.id, name: yesterday.name } : null,
-            coucher, reveil, sleepDur,
-            poids: +poids || null, score,
-            injComment,
-            sleepInterrupt: existing?.sleepInterrupt ?? null,
-            sleepInterruptNote: existing?.sleepInterruptNote ?? null,
-          })}
+          onClick={save}
           style={{ ...bigBtn(true, "#66F03C"), marginTop: 6 }}
         >
           Enregistrer

@@ -22,6 +22,7 @@ import { CombinedStatsChart } from "@/components/athlete/StatsCharts";
 import BlockHistoryViewer from "@/features/coach/components/BlockHistoryViewer";
 import { getBig3 } from "@/lib/calculations";
 import OfflineBanner from "@/features/shared/components/OfflineBanner";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { AthleteChromeContext, type AthleteChrome } from "./context/AthleteChromeContext";
 
 const ip = { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "square" as const, strokeLinejoin: "miter" as const };
@@ -58,6 +59,7 @@ interface AthleteLayoutProps {
 export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isDesktop = useIsDesktop();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Pages qui dessinent leur propre en-tête (maquettes) : sur téléphone, la
@@ -480,8 +482,8 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {/* ── Wellness ── */}
       {showWellness && (
         <div className="fixed inset-0 z-[300] overflow-y-auto bg-agon-bg">
-          {/* PC : panneau centré de 600 px au lieu de toute la largeur */}
-          <div className="border-agon-brd lg:mx-auto lg:min-h-full lg:max-w-[600px] lg:border-x">
+          {/* PC : une seule page sur 2 colonnes (planche AthOrdiAWellness) */}
+          <div>
             {/* Pas de barre : le chevron de l'écran 1 ferme (planche wellness). */}
             <WellnessFlow
               onClose={() => setShowWellness(false)}
@@ -489,6 +491,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               onSave={(data) => { saveWellness(data); setShowWellness(false); }}
               sleepTarget={goals.sleepTarget}
               weightLog={weightLog}
+              wide={isDesktop}
             />
           </div>
         </div>

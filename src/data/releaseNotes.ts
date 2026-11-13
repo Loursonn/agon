@@ -67,6 +67,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "En dessous : les séances du jour et la tendance de forme.",
           "Programme : la semaine s'affiche en 7 colonnes, une par jour.",
           "Santé : les mesures passent sur 4 colonnes. Profil : les rubriques sur 2 colonnes.",
+          "Wellness : tout tient sur une page, les questions et le corps à gauche, la forme du jour, la nuit et la tendance sur 7 ou 28 jours à droite.",
           "Sur téléphone, rien ne change.",
         ],
       },
