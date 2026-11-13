@@ -7,7 +7,7 @@
  *   /coach/energy-library/new
  *   /coach/energy-library/:sessionId/edit
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Zap } from "lucide-react";
 import {
@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { uploadEnergySessionImage } from "@/api/energy";
 import { compressImage } from "@/lib/compressImage";
 import IntervalBuilder from "../components/energy/IntervalBuilder";
+import { EnergyBlockCards } from "../components/energy/EnergyBlockCards";
 import SessionPreview from "../components/energy/SessionPreview";
 import SchemaEditor from "../components/energy/SchemaEditor";
 import { SchemaViewerWithZoom } from "../components/energy/SchemaViewer";
@@ -49,7 +50,7 @@ import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuali
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
 import { toast } from "sonner";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { ORDI_CARD, SectionHead, MONO as ORDI_MONO, DISPLAY } from "@/features/shared/components/ordi/OrdiUi";
+import { Avatar, CheckBox, ORDI_CARD, SectionHead, MONO as ORDI_MONO, DISPLAY } from "@/features/shared/components/ordi/OrdiUi";
 import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
 import { issueCounts } from "../components/import/importIssues";
 import ImportReportPanel from "../components/import/ImportReportPanel";
@@ -71,56 +72,6 @@ const SESSION_KINDS: { value: SessionKind; label: string }[] = [
 
 const ORANGE = "#F5A623";
 
-
-// ── Assign modal (simple) ─────────────────────────────────────────────────────
-
-function AssignModal({
-  sessionId, athleteId, onClose,
-}: { sessionId: string; athleteId: string; onClose: () => void }) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const assign = useAssignEnergySession();
-
-  async function handleAssign() {
-    await assign.mutateAsync({ energy_session_id: sessionId, athlete_id: athleteId, scheduled_date: date, status: "planned" });
-    onClose();
-  }
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 100,
-      background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{ background: C.s1, borderRadius: 6, padding: 24, width: 320, border: `1px solid ${C.brd}` }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>Planifier la séance</div>
-        <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Date</div>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          style={{
-            width: "100%", background: C.s2, border: `1px solid ${C.brd}`,
-            borderRadius: 6, color: C.tx, fontSize: 13, padding: "6px 10px", fontFamily: "inherit",
-          }}
-        />
-        <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
-          <button
-            onClick={onClose}
-            style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleAssign}
-            disabled={assign.isPending}
-            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.gV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-          >
-            {assign.isPending ? "…" : "Planifier"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Import session modal ─────────────────────────────────────────────────────
 
@@ -234,7 +185,7 @@ function ImportSessionModal({ onImport, onClose }: {
 export default function EnergySessionEditorPage() {
   const { athleteId, sessionId } = useParams<{ athleteId?: string; sessionId?: string }>();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, athletes } = useAuth();
   const navigate = useNavigate();
   const isEdit = !!sessionId;
   const kindFromUrl = searchParams.get("kind") as SessionKind | null;
@@ -260,8 +211,11 @@ export default function EnergySessionEditorPage() {
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
+  // Enregistrer (planche CoachOrdiAEditeurEnergie) : pour l'athlète à une date, copie dans la banque, ou banque seule.
+  const [planDate, setPlanDate] = useState(searchParams.get("date") ?? "");
+  const [keepCopy, setKeepCopy] = useState(false);
+  const [bankOnly, setBankOnly] = useState(false);
+  const assign = useAssignEnergySession();
   const [showImport, setShowImport] = useState(false);
   // Import texte YOXX (?import=texte ouvre directement la fenêtre)
   const [showTextImport, setShowTextImport] = useState(searchParams.get("import") === "texte");
@@ -279,6 +233,8 @@ export default function EnergySessionEditorPage() {
 
   const isSpecifique = sessionKind === "specifique";
   const isClassique  = isSpecifique && format === "classique";
+  const athleteName = athletes.find((a) => a.id === athleteId)?.full_name?.trim() || "l’athlète";
+  const athleteFirst = athleteName.split(/\s+/)[0];
 
   const { data: sports = [] }    = useSpecificSports();
   const { data: qualities = [] } = usePhysicalQualities();
@@ -436,9 +392,9 @@ export default function EnergySessionEditorPage() {
     }
   }
 
-  async function handleSave(andPlan = false) {
+  async function handleSave() {
     const effectiveKind: SessionKind = sessionKind;
-    const payload = {
+    const base = {
       name: name.trim() || "Séance sans titre",
       session_kind: effectiveKind,
       custom_kind: sessionKind === "specifique"
@@ -459,28 +415,29 @@ export default function EnergySessionEditorPage() {
         ? { blocks: classiqueBlocks }
         : null,
       created_by: user?.id ?? null,
-      ...(athleteId ? { athlete_id: athleteId } : {}),
     };
 
+    const forAthlete = !!athleteId && !bankOnly;
+    const payload = { ...base, ...(forAthlete ? { athlete_id: athleteId } : {}) };
+    type CreateInput = Parameters<typeof createMutation.mutateAsync>[0];
+
+    let id: string | null = null;
     if (isEdit && sessionId) {
       await updateMutation.mutateAsync({ id: sessionId, ...payload });
       // Attributions 'energie' des athlètes qui ont cette séance au planning
       void syncEnergySessionAthletes(sessionId, qc);
-      if (andPlan && athleteId) {
-        setSavedSessionId(sessionId);
-        setShowAssignModal(true);
-      } else {
-        navigateBack();
-      }
+      id = sessionId;
     } else {
-      const created = await createMutation.mutateAsync(payload as Parameters<typeof createMutation.mutateAsync>[0]);
-      if (andPlan && athleteId && created?.id) {
-        setSavedSessionId(created.id);
-        setShowAssignModal(true);
-      } else {
-        navigateBack();
-      }
+      const created = await createMutation.mutateAsync(payload as CreateInput);
+      id = created?.id ?? null;
     }
+    // « Garder aussi une copie dans ma banque » : une 2e séance, sans athlète.
+    if (forAthlete && keepCopy) await createMutation.mutateAsync(base as CreateInput);
+    if (forAthlete && planDate && id) {
+      await assign.mutateAsync({ energy_session_id: id, athlete_id: athleteId!, scheduled_date: planDate, status: "planned" });
+    }
+    if (athleteId && !forAthlete) toast.success("Séance ajoutée à ta banque");
+    navigateBack();
   }
 
   function navigateBack() {
@@ -493,7 +450,7 @@ export default function EnergySessionEditorPage() {
     }
   }
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isSaving = createMutation.isPending || updateMutation.isPending || assign.isPending;
 
   if (isLoading && isEdit) {
     return (
@@ -725,16 +682,51 @@ export default function EnergySessionEditorPage() {
               onSaveBlockToBank={handleSaveBlockToBank}
             />
           ) : (
-            <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
+            isSpecifique
+              ? <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
+              : <EnergyBlockCards root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
           )}
         </section>
 
         {/* ── 03 Enregistrer ── */}
         <aside style={{ display: "flex", flexDirection: "column", gap: 12, position: isDesktop ? "sticky" : "static", top: 16 }}>
           <SectionHead n={3} title="Enregistrer" />
-          <div style={{ ...ORDI_CARD, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ ...ORDI_CARD, padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+            {athleteId && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <span style={{ fontSize: 12, color: C.tx3 }}>Enregistrer pour</span>
+                <SaveOption on={!bankOnly} onSelect={() => setBankOnly(false)}>
+                  <Avatar name={athleteName} size={24} />
+                  <span style={{ fontSize: 13.5, fontWeight: 500, color: C.tx }}>{athleteName}</span>
+                </SaveOption>
+                {!bankOnly && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 26 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12.5, color: C.tx3, width: 22 }}>Le</span>
+                      <input
+                        type="date"
+                        value={planDate}
+                        onChange={(e) => setPlanDate(e.target.value)}
+                        aria-label="Date de la séance"
+                        style={{ flex: 1, height: 34, boxSizing: "border-box", background: C.s2, border: `1px solid ${C.brdL}`, borderRadius: 8, color: C.tx, fontSize: 13, padding: "0 10px", fontFamily: "inherit" }}
+                      />
+                    </label>
+                    {!planDate && <span style={{ fontSize: 11.5, color: C.tx3 }}>Sans date, la séance reste à programmer.</span>}
+                    <CheckBox checked={keepCopy} onChange={setKeepCopy} label="Garder aussi une copie dans ma banque" />
+                  </div>
+                )}
+                {!isEdit && (
+                  <SaveOption on={bankOnly} onSelect={() => setBankOnly(true)}>
+                    <span>
+                      <span style={{ display: "block", fontSize: 13.5, fontWeight: 500, color: C.tx }}>Ma banque seulement</span>
+                      <span style={{ display: "block", fontSize: 12, color: C.tx3 }}>À programmer plus tard, pour tout athlète</span>
+                    </span>
+                  </SaveOption>
+                )}
+              </div>
+            )}
             <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 12, color: C.tx3 }}>Consigne{athleteId ? " pour l’athlète" : ""}</span>
+              <span style={{ fontSize: 12, color: C.tx3 }}>{athleteId && !bankOnly ? `Consigne pour ${athleteFirst}` : "Consigne"}</span>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -748,21 +740,18 @@ export default function EnergySessionEditorPage() {
               />
             </label>
             <button
-              onClick={() => handleSave(false)}
+              onClick={() => void handleSave()}
               disabled={isSaving}
               style={{ height: 40, borderRadius: 10, border: "none", background: C.ac, color: "#0E0C0A", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
             >
-              {isSaving ? "Enregistrement…" : athleteId ? "Enregistrer" : "Enregistrer dans ma banque"}
+              {isSaving ? "Enregistrement…" : athleteId && !bankOnly ? `Enregistrer pour ${athleteName}` : "Enregistrer dans ma banque"}
             </button>
-            {athleteId && (
-              <button
-                onClick={() => handleSave(true)}
-                disabled={isSaving}
-                style={{ height: 40, borderRadius: 10, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
-              >
-                Enregistrer et programmer un jour…
-              </button>
-            )}
+            <button
+              onClick={navigateBack}
+              style={{ alignSelf: "center", background: "none", border: "none", color: C.tx3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Annuler
+            </button>
           </div>
 
           {/* Schema drawing */}
@@ -931,15 +920,6 @@ export default function EnergySessionEditorPage() {
         />
       )}
 
-      {/* ── Assign modal ── */}
-      {showAssignModal && savedSessionId && athleteId && (
-        <AssignModal
-          sessionId={savedSessionId}
-          athleteId={athleteId}
-          onClose={() => { setShowAssignModal(false); navigateBack(); }}
-        />
-      )}
-
       {/* ── Image lightbox ── */}
       {previewImage && (
         <div
@@ -959,5 +939,23 @@ export default function EnergySessionEditorPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Choix rond de la planche (« Enregistrer pour Léa » / « Ma banque seulement »). */
+function SaveOption({ on, onSelect, children }: { on: boolean; onSelect: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      onClick={onSelect}
+      style={{ display: "flex", alignItems: "center", gap: 10, padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+    >
+      <span aria-hidden style={{ width: 16, height: 16, flex: "none", boxSizing: "border-box", borderRadius: 999, border: `1px solid ${on ? C.ac : C.brdL}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {on && <span style={{ width: 8, height: 8, borderRadius: 999, background: C.ac }} />}
+      </span>
+      {children}
+    </button>
   );
 }
