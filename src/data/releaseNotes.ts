@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-telephone-energie-corrections",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Séances d'énergie sur téléphone et charges à virgule",
+    summary: "La banque énergétique et l'éditeur de séance d'énergie ne dépassent plus de l'écran du téléphone.",
+    sections: [
+      {
+        title: "Ce qui est corrigé",
+        points: [
+          "Banque énergétique et création d'une séance d'énergie : les boutons passent à la ligne au lieu de sortir de l'écran.",
+          "Les charges s'écrivent avec une virgule (« 27,5 kg ») dans le résumé des séances, côté staff et athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-emom-minuteur",
     date: "2026-11-13",
     kind: "feature",

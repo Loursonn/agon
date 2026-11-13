@@ -628,7 +628,7 @@ export default function EnergySessionEditorPage() {
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginLeft: "auto" }}>
           {!isEdit && (
             <button
               onClick={() => setShowImport(true)}

@@ -90,7 +90,9 @@ export default function CoachPhoneBanque() {
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.name}</div>
-                <div style={{ fontSize: 11.5, color: C.tx3 }}>{[ex.target ? mL(ex.target) : null, ex.equipment].filter(Boolean).join(" · ") || "—"}</div>
+                {(ex.target || ex.equipment) && (
+                  <div style={{ fontSize: 11.5, color: C.tx3 }}>{[ex.target ? mL(ex.target) : null, ex.equipment].filter(Boolean).join(" · ")}</div>
+                )}
               </div>
               {ex.ex_type && <span style={{ fontSize: 11, color: exTypeColor(ex.ex_type), whiteSpace: "nowrap" }}>{exTypeLabel(ex.ex_type)}</span>}
               <Chevron />

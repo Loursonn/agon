@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { C, alpha } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -48,6 +48,21 @@ export default function CoachPhoneSante() {
   const { data: days = [], isLoading, isError } = useHealthWindow(athleteId, day);
   const hist = useWellnessHistory(athleteId, { from: addDays(day, -1) } as never);
   const [open, setOpen] = useState<string | null>(null);
+
+  // Nuit pas encore remontée (montre synchronisée plus tard) : on ouvre une
+  // seule fois sur la dernière nuit mesurée de la fenêtre.
+  const jumped = useRef(false);
+  useEffect(() => {
+    if (jumped.current || isLoading || offset !== 0) return;
+    jumped.current = true;
+    const rows = days as HealthDay[];
+    if (rows.some((d) => d.day === today)) return;
+    const last = rows.map((d) => d.day).filter((d) => d < today).sort().pop();
+    if (!last) return;
+    let n = 0;
+    while (n > -28 && addDays(today, n) > last) n--;
+    if (addDays(today, n) === last) setOffset(n);
+  }, [days, isLoading, offset, today]);
 
   const views = useMemo<View[]>(() => HEALTH_METRICS.map((def) => {
     const values = dailyValues(days as readonly HealthDay[], def.pick);

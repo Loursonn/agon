@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { C, alpha } from "@/lib/theme";
@@ -79,13 +79,21 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
 
   // Point de départ : l'adaptation du jour (portée « cette séance »), sinon
   // le programme résolu pour cette occurrence.
+  // `log` / `override` / `session` sont recréés à chaque rendu : on ne
+  // réinitialise le brouillon que si leur contenu change (sinon boucle).
   const ready = !!session && !occ.isLoading;
+  const initKey = ready
+    ? [mode, log?.id ?? "", occurrence, JSON.stringify(override?.blocs ?? null), JSON.stringify(session!.blocs)].join("|")
+    : null;
+  const lastInit = useRef<string | null>(null);
   useEffect(() => {
-    if (!ready || dirty) return;
+    if (!initKey || dirty || lastInit.current === initKey) return;
+    lastInit.current = initKey;
     const m: Mode = log ? mode : "next";
     if (m !== mode) setMode(m);
     setDraft(m === "this" && override ? structuredClone(override.blocs as Bloc[]) : flattenBlocs(session!.blocs, occurrence));
-  }, [ready, mode, log, override, occurrence, session, dirty]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initKey résume log, override, session, occurrence et mode
+  }, [initKey, dirty]);
 
   function goBack() {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;

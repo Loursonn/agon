@@ -125,7 +125,7 @@ export default function EnergyLibraryPage() {
         {/* Title row */}
         <div style={{
           padding: "14px 20px 10px",
-          display: "flex", alignItems: "center", gap: 12,
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
         }}>
           <h1 style={{ fontSize: 18, fontWeight: 800, color: C.tx, margin: 0, flex: 1 }}>
             Banque énergétique

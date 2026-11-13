@@ -71,6 +71,7 @@ export default function CoachPhoneWellness() {
     return { todayEntry, scoreNow, scoreHabit: mean(base), doms, daily };
   }, [hist.data, today]);
 
+  // Feu : VFC en ln(ms) (moyenne et zone) → reconverties en ms à l'affichage.
   const hrv = r?.hrv;
   const rhr = r?.restingHr;
   const signals = r ? [...r.redSigns, ...r.orange].map((s) => s.text).filter((t, i, a) => a.indexOf(t) === i) : [];
@@ -107,10 +108,10 @@ export default function CoachPhoneWellness() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
         <Tile
-          label="VFC de nuit" value={hrv?.mean7 != null ? fmtDec(hrv.mean7, 0) : "—"} unit={hrv?.mean7 != null ? "ms" : undefined}
+          label="VFC de nuit" value={hrv?.mean7 != null ? fmtDec(Math.exp(hrv.mean7), 0) : "—"} unit={hrv?.mean7 != null ? "ms" : undefined}
           state={hrv?.mean7 == null ? "Pas de mesure" : hrv.below ? `Basse${hrv.belowDays ? ` · ${hrv.belowDays} j` : ""}` : "Dans sa zone"}
           stateColor={hrv?.below ? C.o : hrv?.mean7 != null ? C.g : C.tx3}
-          foot={hrv?.zoneLow != null && hrv.zoneHigh != null ? `Zone ${fmtDec(hrv.zoneLow, 0)}–${fmtDec(hrv.zoneHigh, 0)}` : "Zone en construction"}
+          foot={hrv?.zoneLow != null && hrv.zoneHigh != null ? `Zone ${fmtDec(Math.exp(hrv.zoneLow), 0)}–${fmtDec(Math.exp(hrv.zoneHigh), 0)}` : "Zone en construction"}
         />
         <Tile
           label="FC de repos" value={rhr?.mean7 != null ? fmtDec(rhr.mean7, 1) : "—"} unit={rhr?.mean7 != null ? "bpm" : undefined}
