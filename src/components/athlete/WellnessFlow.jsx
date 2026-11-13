@@ -8,6 +8,7 @@ import { loadDraft, saveDraft, wellnessDraftKey } from "@/lib/localDraft";
 import { BodyZoneMap } from "@/features/athlete/components/wellness/BodyZoneMap";
 import { DOMS_LEVEL_COLOR, PAIN_COLORS, levelsList } from "@/lib/bodyZones";
 import { useYesterdayWorkout } from "@/features/athlete/hooks/useYesterdayWorkout";
+import { useWatchSleep } from "@/features/athlete/hooks/useWatchSleep";
 import { WellnessTrendCard } from "@/features/athlete/components/wellness/WellnessTrendCard";
 
 // ── Wellness du matin (planche « Wellness athlète » retenue, 12/11) ─────────
@@ -179,6 +180,10 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
   const [sick, setSick] = useState(draft ? draft.sick ?? null : existing?.sick ?? null);
   const [coucher, setCoucher] = useState(draft?.coucher ?? (existing?.coucher || { h: 23, m: 0 }));
   const [reveil, setReveil] = useState(draft?.reveil ?? (existing?.reveil || { h: 7, m: 0 }));
+  // Montre reliée avec la nuit mesurée : rien à saisir (« Corriger » repasse en saisie).
+  const { data: watchSleep } = useWatchSleep(athleteId);
+  const [manualSleep, setManualSleep] = useState(false);
+  const fromWatch = !!watchSleep && !manualSleep;
   const [poids, setPoids] = useState(draft?.poids ?? (existing?.poids || ""));
   const prevPoids = (() => { if (!weightLog) return null; const d = new Date(); d.setDate(d.getDate() - 1); const k = String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0"); return weightLog[k] || null; })();
   const snapshot = { step, vals, domsLevels: levels, pain, sick, coucher, reveil, poids };
@@ -197,9 +202,11 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
   const alerts = getAlerts(vals);
   const answered = ROWS.filter((it) => vals[it.k] != null).length;
   const allAnswered = answered === ROWS.length;
-  const sleepDur = (() => { const rM = reveil.h * 60 + reveil.m, cM = coucher.h * 60 + coucher.m; return Math.round(((rM <= cM ? rM + 1440 - cM : rM - cM) / 60) * 10) / 10; })();
+  const manualDur = (() => { const rM = reveil.h * 60 + reveil.m, cM = coucher.h * 60 + coucher.m; return Math.round(((rM <= cM ? rM + 1440 - cM : rM - cM) / 60) * 10) / 10; })();
+  const sleepDur = fromWatch ? watchSleep.hours : manualDur;
   const diff = Math.round((sleepDur - tgt) * 10) / 10;
   const sleepC = Math.abs(diff) <= 0.5 ? C.g : Math.abs(diff) <= 1.5 ? C.o : C.r;
+  const fmtT = (t) => `${String(t.h).padStart(2, "0")}:${String(t.m).padStart(2, "0")}`;
   const fmtH = (h) => { const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`; };
   const ringColor = score != null ? reco.c : TX3;
 
@@ -214,7 +221,9 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
             pain, sick,
             // Rattachement seulement s'il y a des courbatures notées.
             domsWorkout: yesterday && Object.keys(levels).length > 0 ? { id: yesterday.id, name: yesterday.name } : null,
-            coucher, reveil, sleepDur,
+            coucher: fromWatch && watchSleep.start ? watchSleep.start : coucher,
+            reveil: fromWatch && watchSleep.end ? watchSleep.end : reveil,
+            sleepDur,
             poids: +poids || null, score,
             injComment,
             sleepInterrupt: existing?.sleepInterrupt ?? null,
@@ -239,16 +248,29 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
         <span style={KICK_S}>Cette nuit</span>
         <span style={{ ...MONO_S, fontSize: 10.5, color: TX3 }}>objectif {fmtH(tgt)}</span>
       </div>
-      <div style={{ display: "flex", gap: 6 }}>
-        <TimePick label="Coucher" time={coucher} setTime={setCoucher} />
-        <TimePick label="Réveil" time={reveil} setTime={setReveil} />
-        <div style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: 10, background: "#27221D", display: "flex", flexDirection: "column", gap: 3, justifyContent: "center" }}>
-          <span style={{ fontSize: 10.5, color: TX3, whiteSpace: "nowrap" }}>Sommeil</span>
-          <span style={{ ...MONO_S, fontSize: 20, color: "#FFFFFF", whiteSpace: "nowrap" }}>{fmtH(sleepDur)}</span>
+      {fromWatch ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ ...MONO_S, fontSize: 24, color: "#FFFFFF", whiteSpace: "nowrap" }}>{fmtH(sleepDur)}</span>
+            <span style={{ fontSize: 11, color: TX3 }}>
+              {watchSleep.start && watchSleep.end ? `${fmtT(watchSleep.start)} → ${fmtT(watchSleep.end)} · ` : ""}{watchSleep.attribution}
+            </span>
+          </div>
           <span style={{ fontSize: 10.5, color: sleepC, whiteSpace: "nowrap" }}>{diff === 0 ? "objectif atteint" : `${diff > 0 ? "+" : ""}${String(diff).replace(".", ",")} h`}</span>
+          <button type="button" onClick={() => setManualSleep(true)} style={{ ...PILL_S, fontSize: 11, fontWeight: 400, color: TX2, background: "rgba(231,211,168,0.08)", border: "1px solid rgba(231,211,168,0.10)", cursor: "pointer", fontFamily: "var(--agon-font-data)" }}>Corriger</button>
         </div>
-      </div>
-      <div style={{ fontSize: 11, color: TX3 }}>Sans montre, tu indiques tes heures de sommeil. Montre reliée : rien à saisir.</div>
+      ) : (
+        <div style={{ display: "flex", gap: 6 }}>
+          <TimePick label="Coucher" time={coucher} setTime={setCoucher} />
+          <TimePick label="Réveil" time={reveil} setTime={setReveil} />
+          <div style={{ flex: 1, minWidth: 0, padding: "9px 10px", borderRadius: 10, background: "#27221D", display: "flex", flexDirection: "column", gap: 3, justifyContent: "center" }}>
+            <span style={{ fontSize: 10.5, color: TX3, whiteSpace: "nowrap" }}>Sommeil</span>
+            <span style={{ ...MONO_S, fontSize: 20, color: "#FFFFFF", whiteSpace: "nowrap" }}>{fmtH(sleepDur)}</span>
+            <span style={{ fontSize: 10.5, color: sleepC, whiteSpace: "nowrap" }}>{diff === 0 ? "objectif atteint" : `${diff > 0 ? "+" : ""}${String(diff).replace(".", ",")} h`}</span>
+          </div>
+        </div>
+      )}
+      <div style={{ fontSize: 11, color: TX3 }}>{fromWatch ? "Mesuré par ta montre : rien à saisir." : watchSleep ? "Saisie à la main, à la place de la mesure de ta montre." : "Sans montre, tu indiques tes heures de sommeil. Montre reliée : rien à saisir."}</div>
     </div>
   );
   const rowsList = ROWS.map((it, i) => (

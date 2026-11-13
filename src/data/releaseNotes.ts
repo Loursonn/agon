@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-wellness-nuit-montre",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Wellness : la nuit vient de la montre",
+    summary: "Si l'athlète a relié une montre qui mesure son sommeil, le wellness du matin affiche sa nuit (durée, coucher, réveil, modèle de la montre) au lieu de lui demander ses heures. Il peut toujours corriger à la main.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-retours-ordi",
     date: "2026-11-13",
     kind: "feature",
