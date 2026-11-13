@@ -16,21 +16,22 @@ SELECT a.id AS ath, a.coach_id AS coach,
       AND NOT EXISTS (SELECT 1 FROM athlete_co_coaches cc WHERE cc.athlete_id = a.id AND cc.co_coach_id = p.id)
       AND NOT coalesce(p.is_admin, false)
     ORDER BY p.created_at LIMIT 1) AS other_coach,
-  -- Une activité avec ses détails et un lien vers une séance prévue (garmin si possible).
-  (SELECT x.id FROM provider_activities x
-    WHERE x.athlete_id = a.id AND EXISTS (SELECT 1 FROM activity_plan_links l WHERE l.activity_id = x.id)
-      AND EXISTS (SELECT 1 FROM activity_streams s WHERE s.activity_id = x.id)
-    ORDER BY (x.source = 'garmin') DESC, x.started_at LIMIT 1) AS act_athlete,
-  -- Une activité de fichier, retirée par le coach.
-  (SELECT x.id FROM provider_activities x
-    WHERE x.athlete_id = a.id AND x.source = 'file_import'
-      AND EXISTS (SELECT 1 FROM activity_streams s WHERE s.activity_id = x.id)
-    ORDER BY x.started_at LIMIT 1) AS act_coach,
-  -- Une troisième, marquée « séance Agon » (manual) pour le refus.
-  (SELECT x.id FROM provider_activities x
-    WHERE x.athlete_id = a.id AND x.source = 'file_import'
-    ORDER BY x.started_at DESC LIMIT 1) AS act_manual
+  gen_random_uuid() AS act_athlete,  -- avec détails et un lien vers une séance prévue
+  gen_random_uuid() AS act_coach,    -- activité de fichier, retirée par le coach
+  gen_random_uuid() AS act_manual    -- marquée « séance Agon » (manual) pour le refus
 FROM profiles a WHERE a.full_name = 'Léa Démo' AND a.coach_id IS NOT NULL LIMIT 1;
+
+-- Activités fictives créées ici (annulées avec le reste) : le test ne dépend ni des
+-- activités réelles de la démo en prod, ni du seed de la CI, qui n'en a pas.
+INSERT INTO provider_activities (id, athlete_id, source, external_id, started_at, local_date)
+SELECT x.id, i.ath, 'file_import', 'test-p38-' || x.n, now() - make_interval(days => x.n), (now() - make_interval(days => x.n))::date
+FROM ids i CROSS JOIN LATERAL (VALUES (i.act_athlete, 40), (i.act_coach, 41), (i.act_manual, 42)) AS x(id, n);
+INSERT INTO activity_streams (activity_id, athlete_id, source, normalized_from, started_at, sample_count, t)
+SELECT pa.id, pa.athlete_id, pa.source, 'fit', pa.started_at, 0, '{}'::int[]
+FROM provider_activities pa, ids i WHERE pa.id IN (i.act_athlete, i.act_coach);
+INSERT INTO activity_plan_links (athlete_id, activity_id, source, planned_kind, planned_id, local_date, status)
+SELECT i.ath, i.act_athlete, 'file_import', 'workout', w.id, w.scheduled_date, 'confirmed'
+FROM ids i JOIN LATERAL (SELECT id, scheduled_date FROM workout_logs WHERE athlete_id = i.ath ORDER BY scheduled_date LIMIT 1) w ON true;
 GRANT SELECT ON ids TO authenticated;
 
 -- La séance prévue rapprochée de act_athlete, et son état avant.
