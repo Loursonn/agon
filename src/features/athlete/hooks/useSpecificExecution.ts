@@ -6,49 +6,15 @@
  * lap_button, round tracking within groups.
  */
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import type { EnergyStep, EnergyGroup, EnergyInterval, ExerciseInterval } from "@/types/energy";
+import type { EnergyStep } from "@/types/energy";
 import { estimateIntervalDuration } from "@/lib/energy";
+import {
+  type FlatExecStep, emomNextRoundIndex, emomSecondsLeft, flattenExecSteps, isEmomRoundStart,
+} from "@/lib/execSteps";
 
 export type ExecutionPhase = "preview" | "executing" | "completed";
 
-export interface FlatExecStep {
-  step: EnergyInterval | ExerciseInterval;
-  /** Label like "Tour 3 / 8" if inside a repeat group */
-  roundLabel?: string;
-  /** Depth in group nesting */
-  depth: number;
-}
-
-/** Flatten steps (expand groups × repeat) into linear ordered list. */
-function flattenSteps(steps: EnergyStep[], depth = 0): FlatExecStep[] {
-  const result: FlatExecStep[] = [];
-  for (const step of steps) {
-    if (step.type === "interval" || step.type === "exercise") {
-      result.push({ step, depth });
-    } else {
-      // Group
-      const group = step as EnergyGroup;
-      for (let rep = 0; rep < group.repeat; rep++) {
-        const roundLabel = group.repeat > 1 ? `Tour ${rep + 1} / ${group.repeat}` : undefined;
-        for (const child of group.children) {
-          if (child.type === "interval" || child.type === "exercise") {
-            result.push({ step: child, roundLabel, depth: depth + 1 });
-          } else {
-            const nested = flattenSteps([child], depth + 1);
-            for (const n of nested) {
-              result.push({ ...n, roundLabel: roundLabel ?? n.roundLabel });
-            }
-          }
-        }
-        // rest_between after each rep except last
-        if (group.rest_between && rep < group.repeat - 1) {
-          result.push({ step: group.rest_between, roundLabel, depth: depth + 1 });
-        }
-      }
-    }
-  }
-  return result;
-}
+export type { FlatExecStep } from "@/lib/execSteps";
 
 export interface SpecificExecutionState {
   phase: ExecutionPhase;
@@ -69,7 +35,7 @@ function stepDuration(fs: FlatExecStep | undefined): number {
 }
 
 export function useSpecificExecution(intervals: EnergyStep[]) {
-  const flatSteps = useMemo(() => flattenSteps(intervals), [intervals]);
+  const flatSteps = useMemo(() => flattenExecSteps(intervals), [intervals]);
 
   const [phase, setPhase] = useState<ExecutionPhase>("preview");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -81,6 +47,9 @@ export function useSpecificExecution(intervals: EnergyStep[]) {
   // Index du pas dont le décompte est en cours. null = pas chronométré
   // (lap_button) : celui-là attend une action manuelle de l'athlète.
   const armedIndexRef = useRef<number | null>(null);
+  // EMOM : début de la répétition en cours (ms) et secondes restantes dans la minute.
+  const roundStartRef = useRef<number | null>(null);
+  const [minuteLeft, setMinuteLeft] = useState<number | null>(null);
 
   const currentFlatStep = flatSteps[currentIndex] ?? null;
   const nextFlatStep = flatSteps[currentIndex + 1] ?? null;
@@ -97,7 +66,21 @@ export function useSpecificExecution(intervals: EnergyStep[]) {
     clearTimer();
     const fs = flatSteps[stepIndex];
     if (!fs) return;
-    const dur = stepDuration(fs);
+    let dur = stepDuration(fs);
+    if (fs.emom) {
+      if (isEmomRoundStart(flatSteps, stepIndex) || roundStartRef.current == null) roundStartRef.current = Date.now();
+      if (fs.emom.gap) {
+        // Repos = ce qui reste de la minute. Minute déjà finie : on enchaîne.
+        dur = emomSecondsLeft(roundStartRef.current, Date.now(), fs.emom.every);
+        if (dur <= 0) {
+          armedIndexRef.current = stepIndex;
+          setSecondsLeft(0);
+          return;
+        }
+      }
+    } else {
+      roundStartRef.current = null;
+    }
 
     if (dur <= 0) {
       // lap_button or no-duration exercise — no countdown, wait for manual advance
@@ -168,6 +151,23 @@ export function useSpecificExecution(intervals: EnergyStep[]) {
     goToStep(currentIndex + 1);
   }, [phase, secondsLeft, currentIndex, goToStep]);
 
+  // EMOM : décompte de la minute ; à 0, la répétition suivante part même si
+  // l'athlète n'a pas fini (le pas « reste » s'enchaîne déjà tout seul).
+  const currentEmom = currentFlatStep?.emom ?? null;
+  useEffect(() => {
+    if (phase !== "executing" || !currentEmom) { setMinuteLeft(null); return; }
+    const tick = () => {
+      const startedAt = roundStartRef.current;
+      if (startedAt == null) return;
+      const left = emomSecondsLeft(startedAt, Date.now(), currentEmom.every);
+      setMinuteLeft(left);
+      if (left <= 0 && !currentEmom.gap) goToStep(emomNextRoundIndex(flatSteps, currentIndex));
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [phase, currentEmom, currentIndex, flatSteps, goToStep]);
+
   const skip = useCallback(() => {
     goToStep(currentIndex + 1);
   }, [currentIndex, goToStep]);
@@ -194,6 +194,7 @@ export function useSpecificExecution(intervals: EnergyStep[]) {
     nextFlatStep,
     isLastStep,
     secondsLeft,
+    minuteLeft,
     startTime,
     elapsedTotal,
     start,

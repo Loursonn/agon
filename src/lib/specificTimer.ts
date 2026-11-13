@@ -95,6 +95,12 @@ export function nextWork(flat: readonly FlatExecStep[], i: number): FlatExecStep
 
 /** « WOD · 5 tours · 40 s / 20 s ». */
 export function wodSummary(flat: readonly FlatExecStep[]): string {
+  const emom = flat.find((f) => f.emom)?.emom;
+  if (emom) {
+    return emom.every === 60
+      ? `EMOM · ${emom.rounds} min`
+      : `Départ toutes les ${fmtShort(emom.every)} · ${emom.rounds} tours`;
+  }
   const parts = ["WOD"];
   const r = roundOf(flat.find((f) => f.roundLabel));
   if (r) parts.push(`${r.rounds} tours`);

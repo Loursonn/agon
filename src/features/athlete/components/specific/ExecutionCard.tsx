@@ -20,6 +20,8 @@ interface Props {
   flat: readonly FlatExecStep[];
   index: number;
   secondsLeft: number;
+  /** EMOM : secondes restantes dans la minute (null hors départ fixe). */
+  minuteLeft?: number | null;
   elapsed: number;
   onSkip: () => void;
   /** « Terminer » : arrête le minuteur (format WOD : retour athlète). */
@@ -30,7 +32,7 @@ interface Props {
 
 const LABEL = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: C.tx3 };
 
-export default function ExecutionCard({ flat, index, secondsLeft, elapsed, onSkip, onFinish, vma }: Props) {
+export default function ExecutionCard({ flat, index, secondsLeft, minuteLeft = null, elapsed, onSkip, onFinish, vma }: Props) {
   const current = flat[index];
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -42,7 +44,11 @@ export default function ExecutionCard({ flat, index, secondsLeft, elapsed, onSki
   const { step } = current;
   const rest = isRestStep(step);
   const color = rest ? TYPE_COLOR.energie : TYPE_COLOR.hyrox;
-  const total = stepSeconds(step);
+  const emom = current.emom ?? null;
+  // EMOM : le gros chrono suit la minute, sauf pendant un effort chronométré.
+  const minuteClock = !!emom && (emom.gap || stepSeconds(step) === 0);
+  const total = minuteClock && emom ? emom.every : stepSeconds(step);
+  const clock = minuteClock ? (minuteLeft ?? emom?.every ?? 0) : secondsLeft;
   const round = roundOf(current);
   const view = roundView(flat, index);
   const upcoming = rest ? nextWork(flat, index) : null;
@@ -50,7 +56,7 @@ export default function ExecutionCard({ flat, index, secondsLeft, elapsed, onSki
   const following = rest ? null : flat[index + 1] ?? null;
   const followingWork = !rest ? nextWork(flat, index) : null;
   const target = step.type !== "exercise" && step.target ? formatTarget(step.target) : "";
-  const progress = total > 0 ? Math.min(1, Math.max(0, 1 - secondsLeft / total)) : 0;
+  const progress = total > 0 ? Math.min(1, Math.max(0, 1 - clock / total)) : 0;
 
   const hero = rest && upcoming ? upcoming.step : step;
   const heroDetail = rest && upcoming ? [fmtShort(stepSeconds(upcoming.step)), stepDetail(upcoming.step)].filter((s) => s && s !== "0 s").join(" · ") : stepDetail(step);
@@ -77,7 +83,9 @@ export default function ExecutionCard({ flat, index, secondsLeft, elapsed, onSki
         </div>
 
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          {round ? (
+          {round && emom ? (
+            <span style={{ ...DISPLAY, fontSize: 22, fontWeight: 300 }}>{emom.every === 60 ? "Minute" : "Départ"} <span style={{ ...MONO, fontSize: 26 }}>{round.round}</span> <span style={{ color: C.tx3 }}>/ {round.rounds}</span></span>
+          ) : round ? (
             <span style={{ ...DISPLAY, fontSize: 22, fontWeight: 300 }}>Tour <span style={{ ...MONO, fontSize: 26 }}>{round.round}</span> <span style={{ color: C.tx3 }}>/ {round.rounds}</span></span>
           ) : current.roundLabel ? (
             <span style={{ ...DISPLAY, fontSize: 20, fontWeight: 300 }}>{current.roundLabel}</span>
@@ -91,8 +99,11 @@ export default function ExecutionCard({ flat, index, secondsLeft, elapsed, onSki
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "18px 0 6px" }}>
           <span style={{ ...LABEL, color }}>{rest ? (PHASE_LABEL[step.role] ?? "Récup") : step.type === "exercise" ? "Effort" : (PHASE_LABEL[step.role] ?? step.role)}</span>
-          <span style={{ ...MONO, fontSize: 84, lineHeight: 1, color, fontVariantNumeric: "tabular-nums" }}>{total > 0 ? fmtClock(secondsLeft) : "—"}</span>
-          {total > 0 && <span style={{ ...MONO, fontSize: 13, color: C.tx3 }}>sur {fmtClock(total)}</span>}
+          <span style={{ ...MONO, fontSize: 84, lineHeight: 1, color, fontVariantNumeric: "tabular-nums" }}>{total > 0 ? fmtClock(clock) : "—"}</span>
+          {total > 0 && <span style={{ ...MONO, fontSize: 13, color: C.tx3 }}>{minuteClock ? (emom?.every === 60 ? "reste dans la minute" : "avant le départ suivant") : `sur ${fmtClock(total)}`}</span>}
+          {emom && !minuteClock && minuteLeft != null && (
+            <span style={{ ...MONO, fontSize: 13, color: C.tx2 }}>{fmtClock(minuteLeft)} {emom.every === 60 ? "dans la minute" : "avant le départ suivant"}</span>
+          )}
           {total > 0 && (
             <div aria-hidden style={{ width: "100%", height: 4, borderRadius: 2, background: alpha(C.tx, 0.1), marginTop: 10, overflow: "hidden" }}>
               <div style={{ width: `${progress * 100}%`, height: "100%", background: color, transition: "width 1s linear" }} />

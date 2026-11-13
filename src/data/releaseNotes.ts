@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-emom-minuteur",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance spécifique : le minuteur gère l'EMOM",
+    summary: "Quand un bloc a un départ fixe (« départ toutes les 1:00 »), le minuteur de l'athlète affiche « Minute 7 / 12 » et décompte la minute : ses exercices faits, il récupère jusqu'à la minute suivante, qui part toute seule.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "En haut du minuteur : « EMOM · 12 min » et la minute en cours.",
+          "L'athlète tape « Fait » quand ses répétitions sont faites : le reste de la minute devient sa récup.",
+          "S'il n'a pas fini à temps, la minute suivante démarre quand même, comme en salle.",
+          "Départ toutes les 2:00 ou autre : même principe, affiché « Départ 3 / 10 ».",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-indispo-semaine",
     date: "2026-11-13",
     kind: "feature",

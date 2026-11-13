@@ -332,6 +332,7 @@ export default function SpecificExecutionPage() {
             flat={exec.flatSteps}
             index={exec.currentIndex}
             secondsLeft={exec.secondsLeft}
+            minuteLeft={exec.minuteLeft}
             elapsed={isClassique ? elapsedTotal : exec.elapsedTotal}
             onSkip={exec.skip}
             onFinish={exec.stop}
