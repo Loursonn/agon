@@ -1,9 +1,7 @@
 -- Tests de 20261115110000_purge_comptes.sql : qui la purge viserait, et qui personne d'autre ne
 -- peut interroger. Comptes FICTIFS créés dans la transaction (e-mails @example.invalid), toujours
 -- annulé. Les résultats ne portent que sur ces comptes fictifs : aucune donnée réelle affichée.
--- Avant application :
---   { echo 'BEGIN;'; cat supabase/pending/20261115110000_purge_comptes.sql; sed '/^BEGIN;$/d' supabase/pending/tests/purge_comptes.sql; } > "$TMPDIR/x.sql"
--- Après application : supabase/tests/purge_comptes.sql tel quel.
+-- Lancer : supabase db query --linked -f supabase/tests/purge_comptes.sql (chaque ligne : ok = true).
 BEGIN;
 
 SET LOCAL session_replication_role = replica;  -- comptes bruts : pas de triggers

@@ -55,7 +55,7 @@ Storage, Edge Functions Deno, Vault) ; Vercel ne sert que le code du site. Donn�
 | Base légale (art. 6 et 9) | Consentement explicite séparé, versionné, horodaté, libellé archivé ; accords facultatifs distincts (IA, staff, Garmin, COROS) | Conforme. Le refus de l'accord socle bloque l'app : admis, car le partage avec le coach *est* le service (art. 7.4 non méconnu, lignes directrices EDPB 05/2020 §36-37) |
 | Minimisation (art. 5.1.c) | Saisie à l'initiative de l'athlète ; liste blanche de colonnes vers l'IA ; mais copie intégrale Garmin, y compris des types non affichés | **À améliorer** (A5) |
 | Exactitude (art. 5.1.d) | Rectification dans l'app ; provenance des mesures affichée ; « — » pour une mesure absente | Conforme |
-| Durées (art. 5.1.e) | Durée de vie du compte ; effacement à la suppression ; pas de purge des comptes inactifs ni des comptes pré-créés jamais réclamés | **À améliorer** (A6) |
+| Durées (art. 5.1.e) | Durée de vie du compte ; effacement à la suppression ; purge hebdomadaire des comptes pré-créés jamais réclamés (6 mois) ; comptes inactifs (3 ans) en attente d'un service d'e-mail | **En partie** (A6) |
 | Information (art. 12-14) | Politique détaillée, version 2026-11-13 ; complétée par cette revue | Conforme après corrections |
 | Droits (art. 15-22) | Export JSON complet en libre-service, suppression en libre-service (app et page web), retrait des accords en un clic | Conforme |
 | Sous-traitance (art. 28) | DPA Supabase non signé, statut Vercel et Gemini à vérifier | **Non conforme tant que H1-H3 ne sont pas faits** |
@@ -132,7 +132,7 @@ dans `docs/DECISIONS.md`).
 | A3 | Mot de passe : 8 caractères minimum au lieu de 6. **Client fait le 13/11** (formulaires, `src/api/auth.ts` refuse toute inscription ou changement à moins de 8, Edge Function `claim-athlete`). Reste : réglage « Minimum password length » à 8 dans Supabase Auth (Hugo), MFA proposé aux coachs | dev + Hugo (réglage) | Avant les stores |
 | A4 | Sauvegardes : offre Pro ou dump quotidien chiffré | Hugo | Avant les stores |
 | A5 | Copie Garmin : ne garder que les types utiles, ou purger le brut après 12 mois | dev + Hugo | 2027 T1 |
-| A6 | Purge : comptes pré-créés non réclamés après 6 mois, comptes inactifs après 3 ans (avec préavis par e-mail). Codée le 2026-11-13, inactive jusqu'à l'accord d'Hugo et au choix d'un service d'e-mail (`docs/PURGE_COMPTES.md`) | dev | 2027 T1 |
+| A6 | Purge : comptes pré-créés non réclamés après 6 mois, comptes inactifs après 3 ans (avec préavis par e-mail). Active depuis le 2026-11-13 pour les comptes pré-créés ; comptes inactifs codés, en attente d'un service d'e-mail (`docs/PURGE_COMPTES.md`) | dev | 2027 T1 |
 | A7 | Procédure et registre des violations (`REGISTRE_VIOLATIONS.md`) | fait le 13/11 | — |
 | A8 | **Fait le 13/11** : polices servies par le site (`src/styles/fonts.css`, paquets `@fontsource-variable`, précache PWA), Google Fonts retiré de la politique de confidentialité et du registre | dev | Fait |
 | A9 | Demander l'avis de quelques athlètes et coachs sur cette AIPD | Hugo | Facultatif |

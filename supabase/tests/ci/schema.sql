@@ -329,6 +329,89 @@ $$;
 ALTER FUNCTION "public"."accept_staff_invitation"("p_token" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."account_retention_candidates"("p_now" timestamp with time zone DEFAULT "now"()) RETURNS TABLE("user_id" "uuid", "action" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  WITH activity AS (
+    SELECT
+      u.id,
+      p.role,
+      coalesce(p.is_pending, false) AS is_pending,
+      coalesce(p.is_admin, false)   AS is_admin,
+      greatest(
+        u.created_at,
+        u.last_sign_in_at,
+        p.client_build_at,
+        (SELECT max(greatest(s.created_at, s.updated_at)) FROM auth.sessions s WHERE s.user_id = u.id)
+      ) AS last_activity
+    FROM auth.users u
+    LEFT JOIN public.profiles p ON p.id = u.id
+  ),
+  pre_crees AS (
+    SELECT a.id
+    FROM activity a
+    JOIN public.profiles p ON p.id = a.id
+    LEFT JOIN public.athlete_claims c ON c.athlete_id = a.id
+    WHERE a.is_pending
+      AND NOT a.is_admin
+      AND coalesce(c.created_at, p.created_at, a.last_activity) < p_now - interval '6 months'
+      AND NOT EXISTS (
+        SELECT 1 FROM public.workout_logs w
+         WHERE w.athlete_id = a.id
+           AND greatest(w.created_at, w.updated_at) >= p_now - interval '6 months')
+  ),
+  inactifs AS (
+    SELECT a.id, a.last_activity
+    FROM activity a
+    WHERE NOT a.is_pending
+      AND NOT a.is_admin
+      AND a.last_activity < p_now - interval '3 years'
+      -- Un coach (référent ou co-coach) reste actif tant qu'un de ses athlètes l'est.
+      AND NOT EXISTS (
+        SELECT 1 FROM activity x
+         WHERE x.last_activity >= p_now - interval '3 years'
+           AND (x.id IN (SELECT pr.id FROM public.profiles pr WHERE pr.coach_id = a.id)
+                OR x.id IN (SELECT cc.athlete_id FROM public.athlete_co_coaches cc WHERE cc.co_coach_id = a.id)))
+  )
+  SELECT id, 'supprimer_pre_cree' FROM pre_crees
+  UNION ALL
+  SELECT i.id, 'supprimer_inactif'
+    FROM inactifs i JOIN public.account_retention_notices n ON n.user_id = i.id
+   WHERE n.purge_after <= p_now AND i.last_activity < n.notified_at
+  UNION ALL
+  SELECT i.id, 'prevenir'
+    FROM inactifs i
+   WHERE NOT EXISTS (SELECT 1 FROM public.account_retention_notices n WHERE n.user_id = i.id)
+  UNION ALL
+  SELECT n.user_id, 'annuler_preavis'
+    FROM public.account_retention_notices n
+   WHERE NOT EXISTS (SELECT 1 FROM inactifs i WHERE i.id = n.user_id AND i.last_activity < n.notified_at);
+$$;
+
+
+ALTER FUNCTION "public"."account_retention_candidates"("p_now" timestamp with time zone) OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."account_retention_candidates"("p_now" timestamp with time zone) IS 'Comptes visés par la purge (pré-créés non réclamés 6 mois, inactifs 3 ans). Lecture seule ; service_role uniquement. Voir docs/PURGE_COMPTES.md.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."account_retention_preview"("p_now" timestamp with time zone DEFAULT "now"()) RETURNS TABLE("action" "text", "comptes" bigint)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+  SELECT a.action, count(c.user_id)
+    FROM (VALUES ('supprimer_pre_cree'), ('prevenir'), ('supprimer_inactif'), ('annuler_preavis')) AS a(action)
+    LEFT JOIN public.account_retention_candidates(p_now) c ON c.action = a.action
+   GROUP BY a.action
+   ORDER BY a.action;
+$$;
+
+
+ALTER FUNCTION "public"."account_retention_preview"("p_now" timestamp with time zone) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."activity_detail_upsert"("p_activity" "uuid", "p_detail" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -5930,6 +6013,43 @@ $$;
 ALTER FUNCTION "public"."toggle_coach_certification"("p_target_id" "uuid", "p_certified" boolean) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."trigger_account_retention"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'net', 'vault', 'extensions'
+    AS $$
+DECLARE
+  v_url text;
+  v_key text;
+BEGIN
+  SELECT decrypted_secret INTO v_url FROM vault.decrypted_secrets WHERE name = 'project_url';
+  SELECT decrypted_secret INTO v_key FROM vault.decrypted_secrets WHERE name = 'service_role_key';
+
+  IF v_url IS NULL OR v_key IS NULL THEN
+    RAISE WARNING 'trigger_account_retention : secrets project_url / service_role_key absents du Vault — rien envoyé.';
+    RETURN;
+  END IF;
+
+  PERFORM net.http_post(
+    url     := v_url || '/functions/v1/account-retention',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || v_key
+    ),
+    body    := '{"apply": true}'::jsonb,
+    timeout_milliseconds := 120000
+  );
+EXCEPTION
+  WHEN undefined_function THEN
+    RAISE WARNING 'trigger_account_retention : net.http_post introuvable (pg_net non installé).';
+  WHEN undefined_table THEN
+    RAISE WARNING 'trigger_account_retention : Vault indisponible.';
+END;
+$$;
+
+
+ALTER FUNCTION "public"."trigger_account_retention"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."trigger_coros_sync"() RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'net', 'vault', 'extensions'
@@ -6506,7 +6626,7 @@ CREATE TABLE IF NOT EXISTS "public"."account_deletions" (
     "consent_version" "text",
     "had_core_consent" boolean,
     "initiated_by" "text" DEFAULT 'user'::"text" NOT NULL,
-    CONSTRAINT "account_deletions_initiated_by_check" CHECK (("initiated_by" = ANY (ARRAY['user'::"text", 'admin'::"text"])))
+    CONSTRAINT "account_deletions_initiated_by_check" CHECK (("initiated_by" = ANY (ARRAY['user'::"text", 'admin'::"text", 'retention'::"text"])))
 );
 
 
@@ -6514,6 +6634,20 @@ ALTER TABLE "public"."account_deletions" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."account_deletions" IS 'Journal anonyme des suppressions. Aucun identifiant de personne : ni email, ni uuid, ni nom. Ne jamais en ajouter.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."account_retention_notices" (
+    "user_id" "uuid" NOT NULL,
+    "notified_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "purge_after" timestamp with time zone NOT NULL
+);
+
+
+ALTER TABLE "public"."account_retention_notices" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."account_retention_notices" IS 'Préavis de suppression pour inactivité (3 ans). Lue et écrite par la seule Edge Function account-retention (service_role).';
 
 
 
@@ -7968,6 +8102,7 @@ ALTER TABLE "public"."medical_attachments" OWNER TO "postgres";
 COMMENT ON TABLE "public"."medical_attachments" IS 'Retirée (hors HDS, 2026-11-13) : plus aucune écriture, table supprimée au temps 2';
 
 
+
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8008,6 +8143,14 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
 ALTER TABLE "public"."medical_entries" OWNER TO "postgres";
 
 
+COMMENT ON COLUMN "public"."medical_entries"."diagnosis" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
+
+
+
+COMMENT ON COLUMN "public"."medical_entries"."treatment" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
+
+
+
 COMMENT ON COLUMN "public"."medical_entries"."injury_type" IS 'traumatique | chronique_surmenage | recidive';
 
 
@@ -8029,14 +8172,6 @@ COMMENT ON COLUMN "public"."medical_entries"."training_impact" IS 'aucun | adapt
 
 
 COMMENT ON COLUMN "public"."medical_entries"."days_off" IS 'Jours d''arrêt déjà posés';
-
-
-
-COMMENT ON COLUMN "public"."medical_entries"."diagnosis" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
-
-
-
-COMMENT ON COLUMN "public"."medical_entries"."treatment" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
 
 
 
@@ -8070,6 +8205,7 @@ ALTER TABLE "public"."medical_history" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."medical_history" IS 'Retirée (hors HDS, 2026-11-13) : plus aucune écriture, table supprimée au temps 2';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."mesocycles" (
@@ -8734,6 +8870,11 @@ ALTER TABLE ONLY "public"."coach_api_access_log" ALTER COLUMN "id" SET DEFAULT "
 
 ALTER TABLE ONLY "public"."account_deletions"
     ADD CONSTRAINT "account_deletions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."account_retention_notices"
+    ADD CONSTRAINT "account_retention_notices_pkey" PRIMARY KEY ("user_id");
 
 
 
@@ -10172,6 +10313,10 @@ CREATE OR REPLACE TRIGGER "hr_zone_models_refresh" AFTER INSERT OR UPDATE OF "st
 
 
 
+CREATE OR REPLACE TRIGGER "medical_entries_sans_soins" BEFORE INSERT OR UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_sans_soins"();
+
+
+
 CREATE OR REPLACE TRIGGER "performance_logs_fczone_refresh" AFTER INSERT ON "public"."performance_logs" FOR EACH ROW EXECUTE FUNCTION "public"."tg_fczone_refresh"();
 
 
@@ -10245,10 +10390,6 @@ CREATE OR REPLACE TRIGGER "set_docs_updated_at" BEFORE UPDATE ON "public"."docs"
 
 
 CREATE OR REPLACE TRIGGER "set_exercises_updated_at" BEFORE UPDATE ON "public"."exercises" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
-
-
-
-CREATE OR REPLACE TRIGGER "medical_entries_sans_soins" BEFORE INSERT OR UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_sans_soins"();
 
 
 
@@ -10377,6 +10518,11 @@ CREATE OR REPLACE TRIGGER "user_consents_halt_sync" AFTER INSERT ON "public"."us
 
 
 CREATE OR REPLACE TRIGGER "workout_logs_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "scheduled_date", "status", "duration_s" ON "public"."workout_logs" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink"();
+
+
+
+ALTER TABLE ONLY "public"."account_retention_notices"
+    ADD CONSTRAINT "account_retention_notices_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -11273,6 +11419,9 @@ CREATE POLICY "acc_select" ON "public"."athlete_co_coaches" FOR SELECT USING (((
 
 
 ALTER TABLE "public"."account_deletions" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."account_retention_notices" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."activity_laps" ENABLE ROW LEVEL SECURITY;
@@ -14678,6 +14827,16 @@ GRANT ALL ON FUNCTION "public"."_workout_log_for_write"("p_log" "uuid", "p_coach
 REVOKE ALL ON FUNCTION "public"."accept_staff_invitation"("p_token" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."accept_staff_invitation"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."accept_staff_invitation"("p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."account_retention_candidates"("p_now" timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_retention_candidates"("p_now" timestamp with time zone) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."account_retention_preview"("p_now" timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."account_retention_preview"("p_now" timestamp with time zone) TO "service_role";
 
 
 
@@ -21036,6 +21195,9 @@ GRANT ALL ON FUNCTION "public"."set_hasnt"("text", "text", "text") TO "service_r
 REVOKE ALL ON FUNCTION "public"."set_my_birth_date"("p_birth" "date") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."set_my_birth_date"("p_birth" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_my_birth_date"("p_birth" "date") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."set_ne"("text", "anyarray") TO "postgres";
 GRANT ALL ON FUNCTION "public"."set_ne"("text", "anyarray") TO "anon";
 GRANT ALL ON FUNCTION "public"."set_ne"("text", "anyarray") TO "authenticated";
@@ -21588,6 +21750,11 @@ GRANT ALL ON FUNCTION "public"."toggle_coach_certification"("p_target_id" "uuid"
 
 
 
+REVOKE ALL ON FUNCTION "public"."trigger_account_retention"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."trigger_account_retention"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."trigger_coros_sync"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."trigger_coros_sync"() TO "service_role";
 
@@ -21947,6 +22114,10 @@ GRANT ALL ON FUNCTION "public"."workout_log_has_entries"("mods" "jsonb") TO "ser
 GRANT ALL ON TABLE "public"."account_deletions" TO "anon";
 GRANT ALL ON TABLE "public"."account_deletions" TO "authenticated";
 GRANT ALL ON TABLE "public"."account_deletions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."account_retention_notices" TO "service_role";
 
 
 

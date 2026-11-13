@@ -2385,6 +2385,11 @@ et son README.
   l'effacement, désormais partagée (`_shared/accountDeletion.ts`, aussi utilisée par `delete-account`). Double
   verrou : tâche cron créée inactive + secret `RETENTION_ENABLED`. Aucun service d'e-mail n'existe : sans lui,
   aucun compte inactif n'est supprimé. Aujourd'hui en prod : 0 compte visé. Détail : `docs/PURGE_COMPTES.md`.
+- **Accord d'Hugo (13/11, soir)** : purge appliquée et activée pour les comptes pré-créés (migration
+  `20261115110000`, test 23/23 en prod, `account-retention` et `delete-account` déployées,
+  `RETENTION_ENABLED=true`, cron actif le lundi 4 h 30 UTC ; premier passage réel : 0 compte). Service d'e-mail
+  pour le préavis : plus tard (aucun compte ne peut avoir 3 ans d'inactivité avant 2029). Politique : les deux
+  durées gardées. HDS temps 2 : appliqué dès que la PR #150 est en production.
 
 ## 2026-11-14 — Date de naissance des anciens comptes (revue juridique C2)
 

@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-comptes-pre-crees-6-mois",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Athlètes créés par toi et jamais activés : supprimés après 6 mois sans séance",
+    summary: "Pour ne pas garder des données sans raison (RGPD), un athlète que tu as créé toi-même et qui n'a jamais activé son compte est supprimé au bout de 6 mois, seulement si aucune séance ne lui a été programmée ou modifiée pendant ces 6 mois.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Tu programmes encore pour un athlète sans application ? Rien ne change : chaque séance créée ou modifiée repousse l'échéance de 6 mois.",
+          "Un athlète que tu as créé puis oublié disparaît de ta liste après 6 mois sans séance, avec ses données.",
+          "Les comptes que tes athlètes ont activés ne sont pas concernés par cette règle.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-date-de-naissance-anciens-comptes",
     date: "2026-11-14",
     kind: "feature",

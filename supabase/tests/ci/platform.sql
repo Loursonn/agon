@@ -63,6 +63,7 @@ CREATE POLICY test_files_select ON storage.objects AS PERMISSIVE FOR SELECT TO a
 CREATE POLICY test_files_upload ON storage.objects AS PERMISSIVE FOR INSERT TO public WITH CHECK (((bucket_id = 'test-files'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
 
 -- Tâches planifiées (cron.job), mêmes noms et horaires qu'en prod.
+SELECT cron.schedule('account-retention', '30 4 * * 1', 'SELECT public.trigger_account_retention();');
 SELECT cron.schedule('coros-sync', '40 3 * * *', 'SELECT public.trigger_coros_sync();');
 SELECT cron.schedule('garmin-maintenance', '*/15 * * * *', 'SELECT public.trigger_garmin_maintenance();');
 SELECT cron.schedule('garmin-workouts', '*/10 * * * *', 'SELECT public.trigger_garmin_workouts()');

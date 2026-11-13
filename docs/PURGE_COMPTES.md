@@ -1,7 +1,12 @@
 # Purge des comptes (limitation de la conservation)
 
-Revue juridique `docs/juridique/REVUE_2026-11.md` I6, AIPD A6. Préparé le 2026-11-13, **inactif** tant
-qu'Hugo ne l'a pas activé.
+Revue juridique `docs/juridique/REVUE_2026-11.md` I6, AIPD A6. Préparé le 2026-11-13.
+
+**État au 2026-11-13 (accord d'Hugo)** : migration appliquée, `account-retention` et `delete-account`
+déployées, `RETENTION_ENABLED=true`, tâche cron **active** (lundi 4 h 30 UTC). Premier passage réel :
+0 compte visé. Seule la règle 1 agit : aucun service d'e-mail n'est choisi (décision d'Hugo : plus tard,
+aucun compte ne peut avoir 3 ans d'inactivité avant 2029), donc aucun compte inactif n'est prévenu ni
+supprimé.
 
 ## Règles
 
@@ -21,41 +26,35 @@ révocation Garmin / COROS, compte auth puis cascade.
 
 | Pièce | Rôle |
 |---|---|
-| `supabase/pending/20261115110000_purge_comptes.sql` | table `account_retention_notices`, fonctions `account_retention_candidates()` (qui) et `account_retention_preview()` (combien, sans identifiant), `trigger_account_retention()`, tâche cron `account-retention` (lundi 4 h 30 UTC) **créée inactive** |
+| `supabase/migrations/20261115110000_purge_comptes.sql` | table `account_retention_notices`, fonctions `account_retention_candidates()` (qui) et `account_retention_preview()` (combien, sans identifiant), `trigger_account_retention()`, tâche cron `account-retention` (lundi 4 h 30 UTC) **créée inactive** |
 | `supabase/functions/account-retention` | déroulé d'un passage ; ne fait que compter sans le secret `RETENTION_ENABLED=true` |
 | `supabase/functions/_shared/accountRetention.ts` | logique testée : annulations, suppressions (20 au plus par passage), préavis (e-mail **avant** enregistrement) ; rapport en nombres seulement |
-| `supabase/pending/tests/purge_comptes.sql` | 23 cas sur comptes fictifs, droits, journal, cron inactif |
+| `supabase/tests/purge_comptes.sql` | 23 cas sur comptes fictifs, droits, journal, cron inactif |
 | `src/lib/legal.ts` (`RETENTION`) | politique de confidentialité : les deux durées |
 
 ## Ce que la purge viserait aujourd'hui
 
-Essai à blanc en prod le 2026-11-13 (migration + aperçu dans `BEGIN … ROLLBACK`) : **0** compte
-pré-créé à supprimer, **0** compte à prévenir, **0** à supprimer, **0** préavis à annuler.
+Essai à blanc puis premier passage réel en prod le 2026-11-13 : **0** compte pré-créé à supprimer,
+**0** compte à prévenir, **0** à supprimer, **0** préavis à annuler.
 
-Pour recompter, une fois la migration appliquée (nombres seulement) :
+Pour recompter (nombres seulement) :
 
 ```sql
 SELECT * FROM public.account_retention_preview();
 ```
 
-## Activation (accord d'Hugo)
+## Reste à faire : préavis par e-mail (règle 2)
 
-1. Appliquer la migration : la déplacer de `supabase/pending/` vers `supabase/migrations/` et son
-   test vers `supabase/tests/`, puis `supabase db query --linked -f …`, vérifier,
-   `supabase migration repair --status applied 20261115110000 --linked`, rafraîchir
-   `supabase/tests/ci/schema.sql` et ajouter la ligne cron à `supabase/tests/ci/platform.sql`
-   (voir `supabase/pending/README.md`).
-2. Déployer `account-retention` **et** `delete-account` (elle utilise maintenant le module partagé).
-3. Préavis par e-mail : choisir un service d'envoi (Resend prévu dans le code, offre gratuite
-   suffisante ; c'est un **nouveau sous-traitant** à ajouter à `SUBPROCESSORS`, au registre et à
-   la politique), poser `RESEND_API_KEY` et `RETENTION_MAIL_FROM` (adresse d'un domaine vérifié).
-   Sans eux, seule la règle 1 s'applique : aucun compte inactif n'est supprimé.
-4. `supabase secrets set RETENTION_ENABLED=true`.
-5. Activer la tâche : `SELECT cron.alter_job(jobid, active := true) FROM cron.job WHERE jobname = 'account-retention';`
-6. Registre (`docs/juridique/REGISTRE.md` T1, durée) et AIPD (A6 → fait).
+Choisir un service d'envoi (Resend prévu dans le code ; Brevo, hébergé dans l'UE, en remplaçant
+`resendSender`). C'est un **nouveau sous-traitant** : l'ajouter à `SUBPROCESSORS`, au registre et à la
+politique. Puis poser `RESEND_API_KEY` et `RETENTION_MAIL_FROM` (adresse d'un domaine vérifié).
 
-Arrêt d'urgence : `supabase secrets set RETENTION_ENABLED=false` (effet immédiat), puis désactiver
-la tâche cron.
+Arrêt d'urgence : `supabase secrets set RETENTION_ENABLED=false` (effet immédiat : le passage ne fait
+plus que compter), puis
+`SELECT cron.alter_job(jobid, active := false) FROM cron.job WHERE jobname = 'account-retention';`.
+
+Dernier rapport (nombres seulement) : `SELECT status_code, content FROM net._http_response ORDER BY
+created DESC LIMIT 5;` peu après lundi 4 h 30 UTC.
 
 ## Texte du préavis
 

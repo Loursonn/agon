@@ -66,6 +66,24 @@ export type Database = {
         }
         Relationships: []
       }
+      account_retention_notices: {
+        Row: {
+          notified_at: string
+          purge_after: string
+          user_id: string
+        }
+        Insert: {
+          notified_at?: string
+          purge_after: string
+          user_id: string
+        }
+        Update: {
+          notified_at?: string
+          purge_after?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       activity_laps: {
         Row: {
           activity_id: string
@@ -5796,6 +5814,20 @@ export type Database = {
         }
       }
       accept_staff_invitation: { Args: { p_token: string }; Returns: string }
+      account_retention_candidates: {
+        Args: { p_now?: string }
+        Returns: {
+          action: string
+          user_id: string
+        }[]
+      }
+      account_retention_preview: {
+        Args: { p_now?: string }
+        Returns: {
+          action: string
+          comptes: number
+        }[]
+      }
       activity_detail_upsert: {
         Args: { p_activity: string; p_detail: Json }
         Returns: Json
@@ -6564,7 +6596,6 @@ export type Database = {
         Returns: undefined
       }
       set_coach_athlete: { Args: { p_enabled: boolean }; Returns: string }
-      set_my_birth_date: { Args: { p_birth: string }; Returns: string }
       set_coach_override: {
         Args: { p_log: string; p_override: Json }
         Returns: {
@@ -6652,6 +6683,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_my_birth_date: { Args: { p_birth: string }; Returns: string }
       set_own_coach: { Args: { p_coach: string }; Returns: string }
       set_performance_reference: {
         Args: {
@@ -6793,6 +6825,7 @@ export type Database = {
         Args: { p_certified: boolean; p_target_id: string }
         Returns: undefined
       }
+      trigger_account_retention: { Args: never; Returns: undefined }
       trigger_coros_sync: { Args: never; Returns: undefined }
       trigger_garmin_maintenance: { Args: never; Returns: undefined }
       trigger_garmin_workouts: { Args: never; Returns: undefined }
