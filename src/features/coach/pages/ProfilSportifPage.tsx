@@ -26,7 +26,8 @@ import { activeModelAt } from "@shared/domain/hrZones";
 import { localIsoDay } from "@shared/domain/dates";
 import { useZoneModels } from "@/features/shared/hooks/useZoneModels";
 import { KICK, ORDI_CARD, PageHead, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
-import { RefGroup, RefRow, RefTable, ThresholdTile, refSource } from "@/features/coach/components/profil/ProfilOrdi";
+import { RefGroup, RefRow, RefTable, ThresholdTile } from "@/features/coach/components/profil/ProfilOrdi";
+import { refSource } from "@/features/coach/components/profil/refSource";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

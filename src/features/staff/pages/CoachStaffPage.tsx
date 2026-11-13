@@ -8,7 +8,8 @@ import { useParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { CoCoachPanel } from "@/features/shared/components/CoCoachPanel";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
-import { PageHead, PlusIcon, btnStyle } from "@/features/shared/components/ordi/OrdiUi";
+import { PageHead, PlusIcon } from "@/features/shared/components/ordi/OrdiUi";
+import { btnStyle } from "@/features/shared/components/ordi/ordiStyles";
 import { AthleteStaffPanel } from "../components/AthleteStaffPanel";
 import { useAthleteStaff, useStaffInvitations } from "../hooks/useAthleteStaff";
 

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Avatar, CheckBox, ORDI_CARD, PermissionsLine, Pill, btnStyle, frDate,
-} from "@/features/shared/components/ordi/OrdiUi";
+import { Avatar, CheckBox, ORDI_CARD, PermissionsLine, Pill } from "@/features/shared/components/ordi/OrdiUi";
+import { btnStyle, frDate } from "@/features/shared/components/ordi/ordiStyles";
 import { permissionLists, professionLabel, type StaffPermissions } from "../lib/staffPermissions";
 import {
   personName,

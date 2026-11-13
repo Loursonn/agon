@@ -8,7 +8,8 @@ import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { professionLabel } from "./lib/staffPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Avatar, DISPLAY, Pill, btnStyle } from "@/features/shared/components/ordi/OrdiUi";
+import { Avatar, DISPLAY, Pill } from "@/features/shared/components/ordi/OrdiUi";
+import { btnStyle } from "@/features/shared/components/ordi/ordiStyles";
 
 export default function StaffApp() {
   const { profile, logout } = useAuth();

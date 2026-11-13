@@ -16,7 +16,8 @@ import { localIsoDay } from "@shared/domain/dates";
 import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { C } from "@/lib/theme";
 import { PasswordInput } from "@/components/ui/PasswordInput";
-import { DISPLAY, KICK, MONO, btnStyle, frDate } from "@/features/shared/components/ordi/OrdiUi";
+import { DISPLAY, KICK, MONO } from "@/features/shared/components/ordi/OrdiUi";
+import { btnStyle, frDate } from "@/features/shared/components/ordi/ordiStyles";
 import {
   permissionLists,
   PROFESSION_LABEL,

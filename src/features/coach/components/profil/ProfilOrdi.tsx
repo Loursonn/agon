@@ -6,17 +6,8 @@
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
-import { MONO, ORDI_CARD, frDate } from "@/features/shared/components/ordi/OrdiUi";
-import type { ActiveReference } from "@/api/references";
-
-/** « Test », « Saisie coach », « Saisie athlète ». */
-export function refSource(ref: ActiveReference | undefined, athleteId: string): string | null {
-  if (!ref) return null;
-  if (ref.testSessionId) return "Test";
-  if (ref.createdBy && ref.createdBy === athleteId) return "Saisie athlète";
-  if (ref.createdBy) return "Saisie coach";
-  return null;
-}
+import { MONO, ORDI_CARD } from "@/features/shared/components/ordi/OrdiUi";
+import { frDate } from "@/features/shared/components/ordi/ordiStyles";
 
 const fmtNum = (v: number) => (Number.isInteger(v) ? String(v) : v.toLocaleString("fr-FR", { maximumFractionDigits: 2 }));
 

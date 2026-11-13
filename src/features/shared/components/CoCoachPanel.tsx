@@ -11,7 +11,8 @@ import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddCoCoach, useAthleteCoaches, useRemoveCoCoach } from "../hooks/useCoCoach";
-import { Avatar, ORDI_CARD, Pill, SectionHead, btnStyle, frDate } from "./ordi/OrdiUi";
+import { Avatar, ORDI_CARD, Pill, SectionHead } from "./ordi/OrdiUi";
+import { btnStyle, frDate } from "./ordi/ordiStyles";
 
 function CoachCard({ name, isMe, tag, line, color, badge, action }: {
   name: string; isMe: boolean; tag?: string; line: string; color: string; badge?: React.ReactNode; action?: React.ReactNode;

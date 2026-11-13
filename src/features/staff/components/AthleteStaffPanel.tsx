@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
-import {
-  Avatar, CheckIcon, LinkIcon, ORDI_CARD, PlusIcon, SectionHead, btnStyle, frDate,
-} from "@/features/shared/components/ordi/OrdiUi";
+import { Avatar, CheckIcon, LinkIcon, ORDI_CARD, PlusIcon, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
+import { btnStyle, frDate } from "@/features/shared/components/ordi/ordiStyles";
 import { professionLabel, staffInviteUrl } from "../lib/staffPermissions";
 import {
   useAthleteStaff,
