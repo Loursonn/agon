@@ -2928,41 +2928,6 @@ export type Database = {
           },
         ]
       }
-      invitations: {
-        Row: {
-          coach_id: string
-          created_at: string | null
-          email: string | null
-          id: string
-          token: string
-          used_at: string | null
-        }
-        Insert: {
-          coach_id: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          token?: string
-          used_at?: string | null
-        }
-        Update: {
-          coach_id?: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          token?: string
-          used_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invitations_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       macrocycles: {
         Row: {
           athlete_id: string
@@ -4461,74 +4426,6 @@ export type Database = {
           },
         ]
       }
-      retours: {
-        Row: {
-          athlete_id: string
-          content: string
-          created_at: string
-          id: string
-        }
-        Insert: {
-          athlete_id: string
-          content: string
-          created_at?: string
-          id?: string
-        }
-        Update: {
-          athlete_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "retours_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      retours_votes: {
-        Row: {
-          created_at: string
-          id: string
-          retour_id: string
-          user_id: string
-          vote: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          retour_id: string
-          user_id: string
-          vote: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          retour_id?: string
-          user_id?: string
-          vote?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "retours_votes_retour_id_fkey"
-            columns: ["retour_id"]
-            isOneToOne: false
-            referencedRelation: "retours"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "retours_votes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       roadmap_items: {
         Row: {
           category: string
@@ -5292,6 +5189,53 @@ export type Database = {
           {
             foreignKeyName: "weekly_retours_coach_id_fkey"
             columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_reviews: {
+        Row: {
+          answers: Json
+          athlete_id: string
+          auto: Json | null
+          created_at: string
+          id: string
+          light: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          answers?: Json
+          athlete_id: string
+          auto?: Json | null
+          created_at?: string
+          id?: string
+          light?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          answers?: Json
+          athlete_id?: string
+          auto?: Json | null
+          created_at?: string
+          id?: string
+          light?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reviews_athlete_id_fkey"
+            columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -6185,8 +6129,6 @@ export type Database = {
         }[]
       }
       in_todo: { Args: never; Returns: boolean }
-      invitation_coach_name: { Args: { p_token: string }; Returns: string }
-      invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
       is_athlete_coach: {
         Args: { athlete_uuid: string; p_coach: string }
         Returns: boolean
@@ -6455,7 +6397,6 @@ export type Database = {
         Args: { p_reaction: string; p_retour_id: string }
         Returns: undefined
       }
-      redeem_invitation: { Args: { p_token: string }; Returns: string }
       refresh_activity_zone_summary: {
         Args: { p_activity: string }
         Returns: undefined
@@ -6465,6 +6406,7 @@ export type Database = {
         Returns: number
       }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
+      remove_provider_activity: { Args: { p_activity: string }; Returns: Json }
       reopen_energy_assignment: {
         Args: { p_assignment: string }
         Returns: {
@@ -6571,6 +6513,33 @@ export type Database = {
         }
         Returns: string
       }
+      save_weekly_review: {
+        Args: {
+          p_answers: Json
+          p_auto?: Json
+          p_light?: string
+          p_submit?: boolean
+          p_week: string
+        }
+        Returns: {
+          answers: Json
+          athlete_id: string
+          auto: Json | null
+          created_at: string
+          id: string
+          light: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          week_start: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "weekly_reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       schedule_doc: {
         Args: {
           p_athlete: string
@@ -6592,6 +6561,7 @@ export type Database = {
         Args: { athlete_id: string; hidden: boolean }
         Returns: undefined
       }
+      set_coach_athlete: { Args: { p_enabled: boolean }; Returns: string }
       set_coach_override: {
         Args: { p_log: string; p_override: Json }
         Returns: {
@@ -6824,6 +6794,10 @@ export type Database = {
       trigger_garmin_maintenance: { Args: never; Returns: undefined }
       trigger_garmin_workouts: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
+      weekly_review_open: {
+        Args: { p_today: string; p_week: string }
+        Returns: boolean
+      }
       weight_record_milestone: {
         Args: { p_athlete: string; p_day: string; p_kg: number }
         Returns: Json

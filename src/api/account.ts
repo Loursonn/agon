@@ -87,6 +87,16 @@ export async function coachPreviewByCode(code: string): Promise<string | null> {
   return (name as string | null) ?? null;
 }
 
+/**
+ * Interrupteur « Mode coach-athlète » (Paramètres coach). Activer : le coach
+ * s'entraîne aussi (son propre coach s'il n'en a pas). Désactiver : coach seul,
+ * il quitte la liste où il était suivi. Renvoie le nouveau rôle.
+ */
+export async function setCoachAthlete(enabled: boolean): Promise<"coach" | "coach_athlete"> {
+  const role = must(await db().rpc("set_coach_athlete", { p_enabled: enabled }), "Changement de mode impossible");
+  return role === "coach_athlete" ? "coach_athlete" : "coach";
+}
+
 export async function pickFreeCoachCode(random: () => number = Math.random): Promise<string> {
   let code = generateCoachCode(random);
   for (let attempts = 0; attempts < 5; attempts++) {

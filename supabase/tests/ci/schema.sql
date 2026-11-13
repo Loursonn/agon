@@ -1780,7 +1780,12 @@ BEGIN
   END IF;
 
   -- UPDATE
-  IF NEW.role IS DISTINCT FROM OLD.role THEN
+  -- Seule exception : coach <-> coach_athlete via set_coach_athlete() (agon.role_switch).
+  IF NEW.role IS DISTINCT FROM OLD.role
+     AND NOT (coalesce(current_setting('agon.role_switch', true), '') = 'on'
+              AND v_uid = OLD.id
+              AND OLD.role IN ('coach', 'coach_athlete')
+              AND NEW.role IN ('coach', 'coach_athlete')) THEN
     RAISE EXCEPTION 'Le rôle ne peut pas être modifié' USING ERRCODE = '42501';
   END IF;
 
@@ -2390,30 +2395,6 @@ $$;
 
 
 ALTER FUNCTION "public"."hyrox_test_analyses_freeze"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."invitation_coach_name"("p_token" "text") RETURNS "text"
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-  SELECT coalesce(nullif(trim(p.full_name), ''), 'Ton coach')
-    FROM public.invitations i
-    JOIN public.profiles p ON p.id = i.coach_id
-   WHERE i.token = p_token AND i.used_at IS NULL
-   LIMIT 1;
-$$;
-
-
-ALTER FUNCTION "public"."invitation_coach_name"("p_token" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."invitation_is_valid"("p_token" "text") RETURNS boolean
-    LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$ SELECT false $$;
-
-
-ALTER FUNCTION "public"."invitation_is_valid"("p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_athlete_coach"("athlete_uuid" "uuid", "p_coach" "uuid") RETURNS boolean
@@ -3901,19 +3882,6 @@ $$;
 ALTER FUNCTION "public"."react_weekly_retour"("p_retour_id" "uuid", "p_reaction" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."redeem_invitation"("p_token" "text") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-BEGIN
-  RAISE EXCEPTION 'Ce lien d''invitation n''est plus valable : demande le code coach.' USING ERRCODE = '42501';
-END;
-$$;
-
-
-ALTER FUNCTION "public"."redeem_invitation"("p_token" "text") OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."refresh_activity_zone_summary"("p_activity" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -3993,6 +3961,53 @@ $$;
 
 
 ALTER FUNCTION "public"."remove_co_coach"("p_athlete" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."remove_provider_activity"("p_activity" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_row public.provider_activities%ROWTYPE;
+  v_links int;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Non authentifié' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_row FROM public.provider_activities WHERE id = p_activity FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Activité introuvable' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_row.athlete_id <> v_uid AND NOT (
+    public.is_coach_of(v_row.athlete_id)
+    AND EXISTS (SELECT 1 FROM public.data_source_policies p WHERE p.source = v_row.source AND p.coach_visible)
+    AND public.source_consent_granted(v_row.athlete_id, v_row.source)
+  ) THEN
+    -- Même message qu'une ligne absente : on ne révèle pas qu'elle existe.
+    RAISE EXCEPTION 'Activité introuvable' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_row.source = 'manual' OR 'manual' = ANY (coalesce(v_row.sources, '{}'::text[])) THEN
+    RAISE EXCEPTION 'Une séance saisie dans Agon ne se retire pas ici' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT count(*) INTO v_links FROM public.activity_plan_links WHERE activity_id = p_activity;
+
+  DELETE FROM public.provider_activities WHERE id = p_activity;
+
+  RETURN jsonb_build_object('removed', true, 'source', v_row.source, 'unlinked', v_links);
+END;
+$$;
+
+
+ALTER FUNCTION "public"."remove_provider_activity"("p_activity" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."remove_provider_activity"("p_activity" "uuid") IS 'P38 : retire une activité de montre ou de fichier (athlète ou is_coach_of). Détails en cascade, jamais une séance Agon (source manual).';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."reopen_energy_assignment"("p_assignment" "uuid") RETURNS "public"."energy_session_assignments"
@@ -4436,6 +4451,116 @@ $$;
 ALTER FUNCTION "public"."save_hr_zone_model"("p_athlete" "uuid", "p_kind" "text", "p_bounds" integer[], "p_valid_from" "date") OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."weekly_reviews" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "athlete_id" "uuid" NOT NULL,
+    "week_start" "date" NOT NULL,
+    "status" "text" DEFAULT 'draft'::"text" NOT NULL,
+    "answers" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "auto" "jsonb",
+    "light" "text",
+    "submitted_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "weekly_reviews_answers_check" CHECK ((("jsonb_typeof"("answers") = 'object'::"text") AND ("pg_column_size"("answers") < 32768))),
+    CONSTRAINT "weekly_reviews_auto_check" CHECK ((("auto" IS NULL) OR (("jsonb_typeof"("auto") = 'object'::"text") AND ("pg_column_size"("auto") < 32768)))),
+    CONSTRAINT "weekly_reviews_check" CHECK ((("status" = 'submitted'::"text") = ("submitted_at" IS NOT NULL))),
+    CONSTRAINT "weekly_reviews_light_check" CHECK (("light" = ANY (ARRAY['green'::"text", 'orange'::"text", 'red'::"text"]))),
+    CONSTRAINT "weekly_reviews_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'submitted'::"text"]))),
+    CONSTRAINT "weekly_reviews_week_start_check" CHECK ((EXTRACT(isodow FROM "week_start") = (1)::numeric))
+);
+
+
+ALTER TABLE "public"."weekly_reviews" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."weekly_reviews" IS 'Weekly review de l''athlète (donnée de santé). Écriture par save_weekly_review seulement.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."save_weekly_review"("p_week" "date", "p_answers" "jsonb", "p_submit" boolean DEFAULT false, "p_auto" "jsonb" DEFAULT NULL::"jsonb", "p_light" "text" DEFAULT NULL::"text") RETURNS "public"."weekly_reviews"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me    uuid := auth.uid();
+  v_today date := (now() AT TIME ZONE 'Europe/Paris')::date;
+  v_key   text;
+  v_val   jsonb;
+  v_row   public.weekly_reviews;
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'Non connecté' USING ERRCODE = '42501';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = v_me AND role IN ('athlete', 'coach_athlete')) THEN
+    RAISE EXCEPTION 'Seul l''athlète remplit sa weekly review' USING ERRCODE = '42501';
+  END IF;
+
+  -- Contenu (avant la fenêtre : testable un autre jour que le dimanche).
+  IF p_week IS NULL OR extract(isodow FROM p_week) <> 1 THEN
+    RAISE EXCEPTION 'La semaine doit commencer un lundi' USING ERRCODE = '22023';
+  END IF;
+  IF p_answers IS NULL OR jsonb_typeof(p_answers) <> 'object' OR pg_column_size(p_answers) >= 32768 THEN
+    RAISE EXCEPTION 'Review invalide' USING ERRCODE = '22023';
+  END IF;
+  IF p_answers ? 'feel' THEN
+    IF jsonb_typeof(p_answers->'feel') <> 'object' THEN
+      RAISE EXCEPTION 'Ressenti invalide' USING ERRCODE = '22023';
+    END IF;
+    FOR v_key, v_val IN SELECT * FROM jsonb_each(p_answers->'feel') LOOP
+      IF v_key NOT IN ('note', 'energie', 'motivation', 'vie', 'nutrition') THEN
+        RAISE EXCEPTION 'Ressenti inconnu : %', v_key USING ERRCODE = '22023';
+      END IF;
+      IF jsonb_typeof(v_val) <> 'null' AND NOT (jsonb_typeof(v_val) = 'number'
+           AND (v_val #>> '{}')::numeric IN (1, 2, 3, 4, 5)) THEN
+        RAISE EXCEPTION 'Ressenti % : note de 1 à 5', v_key USING ERRCODE = '22023';
+      END IF;
+    END LOOP;
+  END IF;
+  IF jsonb_typeof(p_answers #> '{pain,level}') = 'number'
+     AND NOT ((p_answers #>> '{pain,level}')::numeric BETWEEN 0 AND 10) THEN
+    RAISE EXCEPTION 'Douleur : niveau de 0 à 10' USING ERRCODE = '22023';
+  END IF;
+  IF jsonb_typeof(p_answers->'next') = 'array' AND jsonb_array_length(p_answers->'next') > 3 THEN
+    RAISE EXCEPTION '3 engagements au plus' USING ERRCODE = '22023';
+  END IF;
+  IF p_submit AND (p_auto IS NULL OR jsonb_typeof(p_auto) <> 'object') THEN
+    RAISE EXCEPTION 'Bilan de la semaine manquant' USING ERRCODE = '22023';
+  END IF;
+  IF p_light IS NOT NULL AND p_light NOT IN ('green', 'orange', 'red') THEN
+    RAISE EXCEPTION 'Feu invalide' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.weekly_review_open(p_week, v_today) THEN
+    RAISE EXCEPTION 'La weekly review se remplit du dimanche au lundi soir' USING ERRCODE = '22023';
+  END IF;
+
+  INSERT INTO public.weekly_reviews AS w (athlete_id, week_start, answers)
+  VALUES (v_me, p_week, p_answers)
+  ON CONFLICT (athlete_id, week_start) DO UPDATE
+    SET answers = EXCLUDED.answers, updated_at = now()
+    WHERE w.status = 'draft'
+  RETURNING * INTO v_row;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Review déjà envoyée' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_submit THEN
+    UPDATE public.weekly_reviews
+       SET status = 'submitted', submitted_at = now(), auto = p_auto, light = p_light, updated_at = now()
+     WHERE id = v_row.id
+    RETURNING * INTO v_row;
+  END IF;
+
+  RETURN v_row;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."save_weekly_review"("p_week" "date", "p_answers" "jsonb", "p_submit" boolean, "p_auto" "jsonb", "p_light" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."schedule_doc"("p_athlete" "uuid", "p_doc" "uuid", "p_dates" "date"[], "p_note" "text" DEFAULT NULL::"text") RETURNS integer
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public'
@@ -4519,6 +4644,36 @@ $$;
 
 
 ALTER FUNCTION "public"."set_athlete_hidden"("athlete_id" "uuid", "hidden" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."set_coach_athlete"("p_enabled" boolean) RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_uid  uuid := auth.uid();
+  v_role text;
+BEGIN
+  IF v_uid IS NULL THEN RAISE EXCEPTION 'non connecté' USING ERRCODE = '42501'; END IF;
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_uid;
+  IF v_role IS NULL OR v_role NOT IN ('coach', 'coach_athlete') THEN
+    RAISE EXCEPTION 'Réservé aux coachs' USING ERRCODE = '42501';
+  END IF;
+  PERFORM set_config('agon.role_switch', 'on', true);
+  IF p_enabled THEN
+    UPDATE public.profiles
+       SET role = 'coach_athlete', coach_id = coalesce(coach_id, v_uid)
+     WHERE id = v_uid;
+  ELSE
+    UPDATE public.profiles SET role = 'coach', coach_id = NULL WHERE id = v_uid;
+  END IF;
+  PERFORM set_config('agon.role_switch', '', true);
+  RETURN CASE WHEN p_enabled THEN 'coach_athlete' ELSE 'coach' END;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."set_coach_athlete"("p_enabled" boolean) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."set_coach_override"("p_log" "uuid", "p_override" "jsonb") RETURNS "public"."workout_logs"
@@ -5848,6 +6003,18 @@ $$;
 
 
 ALTER FUNCTION "public"."unlink_athlete"("athlete_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."weekly_review_open"("p_week" "date", "p_today" "date") RETURNS boolean
+    LANGUAGE "sql" IMMUTABLE
+    AS $$
+  SELECT p_week IS NOT NULL AND p_today IS NOT NULL
+     AND extract(isodow FROM p_week) = 1
+     AND p_today BETWEEN p_week + 6 AND p_week + 7;
+$$;
+
+
+ALTER FUNCTION "public"."weekly_review_open"("p_week" "date", "p_today" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."weight_record_milestone"("p_athlete" "uuid", "p_day" "date", "p_kg" numeric) RETURNS "jsonb"
@@ -7616,19 +7783,6 @@ COMMENT ON TABLE "public"."hyrox_work_axes_rules" IS 'Règles d''axes de travail
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."invitations" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "coach_id" "uuid" NOT NULL,
-    "token" "text" DEFAULT ("gen_random_uuid"())::"text" NOT NULL,
-    "email" "text",
-    "used_at" timestamp with time zone,
-    "created_at" timestamp with time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."invitations" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."macrocycles" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8160,30 +8314,6 @@ ALTER TABLE "public"."provider_workout_pushes" OWNER TO "postgres";
 
 COMMENT ON TABLE "public"."provider_workout_pushes" IS 'Séances Agon publiées dans le calendrier de la montre (Garmin Training API). status : sent (à jour), error (réessai au passage suivant), rejected (refusée par la traduction, ex. > 100 étapes ; réessayée si la séance change).';
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."retours" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "athlete_id" "uuid" NOT NULL,
-    "content" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
-
-
-ALTER TABLE "public"."retours" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."retours_votes" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "retour_id" "uuid" NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "vote" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "retours_votes_vote_check" CHECK (("vote" = ANY (ARRAY['like'::"text", 'dislike'::"text"])))
-);
-
-
-ALTER TABLE "public"."retours_votes" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."roadmap_items" (
@@ -8793,16 +8923,6 @@ ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
 
 
 
-ALTER TABLE ONLY "public"."invitations"
-    ADD CONSTRAINT "invitations_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."invitations"
-    ADD CONSTRAINT "invitations_token_key" UNIQUE ("token");
-
-
-
 ALTER TABLE ONLY "public"."macrocycles"
     ADD CONSTRAINT "macrocycles_pkey" PRIMARY KEY ("id");
 
@@ -8968,21 +9088,6 @@ ALTER TABLE ONLY "public"."provider_workout_pushes"
 
 
 
-ALTER TABLE ONLY "public"."retours"
-    ADD CONSTRAINT "retours_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_retour_id_user_id_key" UNIQUE ("retour_id", "user_id");
-
-
-
 ALTER TABLE ONLY "public"."roadmap_items"
     ADD CONSTRAINT "roadmap_items_pkey" PRIMARY KEY ("id");
 
@@ -9085,6 +9190,16 @@ ALTER TABLE ONLY "public"."weekly_retours"
 
 ALTER TABLE ONLY "public"."weekly_retours"
     ADD CONSTRAINT "weekly_retours_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."weekly_reviews"
+    ADD CONSTRAINT "weekly_reviews_athlete_id_week_start_key" UNIQUE ("athlete_id", "week_start");
+
+
+
+ALTER TABLE ONLY "public"."weekly_reviews"
+    ADD CONSTRAINT "weekly_reviews_pkey" PRIMARY KEY ("id");
 
 
 
@@ -9586,10 +9701,6 @@ CREATE INDEX "idx_planning_blocks_season" ON "public"."planning_blocks" USING "b
 
 
 
-CREATE INDEX "idx_retours_athlete_created" ON "public"."retours" USING "btree" ("athlete_id", "created_at" DESC);
-
-
-
 CREATE INDEX "idx_seasons_athlete" ON "public"."seasons" USING "btree" ("athlete_id");
 
 
@@ -9655,10 +9766,6 @@ CREATE UNIQUE INDEX "idx_workout_logs_unique" ON "public"."workout_logs" USING "
 
 
 CREATE INDEX "idx_workout_rpe_athlete" ON "public"."workout_rpe" USING "btree" ("athlete_id");
-
-
-
-CREATE INDEX "invitations_coach_id_fk_idx" ON "public"."invitations" USING "btree" ("coach_id");
 
 
 
@@ -9770,10 +9877,6 @@ CREATE INDEX "provider_workout_pushes_athlete_idx" ON "public"."provider_workout
 
 
 
-CREATE INDEX "retours_votes_user_id_fk_idx" ON "public"."retours_votes" USING "btree" ("user_id");
-
-
-
 CREATE INDEX "roadmap_items_created_by_fk_idx" ON "public"."roadmap_items" USING "btree" ("created_by");
 
 
@@ -9863,6 +9966,10 @@ CREATE INDEX "user_consents_lookup_idx" ON "public"."user_consents" USING "btree
 
 
 CREATE INDEX "weekly_retours_coach_id_fk_idx" ON "public"."weekly_retours" USING "btree" ("coach_id");
+
+
+
+CREATE INDEX "weekly_reviews_week_idx" ON "public"."weekly_reviews" USING "btree" ("week_start");
 
 
 
@@ -10646,11 +10753,6 @@ ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
 
 
 
-ALTER TABLE ONLY "public"."invitations"
-    ADD CONSTRAINT "invitations_coach_id_fkey" FOREIGN KEY ("coach_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."macrocycles"
     ADD CONSTRAINT "macrocycles_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -10825,21 +10927,6 @@ ALTER TABLE ONLY "public"."provider_workout_pushes"
 
 
 
-ALTER TABLE ONLY "public"."retours"
-    ADD CONSTRAINT "retours_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_retour_id_fkey" FOREIGN KEY ("retour_id") REFERENCES "public"."retours"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."retours_votes"
-    ADD CONSTRAINT "retours_votes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."roadmap_items"
     ADD CONSTRAINT "roadmap_items_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
@@ -10975,6 +11062,11 @@ ALTER TABLE ONLY "public"."weekly_retours"
 
 
 
+ALTER TABLE ONLY "public"."weekly_reviews"
+    ADD CONSTRAINT "weekly_reviews_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."wellness_entries"
     ADD CONSTRAINT "wellness_entries_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -11019,37 +11111,11 @@ CREATE POLICY "Coach can unlink own athletes" ON "public"."profiles" FOR UPDATE 
 
 
 
-CREATE POLICY "Création retour par l'athlète lui-même" ON "public"."retours" FOR INSERT WITH CHECK (("auth"."uid"() = "athlete_id"));
-
-
-
-CREATE POLICY "Lecture votes pour utilisateurs authentifiés" ON "public"."retours_votes" FOR SELECT USING (("auth"."uid"() IS NOT NULL));
-
-
-
-CREATE POLICY "Mise à jour vote par l'utilisateur lui-même" ON "public"."retours_votes" FOR UPDATE USING (("auth"."uid"() = "user_id"));
-
-
-
 CREATE POLICY "Service write" ON "public"."exercises" USING (("auth"."role"() = 'service_role'::"text"));
 
 
 
-CREATE POLICY "Suppression par l'auteur ou un admin" ON "public"."retours" FOR DELETE USING ((("auth"."uid"() = "athlete_id") OR (EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
-
-
-
-CREATE POLICY "Suppression vote par l'utilisateur lui-même" ON "public"."retours_votes" FOR DELETE USING (("auth"."uid"() = "user_id"));
-
-
-
 CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
-
-
-
-CREATE POLICY "Vote par l'utilisateur lui-même" ON "public"."retours_votes" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -11946,13 +12012,6 @@ CREATE POLICY "hyrox_work_axes_rules_update" ON "public"."hyrox_work_axes_rules"
 
 
 
-ALTER TABLE "public"."invitations" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "invitations_coach" ON "public"."invitations" USING (("coach_id" = "auth"."uid"()));
-
-
-
 CREATE POLICY "life_events_delete" ON "public"."athlete_life_events" FOR DELETE USING (("athlete_id" = "auth"."uid"()));
 
 
@@ -12285,18 +12344,6 @@ CREATE POLICY "provider_workout_pushes_coach_read" ON "public"."provider_workout
 
 CREATE POLICY "provider_workout_pushes_own_read" ON "public"."provider_workout_pushes" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
 
-
-
-ALTER TABLE "public"."retours" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "retours_select" ON "public"."retours" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
-
-
-
-ALTER TABLE "public"."retours_votes" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."roadmap_items" ENABLE ROW LEVEL SECURITY;
@@ -12762,6 +12809,21 @@ CREATE POLICY "user_consents_select_own" ON "public"."user_consents" FOR SELECT 
 
 
 ALTER TABLE "public"."weekly_retours" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."weekly_reviews" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "weekly_reviews_coach" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING ((("status" = 'submitted'::"text") AND "public"."is_coach_of"("athlete_id")));
+
+
+
+CREATE POLICY "weekly_reviews_self" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "weekly_reviews_staff" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING ((("status" = 'submitted'::"text") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text")));
+
 
 
 ALTER TABLE "public"."wellness_entries" ENABLE ROW LEVEL SECURITY;
@@ -18170,20 +18232,6 @@ GRANT ALL ON FUNCTION "public"."indexes_are"("name", "name", "name"[], "text") T
 
 
 
-REVOKE ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."invitation_coach_name"("p_token" "text") TO "service_role";
-
-
-
-REVOKE ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."invitation_is_valid"("p_token" "text") TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."is"("anyelement", "anyelement") TO "postgres";
 GRANT ALL ON FUNCTION "public"."is"("anyelement", "anyelement") TO "anon";
 GRANT ALL ON FUNCTION "public"."is"("anyelement", "anyelement") TO "authenticated";
@@ -20141,12 +20189,6 @@ GRANT ALL ON FUNCTION "public"."react_weekly_retour"("p_retour_id" "uuid", "p_re
 
 
 
-REVOKE ALL ON FUNCTION "public"."redeem_invitation"("p_token" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."redeem_invitation"("p_token" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."redeem_invitation"("p_token" "text") TO "service_role";
-
-
-
 REVOKE ALL ON FUNCTION "public"."refresh_activity_zone_summary"("p_activity" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."refresh_activity_zone_summary"("p_activity" "uuid") TO "service_role";
 
@@ -20188,6 +20230,12 @@ GRANT ALL ON FUNCTION "public"."relation_owner_is"("name", "name", "name", "text
 REVOKE ALL ON FUNCTION "public"."remove_co_coach"("p_athlete" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."remove_co_coach"("p_athlete" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."remove_co_coach"("p_athlete" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."remove_provider_activity"("p_activity" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."remove_provider_activity"("p_activity" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."remove_provider_activity"("p_activity" "uuid") TO "service_role";
 
 
 
@@ -20564,6 +20612,17 @@ GRANT ALL ON FUNCTION "public"."save_hr_zone_model"("p_athlete" "uuid", "p_kind"
 
 
 
+GRANT ALL ON TABLE "public"."weekly_reviews" TO "service_role";
+GRANT SELECT ON TABLE "public"."weekly_reviews" TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."save_weekly_review"("p_week" "date", "p_answers" "jsonb", "p_submit" boolean, "p_auto" "jsonb", "p_light" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."save_weekly_review"("p_week" "date", "p_answers" "jsonb", "p_submit" boolean, "p_auto" "jsonb", "p_light" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."save_weekly_review"("p_week" "date", "p_answers" "jsonb", "p_submit" boolean, "p_auto" "jsonb", "p_light" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."schedule_doc"("p_athlete" "uuid", "p_doc" "uuid", "p_dates" "date"[], "p_note" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."schedule_doc"("p_athlete" "uuid", "p_doc" "uuid", "p_dates" "date"[], "p_note" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."schedule_doc"("p_athlete" "uuid", "p_doc" "uuid", "p_dates" "date"[], "p_note" "text") TO "service_role";
@@ -20719,6 +20778,12 @@ GRANT ALL ON FUNCTION "public"."set_active_performance_reference"("p_performance
 REVOKE ALL ON FUNCTION "public"."set_athlete_hidden"("athlete_id" "uuid", "hidden" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."set_athlete_hidden"("athlete_id" "uuid", "hidden" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_athlete_hidden"("athlete_id" "uuid", "hidden" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."set_coach_athlete"("p_enabled" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."set_coach_athlete"("p_enabled" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_coach_athlete"("p_enabled" boolean) TO "service_role";
 
 
 
@@ -21641,6 +21706,12 @@ GRANT ALL ON FUNCTION "public"."volatility_is"("name", "name", "name"[], "text",
 
 
 
+REVOKE ALL ON FUNCTION "public"."weekly_review_open"("p_week" "date", "p_today" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."weekly_review_open"("p_week" "date", "p_today" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."weekly_review_open"("p_week" "date", "p_today" "date") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."weight_record_milestone"("p_athlete" "uuid", "p_day" "date", "p_kg" numeric) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."weight_record_milestone"("p_athlete" "uuid", "p_day" "date", "p_kg" numeric) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."weight_record_milestone"("p_athlete" "uuid", "p_day" "date", "p_kg" numeric) TO "service_role";
@@ -22058,12 +22129,6 @@ GRANT ALL ON TABLE "public"."hyrox_work_axes_rules" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."invitations" TO "anon";
-GRANT ALL ON TABLE "public"."invitations" TO "authenticated";
-GRANT ALL ON TABLE "public"."invitations" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."macrocycles" TO "anon";
 GRANT ALL ON TABLE "public"."macrocycles" TO "authenticated";
 GRANT ALL ON TABLE "public"."macrocycles" TO "service_role";
@@ -22178,18 +22243,6 @@ GRANT ALL ON TABLE "public"."provider_tokens" TO "service_role";
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."provider_workout_pushes" TO "anon";
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."provider_workout_pushes" TO "authenticated";
 GRANT ALL ON TABLE "public"."provider_workout_pushes" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."retours" TO "anon";
-GRANT ALL ON TABLE "public"."retours" TO "authenticated";
-GRANT ALL ON TABLE "public"."retours" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."retours_votes" TO "anon";
-GRANT ALL ON TABLE "public"."retours_votes" TO "authenticated";
-GRANT ALL ON TABLE "public"."retours_votes" TO "service_role";
 
 
 

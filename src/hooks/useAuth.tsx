@@ -4,7 +4,8 @@ import {
   createPendingAthlete as apiCreatePendingAthlete, ensureCoachCode, getCoachRoster,
   linkToCoachByCode, normalizeCoachCode, registerAthleteWithCode as apiRegisterAthleteWithCode,
   registerCoach as apiRegisterCoach, registerStaff as apiRegisterStaff,
-  removePendingAthlete as apiRemovePendingAthlete, serverReason, setAthleteHidden as apiSetAthleteHidden, setOwnCoach,
+  removePendingAthlete as apiRemovePendingAthlete, serverReason, setAthleteHidden as apiSetAthleteHidden,
+  setCoachAthlete as apiSetCoachAthlete, setOwnCoach,
 } from "@/api/account";
 import { getProfile, updateAthleteProfile as apiUpdateAthleteProfile, type AthleteProfileFields, type Profile } from "@/api/profile";
 import { clearOfflineProfile, readOfflineProfile, readStoredAuthUser, saveOfflineProfile } from "@/lib/offline/offlineCache";
@@ -42,6 +43,8 @@ interface AuthContextType {
   setAthleteHidden: (athleteId: string, hidden: boolean) => Promise<void>;
   /** Recharge la liste des athlètes (après ajout/retrait d'un co-coach…) */
   refreshAthletes: () => Promise<void>;
+  /** Interrupteur « Mode coach-athlète » (Paramètres) : change le rôle puis recharge le profil. */
+  setCoachAthleteMode: (enabled: boolean) => Promise<void>;
   /** Crée un athlète avant sa première connexion ; renvoie son id */
   createPendingAthlete: (firstName: string, lastName: string) => Promise<string>;
   /** Supprime un athlète pré-créé encore non réclamé */
@@ -115,6 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error("Non connecté");
     await apiSetAthleteHidden(athleteId, hidden);
     await fetchAthletes(user.id);
+  }
+
+  async function setCoachAthleteMode(enabled: boolean) {
+    if (!user) throw new Error("Non connecté");
+    await apiSetCoachAthlete(enabled);
+    await fetchProfile(user.id);
   }
 
   async function refreshAthletes() {
@@ -273,7 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, profile, loading,
-      athletes, hiddenAthletes, setAthleteHidden, refreshAthletes, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
+      athletes, hiddenAthletes, setAthleteHidden, refreshAthletes, setCoachAthleteMode, createPendingAthlete, removePendingAthlete, activeAthleteId, setActiveAthleteId,
       login, registerCoach, registerAthleteWithCode, registerStaff,
       canCoachSelf, selfCoCoached, linkToCoach, unlinkFromCoach, removeSelfAsAthlete, becomeSelfCoach, logout, updateAthleteProfile,
     }}>

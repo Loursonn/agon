@@ -5,7 +5,7 @@ import {
   AccountError, accountKeys, claimAthleteAccount, coachCodeExists, coachPreviewByCode, createPendingAthlete,
   deleteAccount, ensureCoachCode, generateCoachCode, getClaimInfo, getClaimToken, getCoachRoster, getConsents,
   invalidateAccount, linkToCoachByCode, pickFreeCoachCode, readOwnRows, recordConsents,
-  registerAthleteWithCode, registerCoach, registerStaff, reportClientBuild, serverReason, setOwnCoach,
+  registerAthleteWithCode, registerCoach, registerStaff, reportClientBuild, serverReason, setCoachAthlete, setOwnCoach,
 } from "@/api/account";
 import type { Profile } from "@/api/profile";
 
@@ -136,6 +136,14 @@ describe("api/account — code coach et inscription", () => {
     expect(await coachPreviewByCode(" demo42 ")).toBe("Agon Démo");
     expect(await coachPreviewByCode("zzzzzz")).toBeNull();
     expect(asked).toEqual(["DEMO42", "ZZZZZZ"]);
+  });
+
+  it("setCoachAthlete : passe le choix à la RPC et renvoie le rôle", async () => {
+    const asked: unknown[] = [];
+    world({}, { rpcs: { set_coach_athlete: (a) => (asked.push(a.p_enabled), a.p_enabled ? "coach_athlete" : "coach") } });
+    expect(await setCoachAthlete(true)).toBe("coach_athlete");
+    expect(await setCoachAthlete(false)).toBe("coach");
+    expect(asked).toEqual([true, false]);
   });
 
   it("âge minimum : moins de 15 ans ou date absente refusés AVANT de créer le compte (tous les parcours)", async () => {

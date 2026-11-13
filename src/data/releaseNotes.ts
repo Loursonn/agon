@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-coach-parametres-mode-athlete",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Paramètres : activez ou coupez le mode coach-athlète",
+    summary: "Dans Paramètres, l'interrupteur « Je m'entraîne aussi » vous ajoute à votre liste d'athlètes et ouvre votre propre espace athlète. Coupé, vous restez uniquement coach et vos séances passées sont gardées.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sur ordinateur, la page Paramètres passe sur 2 colonnes : profil, code, point hebdo et mode à gauche ; assistant IA et données à droite.",
+          "Couper le mode vous retire aussi de la liste d'un autre coach qui vous suivait.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-nouveautes-repliees",
     date: "2026-11-13",
     kind: "feature",
