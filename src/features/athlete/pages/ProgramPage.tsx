@@ -840,6 +840,18 @@ function DayRow({
           <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
         ))}
 
+        {/* Événements de vie (vacances, stage, examen…) : « Indisponible » si l'athlète ne peut pas s'entraîner. */}
+        {(day.lifeEvents ?? []).map((e) => (
+          <div key={e.id} style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, fontSize: 12.5, color: C.tx2,
+            border: `1px dashed ${e.unavailable ? alpha(C.o, 0.5) : C.brdL}`,
+            background: e.unavailable ? `repeating-linear-gradient(135deg, ${alpha(C.o, 0.08)} 0 6px, transparent 6px 12px)` : "transparent",
+          }}>
+            {e.unavailable && <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.o, flex: "none" }}>Indisponible</span>}
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
+          </div>
+        ))}
+
         {day.sessions.map(s => {
           const c = linkedCard.get(`${s.kind}:${s.id}`);
           return c ? (

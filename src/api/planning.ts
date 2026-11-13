@@ -132,6 +132,16 @@ export interface WeekDay {
   sessions: WeekSession[];
   tests: TestBrief[];
   competitions: CompetitionBrief[];
+  /** Événements de vie couvrant ce jour (vacances, stage, examen…). */
+  lifeEvents: LifeEventBrief[];
+}
+
+export interface LifeEventBrief {
+  id: string;
+  title: string;
+  kind: string;
+  /** L'athlète ne peut pas s'entraîner ce jour-là. */
+  unavailable: boolean;
 }
 
 /** Cycle terminé (fin < aujourd'hui) — historique côté athlète. */
@@ -277,11 +287,12 @@ export async function getActivePlan(athleteId: string, weekOffset = 0): Promise<
   );
 
   // 4. Semaine affichée
-  const [wLogs, eAssigns, tSessions, comps] = await Promise.all([
+  const [wLogs, eAssigns, tSessions, comps, lifeEvents] = await Promise.all([
     listWorkoutLogs({ athleteIds: [athleteId], from: mondayISO, to: sundayISO, excludeStatuses: ["skipped"], withMods: false }),
     listEnergyAssignments({ athleteIds: [athleteId], from: mondayISO, to: sundayISO, join: "summary" }),
     listTestSessionsBetween(athleteId, mondayISO, sundayISO),
     listCompetitions(athleteId),
+    listLifeEvents(athleteId),
   ]);
 
   const byDate = new Map<string, WeekSession[]>();
@@ -289,12 +300,23 @@ export async function getActivePlan(athleteId: string, weekOffset = 0): Promise<
   const compsByDate = new Map<string, CompetitionBrief[]>();
   const push = <T>(m: Map<string, T[]>, k: string, v: T) => m.set(k, [...(m.get(k) ?? []), v]);
 
+  // Une compétition sur plusieurs jours (`date_end`) apparaît chaque jour de la semaine qu'elle couvre.
   for (const c of comps) {
-    if (c.date < mondayISO || c.date > sundayISO) continue;
-    push(compsByDate, c.date, {
-      id: c.id, name: c.name, type: c.type, date: c.date, location: c.location ?? null,
-      priority: (c.priority ?? null) as CompetitionBrief["priority"], athlete_comment: c.athlete_comment ?? null,
-    });
+    const end = String((c as { date_end?: string | null }).date_end ?? c.date).slice(0, 10);
+    for (let d = c.date < mondayISO ? mondayISO : c.date; d <= end && d <= sundayISO; d = addDays(d, 1)) {
+      push(compsByDate, d, {
+        id: c.id, name: c.name, type: c.type, date: c.date, location: c.location ?? null,
+        priority: (c.priority ?? null) as CompetitionBrief["priority"], athlete_comment: c.athlete_comment ?? null,
+      });
+    }
+  }
+  const lifeByDate = new Map<string, LifeEventBrief[]>();
+  for (const le of lifeEvents) {
+    const start = String(le.date_start).slice(0, 10);
+    const end = String(le.date_end ?? le.date_start).slice(0, 10);
+    for (let d = start < mondayISO ? mondayISO : start; d <= end && d <= sundayISO; d = addDays(d, 1)) {
+      push(lifeByDate, d, { id: le.id, title: le.title, kind: le.kind ?? "autre", unavailable: le.unavailable !== false });
+    }
   }
   for (const t of tSessions) {
     push(testsByDate, t.date, {
@@ -335,6 +357,7 @@ export async function getActivePlan(athleteId: string, weekOffset = 0): Promise<
       sessions: byDate.get(iso) ?? [],
       tests: testsByDate.get(iso) ?? [],
       competitions: compsByDate.get(iso) ?? [],
+      lifeEvents: lifeByDate.get(iso) ?? [],
     };
   });
   const weekSessionCount = weekDays.reduce((sum, d) => sum + d.sessions.length, 0);

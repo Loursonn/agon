@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-indispo-semaine",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Semaine de l'athlète : indisponibilités et compétitions sur plusieurs jours",
+    summary: "Dans le Programme de l'athlète, ses vacances, stages ou examens apparaissent sur chaque jour concerné, marqués « Indisponible » quand il ne peut pas s'entraîner. Une compétition sur plusieurs jours s'affiche sur chacun d'eux.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Un événement saisi avec « Je ne peux pas m'entraîner » est hachuré « Indisponible » ; sinon il s'affiche simplement.",
+          "Sur ordinateur, « Déplacer » ouvre un petit panneau à côté de la séance au lieu d'un volet en bas d'écran.",
+          "Premier lancement : chaque bulle d'aide pointe ce qu'elle explique (séance du jour, onglet Programme, onglet Tests).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-retours-sante",
     date: "2026-11-13",
     kind: "feature",

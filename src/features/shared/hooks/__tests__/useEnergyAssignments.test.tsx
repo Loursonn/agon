@@ -49,7 +49,7 @@ function seed() {
   ]);
   qc.setQueryData(planKey, {
     mesocycle: null, cycle: null, pastCycles: [], weekSessionCount: 1,
-    weekDays: [{ date: "2026-11-08", dow: 6, tests: [], competitions: [], sessions: [
+    weekDays: [{ date: "2026-11-08", dow: 6, tests: [], competitions: [], lifeEvents: [], sessions: [
       { id: "e1", sessionName: "VMA", scheduledDate: "2026-11-08", status: "planned", kind: "energy" },
     ] }],
   });
