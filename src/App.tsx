@@ -92,6 +92,8 @@ const CoachPhoneWellness = lazy(() => import("./features/coach/phone/CoachPhoneW
 const CoachPhoneSante    = lazy(() => import("./features/coach/phone/CoachPhoneSante.tsx"));
 const CoachPhoneTests    = lazy(() => import("./features/coach/phone/CoachPhoneTests.tsx"));
 const CoachPhoneProgrammation = lazy(() => import("./features/coach/phone/CoachPhoneProgrammation.tsx"));
+const CoachPhoneFiches   = lazy(() => import("./features/coach/phone/CoachPhoneFiches.tsx"));
+const CoachPhoneBanque   = lazy(() => import("./features/coach/phone/CoachPhoneBanque.tsx"));
 
 // staleTime : une donnée lue il y a moins de 30 s n'est pas re-téléchargée à
 // chaque ouverture de page (les mutations invalident explicitement leurs clés).
@@ -241,9 +243,9 @@ function AppRoutes() {
             <Route path="reviews"  element={<Page><CoachReviewsPage /></Page>} />
             <Route path="athletes" element={<Page><PhoneOr phone={<CoachPhoneAthletes />} desktop={<AthletesListPage />} /></Page>} />
             <Route path="plus"     element={<Page><PhoneOr phone={<CoachPhonePlus />} desktop={<Navigate to="/coach/settings" replace />} /></Page>} />
-            <Route path="library"  element={<Page><LibraryPage /></Page>} />
+            <Route path="library"  element={<Page><PhoneOr phone={<CoachPhoneBanque />} desktop={<LibraryPage />} /></Page>} />
             <Route path="tests"    element={<Page><CoachTestsBankPage /></Page>} />
-            <Route path="fiches"   element={<Page><FichesPage /></Page>} />
+            <Route path="fiches"   element={<Page><PhoneOr phone={<CoachPhoneFiches />} desktop={<FichesPage />} /></Page>} />
             <Route path="nouveautes" element={<Page><CoachUpdatesPage /></Page>} />
             <Route path="coaches"  element={<Page><CoachesListPage /></Page>} />
             <Route path="roadmap"  element={<Page><RoadmapPage /></Page>} />

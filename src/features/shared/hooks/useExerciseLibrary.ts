@@ -3,9 +3,11 @@ import {
   createExercise,
   createExercises,
   exerciseKeys,
+  getExerciseBankPage,
   getExerciseLibrary,
   invalidateExercises,
   searchExercises,
+  type ExerciseBankFilters,
   type ExerciseLite,
   type LibraryExercise,
 } from "@/api/exercises";
@@ -53,5 +55,15 @@ export function useCreateExercises() {
   return useMutation({
     mutationFn: ({ names, coachId }: { names: string[]; coachId: string }) => createExercises(names, coachId),
     onSettled: () => invalidateExercises(qc),
+  });
+}
+
+/** Une page de la banque (toutes colonnes) avec filtres, et le total filtré. */
+export function useExerciseBankPage(f: ExerciseBankFilters) {
+  return useQuery({
+    queryKey: [...exerciseKeys.all, "bank-page", f] as const,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    queryFn: () => getExerciseBankPage(f),
   });
 }

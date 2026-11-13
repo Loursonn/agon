@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-coach-telephone-fiches-banque",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Fiches et banque d'exercices sur téléphone",
+    summary: "Depuis « Plus » sur votre téléphone : lisez et partagez vos fiches, et retrouvez un exercice de la banque pour montrer sa vidéo à un athlète.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Fiches : rangées par catégorie, avec recherche. Vous voyez à qui chaque fiche est partagée et si elle a été lue.",
+          "Partagez une fiche à un ou plusieurs athlètes en une fois, avec un mot facultatif. Ceux qui l'ont déjà sont grisés.",
+          "Banque d'exercices en lecture : recherche, type, muscle, équipement, niveau ; chaque exercice montre sa vidéo, ses consignes et ses muscles.",
+          "Les reviews de la semaine sont aussi accessibles depuis « Plus » et l'onglet « Review » de chaque athlète.",
+          "Importer ou modifier une fiche ou un exercice reste sur ordinateur.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-telephone",
     date: "2026-11-13",
     kind: "feature",

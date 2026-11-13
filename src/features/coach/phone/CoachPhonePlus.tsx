@@ -44,6 +44,7 @@ export default function CoachPhonePlus() {
   const isAdmin = !!profile?.is_admin;
 
   const tools: Array<{ label: string; sub?: string; to: string; show: boolean }> = [
+    { label: "Reviews de la semaine", sub: "Bilans du dimanche", to: "/coach/reviews", show: true },
     { label: "Fiches", to: "/coach/fiches", show: true },
     { label: "Banque d’exercices", sub: "Lecture seule", to: "/coach/library", show: true },
     { label: "Banque de tests", to: "/coach/tests", show: true },

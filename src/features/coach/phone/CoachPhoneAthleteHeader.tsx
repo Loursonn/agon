@@ -14,6 +14,7 @@ export const PHONE_ATHLETE_TABS = [
   { to: "planning", label: "Planning" },
   { to: "programmation", label: "Programmation" },
   { to: "retours", label: "Retours" },
+  { to: "review", label: "Review" },
   { to: "wellness", label: "Wellness" },
   { to: "sante", label: "Santé" },
   { to: "tests", label: "Tests" },

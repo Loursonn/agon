@@ -13,10 +13,10 @@ import {
 import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride";
 import type { SessionSetLog } from "@/features/shared/types/athlete";
 import { formatExercice } from "@/features/staff/lib/formatPrescription";
-import { isWeekRecord, toMultiWeekSession } from "@/lib/sessionOccurrence";
+import { isWeekRecord } from "@/lib/sessionOccurrence";
 import { CARD, KICKER, MONO, PhoneButton, PhonePage, fmtDec, rowLine, shortDate } from "./phoneUi";
 import { useCurrentCycle } from "./CoachPhoneAthleteHeader";
-import { flattenBlocs, useSessionOccurrence } from "./useSessionOccurrence";
+import { applyFromOccurrence, flattenBlocs, useSessionOccurrence } from "./useSessionOccurrence";
 
 type Mode = "this" | "next";
 type Focus = { bi: number; ei: number };
@@ -216,24 +216,7 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
       }, { onSuccess: done });
       return;
     }
-    // Cette séance et les suivantes : params écrits à cette occurrence (elle vaut
-    // jusqu'à la prochaine qui a ses propres valeurs), le passé ne bouge pas.
-    const base = toMultiWeekSession(session);
-    const byId = new Map(base.blocs.flatMap((b) => b.exercices).map((ex) => [ex.id, ex]));
-    const key = String(occurrence);
-    const next: ProgSession = {
-      ...base,
-      nb_semaines: Math.max(base.nb_semaines ?? 1, occurrence),
-      blocs: blocs.map((b) => ({
-        ...b,
-        exercices: b.exercices.map((ex) => {
-          const orig = byId.get(ex.id);
-          if (!isFlat(ex.params)) return { ...ex, params: orig?.params ?? ex.params };
-          const rec = orig && isWeekRecord(orig.params) ? orig.params : {};
-          return { ...ex, params: { ...rec, [key]: ex.params } };
-        }),
-      })),
-    };
+    const next = applyFromOccurrence(session, blocs, occurrence);
     saveProg.mutate({ base: prog, next: prog.map((s) => (s.id === session.id ? next : s)) }, { onSuccess: done });
   }
 
