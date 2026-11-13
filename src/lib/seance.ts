@@ -25,11 +25,8 @@ export const ZONE_COLORS_3 = [token("--agon-zone-1"), token("--agon-zone-2"), to
  * - 5 zones : bleu, vert, or, orange, rouge ;
  * - 7 zones : bleu, turquoise, vert, or, orange, rouge, rose.
  */
-export const ZONE_COLORS_5 = [token("--agon-info"), token("--agon-zone-1"), token("--agon-accent"), token("--agon-zone-2"), token("--agon-zone-3")];
-export const ZONE_COLORS_7 = [
-  token("--agon-info"), token("--agon-cadence"), token("--agon-zone-1"), token("--agon-accent"),
-  token("--agon-zone-2"), token("--agon-zone-3"), token("--agon-amethyste-vif"),
-];
+export const ZONE_COLORS_5 = [1, 2, 3, 4, 5].map((i) => token(`--agon-zone5-${i}`));
+export const ZONE_COLORS_7 = [1, 2, 3, 4, 5, 6, 7].map((i) => token(`--agon-zone7-${i}`));
 
 export const SERIES_COLORS = {
   pace: token("--agon-info"),

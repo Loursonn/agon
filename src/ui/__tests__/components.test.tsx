@@ -33,7 +33,7 @@ describe("Button", () => {
     // Danger : contour rouge, jamais plein (canvas 12/11).
     expect(cls).toContain("text-agon-rouge");
     expect(cls.split(" ")).not.toContain("bg-agon-rouge");
-    expect(cls).toContain("h-[52px]");
+    expect(cls).toContain("h-[var(--agon-btn-h-tel)]"); // 52 px (tokens.css)
     expect(cls).toContain("w-full");
   });
 

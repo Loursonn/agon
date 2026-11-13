@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-charte-finale-couleurs",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Couleurs et boutons harmonisés",
+    summary: "Menus, fenêtres et listes déroulantes prennent exactement l'or et les fonds du reste de l'app. Les boutons de suppression sont désormais bordés de rouge au lieu d'être pleins, comme partout ailleurs.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-ecrans-alignes-maquettes",
     date: "2026-11-13",
     kind: "feature",

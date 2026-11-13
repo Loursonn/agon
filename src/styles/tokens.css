@@ -40,6 +40,8 @@
   --agon-patine-profond: #1F5E47;
   --agon-amethyste-vif: #F060C0;
   --agon-amethyste-profond: #5E2A48;
+  --agon-turquoise-vif: #2EE6C5;            /* charte finale (P10) */
+  --agon-corail-vif: #FF7A45;
 
   /* ── Fond & surfaces ────────────────────────────────────────────────── */
   --agon-bg: #0E0C0A;                       /* C.bg  obsidienne profond */
@@ -97,7 +99,21 @@
   --agon-zone-1: var(--agon-vert-vif);      /* sous SV1 */
   --agon-zone-2: var(--agon-ocre-vif);      /* SV1 → SV2 */
   --agon-zone-3: var(--agon-rouge);         /* au-dessus de SV2 (maquette, plus rouge que terracotta) */
-  --agon-cadence: #2EE6C5;                  /* courbe de cadence */
+  --agon-cadence: var(--agon-turquoise-vif); /* courbe de cadence */
+  /* Suites de zones à 5 et 7 zones (lues par src/lib/seance.ts). Suite froid → chaud du code :
+     la variante vert → rouge du canvas attend la décision d'Hugo (CHARTE_FINALE_2026-11 §3). */
+  --agon-zone5-1: var(--agon-ardoise-vif);
+  --agon-zone5-2: var(--agon-vert-vif);
+  --agon-zone5-3: var(--agon-or-vif);
+  --agon-zone5-4: var(--agon-ocre-vif);
+  --agon-zone5-5: var(--agon-rouge);
+  --agon-zone7-1: var(--agon-ardoise-vif);
+  --agon-zone7-2: var(--agon-turquoise-vif);
+  --agon-zone7-3: var(--agon-vert-vif);
+  --agon-zone7-4: var(--agon-or-vif);
+  --agon-zone7-5: var(--agon-ocre-vif);
+  --agon-zone7-6: var(--agon-rouge);
+  --agon-zone7-7: var(--agon-amethyste-vif);
 
   /* ── Direction « peps » (canvas, validée le 12/11) : une couleur fixe par type ──
      Lue par src/lib/peps.ts. Mêmes couleurs athlète / coach, téléphone / ordinateur. */
@@ -113,8 +129,8 @@
   --agon-bloc-perf: var(--agon-or-vif);     /* Mvt principal */
   --agon-bloc-esth: var(--agon-amethyste-vif); /* Hypertrophie */
   --agon-bloc-besoin: var(--agon-ardoise-vif); /* Besoin indiv. */
-  --agon-bloc-assoc: #2EE6C5;               /* Muscles assoc. */
-  --agon-bloc-core: #FF7A45;                /* Core */
+  --agon-bloc-assoc: var(--agon-turquoise-vif);               /* Muscles assoc. */
+  --agon-bloc-core: var(--agon-corail-vif);                /* Core */
   /* Macros (glucides, lipides, protéines) */
   --agon-macro-g: var(--agon-ardoise-vif);
   --agon-macro-l: var(--agon-or-vif);
@@ -126,6 +142,18 @@
   /* Dominantes de tests (HYROX rose, Biométrie bleu : validé le 12/11) */
   --agon-dominante-hyrox: var(--agon-amethyste-vif);
   --agon-dominante-bio: var(--agon-ardoise-vif);
+
+  /* ── Peps : cartes de type et boutons (charte finale P10) ──
+     Bouton principal = aplat --agon-accent, texte --agon-ink, Geist 600, un seul par écran ;
+     secondaire = contour --agon-brd-l ; danger = contour --agon-rouge, jamais plein ;
+     valider une série = aplat --agon-succes. Aucun dégradé, aucune ombre floue, aucun halo. */
+  --agon-peps-fond: 0.12;                   /* alpha du fond d'une carte de type (suffixe hex 1F) */
+  --agon-peps-contour: 0.45;                /* alpha du contour (suffixe 73) */
+  --agon-peps-barre: 3px;                   /* barre gauche pleine */
+  --agon-btn-h-tel: 52px;                   /* bouton principal en bas d'écran téléphone */
+  --agon-btn-h-tel-2: 48px;                 /* autres boutons téléphone */
+  --agon-btn-h-ordi: 40px;                  /* boutons ordinateur (44 px pour le principal d'une page) */
+  --agon-btn-radius: 12px;
 
   /* ── Couleurs héritées (palettes par défaut, sans équivalent dans la charte) ──
      Sorties du code des écrans le 13/11 (phase 6) : valeurs inchangées, rendu identique.
@@ -196,22 +224,19 @@
   --agon-h-cyan: #06B6D4;
   --agon-h-vert-nuit: #04150E;
 
-  /* ── Composants shadcn (src/components/ui) : valeurs historiques ─────
-     Elles diffèrent très légèrement des couleurs ci-dessus (ex. or hsl(43 100% 60%)
-     = #FFC533 au lieu de #FFC933). Gardées telles quelles pour ne rien changer au rendu.
-     Charte finale : remplacer chacune par la variable indiquée. */
-  --agon-ui-bg: hsl(20 17% 3%);             /* → var(--agon-bg) */
-  --agon-ui-s1: hsl(24 14% 10%);            /* → var(--agon-s1) */
-  --agon-ui-s2: hsl(24 12% 13%);            /* → var(--agon-s2) */
-  --agon-ui-tx: hsl(0 0% 100%);             /* = --agon-tx */
-  --agon-ui-tx3: hsl(27 8% 45%);            /* → var(--agon-tx3) */
-  --agon-ui-accent: hsl(43 100% 60%);       /* → var(--agon-accent) */
-  --agon-ui-accent-doux: hsl(43 100% 60% / 0.1); /* → var(--agon-accent-doux) */
-  --agon-ui-ink: hsl(24 28% 7%);            /* → var(--agon-ink) */
-  --agon-ui-sable: hsl(38 50% 78%);         /* → var(--agon-sable) */
-  --agon-ui-erreur: hsl(13 100% 60%);       /* → var(--agon-erreur) */
-  --agon-ui-brd: hsl(38 43% 78% / 0.12);    /* → var(--agon-brd) */
-  --agon-ui-brd-sidebar: hsl(38 43% 78% / 0.10); /* → var(--agon-brd) */
+  /* ── Composants shadcn (src/components/ui) : alignés sur la charte (P10, 13/11) ── */
+  --agon-ui-bg: var(--agon-bg);
+  --agon-ui-s1: var(--agon-s1);
+  --agon-ui-s2: var(--agon-s2);
+  --agon-ui-tx: var(--agon-tx);
+  --agon-ui-tx3: var(--agon-tx3);
+  --agon-ui-accent: var(--agon-accent);
+  --agon-ui-accent-doux: var(--agon-accent-doux);
+  --agon-ui-ink: var(--agon-ink);
+  --agon-ui-sable: var(--agon-sable);
+  --agon-ui-erreur: var(--agon-erreur);
+  --agon-ui-brd: var(--agon-brd);
+  --agon-ui-brd-sidebar: var(--agon-brd);
 
   /* ── Typographie ────────────────────────────────────────────────────── */
   --agon-font-display: "Archivo", system-ui, sans-serif;
@@ -225,6 +250,9 @@
   --agon-text-xl: 18px;
   --agon-text-2xl: 22px;
   --agon-text-3xl: 28px;
+  --agon-text-bouton: 15px;                 /* bouton principal téléphone (Geist 600) */
+  --agon-text-cible: 54px;                  /* cible pendant un bloc d'énergie (Geist Mono) */
+  --agon-text-chrono: 78px;                 /* chrono d'un minuteur plein écran (Geist Mono) */
 
   /* ── Formes ─────────────────────────────────────────────────────────── */
   /* rounded-sm / rounded-md / rounded-lg de Tailwind : 2 / 4 / 6 px (écrits en rem

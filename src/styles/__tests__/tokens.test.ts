@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import tokensCss from "@/styles/tokens.css?raw";
 import indexCss from "@/index.css?raw";
+import { ZONE_COLORS_5, ZONE_COLORS_7 } from "@/lib/seance";
 import { colorTokenNames, parseTokens, resolveToken, scale } from "@/styles/parseTokens";
 import { BLOC_COLORS, BT, C, H, HABIT_COLORS, PRIMARY, SECONDARY, SUCCESS, TERTIARY, NEUTRAL, TOKENS, alpha } from "@/lib/theme";
 
@@ -29,20 +30,21 @@ const LEGACY_C = {
   cadence: "#2EE6C5", blocCore: "#FF7A45", hyroxCourse: "#FFB54D",
 };
 
-const LEGACY_SHADCN: Record<string, string> = {
-  "--background": "20 17% 3%", "--foreground": "0 0% 100%",
-  "--card": "24 14% 10%", "--card-foreground": "0 0% 100%",
-  "--popover": "24 12% 13%", "--popover-foreground": "0 0% 100%",
-  "--primary": "43 100% 60%", "--primary-foreground": "24 28% 7%",
-  "--secondary": "38 50% 78%", "--secondary-foreground": "24 28% 7%",
-  "--muted": "24 12% 13%", "--muted-foreground": "27 8% 45%",
-  "--accent": "43 100% 60%", "--accent-foreground": "24 28% 7%",
-  "--destructive": "13 100% 60%", "--destructive-foreground": "0 0% 100%",
-  "--border": "38 43% 78% / 0.12", "--input": "24 12% 13%", "--ring": "43 100% 60%",
-  "--sidebar-background": "20 17% 3%", "--sidebar-foreground": "27 8% 45%",
-  "--sidebar-primary": "43 100% 60%", "--sidebar-primary-foreground": "24 28% 7%",
-  "--sidebar-accent": "43 100% 60% / 0.1", "--sidebar-accent-foreground": "43 100% 60%",
-  "--sidebar-border": "38 43% 78% / 0.10", "--sidebar-ring": "43 100% 60%",
+/** Charte finale (P10, 13/11) : chaque variable shadcn de index.css vaut un token de la charte. */
+const SHADCN_CHARTE: Record<string, string> = {
+  "--background": "--agon-bg", "--foreground": "--agon-tx",
+  "--card": "--agon-s1", "--card-foreground": "--agon-tx",
+  "--popover": "--agon-s2", "--popover-foreground": "--agon-tx",
+  "--primary": "--agon-accent", "--primary-foreground": "--agon-ink",
+  "--secondary": "--agon-sable", "--secondary-foreground": "--agon-ink",
+  "--muted": "--agon-s2", "--muted-foreground": "--agon-tx3",
+  "--accent": "--agon-accent", "--accent-foreground": "--agon-ink",
+  "--destructive": "--agon-erreur", "--destructive-foreground": "--agon-tx",
+  "--border": "--agon-brd", "--input": "--agon-s2", "--ring": "--agon-accent",
+  "--sidebar-background": "--agon-bg", "--sidebar-foreground": "--agon-tx3",
+  "--sidebar-primary": "--agon-accent", "--sidebar-primary-foreground": "--agon-ink",
+  "--sidebar-accent": "--agon-accent-doux", "--sidebar-accent-foreground": "--agon-accent",
+  "--sidebar-border": "--agon-brd", "--sidebar-ring": "--agon-accent",
 };
 const LEGACY_OTHER: Record<string, string> = {
   "--radius": "0.375rem",
@@ -76,10 +78,15 @@ describe("tokens — rendu historique", () => {
     expect(HABIT_COLORS).toEqual(["#FFC933", "#66F03C", "#33B5FF", "#FF5A33", "#FF9500", "#1FF0B0", "#F060C0", "#E7D3A8"]);
   });
 
-  it("les variables shadcn de index.css résolvent vers les anciennes valeurs", () => {
+  it("les variables shadcn de index.css résolvent vers les tokens de la charte", () => {
     const all = { ...parseTokens(tokensCss), ...parseTokens(indexCss) };
-    for (const [k, channels] of Object.entries(LEGACY_SHADCN)) expect(resolveToken(all, k), k).toBe(`hsl(${channels})`);
+    for (const [k, tok] of Object.entries(SHADCN_CHARTE)) expect(resolveToken(all, k), k).toBe(resolveToken(all, tok));
     for (const [k, v] of Object.entries(LEGACY_OTHER)) expect(resolveToken(all, k), k).toBe(v);
+  });
+
+  it("zones à 5 et 7 : suite froid → chaud du code (variante du canvas en attente d'Hugo)", () => {
+    expect(ZONE_COLORS_5).toEqual(["#33B5FF", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F"]);
+    expect(ZONE_COLORS_7).toEqual(["#33B5FF", "#2EE6C5", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F", "#F060C0"]);
   });
 });
 

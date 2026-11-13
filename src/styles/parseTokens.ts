@@ -29,10 +29,10 @@ export function scale(tokens: TokenMap, prefix: string): string[] {
   return Object.keys(tokens).filter((k) => k.startsWith(p)).map((k) => k.slice(p.length));
 }
 
-/** Tokens de couleur exposés à Tailwind (`bg-agon-<nom>`) : tout sauf typo, formes, espacements et alias shadcn. */
+/** Tokens de couleur exposés à Tailwind (`bg-agon-<nom>`) : tout sauf typo, formes, espacements, réglages peps / boutons et alias shadcn. */
 export function colorTokenNames(tokens: TokenMap): string[] {
   return Object.keys(tokens)
     .filter((k) => k.startsWith("--agon-"))
-    .filter((k) => !/^--agon-(ui|font|text|radius|space)-/.test(k) && k !== "--agon-radius" && k !== "--agon-or-poli")
+    .filter((k) => !/^--agon-(ui|font|text|radius|space|peps|btn)-/.test(k) && k !== "--agon-radius" && k !== "--agon-or-poli")
     .map((k) => k.slice("--agon-".length));
 }
