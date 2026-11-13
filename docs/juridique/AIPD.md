@@ -132,7 +132,7 @@ dans `docs/DECISIONS.md`).
 | A3 | Mot de passe : 8 caractères minimum au lieu de 6. **Client fait le 13/11** (formulaires, `src/api/auth.ts` refuse toute inscription ou changement à moins de 8, Edge Function `claim-athlete`). Reste : réglage « Minimum password length » à 8 dans Supabase Auth (Hugo), MFA proposé aux coachs | dev + Hugo (réglage) | Avant les stores |
 | A4 | Sauvegardes : offre Pro ou dump quotidien chiffré | Hugo | Avant les stores |
 | A5 | Copie Garmin : ne garder que les types utiles, ou purger le brut après 12 mois | dev + Hugo | 2027 T1 |
-| A6 | Purge : comptes pré-créés non réclamés après 6 mois, comptes inactifs après 3 ans (avec préavis par e-mail) | dev | 2027 T1 |
+| A6 | Purge : comptes pré-créés non réclamés après 6 mois, comptes inactifs après 3 ans (avec préavis par e-mail). Codée le 2026-11-13, inactive jusqu'à l'accord d'Hugo et au choix d'un service d'e-mail (`docs/PURGE_COMPTES.md`) | dev | 2027 T1 |
 | A7 | Procédure et registre des violations (`REGISTRE_VIOLATIONS.md`) | fait le 13/11 | — |
 | A8 | **Fait le 13/11** : polices servies par le site (`src/styles/fonts.css`, paquets `@fontsource-variable`, précache PWA), Google Fonts retiré de la politique de confidentialité et du registre | dev | Fait |
 | A9 | Demander l'avis de quelques athlètes et coachs sur cette AIPD | Hugo | Facultatif |

@@ -218,7 +218,8 @@ export const SUBPROCESSORS: Subprocessor[] = [
  * durée ou un critère de détermination.
  */
 export const RETENTION = [
-  { data: "Compte et profil", duration: "Jusqu'à suppression du compte, puis 30 jours de sauvegarde" },
+  { data: "Compte et profil", duration: "Jusqu'à suppression du compte, puis 30 jours de sauvegarde. Un compte inutilisé pendant 3 ans (aucune connexion ni ouverture de l'application) est supprimé, après un e-mail de préavis envoyé 30 jours avant ; se reconnecter suffit à le garder" },
+  { data: "Compte préparé par votre coach et jamais activé", duration: "Supprimé après 6 mois sans activation ni séance programmée" },
   { data: "Séances, charges, séries réalisées", duration: "Durée de vie du compte" },
   { data: "Blessures déclarées", duration: "Durée de vie du compte, ou jusqu'à ce que vous ou l'auteur de l'entrée la supprimiez" },
   { data: "Données de bien-être, bilans hebdomadaires, poids, mensurations, photos du corps, blessures", duration: "Durée de vie du compte" },

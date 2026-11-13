@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { purgeUserStorage, type StorageAdmin } from "../_shared/userStorage.ts";
+import { deleteAccount, type DeletionAdmin } from "../_shared/accountDeletion.ts";
 
 /**
  * Suppression définitive du compte de l'appelant — droit à l'effacement
@@ -12,19 +12,8 @@ import { purgeUserStorage, type StorageAdmin } from "../_shared/userStorage.ts";
  * identifié par son JWT — jamais un identifiant fourni dans le corps de la
  * requête, ce qui permettrait à n'importe qui de supprimer n'importe qui.
  *
- * Ordre des opérations, et pourquoi :
- *
- *   1. Journal anonyme écrit en PREMIER. Si l'étape suivante échoue, on garde
- *      une trace de la tentative ; si on l'écrivait en dernier, une
- *      interruption laisserait un compte supprimé sans trace.
- *   2. Fichiers de stockage. Les cascades SQL ne couvrent pas `storage.objects`,
- *      donc sans cette étape des pièces jointes médicales survivraient au
- *      compte.
- *   3. Jetons des services connectés, révoqués auprès du fournisseur avant
- *      d'être effacés. Effacer un jeton sans le révoquer laisse un accès actif
- *      côté Garmin ou COROS.
- *   4. Utilisateur auth. La contrainte `profiles_id_fkey ON DELETE CASCADE`
- *      propage alors l'effacement aux ~45 tables applicatives.
+ * Ordre des opérations (journal anonyme, fichiers, révocation des montres,
+ * compte auth puis cascade) et raisons : `_shared/accountDeletion.ts`.
  */
 
 const corsHeaders = {
@@ -66,105 +55,16 @@ serve(async (req) => {
       throw new Error("Confirmation manquante");
     }
 
-    // ---- 1. Journal anonyme -------------------------------------------------
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const { data: coreConsent } = await admin
-      .from("current_consents")
-      .select("granted, doc_version")
-      .eq("user_id", user.id)
-      .eq("purpose", "health_data")
-      .maybeSingle();
-
-    await admin.from("account_deletions").insert({
-      role: profile?.role ?? null,
-      consent_version: coreConsent?.doc_version ?? null,
-      had_core_consent: coreConsent?.granted ?? false,
-      initiated_by: "user",
-    });
-
-    // ---- 2. Fichiers --------------------------------------------------------
-    // Liste exacte demandée à la base (les conventions de chemin ont varié
-    // selon les fonctionnalités) : voir `_shared/userStorage.ts`.
-    const storageErrors = await purgeUserStorage(admin as unknown as StorageAdmin, user.id);
-
-    // ---- 3. Services connectés ---------------------------------------------
-    /*
-      Révocation auprès du fournisseur avant effacement local. Tolérant à
-      l'échec : si Garmin est injoignable, on ne doit pas pour autant refuser à
-      l'utilisateur la suppression de son compte — son droit ne dépend pas de la
-      disponibilité d'un tiers. Le jeton local part dans tous les cas, et sa
-      durée de vie limitée clôt l'accès résiduel.
-    */
-    const revocationErrors: string[] = [];
-    const { data: connections, error: connError } = await admin
-      .from("provider_connections")
-      // `athlete_id`, et non `user_id` : la colonne porte ce nom dans
-      // `provider_connections`. Écrit `user_id` ici, la requête échouait en
-      // 42703 et aucune révocation n'avait jamais lieu — un jeton fournisseur
-      // survivait à la suppression du compte, sans que rien ne le signale
-      // autrement qu'un avertissement dans la réponse.
-      .select("provider, external_user_id")
-      .eq("athlete_id", user.id);
-
-    /*
-      Avant la livraison de l'intégration des montres, la table n'existait pas
-      (code 42P01) : la tolérance est conservée pour les environnements qui
-      n'ont pas encore la migration. Toute autre erreur est signalée — « aucune
-      connexion » et « je n'ai pas pu lire les connexions » ne doivent pas se
-      confondre, sinon un jeton resterait actif sans que personne ne le sache.
-    */
-    if (connError && connError.code !== "42P01") {
-      revocationErrors.push(`lecture des connexions: ${connError.message}`);
-    }
-
-    /*
-      `provider-disconnect` couvre COROS et Garmin : révocation chez le
-      fournisseur (Garmin : DELETE /user/registration, obligatoire en cas de
-      « Delete my account »), puis `provider_forget`.
-    */
-    for (const c of (connections ?? []) as Array<{ provider: string; external_user_id: string | null }>) {
-      try {
-        const { error } = await admin.functions.invoke("provider-disconnect", {
-          body: { userId: user.id, provider: c.provider, internal: true },
-        });
-        if (error) revocationErrors.push(`${c.provider}: ${error.message}`);
-      } catch (e) {
-        revocationErrors.push(`${c.provider}: ${errMessage(e)}`);
-      }
-      /*
-        Filet de sécurité : si la déconnexion a échoué, la cascade du compte
-        supprimera connexion, jetons et données, mais pas les notifications
-        brutes en attente (`provider_webhook_inbox` n'a pas de clé étrangère
-        vers l'athlète — Garmin ne connaît que son propre identifiant).
-      */
-      if (c.external_user_id) {
-        const { error: inboxError } = await admin
-          .from("provider_webhook_inbox")
-          .delete()
-          .eq("provider", c.provider)
-          .eq("external_user_id", c.external_user_id);
-        if (inboxError && inboxError.code !== "42P01") {
-          revocationErrors.push(`${c.provider} (notifications en attente): ${inboxError.message}`);
-        }
-      }
-    }
-
-    // ---- 4. Compte auth ----------------------------------------------------
-    // Déclenche la cascade vers profiles puis vers toutes les tables liées.
-    const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
-    if (deleteError) throw new Error(`Suppression impossible : ${deleteError.message}`);
+    // Journal anonyme, fichiers, révocation des montres, compte auth (cascade) :
+    // `_shared/accountDeletion.ts`, commun avec la purge `account-retention`.
+    const { warnings } = await deleteAccount(admin as unknown as DeletionAdmin, user.id, "user");
 
     return new Response(
       JSON.stringify({
         success: true,
         // Remontés pour journalisation côté client, sans faire échouer
         // l'opération : le compte est bien supprimé.
-        warnings: [...storageErrors, ...revocationErrors],
+        warnings,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

@@ -2368,3 +2368,20 @@ et son README.
   `@fontsource-variable` (`src/styles/fonts.css`, mêmes noms de familles, aucun style d'écran touché), mises en
   précache par le service worker. Plus d'appel à `fonts.googleapis.com` / `fonts.gstatic.com` ; Google Fonts retiré
   de la politique de confidentialité (modification mineure, `LEGAL_VERSION` inchangée) et du registre.
+
+## 2026-11-13 — HDS temps 2 et purge des comptes : préparés, en attente d'accord
+
+- **HDS temps 2 (P44)** : migration `20261115100000_hds_temps2_suppression.sql` écrite et essayée à blanc en prod
+  (9/9), rangée dans `supabase/pending/` : appliquée seulement après la mise en prod de `dev` (PR #150), sinon
+  l'ancien client échoue en écrivant `diagnosis`. Le code ne lit déjà plus `medical_history` /
+  `medical_attachments` (export) ni le bucket `medical` (`USER_BUCKETS`) : compatible avant comme après.
+- **Pourquoi `supabase/pending/`** : le rejeu des migrations (R2) est bloquant ; une migration présente dans
+  `supabase/migrations/` mais pas en prod le rend rouge. Une migration non autorisée attend donc à côté, avec son
+  test, et rejoint `migrations/` au moment où elle est appliquée (`supabase/pending/README.md`).
+- **Purge des comptes (revue I6, AIPD A6)** : pré-créé jamais réclamé → supprimé après 6 mois **sans séance
+  programmée depuis 6 mois** (protège le coach qui suit un athlète sans application) ; inactif 3 ans (connexion,
+  session rafraîchie ou ouverture de l'app) → préavis par e-mail puis suppression 30 jours après, annulée par une
+  reconnexion ; un coach dont un athlète est actif n'est jamais inactif. Suppression = celle du droit à
+  l'effacement, désormais partagée (`_shared/accountDeletion.ts`, aussi utilisée par `delete-account`). Double
+  verrou : tâche cron créée inactive + secret `RETENTION_ENABLED`. Aucun service d'e-mail n'existe : sans lui,
+  aucun compte inactif n'est supprimé. Aujourd'hui en prod : 0 compte visé. Détail : `docs/PURGE_COMPTES.md`.
