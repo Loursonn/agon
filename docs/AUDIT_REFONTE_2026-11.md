@@ -278,8 +278,8 @@ Source : audit qualité.
 3. ✅ *Décidé (2026-11-07) : Capacitor.* **Mobile** : Capacitor (recommandé) ou React Native/Expo ?
 4. ✅ *Décidé : supprimer (imports de fichiers gardés).* **Déconnexion d'une montre** : garder ou supprimer les activités importées ? (le dossier Garmin promet la suppression)
 5. ✅ *Décidé : oui, comptées une seule fois.* **Données montre** : les compter dans le volume de course et les rattacher automatiquement aux séances prévues ?
-6. **Legacy** : supprimer `invitations` et `retours` (archivés en CSV avant) ? *Plan prêt : `docs/PLAN_LEGACY.md` §1.*
-7. **Migrations** : faire le `migration repair` (rend `db push` à nouveau sûr) ? *Plan prêt : `docs/PLAN_LEGACY.md` §3.*
+6. ✅ *Décidé (2026-11-13) : oui, plan complet de `docs/PLAN_LEGACY.md` §1 (archive CSV sans jetons → code → fermeture → DROP), chaque écriture prod resoumise.* **Legacy** : supprimer `invitations` et `retours` (archivés en CSV avant) ? *Plan prêt : `docs/PLAN_LEGACY.md` §1.*
+7. ✅ *Décidé (2026-11-13) : oui, R0→R2 de `docs/PLAN_LEGACY.md` §3 puis `repair` seulement quand le diff migrations ↔ prod est vide.* **Migrations** : faire le `migration repair` (rend `db push` à nouveau sûr) ? *Plan prêt : `docs/PLAN_LEGACY.md` §3.*
 8. **Charte** : brancher le disque `AGON` pour récupérer la charte source.
 
 ---
