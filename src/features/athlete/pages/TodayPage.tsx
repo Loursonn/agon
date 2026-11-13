@@ -61,6 +61,7 @@ import { queueIsDurable } from "@/lib/offline/writes";
 import { FreeActivityModal } from "@/features/athlete/components/FreeActivityModal";
 import { useAthleteRetours, useReactWeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
+import { WeeklyReviewBanner } from "@/features/athlete/components/today/WeeklyReviewBanner";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunningVolume";
 import { watchRunMeasure, watchRunText } from "@/lib/watchRunLabel";
@@ -1026,6 +1027,8 @@ export default function TodayPage() {
           scrollbarWidth: "none", display: "flex", flexDirection: "column", gap: 28,
         }}
       >
+
+        {!viewOnly && <WeeklyReviewBanner athleteId={athleteId} />}
 
         {(() => {
           const s01 = (<>

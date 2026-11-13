@@ -48,6 +48,7 @@ const LogSeancePage   = lazy(() => import("./features/athlete/pages/LogSeancePag
 const AlimPage        = lazy(() => import("./features/athlete/pages/AlimPage.tsx"));
 const AthleteTestPage = lazy(() => import("./features/athlete/pages/AthleteTestPage.tsx"));
 const AthleteZonesPage = lazy(() => import("./features/athlete/pages/AthleteZonesPage.tsx"));
+const WeeklyReviewPage = lazy(() => import("./features/athlete/pages/WeeklyReviewPage.tsx"));
 const AthleteSantePage = lazy(() => import("./features/athlete/pages/AthleteSantePage.tsx"));
 const AthleteMontresPage = lazy(() => import("./features/athlete/pages/AthleteMontresPage.tsx"));
 const AthleteHyroxPage = lazy(() => import("./features/athlete/pages/HyroxPage.tsx"));
@@ -68,6 +69,8 @@ const PlanningPage      = lazy(() => import("./features/coach/pages/PlanningPage
 const ProgrammationPage = lazy(() => import("./features/coach/pages/ProgrammationPage.tsx"));
 const DonneesPage       = lazy(() => import("./features/coach/pages/DonneesPage.tsx"));
 const RetoursPage       = lazy(() => import("./features/coach/pages/RetoursPage.tsx"));
+const CoachReviewsPage = lazy(() => import("./features/coach/pages/CoachReviewsPage.tsx"));
+const CoachAthleteReviewPage = lazy(() => import("./features/coach/pages/CoachAthleteReviewPage.tsx"));
 const AthleteViewPage           = lazy(() => import("./features/coach/pages/AthleteViewPage.tsx"));
 const EnergySessionEditorPage   = lazy(() => import("./features/coach/pages/EnergySessionEditorPage.tsx"));
 const ProfilAthletePage         = lazy(() => import("./features/coach/pages/ProfilAthletePage.tsx"));
@@ -205,6 +208,7 @@ function AppRoutes() {
             <Route path="alim" element={<Page><AlimPage /></Page>} />
             <Route path="test" element={<Page><AthleteTestPage /></Page>} />
             <Route path="zones" element={<Page><AthleteZonesPage /></Page>} />
+            <Route path="review" element={<Page><WeeklyReviewPage /></Page>} />
             <Route path="montres" element={<Page><AthleteMontresPage /></Page>} />
             <Route path="sante" element={<Page><AthleteSantePage /></Page>} />
             <Route path="hyrox" element={<Page><AthleteHyroxPage /></Page>} />
@@ -224,6 +228,7 @@ function AppRoutes() {
 
             {/* Pages globales */}
             <Route path="athletes" element={<Page><AthletesListPage /></Page>} />
+            <Route path="reviews"  element={<Page><CoachReviewsPage /></Page>} />
             <Route path="library"  element={<Page><LibraryPage /></Page>} />
             <Route path="tests"    element={<Page><CoachTestsBankPage /></Page>} />
             <Route path="fiches"   element={<Page><FichesPage /></Page>} />
@@ -245,6 +250,7 @@ function AppRoutes() {
               <Route path="profil-sportif" element={<Page><ProfilAthletePage /></Page>} />
               <Route path="donnees"       element={<Page><DonneesPage /></Page>} />
               <Route path="retours"       element={<Page><RetoursPage /></Page>} />
+              <Route path="review"        element={<Page><CoachAthleteReviewPage /></Page>} />
               {/* Legacy : Tests vit maintenant dans Profil athlète → Suivi Testing */}
               <Route path="tests"         element={<Navigate to="../profil-sportif?view=testing" replace />} />
               <Route path="hyrox"         element={<Page><CoachHyroxPage /></Page>} />
