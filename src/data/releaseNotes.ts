@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-photos-privees",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Photos de mensurations : accès protégé",
+    summary: "Les photos du corps déposées avec les mensurations ne sont plus accessibles par un simple lien : seuls l'athlète et son coach les ouvrent, par un lien temporaire.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les photos de mensurations s'ouvrent par un lien valable 10 minutes, réservé à l'athlète et à son coach (référent ou co-coach).",
+          "Vous pouvez maintenant déposer ou remplacer les photos de mensurations de vos athlètes.",
+          "Les images d'illustration des séances énergie sont rangées à part ; celles déjà posées s'affichent comme avant.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-confidentialite-v2026-11-13",
     date: "2026-11-13",
     kind: "feature",

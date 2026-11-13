@@ -267,10 +267,16 @@ export async function deleteMeasurementLog(log: Pick<MeasurementLog, "id" | "pho
   check(await db().from("measurement_logs").delete().eq("id", log.id), "Suppression des mensurations impossible");
 }
 
-/** URLs signées (1 h) des photos, par chemin. */
+/**
+ * Durée de vie d'une URL signée de photo (secondes). Courte : le bucket
+ * `test-media` est privé (photos du corps), une URL qui fuit expire vite.
+ */
+export const PHOTO_URL_TTL_S = 600;
+
+/** URLs signées (10 min) des photos, par chemin. */
 export async function getMeasurementPhotoUrls(paths: readonly string[]): Promise<Record<string, string>> {
   if (paths.length === 0) return {};
-  const res = await photos().createSignedUrls([...paths].sort(), 3600);
+  const res = await photos().createSignedUrls([...paths].sort(), PHOTO_URL_TTL_S);
   if (res.error) throw new ApiError("Lecture des photos impossible", res.error);
   const out: Record<string, string> = {};
   for (const item of res.data ?? []) if (item.path && item.signedUrl) out[item.path] = item.signedUrl;

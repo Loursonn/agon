@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { QK } from '@/lib/queryKeys';
 import { compressImage } from '@/lib/compressImage';
 import {
-  createMeasurementLog, deleteMeasurementLog, getMeasurementLogs, getMeasurementPhotoUrls,
+  createMeasurementLog, deleteMeasurementLog, getMeasurementLogs, getMeasurementPhotoUrls, PHOTO_URL_TTL_S,
   invalidateProfile, profileKeys, updateMeasurementLog,
 } from '@/api/profile';
 import type {
@@ -106,6 +106,6 @@ export function useMeasurementPhotoUrls(paths: string[]) {
     queryKey: profileKeys.photoUrls(sorted),
     queryFn: (): Promise<Record<string, string>> => getMeasurementPhotoUrls(sorted),
     enabled: sorted.length > 0,
-    staleTime: 50 * 60 * 1000, // < 1h (durée du signed URL)
+    staleTime: (PHOTO_URL_TTL_S - 120) * 1000, // relue avant l'expiration de l'URL signée
   });
 }

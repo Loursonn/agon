@@ -2135,3 +2135,36 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   photos du corps. La politique ne dit donc plus « espace privé ». Correctif et qualification juridique :
   `docs/QUESTIONS_JURISTE_HDS.md` §4.
 - Pas de CGV : aucun paiement aujourd'hui. Questions ouvertes : `docs/QUESTIONS_JURISTE_HDS.md`.
+
+## 2026-11-13 — Bucket `test-media` privé (faille S6)
+
+- **Faille** : le bucket est public depuis 2026-08-25 (`20260825000000_coach_upload_test_media.sql`). Toute personne qui
+  connaît l'adresse d'un fichier peut le lire sans compte. En prod, il contient 12 photos du corps
+  (`<athlete>/mensurations/…`) et 6 illustrations de séances énergie (`<coach>/sessions/…`). Seules ces 6 illustrations
+  utilisent l'URL publique, et 4 liens sont enregistrés dans `energy_sessions.images`.
+- **Choix** :
+  - Les illustrations de séances, contenu du coach et non donnée personnelle, passent dans le bucket public
+    `energy-exercise-photos` (`ENERGY_IMAGE_BUCKET`, `src/api/energy.ts`).
+  - Les photos du corps restent dans `test-media`, qui devient privé ; elles sont lues par URL signée de 10 min
+    (`PHOTO_URL_TTL_S`, `src/api/profile.ts`).
+  - Lecture et écriture : le propriétaire du dossier ou son coach (`is_coach_of_folder` : référent ou co-coach).
+    Pas de staff, car la table des mensurations n'a pas de règle staff.
+- **Liens déjà enregistrés** : réécrits par migration vers `energy-exercise-photos`, seulement si la copie du fichier
+  existe. Un lien sans copie reste tel quel.
+- **Ordre en prod** (accord d'Hugo requis) :
+  1. Copier les 6 fichiers `test-media/<coach>/sessions/*` vers `energy-exercise-photos` avec l'API Storage
+     (`supabase storage cp … --experimental`), hors SQL.
+  2. Appliquer `20261113190000_test_media_private_part1.sql` : règles d'accès et réécriture des liens. Compatible
+     avec le client de `main`.
+  3. Appliquer `20261113190100_test_media_private_part2.sql` : `public = false`. Le client de `main` lit déjà les
+     photos par URL signée. Seule une **nouvelle** illustration de séance envoyée depuis `main` aurait un lien cassé
+     jusqu'au déploiement de `dev`. Si cela arrive, refaire 1 puis rejouer la réécriture de la partie 1.
+- Test à blanc : `supabase/tests/test_media_storage.sql`, passé le 2026-11-13 dans une transaction annulée.
+  - Anonyme : refusé.
+  - Autre coach : refusé en lecture et en dépôt.
+  - Athlète et son coach : lecture, dépôt et remplacement acceptés.
+  - 4 liens sur 4 réécrits.
+  - La suppression SQL directe dans `storage.objects` est interdite par Supabase, donc non testable ici.
+- Reste : les illustrations d'un coach dans `energy-exercise-photos` ne sont pas dans `USER_BUCKETS`
+  (`_shared/userStorage.ts`). Elles ne partent pas à la suppression de son compte. À ajouter avec un redéploiement
+  de `delete-account`.
