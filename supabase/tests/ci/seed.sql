@@ -15,7 +15,7 @@
 --   a1 …0a01 « Léa Démo » : le plus ancien athlète et le plus petit id. Sans co-coach
 --      (weight_set_goal, co_coach_rls en ajoutent un). Porte tout ce que les scripts cherchent :
 --      app_data asp:wh / asp:wlog / asp:bw / asp:blockHistory / asp:prog (2 séances),
---      workout_logs, medical_entries, antécédents, consentement garmin_sync.
+--      workout_logs, medical_entries, consentement garmin_sync.
 --   a2 …0a02 : même coach que a1 (« autre athlète du coach »), asp:wh / asp:wlog
 --   a3 …0a03, a4 …0a04 : athlètes d'autres coachs (servent de « pro » dans les tests staff)
 --   a4 est co-coaché par D, avec des saisies wellness (co-coach « avec des saisies » de sante_tables).
@@ -77,9 +77,6 @@ SET session_replication_role = origin;  -- données : triggers actifs (synchro s
 
 INSERT INTO public.athlete_co_coaches (athlete_id, co_coach_id, added_by, added_by_role) VALUES
   ('00000000-0000-4000-a000-000000000a04', '00000000-0000-4000-a000-000000000c04', '00000000-0000-4000-a000-000000000c03', 'coach');
-
-INSERT INTO public.medical_history (athlete_id, conditions) VALUES
-  ('00000000-0000-4000-a000-000000000a01', 'test');
 
 INSERT INTO public.medical_entries (athlete_id, kind, title, zone, date, status, created_by, declared_by) VALUES
   ('00000000-0000-4000-a000-000000000a01', 'blessure', 'Entorse (test)', 'cheville', current_date - 60, 'gueri',
