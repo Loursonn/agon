@@ -2117,3 +2117,21 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   regles.md : c'est regles.md qui est appliqué (charge en hausse **et** VFC sous la zone **et** ≥ 2 signes sur 5).
 - **Affichage** : Retours (coach, détail des signaux) et carte wellness d'Aujourd'hui (athlète). Accueil coach et vue
   globale wellness (P26) : pas branchés (P26 bloqué), un feu par athlète y coûterait une lecture par athlète.
+
+## 2026-11-13 — Documents légaux, version 2026-11-13 (re-consentement)
+
+- `LEGAL_VERSION` et `CORE_CONSENT_SINCE` passent au 2026-11-13. L'accord socle couvre de nouvelles catégories de données
+  de santé : photos du corps, composition corporelle, douleur et maladie du matin, bilan hebdomadaire, feu du matin,
+  copie intégrale Garmin. Tous les utilisateurs sont donc re-sollicités par `ConsentGate`. L'accord IA (`AI_CONSENT_SINCE`)
+  ne bouge pas : rien de nouveau n'est envoyé à une IA.
+- Politique : ajouts de `docs/stores/DONNEES_COLLECTEES.md` §5 (points 2 à 6, 8 et 9) et de P39 (weekly review).
+  Liste explicite de ce qui ne part jamais vers une IA.
+- Faits corrigés :
+  - région Supabase : Irlande (`supabase backups list`), et non eu-central-1 ;
+  - la preuve du consentement n'est pas gardée 5 ans après la suppression du compte : le journal part avec le compte,
+    seule `account_deletions` reste, anonyme ;
+  - renvoi « section 4.2 » corrigé en 4.3.
+- Constaté en lisant la base : le bucket `test-media` est **public** (migration du 2026-08-25, audit S6). Il contient des
+  photos du corps. La politique ne dit donc plus « espace privé ». Correctif et qualification juridique :
+  `docs/QUESTIONS_JURISTE_HDS.md` §4.
+- Pas de CGV : aucun paiement aujourd'hui. Questions ouvertes : `docs/QUESTIONS_JURISTE_HDS.md`.

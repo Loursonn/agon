@@ -26,7 +26,8 @@ export default function Terms() {
         diagnostic, aucun traitement et aucun avis médical. Les programmes, charges et indicateurs
         affichés sont des outils de suivi sportif. Consultez un professionnel de santé avant de
         reprendre ou d'intensifier une activité physique, et arrêtez immédiatement en cas de
-        douleur.
+        douleur. Les indicateurs calculés (charge d'entraînement, feu du matin…) sont des repères
+        pour le suivi, pas un diagnostic.
       </Callout>
 
       <Section title="1. Objet">
@@ -47,6 +48,13 @@ export default function Terms() {
           L'accès nécessite la création d'un compte. Deux rôles existent : <strong>coach</strong> et{" "}
           <strong>athlète</strong>. Un athlète rejoint un coach au moyen d'un code d'invitation que
           celui-ci lui transmet. Un même utilisateur peut cumuler les deux rôles.
+        </P>
+        <P>
+          Un athlète peut aussi être suivi par un second coach (co-coach), qui dispose des mêmes
+          accès que son coach référent, et par des professionnels de son staff (kiné, ostéopathe,
+          nutritionniste, préparateur mental, médecin, coach adjoint), invités par lien. Un
+          professionnel du staff n'accède aux données de l'athlète qu'avec l'accord de celui-ci et
+          dans les seuls domaines que le coach lui ouvre.
         </P>
         <P>
           Vous devez avoir au moins 15 ans : votre date de naissance est demandée à l'inscription,
@@ -108,6 +116,14 @@ export default function Terms() {
         <P>
           Un modèle d'intelligence artificielle peut produire des résultats inexacts ou inadaptés.
           L'Éditeur ne garantit ni la pertinence ni la sécurité des contenus générés.
+        </P>
+        <P>
+          Le coach peut aussi relier son propre assistant d'intelligence artificielle (Claude,
+          édité par Anthropic) à Agon au moyen d'une clé qu'il génère. Cet assistant agit pour le
+          compte du coach, sur son abonnement personnel et sous sa responsabilité : il ne lit les
+          données d'un athlète que si celui-ci a donné son accord « intelligence artificielle », et
+          n'inscrit rien dans Agon sans la demande du coach. Le coach garde sa clé confidentielle
+          et peut la révoquer à tout moment.
         </P>
       </Section>
 
@@ -201,7 +217,9 @@ export default function Terms() {
         <P>
           Vous pouvez supprimer votre compte à tout moment depuis votre profil, sans préavis ni
           justification. La suppression est <strong>définitive et irréversible</strong> : les
-          données sont effacées, pas archivées.
+          données sont effacées, pas archivées. Elles peuvent subsister au plus 30 jours dans les
+          sauvegardes techniques de la base, qui ne servent qu'à restaurer le service après un
+          incident (voir la politique de confidentialité).
         </P>
         <P>
           L'Éditeur peut suspendre ou résilier un compte en cas de manquement grave aux présentes

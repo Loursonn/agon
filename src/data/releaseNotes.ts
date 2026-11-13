@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-confidentialite-v2026-11-13",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Politique de confidentialité et CGU mises à jour",
+    summary: "La politique de confidentialité liste maintenant toutes les données que l'app garde. Vos athlètes et vous serez invités à accepter à nouveau l'accord sur les données de santé à votre prochaine connexion.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Nouvelles données nommées : envie, douleur et maladie du matin, bilan hebdomadaire, photos du corps, masse grasse, tests et HYROX, habitudes, données détaillées des montres (stress, SpO2, Body Battery…) et copie intégrale des données Garmin.",
+          "Ce qui ne part jamais vers une IA est écrit noir sur blanc : montres, photos, douleur, maladie, bilan hebdomadaire, feu du matin, charge.",
+          "Durée des sauvegardes (30 jours au plus) et sort de l'historique des accords à la suppression d'un compte.",
+          "CGU : co-coach et staff, assistant IA du coach, indicateurs présentés comme des repères et non un diagnostic.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-feu-du-matin",
     date: "2026-11-13",
     kind: "feature",
