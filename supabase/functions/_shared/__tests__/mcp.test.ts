@@ -190,3 +190,18 @@ describe("McpClient — erreurs explicites", () => {
     await expect(client().listTools()).rejects.toMatchObject({ code: 401 });
   });
 });
+
+describe("McpClient — délai", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("un serveur muet lève une erreur nommée au lieu d'attendre sans fin", async () => {
+    vi.stubGlobal("fetch", (_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(init.signal!.reason));
+      }));
+    const mcp = new McpClient({ host: "https://mcp.example", accessToken: "t", timeoutMs: 20 });
+    const err = await mcp.listTools().catch((e) => e);
+    expect(err).toBeInstanceOf(McpError);
+    expect(String(err.message)).toMatch(/sans réponse après/);
+  });
+});

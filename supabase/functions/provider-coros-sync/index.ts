@@ -102,6 +102,9 @@ const DEADLINE_MS = envNumber("COROS_SYNC_DEADLINE_MS", 110_000);
 /** Durée du verrou de synchronisation : plus long que la plus longue exécution. */
 const LOCK_TTL_S = 600;
 
+/** Délai maximal du téléchargement d'un FIT. */
+const FIT_DOWNLOAD_TIMEOUT_MS = 30_000;
+
 /** Largeur initiale de la fenêtre de dates demandée pour les FIT. */
 const WINDOW_SPAN = 30;
 
@@ -127,6 +130,45 @@ interface SyncReport {
   warnings?: string[];
   /** Ce qui reste à faire et quand (quota, budget, temps) — pas une erreur. */
   pending?: string;
+  /**
+   * Où le temps est passé (compteurs et durées, aucune donnée d'athlète) : sans
+   * cela, « interrompue avant la limite de temps » ne dit pas quelle étape est
+   * lente — l'ouverture de session, la liste des fichiers ou leur téléchargement.
+   */
+  timing?: SyncTiming;
+}
+
+interface CallStats {
+  calls: number;
+  totalMs: number;
+  maxMs: number;
+}
+
+interface SyncTiming {
+  /** Jeton + ouverture de session MCP + liste des outils. */
+  setupMs: number;
+  list: CallStats;
+  ingest: CallStats;
+  /** Fenêtres terminées : récentes, rattrapage. */
+  windows: { recent: number; backfill: number };
+  totalMs: number;
+}
+
+const newStats = (): CallStats => ({ calls: 0, totalMs: 0, maxMs: 0 });
+
+/** Chronomètre un appel asynchrone dans `stats`, même s'il lève. */
+function timed<A extends unknown[], R>(stats: CallStats, fn: (...a: A) => Promise<R>) {
+  return async (...a: A): Promise<R> => {
+    const t = Date.now();
+    try {
+      return await fn(...a);
+    } finally {
+      const d = Date.now() - t;
+      stats.calls++;
+      stats.totalMs += d;
+      stats.maxMs = Math.max(stats.maxMs, d);
+    }
+  };
 }
 
 const emptyReport = (conn: Connection): SyncReport => ({
@@ -348,7 +390,8 @@ async function ingestFit(
 
   let bytes: Uint8Array;
   try {
-    const res = await fetch(url);
+    // Un fichier qui ne vient pas ne doit pas manger tout le temps de l'exécution.
+    const res = await fetch(url, { signal: AbortSignal.timeout(FIT_DOWNLOAD_TIMEOUT_MS) });
     if (!res.ok) {
       return { kind: "retry", reason: `téléchargement refusé (${res.status})`, quota: res.status === 429 };
     }
@@ -548,6 +591,14 @@ async function syncConnection(
   }
 
   const { mcp, tools } = await listToolsWithRetry(admin, conn, host);
+  const timing: SyncTiming = {
+    setupMs: Date.now() - startedAt,
+    list: newStats(),
+    ingest: newStats(),
+    windows: { recent: 0, backfill: 0 },
+    totalMs: 0,
+  };
+  report.timing = timing;
 
   /*
     La liste réelle des outils, demandée une fois par exécution, avec le schéma
@@ -594,13 +645,13 @@ async function syncConnection(
     });
 
     const deps = {
-      list: async (range: { from: string; to: string }) => {
+      list: timed(timing.list, async (range: { from: string; to: string }) => {
         const result = await mcp.callTool(
           spec.tool,
           buildDateArgs(spec, range.from, range.to, COROS_FIT_LIMITS.perCall),
         );
         return classifyFitListing(result);
-      },
+      }),
       quotaRemaining: async () => {
         const { data, error } = await admin.rpc("provider_fit_quota_remaining", {
           p_connection_id: conn.id,
@@ -624,7 +675,7 @@ async function syncConnection(
           p_limit: COROS_FIT_LIMITS.perDay,
         });
       },
-      ingest: (url: string) => ingestFit(admin, conn.athlete_id, url),
+      ingest: timed(timing.ingest, (url: string) => ingestFit(admin, conn.athlete_id, url)),
       hasTime: () => Date.now() - startedAt < DEADLINE_MS,
     };
     const opts = { span: WINDOW_SPAN, perCall: COROS_FIT_LIMITS.perCall, budget };
@@ -656,6 +707,7 @@ async function syncConnection(
       report.error = `Synchronisation interrompue : ${errMsg(e).slice(0, 200)}`;
     }
 
+    timing.windows = { recent: recent?.windows ?? 0, backfill: backfill?.windows ?? 0 };
     report.syncedThrough = nextSyncedThrough(plan, {
       backfillThrough: backfill?.processedThrough ?? null,
       recentThrough: recent?.processedThrough ?? null,
@@ -690,6 +742,9 @@ async function syncConnection(
       warnings.push(`données quotidiennes non lues : ${errMsg(e).slice(0, 200)}`);
     }
   }
+
+  timing.totalMs = Date.now() - startedAt;
+  console.log(`provider-coros-sync: connexion ${conn.id} : durées`, JSON.stringify(timing));
 
   await admin
     .from("provider_connections")

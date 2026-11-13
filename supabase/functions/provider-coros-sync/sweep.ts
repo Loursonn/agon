@@ -66,6 +66,10 @@ export interface SweepResult {
   warnings: string[];
   /** Fichiers réservés sur le quota. */
   used: number;
+  /** Fenêtres terminées (listées et téléchargées en entier). */
+  windows: number;
+  /** Appels de liste, resserrements compris. */
+  lists: number;
 }
 
 export async function sweepFitWindows(
@@ -82,6 +86,8 @@ export async function sweepFitWindows(
     rejected: [],
     warnings: [],
     used: 0,
+    windows: 0,
+    lists: 0,
   };
   const stop = (s: SweepStop, error?: string): SweepResult => {
     out.stop = s;
@@ -108,10 +114,13 @@ export async function sweepFitWindows(
       fichiers : on le fait même budget épuisé, ce qui laisse le curseur
       traverser les périodes sans activité.
     */
-    for (;;) {
+    for (let attempt = 0; ; attempt++) {
       range = planFitWindow(cursor, to, span);
       if (!range) return stop("done");
+      // Chaque resserrement est un appel de plus : il doit tenir dans le temps.
+      if (attempt > 0 && !deps.hasTime()) return stop("deadline");
       let listing: FitListing;
+      out.lists++;
       try {
         listing = await deps.list(range);
       } catch (e) {
@@ -169,6 +178,7 @@ export async function sweepFitWindows(
     }
 
     out.processedThrough = range.to;
+    out.windows++;
     if (deps.onWindowDone) await deps.onWindowDone(range);
     cursor = shiftDay(range.to, 1);
   }
