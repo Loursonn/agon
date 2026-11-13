@@ -29,3 +29,12 @@ describe("publicWebOrigin", () => {
     expect(publicWebOrigin(false)).toBe(window.location.origin);
   });
 });
+
+describe("openAuthorization", () => {
+  it("web : redirection complète vers l'URL du serveur", async () => {
+    const { openAuthorization } = await import("../native");
+    const went: string[] = [];
+    await openAuthorization("https://coros.example/authorize?state=s", false, (u) => went.push(u));
+    expect(went).toEqual(["https://coros.example/authorize?state=s"]);
+  });
+});

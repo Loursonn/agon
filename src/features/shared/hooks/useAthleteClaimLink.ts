@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { accountKeys, getClaimInfo, getClaimToken } from "@/api/account";
+import { publicWebOrigin } from "@/lib/native";
 
 /**
  * Lien de première connexion d'un athlète pré-créé par son coach.
@@ -13,7 +14,7 @@ export function useAthleteClaimLink(athleteId: string, enabled: boolean) {
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const token = await getClaimToken(athleteId);
-      return token ? `${window.location.origin}/claim/${token}` : null;
+      return token ? `${publicWebOrigin()}/claim/${token}` : null;
     },
   });
 }

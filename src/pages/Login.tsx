@@ -14,6 +14,7 @@ import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { initials } from "@/lib/initials";
 import { AUTH_INPUT } from "./auth/authStyles";
 import { AuthButton, AuthError, AuthField, AuthLogo, AuthScreen, AuthTitle, LegalLinks } from "./auth/AuthUi";
+import { publicWebOrigin } from "@/lib/native";
 
 type Tab = "login" | "register";
 type Role = "athlete" | "coach";
@@ -84,7 +85,7 @@ export default function Login() {
   const handleLogin = (e: FormEvent) => { e.preventDefault(); void run(async () => { await login(email, password); navigate("/"); }); };
   const handleForgot = (e: FormEvent) => {
     e.preventDefault();
-    void run(async () => { await sendPasswordReset(email, `${window.location.origin}/reset-password`); setForgotSent(true); });
+    void run(async () => { await sendPasswordReset(email, `${publicWebOrigin()}/reset-password`); setForgotSent(true); });
   };
   const handleRegister = (e: FormEvent) => {
     e.preventDefault();

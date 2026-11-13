@@ -2168,3 +2168,16 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
 - Reste : les illustrations d'un coach dans `energy-exercise-photos` ne sont pas dans `USER_BUCKETS`
   (`_shared/userStorage.ts`). Elles ne partent pas à la suppression de son compte. À ajouter avec un redéploiement
   de `delete-account`.
+
+## 2026-11-13 — Apps natives : tests dans la CI, pas sur un poste
+
+- Hugo n'installe pas Xcode. Les apps iOS et Android sont construites, installées et lancées dans
+  `.github/workflows/mobile.yml` : simulateur iOS sur `macos-latest`, émulateur Android sur `ubuntu-latest`. Le
+  workflow capture l'écran de connexion et publie les captures et l'APK en artefacts. Il se lance à la main ou à
+  chaque changement de `ios/`, `android/` ou `capacitor.config.ts`. Il n'utilise aucun secret de prod.
+- La signature iOS (et l'envoi aux stores) se fera plus tard dans la CI, par Fastlane, avec les secrets du compte
+  Apple dans GitHub.
+- Liens de l'app native : `publicWebOrigin()` (mot de passe oublié, réclamation, staff). Autorisation des montres
+  dans une fenêtre in-app (`@capacitor/browser`).
+- `public/.well-known` (AASA, assetlinks) est publié avec des valeurs à remplacer (Team ID Apple, empreinte Play).
+- Icônes et écran de lancement tirés de `public/brand`.
