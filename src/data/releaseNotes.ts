@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-suppression-photos-seances",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Suppression de compte : les photos des séances partent aussi",
+    summary: "Quand un compte est supprimé, les photos d'exercices qu'il avait ajoutées aux séances d'énergie sont maintenant effacées.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les photos ajoutées dans l'éditeur de séances d'énergie sont effacées avec le compte de leur auteur.",
+          "Une photo encore utilisée par une séance qui reste (bibliothèque, séance d'un autre athlète) est gardée, pour ne pas casser cette séance.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-telephone-energie-corrections",
     date: "2026-11-13",
     kind: "fix",

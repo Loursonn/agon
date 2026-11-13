@@ -39,6 +39,12 @@ describe("purgeUserStorage", () => {
     ]);
   });
 
+  it("supprime les photos d'exercices d'énergie que la base lui renvoie", async () => {
+    const { a, removed } = admin([{ bucket_id: "energy-exercise-photos", object_name: "u1/1700000000000.jpg" }]);
+    expect(await purgeUserStorage(a, "u1")).toEqual([]);
+    expect(removed).toEqual([{ bucket: "energy-exercise-photos", paths: ["u1/1700000000000.jpg"] }]);
+  });
+
   it("découpe par lots de 100", async () => {
     const many = Array.from({ length: 250 }, (_, i) => ({ bucket_id: "test-media", object_name: `u1/${i}.jpg` }));
     const { a, removed } = admin(many);

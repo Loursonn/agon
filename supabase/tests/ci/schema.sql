@@ -1700,7 +1700,7 @@ $$;
 ALTER FUNCTION "public"."get_my_coach_email"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_staff_invitation"("p_token" "text") RETURNS TABLE("athlete_name" "text", "coach_name" "text", "inviter_name" "text", "invited_by_role" "text", "profession" "text", "status" "text")
+CREATE OR REPLACE FUNCTION "public"."get_staff_invitation"("p_token" "text") RETURNS TABLE("athlete_name" "text", "coach_name" "text", "inviter_name" "text", "invited_by_role" "text", "profession" "text", "status" "text", "permissions" "jsonb", "expires_at" timestamp with time zone)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -1713,7 +1713,9 @@ CREATE OR REPLACE FUNCTION "public"."get_staff_invitation"("p_token" "text") RET
            WHEN i.used_at IS NOT NULL THEN 'used'
            WHEN i.expires_at < now()  THEN 'expired'
            ELSE 'valid'
-         END
+         END,
+         i.permissions,
+         i.expires_at
     FROM public.staff_invitations i
     JOIN public.profiles a ON a.id = i.athlete_id
     LEFT JOIN public.profiles c ON c.id = a.coach_id
@@ -2624,6 +2626,18 @@ CREATE OR REPLACE FUNCTION "public"."list_user_storage_objects"("target_user" "u
       OR o.name LIKE '%/athletes/' || target_user::text || '/%'
       OR o.name IN (SELECT c.image_path FROM public.doc_comments c
                      WHERE c.author_id = target_user AND c.image_path IS NOT NULL)
+    )
+  UNION
+  -- Illustrations de séances : seulement celles qu'aucune séance survivante n'utilise.
+  SELECT o.bucket_id, o.name
+  FROM storage.objects o
+  WHERE o.bucket_id = 'energy-exercise-photos'
+    AND (o.name LIKE target_user::text || '/%' OR o.owner = target_user)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.energy_sessions s
+       WHERE s.athlete_id IS DISTINCT FROM target_user
+         AND jsonb_typeof(s.images) = 'array'
+         AND strpos(s.images::text, '/energy-exercise-photos/' || o.name) > 0
     );
 $$;
 

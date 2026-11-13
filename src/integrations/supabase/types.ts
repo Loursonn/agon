@@ -6053,8 +6053,10 @@ export type Database = {
         Returns: {
           athlete_name: string
           coach_name: string
+          expires_at: string
           invited_by_role: string
           inviter_name: string
+          permissions: Json
           profession: string
           status: string
         }[]
