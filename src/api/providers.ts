@@ -568,7 +568,7 @@ export interface RemovedActivity {
  */
 export async function removeProviderActivity(activityId: string): Promise<RemovedActivity> {
   const data = unwrap(
-    await db().rpc("remove_provider_activity" as never, { p_activity: activityId } as never),
+    await db().rpc("remove_provider_activity", { p_activity: activityId }),
     "Activité non retirée",
   ) as { removed?: unknown; unlinked?: unknown } | null;
   return { removed: data?.removed === true, unlinked: Number(data?.unlinked ?? 0) || 0 };
