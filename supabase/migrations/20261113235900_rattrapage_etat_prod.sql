@@ -43,6 +43,9 @@ COMMENT ON COLUMN public.energy_session_assignments.actual_duration_min IS NULL;
 DROP POLICY IF EXISTS "Service write" ON public.exercises;
 CREATE POLICY "Service write" ON public.exercises USING ((auth.role() = 'service_role'::text));
 
+-- ── training_methods : contrainte de catégorie jamais posée en prod ───────
+ALTER TABLE public.training_methods DROP CONSTRAINT IF EXISTS training_methods_category_check;
+
 -- ── measurement_logs : commentaires absents en prod ─────────────────────────
 COMMENT ON COLUMN public.measurement_logs.bras_g IS NULL;
 COMMENT ON COLUMN public.measurement_logs.bras_d IS NULL;
