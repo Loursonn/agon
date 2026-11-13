@@ -2269,3 +2269,13 @@ et son README.
   « bien-être », pas de nouveau domaine.
 - **P39** : export (`weekly_reviews`), suppression par cascade, aucune donnée envoyée à l'IA. Texte de la
   politique de confidentialité à compléter par la session « légal » (`LEGAL_VERSION` inchangée).
+
+## 2026-11-13 — Poids : une seule source (P15, décisions d'Hugo)
+
+- **Poids de référence** : la dernière pesée (`body_weight_logs`). `profiles.weight_kg` deviendra une
+  valeur dérivée ; pour les athlètes dont la fiche diffère, l'ancienne valeur de fiche part dans l'export
+  avant la fusion.
+- **Objectif de poids** : la stratégie nutrition est la seule source ; `body_weight_goals.target_kg` est
+  alimenté par elle.
+- Mise en œuvre à l'étape 3 de `docs/SANTE_TABLES.md`, qui attend la mesure des versions clientes (P4 :
+  le suivi n'était pas monté dans l'app, corrigé sur dev le 13/11, actif au prochain déploiement de main).

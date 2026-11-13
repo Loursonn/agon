@@ -76,6 +76,8 @@ Le client de ce lot **retombe sur `app_data`** si la table n'existe pas (erreur 
 
 Mesure avant 3 et 4 : `git rev-list --count origin/main..origin/dev` (le client de prod vient de `main`) et ancienneté des PWA : aucune télémétrie de version aujourd'hui. Proposition : à l'étape 2, ajouter un contrôle de version au démarrage (fichier `version.json` servi par Vercel, rechargement forcé si l'app est plus vieille) ; l'étape 4 attend ensuite au moins 30 jours.
 
+**Blocage de l'étape 3 (constaté le 2026-11-13)** : `ClientBuildReporter` était importé mais jamais monté (`App.tsx`), donc aucun appareil n'a remonté sa version (0 profil avec `client_build`). Corrigé sur dev (f80124a) ; la mesure ne commence qu'au prochain déploiement de main, puis il faut le délai PWA. Rien d'autre ne bloque le code de l'étape 3.
+
 **Fait (P4)** : `/version.json` + rechargement propre (`src/lib/versionCheck.ts`, `UpdatePrompt`) ; suivi serveur par `profiles.client_build` / `client_build_at` et la RPC `report_client_build` (migration `20261110110000_client_build.sql`, test `supabase/tests/client_build.sql`, appel `ClientBuildReporter`). Comptage : `select client_build, count(*) from profiles where client_build_at > now() - interval '30 days' group by 1 order by 2 desc;`. Test à blanc vert le 2026-11-09 ; migration appliquée en prod. **Correctif 2026-11-13** : `ClientBuildReporter` était importé dans `App.tsx` mais jamais rendu, d'où 0 profil avec `client_build` en prod ; il est maintenant monté dans `AuthProvider`. Le comptage ne vaut qu'à partir de la mise en prod de ce correctif.
 
 
@@ -110,8 +112,8 @@ Proposition (étape 3, à valider) :
 1. `body_weight_logs` = **seule source** du poids du jour. Le formulaire wellness, la fiche profil et les mensurations écrivent une pesée par `weight_set_day`.
 2. `wellness_entries.weight_kg` : gardé jusqu'à l'étape 4 pour la compatibilité, puis supprimé (lecture par jointure sur `body_weight_logs`).
 3. `measurement_logs.weight_kg` : reste un instantané de la séance de mesures, mais saisi = pesée écrite dans `body_weight_logs` ; reprise unique du jour sans pesée (1 cas).
-4. `profiles.weight_kg` : devient dérivé (trigger sur `body_weight_logs` → dernière pesée), la fiche ne l'écrit plus directement. **Décision d'Hugo** : à la fusion, pour les 10 athlètes où la fiche et la dernière pesée diffèrent, laquelle garder ? (recommandé : la dernière pesée ; la valeur de fiche est copiée dans l'export avant).
-5. Objectif : `body_weight_goals.target_kg` et `nutrition strategy.target_weight` coexistent (l'écran prend la stratégie d'abord). Garder un seul objectif (recommandé : celui de la stratégie nutrition, `target_kg` alimenté par elle).
+4. `profiles.weight_kg` : devient dérivé (trigger sur `body_weight_logs` → dernière pesée), la fiche ne l'écrit plus directement. **Tranché par Hugo le 2026-11-13 : la dernière pesée** fait foi ; la valeur de fiche est copiée dans l'export avant la fusion.
+5. Objectif : `body_weight_goals.target_kg` et `nutrition strategy.target_weight` coexistent (l'écran prend la stratégie d'abord). **Tranché par Hugo le 2026-11-13 : la stratégie nutrition** est la seule source ; `target_kg` est alimenté par elle.
 
 ## 6. Rollback
 
