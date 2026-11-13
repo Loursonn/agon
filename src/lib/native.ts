@@ -8,11 +8,15 @@
  *     doivent pointer vers le site public, pas vers `localhost` ;
  *   - liens ouverts depuis l'extérieur (lien universel / App Link
  *     `https://agon-training.com/...`) : routés dans l'app ;
- *   - bouton retour Android : page précédente, ou sortie de l'app.
+ *   - bouton retour Android : page précédente, ou sortie de l'app ;
+ *   - autorisation d'une montre (COROS, Garmin) : fenêtre in-app
+ *     (`@capacitor/browser`), fermée au retour par lien universel.
  * Sur le web, rien de tout cela ne s'exécute.
  */
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import { focusManager } from "@tanstack/react-query";
 import { COMPANY } from "@/lib/legal";
 
 /** Hôtes dont les liens s'ouvrent dans l'app (liens universels / App Links). */
@@ -46,6 +50,28 @@ export function deepLinkPath(url: string): string | null {
   return `${parsed.pathname}${parsed.search}${parsed.hash}` || "/";
 }
 
+/**
+ * Ouvre la page d'autorisation d'un service connecté (COROS, Garmin).
+ * Web : redirection complète (les bloqueurs de pop-up font échouer une
+ * fenêtre surgissante sur mobile). Natif : fenêtre in-app, pour que
+ * l'athlète ne quitte pas l'app ; le serveur garde le `state`, l'URL de
+ * retour reste celle du serveur (jamais une URL venant du client).
+ */
+export async function openAuthorization(
+  url: string,
+  native = isNativeApp(),
+  go: (u: string) => void = (u) => window.location.assign(u),
+): Promise<void> {
+  if (native) await Browser.open({ url, presentationStyle: "fullscreen" });
+  else go(url);
+}
+
+/** Relance les lectures (connexion de montre) : React Query relit au retour du focus. */
+function refreshAfterBrowser(): void {
+  focusManager.setFocused(false);
+  focusManager.setFocused(undefined);
+}
+
 /** Navigation SPA sans rechargement : BrowserRouter écoute `popstate`. */
 function navigateInApp(path: string): void {
   window.history.pushState({}, "", path);
@@ -58,8 +84,16 @@ export function initNativeShell(): void {
 
   void App.addListener("appUrlOpen", ({ url }) => {
     const path = deepLinkPath(url);
-    if (path) navigateInApp(path);
+    if (!path) return;
+    // Retour d'autorisation par lien universel : on ferme la fenêtre in-app.
+    void Browser.close().catch(() => {});
+    navigateInApp(path);
+    refreshAfterBrowser();
   });
+
+  // L'athlète a fermé la fenêtre d'autorisation lui-même (pas de lien
+  // universel avant la publication de l'AASA / assetlinks) : on relit.
+  void Browser.addListener("browserFinished", refreshAfterBrowser);
 
   if (Capacitor.getPlatform() === "android") {
     void App.addListener("backButton", ({ canGoBack }) => {

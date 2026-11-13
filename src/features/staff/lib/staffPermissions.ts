@@ -6,6 +6,8 @@
  * autorité : ces valeurs ne servent qu'à pré-cocher et à afficher.
  */
 
+import { publicWebOrigin } from "@/lib/native";
+
 export const STAFF_DOMAINS = [
   "seances",
   "fiches",
@@ -131,5 +133,5 @@ export function summarizePermissions(p: StaffPermissions): string {
 }
 
 export function staffInviteUrl(token: string): string {
-  return `${window.location.origin}/staff-invite/${token}`;
+  return `${publicWebOrigin()}/staff-invite/${token}`;
 }

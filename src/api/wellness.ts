@@ -228,5 +228,6 @@ export function invalidateWellness(qc: QueryClient, athleteId: string): Promise<
     qc.invalidateQueries({ queryKey: ["monthlyRetours", athleteId] }),
     qc.invalidateQueries({ queryKey: ["micro-stats", athleteId] }),
     qc.invalidateQueries({ queryKey: ["athlete-insights", athleteId] }),
+    qc.invalidateQueries({ queryKey: ["wellnessLight", athleteId] }),
   ]);
 }

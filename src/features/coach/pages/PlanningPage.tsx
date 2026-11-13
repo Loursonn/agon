@@ -11,6 +11,8 @@ import { TimelineView } from "@/features/coach/components/planning/TimelineView"
 import { CalendarMonthView } from "@/features/coach/components/planning/CalendarMonthView";
 import { SummaryView } from "@/features/coach/components/planning/SummaryView";
 import { CompetitionsView } from "@/features/coach/components/planning/CompetitionsView";
+import { WeekLoadPanel } from "@/features/coach/components/load/WeekLoadPanel";
+import { mondayOf } from "@/lib/trainingLoadWeek";
 
 // ── View types ────────────────────────────────────────────────────────────────
 
@@ -57,6 +59,11 @@ export default function PlanningPage() {
             wellnessHistory={wellnessHistory}
             nutritionLog={nutritionLog}
           />
+        )}
+        {view === "month" && athleteId && (
+          <div style={{ marginTop: 20 }}>
+            <WeekLoadPanel athleteId={athleteId} weekStart={mondayOf()} />
+          </div>
         )}
 
         {view === "summary" && (

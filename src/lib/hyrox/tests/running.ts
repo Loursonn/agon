@@ -1,12 +1,14 @@
 /**
  * Analyse course à pied à partir de 2 ou 3 efforts maximaux (1200 m, 6 min, 12 min).
  *
- * Modèle vitesse critique (Monod-Scherrer / Jones) : distance = VC × t + D′.
+ * Modèle vitesse critique (Monod-Scherrer / Jones) : distance = VC × t + D′,
+ * calcul unique `fitCriticalSpeed` (`_shared/domain/criticalSpeed.ts`).
  * Loi de puissance de Riegel : v(t) = S × t^(E−1).
  * Seuils, zones et FC seuil (méthode CHR) selon la méthode Rivet.
  * Paramètres : GridSet.running (versionnés, jamais en dur).
  */
 import type { RunEffort, RunningParams } from "./types";
+import { fitCriticalSpeed } from "@shared/domain/criticalSpeed";
 import { linreg, pos } from "./util";
 
 export interface RunPoint { t: number; d: number; hr: number | null }
@@ -104,14 +106,14 @@ export function analyzeRunning(
     e_reading: null, hr_threshold: null, athlete_zones: [], coach_speed_zones: [], coach_hr_zones: [],
     predictions: { km5_s: null, km10_s: null }, speed_reserve: null, profile: null, pct_vc_table: [],
   };
-  // VC : régression distance (m) sur temps (s) ; pente en m/s.
-  const cv = linreg(points.map(q => [q.t, q.d] as const));
+  // VC : régression distance (m) sur temps (s), calcul partagé.
+  const cv = fitCriticalSpeed(points);
   // Riegel : ln(v) sur ln(t).
   const rg = linreg(points.map(q => [Math.log(q.t), Math.log((q.d / q.t) * 3.6)] as const));
-  if (!cv || !rg || !(cv.b > 0)) return empty;
+  if (!cv || !rg) return empty;
 
-  const cs = cv.b * 3.6;
-  const dprime = cv.a;
+  const cs = cv.csKmh;
+  const dprime = cv.dprimeM;
   const e = rg.b + 1;
   const s = Math.exp(rg.a);
   const f1 = s1FactorFor(e, p);

@@ -108,7 +108,7 @@ export function MesocycleSummary({ meso, athleteId }: Props) {
           {/* Load chart */}
           {loadData.length > 0 && (
             <div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Charge hebdomadaire</p>
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Charge hebdomadaire · points YOXX (prévu / réalisé)</p>
               <ResponsiveContainer width="100%" height={120}>
                 <BarChart data={loadData} margin={{ top: 2, right: 4, left: -24, bottom: 0 }} barCategoryGap="20%">
                   <XAxis
@@ -124,8 +124,9 @@ export function MesocycleSummary({ meso, athleteId }: Props) {
                     cursor={{ fill: "#FFC933", opacity: 0.1 }}
                     labelStyle={{ color: "#fff" }}
                     itemStyle={{ color: "#FFC933" }}
-                    formatter={(v: number) => [v, "Charge"]}
+                    formatter={(v: number | null, name: string) => [v ?? "—", name === "planned" ? "Prévu" : "Réalisé"]}
                   />
+                  <Bar dataKey="planned" fill="#FFC933" fillOpacity={0.25} radius={[4, 4, 0, 0]} />
                   <Bar dataKey="load" fill="#FFC933" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -55,6 +55,111 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     ],
   },
   {
+    id: "2026-11-13-photos-privees",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Photos de mensurations : accès protégé",
+    summary: "Les photos du corps déposées avec les mensurations ne sont plus accessibles par un simple lien : seuls l'athlète et son coach les ouvrent, par un lien temporaire.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les photos de mensurations s'ouvrent par un lien valable 10 minutes, réservé à l'athlète et à son coach (référent ou co-coach).",
+          "Vous pouvez maintenant déposer ou remplacer les photos de mensurations de vos athlètes.",
+          "Les images d'illustration des séances énergie sont rangées à part ; celles déjà posées s'affichent comme avant.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-confidentialite-v2026-11-13",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Politique de confidentialité et CGU mises à jour",
+    summary: "La politique de confidentialité liste maintenant toutes les données que l'app garde. Vos athlètes et vous serez invités à accepter à nouveau l'accord sur les données de santé à votre prochaine connexion.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Nouvelles données nommées : envie, douleur et maladie du matin, bilan hebdomadaire, photos du corps, masse grasse, tests et HYROX, habitudes, données détaillées des montres (stress, SpO2, Body Battery…) et copie intégrale des données Garmin.",
+          "Ce qui ne part jamais vers une IA est écrit noir sur blanc : montres, photos, douleur, maladie, bilan hebdomadaire, feu du matin, charge.",
+          "Durée des sauvegardes (30 jours au plus) et sort de l'historique des accords à la suppression d'un compte.",
+          "CGU : co-coach et staff, assistant IA du coach, indicateurs présentés comme des repères et non un diagnostic.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-feu-du-matin",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Feu du matin : vert, orange ou rouge, calculé",
+    summary: "Chaque matin, un feu résume l'état de l'athlète à partir de sa VFC et de sa FC de repos (montre), de ses ressentis et de sa charge des 7 derniers jours, toujours comparés à ses propres habitudes.",
+    sections: [
+      {
+        title: "Comment il se décide",
+        points: [
+          "Orange dès qu'un signal apparaît : charge des 7 jours plus de 10 % au-dessus du prévu, km +7 %, sortie non prévue au-dessus du plafond, monotonie au-dessus de 2, VFC sous sa zone habituelle, FC de repos au-dessus de l'habitude, 2 ressentis nettement bas, douleur au-dessus de 3/10.",
+          "Rouge quand la charge monte et que la VFC est sous la zone, avec au moins 2 signes parmi : FC de repos haute, wellness sous l'habitude, envie à 2/5 ou moins, sommeil en baisse. Rouge aussi si l'athlète se dit malade.",
+          "VFC : moyenne des 7 dernières nuits (5 au moins), zone habituelle = moyenne ± 0,5 écart-type des 4 semaines d'avant. L'alerte VFC s'active au 14e jour de mesure.",
+          "Une seule marque de montre à la fois : après un changement de montre, l'habitude repart de zéro. Les scores des marques (Body Battery, readiness…) ne comptent jamais, et ces données ne passent par aucune IA.",
+          "Sans montre, le feu ne passe au rouge que si l'athlète est malade.",
+        ],
+      },
+      {
+        title: "Où le voir",
+        points: [
+          "Retours d'un athlète : le feu du jour en haut, avec tous les signaux.",
+          "L'athlète le voit sur son accueil, sous son score wellness.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-charge-yoxx",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Charge d'entraînement : points YOXX, prévu face au réalisé",
+    summary: "La charge de chaque séance se compte en points (1 point = 1 minute en zone 1), pour la course, les ergos, les séances mixtes et la musculation, prévue et réalisée.",
+    sections: [
+      {
+        title: "Comment c'est compté",
+        points: [
+          "Course et ergos : minutes en zone 1 × 1, en zone 2 × 2, en zone 3 × 3. Les zones viennent du modèle de zones FC que vous avez fixé à la date de la séance (5 et 7 zones sont ramenées à 3).",
+          "En course, un tour plus rapide que le seuil 1 est classé à l'allure : zone 2 jusqu'à la vitesse critique, zone 3 au-delà.",
+          "Séances mixtes, spécifiques, HYROX : la FC de toute la séance ; leurs km comptent à part (« compromised »).",
+          "Musculation : séries dures selon le RIR (0-1 : 1 · 2-3 : 0,75 · 4-5 : 0,4) et le type d'exercice (bas du corps lourd × 1,5, autre polyarticulaire × 1, isolation × 0,5), × 6.",
+          "Sans montre : la séance validée compte comme prévue (au prorata de la durée corrigée).",
+        ],
+      },
+      {
+        title: "Où la voir",
+        points: [
+          "Planning › Mois : sous le calendrier, la semaine en cours : séances, km, zones, charge sur 6 semaines (prévu en pointillé), monotonie, séance la plus coûteuse.",
+          "Charge aiguë (7 j) face à la chronique (4 semaines précédentes) et leur ratio, avec la zone 0,8–1,3 : pour le contexte, il ne déclenche aucune alerte.",
+          "Planning › Résumé : la charge hebdomadaire de chaque mésocycle passe aux points YOXX, prévus et réalisés.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-vitesse-critique",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Vitesse critique : une seule, et une proposition tirée des courses",
+    summary: "Le profil sportif affiche la vitesse critique retenue (test ou saisie, la plus récente) et en propose une nouvelle à partir des courses de l'athlète.",
+    sections: [
+      {
+        title: "Profil sportif › Vitesse",
+        points: [
+          "Sous les références : la VC retenue, sa source (test ou saisie) et sa date, avec la vitesse au seuil 1 qui en découle.",
+          "Si les meilleurs efforts de 3, 6 et 12 min des courses des 90 derniers jours donnent une VC différente, elle vous est proposée : « Utiliser » l'enregistre, sinon rien ne change.",
+          "La même VC sert aux tests HYROX et, bientôt, à la charge d'entraînement (zones 2 et 3).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-nouveautes-repliees",
     date: "2026-11-13",
     kind: "feature",

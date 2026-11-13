@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["APPLE_TEAM_ID.com.agontraining.app"],
+        "components": [{ "/": "*", "comment": "Toutes les pages du site s'ouvrent dans l'app" }]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["APPLE_TEAM_ID.com.agontraining.app"]
+  }
+}

@@ -87,6 +87,7 @@ export default function PrivacyPolicy() {
             "Adresse email et mot de passe (stocké sous forme de hachage irréversible, jamais en clair).",
             "Nom et prénom.",
             "Date de naissance, demandée à la création du compte pour vérifier l'âge minimum (15 ans).",
+            "Genre, si vous le renseignez (il sert à certains calculs et barèmes de tests).",
             "Rôle dans l'application : coach, athlète ou professionnel du staff, et le rattachement entre eux.",
             "Pour un professionnel du staff : son métier, les athlètes qu'il accompagne et les droits qui lui sont ouverts.",
             "Préférences d'affichage et paramètres du compte.",
@@ -106,9 +107,13 @@ export default function PrivacyPolicy() {
           items={[
             "Séances réalisées : exercices, charges, répétitions, séries, repos, difficulté perçue (RIR/RPE).",
             "Records personnels et maximums estimés.",
-            "Bien-être quotidien : fatigue, qualité et durée du sommeil, stress, énergie, courbatures par zone.",
-            "Poids de corps et mesures corporelles que vous saisissez.",
+            "Tests et évaluations : résultats, mesures, vidéos ou photos jointes ; courses et tests HYROX (temps, stations, analyses) ; compétitions.",
+            "Bien-être du matin : récupération, qualité et durée du sommeil, sérénité, énergie, fraîcheur musculaire, envie de vous entraîner, courbatures par zone et par intensité (et la séance de la veille à laquelle vous les rattachez), douleur éventuelle de 0 à 10, si vous êtes malade ou fiévreux, poids.",
+            "Bilan hebdomadaire : ressenti de la semaine (1 à 5), engagements, réponses libres, douleur éventuelle (zone, type, niveau de 0 à 10), message au coach, et un résumé chiffré de la semaine figé à l'envoi. Votre coach et votre staff ne le voient qu'une fois envoyé, jamais à l'état de brouillon.",
+            "Taille, poids de corps, masse grasse, métabolisme de base, et mensurations que vous saisissez.",
+            "Photos du corps (face, côté, dos, jambes) que vous déposez avec vos mensurations. Dans l'application, seuls vous et votre coach les voient.",
             "Blessures et zones douloureuses que vous déclarez, avec leurs dates.",
+            "Habitudes que vous suivez, et événements de votre calendrier (examens, voyages…) que vous ajoutez.",
             "Données de nutrition que vous saisissez.",
             "Commentaires et retours échangés avec votre coach.",
             "Contenus déposés par les professionnels de votre staff : entrées de suivi médical, fiches, commentaires.",
@@ -128,11 +133,28 @@ export default function PrivacyPolicy() {
           items={[
             "Activités : type, date, durée, distance, allure, vitesse, dénivelé, calories, tracé GPS lorsqu'il est fourni.",
             "Fréquence cardiaque : moyenne, maximale, zones, et série temporelle lorsqu'elle est fournie.",
-            "Données quotidiennes : pas, dépense énergétique, fréquence cardiaque de repos, variabilité cardiaque.",
-            "Sommeil : durée, phases, score lorsqu'il est fourni.",
-            "Indicateurs calculés par le fabricant : VO2max estimée, charge d'entraînement, statut de récupération, selon le modèle de montre.",
+            "Données quotidiennes : pas, étages, dépense énergétique, temps d'activité, fréquence cardiaque de repos, variabilité cardiaque de nuit.",
+            "Sommeil : durée, phases, heures de coucher et de lever, score lorsqu'il est fourni.",
+            "Stress, Body Battery, respiration, saturation en oxygène (SpO2), variation de température cutanée, lorsque la montre les mesure.",
+            "Composition corporelle et tension artérielle, si vous les enregistrez dans le service connecté (balance, tensiomètre).",
+            "Indicateurs calculés par le fabricant : VO2max estimée, âge sportif, charge d'entraînement, statut de récupération, selon le modèle de montre.",
           ]}
         />
+        <P>
+          Pour Garmin, nous conservons en plus une <strong>copie intégrale</strong> de ce que le
+          service nous transmet (le contenu complet de chaque résumé, les échantillons seconde par
+          seconde d'une activité — fréquence cardiaque, allure, cadence, puissance, altitude,
+          position GPS — et le fichier d'origine de la montre), y compris les types de données que
+          l'application n'affiche pas encore (nutrition, hydratation…). Cette copie sert à
+          recalculer ou corriger vos données sans vous redemander de synchroniser. Seul vous y avez
+          accès (elle figure dans l'export de vos données) ; votre coach ne la lit pas. Elle est
+          supprimée quand vous déconnectez Garmin, retirez votre accord ou supprimez votre compte.
+        </P>
+        <P>
+          Agon affiche ces mesures telles quelles, avec leur source. Les scores propres au fabricant
+          (Body Battery, score de sommeil, statut de récupération…) ne servent à aucun calcul
+          d'Agon.
+        </P>
         <P>
           Vous pouvez également importer vous-même des fichiers d'activité (formats FIT, TCX, GPX)
           ou une archive d'export fournie par un service tiers. Dans ce cas, c'est vous qui
@@ -140,12 +162,27 @@ export default function PrivacyPolicy() {
         </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
-          2.4 Données techniques
+          2.4 Indicateurs calculés par Agon
+        </h3>
+        <P>
+          À partir des données ci-dessus, Agon calcule des indicateurs pour vous et votre coach :
+          charge d'entraînement (prévue et réalisée, sur la semaine et sur 4 semaines), vitesse
+          critique, et un <strong>feu du matin</strong> (vert, orange ou rouge) qui compare votre
+          variabilité cardiaque, votre fréquence cardiaque de repos, vos ressentis et votre charge à
+          vos propres habitudes. Ces indicateurs sont recalculés à chaque affichage et ne sont pas
+          conservés à part, sauf le feu de la semaine, figé dans votre bilan hebdomadaire quand vous
+          l'envoyez. Ce sont des repères pour votre coach, pas un diagnostic médical.
+        </P>
+
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+          2.5 Données techniques
         </h3>
         <UL
           items={[
             "Journaux de connexion : date, heure, adresse IP, type de navigateur. Conservés pour la sécurité du service.",
             "Jeton de session, stocké localement dans votre navigateur pour vous maintenir connecté.",
+            "Version de l'application que vous utilisez, pour savoir qui doit mettre à jour et corriger les problèmes propres à une version.",
+            "Retours que vous nous envoyez sur l'application (votre message, la page où vous étiez, votre navigateur).",
           ]}
         />
         <P>
@@ -186,8 +223,13 @@ export default function PrivacyPolicy() {
             ],
             [
               "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Google Gemini utilisée par Agon, ou via l'assistant Claude de votre coach",
-              "Historique d'entraînement, bien-être, poids, objectifs, blessures déclarées, données de montre autorisées ; pour l'assistant Claude, également vos compétitions, tests et les titres des événements de votre calendrier",
+              "Historique d'entraînement, moyennes de bien-être (récupération, sommeil, stress, énergie), poids, objectifs, blessures déclarées ; pour l'assistant Claude, également vos compétitions, tests et les titres des événements de votre calendrier. Jamais les données Garmin ou COROS (voir 4.3)",
               "Consentement explicite (art. 9.2.a)",
+            ],
+            [
+              "Améliorer l'application et corriger ses défauts à partir de vos retours et de la version utilisée",
+              "Retours sur l'application, version installée",
+              "Intérêt légitime (art. 6.1.f)",
             ],
             [
               "Assurer la sécurité du service, prévenir les abus",
@@ -302,6 +344,12 @@ export default function PrivacyPolicy() {
           aux conditions de l'API payante. Aucune donnée issue d'un service tiers dont les
           conditions l'interdisent n'est transmise à ce traitement.
         </P>
+        <P>
+          <strong>Ne sont jamais transmis à une intelligence artificielle</strong>, ni à Gemini ni à
+          l'assistant de votre coach : les données de vos montres Garmin et COROS et leur copie
+          intégrale, vos photos du corps, la douleur et la maladie déclarées le matin, votre bilan
+          hebdomadaire, le feu du matin et la charge calculée.
+        </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
           4.4 Les services que vous connectez
@@ -341,14 +389,15 @@ export default function PrivacyPolicy() {
 
       <Section title="5. Où vos données sont stockées">
         <P>
-          La base de données et les fichiers sont hébergés par Supabase dans l'Union européenne.
+          La base de données et les fichiers sont hébergés par Supabase dans l'Union européenne
+          (Irlande).
           L'application web est distribuée par {HOSTING.name} ({HOSTING.address}).
         </P>
         <P>
           Certains prestataires sont établis hors de l'Union européenne. Ces transferts sont
           encadrés par les clauses contractuelles types adoptées par la Commission européenne, et
           le cas échéant par le Data Privacy Framework. Le détail figure au tableau de la section
-          4.2.
+          4.3.
         </P>
       </Section>
 
@@ -359,13 +408,21 @@ export default function PrivacyPolicy() {
         />
         <P>
           À la suppression de votre compte, vos données sont effacées de la base de production
-          immédiatement. Elles peuvent subsister jusqu'à 30 jours dans les sauvegardes chiffrées,
+          immédiatement. Elles peuvent subsister jusqu'à 30 jours dans les sauvegardes chiffrées
+          automatiques de la base, qui ne servent qu'à restaurer le service après un incident,
           puis disparaissent par rotation automatique.
         </P>
         <P>
-          Seule exception : la preuve de votre consentement (email, date, version du document
-          accepté) est conservée 5 ans, car la loi nous impose de pouvoir démontrer que ce
-          consentement a bien été recueilli.
+          Si un coach supprime son compte, ses athlètes gardent toutes leurs données : ils sont
+          seulement détachés de lui. Les documents que ce coach avait créés (fiches, bibliothèque)
+          partent avec son compte.
+        </P>
+        <P>
+          Tant que votre compte existe, l'historique de vos accords (date, version du document,
+          accord ou retrait) est conservé, y compris après un retrait, pour pouvoir démontrer
+          qu'ils ont bien été recueillis. Quand vous supprimez votre compte, cet historique est
+          effacé avec lui : nous ne gardons qu'une trace anonyme de la suppression (date, rôle,
+          version des documents en vigueur), sans nom, sans e-mail ni identifiant.
         </P>
       </Section>
 

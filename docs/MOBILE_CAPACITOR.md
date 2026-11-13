@@ -10,7 +10,7 @@ Même code, mêmes routes, même base Supabase. Pas de code natif métier.
 |---|---|
 | appId (iOS bundle id / Android package) | `com.agontraining.app` — **définitif** une fois publié (choisi par Hugo le 2026-11-12) |
 | Nom affiché | Agon |
-| Capacitor | 8.6 (`@capacitor/core`, `ios`, `android`, `cli`) + plugin `@capacitor/app` |
+| Capacitor | 8.6 (`@capacitor/core`, `ios`, `android`, `cli`) + plugins `@capacitor/app`, `@capacitor/browser` |
 | iOS minimum | 15.0 — dépendances natives par Swift Package Manager (pas de CocoaPods) |
 | Android | minSdk 24, targetSdk 36 |
 | Origine de la WebView | iOS `capacitor://localhost`, Android `https://localhost` |
@@ -28,7 +28,19 @@ Même code, mêmes routes, même base Supabase. Pas de code natif métier.
   - `appUrlOpen` : un lien `https://agon-training.com/...` ouvert par le système
     (lien universel / App Link) est routé dans l'app ; tout autre hôte est ignoré ;
   - bouton retour Android : page précédente, sinon sortie de l'app ;
-  - `publicWebOrigin()` : origine à mettre dans un lien partagé (voir « Reste à faire »).
+  - `publicWebOrigin()` : origine à mettre dans un lien partagé (mot de passe oublié,
+    réclamation, invitation staff) ;
+  - `openAuthorization()` : autorisation COROS / Garmin dans une fenêtre in-app
+    (`@capacitor/browser`), fermée au retour par lien universel ; à sa fermeture, les
+    lectures sont relancées (connexion de la montre à jour).
+- `public/.well-known/apple-app-site-association` et `assetlinks.json` : liens universels
+  et App Links, servis en `application/json` (`vercel.json`). **Valeurs à remplacer** :
+  `APPLE_TEAM_ID` (compte Apple) et `PLAY_APP_SIGNING_SHA256` (Play Console → Intégrité
+  de l'app). Tant qu'elles restent, les liens s'ouvrent dans le navigateur, sans erreur.
+- `assets/` : sources des icônes et de l'écran de lancement, tirées de `public/brand`
+  (`agon-app-icon.svg`, `agon-symbole-or-poli.svg` sur fond `#0E0C0A`). Regénérer :
+  `./node_modules/.bin/capacitor-assets generate --ios --android --iconBackgroundColor '#C9A14A'
+  --iconBackgroundColorDark '#C9A14A' --splashBackgroundColor '#0E0C0A' --splashBackgroundColorDark '#0E0C0A'`.
 - `src/lib/pwa.ts` (déjà là) : pas de service worker dans l'app native (les fichiers
   sont dans le paquet, mis à jour par le store).
 
@@ -41,9 +53,28 @@ npm run cap:android   # cap:sync puis ouvre Android Studio
 ```
 
 Le build lit `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) : le paquet
-pointe vers la base de prod, comme le site. La CI ne construit que le web.
+pointe vers la base de prod, comme le site.
 
-### Prérequis sur le Mac (absents au 2026-11-12)
+### Tests natifs dans la CI (pas de Xcode sur le Mac)
+
+Hugo n'installe pas Xcode : les apps sont construites et lancées par GitHub Actions,
+`.github/workflows/mobile.yml` (lancement à la main, ou à chaque changement de `ios/`,
+`android/`, `capacitor.config.ts`) :
+- **iOS** (`macos-latest`) : build simulateur sans signature, installation, lancement,
+  capture de l'écran de connexion ;
+- **Android** (`ubuntu-latest`, JDK 21) : APK debug, émulateur
+  (`reactivecircus/android-emulator-runner`, API 34), lancement, capture ;
+- captures et APK en **artefacts du run** (Actions → run → Artifacts). Aucun secret :
+  le build web prend les valeurs factices de `src/integrations/supabase/client.ts`, donc
+  l'app ne parle pas à la base de prod (l'écran de connexion s'affiche, rien de plus).
+
+**Signature iOS plus tard, dans la CI, par Fastlane** (`match` pour les certificats et
+profils, `gym` pour l'archive, `pilot` pour TestFlight), avec les secrets du compte Apple
+dans les secrets GitHub, jamais dans le repo. Même principe pour Android (`supply`, clé
+d'envoi en secret GitHub). Les sections « Signer et publier » ci-dessous décrivent la voie
+manuelle, à n'utiliser que si un Mac avec Xcode est disponible.
+
+### Prérequis sur un Mac (facultatif depuis le 2026-11-13 : la CI les remplace)
 
 - **iOS** : Xcode complet depuis l'App Store (seuls les Command Line Tools sont installés),
   puis `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` et
@@ -71,16 +102,14 @@ ligne puis retour réseau, bouton retour Android, zones sûres (encoche, barre d
 
 ### Liens (invitation, réclamation, mot de passe, montres)
 
-1. **Liens générés dans l'app** : ils utilisent `window.location.origin`, qui vaut
-   `capacitor://localhost` en natif. À remplacer par `publicWebOrigin()` de
-   `src/lib/native.ts` (pas fait ici pour ne pas toucher aux fichiers des chantiers
-   en cours) :
-   - `src/pages/Login.tsx` (mot de passe oublié → `/reset-password`) — le plus important,
-     l'athlète l'utilise depuis son téléphone ;
-   - `src/hooks/useAuth.tsx` (`/invite/…`), `src/features/shared/hooks/useAthleteClaimLink.ts`
-     (`/claim/…`), `src/features/staff/lib/staffPermissions.ts` (`/staff-invite/…`) :
-     surtout côté coach (ordinateur), mais faux si un coach invite depuis l'app.
-2. **Liens universels iOS / App Links Android** (pour qu'un lien reçu par mail ouvre l'app) :
+1. ~~**Liens générés dans l'app**~~ (fait le 2026-11-13) : `publicWebOrigin()` dans
+   `Login.tsx` (mot de passe oublié), `useAthleteClaimLink.ts` (`/claim/…`) et
+   `staffPermissions.ts` (`/staff-invite/…`). Les liens `/invite/…` n'existent plus
+   (décision 6).
+2. **Liens universels iOS / App Links Android** (pour qu'un lien reçu par mail ouvre l'app).
+   Fichiers publiés le 2026-11-13 avec des valeurs à remplacer (voir « Fichiers ») ; restent
+   le Team ID, l'empreinte Play et la capacité Associated Domains (ajoutée au moment de la
+   signature, par Fastlane ou Xcode) :
    - publier `https://agon-training.com/.well-known/apple-app-site-association`
      (`applinks`, `appID` = `<TEAM_ID>.com.agontraining.app`, chemins `*`) — Team ID
      connu une fois le compte Apple créé ; servir en `application/json` (règle Vercel) ;
@@ -89,7 +118,8 @@ ligne puis retour réseau, bouton retour Android, zones sûres (encoche, barre d
      SHA-256 de la clé de signature Play (Play Console → Intégrité de l'app).
      L'`intent-filter autoVerify` est déjà dans `AndroidManifest.xml`.
    - Le service worker exclut déjà `/.well-known/` de son fallback.
-3. **Retour OAuth COROS / Garmin** : `window.location.assign(authorizeUrl)` quitte la
+3. **Retour OAuth COROS / Garmin** — fait le 2026-11-13 (`openAuthorization`, fenêtre
+   in-app ; sans lien universel, l'athlète ferme la fenêtre et la connexion se relit) : `window.location.assign(authorizeUrl)` quitte la
    WebView et ouvre le navigateur du système ; le callback renvoie vers
    `APP_URL/athlete/profil` (site web). La connexion est bien enregistrée côté serveur
    (le `state` est stocké en base), mais l'athlète finit dans le navigateur. Avec les
@@ -102,9 +132,7 @@ ligne puis retour réseau, bouton retour Android, zones sûres (encoche, barre d
 
 ### Apparence
 
-- Icônes et écran de lancement : `npx @capacitor/assets generate` à partir d'un
-  `assets/icon.png` (1024×1024) et `assets/splash.png` (2732×2732), fond `#0E0C0A`.
-  Les fichiers par défaut de Capacitor sont encore en place.
+- ~~Icônes et écran de lancement~~ : faits le 2026-11-13 depuis `public/brand` (`assets/`).
 - Zones sûres : `index.html` n'a pas `viewport-fit=cover`, la WebView reste donc sous la
   barre d'état et au-dessus de l'indicateur d'accueil. À revoir avec la refonte des
   écrans (P43) si on veut un rendu bord à bord.

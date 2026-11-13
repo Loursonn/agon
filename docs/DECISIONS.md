@@ -2043,3 +2043,144 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   utilisateurs **fictifs** (`seed.sql`, `@example.invalid`).
 - Contrepartie : `schema.sql` est à rafraîchir après chaque migration appliquée
   (`supabase/tests/ci/README.md`).
+
+## 2026-11-13 — Vitesse critique : un calcul, trois sources, la plus récente
+
+- **Formule** (Monod-Scherrer / Jones, méthode Rivet) : distance (m) = VC (m/s) × durée (s) + D′ (m).
+  VC = pente de la régression linéaire distance / durée d'au moins deux efforts maximaux de durées
+  différentes ; D′ = ordonnée à l'origine. Un seul code : `_shared/domain/criticalSpeed.ts`
+  (`fitCriticalSpeed`), utilisé aussi par l'analyse des tests HYROX (`src/lib/hyrox/tests/running.ts`,
+  dont le `linreg` vient désormais du même fichier).
+- **Sources** : analyse de tests HYROX (1200 m / 6 min / 12 min, VC + seuil 1 du moteur), VC active du
+  profil sportif (`performance_logs` « VC »), courses des 90 derniers jours (meilleurs efforts de 3, 6 et
+  12 min d'affilée dans les séries seconde par seconde, fenêtre cassée par un trou > 10 s ou une vitesse
+  > 10 m/s ; ajustement retenu si R² ≥ 0,95).
+- **Choix (Hugo, 13/11)** : VC retenue = la plus récente entre test et saisie (même jour : la saisie).
+  La VC des courses est seulement **proposée** au coach (écart ≥ 0,3 km/h), jamais appliquée seule.
+- **Seuil 1** : celui du test ; pour une VC saisie, VC × 0,84 (facteur médian de la méthode Rivet,
+  `GridSet.running.s1_factor`).
+- Lecture seule, aucune migration. Sert à la charge YOXX : Zone 2 jusqu'à la VC, Zone 3 au-delà.
+
+## 2026-11-13 — Charge d'entraînement YOXX (P28) et D13
+
+- **D13 tranchée (Hugo, 13/11)** : ratio aigu / chronique **affiché** sous la semaine (zone 0,8–1,3, comme la
+  maquette), **jamais** dans un feu ni une alerte. Aigu = charge de la semaine ; chronique = moyenne des 4 semaines
+  précédentes, semaine en cours exclue (ratio découplé, même chiffre que la « charge chronique » du modèle YOXX).
+- **Calcul** : `_shared/domain/trainingLoad.ts` (points, SDP, prévu, tableau de semaine) et
+  `src/lib/trainingLoadWeek.ts` (assemblage des lectures). Calculé à la volée (`src/api/load.ts`), **aucune table** :
+  pas de cache tant que c'est rapide. Formules de `regles.md` (coach-chef, 7/11) sans changement.
+- **Zones** (Hugo, 13/11) : minutes classées avec le modèle de zones FC de la date de la séance ; 3 zones telles
+  quelles ; 5 zones Z1-Z2 → 1, Z3-Z4 → 2, Z5 → 3 ; 7 zones Z1-Z3 → 1, Z4-Z5 → 2, Z6-Z7 → 3. Course avec série :
+  tour plus rapide que le seuil 1 → Z2 jusqu'à la VC, Z3 au-delà ; sinon chaque seconde à la FC. Tours = ceux
+  d'Agon (`activity_laps`), sinon ceux de la montre ; sans tours, toute la sortie est un tour.
+- **Musculation** (Hugo, 13/11) : pas de migration ; f(exercice) déduit de la fiche (`is_compound`, cible, nom) :
+  bas du corps polyarticulaire → 1,5 ; autre polyarticulaire → 1 ; isolation, mollets, gainage → 0,5. k = 6 pour
+  tous. Bloc « Échauffement » et exercices en mode libre exclus. RIR saisi, sinon prévu, sinon 0,75 (signalé).
+- **Prévu** (étapes de la séance énergie) : échauffement, récup, repos, retour au calme → Z1 ; effort classé par sa
+  cible (zone FC 1-5 de l'éditeur ramenée à 3, bpm et % FC max avec le modèle de la date, allure et % VMA / VC
+  avec seuil 1 et VC) ; sans cible : Z2. Séance spécifique (= mixte) : station → Z3, **60 s par station sans
+  durée** (hypothèse à revoir). Distance convertie en temps à la vitesse visée, sinon à celle de la zone.
+- **Réalisé sans montre** : séance énergie validée = prévu × durée réelle ÷ durée prévue (« fait comme prévu »).
+  Activité libre de muscu ignorée (la séance saisie compte déjà). Limites : la VC et les bornes « 5 zones » sont
+  celles d'aujourd'hui pour toute la plage (les modèles 3 / 7 zones sont bien datés) ; km d'une séance mixte =
+  tous en compromised.
+- **Affichage** : `WeekLoadPanel` sous le calendrier du planning (vue Mois, semaine en cours) en attendant la
+  vue semaine large (P24, P9) ; `useMesoLoad` (résumé des mésocycles) passe aux points prévus / réalisés.
+
+## 2026-11-13 — Liens d'invitation coach et ancien fil « retours » supprimés (décision 6)
+
+- Les liens `/invite/…` ne s'utilisaient plus et n'expiraient jamais : désactivés puis supprimés avec les
+  tables `invitations`, `retours`, `retours_votes` et les fonctions `invitation_is_valid`,
+  `redeem_invitation`, `invitation_coach_name`. Rejoindre un coach = son code (ou un lien staff).
+- Archive CSV faite avant (sans les jetons), hors repo. Un vieux lien `/invite/…` mène à la connexion.
+- Choix d'Hugo : supprimer sans attendre la mise en prod de dev ; l'export RGPD de `main` signale ces
+  3 tables en échec jusque-là.
+- Décision 7 en cours : R0-R2 faits (`docs/PLAN_LEGACY.md` §3), `migration repair` seulement si le
+  rejeu des migrations donne le même schéma que la prod.
+
+## 2026-11-13 — Feu du matin calculé (T-feux-wellness)
+
+- **Règles** : `regles.md` coach-chef (arbitrage Hugo du 07/11), appliquées telles quelles dans
+  `_shared/domain/wellnessLight.ts` (pur, paramètres versionnés `feux-2026-11-13`). Lecture : `src/api/wellnessLight.ts`,
+  calcul à la volée, aucune table, aucune migration. Les mesures de montre (Garmin compris) n'entrent dans aucun appel IA.
+- **VFC** : ln RMSSD de nuit (`provider_dailies.hrv_ms`), moyenne 7 j si ≥ 5 nuits ; zone = moyenne ± 0,5 écart-type (n − 1)
+  des 28 jours avant la fenêtre, depuis J1 (fenêtre comprise) tant qu'il y a moins de 5 nuits avant elle ; alerte active à J14.
+  « Depuis N jours » = jours de suite où la moyenne 7 j est sous la zone.
+- **FC de repos** : moyenne 7 j (≥ 5 jours) contre les 28 jours d'avant (≥ 5 jours, jamais la fenêtre), plancher d'écart-type 1 bpm.
+- **Une marque** : celle de la mesure la plus récente ; un export Garmin = Garmin. Changement de montre → habitude depuis J1 de la nouvelle.
+- **Charge** : les 7 jours glissants finissant aujourd'hui (`getLoadWeeks(today − 6, 2)`) contre les 7 d'avant. « Monte » =
+  réalisé > 7 jours d'avant ou > prévu. Le prévu inclut les séances du jour pas encore faites (prudent : sous-estime l'écart).
+- **Wellness** : saisie d'aujourd'hui ou d'hier, comparée par `assessWellness` (items z < −1,5 ; score z < −1).
+- **Hypothèses à valider par Hugo** : « douleur hors règle des 3 douleurs » = douleur du matin > 3/10 ; « sommeil en baisse » =
+  item sommeil z < −1,5 ou durée de sommeil montre 7 j à z < −1 (plancher 15 min) ; « séance repère ratée » et « douleur qui
+  modifie la foulée » : aucune donnée dans Agon, donc jamais comptées. Le résumé roadmap « rouge à 3 sur 5 » diffère de
+  regles.md : c'est regles.md qui est appliqué (charge en hausse **et** VFC sous la zone **et** ≥ 2 signes sur 5).
+- **Affichage** : Retours (coach, détail des signaux) et carte wellness d'Aujourd'hui (athlète). Accueil coach et vue
+  globale wellness (P26) : pas branchés (P26 bloqué), un feu par athlète y coûterait une lecture par athlète.
+
+## 2026-11-13 — Documents légaux, version 2026-11-13 (re-consentement)
+
+- `LEGAL_VERSION` et `CORE_CONSENT_SINCE` passent au 2026-11-13. L'accord socle couvre de nouvelles catégories de données
+  de santé : photos du corps, composition corporelle, douleur et maladie du matin, bilan hebdomadaire, feu du matin,
+  copie intégrale Garmin. Tous les utilisateurs sont donc re-sollicités par `ConsentGate`. L'accord IA (`AI_CONSENT_SINCE`)
+  ne bouge pas : rien de nouveau n'est envoyé à une IA.
+- Politique : ajouts de `docs/stores/DONNEES_COLLECTEES.md` §5 (points 2 à 6, 8 et 9) et de P39 (weekly review).
+  Liste explicite de ce qui ne part jamais vers une IA.
+- Faits corrigés :
+  - région Supabase : Irlande (`supabase backups list`), et non eu-central-1 ;
+  - la preuve du consentement n'est pas gardée 5 ans après la suppression du compte : le journal part avec le compte,
+    seule `account_deletions` reste, anonyme ;
+  - renvoi « section 4.2 » corrigé en 4.3.
+- Constaté en lisant la base : le bucket `test-media` est **public** (migration du 2026-08-25, audit S6). Il contient des
+  photos du corps. La politique ne dit donc plus « espace privé ». Correctif et qualification juridique :
+  `docs/QUESTIONS_JURISTE_HDS.md` §4.
+- Pas de CGV : aucun paiement aujourd'hui. Questions ouvertes : `docs/QUESTIONS_JURISTE_HDS.md`.
+
+## 2026-11-13 — Bucket `test-media` privé (faille S6)
+
+- **Faille** : le bucket est public depuis 2026-08-25 (`20260825000000_coach_upload_test_media.sql`). Toute personne qui
+  connaît l'adresse d'un fichier peut le lire sans compte. En prod, il contient 12 photos du corps
+  (`<athlete>/mensurations/…`) et 6 illustrations de séances énergie (`<coach>/sessions/…`). Seules ces 6 illustrations
+  utilisent l'URL publique, et 4 liens sont enregistrés dans `energy_sessions.images`.
+- **Choix** :
+  - Les illustrations de séances, contenu du coach et non donnée personnelle, passent dans le bucket public
+    `energy-exercise-photos` (`ENERGY_IMAGE_BUCKET`, `src/api/energy.ts`).
+  - Les photos du corps restent dans `test-media`, qui devient privé ; elles sont lues par URL signée de 10 min
+    (`PHOTO_URL_TTL_S`, `src/api/profile.ts`).
+  - Lecture et écriture : le propriétaire du dossier ou son coach (`is_coach_of_folder` : référent ou co-coach).
+    Pas de staff, car la table des mensurations n'a pas de règle staff.
+- **Liens déjà enregistrés** : réécrits par migration vers `energy-exercise-photos`, seulement si la copie du fichier
+  existe. Un lien sans copie reste tel quel.
+- **Ordre en prod** (accord d'Hugo requis) :
+  1. Copier les 6 fichiers `test-media/<coach>/sessions/*` vers `energy-exercise-photos` avec l'API Storage
+     (`supabase storage cp … --experimental`), hors SQL.
+  2. Appliquer `20261113190000_test_media_private_part1.sql` : règles d'accès et réécriture des liens. Compatible
+     avec le client de `main`.
+  3. Appliquer `20261113190100_test_media_private_part2.sql` : `public = false`. Le client de `main` lit déjà les
+     photos par URL signée. Seule une **nouvelle** illustration de séance envoyée depuis `main` aurait un lien cassé
+     jusqu'au déploiement de `dev`. Si cela arrive, refaire 1 puis rejouer la réécriture de la partie 1.
+- Test à blanc : `supabase/tests/test_media_storage.sql`, passé le 2026-11-13 dans une transaction annulée.
+- **Appliqué en prod le 2026-11-13** avec l'accord d'Hugo : 6 fichiers copiés, parties 1 et 2 appliquées. Contrôles : bucket
+  privé, 0 lien `public/test-media` restant, 4 liens réécrits, photo du corps en accès anonyme → 400, image de séance → 200,
+  `test_media_storage.sql` vert. `platform.sql` rafraîchi, test retiré de `known_failures.txt`.
+  - Anonyme : refusé.
+  - Autre coach : refusé en lecture et en dépôt.
+  - Athlète et son coach : lecture, dépôt et remplacement acceptés.
+  - 4 liens sur 4 réécrits.
+  - La suppression SQL directe dans `storage.objects` est interdite par Supabase, donc non testable ici.
+- Reste : les illustrations d'un coach dans `energy-exercise-photos` ne sont pas dans `USER_BUCKETS`
+  (`_shared/userStorage.ts`). Elles ne partent pas à la suppression de son compte. À ajouter avec un redéploiement
+  de `delete-account`.
+
+## 2026-11-13 — Apps natives : tests dans la CI, pas sur un poste
+
+- Hugo n'installe pas Xcode. Les apps iOS et Android sont construites, installées et lancées dans
+  `.github/workflows/mobile.yml` : simulateur iOS sur `macos-latest`, émulateur Android sur `ubuntu-latest`. Le
+  workflow capture l'écran de connexion et publie les captures et l'APK en artefacts. Il se lance à la main ou à
+  chaque changement de `ios/`, `android/` ou `capacitor.config.ts`. Il n'utilise aucun secret de prod.
+- La signature iOS (et l'envoi aux stores) se fera plus tard dans la CI, par Fastlane, avec les secrets du compte
+  Apple dans GitHub.
+- Liens de l'app native : `publicWebOrigin()` (mot de passe oublié, réclamation, staff). Autorisation des montres
+  dans une fenêtre in-app (`@capacitor/browser`).
+- `public/.well-known` (AASA, assetlinks) est publié avec des valeurs à remplacer (Team ID Apple, empreinte Play).
+- Icônes et écran de lancement tirés de `public/brand`.

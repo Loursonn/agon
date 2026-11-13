@@ -22,7 +22,7 @@
  * Les corrections purement rédactionnelles (typo, reformulation) ne doivent PAS
  * l'incrémenter, sinon on harcèle les utilisateurs pour rien.
  */
-export const LEGAL_VERSION = "2026-10-31";
+export const LEGAL_VERSION = "2026-11-13";
 
 /**
  * Plus ancienne version sous laquelle l'accord socle (`health_data`) reste
@@ -34,8 +34,13 @@ export const LEGAL_VERSION = "2026-10-31";
  * (`staff_sharing`) : l'accord socle du 30 octobre reste valable, seul
  * l'accord staff est demandé. À aligner sur LEGAL_VERSION quand une version
  * change le traitement couvert par l'accord socle.
+ *
+ * 13 novembre 2026 : nouvelles catégories de données de santé couvertes par
+ * l'accord socle (photos du corps, composition corporelle, douleur et maladie
+ * du matin, bilan hebdomadaire, feu du matin, copie intégrale Garmin) : tous
+ * les utilisateurs sont re-sollicités.
  */
-export const CORE_CONSENT_SINCE = "2026-10-30";
+export const CORE_CONSENT_SINCE = "2026-11-13";
 
 /**
  * Plus ancienne version sous laquelle une réponse à l'accord IA
@@ -50,7 +55,7 @@ export const CORE_CONSENT_SINCE = "2026-10-30";
 export const AI_CONSENT_SINCE = "2026-10-30";
 
 /** Date d'entrée en vigueur affichée en tête des documents. */
-export const LEGAL_EFFECTIVE_DATE = "31 octobre 2026";
+export const LEGAL_EFFECTIVE_DATE = "13 novembre 2026";
 
 /**
  * Marqueur des champs que seul Hugo peut renseigner (données d'état civil et
@@ -145,7 +150,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
   {
     name: "Supabase Inc.",
     purpose: "Hébergement de la base de données, authentification, stockage des fichiers",
-    location: "Union européenne (région eu-central-1)",
+    location: "Union européenne (Irlande)",
     role: "subprocessor",
     privacyUrl: "https://supabase.com/privacy",
   },
@@ -197,9 +202,11 @@ export const SUBPROCESSORS: Subprocessor[] = [
 export const RETENTION = [
   { data: "Compte et profil", duration: "Jusqu'à suppression du compte, puis 30 jours de sauvegarde" },
   { data: "Séances, charges, séries réalisées", duration: "Durée de vie du compte" },
-  { data: "Données de bien-être, poids, blessures", duration: "Durée de vie du compte" },
-  { data: "Données importées depuis une montre connectée", duration: "Durée de vie du compte, ou suppression immédiate à la déconnexion du service" },
+  { data: "Données de bien-être, bilans hebdomadaires, poids, mensurations, photos du corps, blessures", duration: "Durée de vie du compte" },
+  { data: "Données importées depuis une montre connectée, et copie intégrale des données Garmin", duration: "Durée de vie du compte, ou suppression immédiate à la déconnexion du service ou au retrait de l'accord" },
+  { data: "Retours sur l'application", duration: "Durée de vie du compte" },
   { data: "Journaux techniques de connexion", duration: "12 mois" },
   { data: "Liens avec les professionnels de votre staff, et leurs droits", duration: "Durée de vie du compte (un accès retiré est conservé comme historique, sans plus aucune lecture possible)" },
-  { data: "Preuve du consentement", duration: "5 ans après son retrait (obligation de preuve)" },
+  { data: "Historique de vos accords (preuve du consentement)", duration: "Durée de vie du compte, retraits compris ; à la suppression du compte, seule une trace anonyme (date, rôle, version) est gardée" },
+  { data: "Sauvegardes automatiques de la base", duration: "30 jours au plus, puis effacement par rotation automatique" },
 ] as const;

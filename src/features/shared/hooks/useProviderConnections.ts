@@ -7,6 +7,7 @@ import {
 } from "@/api/providers";
 import { useAuth } from "@/hooks/useAuth";
 import { localIsoDay } from "@shared/domain/dates";
+import { openAuthorization } from "@/lib/native";
 
 export { ConnectError };
 export type { DisconnectResult, ProviderConnection, ProviderName, ProviderStatus, SyncReport, WorkoutPush };
@@ -81,7 +82,7 @@ export function connectionFor(
 export function useConnectCoros() {
   return useMutation<void, Error, { region: CorosRegion }>({
     mutationFn: async ({ region }) => {
-      window.location.assign(await startCorosAuthorization(region));
+      await openAuthorization(await startCorosAuthorization(region));
     },
   });
 }
@@ -94,7 +95,7 @@ export function useConnectCoros() {
 export function useConnectGarmin() {
   return useMutation<void, ConnectError, void>({
     mutationFn: async () => {
-      window.location.assign(await startGarminAuthorization());
+      await openAuthorization(await startGarminAuthorization());
     },
   });
 }

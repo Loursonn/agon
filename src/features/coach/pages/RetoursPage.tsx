@@ -20,6 +20,8 @@ import { useAthleteModifications } from "@/features/shared/hooks/useAthleteModif
 import { MonthCalendarView } from "../components/retours/MonthCalendarView";
 import { WeekView } from "../components/retours/WeekView";
 import { WellnessDetailView } from "../components/retours/WellnessDetailView";
+import { WellnessLightBadge } from "@/features/shared/components/WellnessLightBadge";
+import { useWellnessLight } from "@/features/shared/hooks/useWellnessLight";
 import { WorkoutsDetailView } from "../components/retours/WorkoutsDetailView";
 import { TestsDetailView } from "../components/retours/TestsDetailView";
 import { CompetitionsDetailView } from "../components/retours/CompetitionsDetailView";
@@ -73,6 +75,7 @@ export default function RetoursPage() {
 
   // Blessures déclarées, en cours d'abord (l'ordre vient déjà de la requête).
   const { data: medicalEntries = [] } = useMedicalEntries(athleteId);
+  const light = useWellnessLight(athleteId);
   const injuries = medicalEntries.filter((e) => e.kind === "blessure");
   const activeCount = activeInjuries(injuries).length;
 
@@ -261,6 +264,11 @@ export default function RetoursPage() {
             <ChevronRight size={14} />
           </button>
         </div>
+      </div>
+
+      {/* Feu du matin calculé (règles du 07/11) */}
+      <div style={{ marginBottom: 16 }}>
+        <WellnessLightBadge result={light.data} loading={light.isLoading} detail />
       </div>
 
       {/* KPI cards */}

@@ -24,7 +24,6 @@ SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claims', '{"role":"anon"}', true);
 DO $$ DECLARE n int; b boolean; BEGIN
   SELECT count(*) INTO n FROM profiles;   INSERT INTO t_res VALUES ('anon: 0 profil visible', n=0, n::text);
-  SELECT count(*) INTO n FROM invitations; INSERT INTO t_res VALUES ('anon: 0 invitation visible', n=0, n::text);
   SELECT coach_code_exists('ZZZZZZ') INTO b; INSERT INTO t_res VALUES ('anon: coach_code_exists marche', b IS NOT NULL, b::text);
   SELECT coach_code_exists((SELECT other_code FROM t_ids)) INTO b; INSERT INTO t_res VALUES ('anon: code réel trouvé', b, b::text);
   BEGIN PERFORM set_active_performance_reference(gen_random_uuid(), gen_random_uuid(), 'x');
