@@ -55,7 +55,7 @@ const job = (table: string, column: string, select?: string): ExportJob => ({ ta
  * en entier.
  */
 /** Tables de la migration santé (20261110100000), absentes tant qu'elle n'est pas appliquée. */
-const OPTIONAL_TABLES = new Set(["wellness_entries", "body_weight_logs", "body_weight_milestones", "body_weight_goals"]);
+const OPTIONAL_TABLES = new Set(["wellness_entries", "body_weight_logs", "body_weight_milestones", "body_weight_goals", "weekly_reviews"]);
 
 export const EXPORT_JOBS: readonly ExportJob[] = [
   // ── Athlète : tout ce qui le concerne (`athlete_id`) ─────────────────────
@@ -123,6 +123,7 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("test_results", "athlete_id"),
   job("test_sessions", "athlete_id"),
   job("weekly_retours", "athlete_id"),
+  job("weekly_reviews", "athlete_id"),
   job("workout_logs", "athlete_id", "*, workout_exercise_comments(*)"),
   job("workout_rpe", "athlete_id"),
 

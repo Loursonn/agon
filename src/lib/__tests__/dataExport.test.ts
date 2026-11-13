@@ -44,7 +44,7 @@ describe("inventaire de l'export", () => {
   it("couvre les données manquantes de l'audit §9", () => {
     // Hyrox, tests, compétitions, nutrition (app_data), retours hebdo
     for (const t of ["hyrox_results", "hyrox_race_plans", "hyrox_test_analyses", "athlete_test_results",
-      "test_sessions", "performance_logs", "competitions", "app_data", "weekly_retours"]) {
+      "test_sessions", "performance_logs", "competitions", "app_data", "weekly_retours", "weekly_reviews"]) {
       expect(has(t, "athlete_id"), t).toBe(true);
     }
     // Staff et co-coach, des deux côtés

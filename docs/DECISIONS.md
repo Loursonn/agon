@@ -2251,3 +2251,21 @@ et son README.
   contenu « Annulée — voir Agon » (rien d'inventé, mais l'entrée reste au
   calendrier) ; (c) abandonner COROS pour l'envoi. Avant (b), lire le schéma
   réel de `course` par `tools/list` avec le compte COROS d'Hugo.
+## 2026-11-13 — Weekly review (P22, P23, P39) ; D16 et D17 tranchées
+
+- **Table `weekly_reviews`** (une par athlète et par semaine, lundi → dimanche) : `answers` (jsonb) pour
+  la saisie, `auto` = bilan figé à l'envoi, `light` = feu du matin au moment de l'envoi. Seule écriture :
+  la RPC `save_weekly_review`, par l'athlète, du dimanche au lundi soir (heure de Paris), refusée après
+  l'envoi. Brouillon enregistré à chaque champ (repris après fermeture).
+- **Lecture** : l'athlète (brouillons compris) ; coach, co-coach (`is_coach_of`) et staff ayant
+  « wellness » en lecture : reviews envoyées seulement.
+- **Bilan** (`src/lib/weekly-review/`) : séances faites / prévues (activités libres hors compte), durée et
+  distance (séances faites + libres, pas de tonnage), RPE moyen, séance la plus dure avec la note de
+  l'athlète, moyennes du wellness à partir de 3 jours (sinon « — »). Aucune IA.
+- **D16 (Hugo, 13/11)** : la question douleur apparaît si le feu du matin est orange ou rouge ; relance
+  par bannière seule (dimanche et lundi) ; après le lundi soir, fermée et « non faite ».
+- **D17 (Hugo, 13/11)** : la réponse du coach reste le retour hebdo (`weekly_retours.comment`) ; menu
+  « Reviews » (tous les athlètes) + onglet « Review » par athlète ; staff en lecture avec le droit
+  « bien-être », pas de nouveau domaine.
+- **P39** : export (`weekly_reviews`), suppression par cascade, aucune donnée envoyée à l'IA. Texte de la
+  politique de confidentialité à compléter par la session « légal » (`LEGAL_VERSION` inchangée).
