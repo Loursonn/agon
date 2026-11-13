@@ -93,6 +93,11 @@ export function forgetStoredSession(): void {
   }
 }
 
+/** Renvoie l'e-mail de confirmation d'inscription (écran « Compte créé »). */
+export async function resendSignupEmail(email: string): Promise<void> {
+  ok(await db().auth.resend({ type: "signup", email }));
+}
+
 /** Envoie le lien « mot de passe oublié » ; `redirectTo` = page de réinitialisation. */
 export async function sendPasswordReset(email: string, redirectTo: string): Promise<void> {
   ok(await db().auth.resetPasswordForEmail(email, { redirectTo }));

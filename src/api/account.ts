@@ -78,6 +78,21 @@ export async function coachCodeExists(code: string): Promise<boolean> {
  * vérification impossible n'empêche pas l'inscription : comme avant, on garde
  * le code tiré.
  */
+/**
+ * Nom du coach qui porte ce code (inscription, « Coach trouvé »), null si le
+ * code est incomplet ou inconnu. Rien d'autre n'est exposé avant connexion.
+ */
+export async function coachPreviewByCode(code: string): Promise<string | null> {
+  const name = must(await db().rpc("coach_preview_by_code", { p_code: normalizeCoachCode(code) }), "Vérification du code impossible");
+  return (name as string | null) ?? null;
+}
+
+/** Nom du coach d'un lien d'invitation encore valable, null sinon (page « … t'invite »). */
+export async function invitationCoachName(token: string): Promise<string | null> {
+  const name = must(await db().rpc("invitation_coach_name", { p_token: token }), "Vérification du lien impossible");
+  return (name as string | null) ?? null;
+}
+
 export async function pickFreeCoachCode(random: () => number = Math.random): Promise<string> {
   let code = generateCoachCode(random);
   for (let attempts = 0; attempts < 5; attempts++) {

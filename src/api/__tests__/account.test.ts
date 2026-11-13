@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { fakeDb, type FakeRpc, type Row } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
 import {
-  AccountError, accountKeys, claimAthleteAccount, coachCodeExists, createInvitation, createPendingAthlete,
+  AccountError, accountKeys, claimAthleteAccount, coachCodeExists, coachPreviewByCode, invitationCoachName, createInvitation, createPendingAthlete,
   deleteAccount, ensureCoachCode, generateCoachCode, getClaimInfo, getClaimToken, getCoachRoster, getConsents,
   invalidateAccount, invitationIsValid, linkToCoachByCode, pickFreeCoachCode, readOwnRows, recordConsents,
   registerAthleteWithCode, registerAthleteWithInvitation, registerCoach, registerStaff, reportClientBuild, serverReason, setOwnCoach,
@@ -128,6 +128,20 @@ describe("api/account — code coach et inscription", () => {
     world({}, { rpcs: { coach_code_exists: () => true, link_to_coach_by_code: raise("Code coach invalide") } });
     await expect(registerAthleteWithCode("a@b.c", "pw", "Léa", "1998-04-12", "X"))
       .rejects.toThrow("Compte créé, mais le rattachement au coach a échoué : Code coach invalide");
+  });
+
+  it("coachPreviewByCode : nom du coach, code normalisé, null si inconnu", async () => {
+    const asked: unknown[] = [];
+    world({}, { rpcs: { coach_preview_by_code: (a) => (asked.push(a.p_code), a.p_code === "DEMO42" ? "Agon Démo" : null) } });
+    expect(await coachPreviewByCode(" demo42 ")).toBe("Agon Démo");
+    expect(await coachPreviewByCode("zzzzzz")).toBeNull();
+    expect(asked).toEqual(["DEMO42", "ZZZZZZ"]);
+  });
+
+  it("invitationCoachName : nom du coach d'un lien valable", async () => {
+    world({}, { rpcs: { invitation_coach_name: (a) => (a.p_token === "tok" ? "Agon Démo" : null) } });
+    expect(await invitationCoachName("tok")).toBe("Agon Démo");
+    expect(await invitationCoachName("autre")).toBeNull();
   });
 
   it("registerAthleteWithInvitation : lien invalide (ou vérification en panne) refusé", async () => {

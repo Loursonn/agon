@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-acces-inscription",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Inscription en 3 étapes, votre nom s'affiche au code",
+    summary: "Un athlète qui s'inscrit choisit son rôle, entre votre code coach puis crée son compte. Dès le 6ᵉ caractère du code, il voit « Coach trouvé » avec votre nom avant de confirmer.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Fini les inscriptions chez le mauvais coach : le nom s'affiche avant de valider.",
+          "Connexion, mot de passe oublié, nouveau mot de passe, accord sur les données de santé et page introuvable reprennent le style de l'app.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-seance-en-cours-precedent",
     date: "2026-11-13",
     kind: "feature",
