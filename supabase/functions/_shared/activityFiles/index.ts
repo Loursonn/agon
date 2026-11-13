@@ -20,9 +20,18 @@ import { normalizeActivity } from "./normalize.ts";
 import type { NormalizedActivity } from "./stream.ts";
 export { bytesSource, blobSource } from "./archive.ts";
 
+/**
+ * Fichiers que macOS ajoute tout seul (copie sur un disque externe, zip du Finder) :
+ * `._1234.fit.gz` (métadonnées, pas une activité), `__MACOSX/`, `.DS_Store`.
+ */
+export function isOsMetadataName(path: string): boolean {
+  const base = path.split("/").pop() ?? path;
+  return base.startsWith("._") || base === ".DS_Store" || /(^|\/)__MACOSX\//.test(path);
+}
+
 /** Vrai si ce nom vaut la peine d'être ouvert. Sur le nom, donc indicatif. */
 export function looksLikeActivityName(name: string): boolean {
-  return /\.(fit|tcx|gpx)(\.gz)?$/i.test(name);
+  return !isOsMetadataName(name) && /\.(fit|tcx|gpx)(\.gz)?$/i.test(name);
 }
 
 /**

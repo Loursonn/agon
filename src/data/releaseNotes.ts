@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-import-fichiers-caches-mac",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Import d'historique : plus de fausses erreurs sur Mac",
+    summary: "En important un dossier d'activités copié depuis un Mac (archive Strava dézippée, disque externe), des centaines d'erreurs « contenu compressé illisible » s'affichaient sur des fichiers commençant par « ._ ». Ce sont des fichiers cachés créés par macOS, pas des activités : ils sont maintenant ignorés sans bruit.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les fichiers « ._… », « .DS_Store » et le dossier « __MACOSX » ne sont plus lus ni comptés comme erreurs.",
+          "Vos vraies activités étaient déjà importées correctement : rien à refaire.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-seance-retour-commentaires-tours",
     date: "2026-11-13",
     kind: "feature",

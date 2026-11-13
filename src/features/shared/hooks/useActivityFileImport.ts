@@ -81,7 +81,7 @@ export function useActivityFileImport(athleteId?: string) {
       if (files.length === 0) throw new Error("Aucun fichier à importer.");
 
       const report = emptyReport();
-      const { activityDetailOf, blobSource, detailPayload, looksLikeActivityName, parseActivityFile, qualityOf } =
+      const { activityDetailOf, blobSource, detailPayload, isOsMetadataName, looksLikeActivityName, parseActivityFile, qualityOf } =
         await decoders();
 
       let done = 0;
@@ -146,6 +146,8 @@ export function useActivityFileImport(athleteId?: string) {
             continue;
           }
 
+          // Fichiers cachés de macOS (._xxx.fit.gz…) : ni activité ni « ignoré ».
+          if (isOsMetadataName(file.name)) continue;
           if (!looksLikeActivityName(file.name)) {
             report.ignored++;
             continue;
