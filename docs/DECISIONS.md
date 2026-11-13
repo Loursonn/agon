@@ -2086,3 +2086,14 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   tous en compromised.
 - **Affichage** : `WeekLoadPanel` sous le calendrier du planning (vue Mois, semaine en cours) en attendant la
   vue semaine large (P24, P9) ; `useMesoLoad` (résumé des mésocycles) passe aux points prévus / réalisés.
+
+## 2026-11-13 — Liens d'invitation coach et ancien fil « retours » supprimés (décision 6)
+
+- Les liens `/invite/…` ne s'utilisaient plus et n'expiraient jamais : désactivés puis supprimés avec les
+  tables `invitations`, `retours`, `retours_votes` et les fonctions `invitation_is_valid`,
+  `redeem_invitation`, `invitation_coach_name`. Rejoindre un coach = son code (ou un lien staff).
+- Archive CSV faite avant (sans les jetons), hors repo. Un vieux lien `/invite/…` mène à la connexion.
+- Choix d'Hugo : supprimer sans attendre la mise en prod de dev ; l'export RGPD de `main` signale ces
+  3 tables en échec jusque-là.
+- Décision 7 en cours : R0-R2 faits (`docs/PLAN_LEGACY.md` §3), `migration repair` seulement si le
+  rejeu des migrations donne le même schéma que la prod.

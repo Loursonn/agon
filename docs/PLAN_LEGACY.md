@@ -2,7 +2,8 @@
 
 > Rédigé le 2026-11-12. Lecture seule sur la prod : compteurs et définitions uniquement, aucune écriture, aucune donnée d'athlète affichée.
 > Suite de `docs/AUDIT_REFONTE_2026-11.md` §6, §10 phase 4 et §11 (décisions 6 et 7).
-> Rien de ce document n'est exécuté. Chaque écriture en prod attend l'accord d'Hugo.
+> **État au 2026-11-13** : décision 6 exécutée (accord d'Hugo) : liens désactivés (`20261113162000`), lecteurs retirés de `src/`, archive CSV hors repo (disque externe d'Hugo), tables et fonctions supprimées (`20261113163000`). Hugo a accepté de supprimer avant la mise en prod de dev : jusque-là, l'export RGPD de `main` signale 3 tables en échec.
+> Décision 7 : R0 (dump complet sur le disque externe ; le projet n'a ni PITR ni sauvegarde listée), R1 (3 doublons renommés +1 s), R2 (job `migrations-replay`) faits. R3 `repair` seulement si le diff R2 est vide.
 
 Sommaire :
 1. `invitations`, `retours`, `retours_votes` (décision 6)
