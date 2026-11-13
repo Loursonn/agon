@@ -2193,7 +2193,7 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
 - **Qui** : l'athlète, ou son coach (référent ou co-coach, `is_coach_of`) pour
   une activité qu'il voit (même règle que `provider_activities_coach_read`).
   Un autre coach reçoit « introuvable », comme pour une ligne absente.
-- **Comment** : RPC `remove_provider_activity` (migration `20261113180000`).
+- **Comment** : RPC `remove_provider_activity` (migration `20261113180200`).
   Elle supprime la ligne ; courbe, tours, séries, résumés de zones et liens au
   planning partent en cascade. La séance Agon rapprochée garde son statut, ses
   séries et ses notes : seul le lien part. Refusée si la ligne porte la source
