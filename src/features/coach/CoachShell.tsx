@@ -46,6 +46,7 @@ const AgonIcons = {
 const NAV_ITEMS = [
   { icon: AgonIcons.stats,       label: "Home",          path: "/coach",            exact: true,  certified: false, roadmap: false },
   { icon: AgonIcons.groupe,      label: "Athlètes",      path: "/coach/athletes",   exact: false, certified: false, roadmap: false },
+  { icon: AgonIcons.message,     label: "Reviews",       path: "/coach/reviews",    exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.barre,       label: "Banque",         path: "/coach/library",    exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.test,        label: "Tests",          path: "/coach/tests",      exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.fiche,       label: "Fiches",         path: "/coach/fiches",     exact: false, certified: false, roadmap: false },

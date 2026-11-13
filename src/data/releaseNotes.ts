@@ -38,6 +38,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-weekly-review",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Weekly review : le bilan de la semaine de chaque athlète",
+    summary: "Chaque dimanche, l'athlète fait le point sur sa semaine depuis son téléphone. Le lundi, tu lis toutes les reviews sur une seule page et tu réponds.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Ouverte du dimanche matin au lundi soir, avec un rappel sur l'accueil.",
+          "Le bilan se remplit tout seul : séances faites sur prévues, durée, distance, RPE moyen, séance la plus dure et moyenne du wellness.",
+          "L'athlète note sa semaine de 1 à 5 (note, énergie, motivation, charge de vie, nutrition), dit s'il a tenu ses engagements, répond à 3 questions et prend 3 engagements pour la semaine suivante.",
+          "Si son feu est orange ou rouge, on lui demande aussi sa douleur (zone et niveau de 0 à 10).",
+          "Sa review est enregistrée au fur et à mesure : il peut s'arrêter et reprendre plus tard.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Menu « Reviews » : une ligne par athlète (reçue, en attente, non faite), avec le feu, la note, les séances et la douleur.",
+          "Onglet « Review » de l'athlète : sa review complète et ta réponse, qui reste ton retour de la semaine, visible sur son accueil.",
+          "Le co-coach voit la même chose. Un membre du staff avec l'accès « bien-être » la lit, sans pouvoir la modifier.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-retirer-activite-montre",
     date: "2026-11-13",
     kind: "feature",

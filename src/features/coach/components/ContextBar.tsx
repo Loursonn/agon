@@ -29,6 +29,7 @@ const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: b
   { key: "planning",        label: "Planning"        },
   { key: "programmation",   label: "Programmation"   },
   { key: "retours",         label: "Retours"         },
+  { key: "review",          label: "Review"          },
   { key: "profil-sportif",  label: "Profil athlète"  },
   { key: "hyrox",           label: "HYROX", hyroxOnly: true },
   { key: "fiches",          label: "Fiches"          },
