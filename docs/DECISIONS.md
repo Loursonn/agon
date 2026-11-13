@@ -2160,6 +2160,9 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
      photos par URL signée. Seule une **nouvelle** illustration de séance envoyée depuis `main` aurait un lien cassé
      jusqu'au déploiement de `dev`. Si cela arrive, refaire 1 puis rejouer la réécriture de la partie 1.
 - Test à blanc : `supabase/tests/test_media_storage.sql`, passé le 2026-11-13 dans une transaction annulée.
+- **Appliqué en prod le 2026-11-13** avec l'accord d'Hugo : 6 fichiers copiés, parties 1 et 2 appliquées. Contrôles : bucket
+  privé, 0 lien `public/test-media` restant, 4 liens réécrits, photo du corps en accès anonyme → 400, image de séance → 200,
+  `test_media_storage.sql` vert. `platform.sql` rafraîchi, test retiré de `known_failures.txt`.
   - Anonyme : refusé.
   - Autre coach : refusé en lecture et en dépôt.
   - Athlète et son coach : lecture, dépôt et remplacement acceptés.
