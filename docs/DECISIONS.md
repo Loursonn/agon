@@ -2221,3 +2221,33 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   service_role, même principe que le reste de l'export.
 - Lien expiré : refaire un export. Fichier absent ou signature en panne :
   listé sans lien et signalé dans `tables_unreadable`.
+
+## 2026-11-13 — Séances Agon vers la montre COROS : bloqué, l'API ne sait pas retirer
+
+Lu le 13/11/2026 : guide des outils `coroslab/COROS-MCP` (`docs/en/tools.md`)
+et son README.
+
+- **Ce que COROS permet** : `createScheduledWorkout` (une séance à une date,
+  ≤ 90 jours), `createSingleWorkout` + `scheduleWorkout`, `updateScheduledWorkout`
+  (contenu d'une date), `queryTrainingSchedule`. Sports : **course, vélo, trail
+  seulement** (pas de muscu, pas de natation à la création).
+- **Ce qu'il ne permet pas** : *« No tool in this set deletes content »* —
+  aucune suppression, aucun déplacement, aucune sortie de plan ; il faut le
+  faire dans l'app COROS. Le format de `course` (étapes, cibles, répétitions)
+  n'est pas documenté (« complete workout content »).
+- **Pourquoi c'est bloquant** : la réconciliation de `_shared/garminTraining`
+  (`plan.ts`) repose sur « modifiée = supprimée puis recréée » et « annulée ou
+  déplacée = retirée ». Avec COROS, une séance déplacée ou annulée par le coach
+  resterait sur la montre à l'ancienne date : l'athlète s'entraînerait sur une
+  version périmée, ce que la règle Garmin (DECISIONS 2026-11-13) interdit.
+  La muscu et le HYROX (la moitié des séances Agon) ne passeraient pas.
+- **Droits** : le README présente le MCP pour l'usage d'un assistant IA choisi
+  par l'athlète ; il ne restreint pas les intégrations tierces, renvoie aux CGU
+  COROS. Notre connexion actuelle est en lecture (synchro) ; l'écriture au
+  calendrier serait une nouvelle finalité à annoncer à l'athlète.
+- **Pistes, à décider par Hugo** : (a) attendre un outil de suppression
+  (demande à COROS) ; (b) envoi partiel : course / vélo / trail, contenu mis à
+  jour sur la même date, et une séance déplacée ou annulée remplacée par un
+  contenu « Annulée — voir Agon » (rien d'inventé, mais l'entrée reste au
+  calendrier) ; (c) abandonner COROS pour l'envoi. Avant (b), lire le schéma
+  réel de `course` par `tools/list` avec le compte COROS d'Hugo.
