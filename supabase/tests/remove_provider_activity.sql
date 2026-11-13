@@ -1,6 +1,6 @@
--- Tests : retirer une activité de montre (migration 20261113180000_remove_provider_activity, P38).
+-- Tests : retirer une activité de montre (migration 20261113180200_remove_provider_activity, P38).
 -- Toujours annulé (ROLLBACK final). Avant application, dans la même transaction :
---   (echo 'BEGIN;'; cat supabase/migrations/20261113180000_remove_provider_activity.sql \
+--   (echo 'BEGIN;'; cat supabase/migrations/20261113180200_remove_provider_activity.sql \
 --      supabase/tests/remove_provider_activity.sql) > "$TMPDIR/r.sql"
 --   supabase db query --linked -f "$TMPDIR/r.sql"
 -- Comptes de démonstration seulement (Léa Démo / Agon Démo) ; résultats = booléens.
