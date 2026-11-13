@@ -1,5 +1,5 @@
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { C } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -66,7 +66,11 @@ const hm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("fr-F
  * nuit venues de la montre, état comparé à la zone habituelle de l'athlète,
  * courbes ; une mesure touchée ouvre son détail sur 28 jours.
  */
-export default function AthleteSantePage() {
+/**
+ * @param coachView  Vue coach (planche CoachOrdiASante, onglet Santé de Retours) :
+ *   sans en-tête de page, à la 3ᵉ personne, précédée du bloc « Ressenti / mesuré ».
+ */
+export default function AthleteSantePage({ coachView, top }: { coachView?: { firstName: string }; top?: ReactNode } = {}) {
   const isDesktop = useIsDesktop();
   const { athleteId } = useAthleteContext();
   const day = localIsoDay();
@@ -95,8 +99,8 @@ export default function AthleteSantePage() {
     const vs = s28.map((p) => p.v).filter((v): v is number => v != null);
     const streak = streakOf(opened.values, day, opened.state);
     return (
-      <div style={{ maxWidth: 480, margin: "0 auto" }}>
-        <AthletePageHeader title={opened.def.label} titleSize={22} background={headerGlow("#33B5FF", undefined)} />
+      <div style={{ maxWidth: 480, margin: coachView ? 0 : "0 auto" }}>
+        {!coachView && <AthletePageHeader title={opened.def.label} titleSize={22} background={headerGlow("#33B5FF", undefined)} />}
         <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
           <button type="button" onClick={() => setOpen(null)} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.tx3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>‹ Santé</button>
           {opened.source && <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{opened.source}</div>}
@@ -106,10 +110,10 @@ export default function AthleteSantePage() {
             {opened.def.unit && opened.def.key !== "sleep" && <span style={{ ...MONO, fontSize: 13, color: C.tx3 }}>{opened.def.unit}</span>}
             <StatePill state={opened.state} />
           </div>
-          {streak > 1 && <div style={{ fontSize: 13, color: C.o }}>{streak}ᵉ nuit {opened.state === "low" ? "sous" : "au-dessus de"} ta zone habituelle</div>}
+          {streak > 1 && <div style={{ fontSize: 13, color: C.o }}>{streak}ᵉ nuit {opened.state === "low" ? "sous" : "au-dessus de"} {coachView ? "sa" : "ta"} zone habituelle</div>}
           <div style={CARD}>
             <Spark pts={span === "day" ? s28 : seriesTo(opened.values, day, n)} base={opened.base} h={120} dots />
-            {opened.base && <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 8 }}>▒ ta zone habituelle · moyenne {fmtValue(opened.def, opened.base.mean)}{opened.def.key === "sleep" ? "" : ` ${opened.def.unit}`}</div>}
+            {opened.base && <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 8 }}>▒ {coachView ? "sa" : "ta"} zone habituelle · moyenne {fmtValue(opened.def, opened.base.mean)}{opened.def.key === "sleep" ? "" : ` ${opened.def.unit}`}</div>}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             {([["Plus bas", vs.length ? Math.min(...vs) : null], ["Moyenne", vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null], ["Plus haut", vs.length ? Math.max(...vs) : null]] as const).map(([k, v]) => (
@@ -123,7 +127,7 @@ export default function AthleteSantePage() {
             <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6 }}>C’est quoi ?</div>
             <div style={{ fontSize: 12.5, color: C.tx2, lineHeight: 1.5 }}>{opened.def.explain}</div>
           </div>
-          <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>« Bas » ou « Haut » : comparé à ta propre zone habituelle des 28 derniers jours, jamais aux autres.</div>
+          <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>« Bas » ou « Haut » : comparé à {coachView ? "sa" : "ta"} propre zone habituelle des 28 derniers jours, jamais aux autres.</div>
         </div>
       </div>
     );
@@ -132,8 +136,9 @@ export default function AthleteSantePage() {
   const [sleep, ...rest] = views;
   return (
     <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
-      <AthletePageHeader title="Santé" titleSize={24} background={headerGlow("#33B5FF", undefined)} />
-      <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+      {!coachView && <AthletePageHeader title="Santé" titleSize={24} background={headerGlow("#33B5FF", undefined)} />}
+      <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {top}
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, color: C.tx2 }}>
           <span>{fmtDayShort(day)}</span>
           {source && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{source}</span>}
@@ -141,7 +146,7 @@ export default function AthleteSantePage() {
         {tabs}
         {isLoading ? null : !days.length ? (
           <div style={{ ...CARD, padding: 16, fontSize: 13, color: C.tx2, lineHeight: 1.5 }}>
-            Aucune donnée de montre pour l’instant. Relie ta montre dans Profil › Montres et données : sommeil, VFC et FC de repos arriveront ici chaque matin.
+            Aucune donnée de montre pour l’instant. {coachView ? `${coachView.firstName} n’a pas relié de montre : sommeil, VFC et FC de repos arriveront ici chaque matin une fois sa montre reliée.` : "Relie ta montre dans Profil › Montres et données : sommeil, VFC et FC de repos arriveront ici chaque matin."}
           </div>
         ) : (
           <>

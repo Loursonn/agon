@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-coach-retours-sante",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retours › Santé : le ressenti face à la montre",
+    summary: "Dans Retours, l'onglet Santé met face à face ce que l'athlète déclare le matin (sommeil, énergie, sérénité) et ce que mesure sa montre, puis toutes les mesures de la nuit.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Écart » quand l'athlète se dit en forme alors que sa montre mesure nettement moins bien que d'habitude (ou l'inverse) ; « Cohérent » sinon.",
+          "En dessous, les mesures de la montre (sommeil, VFC, FC de repos, stress…) sur le jour, 7 ou 28 jours, comparées à sa propre moyenne.",
+          "Rien ne s'affiche si l'athlète n'a pas de montre reliée ou n'a pas rempli son wellness.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-parametres-mode-athlete",
     date: "2026-11-13",
     kind: "feature",

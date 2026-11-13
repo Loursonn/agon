@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
+import AthleteSantePage from "@/features/athlete/pages/AthleteSantePage";
+import { FeltVsMeasured } from "@/features/coach/components/FeltVsMeasured";
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
   addWeeks, subWeeks, startOfWeek, addDays,
@@ -59,6 +61,8 @@ export default function RetoursPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { goals, freeSessions, athleteProfile } = useAthleteContext();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
+  // Planche CoachOrdiASante : « Wellness | Santé » (mesures de la montre).
+  const [tab, setTab] = useState<"wellness" | "sante">(() => (searchParams.get("vue") === "sante" ? "sante" : "wellness"));
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [selectedWeek, setSelectedWeek]   = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [detailView, setDetailView]       = useState<DetailView>(() => detailFromParam(searchParams.get("detail")));
@@ -211,6 +215,44 @@ export default function RetoursPage() {
     ? Math.round(calLogs.reduce((s, l) => s + l.total_calories_consumed!, 0) / calLogs.length)
     : null;
 
+  const firstName = ((athleteProfile as { full_name?: string | null } | null)?.full_name ?? "").trim().split(/\s+/)[0] || "L’athlète";
+  const tabSwitch = (
+    <div role="tablist" style={{ display: "flex", background: C.s2, borderRadius: 8, padding: 2, alignSelf: "flex-start", marginBottom: 16 }}>
+      {(["wellness", "sante"] as const).map((k) => (
+        <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} style={{
+          padding: "5px 14px", borderRadius: 6, border: "none", background: tab === k ? C.s1 : "transparent",
+          color: tab === k ? C.tx : C.tx3, fontSize: 12, fontWeight: tab === k ? 600 : 500, cursor: "pointer", fontFamily: "inherit",
+        }}>
+          {k === "wellness" ? "Wellness" : "Santé"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (tab === "sante" && athleteId) {
+    return (
+      <div style={{ padding: "16px 20px 80px", display: "flex", flexDirection: "column" }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, letterSpacing: "-0.3px", marginBottom: 12 }}>Retours</div>
+        {tabSwitch}
+        <AthleteSantePage
+          coachView={{ firstName }}
+          top={
+            <section style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+              <div style={{ fontFamily: "var(--agon-font-data)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2 }}>
+                <span style={{ color: C.ac }}>01 —</span> Ressenti / mesuré · ce matin
+              </div>
+              <div style={{ fontSize: 12.5, color: C.tx3 }}>Ce que {firstName} déclare face à ce que mesure sa montre.</div>
+              <FeltVsMeasured athleteId={athleteId} firstName={firstName} />
+              <div style={{ fontFamily: "var(--agon-font-data)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2, marginTop: 14 }}>
+                <span style={{ color: C.ac }}>02 —</span> Mesures de la montre
+              </div>
+            </section>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "16px 20px 80px" }}>
 
@@ -265,6 +307,8 @@ export default function RetoursPage() {
           </button>
         </div>
       </div>
+
+      {tabSwitch}
 
       {/* Feu du matin calculé (règles du 07/11) */}
       <div style={{ marginBottom: 16 }}>
