@@ -82,8 +82,8 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       {
         title: "Ce qui change",
         points: [
-          "En haut, les seuils clés en grand : FC max, FC seuil, FC de repos et les deux seuils de tes zones.",
-          "Les références (VMA, vitesse critique, FTP…) sont rangées en tableau : valeur, date, et si elle vient d'un test, de toi ou de l'athlète.",
+          "En haut, les seuils clés en grand : FC max, FC seuil, FC de repos et les deux seuils de ses zones.",
+          "Les références (VMA, vitesse critique, FTP…) sont rangées en tableau : valeur, date, et si elle vient d'un test, de vous ou de l'athlète.",
           "Un crayon sur chaque ligne pour corriger une valeur sans changer de page.",
           "Biométrie, records et profils par catégorie restent plus bas, comme avant.",
         ],
@@ -110,7 +110,6 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         title: "Pour le professionnel invité",
         points: [
           "La page d'invitation affiche ce qu'il pourra faire avant de créer son compte, et jusqu'à quand le lien est valable.",
-          "Son espace liste ses athlètes avec leurs blessures en cours, et chaque fiche montre ses accès sur le côté.",
         ],
       },
     ],
