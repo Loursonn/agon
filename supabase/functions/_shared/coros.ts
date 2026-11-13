@@ -571,6 +571,11 @@ const QUOTA_RE =
   /quota|rate.?limit|too many requests|limit (?:has been )?(?:exceeded|reached)|exceed\w* (?:the |your )?(?:daily |download )?(?:limit|allowance)/i;
 /** Refus de la garde COROS (« Tool call anomalies detected… ») : erreur, jamais une liste vide. */
 const ANOMALY_RE = /anomal|session context|capability boundary/i;
+
+/** Le texte est-il le refus « anomalies » de la garde COROS ? */
+export function isCorosAnomaly(text: string): boolean {
+  return ANOMALY_RE.test(text);
+}
 const EMPTY_RE =
   /\bno\s+(?:\w+\s+){0,2}(?:activit|record|data|file|fit|workout|sport)|\bnot found\b|\bnone\b|\b0\s+(?:\w+\s+)?(?:activit|record|file)|aucun/i;
 const ERRORISH_RE =

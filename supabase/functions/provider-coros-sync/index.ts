@@ -44,6 +44,8 @@ import {
   resolveDateArgs,
   shiftDay,
   ymd,
+  isCorosAnomaly,
+  type FitListing,
 } from "../_shared/coros.ts";
 import { McpClient, McpError, type McpTool, resolveTool } from "../_shared/mcp.ts";
 import { looksLikeFit, parseFit } from "../_shared/activityFiles/fit.ts";
@@ -145,6 +147,12 @@ interface SyncReport {
     required: string[];
     args: Record<string, unknown>;
   };
+  /**
+   * Refus « anomalies » de COROS sur la liste des FIT : variantes essayées une
+   * fois, résultat réduit à sa forme (`urls:N`, `vide`, `erreur:…`). Aucun
+   * fichier n'est téléchargé par la sonde.
+   */
+  fitProbe?: Record<string, string>;
 }
 
 interface CallStats {
@@ -600,6 +608,11 @@ async function syncConnection(
   }
 
   const { mcp, tools } = await listToolsWithRetry(admin, conn, host);
+  /*
+    Session utilisée pour la liste des FIT. Remplacée par une session neuve si
+    COROS refuse avec sa garde « anomalies » et que la session neuve passe.
+  */
+  let fitMcp = mcp;
   const timing: SyncTiming = {
     setupMs: Date.now() - startedAt,
     list: newStats(),
@@ -670,11 +683,49 @@ async function syncConnection(
 
     const deps = {
       list: timed(timing.list, async (range: { from: string; to: string }) => {
-        const result = await mcp.callTool(
-          spec.tool,
-          buildDateArgs(spec, range.from, range.to, COROS_FIT_LIMITS.perCall),
-        );
-        return classifyFitListing(result);
+        const args = buildDateArgs(spec, range.from, range.to, COROS_FIT_LIMITS.perCall);
+        const listing = classifyFitListing(await fitMcp.callTool(spec.tool, args));
+        if (listing.kind !== "error" || !isCorosAnomaly(listing.reason) || report.fitProbe) return listing;
+
+        // Une seule fois par exécution : variantes, pour savoir ce que la garde refuse.
+        const probe: Record<string, string> = {};
+        report.fitProbe = probe;
+        const shape = (l: FitListing) =>
+          l.kind === "urls" ? `urls:${l.urls.length}` : l.kind === "empty" ? "vide" : `erreur:${l.reason.slice(0, 80)}`;
+        const token = await freshAccessToken(admin, conn);
+        const fresh = () => new McpClient({ host, accessToken: token });
+        let adopted: FitListing | null = null;
+        try {
+          const s1 = fresh();
+          const l1 = classifyFitListing(await s1.callTool(spec.tool, args));
+          probe.nouvelleSession = shape(l1);
+          if (l1.kind !== "error") {
+            fitMcp = s1;
+            adopted = l1;
+          }
+        } catch (e) {
+          probe.nouvelleSession = `exception:${errMsg(e).slice(0, 80)}`;
+        }
+        try {
+          const day = spec.format === "iso" ? range.to : range.to.replace(/-/g, "");
+          const l2 = classifyFitListing(await fresh().callTool(spec.tool, { [spec.start]: day }));
+          probe.unJourSansLimit = shape(l2);
+        } catch (e) {
+          probe.unJourSansLimit = `exception:${errMsg(e).slice(0, 80)}`;
+        }
+        const recordsTool = resolveTool(tools, COROS_TOOLS.sportRecords, /sport.*record|activit(y|ies).*list/i);
+        if (recordsTool) {
+          try {
+            const r = await fresh().callTool(recordsTool, {});
+            probe.listeActivites = r.isError
+              ? `erreur:${r.text.slice(0, 80)}`
+              : isCorosAnomaly(r.text) ? `anomalie` : `ok:${r.text.length} car.`;
+          } catch (e) {
+            probe.listeActivites = `exception:${errMsg(e).slice(0, 80)}`;
+          }
+        }
+        console.log(`provider-coros-sync: connexion ${conn.id} : sonde`, JSON.stringify(probe));
+        return adopted ?? listing;
       }),
       quotaRemaining: async () => {
         const { data, error } = await admin.rpc("provider_fit_quota_remaining", {

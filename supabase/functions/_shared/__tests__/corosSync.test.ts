@@ -11,6 +11,7 @@ import {
   buildDateArgs,
   classifyFitListing,
   CorosSchemaError,
+  isCorosAnomaly,
   CorosTokenError,
   isRefreshRejected,
   lastSettledDay,
@@ -139,6 +140,8 @@ describe("classifyFitListing", () => {
     const text = "Tool call anomalies detected. High risk of session context pollution or request exceeds the LLM capability boundary.";
     expect(classifyFitListing({ isError: true, text })).toMatchObject({ kind: "error", quota: false });
     expect(classifyFitListing({ isError: false, text })).toMatchObject({ kind: "error", quota: false });
+    expect(isCorosAnomaly(text)).toBe(true);
+    expect(isCorosAnomaly("No activity found")).toBe(false);
   });
 
   it("variantes de quota toujours reconnues", () => {
