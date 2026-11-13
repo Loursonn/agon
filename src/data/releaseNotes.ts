@@ -38,6 +38,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-charge-yoxx",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Charge d'entraînement : points YOXX, prévu face au réalisé",
+    summary: "La charge de chaque séance se compte en points (1 point = 1 minute en zone 1), pour la course, les ergos, les séances mixtes et la musculation, prévue et réalisée.",
+    sections: [
+      {
+        title: "Comment c'est compté",
+        points: [
+          "Course et ergos : minutes en zone 1 × 1, en zone 2 × 2, en zone 3 × 3. Les zones viennent du modèle de zones FC que vous avez fixé à la date de la séance (5 et 7 zones sont ramenées à 3).",
+          "En course, un tour plus rapide que le seuil 1 est classé à l'allure : zone 2 jusqu'à la vitesse critique, zone 3 au-delà.",
+          "Séances mixtes, spécifiques, HYROX : la FC de toute la séance ; leurs km comptent à part (« compromised »).",
+          "Musculation : séries dures selon le RIR (0-1 : 1 · 2-3 : 0,75 · 4-5 : 0,4) et le type d'exercice (bas du corps lourd × 1,5, autre polyarticulaire × 1, isolation × 0,5), × 6.",
+          "Sans montre : la séance validée compte comme prévue (au prorata de la durée corrigée).",
+        ],
+      },
+      {
+        title: "Où la voir",
+        points: [
+          "Planning › Mois : sous le calendrier, la semaine en cours : séances, km, zones, charge sur 6 semaines (prévu en pointillé), monotonie, séance la plus coûteuse.",
+          "Charge aiguë (7 j) face à la chronique (4 semaines précédentes) et leur ratio, avec la zone 0,8–1,3 : pour le contexte, il ne déclenche aucune alerte.",
+          "Planning › Résumé : la charge hebdomadaire de chaque mésocycle passe aux points YOXX, prévus et réalisés.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-vitesse-critique",
     date: "2026-11-13",
     kind: "feature",

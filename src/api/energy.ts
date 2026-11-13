@@ -400,6 +400,7 @@ const ATHLETE_SCOPED = new Set<string>([
   "runningVolume",            // volume de course (distance des séances énergie)
   "athlete-trend-sessions",   // tendances athlète
   "coach-api-draft-target",   // propositions de l'assistant (état courant)
+  "load",                     // charge YOXX (src/api/load.ts)
 ]);
 
 /**

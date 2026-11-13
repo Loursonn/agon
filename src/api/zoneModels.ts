@@ -23,7 +23,11 @@ export const zoneModelKeys = {
 
 /** Après un enregistrement ou une décision : modèles, bornes datées, résumés. */
 export function invalidateZoneModels(qc: QueryClient, athleteId: string): Promise<void> {
-  return qc.invalidateQueries({ queryKey: zoneModelKeys.all(athleteId) });
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: zoneModelKeys.all(athleteId) }),
+    // Charge YOXX (`loadKeys`) : les minutes sont classées avec ces zones.
+    qc.invalidateQueries({ queryKey: ["load", athleteId] }),
+  ]).then(() => undefined);
 }
 
 /** `replaced` : modèle plus ancien écarté par « Appliquer aussi aux séances passées » (gardé pour l'historique). */

@@ -2060,3 +2060,29 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
 - **Seuil 1** : celui du test ; pour une VC saisie, VC × 0,84 (facteur médian de la méthode Rivet,
   `GridSet.running.s1_factor`).
 - Lecture seule, aucune migration. Sert à la charge YOXX : Zone 2 jusqu'à la VC, Zone 3 au-delà.
+
+## 2026-11-13 — Charge d'entraînement YOXX (P28) et D13
+
+- **D13 tranchée (Hugo, 13/11)** : ratio aigu / chronique **affiché** sous la semaine (zone 0,8–1,3, comme la
+  maquette), **jamais** dans un feu ni une alerte. Aigu = charge de la semaine ; chronique = moyenne des 4 semaines
+  précédentes, semaine en cours exclue (ratio découplé, même chiffre que la « charge chronique » du modèle YOXX).
+- **Calcul** : `_shared/domain/trainingLoad.ts` (points, SDP, prévu, tableau de semaine) et
+  `src/lib/trainingLoadWeek.ts` (assemblage des lectures). Calculé à la volée (`src/api/load.ts`), **aucune table** :
+  pas de cache tant que c'est rapide. Formules de `regles.md` (coach-chef, 7/11) sans changement.
+- **Zones** (Hugo, 13/11) : minutes classées avec le modèle de zones FC de la date de la séance ; 3 zones telles
+  quelles ; 5 zones Z1-Z2 → 1, Z3-Z4 → 2, Z5 → 3 ; 7 zones Z1-Z3 → 1, Z4-Z5 → 2, Z6-Z7 → 3. Course avec série :
+  tour plus rapide que le seuil 1 → Z2 jusqu'à la VC, Z3 au-delà ; sinon chaque seconde à la FC. Tours = ceux
+  d'Agon (`activity_laps`), sinon ceux de la montre ; sans tours, toute la sortie est un tour.
+- **Musculation** (Hugo, 13/11) : pas de migration ; f(exercice) déduit de la fiche (`is_compound`, cible, nom) :
+  bas du corps polyarticulaire → 1,5 ; autre polyarticulaire → 1 ; isolation, mollets, gainage → 0,5. k = 6 pour
+  tous. Bloc « Échauffement » et exercices en mode libre exclus. RIR saisi, sinon prévu, sinon 0,75 (signalé).
+- **Prévu** (étapes de la séance énergie) : échauffement, récup, repos, retour au calme → Z1 ; effort classé par sa
+  cible (zone FC 1-5 de l'éditeur ramenée à 3, bpm et % FC max avec le modèle de la date, allure et % VMA / VC
+  avec seuil 1 et VC) ; sans cible : Z2. Séance spécifique (= mixte) : station → Z3, **60 s par station sans
+  durée** (hypothèse à revoir). Distance convertie en temps à la vitesse visée, sinon à celle de la zone.
+- **Réalisé sans montre** : séance énergie validée = prévu × durée réelle ÷ durée prévue (« fait comme prévu »).
+  Activité libre de muscu ignorée (la séance saisie compte déjà). Limites : la VC et les bornes « 5 zones » sont
+  celles d'aujourd'hui pour toute la plage (les modèles 3 / 7 zones sont bien datés) ; km d'une séance mixte =
+  tous en compromised.
+- **Affichage** : `WeekLoadPanel` sous le calendrier du planning (vue Mois, semaine en cours) en attendant la
+  vue semaine large (P24, P9) ; `useMesoLoad` (résumé des mésocycles) passe aux points prévus / réalisés.

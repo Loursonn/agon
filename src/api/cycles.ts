@@ -424,7 +424,7 @@ export async function deletePeriod(level: Exclude<PeriodLevel, "cycles">, id: st
 const ATHLETE_SCOPED = new Set<string>([
   "timeline-data", "planning-summary", "athlete-cycles", "assistant-last-cycle", "historique",
   "cycle-sessions", "micro-days", "micro-stats", "calendar-events", "cal", "activePlan",
-  "workout-logs-week",
+  "workout-logs-week", "load",
 ]);
 /** Requêtes de périodisation sans id d'athlète dans la clé : toujours invalidées. */
 const GLOBAL = new Set<string>([
