@@ -85,7 +85,7 @@ Lecteurs : **plus aucun code ne lit `asp:wh`, `asp:wellness`, `asp:wlog`, `asp:w
 - ✅ `src/features/shared/hooks/useAthletePersistedState.ts` → `getWellnessHistory({ includeArchived: false })` (+ `toLegacyWellnessHistory`, `toLegacyToday`), `getWeightLog` + `toLegacyWeightLog`, `getWeightMilestones` + `toLegacyMilestones`, `getBodyWeightGoal` + `toLegacyBodyWeight`. Les composants reçoivent les mêmes formes qu'avant (clés compactes `YYYYMMDD`, `{ current, target }` à 0 si absent). Une lecture en erreur bloque l'écriture de la clé (`markKeyLoad` dans `src/lib/storage.ts`, même garde que `sLoadResult`) et relance la lecture automatique.
 - ✅ `useWeeklyRetours.ts`, `useMonthlyRetours.ts` → `getWellnessHistory` (archives comprises). `retoursWellnessHistory` supprimé.
 - ✅ `src/api/appContent.ts` `listRecentActivity` → dernier `wellness_entries.updated_at` non archivé de chaque athlète (repli `app_data` si table absente).
-- ✅ `supabase/functions/coach-api` + `_shared/coachApiRead.ts` → `_shared/coachApiHealth.ts` (`readSummaryHealth`) lit `wellness_entries`, `body_weight_logs`, `body_weight_goals` sur la période. `asp:goals` et `asp:prog` restent dans `app_data` (hors périmètre santé). **À redéployer** : `supabase functions deploy coach-api`, accord d'Hugo requis.
+- ✅ `supabase/functions/coach-api` + `_shared/coachApiRead.ts` → `_shared/coachApiHealth.ts` (`readSummaryHealth`) lit `wellness_entries`, `body_weight_logs`, `body_weight_goals` sur la période. `asp:goals` et `asp:prog` restent dans `app_data` (hors périmètre santé). Déployée en prod le 2026-11-09 (version en ligne vérifiée identique au code le 2026-11-13).
 - Composants qui lisent l'état du contexte (`StatsCharts.jsx`, `WellnessFlow.jsx`, `NutritionView.tsx`, `ProfileDrawer.tsx`, `ProfilSportifPage.tsx`, `StaffWellnessTab.tsx`…) : rien changé.
 - Lecture des lignes dans le domaine partagé : `wellnessRowToEntry` / `wellnessRowsToHistory` (`_shared/domain/wellness.ts`), réexportés par `src/api/wellness.ts`.
 
@@ -93,7 +93,7 @@ Contrat de `coach-api` : sortie de `GET /athletes/:id/summary` strictement ident
 
 Limite connue : `wellnessHistory` du contexte ne contient plus les clés parasites (`"1"`..`"4"`) ni les champs inconnus d'une saisie ; quand un écrivain réécrit encore le blob `asp:wh` entier, il l'écrit nettoyé (le trigger projette de toute façon l'état nettoyé). Sans effet sur les tables.
 
-Écrivains qui réécrivaient un blob entier : **P6 (2026-11-10) les a tous passés par RPC** (code ; migration `20261110110100_weight_set_goal.sql` à appliquer) :
+Écrivains qui réécrivaient un blob entier : **P6 (2026-11-10) les a tous passés par RPC** (migration `20261110110100_weight_set_goal.sql` appliquée en prod le 2026-11-10) :
 - `ProfilPage.tsx` → `saveWeighIn` (file hors ligne, RPC `weight_set_day`).
 - Objectif → `weight_set_goal` (`saveWeightGoal`) ; les setters blob sans appelant sont supprimés.
 - `useAthleteLogic.archiveAndNewBlock` : `asp:wh = {}` après archivage ; les saisies passent `archived = true` si elles sont dans `asp:blockHistory` (désormais toujours le cas quand il reste du wellness). Reste un écrivain blob (`asp:blockHistory`, programme) : hors santé, voir P17.
@@ -126,7 +126,7 @@ Proposition (étape 3, à valider) :
 |---|---|---|
 | Accès : athlète, coachs (`is_coach_of`), staff autorisé (`staff_can` + consentement), rien pour anon | OK (testé) | migration §2 |
 | Suppression de compte : cascade `profiles → tables` (aucun bucket) ; `health_sync_errors` en cascade aussi | OK (testé D2) | — |
-| Export : les 4 tables à ajouter à `ATHLETE_TABLES` | **à faire** (autre agent) | `src/lib/dataExport.ts` |
+| Export : les 4 tables dans l'export athlète | OK | `src/lib/dataExport.ts` |
 | Finalité : même donnée, mêmes destinataires | OK, `legal.ts` inchangé | — |
 | IA : aucune nouvelle donnée envoyée (`athlete-insights` reçoit des agrégats, `coach-api` inchangé) ; pas de Garmin | OK | — |
 | Logs : `RAISE WARNING` = clé + code SQL, jamais de valeur | OK | migration §5 |
