@@ -9,7 +9,7 @@ name: Rejeu des migrations (R2)
 on:
   push:
     branches: [dev]
-    paths: [supabase/migrations/**, supabase/tests/ci/schema.sql, .github/workflows/migrations-replay.yml]
+    paths: [supabase/migrations/**, supabase/tests/ci/schema.sql, supabase/tests/storage_public_buckets.sql, .github/workflows/migrations-replay.yml]
   workflow_dispatch:
 
 concurrency:
@@ -75,6 +75,14 @@ jobs:
           path: |
             ${{ runner.temp }}/${{ matrix.side }}.sql
             ${{ runner.temp }}/${{ matrix.side }}-failed.txt
+
+      # AIPD A2 : un bucket rendu public (ou lisible sans compte) par une migration rend le job rouge,
+      # même si supabase/tests/ci/platform.sql n'a pas été mis à jour.
+      - name: Buckets publics hors liste blanche (AIPD A2)
+        if: matrix.side == 'migrations'
+        run: |
+          (cd supabase/tests && npm i --no-save --no-package-lock --prefix . pg@8 >/dev/null)
+          node supabase/tests/ci/run.mjs supabase/tests/storage_public_buckets.sql
 
   diff:
     name: Diff migrations ↔ prod

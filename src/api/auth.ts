@@ -42,6 +42,23 @@ function ok<T>(res: AuthRes<T>): T {
   return res.data;
 }
 
+/**
+ * Longueur minimale d'un mot de passe (AIPD A3). Vérifiée ici, point de passage de toute
+ * inscription et de tout changement de mot de passe, en plus des formulaires (`minLength`) et de
+ * l'Edge Function `claim-athlete`. Les mots de passe déjà choisis restent valables à la connexion.
+ */
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_TOO_SHORT = `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`;
+
+/** true si le mot de passe respecte la longueur minimale. */
+export function isPasswordLongEnough(password: string): boolean {
+  return password.length >= PASSWORD_MIN_LENGTH;
+}
+
+function assertNewPassword(password: string): void {
+  if (!isPasswordLongEnough(password)) throw new AuthFailure({ message: PASSWORD_TOO_SHORT, code: "weak_password" });
+}
+
 /** Session en cours (lue dans le stockage local, rafraîchie si besoin) ; null si déconnecté. */
 export async function getSession(): Promise<Session | null> {
   return ok(await db().auth.getSession()).session;
@@ -64,6 +81,7 @@ export async function signIn(email: string, password: string): Promise<Session |
 
 /** Crée le compte d'authentification ; lève si Supabase ne renvoie pas d'utilisateur. */
 export async function signUp(email: string, password: string): Promise<User> {
+  assertNewPassword(password);
   const { user } = ok(await db().auth.signUp({ email, password }));
   if (!user) throw new AuthFailure({ message: "Erreur lors de la création du compte" });
   return user;
@@ -105,5 +123,6 @@ export async function sendPasswordReset(email: string, redirectTo: string): Prom
 
 /** Nouveau mot de passe pour l'utilisateur connecté (session de récupération comprise). */
 export async function updatePassword(password: string): Promise<void> {
+  assertNewPassword(password);
   ok(await db().auth.updateUser({ password }));
 }

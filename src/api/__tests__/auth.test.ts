@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { setDbForTests } from "@/api/client";
 import {
-  AuthFailure, getAccessToken, getSession, onAuthChange, sendPasswordReset, signIn, signOut, signUp, updatePassword,
+  AuthFailure, PASSWORD_MIN_LENGTH, getAccessToken, isPasswordLongEnough, getSession, onAuthChange, sendPasswordReset, signIn, signOut, signUp, updatePassword,
 } from "@/api/auth";
 
 type Err = { message: string; code?: string; status?: number } | null;
@@ -46,7 +46,7 @@ describe("api/auth", () => {
     expect(e.message).toBe("Invalid login credentials");
     expect(e.status).toBe(400);
     await expect(getSession()).rejects.toThrow("Invalid login credentials");
-    await expect(updatePassword("nouveau")).rejects.toThrow("Invalid login credentials");
+    await expect(updatePassword("nouveau-mdp")).rejects.toThrow("Invalid login credentials");
     await expect(signOut()).rejects.toBeInstanceOf(AuthFailure);
   });
 
@@ -64,9 +64,9 @@ describe("api/auth", () => {
 
   it("signUp renvoie l'utilisateur, et lève s'il n'y en a pas", async () => {
     setDbForTests(fakeAuth({ user: { id: "u1" } }).db);
-    expect((await signUp("a@b.c", "secret")).id).toBe("u1");
+    expect((await signUp("a@b.c", "secret-8")).id).toBe("u1");
     setDbForTests(fakeAuth().db);
-    await expect(signUp("a@b.c", "secret")).rejects.toThrow("Erreur lors de la création du compte");
+    await expect(signUp("a@b.c", "secret-8")).rejects.toThrow("Erreur lors de la création du compte");
   });
 
   it("transmet les paramètres tels quels (portée de déconnexion, lien de réinitialisation)", async () => {
@@ -75,13 +75,30 @@ describe("api/auth", () => {
     await signOut();
     await signOut("global");
     await sendPasswordReset("a@b.c", "https://app/reset-password");
-    await updatePassword("nouveau");
+    await updatePassword("nouveau-mdp");
     expect(f.calls).toEqual([
       ["signOut", { scope: "local" }],
       ["signOut", { scope: "global" }],
       ["reset", { email: "a@b.c", redirectTo: "https://app/reset-password" }],
-      ["updateUser", { password: "nouveau" }],
+      ["updateUser", { password: "nouveau-mdp" }],
     ]);
+  });
+
+  it("mot de passe : 8 caractères minimum à l'inscription et au changement, pas à la connexion (AIPD A3)", async () => {
+    expect(PASSWORD_MIN_LENGTH).toBe(8);
+    expect(isPasswordLongEnough("1234567")).toBe(false);
+    expect(isPasswordLongEnough("12345678")).toBe(true);
+    const f = fakeAuth({ user: { id: "u1" } });
+    setDbForTests(f.db);
+    const e = await signUp("a@b.c", "1234567").catch((x) => x);
+    expect(e).toBeInstanceOf(AuthFailure);
+    expect(e.message).toBe("Le mot de passe doit contenir au moins 8 caractères.");
+    await expect(updatePassword("secret")).rejects.toThrow("au moins 8 caractères");
+    // Refusé avant tout appel à Supabase.
+    expect(f.calls).toEqual([]);
+    // Connexion : un ancien mot de passe de 6 caractères reste accepté.
+    await signIn("a@b.c", "abcdef");
+    expect(f.calls).toEqual([["signIn", { email: "a@b.c", password: "abcdef" }]]);
   });
 
   it("onAuthChange relaie les évènements et renvoie le désabonnement", () => {

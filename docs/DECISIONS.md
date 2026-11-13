@@ -2351,3 +2351,20 @@ et son README.
   déclenchement planifié ne part que de `main` : actif après la mise en prod. Secrets posés et essai réel réussi le 13/11
   (copie de 12 Mo, déchiffrée avec la phrase d'Hugo).
 
+
+## 2026-11-13 — Buckets publics en CI, mot de passe côté API, polices locales (AIPD A2, A3, A8)
+
+- **Buckets (A2)** : `supabase/tests/storage_public_buckets.sql` échoue si un bucket hors liste blanche
+  (`energy-exercise-photos`, `exercise-images`, `exercise-pdfs`, `public-assets`) est `public`, ou si un fichier
+  témoin y est lisible par un anonyme ou par un compte connecté sans lien. Il tourne sur la base éphémère des
+  « Tests SQL » (buckets de la prod recopiés dans `platform.sql`) **et** après le rejeu des migrations (job R2) : une
+  migration qui rouvrirait un bucket rend la CI rouge même si `platform.sql` n'a pas suivi. Ajouter un bucket à la
+  liste blanche = le justifier dans l'AIPD.
+- **Mot de passe (A3)** : la règle des 8 caractères est aussi dans `src/api/auth.ts` (`signUp`, `updatePassword`
+  lèvent avant d'appeler Supabase), seul point de passage des inscriptions ; `claim-athlete` l'exigeait déjà. La
+  connexion accepte toujours les anciens mots de passe de 6. Le réglage Supabase reste à passer à 8 par Hugo après
+  la mise en production (entrée précédente).
+- **Polices (A8)** : Archivo (axes graisse et largeur), Geist et Geist Mono servies par le site via
+  `@fontsource-variable` (`src/styles/fonts.css`, mêmes noms de familles, aucun style d'écran touché), mises en
+  précache par le service worker. Plus d'appel à `fonts.googleapis.com` / `fonts.gstatic.com` ; Google Fonts retiré
+  de la politique de confidentialité (modification mineure, `LEGAL_VERSION` inchangée) et du registre.

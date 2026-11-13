@@ -6,7 +6,7 @@ import { LEGAL_ROUTES } from "@/lib/legal";
 import { localIsoDay } from "@shared/domain/dates";
 import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { useAuth } from "@/hooks/useAuth";
-import { resendSignupEmail, sendPasswordReset } from "@/api/auth";
+import { isPasswordLongEnough, resendSignupEmail, sendPasswordReset } from "@/api/auth";
 import { coachPreviewByCode, normalizeCoachCode } from "@/api/account";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { C, alpha } from "@/lib/theme";
@@ -262,7 +262,7 @@ export default function Login() {
   }
 
   // ── Inscription 3 : compte ──
-  const ready = acceptTerms && !!fullName.trim() && !!birthDate && !!email && password.length >= 6 && !!confirm && !loading;
+  const ready = acceptTerms && !!fullName.trim() && !!birthDate && !!email && isPasswordLongEnough(password) && !!confirm && !loading;
   return (
     <form onSubmit={handleRegister}>
       <AuthScreen

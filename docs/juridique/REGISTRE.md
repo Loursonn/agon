@@ -120,5 +120,5 @@ moins une fois par an.
 | Google (API Gemini payante) | Sous-traitant IA | UE / États-Unis | DPF + DPA Google | **À vérifier** : facturation active (H1) |
 | Garmin, COROS | Responsables indépendants | États-Unis / Chine (point d'accès UE) | Leurs propres conditions | Accords développeur |
 | Anthropic (assistant du coach) | Ni sous-traitant ni choisi par Agon | États-Unis | Compte personnel du coach | Aucun |
-| YouTube (vidéos d'exercices, mode `youtube-nocookie`), Google Fonts, Calendly (prise de rendez-vous du coach) | Contenus tiers chargés par le navigateur | États-Unis | Conditions de chaque service | Aucun |
+| YouTube (vidéos d'exercices, mode `youtube-nocookie`), Calendly (prise de rendez-vous du coach) | Contenus tiers chargés par le navigateur | États-Unis | Conditions de chaque service | Aucun |
 | Strava | Aucun lien : import de fichiers par l'athlète, pas d'API | — | — | — |

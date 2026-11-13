@@ -128,11 +128,11 @@ dans `docs/DECISIONS.md`).
 | C2 | Accord IA 18 ans : client (fait, sur `dev`), trigger en base appliqué le 13/11 | — | Fait |
 | H1-H3 | DPA Supabase signé, facturation Gemini active, offre Vercel compatible | Hugo | Avant les stores |
 | A1 | Finir la correction des règles trop larges | session `policies-prod-trop-large` | En cours |
-| A2 | Test CI : aucun bucket public hors liste blanche (`energy-exercise-photos`, `exercise-*`, `public-assets`) | dev | Prochain lot |
-| A3 | Mot de passe : 8 caractères minimum au lieu de 6 (client et réglage Supabase Auth), MFA proposé aux coachs | dev + Hugo (réglage) | Avant les stores |
+| A2 | **Fait le 13/11** : test CI `supabase/tests/storage_public_buckets.sql` (drapeau `public` et lecture d'un fichier témoin par un anonyme ou un compte sans lien), sur les buckets de la prod (`platform.sql`, job « Tests SQL ») et sur ceux des migrations (job R2). Liste blanche : `energy-exercise-photos`, `exercise-images`, `exercise-pdfs`, `public-assets` | dev | Fait |
+| A3 | Mot de passe : 8 caractères minimum au lieu de 6. **Client fait le 13/11** (formulaires, `src/api/auth.ts` refuse toute inscription ou changement à moins de 8, Edge Function `claim-athlete`). Reste : réglage « Minimum password length » à 8 dans Supabase Auth (Hugo), MFA proposé aux coachs | dev + Hugo (réglage) | Avant les stores |
 | A4 | Sauvegardes : offre Pro ou dump quotidien chiffré | Hugo | Avant les stores |
 | A5 | Copie Garmin : ne garder que les types utiles, ou purger le brut après 12 mois | dev + Hugo | 2027 T1 |
 | A6 | Purge : comptes pré-créés non réclamés après 6 mois, comptes inactifs après 3 ans (avec préavis par e-mail) | dev | 2027 T1 |
 | A7 | Procédure et registre des violations (`REGISTRE_VIOLATIONS.md`) | fait le 13/11 | — |
-| A8 | Polices Google servies depuis le site (plus d'appel à Google à chaque chargement) | dev | Avant les stores |
+| A8 | **Fait le 13/11** : polices servies par le site (`src/styles/fonts.css`, paquets `@fontsource-variable`, précache PWA), Google Fonts retiré de la politique de confidentialité et du registre | dev | Fait |
 | A9 | Demander l'avis de quelques athlètes et coachs sur cette AIPD | Hugo | Facultatif |

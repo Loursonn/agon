@@ -188,9 +188,9 @@ export default function PrivacyPolicy() {
           ]}
         />
         <P>
-          Certains contenus viennent de services tiers, qui reçoivent alors votre adresse IP : les
-          polices de caractères (Google Fonts), les vidéos d'exercices (YouTube, en mode « sans
-          cookie », chargées seulement quand vous lancez la vidéo) et, si votre coach en a
+          Les polices de caractères sont servies par Agon lui-même. Certains contenus viennent de
+          services tiers, qui reçoivent alors votre adresse IP : les vidéos d'exercices (YouTube, en
+          mode « sans cookie », chargées seulement quand vous lancez la vidéo) et, si votre coach en a
           configuré une, sa page de prise de rendez-vous (Calendly, ouverte à votre demande).
           Chacun de ces services applique sa propre politique de confidentialité.
         </P>
