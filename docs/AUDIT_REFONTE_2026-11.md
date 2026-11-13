@@ -188,7 +188,7 @@ Source : audit qualité.
 
 - 🔴 **Pas de CI** (`.github/` absent) : Vercel déploie `main` sans `tsc`, tests ni lint. 🔴 **Pas de protection de branche** ; les 10 dernières PR mergées sans review.
 - 🟠 **119 erreurs `tsc`** (dont de vrais bugs), `strict: false`, `types.ts` périmé (13 tables manquantes), `.jsx` jamais lintés.
-- 🟠 **Tests** : 925 verts mais 1 hook sur 128 ; 8 fichiers de tests RLS pgTAP qui ne tournent jamais automatiquement ; aucun test e2e.
+- 🟠 **Tests** : 925 verts mais 1 hook sur 128 ; 8 fichiers de tests RLS pgTAP qui ne tournent jamais automatiquement *(2026-11-12 : les scripts de `supabase/tests/` tournent en CI, job « Tests SQL »)* ; aucun test e2e.
 - 🟠 **`CLAUDE.md` périmé** (parle d'`app_data` sans auth et du monolithe de 2 500 lignes ; ignore staff, co-coach, providers). `docs/CLAUDE.md` contredit le workflow (feature branches). `docs/AUTOMATISATION PUSH/` fait `git add .`.
 - 🟠 **Règles critiques uniquement dans la mémoire d'Hugo** (jamais `db push`, release notes à chaque lot, `is_coach_of` dans les policies, merger `main` avant PR) → **Tito ne les a pas**.
 - 🟠 **Aucun skill projet.** À créer : `nouvelle-fonctionnalite` (checklist coach/athlète/staff/co-coach, RLS, consentement, export RGPD, tests, release notes), `migration-bdd`, `edge-function`, `integration-provider`, `preparer-pr`, `rgpd-check`.
@@ -278,8 +278,8 @@ Source : audit qualité.
 3. ✅ *Décidé (2026-11-07) : Capacitor.* **Mobile** : Capacitor (recommandé) ou React Native/Expo ?
 4. ✅ *Décidé : supprimer (imports de fichiers gardés).* **Déconnexion d'une montre** : garder ou supprimer les activités importées ? (le dossier Garmin promet la suppression)
 5. ✅ *Décidé : oui, comptées une seule fois.* **Données montre** : les compter dans le volume de course et les rattacher automatiquement aux séances prévues ?
-6. **Legacy** : supprimer `invitations` et `retours` (archivés en CSV avant) ?
-7. **Migrations** : faire le `migration repair` (rend `db push` à nouveau sûr) ?
+6. **Legacy** : supprimer `invitations` et `retours` (archivés en CSV avant) ? *Plan prêt : `docs/PLAN_LEGACY.md` §1.*
+7. **Migrations** : faire le `migration repair` (rend `db push` à nouveau sûr) ? *Plan prêt : `docs/PLAN_LEGACY.md` §3.*
 8. **Charte** : brancher le disque `AGON` pour récupérer la charte source.
 
 ---

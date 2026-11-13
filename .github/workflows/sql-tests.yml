@@ -1,0 +1,72 @@
+name: Tests SQL
+
+# Rejoue supabase/tests/*.sql contre une base Supabase LOCALE et éphémère (dans le runner),
+# jamais contre la prod. La base est construite à partir du dump de schéma de la prod
+# (supabase/tests/ci/schema.sql), pas des migrations locales : l'historique est
+# désynchronisé (voir supabase/tests/ci/README.md).
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+concurrency:
+  group: sql-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sql:
+    name: Tests SQL (base locale)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.95.4
+
+      - name: Dépendances des scripts de test (hors package.json)
+        working-directory: supabase/tests
+        run: npm i --no-save --no-package-lock --prefix . pg@8 @electric-sql/pglite@0.2.17
+
+      - name: Démarrer Supabase local (Postgres, Auth, Storage)
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir sqltests && cd sqltests
+          supabase init --force >/dev/null
+          # Même image Postgres que la prod (supabase/.temp/postgres-version du projet lié) :
+          # l'image par défaut de la CLI plante (signal 11) sur « permission denied for function ».
+          mkdir -p supabase/.temp && echo 17.6.1.084 > supabase/.temp/postgres-version
+          supabase start -x realtime,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          docker ps --format '{{.Names}} {{.Image}}'
+
+      - name: Charger le schéma, les référentiels, Storage, cron et le jeu fictif
+        run: |
+          for f in before_schema schema reference_data platform seed; do
+            echo "::group::$f.sql"
+            PGOPTIONS="-c client_min_messages=error" psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "supabase/tests/ci/$f.sql"
+            echo "::endgroup::"
+          done
+
+      - name: Tests SQL (supabase/tests/*.sql)
+        run: node supabase/tests/ci/run.mjs
+
+      - name: Tests Hyrox (PGlite)
+        if: always()
+        run: node supabase/tests/hyrox_tests_pglite.mjs supabase/migrations 32 24
+
+      - name: Journal Postgres (si échec)
+        if: failure()
+        run: |
+          docker logs "$(docker ps --format '{{.Names}}' | /usr/bin/grep -m1 supabase_db)" > "$RUNNER_TEMP/pg.log" 2>&1 || true
+          /usr/bin/grep -nE 'terminated by signal|PANIC|was terminated|exited with' "$RUNNER_TEMP/pg.log" | head -20
+          n=$(/usr/bin/grep -nE 'terminated by signal|was terminated' "$RUNNER_TEMP/pg.log" | head -1 | cut -d: -f1)
+          [ -n "$n" ] && sed -n "$((n-40)),$((n+5))p" "$RUNNER_TEMP/pg.log" | cut -c1-400 || true

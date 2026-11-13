@@ -2028,3 +2028,18 @@ rejouable, sans table de correspondance à tenir (sauf le cas « place prise »)
 **Pourquoi** : l'identifiant ne peut plus changer après publication ; il dérive du
 domaine possédé `agon-training.com` (Android refuse le tiret). Mode d'emploi et
 reste à faire : `docs/MOBILE_CAPACITOR.md`.
+
+## 2026-11-12 — Tests SQL en CI sur le schéma de la prod, pas sur les migrations
+
+- Les scripts `supabase/tests/*.sql` tournent maintenant à chaque push sur `dev` / `main`
+  et chaque PR (job « Tests SQL », `.github/workflows/sql-tests.yml`), contre un Supabase
+  **local** démarré dans le runner. Jamais la prod.
+- La base de test part d'un **dump de schéma** de la prod (`supabase/tests/ci/schema.sql`),
+  pas de `supabase/migrations/` : l'historique ne se rejoue pas (doublons de versions,
+  `exercises` créée à la main, `20260404_nutrition` enregistrée mais jamais appliquée).
+  Le jour où `migration repair` est fait et le diff migrations ↔ prod vide
+  (`docs/PLAN_LEGACY.md` §3), la CI pourra repartir des migrations.
+- Données : bibliothèques exportées de la prod (aucune donnée d'athlète ni de coach) +
+  utilisateurs **fictifs** (`seed.sql`, `@example.invalid`).
+- Contrepartie : `schema.sql` est à rafraîchir après chaque migration appliquée
+  (`supabase/tests/ci/README.md`).
