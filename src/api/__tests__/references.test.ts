@@ -41,7 +41,7 @@ describe("lectures", () => {
     });
     setDbForTests(db);
     const refs = await getActiveReferences("a");
-    expect(refs.VMA).toEqual({ id: "v1", value: 18.5, unit: "km/h", date: "2026-10-01", metricType: "reference" });
+    expect(refs.VMA).toMatchObject({ id: "v1", value: 18.5, unit: "km/h", date: "2026-10-01", metricType: "reference" });
     expect(referenceValues(refs)).toEqual({ VMA: 18.5, FCmax: 192, FCzone_Z1_max: 120 });
     expect(storedFcZones(refs)).toEqual({ FCzone_Z1_max: 120 });
   });

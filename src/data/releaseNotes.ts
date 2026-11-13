@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-profil-sportif-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Profil sportif : seuils et références en un coup d'œil",
+    summary: "Le profil sportif d'un athlète s'ouvre sur ses seuils (fréquences cardiaques, seuils de zones), puis ses zones et un tableau de références avec la date et l'origine de chaque valeur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "En haut, les seuils clés en grand : FC max, FC seuil, FC de repos et les deux seuils de tes zones.",
+          "Les références (VMA, vitesse critique, FTP…) sont rangées en tableau : valeur, date, et si elle vient d'un test, de toi ou de l'athlète.",
+          "Un crayon sur chaque ligne pour corriger une valeur sans changer de page.",
+          "Biométrie, records et profils par catégorie restent plus bas, comme avant.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-staff-ordi",
     date: "2026-11-13",
     kind: "feature",
