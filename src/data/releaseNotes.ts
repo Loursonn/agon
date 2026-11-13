@@ -49,6 +49,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         points: [
           "Sur ordinateur, la page Paramètres passe sur 2 colonnes : profil, code, point hebdo et mode à gauche ; assistant IA et données à droite.",
           "Couper le mode vous retire aussi de la liste d'un autre coach qui vous suivait.",
+          "Pour vos professionnels (kiné, nutri…) : leur accueil liste leurs athlètes avec leurs droits et une colonne « À surveiller » (blessures en cours) ; sur la fiche d'un athlète, leurs accès restent affichés à droite.",
         ],
       },
     ],
