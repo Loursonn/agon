@@ -42,7 +42,11 @@ export const loadKeys = {
  * planning ou zones appellent aussi celle-ci.
  */
 export function invalidateLoad(qc: QueryClient, athleteId: string): Promise<void> {
-  return qc.invalidateQueries({ queryKey: loadKeys.all(athleteId) });
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: loadKeys.all(athleteId) }),
+    // Le feu du matin lit la charge des 7 derniers jours.
+    qc.invalidateQueries({ queryKey: ["wellnessLight", athleteId] }),
+  ]).then(() => undefined);
 }
 
 type Row = Record<string, unknown>;

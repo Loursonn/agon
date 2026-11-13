@@ -38,6 +38,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-feu-du-matin",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Feu du matin : vert, orange ou rouge, calculé",
+    summary: "Chaque matin, un feu résume l'état de l'athlète à partir de sa VFC et de sa FC de repos (montre), de ses ressentis et de sa charge des 7 derniers jours, toujours comparés à ses propres habitudes.",
+    sections: [
+      {
+        title: "Comment il se décide",
+        points: [
+          "Orange dès qu'un signal apparaît : charge des 7 jours plus de 10 % au-dessus du prévu, km +7 %, sortie non prévue au-dessus du plafond, monotonie au-dessus de 2, VFC sous sa zone habituelle, FC de repos au-dessus de l'habitude, 2 ressentis nettement bas, douleur au-dessus de 3/10.",
+          "Rouge quand la charge monte et que la VFC est sous la zone, avec au moins 2 signes parmi : FC de repos haute, wellness sous l'habitude, envie à 2/5 ou moins, sommeil en baisse. Rouge aussi si l'athlète se dit malade.",
+          "VFC : moyenne des 7 dernières nuits (5 au moins), zone habituelle = moyenne ± 0,5 écart-type des 4 semaines d'avant. L'alerte VFC s'active au 14e jour de mesure.",
+          "Une seule marque de montre à la fois : après un changement de montre, l'habitude repart de zéro. Les scores des marques (Body Battery, readiness…) ne comptent jamais, et ces données ne passent par aucune IA.",
+          "Sans montre, le feu ne passe au rouge que si l'athlète est malade.",
+        ],
+      },
+      {
+        title: "Où le voir",
+        points: [
+          "Retours d'un athlète : le feu du jour en haut, avec tous les signaux.",
+          "L'athlète le voit sur son accueil, sous son score wellness.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-charge-yoxx",
     date: "2026-11-13",
     kind: "feature",

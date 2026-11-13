@@ -26,6 +26,7 @@ import { TodayDial } from "@/features/athlete/components/today/TodayDial";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useTodayWellness } from "@/features/shared/hooks/useTodayWellness";
 import { useReadinessScore } from "@/features/shared/hooks/useReadinessScore";
+import { useWellnessLight } from "@/features/shared/hooks/useWellnessLight";
 import { useUpcomingCompetition } from "@/features/shared/hooks/useUpcomingCompetition";
 import { useWeekProgram } from "@/features/shared/hooks/useWeekProgram";
 import { WatchPushBadge } from "@/features/athlete/components/today/WatchPushBadge";
@@ -809,6 +810,7 @@ export default function TodayPage() {
 
   const wellness        = useTodayWellness();
   const readiness       = useReadinessScore(wellness);
+  const { data: light } = useWellnessLight(athleteId);
   const { data: nextComp } = useUpcomingCompetition(athleteId);
   const { data: allCompetitions = [] } = useCompetitions(athleteId);
   const weekDays = useWeekProgram(null);
@@ -1038,6 +1040,7 @@ export default function TodayPage() {
               readiness={readiness}
               advice={readiness ? getReco(readiness.score).desc : null}
               wellness={wellness}
+              light={light}
               onLog={() => { setShowWellness(true); haptic(); }}
             />
           </TodaySection>

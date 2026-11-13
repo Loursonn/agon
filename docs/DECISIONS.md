@@ -2097,3 +2097,23 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   3 tables en échec jusque-là.
 - Décision 7 en cours : R0-R2 faits (`docs/PLAN_LEGACY.md` §3), `migration repair` seulement si le
   rejeu des migrations donne le même schéma que la prod.
+
+## 2026-11-13 — Feu du matin calculé (T-feux-wellness)
+
+- **Règles** : `regles.md` coach-chef (arbitrage Hugo du 07/11), appliquées telles quelles dans
+  `_shared/domain/wellnessLight.ts` (pur, paramètres versionnés `feux-2026-11-13`). Lecture : `src/api/wellnessLight.ts`,
+  calcul à la volée, aucune table, aucune migration. Les mesures de montre (Garmin compris) n'entrent dans aucun appel IA.
+- **VFC** : ln RMSSD de nuit (`provider_dailies.hrv_ms`), moyenne 7 j si ≥ 5 nuits ; zone = moyenne ± 0,5 écart-type (n − 1)
+  des 28 jours avant la fenêtre, depuis J1 (fenêtre comprise) tant qu'il y a moins de 5 nuits avant elle ; alerte active à J14.
+  « Depuis N jours » = jours de suite où la moyenne 7 j est sous la zone.
+- **FC de repos** : moyenne 7 j (≥ 5 jours) contre les 28 jours d'avant (≥ 5 jours, jamais la fenêtre), plancher d'écart-type 1 bpm.
+- **Une marque** : celle de la mesure la plus récente ; un export Garmin = Garmin. Changement de montre → habitude depuis J1 de la nouvelle.
+- **Charge** : les 7 jours glissants finissant aujourd'hui (`getLoadWeeks(today − 6, 2)`) contre les 7 d'avant. « Monte » =
+  réalisé > 7 jours d'avant ou > prévu. Le prévu inclut les séances du jour pas encore faites (prudent : sous-estime l'écart).
+- **Wellness** : saisie d'aujourd'hui ou d'hier, comparée par `assessWellness` (items z < −1,5 ; score z < −1).
+- **Hypothèses à valider par Hugo** : « douleur hors règle des 3 douleurs » = douleur du matin > 3/10 ; « sommeil en baisse » =
+  item sommeil z < −1,5 ou durée de sommeil montre 7 j à z < −1 (plancher 15 min) ; « séance repère ratée » et « douleur qui
+  modifie la foulée » : aucune donnée dans Agon, donc jamais comptées. Le résumé roadmap « rouge à 3 sur 5 » diffère de
+  regles.md : c'est regles.md qui est appliqué (charge en hausse **et** VFC sous la zone **et** ≥ 2 signes sur 5).
+- **Affichage** : Retours (coach, détail des signaux) et carte wellness d'Aujourd'hui (athlète). Accueil coach et vue
+  globale wellness (P26) : pas branchés (P26 bloqué), un feu par athlète y coûterait une lecture par athlète.

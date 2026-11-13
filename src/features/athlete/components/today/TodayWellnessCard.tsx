@@ -5,6 +5,8 @@ import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import type { ReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import type { WellnessData } from "@/features/shared/types/athlete";
 import { DOMS_LEVEL_COLOR, levelsList } from "@/lib/bodyZones";
+import type { LightResult } from "@shared/domain/wellnessLight";
+import { WellnessLightBadge } from "@/features/shared/components/WellnessLightBadge";
 
 /** Les 5 notes du matin (1 = mauvais, 5 = très bien pour toutes), libellés courts. */
 const ITEMS: Array<{ key: string; label: string }> = [
@@ -42,11 +44,14 @@ export function TodayWellnessCard({
   readiness,
   advice,
   wellness,
+  light,
   onLog,
 }: {
   readiness: ReadinessScore | null;
   advice: string | null;
   wellness: WellnessData | null;
+  /** Feu du matin calculé (VFC, FC de repos, ressentis, charge) ; absent = non affiché. */
+  light?: LightResult | null;
   onLog?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -98,6 +103,11 @@ export function TodayWellnessCard({
           {advice && <div style={{ fontSize: 13, color: C.tx2 }}>{advice}</div>}
         </div>
       </div>
+      {light !== undefined && (
+        <div style={{ padding: "0 14px 12px" }}>
+          <WellnessLightBadge result={light} />
+        </div>
+      )}
       <button
         type="button"
         aria-expanded={open}

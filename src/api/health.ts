@@ -22,7 +22,11 @@ export const healthKeys = {
 
 /** Après une synchro ou une déconnexion. */
 export function invalidateHealth(qc: QueryClient, athleteId: string): Promise<void> {
-  return qc.invalidateQueries({ queryKey: healthKeys.all(athleteId) });
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: healthKeys.all(athleteId) }),
+    // Le feu du matin lit la VFC, la FC de repos et le sommeil.
+    qc.invalidateQueries({ queryKey: ["wellnessLight", athleteId] }),
+  ]).then(() => undefined);
 }
 
 /** Colonnes numériques du résumé du jour (nom en base → nom renvoyé). */

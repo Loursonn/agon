@@ -664,6 +664,7 @@ const ATHLETE_SCOPED = new Set<string>([
   "unfinished-workouts",      // ancienne clé du rappel
   "staff",                    // vues staff (logs, planning, retours, occurrences)
   "load",                     // charge YOXX (src/api/load.ts)
+  "wellnessLight",            // feu du matin (src/api/wellnessLight.ts)
 ]);
 /** Requêtes sans id d'athlète dans la clé : toujours invalidées. */
 const GLOBAL = new Set<string>([

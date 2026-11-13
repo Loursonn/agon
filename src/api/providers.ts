@@ -37,6 +37,7 @@ export function invalidateProviders(qc: QueryClient, athleteId: string): Promise
     qc.invalidateQueries({ queryKey: providerKeys.all(athleteId) }),
     // Charge YOXX et VC (`loadKeys`, `criticalSpeedKeys`) lisent les activités.
     qc.invalidateQueries({ queryKey: ["load", athleteId] }),
+    qc.invalidateQueries({ queryKey: ["wellnessLight", athleteId] }),
     qc.invalidateQueries({ queryKey: ["criticalSpeed", athleteId] }),
   ]).then(() => undefined);
 }

@@ -39,6 +39,7 @@ export function invalidatePlanLinks(qc: QueryClient, athleteId: string): Promise
     qc.invalidateQueries({ queryKey: planLinkKeys.all(athleteId) }),
     // Charge YOXX (`loadKeys`) : le rattachement change le réalisé.
     qc.invalidateQueries({ queryKey: ["load", athleteId] }),
+    qc.invalidateQueries({ queryKey: ["wellnessLight", athleteId] }),
   ]).then(() => undefined);
 }
 
