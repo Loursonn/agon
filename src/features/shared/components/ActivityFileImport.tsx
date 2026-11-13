@@ -131,7 +131,7 @@ export function ActivityFileImport({ athleteId, forCoach = false }: { athleteId?
           {forCoach ? "Importer l'historique de l'athlète" : "Importer mes fichiers"}
         </div>
         <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5, marginTop: 4 }}>
-          {forCoach ? "Dépose l'archive d'export Strava de l'athlète" : "Dépose l'archive de ton export Strava"}, ou
+          {forCoach ? "Dépose l'archive d'export Strava ou Garmin de l'athlète" : "Dépose l'archive de ton export Strava ou Garmin"}, ou
           des fichiers .fit, .tcx et .gpx. Une sortie déjà présente (montre Garmin, autre fichier) est
           complétée, jamais dupliquée : titre, description, effort ressenti et matériel s'ajoutent, et la
           meilleure courbe est gardée. Tout est lu sur l'appareil : les fichiers ne sont pas envoyés,

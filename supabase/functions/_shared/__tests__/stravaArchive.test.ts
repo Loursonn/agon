@@ -107,3 +107,37 @@ describe("openStravaArchive", () => {
     expect((await collect(items)).filter((x) => x.kind === "activity")).toHaveLength(1);
   });
 });
+
+describe("openStravaArchive — zips imbriqués (export de compte Garmin)", () => {
+  it("lit les fichiers d'activité des zips internes, compressés ou stockés", async () => {
+    const part1 = await buildZip([
+      { name: "a1.gpx", bytes: gpxFile("2025-03-01T07:00:00Z"), deflate: true },
+      { name: "a2.tcx", bytes: tcxFile("2025-03-02T07:00:00Z") },
+    ]);
+    const part2 = await buildZip([{ name: "b1.gpx", bytes: gpxFile("2025-04-01T07:00:00Z") }]);
+    const zip = await buildZip([
+      { name: "DI_CONNECT/DI-Connect-Uploaded-Files/UploadedFiles_0-_Part1.zip", bytes: part1, deflate: true },
+      { name: "DI_CONNECT/DI-Connect-Uploaded-Files/UploadedFiles_0-_Part2.zip", bytes: part2 },
+      { name: "DI_CONNECT/DI-Connect-Wellness/sleepData.json", bytes: utf8("[]") },
+      { name: "__MACOSX/._UploadedFiles_0-_Part1.zip", bytes: utf8("x") },
+    ]);
+    const { scan, items } = await openStravaArchive(bytesSource(zip));
+    expect(scan).toMatchObject({ files: 3, nestedZips: 2, csvRows: 0, total: 3, origin: "garmin" });
+    const out = await collect(items);
+    const acts = out.filter((x) => x.kind === "activity");
+    expect(acts.map((x) => x.name).sort()).toEqual(["a1.gpx", "a2.tcx", "b1.gpx"]);
+    expect(out.filter((x) => x.kind === "rejected")).toHaveLength(0);
+  });
+
+  it("zip interne abîmé : refusé et nommé, le reste de l'archive est lu", async () => {
+    const zip = await buildZip([
+      { name: "UploadedFiles_0-_Part1.zip", bytes: utf8("pas un zip") },
+      { name: "activities/11.gpx", bytes: gpxFile("2025-03-01T07:00:00Z") },
+    ]);
+    const { scan, items } = await openStravaArchive(bytesSource(zip));
+    expect(scan).toMatchObject({ files: 1, nestedZips: 1, total: 2, origin: "zip" });
+    const out = await collect(items);
+    expect(out.map((x) => x.kind).sort()).toEqual(["activity", "rejected"]);
+    expect(out.find((x) => x.kind === "rejected")!.name).toBe("UploadedFiles_0-_Part1.zip");
+  });
+});

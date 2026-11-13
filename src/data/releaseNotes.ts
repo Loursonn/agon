@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-import-export-garmin",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Historique Garmin d'avant la connexion",
+    summary: "L'archive d'export du compte Garmin se dépose comme l'archive Strava : toutes les sorties passées entrent dans Agon.",
+    sections: [
+      {
+        title: "Comment faire",
+        points: [
+          "L'athlète demande l'export de ses données sur son compte Garmin (Gestion des données → Exporter vos données) et reçoit un zip par e-mail.",
+          "Il le dépose dans Montres › Importer mes fichiers, ou toi depuis sa fiche : les sorties sont lues sur l'appareil, rien n'est envoyé.",
+          "Une sortie déjà reçue par la connexion Garmin est complétée, jamais dupliquée, et reste attribuée à sa montre Garmin.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-sante-modele-montre",
     date: "2026-11-13",
     kind: "fix",
