@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-fiches-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Fiches : rubriques numérotées",
+    summary: "Vos fiches sont rangées en rubriques numérotées par catégorie, avec une pastille verte pour celles en libre-service.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-tests-ordi",
     date: "2026-11-13",
     kind: "feature",
