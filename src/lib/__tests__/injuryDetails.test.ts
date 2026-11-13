@@ -109,15 +109,15 @@ describe("détail affiché", () => {
     const facts = injuryFacts(gene({
       injury_type: "recidive", mechanism: "geste_repete", context: "entrainement",
       pain_level: 4, training_impact: "arret_partiel", days_off: 2,
-      diagnosed_by: "kine", return_date: "2026-03-12",
+      return_date: "2026-03-12",
     }));
     expect(facts.map((f) => f.l)).toEqual([
       "Douleur", "Impact sur l'entraînement", "Type", "Mécanisme",
-      "Survenue", "Arrêt", "Vu par", "Retour prévu",
+      "Survenue", "Arrêt", "Retour prévu",
     ]);
     expect(facts.map((f) => f.v)).toEqual([
       "4/10 — douleur modérée", "Arrêt partiel", "Récidive", "Geste répété",
-      "Entraînement", "2 jours d'arrêt", "Kiné", "12 mar 2026",
+      "Entraînement", "2 jours d'arrêt", "12 mar 2026",
     ]);
   });
 

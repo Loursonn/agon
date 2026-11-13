@@ -51,7 +51,7 @@ export const DOMAIN_LABEL: Record<StaffDomain, string> = {
   planification: "Planification",
   logs: "Séances réalisées",
   wellness: "Bien-être",
-  medical: "Médical",
+  medical: "Blessures",
   nutrition: "Nutrition",
   tests: "Tests",
   commentaires: "Commentaires",
@@ -63,7 +63,7 @@ export const DOMAIN_HINT: Record<StaffDomain, string> = {
   planification: "Saisons, cycles, compétitions",
   logs: "Charges, RPE, records",
   wellness: "Sommeil, fatigue, stress, habitudes",
-  medical: "Antécédents, blessures, pièces jointes",
+  medical: "Blessures sportives (zone, douleur, impact, arrêt)",
   nutrition: "Stratégie, journal, poids, mensurations",
   tests: "Tests de performance",
   commentaires: "Commentaires sur les fiches, retours",
@@ -122,7 +122,7 @@ export function professionLabel(p: string | null | undefined): string {
   return p && p in PROFESSION_LABEL ? PROFESSION_LABEL[p as StaffProfession] : "Professionnel";
 }
 
-/** Résumé court d'une grille : « Médical, Fiches (écriture) · Séances, Tests (lecture) ». */
+/** Résumé court d'une grille : « Blessures, Fiches (écriture) · Séances, Tests (lecture) ». */
 export function summarizePermissions(p: StaffPermissions): string {
   const w = STAFF_DOMAINS.filter((d) => p[d] === "write").map((d) => DOMAIN_LABEL[d]);
   const r = STAFF_DOMAINS.filter((d) => p[d] === "read").map((d) => DOMAIN_LABEL[d]);

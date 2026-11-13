@@ -15,7 +15,6 @@ import {
   shouldPersistQuery,
 } from "../offlineCache";
 import { docsKeys } from "@/api/docs";
-import { medicalKeys } from "@/api/injuries";
 import { profileKeys } from "@/api/profile";
 import { accountKeys } from "@/api/account";
 import { staffKeys } from "@/api/staff";
@@ -58,7 +57,6 @@ describe("shouldPersistQuery", () => {
   it("exclut URL signées, jetons et clés d'API (clés réelles des modules)", () => {
     for (const key of [
       docsKeys.signedUrl("p"),
-      medicalKeys.signedUrls("a1", ["x.pdf"]),
       profileKeys.photoUrls(["a1/p.jpg"]),
       accountKeys.claimInfo("t"),
       accountKeys.claimLink("a1"),

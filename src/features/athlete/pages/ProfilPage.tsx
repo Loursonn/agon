@@ -229,10 +229,10 @@ export default function ProfilPage() {
         </Link>
       )}
 
-      {/* ── Antécédents médicaux ── */}
+      {/* ── Blessures ── */}
       {athleteId && (
         <div style={{ marginBottom: 24 }}>
-          <SectionTitle n="02">Antécédents médicaux</SectionTitle>
+          <SectionTitle n="02">Blessures</SectionTitle>
           <MedicalEntriesSection athleteId={athleteId} canEdit />
         </div>
       )}

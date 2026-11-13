@@ -2,7 +2,7 @@
  * ProfilAthletePage — onglet « Profil athlète » (route profil-sportif).
  * Header unifié pour les 3 sous-onglets (?view=) :
  *   - sportif  : Profil Sportif Actuel
- *   - general  : Profil Général (profil + antécédents + stratégie)
+ *   - general  : Profil Général (profil + blessures + stratégie)
  *   - testing  : Suivi Testing
  */
 import { useSearchParams } from "react-router-dom";
@@ -20,7 +20,7 @@ const HEADERS: Record<ProfilView, { title: string; subtitle: string }> = {
   },
   general: {
     title: "Profil Général",
-    subtitle: "Informations personnelles, antécédents médicaux et stratégie de suivi.",
+    subtitle: "Informations personnelles, blessures et stratégie de suivi.",
   },
   testing: {
     title: "Suivi Testing",

@@ -203,7 +203,7 @@ export function LinkIcon({ color = C.tx3, size = 17 }: { color?: string; size?: 
   );
 }
 
-/** « Écriture Médical, Fiches · Lecture Séances, Tests » coloré. */
+/** « Écriture Blessures, Fiches · Lecture Séances, Tests » coloré. */
 export function PermissionsLine({ write, read }: { write: string[]; read: string[] }) {
   if (!write.length && !read.length) return <div style={{ fontSize: 12.5, color: C.tx3 }}>Aucun accès</div>;
   return (

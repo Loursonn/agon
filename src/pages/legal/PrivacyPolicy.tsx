@@ -113,13 +113,12 @@ export default function PrivacyPolicy() {
             "Bilan hebdomadaire : ressenti de la semaine (1 à 5), engagements, réponses libres, douleur éventuelle (zone, type, niveau de 0 à 10), message au coach, et un résumé chiffré de la semaine figé à l'envoi. Votre coach et votre staff ne le voient qu'une fois envoyé, jamais à l'état de brouillon.",
             "Taille, poids de corps, masse grasse, métabolisme de base, et mensurations que vous saisissez.",
             "Photos du corps (face, côté, dos, jambes) que vous déposez avec vos mensurations. Dans l'application, seuls vous et votre coach les voient.",
-            "Blessures et zones douloureuses que vous déclarez, avec leurs dates, leur mécanisme, leur impact sur l'entraînement et, si elles sont renseignées, le diagnostic et le traitement indiqués par vous ou par un professionnel de votre staff.",
-            "Antécédents médicaux que vous ou votre staff renseignez : pathologies, allergies, opérations, traitements en cours, notes médicales ; et documents médicaux que vous joignez (comptes rendus, ordonnances, images).",
+            "Blessures sportives et zones douloureuses que vous, votre coach ou votre staff déclarez : zone, dates, type, mécanisme, contexte, douleur, impact sur l'entraînement, jours d'arrêt, date de retour, statut et notes. Agon ne recueille ni diagnostic, ni traitement, ni antécédents médicaux, ni documents médicaux.",
             "Fichiers joints à vos tests (photos, vidéos, PDF) et captures d'écran de votre montre.",
             "Habitudes que vous suivez, et événements de votre calendrier (examens, voyages…) que vous ajoutez.",
             "Données de nutrition que vous saisissez.",
             "Commentaires et retours échangés avec votre coach.",
-            "Contenus déposés par les professionnels de votre staff : entrées de suivi médical, fiches, commentaires.",
+            "Contenus déposés par les professionnels de votre staff : blessures saisies, fiches, commentaires.",
           ]}
         />
 
@@ -223,7 +222,7 @@ export default function PrivacyPolicy() {
             ],
             [
               "Permettre aux professionnels ajoutés par votre coach ou par vous (kiné, ostéopathe, nutritionniste…) de vous accompagner",
-              "Les seuls domaines que votre coach leur ouvre : programme, planification, séances réalisées, bien-être, suivi médical et blessures, nutrition, tests, fiches, commentaires",
+              "Les seuls domaines que votre coach leur ouvre : programme, planification, séances réalisées, bien-être, blessures, nutrition, tests, fiches, commentaires",
               "Consentement explicite et spécifique, facultatif (art. 9.2.a)",
             ],
             [
@@ -272,7 +271,7 @@ export default function PrivacyPolicy() {
           C'est la finalité même du service. Le coach auquel vous êtes rattaché, et votre
           co-coach si vous en avez un, accèdent à vos séances, vos charges, votre bien-être, vos
           bilans hebdomadaires une fois envoyés, votre poids, vos mensurations et photos du corps,
-          vos blessures et votre suivi médical (y compris ce qu'y écrivent les professionnels de
+          vos blessures (y compris celles que saisissent les professionnels de
           votre staff) et, si vous avez connecté une montre, aux données qu'elle transmet. Un
           coach ne voit{" "}
           <strong>que</strong> les athlètes qui lui sont rattachés : cette restriction est
@@ -320,7 +319,7 @@ export default function PrivacyPolicy() {
           adjoint. Un professionnel n'accède à vos données que si vous l'avez accepté (accord
           « staff », facultatif, modifiable dans votre profil), et seulement dans les domaines que
           votre coach lui ouvre, en lecture ou en écriture : programme, planification, séances
-          réalisées, bien-être, suivi médical et blessures, nutrition, tests, fiches, commentaires.
+          réalisées, bien-être, blessures, nutrition, tests, fiches, commentaires.
           Comme pour votre coach, ces restrictions sont appliquées par la base de données
           elle-même. <strong>Sans votre accord, aucun professionnel ne voit vos données</strong>,
           même s'il a été ajouté à votre staff.
@@ -332,8 +331,8 @@ export default function PrivacyPolicy() {
           cesse immédiatement.
         </P>
         <P>
-          Dans les domaines ouverts en écriture, un professionnel peut ajouter des entrées à votre
-          suivi médical, déposer des fiches et commenter. Ces contenus restent rattachés à votre
+          Dans les domaines ouverts en écriture, un professionnel peut déclarer des blessures
+          dans votre suivi, déposer des fiches et commenter. Ces contenus restent rattachés à votre
           suivi et à la bibliothèque de votre coach, avec le nom de leur auteur, et votre coach
           les voit. Chaque professionnel est responsable de l'usage qu'il fait de vos données dans
           sa propre activité ; les professionnels de santé restent tenus au secret professionnel.

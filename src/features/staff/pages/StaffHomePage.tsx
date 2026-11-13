@@ -109,7 +109,7 @@ export default function StaffHomePage() {
               <span style={{ fontSize: 12, color: C.tx3, borderTop: `1px solid ${C.brd}`, padding: "12px 0" }}>Les blessures en cours de tes athlètes s’affichent ici.</span>
             </div>
             <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.55 }}>
-              Ce que tu crées (fiches, notes médicales) va dans la banque du coach de chaque athlète, à ton nom. Les données des montres ne sont pas partagées avec le staff.
+              Ce que tu crées (fiches, blessures saisies) va dans la banque du coach de chaque athlète, à ton nom. Les données des montres ne sont pas partagées avec le staff.
             </div>
           </div>
         </div>

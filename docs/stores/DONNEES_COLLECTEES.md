@@ -63,7 +63,7 @@ Légende : **Obl.** = obligatoire pour utiliser l'app ; **Fac.** = facultatif.
 | Séances, charges, séries, RPE/RIR, records | `workout_logs`, `set_logs`, `exercise_pr_logs`, `workout_rpe`, `energy_*`, `performance_logs` | Fac.* | Fonctionnement, suivi coach | Oui (agrégats) | Oui |
 | Bien-être (sommeil, fatigue, stress, courbatures) | `app_data` `asp:*`, `wellness_entries` | Fac. | Suivi coach, IA | Oui | Oui |
 | Poids, taille, masse grasse, métabolisme, mensurations | `profiles.weight_kg` / `height_cm` / `body_fat_pct` / `base_metabolism`, `body_weight_*`, `measurement_logs` | Fac. | Suivi, calculs | Oui (poids) | Oui (poids) |
-| Blessures, suivi médical, antécédents | `medical_entries`, `medical_history`, `medical_attachments` | Fac. | Suivi coach / staff | Zones et dates seulement | Zones et dates seulement |
+| Blessures sportives (zone, douleur, impact, arrêt, notes) | `medical_entries` | Fac. | Suivi coach / staff | Zones et dates seulement | Zones et dates seulement |
 | Nutrition | `app_data` `asp:*` (tables `nutrition_*` non utilisées par le front) | Fac. | Suivi | Non (`athlete-insights` n'en reçoit pas) | Non |
 | Tests, résultats HYROX, compétitions | `test_*`, `athlete_test_*`, `hyrox_*`, `competitions` | Fac. | Suivi, programmation | Oui | Oui |
 | Habitudes | `habits`, `habit_logs` | Fac. | Suivi | Non | Oui (fiches/habitudes écrites) |
@@ -93,7 +93,6 @@ Strava / Garmin). Toujours **facultatif**.
 | Photos de mensurations (corps) | `test-media` | Fac. |
 | Médias et fichiers de tests | `test-media`, `test-files` | Fac. |
 | Captures d'écran Garmin (tests énergie) | `garmin-screenshots` | Fac. |
-| Documents médicaux (PDF, images) | `medical` | Fac. |
 | Fiches (photos de fiches, documents du coach) | `docs` | Fac. |
 | Fichiers d'activité importés | traités dans le navigateur, bruts Garmin dans `provider-raw` | Fac. |
 

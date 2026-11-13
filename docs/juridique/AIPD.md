@@ -19,7 +19,7 @@ Agon en remplit quatre :
 | Critère WP248 | Agon |
 |---|---|
 | 1. Évaluation ou notation, dont profilage de la santé | Feu du matin (VFC, FC de repos, ressentis, charge comparés à la norme de la personne), charge d'entraînement, synthèses IA |
-| 4. Données sensibles | Données de santé (art. 9) : douleur, maladie, VFC, photos du corps, blessures, antécédents, documents médicaux |
+| 4. Données sensibles | Données de santé (art. 9) : douleur, maladie, VFC, photos du corps, blessures sportives (antécédents et documents médicaux retirés le 13/11) |
 | 7. Personnes vulnérables | Mineurs de 15 à 17 ans ; athlètes dans une relation de dépendance avec leur coach |
 | 8. Usage innovant | Objets connectés (montres), IA générative |
 
@@ -61,7 +61,7 @@ Storage, Edge Functions Deno, Vault) ; Vercel ne sert que le code du site. Donn�
 | Sous-traitance (art. 28) | DPA Supabase non signé, statut Vercel et Gemini à vérifier | **Non conforme tant que H1-H3 ne sont pas faits** |
 | Transferts (chap. V) | Vercel et Google certifiés DPF ; Supabase par clauses types | Conforme après H2 |
 | Mineurs (art. 8, loi I&L art. 45) | 15 ans minimum vérifié en base ; IA ouverte aux 15-17 ans alors que Gemini et Claude l'interdisent | **Corrigé** : client et trigger en base (C2) |
-| Hébergement de santé (CSP L.1111-8) | Fonctions de suivi médical (diagnostic, traitement, documents médicaux) sur un hébergeur non certifié HDS | **Non conforme** (C1) |
+| Hébergement de santé (CSP L.1111-8) | Diagnostic, traitement, antécédents et documents médicaux retirés le 13/11 (C1) : plus aucune donnée de soins, hors champ | Conforme depuis le 13/11 |
 
 ## 4. Risques
 
@@ -113,10 +113,9 @@ et les actions H1 à H3 (contrats), le risque résiduel est **limité** pour R2 
 **important en gravité mais limité en vraisemblance** pour R1. Il n'y a pas de risque résiduel
 élevé justifiant une consultation préalable de la CNIL (art. 36).
 
-Tant que C1 n'est pas tranché, le traitement des données de soins (diagnostics et traitements
-écrits par un professionnel de santé, documents médicaux) n'est **pas** conforme : la
-recommandation est de le suspendre (masquer ces champs et l'envoi de documents médicaux) en
-attendant.
+C1 est fait (13/11) : diagnostic, traitement, « vu par », antécédents et documents médicaux sont
+retirés de l'application et refusés par la base (migration `20261114100000`). Reste le temps 2
+(suppression des colonnes, tables et bucket une fois `dev` en production).
 
 Validation par le responsable de traitement : **à faire par Hugo** (date, signature, ou « validé »
 dans `docs/DECISIONS.md`).
@@ -125,7 +124,7 @@ dans `docs/DECISIONS.md`).
 
 | # | Action | Qui | Échéance |
 |---|---|---|---|
-| C1 | Décidé le 13/11 (Hugo) : retirer. Données de soins (aujourd'hui : 1 diagnostic et 2 traitements saisis par les athlètes, 0 document) : retirer les champs diagnostic / traitement / antécédents / documents médicaux (ou les réserver à un hébergeur HDS) | Hugo décide, dev | Avant toute nouvelle saisie ; avant les stores au plus tard |
+| C1 | **Fait le 13/11** : champs diagnostic / traitement / « vu par » / antécédents / documents médicaux retirés (écrans, API, base). Valeurs existantes recopiées dans les notes de l'athlète, entrée « pathologie » supprimée (accord d'Hugo). Temps 2 : supprimer colonnes, tables et bucket après la mise en production de `dev` | dev | Fait ; temps 2 au prochain déploiement |
 | C2 | Accord IA 18 ans : client (fait, sur `dev`), trigger en base appliqué le 13/11 | — | Fait |
 | H1-H3 | DPA Supabase signé, facturation Gemini active, offre Vercel compatible | Hugo | Avant les stores |
 | A1 | Finir la correction des règles trop larges | session `policies-prod-trop-large` | En cours |

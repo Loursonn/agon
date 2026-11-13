@@ -221,7 +221,7 @@ function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
         <ul style={{ fontSize: 12, color: C.tx2, lineHeight: 1.6, margin: 0, paddingLeft: 18 }}>
           <li>tes séances, charges, records et tests</li>
           <li>ton wellness, ton poids, tes mensurations</li>
-          <li>tes blessures déclarées et tes documents médicaux déposés</li>
+          <li>tes blessures déclarées</li>
           <li>tes accès aux montres connectées, révoqués chez le fournisseur</li>
         </ul>
         <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.6 }}>

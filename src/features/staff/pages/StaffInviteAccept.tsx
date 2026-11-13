@@ -88,7 +88,7 @@ export default function StaffInviteAccept() {
   const lists = inv.permissions ? permissionLists(inv.permissions) : null;
   const shared = inv.permissions ? new Set([...lists!.write, ...lists!.read]) : null;
   const notShared = inv.permissions
-    ? [...["Séances", "Planification", "Séances réalisées", "Bien-être", "Médical", "Nutrition", "Tests", "Fiches", "Commentaires"].filter((d) => !shared!.has(d)), "données des montres"]
+    ? [...["Séances", "Planification", "Séances réalisées", "Bien-être", "Blessures", "Nutrition", "Tests", "Fiches", "Commentaires"].filter((d) => !shared!.has(d)), "données des montres"]
     : null;
   const intro = (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

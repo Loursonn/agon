@@ -207,7 +207,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
 export const RETENTION = [
   { data: "Compte et profil", duration: "Jusqu'à suppression du compte, puis 30 jours de sauvegarde" },
   { data: "Séances, charges, séries réalisées", duration: "Durée de vie du compte" },
-  { data: "Blessures, antécédents et documents médicaux", duration: "Durée de vie du compte, ou jusqu'à ce que vous ou l'auteur de l'entrée la supprimiez" },
+  { data: "Blessures déclarées", duration: "Durée de vie du compte, ou jusqu'à ce que vous ou l'auteur de l'entrée la supprimiez" },
   { data: "Données de bien-être, bilans hebdomadaires, poids, mensurations, photos du corps, blessures", duration: "Durée de vie du compte" },
   { data: "Données importées depuis une montre connectée, et copie intégrale des données Garmin", duration: "Durée de vie du compte, ou suppression immédiate à la déconnexion du service ou au retrait de l'accord" },
   { data: "Retours sur l'application", duration: "Durée de vie du compte" },

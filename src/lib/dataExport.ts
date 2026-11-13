@@ -341,7 +341,7 @@ export async function buildDataExport(userId: string): Promise<ExportResult> {
       basis: "RGPD art. 15 (droit d'accès) et art. 20 (portabilité)",
       note:
         "Export réalisé avec vos propres droits d'accès : il contient exactement les données que votre compte peut lire. " +
-        "Les fichiers (documents médicaux, fiches, photos de tests) ne sont pas inclus dans ce JSON ; " +
+        "Les fichiers (fiches, photos de tests) ne sont pas inclus dans ce JSON ; " +
         "leurs chemins figurent dans les tables correspondantes (file_path, image_path) et ils restent téléchargeables depuis l'application. " +
         `Les fichiers bruts de vos montres (échantillons .json.gz, fichiers .FIT d'origine) sont listés dans « provider_raw_files » avec un lien de téléchargement valable ${RAW_FILE_LINK_DAYS} jours ; ` +
         "au-delà, refaites un export pour obtenir de nouveaux liens. " +

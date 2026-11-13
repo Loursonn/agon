@@ -152,7 +152,7 @@ export default function ProfileDrawer({ onClose }: Props) {
                   </div>
                 ))}
                 <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
-                  Le détail se complète depuis l'onglet Profil, section Antécédents.
+                  Le détail se complète depuis l'onglet Profil, section Blessures.
                 </div>
               </div>
             )}

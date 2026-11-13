@@ -29,7 +29,7 @@ export const CONSENT_COPY: Record<
 > = {
   health_data: {
     label:
-      "J'accepte que mes données d'entraînement, de bien-être et de santé soient traitées par Agon et partagées avec le coach auquel je suis rattaché : séances et charges, bien-être du matin (sommeil, fatigue, douleur, maladie), bilans hebdomadaires, poids, composition corporelle, mensurations et photos du corps, blessures et suivi médical, et les données de ma montre si je la connecte.",
+      "J'accepte que mes données d'entraînement, de bien-être et de santé soient traitées par Agon et partagées avec le coach auquel je suis rattaché : séances et charges, bien-être du matin (sommeil, fatigue, douleur, maladie), bilans hebdomadaires, poids, composition corporelle, mensurations et photos du corps, blessures déclarées, et les données de ma montre si je la connecte.",
     detail:
       "C'est la raison d'être du service : sans cet accord, l'application ne peut pas fonctionner. Ton coach et ton co-coach voient ces données, tes photos du corps comprises ; ton staff ne voit que ce que tu acceptes à part. Tu peux retirer cet accord ou supprimer ton compte à tout moment.",
     required: true,
@@ -58,7 +58,7 @@ export const CONSENT_COPY: Record<
     label:
       "J'accepte que les professionnels ajoutés par mon coach ou par moi (kiné, ostéo, nutritionniste…) accèdent à mes données selon les droits définis par mon coach.",
     detail:
-      "Facultatif, et révocable à tout moment. Chaque professionnel ne voit que les domaines que ton coach lui ouvre (programme, séances, bien-être, blessures, nutrition…), et tu retrouves la liste de tes pros et de leurs droits dans « Mon staff ». Tant que tu n'as pas accepté, ton staff ne voit aucune de tes données. Ce qu'un professionnel écrit dans ton suivi (blessures, suivi médical, fiches, commentaires) est visible de ton coach et de ton co-coach.",
+      "Facultatif, et révocable à tout moment. Chaque professionnel ne voit que les domaines que ton coach lui ouvre (programme, séances, bien-être, blessures, nutrition…), et tu retrouves la liste de tes pros et de leurs droits dans « Mon staff ». Tant que tu n'as pas accepté, ton staff ne voit aucune de tes données. Ce qu'un professionnel écrit dans ton suivi (blessures, fiches, commentaires) est visible de ton coach et de ton co-coach.",
     required: false,
   },
 };

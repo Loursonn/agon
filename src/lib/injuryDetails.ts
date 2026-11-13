@@ -10,13 +10,11 @@
  * critère des badges (header athlète, profil, retours coach).
  */
 import {
-  DIAGNOSED_BY_LABEL,
   INJURY_CONTEXT_LABEL,
   INJURY_MECHANISM_LABEL,
   INJURY_TYPE_LABEL,
   TRAINING_IMPACT_LABEL,
   type DeclaredBy,
-  type DiagnosedBy,
   type InjuryContext,
   type InjuryMechanism,
   type InjuryType,
@@ -41,7 +39,6 @@ export interface InjuryLike {
   pain_level?: number | null;
   training_impact?: TrainingImpact | null;
   days_off?: number | null;
-  diagnosed_by?: DiagnosedBy | null;
   return_date?: string | null;
   declared_by?: DeclaredBy | null;
 }
@@ -109,7 +106,7 @@ export interface InjuryFact {
 /**
  * Détail d'une blessure, dans l'ordre d'intérêt du coach : d'abord ce qui change
  * la séance de demain (douleur, impact), ensuite ce qui explique (type,
- * mécanisme, contexte), enfin le suivi (arrêt, avis médical, retour).
+ * mécanisme, contexte), enfin le suivi (arrêt, retour).
  * Les champs vides sont absents : rien d'inventé, rien de « non précisé ».
  */
 export function injuryFacts(e: InjuryLike): InjuryFact[] {
@@ -124,7 +121,6 @@ export function injuryFacts(e: InjuryLike): InjuryFact[] {
   push("Mécanisme", e.mechanism ? INJURY_MECHANISM_LABEL[e.mechanism] : null);
   push("Survenue", e.context ? INJURY_CONTEXT_LABEL[e.context] : null);
   push("Arrêt", daysOffReading(e.days_off));
-  push("Vu par", e.diagnosed_by ? DIAGNOSED_BY_LABEL[e.diagnosed_by] : null);
   push("Retour prévu", fmtInjuryDate(e.return_date));
 
   return out;
@@ -153,13 +149,12 @@ export interface InjuryDetail {
   pain_level: number | null;
   training_impact: TrainingImpact | null;
   days_off: number | null;
-  diagnosed_by: DiagnosedBy | null;
   return_date: string | null;
 }
 
 export const EMPTY_INJURY_DETAIL: InjuryDetail = {
   injury_type: null, mechanism: null, context: null, pain_level: null,
-  training_impact: null, days_off: null, diagnosed_by: null, return_date: null,
+  training_impact: null, days_off: null, return_date: null,
 };
 
 /** Détail d'une ligne existante, ou tout à null : le formulaire part d'un état connu. */
@@ -172,7 +167,6 @@ export function injuryDetailOf(e: Partial<InjuryDetail> | null | undefined): Inj
     pain_level: painValue(e.pain_level),
     training_impact: e.training_impact ?? null,
     days_off: e.days_off ?? null,
-    diagnosed_by: e.diagnosed_by ?? null,
     return_date: e.return_date || null,
   };
 }

@@ -2738,6 +2738,29 @@ $$;
 ALTER FUNCTION "public"."mark_onboarded"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."medical_entries_sans_soins"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  -- Le client de `main` peut encore envoyer ces champs : on les vide plutôt
+  -- que de faire échouer l'enregistrement de la blessure.
+  NEW.kind := 'blessure';
+  NEW.diagnosis := NULL;
+  NEW.treatment := NULL;
+  NEW.diagnosed_by := NULL;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."medical_entries_sans_soins"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."medical_entries_sans_soins"() IS 'Hors HDS (2026-11-13) : toute entrée est une blessure sportive, sans diagnostic, traitement ni « vu par ».';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."merge_provider_activities"("p_athlete" "uuid", "p_source" "public"."data_source", "p_tag" "text", "p_activities" "jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -7885,6 +7908,9 @@ CREATE TABLE IF NOT EXISTS "public"."medical_attachments" (
 ALTER TABLE "public"."medical_attachments" OWNER TO "postgres";
 
 
+COMMENT ON TABLE "public"."medical_attachments" IS 'Retirée (hors HDS, 2026-11-13) : plus aucune écriture, table supprimée au temps 2';
+
+
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -7913,9 +7939,10 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     CONSTRAINT "medical_entries_declared_by_check" CHECK ((("declared_by" IS NULL) OR ("declared_by" = ANY (ARRAY['athlete'::"text", 'coach'::"text", 'staff'::"text"])))),
     CONSTRAINT "medical_entries_diagnosed_by_check" CHECK ((("diagnosed_by" IS NULL) OR ("diagnosed_by" = ANY (ARRAY['personne'::"text", 'medecin'::"text", 'kine'::"text", 'osteo'::"text", 'autre'::"text"])))),
     CONSTRAINT "medical_entries_injury_type_check" CHECK ((("injury_type" IS NULL) OR ("injury_type" = ANY (ARRAY['traumatique'::"text", 'chronique_surmenage'::"text", 'recidive'::"text"])))),
-    CONSTRAINT "medical_entries_kind_check" CHECK (("kind" = ANY (ARRAY['blessure'::"text", 'operation'::"text", 'pathologie'::"text", 'autre'::"text"]))),
+    CONSTRAINT "medical_entries_kind_check" CHECK (("kind" = 'blessure'::"text")),
     CONSTRAINT "medical_entries_mechanism_check" CHECK ((("mechanism" IS NULL) OR ("mechanism" = ANY (ARRAY['contact'::"text", 'sans_contact'::"text", 'chute'::"text", 'geste_repete'::"text", 'inconnu'::"text"])))),
     CONSTRAINT "medical_entries_pain_level_check" CHECK ((("pain_level" IS NULL) OR (("pain_level" >= 0) AND ("pain_level" <= 10)))),
+    CONSTRAINT "medical_entries_sans_soins_check" CHECK ((("diagnosis" IS NULL) AND ("treatment" IS NULL) AND ("diagnosed_by" IS NULL))),
     CONSTRAINT "medical_entries_status_check" CHECK (("status" = ANY (ARRAY['gueri'::"text", 'en_cours'::"text"]))),
     CONSTRAINT "medical_entries_training_impact_check" CHECK ((("training_impact" IS NULL) OR ("training_impact" = ANY (ARRAY['aucun'::"text", 'adapte'::"text", 'arret_partiel'::"text", 'arret_total'::"text"]))))
 );
@@ -7948,7 +7975,15 @@ COMMENT ON COLUMN "public"."medical_entries"."days_off" IS 'Jours d''arrêt déj
 
 
 
-COMMENT ON COLUMN "public"."medical_entries"."diagnosed_by" IS 'personne | medecin | kine | osteo | autre';
+COMMENT ON COLUMN "public"."medical_entries"."diagnosis" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
+
+
+
+COMMENT ON COLUMN "public"."medical_entries"."treatment" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
+
+
+
+COMMENT ON COLUMN "public"."medical_entries"."diagnosed_by" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
 
 
 
@@ -7975,6 +8010,9 @@ CREATE TABLE IF NOT EXISTS "public"."medical_history" (
 
 
 ALTER TABLE "public"."medical_history" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."medical_history" IS 'Retirée (hors HDS, 2026-11-13) : plus aucune écriture, table supprimée au temps 2';
 
 
 CREATE TABLE IF NOT EXISTS "public"."mesocycles" (
@@ -10150,6 +10188,10 @@ CREATE OR REPLACE TRIGGER "set_docs_updated_at" BEFORE UPDATE ON "public"."docs"
 
 
 CREATE OR REPLACE TRIGGER "set_exercises_updated_at" BEFORE UPDATE ON "public"."exercises" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "medical_entries_sans_soins" BEFORE INSERT OR UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_sans_soins"();
 
 
 
@@ -19726,6 +19768,12 @@ GRANT ALL ON FUNCTION "public"."materialized_views_are"("name", "name"[], "text"
 
 
 
+GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "anon";
+GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."merge_provider_activities"("p_athlete" "uuid", "p_source" "public"."data_source", "p_tag" "text", "p_activities" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."merge_provider_activities"("p_athlete" "uuid", "p_source" "public"."data_source", "p_tag" "text", "p_activities" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."merge_provider_activities"("p_athlete" "uuid", "p_source" "public"."data_source", "p_tag" "text", "p_activities" "jsonb") TO "service_role";
@@ -22202,8 +22250,8 @@ GRANT ALL ON TABLE "public"."measurement_logs" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."medical_attachments" TO "anon";
-GRANT ALL ON TABLE "public"."medical_attachments" TO "authenticated";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_attachments" TO "anon";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_attachments" TO "authenticated";
 GRANT ALL ON TABLE "public"."medical_attachments" TO "service_role";
 
 
@@ -22214,8 +22262,8 @@ GRANT ALL ON TABLE "public"."medical_entries" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."medical_history" TO "anon";
-GRANT ALL ON TABLE "public"."medical_history" TO "authenticated";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_history" TO "anon";
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_history" TO "authenticated";
 GRANT ALL ON TABLE "public"."medical_history" TO "service_role";
 
 

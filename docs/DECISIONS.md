@@ -2304,3 +2304,27 @@ et son README.
   écrits dans les CGU §4 et §4 bis (staff, secret professionnel). À revoir si les coachs paient (accord art. 28).
 - Actions d'Hugo (DPA Supabase, facturation Gemini, offre Vercel, médiateur, téléphone, sauvegardes) :
   `REVUE_2026-11.md` §5.
+
+## 2026-11-13 — Agon sort du champ HDS : plus aucune donnée de soins (C1)
+
+- **Décision d'Hugo (13/11)**, revue juridique `docs/juridique/REVUE_2026-11.md` §2 (C1) et §3.2 : plutôt qu'un
+  hébergeur certifié HDS, retirer ce qui relève des soins. Agon garde la **blessure sportive** : zone, type,
+  mécanisme, contexte, douleur, impact, jours d'arrêt, date de retour, statut, notes de l'athlète.
+- **Retiré** des écrans athlète, coach et staff et de `src/api/injuries.ts` : diagnostic, traitement, « vu par »
+  (`diagnosed_by`), types « opération / pathologie / autre », antécédents (`medical_history` : allergies,
+  traitements en cours…) et documents médicaux (`medical_attachments`, bucket `medical`). Le domaine staff
+  « medical » s'affiche « Blessures » et ne couvre plus que la blessure sportive.
+- **Données existantes** (accord d'Hugo) : 1 diagnostic, 1 traitement et 1 « vu par » recopiés en fin des notes de
+  l'athlète sur la même blessure ; l'entrée « pathologie » (avec son traitement) supprimée ; la ligne
+  d'antécédents (vide) supprimée ; 0 pièce jointe.
+- **Base, temps 1** (migration `20261114100000`, appliquée en prod le 13/11 avec l'accord d'Hugo, essai à blanc puis
+  test `supabase/tests/hds_retrait_soins.sql`) : `main` écrit encore ces champs, donc pas de suppression de colonne.
+  Trigger `medical_entries_sans_soins` (force `kind = 'blessure'`, vide les trois champs, sans erreur pour `main`) +
+  contraintes ; `INSERT`/`UPDATE` révoqués sur `medical_history` et `medical_attachments` ; plus de policy d'envoi
+  sur le bucket `medical` (lecture et suppression gardées pour l'export et l'effacement).
+- **Temps 2** (après mise en production de `dev`) : supprimer `diagnosis`, `treatment`, `diagnosed_by`, les tables
+  `medical_history` / `medical_attachments`, le bucket `medical`, puis les retirer de `dataExport.ts`,
+  `USER_BUCKETS`, `seed.sql` et `db_hygiene.sql`. Tâche roadmap « HDS temps 2 ».
+- Textes : politique de confidentialité §2.2, durées de conservation, accord socle et accord staff (« suivi
+  médical » → « blessures »), corrigés **sans monter** `LEGAL_VERSION` (déjà `2026-11-13` sur `dev`, jamais vue en
+  prod ; c'est une réduction). Registre T2, AIPD (C1 fait), `docs/stores/DONNEES_COLLECTEES.md` à jour.

@@ -1,7 +1,7 @@
 /**
  * ProfilGeneralTab — sous-onglet « Profil Général » de Profil athlète.
  * 5 blocs distincts, code couleur par thème :
- *   1. Identité (infos perso de base + antécédents médicaux)
+ *   1. Identité (infos perso de base + blessures)
  *   2. Composition & Nutrition (poids / masse grasse / MB + stratégie alimentaire)
  *   3. Objectifs de sommeil
  *   4. Tracker d'habitudes
@@ -252,7 +252,7 @@ export function ProfilGeneralTab() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* ── 1. Identité ── */}
-      <Section icon={User} title="Identité" subtitle="Informations personnelles et antécédents" color={COL.identity} motif>
+      <Section icon={User} title="Identité" subtitle="Informations personnelles et blessures" color={COL.identity} motif>
         {ap ? (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -275,10 +275,10 @@ export function ProfilGeneralTab() {
           </div>
         )}
 
-        {/* Antécédents médicaux */}
+        {/* Blessures */}
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.brd}` }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-            Antécédents médicaux <span style={{ fontWeight: 400, textTransform: "none" }}>— modifiables par l'athlète et par toi</span>
+            Blessures <span style={{ fontWeight: 400, textTransform: "none" }}>— modifiables par l'athlète et par toi</span>
           </div>
           {athleteId && <MedicalEntriesSection athleteId={athleteId} canEdit />}
         </div>

@@ -37,7 +37,7 @@ const TABS: { key: StaffDomain; label: string }[] = [
   { key: "planification", label: "Planification" },
   { key: "logs", label: "Séances réalisées" },
   { key: "wellness", label: "Bien-être" },
-  { key: "medical", label: "Médical" },
+  { key: "medical", label: "Blessures" },
   { key: "nutrition", label: "Nutrition" },
   { key: "tests", label: "Tests" },
   { key: "fiches", label: "Fiches" },
@@ -50,7 +50,7 @@ function AccessTab({ link }: { link: MyStaffAthlete }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 620 }}>
       <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.6 }}>
-        Droits réglés par {link.coachName ?? "le coach principal"}. Ce que tu crées (fiches, saisies médicales) va dans
+        Droits réglés par {link.coachName ?? "le coach principal"}. Ce que tu crées (fiches, blessures saisies) va dans
         sa banque, à ton nom.
         {link.canEditCoachContent
           ? " Tu peux aussi modifier ses contenus dans les domaines en écriture."
@@ -139,7 +139,6 @@ function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: My
             athleteId={link.athleteId}
             canEdit={write}
             asStaff
-            canEditHistory={false}
             canEditEntry={(e) => e.created_by === userId || (link.canEditCoachContent && !!link.coachId && e.created_by === link.coachId)}
           />
         </div>

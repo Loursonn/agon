@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-blessures-sans-soins",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Blessures : Agon garde le sportif, pas le médical",
+    summary: "La section « Antécédents médicaux » devient « Blessures ». On y suit la blessure sportive (zone, douleur, impact sur l'entraînement, arrêt, retour, notes) ; diagnostic, traitement, antécédents et documents médicaux ne sont plus enregistrés dans Agon.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque blessure garde sa zone, sa date, son statut, son détail (type, mécanisme, contexte, douleur, impact, jours d'arrêt, retour prévu) et ses notes.",
+          "Les champs « Diagnostic du médecin », « Traitement », « Vu par », les allergies et traitements en cours, et l'ajout de photos ou PDF médicaux sont retirés.",
+          "Les quelques diagnostics et traitements déjà saisis ont été recopiés dans les notes de la blessure concernée : rien n'est perdu.",
+          "Pourquoi : ces informations relèvent du soin et imposent un hébergement médical certifié. Le suivi médical reste chez le médecin ou le kiné de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-banque-grille-exercices",
     date: "2026-11-13",
     kind: "feature",

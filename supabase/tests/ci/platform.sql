@@ -41,7 +41,8 @@ CREATE POLICY energy_photo_upload ON storage.objects AS PERMISSIVE FOR INSERT TO
 CREATE POLICY garmin_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'garmin-screenshots'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
 CREATE POLICY garmin_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'garmin-screenshots'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of_folder((storage.foldername(name))[1]) OR current_user_is_admin())));
 CREATE POLICY garmin_upload ON storage.objects AS PERMISSIVE FOR INSERT TO public WITH CHECK (((bucket_id = 'garmin-screenshots'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
-CREATE POLICY medical_storage_all ON storage.objects AS PERMISSIVE FOR ALL TO authenticated USING (((bucket_id = 'medical'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of(((storage.foldername(name))[1])::uuid)))) WITH CHECK (((bucket_id = 'medical'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of(((storage.foldername(name))[1])::uuid))));
+CREATE POLICY medical_storage_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'medical'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of(((storage.foldername(name))[1])::uuid))));
+CREATE POLICY medical_storage_read ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'medical'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of(((storage.foldername(name))[1])::uuid))));
 CREATE POLICY provider_raw_own_read ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'provider-raw'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 CREATE POLICY staff_docs_storage_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'docs'::text) AND ((EXISTS ( SELECT 1
    FROM docs d
@@ -56,7 +57,6 @@ CREATE POLICY staff_docs_storage_insert ON storage.objects AS PERMISSIVE FOR INS
 CREATE POLICY staff_medical_storage_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'medical'::text) AND (((owner_id = (auth.uid())::text) AND staff_can_path(name, 'medical'::text, 'write'::text)) OR (EXISTS ( SELECT 1
    FROM medical_attachments a
   WHERE ((a.file_path = objects.name) AND staff_can_edit(a.athlete_id, 'medical'::text, a.created_by)))))));
-CREATE POLICY staff_medical_storage_insert ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'medical'::text) AND staff_can_path(name, 'medical'::text, 'write'::text)));
 CREATE POLICY staff_medical_storage_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'medical'::text) AND staff_can_path(name, 'medical'::text, 'read'::text)));
 CREATE POLICY test_files_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'test-files'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
 CREATE POLICY test_files_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'test-files'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of_folder((storage.foldername(name))[1]) OR current_user_is_admin())));

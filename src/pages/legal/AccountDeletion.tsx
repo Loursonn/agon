@@ -79,7 +79,7 @@ export default function AccountDeletion() {
             "Vos séances, charges, séries, records, tests et programmes reçus.",
             "Votre bien-être, votre poids, vos mensurations, votre nutrition et vos blessures déclarées.",
             "Les activités et données de santé importées depuis une montre (Garmin, COROS, fichiers importés). Les accès accordés à ces services sont révoqués chez le fournisseur.",
-            "Vos photos et fichiers déposés (documents médicaux compris).",
+            "Vos photos et fichiers déposés.",
             "Vos accords (consentements) et les accès donnés à votre coach, co-coach ou staff.",
           ]}
         />
