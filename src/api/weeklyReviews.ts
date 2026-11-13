@@ -11,7 +11,7 @@ import { listWorkoutLogs } from "./workouts";
 /**
  * Weekly review de l'athlète (`weekly_reviews`, P22-P23). Donnée de santé.
  *
- * Droits (RLS, migration 20261113180000) : l'athlète lit tout ce qui est à lui,
+ * Droits (RLS, migration 20261113180100) : l'athlète lit tout ce qui est à lui,
  * brouillons compris ; le coach, le co-coach (`is_coach_of`) et le staff qui a
  * « wellness » en lecture lisent les reviews ENVOYÉES. Seule écriture : la RPC
  * `save_weekly_review` (brouillon ou envoi), ouverte du dimanche au lundi soir.

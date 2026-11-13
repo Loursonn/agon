@@ -1,4 +1,4 @@
--- Tests de 20261113180000_weekly_reviews.sql : qui lit une weekly review, qui l'écrit.
+-- Tests de 20261113180100_weekly_reviews.sql : qui lit une weekly review, qui l'écrit.
 -- Toujours annulé. Comptes fictifs créés dans la transaction (@example.invalid).
 --   athlète a (coach c, co-coach cc), autre coach o, staff s (wellness en lecture, accord donné),
 --   staff s2 (séances seulement).
