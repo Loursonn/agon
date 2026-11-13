@@ -172,6 +172,13 @@ export function useSpecificExecution(intervals: EnergyStep[]) {
     goToStep(currentIndex + 1);
   }, [currentIndex, goToStep]);
 
+  /** Arrête le minuteur et clôt la séance (bouton « Terminer »). */
+  const stop = useCallback(() => {
+    clearTimer();
+    armedIndexRef.current = null;
+    setPhase("completed");
+  }, [clearTimer]);
+
   // Cleanup
   useEffect(() => {
     return () => clearTimer();
@@ -180,6 +187,7 @@ export function useSpecificExecution(intervals: EnergyStep[]) {
   return {
     phase,
     setPhase,
+    stop,
     flatSteps,
     currentIndex,
     currentFlatStep,

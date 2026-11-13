@@ -1,65 +1,103 @@
-import { cn } from "@/lib/utils";
-import type { ClassiqueBlock } from "@/types/specific";
+import { Check, Timer } from "lucide-react";
+import type { ClassiqueBlock, WodBlock } from "@/types/specific";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { C, alpha } from "@/lib/theme";
+import { TYPE_COLOR } from "@/lib/peps";
+
+const HYROX = TYPE_COLOR.hyrox;
+
+function CheckBox({ on, size = 24 }: { on: boolean; size?: number }) {
+  return (
+    <span aria-hidden style={{
+      width: size, height: size, borderRadius: "50%", flex: "none", display: "flex", alignItems: "center", justifyContent: "center",
+      background: on ? C.g : "transparent", border: on ? "none" : `1.5px solid ${alpha(C.tx, 0.3)}`,
+    }}>
+      {on && <Check size={size * 0.6} color={C.bg} strokeWidth={2.5} />}
+    </span>
+  );
+}
 
 interface Props {
   block: ClassiqueBlock;
+  /** « Bloc 2 · … » */
+  number: number;
   blockLogs: Record<string, boolean>;
   onToggle: (itemId: string) => void;
+  /** Coche (ou décoche) tout le bloc d'un coup. */
+  onToggleAll: (itemIds: string[], done: boolean) => void;
 }
 
-/** Bloc « classique » en cours de séance : une case à cocher par élément. */
-export function ClassiqueBlockExecution({ block, blockLogs, onToggle }: Props) {
-  const allDone = block.items.every((item) => blockLogs[item.id]);
+/**
+ * Bloc « classique » en cours de séance (planche Ath2SeanceSpecifique, 03) :
+ * éléments à cocher un par un, ou tout le bloc d'un coup depuis l'en-tête.
+ * Un bloc fini se replie sur son titre.
+ */
+export function ClassiqueBlockExecution({ block, number, blockLogs, onToggle, onToggleAll }: Props) {
+  const done = block.items.filter((it) => blockLogs[it.id]).length;
+  const allDone = block.items.length > 0 && done === block.items.length;
+  const title = `Bloc ${number}${block.title ? ` · ${block.title}` : ""}`;
   return (
-    <div
-      className={cn(
-        "mb-agon-md break-inside-avoid rounded-md border border-l-4 border-agon-brd bg-agon-bg px-agon-md py-agon-md transition-opacity duration-200",
-        allDone ? "border-l-agon-succes opacity-70" : "border-l-agon-tx2",
-      )}
-    >
-      <div className={cn("mb-agon-sm text-agon-xs font-bold uppercase tracking-wide", allDone ? "text-agon-succes" : "text-agon-tx2")}>
-        {block.title || "Bloc classique"}
-        {allDone && " ✓"}
-      </div>
-      {block.instructions && (
-        <div className="mb-agon-sm whitespace-pre-wrap text-agon-sm leading-snug text-agon-tx2">{block.instructions}</div>
-      )}
-      {block.items.map((item) => {
-        const done = !!blockLogs[item.id];
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onToggle(item.id)}
-            className={cn(
-              "flex min-h-11 w-full items-center gap-agon-sm border-b border-agon-brd px-agon-xs py-agon-sm text-left",
-              done && "opacity-50",
-            )}
-          >
-            <span
-              className={cn(
-                "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-2 text-agon-sm text-agon-succes",
-                done ? "border-agon-succes bg-agon-succes/10" : "border-agon-tx2 bg-transparent",
-              )}
-            >
-              {done ? "✓" : ""}
-            </span>
-            <span className={cn("min-w-0 flex-1 text-agon-base font-semibold text-agon-tx", done && "line-through")}>{item.name}</span>
-            {item.prescription && (
-              <span className="max-w-[55%] whitespace-pre-wrap text-right text-agon-sm text-agon-tx2">{item.prescription}</span>
-            )}
-          </button>
-        );
-      })}
-      {block.items.some((it) => it.notes) && (
-        <div className="mt-agon-xs">
-          {block.items.filter((it) => it.notes).map((it) => (
-            <div key={it.id} className="whitespace-pre-wrap py-agon-2xs text-agon-xs text-agon-tx2">
-              Note — {it.name} : {it.notes}
+    <div style={{
+      marginBottom: 10, breakInside: "avoid", borderRadius: 14, background: C.s1,
+      border: `1px solid ${allDone ? alpha(C.g, 0.35) : done > 0 ? alpha(HYROX, 0.45) : C.brd}`, overflow: "hidden",
+    }}>
+      <button
+        type="button"
+        aria-label={allDone ? `${title} : tout décocher` : `${title} : tout cocher`}
+        onClick={() => onToggleAll(block.items.map((it) => it.id), !allDone)}
+        style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 14px", background: "transparent", border: "none", color: C.tx, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}
+      >
+        <CheckBox on={allDone} />
+        <span style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: allDone ? C.tx2 : C.tx }}>{title}</span>
+        <span style={{ ...MONO, fontSize: 12.5, color: allDone ? C.g : done > 0 ? HYROX : C.tx3 }}>{done} / {block.items.length}</span>
+      </button>
+      {!allDone && (
+        <div style={{ padding: "0 14px 10px" }}>
+          {block.instructions && (
+            <div style={{ whiteSpace: "pre-wrap", fontSize: 12.5, color: C.tx2, lineHeight: 1.45, padding: "8px 10px", marginBottom: 6, borderRadius: 10, background: C.bg, borderLeft: `2px solid ${HYROX}` }}>
+              {block.instructions}
             </div>
-          ))}
+          )}
+          {block.items.map((item) => {
+            const on = !!blockLogs[item.id];
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onToggle(item.id)}
+                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 48, padding: "8px 0", borderTop: `1px solid ${C.brd}`, borderLeft: "none", borderRight: "none", borderBottom: "none", background: "transparent", color: C.tx, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                <CheckBox on={on} size={22} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, color: on ? C.tx3 : C.tx, textDecoration: on ? "line-through" : "none" }}>{item.name}</span>
+                  {item.notes && <span style={{ display: "block", fontSize: 11.5, color: C.tx3, marginTop: 2, whiteSpace: "pre-wrap" }}>{item.notes}</span>}
+                </span>
+                {item.prescription && (
+                  <span style={{ ...MONO, maxWidth: "55%", whiteSpace: "pre-wrap", textAlign: "right", fontSize: 12.5, color: on ? C.tx3 : C.tx2 }}>{item.prescription}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Bloc WOD dans le format classique : son minuteur se lance d'ici. */
+export function WodBlockExecution({ block, number, done, onTimer }: { block: WodBlock; number: number; done: boolean; onTimer: () => void }) {
+  const title = `Bloc ${number}${block.title ? ` · ${block.title}` : ""}`;
+  return (
+    <div style={{ marginBottom: 10, breakInside: "avoid", borderRadius: 14, background: C.s1, border: `1px dashed ${alpha(HYROX, done ? 0.25 : 0.55)}`, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
+      <CheckBox on={done} />
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 14.5, fontWeight: 500, color: done ? C.tx2 : C.tx }}>{title}</span>
+        {block.instructions && !done && <span style={{ display: "block", fontSize: 12, color: C.tx3, marginTop: 2, whiteSpace: "pre-wrap" }}>{block.instructions}</span>}
+      </span>
+      <button type="button" onClick={onTimer} style={{ display: "flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 999, border: "none", background: done ? alpha(HYROX, 0.16) : HYROX, color: done ? HYROX : C.bg, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flex: "none" }}>
+        <Timer size={15} strokeWidth={2} /> {done ? "Relancer" : "Minuteur"}
+      </button>
     </div>
   );
 }

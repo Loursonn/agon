@@ -9,7 +9,8 @@
  *
  * 3 states: preview → executing → completed
  */
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -28,9 +29,11 @@ import { isWodBlock } from "@/types/specific";
 import { SchemaViewerWithZoom } from "@/features/coach/components/energy/SchemaViewer";
 import { formatSLong } from "@/lib/energy/formatTarget";
 import { cn } from "@/lib/utils";
+import { fmtClock } from "@/lib/specificTimer";
+import { TYPE_COLOR } from "@/lib/peps";
 import { ClassiqueBlockPreview } from "@/features/athlete/components/specific/ClassiqueBlockPreview";
 import { WodBlockPreview } from "@/features/athlete/components/specific/WodBlockPreview";
-import { ClassiqueBlockExecution } from "@/features/athlete/components/specific/ClassiqueBlockExecution";
+import { ClassiqueBlockExecution, WodBlockExecution } from "@/features/athlete/components/specific/ClassiqueBlockExecution";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 
 
@@ -57,28 +60,67 @@ export default function SpecificExecutionPage() {
     [isClassique, session?.classique_structure],
   );
 
-  // For WOD format: use session.intervals directly
-  // For classique format: extract all WodBlock steps for the timer
+  // Format WOD : le minuteur parcourt session.intervals.
+  // Format classique : le minuteur parcourt le bloc WOD lancé (« Minuteur »).
+  const [wodBlockId, setWodBlockId] = useState<string | null>(null);
+  const [wodDone, setWodDone] = useState<Set<string>>(() => new Set());
   const allIntervals: EnergyStep[] = useMemo(() => {
     if (!isClassique) return session?.intervals ?? [];
-    const steps: EnergyStep[] = [];
-    for (const b of blocks) {
-      if (isWodBlock(b)) steps.push(...b.steps);
-    }
-    return steps;
-  }, [isClassique, session?.intervals, blocks]);
+    const b = blocks.find((x) => x.id === wodBlockId);
+    return b && isWodBlock(b) ? b.steps : [];
+  }, [isClassique, session?.intervals, blocks, wodBlockId]);
 
-  const hasWodSteps = allIntervals.length > 0;
   const exec = useSpecificExecution(allIntervals);
+  // Le minuteur démarre une fois les pas du bloc choisi en place.
+  const pendingStart = useRef(false);
+  const execStart = exec.start;
+  useEffect(() => {
+    if (!pendingStart.current || allIntervals.length === 0) return;
+    pendingStart.current = false;
+    execStart();
+  }, [allIntervals, execStart]);
+  const launchWod = (blockId: string) => {
+    if (blockId === wodBlockId) { execStart(); return; }
+    pendingStart.current = true;
+    setWodBlockId(blockId);
+  };
+  // Bloc WOD fini (ou « Terminer ») : retour à la liste des blocs.
+  const execPhase = exec.phase;
+  useEffect(() => {
+    if (!isClassique || execPhase !== "completed" || !wodBlockId) return;
+    setWodDone((cur) => new Set(cur).add(wodBlockId));
+  }, [isClassique, execPhase, wodBlockId]);
 
   // ── Classique checklist state ───────────────────────────────────────────
   const [itemChecks, setItemChecks] = useState<Record<string, boolean>>({});
   const [classiqueStartTime, setClassiqueStartTime] = useState<number | null>(null);
   const [classiquePhase, setClassiquePhase] = useState<"preview" | "executing" | "completed">("preview");
 
+  const blockDoneToast = useCallback((itemIds: string[], next: Record<string, boolean>, prev: Record<string, boolean>) => {
+    const idx = blocks.findIndex((b) => !isWodBlock(b) && b.items.some((it) => itemIds.includes(it.id)));
+    const b = blocks[idx];
+    if (!b || isWodBlock(b) || b.items.length === 0) return;
+    const was = b.items.every((it) => prev[it.id]);
+    const now = b.items.every((it) => next[it.id]);
+    if (!was && now) toast.success(`Bloc ${idx + 1} terminé`);
+  }, [blocks]);
+
   const toggleItem = useCallback((itemId: string) => {
-    setItemChecks((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
-  }, []);
+    setItemChecks((prev) => {
+      const next = { ...prev, [itemId]: !prev[itemId] };
+      blockDoneToast([itemId], next, prev);
+      return next;
+    });
+  }, [blockDoneToast]);
+
+  const toggleAll = useCallback((itemIds: string[], done: boolean) => {
+    setItemChecks((prev) => {
+      const next = { ...prev };
+      for (const id of itemIds) next[id] = done;
+      blockDoneToast(itemIds, next, prev);
+      return next;
+    });
+  }, [blockDoneToast]);
 
   const classiqueItems = useMemo(
     () => blocks.filter((b): b is ClassiqueBlock => !isWodBlock(b)).flatMap((b) => b.items),
@@ -87,12 +129,19 @@ export default function SpecificExecutionPage() {
   const allClassiqueChecked = classiqueItems.length > 0 && classiqueItems.every((it) => itemChecks[it.id]);
 
   // For pure classique (no WOD steps), manage phase locally
-  const effectivePhase = isClassique && !hasWodSteps ? classiquePhase : exec.phase;
-  const effectiveStart = isClassique && !hasWodSteps
+  const effectivePhase = isClassique ? classiquePhase : exec.phase;
+  const effectiveStart = isClassique
     ? () => { setClassiquePhase("executing"); setClassiqueStartTime(Date.now()); }
     : exec.start;
 
-  const elapsedTotal = isClassique && !hasWodSteps && classiqueStartTime
+  // Format classique : l'horloge avance d'elle-même (pas de minuteur actif).
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!isClassique || classiquePhase !== "executing") return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [isClassique, classiquePhase]);
+  const elapsedTotal = isClassique && classiqueStartTime
     ? Math.floor((Date.now() - classiqueStartTime) / 1000)
     : exec.elapsedTotal;
 
@@ -122,6 +171,9 @@ export default function SpecificExecutionPage() {
     ? blocks.reduce((n, b) => n + (isWodBlock(b) ? b.steps.length : b.items.length), 0)
     : exec.flatSteps.length;
   const sessionName = session.name;
+
+  const doneBlocks = blocks.filter((b) => (isWodBlock(b) ? wodDone.has(b.id) : b.items.length > 0 && b.items.every((it) => itemChecks[it.id]))).length;
+  const classiqueProgress = `Bloc ${Math.min(doneBlocks + 1, blocks.length)} / ${blocks.length}`;
 
   // ── End submit ──────────────────────────────────────────────────────────
   async function handleEndSubmit(data: { rpe: number; respected: boolean; comment: string }) {
@@ -245,87 +297,45 @@ export default function SpecificExecutionPage() {
         )}
 
         {/* ── EN COURS ── */}
-        {effectivePhase === "executing" && (
+        {effectivePhase === "executing" && isClassique && (
           <div className="mt-agon-md">
-            <div className="mb-agon-md text-center text-agon-sm text-agon-tx2">
-              Temps écoulé : <strong className="text-agon-tx">{formatSLong(elapsedTotal)}</strong>
+            <div className="mb-agon-md flex items-center justify-between font-mono text-agon-xs uppercase tracking-[0.14em]" style={{ color: TYPE_COLOR.hyrox }}>
+              <span>{classiqueProgress}</span>
+              <span className="text-agon-sm normal-case tracking-normal text-agon-tx2">{fmtClock(elapsedTotal)}</span>
             </div>
-
-            {isClassique ? (
-              <>
-                <div className="lg:columns-2 lg:gap-agon-lg">
-                  {blocks.map((b) =>
-                    isWodBlock(b) ? (
-                      <WodBlockPreview key={b.id} block={b} />
-                    ) : (
-                      <ClassiqueBlockExecution key={b.id} block={b} blockLogs={itemChecks} onToggle={toggleItem} />
-                    ),
-                  )}
-                </div>
-
-                <div className="lg:mx-auto lg:max-w-md">
-                  {hasWodSteps && exec.phase === "preview" && (
-                    <button
-                      type="button"
-                      onClick={exec.start}
-                      className="mt-agon-md min-h-12 w-full rounded-md bg-agon-alerte p-agon-md text-agon-base font-bold text-agon-ink"
-                    >
-                      ▶ Lancer les chronos WOD
-                    </button>
-                  )}
-                  {hasWodSteps && exec.phase === "executing" && exec.currentFlatStep && (
-                    <div className="mt-agon-md">
-                      <div className="mb-agon-sm text-center text-agon-xs text-agon-tx2">
-                        WOD — Étape {exec.currentIndex + 1}/{exec.flatSteps.length}
-                      </div>
-                      <ExecutionCard
-                        current={exec.currentFlatStep}
-                        next={exec.nextFlatStep}
-                        secondsLeft={exec.secondsLeft}
-                        isLastStep={exec.isLastStep}
-                        onNext={exec.next}
-                        onSkip={exec.skip}
-                        vma={vma}
-                      />
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isClassique && !hasWodSteps) setClassiquePhase("completed");
-                      else if (exec.phase !== "executing") setClassiquePhase("completed");
-                    }}
-                    disabled={hasWodSteps && exec.phase === "executing"}
-                    className={cn(
-                      "mt-agon-lg min-h-12 w-full rounded-md p-[14px] text-agon-base font-bold",
-                      hasWodSteps && exec.phase === "executing" ? "bg-agon-tx2/20 text-agon-tx2" : "bg-agon-succes text-agon-ink",
-                    )}
-                  >
-                    Terminer la séance
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* Ancien format WOD */
-              exec.currentFlatStep && (
-                <div className="lg:mx-auto lg:max-w-md">
-                  <div className="mb-agon-md text-center text-agon-sm text-agon-tx2">
-                    Étape {exec.currentIndex + 1}/{exec.flatSteps.length}
-                  </div>
-                  <ExecutionCard
-                    current={exec.currentFlatStep}
-                    next={exec.nextFlatStep}
-                    secondsLeft={exec.secondsLeft}
-                    isLastStep={exec.isLastStep}
-                    onNext={exec.next}
-                    onSkip={exec.skip}
-                    vma={vma}
-                  />
-                </div>
-              )
-            )}
+            <div className="lg:columns-2 lg:gap-agon-lg">
+              {blocks.map((b, i) =>
+                isWodBlock(b) ? (
+                  <WodBlockExecution key={b.id} block={b} number={i + 1} done={wodDone.has(b.id)} onTimer={() => launchWod(b.id)} />
+                ) : (
+                  <ClassiqueBlockExecution key={b.id} block={b} number={i + 1} blockLogs={itemChecks} onToggle={toggleItem} onToggleAll={toggleAll} />
+                ),
+              )}
+            </div>
+            <div className="mt-agon-xs text-center text-agon-xs text-agon-tx3">Coche tout le bloc d’un coup, ou élément par élément</div>
+            <div className="lg:mx-auto lg:max-w-md">
+              <button
+                type="button"
+                onClick={() => setClassiquePhase("completed")}
+                className="mt-agon-lg min-h-12 w-full rounded-md bg-agon-accent p-[14px] text-agon-base font-bold text-agon-ink"
+              >
+                Terminer la séance
+              </button>
+            </div>
           </div>
+        )}
+
+        {/* Minuteur plein écran : format WOD, ou bloc WOD lancé depuis le format classique */}
+        {exec.phase === "executing" && (effectivePhase === "executing" || isClassique) && (
+          <ExecutionCard
+            flat={exec.flatSteps}
+            index={exec.currentIndex}
+            secondsLeft={exec.secondsLeft}
+            elapsed={isClassique ? elapsedTotal : exec.elapsedTotal}
+            onSkip={exec.skip}
+            onFinish={exec.stop}
+            vma={vma}
+          />
         )}
 
         {/* ── TERMINÉE ── */}

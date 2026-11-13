@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-seance-specifique",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : nouveau minuteur des séances spécifiques",
+    summary: "Pendant une séance HYROX ou spécifique, l'athlète voit un minuteur plein écran : tour en cours, exercice en cours et le suivant.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Effort en orange, récup en bleu : pendant la récup, le prochain exercice passe au premier plan pour se préparer.",
+          "En bas, les exercices du tour : ceux déjà faits sont barrés.",
+          "Format classique : l'athlète coche chaque élément, ou tout le bloc d'un coup. Un bloc WOD se lance avec son bouton « Minuteur ».",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-premier-lancement",
     date: "2026-11-13",
     kind: "feature",
