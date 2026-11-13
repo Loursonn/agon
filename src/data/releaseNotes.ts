@@ -38,6 +38,42 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-banque-grille-exercices",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Banque : nouvelle grille d'exercices",
+    summary: "La banque d'exercices s'affiche en grande grille sur ordinateur, avec la couleur du type sur chaque carte.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Jusqu'à 4 exercices par ligne sur ordinateur, avec l'aperçu vidéo et « Voir la vidéo ».",
+          "Chaque carte montre « Officiel » ou « Communauté », le type d'exercice (clic pour le changer), le muscle principal et le matériel.",
+          "Une légende des types en haut de la grille.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-affichage-ordi-corrige",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Affichage ordinateur : petites corrections",
+    summary: "Planning, Retours, Wellness, Profil sportif et Fiches s'affichent plus proprement sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Planning en semaine : le type de séance n'est plus coupé, une coche verte indique une séance réalisée.",
+          "Retours : les chiffres de la semaine occupent toute la largeur.",
+          "Wellness : la période affichée suit le choix 7 j / 28 j / 3 mois.",
+          "Profil sportif : le titre n'apparaît plus deux fois.",
+          "Fiches : 3 fiches par ligne, titres moins coupés.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-droits-seances-resserres",
     date: "2026-11-13",
     kind: "fix",

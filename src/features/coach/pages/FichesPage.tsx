@@ -93,7 +93,7 @@ export default function FichesPage() {
         ) : grouped.map((g, idx) => (
           <section key={g.cat} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <SectionHead n={idx + 1} title={FICHE_CATEGORY_LABEL[g.cat]} right={`${g.items.length} fiche${g.items.length > 1 ? "s" : ""}`} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
               {g.items.map(f => (
                 <button
                   key={f.origin.id}

@@ -9,7 +9,7 @@ import { cycleKeys, listAthleteCycles } from "@/api/cycles";
 import type { BlockConfig, Session, WellnessData } from "@/features/shared/types/athlete";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Target, Ruler, Trophy, Watch, X as XIcon } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Target, Ruler, Trophy, Watch, X as XIcon } from "lucide-react";
 import { competitionDayLabel } from "@/types/planning";
 import {
   DndContext,
@@ -243,7 +243,7 @@ function WatchFreeChip({ card, athleteId }: { card: PlanningCardModel; athleteId
 }
 
 const CARD_KIND_LABEL: Record<CalEvent["type"], string> = {
-  workout: "Musculation", energy: "Énergie", test: "Test", competition: "Compétition", free_activity: "Activité libre", life_event: "",
+  workout: "Musculation", energy: "Énergie", test: "Test", competition: "Compétition", free_activity: "Activité", life_event: "",
 };
 const CARD_MONO = "'Geist Mono', ui-monospace, monospace";
 
@@ -277,9 +277,13 @@ function EventCard({ event, watch }: { event: CalEvent; watch?: PlanningCardStat
     >
       <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
       <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: color, color: "#0E0C0A", borderRadius: 999, padding: "1px 7px", fontSize: 10, fontWeight: 600 }}>{label}</span>
-        {st === "completed" && <span style={{ fontSize: 10, fontWeight: 600, color: C.g, border: `1px solid ${alpha(C.g, 0.5)}`, borderRadius: 999, padding: "0 6px" }}>Réalisée</span>}
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: CARD_MONO, fontSize: 9.5, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color }}>{label}</span>
         <span style={{ flex: 1 }} />
+        {st === "completed" && (
+          <span title="Réalisée" aria-label="Réalisée" style={{ display: "inline-flex", color: C.g, flexShrink: 0 }}>
+            <Check size={12} strokeWidth={2.5} />
+          </span>
+        )}
         {event.type === "workout" && event.rescheduledByAthlete && (
           <span title={athleteMoveTitle(event.date, event.originalScheduledDate)} style={{ fontSize: 10, fontWeight: 800, color: "#F59E0B" }}>↷</span>
         )}

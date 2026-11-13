@@ -186,7 +186,7 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <span style={KICK}>Wellness · {frDate(addDays(today, -6), false)} → {frDate(today, false)}</span>
+          <span style={KICK}>Wellness · {frDate(addDays(today, -(Number(spanKey) - 1)), false)} → {frDate(today, false)}</span>
           {spanSwitch}
         </div>
         {lightCard}
@@ -265,7 +265,7 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
           <WatchChart title="VFC de nuit" unit="ms" color={C.b} data={hrvSeries} zone={hrvZone}
             note={hrvZone ? <>Moyenne 7 j {int(hrvMean)} ms · zone {int(hrvZone.low)}–{int(hrvZone.high)} ms{hrv?.belowDays ? ` · sous la zone depuis ${hrv.belowDays} jour${hrv.belowDays > 1 ? "s" : ""}` : ""}</> : "Zone normale disponible après 14 nuits de mesure."} />
           <WatchChart title="FC de repos" unit="bpm" color={C.o} data={rhrSeries} zone={rhrBase ? { low: rhrBase.low, high: rhrBase.high } : null}
-            note={<>Moyenne 7 j {dec(r?.restingHr.mean7)} bpm · habitude {dec(r?.restingHr.baselineMean)} bpm{rz != null ? ` · z ${rz > 0 ? "+" : ""}${dec(rz)}` : ""}</>} />
+            note={<>Moyenne 7 j {dec(r?.restingHr.mean7)} bpm · habitude {r?.restingHr.baselineMean != null ? `${dec(r.restingHr.baselineMean)} bpm` : "—"}{rz != null ? ` · z ${rz > 0 ? "+" : ""}${dec(rz)}` : ""}</>} />
         </div>
         <div style={{ fontSize: 11.5, color: C.tx3 }}>VFC lue sur 7 nuits (5 valides au moins), zone = moyenne ± 0,5 écart-type des 28 jours précédents.</div>
       </section>
