@@ -302,6 +302,7 @@ const App = () => (
       />
       <BrowserRouter>
         <AuthProvider>
+          <ClientBuildReporter />
           <Suspense fallback={<PageLoader />}>
             <AppRoutes />
           </Suspense>
