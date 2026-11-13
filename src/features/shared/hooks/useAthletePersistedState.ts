@@ -21,6 +21,7 @@ import {
   getBodyWeightGoal, getWeightLog, getWeightMilestones,
   toLegacyBodyWeight, toLegacyMilestones, toLegacyWeightLog,
 } from "@/api/profile";
+import { notifyQueued, submitWrite } from "@/lib/offline/writes";
 
 /**
  * Clé dont la lecture a échoué : comment la réappliquer une fois relue.
@@ -494,10 +495,19 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   const setFreeSessions = useCallback((v: FreeSession[] | ((prev: FreeSession[]) => FreeSession[])) => {
     setFreeSessionsRaw(prev => {
       const next = typeof v === "function" ? v(prev) : v;
-      persist(save(SKEYS.freeSessions, next));
+      // Clé pas encore relue : même garde que les autres clés (écriture retenue).
+      if (readOnly || !athleteId || isKeyLoadFailed(SKEYS.freeSessions, athleteId)) {
+        persist(save(SKEYS.freeSessions, next));
+        return next;
+      }
+      // File d'écritures : sans réseau, la liste est gardée sur le téléphone et
+      // part au retour du réseau (avant : « Sauvegarde échouée », saisie perdue).
+      persist(submitWrite("freeSessions.set", { athleteId, sessions: next }).then((r) => {
+        if (r.status === "queued") notifyQueued();
+      }));
       return next;
     });
-  }, [save, persist]);
+  }, [save, persist, readOnly, athleteId]);
 
   const setVisibilitySettings = useCallback(async (settings: VisibilitySettings) => {
     setVisibilityRaw(settings);

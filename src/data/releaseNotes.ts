@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-activite-libre-hors-ligne",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Activités libres gardées sans réseau",
+    summary: "Une activité libre (footing, vélo…) ajoutée par un athlète sans réseau n'est plus perdue : elle part toute seule au retour du réseau.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Avant, l'athlète voyait « Sauvegarde échouée » et l'activité disparaissait au prochain chargement.",
+          "Maintenant, comme pour le wellness ou la pesée, l'activité est gardée sur le téléphone et vous arrive dès que le réseau revient.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-telephone-fiches-banque",
     date: "2026-11-13",
     kind: "feature",

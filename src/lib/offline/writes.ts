@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import type { IsoDay } from "@shared/domain/dates";
 import type { NutritionDailyLog } from "@shared/domain/nutrition";
 import type { RecordSet } from "@shared/domain/performance";
+import { writeAppData } from "@/api/appData";
 import { db } from "@/api/client";
 import { completeEnergyAssignment, setEnergyRpe, type CompleteEnergyInput } from "@/api/energy";
 import { saveDay } from "@/api/nutrition";
@@ -76,6 +77,12 @@ export interface WriteArgs {
   "wellness.day": { athleteId: string; day: IsoDay; form: unknown };
   "nutrition.day": { athleteId: string; day: IsoDay; log: NutritionDailyLog };
   "weight.day": { athleteId: string; day: IsoDay; kg: number };
+  /**
+   * Liste complète des activités libres (`asp:freesess`, écrite par l'athlète
+   * seul) : la plus récente remplace, comme l'écriture directe d'avant, mais
+   * gardée sur le téléphone sans réseau au lieu d'être perdue.
+   */
+  "freeSessions.set": { athleteId: string; sessions: unknown[] };
 }
 export type WriteKind = keyof WriteArgs;
 
@@ -93,6 +100,7 @@ export const EXECUTORS: { [K in WriteKind]: (a: WriteArgs[K]) => Promise<unknown
   "wellness.day": (a) => saveWellnessForm(a.athleteId, a.form, a.day),
   "nutrition.day": (a) => saveDay(a.athleteId, a.day, a.log),
   "weight.day": (a) => saveWeight(a.athleteId, a.day, a.kg),
+  "freeSessions.set": (a) => writeAppData(a.athleteId, "asp:freesess", a.sessions),
 };
 
 /**
@@ -117,7 +125,7 @@ export function mergeWriteArgs(kind: string, prev: unknown, next: unknown): unkn
 /** Une cible = une clé : deux saisies de même clé n'en font qu'une (la dernière). */
 export function writeKey<K extends WriteKind>(kind: K, args: WriteArgs[K]): string {
   const a = args as Record<string, unknown>;
-  const target = (a.logId ?? a.id ?? `${a.athleteId}:${a.day}`) as string;
+  const target = (a.logId ?? a.id ?? (a.day !== undefined ? `${a.athleteId}:${a.day}` : a.athleteId)) as string;
   return `${kind}:${target}`;
 }
 
@@ -132,6 +140,7 @@ const LABELS: Record<WriteKind, [string, boolean]> = {
   "wellness.day": ["Wellness", false],
   "nutrition.day": ["Nutrition", true],
   "weight.day": ["Pesée", true],
+  "freeSessions.set": ["Activité libre", true],
 };
 
 /** Toast quand une saisie part en file d'attente (même texte partout). */
