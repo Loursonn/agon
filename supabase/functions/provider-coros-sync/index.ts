@@ -133,6 +133,18 @@ interface SyncReport {
    * lente — l'ouverture de session, la liste des fichiers ou leur téléchargement.
    */
   timing?: SyncTiming;
+  /**
+   * L'appel de liste des FIT tel qu'il est fait : outil, paramètres publiés
+   * (nom, type, format, début de description) et arguments envoyés pour la
+   * fenêtre récente. Aucune donnée d'athlète ; sert à confronter le schéma
+   * réel de COROS à ce qu'on envoie quand COROS refuse l'appel.
+   */
+  fitCall?: {
+    tool: string;
+    params: Record<string, string>;
+    required: string[];
+    args: Record<string, unknown>;
+  };
 }
 
 interface CallStats {
@@ -640,6 +652,21 @@ async function syncConnection(
       settled: lastSettledDay(now, await athleteUtcOffset(admin, conn.athlete_id)),
       rescanDays: RESCAN_DAYS,
     });
+
+    {
+      const props = toolByName(fitToolName)?.inputSchema?.properties ?? {};
+      report.fitCall = {
+        tool: spec.tool,
+        params: Object.fromEntries(
+          Object.entries(props).map(([k, v]) => {
+            const p = v as { type?: unknown; format?: string; description?: string };
+            return [k, [String(p.type ?? "?"), p.format ?? "", (p.description ?? "").slice(0, 120)].filter(Boolean).join(" · ")];
+          }),
+        ),
+        required: (toolByName(fitToolName)?.inputSchema as { required?: string[] } | undefined)?.required ?? [],
+        args: buildDateArgs(spec, plan.recent.from, plan.recent.to, COROS_FIT_LIMITS.perCall),
+      };
+    }
 
     const deps = {
       list: timed(timing.list, async (range: { from: string; to: string }) => {

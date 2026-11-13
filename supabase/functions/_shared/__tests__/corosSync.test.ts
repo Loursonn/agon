@@ -135,6 +135,18 @@ describe("classifyFitListing", () => {
     expect(r).toMatchObject({ kind: "error", quota: true });
   });
 
+  it("garde COROS « anomalies » : erreur, pas un quota, jamais une liste vide (13/11/2026)", () => {
+    const text = "Tool call anomalies detected. High risk of session context pollution or request exceeds the LLM capability boundary.";
+    expect(classifyFitListing({ isError: true, text })).toMatchObject({ kind: "error", quota: false });
+    expect(classifyFitListing({ isError: false, text })).toMatchObject({ kind: "error", quota: false });
+  });
+
+  it("variantes de quota toujours reconnues", () => {
+    for (const text of ["Rate limit reached", "Too many requests", "You have exceeded your daily limit", "limit exceeded"]) {
+      expect(classifyFitListing({ isError: true, text })).toMatchObject({ kind: "error", quota: true });
+    }
+  });
+
   it("un paramètre refusé est une erreur, pas une liste vide", () => {
     expect(classifyFitListing({ isError: true, text: "Invalid parameter startDate" })).toMatchObject({ kind: "error", quota: false });
     expect(classifyFitListing({ isError: false, text: "Error: missing required field endDate" })).toMatchObject({ kind: "error" });
