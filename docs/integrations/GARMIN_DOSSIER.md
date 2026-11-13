@@ -511,5 +511,26 @@ secret, aucune donnée d'athlète lue. Rien déployé, rien écrit en prod.
   `ai_provider_dailies`, vues qui excluent `ai_allowed = false` (Garmin) ; trigger
   `data_source_policies` en base (migrations `20261028090000`, `20261029100000`).
   Non vérifié ici : l'état réel des vues en prod (lecture SQL à faire par Hugo si besoin).
-- [ ] **Partner Verification demandée dans le portail** — Hugo.
-- [ ] **`VITE_GARMIN_ENABLED=true`** sur Vercel (Preview puis Production) — Hugo uniquement.
+- [ ] **Partner Verification demandée dans le portail** — Hugo (question posée le 13/11).
+- [x] **`VITE_GARMIN_ENABLED=true`** sur Vercel (13/11/2026, lecture seule). Projet
+  `myprepapro-uuc7` (celui qui sert `agon-training.com`) : variable présente en
+  Production (posée le 10/11) et en Preview (`dev`). Valeur chiffrée chez Vercel,
+  vérifiée dans le code livré : le texte « En attente de validation du programme
+  développeur Garmin » (branche `!GARMIN_ENABLED`, présent dans `main`) est absent du
+  bundle de production → le drapeau vaut `true`. Le projet `myprepapro`
+  (`myprepapro.vercel.app`) n'a aucune variable : ancien projet, ne sert pas le domaine.
+
+### Relevé du 13/11/2026 (lecture seule)
+
+- **Webhook** : 2 516 notifications reçues depuis le 09/11, 0 en attente, 0 en erreur ;
+  20 activités et 20 journées Garmin rangées, 2 371 résumés bruts. La ligne `[!]`
+  ci-dessus est levée.
+- **Connexions Garmin actives : 4.** Une seule porte ses permissions
+  (`ACTIVITY_EXPORT`, `HEALTH_EXPORT`, `WORKOUT_IMPORT`) ; les trois du 09/11 ont
+  `granted_scopes` vide (lecture des permissions faite avant la correction des
+  routes `partner-gateway`). Corrigé : `provider-garmin-workouts` relit les
+  permissions inconnues (`ensureKnownScopes`) et n'envoie rien sans `WORKOUT_IMPORT`.
+- **Envoi des séances** : cron `garmin-workouts` actif ; `push_workouts` vrai sur les
+  deux comptes admin, faux sur les deux vrais athlètes ; 2 séances envoyées (compte
+  admin). Activation pour les athlètes : voir « Activer l'envoi des séances » dans
+  `GARMIN_TRAINING.md`.
