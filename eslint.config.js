@@ -4,8 +4,50 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
+/**
+ * `no-undef` ne voit pas les composants JSX (`<TimePick />`) : sans TypeScript,
+ * un composant supprimé mais encore utilisé passait le lint et cassait l'écran
+ * (PR #139 → #141). Règle locale, sans dépendance : tout `<Majuscule …>` doit
+ * être déclaré ou importé dans le fichier.
+ */
+const agon = {
+  rules: {
+    "jsx-no-undef": {
+      meta: { type: "problem", messages: { undef: "« {{name}} » n'est ni déclaré ni importé." } },
+      create(context) {
+        return {
+          JSXOpeningElement(node) {
+            let id = node.name;
+            while (id.type === "JSXMemberExpression") id = id.object;
+            if (id.type !== "JSXIdentifier" || !/^[A-Z]/.test(id.name)) return;
+            for (let scope = context.sourceCode.getScope(node); scope; scope = scope.upper) {
+              if (scope.set.has(id.name)) return;
+            }
+            context.report({ node: id, messageId: "undef", data: { name: id.name } });
+          },
+        };
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   { ignores: ["dist", ".claude"] },
+  {
+    // Fichiers .jsx hérités : pas de typecheck, donc au moins les noms inconnus.
+    files: ["src/**/*.jsx"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: globals.browser,
+    },
+    plugins: { agon },
+    rules: {
+      "no-undef": "error",
+      "agon/jsx-no-undef": "error",
+    },
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
