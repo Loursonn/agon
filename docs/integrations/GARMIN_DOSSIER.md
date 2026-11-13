@@ -511,7 +511,10 @@ secret, aucune donnée d'athlète lue. Rien déployé, rien écrit en prod.
   `ai_provider_dailies`, vues qui excluent `ai_allowed = false` (Garmin) ; trigger
   `data_source_policies` en base (migrations `20261028090000`, `20261029100000`).
   Non vérifié ici : l'état réel des vues en prod (lecture SQL à faire par Hugo si besoin).
-- [ ] **Partner Verification demandée dans le portail** — Hugo (question posée le 13/11).
+- [ ] **Partner Verification demandée dans le portail** — Hugo. Vérifié le 13/11 dans le
+  portail développeur : app « Agon » *Approved*, Health / Activity / Training activées.
+  L'outil de vérification est dans API Tools (`apis.garmin.com/tools`), dont la connexion
+  demande le Client Secret : à ouvrir par Hugo.
 - [x] **`VITE_GARMIN_ENABLED=true`** sur Vercel (13/11/2026, lecture seule). Projet
   `myprepapro-uuc7` (celui qui sert `agon-training.com`) : variable présente en
   Production (posée le 10/11) et en Preview (`dev`). Valeur chiffrée chez Vercel,
@@ -530,6 +533,8 @@ secret, aucune donnée d'athlète lue. Rien déployé, rien écrit en prod.
   `granted_scopes` vide (lecture des permissions faite avant la correction des
   routes `partner-gateway`). Corrigé : `provider-garmin-workouts` relit les
   permissions inconnues (`ensureKnownScopes`) et n'envoie rien sans `WORKOUT_IMPORT`.
+  Déployée le 13/11 : au passage de 08 h 20 UTC, les 4 connexions portent
+  `ACTIVITY_EXPORT`, `HEALTH_EXPORT` et `WORKOUT_IMPORT`.
 - **Envoi des séances** : cron `garmin-workouts` actif ; `push_workouts` vrai sur les
   deux comptes admin, faux sur les deux vrais athlètes ; 2 séances envoyées (compte
   admin). Activation pour les athlètes : voir « Activer l'envoi des séances » dans
