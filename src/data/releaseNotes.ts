@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-banque-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Banque : onglets aux couleurs des types",
+    summary: "Dans la Banque, les onglets Musculaire, Énergétique et Spécifique reprennent les couleurs de la Programmation, et les sous-onglets (Exercices, Méthodes, Blocs, Séances) deviennent des pastilles.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-fiches-ordi",
     date: "2026-11-13",
     kind: "feature",

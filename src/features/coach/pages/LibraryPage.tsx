@@ -1,7 +1,7 @@
 ﻿import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Dumbbell, X, Zap, Target, type LucideIcon } from "lucide-react";
-import { C } from "@/lib/theme";
+import { Dumbbell, X, Zap } from "lucide-react";
+import { C, alpha } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -31,16 +31,11 @@ import { formValuesToConfig } from "@/features/coach/components/library/methodCo
 
 type LibTab = "musculaire" | "energetique" | "specifique";
 
-const TAB_ICONS: Record<LibTab, LucideIcon> = {
-  musculaire:  Dumbbell,
-  energetique: Zap,
-  specifique:  Target,
-};
 
-const TABS: { key: LibTab; label: string }[] = [
-  { key: "musculaire",  label: "Musculaire"  },
-  { key: "energetique", label: "Énergétique" },
-  { key: "specifique",  label: "Spécifique"  },
+const TABS: { key: LibTab; label: string; color: string }[] = [
+  { key: "musculaire",  label: "Musculaire",  color: C.ac },
+  { key: "energetique", label: "Énergétique", color: C.b },
+  { key: "specifique",  label: "Spécifique",  color: C.o },
 ];
 
 // ── Energy sub-tab constants ──────────────────────────────────────────────────
@@ -514,23 +509,22 @@ export default function LibraryPage() {
           paddingTop: 16,
         }}
       >
-        {TABS.map(({ key, label }) => {
-          const Icon = TAB_ICONS[key];
+        {TABS.map(({ key, label, color }) => {
+          const on = activeTab === key;
+          // Planche CoachBanque : carré de couleur par type, soulignement or.
           return (
             <button
               key={key}
               onClick={() => setTab(key)}
               style={{
-                padding: "8px 18px", border: "none", background: "transparent",
-                color: activeTab === key ? C.ac : C.tx3,
-                fontSize: 13, fontWeight: activeTab === key ? 700 : 400,
-                cursor: "pointer", fontFamily: "inherit",
-                borderBottom: "2px solid " + (activeTab === key ? C.ac : "transparent"),
-                display: "flex", alignItems: "center", gap: 6,
-                transition: "color 150ms",
+                height: 40, padding: "0 16px", border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: on ? 500 : 400, color: on ? C.tx : C.tx2, whiteSpace: "nowrap",
+                boxShadow: on ? `inset 0 -3px 0 ${C.ac}` : "none",
+                background: on ? `linear-gradient(0deg, ${alpha(C.ac, 0.12)}, transparent 70%)` : "transparent",
+                display: "flex", alignItems: "center", gap: 8,
               }}
             >
-              <Icon size={15} style={{ color: activeTab === key ? C.ac : C.tx3 }} />
+              <span aria-hidden style={{ width: 9, height: 9, borderRadius: 2, flex: "none", background: color }} />
               {label}
             </button>
           );
@@ -553,11 +547,11 @@ export default function LibraryPage() {
                   key={t.k}
                   onClick={() => setMuscuTab(t.k as typeof muscuTab)}
                   style={{
-                    padding: "6px 14px", borderRadius: 4,
+                    height: 32, boxSizing: "border-box", padding: "0 14px", borderRadius: 999,
                     border: "1px solid " + (muscuTab === t.k ? C.ac : C.brdL),
-                    background: muscuTab === t.k ? C.acS : "transparent",
-                    color: muscuTab === t.k ? C.ac : C.tx3,
-                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    background: muscuTab === t.k ? alpha(C.ac, 0.14) : "transparent",
+                    color: muscuTab === t.k ? C.ac : C.tx2,
+                    fontSize: 12, fontWeight: muscuTab === t.k ? 500 : 400, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >{t.l}</button>
               ))}
@@ -578,11 +572,11 @@ export default function LibraryPage() {
                   key={t.k}
                   onClick={() => setSpecTab(t.k as "seances" | "blocs")}
                   style={{
-                    padding: "6px 14px", borderRadius: 4,
-                    border: "1px solid " + (specTab === t.k ? "#F5A623" : C.brdL),
-                    background: specTab === t.k ? "#F5A62315" : "transparent",
-                    color: specTab === t.k ? "#F5A623" : C.tx3,
-                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    height: 32, boxSizing: "border-box", padding: "0 14px", borderRadius: 999,
+                    border: "1px solid " + (specTab === t.k ? C.ac : C.brdL),
+                    background: specTab === t.k ? alpha(C.ac, 0.14) : "transparent",
+                    color: specTab === t.k ? C.ac : C.tx2,
+                    fontSize: 12, fontWeight: specTab === t.k ? 500 : 400, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >{t.l}</button>
               ))}
