@@ -4,7 +4,7 @@ import { setDbForTests } from "@/api/client";
 import {
   ConnectError, connectError, disconnectProvider, getActivities, getConnections, getKnownActivities,
   getManualRunSources, getWatchRuns, getWorkoutPushes, insertActivities, invalidateProviders, providerKeys,
-  startCorosAuthorization, startGarminAuthorization, syncCoros,
+  removeProviderActivity, startCorosAuthorization, startGarminAuthorization, syncCoros,
 } from "@/api/providers";
 
 type FnRes = { data: unknown; error: { message: string; context?: unknown } | null };
@@ -163,5 +163,30 @@ describe("api/providers — Edge Functions", () => {
     for (const k of [providerKeys.connections("a"), providerKeys.activities("a", 60), providerKeys.runs("a", "2026-01-01")]) {
       expect(k.slice(0, 2)).toEqual(["providers", "a"]);
     }
+  });
+});
+
+describe("api/providers — retirer une activité (P38)", () => {
+  it("appelle la RPC avec l'identifiant et rend le nombre de liens retirés", async () => {
+    const calls: unknown[] = [];
+    const { db } = fakeDb({}, undefined, {
+      remove_provider_activity: (args) => {
+        calls.push(args);
+        return { removed: true, source: "garmin", unlinked: 1 };
+      },
+    });
+    setDbForTests(db);
+    expect(await removeProviderActivity("act-1")).toEqual({ removed: true, unlinked: 1 });
+    expect(calls).toEqual([{ p_activity: "act-1" }]);
+  });
+
+  it("refus de la base (séance Agon, autre coach) : lève, ne fait pas semblant", async () => {
+    const { db } = fakeDb({}, undefined, {
+      remove_provider_activity: () => {
+        throw new Error("Une séance saisie dans Agon ne se retire pas ici");
+      },
+    });
+    setDbForTests(db);
+    await expect(removeProviderActivity("act-1")).rejects.toThrow(/Activité non retirée.*séance saisie dans Agon/);
   });
 });

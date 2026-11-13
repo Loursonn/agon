@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-retirer-activite-montre",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retirer une activité de montre supprimée",
+    summary: "Une sortie supprimée dans Garmin Connect ou COROS restait dans Agon. Vous pouvez maintenant la retirer depuis la liste des sorties de l'athlète.",
+    sections: [
+      {
+        title: "Comment faire",
+        points: [
+          "Ouvrez la sortie dans la liste des activités, puis « Retirer d'Agon » et confirmez. L'athlète peut le faire aussi.",
+          "La courbe, les tours et les zones partent avec elle. La séance prévue à laquelle elle était rattachée reste, avec ce que l'athlète y a saisi.",
+          "Une séance enregistrée dans Agon ne peut pas être retirée de cette façon.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-retours-sante",
     date: "2026-11-13",
     kind: "feature",

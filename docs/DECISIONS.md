@@ -2184,3 +2184,26 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   dans une fenêtre in-app (`@capacitor/browser`).
 - `public/.well-known` (AASA, assetlinks) est publié avec des valeurs à remplacer (Team ID Apple, empreinte Play).
 - Icônes et écran de lancement tirés de `public/brand`.
+
+## 2026-11-13 — Retirer d'Agon une activité de montre (P38)
+
+- **Pourquoi** : Garmin et COROS ne préviennent pas quand une activité est
+  supprimée dans leur application. Sans action, elle reste dans Agon, le
+  volume et le planning.
+- **Qui** : l'athlète, ou son coach (référent ou co-coach, `is_coach_of`) pour
+  une activité qu'il voit (même règle que `provider_activities_coach_read`).
+  Un autre coach reçoit « introuvable », comme pour une ligne absente.
+- **Comment** : RPC `remove_provider_activity` (migration `20261113180000`).
+  Elle supprime la ligne ; courbe, tours, séries, résumés de zones et liens au
+  planning partent en cascade. La séance Agon rapprochée garde son statut, ses
+  séries et ses notes : seul le lien part. Refusée si la ligne porte la source
+  `manual` (séance saisie dans Agon).
+- **Gardé** : le brut (`provider_raw_records`, fichiers `provider-raw`), stocké
+  par choix d'Hugo (09/11), part à la déconnexion, au retrait de permission ou
+  à la suppression du compte. À relire si Hugo préfère l'effacer aussi (il
+  faudrait passer par une Edge Function : l'athlète n'écrit pas dans ce bucket).
+- **Limite connue** : une correction envoyée plus tard par Garmin
+  (`manuallyUpdatedActivities`) ou un nouvel import du même fichier recrée
+  l'activité.
+- **Écran** : bouton « Retirer d'Agon » au dépli d'une sortie
+  (`RemoveActivityButton`, partagé athlète / coach), confirmation en deux temps.
