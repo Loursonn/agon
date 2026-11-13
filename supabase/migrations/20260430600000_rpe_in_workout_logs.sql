@@ -9,7 +9,7 @@ begin
     update workout_logs wl
     set rpe_score = wr.rpe_score
     from workout_rpe wr
-    where wr.workout_id = wl.id;
+    where wr.workout_log_id = wl.id;  -- workout_id : colonne inexistante (corrigé le 2026-11-13)
   end if;
 end;
 $$;
