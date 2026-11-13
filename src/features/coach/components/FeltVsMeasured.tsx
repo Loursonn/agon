@@ -36,9 +36,11 @@ export function FeltVsMeasured({ athleteId, firstName }: { athleteId: string; fi
     const felt = today?.items[r.key] ?? null;
     const values = dailyValues(health, r.pick);
     const m = values.get(day)?.v ?? null;
+    // Attribution exigée par Garmin à côté de chaque mesure affichée.
+    const source = values.get(day)?.source ?? null;
     const base = baselineAt(values, day);
     if (felt == null || m == null) return [];
-    return [{ r, felt, m, mean: base?.mean ?? null, agr: base ? agreement(felt, m, base.mean, r.higherIsBetter) : null }];
+    return [{ r, felt, m, source, mean: base?.mean ?? null, agr: base ? agreement(felt, m, base.mean, r.higherIsBetter) : null }];
   });
 
   if (rows.length === 0) {
@@ -51,7 +53,7 @@ export function FeltVsMeasured({ athleteId, firstName }: { athleteId: string; fi
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-      {rows.map(({ r, felt, m, mean, agr }) => {
+      {rows.map(({ r, felt, m, source, mean, agr }) => {
         const col = agr === "ecart" ? C.o : C.g;
         return (
           <div key={r.key} style={{ borderRadius: 14, background: C.s1, border: `1px solid ${agr === "ecart" ? alpha(C.o, 0.5) : C.brd}`, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -67,7 +69,7 @@ export function FeltVsMeasured({ athleteId, firstName }: { athleteId: string; fi
               </div>
               <span style={{ ...MONO, fontSize: 18, color: col, textAlign: "center" }}>{agr === "ecart" ? "≠" : "="}</span>
               <div>
-                <div style={{ fontSize: 11, color: C.tx3 }}>Mesuré par la montre</div>
+                <div style={{ fontSize: 11, color: C.tx3 }}>Mesuré par {source ?? "la montre"}</div>
                 <div style={{ ...MONO, fontSize: 26, marginTop: 4 }}>{Math.round(m)}</div>
                 <div style={{ fontSize: 11.5, color: C.tx2 }}>{r.measuredLabel}{mean != null ? ` · moy. ${Math.round(mean)}` : ""}</div>
               </div>

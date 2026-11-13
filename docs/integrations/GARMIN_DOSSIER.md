@@ -499,9 +499,11 @@ secret, aucune donnée d'athlète lue. Rien déployé, rien écrit en prod.
   RGPD (champ `attribution`, `dataExport`). **Écart corrigé dans ce lot** : les totaux de
   km de course (carte « Volume de course » du profil athlète et de la fiche coach, KPI
   « Course à pied » de la page Retours) disaient « montre » sans nom. Ils affichent
-  maintenant « Garmin [modèle] » (`watchOrigins`, testé). `provider_dailies` n'est affiché
-  nulle part dans l'UI aujourd'hui (seulement l'export, qui porte l'attribution) : à
-  rattacher à l'attribution le jour où une vue sommeil/FC repos Garmin sera ajoutée.
+  maintenant « Garmin [modèle] » (`watchOrigins`, testé). Santé (`provider_dailies`, `provider_intraday`,
+  affichés depuis P43 : page Santé de l'athlète, Retours › Santé du coach) : attribution
+  « Garmin [modèle] » depuis le 13/11/2026 — `src/api/health.ts` reprend le dernier
+  `device_name` des activités du même fournisseur (testé), « Garmin » seul si aucun modèle
+  n'est connu.
   API coach (`coach-api`) : n'expose pas Garmin (voir ligne suivante).
 - [x] **Données Garmin exclues de tout traitement IA.** `ai-program` : aucune lecture
   base, corps de requête seul, et aucun appel côté front. `athlete-insights` : n'accepte

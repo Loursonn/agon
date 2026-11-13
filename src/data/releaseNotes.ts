@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-sante-modele-montre",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Santé : le modèle de la montre est indiqué",
+    summary: "Les mesures de la nuit (sommeil, VFC, Body Battery…) disent maintenant de quelle montre elles viennent.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans Retours › Santé, « Mesuré par la montre » devient « Mesuré par Garmin Forerunner 265 » (le modèle de l'athlète).",
+          "Même chose sur la page Santé de l'athlète : chaque mesure porte le nom de la montre qui l'a prise.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-wellness-coach",
     date: "2026-11-13",
     kind: "feature",
