@@ -16,7 +16,6 @@ import { pendingWrites, startWriteQueue } from "@/lib/offline/writes";
 // Pages publiques (chargées immédiatement — nécessaires au démarrage)
 import Login from "./pages/Login.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
-import InviteAccept from "./pages/InviteAccept.tsx";
 import StaffInviteAccept from "./features/staff/pages/StaffInviteAccept.tsx";
 import ClaimAthlete from "./pages/ClaimAthlete.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -176,7 +175,8 @@ function AppRoutes() {
           {/* Pages publiques */}
           <Route path="/login" element={<Page><Login /></Page>} />
           <Route path="/reset-password" element={<Page><ResetPassword /></Page>} />
-          <Route path="/invite/:token" element={<Page><InviteAccept /></Page>} />
+          {/* Anciens liens d'invitation coach (supprimés, décision 6) : rejoindre un coach = son code. */}
+          <Route path="/invite/:token" element={<Navigate to="/login" replace />} />
           <Route path="/staff-invite/:token" element={<Page><StaffInviteAccept /></Page>} />
           <Route path="/claim/:token" element={<Page><ClaimAthlete /></Page>} />
 

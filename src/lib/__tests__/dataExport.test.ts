@@ -32,9 +32,9 @@ beforeEach(() => {
 
 describe("inventaire de l'export", () => {
   it("couvre les données manquantes de l'audit §9", () => {
-    // Hyrox, tests, compétitions, nutrition (app_data), retours
+    // Hyrox, tests, compétitions, nutrition (app_data), retours hebdo
     for (const t of ["hyrox_results", "hyrox_race_plans", "hyrox_test_analyses", "athlete_test_results",
-      "test_sessions", "performance_logs", "competitions", "app_data", "weekly_retours", "retours"]) {
+      "test_sessions", "performance_logs", "competitions", "app_data", "weekly_retours"]) {
       expect(has(t, "athlete_id"), t).toBe(true);
     }
     // Staff et co-coach, des deux côtés
@@ -58,7 +58,6 @@ describe("inventaire de l'export", () => {
   it("lit les tables à secrets avec une liste de colonnes sans le secret", () => {
     const sel = (t: string) => EXPORT_JOBS.filter((j) => j.table === t).map((j) => j.select ?? "*");
     for (const s of sel("coach_api_keys")) expect(s).not.toMatch(/\*|key_hash|key_prefix/);
-    for (const s of sel("invitations")) expect(s).not.toMatch(/\*|token/);
     for (const s of sel("staff_invitations")) expect(s).not.toMatch(/\*|token/);
     for (const s of sel("provider_connections")) expect(s).not.toMatch(/\*|sync_lock_token/);
   });

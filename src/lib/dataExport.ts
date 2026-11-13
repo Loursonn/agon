@@ -118,7 +118,6 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   // Tout ce que Garmin a envoyé, tel quel (échantillons et .FIT : chemins
   // vers le bucket privé `provider-raw`, lisible par l'athlète lui-même).
   job("provider_raw_records", "athlete_id"),
-  job("retours", "athlete_id"),
   job("seasons", "athlete_id"),
   job("staff_invitations", "athlete_id", STAFF_INVITATION_COLUMNS),
   job("test_results", "athlete_id"),
@@ -130,7 +129,6 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   // ── Compte (`user_id`) ───────────────────────────────────────────────────
   job("app_update_reads", "user_id"),
   job("citation_likes", "user_id"),
-  job("retours_votes", "user_id"),
   job("roadmap_votes", "user_id"),
   job("user_consents", "user_id"),
 
@@ -144,8 +142,7 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("staff_invitations", "invited_by", STAFF_INVITATION_COLUMNS),
   job("staff_invitations", "used_by", STAFF_INVITATION_COLUMNS),
 
-  // ── Coach : invitations, assistant IA, fiches et bibliothèques ───────────
-  job("invitations", "coach_id", "id, coach_id, email, used_at, created_at"),
+  // ── Coach : assistant IA, fiches et bibliothèques ───────────
   // Jamais la clé ni son empreinte : nom et dates seulement.
   job("coach_api_keys", "coach_id", "id, coach_id, name, created_at, last_used_at, revoked_at"),
   job("coach_api_drafts", "coach_id"),

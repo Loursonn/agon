@@ -2,10 +2,10 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { fakeDb, type FakeRpc, type Row } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
 import {
-  AccountError, accountKeys, claimAthleteAccount, coachCodeExists, coachPreviewByCode, invitationCoachName, createInvitation, createPendingAthlete,
+  AccountError, accountKeys, claimAthleteAccount, coachCodeExists, coachPreviewByCode, createPendingAthlete,
   deleteAccount, ensureCoachCode, generateCoachCode, getClaimInfo, getClaimToken, getCoachRoster, getConsents,
-  invalidateAccount, invitationIsValid, linkToCoachByCode, pickFreeCoachCode, readOwnRows, recordConsents,
-  registerAthleteWithCode, registerAthleteWithInvitation, registerCoach, registerStaff, reportClientBuild, serverReason, setOwnCoach,
+  invalidateAccount, linkToCoachByCode, pickFreeCoachCode, readOwnRows, recordConsents,
+  registerAthleteWithCode, registerCoach, registerStaff, reportClientBuild, serverReason, setOwnCoach,
 } from "@/api/account";
 import type { Profile } from "@/api/profile";
 
@@ -138,31 +138,14 @@ describe("api/account — code coach et inscription", () => {
     expect(asked).toEqual(["DEMO42", "ZZZZZZ"]);
   });
 
-  it("invitationCoachName : nom du coach d'un lien valable", async () => {
-    world({}, { rpcs: { invitation_coach_name: (a) => (a.p_token === "tok" ? "Agon Démo" : null) } });
-    expect(await invitationCoachName("tok")).toBe("Agon Démo");
-    expect(await invitationCoachName("autre")).toBeNull();
-  });
-
-  it("registerAthleteWithInvitation : lien invalide (ou vérification en panne) refusé", async () => {
-    world({}, { rpcs: { invitation_is_valid: () => false } });
-    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", "1998-04-12", "t")).rejects.toThrow("Lien d'invitation invalide ou déjà utilisé");
-    world({}, { failOn: { table: "invitation_is_valid", op: "rpc" } });
-    expect(await invitationIsValid("t")).toBe(false);
-    world({}, { rpcs: { invitation_is_valid: () => true, redeem_invitation: raise("déjà rattaché") } });
-    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", "1998-04-12", "t"))
-      .rejects.toThrow("Compte créé, mais le lien d'invitation n'a pas pu être utilisé : déjà rattaché");
-  });
-
   it("âge minimum : moins de 15 ans ou date absente refusés AVANT de créer le compte (tous les parcours)", async () => {
     const future = "2099-01-01";
     const today = new Date();
     const young = `${today.getFullYear() - 14}-01-01`;
-    const w = world({}, { rpcs: { coach_code_exists: () => true, invitation_is_valid: () => true } });
+    const w = world({}, { rpcs: { coach_code_exists: () => true } });
     const msg = "Tu dois avoir au moins 15 ans pour utiliser Agon.";
     await expect(registerCoach("a@b.c", "pw", "Coach", young)).rejects.toThrow(msg);
     await expect(registerAthleteWithCode("a@b.c", "pw", "Léa", young, "DEMO42")).rejects.toThrow(msg);
-    await expect(registerAthleteWithInvitation("a@b.c", "pw", "Léa", young, "t")).rejects.toThrow(msg);
     await expect(registerStaff("a@b.c", "pw", "Kiné", young, "kine")).rejects.toThrow(msg);
     await expect(claimAthleteAccount("tok", "a@b.c", "pw", young)).rejects.toThrow(msg);
     await expect(registerCoach("a@b.c", "pw", "Coach", "")).rejects.toThrow("Indique ta date de naissance.");
@@ -240,13 +223,6 @@ describe("api/account — code coach et inscription", () => {
     expect(await ensureCoachCode(athlete)).toBe(athlete);
   });
 
-  it("createInvitation renvoie le jeton", async () => {
-    // fakeDb ne génère pas le jeton (valeur par défaut de la colonne) : réponse fixée.
-    setDbForTests({
-      from: () => ({ insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { token: "tok" }, error: null }) }) }) }),
-    });
-    expect(await createInvitation("c")).toBe("tok");
-  });
 });
 
 describe("api/account — roster du coach", () => {
