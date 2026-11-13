@@ -13,22 +13,8 @@ export function pos(x: unknown): number | null {
   return v != null && v > 0 ? v : null;
 }
 
-/** Régression linéaire y = a + b·x. null si moins de 2 points ou x constants. */
-export function linreg(points: ReadonlyArray<readonly [number, number]>): { a: number; b: number; r2: number; n: number } | null {
-  const n = points.length;
-  if (n < 2) return null;
-  const mx = points.reduce((s, p) => s + p[0], 0) / n;
-  const my = points.reduce((s, p) => s + p[1], 0) / n;
-  let sxy = 0, sxx = 0, syy = 0;
-  for (const [x, y] of points) {
-    sxy += (x - mx) * (y - my);
-    sxx += (x - mx) ** 2;
-    syy += (y - my) ** 2;
-  }
-  if (!(sxx > 0)) return null;
-  const b = sxy / sxx;
-  return { a: my - b * mx, b, r2: syy > 0 ? (sxy * sxy) / (sxx * syy) : 1, n };
-}
+/** Régression linéaire y = a + b·x (calcul partagé avec la vitesse critique). */
+export { linreg } from "@shared/domain/criticalSpeed";
 
 /** Interpolation linéaire par morceaux (extrapolation sur les segments extrêmes). */
 export function lin(x: number, xs: ReadonlyArray<number>, ys: ReadonlyArray<number>): number {

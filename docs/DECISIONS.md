@@ -2043,3 +2043,20 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   utilisateurs **fictifs** (`seed.sql`, `@example.invalid`).
 - Contrepartie : `schema.sql` est à rafraîchir après chaque migration appliquée
   (`supabase/tests/ci/README.md`).
+
+## 2026-11-13 — Vitesse critique : un calcul, trois sources, la plus récente
+
+- **Formule** (Monod-Scherrer / Jones, méthode Rivet) : distance (m) = VC (m/s) × durée (s) + D′ (m).
+  VC = pente de la régression linéaire distance / durée d'au moins deux efforts maximaux de durées
+  différentes ; D′ = ordonnée à l'origine. Un seul code : `_shared/domain/criticalSpeed.ts`
+  (`fitCriticalSpeed`), utilisé aussi par l'analyse des tests HYROX (`src/lib/hyrox/tests/running.ts`,
+  dont le `linreg` vient désormais du même fichier).
+- **Sources** : analyse de tests HYROX (1200 m / 6 min / 12 min, VC + seuil 1 du moteur), VC active du
+  profil sportif (`performance_logs` « VC »), courses des 90 derniers jours (meilleurs efforts de 3, 6 et
+  12 min d'affilée dans les séries seconde par seconde, fenêtre cassée par un trou > 10 s ou une vitesse
+  > 10 m/s ; ajustement retenu si R² ≥ 0,95).
+- **Choix (Hugo, 13/11)** : VC retenue = la plus récente entre test et saisie (même jour : la saisie).
+  La VC des courses est seulement **proposée** au coach (écart ≥ 0,3 km/h), jamais appliquée seule.
+- **Seuil 1** : celui du test ; pour une VC saisie, VC × 0,84 (facteur médian de la méthode Rivet,
+  `GridSet.running.s1_factor`).
+- Lecture seule, aucune migration. Sert à la charge YOXX : Zone 2 jusqu'à la VC, Zone 3 au-delà.

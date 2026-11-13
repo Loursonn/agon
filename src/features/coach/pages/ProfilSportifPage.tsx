@@ -19,6 +19,7 @@ import { WeightChart } from "@/components/athlete/StatsCharts";
 import { PRLogsSection } from "@/features/coach/components/PRLogsSection";
 import { useActiveReferences, useDeleteMeasurement, useSaveFcZones, useSetReference } from "@/features/shared/hooks/useReferences";
 import { ZoneModelPanel } from "@/features/coach/components/zones/ZoneModelPanel";
+import { CriticalSpeedProposal } from "@/features/coach/components/load/CriticalSpeedProposal";
 import { defaultFiveZoneMaxes, fiveZoneBounds } from "@shared/domain/hrZones";
 import { storedFcZones as pickFcZones } from "@/api/references";
 
@@ -788,6 +789,11 @@ export default function ProfilSportifPage() {
                   <VraDerivedCard vmax={vmax} vma={vma} />
                   {metricsOf("puissance").map((m) => renderMetric(m))}
                 </MetricGrid>
+                <CriticalSpeedProposal
+                  athleteId={athleteId!}
+                  saving={upsert.isPending}
+                  onUse={(v) => upsert.mutate({ metricName: "VC", value: v, unit: "km/h" })}
+                />
                 {(vma || ftp) && (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
                     {vma && (

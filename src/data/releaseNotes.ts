@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-vitesse-critique",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Vitesse critique : une seule, et une proposition tirée des courses",
+    summary: "Le profil sportif affiche la vitesse critique retenue (test ou saisie, la plus récente) et en propose une nouvelle à partir des courses de l'athlète.",
+    sections: [
+      {
+        title: "Profil sportif › Vitesse",
+        points: [
+          "Sous les références : la VC retenue, sa source (test ou saisie) et sa date, avec la vitesse au seuil 1 qui en découle.",
+          "Si les meilleurs efforts de 3, 6 et 12 min des courses des 90 derniers jours donnent une VC différente, elle vous est proposée : « Utiliser » l'enregistre, sinon rien ne change.",
+          "La même VC sert aux tests HYROX et, bientôt, à la charge d'entraînement (zones 2 et 3).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-coach-nouveautes-repliees",
     date: "2026-11-13",
     kind: "feature",

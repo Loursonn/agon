@@ -100,6 +100,9 @@ export function invalidateReferences(qc: QueryClient, athleteId: string): Promis
     qc.invalidateQueries({ queryKey: ["athleteTestResults", athleteId] }),
     qc.invalidateQueries({ queryKey: ["athleteCurrentValues", athleteId] }),
     qc.invalidateQueries({ queryKey: ["categoryTestSeries", athleteId] }),
+    // VC et charge YOXX lisent la VC du profil (`criticalSpeedKeys`, `loadKeys`).
+    qc.invalidateQueries({ queryKey: ["criticalSpeed", athleteId] }),
+    qc.invalidateQueries({ queryKey: ["load", athleteId] }),
   ]);
 }
 
