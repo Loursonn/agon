@@ -1,22 +1,4 @@
 # Échecs connus des tests SQL en CI, lus par run.mjs : signalés « ignoré (connu) », sans faire échouer le job.
 # Format : fichier.sql|début du libellé du cas|raison   (« * » = fichier entier, en dernier recours)
 # Chaque ligne est une dette à solder : corriger la base ou le script, puis retirer la ligne.
-
-# Propriété de données réelles de la prod (un nom de métrique personnalisé précis), sans équivalent fictif honnête.
-references_rpcs.sql|données: nom personnalisé gardé|vérifie une ligne réelle de la prod (performance_logs « Semi Bilbao »)
-
-# Script périmé : écrit avant 20261112200000_hr_zone_models_coach (enregistrement réservé au coach) ; il appelle
-# save_hr_zone_model en tant qu'athlète et s'arrête à la première ligne. hr_zone_models_coach.sql couvre le nouveau contrat.
-hr_zone_models.sql|*|script périmé : l'athlète n'enregistre plus de modèle de zones depuis hr_zone_models_coach (voir hr_zone_models_coach.sql)
-
-# Bug du script : le test 12 insère dans workout_logs avec le jwt de Coach B (posé au test 11) ; la RLS refuse,
-# à juste titre, et la transaction s'arrête avant finish(). À corriger dans le script (insérer avant de changer de jwt).
-rls_coach_isolation.sql|*|bug du script : INSERT workout_logs exécuté sous l'identité de Coach B (RLS refuse à juste titre)
-
-# Script dérivé : la section 5 crée un profil de test en postgres alors que le jwt de l'athlète est encore
-# posé (RESET ROLE ne l'efface pas) ; depuis la phase 2 de enforce_min_age_on_signup, un profil sans date de
-# naissance créé avec un auth.uid() est refusé, et toute la transaction s'arrête. À corriger dans le script
-# (vider request.jwt.claims ou donner une birth_date avant l'INSERT). Vérifié en CI (run 43331800498) sur une
-# copie avec le jwt vidé avant la section 5 : 59/60 cas verts, le 60e (W1) ne différait que par « f » au lieu
-# de « false » (concat_ws d'un booléen), écart que run.mjs accepte désormais.
-sante_tables.sql|*|script dérivé : profil de test sans date de naissance créé avec le jwt de l'athlète encore posé (refusé par enforce_min_age_on_signup)
+# Vide depuis le 2026-11-13 (régression zones, index des FK et 4 scripts corrigés).
