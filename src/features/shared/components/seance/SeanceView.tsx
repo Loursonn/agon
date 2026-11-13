@@ -372,7 +372,11 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
             <SectionTitle
               n="02"
               title={zoomLap !== null ? `${bike ? "Vitesse" : "Allure"} et FC · zoom sur le tour ${zoomLap + 1}` : hyrox ? "Allure et FC · picto au-dessus de chaque station" : `${bike ? "Vitesse" : "Allure"} ${noAlt ? "et FC" : ", FC et altitude"}`.replace(" ,", ",")}
-              right={hyrox && shown.some((l) => l.status === "proposed") ? <ProposalLegend review={review.length > 0} /> : "Clique sur un tour pour zoomer"}
+              right={hyrox && shown.some((l) => l.status === "proposed")
+                ? <ProposalLegend review={review.length > 0} />
+                : hyrox && shown.length
+                  ? `${shown.length} tours posés${shown.every((l) => l.origin === "agon_proposal") ? " automatiquement" : ""} · clique sur un tour pour zoomer`
+                  : "Clique sur un tour pour zoomer"}
             />
           )}
           {chartCard({
@@ -407,7 +411,15 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
             n="03"
             title={editing ? `Tours · le tour ${selected + 1} est sélectionné` : "Tours"}
             right={!editing && hasStream ? (
-              <button type="button" style={buttonStyle()} onClick={startEdit}><Pencil size={14} />{hyrox ? "Ajuster les tours" : "Modifier les tours"}</button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {hyrox && editActions.onResetProposal && !shown.some((l) => l.status === "proposed") && (
+                  // Planche HyroxCoachOrdi : rouvre l'édition sur la proposition d'Agon, rien n'est enregistré sans « Enregistrer ».
+                  <button type="button" style={buttonStyle()} onClick={() => { startEdit(); editActions.onResetProposal!(); }}>
+                    Revenir à la proposition d’Agon
+                  </button>
+                )}
+                <button type="button" style={buttonStyle()} onClick={startEdit}><Pencil size={14} />{hyrox && role === "athlete" ? "Ajuster les tours" : "Modifier les tours"}</button>
+              </div>
             ) : undefined}
           />
           <div style={{ display: "grid", gridTemplateColumns: editing && hyrox ? "minmax(0, 1fr) 340px" : "1fr", gap: 14, alignItems: "start" }}>

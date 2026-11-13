@@ -145,7 +145,7 @@ export function SeanceChartCard(props: Props) {
         speed={props.speed}
       />
 
-      {zoom && <Overview display={display} zoom={zoom} />}
+      {zoom && <Overview display={display} zoom={zoom} lapZoom={!!zoomedLap && !compact} />}
       {compact && !editing && (
         <div style={{ display: "flex", justifyContent: "center", gap: 18, fontSize: 11, color: C.tx3 }}>
           <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><ZoomIn size={12} /> 2 doigts : zoomer</span>
@@ -158,7 +158,7 @@ export function SeanceChartCard(props: Props) {
 }
 
 /** Vue d'ensemble sous un zoom : toute la FC, la partie affichée en or. */
-function Overview({ display, zoom }: { display: ActivityStream; zoom: { startS: number; endS: number } }) {
+function Overview({ display, zoom, lapZoom }: { display: ActivityStream; zoom: { startS: number; endS: number }; lapZoom: boolean }) {
   const t0 = display.t[0] ?? 0;
   const t1 = display.t[display.t.length - 1] ?? 1;
   const hr = display.hr ?? [];
@@ -183,7 +183,7 @@ function Overview({ display, zoom }: { display: ActivityStream; zoom: { startS: 
         <path d={d} fill="none" stroke={C.tx3} strokeWidth={1} vectorEffect="non-scaling-stroke" />
         <rect x={a} y={0} width={Math.max(2, b - a)} height={H} fill={alpha(C.ac, 0.18)} stroke={C.ac} vectorEffect="non-scaling-stroke" />
       </svg>
-      <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>Toute la séance · partie affichée en or</div>
+      <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>{lapZoom ? "Toute la séance · le tour zoomé est surligné" : "Toute la séance · partie affichée en or"}</div>
     </div>
   );
 }

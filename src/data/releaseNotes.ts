@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-seance-hyrox-coach",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance HYROX : revenir à la proposition d'Agon",
+    summary: "Sur l'onglet Séance d'une simulation HYROX, vous pouvez repartir du découpage proposé par Agon à tout moment.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Revenir à la proposition d'Agon » à côté de « Modifier les tours » : le découpage d'Agon s'ouvre en modification, rien n'est enregistré tant que vous ne cliquez pas sur « Enregistrer ».",
+          "Le graphique indique combien de tours sont posés et s'ils l'ont été automatiquement.",
+          "En zoom sur un tour, la mini-courbe dessous montre où se situe le tour dans la séance.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-import-export-garmin",
     date: "2026-11-13",
     kind: "feature",
