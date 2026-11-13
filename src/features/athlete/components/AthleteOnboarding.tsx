@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { AgonMark } from "@/features/shared/components/AgonMark";
 import { Check, Dumbbell, HeartPulse, Users } from "lucide-react";
 import { toast } from "sonner";
 import { markOnboarded } from "@/api/profile";
@@ -29,7 +30,7 @@ interface Props {
 function Logo() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <span style={{ width: 24, height: 24, boxSizing: "border-box", borderRadius: "50%", border: `1.5px solid ${C.ac}`, flex: "none" }} />
+      <AgonMark size={24} />
       <span style={{ ...DISPLAY, fontWeight: 400, fontSize: 12, letterSpacing: "0.32em", lineHeight: 1 }}>Agon</span>
     </div>
   );
@@ -133,7 +134,7 @@ export function AthleteOnboarding({ uid, firstName, coachName, saveWellness, onD
           <div style={{ position: "relative", width: 132, height: 132 }}>
             <span style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1.5px solid ${C.ac}` }} />
             <span style={{ position: "absolute", inset: 24, borderRadius: "50%", border: `1px solid ${alpha(C.tx, 0.18)}` }} />
-            <span style={{ position: "absolute", inset: 50, borderRadius: "50%", border: `1px dashed ${C.brd}` }} />
+            <span style={{ position: "absolute", inset: 42, display: "flex" }}><AgonMark size={48} /></span>
           </div>
         </div>
         <div style={{ marginTop: 26 }}>

@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-logo-agon",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Le vrai logo Agon à la connexion",
+    summary: "Sur la page de connexion, le premier lancement et les pages légales, le logo s'affichait comme un simple cercle doré. C'est maintenant le symbole Agon.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-athletes-ordi",
     date: "2026-11-13",
     kind: "feature",

@@ -4,6 +4,7 @@ import { C, alpha } from "@/lib/theme";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { LEGAL_ROUTES } from "@/lib/legal";
 import { AUTH_LABEL } from "./authStyles";
+import { AgonMark } from "@/features/shared/components/AgonMark";
 
 /**
  * Briques des pages d'accès (planches AccesConnexion / AccesPagesSimples) :
@@ -14,7 +15,7 @@ export function AuthLogo({ subtitle, size = "big" }: { subtitle?: string; size?:
   const big = size === "big";
   return (
     <div style={{ display: "flex", flexDirection: big ? "column" : "row", alignItems: "center", gap: big ? 14 : 10 }}>
-      <span style={{ width: big ? 56 : 24, height: big ? 56 : 24, boxSizing: "border-box", borderRadius: "50%", border: `1.5px solid ${C.ac}`, flex: "none" }} />
+      <AgonMark size={big ? 56 : 24} />
       <div style={{ textAlign: big ? "center" : "left" }}>
         <div style={{ ...DISPLAY, fontWeight: 400, fontSize: big ? 22 : 12, letterSpacing: "0.32em", lineHeight: 1, textTransform: "uppercase" }}>Agon</div>
         {subtitle && <div style={{ fontSize: 13, color: C.tx2, marginTop: big ? 8 : 2 }}>{subtitle}</div>}

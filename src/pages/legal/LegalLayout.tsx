@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AgonMark } from "@/features/shared/components/AgonMark";
 import { Link, useLocation } from "react-router-dom";
 import { legalSlug } from "./legalSlug";
 import {
@@ -197,7 +198,7 @@ export default function LegalLayout({
         {/* En-tête : logo, « Informations légales », onglets (planche AccesPagesSimples) */}
         <header style={{ padding: "28px 0 20px", marginBottom: 24 }}>
           <Link to="/login" style={{ display: "inline-flex", alignItems: "center", gap: 10, color: S.tx, textDecoration: "none" }}>
-            <span style={{ width: 24, height: 24, boxSizing: "border-box", borderRadius: "50%", border: `1.5px solid ${S.ac}` }} />
+            <AgonMark size={24} />
             <span style={{ fontFamily: "var(--agon-font-display)", fontSize: 12, letterSpacing: "0.32em", textTransform: "uppercase" }}>Agon</span>
           </Link>
           <div style={{ fontSize: 13, color: S.tx2, margin: "18px 0 10px" }}>Informations légales</div>
