@@ -361,7 +361,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
             <SectionTitle
               n="02"
               title={zoomLap !== null ? `${bike ? "Vitesse" : "Allure"} et FC · zoom sur le tour ${zoomLap + 1}` : hyrox ? "Allure et FC · picto au-dessus de chaque station" : `${bike ? "Vitesse" : "Allure"} ${noAlt ? "et FC" : ", FC et altitude"}`.replace(" ,", ",")}
-              right="Clique sur un tour pour zoomer"
+              right={hyrox && shown.some((l) => l.status === "proposed") ? <ProposalLegend review={review.length > 0} /> : "Clique sur un tour pour zoomer"}
             />
           )}
           {chartCard({
@@ -444,6 +444,18 @@ function describeKinds(kinds: readonly string[], names: string[]): string | null
   const stationNames = [...new Set(names.filter((_, i) => kinds[i] === "station").map((n) => n.replace(/\s+\d+$/, "").toLowerCase()))];
   if (!runs && !stationNames.length) return null;
   return [runs ? `${runs} × course` : null, ...stationNames].filter(Boolean).join(", ");
+}
+
+/** Légende du graphe HYROX quand des tours sont proposés (planche HyroxAthleteOrdi). */
+function ProposalLegend({ review }: { review: boolean }) {
+  const item = { display: "inline-flex", alignItems: "center", gap: 6 } as const;
+  return (
+    <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 14, fontSize: 11.5, color: C.tx3 }}>
+      <span style={item}><svg width="14" height="12" aria-hidden><line x1="7" x2="7" y1="0" y2="12" stroke={alpha(C.tx, 0.5)} /></svg>Tour validé : trait plein</span>
+      <span style={item}><svg width="14" height="12" aria-hidden><line x1="7" x2="7" y1="0" y2="12" stroke={C.o} strokeDasharray="3 3" /></svg>Tour proposé : pointillés, nom en <i>italique</i></span>
+      {review && <span style={item}><svg width="14" height="12" aria-hidden><rect x="1" y="1" width="12" height="10" fill="none" stroke={C.ac} strokeDasharray="4 3" /></svg>Limite à vérifier</span>}
+    </span>
+  );
 }
 
 function SectionTitle({ n, title, right }: { n: string; title: string; right?: ReactNode }) {
