@@ -6,6 +6,7 @@
 import { STATION_META, type HyroxResult, type StationKey } from "@/features/shared/types/hyrox";
 import type { RaceWatchAnalysis } from "@/lib/hyrox/raceWatch";
 import { fmtClock, fmtPace } from "@/lib/seance";
+import { roxzoneTotal, runTotal, stationsTotal } from "@/lib/hyrox/calc";
 
 export interface ShareCardInput {
   race: HyroxResult;
@@ -183,14 +184,13 @@ export function drawShareCard(canvas: HTMLCanvasElement, input: ShareCardInput):
     ctx.textAlign = "left";
   });
 
-  // Totaux
   y = 1560;
-  const runSum = [1, 2, 3, 4, 5, 6, 7, 8].reduce((n, i) => n + ((race as unknown as Record<string, number | null>)[`run_${i}_s`] ?? 0), 0);
-  const stSum = STATION_ORDER.reduce((n, k) => n + ((race as unknown as Record<string, number | null>)[`${k}_s`] ?? 0), 0);
+  // Totaux de la planche : « Course 38:55 · Stations 33:30 · Roxzone 6:17 » (absent → « — »).
+  const runSum = runTotal(race);
   const totals: Array<[string, string]> = [
-    ["Course", fmtClock(runSum || null)],
-    ["Stations", fmtClock(stSum || null)],
-    ["Roxzone", fmtClock(race.roxzone_total_s)],
+    ["Course", fmtClock(runSum)],
+    ["Stations", fmtClock(stationsTotal(race))],
+    ["Roxzone", fmtClock(roxzoneTotal(race))],
   ];
   const tw = (W - 2 * pad) / 3;
   totals.forEach(([label, v], i) => {
@@ -205,7 +205,7 @@ export function drawShareCard(canvas: HTMLCanvasElement, input: ShareCardInput):
   // Pied
   ctx.fillStyle = p.tx3;
   ctx.font = font(500, 28, true);
-  if (runSum) ctx.fillText(`Allure moy. ${fmtPace(runSum / 8)} /km`, pad, H - 150);
+  if (runSum != null) ctx.fillText(`Allure moy. ${fmtPace(runSum / 8)} /km`, pad, H - 150);
   if (input.coachName) {
     ctx.textAlign = "right";
     ctx.fillStyle = p.tx2;

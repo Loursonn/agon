@@ -174,7 +174,9 @@ export default function SpecificExecutionPage() {
   const sessionName = session.name;
 
   const doneBlocks = blocks.filter((b) => (isWodBlock(b) ? wodDone.has(b.id) : b.items.length > 0 && b.items.every((it) => itemChecks[it.id]))).length;
-  const classiqueProgress = `Bloc ${Math.min(doneBlocks + 1, blocks.length)} / ${blocks.length}`;
+  // Pas de champ « sport » lisible ici : le libellé HYROX se déduit du nom / du type perso.
+  const typeLabel = /hyrox/i.test(`${session.custom_kind ?? ""} ${sessionName}`) ? "HYROX" : "Spécifique";
+  const classiqueProgress = `${typeLabel} · Bloc ${Math.min(doneBlocks + 1, blocks.length)} / ${blocks.length}`;
 
   // ── End submit ──────────────────────────────────────────────────────────
   async function handleEndSubmit(data: { rpe: number; respected: boolean; comment: string }) {
@@ -230,7 +232,8 @@ export default function SpecificExecutionPage() {
           ← Retour
         </button>
 
-        <h1 className="mb-agon-sm font-display text-agon-2xl font-bold">{sessionName}</h1>
+        <h1 className={cn("font-display text-agon-2xl font-bold", isClassique ? "mb-agon-xs" : "mb-agon-sm")}>{sessionName}</h1>
+        {isClassique && <div className="mb-agon-sm text-agon-sm text-agon-tx2">{typeLabel} · Format classique</div>}
 
         <div className="mb-agon-lg flex flex-wrap gap-agon-sm">
           <span className={cn(PILL, "border-agon-alerte/30 bg-agon-alerte/10 text-agon-alerte")}>Spécifique</span>

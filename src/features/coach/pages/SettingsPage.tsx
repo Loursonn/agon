@@ -169,7 +169,7 @@ export default function SettingsPage() {
           <CoachApiKeysSection />
 
           {/* Confidentialité & données — mêmes droits RGPD que côté athlète */}
-          <PrivacySection />
+          <PrivacySection coach />
 
           <button
             type="button"

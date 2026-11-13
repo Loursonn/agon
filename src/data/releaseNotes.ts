@@ -38,6 +38,38 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-ecrans-alignes-maquettes",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Santé, HYROX, Paramètres : les écrans suivent les nouvelles maquettes",
+    summary: "Plusieurs pages ont été complétées pour coller aux maquettes : santé de l'athlète plus complète, analyse de course HYROX plus détaillée, Paramètres et Avis athlètes plus lisibles.",
+    sections: [
+      {
+        title: "Santé d'un athlète",
+        points: [
+          "Retours › Santé ajoute « Wellness déclaré » (la note du jour, les réponses qui contredisent la montre) et « Ressenti et mesuré » sur 28 jours, en sommeil, énergie ou sérénité.",
+          "Sur téléphone, « Détails sur 28 jours » ouvre directement la mesure qui sort de la normale.",
+        ],
+      },
+      {
+        title: "HYROX",
+        points: [
+          "Analyse d'une course : fil d'Ariane, position course et stations, cadence qui chute, tableau des segments avec la position et le coût sur le run suivant.",
+          "Onglet Gains : une cascade montre le chrono actuel, ce que chaque station peut faire gagner, et le chrono possible.",
+          "Bilan : la part du temps en course, stations et Roxzone par course, et la position de l'athlète station par station.",
+        ],
+      },
+      {
+        title: "Ailleurs",
+        points: [
+          "Paramètres : « Données et confidentialité » ouvert, export en un clic, zone de suppression du compte clairement signalée, date de dernière utilisation de ta clé d'assistant IA.",
+          "Avis athlètes : initiales, page concernée en clair, compteur de nouveaux retours.",
+          "Éditeur de séance énergétique : la VMA et les seuils de l'athlète utilisés pour l'estimation s'affichent sous le profil.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-mot-de-passe-8-caracteres",
     date: "2026-11-13",
     kind: "fix",

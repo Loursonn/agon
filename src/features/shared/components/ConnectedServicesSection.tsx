@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
+import { relativeSince } from "@/lib/relativeSince";
 import { ActivityFileImport } from "@/features/shared/components/ActivityFileImport";
 import {
   CONSENT_COPY,
@@ -45,6 +46,7 @@ import {
  */
 
 const PROVIDER_LABEL: Record<ProviderName, string> = { coros: "COROS", garmin: "Garmin" };
+const PROVIDER_VIA: Record<ProviderName, string> = { coros: "Via ton compte COROS", garmin: "Via ton compte Garmin Connect" };
 
 type Outcome = { kind: "success" | "warning" | "error"; title: string; detail?: string };
 
@@ -121,7 +123,7 @@ const fmtDate = (iso: string) =>
   qui demande une action de l'athlète s'affichait comme « undefined ».
 */
 const STATUS_COPY: Record<ProviderConnection["status"], { label: string; tone: "ok" | "warn" | "bad" }> = {
-  active: { label: "Connecté", tone: "ok" },
+  active: { label: "Connectée", tone: "ok" },
   needs_reauth: { label: "Reconnexion nécessaire", tone: "warn" },
   consent_withdrawn: { label: "Accord retiré", tone: "bad" },
   revoked: { label: "Accès révoqué", tone: "bad" },
@@ -189,7 +191,10 @@ export function ProviderCards() {
             <span style={{ width: 36, height: 36, borderRadius: 10, background: C.s2, border: "1px solid " + C.brd, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--agon-font-data)", fontSize: 10.5, color: C.tx2, flex: "none" }}>
               {p === "garmin" ? "GRM" : "CRS"}
             </span>
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{PROVIDER_LABEL[p]}</span>
+            <span style={{ flex: 1 }}>
+              <span style={{ display: "block", fontSize: 14, fontWeight: 500 }}>{PROVIDER_LABEL[p]}</span>
+              <span style={{ display: "block", fontSize: 11.5, color: C.tx3, marginTop: 2 }}>{PROVIDER_VIA[p]}</span>
+            </span>
           </div>
           <InCard.Provider value>
             {p === "garmin" ? <GarminRow connection={garmin} /> : <CorosRow connection={coros} />}
@@ -380,9 +385,9 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
         </div>
 
         <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
-          Connecté le {fmtDate(connection.connectedAt)}
+          Connectée le {fmtDate(connection.connectedAt)}
           {connection.lastSyncAt
-            ? ` · dernière synchronisation le ${fmtDate(connection.lastSyncAt)}`
+            ? ` · dernière synchro ${relativeSince(connection.lastSyncAt) ?? `le ${fmtDate(connection.lastSyncAt)}`}`
             : " · première synchronisation en attente"}
           {connection.syncedThrough && ` · historique récupéré jusqu'au ${fmtDate(connection.syncedThrough)}`}
         </div>
@@ -475,7 +480,7 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
         disabled={!pretAConnecter || busy}
         style={{ padding: "11px 0", borderRadius: 6, border: "1px solid " + (pretAConnecter ? C.g + "40" : C.brd), background: pretAConnecter ? C.gS : C.s2, color: pretAConnecter ? C.g : C.tx3, fontSize: 12, fontWeight: 600, cursor: pretAConnecter && !busy ? "pointer" : "not-allowed", opacity: pretAConnecter ? 1 : 0.6, fontFamily: "inherit" }}
       >
-        {busy ? "Redirection vers COROS…" : "Connecter mon compte COROS"}
+        {busy ? "Redirection vers COROS…" : consentGranted ? "Connecter" : "Connecter mon compte COROS"}
       </button>
     </div>
   );
@@ -722,15 +727,18 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
           <div style={{ fontSize: 11, color: tone }}>{status.label}</div>
         </div>
         <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
-          Connecté le {fmtDate(connection.connectedAt)}
+          Connectée le {fmtDate(connection.connectedAt)}
           {connection.lastSyncAt
-            ? ` · dernière donnée reçue le ${fmtDate(connection.lastSyncAt)}`
+            ? ` · dernière synchro ${relativeSince(connection.lastSyncAt) ?? `le ${fmtDate(connection.lastSyncAt)}`}`
             : " · aucune donnée reçue pour l'instant"}
         </div>
         {connection.lastError && (
           <div style={{ fontSize: 11, color: C.r, background: C.rS, border: "1px solid " + C.r + "30", borderRadius: 6, padding: "8px 10px", lineHeight: 1.5 }}>
             {connection.lastError}
           </div>
+        )}
+        {connection.status === "active" && (
+          <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45 }}>Activités, sommeil, VFC, FC de repos, stress.</div>
         )}
         {connection.status === "active" && <WorkoutPushBlock connection={connection} />}
         {connection.status === "active" ? historique : (

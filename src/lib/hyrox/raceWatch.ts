@@ -457,3 +457,84 @@ export function defaultRaceOffset(stream: ActivityStream | null, totalS: number)
   const end = stream.t[stream.t.length - 1];
   return end - totalS > 120 ? Math.max(0, Math.round(end - totalS)) : 0;
 }
+
+// ───────────────────── Compléments de l'analyse (13/11) ─────────────────────
+
+/** Station juste avant un segment (libellé), ou `null` pour le run 1. */
+function stationBefore(a: RaceWatchAnalysis, s: SegmentWatch): string | null {
+  const i = a.segments.indexOf(s);
+  for (let j = i - 1; j >= 0; j--) if (a.segments[j].kind === "station") return a.segments[j].label;
+  return null;
+}
+
+/**
+ * Chute de cadence : runs 2 à 8 comparés au run 1 (pas/min). Rend les deux
+ * plus fortes baisses, ou `null` si la cadence ne baisse jamais.
+ */
+export function cadenceDrop(a: RaceWatchAnalysis): {
+  freshCadence: number;
+  worst: { key: string; after: string | null; drop: number };
+  next: { key: string; after: string | null; drop: number } | null;
+} | null {
+  const runs = a.segments.filter((s) => s.kind === "run");
+  const fresh = runs[0]?.avgCadence;
+  if (fresh == null) return null;
+  const drops = runs.slice(1)
+    .filter((s) => s.avgCadence != null)
+    .map((s) => ({ key: s.key, after: stationBefore(a, s), drop: fresh - (s.avgCadence as number) }))
+    .filter((d) => d.drop > 0)
+    .sort((x, y) => y.drop - x.drop);
+  if (drops.length === 0) return null;
+  return { freshCadence: fresh, worst: drops[0], next: drops[1] ?? null };
+}
+
+/**
+ * Part des secondes mesurées au-dessus d'un seuil de FC sur les segments
+ * retenus (`% Z3` du tableau). `null` sans série, sans seuil ou sans mesure.
+ */
+export function shareAboveHr(
+  a: RaceWatchAnalysis,
+  stream: ActivityStream | null,
+  thresholdBpm: number | null,
+  offsetS: number,
+  keep: (s: SegmentWatch) => boolean,
+): number | null {
+  if (!stream || !stream.hr || thresholdBpm == null) return null;
+  let above = 0;
+  let measured = 0;
+  for (const s of a.segments) {
+    if (!keep(s)) continue;
+    const w = window(stream, stream.hr, offsetS + s.startS, offsetS + s.endS);
+    above += w.vals.filter((v) => v > thresholdBpm).length;
+    measured += w.vals.length;
+  }
+  return measured ? above / measured : null;
+}
+
+/** Coût d'une station sur le run qui la suit : allure du run suivant − allure du run 1 (s/km). */
+export function runCostAfter(a: RaceWatchAnalysis): Record<string, number> {
+  const out: Record<string, number> = {};
+  a.segments.forEach((s, i) => {
+    if (s.kind !== "station") return;
+    const next = a.segments.slice(i + 1).find((x) => x.kind === "run");
+    if (next) out[s.key] = Math.round(next.officialS - a.freshPaceSPerKm);
+  });
+  return out;
+}
+
+/** Course compromise à partir des seuls temps (sans montre) : sert à comparer les courses. */
+export function compromisedFromTimes(r: HyroxResult): ReturnType<typeof compromisedRunning> {
+  const a = crossRaceWithWatch(r, null);
+  return a ? compromisedRunning(a) : null;
+}
+
+/**
+ * Stations au niveau de la médiane ou devant : médiane connue et absentes de
+ * la cascade des gains. Dans l'ordre de la course.
+ */
+export function stationsAtLevel(r: HyroxResult, median: MedianLookup, gains: { items: GainItem[] }): string[] {
+  const behind = new Set(gains.items.map((g) => g.key));
+  return (Object.keys(STATION_META) as StationKey[])
+    .filter((k) => !behind.has(k) && segValue(r, k) != null && median(k) != null)
+    .map((k) => STATION_META[k].label);
+}

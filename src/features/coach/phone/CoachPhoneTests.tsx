@@ -7,9 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAthleteTestResults, useCreateTestResult } from "@/features/shared/hooks/tests/useAthleteTests";
 import { useTestDefinitions } from "@/features/shared/hooks/tests/useTestDefinitions";
-import { listTestSessions, testKeys } from "@/api/tests";
+import { listTestSessions, pickDefinitionByName, testKeys } from "@/api/tests";
 import {
-  TEST_GROUP_COLOR, TEST_GROUP_LABEL, buildTestValueCards, displayUnit, fmtTestDate, formatTestDelta, formatTestValue, groupTestCards,
+  TEST_GROUP_COLOR, TEST_GROUP_LABEL, buildTestValueCards, displayUnit, fmtTestDate, formatTestDelta, formatTestValue, groupTestCards, testGroupOf,
   type TestValueCard,
 } from "@/lib/athleteTestValues";
 import { TestDetailView } from "@/features/athlete/components/tests/TestDetailView";
@@ -27,9 +27,17 @@ import { CARD, Chevron, DISPLAY, KICKER, MONO, PhoneButton, PhonePage, Section, 
 export default function CoachPhoneTests() {
   const { athleteId = "" } = useParams<{ athleteId: string }>();
   const { athleteProfile } = useAthleteContext();
+  const { user } = useAuth();
   const first = (athleteProfile?.first_name || athleteProfile?.full_name?.split(" ")[0] || "l’athlète").trim();
   const today = localIsoDay();
   const { data: results = [], isLoading, isError } = useAthleteTestResults(athleteId);
+  const { data: defs = [] } = useTestDefinitions(user?.id ?? "");
+  /** Domaine d'un test prévu (« Endurance »), retrouvé par son nom dans la banque. */
+  const domainOf = (title: string) => {
+    const def = pickDefinitionByName(defs as TestDefinitionWithVariables[], title);
+    const g = def ? testGroupOf(def) : null;
+    return g && g !== "autres" ? TEST_GROUP_LABEL[g] : null;
+  };
   const sessionsQ = useQuery({ queryKey: testKeys.sessions(athleteId), enabled: !!athleteId, queryFn: () => listTestSessions(athleteId) });
   const planned = (sessionsQ.data ?? []).filter((s) => !s.completed && s.date >= today).slice(0, 6);
   const groups = useMemo(() => groupTestCards(buildTestValueCards(results)), [results]);
@@ -69,7 +77,10 @@ export default function CoachPhoneTests() {
                 <span style={{ ...MONO, width: 52, flex: "none", fontSize: 11.5, color: TYPE_COLOR.test }}>
                   {new Date(t.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}
                 </span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+                  {domainOf(t.title) && <span style={{ display: "block", fontSize: 11.5, color: C.tx3 }}>{domainOf(t.title)}</span>}
+                </span>
                 <span style={{ fontSize: 12, color: C.ac }}>Saisir</span>
               </button>
             ))}
@@ -173,7 +184,7 @@ function FreeTestEntry({ athleteId, first, onClose }: { athleteId: string; first
         <span style={{ fontSize: 11.5, color: C.tx3 }}>Test</span>
         <select value={defId} onChange={(e) => { setDefId(e.target.value); setVals({}); }} style={field}>
           <option value="">Choisir un test…</option>
-          {(defs as TestDefinitionWithVariables[]).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          {(defs as TestDefinitionWithVariables[]).map((d) => <option key={d.id} value={d.id}>{d.name}{testGroupOf(d) !== "autres" ? ` · ${TEST_GROUP_LABEL[testGroupOf(d)]}` : ""}</option>)}
         </select>
       </label>
       <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>

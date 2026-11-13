@@ -5,14 +5,17 @@ import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
 import {
   percentile, runTotal, stationsTotal, roxzoneTotal, bracketOf, typology,
-  runStats, shares, stationPriorities, formatAvgPerRun, type RefLookup,
+  runStats, shares, stationPriorities, type RefLookup,
 } from "@/lib/hyrox/calc";
 import {
-  STATION_KEYS, STATION_META, SEGMENT_LABEL, REFERENCE_DIVISION, RUN_KEYS,
+  STATION_KEYS, STATION_META, SEGMENT_LABEL, REFERENCE_DIVISION, DIVISION_LABEL,
   type StationKey, type HyroxDivision,
 } from "@/features/shared/types/hyrox";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
 import { formatMmSs, formatDelta } from "@/lib/time";
+import { segmentPositions } from "@/lib/hyrox/raceEvolution";
+import BilanTimeSplit from "./BilanTimeSplit";
+import BilanStationPositions from "./BilanStationPositions";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 const PROFILE_LABEL = { runner: "Runner", hybrid: "Hybride", powerhouse: "Powerhouse" };
@@ -150,6 +153,9 @@ export default function BilanView() {
   const strengths = sorted.slice(0, 3);
   const weaknesses = sorted.slice(-3).reverse();
 
+  // Position par station, course après course
+  const positions = segmentPositions(chronological, refLookup);
+
   // Pacing (latest race)
   const latestRunStats = runStats(latest);
   const latestShares = shares(latest);
@@ -214,6 +220,9 @@ export default function BilanView() {
         </div>
       )}
 
+      {/* ── Où passe le temps + course compromise (HyroxAnaCoachEvolution, 02) ─ */}
+      <BilanTimeSplit races={chronological} />
+
       {/* ── Forces & Faiblesses ───────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
         <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 14px" }}>
@@ -236,43 +245,9 @@ export default function BilanView() {
         </div>
       </div>
 
-      {/* ── Segment evolution table ───────────────────────────────── */}
-      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden", marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, padding: "10px 12px 6px" }}>Évolution par segment</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid " + C.brd, color: C.tx3, fontSize: 10 }}>
-              <th style={{ padding: "6px 8px", textAlign: "left" }}>Segment</th>
-              <th style={{ padding: "6px 8px", textAlign: "right" }}>Dernier</th>
-              <th style={{ padding: "6px 8px", textAlign: "right" }}>Moy. %ile</th>
-              <th style={{ padding: "6px 8px", textAlign: "right" }}>Meilleur %ile</th>
-              <th style={{ padding: "6px 8px", textAlign: "center" }}>Tendance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summaries.map(s => (
-              <tr key={s.key} style={{ borderBottom: "1px solid " + C.brd }}>
-                <td style={{ padding: "6px 8px", color: C.tx }}>{s.label}</td>
-                <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx }}>
-                  {formatMmSs(s.latestVal)}
-                  {s.key === "run_total" && s.latestVal != null && (
-                    <div style={{ fontSize: 9, color: C.tx3 }}>{formatAvgPerRun(s.latestVal / RUN_KEYS.length)}</div>
-                  )}
-                </td>
-                <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: pctColor(s.avgPct) }}>
-                  Top {s.avgPct} %
-                </td>
-                <td style={{ padding: "6px 8px", textAlign: "right", color: pctColor(s.bestPct) }}>
-                  Top {s.bestPct} %
-                </td>
-                <td style={{ padding: "6px 8px", textAlign: "center", fontWeight: 700, color: TREND_COLOR[s.trend] }}>
-                  {TREND_ICON[s.trend]}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* ── Position par station (planche HyroxAnaCoachEvolution, 03) ─ */}
+      <BilanStationPositions rows={positions} races={chronological} pctColor={pctColor}
+        refText={`${DIVISION_LABEL[latest.division as HyroxDivision] ?? refDiv}, tranche de chrono de chaque course`} />
 
       {/* ── Coach auto-assessment ─────────────────────────────────── */}
       <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px" }}>

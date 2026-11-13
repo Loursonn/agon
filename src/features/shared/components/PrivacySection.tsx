@@ -29,11 +29,16 @@ const OPTIONAL_PURPOSES: ConsentPurpose[] = ["ai_programming", "staff_sharing", 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
-export function PrivacySection() {
+/**
+ * `coach` : version des Paramètres coach (planche CoachOrdiBParametres) — carte ouverte
+ * par défaut, titre « Données et confidentialité », accord en une ligne, export en une
+ * ligne et zone danger titrée. Sans cette prop, rendu athlète inchangé.
+ */
+export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
   const { user, profile } = useAuth();
   // Le partage avec un staff ne concerne que les comptes qui ont des données d'athlète.
   const isAthlete = profile?.role === "athlete" || profile?.role === "coach_athlete";
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(coach);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: consents, isLoading } = useConsents();
@@ -77,7 +82,7 @@ export function PrivacySection() {
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit" }}
       >
         <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-          Confidentialité &amp; données
+          {coach ? "Données et confidentialité" : <>Confidentialité &amp; données</>}
         </div>
         <span style={{ fontSize: 12, color: C.tx3, display: "inline-block", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }}>∨</span>
       </button>
@@ -89,7 +94,16 @@ export function PrivacySection() {
           ) : (
             <>
               {/* ── Accord socle : informatif, car le retirer = quitter le service ── */}
-              {core && (
+              {core && coach && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Traitement de tes données de santé</div>
+                    <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>Accord donné le {fmtDate(core.decidedAt)}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.g, background: C.gS, border: "1px solid " + C.g + "50", borderRadius: 999, padding: "2px 10px" }}>Accordé</span>
+                </div>
+              )}
+              {core && !coach && (
                 <div style={{ background: C.s2, borderRadius: 6, padding: "12px 14px" }}>
                   <div style={{ fontSize: 12, color: C.tx, fontWeight: 600, marginBottom: 4 }}>
                     Traitement de tes données de santé
@@ -141,6 +155,21 @@ export function PrivacySection() {
               </div>
 
               {/* ── Export ── */}
+              {coach ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Exporter mes données</div>
+                    <div style={{ fontSize: 11, color: C.tx3, marginTop: 2, lineHeight: 1.45 }}>Tout ce qu'Agon détient à ton sujet, dans un fichier lisible.</div>
+                  </div>
+                  <button
+                    onClick={runExport}
+                    disabled={exportData.isPending}
+                    style={{ padding: "8px 14px", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: exportData.isPending ? "wait" : "pointer", fontFamily: "inherit", flexShrink: 0 }}
+                  >
+                    {exportData.isPending ? "Préparation…" : "Télécharger (JSON)"}
+                  </button>
+                </div>
+              ) : (
               <div>
                 <button
                   onClick={runExport}
@@ -154,6 +183,7 @@ export function PrivacySection() {
                   ailleurs.
                 </div>
               </div>
+              )}
 
               {/* ── Documents ── */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 11 }}>
@@ -164,6 +194,14 @@ export function PrivacySection() {
 
               {/* ── Suppression ── */}
               <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14 }}>
+                {coach && (
+                  <>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Zone danger</div>
+                    <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45, marginBottom: 10 }}>
+                      Irréversible : ton compte et tes données sont effacés. Il faudra taper SUPPRIMER pour confirmer.
+                    </div>
+                  </>
+                )}
                 <button
                   onClick={() => setConfirmDelete(true)}
                   style={{ width: "100%", padding: "11px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}

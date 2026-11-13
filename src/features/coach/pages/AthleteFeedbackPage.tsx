@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { C } from "@/lib/theme";
+import { initials } from "@/lib/initials";
+import { feedbackPageLabel } from "@/lib/feedbackPage";
 import {
   useAppFeedbackList, useUpdateAppFeedbackStatus, useDeleteAppFeedback,
   FEEDBACK_KIND_LABEL, FEEDBACK_STATUS_LABEL,
@@ -24,9 +26,15 @@ function authorName(r: AppFeedbackRow): string {
   return [a.first_name, a.last_name].filter(Boolean).join(" ") || a.full_name || "Athlète";
 }
 
+/** « 12 nov. · 08:41 » */
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const d = new Date(iso);
+  const day = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return `${day} · ${time}`;
 }
+
+const FILTER_LABEL: Record<Filter, string> = { new: "Nouveaux", in_progress: "En cours", done: "Faits", all: "Tous" };
 
 export default function AthleteFeedbackPage() {
   const { data = [], isLoading, error } = useAppFeedbackList();
@@ -44,9 +52,16 @@ export default function AthleteFeedbackPage() {
 
   return (
     <div style={{ padding: "24px 20px", maxWidth: 860, margin: "0 auto" }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color: C.tx }}>Avis athlètes</div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: C.tx, flex: 1 }}>Avis athlètes</div>
+        {!isLoading && !error && (
+          <div style={{ fontSize: 12, color: C.tx3 }}>
+            {data.length} retour{data.length > 1 ? "s" : ""} · {counts.new} nouveau{counts.new > 1 ? "x" : ""}
+          </div>
+        )}
+      </div>
       <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 18 }}>
-        Bugs et idées envoyés depuis l'app athlète (Mon profil → Signaler un bug / une idée).
+        Bugs et idées envoyés depuis l'app athlète (Mon profil → Signaler un bug / une idée). Visible par l'admin et les coachs certifiés.
       </div>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
@@ -60,7 +75,8 @@ export default function AthleteFeedbackPage() {
               fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
             }}
           >
-            {f === "all" ? "Tous" : FEEDBACK_STATUS_LABEL[f]} · {counts[f]}
+            {FILTER_LABEL[f]}
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 999, background: filter === f ? C.ac + "28" : C.s2, color: filter === f ? C.ac : C.tx3 }}>{counts[f]}</span>
           </button>
         ))}
       </div>
@@ -76,14 +92,18 @@ export default function AthleteFeedbackPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {rows.map(r => (
-            <div key={r.id} style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "14px 16px" }}>
+            <div key={r.id} style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div aria-hidden style={{ width: 34, height: 34, borderRadius: "50%", background: C.s2, border: "1px solid " + C.brd, color: C.tx2, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {initials(authorName(r))}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: KIND_COLOR[r.kind], background: KIND_COLOR[r.kind] + "18", padding: "2px 8px", borderRadius: 5 }}>
                   {FEEDBACK_KIND_LABEL[r.kind]}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{authorName(r)}</span>
                 <span style={{ fontSize: 11, color: C.tx3 }}>{fmtDate(r.created_at)}</span>
-                {r.page && <span style={{ fontSize: 11, color: C.tx3 }}>· {r.page}</span>}
+                {r.page && <span style={{ fontSize: 11, color: C.tx3 }}>· {feedbackPageLabel(r.page)}</span>}
               </div>
               <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap", marginBottom: 12 }}>{r.content}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -109,6 +129,7 @@ export default function AthleteFeedbackPage() {
                 >
                   <Trash2 size={15} />
                 </button>
+              </div>
               </div>
             </div>
           ))}

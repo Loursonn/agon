@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import AthleteSantePage from "@/features/athlete/pages/AthleteSantePage";
+import { DeclaredWellness } from "@/features/coach/components/sante/DeclaredWellness";
+import { FeltMeasuredChart } from "@/features/coach/components/sante/FeltMeasuredChart";
+import { SanteKicker } from "@/features/coach/components/sante/SanteParts";
 import { FeltVsMeasured } from "@/features/coach/components/FeltVsMeasured";
 import { CoachWellnessPanel } from "@/features/coach/components/retours/CoachWellnessPanel";
 import {
@@ -256,15 +259,17 @@ export default function RetoursPage() {
           coachView={{ firstName }}
           top={
             <section style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
-              <div style={{ fontFamily: "var(--agon-font-data)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2 }}>
-                <span style={{ color: C.ac }}>01 —</span> Ressenti / mesuré · ce matin
-              </div>
+              <SanteKicker n={1}>Ressenti / mesuré · ce matin</SanteKicker>
               <div style={{ fontSize: 12.5, color: C.tx3 }}>Ce que {firstName} déclare face à ce que mesure sa montre.</div>
               <FeltVsMeasured athleteId={athleteId} firstName={firstName} />
-              <div style={{ fontFamily: "var(--agon-font-data)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2, marginTop: 14 }}>
-                <span style={{ color: C.ac }}>02 —</span> Mesures de la montre
-              </div>
+              <SanteKicker n={2} style={{ marginTop: 14 }}>Mesures de la montre</SanteKicker>
             </section>
+          }
+          bottom={
+            <>
+              <DeclaredWellness athleteId={athleteId} firstName={firstName} n={3} onOpenWellness={() => setTab("bienetre")} />
+              <FeltMeasuredChart athleteId={athleteId} n={4} />
+            </>
           }
         />
       </div>

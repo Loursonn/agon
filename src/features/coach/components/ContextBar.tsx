@@ -57,9 +57,9 @@ const SUB_TABS: Record<string, { key: string; label: string }[]> = {
     { key: "bilan",    label: "Bilan"             },
     { key: "courses",  label: "Courses"           },
     { key: "stations", label: "Stations"          },
-    { key: "runs",     label: "Runs et Roxzone"   },
+    { key: "runs",     label: "Runs"              },
     { key: "radar",    label: "Radar"             },
-    { key: "tests",    label: "Tests HYROX"       },
+    { key: "tests",    label: "Tests"             },
     { key: "plan",     label: "Plan de course"    },
   ],
 };

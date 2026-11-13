@@ -9,10 +9,11 @@ import {
   type Baseline, type HealthMetricDef, type HealthState,
 } from "@/lib/healthView";
 import type { HealthDay } from "@/api/health";
+import { gapSentence } from "@/lib/santeCoach";
 import { addDays, localIsoDay, type IsoDay } from "@shared/domain/dates";
 import { CARD, Chevron, KICKER, MONO, PhonePage, Section, Tag, rowLine } from "./phoneUi";
 
-interface View { def: HealthMetricDef; v: number | null; base: Baseline | null; state: HealthState; streak: number; series: Array<{ day: IsoDay; v: number | null }> }
+interface View { def: HealthMetricDef; v: number | null; base: Baseline | null; state: HealthState; streak: number; series: Array<{ day: IsoDay; v: number | null }>; series28: Array<{ day: IsoDay; v: number | null }> }
 
 function Spark({ pts, base, h = 28 }: { pts: Array<{ v: number | null }>; base: Baseline | null; h?: number }) {
   const vs = pts.map((p) => p.v).filter((v): v is number => v != null);
@@ -48,6 +49,8 @@ export default function CoachPhoneSante() {
   const { data: days = [], isLoading, isError } = useHealthWindow(athleteId, day);
   const hist = useWellnessHistory(athleteId, { from: addDays(day, -1) } as never);
   const [open, setOpen] = useState<string | null>(null);
+  // « Détails sur 28 jours » : courbes dépliées sur 28 nuits au lieu de 14.
+  const [long, setLong] = useState(false);
 
   // Nuit pas encore remontée (montre synchronisée plus tard) : on ouvre une
   // seule fois sur la dernière nuit mesurée de la fenêtre.
@@ -69,7 +72,7 @@ export default function CoachPhoneSante() {
     const cur = values.get(day) ?? null;
     const base = baselineAt(values, day);
     const state = stateOf(cur?.v ?? null, base);
-    return { def, v: cur?.v ?? null, base, state, streak: streakOf(values, day, state), series: seriesTo(values, day, 14) };
+    return { def, v: cur?.v ?? null, base, state, streak: streakOf(values, day, state), series: seriesTo(values, day, 14), series28: seriesTo(values, day, 28) };
   }), [days, day]);
   const night = (days as HealthDay[]).filter((d) => d.day === day).sort((a) => (a.source === "garmin" ? -1 : 1))[0] ?? null;
   const source = night?.attribution ?? (days as HealthDay[])[days.length - 1]?.attribution ?? null;
@@ -82,10 +85,13 @@ export default function CoachPhoneSante() {
   const sleepV = views.find((v) => v.def.key === "sleep") ?? null;
   const bbV = views.find((v) => v.def.key === "bodyBattery") ?? null;
   const gaps: Array<{ label: string; declared: number; measured: string; foot: string }> = [];
-  if (entry?.items.sommeil != null && sleepV?.v != null && entry.items.sommeil >= 4 && sleepV.state === "low") {
+  const sleepGap = entry?.items.sommeil != null && sleepV?.v != null && entry.items.sommeil >= 4 && sleepV.state === "low";
+  const energyGap = entry?.items.energie != null && bbV?.v != null && entry.items.energie >= 4 && bbV.state === "low";
+  const gapText = gapSentence(first, sleepGap ? Math.max(1, sleepV!.streak) : null, energyGap ? Math.max(1, bbV!.streak) : null);
+  if (sleepGap && entry?.items.sommeil != null && sleepV?.v != null) {
     gaps.push({ label: "Sommeil", declared: entry.items.sommeil, measured: fmtMinutes(sleepV.v), foot: `${night?.sleepScore != null ? `score ${Math.round(night.sleepScore)} · ` : ""}moy. ${fmtMinutes(sleepV.base?.mean ?? null)}` });
   }
-  if (entry?.items.energie != null && bbV?.v != null && entry.items.energie >= 4 && bbV.state === "low") {
+  if (energyGap && entry?.items.energie != null && bbV?.v != null) {
     gaps.push({ label: "Énergie", declared: entry.items.energie, measured: fmtValue(bbV.def, bbV.v), foot: `Body Battery au réveil · moy. ${fmtValue(bbV.def, bbV.base?.mean ?? null)}` });
   }
 
@@ -113,7 +119,7 @@ export default function CoachPhoneSante() {
             {v.base && <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>Moy. {show(v.def, v.base.mean)}</div>}
           </div>
         </div>
-        {(outside || isOpen) && <div style={{ marginTop: 8 }}><Spark pts={v.series} base={v.base} h={isOpen ? 70 : 28} /></div>}
+        {(outside || isOpen) && <div style={{ marginTop: 8 }}><Spark pts={long ? v.series28 : v.series} base={v.base} h={isOpen ? 70 : 28} /></div>}
         {isOpen && <div style={{ fontSize: 12, color: C.tx2, marginTop: 8, lineHeight: 1.45 }}>{v.def.explain}</div>}
       </button>
     );
@@ -157,7 +163,7 @@ export default function CoachPhoneSante() {
                   </div>
                 </div>
               ))}
-              <div style={{ fontSize: 12.5, color: C.tx2 }}>{first} se dit en forme, mais la montre mesure moins bien que d’habitude.</div>
+              {gapText && <div style={{ fontSize: 12.5, color: C.tx2 }}>{gapText}</div>}
             </div>
           )}
 
@@ -172,7 +178,16 @@ export default function CoachPhoneSante() {
             </Section>
           )}
           {present.length === 0 && <div style={{ ...CARD, padding: 14, fontSize: 13, color: C.tx3 }}>Pas de mesure pour cette nuit.</div>}
-          <div style={{ fontSize: 11.5, color: C.tx3 }}>Bande verte = sa zone habituelle sur 28 jours. Courbes : 14 dernières nuits. Touche une mesure pour le détail.</div>
+          <div style={{ fontSize: 11.5, color: C.tx3 }}>Bande verte = sa zone habituelle sur 28 jours. Courbes : {long ? 28 : 14} dernières nuits. Touche une mesure pour le détail.</div>
+          {present.length > 0 && (
+            <button type="button" onClick={() => {
+              if (long) { setLong(false); return; }
+              setLong(true);
+              setOpen((out[0] ?? present[0]).def.key);
+            }} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.ac, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              {long ? "Revenir aux 14 nuits ›" : "Détails sur 28 jours ›"}
+            </button>
+          )}
         </>
       )}
     </PhonePage>

@@ -94,7 +94,12 @@ export default function CoachPhoneBanque() {
                   <div style={{ fontSize: 11.5, color: C.tx3 }}>{[ex.target ? mL(ex.target) : null, ex.equipment].filter(Boolean).join(" · ")}</div>
                 )}
               </div>
-              {ex.ex_type && <span style={{ fontSize: 11, color: exTypeColor(ex.ex_type), whiteSpace: "nowrap" }}>{exTypeLabel(ex.ex_type)}</span>}
+              {(ex.ex_type || !ex.is_verified) && (
+                <span style={{ fontSize: 11, whiteSpace: "nowrap", textAlign: "right" }}>
+                  {ex.ex_type && <span style={{ color: exTypeColor(ex.ex_type) }}>{exTypeLabel(ex.ex_type)}</span>}
+                  {!ex.is_verified && <span style={{ color: C.tx3 }}>{ex.ex_type ? " · " : ""}communauté</span>}
+                </span>
+              )}
               <Chevron />
             </button>
           ))}

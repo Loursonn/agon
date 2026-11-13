@@ -5,6 +5,7 @@ import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { headerGlow } from "@/features/athlete/components/headerGlow";
+import { DayBars } from "@/features/coach/components/sante/SanteParts";
 import { useHealthWindow } from "@/features/athlete/hooks/useHealthWindow";
 import { localIsoDay, type IsoDay } from "@shared/domain/dates";
 import type { HealthDay } from "@/api/health";
@@ -58,7 +59,7 @@ function viewOf(def: HealthMetricDef, days: readonly HealthDay[], day: IsoDay, n
   return { def, v: cur?.v ?? null, source: cur?.source ?? null, base, state: stateOf(cur?.v ?? null, base), series: seriesTo(values, day, n), values };
 }
 
-const fmtDayShort = (d: IsoDay) => { const s = new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }); return s.charAt(0).toUpperCase() + s.slice(1); };
+const fmtDayShort = (d: IsoDay, lower = false) => { const s = new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }); return lower ? s : s.charAt(0).toUpperCase() + s.slice(1); };
 const hm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—");
 
 /**
@@ -68,9 +69,11 @@ const hm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("fr-F
  */
 /**
  * @param coachView  Vue coach (planche CoachOrdiASante, onglet Santé de Retours) :
- *   sans en-tête de page, à la 3ᵉ personne, précédée du bloc « Ressenti / mesuré ».
+ *   sans en-tête de page, à la 3ᵉ personne, précédée du bloc « Ressenti / mesuré » (`top`)
+ *   et suivie du wellness déclaré et des courbes ressenti / mesuré (`bottom`).
+ *   Moyennes « 28 j » explicites et score de sommeil des 7 nuits en barres.
  */
-export default function AthleteSantePage({ coachView, top }: { coachView?: { firstName: string }; top?: ReactNode } = {}) {
+export default function AthleteSantePage({ coachView, top, bottom }: { coachView?: { firstName: string }; top?: ReactNode; bottom?: ReactNode } = {}) {
   const isDesktop = useIsDesktop();
   const { athleteId } = useAthleteContext();
   const day = localIsoDay();
@@ -82,6 +85,10 @@ export default function AthleteSantePage({ coachView, top }: { coachView?: { fir
   const today = days.filter((d) => d.day === day).sort((a) => (a.source === "garmin" ? -1 : 1))[0] ?? null;
   const source = today?.attribution ?? days[days.length - 1]?.attribution ?? null;
   const opened = open ? views.find((v) => v.def.key === open)! : null;
+  // Score de sommeil (Garmin, affiché tel quel) : moyenne 28 j et 7 nuits en barres, vue coach.
+  const sleepScores = useMemo(() => dailyValues(days, (d) => d.sleepScore), [days]);
+  const sleepScoreMean = baselineAt(sleepScores, day)?.mean ?? null;
+  const sleepScore7 = seriesTo(sleepScores, day, 7);
 
   const tabs = (
     <div style={{ display: "flex", padding: 3, borderRadius: 11, background: C.s2, fontSize: 12 }} role="tablist">
@@ -140,7 +147,7 @@ export default function AthleteSantePage({ coachView, top }: { coachView?: { fir
       <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         {top}
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, color: C.tx2 }}>
-          <span>{fmtDayShort(day)}</span>
+          <span>{fmtDayShort(day, !!coachView)}</span>
           {source && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{source}</span>}
         </div>
         {tabs}
@@ -159,7 +166,9 @@ export default function AthleteSantePage({ coachView, top }: { coachView?: { fir
                 <div style={{ flex: 1 }}>
                   <div style={{ ...MONO, fontSize: 30, lineHeight: 1.1 }}>{fmtMinutes(sleep.v)}</div>
                   <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 4 }}>
-                    {hm(today?.sleepStartAt ?? null)} → {hm(today?.sleepEndAt ?? null)}{sleep.base ? ` · moy. ${fmtMinutes(sleep.base.mean)}` : ""}
+                    {coachView
+                      ? `${sleep.base ? `Moy. 28 j : ${fmtMinutes(sleep.base.mean)}` : "Moy. 28 j : —"}${sleepScoreMean != null ? ` · score ${Math.round(sleepScoreMean)}` : ""} · coucher ${hm(today?.sleepStartAt ?? null)} → lever ${hm(today?.sleepEndAt ?? null)}`
+                      : <>{hm(today?.sleepStartAt ?? null)} → {hm(today?.sleepEndAt ?? null)}{sleep.base ? ` · moy. ${fmtMinutes(sleep.base.mean)}` : ""}</>}
                   </div>
                 </div>
                 {today?.sleepScore != null && (
@@ -174,7 +183,14 @@ export default function AthleteSantePage({ coachView, top }: { coachView?: { fir
                   <div key={k}><div style={{ fontSize: 10.5, color: C.tx3 }}>{k}</div><div style={{ ...MONO, fontSize: 12.5 }}>{fmtMinutes(v ?? null)}</div></div>
                 ))}
               </div>
-              <div style={{ marginTop: 8 }}><Spark pts={sleep.series} base={sleep.base} /></div>
+              {coachView && sleepScore7.some((p) => p.v != null) ? (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Score de sommeil · 7 nuits</div>
+                  <DayBars pts={sleepScore7} />
+                </div>
+              ) : (
+                <div style={{ marginTop: 8 }}><Spark pts={sleep.series} base={sleep.base} /></div>
+              )}
             </button>
             <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, minmax(0, 1fr))" : "1fr 1fr", gap: 8 }}>
               {rest.map((m) => {
@@ -195,7 +211,7 @@ export default function AthleteSantePage({ coachView, top }: { coachView?: { fir
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, minHeight: 20 }}>
                           <StatePill state={m.state} />
-                          {m.base && <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>moy. {fmtValue(m.def, m.base.mean)}</span>}
+                          {m.base && <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>moy. {coachView ? `28 j ${fmtValue(m.def, m.base.mean)}${m.def.unit && !m.def.unit.startsWith("/") ? ` ${m.def.unit}` : ""}` : fmtValue(m.def, m.base.mean)}</span>}
                         </div>
                         <div style={{ marginTop: 6 }}><Spark pts={m.series} base={m.base} h={26} /></div>
                       </>
@@ -204,9 +220,15 @@ export default function AthleteSantePage({ coachView, top }: { coachView?: { fir
                 );
               })}
             </div>
-            <div style={{ fontSize: 11.5, color: C.tx3 }}>▒ ta moyenne · courbes sur {n} jours · touche une mesure</div>
+            <div style={{ fontSize: 11.5, color: C.tx3 }}>▒ {coachView ? "sa" : "ta"} moyenne · courbes sur {n} jours · touche une mesure</div>
+            {coachView && (
+              <div style={{ fontSize: 11.5, color: C.tx3, lineHeight: 1.5 }}>
+                Body Battery, score de sommeil et stress sont des scores Garmin : affichés pour information, Agon ne s’en sert dans aucun calcul.
+              </div>
+            )}
           </>
         )}
+        {bottom}
       </div>
     </div>
   );

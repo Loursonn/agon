@@ -37,7 +37,7 @@ describe("RaceAnalysis", () => {
     expect(screen.getByText("HYROX Paris")).toBeTruthy();
     expect(screen.getByText(/Aucune activité de montre/)).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Gains" }));
-    expect(screen.getByText("SkiErg")).toBeTruthy();
+    expect(screen.getAllByText("SkiErg").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("tab", { name: "Runs" }));
     expect(screen.getByText(/Allure par km/)).toBeTruthy();
   });

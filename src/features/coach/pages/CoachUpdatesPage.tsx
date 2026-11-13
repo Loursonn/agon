@@ -11,6 +11,11 @@ import { useAppUpdates, useAppUpdateStats, useMarkAppUpdateSeen } from "@/featur
 import { ReleaseNoteContent } from "../components/updates/ReleaseNoteContent";
 import { ReleaseNoteKindBadge } from "../components/updates/ReleaseNoteKindBadge";
 
+/** Date courte : « 9 nov. » (mention « Vue le »). */
+function fmtShort(iso: string) {
+  return new Date(iso.length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
 function fmtDate(iso: string) {
   return new Date(iso.length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
@@ -62,7 +67,7 @@ export default function CoachUpdatesPage() {
                 <ReleaseNoteKindBadge kind={note.kind} />
                 <span style={{ fontSize: 11, color: C.tx3 }}>{fmtDate(note.date)}</span>
                 {seenAt ? (
-                  <span style={{ fontSize: 11, color: C.g }}>· Vue le {fmtDate(seenAt)}</span>
+                  <span style={{ fontSize: 11, color: C.g }}>· Vue le {fmtShort(seenAt)}</span>
                 ) : (
                   <span style={{ fontSize: 11, fontWeight: 600, color: C.bg, background: C.ac, borderRadius: 999, padding: "1px 8px" }}>Non vue</span>
                 )}
@@ -70,12 +75,6 @@ export default function CoachUpdatesPage() {
               <h2 style={{ fontSize: 16, fontWeight: 600, color: C.tx, margin: "4px 0 4px" }}>{note.title}</h2>
               <p style={{ fontSize: 13, color: C.tx2, margin: expanded ? "0 0 12px" : 0 }}>{note.summary}</p>
               {expanded && <ReleaseNoteContent note={note} />}
-              {seenAt && (
-                <button type="button" onClick={() => toggle(note.id)} style={{ marginTop: 10, padding: 0, background: "none", border: "none", color: C.ac, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>
-                  {expanded ? "Replier" : "Voir le détail ›"}
-                </button>
-              )}
-
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 14 }}>
                 {!seenAt && user && (
                   <button
@@ -83,6 +82,11 @@ export default function CoachUpdatesPage() {
                     style={{ minHeight: 40, padding: "8px 18px", borderRadius: 10, border: "none", background: C.ac, color: C.bg, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
                   >
                     J'ai vu
+                  </button>
+                )}
+                {seenAt && (
+                  <button type="button" onClick={() => toggle(note.id)} style={{ padding: 0, background: "none", border: "none", color: C.ac, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>
+                    {expanded ? "Replier" : "Voir le détail ›"}
                   </button>
                 )}
                 {isAdmin && (

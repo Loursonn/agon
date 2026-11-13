@@ -192,8 +192,8 @@ export default function StaffAthleteArea() {
     >
       <div style={{ position: "sticky", top: 64, zIndex: 9, background: "rgba(29,28,30,0.95)", borderBottom: "1px solid " + C.brd }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 6px", flexWrap: "wrap" }}>
-          <button onClick={() => navigate("/staff")} aria-label="Retour" style={{ background: "none", border: "none", color: C.tx3, fontSize: 18, cursor: "pointer" }}>‹</button>
           <div style={{ flex: 1, minWidth: 0 }}>
+            <button onClick={() => navigate("/staff")} style={{ background: "none", border: "none", padding: 0, marginBottom: 2, color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>‹ Mes athlètes</button>
             <div style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 300, fontSize: 18, color: C.tx }}>{link.athleteName}</div>
             <div style={{ fontSize: 11, color: C.tx3 }}>
               Coach principal : {link.coachName ?? "aucun"} · tu interviens en tant que {professionLabel(link.profession).toLowerCase()}

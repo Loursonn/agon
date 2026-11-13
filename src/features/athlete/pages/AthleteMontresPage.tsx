@@ -58,9 +58,18 @@ export default function AthleteMontresPage() {
           <div style={{ fontSize: 12, color: C.tx3, marginTop: 2, marginBottom: 12 }}>
             Archive Strava ou export Garmin. Garmin n’envoie que les activités faites après la connexion : pour les plus anciennes, dépose ton export.
           </div>
-          <ActivityFileImport />
+          <ActivityFileImport
+            sourceChoice
+            coachName={coach === "ton coach" ? undefined : coach}
+            onOpenStravaTutorial={() => {
+              const box = document.getElementById("strava-tuto");
+              const btn = box?.querySelector("button");
+              if (btn && btn.getAttribute("aria-expanded") !== "true") btn.click();
+              box?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          />
         </div>
-        <StravaExportTutorial />
+        <div id="strava-tuto"><StravaExportTutorial /></div>
       </div>
     </div>
   );

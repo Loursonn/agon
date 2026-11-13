@@ -148,12 +148,16 @@ const TABS = [
 
 /** Sommaire construit depuis les titres de section (planche AccesPagesSimples, écran 03). */
 function Summary({ root }: { root: React.RefObject<HTMLElement> }) {
-  const [items, setItems] = useState<Array<{ id: string; title: string }>>([]);
+  const [items, setItems] = useState<Array<{ id: string; num: string; title: string }>>([]);
   const [all, setAll] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => {
     const hs = Array.from(root.current?.querySelectorAll("section[id] > h2") ?? []);
-    setItems(hs.map((h) => ({ id: (h.parentElement as HTMLElement).id, title: (h.textContent ?? "").replace(/^\d+\.\s*/, "") })));
+    setItems(hs.map((h, i) => {
+      const text = (h.textContent ?? "").trim();
+      const m = /^(\d+(?: bis)?)\.\s*/.exec(text);
+      return { id: (h.parentElement as HTMLElement).id, num: m ? m[1]! : String(i + 1), title: m ? text.slice(m[0].length) : text };
+    }));
     setAll(false);
   }, [root, pathname]);
   if (items.length < 3) return null;
@@ -162,10 +166,10 @@ function Summary({ root }: { root: React.RefObject<HTMLElement> }) {
     <nav aria-label="Sommaire" style={{ background: S.s1, border: "1px solid " + S.brd, borderRadius: 14, padding: "14px 16px", marginBottom: 28 }}>
       <div style={{ fontFamily: "var(--agon-font-data)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: S.tx2, marginBottom: 8 }}>Sommaire</div>
       <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {shown.map((it, i) => (
+        {shown.map((it) => (
           <li key={it.id}>
             <a href={`#${it.id}`} style={{ display: "flex", gap: 12, padding: "6px 0", color: S.tx, textDecoration: "none", fontSize: 14 }}>
-              <span style={{ fontFamily: "var(--agon-font-data)", color: S.ac, width: 18 }}>{i + 1}</span>{it.title}
+              <span style={{ fontFamily: "var(--agon-font-data)", color: S.ac, minWidth: 18 }}>{it.num}</span>{it.title}
             </a>
           </li>
         ))}

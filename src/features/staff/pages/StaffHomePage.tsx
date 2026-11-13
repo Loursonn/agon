@@ -10,6 +10,9 @@ import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { initials } from "@/lib/initials";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
+import { useWellnessHistory } from "@/features/shared/hooks/useWellness";
+import { localIsoDay } from "@shared/domain/dates";
+import { wellnessDrop } from "../lib/wellnessWatch";
 import { useMyStaffLinks, type MyStaffAthlete } from "../hooks/useMyStaffLinks";
 import { DOMAIN_LABEL, STAFF_DOMAINS, canRead, professionLabel } from "../lib/staffPermissions";
 
@@ -59,13 +62,27 @@ function AthleteCard({ a }: { a: MyStaffAthlete }) {
   );
 }
 
-/** Lignes « À surveiller » d'un athlète : ses blessures en cours (si le médical est lisible). */
+/** Lignes « À surveiller » d'un athlète : blessures en cours (médical lisible) et bien-être en baisse (bien-être lisible). */
 function WatchRows({ a }: { a: MyStaffAthlete }) {
   const navigate = useNavigate();
   const medical = canRead(a.permissions, "medical") && a.sharingConsent;
   const { injuries } = useActiveInjuries(medical ? a.athleteId : undefined);
+  const wellnessOk = canRead(a.permissions, "wellness") && a.sharingConsent;
+  const { data: wellness } = useWellnessHistory(wellnessOk ? a.athleteId : undefined);
+  const drop = wellnessOk && wellness ? wellnessDrop(wellness, localIsoDay()) : null;
   return (
     <>
+      {drop && (
+        <button type="button" onClick={() => navigate(`/staff/athletes/${a.athleteId}?tab=wellness`)}
+          style={{ textAlign: "left", background: "none", border: "none", borderTop: `1px solid ${C.brd}`, padding: "12px 0", cursor: "pointer", fontFamily: "inherit", color: C.tx, display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <span aria-hidden style={{ width: 8, height: 8, borderRadius: "50%", background: C.o, marginTop: 6, flex: "none" }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 13.5, fontWeight: 500 }}>{a.athleteName} · wellness en baisse</span>
+            <span style={{ display: "block", fontSize: 12, color: C.tx3, marginTop: 2, lineHeight: 1.45 }}>{drop.label} {drop.value} / 5 deux matins de suite</span>
+          </span>
+          <span style={{ ...MONO, fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>{fmtDay(drop.day)}</span>
+        </button>
+      )}
       {injuries.map((inj) => (
         <button key={inj.id} type="button" onClick={() => navigate(`/staff/athletes/${a.athleteId}`)}
           style={{ textAlign: "left", background: "none", border: "none", borderTop: `1px solid ${C.brd}`, padding: "12px 0", cursor: "pointer", fontFamily: "inherit", color: C.tx, display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -84,10 +101,18 @@ function WatchRows({ a }: { a: MyStaffAthlete }) {
 export default function StaffHomePage() {
   const { data = [], isLoading } = useMyStaffLinks();
   const isDesktop = useIsDesktop();
+  const nbCoachs = new Set(data.map((a) => a.coachName).filter((n): n is string => !!n)).size;
 
   return (
     <div style={{ maxWidth: isDesktop ? 1248 : 760, margin: "0 auto", padding: isDesktop ? "32px 48px 60px" : "20px 16px 60px", boxSizing: "border-box", color: C.tx }}>
-      <h1 style={{ ...DISPLAY, fontWeight: 300, fontSize: 28, letterSpacing: "0.06em", margin: 0 }}>Mes athlètes</h1>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+        <h1 style={{ ...DISPLAY, fontWeight: 300, fontSize: 28, letterSpacing: "0.06em", margin: 0, flex: 1 }}>Mes athlètes</h1>
+        {data.length > 0 && (
+          <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>
+            {data.length} athlète{data.length > 1 ? "s" : ""}{nbCoachs > 0 ? ` · ${nbCoachs} coach${nbCoachs > 1 ? "s" : ""}` : ""}
+          </span>
+        )}
+      </div>
       <div style={{ fontSize: 13.5, color: C.tx2, margin: "6px 0 22px" }}>
         Tu vois chaque athlète selon les droits réglés par son coach principal.
       </div>
@@ -106,7 +131,7 @@ export default function StaffHomePage() {
             <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: "14px 16px 4px", display: "flex", flexDirection: "column" }}>
               <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, paddingBottom: 10 }}>À surveiller</span>
               {data.map((a) => <WatchRows key={a.linkId} a={a} />)}
-              <span style={{ fontSize: 12, color: C.tx3, borderTop: `1px solid ${C.brd}`, padding: "12px 0" }}>Les blessures en cours de tes athlètes s’affichent ici.</span>
+              <span style={{ fontSize: 12, color: C.tx3, borderTop: `1px solid ${C.brd}`, padding: "12px 0" }}>Les blessures en cours et le bien-être en baisse de tes athlètes s’affichent ici.</span>
             </div>
             <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.55 }}>
               Ce que tu crées (fiches, blessures saisies) va dans la banque du coach de chaque athlète, à ton nom. Les données des montres ne sont pas partagées avec le staff.
