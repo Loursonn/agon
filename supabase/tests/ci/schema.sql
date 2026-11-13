@@ -7339,7 +7339,7 @@ CREATE TABLE IF NOT EXISTS "public"."energy_sessions" (
     "total_duration_s" integer,
     "total_distance_m" integer,
     "notes" "text",
-    "created_by" "uuid",
+    "created_by" "uuid" DEFAULT "auth"."uid"(),
     "is_verified" boolean DEFAULT false NOT NULL,
     "verified_by" "uuid",
     "verified_at" timestamp with time zone,
@@ -11624,7 +11624,7 @@ CREATE POLICY "es_delete" ON "public"."energy_sessions" FOR DELETE USING ((("cre
 
 
 
-CREATE POLICY "es_insert" ON "public"."energy_sessions" FOR INSERT TO "authenticated" WITH CHECK (("is_verified" = false));
+CREATE POLICY "es_insert" ON "public"."energy_sessions" FOR INSERT TO "authenticated" WITH CHECK ((("is_verified" = false) AND ("created_by" = "auth"."uid"()) AND (("athlete_id" IS NULL) OR ("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))));
 
 
 
@@ -12889,7 +12889,15 @@ CREATE POLICY "workout_logs_coach_update" ON "public"."workout_logs" FOR UPDATE 
 
 
 
-CREATE POLICY "workout_logs_self" ON "public"."workout_logs" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "workout_logs_self_insert" ON "public"."workout_logs" FOR INSERT WITH CHECK (("athlete_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "workout_logs_self_select" ON "public"."workout_logs" FOR SELECT USING (("athlete_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "workout_logs_self_update" ON "public"."workout_logs" FOR UPDATE USING (("athlete_id" = "auth"."uid"())) WITH CHECK (("athlete_id" = "auth"."uid"()));
 
 
 

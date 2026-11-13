@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-droits-seances-resserres",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Séances : droits d'écriture resserrés",
+    summary: "Une séance énergie destinée à un athlète ne peut être créée que par son coach (référent ou co-coach), et une séance de votre banque reste à votre nom. Un athlète ne peut plus supprimer lui-même une séance de son programme.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Une séance énergie se crée dans votre banque, pour vous-même, ou pour un athlète que vous suivez (référent ou co-coach) : plus pour l'athlète d'un autre coach.",
+          "Vos athlètes voient, remplissent et valident leurs séances comme avant ; seule la suppression leur est retirée. Vous gardez la main pour supprimer depuis le planning.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-documents-legaux-revus",
     date: "2026-11-13",
     kind: "feature",
