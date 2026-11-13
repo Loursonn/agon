@@ -6,9 +6,44 @@ import { displayUnit, fmtTestDate, formatTestDelta, formatTestValue, type TestVa
 
 
 /** Une valeur de test (maquette « Tests athlète ») : nom, dernière valeur, date, écart. */
-export function TestValueTile({ card, color, onOpen }: { card: TestValueCard; color: string; onOpen: () => void }) {
+export function TestValueTile({ card, color, onOpen, variant = "tile", selected = false }: {
+  card: TestValueCard; color: string; onOpen: () => void;
+  /** « row » : ligne de liste sur ordinateur (planche AthOrdiBTests). */
+  variant?: "tile" | "row"; selected?: boolean;
+}) {
   const deltaBg = card.improved === true ? TYPE_COLOR.fait : card.improved === false ? ROUGE : C.s2;
   const deltaTx = card.improved == null ? C.tx2 : C.bg;
+  const delta = card.delta != null && (
+    <span style={{ ...MONO, fontSize: 11, color: deltaTx, background: deltaBg, fontWeight: 500, whiteSpace: "nowrap", borderRadius: 999, padding: "3px 9px" }}>
+      {formatTestDelta(card.delta, card.valueType)}
+    </span>
+  );
+  if (variant === "row") {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-pressed={selected}
+        style={{
+          position: "relative", overflow: "hidden", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: C.tx,
+          borderRadius: 12, border: `1px solid ${selected ? color : C.brd}`, background: selected ? `linear-gradient(160deg, ${color}29, ${color}0F), ${C.s1}` : C.s1,
+          padding: "10px 14px 10px 16px", display: "flex", alignItems: "center", gap: 12, minWidth: 0, width: "100%",
+        }}
+      >
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
+        <TestGroupIcon group={card.group} color={color} testName={card.testName} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.title}</span>
+          <span style={{ display: "block", fontSize: 11.5, color: C.tx3, marginTop: 2 }}>{fmtTestDate(card.latest.date)}</span>
+        </span>
+        <span style={{ display: "flex", alignItems: "baseline", gap: 4, whiteSpace: "nowrap" }}>
+          <span style={{ ...MONO, fontSize: 20, color }}>{formatTestValue(card.latest.value, card.valueType)}</span>
+          <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>{displayUnit(card.unit, card.valueType)}</span>
+        </span>
+        <span style={{ width: 64, display: "flex", justifyContent: "flex-end" }}>{delta}</span>
+      </button>
+    );
+  }
   return (
     <button
       type="button"
@@ -33,11 +68,7 @@ export function TestValueTile({ card, color, onOpen }: { card: TestValueCard; co
       </span>
       <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
         <span style={{ fontSize: 11, color: C.tx3 }}>{fmtTestDate(card.latest.date)}</span>
-        {card.delta != null && (
-          <span style={{ ...MONO, fontSize: 11, color: deltaTx, background: deltaBg, fontWeight: 500, whiteSpace: "nowrap", borderRadius: 999, padding: "3px 9px" }}>
-            {formatTestDelta(card.delta, card.valueType)}
-          </span>
-        )}
+        {delta}
       </span>
     </button>
   );

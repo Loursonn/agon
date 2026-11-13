@@ -18,6 +18,7 @@ import { TestGroupIcon, RULER_PATH } from '@/features/athlete/components/tests/T
 import type { ReactNode } from 'react';
 import { TestValueTile } from '@/features/athlete/components/tests/TestValueTile';
 import { TestDetailView } from '@/features/athlete/components/tests/TestDetailView';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 /** Titre numéroté de la planche : « 01 — Mes valeurs » + filet. */
 function SectionTitle({ n, children }: { n: string; children: ReactNode }) {
@@ -76,6 +77,7 @@ function ResultRow({ result, last }: { result: AthleteTestResult; last: boolean 
 /** Tests de l'athlète : téléphone = une colonne ; PC = valeurs à gauche, historique à droite. */
 export default function AthleteTestPage() {
   const { athleteId, viewOnly } = useAthleteContext();
+  const isDesktop = useIsDesktop();
   const [mensuOpen, setMensuOpen] = useState(false);
 
   const { data: results = [], isLoading: loadingResults } = useAthleteTestResults(athleteId);
@@ -88,8 +90,10 @@ export default function AthleteTestPage() {
     if (!id && params.has('valeur')) { params.delete('valeur'); setParams(params, { replace: true }); }
   };
   const openCard = openVar ? groups.flatMap((g) => g.cards).find((c) => c.variableId === openVar) ?? null : null;
+  // Ordinateur (planche AthOrdiBTests) : liste à gauche, détail à droite, toujours un test ouvert.
+  const deskCard = isDesktop ? openCard ?? groups[0]?.cards[0] ?? null : null;
 
-  if (openCard) {
+  if (openCard && !isDesktop) {
     return (
       <div className="mx-auto w-full max-w-[480px] px-agon-lg pb-[60px] pt-5 font-ui text-agon-tx lg:max-w-[760px] lg:pt-agon-xl">
         <TestDetailView card={openCard} color={TEST_GROUP_COLOR[openCard.group]} onBack={() => setOpenVar(null)} />
@@ -123,7 +127,7 @@ export default function AthleteTestPage() {
           {/* Valeurs courantes */}
           <section className="mb-8 lg:mb-0">
             <SectionTitle n="01">Mes valeurs</SectionTitle>
-            <p style={{ margin: '10px 0 14px', fontSize: 12, color: C.tx3 }}>Rangées par dominante. Touche une valeur pour voir tous tes tests et leur évolution.</p>
+            <p style={{ margin: '10px 0 14px', fontSize: 12, color: C.tx3 }}>{isDesktop ? 'Rangées par dominante. Clique une valeur pour voir son évolution.' : 'Rangées par dominante. Touche une valeur pour voir tous tes tests et leur évolution.'}</p>
             {loadingResults ? (
               <div className="flex gap-agon-md">{[0, 1, 2].map(i => <CardSkeleton key={i} />)}</div>
             ) : groups.length === 0 ? (
@@ -137,11 +141,19 @@ export default function AthleteTestPage() {
                       <span style={{ ...DISPLAY, fontSize: 13, letterSpacing: '0.06em', color: C.tx }}>{TEST_GROUP_LABEL[g.group]}</span>
                       <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{g.cards.length} test{g.cards.length > 1 ? 's' : ''}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 lg:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
-                      {g.cards.map(c => (
-                        <TestValueTile key={c.variableId} card={c} color={TEST_GROUP_COLOR[g.group]} onOpen={() => setOpenVar(c.variableId)} />
-                      ))}
-                    </div>
+                    {isDesktop ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {g.cards.map(c => (
+                          <TestValueTile key={c.variableId} variant="row" selected={deskCard?.variableId === c.variableId} card={c} color={TEST_GROUP_COLOR[g.group]} onOpen={() => setOpenVar(c.variableId)} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {g.cards.map(c => (
+                          <TestValueTile key={c.variableId} card={c} color={TEST_GROUP_COLOR[g.group]} onOpen={() => setOpenVar(c.variableId)} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -149,8 +161,14 @@ export default function AthleteTestPage() {
           </section>
         </div>
 
-        {/* Historique */}
-        <section>
+        {deskCard && (
+          <div style={{ position: 'sticky', top: 24 }}>
+            <TestDetailView key={deskCard.variableId} card={deskCard} color={TEST_GROUP_COLOR[deskCard.group]} />
+          </div>
+        )}
+
+        {/* Historique (ordinateur : sous les deux colonnes) */}
+        <section className={deskCard ? 'lg:col-span-2 lg:mt-agon-xl' : undefined}>
           <div style={{ marginBottom: 14 }}><SectionTitle n="02">Historique — {results.length}</SectionTitle></div>
           {loadingResults ? (
             <ListSkeleton rows={3} />

@@ -16,6 +16,7 @@ import {
 } from "@/lib/nutrition";
 import { useNutritionLog, useSaveNutritionDay } from "@/features/shared/hooks/useNutrition";
 import { notifyQueued } from "@/lib/offline/writes";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 const INK = "#0E0C0A";
 const ROUGE_VIF = "#FF3B1F";
@@ -87,6 +88,7 @@ interface Props {
 }
 
 export default function NutritionView({ athleteId, bmr, nutritionStrategy, weightLog, viewOnly = false }: Props) {
+  const isDesktop = useIsDesktop();
   const today = localIsoDay();
   // Journal lu par la couche API (lève en cas d'erreur, jamais `{}` à la place).
   const logQuery = useNutritionLog(athleteId);
@@ -228,6 +230,8 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
     <div style={{ padding: "24px 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Titre et date : en-tête de page (AlimPage) */}
 
+      {/* Ordinateur (planche AthOrdiBAlimentation) : objectif, série et poids sur une rangée 1,75 / 1 / 1. */}
+      <div style={isDesktop ? { display: "grid", gridTemplateColumns: "minmax(0, 1.75fr) minmax(0, 1fr) minmax(0, 1fr)", gap: 16, alignItems: "stretch" } : { display: "contents" }}>
       {/* ── Objectif ── */}
       <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, padding: 16, border: `1px solid ${meta.color}73`, background: tint(meta.color) }}>
         <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, background: meta.color }} />
@@ -295,7 +299,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
 
       {/* ── Série + poids ── */}
       {(streakData || weightData) && (
-        <div style={{ display: "grid", gridTemplateColumns: streakData && weightData ? "1fr 1fr" : "1fr", gap: 10 }}>
+        <div style={isDesktop ? { display: "contents" } : { display: "grid", gridTemplateColumns: streakData && weightData ? "1fr 1fr" : "1fr", gap: 10 }}>
           {streakData && (
             <div style={{ borderRadius: 14, padding: 14, border: `1px solid ${C.o}66`, background: tint(C.o, "24", "0D"), display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -357,6 +361,8 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
           )}
         </div>
       )}
+
+      </div>
 
       {/* ── Mon suivi du jour ── */}
       <section style={{ marginTop: 8 }}>

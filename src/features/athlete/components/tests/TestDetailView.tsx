@@ -24,7 +24,7 @@ const label10 = { ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform:
  * (chaque point = un test avec sa valeur et sa date), liste des tests ;
  * pour la VMA, les allures qui en découlent.
  */
-export function TestDetailView({ card, color, onBack }: { card: TestValueCard; color: string; onBack: () => void }) {
+export function TestDetailView({ card, color, onBack }: { card: TestValueCard; color: string; onBack?: () => void }) {
   const [range, setRange] = useState<Range>("all");
   const unit = displayUnit(card.unit, card.valueType);
   const first = card.history[0];
@@ -47,9 +47,11 @@ export function TestDetailView({ card, color, onBack }: { card: TestValueCard; c
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <button type="button" onClick={onBack} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.ac, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-          ‹ Tests
-        </button>
+        {onBack && (
+          <button type="button" onClick={onBack} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.ac, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            ‹ Tests
+          </button>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <h1 style={{ ...DISPLAY, fontSize: 28, margin: 0, color: C.tx }}>{card.title}</h1>
           <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.bg, background: color, borderRadius: 999, padding: "3px 9px" }}>
