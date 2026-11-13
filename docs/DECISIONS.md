@@ -2207,3 +2207,17 @@ reste à faire : `docs/MOBILE_CAPACITOR.md`.
   l'activité.
 - **Écran** : bouton « Retirer d'Agon » au dépli d'une sortie
   (`RemoveActivityButton`, partagé athlète / coach), confirmation en deux temps.
+
+## 2026-11-13 — Export RGPD : fichiers bruts de montre par liens signés (P37)
+
+- L'export JSON liste les fichiers du bucket `provider-raw` cités par
+  `provider_raw_records` (`samples_path` .json.gz, `file_path` .FIT) dans
+  `provider_raw_files`, avec un **lien signé valable 7 jours** et l'attribution
+  « Garmin ».
+- **Pourquoi des liens et pas un zip** : plusieurs centaines de fichiers par
+  athlète, construits dans le navigateur d'un téléphone ; un zip tiendrait
+  tout en mémoire. Les liens se signent avec les droits de l'utilisateur
+  (policy existante `provider_raw_own_read`, dossier = son id) : pas de clé
+  service_role, même principe que le reste de l'export.
+- Lien expiré : refaire un export. Fichier absent ou signature en panne :
+  listé sans lien et signalé dans `tables_unreadable`.
