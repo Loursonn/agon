@@ -48,6 +48,45 @@ Code pur dans `supabase/functions/_shared/garminTraining/` :
   l'écran lui demande de reconnecter en cochant cette autorisation.
 - Natation : pas de cible principale chez Garmin, consigne en texte.
 
+## Permission « Workout Import »
+
+Garmin répond 412 à tout appel Training si l'athlète n'a pas coché « Workout
+Import » à la connexion. `provider-garmin-workouts` lit `granted_scopes` :
+
+- **inconnues** (liste vide) → relues par `GET /user/permissions`
+  (`ensureKnownScopes`) et rangées ; une lecture en échec ou vide n'écrit rien ;
+- **sans `WORKOUT_IMPORT`** → aucun appel pour cet athlète (compté `noPermission`) ;
+  l'écran « Montres » affiche « Envoi bloqué : autorise l'import de séances… » ;
+- `userPermissionsChange` met `granted_scopes` à jour (webhook) : une permission
+  retirée chez Garmin coupe l'envoi au passage suivant, une permission rendue le relance.
+
+## Activer l'envoi des séances pour les vrais athlètes
+
+État au 13/11/2026 : `push_workouts` (vrai par défaut) a été mis à faux sur les
+deux connexions d'athlètes réels ; seuls les comptes admin envoient.
+
+Prérequis, dans l'ordre :
+
+1. **PR dev → main déployée** : l'interrupteur « Envoyer mes séances sur ma
+   montre » n'existe que sur `dev`. Sans lui en prod, un athlète ne peut pas
+   couper l'envoi.
+2. **`provider-garmin-workouts` redéployée** avec la lecture des permissions
+   (sinon les connexions du 09/11 aux permissions inconnues tentent l'envoi et
+   se font refuser en 412 à chaque passage).
+3. **Accord d'Hugo**, puis :
+
+```sql
+-- Relire avant : qui passe à vrai (aucune donnée personnelle affichée)
+select id, connected_at::date, granted_scopes from provider_connections
+ where provider = 'garmin' and status = 'active' and not push_workouts;
+-- Activer
+update provider_connections set push_workouts = true, updated_at = now()
+ where provider = 'garmin' and status = 'active' and not push_workouts;
+```
+
+4. Au passage suivant du cron (10 min) : `select status, count(*) from
+   provider_workout_pushes group by 1;` — des lignes `sent`, aucune `error` en 412.
+
 ## Tests
 
 `supabase/functions/_shared/__tests__/garminTraining.test.ts` (traduction),

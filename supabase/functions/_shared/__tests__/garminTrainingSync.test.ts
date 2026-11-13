@@ -1,18 +1,19 @@
 /**
  * Envoi vers Garmin de bout en bout, sur base simulée et faux client Garmin :
  * création, passage sans changement (aucun appel), modification, retrait,
- * séance commencée protégée, envoi coupé, refus d'autorisation (412).
+ * séance commencée protégée, envoi coupé, refus d'autorisation (412),
+ * permission « Workout Import » manquante ou inconnue, doublons.
  */
 import { describe, expect, it } from "vitest";
 import { fakeDb, type Row } from "./fakeDb";
 import { GarminTrainingError, type GarminTrainingClient } from "../garminTraining/client";
-import { syncAthleteWorkouts } from "../garminTraining/sync";
+import { ensureKnownScopes, syncAthleteWorkouts, workoutImportPermission, WORKOUT_IMPORT_MISSING } from "../garminTraining/sync";
 import type { GarminWorkout } from "../garminTraining/types";
 
 const A = "athlete-1";
 const TODAY = "2026-11-13";
 
-function fakeGarmin(failWith?: number) {
+function fakeGarmin(failWith?: number, scheduleFailWith?: number) {
   const calls: string[] = [];
   const workouts = new Map<string, GarminWorkout>();
   let n = 100;
@@ -30,6 +31,7 @@ function fakeGarmin(failWith?: number) {
     },
     async scheduleWorkout(id, date) {
       calls.push(`schedule:${id}:${date}`);
+      if (scheduleFailWith) throw new GarminTrainingError("date refusée", scheduleFailWith);
       return `s${id}`;
     },
   };
@@ -166,5 +168,73 @@ describe("envoi des séances vers Garmin", () => {
     const rows = await pushes(db);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ status: "error", attempts: 1, external_workout_id: null });
+  });
+
+  it("412 puis autorisation accordée : une seule séance créée, pas de doublon", async () => {
+    const db = world();
+    await syncAthleteWorkouts(db, fakeGarmin(412).client, A, true, { today: TODAY });
+    const g = fakeGarmin();
+    // Réessai immédiat forcé (`now` loin après l'erreur).
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, now: Date.now() + 7 * 3600_000 });
+    expect(g.workouts.size).toBe(2);
+    const rows = await pushes(db);
+    expect(rows.filter((r) => r.source_id === "as-1")).toHaveLength(1);
+    expect(rows.every((r) => r.status === "sent")).toBe(true);
+  });
+
+  it("date refusée après création : la séance créée est retirée (pas d'orpheline sur Garmin)", async () => {
+    const db = world();
+    const g = fakeGarmin(undefined, 400);
+    const report = await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY });
+    expect(g.workouts.size).toBe(0);
+    expect(report.errors.length).toBeGreaterThan(0);
+    const rows = await pushes(db);
+    expect(rows.every((r) => r.status === "error" && r.external_workout_id === null)).toBe(true);
+  });
+});
+
+describe("permission « Workout Import »", () => {
+  it("lecture des scopes : vide = inconnue, sans WORKOUT_IMPORT = manquante", () => {
+    expect(workoutImportPermission([])).toBe("unknown");
+    expect(workoutImportPermission(null)).toBe("unknown");
+    expect(workoutImportPermission(["ACTIVITY_EXPORT"])).toBe("missing");
+    expect(workoutImportPermission(["ACTIVITY_EXPORT", "WORKOUT_IMPORT"])).toBe("granted");
+  });
+
+  it("manquante : aucun appel Garmin, aucune ligne, motif clair", async () => {
+    const db = world();
+    const g = fakeGarmin();
+    const report = await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, scopes: ["ACTIVITY_EXPORT", "HEALTH_EXPORT"] });
+    expect(g.calls).toEqual([]);
+    expect(report.stopped).toBe(WORKOUT_IMPORT_MISSING);
+    expect(await pushes(db)).toHaveLength(0);
+  });
+
+  it("inconnue : l'envoi est tenté (Garmin tranchera par 412)", async () => {
+    const db = world();
+    const g = fakeGarmin();
+    const report = await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, scopes: [] });
+    expect(report.created).toBe(2);
+  });
+
+  it("scopes inconnus : relus chez Garmin et rangés sur la connexion", async () => {
+    const db = world({ provider_connections: [{ id: "c1", granted_scopes: [] }] });
+    let reads = 0;
+    const scopes = await ensureKnownScopes(db, "c1", [], async () => { reads++; return ["ACTIVITY_EXPORT", "WORKOUT_IMPORT"]; });
+    expect(reads).toBe(1);
+    expect(scopes).toEqual(["ACTIVITY_EXPORT", "WORKOUT_IMPORT"]);
+    const { data } = await db.from("provider_connections").select("*");
+    expect((data as Row[])[0].granted_scopes).toEqual(["ACTIVITY_EXPORT", "WORKOUT_IMPORT"]);
+  });
+
+  it("scopes connus : pas de lecture ; lecture en échec ou vide : rien n'est écrit", async () => {
+    const db = world({ provider_connections: [{ id: "c1", granted_scopes: [] }] });
+    let reads = 0;
+    expect(await ensureKnownScopes(db, "c1", ["HEALTH_EXPORT"], async () => { reads++; return []; })).toEqual(["HEALTH_EXPORT"]);
+    expect(reads).toBe(0);
+    expect(await ensureKnownScopes(db, "c1", [], async () => { throw new Error("réseau"); })).toEqual([]);
+    expect(await ensureKnownScopes(db, "c1", [], async () => [])).toEqual([]);
+    const { data } = await db.from("provider_connections").select("*");
+    expect((data as Row[])[0].granted_scopes).toEqual([]);
   });
 });
