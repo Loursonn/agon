@@ -4,6 +4,7 @@
 > Suite de `docs/AUDIT_REFONTE_2026-11.md` §6, §10 phase 4 et §11 (décisions 6 et 7).
 > **État au 2026-11-13** : décision 6 exécutée (accord d'Hugo) : liens désactivés (`20261113162000`), lecteurs retirés de `src/`, archive CSV hors repo (disque externe d'Hugo), tables et fonctions supprimées (`20261113170100`). Hugo a accepté de supprimer avant la mise en prod de dev : jusque-là, l'export RGPD de `main` signale 3 tables en échec.
 > Décision 7 : R0 (dump complet sur le disque externe ; le projet n'a ni PITR ni sauvegarde listée), R1 (3 doublons renommés +1 s), R2 (job `migrations-replay`) faits. R3 `repair` seulement si le diff R2 est vide.
+> **R2 → R4 faits le 2026-11-13** : migration socle `20260411000000`, rattrapage `20261113235900` (écarts de la prod repérés dedans), 2 vieux fichiers corrigés, `20260510000000` neutralisée ; diff vide (run 43445643326). Doublons de version renommés. `repair --status applied` sur 116 versions (liste dans les notes de session), `20260503`/`20260507` renommées `…200000` et réinscrites. `db push --dry-run` : « Remote database is up to date ». R5 : règle dans `CLAUDE.md` et le skill `migration-bdd`, job R2 bloquant.
 > **Résultat R2 (run 43345653860)** : diff non vide, donc **pas de `repair`**. 32 fichiers sur ~160 échouent au rejeu, en cascade depuis des objets créés hors migrations (`profiles.is_admin`, `test_sessions`, `performance_logs`, `exercises`, `energy_session_config`), plus un index refusé (`20260427120000`, fonction non IMMUTABLE dans le prédicat). Prochaine étape : une migration « socle » datée avant `20260412` qui crée ces objets tels qu'en prod, puis relancer le job jusqu'au diff vide.
 
 Sommaire :
@@ -40,7 +41,7 @@ Remplaçants déjà en place : `weekly_retours` (retours hebdo coach), `app_feed
 **`retours` / `retours_votes`** : plus aucun écran. Restent :
 - l'export RGPD `src/lib/dataExport.ts:121` et `:133`, et `src/lib/__tests__/dataExport.test.ts:37` ;
 - 7 policies, la FK `retours_votes.retour_id → retours ON DELETE CASCADE` ;
-- les migrations `20260412_retours.sql` et `20260503_retours_comments.sql`.
+- les migrations `20260412_retours.sql` et `20260503200000_retours_comments.sql` (ex-`20260503_…`).
 - La route `retours` de `App.tsx:240` et `useWeeklyRetours` lisent `weekly_retours`, pas ces tables.
 
 `delete-account` s'appuie sur les cascades depuis `profiles` : supprimer ces tables ne change rien à la suppression de compte.

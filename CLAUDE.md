@@ -43,7 +43,7 @@ src/
 ├── data/releaseNotes.ts    fil « Nouveautés » des coachs
 └── components/ui/          primitives shadcn
 supabase/
-├── migrations/             SQL (historique distant désynchronisé, voir plus bas)
+├── migrations/             SQL (historique réaligné le 2026-11-13, voir plus bas)
 ├── functions/              Edge Functions ; _shared/ est aussi importé par le front (décodeurs FIT)
 └── tests/                  scripts SQL de test RLS, exécutés en transaction annulée
 ```
@@ -96,8 +96,8 @@ La CI GitHub (`.github/workflows/ci.yml`) lance `typecheck`, `lint`, `test`, `bu
 
 ## Base de données — règles
 
-- **Jamais `supabase db push`** : l'historique distant ne connaît pas les migrations locales de 2026-05 à aujourd'hui, il rejouerait tout sur la prod.
-- Appliquer une migration : `supabase db query --linked -f supabase/migrations/<fichier>.sql`, puis vérifier par une requête en lecture.
+- **Pas de `supabase db push`** (plusieurs sessions appliquent en parallèle) : appliquer une migration avec `supabase db query --linked -f supabase/migrations/<fichier>.sql`, vérifier par une requête en lecture, **puis l'inscrire** : `supabase migration repair --status applied <version> --linked`. Contrôle : `supabase db push --dry-run --linked` doit répondre « Remote database is up to date ».
+- Numéro de version unique (14 chiffres, jamais deux fichiers avec le même). L'historique a été réaligné le 2026-11-13 (décision 7, `docs/PLAN_LEGACY.md` §3) ; le job CI « Rejeu des migrations (R2) » rejoue tout `supabase/migrations/` et le compare à `supabase/tests/ci/schema.sql` : il est rouge si une migration ne rejoue pas ou si le schéma de la prod a changé sans migration.
 - **Demander à Hugo avant toute écriture en prod.** Tester d'abord à blanc : `BEGIN; … ; ROLLBACK;` avec `SET LOCAL ROLE authenticated` + `set_config('request.jwt.claims', …)` (exemples dans `supabase/tests/`).
 - Durcissement côté serveur : mesurer `git rev-list --count origin/main..origin/dev`. Le client de prod vient de `main` ; s'il ne sait pas encore appeler la nouvelle règle, découper la migration (avant / après déploiement).
 - Après une migration : régénérer `supabase gen types typescript --linked > src/integrations/supabase/types.ts`.

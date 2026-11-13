@@ -27,6 +27,6 @@ Cas à couvrir : l'athlète voit ses lignes, pas celles d'un autre ; le coach (r
 
 ## Appliquer
 1. **Demander à Hugo** (outil de question) en résumant ce qui change.
-2. `supabase db query --linked -f supabase/migrations/<fichier>.sql` — **jamais** `supabase db push`.
+2. `supabase db query --linked -f supabase/migrations/<fichier>.sql` — pas de `supabase db push` ; puis `supabase migration repair --status applied <version> --linked` (la version = les 14 chiffres du nom, unique).
 3. Vérifier par une requête en lecture (`pg_policies`, `information_schema`).
 4. `supabase gen types typescript --linked > src/integrations/supabase/types.ts`, puis `npm run typecheck`.

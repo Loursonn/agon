@@ -3,8 +3,8 @@ name: Rejeu des migrations (R2)
 # Étape R2 de docs/PLAN_LEGACY.md §3 (décision 7) : rejouer supabase/migrations/ dans l'ordre sur
 # une base Supabase LOCALE et éphémère, puis comparer le schéma public obtenu à celui de la prod
 # (supabase/tests/ci/schema.sql, chargé sur une autre base éphémère). Jamais la prod.
-# Informatif (jamais rouge) tant que le diff n'est pas vide : le résultat est dans le résumé du run.
-# `migration repair` (R3) seulement quand il l'est.
+# Bloquant depuis le 2026-11-13 (diff vide, historique réaligné par `migration repair`) : une migration
+# qui ne rejoue pas, ou un changement de la prod sans migration (schema.sql à jour), rend le job rouge.
 
 on:
   push:
@@ -80,7 +80,6 @@ jobs:
     name: Diff migrations ↔ prod
     needs: build
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
