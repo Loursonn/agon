@@ -260,12 +260,12 @@ export default function StaffInviteAccept() {
         <div style={tab === "signup" ? pair : undefined}>
           <div>
             <span style={label}>Mot de passe</span>
-            <PasswordInput variant="shadcn" name="password" required minLength={6} placeholder="••••••••" />
+            <PasswordInput variant="shadcn" name="password" required minLength={8} placeholder="••••••••" />
           </div>
           {tab === "signup" && (
             <div>
               <span style={label}>Confirmer le mot de passe</span>
-              <PasswordInput variant="shadcn" name="confirm" required minLength={6} placeholder="••••••••" />
+              <PasswordInput variant="shadcn" name="confirm" required minLength={8} placeholder="••••••••" />
             </div>
           )}
         </div>

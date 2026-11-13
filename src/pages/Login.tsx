@@ -279,11 +279,11 @@ export default function Login() {
         <AuthField label="E-mail">
           <input aria-label="E-mail" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ton@email.fr" style={AUTH_INPUT} />
         </AuthField>
-        <AuthField label="Mot de passe" hint="6 caractères minimum.">
-          <PasswordInput aria-label="Mot de passe" required minLength={6} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" iconColor={C.tx2} style={AUTH_INPUT} />
+        <AuthField label="Mot de passe" hint="8 caractères minimum.">
+          <PasswordInput aria-label="Mot de passe" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" iconColor={C.tx2} style={AUTH_INPUT} />
         </AuthField>
         <AuthField label="Confirmer le mot de passe" error={confirm && password !== confirm ? "Les deux mots de passe ne sont pas identiques." : null}>
-          <PasswordInput aria-label="Confirmer le mot de passe" required minLength={6} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" iconColor={C.tx2} style={AUTH_INPUT} />
+          <PasswordInput aria-label="Confirmer le mot de passe" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" iconColor={C.tx2} style={AUTH_INPUT} />
         </AuthField>
         {role === "coach" && (
           <Check on={isCoachAthlete} onChange={setIsCoachAthlete}>

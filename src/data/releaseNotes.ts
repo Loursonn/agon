@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-mot-de-passe-8-caracteres",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Mot de passe : 8 caractères minimum",
+    summary: "Pour les nouveaux comptes et les changements de mot de passe, il faut désormais 8 caractères au lieu de 6. Les mots de passe déjà choisis restent valables.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-blessures-sans-soins",
     date: "2026-11-13",
     kind: "feature",

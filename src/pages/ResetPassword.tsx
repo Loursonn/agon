@@ -37,7 +37,7 @@ export default function ResetPassword() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
-    if (password.length < 6) { setError("Le mot de passe doit contenir au moins 6 caractères."); return; }
+    if (password.length < 8) { setError("Le mot de passe doit contenir au moins 8 caractères."); return; }
     if (password !== confirm) { setError("Les deux mots de passe ne correspondent pas."); return; }
     setLoading(true);
     let updErr: { message: string } | null = null;
@@ -82,11 +82,11 @@ export default function ResetPassword() {
             <div style={{ marginTop: 12 }}>
               <AuthTitle title="Nouveau mot de passe" text={email ? <>Choisis un mot de passe pour <strong style={{ color: C.tx }}>{email}</strong>.</> : "Choisis ton nouveau mot de passe."} />
             </div>
-            <AuthField label="Nouveau mot de passe" hint="6 caractères minimum.">
-              <PasswordInput aria-label="Nouveau mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" placeholder="••••••••" iconColor={C.tx2} style={AUTH_INPUT} />
+            <AuthField label="Nouveau mot de passe" hint="8 caractères minimum.">
+              <PasswordInput aria-label="Nouveau mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" placeholder="••••••••" iconColor={C.tx2} style={AUTH_INPUT} />
             </AuthField>
             <AuthField label="Confirmer" error={mismatch ? "Les deux mots de passe ne sont pas identiques." : null}>
-              <PasswordInput aria-label="Confirmer" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} autoComplete="new-password" placeholder="••••••••" iconColor={C.tx2} style={{ ...AUTH_INPUT, borderColor: mismatch ? C.r : AUTH_INPUT.border as string }} />
+              <PasswordInput aria-label="Confirmer" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} autoComplete="new-password" placeholder="••••••••" iconColor={C.tx2} style={{ ...AUTH_INPUT, borderColor: mismatch ? C.r : AUTH_INPUT.border as string }} />
             </AuthField>
             {(error || expired) && <AuthError>{error || expired}</AuthError>}
           </>

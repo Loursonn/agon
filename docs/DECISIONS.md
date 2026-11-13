@@ -2328,3 +2328,18 @@ et son README.
 - Textes : politique de confidentialité §2.2, durées de conservation, accord socle et accord staff (« suivi
   médical » → « blessures »), corrigés **sans monter** `LEGAL_VERSION` (déjà `2026-11-13` sur `dev`, jamais vue en
   prod ; c'est une réduction). Registre T2, AIPD (C1 fait), `docs/stores/DONNEES_COLLECTEES.md` à jour.
+
+## 2026-11-13 — Actions juridiques d'Hugo : DPA, Vercel, mot de passe, AIPD
+
+- **DPA Supabase (H2)** : rien à signer. Le tableau de bord (organisation › Legal Documents) indique que le DPA est
+  intégré aux conditions d'utilisation et s'applique d'office à toutes les organisations ; l'évaluation des
+  transferts (TIA) y est téléchargeable.
+- **Vercel (H3)** : offre Hobby (gratuite, non commerciale) gardée tant qu'Agon est gratuit pour les coachs ; passage
+  en Pro (20 $/mois) le jour où Agon facture. Tâche roadmap.
+- **Gemini (H1)** : les deux clés visibles dans AI Studio sont en « niveau sans frais ». Hugo active la facturation
+  plus tard ; d'ici là la politique promet une offre payante qui n'est pas en place (écart connu, `REVUE_2026-11.md`).
+- **Mot de passe (H10)** : 8 caractères minimum dans les formulaires (inscription, réinitialisation, invitation
+  staff ; la reprise de compte l'exigeait déjà). Le réglage Supabase (Auth › Email › Minimum password length, encore
+  à 6) passe à 8 une fois `dev` en production, pour que l'ancien client ne bute pas sur une erreur serveur.
+- **AIPD (H9)** : `docs/juridique/AIPD.md` validée par Hugo le 13/11/2026.
+
