@@ -10,6 +10,10 @@ import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
 import ProfileDrawer from "./components/ProfileDrawer";
 import { useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
+import { AthleteOnboarding } from "./components/AthleteOnboarding";
+import { shouldShowOnboarding } from "@/lib/onboarding";
+import { useAuth } from "@/hooks/useAuth";
+import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
 import AppFbForm from "./components/AppFbForm";
 import { WellnessFlow } from "@/components/athlete/WellnessFlow";
@@ -92,6 +96,16 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
     saveWellness, goals, wellness, weightLog, archiveAndNewBlock,
     freeSessions,
   } = useAthleteContext();
+
+  // Premier lancement (planche Ath1Onboarding) : nouvel athlète seulement.
+  const { user, profile } = useAuth();
+  const { data: athleteCoaches } = useAthleteCoaches(athleteId);
+  const [onboarding, setOnboarding] = useState(() =>
+    shouldShowOnboarding({ uid: user?.id, role: profile?.role, onboardedAt: profile?.onboarded_at, viewOnly: !!viewOnly }),
+  );
+  useEffect(() => {
+    if (shouldShowOnboarding({ uid: user?.id, role: profile?.role, onboardedAt: profile?.onboarded_at, viewOnly: !!viewOnly })) setOnboarding(true);
+  }, [user?.id, profile?.role, profile?.onboarded_at, viewOnly]);
 
   // Badge « blessure » : `medical_entries` est la seule source, pour qu'il dise
   // la même chose que la fiche blessure du profil.
@@ -516,6 +530,16 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {drawerOpen && <ProfileDrawer onClose={() => setDrawerOpen(false)} />}
 
       <FicheViewerHost athleteId={athleteId} viewOnly={viewOnly} />
+
+      {onboarding && user && (
+        <AthleteOnboarding
+          uid={user.id}
+          firstName={(profile?.full_name ?? "").trim().split(/\s+/)[0] || "toi"}
+          coachName={athleteCoaches?.referent?.full_name ?? null}
+          saveWellness={saveWellness as (d: Record<string, unknown>) => void | Promise<boolean>}
+          onDone={() => { setOnboarding(false); navigate("/athlete"); }}
+        />
+      )}
 
       {/* ── Confirmation de déconnexion ── */}
       <Dialog

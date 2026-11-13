@@ -52,6 +52,8 @@ export function TodayWellnessCard({
   const [open, setOpen] = useState(false);
 
   if (!readiness) {
+    // Wellness court du premier lancement (3 réponses) : le score demande les 5.
+    const answered = ITEMS.filter((it) => Number((wellness as Record<string, unknown> | null)?.[it.key]) > 0).length;
     return (
       <button
         type="button"
@@ -63,7 +65,7 @@ export function TodayWellnessCard({
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
         }}
       >
-        Remplir mon wellness du matin
+        {answered > 0 ? `Compléter mon wellness (${answered} / ${ITEMS.length})` : "Remplir mon wellness du matin"}
       </button>
     );
   }

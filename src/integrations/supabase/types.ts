@@ -3634,6 +3634,7 @@ export type Database = {
           is_hyrox_athlete: boolean
           is_pending: boolean
           last_name: string | null
+          onboarded_at: string | null
           profession: string | null
           role: string
           weight_kg: number | null
@@ -3663,6 +3664,7 @@ export type Database = {
           is_hyrox_athlete?: boolean
           is_pending?: boolean
           last_name?: string | null
+          onboarded_at?: string | null
           profession?: string | null
           role: string
           weight_kg?: number | null
@@ -3692,6 +3694,7 @@ export type Database = {
           is_hyrox_athlete?: boolean
           is_pending?: boolean
           last_name?: string | null
+          onboarded_at?: string | null
           profession?: string | null
           role?: string
           weight_kg?: number | null
@@ -6213,6 +6216,7 @@ export type Database = {
       lives_ok: { Args: { "": string }; Returns: string }
       mark_doc_seen: { Args: { doc_uuid: string }; Returns: undefined }
       mark_missed_workouts: { Args: never; Returns: number }
+      mark_onboarded: { Args: never; Returns: string }
       merge_provider_activities: {
         Args: {
           p_activities: Json

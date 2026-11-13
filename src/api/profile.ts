@@ -64,6 +64,8 @@ export function invalidateProfile(qc: QueryClient, athleteId: string): Promise<v
 export interface Profile {
   id: string;
   role: "coach" | "athlete" | "coach_athlete" | "staff";
+  /** Fin (ou saut) du premier lancement athlète ; null = à montrer. */
+  onboarded_at?: string | null;
   full_name: string;
   coach_id: string | null;
   coach_code: string | null;
@@ -114,6 +116,11 @@ export async function getProfile(id: string): Promise<Profile | null> {
     "Lecture du profil impossible",
   );
   return (row as unknown as Profile | null) ?? null;
+}
+
+/** Premier lancement terminé (ou passé) pour l'utilisateur connecté. */
+export async function markOnboarded(): Promise<void> {
+  check(await db().rpc("mark_onboarded"), "Premier lancement non enregistré");
 }
 
 /** Plusieurs fiches (roster du coach). */

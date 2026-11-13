@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-athlete-premier-lancement",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : accueil au premier lancement",
+    summary: "Un nouvel athlète est accueilli en 3 écrans : à quoi sert Agon, lier sa montre s'il le souhaite, et son premier wellness en 3 tapes.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Montré une seule fois, après l'accord sur les données de santé. « Passer » mène directement à l'accueil.",
+          "Ensuite, 3 bulles d'aide sur Aujourd'hui : séance du jour, Programme, Tests.",
+          "Vos athlètes déjà inscrits ne voient rien de nouveau.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-saisie-test",
     date: "2026-11-13",
     kind: "feature",

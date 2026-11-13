@@ -64,6 +64,8 @@ import { useRunningVolume, type RunMatch } from "@/features/shared/hooks/useRunn
 import { watchRunMeasure, watchRunText } from "@/lib/watchRunLabel";
 import { useLifeEvents, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
 import { EventFormPage } from "@/features/athlete/components/EventFormPage";
+import { TodayTips } from "@/features/athlete/components/today/TodayTips";
+import { useAuth } from "@/hooks/useAuth";
 import { competitionAfter, eventTag, upcomingEvents } from "@/lib/athleteEvents";
 import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
 import { CalendarDays, GraduationCap, Plane, Trash2, Trophy } from "lucide-react";
@@ -792,6 +794,7 @@ export default function TodayPage() {
   const [testPreviewId, setTestPreviewId] = useState<string | null>(null);
   const [mensuOpen, setMensuOpen] = useState(false);
   const [eventForm, setEventForm] = useState<null | "competition" | "voyage">(null);
+  const { user: authUser } = useAuth();
   const [showAllComps, setShowAllComps] = useState(false);
 
   const {
@@ -1580,6 +1583,9 @@ export default function TodayPage() {
           onClose={() => setMensuOpen(false)}
         />
       )}
+
+      {/* Bulles d'aide après le premier lancement */}
+      {!viewOnly && <TodayTips uid={authUser?.id} />}
 
       {/* Nouvel événement (compétition, stage, voyage, examen, autre) */}
       {eventForm && (
