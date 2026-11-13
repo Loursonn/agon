@@ -1,3 +1,4 @@
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useEffect, useState } from "react";
@@ -77,6 +78,7 @@ const card: React.CSSProperties = {
 };
 
 export default function ProfilPage() {
+  const isDesktop = useIsDesktop();
   const { profile, updateAthleteProfile } = useAuth();
   const {
     athleteId, athleteProfile, viewOnly, freeSessions,
@@ -104,9 +106,10 @@ export default function ProfilPage() {
   const targetWeight = nutritionStrategy?.target_weight ?? (bodyWeight?.target || null);
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+    <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
     <AthletePageHeader title="Profil" background={headerGlow(undefined, "#33B5FF")} />
-    <div style={{ padding: "24px 20px 40px", scrollbarWidth: "none" }}>
+    {/* Ordinateur (planche AthOrdiBProfil) : rubriques sur deux colonnes. */}
+    <div className="[&>*]:break-inside-avoid" style={{ padding: "24px 20px 40px", scrollbarWidth: "none", ...(isDesktop ? { columns: 2, columnGap: 32 } : {}) }}>
       {/* ── Profil ── */}
       <div style={{ marginBottom: 24 }}>
         <SectionTitle n="01">Profil</SectionTitle>

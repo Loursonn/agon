@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-coach-nouveautes-repliees",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Nouveautés : celles déjà vues se replient",
+    summary: "Sur cette page, les nouveautés que vous avez déjà vues n'affichent plus que leur titre. « Voir le détail » les rouvre.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le titre indique combien de nouveautés restent à voir.",
+          "Une nouveauté pas encore vue porte l'étiquette « Non vue » et le bouton « J'ai vu ».",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-athlete-ordi-accueil",
     date: "2026-11-13",
     kind: "feature",
@@ -50,6 +66,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Wellness et retour du coach à gauche, semaine, événements et nutrition au centre, test et compétition à droite.",
           "En dessous : les séances du jour et la tendance de forme.",
           "Programme : la semaine s'affiche en 7 colonnes, une par jour.",
+          "Santé : les mesures passent sur 4 colonnes. Profil : les rubriques sur 2 colonnes.",
           "Sur téléphone, rien ne change.",
         ],
       },

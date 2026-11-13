@@ -1,3 +1,4 @@
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useMemo, useState, type CSSProperties } from "react";
 import { C } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
@@ -66,6 +67,7 @@ const hm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("fr-F
  * courbes ; une mesure touchée ouvre son détail sur 28 jours.
  */
 export default function AthleteSantePage() {
+  const isDesktop = useIsDesktop();
   const { athleteId } = useAthleteContext();
   const day = localIsoDay();
   const { data: days = [], isLoading } = useHealthWindow(athleteId, day);
@@ -129,7 +131,7 @@ export default function AthleteSantePage() {
 
   const [sleep, ...rest] = views;
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+    <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
       <AthletePageHeader title="Santé" titleSize={24} background={headerGlow("#33B5FF", undefined)} />
       <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, color: C.tx2 }}>
@@ -169,7 +171,7 @@ export default function AthleteSantePage() {
               </div>
               <div style={{ marginTop: 8 }}><Spark pts={sleep.series} base={sleep.base} /></div>
             </button>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, minmax(0, 1fr))" : "1fr 1fr", gap: 8 }}>
               {rest.map((m) => {
                 const missing = m.v == null && !m.series.some((p) => p.v != null);
                 return (
