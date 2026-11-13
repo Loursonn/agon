@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { NutritionDailyLog } from "@/lib/nutrition";
 
 export function NutritionDayView({ nutrition }: { nutrition: NutritionDailyLog }) {
@@ -14,9 +14,9 @@ export function NutritionDayView({ nutrition }: { nutrition: NutritionDailyLog }
       )}
       {hasMacros && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 12px" }}>
-          {proteines != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Prot.</span><span style={{ fontSize: 10, fontWeight: 700, color: "#33B5FF" }}>{proteines}g</span></div>}
-          {glucides != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Gluc.</span><span style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B" }}>{glucides}g</span></div>}
-          {lipides != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Lip.</span><span style={{ fontSize: 10, fontWeight: 700, color: "#EF4444" }}>{lipides}g</span></div>}
+          {proteines != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Prot.</span><span style={{ fontSize: 10, fontWeight: 700, color: C.b }}>{proteines}g</span></div>}
+          {glucides != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Gluc.</span><span style={{ fontSize: 10, fontWeight: 700, color: H.ambre }}>{glucides}g</span></div>}
+          {lipides != null && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, color: C.tx3 }}>Lip.</span><span style={{ fontSize: 10, fontWeight: 700, color: H.rougeVif }}>{lipides}g</span></div>}
         </div>
       )}
     </div>

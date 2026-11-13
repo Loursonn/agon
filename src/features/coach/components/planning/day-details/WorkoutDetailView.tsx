@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Pencil } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { AthleteModifications } from "@/features/shared/types/athlete";
 import { AthleteChoicesPanel, AthleteMoveBadge } from "../AthleteChoicesPanel";
@@ -59,7 +59,7 @@ export function WorkoutDetailView({
         {hasOverride && (
           <span style={{
             fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-            background: "#F59E0B20", color: "#F59E0B",
+            background: `${H.ambre}20`, color: H.ambre,
             textTransform: "uppercase", letterSpacing: "0.4px",
           }}>
             Adaptée ce jour

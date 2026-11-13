@@ -95,7 +95,7 @@ export default function ImportTextDialogShell({
             onClick={onImport}
             style={{
               padding: "8px 16px", borderRadius: 4, border: "none",
-              background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700,
+              background: C.acV, color: C.ink, fontSize: 12, fontWeight: 700,
               cursor: canImport && !importing ? "pointer" : "not-allowed",
               opacity: canImport && !importing ? 1 : 0.4, fontFamily: "inherit",
             }}

@@ -60,7 +60,7 @@ export function CompetitionDayCard({
           width: 36, height: 36, borderRadius: 6, flexShrink: 0, background: C.r,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <Trophy size={18} color="#fff" />
+          <Trophy size={18} color={C.tx} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -108,7 +108,7 @@ export function CompetitionDayCard({
                 disabled={update.isPending || !text.trim()}
                 style={{
                   flex: 1, padding: "9px 0", borderRadius: 6, border: "none", background: C.r,
-                  color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                   opacity: update.isPending || !text.trim() ? 0.6 : 1,
                 }}
               >
@@ -145,7 +145,7 @@ export function CompetitionDayCard({
             onClick={() => setEditing(true)}
             style={{
               width: "100%", padding: "9px 0", borderRadius: 6, border: "none", background: C.r,
-              color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
             }}
           >
             {toComment ? "Compétition à commenter — remplir mon bilan" : "Remplir mon bilan"}

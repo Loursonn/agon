@@ -3,7 +3,7 @@
  * (blocs, exercices, séries × reps, charge, RIR), séances énergie, tests,
  * compétitions, et les fiches posées sur ce jour.
  */
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { UnifiedCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
 import type { ProgSession } from "@/features/coach/components/programmation/types";
@@ -98,7 +98,7 @@ function OtherEvent({ event, onOpenEnergy }: { event: UnifiedCalendarEvent; onOp
     );
   }
   const meta: Record<string, { color: string; prefix: string }> = {
-    test: { color: "#C08A4A", prefix: "Test" },
+    test: { color: H.cuivre, prefix: "Test" },
     competition: { color: C.r, prefix: "Compétition" },
     free_activity: { color: C.pat, prefix: event.sport ?? "Activité" },
     life_event: { color: C.tx3, prefix: "Événement" },

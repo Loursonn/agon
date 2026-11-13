@@ -73,7 +73,7 @@ export function DraggableEventChip({
             background: C.r + "cc", border: "none",
             borderRadius: card ? "0 10px 10px 0" : "0 4px 4px 0",
             cursor: "pointer", padding: 0,
-            color: "#fff",
+            color: C.tx,
             zIndex: 1,
           }}
         >

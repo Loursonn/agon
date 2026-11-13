@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from "react";
 import { X, Trash2, Pencil, Check } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { genId } from "@/lib/energy/treeUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { useSpecificBlocks, useUpdateSpecificBlock, useDeleteSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
@@ -14,8 +14,8 @@ import TaxonomySelect from "./TaxonomySelect";
 import type { EnergyStep } from "@/types/energy";
 import type { SessionBlock, SpecificBlockRow } from "@/types/specific";
 
-const ORANGE = "#F5A623";
-const GREEN  = "#66F03C";
+const ORANGE = H.miel;
+const GREEN  = C.g;
 
 /** Clone récursif d'EnergyStep[] avec nouveaux ids. */
 function cloneSteps(steps: EnergyStep[]): EnergyStep[] {
@@ -155,7 +155,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
             onChange={(id) => setQualityFilter(id ?? "all")}
             onCreate={async (n) => user?.id ? await createQuality.mutateAsync({ name: n, coachId: user.id }) : undefined}
             width={160}
-            accent="#FFC933"
+            accent={C.ac}
           />
           <input
             value={search}
@@ -212,7 +212,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
                         background: isSel ? ORANGE : "transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        {isSel && <Check size={11} color="#1a1204" strokeWidth={3} />}
+                        {isSel && <Check size={11} color={H.encreOr} strokeWidth={3} />}
                       </span>
 
                       {editingId === b.id ? (
@@ -269,7 +269,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
                         </span>
                       )}
                       {quality && (
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "#FFC93320", color: "#FFC933" }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${C.ac}20`, color: C.ac }}>
                           {quality.name}
                         </span>
                       )}
@@ -300,7 +300,7 @@ export default function BlockBankDrawer({ onInsert, onClose }: Props) {
             style={{
               padding: "8px 16px", borderRadius: 4, border: "none",
               background: selected.size > 0 ? ORANGE : C.s2,
-              color: selected.size > 0 ? "#1a1204" : C.tx3,
+              color: selected.size > 0 ? H.encreOr : C.tx3,
               fontSize: 12, fontWeight: 700, cursor: selected.size > 0 ? "pointer" : "default",
               fontFamily: "inherit",
             }}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FlaskConical, Plus, Pencil, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { C, alpha } from '@/lib/theme';
+import { C, alpha, H } from "@/lib/theme";
 import { DISPLAY, KICK, SectionHead } from '@/features/shared/components/ordi/OrdiUi';
 import { EmptyState } from '@/features/shared/components/EmptyState';
 import { ListSkeleton } from '@/features/shared/components/skeletons';
@@ -121,7 +121,7 @@ function VariableRow({
           style={{
             width: 30, height: 30, borderRadius: 6, border: 'none',
             background: total <= 1 ? 'transparent' : 'rgba(239,75,75,0.12)',
-            color: total <= 1 ? C.tx3 : '#FF5A33',
+            color: total <= 1 ? C.tx3 : C.r,
             cursor: total <= 1 ? 'default' : 'pointer', fontSize: 14,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
@@ -199,7 +199,7 @@ function TestCard({
           background: test.kind === 'preset' ? 'rgba(255,201,51,0.12)' : 'rgba(245,166,35,0.12)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <FlaskConical size={16} color={test.kind === 'preset' ? C.ac : '#F5A623'} />
+          <FlaskConical size={16} color={test.kind === 'preset' ? C.ac : H.miel} />
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -250,7 +250,7 @@ function TestCard({
               {confirmDelete ? (
                 <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
                   <button onClick={onDelete} style={{
-                    ...iconBtnStyle, background: 'rgba(239,75,75,0.15)', color: '#FF5A33',
+                    ...iconBtnStyle, background: 'rgba(239,75,75,0.15)', color: C.r,
                     padding: '4px 10px', fontSize: 11, width: 'auto', borderRadius: 6,
                   }}>
                     Confirmer
@@ -302,7 +302,7 @@ function TestCard({
               }}>
                 {v.better_when === 'higher'
                   ? <TrendingUp size={12} color={C.g} />
-                  : <TrendingDown size={12} color='#FF5A33' />
+                  : <TrendingDown size={12} color={C.r} />
                 }
                 <span style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{v.label}</span>
                 <span style={{ fontSize: 11, color: C.tx3 }}>{v.unit}</span>
@@ -482,7 +482,7 @@ function TestFormPanel({
           style={{
             padding: '9px 22px', borderRadius: 4, border: 'none', fontFamily: 'inherit',
             background: isValid && !saving ? C.ac : C.s2,
-            color: isValid && !saving ? '#fff' : C.tx3,
+            color: isValid && !saving ? C.tx : C.tx3,
             fontSize: 13, fontWeight: 700,
             cursor: isValid && !saving ? 'pointer' : 'default',
             transition: 'background 150ms ease-out',
@@ -577,7 +577,7 @@ export default function CoachTestsBankPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
               height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 10, border: 'none',
-              background: C.ac, color: '#0E0C0A', fontSize: 12, fontWeight: 600, boxShadow: `0 6px 22px ${alpha(C.ac, 0.3)}`,
+              background: C.ac, color: C.ink, fontSize: 12, fontWeight: 600, boxShadow: `0 6px 22px ${alpha(C.ac, 0.3)}`,
               cursor: 'pointer', fontFamily: 'inherit',
               transition: 'opacity 150ms ease-out',
             }}
@@ -700,7 +700,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 11px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
   background: 'rgba(255,255,255,0.04)',
-  color: '#E8E6EA', fontSize: 12, fontFamily: 'inherit',
+  color: H.grisPerle, fontSize: 12, fontFamily: 'inherit',
   outline: 'none', boxSizing: 'border-box',
 };
 
@@ -710,12 +710,12 @@ const selectStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: 10, fontWeight: 600,
-  color: '#7D7468', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6,
+  color: C.tx3, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6,
 };
 
 const iconBtnStyle: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)',
-  background: 'transparent', color: '#7D7468', cursor: 'pointer',
+  background: 'transparent', color: C.tx3, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   transition: 'color 150ms ease-out',
 };
@@ -723,6 +723,6 @@ const iconBtnStyle: React.CSSProperties = {
 const cancelBtnStyle: React.CSSProperties = {
   padding: '9px 18px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
-  background: 'transparent', color: '#7D7468',
+  background: 'transparent', color: C.tx3,
   fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
 };

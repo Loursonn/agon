@@ -1,9 +1,9 @@
 import { useState } from "react"
-import { C } from "@/lib/theme"
+import { C, H } from "@/lib/theme";
 import { X } from "lucide-react"
 import type { TrainingMethod } from "@/types/trainingMethods"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 interface MethodPickerModalProps {
@@ -17,7 +17,7 @@ const SCOPE_CONFIG = {
   classic: {
     label: "Classique",
     description: "Template simple — séries × reps avec progressions",
-    color: "#22c55e",
+    color: H.vert,
     colorS: "rgba(34,197,94,0.10)",
   },
   exercise: {
@@ -29,7 +29,7 @@ const SCOPE_CONFIG = {
   set: {
     label: "Sur la série",
     description: "S'applique à une série spécifique (cluster, rest-pause, drop-set...)",
-    color: "#f59e0b",
+    color: H.ambre,
     colorS: "rgba(245,158,11,0.10)",
   },
 } as const
@@ -147,7 +147,7 @@ export function MethodPickerModal({ methods, selectedId, onSelect, onClose }: Me
                         </div>
                         {isSelected && (
                           <div style={{ width: 18, height: 18, borderRadius: "50%", background: cfg.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff" }} />
+                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.tx }} />
                           </div>
                         )}
                       </button>

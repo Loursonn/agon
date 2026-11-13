@@ -3,7 +3,7 @@ import type { AllSets, PadTarget } from "@/features/athlete/components/workout-d
 import type { AthleteModifications } from "@/features/shared/types/athlete";
 import { BLANK_SET, allSetsToMods, blocRestSeconds, buildExSets, countSets, formatElapsed, formatPrescription, getSetTarget, haptic, hexToRgba, normalizeSet, parsePrevVal, prescribedKg, sameSets, timingLabel } from "@/features/athlete/components/workout-detail/workoutDetailUtils";
 import { BadgeTag } from "@/features/athlete/components/workout-detail/BadgeTag";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { ExerciceCard } from "@/features/athlete/components/workout-detail/ExerciceCard";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 import { FinishWorkoutSheet } from "@/features/athlete/components/workout/FinishWorkoutSheet";
@@ -905,7 +905,7 @@ export default function WorkoutDetailPage() {
                     border: "1px solid rgba(245,158,11,0.3)",
                     fontSize: 9,
                     fontWeight: 700,
-                    color: "#F59E0B",
+                    color: H.ambre,
                   }}
                 >
                   Décalée du{" "}
@@ -1320,7 +1320,7 @@ export default function WorkoutDetailPage() {
                           <span style={{
                             padding: "1px 8px", borderRadius: 4,
                             background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.4)",
-                            color: "#F5A623", fontSize: 9, fontWeight: 800,
+                            color: H.miel, fontSize: 9, fontWeight: 800,
                           }}>
                             enchaîner sans repos
                           </span>
@@ -1526,7 +1526,7 @@ export default function WorkoutDetailPage() {
               borderRadius: 6,
               border: "none",
               background: allSetsHandled ? GREEN : ACCENT,
-              color: "#fff",
+              color: C.tx,
               fontSize: 14,
               fontWeight: 700,
               cursor: "pointer",
@@ -1586,7 +1586,7 @@ export default function WorkoutDetailPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button
                 onClick={() => { setShowInactiveReminder(false); lastActivityRef.current = Date.now(); }}
-                style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "none", background: ACCENT, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "12px 0", borderRadius: 6, border: "none", background: ACCENT, color: C.tx, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Continuer la séance
               </button>
@@ -1652,7 +1652,7 @@ export default function WorkoutDetailPage() {
                 }}
               >×</button>
             </div>
-            <div style={{ width: "100%", aspectRatio: "16/9", background: "#000" }}>
+            <div style={{ width: "100%", aspectRatio: "16/9", background: H.noir }}>
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${videoModal.ytId}?rel=0`}
                 style={{ width: "100%", height: "100%", border: "none" }}

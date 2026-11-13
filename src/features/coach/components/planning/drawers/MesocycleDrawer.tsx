@@ -67,7 +67,7 @@ function CascadeModal({
           Modifier ce mésocycle va décaler <strong style={{ color: C.coach }}>{count} {level}{count > 1 ? "s" : ""}</strong> suivant{count > 1 ? "s" : ""}.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.acV, color: C.ink, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Bouger tout le planning
           </button>
           <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -432,7 +432,7 @@ export function MesocycleDrawer({ meso, siblings, allMacros, athleteId, rangeSta
         {/* Save config */}
         <button
           onClick={save} disabled={saving}
-          style={{ width: "100%", padding: "13px 0", borderRadius: 6, border: "none", background: saving ? C.s2 : C.coach, color: saving ? C.tx3 : "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
+          style={{ width: "100%", padding: "13px 0", borderRadius: 6, border: "none", background: saving ? C.s2 : C.coach, color: saving ? C.tx3 : C.tx, fontSize: 14, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
         >
           {saving ? "Enregistrement..." : "Enregistrer config"}
         </button>

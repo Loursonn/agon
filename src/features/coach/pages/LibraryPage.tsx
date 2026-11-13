@@ -122,7 +122,7 @@ function EnergyTab() {
               style={{
                 padding: "5px 12px", borderRadius: 6, border: "none",
                 background: filterTab === t.value ? C.ac : "transparent",
-                color: filterTab === t.value ? "#fff" : C.tx3,
+                color: filterTab === t.value ? C.tx : C.tx3,
                 fontSize: 12, fontWeight: filterTab === t.value ? 600 : 400,
                 cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
               }}
@@ -181,7 +181,7 @@ function EnergyTab() {
           onClick={() => navigate("/coach/energy-library/new")}
           style={{
             padding: "7px 14px", borderRadius: 4, border: "none",
-            background: C.acV, color: "#0E0C0A", fontSize: 12,
+            background: C.acV, color: C.ink, fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -207,7 +207,7 @@ function EnergyTab() {
               onClick={() => navigate("/coach/energy-library/new")}
               style={{
                 padding: "9px 20px", borderRadius: 4, border: "none",
-                background: C.acV, color: "#0E0C0A", fontSize: 13,
+                background: C.acV, color: C.ink, fontSize: 13,
                 fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               }}
             >
@@ -334,7 +334,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
             <button key={t.value} onClick={() => setScopeFilter(t.value)} style={{
               padding: "5px 12px", borderRadius: 6, border: "none",
               background: scopeFilter === t.value ? C.ac : "transparent",
-              color: scopeFilter === t.value ? "#fff" : C.tx3,
+              color: scopeFilter === t.value ? C.tx : C.tx3,
               fontSize: 12, fontWeight: scopeFilter === t.value ? 600 : 400,
               cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
             }}>
@@ -365,7 +365,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
             <button key={v} onClick={() => setOfficialFilter(v)} style={{
               padding: "5px 12px", borderRadius: 6, border: "none",
               background: officialFilter === v ? C.ac : "transparent",
-              color: officialFilter === v ? "#fff" : C.tx3,
+              color: officialFilter === v ? C.tx : C.tx3,
               fontSize: 12, fontWeight: officialFilter === v ? 600 : 400,
               cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
             }}>
@@ -397,7 +397,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
           onClick={openCreate}
           style={{
             marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
-            background: C.acV, color: "#0E0C0A", fontSize: 12,
+            background: C.acV, color: C.ink, fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >

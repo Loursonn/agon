@@ -129,7 +129,7 @@ export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, 
               : "transparent",
           color:
             checkState === "done"
-              ? "#fff"
+              ? C.tx
               : checkState === "skip"
               ? ACCENT_ALT
               : C.tx3,

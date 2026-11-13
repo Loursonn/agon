@@ -152,7 +152,7 @@ export function NumPad({ target, value, onChange, onConfirm, onClose }: NumPadPr
               borderRadius: 6,
               border: "none",
               background: ACCENT,
-              color: "#fff",
+              color: C.tx,
               fontSize: 14,
               fontWeight: 700,
               cursor: "pointer",

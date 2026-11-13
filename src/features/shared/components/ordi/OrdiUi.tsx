@@ -3,7 +3,7 @@
  * (coach ordi, espace staff) : en-tête de page, rubriques numérotées
  * « 01 — », cartes, boutons, pastilles, avatars à initiales.
  * Valeurs relevées dans les planches CoachOrdi* (Archivo 30 px, Geist Mono 11 px
- * espacé 0,14 em, cartes #1E1A16 rayon 14, boutons rayon 10).
+ * espacé 0,14 em, cartes basalte (C.s1) rayon 14, boutons rayon 10).
  */
 import type { CSSProperties, ReactNode } from "react";
 import { C } from "@/lib/theme";

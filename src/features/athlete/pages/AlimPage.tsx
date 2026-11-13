@@ -3,6 +3,7 @@ import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import NutritionView from "@/components/athlete/NutritionView";
 import { useNutritionStrategy } from "@/features/shared/hooks/useNutrition";
+import { C } from "@/lib/theme";
 
 /**
  * Le journal est lu et écrit par NutritionView via `src/api/nutrition.ts`
@@ -20,7 +21,7 @@ export default function AlimPage() {
 
   return (
     <div className="mx-auto w-full max-w-[480px] lg:max-w-none">
-    <AthletePageHeader title="Alimentation" dateStyle="long" background={headerGlow("#66F03C", "#FF9500")} />
+    <AthletePageHeader title="Alimentation" dateStyle="long" background={headerGlow(C.g, C.o)} />
     <NutritionView
       athleteId={athleteId}
       bmr={bmr}

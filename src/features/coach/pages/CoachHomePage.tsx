@@ -73,7 +73,7 @@ function SectionTitle({ n, children }: { n?: number; icon?: React.ReactNode; chi
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-[#1E1A16] border border-[rgba(231,211,168,0.15)] rounded-2xl overflow-hidden ${className}`}>
+    <div className={`bg-agon-s1 border border-[rgba(231,211,168,0.15)] rounded-2xl overflow-hidden ${className}`}>
       {children}
     </div>
   );
@@ -83,7 +83,7 @@ function SkeletonRows({ n = 3 }: { n?: number }) {
   return (
     <div className="flex flex-col gap-2 p-4">
       {Array.from({ length: n }).map((_, i) => (
-        <Skeleton key={i} className="h-12 w-full rounded-xl bg-[#27221D]" />
+        <Skeleton key={i} className="h-12 w-full rounded-xl bg-agon-s2" />
       ))}
     </div>
   );
@@ -190,7 +190,7 @@ export default function CoachHomePage() {
 
           {/* ── Aujourd'hui ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Calendar size={11} style={{ color: "#7D7468" }} />}>Aujourd'hui</SectionTitle>
+            <SectionTitle n={nx()} icon={<Calendar size={11} style={{ color: C.tx3 }} />}>Aujourd'hui</SectionTitle>
             <Card>
               {isLoadingToday ? (
                 <SkeletonRows n={3} />
@@ -243,7 +243,7 @@ export default function CoachHomePage() {
                                 </span>
                                 <StatusPill status={s.status} />
                                 {s.rpeScore != null && (
-                                  <span className="text-[10px] font-bold px-1.5 py-px rounded bg-[rgba(59,141,240,0.12)] text-[#33B5FF] border border-[rgba(59,141,240,0.2)]">
+                                  <span className="text-[10px] font-bold px-1.5 py-px rounded bg-[rgba(59,141,240,0.12)] text-agon-info border border-[rgba(59,141,240,0.2)]">
                                     RPE {s.rpeScore}
                                   </span>
                                 )}
@@ -386,7 +386,7 @@ export default function CoachHomePage() {
           {/* ── Séances à clôturer ── */}
           {unfinished.length > 0 && (
             <motion.div variants={fadeUp}>
-              <SectionTitle n={nx()} icon={<Flag size={11} style={{ color: "#7D7468" }} />}>Séances à clôturer</SectionTitle>
+              <SectionTitle n={nx()} icon={<Flag size={11} style={{ color: C.tx3 }} />}>Séances à clôturer</SectionTitle>
               <Card>
                 {unfinished.slice(0, 8).map((w, i) => {
                   const name = athleteNameById.get(w.athleteId)
@@ -421,7 +421,7 @@ export default function CoachHomePage() {
 
           {/* ── Activité récente ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Clock size={11} style={{ color: "#7D7468" }} />}>Activité récente</SectionTitle>
+            <SectionTitle n={nx()} icon={<Clock size={11} style={{ color: C.tx3 }} />}>Activité récente</SectionTitle>
             <Card>
               {loadActivity ? (
                 <SkeletonRows n={4} />
@@ -468,7 +468,7 @@ export default function CoachHomePage() {
           {/* Self as athlete shortcut */}
           {isCoachAthlete && canCoachSelf && user && (
             <motion.div variants={fadeUp}>
-              <SectionTitle icon={<Dumbbell size={11} style={{ color: "#7D7468" }} />}>Mon programme</SectionTitle>
+              <SectionTitle icon={<Dumbbell size={11} style={{ color: C.tx3 }} />}>Mon programme</SectionTitle>
               <button
                 onClick={() => navigate(`/coach/athletes/${user.id}/planning`)}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-colors hover:border-[rgba(255,201,51,0.5)]"
@@ -507,7 +507,7 @@ export default function CoachHomePage() {
 
           {/* ── À anticiper ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<CalendarDays size={11} style={{ color: "#7D7468" }} />}>À anticiper</SectionTitle>
+            <SectionTitle n={nx()} icon={<CalendarDays size={11} style={{ color: C.tx3 }} />}>À anticiper</SectionTitle>
             <Card>
               {loadMargin ? (
                 <SkeletonRows n={3} />
@@ -574,7 +574,7 @@ export default function CoachHomePage() {
 
           {/* ── Records & tests ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Medal size={11} style={{ color: "#7D7468" }} />}>Records & tests</SectionTitle>
+            <SectionTitle n={nx()} icon={<Medal size={11} style={{ color: C.tx3 }} />}>Records & tests</SectionTitle>
             <Card>
               {loadRecords ? (
                 <SkeletonRows n={3} />
@@ -624,7 +624,7 @@ export default function CoachHomePage() {
 
           {/* ── Compétitions ── */}
           <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Trophy size={11} style={{ color: "#7D7468" }} />}>Compétitions</SectionTitle>
+            <SectionTitle n={nx()} icon={<Trophy size={11} style={{ color: C.tx3 }} />}>Compétitions</SectionTitle>
             <Card>
               {loadCompet ? (
                 <SkeletonRows n={3} />
@@ -694,19 +694,19 @@ function ActionCounter({ icon, label, count, loading, color, onClick }: ActionCo
       onClick={onClick}
       className="flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl border transition-all cursor-pointer"
       style={{
-        background:  count > 0 ? color + "12" : "#1E1A16",
+        background:  count > 0 ? color + "12" : C.s1,
         borderColor: count > 0 ? color + "45" : "rgba(231,211,168,0.15)",
       }}
     >
       <span className="leading-none flex items-center justify-center">{icon}</span>
       {loading ? (
-        <Skeleton className="h-7 w-10 rounded bg-[#27221D]" />
+        <Skeleton className="h-7 w-10 rounded bg-agon-s2" />
       ) : (
-        <p className="text-[26px] font-extrabold leading-none" style={{ color: count > 0 ? color : "#7D7468" }}>
+        <p className="text-[26px] font-extrabold leading-none" style={{ color: count > 0 ? color : C.tx3 }}>
           {count}
         </p>
       )}
-      <p className="text-[9px] font-bold uppercase tracking-wide text-center leading-tight" style={{ color: "#7D7468" }}>
+      <p className="text-[9px] font-bold uppercase tracking-wide text-center leading-tight" style={{ color: C.tx3 }}>
         {label}
       </p>
     </div>

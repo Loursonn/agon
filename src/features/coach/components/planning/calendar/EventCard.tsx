@@ -1,5 +1,5 @@
 import { Check, Watch } from "lucide-react";
-import { C, alpha } from "@/lib/theme";
+import { C, alpha, H } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { athleteMoveTitle } from "@/lib/athleteChoices";
 import type { PlanningCardState } from "@/lib/planningCard";
@@ -15,7 +15,7 @@ export function EventCard({ event, watch }: { event: CalEvent; watch?: PlanningC
   const st = event.status;
   const bio = isBiometric(event);
   const spec = event.type === "energy" && event.sessionKind === "specifique";
-  const color = spec ? "#F5A623" : event.type === "energy" ? C.b : bio ? BIO_COLOR : TYPE_COLOR[event.type];
+  const color = spec ? H.miel : event.type === "energy" ? C.b : bio ? BIO_COLOR : TYPE_COLOR[event.type];
   const label = spec ? "Spécifique" : bio ? "Biométrie" : CARD_KIND_LABEL[event.type];
   const blockLogs = event.type === "energy" && event.partial
     ? (event.raw?.block_logs as Record<string, { done: boolean }> | null | undefined)
@@ -44,7 +44,7 @@ export function EventCard({ event, watch }: { event: CalEvent; watch?: PlanningC
           </span>
         )}
         {event.type === "workout" && event.rescheduledByAthlete && (
-          <span title={athleteMoveTitle(event.date, event.originalScheduledDate)} style={{ fontSize: 10, fontWeight: 800, color: "#F59E0B" }}>↷</span>
+          <span title={athleteMoveTitle(event.date, event.originalScheduledDate)} style={{ fontSize: 10, fontWeight: 800, color: H.ambre }}>↷</span>
         )}
         {watch && WATCH_MARK[watch] && (
           <span title={WATCH_MARK[watch]!.title} aria-label={WATCH_MARK[watch]!.title} style={{ display: "inline-flex", color: WATCH_MARK[watch]!.color }}>

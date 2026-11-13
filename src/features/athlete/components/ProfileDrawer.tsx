@@ -654,7 +654,7 @@ function CoachSection({ onClose }: { onClose: () => void }) {
           placeholder="Ex: R4BL7M" maxLength={6} autoFocus
           style={{ flex: 1, padding: "8px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", letterSpacing: "0.1em" }}
         />
-        <button onClick={handleJoin} disabled={loading || !code.trim()} style={{ padding: "8px 14px", borderRadius: 4, border: "none", background: code.trim() ? C.ac : C.s2, color: code.trim() ? "#fff" : C.tx3, fontSize: 12, fontWeight: 600, cursor: code.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
+        <button onClick={handleJoin} disabled={loading || !code.trim()} style={{ padding: "8px 14px", borderRadius: 4, border: "none", background: code.trim() ? C.ac : C.s2, color: code.trim() ? C.tx : C.tx3, fontSize: 12, fontWeight: 600, cursor: code.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
           {loading ? "…" : "OK"}
         </button>
       </div>
@@ -679,7 +679,7 @@ function CoachSection({ onClose }: { onClose: () => void }) {
                   Tu n'apparaîtras plus dans tes athlètes et n'auras plus de coach. Continuer ?
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={handleStopSelfCoaching} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={handleStopSelfCoaching} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                     {loading ? "…" : "Confirmer"}
                   </button>
                   <button onClick={() => setConfirmAction(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -737,7 +737,7 @@ function CoachSection({ onClose }: { onClose: () => void }) {
                   {isCoachAthlete ? "Tu redeviendras ton propre coach. Continuer ?" : "Tu n'auras plus de coach. Continuer ?"}
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={handleQuitExternalCoach} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={handleQuitExternalCoach} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                     {loading ? "…" : "Confirmer"}
                   </button>
                   <button onClick={() => setConfirmAction(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>

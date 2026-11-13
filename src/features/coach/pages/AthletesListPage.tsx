@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { C, alpha } from "@/lib/theme";
+import { C, alpha, H } from "@/lib/theme";
 import { DISPLAY, KICK, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -95,7 +95,7 @@ export default function AthletesListPage() {
               {tag && (
                 <span
                   title={a.co_coached_by_me ? "Tu es co-coach de cet athlète" : "Cet athlète a un co-coach"}
-                  style={{ ...MONO, fontSize: 10.5, fontWeight: 500, lineHeight: "14px", letterSpacing: "0.10em", textTransform: "uppercase", flex: "none", color: "#0E0C0A", background: tag.color, borderRadius: 999, padding: "2px 9px" }}
+                  style={{ ...MONO, fontSize: 10.5, fontWeight: 500, lineHeight: "14px", letterSpacing: "0.10em", textTransform: "uppercase", flex: "none", color: C.ink, background: tag.color, borderRadius: 999, padding: "2px 9px" }}
                 >
                   {tag.label}
                 </span>
@@ -103,7 +103,7 @@ export default function AthletesListPage() {
             </span>
             {pending ? (
               <span style={{ display: "block", marginTop: 3, lineHeight: "16px" }}>
-                <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#0E0C0A", background: C.o, borderRadius: 999, padding: "1px 8px" }}>
+                <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.ink, background: C.o, borderRadius: 999, padding: "1px 8px" }}>
                   En attente de première connexion
                 </span>
               </span>
@@ -210,7 +210,7 @@ export default function AthletesListPage() {
           aria-label="Ajouter un athlète"
           style={{
             width: 44, height: 44, boxSizing: "border-box", borderRadius: 11, flexShrink: 0, border: "none",
-            background: C.ac, boxShadow: `0 6px 22px ${alpha(C.ac, 0.35)}`, color: "#0E0C0A", cursor: "pointer",
+            background: C.ac, boxShadow: `0 6px 22px ${alpha(C.ac, 0.35)}`, color: C.ink, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
@@ -427,7 +427,7 @@ export default function AthletesListPage() {
                 disabled={creating || !newFirst.trim() || !newLast.trim()}
                 style={{
                   flex: 1, padding: "12px 0", borderRadius: 4,
-                  border: "none", background: C.coach, color: "#000",
+                  border: "none", background: C.coach, color: H.noir,
                   fontSize: 13, fontWeight: 700, fontFamily: "inherit",
                   cursor: creating ? "default" : "pointer",
                   opacity: creating || !newFirst.trim() || !newLast.trim() ? 0.5 : 1,
@@ -491,7 +491,7 @@ export default function AthletesListPage() {
                   style={{
                     flex: 1, padding: "12px 0", borderRadius: 4,
                     border: "none", background: removing ? C.s2 : C.r,
-                    color: removing ? C.tx3 : "#fff", fontSize: 13, fontWeight: 700,
+                    color: removing ? C.tx3 : C.tx, fontSize: 13, fontWeight: 700,
                     cursor: removing ? "default" : "pointer", fontFamily: "inherit",
                   }}
                 >

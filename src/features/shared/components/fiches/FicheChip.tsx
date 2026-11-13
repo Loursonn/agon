@@ -53,7 +53,7 @@ export function FicheChip({ doc, fallback = "Fiche", showVariant = true, hint, i
           {hint && <span style={{ color: C.tx3, fontWeight: 500 }}> · {hint}</span>}
         </span>
         {isNew && (
-          <span style={{ fontSize: 9, fontWeight: 800, color: "#0E0C0A", background: C.ac, borderRadius: 3, padding: "1px 5px", flexShrink: 0 }}>
+          <span style={{ fontSize: 9, fontWeight: 800, color: C.ink, background: C.ac, borderRadius: 3, padding: "1px 5px", flexShrink: 0 }}>
             NOUVEAU
           </span>
         )}

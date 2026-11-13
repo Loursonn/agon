@@ -3,7 +3,7 @@ import { fr } from "date-fns/locale";
 import { Trophy } from "lucide-react";
 import { competitionDayLabel } from "@/types/planning";
 import { useDroppable } from "@dnd-kit/core";
-import { C, alpha } from "@/lib/theme";
+import { C, alpha, H } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { DayThemePill } from "@/features/shared/components/DayThemePill";
 import { dayThemeFullLabel, type DayThemeLike } from "@/lib/dayTheme";
@@ -108,7 +108,7 @@ export function DroppableDay({
             background: today ? C.ac : "transparent",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 11, fontWeight: today ? 800 : 500,
-            color: today ? "#fff" : isCurrentMonth ? C.tx2 : C.tx3,
+            color: today ? C.tx : isCurrentMonth ? C.tx2 : C.tx3,
             flexShrink: 0,
           }}
         >
@@ -126,7 +126,7 @@ export function DroppableDay({
           key={cp.id}
           title={competitionDayLabel(cp.raw?.type as string | undefined) + " — " + cp.title}
           style={{
-            background: C.r, color: "#fff",
+            background: C.r, color: C.tx,
             borderRadius: 3, padding: "1px 5px",
             fontSize: 9, fontWeight: 700, lineHeight: "15px",
             display: "flex", alignItems: "center", gap: 4,
@@ -206,7 +206,7 @@ export function DroppableDay({
                 title="Décalage → semaine suivante (coach requis)"
                 style={{
                   width: 6, height: 6, borderRadius: "50%",
-                  background: "#F59E0B",
+                  background: H.ambre,
                   display: "block",
                 }}
               />
@@ -216,8 +216,8 @@ export function DroppableDay({
                 title="Déplacé par l'athlète"
                 style={{
                   width: 5, height: 5, borderRadius: "50%",
-                  background: "#F59E0B50",
-                  border: "1px solid #F59E0B",
+                  background: `${H.ambre}50`,
+                  border: `1px solid ${H.ambre}`,
                   display: "block",
                 }}
               />

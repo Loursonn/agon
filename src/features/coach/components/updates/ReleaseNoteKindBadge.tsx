@@ -12,7 +12,7 @@ const KIND: Record<ReleaseNoteKind, { label: string; bg: string }> = {
 export function ReleaseNoteKindBadge({ kind }: { kind: ReleaseNoteKind }) {
   const k = KIND[kind];
   return (
-    <span style={{ fontSize: 10, fontWeight: 800, color: "#0E0C0A", background: k.bg, borderRadius: 3, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 6px" }}>
+    <span style={{ fontSize: 10, fontWeight: 800, color: C.ink, background: k.bg, borderRadius: 3, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 6px" }}>
       {k.label}
     </span>
   );

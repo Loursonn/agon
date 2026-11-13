@@ -261,7 +261,10 @@ Source : audit qualité.
 
 ### Phase 6 — 4 fronts (coach PC/mobile, athlète mobile/PC) · écran par écran
 - [x] Shell responsive par rôle (`CoachShell.tsx`, `AthleteLayout.tsx`).
-- [ ] Migrer chaque écran inline → Tailwind avec breakpoints, à partir des maquettes Claude Design ; découper les gros fichiers.
+- [x] Toutes les planches du canvas comparées au code et les écarts « front » corrigés (2026-11-13 : `docs/maquettes/ECARTS_CANVAS_2026-11-13.md`, les B restants y sont listés).
+- [x] Plus aucune couleur hex en dur dans `src/features` et `src/pages` (912 → 0, 2026-11-13) : tout passe par `tokens.css` (`C`, `H` pour les couleurs héritées sans équivalent dans la charte, classes `*-agon-*`) ; garde-fou `src/styles/__tests__/noHardcodedHex.test.ts`.
+- [x] Découper les gros fichiers (2026-11-13, déplacement pur) : `WorkoutDetailPage` 3 616 → 1 680 l., `TodayPage` 1 659 → 936, `ProgramPage` 1 284 → 18, `CalendarMonthView` 1 716 → 697, `DayDetailsDrawer` 1 396 → 435, `RaceAnalysis` en onglets.
+- [ ] Migrer les styles inline restants (~9 950 `style={{`) → Tailwind avec breakpoints, écran par écran ; remplacer les couleurs `H` par la charte finale ; redécouper le composant principal de `WorkoutDetailPage` (~1 600 l. à lui seul).
 
 ### Phase 7 — Stores (janv.-fév. 2027)
 - [x] Décision **Capacitor** (recommandé : réutilise tout le code web et le hors-ligne ; plugins santé suffisants) vs React Native/Expo (réécriture de ~13 000 lignes d'UI athlète). À acter dans `DECISIONS.md` (CLAUDE.md dit encore Expo).

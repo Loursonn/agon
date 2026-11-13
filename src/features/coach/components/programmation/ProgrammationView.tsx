@@ -9,7 +9,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { C, alpha } from "@/lib/theme"
+import { C, alpha } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/ordi/OrdiUi"
 import { Plus, Pencil, X, ChevronDown, ChevronUp, CalendarPlus, Copy, Library, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -32,7 +32,7 @@ import { MuscleVolumePanel } from "./MuscleVolumePanel"
 import { useMuscleVolume } from "./hooks/useMuscleVolume"
 import { localISO } from "@/lib/date"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
@@ -138,7 +138,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
         {session.short && session.short !== "?" && (
           <div style={{
             height: 24, display: "flex", alignItems: "center", padding: "0 8px", borderRadius: 6,
-            background: C.ac, color: "#0E0C0A", ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", flexShrink: 0,
+            background: C.ac, color: C.ink, ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", flexShrink: 0,
           }}>
             {session.short}
           </div>
@@ -178,7 +178,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
             <>
               <button
                 onClick={onDelete}
-                style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
+                style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: C.rV, color: C.ink, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
               >Supprimer</button>
               <button
                 onClick={() => setConfirmDelete(false)}
@@ -223,7 +223,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                   setShowPlace(false)
                 }}
                 disabled={placeSession.isPending}
-                style={{ padding: "10px 0", borderRadius: 4, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "10px 0", borderRadius: 4, border: "none", background: VIOLET, color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 {placeSession.isPending ? "En cours…" : "Générer tout le cycle ▶"}
               </button>
@@ -249,7 +249,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                   setShowPlace(false)
                 }}
                 disabled={placeSession.isPending}
-                style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: VIOLET, color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 {placeSession.isPending ? "…" : "Placer"}
               </button>
@@ -502,7 +502,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
           style={{
             display: "flex", alignItems: "center", gap: 5,
             height: 34, boxSizing: "border-box", padding: "0 18px", borderRadius: 10,
-            border: "none", background: C.ac, color: "#0E0C0A", boxShadow: `0 6px 22px ${alpha(C.ac, 0.3)}`,
+            border: "none", background: C.ac, color: C.ink, boxShadow: `0 6px 22px ${alpha(C.ac, 0.3)}`,
             fontSize: 11, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -572,7 +572,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
                             setConfirmBankDeleteId(null)
                             toast.success(`"${t.name || "Séance"}" retirée de la banque`)
                           }}
-                          style={{ padding: "0 10px", height: 34, borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
+                          style={{ padding: "0 10px", height: 34, borderRadius: 4, border: "none", background: C.rV, color: C.ink, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
                         >Supprimer</button>
                         <button
                           onClick={() => setConfirmBankDeleteId(null)}
@@ -624,7 +624,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
             onClick={() => setIsAddingSession(true)}
             style={{
               padding: "10px 22px", borderRadius: 4,
-              border: "none", background: VIOLET, color: "#fff",
+              border: "none", background: VIOLET, color: C.tx,
               fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               display: "inline-flex", alignItems: "center", gap: 6,
             }}

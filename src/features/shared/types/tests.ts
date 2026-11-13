@@ -1,3 +1,4 @@
+import { C } from "@/lib/theme";
 export type TestKind    = 'preset' | 'custom';
 export type ValueType   = 'number' | 'pace' | 'duration' | 'scale5';
 export type BetterWhen  = 'higher' | 'lower';
@@ -14,11 +15,11 @@ export const TEST_CATEGORY_LABEL: Record<TestCategory, string> = {
 };
 
 export const TEST_CATEGORY_COLOR: Record<TestCategory, string> = {
-  bilan_articulaire: '#33B5FF', // bleu
-  endurance:         '#66F03C', // vert
-  force:             '#FF5A33', // rouge
-  explosivite:       '#FF9500', // orange
-  vitesse:           '#FFC933', // violet
+  bilan_articulaire: C.b, // bleu
+  endurance:         C.g, // vert
+  force:             C.r, // rouge
+  explosivite:       C.o, // orange
+  vitesse:           C.ac, // violet
 };
 
 export const TEST_CATEGORY_ORDER: TestCategory[] = [

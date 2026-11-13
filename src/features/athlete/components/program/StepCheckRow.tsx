@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { EQUIPMENT_LABEL } from "@/features/athlete/components/program/programConstants";
 import type { EnergyStep } from "@/types/energy";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
@@ -23,13 +23,13 @@ export function StepCheckRow({
   const isDone    = status === "done";
   const isPartial = status === "partial";
   const comment   = state?.comment ?? "";
-  const bg        = isDone ? C.g + "18" : isPartial ? "#F59E0B18" : C.s2;
-  const borderCol = isDone ? C.g + "40" : isPartial ? "#F59E0B50" : "transparent";
+  const bg        = isDone ? C.g + "18" : isPartial ? `${H.ambre}18` : C.s2;
+  const borderCol = isDone ? C.g + "40" : isPartial ? `${H.ambre}50` : "transparent";
 
   // ── shared step-info block ──────────────────────────────────────────────────
   let infoNode: React.ReactNode;
   if (step.type === "interval") {
-    const rc  = ROLE_COLOR[step.role] ?? "#6B7280";
+    const rc  = ROLE_COLOR[step.role] ?? H.gris;
     const dur = step.duration.kind === "time"
       ? formatS(step.duration.value ?? 0)
       : step.duration.kind === "distance"
@@ -72,7 +72,7 @@ export function StepCheckRow({
   } else if (step.type === "exercise") {
     // Step exercice (séance spécifique / MetCon) : pas de `children` ni de `repeat`.
     // Sans cette branche, on tombait dans le cas "groupe" → step.children undefined → crash.
-    const rc = ROLE_COLOR[step.role] ?? "#6B7280";
+    const rc = ROLE_COLOR[step.role] ?? H.gris;
     const detail = formatExerciseStep(step);
     infoNode = (
       <>
@@ -125,7 +125,7 @@ export function StepCheckRow({
             style={{
               width: 32, height: 32, borderRadius: 4, border: "none",
               background: isDone ? C.g : "rgba(255,255,255,0.07)",
-              color: isDone ? "#fff" : C.tx3,
+              color: isDone ? C.tx : C.tx3,
               cursor: "pointer", fontFamily: "inherit", fontSize: 14,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontWeight: 700,
@@ -138,8 +138,8 @@ export function StepCheckRow({
             title="Bloc non terminé"
             style={{
               width: 32, height: 32, borderRadius: 4, border: "none",
-              background: isPartial ? "#F59E0B" : "rgba(255,255,255,0.07)",
-              color: isPartial ? "#fff" : C.tx3,
+              background: isPartial ? H.ambre : "rgba(255,255,255,0.07)",
+              color: isPartial ? C.tx : C.tx3,
               cursor: "pointer", fontFamily: "inherit", fontSize: 13,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontWeight: 700,
@@ -158,14 +158,14 @@ export function StepCheckRow({
             autoFocus
             style={{
               width: "100%", padding: "8px 10px", borderRadius: 4,
-              border: "1.5px solid " + (comment.trim() ? C.brdL : "#F59E0B80"),
+              border: "1.5px solid " + (comment.trim() ? C.brdL : `${H.ambre}80`),
               background: "rgba(245,158,11,0.06)",
               color: C.tx, fontSize: 12, fontFamily: "inherit",
               boxSizing: "border-box" as const, outline: "none",
             }}
           />
           {!comment.trim() && (
-            <div style={{ fontSize: 9, color: "#F59E0B", marginTop: 3 }}>
+            <div style={{ fontSize: 9, color: H.ambre, marginTop: 3 }}>
               Requis avant de terminer la séance
             </div>
           )}

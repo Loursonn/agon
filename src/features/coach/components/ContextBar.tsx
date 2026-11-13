@@ -7,7 +7,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { countAthleteChoices, workoutKeys } from "@/api/workouts";
 import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import {
@@ -198,7 +198,7 @@ export default function ContextBar() {
               padding: "3px 8px", borderRadius: 6,
               border: "1px solid rgba(245,158,11,0.4)",
               background: "rgba(245,158,11,0.12)",
-              color: "#F59E0B", fontSize: 10, fontWeight: 700,
+              color: H.ambre, fontSize: 10, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
             }}
           >
@@ -324,7 +324,7 @@ export default function ContextBar() {
                 transition: "color 150ms, border-color 150ms",
               }}
               onMouseEnter={(e) => {
-                if (!active) (e.currentTarget as HTMLElement).style.color = "#e0e0e0";
+                if (!active) (e.currentTarget as HTMLElement).style.color = H.grisArgent;
               }}
               onMouseLeave={(e) => {
                 if (!active) (e.currentTarget as HTMLElement).style.color = C.tx3;

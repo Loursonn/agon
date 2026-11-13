@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { X, Plus } from "lucide-react"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 import { useAddPRLog } from "@/features/shared/hooks/usePRLogs"
@@ -8,7 +8,7 @@ import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { localISO } from "@/lib/date";
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 
 interface RmDrawerProps {
   open: boolean
@@ -101,7 +101,7 @@ export function RmDrawer({ open, onClose, exercice, athleteId }: RmDrawerProps) 
             disabled={!newKg || addPR.isPending}
             style={{
               width: "100%", padding: "8px 0", borderRadius: 4,
-              border: "none", background: VIOLET, color: "#fff",
+              border: "none", background: VIOLET, color: C.tx,
               fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               opacity: !newKg || addPR.isPending ? 0.5 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 5,

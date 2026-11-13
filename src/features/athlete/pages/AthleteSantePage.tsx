@@ -107,7 +107,7 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
     const streak = streakOf(opened.values, day, opened.state);
     return (
       <div style={{ maxWidth: 480, margin: coachView ? 0 : "0 auto" }}>
-        {!coachView && <AthletePageHeader title={opened.def.label} titleSize={22} background={headerGlow("#33B5FF", undefined)} />}
+        {!coachView && <AthletePageHeader title={opened.def.label} titleSize={22} background={headerGlow(C.b, undefined)} />}
         <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
           <button type="button" onClick={() => setOpen(null)} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.tx3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>‹ Santé</button>
           {opened.source && <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{opened.source}</div>}
@@ -143,7 +143,7 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
   const [sleep, ...rest] = views;
   return (
     <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
-      {!coachView && <AthletePageHeader title="Santé" titleSize={24} background={headerGlow("#33B5FF", undefined)} />}
+      {!coachView && <AthletePageHeader title="Santé" titleSize={24} background={headerGlow(C.b, undefined)} />}
       <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         {top}
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, color: C.tx2 }}>

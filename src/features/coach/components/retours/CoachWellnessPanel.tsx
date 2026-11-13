@@ -7,7 +7,7 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import { Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { C, alpha } from "@/lib/theme";
+import { C, alpha, H } from "@/lib/theme";
 import { addDays, localIsoDay, type IsoDay } from "@shared/domain/dates";
 import { WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT, wellnessScore, wellnessBand, type WellnessItem } from "@shared/domain/wellness";
 import type { LightResult } from "@shared/domain/wellnessLight";
@@ -31,7 +31,7 @@ const LIGHT: Record<LightResult["light"], { label: string; color: string }> = {
 
 const ITEM_NAME: Record<GridItem, string> = { ...WELLNESS_ITEM_LABEL, envie: "Envie de s’entraîner" };
 /** Note 1 → 5 : rouge → vert. */
-const NOTE_COLOR = ["", C.r, C.o, C.ac, "#9BD35A", C.g];
+const NOTE_COLOR = ["", C.r, C.o, C.ac, H.vertHerbe, C.g];
 
 const dec = (x: number | null | undefined, d = 1) => (x == null || !Number.isFinite(x) ? "—" : x.toLocaleString("fr-FR", { maximumFractionDigits: d, minimumFractionDigits: d }));
 const int = (x: number | null | undefined) => (x == null || !Number.isFinite(x) ? "—" : String(Math.round(x)));

@@ -52,7 +52,7 @@ export function PhotoFicheCapture({ photos, onChange, disabled }: {
   const remove = (i: number) => onChange(photos.filter((_, k) => k !== i));
 
   const small: React.CSSProperties = {
-    width: 22, height: 22, borderRadius: 3, border: "none", background: "rgba(0,0,0,0.65)", color: "#fff",
+    width: 22, height: 22, borderRadius: 3, border: "none", background: "rgba(0,0,0,0.65)", color: C.tx,
     fontSize: 12, lineHeight: "22px", padding: 0, cursor: "pointer", fontFamily: "inherit",
   };
 

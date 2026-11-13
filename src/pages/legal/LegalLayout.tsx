@@ -9,6 +9,7 @@ import {
   LEGAL_VERSION,
   hasLegalPlaceholders,
 } from "@/lib/legal";
+import { C } from "@/lib/theme";
 
 /**
  * Chrome commun aux trois documents légaux publics.
@@ -20,16 +21,16 @@ import {
  */
 
 const S = {
-  bg: "#0E0C0A",
-  s1: "#1E1A16",
-  s2: "#27221D",
+  bg: C.bg,
+  s1: C.s1,
+  s2: C.s2,
   brd: "rgba(231,211,168,0.10)",
   brdL: "rgba(231,211,168,0.18)",
-  tx: "#FFFFFF",
-  tx2: "#B9AE9C",
-  tx3: "#7D7468",
-  ac: "#FFC933",
-  warn: "#FF5A33",
+  tx: C.tx,
+  tx2: C.tx2,
+  tx3: C.tx3,
+  ac: C.ac,
+  warn: C.r,
 };
 
 /** Titre de section numéroté. */

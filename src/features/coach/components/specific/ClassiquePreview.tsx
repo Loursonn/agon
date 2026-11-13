@@ -2,14 +2,14 @@
  * ClassiquePreview — aperçu lecture seule d'une séance par blocs (mix Classique / WOD).
  */
 import { Youtube } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import SessionPreview from "../energy/SessionPreview";
 import type { EnergyGroup } from "@/types/energy";
 import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 
-const ORANGE = "#F5A623";
-const GREEN  = "#66F03C";
+const ORANGE = H.miel;
+const GREEN  = C.g;
 
 function hasContent(b: SessionBlock): boolean {
   if (isWodBlock(b)) return b.title.trim().length > 0 || b.steps.length > 0;
@@ -80,7 +80,7 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
                   <div key={item.id} style={{ display: "flex", flexWrap: "wrap", gap: "2px 8px", alignItems: "baseline", padding: "4px 0", borderBottom: `1px solid ${C.brd}30` }}>
                     <span style={{ fontSize: 11, color: C.tx, flex: "1 1 120px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.4 }}>
                       {item.name}
-                      {item.youtube_id && <Youtube size={11} color="#EF4444" style={{ marginLeft: 5, verticalAlign: "middle" }} />}
+                      {item.youtube_id && <Youtube size={11} color={H.rougeVif} style={{ marginLeft: 5, verticalAlign: "middle" }} />}
                     </span>
                     {item.prescription && (
                       <span style={{ fontSize: 11, fontWeight: 700, color: GREEN, minWidth: 0, maxWidth: "100%", whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>{item.prescription}</span>

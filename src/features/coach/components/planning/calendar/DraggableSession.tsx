@@ -1,6 +1,6 @@
 import { Dumbbell, Zap, FlaskConical, Ruler } from "lucide-react";
 import { DragOverlay, useDraggable } from "@dnd-kit/core";
-import { C, alpha } from "@/lib/theme";
+import { C, alpha, H } from "@/lib/theme";
 import { TEST_COLOR, BIO_COLOR, CARD_MONO, BankItemType, BANK_TYPE_LABEL } from "./calendarConstants";
 
 export function DraggableSession({
@@ -17,8 +17,8 @@ export function DraggableSession({
   variant?: "chip" | "card";
   meta?: string | null;
 }) {
-  const color  = sessionType === "energy" ? C.b : sessionType === "specifique" ? "#F5A623" : sessionType === "test" ? TEST_COLOR : sessionType === "biometric" ? BIO_COLOR : C.ac;
-  const colorS = sessionType === "energy" ? C.bS : sessionType === "specifique" ? "#F5A62320" : sessionType === "test" ? TEST_COLOR + "20" : sessionType === "biometric" ? BIO_COLOR + "20" : C.acS;
+  const color  = sessionType === "energy" ? C.b : sessionType === "specifique" ? H.miel : sessionType === "test" ? TEST_COLOR : sessionType === "biometric" ? BIO_COLOR : C.ac;
+  const colorS = sessionType === "energy" ? C.bS : sessionType === "specifique" ? `${H.miel}20` : sessionType === "test" ? TEST_COLOR + "20" : sessionType === "biometric" ? BIO_COLOR + "20" : C.acS;
 
   // Idem : le fantôme est rendu par <DragOverlay>, la vignette source reste en place.
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -60,7 +60,7 @@ export function DraggableSession({
         borderRadius: 4,
         border: "1px solid " + color + "40",
         background: isDragging ? color : colorS,
-        color: isDragging ? "#fff" : color,
+        color: isDragging ? C.tx : color,
         fontSize: 11, fontWeight: 600,
         cursor: "grab",
         userSelect: "none",

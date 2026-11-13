@@ -236,7 +236,7 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
                 <span style={{ display: "block", fontSize: 12, color: C.tx3, marginTop: 2 }}>Ton coach ne prévoit rien ces jours-là.</span>
               </span>
               <span aria-hidden style={{ width: 44, height: 26, borderRadius: 13, background: unavailable ? color : alpha(C.tx, 0.18), position: "relative", flex: "none", transition: "background .15s" }}>
-                <span style={{ position: "absolute", top: 3, left: unavailable ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+                <span style={{ position: "absolute", top: 3, left: unavailable ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: C.tx, transition: "left .15s" }} />
               </span>
             </button>
           </>

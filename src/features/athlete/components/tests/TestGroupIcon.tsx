@@ -3,8 +3,9 @@ import { HyroxPicto } from "@/features/shared/components/HyroxPicto";
 import { hyroxStationOf } from "@/features/shared/components/hyroxStation";
 import type { TestGroup } from "@/lib/athleteTestValues";
 import { RULER_PATH } from "./testGroupPaths";
+import { C } from "@/lib/theme";
 
-const INK = "#0E0C0A";
+const INK = C.bg;
 
 /** Tracés de la planche « Tests athlète » (traits carrés, 24×24). */
 const PATHS: Partial<Record<TestGroup, ReactNode>> = {

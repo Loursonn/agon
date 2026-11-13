@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useParams } from "react-router-dom";
 import { ChevronDown, ChevronUp, MessageSquare, Heart, Check, Minus, X as XIcon, BarChart2 } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsList, VideoRequestsPill } from "./VideoRequestsList";
 import { StatusPill } from "@/features/shared/components/StatusPill";
@@ -20,13 +20,13 @@ import type {
 
 // ── Colors (match programmation) ─────────────────────────────────────────────
 
-const GREEN   = "#22c55e";
+const GREEN   = H.vert;
 const GREEN_S = "rgba(34,197,94,0.10)";
-const RED     = "#ef4444";
+const RED     = H.rougeVif;
 const RED_S   = "rgba(239,68,68,0.10)";
-const AMBER   = "#f59e0b";
+const AMBER   = H.ambre;
 const AMBER_S = "rgba(245,158,11,0.10)";
-const VIOLET  = "#FFC933";
+const VIOLET  = C.ac;
 const VIOLET_S = "rgba(123,111,255,0.12)";
 
 interface WorkoutType {
@@ -389,7 +389,7 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
               />
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={handleSave} disabled={!commentText.trim() || upsertComment.isPending}
-                  style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.acV, color: C.ink, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   Enregistrer
                 </button>
                 <button onClick={() => { setCommenting(false); setCommentText(""); }}

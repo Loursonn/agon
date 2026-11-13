@@ -3,7 +3,7 @@
  * bandeau (bandeau athlète, drawer).
  *
  * Les deux lisent la même ligne `day_themes` et tirent leurs couleurs de
- * `dayThemeColors`, jamais d'un `color: "#fff"` codé en dur — sinon un thème
+ * `dayThemeColors`, jamais d'un blanc codé en dur — sinon un thème
  * jaune devient invisible. Un thème vide ne rend rien : c'est le composant qui
  * décide de disparaître, pas chaque appelant.
  */

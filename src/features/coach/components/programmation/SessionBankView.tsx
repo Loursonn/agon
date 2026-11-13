@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { Plus, Pencil, X } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import type { ProgSession } from "./types"
@@ -13,7 +13,7 @@ import ImportReportPanel from "../import/ImportReportPanel"
 import { scrollToStep } from "../import/importIssues";
 import type { ImportIssue } from "@/lib/import/yoxx/common"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 
 function totalExercices(session: ProgSession): number {
   return session.blocs.reduce((sum, b) => sum + b.exercices.length, 0)
@@ -136,7 +136,7 @@ export function SessionBankView() {
           style={{
             display: "flex", alignItems: "center", gap: 5,
             padding: "8px 16px", borderRadius: 4,
-            border: "none", background: VIOLET, color: "#fff",
+            border: "none", background: VIOLET, color: C.tx,
             fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
             flexShrink: 0,
           }}
@@ -213,7 +213,7 @@ export function SessionBankView() {
                   <>
                     <button
                       onClick={() => deleteSession(session.id)}
-                      style={{ padding: "0 8px", height: 26, borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}
+                      style={{ padding: "0 8px", height: 26, borderRadius: 6, border: "none", background: C.rV, color: C.ink, cursor: "pointer", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}
                     >Supprimer</button>
                     <button onClick={() => setConfirmDeleteId(null)} style={iconBtn}><X size={11} /></button>
                   </>

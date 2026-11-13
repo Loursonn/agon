@@ -4,6 +4,7 @@ import type { ExerciceParams } from "@/features/coach/components/programmation/t
 import type { WorkoutBlocData, WorkoutExerciceData } from "@/features/shared/hooks/useWorkoutSession";
 import { formatRepsAt, formatSetsReps } from "@/lib/formatSetsReps";
 import { loadFromPctRm } from "@shared/domain/performance";
+import { C, H } from "@/lib/theme";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -277,13 +278,13 @@ export function blocRestSeconds(bloc: {
 }
 export function getRirColor(val: string): string {
   const n = val === "5+" ? 6 : parseFloat(val);
-  if (n <= 0.5) return "#EF4444";
-  if (n <= 1.5) return "#F97316";
-  if (n <= 2.5) return "#FACC15";
-  if (n <= 3.5) return "#84CC16";
-  if (n <= 4.5) return "#22C55E";
-  if (n <= 5)   return "#66F03C";
-  return "#3B9EFF";
+  if (n <= 0.5) return H.rougeVif;
+  if (n <= 1.5) return H.orange;
+  if (n <= 2.5) return H.jaune;
+  if (n <= 3.5) return H.citron;
+  if (n <= 4.5) return H.vert;
+  if (n <= 5)   return C.g;
+  return H.bleuVif;
 }
 /** Séries faites / passées / prévues de la séance (fin de séance). */
 export function countSets(blocs: WorkoutBlocData[], allSets: AllSets) {

@@ -3,7 +3,7 @@ import { AthletePageHeader } from "@/features/athlete/components/AthletePageHead
 import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
 import { confirmLogout, logoutDevice } from "@/lib/offline/logoutDevice";
@@ -57,7 +57,7 @@ const labelStyle: React.CSSProperties = {
 };
 const btnPrimary: React.CSSProperties = {
   padding: "10px 20px", borderRadius: 4, border: "none",
-  background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700,
+  background: C.acV, color: C.ink, fontSize: 13, fontWeight: 700,
   cursor: "pointer", fontFamily: "inherit",
 };
 /** Titre numéroté de la planche « Profil athlète » : « 01 — Profil » + filet. */
@@ -107,7 +107,7 @@ export default function ProfilPage() {
 
   return (
     <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
-    <AthletePageHeader title="Profil" background={headerGlow(undefined, "#33B5FF")} />
+    <AthletePageHeader title="Profil" background={headerGlow(undefined, C.b)} />
     {/* Ordinateur (planche AthOrdiBProfil) : rubriques sur deux colonnes. */}
     <div className="[&>*]:break-inside-avoid" style={{ padding: "24px 20px 40px", scrollbarWidth: "none", ...(isDesktop ? { columns: 2, columnGap: 32 } : {}) }}>
       {/* ── Profil ── */}
@@ -136,7 +136,7 @@ export default function ProfilPage() {
                 width: 52, height: 52, flex: "none", boxSizing: "border-box", borderRadius: "50%",
                 border: `2px solid ${C.ac}`, boxShadow: `0 0 0 4px ${C.ac}24, 0 0 22px ${C.ac}59`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                ...DISPLAY, fontSize: 20, color: "#F1DDA5",
+                ...DISPLAY, fontSize: 20, color: H.sableClair,
               }}>
                 {(displayProfile?.full_name ?? "?").charAt(0).toUpperCase()}
               </span>
@@ -149,7 +149,7 @@ export default function ProfilPage() {
                   onClick={() => setEditing(true)}
                   style={{
                     height: 36, padding: "0 16px", borderRadius: 10, border: "none",
-                    background: C.ac, color: "#0E0C0A", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+                    background: C.ac, color: C.ink, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
                     boxShadow: `0 4px 16px ${C.ac}4D`, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
@@ -263,7 +263,7 @@ export default function ProfilPage() {
 
       {/* ── Déconnexion ── */}
       {!viewOnly && (
-        <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #FF3B1F66", background: `linear-gradient(160deg, #FF3B1F1F, #FF3B1F0A), ${C.s1}` }}>
+        <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${C.rouge}66`, background: `linear-gradient(160deg, ${C.rouge}1F, ${C.rouge}0A), ${C.s1}` }}>
           <button
             onClick={async () => {
               if (!confirmLogout()) return;
@@ -272,7 +272,7 @@ export default function ProfilPage() {
             }}
             style={{
               width: "100%", height: 48, border: "none", background: "transparent",
-              color: "#FF3B1F", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+              color: C.rouge, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             }}
           >

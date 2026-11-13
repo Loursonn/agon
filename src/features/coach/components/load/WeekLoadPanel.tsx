@@ -12,8 +12,8 @@ import { useLoadWeeks } from "@/features/shared/hooks/useLoadWeeks";
 import { zoneColor } from "@/lib/seance";
 
 
-const GOLD = "#FFC933";
-const BLUE = "#33B5FF";
+const GOLD = C.ac;
+const BLUE = C.b;
 const MONO = "'Geist Mono', monospace";
 const DASH = "—";
 
@@ -86,7 +86,7 @@ function RatioGauge({ ratio }: { ratio: number | null }) {
   const min = 0.6, max = 1.8;
   const pos = (v: number) => `${((Math.min(Math.max(v, min), max) - min) / (max - min)) * 100}%`;
   const zone = ratioZone(ratio);
-  const color = zone === "in" ? "#66F03C" : zone ? "#FF9500" : C.tx3;
+  const color = zone === "in" ? C.g : zone ? C.o : C.tx3;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ position: "relative", height: 8, borderRadius: 4, background: C.s2 }}>
@@ -161,7 +161,7 @@ export function WeekLoadPanel({ athleteId, weekStart }: { athleteId: string; wee
             {w.top ? ` · plus coûteuse : ${w.top.label} (${int(w.top.points)} pts, ${Math.round(w.top.sharePct)} %)` : ""}
           </div>
           {data.missingRirSessions > 0 && (
-            <div style={{ fontSize: 11, color: "#FF9500" }}>
+            <div style={{ fontSize: 11, color: C.o }}>
               {data.missingRirSessions} séance{data.missingRirSessions > 1 ? "s" : ""} de muscu sans RIR : 0,75 par série appliqué.
             </div>
           )}
@@ -170,7 +170,7 @@ export function WeekLoadPanel({ athleteId, weekStart }: { athleteId: string; wee
           <Kicker>Aiguë 7 j · chronique 28 j</Kicker>
           <Big value={`${int(w.done)} / ${int(w.chronic)}`} unit="pts" color={C.tx} />
           <Kicker color={C.tx3}>Ratio aiguë / chronique</Kicker>
-          <Big value={dec(w.ratio)} color={ratioZone(w.ratio) === "in" ? "#66F03C" : ratioZone(w.ratio) ? "#FF9500" : C.tx3} />
+          <Big value={dec(w.ratio)} color={ratioZone(w.ratio) === "in" ? C.g : ratioZone(w.ratio) ? C.o : C.tx3} />
           <RatioGauge ratio={w.ratio} />
           <div style={{ fontSize: 11, color: C.tx3 }}>Contexte seulement : le ratio ne déclenche aucune alerte.</div>
         </Card>

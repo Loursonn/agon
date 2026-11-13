@@ -1,6 +1,6 @@
 import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { CalendarDays, Check, GraduationCap, Plane, Trash2, Trophy } from "lucide-react";
 import { CitationFigure } from "@/features/shared/components/CitationDuJour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
@@ -702,7 +702,7 @@ export default function TodayPage() {
                 onClick={() => setShowAllComps(true)}
                 style={{
                   position: "relative", overflow: "hidden", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: C.tx,
-                  borderRadius: 14, border: `1px solid ${ROUGE}73`, background: "#2A1D17 url(/maquette/competition-fond.svg) center/cover",
+                  borderRadius: 14, border: `1px solid ${ROUGE}73`, background: `${H.brun} url(/maquette/competition-fond.svg) center/cover`,
                   padding: "12px 14px 12px 17px", display: "flex", flexDirection: "column", gap: 6,
                 }}
               >

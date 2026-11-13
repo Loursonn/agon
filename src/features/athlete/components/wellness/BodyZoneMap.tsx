@@ -1,11 +1,12 @@
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { BODY_ZONES, DOMS_LEVEL_COLOR, DOMS_LEVEL_LABEL, levelsList, setZoneLevel, touchZone, type BodyView } from "@/lib/bodyZones";
 import type { DomsLevel, DomsLevels } from "@shared/domain/wellness";
+import { C } from "@/lib/theme";
 
 const IDLE_FILL = "rgba(231,211,168,0.07)";
 const IDLE_STROKE = "rgba(231,211,168,0.16)";
-const TX2 = "#B9AE9C";
-const TX3 = "#8E8780";
+const TX2 = C.tx2;
+const TX3 = C.pierre;
 
 /** Carte du corps face / dos (planche wellness 12/11) : touche une zone, choisis son intensité. */
 export function BodyZoneMap({
@@ -47,7 +48,7 @@ export function BodyZoneMap({
                     fillOpacity={lvl ? 0.95 : 1}
                     stroke={lvl ? "none" : IDLE_STROKE}
                   />
-                  {isSel && <rect x={rc.x - 2.5} y={rc.y - 2.5} width={rc.w + 5} height={rc.h + 5} rx={7} fill="none" stroke="#FFFFFF" strokeWidth={1.5} />}
+                  {isSel && <rect x={rc.x - 2.5} y={rc.y - 2.5} width={rc.w + 5} height={rc.h + 5} rx={7} fill="none" stroke={C.tx} strokeWidth={1.5} />}
                 </g>
               ))}
             </g>
@@ -60,7 +61,7 @@ export function BodyZoneMap({
 
   return (
     <>
-      <div style={{ padding: 14, borderRadius: 14, background: "radial-gradient(90% 70% at 50% 40%,rgba(255,149,0,0.12),transparent 70%),#1E1A16", border: "1px solid rgba(231,211,168,0.10)", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ padding: 14, borderRadius: 14, background: `radial-gradient(90% 70% at 50% 40%,rgba(255,149,0,0.12),transparent 70%),${C.s1}`, border: "1px solid rgba(231,211,168,0.10)", display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-around" }}>
           {figure("face")}
           {figure("dos")}
@@ -75,7 +76,7 @@ export function BodyZoneMap({
       </div>
 
       {sel && selLevel != null && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 14px", borderRadius: 14, background: "#1E1A16", border: "1px solid " + DOMS_LEVEL_COLOR[selLevel] + "73" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 14px", borderRadius: 14, background: C.s1, border: "1px solid " + DOMS_LEVEL_COLOR[selLevel] + "73" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: TX2 }}>{sel.label} · intensité</span>
             <button
@@ -101,7 +102,7 @@ export function BodyZoneMap({
                     flex: 1, height: 42, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                     fontSize: 13, cursor: "pointer", fontFamily: "inherit",
                     background: on ? c : c + "14", border: on ? "none" : "1px solid " + c + "45",
-                    color: on ? "#0E0C0A" : c, fontWeight: on ? 500 : 400,
+                    color: on ? C.ink : c, fontWeight: on ? 500 : 400,
                   }}
                 >
                   <span style={MONO}>{l}</span>{DOMS_LEVEL_LABEL[l]}
@@ -121,7 +122,7 @@ export function BodyZoneMap({
                 key={z.id}
                 type="button"
                 onClick={() => onSelect(z.id)}
-                style={{ display: "flex", alignItems: "center", gap: 6, height: 28, padding: "0 10px", borderRadius: 999, background: c + "1F", border: "1px solid " + c + "55", fontSize: 12, whiteSpace: "nowrap", color: "#FFFFFF", cursor: "pointer", fontFamily: "inherit" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, height: 28, padding: "0 10px", borderRadius: 999, background: c + "1F", border: "1px solid " + c + "55", fontSize: 12, whiteSpace: "nowrap", color: C.tx, cursor: "pointer", fontFamily: "inherit" }}
               >
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: c }} />
                 {z.label}

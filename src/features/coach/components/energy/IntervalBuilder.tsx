@@ -24,9 +24,9 @@ import { formatS, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { estimateIntervalDuration, targetToIntensityPct, intensityToColor } from "@/lib/energy";
 import IntervalEditor from "./IntervalEditor";
 import ExerciseStepEditor from "./ExerciseStepEditor";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 
-const EXO_COLOR = "#FFC933";
+const EXO_COLOR = C.ac;
 
 // ── Role colors ───────────────────────────────────────────────────────────────
 
@@ -315,7 +315,7 @@ function GroupRowHeader({
           ) : (
             <button
               onClick={() => { setDepartureVal(toMMSS(group.departure_every_s!)); setEditingDeparture(true); }}
-              style={{ background: "#F5A623" + "20", border: `1px solid #F5A62340`, borderRadius: 6, color: "#F5A623", fontSize: 10, fontWeight: 600, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+              style={{ background: H.miel + "20", border: `1px solid ${H.miel}40`, borderRadius: 6, color: H.miel, fontSize: 10, fontWeight: 600, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
               title="Départ fixe — cliquer pour modifier, Échap pour supprimer"
             >
               /{toMMSS(group.departure_every_s)}

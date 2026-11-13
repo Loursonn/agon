@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { Plus } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import type { Bloc, BlocCategory } from "./types"
@@ -9,7 +9,7 @@ import { BlocCard } from "./BlocCard"
 import { useBlocBank, useUpdateBlocBank } from "./hooks/useBlocBank"
 import { CardSkeleton } from "@/features/shared/components/skeletons"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 
 /**
  * Banque de blocs préconstruits du coach.
@@ -87,7 +87,7 @@ export function BlocBankView() {
           style={{
             display: "flex", alignItems: "center", gap: 5,
             padding: "8px 16px", borderRadius: 4,
-            border: "none", background: VIOLET, color: "#fff",
+            border: "none", background: VIOLET, color: C.tx,
             fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
             flexShrink: 0,
           }}
@@ -115,7 +115,7 @@ export function BlocBankView() {
             onClick={() => setIsAdding(true)}
             style={{
               padding: "10px 22px", borderRadius: 4,
-              border: "none", background: VIOLET, color: "#fff",
+              border: "none", background: VIOLET, color: C.tx,
               fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               display: "inline-flex", alignItems: "center", gap: 6,
             }}

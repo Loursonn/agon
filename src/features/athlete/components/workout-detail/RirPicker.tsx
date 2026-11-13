@@ -90,7 +90,7 @@ export function RirPicker({ value, onChange, onConfirm, onClose }: RirPickerProp
               width: "100%", padding: "14px 0", borderRadius: 6,
               border: "none",
               background: value ? selColor : C.s2,
-              color: value ? "#fff" : C.tx3,
+              color: value ? C.tx : C.tx3,
               fontSize: 14, fontWeight: 700,
               cursor: value ? "pointer" : "default", fontFamily: "inherit",
             }}

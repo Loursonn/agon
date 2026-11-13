@@ -14,7 +14,7 @@ export function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: C
   const totalCount = blEntries.length;
 
   const statusInfo = event.partial
-    ? { label: `Partielle ${doneCount}/${totalCount}`, color: "#33B5FF" }
+    ? { label: `Partielle ${doneCount}/${totalCount}`, color: C.b }
     : event.status ? STATUS_LABEL[event.status] : null;
 
   return (
@@ -62,7 +62,7 @@ export function EnergyDetailView({ event, onOpenPreview, athleteId }: { event: C
                   background: b.done ? C.g : C.s2,
                   border: "1px solid " + (b.done ? C.g : C.brd),
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 8, color: "#fff",
+                  fontSize: 8, color: C.tx,
                 }}>
                   {b.done ? "✓" : ""}
                 </span>

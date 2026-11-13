@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { ThumbsUp, ChevronDown, ChevronUp, Plus, Pencil, CheckCircle2, Clock, Lightbulb, Circle } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { RoadmapPhase, RoadmapItem, RoadmapItemStatus } from "@/features/coach/types/roadmap";
 import {
   CATEGORY_LABEL, CATEGORY_COLOR, PRIORITY_COLOR,
@@ -366,8 +366,8 @@ export function RoadmapJourneyView({
           {[
             { label: "Total",      value: totalItems,                                            color: C.tx3 },
             { label: "Livrés",     value: shippedItems,                                          color: C.g   },
-            { label: "En cours",   value: items.filter((i) => i.status === "in_progress").length, color: "#f97316" },
-            { label: "Planifiés",  value: items.filter((i) => i.status === "planned").length,     color: "#facc15" },
+            { label: "En cours",   value: items.filter((i) => i.status === "in_progress").length, color: H.orange },
+            { label: "Planifiés",  value: items.filter((i) => i.status === "planned").length,     color: H.jaune },
             { label: "Idées",      value: items.filter((i) => i.status === "idea").length,        color: C.tx3 },
           ].map((s) => (
             <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>

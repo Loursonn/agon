@@ -33,7 +33,7 @@ export function TodayFormeTrend({ scores, color }: { scores: Array<number | null
       aria-label={vals.length ? `Forme sur 14 jours, de ${Math.min(...vals)} à ${Math.max(...vals)}` : "Forme sur 14 jours"}
     >
       <line x1="0" y1="40" x2={W} y2="40" stroke="rgba(255,149,0,0.55)" strokeDasharray="3 4" />
-      <text x={W} y="36" textAnchor="end" fill="#FF9500" style={{ ...MONO, fontSize: 10 }}>60</text>
+      <text x={W} y="36" textAnchor="end" fill={C.o} style={{ ...MONO, fontSize: 10 }}>60</text>
       <line x1="0" y1={FLOOR} x2={W} y2={FLOOR} stroke="rgba(231,211,168,0.10)" />
       {segments.map((seg, k) => (
         <g key={k}>

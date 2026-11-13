@@ -3,7 +3,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import SessionPreview from "./SessionPreview";
 import type { EnergySessionRow, EnergyGroup, SessionKind } from "@/types/energy";
 import { useVerifyEnergySession, useCreateEnergySession } from "@/features/shared/hooks/useEnergySessions";
@@ -17,14 +17,14 @@ import { DeleteEnergySessionDialog } from "./DeleteEnergySessionButton";
 // ── Kind badge colors ─────────────────────────────────────────────────────────
 
 const KIND_COLOR: Record<SessionKind | string, string> = {
-  vo2:        "#FFC933",
-  tempo:      "#33B5FF",
-  seuil:      "#FF9500",
-  footing:    "#66F03C",
-  fartlek:    "#FF9500",
-  autre:      "#7D7468",
-  custom:     "#FFC933",
-  specifique: "#F5A623",
+  vo2:        C.ac,
+  tempo:      C.b,
+  seuil:      C.o,
+  footing:    C.g,
+  fartlek:    C.o,
+  autre:      C.tx3,
+  custom:     C.ac,
+  specifique: H.miel,
 };
 
 const KIND_LABEL: Record<SessionKind | string, string> = {
@@ -321,7 +321,7 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
                 disabled={!assignAthleteId || assignMutation.isPending}
                 style={{
                   padding: "7px 14px", borderRadius: 4, border: "none",
-                  background: assignAthleteId ? C.g : C.tx3, color: "#fff",
+                  background: assignAthleteId ? C.g : C.tx3, color: C.tx,
                   fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   opacity: assignAthleteId ? 1 : 0.5,
                 }}

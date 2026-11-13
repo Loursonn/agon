@@ -5,14 +5,14 @@
  */
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
 import { useSpecificSports, usePhysicalQualities } from "@/features/shared/hooks/useSpecificTaxonomy";
 import SpecificSessionCard from "./SpecificSessionCard";
 import type { EnergySessionRow } from "@/types/energy";
 
-const ORANGE = "#F5A623";
+const ORANGE = H.miel;
 
 type FilterTab = "all" | "mine" | "verified";
 
@@ -152,7 +152,7 @@ export default function SpecificCatalog() {
               style={{
                 padding: "5px 12px", borderRadius: 6, border: "none",
                 background: filterTab === t.value ? ORANGE : "transparent",
-                color: filterTab === t.value ? "#1a1204" : C.tx3,
+                color: filterTab === t.value ? H.encreOr : C.tx3,
                 fontSize: 12, fontWeight: filterTab === t.value ? 600 : 400,
                 cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
               }}
@@ -195,7 +195,7 @@ export default function SpecificCatalog() {
           onClick={() => navigate("/coach/energy-library/new?kind=specifique")}
           style={{
             padding: "7px 14px", borderRadius: 4, border: "none",
-            background: ORANGE, color: "#1a1204", fontSize: 12,
+            background: ORANGE, color: H.encreOr, fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -280,7 +280,7 @@ export default function SpecificCatalog() {
                 Toutes
               </button>
               {qualitiesInSport.map((q) => (
-                <button key={q.id} onClick={() => setSelectedQuality(q.id)} style={chip(selectedQuality === q.id, "#FFC933")}>
+                <button key={q.id} onClick={() => setSelectedQuality(q.id)} style={chip(selectedQuality === q.id, C.ac)}>
                   {q.name}
                 </button>
               ))}
@@ -311,7 +311,7 @@ export default function SpecificCatalog() {
                 onClick={() => navigate("/coach/energy-library/new?kind=specifique")}
                 style={{
                   padding: "9px 20px", borderRadius: 4, border: "none",
-                  background: ORANGE, color: "#1a1204", fontSize: 13,
+                  background: ORANGE, color: H.encreOr, fontSize: 13,
                   fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                 }}
               >

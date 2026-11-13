@@ -4,14 +4,14 @@ import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { X, Moon, Sunrise, CheckCircle2, Zap, ChevronDown, ChevronUp, Footprints, BarChart2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { wellnessView } from "@/lib/wellness";
 import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL } from "@shared/domain/wellness";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsList } from "./VideoRequestsList";
 import type { WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
-const FREE_COLOR = "#0D9488";
+const FREE_COLOR = H.sarcelle;
 
 interface DayDetailPanelProps {
   date: string;           // "yyyy-MM-dd"
@@ -290,7 +290,7 @@ function WorkoutCard({ w, onOpenEvolution }: { w: WorkoutDetail; onOpenEvolution
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: C.tx2 }}>{name}</span>
                   {planned?.method && (
-                    <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: "#FFC933", fontWeight: 600 }}>
+                    <span style={{ fontSize: 7, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: C.ac, fontWeight: 600 }}>
                       {planned.method}
                     </span>
                   )}
@@ -329,16 +329,16 @@ function WorkoutCard({ w, onOpenEvolution }: { w: WorkoutDetail; onOpenEvolution
                                 {s.kg != null && <span style={{ fontSize: 10, fontWeight: 700, color: C.tx }}>{s.kg}kg</span>}
                                 {s.reps != null && <span style={{ fontSize: 10, color: C.tx }}>× {s.reps}</span>}
                                 {s.rir != null && <span style={{ fontSize: 9, color: C.tx3 }}>RIR {s.rir}</span>}
-                                <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, color: "#ef4444" }}>✗</span>
+                                <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, color: H.rougeVif }}>✗</span>
                               </>
                             ) : (
-                              <span style={{ fontSize: 9, color: "#ef4444" }}>Non réalisé</span>
+                              <span style={{ fontSize: 9, color: H.rougeVif }}>Non réalisé</span>
                             )}
                           </div>
                         );
                       }
                       const ok = plannedMinReps === undefined || (s.reps != null && s.reps >= plannedMinReps);
-                      const sc = ok ? "#22c55e" : "#f59e0b";
+                      const sc = ok ? H.vert : H.ambre;
                       return (
                         <div key={i} style={{
                           display: "flex", alignItems: "center", gap: 6,
@@ -359,7 +359,7 @@ function WorkoutCard({ w, onOpenEvolution }: { w: WorkoutDetail; onOpenEvolution
                   <div style={{
                     padding: "5px 8px", borderRadius: 5,
                     background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.40)",
-                    fontSize: 9, color: "#ef4444", fontWeight: 600,
+                    fontSize: 9, color: H.rougeVif, fontWeight: 600,
                   }}>
                     Aucune série enregistrée
                   </div>
@@ -382,7 +382,7 @@ function WorkoutCard({ w, onOpenEvolution }: { w: WorkoutDetail; onOpenEvolution
           {w.athlete_forme != null && (
             <div style={{ fontSize: 10, marginBottom: w.athlete_session_comment ? 3 : 0 }}>
               <span style={{ color: C.tx3 }}>Forme : </span>
-              <span style={{ fontWeight: 700, color: w.athlete_forme >= 4 ? C.g : w.athlete_forme >= 3 ? "#f59e0b" : C.r }}>
+              <span style={{ fontWeight: 700, color: w.athlete_forme >= 4 ? C.g : w.athlete_forme >= 3 ? H.ambre : C.r }}>
                 {w.athlete_forme}/5
               </span>
             </div>
@@ -407,7 +407,7 @@ function EnergyCard({ e }: { e: EnergySessionDetail }) {
   const dist     = e.distance_m != null
     ? e.distance_m >= 1000 ? `${(e.distance_m / 1000).toFixed(1)}km` : `${e.distance_m}m`
     : null;
-  const col      = e.partial ? "#33B5FF" : e.completed ? C.g : C.o;
+  const col      = e.partial ? C.b : e.completed ? C.g : C.o;
   const blEntries  = e.block_logs ? Object.entries(e.block_logs) : [];
   const doneCount  = blEntries.filter(([, b]) => b.done).length;
   const totalCount = blEntries.length;
@@ -457,7 +457,7 @@ function EnergyCard({ e }: { e: EnergySessionDetail }) {
                 background: b.done ? C.g : "transparent",
                 border: "1px solid " + (b.done ? C.g : C.brd),
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, color: "#fff",
+                fontSize: 9, color: C.tx,
               }}>
                 {b.done ? "✓" : ""}
               </span>

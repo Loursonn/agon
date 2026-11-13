@@ -46,14 +46,14 @@ export function RaceCard({
           }}
         >
           {checked && (
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0E0C0A" strokeWidth="2.4" strokeLinecap="square"><path d="M4 12.5L9.5 18L20 6" /></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="2.4" strokeLinecap="square"><path d="M4 12.5L9.5 18L20 6" /></svg>
           )}
         </button>
         <button type="button" onClick={onOpen} style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", gap: 12, background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: C.tx }}>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontSize: 14, fontWeight: 500, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{race.event_name}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-              <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none", color: "#0E0C0A", background: color, borderRadius: 999, padding: "2px 8px" }}>
+              <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none", color: C.ink, background: color, borderRadius: 999, padding: "2px 8px" }}>
                 {race.is_official ? "Compétition" : "Simulation"}
               </span>
               <span style={{ ...MONO, fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>{d && m && y ? `${d}/${m}/${y}` : race.date}</span>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER } from "@/features/shared/types/tests";
 import type { EnergySessionRow } from "@/types/energy";
 import { BIO_COLOR, BIO_BANK_ID, BIO_TITLE, ENERGY_KIND_COLOR, ENERGY_KIND_LABEL, BankTab, BANK_TABS } from "./calendarConstants";
@@ -120,7 +120,7 @@ export function PlanningBank({
         {tab === "energy" && (
           filteredEnergy.length === 0 ? empty("Aucune séance énergétique") :
           filteredEnergy.map((s) => {
-            const kc = ENERGY_KIND_COLOR[s.session_kind] ?? "#FFC933";
+            const kc = ENERGY_KIND_COLOR[s.session_kind] ?? C.ac;
             return (
               <div key={s.id} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <DraggableSession session={{ id: s.id, name: s.name }} sessionType="energy" isDragging={activeDragId === s.id} />
@@ -141,7 +141,7 @@ export function PlanningBank({
               <div key={s.id} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <DraggableSession session={{ id: s.id, name: s.name }} sessionType="specifique" isDragging={activeDragId === s.id} />
                 <div style={{ fontSize: 9, color: C.tx3, paddingLeft: 6, display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ color: "#F5A623", fontWeight: 700 }}>{isClassique ? "Blocs" : "WOD"}</span>
+                  <span style={{ color: H.miel, fontWeight: 700 }}>{isClassique ? "Blocs" : "WOD"}</span>
                   {s.total_duration_s != null && s.total_duration_s > 0 && <span>{Math.round(s.total_duration_s / 60)} min</span>}
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
@@ -69,8 +69,8 @@ export function WorkoutPreviewDrawer({
                       {chainLen > 1 && (
                         <div style={{
                           padding: "6px 14px 0", borderTop: idx > 0 ? "1px solid " + C.brd : "none",
-                          borderLeft: "3px solid #F5A623",
-                          fontSize: 9, fontWeight: 800, color: "#F5A623", letterSpacing: "0.5px",
+                          borderLeft: `3px solid ${H.miel}`,
+                          fontSize: 9, fontWeight: 800, color: H.miel, letterSpacing: "0.5px",
                         }}>
                           SUPERSET ×{chainLen} · ENCHAÎNÉS SANS REPOS
                         </div>
@@ -79,7 +79,7 @@ export function WorkoutPreviewDrawer({
                         style={{
                           padding: "10px 14px",
                           borderTop: idx > 0 && !prevLinked && chainLen <= 1 ? "1px solid " + C.brd : "none",
-                          borderLeft: inSuperset ? "3px solid #F5A623" : "3px solid transparent",
+                          borderLeft: inSuperset ? `3px solid ${H.miel}` : "3px solid transparent",
                           display: "flex", alignItems: "center", gap: 10,
                         }}
                       >
@@ -106,7 +106,7 @@ export function WorkoutPreviewDrawer({
                           </div>
                         </div>
                         {ex.superset_with_next && bloc.exercices[idx + 1] && (
-                          <span title="Lié à l'exercice suivant" style={{ fontSize: 12, color: "#F5A623", flexShrink: 0 }}>↓</span>
+                          <span title="Lié à l'exercice suivant" style={{ fontSize: 12, color: H.miel, flexShrink: 0 }}>↓</span>
                         )}
                       </div>
                       </div>
@@ -125,7 +125,7 @@ export function WorkoutPreviewDrawer({
               onClick={onStart}
               style={{
                 width: "100%", padding: "14px 0", borderRadius: 6, border: "none",
-                background: C.acV, color: "#0E0C0A",
+                background: C.acV, color: C.ink,
                 fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 44,
               }}
             >

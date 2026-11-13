@@ -5,12 +5,12 @@ import { toast } from "sonner";
 import { markOnboarded } from "@/api/profile";
 import { ProviderCards } from "@/features/shared/components/ConnectedServicesSection";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
-import { C, alpha } from "@/lib/theme";
+import { C, alpha, H } from "@/lib/theme";
 import { TYPE_COLOR } from "@/lib/peps";
 import { finishLocally, saveStep, savedStep } from "@/lib/onboarding";
 
 /** Ressenti 1 → 5 : du rouge au vert, comme le wellness. */
-const FEEL_COLOR = ["#FF3B1F", "#FF7A45", "#FF9500", "#B6F03C", "#66F03C"];
+const FEEL_COLOR = [C.rouge, C.blocCore, C.o, H.vertAcide, C.g];
 const ROWS = [
   { key: "fatigue", label: "Récupération" },
   { key: "sommeil", label: "Sommeil" },

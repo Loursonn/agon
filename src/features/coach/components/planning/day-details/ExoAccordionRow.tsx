@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, ChevronDown, ChevronUp, Check, Minus } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { ATHLETE_CHOICE_LABEL } from "@/lib/athleteChoices";
 import { hasIso, isIsoAt } from "@/lib/formatSetsReps";
 import { IsoBadge } from "@/features/shared/components/IsoBadge";
@@ -53,7 +53,7 @@ export function ExoAccordionRow({ exo, isCompleted, exerciceComment }: {
               </span>
             )}
             {!exo.planned && hasActual && (
-              <span style={{ fontSize: 8, marginLeft: 5, padding: "1px 5px", borderRadius: 4, background: "#F59E0B20", color: "#F59E0B", fontWeight: 600, verticalAlign: "middle" }}>
+              <span style={{ fontSize: 8, marginLeft: 5, padding: "1px 5px", borderRadius: 4, background: `${H.ambre}20`, color: H.ambre, fontWeight: 600, verticalAlign: "middle" }}>
                 {ATHLETE_CHOICE_LABEL}
               </span>
             )}

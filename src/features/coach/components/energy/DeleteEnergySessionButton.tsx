@@ -35,7 +35,7 @@ export function DeleteEnergySessionDialog({ sessionId, sessionName, onClose }: {
           </button>
           <button
             onClick={() => { deleteMutation.mutate(sessionId); onClose(); }}
-            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
           >
             Supprimer
           </button>

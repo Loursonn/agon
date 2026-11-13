@@ -64,12 +64,12 @@ const NAV_ITEMS = [
 const SIDEBAR_STYLE: React.CSSProperties = {
   "--sidebar-width": "240px",
   "--sidebar-width-icon": "64px",
-  "--sidebar-background": "#0E0C0A",
-  "--sidebar-foreground": "#7D7468",
+  "--sidebar-background": C.bg,
+  "--sidebar-foreground": C.tx3,
   "--sidebar-border": "rgba(231,211,168,0.2)",
   "--sidebar-accent": "rgba(255,201,51,0.10)",
-  "--sidebar-accent-foreground": "#FFC933",
-  "--sidebar-ring": "#FFC933",
+  "--sidebar-accent-foreground": C.ac,
+  "--sidebar-ring": C.ac,
 } as React.CSSProperties;
 
 // ── CoachShell ────────────────────────────────────────────────────────────────
@@ -101,11 +101,11 @@ function CoachSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      style={{ background: "#0E0C0A", borderRight: "1px solid rgba(231,211,168,0.2)" }}
+      style={{ background: C.bg, borderRight: "1px solid rgba(231,211,168,0.2)" }}
     >
       {/* Le tiroir mobile est rendu dans un portail, hors des variables CSS du
           provider : le fond est donc posé ici, identique à celui du PC. */}
-      <div className="flex h-full min-h-0 w-full flex-col" style={{ background: "#0E0C0A" }}>
+      <div className="flex h-full min-h-0 w-full flex-col" style={{ background: C.bg }}>
         {/* Titre lu par les lecteurs d'écran (tiroir mobile = boîte de dialogue) */}
         {isMobile && (
           <>
@@ -198,7 +198,7 @@ function CoachSidebar() {
                     <span className="group-data-[collapsible=icon]:hidden" style={{ flex: 1 }}>{item.label}</span>
                     {item.path === "/coach/nouveautes" && unseenUpdates > 0 && (
                       <span aria-label={`${unseenUpdates} nouveauté(s) non vue(s)`} style={{
-                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 5px", background: C.ac, color: "#0E0C0A",
+                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 5px", background: C.ac, color: C.ink,
                         fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center",
                       }}>{unseenUpdates}</span>
                     )}

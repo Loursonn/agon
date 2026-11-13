@@ -126,7 +126,7 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
             width: "100%", padding: "15px 0", borderRadius: 6,
             border: "none",
             background: selected != null ? C.ac : C.s2,
-            color: selected != null ? "#fff" : C.tx3,
+            color: selected != null ? C.tx : C.tx3,
             fontSize: 14, fontWeight: 700,
             cursor: selected != null ? "pointer" : "default",
             fontFamily: "inherit", minHeight: 44,

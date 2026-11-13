@@ -292,7 +292,7 @@ function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
           <button
             onClick={submit}
             disabled={!ready || del.isPending}
-            style={{ flex: 1, padding: "11px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: ready ? C.r : C.rS, color: ready ? "#0E0C0A" : C.r, fontSize: 12, fontWeight: 700, cursor: ready && !del.isPending ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.5, fontFamily: "inherit" }}
+            style={{ flex: 1, padding: "11px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: ready ? C.r : C.rS, color: ready ? C.ink : C.r, fontSize: 12, fontWeight: 700, cursor: ready && !del.isPending ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.5, fontFamily: "inherit" }}
           >
             {del.isPending ? "Suppression…" : "Supprimer"}
           </button>

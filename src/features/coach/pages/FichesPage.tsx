@@ -109,7 +109,7 @@ export default function FichesPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 500, color: C.tx, marginBottom: 4 }}>
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.origin.title}</span>
                     {f.origin.is_self_service && (
-                      <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", flex: "none", color: "#0E0C0A", background: C.g, borderRadius: 999, padding: "2px 8px" }}>Libre-service</span>
+                      <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", flex: "none", color: C.ink, background: C.g, borderRadius: 999, padding: "2px 8px" }}>Libre-service</span>
                     )}
                   </div>
                   {f.origin.description && (

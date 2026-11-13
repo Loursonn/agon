@@ -1,5 +1,6 @@
 import { AgonIcon } from "@/components/ui/AgonIcon";
 import { Dumbbell, Zap } from "lucide-react";
+import { C } from "@/lib/theme";
 
 // ── Forme advice ──────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ export function getFormeAdvice(wellness: Record<string, number> | null): Array<{
     if (v == null) continue;
     const tip = f.advice(v);
     if (!tip) continue;
-    tips.push({ icon: FORM_FIELDS_ICONS[f.key], label: f.label, text: tip.text, color: tip.tone === "bad" ? "#FF9500" : "#66F03C" });
+    tips.push({ icon: FORM_FIELDS_ICONS[f.key], label: f.label, text: tip.text, color: tip.tone === "bad" ? C.o : C.g });
   }
   return tips;
 }

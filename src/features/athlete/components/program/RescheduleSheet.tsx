@@ -3,11 +3,12 @@ import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { tipPlacement } from "@/lib/onboarding";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { C } from "@/lib/theme";
 const DOW_LETTER = ["L", "M", "M", "J", "V", "S", "D"];
 
-const TX2 = "#B9AE9C";
-const TX3 = "#8E8780";
-const GOLD = "#FFC933";
+const TX2 = C.tx2;
+const TX3 = C.pierre;
+const GOLD = C.ac;
 
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const fmtDay = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
@@ -76,12 +77,12 @@ export function RescheduleSheet({
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
           cursor: past ? "default" : "pointer",
           ...(sel
-            ? { background: GOLD, color: "#0E0C0A", border: "none" }
+            ? { background: GOLD, color: C.ink, border: "none" }
             : past
               ? { background: "transparent", border: "1px solid rgba(231,211,168,0.08)", color: TX3, opacity: 0.45 }
               : cur
                 ? { background: "transparent", border: "1px dashed rgba(231,211,168,0.35)", color: TX2 }
-                : { background: "transparent", border: "1px solid rgba(231,211,168,0.18)", color: "#FFFFFF" }),
+                : { background: "transparent", border: "1px solid rgba(231,211,168,0.18)", color: C.tx }),
         }}
       >
         <span style={{ ...MONO, fontSize: 12, fontWeight: 500 }}>{DOW_LETTER[d.dow]}</span>
@@ -94,9 +95,9 @@ export function RescheduleSheet({
     <button
       type="button"
       onClick={onClick}
-      style={{ display: "flex", alignItems: "center", gap: 14, minHeight: 52, padding: "6px 0", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "#FFFFFF" }}
+      style={{ display: "flex", alignItems: "center", gap: 14, minHeight: 52, padding: "6px 0", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: C.tx }}
     >
-      <span style={{ width: 34, height: 34, flex: "none", borderRadius: 10, background: "#27221D", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>
+      <span style={{ width: 34, height: 34, flex: "none", borderRadius: 10, background: C.s2, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: "block", fontSize: 14, fontWeight: 500 }}>{title}</span>
         {sub && <span style={{ display: "block", fontSize: 12, color: TX3, marginTop: 1 }}>{sub}</span>}
@@ -105,7 +106,7 @@ export function RescheduleSheet({
     </button>
   );
 
-  const titleStyle = { fontSize: 17, fontWeight: 500, lineHeight: 1.25, color: "#FFFFFF", textAlign: "left" as const };
+  const titleStyle = { fontSize: 17, fontWeight: 500, lineHeight: 1.25, color: C.tx, textAlign: "left" as const };
   const titleEl = isDesktop
     ? <div id="reschedule-title" style={titleStyle}>{sessionName}</div>
     : <DrawerTitle style={titleStyle}>{sessionName}</DrawerTitle>;
@@ -114,12 +115,12 @@ export function RescheduleSheet({
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ ...MONO, fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#0E0C0A", background: typeColor, borderRadius: 999, padding: "2px 7px", lineHeight: 1.3 }}>{typeLabel}</span>
+                <span style={{ ...MONO, fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.ink, background: typeColor, borderRadius: 999, padding: "2px 7px", lineHeight: 1.3 }}>{typeLabel}</span>
                 <span style={{ ...MONO, fontSize: 11, color: TX3, whiteSpace: "nowrap" }}>{missed ? "Manquée" : "Prévue"} {fmtDay(scheduledDate)}</span>
               </div>
               {titleEl}
             </div>
-            <button type="button" aria-label="Fermer" onClick={onClose} style={{ width: 32, height: 32, flex: "none", borderRadius: 9, background: "#27221D", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            <button type="button" aria-label="Fermer" onClick={onClose} style={{ width: 32, height: 32, flex: "none", borderRadius: 9, background: C.s2, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TX2} strokeWidth="2" strokeLinecap="square" aria-hidden><path d="M5 5L19 19M19 5L5 19" /></svg>
             </button>
           </div>
@@ -136,7 +137,7 @@ export function RescheduleSheet({
             type="button"
             onClick={() => onConfirm(selected)}
             disabled={!canConfirm}
-            style={{ height: 52, width: "100%", border: "none", borderRadius: 12, background: canConfirm ? GOLD : "#27221D", color: canConfirm ? "#0E0C0A" : TX3, fontWeight: 600, fontSize: 15, cursor: canConfirm ? "pointer" : "default", fontFamily: "inherit" }}
+            style={{ height: 52, width: "100%", border: "none", borderRadius: 12, background: canConfirm ? GOLD : C.s2, color: canConfirm ? C.ink : TX3, fontWeight: 600, fontSize: 15, cursor: canConfirm ? "pointer" : "default", fontFamily: "inherit" }}
           >
             {isPending ? "Déplacement…" : !selected || selected === scheduledDate || selected < today ? "Choisis un jour" : `Déplacer au ${fmtDay(selected)}`}
           </button>
@@ -165,7 +166,7 @@ export function RescheduleSheet({
         <div aria-hidden onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.25)" }} />
         <div role="dialog" aria-modal="true" aria-labelledby="reschedule-title" style={{
           position: "fixed", zIndex: 301, width: place?.width ?? 400, maxHeight: "calc(100vh - 32px)", overflowY: "auto",
-          background: "#1E1A16", border: "1px solid rgba(231,211,168,0.18)", borderRadius: 18, boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
+          background: C.s1, border: "1px solid rgba(231,211,168,0.18)", borderRadius: 18, boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
           ...(place
             ? { left: place.left, ...(place.below ? { top: Math.min(place.y, vh - 16 - 420) } : { bottom: place.y }) }
             : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" }),
@@ -178,7 +179,7 @@ export function RescheduleSheet({
 
   return (
     <Drawer open onOpenChange={(v) => !v && onClose()}>
-      <DrawerContent aria-describedby={undefined} style={{ background: "#1E1A16", borderTop: "1px solid rgba(231,211,168,0.18)", borderRadius: "24px 24px 0 0", padding: 0 }}>
+      <DrawerContent aria-describedby={undefined} style={{ background: C.s1, borderTop: "1px solid rgba(231,211,168,0.18)", borderRadius: "24px 24px 0 0", padding: 0 }}>
         {content}
       </DrawerContent>
     </Drawer>

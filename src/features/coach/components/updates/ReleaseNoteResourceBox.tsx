@@ -38,7 +38,7 @@ export function ReleaseNoteResourceBox({ resource }: { resource: ReleaseNoteReso
       <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>📋 {resource.label}</div>
       {resource.description && <div style={{ fontSize: 12, color: C.tx2, marginTop: 2 }}>{resource.description}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-        <button onClick={copy} style={{ ...btn, border: "none", background: C.acV, color: "#0E0C0A", fontWeight: 700 }}>Copier</button>
+        <button onClick={copy} style={{ ...btn, border: "none", background: C.acV, color: C.ink, fontWeight: 700 }}>Copier</button>
         {resource.filename && <button onClick={download} style={btn}>Télécharger (.md)</button>}
         <button onClick={() => setOpen((v) => !v)} style={btn}>{open ? "Masquer" : "Afficher"}</button>
       </div>

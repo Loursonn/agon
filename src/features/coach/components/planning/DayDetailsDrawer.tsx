@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { X, Plus, ChevronLeft, Trophy } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useAuth } from "@/hooks/useAuth";
 import { competitionDayLabel, type Competition } from "@/types/planning";
@@ -334,14 +334,14 @@ export function DayDetailsDrawer({
 
               {wellnessDay && (
                 <section>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#66F03C", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Bien-être</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: C.g, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Bien-être</div>
                   <WellnessDayView wellness={wellnessDay} />
                 </section>
               )}
 
               {nutritionDay && (
                 <section>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Nutrition</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: H.ambre, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Nutrition</div>
                   <NutritionDayView nutrition={nutritionDay} />
                 </section>
               )}

@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { Check, Dumbbell } from "lucide-react";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
 import { DAYS_FULL_FR, MONTHS_FR } from "@/features/athlete/components/today/todayConstants";
@@ -46,8 +46,8 @@ export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, en
   const dayFreeActivities = freeSessions.filter((f) => f.date === day.date && f.sport);
 
   const ENERGY_KIND_COLOR: Record<string, string> = {
-    vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-    footing: "#10B981", fartlek: "#EF4444", specifique: "#F5A623", autre: "#6B7280", custom: "#6B7280",
+    vo2: C.ac, tempo: C.b, seuil: H.ambre,
+    footing: H.emeraude, fartlek: H.rougeVif, specifique: H.miel, autre: H.gris, custom: H.gris,
   };
   const ENERGY_KIND_LABEL: Record<string, string> = {
     vo2: "VO₂", tempo: "Tempo", seuil: "Seuil",
@@ -153,7 +153,7 @@ export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, en
                       onClick={() => { onStartSession(session, workoutLogId); onClose(); haptic(); }}
                       style={{
                         width: "100%", padding: "11px 0", borderRadius: 4,
-                        border: "none", background: C.acV, color: "#0E0C0A",
+                        border: "none", background: C.acV, color: C.ink,
                         fontSize: 13, fontWeight: 700, cursor: "pointer",
                         fontFamily: "inherit", minHeight: 44,
                       }}
@@ -167,7 +167,7 @@ export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, en
 
               {/* Séances énergie */}
               {dayEnergySessions.map((ev) => {
-                const kc = ENERGY_KIND_COLOR[ev.sessionKind ?? ""] ?? "#FFC933";
+                const kc = ENERGY_KIND_COLOR[ev.sessionKind ?? ""] ?? C.ac;
                 const kl = ENERGY_KIND_LABEL[ev.sessionKind ?? ""] ?? ev.sessionKind ?? "Énergie";
                 const isDone = ev.status === "completed";
                 const watchRun = watchByPlanned?.get(ev.id);
@@ -198,10 +198,10 @@ export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, en
 
               {/* Tests */}
               {day.tests.map((t) => {
-                const tc = t.type === "musculation" ? "#FFC933"
-                  : t.type === "energetique" ? "#FF5A33"
-                  : t.type === "specifique" ? "#F5A623"
-                  : "#66F03C";
+                const tc = t.type === "musculation" ? C.ac
+                  : t.type === "energetique" ? C.r
+                  : t.type === "specifique" ? H.miel
+                  : C.g;
                 return (
                   <button
                     key={t.id}

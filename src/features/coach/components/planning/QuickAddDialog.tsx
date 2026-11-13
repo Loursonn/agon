@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { X, Dumbbell, FlaskConical, Zap, Layers } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAssignWorkout, useCreateTestSession } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
 import { useAssignEnergySession } from "@/features/shared/hooks/useEnergyAssignments";
@@ -31,14 +31,14 @@ const KIND_LABEL: Record<string, string> = {
   footing: "Footing", fartlek: "Fartlek", autre: "Autre", custom: "Custom",
 };
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-  footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
+  vo2: C.ac, tempo: C.b, seuil: H.ambre,
+  footing: H.emeraude, fartlek: H.rougeVif, autre: H.gris, custom: H.gris,
 };
 
 const SIDEBAR_CATS = [
-  { key: "workout"  as Tab, label: "Muscu",      Icon: Dumbbell,     color: "#FFC933", disabled: false },
-  { key: "energy"   as Tab, label: "Énergie",    Icon: Zap,          color: "#F59E0B", disabled: false },
-  { key: "test"     as Tab, label: "Test",        Icon: FlaskConical, color: "#C49A6C", disabled: false },
+  { key: "workout"  as Tab, label: "Muscu",      Icon: Dumbbell,     color: C.ac, disabled: false },
+  { key: "energy"   as Tab, label: "Énergie",    Icon: Zap,          color: H.ambre, disabled: false },
+  { key: "test"     as Tab, label: "Test",        Icon: FlaskConical, color: H.caramel, disabled: false },
   { key: "specific" as Tab, label: "Spécifique",  Icon: Layers,       color: C.tx3,     disabled: true  },
 ];
 
@@ -293,7 +293,7 @@ export function QuickAddDialog({
                       <button
                         key={s.id}
                         onClick={() => setSelectedSession(active ? "" : s.id)}
-                        style={itemBtn(active, "#FFC933")}
+                        style={itemBtn(active, C.ac)}
                       >
                         {active && "✓ "}{s.name}
                       </button>
@@ -318,7 +318,7 @@ export function QuickAddDialog({
                     <div style={emptyTxt}>Aucune séance énergie</div>
                   ) : filteredEnergy.map(s => {
                     const active = selectedEnergy === s.id;
-                    const kc = KIND_COLOR[s.session_kind] ?? "#6B7280";
+                    const kc = KIND_COLOR[s.session_kind] ?? H.gris;
                     return (
                       <button
                         key={s.id}
@@ -483,7 +483,7 @@ export function QuickAddDialog({
               width: "100%", padding: "12px 0", borderRadius: 4,
               border: "none",
               background: canSubmit && !isPending ? C.ac : C.s2,
-              color: canSubmit && !isPending ? "#fff" : C.tx3,
+              color: canSubmit && !isPending ? C.tx : C.tx3,
               fontSize: 13, fontWeight: 700,
               cursor: canSubmit && !isPending ? "pointer" : "default",
               fontFamily: "inherit", transition: "all 150ms",

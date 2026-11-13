@@ -80,7 +80,7 @@ export function ChangeParentDialog({
           <button
             onClick={!saving ? onConfirm : undefined}
             disabled={saving}
-            style={{ ...btnBase, background: C.acV, border: "none", color: "#0E0C0A" }}
+            style={{ ...btnBase, background: C.acV, border: "none", color: C.ink }}
           >
             {saving ? "…" : "Déplacer dans " + newParentName}
           </button>

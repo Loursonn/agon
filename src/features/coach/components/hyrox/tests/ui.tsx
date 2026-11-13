@@ -1,6 +1,6 @@
 /** Petits composants partagés par la partie Tests HYROX. */
 import type { CSSProperties, ReactNode } from "react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { fr, type MetricSource } from "@/lib/hyrox/tests";
 import { NOTE_LABELS, noteColor } from "./format";
 
@@ -57,7 +57,7 @@ export function Btn({
       style={{
         padding: small ? "5px 10px" : "8px 14px", borderRadius: 4, fontSize: small ? 11 : 12, fontWeight: 700, fontFamily: "inherit",
         cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1,
-        background: primary ? C.ac : "transparent", color: primary ? "#000" : C.tx2,
+        background: primary ? C.ac : "transparent", color: primary ? H.noir : C.tx2,
         border: "1px solid " + (primary ? C.ac : C.brdL), whiteSpace: "nowrap", ...style,
       }}
     >

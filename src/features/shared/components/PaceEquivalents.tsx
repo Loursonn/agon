@@ -8,6 +8,7 @@
  */
 import type { EnergyTarget } from "@/types/energy";
 import { targetPaceEquivalents } from "@/lib/energy/paceEquivalents";
+import { H } from "@/lib/theme";
 
 interface Props {
   target: EnergyTarget | null | undefined;
@@ -31,7 +32,7 @@ export function PaceEquivalents({
   return (
     <div
       style={{
-        fontSize, lineHeight: 1.4, color: "#8B8A92",
+        fontSize, lineHeight: 1.4, color: H.grisClair,
         textAlign: align, width: "100%",
       }}
     >

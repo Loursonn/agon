@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { describeOp, type namesFrom } from "@/lib/coachApiDraftText";
 import type { DraftOp, ProgSessionShape } from "@shared/coachApiOps.ts";
 import { isPlanOpName } from "@shared/coachApiPlan.ts";
@@ -47,7 +47,7 @@ export function PlanDraftPreview({ athleteId, ops, prog, names }: {
                   style={{
                     fontSize: 12,
                     lineHeight: 1.45,
-                    color: isRemoval(op.op) ? "#EF4444" : C.tx,
+                    color: isRemoval(op.op) ? H.rougeVif : C.tx,
                   }}
                 >
                   {describeOp(op, names)}

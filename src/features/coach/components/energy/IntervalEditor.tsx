@@ -474,7 +474,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
           </button>
           <button
             onClick={handleSave}
-            style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: C.acV, color: C.ink, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
           >
             Valider
           </button>

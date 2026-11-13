@@ -9,7 +9,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { getWellnessHistory, wellnessKeys } from "@/api/wellness";
 import { recentWeights } from "@/api/profile";
 import MeasurementComparison from "@/features/coach/components/MeasurementComparison";
@@ -61,11 +61,11 @@ const METRICS: MetricDef[] = [
 const PREDEFINED_KEYS = new Set(METRICS.map((m) => m.key));
 
 const CATEGORY_COLOR: Record<Category, string> = {
-  cardio:    "#EF4444",
-  vitesse:   "#33B5FF",
-  puissance: "#F59E0B",
-  corpo:     "#10B981",
-  custom:    "#FFC933",
+  cardio:    H.rougeVif,
+  vitesse:   C.b,
+  puissance: H.ambre,
+  corpo:     H.emeraude,
+  custom:    C.ac,
 };
 
 // ── Zone FC computations ──────────────────────────────────────────────────────
@@ -73,11 +73,11 @@ const CATEGORY_COLOR: Record<Category, string> = {
 interface FcZoneDef { label: string; color: string; zoneKey: string }
 
 const FC_ZONES_DEF: FcZoneDef[] = [
-  { label: "Z1 — Récupération", color: "#22C55E", zoneKey: "FCzone_Z1_max" },
-  { label: "Z2 — Endurance",    color: "#84CC16", zoneKey: "FCzone_Z2_max" },
-  { label: "Z3 — Tempo",        color: "#EAB308", zoneKey: "FCzone_Z3_max" },
-  { label: "Z4 — Seuil",        color: "#F97316", zoneKey: "FCzone_Z4_max" },
-  { label: "Z5 — VO₂max",       color: "#EF4444", zoneKey: "FCzone_Z5_max" },
+  { label: "Z1 — Récupération", color: H.vert, zoneKey: "FCzone_Z1_max" },
+  { label: "Z2 — Endurance",    color: H.citron, zoneKey: "FCzone_Z2_max" },
+  { label: "Z3 — Tempo",        color: H.jauneFonce, zoneKey: "FCzone_Z3_max" },
+  { label: "Z4 — Seuil",        color: H.orange, zoneKey: "FCzone_Z4_max" },
+  { label: "Z5 — VO₂max",       color: H.rougeVif, zoneKey: "FCzone_Z5_max" },
 ];
 
 const computeDefaultFcZones = defaultFiveZoneMaxes;
@@ -91,22 +91,22 @@ function vmaZones(vma: number) {
     return `${m}:${ss}`;
   };
   return [
-    { label: "Z1 — Footing",   min: p(0.65), max: p(0.72), color: "#22C55E" },
-    { label: "Z2 — Endurance", min: p(0.72), max: p(0.82), color: "#84CC16" },
-    { label: "Z3 — Tempo",     min: p(0.82), max: p(0.89), color: "#EAB308" },
-    { label: "Z4 — Seuil",     min: p(0.89), max: p(0.95), color: "#F97316" },
-    { label: "Z5 — VMA",       min: p(0.95), max: p(1.05), color: "#EF4444" },
+    { label: "Z1 — Footing",   min: p(0.65), max: p(0.72), color: H.vert },
+    { label: "Z2 — Endurance", min: p(0.72), max: p(0.82), color: H.citron },
+    { label: "Z3 — Tempo",     min: p(0.82), max: p(0.89), color: H.jauneFonce },
+    { label: "Z4 — Seuil",     min: p(0.89), max: p(0.95), color: H.orange },
+    { label: "Z5 — VMA",       min: p(0.95), max: p(1.05), color: H.rougeVif },
   ];
 }
 
 function ftpZones(ftp: number) {
   const w = (pct: number) => Math.round(ftp * pct);
   return [
-    { label: "Z1 — Récupération", range: `< ${w(0.55)} W`,                        color: "#22C55E" },
-    { label: "Z2 — Endurance",    range: `${w(0.55)}–${w(0.75)} W`,               color: "#84CC16" },
-    { label: "Z3 — Tempo",        range: `${w(0.75)}–${w(0.90)} W`,               color: "#EAB308" },
-    { label: "Z4 — Seuil",        range: `${w(0.90)}–${w(1.05)} W`,               color: "#F97316" },
-    { label: "Z5 — VO₂max",       range: `${w(1.05)}–${w(1.20)} W`,               color: "#EF4444" },
+    { label: "Z1 — Récupération", range: `< ${w(0.55)} W`,                        color: H.vert },
+    { label: "Z2 — Endurance",    range: `${w(0.55)}–${w(0.75)} W`,               color: H.citron },
+    { label: "Z3 — Tempo",        range: `${w(0.75)}–${w(0.90)} W`,               color: H.jauneFonce },
+    { label: "Z4 — Seuil",        range: `${w(0.90)}–${w(1.05)} W`,               color: H.orange },
+    { label: "Z5 — VO₂max",       range: `${w(1.05)}–${w(1.20)} W`,               color: H.rougeVif },
   ];
 }
 
@@ -400,7 +400,7 @@ function FcZoneEditor({
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: C.acV, color: C.ink, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
           >
             {saving ? "…" : "Enregistrer les zones"}
           </button>
@@ -502,7 +502,7 @@ function CustomMetricForm({ onSave, saving }: { onSave: (name: string, value: nu
         <button onClick={() => setOpen(false)} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
           Annuler
         </button>
-        <button onClick={handleSubmit} disabled={saving} style={{ padding: "6px 16px", borderRadius: 7, border: "none", background: CATEGORY_COLOR.custom, color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={handleSubmit} disabled={saving} style={{ padding: "6px 16px", borderRadius: 7, border: "none", background: CATEGORY_COLOR.custom, color: C.tx, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
           {saving ? "…" : "Ajouter"}
         </button>
       </div>

@@ -7,7 +7,7 @@ import { useProgrammation } from "@/features/coach/components/programmation/hook
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Ruler } from "lucide-react";
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { WeekLoadPanel } from "@/features/coach/components/load/WeekLoadPanel";
 import { useUnifiedCalendar, useAssignWorkout, useRescheduleWorkout, useCreateTestSession, useRescheduleTestSession, toCalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
@@ -364,7 +364,7 @@ export function CalendarMonthView({
                 {[
                   { label: "Musculation", color: C.ac },
                   { label: "Énergie", color: C.b },
-                  { label: "Spécifique", color: "#F5A623" },
+                  { label: "Spécifique", color: H.miel },
                   { label: "Test", color: TEST_COLOR },
                   { label: "Compétition", color: C.r },
                 ].map(({ label, color }) => (
@@ -635,7 +635,7 @@ export function CalendarMonthView({
             style={{
               padding: "4px 10px", borderRadius: 6,
               border: "1px solid " + TYPE_COLOR[activeDragEvent.type] + "60",
-              background: TYPE_COLOR[activeDragEvent.type], color: "#fff",
+              background: TYPE_COLOR[activeDragEvent.type], color: C.tx,
               fontSize: 11, fontWeight: 600,
               pointerEvents: "none",
             }}
@@ -648,7 +648,7 @@ export function CalendarMonthView({
               padding: "7px 10px", borderRadius: 4,
               border: "1px solid " + (activeDragIsEnergy ? C.b : activeDragIsTest ? TEST_COLOR : activeDragIsBio ? BIO_COLOR : C.ac) + "60",
               background: activeDragIsEnergy ? C.b : activeDragIsTest ? TEST_COLOR : activeDragIsBio ? BIO_COLOR : C.ac,
-              color: "#fff",
+              color: C.tx,
               fontSize: 11, fontWeight: 600,
               pointerEvents: "none",
               display: "flex", alignItems: "center", gap: 6,

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { signIn } from "@/api/auth";
 import { errorMessage } from "@/lib/errors";
 import { useDeleteAccount } from "@/features/shared/hooks/useDeleteAccount";
+import { C as THEME } from "@/lib/theme";
 
 /**
  * Suppression du compte — page publique.
@@ -22,16 +23,8 @@ import { useDeleteAccount } from "@/features/shared/hooks/useDeleteAccount";
  * identité tirée du seul jeton de session).
  */
 
-const C = {
-  s1: "#1E1A16",
-  s2: "#27221D",
-  brd: "rgba(231,211,168,0.18)",
-  tx: "#FFFFFF",
-  tx2: "#B9AE9C",
-  tx3: "#7D7468",
-  ac: "#FFC933",
-  r: "#FF5A33",
-};
+// Bordures un cran plus marquées que dans l'app (lisibilité de la page publique).
+const C = { ...THEME, brd: THEME.brdL };
 
 const input: React.CSSProperties = {
   width: "100%",
@@ -220,7 +213,7 @@ function SignInForm() {
           borderRadius: 6,
           border: "none",
           background: C.ac,
-          color: "#0E0C0A",
+          color: C.ink,
           fontSize: 14,
           fontWeight: 700,
           cursor: pending ? "wait" : "pointer",
@@ -277,7 +270,7 @@ function ConfirmDeletion({ email }: { email: string }) {
           borderRadius: 6,
           border: "1px solid " + C.r + "55",
           background: ready ? C.r : "transparent",
-          color: ready ? "#0E0C0A" : C.r,
+          color: ready ? C.ink : C.r,
           fontSize: 14,
           fontWeight: 700,
           cursor: ready && !del.isPending ? "pointer" : "not-allowed",

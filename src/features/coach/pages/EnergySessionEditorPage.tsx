@@ -14,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useQueryClient } from "@tanstack/react-query";
 import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor";
 import { syncEnergySessionAthletes } from "@/features/shared/hooks/fiches/syncDocAssignments";
@@ -70,14 +70,14 @@ const SESSION_KINDS: { value: SessionKind; label: string }[] = [
   { value: "custom",     label: "Type personnalisé…" },
 ];
 
-const ORANGE = "#F5A623";
+const ORANGE = H.miel;
 
 
 // ── Import session modal ─────────────────────────────────────────────────────
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-  footing: "#22C55E", fartlek: "#EC4899", autre: "#6B7280", custom: "#14B8A6",
+  vo2: C.ac, tempo: C.b, seuil: H.ambre,
+  footing: H.vert, fartlek: H.rose, autre: H.gris, custom: H.turquoise,
 };
 
 function deepCloneIntervals(steps: EnergyStep[]): EnergyStep[] {
@@ -139,7 +139,7 @@ function ImportSessionModal({ onImport, onClose }: {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {filtered.map((s) => {
-                const kc = KIND_COLOR[s.session_kind] ?? "#6B7280";
+                const kc = KIND_COLOR[s.session_kind] ?? H.gris;
                 return (
                   <div
                     key={s.id}
@@ -479,7 +479,7 @@ export default function EnergySessionEditorPage() {
       }}>
         <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isSpecifique ? ORANGE : C.b }} />
         {!isSpecifique && (
-          <span style={{ background: C.b, color: "#0E0C0A", borderRadius: 999, padding: "2px 10px", fontSize: 11.5, fontWeight: 600 }}>Énergie</span>
+          <span style={{ background: C.b, color: C.ink, borderRadius: 999, padding: "2px 10px", fontSize: 11.5, fontWeight: 600 }}>Énergie</span>
         )}
 
         <input
@@ -524,7 +524,7 @@ export default function EnergySessionEditorPage() {
                 onChange={setQualityId}
                 onCreate={async (n) => user?.id ? await createQuality.mutateAsync({ name: n, coachId: user.id }) : undefined}
                 width={150}
-                accent="#FFC933"
+                accent={C.ac}
               />
               {/* Legacy WOD pleine page : proposer la conversion en blocs */}
               {format === "wod" && (
@@ -742,7 +742,7 @@ export default function EnergySessionEditorPage() {
             <button
               onClick={() => void handleSave()}
               disabled={isSaving}
-              style={{ height: 40, borderRadius: 10, border: "none", background: C.ac, color: "#0E0C0A", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
+              style={{ height: 40, borderRadius: 10, border: "none", background: C.ac, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
             >
               {isSaving ? "Enregistrement…" : athleteId && !bankOnly ? `Enregistrer pour ${athleteName}` : "Enregistrer dans ma banque"}
             </button>
@@ -778,7 +778,7 @@ export default function EnergySessionEditorPage() {
                   style={{
                     padding: "10px 12px", borderRadius: 4,
                     border: `1px solid rgba(239,68,68,0.3)`, background: "rgba(239,68,68,0.08)",
-                    color: "#EF4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    color: H.rougeVif, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
                   ✕
@@ -821,7 +821,7 @@ export default function EnergySessionEditorPage() {
                         position: "absolute", top: 2, right: 2,
                         width: 20, height: 20, borderRadius: "50%",
                         background: "rgba(0,0,0,0.6)", border: "none",
-                        color: "#fff", fontSize: 12, cursor: "pointer",
+                        color: C.tx, fontSize: 12, cursor: "pointer",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         lineHeight: 1,
                       }}

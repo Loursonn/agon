@@ -3,7 +3,7 @@ import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, ChevronDown, ChevronUp } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/energyLabels";
 import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import type { EnergySessionDetail, EnergyStepLog } from "@/features/shared/types/retours.types";
@@ -11,8 +11,8 @@ import type { EnergySessionDetail, EnergyStepLog } from "@/features/shared/types
 // ── Kind labels / colors ──────────────────────────────────────────────────────
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-  footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
+  vo2: C.ac, tempo: C.b, seuil: H.ambre,
+  footing: H.emeraude, fartlek: H.rougeVif, autre: H.gris, custom: H.gris,
 };
 const KIND_LABEL: Record<string, string> = {
   vo2: "VO₂max", tempo: "Tempo", seuil: "Seuil",
@@ -29,11 +29,11 @@ const KIND_LABELS: Record<string, string> = {
 
 function StatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { label: string; bg: string; color: string }> = {
-    completed: { label: "Complétée",   bg: "rgba(34,201,147,0.15)", color: "#66F03C" },
-    missed:    { label: "Manquée",     bg: "rgba(239,68,68,0.15)",  color: "#EF4444" },
-    skipped:   { label: "Passée",      bg: "rgba(107,114,128,0.2)", color: "#9CA3AF" },
-    planned:   { label: "Planifiée",   bg: "rgba(59,141,240,0.15)", color: "#33B5FF" },
-    in_progress: { label: "En cours",  bg: "rgba(245,158,11,0.15)", color: "#F59E0B" },
+    completed: { label: "Complétée",   bg: "rgba(34,201,147,0.15)", color: C.g },
+    missed:    { label: "Manquée",     bg: "rgba(239,68,68,0.15)",  color: H.rougeVif },
+    skipped:   { label: "Passée",      bg: "rgba(107,114,128,0.2)", color: H.grisMoyen },
+    planned:   { label: "Planifiée",   bg: "rgba(59,141,240,0.15)", color: C.b },
+    in_progress: { label: "En cours",  bg: "rgba(245,158,11,0.15)", color: H.ambre },
   };
   const s = cfg[status] ?? cfg["planned"];
   return (
@@ -52,7 +52,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
   const hasLog = log !== null;
 
   if (step.type === "interval") {
-    const rc  = ROLE_COLOR[step.role as string] ?? "#6B7280";
+    const rc  = ROLE_COLOR[step.role as string] ?? H.gris;
     const dur = step.duration?.kind === "time"
       ? formatS(step.duration.value ?? 0)
       : step.duration?.kind === "distance"
@@ -67,7 +67,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
         display: "flex", alignItems: "flex-start", gap: 10,
         padding: "8px 10px", borderRadius: 4,
         background: entry?.status === "done" ? C.g + "10"
-          : entry?.status === "partial" ? "#F59E0B10"
+          : entry?.status === "partial" ? `${H.ambre}10`
           : "transparent",
       }}>
         {/* Role bar */}
@@ -82,7 +82,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
             )}
           </div>
           {entry?.status === "partial" && entry.comment && (
-            <div style={{ fontSize: 10, color: "#F59E0B", marginTop: 2, fontStyle: "italic" }}>
+            <div style={{ fontSize: 10, color: H.ambre, marginTop: 2, fontStyle: "italic" }}>
               {entry.comment}
             </div>
           )}
@@ -94,7 +94,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
               <span style={{ fontSize: 10, fontWeight: 700, color: C.g }}>✓ Fait</span>
             )}
             {entry?.status === "partial" && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B" }}>~ Partiel</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: H.ambre }}>~ Partiel</span>
             )}
             {!entry && (
               <span style={{ fontSize: 10, color: C.tx3 }}>—</span>
@@ -112,7 +112,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
     <div style={{
       padding: "7px 10px", borderRadius: 4,
       background: entry?.status === "done" ? C.g + "10"
-        : entry?.status === "partial" ? "#F59E0B10"
+        : entry?.status === "partial" ? `${H.ambre}10`
         : "rgba(59,141,240,0.06)",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -121,13 +121,13 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
         {hasLog && (
           <div style={{ marginLeft: "auto", flexShrink: 0 }}>
             {entry?.status === "done"    && <span style={{ fontSize: 10, fontWeight: 700, color: C.g }}>✓ Fait</span>}
-            {entry?.status === "partial" && <span style={{ fontSize: 10, fontWeight: 700, color: "#F59E0B" }}>~ Partiel</span>}
+            {entry?.status === "partial" && <span style={{ fontSize: 10, fontWeight: 700, color: H.ambre }}>~ Partiel</span>}
             {!entry                      && <span style={{ fontSize: 10, color: C.tx3 }}>—</span>}
           </div>
         )}
       </div>
       {entry?.status === "partial" && entry.comment && (
-        <div style={{ fontSize: 10, color: "#F59E0B", marginTop: 4, fontStyle: "italic" }}>
+        <div style={{ fontSize: 10, color: H.ambre, marginTop: 4, fontStyle: "italic" }}>
           {entry.comment}
         </div>
       )}
@@ -146,7 +146,7 @@ interface EnergyRetourCardProps {
 
 export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const kc = KIND_COLOR[session.session_kind ?? ""] ?? "#6B7280";
+  const kc = KIND_COLOR[session.session_kind ?? ""] ?? H.gris;
 
   // Support both step_log (old) and block_logs (new)
   const hasBlockLogs = session.block_logs && Object.keys(session.block_logs).length > 0;
@@ -159,7 +159,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
   const doneCount  = blVals.filter((b) => b.done).length;
   const totalCount = blVals.length;
 
-  const statusColor = session.partial ? "#33B5FF" : session.completed ? "#66F03C" : "#FF9500";
+  const statusColor = session.partial ? C.b : session.completed ? C.g : C.o;
   const statusLabel = session.partial
     ? `✓ Partielle ${doneCount}/${totalCount}`
     : session.completed ? "✓ Complétée" : "Non faite";
@@ -272,7 +272,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
               rel="noopener noreferrer"
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
-                fontSize: 11, fontWeight: 600, color: "#FF5500",
+                fontSize: 11, fontWeight: 600, color: H.orangeFeu,
                 padding: "6px 10px", borderRadius: 4,
                 background: "rgba(255,85,0,0.08)", border: "1px solid rgba(255,85,0,0.2)",
                 textDecoration: "none", width: "fit-content",

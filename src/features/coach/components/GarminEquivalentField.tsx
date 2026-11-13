@@ -67,7 +67,7 @@ export function GarminEquivalentField({ ex, onSaved }: { ex: ExerciseLike; onSav
   const lS = { fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 8 };
   const smallBtn = (primary: boolean) => ({
     padding: "6px 10px", borderRadius: 4, border: "1px solid " + (primary ? C.ac : C.brdL),
-    background: primary ? C.ac : "transparent", color: primary ? "#fff" : C.tx2, fontSize: 11, fontWeight: 600,
+    background: primary ? C.ac : "transparent", color: primary ? C.tx : C.tx2, fontSize: 11, fontWeight: 600,
     cursor: save.isPending ? "wait" : "pointer", fontFamily: "inherit", flexShrink: 0,
   });
 

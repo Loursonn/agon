@@ -620,7 +620,7 @@ function WorkoutPushBlock({ connection }: { connection: ProviderConnection }) {
           disabled={setPush.isPending}
           style={{ position: "relative", width: 38, height: 22, flexShrink: 0, borderRadius: 11, border: "none", padding: 0, background: on ? C.g : C.brd, cursor: setPush.isPending ? "wait" : "pointer", transition: "background .15s" }}
         >
-          <span style={{ position: "absolute", top: 3, left: on ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left .15s" }} />
+          <span style={{ position: "absolute", top: 3, left: on ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: C.tx, transition: "left .15s" }} />
         </button>
       </div>
       <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>

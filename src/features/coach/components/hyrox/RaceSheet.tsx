@@ -582,7 +582,7 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
                 style={{
                   flex: 1, padding: "8px 0", borderRadius: 6,
                   border: "none", background: C.r,
-                  color: "#fff", fontSize: 12, fontWeight: 700,
+                  color: C.tx, fontSize: 12, fontWeight: 700,
                   cursor: "pointer", fontFamily: "inherit",
                   opacity: deleteMut.isPending ? 0.6 : 1,
                 }}

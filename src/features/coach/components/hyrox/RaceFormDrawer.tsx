@@ -287,7 +287,7 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
                 disabled={!pasteText.trim()}
                 style={{
                   marginTop: 6, padding: "6px 14px", borderRadius: 4,
-                  border: "none", background: C.ac, color: "#0E0C0A",
+                  border: "none", background: C.ac, color: C.ink,
                   fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                   opacity: pasteText.trim() ? 1 : 0.4,
                 }}
@@ -366,7 +366,7 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
           disabled={createMut.isPending || updateMut.isPending}
           style={{
             width: "100%", padding: "14px 0", borderRadius: 6,
-            border: "none", background: C.ac, color: "#0E0C0A",
+            border: "none", background: C.ac, color: C.ink,
             fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
           }}
         >

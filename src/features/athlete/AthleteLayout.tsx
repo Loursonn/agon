@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { alpha } from "@/lib/theme";
+import { alpha, C } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
@@ -274,9 +274,9 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               aria-label={t.l}
               aria-current={isActive ? "page" : undefined}
               className="relative flex min-w-0 flex-1 flex-col items-center gap-[4px] border-none bg-transparent pt-[10px]"
-              style={{ color: isActive ? "#FFC933" : "rgba(231,211,168,0.55)" }}
+              style={{ color: isActive ? C.ac : "rgba(231,211,168,0.55)" }}
             >
-              {isActive && <span aria-hidden className="absolute top-0 h-px w-[22px]" style={{ background: "#FFC933" }} />}
+              {isActive && <span aria-hidden className="absolute top-0 h-px w-[22px]" style={{ background: C.ac }} />}
               <span className="relative flex items-center [&>svg]:h-[22px] [&>svg]:w-[22px]">
                 {t.icon}
                 {t.k === "profil" && staffUnseen > 0 && <span aria-label="Nouveau dans ton staff" className={NAV_DOT} />}

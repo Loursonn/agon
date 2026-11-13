@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { X, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { getWorkoutLog } from "@/api/workouts";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import { SessionBlocEditor } from "@/features/coach/components/programmation/SessionBlocEditor";
@@ -160,8 +160,8 @@ export function CoachSessionOverrideModal({ workoutLogId, athleteId, onClose }: 
 
         {existingOverride && (
           <div style={{
-            padding: "8px 20px", fontSize: 11, color: "#F59E0B",
-            background: "#F59E0B14", borderBottom: "1px solid " + C.brd, flexShrink: 0,
+            padding: "8px 20px", fontSize: 11, color: H.ambre,
+            background: `${H.ambre}14`, borderBottom: "1px solid " + C.brd, flexShrink: 0,
           }}>
             Cette séance est déjà adaptée pour ce jour. Modifie ou réinitialise.
           </div>

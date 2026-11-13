@@ -1,5 +1,5 @@
 import { ACCENT } from "@/features/athlete/components/workout-detail/workoutDetailConstants";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { WORKOUT_GONE_MESSAGE } from "@/features/shared/hooks/useUpsertWorkoutRpe";
 import { applyOptimisticWorkout } from "@/lib/optimisticWorkout";
 import { hexToRgba } from "@/features/athlete/components/workout-detail/workoutDetailUtils";
@@ -53,16 +53,16 @@ export function RpeSheetForLog({
   });
 
   const RPE_ITEMS: Array<{ v: number; label: string; color: string }> = [
-    { v: 1,  label: "Très léger",  color: "#22C55E" },
-    { v: 2,  label: "Léger",       color: "#4ADE80" },
-    { v: 3,  label: "Facile",      color: "#84CC16" },
-    { v: 4,  label: "Modéré",      color: "#FACC15" },
-    { v: 5,  label: "Rythme",      color: "#F59E0B" },
-    { v: 6,  label: "Intense",     color: "#FF9500" },
-    { v: 7,  label: "Dur",         color: "#F97316" },
-    { v: 8,  label: "Très dur",    color: "#EF4444" },
-    { v: 9,  label: "Quasi max",   color: "#DC2626" },
-    { v: 10, label: "Maximum",     color: "#991B1B" },
+    { v: 1,  label: "Très léger",  color: H.vert },
+    { v: 2,  label: "Léger",       color: H.vertMenthe },
+    { v: 3,  label: "Facile",      color: H.citron },
+    { v: 4,  label: "Modéré",      color: H.jaune },
+    { v: 5,  label: "Rythme",      color: H.ambre },
+    { v: 6,  label: "Intense",     color: C.o },
+    { v: 7,  label: "Dur",         color: H.orange },
+    { v: 8,  label: "Très dur",    color: H.rougeVif },
+    { v: 9,  label: "Quasi max",   color: H.rougeFonce },
+    { v: 10, label: "Maximum",     color: H.bordeaux },
   ];
 
   return (
@@ -174,7 +174,7 @@ export function RpeSheetForLog({
               borderRadius: 6,
               border: "none",
               background: rpe != null ? (RPE_ITEMS.find(r => r.v === rpe)?.color ?? ACCENT) : C.s2,
-              color: rpe != null ? "#fff" : C.tx3,
+              color: rpe != null ? C.tx : C.tx3,
               fontSize: 13,
               fontWeight: 700,
               cursor: rpe != null ? "pointer" : "default",

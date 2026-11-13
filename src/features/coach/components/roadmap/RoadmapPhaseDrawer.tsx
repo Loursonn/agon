@@ -189,7 +189,7 @@ export function RoadmapPhaseDrawer({ phase, onClose }: Props) {
               style={{
                 flex: 2, padding: "9px 0", borderRadius: 4,
                 border: "none", background: C.ac,
-                color: "#fff", fontSize: 13, fontWeight: 700,
+                color: C.tx, fontSize: 13, fontWeight: 700,
                 cursor: busy ? "not-allowed" : "pointer",
                 opacity: busy ? 0.6 : 1, fontFamily: "inherit",
               }}

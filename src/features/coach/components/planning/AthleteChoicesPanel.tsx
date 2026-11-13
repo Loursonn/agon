@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { AthleteModifications } from "@/features/shared/types/athlete";
 import {
@@ -8,7 +8,7 @@ import {
   summarizeAthleteChoices,
 } from "@/lib/athleteChoices";
 
-const AMBER = "#F59E0B";
+const AMBER = H.ambre;
 
 /** Petit tag « Choix de l'athlète ». */
 export function AthleteChoiceTag({ label = ATHLETE_CHOICE_LABEL }: { label?: string }) {

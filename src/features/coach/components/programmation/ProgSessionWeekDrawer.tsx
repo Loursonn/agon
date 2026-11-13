@@ -13,7 +13,7 @@ import { useState, useEffect, useMemo } from "react"
 import { blocColor } from "@/lib/peps";
 import { toast } from "sonner"
 import { X, Copy, AlertTriangle, Video } from "lucide-react"
-import { C } from "@/lib/theme"
+import { C, H } from "@/lib/theme";
 import type { ProgSession, Exercice, ExerciceParams, Bloc, ParamValue } from "./types"
 import { SessionBlocEditor } from "./SessionBlocEditor"
 import { useSessionWeekLogs } from "./hooks/useSessionWeekLogs"
@@ -24,12 +24,12 @@ import { formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps"
 import { IsoBadge } from "@/features/shared/components/IsoBadge"
 import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride"
 
-const VIOLET  = "#FFC933"
-const GREEN   = "#22c55e"
+const VIOLET  = C.ac
+const GREEN   = H.vert
 const GREEN_S = "rgba(34,197,94,0.10)"
-const RED     = "#ef4444"
+const RED     = H.rougeVif
 const RED_S   = "rgba(239,68,68,0.10)"
-const AMBER   = "#f59e0b"
+const AMBER   = H.ambre
 const AMBER_S = "rgba(245,158,11,0.10)"
 
 
@@ -150,7 +150,7 @@ function ActionBtn({ onClick, title, children, primary = false }: {
         padding: "4px 9px", borderRadius: 5,
         border: "1px solid " + AMBER + (primary ? "" : "60"),
         background: primary ? AMBER : AMBER_S,
-        color: primary ? "#0E0C0A" : AMBER, fontSize: 10, fontWeight: 700,
+        color: primary ? C.ink : AMBER, fontSize: 10, fontWeight: 700,
         cursor: "pointer", fontFamily: "inherit",
       }}
     >{children}</button>
@@ -614,7 +614,7 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
                   <button
                     onClick={clearNextOverride}
                     disabled={clearingOverride}
-                    style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: AMBER, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: clearingOverride ? 0.6 : 1 }}
+                    style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: AMBER, color: C.ink, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: clearingOverride ? 0.6 : 1 }}
                   >{clearingOverride ? "…" : "Écraser"}</button>
                 </div>
               </div>

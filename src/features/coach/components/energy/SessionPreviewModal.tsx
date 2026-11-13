@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Zap } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import SessionPreview from "./SessionPreview";
 import { SchemaViewerWithZoom } from "./SchemaViewer";
 import type { EnergySessionRow, EnergyStep, EnergyGroup, SessionImage } from "@/types/energy";
@@ -32,7 +32,7 @@ export function StepTree({ steps, depth = 0, vma }: { steps: EnergyStep[]; depth
     <>
       {steps.map((step, i) => {
         if (step.type === "interval") {
-          const rc = ROLE_COLOR[step.role] ?? "#6B7280";
+          const rc = ROLE_COLOR[step.role] ?? H.gris;
           const dur = step.duration.kind === "time"
             ? formatS(step.duration.value ?? 0)
             : step.duration.kind === "distance"
@@ -86,7 +86,7 @@ export function StepTree({ steps, depth = 0, vma }: { steps: EnergyStep[]; depth
         }
         // Exercise
         if (step.type === "exercise") {
-          const exoColor = "#FFC933";
+          const exoColor = C.ac;
           const detail = formatExerciseStep(step);
           return (
             <div
@@ -152,10 +152,10 @@ function ClassiqueBlockView({ block }: { block: ClassiqueBlock }) {
   return (
     <div style={{
       background: C.s2, border: "1px solid " + C.brd,
-      borderLeft: "3px solid #66F03C",
+      borderLeft: `3px solid ${C.g}`,
       borderRadius: 4, padding: "10px 12px", marginBottom: 8,
     }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#66F03C", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: C.g, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>
         {block.title || "Bloc classique"}
       </div>
       {block.instructions && (
@@ -192,11 +192,11 @@ function ClassiqueBlockView({ block }: { block: ClassiqueBlock }) {
 function WodBlockView({ block, vma }: { block: WodBlock; vma?: number | null }) {
   return (
     <div style={{
-      border: "1px dashed #F5A623",
+      border: `1px dashed ${H.miel}`,
       borderRadius: 4, padding: 8, marginBottom: 8,
       background: "rgba(245,166,35,0.03)",
     }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#F5A623", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4, padding: "0 4px" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: H.miel, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4, padding: "0 4px" }}>
         {block.title || "Bloc WOD"}
         <span style={{ fontWeight: 400, marginLeft: 6, fontSize: 9, color: C.tx3 }}>
           {block.steps.length} étape{block.steps.length > 1 ? "s" : ""}
@@ -248,7 +248,7 @@ interface SessionPreviewModalProps {
 
 export function SessionPreviewModal({ session, athleteId, onEdit, onStart, startLabel, onCancel, onValidate, onUnvalidate, onClose }: SessionPreviewModalProps) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const kc = KIND_COLOR[session.session_kind] ?? "#6B7280";
+  const kc = KIND_COLOR[session.session_kind] ?? H.gris;
   const rootGroup = buildRootGroup(session);
   const isClassique = session.format === "classique";
   const blocks = isClassique ? session.classique_structure?.blocks ?? [] : [];
@@ -370,22 +370,22 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
             </button>
           )}
           {onCancel && (
-            <button onClick={onCancel} style={{ padding: "9px 16px", borderRadius: 4, border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.1)", color: "#EF4444", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={onCancel} style={{ padding: "9px 16px", borderRadius: 4, border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.1)", color: H.rougeVif, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
               Annuler la séance
             </button>
           )}
           {onEdit && (
-            <button onClick={onEdit} style={{ padding: "9px 16px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={onEdit} style={{ padding: "9px 16px", borderRadius: 4, border: "none", background: C.acV, color: C.ink, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
               Modifier
             </button>
           )}
           {onStart && (
-            <button onClick={onStart} style={{ flex: 1, padding: "12px 0", borderRadius: 6, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={onStart} style={{ flex: 1, padding: "12px 0", borderRadius: 6, border: "none", background: C.acV, color: C.ink, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
               {startLabel ?? "Faire la séance ▶"}
             </button>
           )}
           {onValidate && (
-            <button onClick={onValidate} style={{ flex: 1, padding: "12px 0", borderRadius: 6, border: "none", background: "#66F03C", color: "#0E0C0A", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={onValidate} style={{ flex: 1, padding: "12px 0", borderRadius: 6, border: "none", background: C.g, color: C.ink, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
               Valider la séance ✓
             </button>
           )}

@@ -21,7 +21,7 @@ export function EventCard({
   onSelect: (e: CalEvent) => void;
 }) {
   const isEnergy = event.type === "energy";
-  const color = event.partial && isEnergy ? "#33B5FF" : TYPE_COLOR[event.type] ?? C.tx3;
+  const color = event.partial && isEnergy ? C.b : TYPE_COLOR[event.type] ?? C.tx3;
   const { mutate: del } = useDeleteCalendarEvent();
   const { mutate: moveWorkout, isPending: movingWorkout } = useRescheduleWorkout();
   const { mutate: moveEnergy, isPending: movingEnergy } = useUpdateEnergyAssignment();
@@ -47,7 +47,7 @@ export function EventCard({
   const totalCount = blVals.length;
 
   const statusInfo = event.partial && isEnergy
-    ? { label: `Partielle ${doneCount}/${totalCount}`, color: "#33B5FF" }
+    ? { label: `Partielle ${doneCount}/${totalCount}`, color: C.b }
     : event.status ? STATUS_LABEL[event.status] : null;
 
   const isClickable = event.type === "workout" || event.type === "energy" || event.type === "free_activity";

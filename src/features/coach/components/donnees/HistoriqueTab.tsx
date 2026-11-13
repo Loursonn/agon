@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { bodyZoneLabel, levelsList } from "@/lib/bodyZones";
 import { ChevronDown, ChevronRight, Copy, Trash2 } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
 import { getReco } from "@/lib/wellness";
@@ -89,7 +89,7 @@ function LogRow({ log, onCopy, onDelete }: { log: HistoLog; onCopy: () => void; 
       {confirm ? (
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           <button onClick={() => setConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: C.ink, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -248,7 +248,7 @@ function WellnessRow({ e, onDelete, deleting }: { e: WellnessEntry; onDelete: ()
       </div>
       {e.archived ? null : confirm ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-          <button disabled={deleting} onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+          <button disabled={deleting} onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: C.ink, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
           <button onClick={() => setConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
         </div>
       ) : (
@@ -414,7 +414,7 @@ export function HistoriqueTab() {
           title={m.name}
           subtitle={fmtRange(m.start_date, m.end_date)}
           badge={`${mesoCycles.length} cycle${mesoCycles.length > 1 ? "s" : ""}`}
-          color="#FF6B9D"
+          color={H.roseVif}
         />
         {openMesos.has(m.id) && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 16 }}>

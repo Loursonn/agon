@@ -8,7 +8,7 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X, Plus, ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { MethodPreview } from "./MethodPreview";
 import { exerciceParamsToMethodConfig, methodConfigToExerciceParams, methodConfigToText } from "./methodConfigConvert";
 import type { RestConfig } from "./methodConfigConvert";
@@ -33,13 +33,13 @@ type FormValues = z.infer<typeof schema>;
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
-const GREEN  = "#22c55e"
+const GREEN  = H.vert
 const GREEN_S  = "rgba(34,197,94,0.10)"
-const AMBER  = "#f59e0b"
+const AMBER  = H.ambre
 const AMBER_S  = "rgba(245,158,11,0.10)"
-const ORANGE = "#F5A623"
+const ORANGE = H.miel
 
 const SCOPE_META = {
   classic:  { color: GREEN,  colorS: GREEN_S,  label: "Classique",  desc: "Séries × reps — template simple" },
@@ -277,7 +277,7 @@ function Step1({ control, errors, existingCategories }: {
                   </div>
                   {active && (
                     <div style={{ marginLeft: "auto", width: 18, height: 18, borderRadius: "50%", background: cfg.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Check size={10} color="#fff" />
+                      <Check size={10} color={C.tx} />
                     </div>
                   )}
                 </button>
@@ -813,7 +813,7 @@ function WeekFormSlot({ week, scope, initialConfig, isDeload, onChange, onCopyFr
     <div style={{ borderRadius: 4, border: `1px solid ${expanded ? scopeMeta.color : C.brdL}`, overflow: "hidden", marginBottom: 5 }}>
       <div onClick={() => setExpanded(p => !p)} style={{ padding: "9px 14px", background: expanded ? scopeMeta.colorS : C.s2, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "all 100ms" }}>
         <div style={{ width: 20, height: 20, borderRadius: 6, background: expanded ? scopeMeta.color : C.s1, border: `1px solid ${expanded ? scopeMeta.color : C.brdL}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 900, color: expanded ? "#fff" : C.tx3 }}>S{week}</span>
+          <span style={{ fontSize: 9, fontWeight: 900, color: expanded ? C.tx : C.tx3 }}>S{week}</span>
         </div>
         <span style={{ flex: 1, fontSize: 10, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>{preview}</span>
         {isDeload && <span style={{ fontSize: 9, color: scopeMeta.color, fontWeight: 700, background: scopeMeta.colorS, padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}>déload</span>}
@@ -1057,7 +1057,7 @@ export function MethodBuilder({ initial, coachId: _coachId, onSubmit, onCancel, 
             <ChevronLeft size={14} />Retour
           </button>
         )}
-        <button type="button" onClick={handleNext} disabled={!!loading} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: loading ? C.s2 : scopeMeta.color, color: loading ? C.tx3 : "#fff", fontSize: 13, fontWeight: 700, cursor: loading ? "default" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 150ms" }}>
+        <button type="button" onClick={handleNext} disabled={!!loading} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: loading ? C.s2 : scopeMeta.color, color: loading ? C.tx3 : C.tx, fontSize: 13, fontWeight: 700, cursor: loading ? "default" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 150ms" }}>
           {step === 1 ? <><span>Suivant</span><ChevronRight size={14} /></> :
            loading ? "Enregistrement…" :
            <><Check size={14} /><span>{initial ? "Mettre à jour" : "Créer la méthode"}</span></>}

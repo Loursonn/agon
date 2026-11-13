@@ -118,7 +118,7 @@ export function ClusterSubRow({
             checkState === "done" ? GREEN : checkState === "skip" ? ACCENT_ALT : C.brdL
           }`,
           background: checkState === "done" ? GREEN : checkState === "skip" ? hexToRgba(ACCENT_ALT, 0.18) : "transparent",
-          color: checkState === "done" ? "#fff" : checkState === "skip" ? ACCENT_ALT : C.tx3,
+          color: checkState === "done" ? C.tx : checkState === "skip" ? ACCENT_ALT : C.tx3,
           fontSize: 12,
           fontWeight: 700,
           cursor: canEdit ? "pointer" : "default",

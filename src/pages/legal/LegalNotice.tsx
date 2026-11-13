@@ -1,5 +1,6 @@
 import LegalLayout, { Section, P, UL } from "./LegalLayout";
 import { COMPANY, HOSTING, LEGAL_ROUTES } from "@/lib/legal";
+import { C } from "@/lib/theme";
 
 /**
  * Mentions légales.
@@ -11,7 +12,7 @@ import { COMPANY, HOSTING, LEGAL_ROUTES } from "@/lib/legal";
  * suffit pas.
  */
 
-const ACCENT = "#FFC933";
+const ACCENT = C.ac;
 
 export default function LegalNotice() {
   return (

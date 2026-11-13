@@ -116,7 +116,7 @@ function AddPRForm({ athleteId, existingRefs, defaultRef, onDone }: AddPRFormPro
             <button key={m} onClick={() => setMode(m)} style={{
               padding: "3px 9px", borderRadius: 5, border: "none", fontFamily: "inherit",
               background: mode === m ? C.ac : "transparent",
-              color: mode === m ? "#fff" : C.tx3,
+              color: mode === m ? C.tx : C.tx3,
               fontSize: 10, fontWeight: mode === m ? 700 : 400, cursor: "pointer",
             }}>
               {m === "direct" ? "1RM direct" : "Via reps (Epley)"}
@@ -184,7 +184,7 @@ function AddPRForm({ athleteId, existingRefs, defaultRef, onDone }: AddPRFormPro
         <button onClick={handleSubmit} disabled={!canSubmit || addPR.isPending} style={{
           flex: 2, padding: "8px 0", borderRadius: 7, border: "none",
           background: canSubmit ? C.ac : C.s2,
-          color: canSubmit ? "#fff" : C.tx3,
+          color: canSubmit ? C.tx : C.tx3,
           fontSize: 12, fontWeight: 700, cursor: canSubmit ? "pointer" : "default", fontFamily: "inherit",
         }}>
           {addPR.isPending ? "…" : "Enregistrer"}
@@ -515,7 +515,7 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
             style={{
               flex: 2, padding: "8px 0", borderRadius: 4, border: "none",
               background: ref.trim() ? C.g : C.s2,
-              color: ref.trim() ? "#fff" : C.tx3,
+              color: ref.trim() ? C.tx : C.tx3,
               fontSize: 12, fontWeight: 700, cursor: ref.trim() ? "pointer" : "default", fontFamily: "inherit",
             }}
           >

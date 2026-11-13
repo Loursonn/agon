@@ -183,7 +183,7 @@ export function EnergyPreviewOverlay({
             style={{
               width: "100%", padding: "15px 0", borderRadius: 6, border: "none",
               background: rpeSelected != null ? C.ac : C.s2,
-              color: rpeSelected != null ? "#fff" : C.tx3,
+              color: rpeSelected != null ? C.tx : C.tx3,
               fontSize: 14, fontWeight: 700, cursor: rpeSelected != null ? "pointer" : "default",
               fontFamily: "inherit",
             }}
@@ -305,7 +305,7 @@ export function EnergyPreviewOverlay({
               style={{
                 width: "100%", padding: "11px 0", borderRadius: 4, border: "none",
                 background: (isComplex && !allBlocksDone) ? C.s2 : C.g,
-                color: (isComplex && !allBlocksDone) ? C.tx3 : "#fff",
+                color: (isComplex && !allBlocksDone) ? C.tx3 : C.tx,
                 fontSize: 13, fontWeight: 700,
                 cursor: complete.isPending || (isComplex && !allBlocksDone) ? "default" : "pointer",
                 fontFamily: "inherit", opacity: complete.isPending ? 0.7 : 1,

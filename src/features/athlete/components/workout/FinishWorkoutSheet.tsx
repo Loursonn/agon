@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 
 /** Forme 1 → 5 de la maquette « Séance · fin » : rouge → vert. */
-const FORME_COLORS = ["#FF3B1F", "#FF7A1F", "#FFC933", "#A8E83A", "#66F03C"];
+const FORME_COLORS = [C.rouge, H.orangeVif, C.ac, H.vertPomme, C.g];
 const FORME_LABELS = ["Très dure", "Dure", "Correcte", "Bonne", "Excellente"];
 
 function SectionHead({ n, title }: { n: string; title: string }) {
@@ -73,7 +73,7 @@ export function FinishWorkoutSheet({
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 51, maxWidth: 480, margin: "0 auto",
           borderRadius: "24px 24px 0 0", overflow: "hidden", borderTop: "1px solid rgba(255,201,51,0.5)",
-          background: "radial-gradient(80% 45% at 50% 0%, rgba(255,201,51,0.32), rgba(14,12,10,0) 70%), radial-gradient(60% 30% at 15% 22%, rgba(102,240,60,0.2), rgba(14,12,10,0) 70%), #1E1A16",
+          background: `radial-gradient(80% 45% at 50% 0%, rgba(255,201,51,0.32), rgba(14,12,10,0) 70%), radial-gradient(60% 30% at 15% 22%, rgba(102,240,60,0.2), rgba(14,12,10,0) 70%), ${C.s1}`,
           maxHeight: "92vh", overflowY: "auto",
         }}
       >
@@ -85,8 +85,8 @@ export function FinishWorkoutSheet({
               <svg width={112} height={112} viewBox="0 0 112 112" aria-hidden>
                 <defs>
                   <linearGradient id="finish-ring" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stopColor="#66F03C" />
-                    <stop offset="1" stopColor="#FFC933" />
+                    <stop offset="0" stopColor={C.g} />
+                    <stop offset="1" stopColor={C.ac} />
                   </linearGradient>
                 </defs>
                 <circle cx={56} cy={56} r={r} fill="none" stroke="rgba(231,211,168,0.10)" strokeWidth={10} />
@@ -111,9 +111,9 @@ export function FinishWorkoutSheet({
           </div>
 
           <div style={{ display: "flex", gap: 8 }}>
-            <Counter value={doneSets} label="Séries ok" color="#66F03C" />
-            <Counter value={skippedSets} label="Passées" color="#FF9500" />
-            <Counter value={totalSets} label="Total" color="#FFFFFF" />
+            <Counter value={doneSets} label="Séries ok" color={C.g} />
+            <Counter value={skippedSets} label="Passées" color={C.o} />
+            <Counter value={totalSets} label="Total" color={C.tx} />
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -135,7 +135,7 @@ export function FinishWorkoutSheet({
                       flex: 1, height: 52, boxSizing: "border-box", borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
                       display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 18,
                       ...(on
-                        ? { background: col, color: C.bg, border: "none", boxShadow: `0 0 0 2px #0E0C0A, 0 0 0 3px ${col}` }
+                        ? { background: col, color: C.bg, border: "none", boxShadow: `0 0 0 2px ${C.bg}, 0 0 0 3px ${col}` }
                         : { background: `${col}24`, border: `1px solid ${col}80`, color: col }),
                     }}
                   >
@@ -155,7 +155,7 @@ export function FinishWorkoutSheet({
               rows={3}
               style={{
                 minHeight: 84, boxSizing: "border-box", border: "1px solid rgba(231,211,168,0.18)", borderRadius: 12,
-                background: "#27221D", padding: "12px 14px", fontSize: 14, lineHeight: 1.5, color: C.tx, fontFamily: "inherit", resize: "vertical",
+                background: C.s2, padding: "12px 14px", fontSize: 14, lineHeight: 1.5, color: C.tx, fontFamily: "inherit", resize: "vertical",
               }}
             />
           </div>
@@ -163,11 +163,11 @@ export function FinishWorkoutSheet({
           <label
             style={{
               display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14,
-              background: "linear-gradient(160deg, rgba(51,181,255,0.16), rgba(51,181,255,0.06)), #1E1A16", border: "1px solid rgba(51,181,255,0.45)",
+              background: `linear-gradient(160deg, rgba(51,181,255,0.16), rgba(51,181,255,0.06)), ${C.s1}`, border: "1px solid rgba(51,181,255,0.45)",
             }}
           >
-            <span aria-hidden style={{ width: 32, height: 32, flex: "none", borderRadius: 10, background: "#33B5FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E0C0A" strokeWidth="1.8" strokeLinecap="square">
+            <span aria-hidden style={{ width: 32, height: 32, flex: "none", borderRadius: 10, background: C.b, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="1.8" strokeLinecap="square">
                 <path d="M13 4.5A1.5 1.5 0 1 0 13 4.49M7 21L10 15L13 17V22M10 15L11 9L16 11L19 9M11 9L7 11V14" />
               </svg>
             </span>
@@ -199,7 +199,7 @@ export function FinishWorkoutSheet({
           >
             {completing ? "Enregistrement…" : "Terminer"}
             {!completing && (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15120F" strokeWidth="2" strokeLinecap="square" aria-hidden><path d="M4 12.5L9.5 18L20 6" /></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={H.basalte4} strokeWidth="2" strokeLinecap="square" aria-hidden><path d="M4 12.5L9.5 18L20 6" /></svg>
             )}
           </button>
         </div>

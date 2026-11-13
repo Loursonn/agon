@@ -1,5 +1,5 @@
 import { Dumbbell, Zap, FlaskConical, Target } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { TYPE_COLOR as PEPS } from "@/lib/peps";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { PlanningCardState } from "@/lib/planningCard";
@@ -8,11 +8,11 @@ export const DOW_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 export const FREE_COLOR    = PEPS.libre;  // patine (peps)
 export const TEST_COLOR    = PEPS.test;   // rose (peps)
-export const BIO_COLOR     = "#66F03C";   // olivier (DA)
+export const BIO_COLOR     = C.g;   // olivier (DA)
 export const BIO_BANK_ID   = "bio-mensurations";
 export const BIO_TITLE     = "Mensurations / Photos";
 
-export const LIFE_EVENT_COLOR = "#9194A0";
+export const LIFE_EVENT_COLOR = H.grisBleu;
 
 export const TYPE_COLOR: Record<CalEvent["type"], string> = {
   workout:       C.ac,            // or — muscu
@@ -59,8 +59,8 @@ export const BANK_TYPE_LABEL: Record<BankItemType, string> = {
 };
 
 export const ENERGY_KIND_COLOR: Record<string, string> = {
-  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-  footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
+  vo2: C.ac, tempo: C.b, seuil: H.ambre,
+  footing: H.emeraude, fartlek: H.rougeVif, autre: H.gris, custom: H.gris,
 };
 export const ENERGY_KIND_LABEL: Record<string, string> = {
   vo2: "VO₂", tempo: "Tempo", seuil: "Seuil",
@@ -70,8 +70,8 @@ export const ENERGY_KIND_LABEL: Record<string, string> = {
 export type BankTab = "workout" | "energy" | "specifique" | "tests";
 
 export const BANK_TABS: { key: BankTab; label: string; Icon: typeof Dumbbell; color: string }[] = [
-  { key: "workout",    label: "Muscu",      Icon: Dumbbell,     color: "#FFC933" },
-  { key: "energy",     label: "Énergie",    Icon: Zap,          color: "#FFC933" },
-  { key: "specifique", label: "Spécifique", Icon: Target,       color: "#F5A623" },
+  { key: "workout",    label: "Muscu",      Icon: Dumbbell,     color: C.ac },
+  { key: "energy",     label: "Énergie",    Icon: Zap,          color: C.ac },
+  { key: "specifique", label: "Spécifique", Icon: Target,       color: H.miel },
   { key: "tests",      label: "Tests",      Icon: FlaskConical, color: TEST_COLOR },
 ];

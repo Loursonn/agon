@@ -33,7 +33,7 @@ export default function AthleteMontresPage() {
   const coach = coaches?.referent?.full_name ?? "ton coach";
   return (
     <div style={{ maxWidth: 480, margin: "0 auto" }}>
-      <AthletePageHeader title="Montres et données" titleSize={22} background={headerGlow("#33B5FF", "#66F03C")} />
+      <AthletePageHeader title="Montres et données" titleSize={22} background={headerGlow(C.b, C.g)} />
       <div style={{ padding: "20px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ fontSize: 13, color: C.tx2 }}>Tes activités et ta récupération arrivent seules dans Agon.</div>
 

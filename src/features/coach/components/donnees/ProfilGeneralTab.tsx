@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { User, Flame, Moon, ListChecks, Award, Zap, Footprints, LayoutDashboard, Lock } from "lucide-react";
 import { HOME_LOCKED_SECTIONS, HOME_SECTIONS, useHomeHiddenSections, useSetHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachPerfNotification from "@/components/coach/CoachPerfNotification";
 import type { Profile } from "@/hooks/useAuth";
@@ -27,11 +27,11 @@ import { localISO } from "@/lib/date";
 // ── Palette des blocs ─────────────────────────────────────────────────────────
 
 const COL = {
-  identity:  "#FFC933",
-  nutrition: "#F5A623",
-  sleep:     "#33B5FF",
-  habits:    "#66F03C",
-  perfs:     "#FFC933",
+  identity:  C.ac,
+  nutrition: H.miel,
+  sleep:     C.b,
+  habits:    C.g,
+  perfs:     C.ac,
 };
 
 // ── Section shell ─────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ function Section({ icon: Icon, title, subtitle, color, children, motif }: {
         padding: "12px 16px", borderBottom: `1px solid ${C.brd}`,
         background: color + "0A",
       }}>
-        {motif && <div aria-hidden style={{ position: "absolute", top: 0, left: 0, right: 0, height: 20, backgroundImage: "url(/brand/agon-pattern-frise-meandre-sombre.svg)", backgroundSize: "600px", backgroundRepeat: "repeat-x", opacity: 0.18, pointerEvents: "none", zIndex: 0, maskImage: "linear-gradient(180deg, #000 0%, transparent 100%)", WebkitMaskImage: "linear-gradient(180deg, #000 0%, transparent 100%)" }} />}
+        {motif && <div aria-hidden style={{ position: "absolute", top: 0, left: 0, right: 0, height: 20, backgroundImage: "url(/brand/agon-pattern-frise-meandre-sombre.svg)", backgroundSize: "600px", backgroundRepeat: "repeat-x", opacity: 0.18, pointerEvents: "none", zIndex: 0, maskImage: `linear-gradient(180deg, ${H.noir} 0%, transparent 100%)`, WebkitMaskImage: `linear-gradient(180deg, ${H.noir} 0%, transparent 100%)` }} />}
         <span style={{
           position: "relative", zIndex: 1,
           width: 26, height: 26, borderRadius: 4, flexShrink: 0,
@@ -363,14 +363,14 @@ export function ProfilGeneralTab() {
       </Section>
 
       {/* ── 3b. Suivi HYROX ── */}
-      <Section icon={Zap} title="Suivi HYROX" subtitle="Active l'onglet HYROX : courses, stations, Roxzone, radar, tests" color="#F5A623">
+      <Section icon={Zap} title="Suivi HYROX" subtitle="Active l'onglet HYROX : courses, stations, Roxzone, radar, tests" color={H.miel}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Athlète HYROX</div>
             <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>Activer le suivi HYROX pour cet athlète</div>
           </div>
-          <button disabled={hyroxToggling} onClick={toggleHyrox} style={{ width: 46, height: 26, borderRadius: 13, background: hyroxEnabled ? "#F5A623" : C.s2, border: `2px solid ${hyroxEnabled ? "#F5A623" : C.brdL}`, cursor: hyroxToggling ? "default" : "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0, outline: "none", opacity: hyroxToggling ? 0.6 : 1 }}>
-            <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: hyroxEnabled ? 24 : 2, transition: "left 0.2s" }} />
+          <button disabled={hyroxToggling} onClick={toggleHyrox} style={{ width: 46, height: 26, borderRadius: 13, background: hyroxEnabled ? H.miel : C.s2, border: `2px solid ${hyroxEnabled ? H.miel : C.brdL}`, cursor: hyroxToggling ? "default" : "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0, outline: "none", opacity: hyroxToggling ? 0.6 : 1 }}>
+            <div style={{ width: 18, height: 18, borderRadius: "50%", background: C.tx, position: "absolute", top: 2, left: hyroxEnabled ? 24 : 2, transition: "left 0.2s" }} />
           </button>
         </div>
         {hyroxEnabled && (
@@ -405,7 +405,7 @@ export function ProfilGeneralTab() {
             <div style={{ fontSize: 11, color: habitToggleErr ? C.r : C.tx3, marginTop: 2 }}>{habitToggleErr || "Activer le suivi d'habitudes pour cet athlète"}</div>
           </div>
           <button disabled={habitToggling} onClick={toggleHabitEnabled} style={{ width: 46, height: 26, borderRadius: 13, background: habitEnabled ? COL.habits : C.s2, border: `2px solid ${habitEnabled ? COL.habits : C.brdL}`, cursor: habitToggling ? "default" : "pointer", position: "relative", transition: "all 0.2s", flexShrink: 0, outline: "none", opacity: habitToggling ? 0.6 : 1 }}>
-          <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: habitEnabled ? 24 : 2, transition: "left 0.2s" }} />
+          <div style={{ width: 18, height: 18, borderRadius: "50%", background: C.tx, position: "absolute", top: 2, left: habitEnabled ? 24 : 2, transition: "left 0.2s" }} />
           </button>
         </div>
         {habitEnabled && (

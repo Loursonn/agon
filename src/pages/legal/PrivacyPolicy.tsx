@@ -1,5 +1,6 @@
 import LegalLayout, { Section, P, UL, Table, Callout } from "./LegalLayout";
 import { COMPANY, HOSTING, RETENTION, SUBPROCESSORS, LEGAL_ROUTES } from "@/lib/legal";
+import { C } from "@/lib/theme";
 
 /**
  * Politique de confidentialité.
@@ -22,7 +23,7 @@ import { COMPANY, HOSTING, RETENTION, SUBPROCESSORS, LEGAL_ROUTES } from "@/lib/
  *    multi-utilisateurs.
  */
 
-const ACCENT = "#FFC933";
+const ACCENT = C.ac;
 
 function Mail() {
   return (
@@ -80,7 +81,7 @@ export default function PrivacyPolicy() {
           insu.
         </P>
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "0 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "0 0 8px" }}>
           2.1 Données de compte
         </h3>
         <UL
@@ -95,7 +96,7 @@ export default function PrivacyPolicy() {
           ]}
         />
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           2.2 Données d'entraînement et de santé
         </h3>
         <P>
@@ -122,7 +123,7 @@ export default function PrivacyPolicy() {
           ]}
         />
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           2.3 Données issues d'une montre ou d'un service connecté
         </h3>
         <P>
@@ -163,7 +164,7 @@ export default function PrivacyPolicy() {
           transmettez le fichier : aucune connexion automatique n'est établie avec ce service.
         </P>
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           2.4 Indicateurs calculés par Agon
         </h3>
         <P>
@@ -176,7 +177,7 @@ export default function PrivacyPolicy() {
           l'envoyez. Ce sont des repères pour votre coach, pas un diagnostic médical.
         </P>
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           2.5 Données techniques
         </h3>
         <UL
@@ -264,7 +265,7 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="4. Qui peut voir vos données">
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "0 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "0 0 8px" }}>
           4.1 Votre coach
         </h3>
         <P>
@@ -310,7 +311,7 @@ export default function PrivacyPolicy() {
           Google Gemini, ne vaut pas pour cet assistant.
         </P>
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           4.2 Les professionnels de votre staff
         </h3>
         <P>
@@ -338,7 +339,7 @@ export default function PrivacyPolicy() {
           sa propre activité ; les professionnels de santé restent tenus au secret professionnel.
         </P>
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           4.3 Nos prestataires techniques
         </h3>
         <P>
@@ -356,7 +357,7 @@ export default function PrivacyPolicy() {
             <>
               {s.location}
               {s.transferMechanism && (
-                <div style={{ fontSize: 11, color: "#7D7468", marginTop: 2 }}>{s.transferMechanism}</div>
+                <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>{s.transferMechanism}</div>
               )}
             </>,
           ])}
@@ -378,7 +379,7 @@ export default function PrivacyPolicy() {
           hebdomadaire, le feu du matin et la charge calculée.
         </P>
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           4.4 Les services que vous connectez
         </h3>
         <P>
@@ -400,7 +401,7 @@ export default function PrivacyPolicy() {
           ])}
         />
 
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
           4.5 Autorités
         </h3>
         <P>

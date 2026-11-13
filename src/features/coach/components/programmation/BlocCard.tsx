@@ -8,7 +8,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { Settings, X, Plus, GripVertical, Link2, BookmarkPlus } from "lucide-react"
 import type { Bloc, Exercice } from "./types"
 import { defaultExerciceParams } from "./types"
@@ -16,7 +16,7 @@ import { BlocForm } from "./BlocForm"
 import { ExerciceRow } from "./ExerciceRow"
 import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 
@@ -248,7 +248,7 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
                 <>
                   <button
                     onClick={onDelete}
-                    style={{ padding: "0 8px", height: 24, borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}
+                    style={{ padding: "0 8px", height: 24, borderRadius: 6, border: "none", background: C.rV, color: C.ink, cursor: "pointer", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}
                   >Supprimer</button>
                   <button
                     onClick={() => setConfirmDelete(false)}

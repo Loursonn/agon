@@ -127,6 +127,75 @@
   --agon-dominante-hyrox: var(--agon-amethyste-vif);
   --agon-dominante-bio: var(--agon-ardoise-vif);
 
+  /* ── Couleurs héritées (palettes par défaut, sans équivalent dans la charte) ──
+     Sorties du code des écrans le 13/11 (phase 6) : valeurs inchangées, rendu identique.
+     Lues via `H` (src/lib/theme.ts) ou `bg-agon-h-*`. Charte finale : remplacer chacune
+     par une couleur de la charte, puis supprimer la ligne. */
+  --agon-h-gris-fonce: #333333;
+  --agon-h-gris-plomb: #555555;
+  --agon-h-ambre: #F59E0B;
+  --agon-h-miel: #F5A623;
+  --agon-h-rouge-vif: #EF4444;
+  --agon-h-gris: #6B7280;
+  --agon-h-vert: #22C55E;
+  --agon-h-gris-clair: #8B8A92;
+  --agon-h-encre-or: #1A1204;
+  --agon-h-orange: #F97316;
+  --agon-h-anthracite: #2E2D33;
+  --agon-h-emeraude: #10B981;
+  --agon-h-noir: #000000;
+  --agon-h-rouge-doux: #E5484D;
+  --agon-h-citron: #84CC16;
+  --agon-h-jaune: #FACC15;
+  --agon-h-jaune-fonce: #EAB308;
+  --agon-h-carte: #26252A;
+  --agon-h-blanc-casse: #F2F1F5;
+  --agon-h-bleu: #4FA3FF;
+  --agon-h-rose: #EC4899;
+  --agon-h-violet: #8B5CF6;
+  --agon-h-orange-doux: #F29A2E;
+  --agon-h-gris-perle: #E8E6EA;
+  --agon-h-vert-acide: #B6F03C;
+  --agon-h-gris-bleu: #9194A0;
+  --agon-h-bleu-roi: #3B82F6;
+  --agon-h-vert-sapin: #2E9E5B;
+  --agon-h-sarcelle: #0D9488;
+  --agon-h-orange-vif: #FF7A1F;
+  --agon-h-rose-vif: #FF6B9D;
+  --agon-h-orange-feu: #FF5500;
+  --agon-h-creme: #F4EFE6;
+  --agon-h-creme-2: #F4EFE3;
+  --agon-h-sable-clair: #F1DDA5;
+  --agon-h-orange-brule: #F07A2A;
+  --agon-h-or-mat: #E2B04A;
+  --agon-h-gris-argent: #E0E0E0;
+  --agon-h-rouge-fonce: #DC2626;
+  --agon-h-rouge-brique: #D93636;
+  --agon-h-lin: #CFC6B8;
+  --agon-h-caramel: #C49A6C;
+  --agon-h-cuivre: #C08A4A;
+  --agon-h-grege: #BEB3A2;
+  --agon-h-vert-lime: #B8F03C;
+  --agon-h-vert-pomme: #A8E83A;
+  --agon-h-gris-moyen: #9CA3AF;
+  --agon-h-vert-herbe: #9BD35A;
+  --agon-h-bordeaux: #991B1B;
+  --agon-h-taupe: #8B8173;
+  --agon-h-bleu-ciel: #60A5FA;
+  --agon-h-taupe-fonce: #5B5246;
+  --agon-h-vert-menthe: #4ADE80;
+  --agon-h-brun-gris: #4A433B;
+  --agon-h-bleu-vif: #3B9EFF;
+  --agon-h-gris-ardoise: #3A383C;
+  --agon-h-bleu-azur: #38BDF8;
+  --agon-h-brun: #2A1D17;
+  --agon-h-basalte-3: #1A1714;
+  --agon-h-basalte-4: #15120F;
+  --agon-h-basalte-5: #15110D;
+  --agon-h-turquoise: #14B8A6;
+  --agon-h-cyan: #06B6D4;
+  --agon-h-vert-nuit: #04150E;
+
   /* ── Composants shadcn (src/components/ui) : valeurs historiques ─────
      Elles diffèrent très légèrement des couleurs ci-dessus (ex. or hsl(43 100% 60%)
      = #FFC533 au lieu de #FFC933). Gardées telles quelles pour ne rien changer au rendu.

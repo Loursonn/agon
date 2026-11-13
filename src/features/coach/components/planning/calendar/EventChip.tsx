@@ -1,5 +1,5 @@
 import { Watch } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { athleteMoveTitle } from "@/lib/athleteChoices";
 import type { PlanningCardState } from "@/lib/planningCard";
@@ -25,11 +25,11 @@ export function EventChip({
 
   // Status overrides base type color — partial takes priority over completed
   const isPartialEnergy = event.type === "energy" && event.partial;
-  const color = isPartialEnergy     ? "#33B5FF"
+  const color = isPartialEnergy     ? C.b
               : st === "completed"  ? C.g
               : st === "missed"     ? C.r
               : baseColor;
-  const bg    = isPartialEnergy     ? "#33B5FF20"
+  const bg    = isPartialEnergy     ? `${C.b}20`
               : st === "completed"  ? C.gS
               : st === "missed"     ? C.rS
               : baseBg;
@@ -73,13 +73,13 @@ export function EventChip({
       {event.type === "workout" && event.rescheduledByAthlete && (
         <span
           title={athleteMoveTitle(event.date, event.originalScheduledDate)}
-          style={{ flexShrink: 0, marginLeft: 2, fontSize: 8, fontWeight: 800, color: "#F59E0B" }}
+          style={{ flexShrink: 0, marginLeft: 2, fontSize: 8, fontWeight: 800, color: H.ambre }}
         >
           ↷
         </span>
       )}
       {event.type === "workout" && !!(event.raw?.athlete_modifications as { coachOverride?: unknown } | null)?.coachOverride && (
-        <span title="Séance adaptée pour ce jour" style={{ flexShrink: 0, marginLeft: 2, color: "#F59E0B" }}></span>
+        <span title="Séance adaptée pour ce jour" style={{ flexShrink: 0, marginLeft: 2, color: H.ambre }}></span>
       )}
       {event.rpe != null && (
         <span style={{ flexShrink: 0, opacity: 0.85, fontWeight: 700, marginLeft: 2 }}>RPE {event.rpe}</span>

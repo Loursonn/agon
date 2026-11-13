@@ -7,6 +7,7 @@ import { STATION_META, type HyroxResult, type StationKey } from "@/features/shar
 import type { RaceWatchAnalysis } from "@/lib/hyrox/raceWatch";
 import { fmtClock, fmtPace } from "@/lib/seance";
 import { roxzoneTotal, runTotal, stationsTotal } from "@/lib/hyrox/calc";
+import { C, H as HC } from "@/lib/theme";
 
 export interface ShareCardInput {
   race: HyroxResult;
@@ -34,16 +35,16 @@ function cssVar(name: string, fallback: string): string {
 function palette(theme: "dark" | "light") {
   const dark = theme === "dark";
   return {
-    bg: dark ? cssVar("--agon-bg", "#0E0C0A") : "#F4EFE6",
-    card: dark ? "#1A1714" : "#FFFFFF",
-    tx: dark ? "#FFFFFF" : "#0E0C0A",
-    tx2: dark ? "#BEB3A2" : "#5B5246",
-    tx3: dark ? "#7D7468" : "#8B8173",
-    gold: cssVar("--agon-or-vif", "#E2B04A"),
-    station: cssVar("--agon-ocre-vif", "#F07A2A"),
-    run: cssVar("--agon-hyrox-course", "#FFB54D"),
-    rox: dark ? "#4A433B" : "#CFC6B8",
-    hr: cssVar("--agon-rouge", "#E5484D"),
+    bg: dark ? cssVar("--agon-bg", C.bg) : HC.creme,
+    card: dark ? HC.basalte3 : C.tx,
+    tx: dark ? C.tx : C.bg,
+    tx2: dark ? HC.grege : HC.taupeFonce,
+    tx3: dark ? C.tx3 : HC.taupe,
+    gold: cssVar("--agon-or-vif", HC.orMat),
+    station: cssVar("--agon-ocre-vif", HC.orangeBrule),
+    run: cssVar("--agon-hyrox-course", C.hyroxCourse),
+    rox: dark ? HC.brunGris : HC.lin,
+    hr: cssVar("--agon-rouge", HC.rougeDoux),
   };
 }
 

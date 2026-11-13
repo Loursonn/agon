@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { GripVertical, X, Check, Video } from "lucide-react"
 import type { Exercice } from "./types"
 import { SyntheseBar } from "./SyntheseBar"
@@ -11,7 +11,7 @@ import { resolveMuscles } from "@/lib/muscleVolume"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 
 interface ExerciceRowProps {
   exercice: Exercice
@@ -181,7 +181,7 @@ export function ExerciceRow({
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete() }}
-                style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: C.rV, color: C.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               ><Check size={11} /></button>
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false) }}

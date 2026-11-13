@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import tokensCss from "@/styles/tokens.css?raw";
 import indexCss from "@/index.css?raw";
 import { colorTokenNames, parseTokens, resolveToken, scale } from "@/styles/parseTokens";
-import { BLOC_COLORS, BT, C, HABIT_COLORS, PRIMARY, SECONDARY, SUCCESS, TERTIARY, NEUTRAL, TOKENS, alpha } from "@/lib/theme";
+import { BLOC_COLORS, BT, C, H, HABIT_COLORS, PRIMARY, SECONDARY, SUCCESS, TERTIARY, NEUTRAL, TOKENS, alpha } from "@/lib/theme";
 
 /*
  * Rendu historique (avant src/styles/tokens.css, 2026-11-08) : valeurs exactes de
@@ -25,6 +25,8 @@ const LEGACY_C = {
   pat: "#1FF0B0", patV: "#1FF0B0", patP: "#1F5E47",
   ame: "#F060C0", ameV: "#F060C0", ameP: "#5E2A48",
   coach: "#FFC933", coachS: "rgba(255,201,51,0.12)",
+  ink: "#0E0C0A", rouge: "#FF3B1F", pierre: "#8E8780", sable: "#E7D3A8", bronze: "#A67C52",
+  cadence: "#2EE6C5", blocCore: "#FF7A45", hyroxCourse: "#FFB54D",
 };
 
 const LEGACY_SHADCN: Record<string, string> = {
@@ -55,6 +57,13 @@ describe("tokens — rendu historique", () => {
   it("chaque C.x vaut exactement la couleur d'avant", () => {
     expect(Object.keys(C).sort()).toEqual(Object.keys(LEGACY_C).sort());
     for (const [k, v] of Object.entries(LEGACY_C)) expect(norm(C[k as keyof typeof C]), `C.${k}`).toBe(norm(v));
+  });
+
+  it("couleurs héritées H : une par token --agon-h-*, en #RRGGBB", () => {
+    const names = Object.keys(TOKENS).filter((k) => k.startsWith("--agon-h-"));
+    expect(Object.keys(H)).toHaveLength(names.length);
+    for (const v of Object.values(H)) expect(v).toMatch(/^#[0-9A-F]{6}$/);
+    expect(H.ambre).toBe("#F59E0B");
   });
 
   it("alias, blocs, habitudes et types de bloc inchangés", () => {

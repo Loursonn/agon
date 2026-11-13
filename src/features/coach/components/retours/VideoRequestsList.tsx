@@ -1,9 +1,9 @@
 import { Video } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { VideoRequestStatus } from "@/features/shared/types/retours.types";
 
-const AMBER = "#F5A623";
-const GREEN = "#22c55e";
+const AMBER = H.miel;
+const GREEN = H.vert;
 
 /** Pastille compacte « 🎥 1/2 » : vidéos envoyées / demandées. */
 export function VideoRequestsPill({ requests }: { requests?: VideoRequestStatus[] }) {

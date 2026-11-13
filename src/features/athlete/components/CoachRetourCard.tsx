@@ -32,7 +32,7 @@ export function CoachRetourCard({ retour, coachName, onReact, children }: CoachR
     <div
       style={{
         position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", gap: 10,
-        border: "1px solid rgba(231,211,168,0.18)", borderRadius: 14, background: "#1E1A16", padding: "12px 14px 12px 17px",
+        border: "1px solid rgba(231,211,168,0.18)", borderRadius: 14, background: C.s1, padding: "12px 14px 12px 17px",
       }}
     >
       <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />

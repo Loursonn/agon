@@ -11,7 +11,7 @@ import { MensurationsDrawer } from '@/features/athlete/components/MensurationsDr
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { AthleteTestResult } from '@/features/shared/types/tests';
-import { C } from '@/lib/theme';
+import { C } from "@/lib/theme";
 import { DISPLAY, MONO } from '@/features/shared/components/seance/seanceUi';
 import { TEST_GROUP_COLOR, TEST_GROUP_LABEL, buildTestValueCards, groupTestCards, testGroupOf } from '@/lib/athleteTestValues';
 import { TestGroupIcon } from "@/features/athlete/components/tests/TestGroupIcon";
@@ -104,7 +104,7 @@ export default function AthleteTestPage() {
 
   return (
     <div className="mx-auto w-full max-w-[480px] font-ui text-agon-tx lg:max-w-none">
-      <AthletePageHeader title="Tests" background={headerGlow("#F060C0", "#33B5FF")} />
+      <AthletePageHeader title="Tests" background={headerGlow(C.ame, C.b)} />
       <div className="px-5 pb-[60px] pt-6 lg:px-agon-2xl lg:pt-agon-xl">
       <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-agon-2xl">
         <div>
@@ -116,7 +116,7 @@ export default function AthleteTestPage() {
             style={{ width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: C.tx, background: `linear-gradient(160deg, ${C.g}29, ${C.g}0F), ${C.s1}`, border: `1px solid ${C.g}73`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}
           >
             <span aria-hidden style={{ width: 40, height: 40, flex: 'none', borderRadius: 10, background: C.g, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E0C0A" strokeWidth="1.8" strokeLinecap="square">{RULER_PATH}</svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="1.8" strokeLinecap="square">{RULER_PATH}</svg>
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ ...DISPLAY, display: 'block', fontSize: 12, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Mensurations / photos</span>

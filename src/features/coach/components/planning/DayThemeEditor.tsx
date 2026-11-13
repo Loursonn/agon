@@ -12,7 +12,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Trash2, Check } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import {
   DAY_THEME_DEFAULT_COLOR,
   DAY_THEME_DOMINANTES,
@@ -267,7 +267,7 @@ export function DayThemeEditor({
                 width: 24, height: 24, borderRadius: 5, cursor: "pointer",
                 background: isCustomColor
                   ? color
-                  : "conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#ec4899,#ef4444)",
+                  : `conic-gradient(${H.rougeVif},${H.jauneFonce},${H.vert},${H.cyan},${H.bleuRoi},${H.rose},${H.rougeVif})`,
                 border: isCustomColor ? "2px solid " + C.tx : "1px solid " + C.brd,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: textColorOn(color), boxSizing: "border-box",
@@ -316,7 +316,7 @@ export function DayThemeEditor({
             style={{
               ...btnStyle, flex: 1,
               background: hasContent ? C.ac : C.s1,
-              color: hasContent ? "#000" : C.tx3,
+              color: hasContent ? H.noir : C.tx3,
               borderColor: hasContent ? C.ac : C.brd,
               cursor: hasContent && !saving ? "pointer" : "not-allowed",
               fontWeight: 700,

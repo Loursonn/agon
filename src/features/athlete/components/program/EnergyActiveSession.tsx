@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { EnergySessionRow } from "@/types/energy";
 import { StepCheckRow } from "@/features/athlete/components/program/StepCheckRow";
 import type { StepState, StepStatus } from "@/features/athlete/components/program/programTypes";
@@ -106,7 +106,7 @@ export function EnergyActiveSession({
         {/* Terminer */}
         <div style={{ padding: "12px 16px", paddingBottom: "max(12px, env(safe-area-inset-bottom, 12px))", borderTop: "1px solid " + C.brd, flexShrink: 0 }}>
           {hasUnsavedPartial && (
-            <div style={{ fontSize: 11, color: "#F59E0B", textAlign: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: H.ambre, textAlign: "center", marginBottom: 8 }}>
               Remplis les commentaires des blocs non terminés
             </div>
           )}
@@ -116,7 +116,7 @@ export function EnergyActiveSession({
             style={{
               width: "100%", padding: "16px 0", borderRadius: 6, border: "none",
               background: hasUnsavedPartial ? C.s2 : C.g,
-              color: hasUnsavedPartial ? C.tx3 : "#fff",
+              color: hasUnsavedPartial ? C.tx3 : C.tx,
               fontSize: 15, fontWeight: 800,
               cursor: hasUnsavedPartial ? "default" : "pointer",
               fontFamily: "inherit",

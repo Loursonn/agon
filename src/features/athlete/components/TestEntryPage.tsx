@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { completeTestSession, getTestSessionForFill, invalidateTests, type TestSessionFill } from "@/api/tests";
 import { useAthleteTestResults } from "@/features/shared/hooks/tests/useAthleteTests";
 import type { TestDefinitionWithVariables, TestVariable } from "@/features/shared/types/tests";
-import { C, alpha } from "@/lib/theme";
+import { C, alpha, H } from "@/lib/theme";
 import { TYPE_COLOR } from "@/lib/peps";
 import { localIsoDay } from "@shared/domain/dates";
 import {
@@ -33,7 +33,7 @@ interface Props {
 const PINK = TYPE_COLOR.test;
 const LABEL: CSSProperties = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3, whiteSpace: "nowrap" };
 /** Ressenti 1 → 5 : du rouge (très dur) au vert (facile), comme la planche. */
-const FEEL_COLOR = ["#FF3B1F", "#FF7A45", "#FF9500", "#B6F03C", "#66F03C"];
+const FEEL_COLOR = [C.rouge, C.blocCore, C.o, H.vertAcide, C.g];
 
 /** Saisie en cours d'une valeur : texte (nombre) ou cases h / min / s. */
 type Draft = { text: string; h: string; m: string; s: string; scale: number | null };

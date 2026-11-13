@@ -74,7 +74,7 @@ export default function AthleteZonesPage() {
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto" }}>
-      <AthletePageHeader title="Mes seuils et mes zones" titleSize={22} background={headerGlow("#FF3B1F", "#66F03C")} />
+      <AthletePageHeader title="Mes seuils et mes zones" titleSize={22} background={headerGlow(C.rouge, C.g)} />
       <div style={{ padding: "20px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         {isLoading ? null : (
           <>

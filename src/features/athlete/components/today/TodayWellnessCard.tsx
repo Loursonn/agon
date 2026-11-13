@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import type { ReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import type { WellnessData } from "@/features/shared/types/athlete";
@@ -18,7 +18,7 @@ const ITEMS: Array<{ key: string; label: string }> = [
 ];
 
 /** Échelle 1 → 5 du formulaire wellness : rouge → vert. */
-const SCALE5 = ["#FF3B1F", "#FF7A45", "#FF9500", "#B8F03C", "#66F03C"];
+const SCALE5 = [C.rouge, C.blocCore, C.o, H.vertLime, C.g];
 const itemColor = (v: number): string => SCALE5[Math.min(5, Math.max(1, Math.round(v))) - 1];
 
 function Ring({ score, color }: { score: number; color: string }) {
@@ -142,8 +142,8 @@ export function TodayWellnessCard({
         {(envie != null || pain != null || sick || zones.length > 0) && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {envie != null && chip("envie", `Envie ${envie}/5`, itemColor(envie))}
-            {pain != null && chip("pain", `Douleur ${pain}/10`, pain >= 6 ? "#FF3B1F" : pain >= 3 ? "#FF9500" : "#FFC933")}
-            {sick && chip("sick", "Malade", "#FF3B1F")}
+            {pain != null && chip("pain", `Douleur ${pain}/10`, pain >= 6 ? C.rouge : pain >= 3 ? C.o : C.ac)}
+            {sick && chip("sick", "Malade", C.rouge)}
             {zones.map((z) => chip(z.id, z.label, DOMS_LEVEL_COLOR[z.level]))}
           </div>
         )}

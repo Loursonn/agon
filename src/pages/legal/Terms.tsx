@@ -1,5 +1,6 @@
 import LegalLayout, { Section, P, UL, Callout } from "./LegalLayout";
 import { COMPANY, LEGAL_ROUTES } from "@/lib/legal";
+import { C } from "@/lib/theme";
 
 /**
  * Conditions générales d'utilisation.
@@ -13,7 +14,7 @@ import { COMPANY, LEGAL_ROUTES } from "@/lib/legal";
  *   prescrivant aucun programme et n'étant pas partie au contrat de coaching.
  */
 
-const ACCENT = "#FFC933";
+const ACCENT = C.ac;
 
 export default function Terms() {
   return (

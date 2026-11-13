@@ -1,6 +1,6 @@
 import { ACCENT } from "@/features/athlete/components/workout-detail/workoutDetailConstants";
 import { BadgeTag } from "@/features/athlete/components/workout-detail/BadgeTag";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { ClusterSubRow } from "@/features/athlete/components/workout-detail/ClusterSubRow";
 import type { ExerciceParams } from "@/features/coach/components/programmation/types";
 import { InlineRestStrip } from "@/features/athlete/components/workout-detail/InlineRestStrip";
@@ -147,7 +147,7 @@ export function ExerciceCard({
         </div>
         {/* Badge row */}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {supersetTag && <BadgeTag label={supersetTag} color="#F5A623" />}
+          {supersetTag && <BadgeTag label={supersetTag} color={H.miel} />}
           <BadgeTag label={prescription} color={ACCENT} />
           {hasIso(params) && <BadgeTag label="Iso" color={C.b} />}
           {muscle && <BadgeTag label={muscle} color={blocColor} />}
@@ -171,10 +171,10 @@ export function ExerciceCard({
             background: "rgba(245,166,35,0.06)",
             display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
           }}>
-            <span style={{ fontSize: 9, fontWeight: 800, color: "#F5A623", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: H.miel, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>
               Cluster
             </span>
-            <span style={{ fontSize: 12, fontWeight: 800, color: "#F5A623", letterSpacing: 1 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: H.miel, letterSpacing: 1 }}>
               {safeReps.join("+")}
             </span>
             <span style={{ fontSize: 9, color: C.tx3 }}>·  {c.recup_sec}s entre clusters</span>
@@ -398,7 +398,7 @@ export function ExerciceCard({
                 borderRadius: 7,
                 border: "1px dashed rgba(245,158,11,0.5)",
                 background: "rgba(245,158,11,0.05)",
-                color: "#F59E0B",
+                color: H.ambre,
                 fontSize: 10,
                 fontWeight: 700,
                 cursor: "pointer",

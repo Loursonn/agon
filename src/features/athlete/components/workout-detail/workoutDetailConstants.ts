@@ -1,10 +1,11 @@
+import { C, H } from "@/lib/theme";
 
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-export const ACCENT = "#FFC933";
-export const ACCENT_ALT = "#FF9500";
-export const GREEN = "#66F03C";
+export const ACCENT = C.ac;
+export const ACCENT_ALT = C.o;
+export const GREEN = C.g;
 export const REST_DEFAULT = 90;
 export const RING_R = 18;
 export const RING_C = 2 * Math.PI * RING_R; // ≈ 113.097
@@ -15,9 +16,9 @@ export const FIELD_CFG = {
   reps: { label: "Répétitions",           unit: "reps", steps: [-2, -1, 1, 2] as number[] },
   rir:  { label: "RIR (reps en réserve)", unit: "",     steps: [-1, 1] as number[] },
 } as const;
-export const ORANGE = "#F5A623";
+export const ORANGE = H.miel;
 export const SS_LETTERS = "ABCDEFGH";
-export const SS_ORANGE = "#F5A623";
+export const SS_ORANGE = H.miel;
 export const RIR_ITEMS: Array<{ val: string; label: string; desc: string }> = [
   { val: "0",   label: "0",    desc: "Échec" },
   { val: "0.5", label: "0,5",  desc: "Quasi échec" },

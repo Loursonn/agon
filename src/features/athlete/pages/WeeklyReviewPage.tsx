@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { localIsoDay, addDays, isIsoDay } from "@shared/domain/dates";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
@@ -156,7 +156,7 @@ export default function WeeklyReviewPage() {
     );
   };
 
-  const header = <AthletePageHeader title="Ta weekly review" titleSize={22} background={headerGlow("#F29A2E", "#2E9E5B")} />;
+  const header = <AthletePageHeader title="Ta weekly review" titleSize={22} background={headerGlow(H.orangeDoux, H.vertSapin)} />;
   const wrap = (body: ReactNode) => (
     <div style={{ maxWidth: 520, margin: "0 auto" }}>
       {header}

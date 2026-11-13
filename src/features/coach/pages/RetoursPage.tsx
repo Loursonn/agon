@@ -14,7 +14,7 @@ import {
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare, Footprints } from "lucide-react";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { DISPLAY, KICK, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 
 const RETOURS_TITLE: React.CSSProperties = { margin: "0 0 12px", ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx };
@@ -341,12 +341,12 @@ export default function RetoursPage() {
       {/* KPI cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
         {[
-          { icon: <Heart size={14} style={{ color: "#66F03C" }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
+          { icon: <Heart size={14} style={{ color: C.g }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
           { icon: <Dumbbell size={14} style={{ color: C.ac }} />,            title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate}%` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
           { icon: <FlaskConical size={14} style={{ color: C.b }} />,         title: "Tests",           value: testsVal,    subtitle: undefined,                                                onClick: () => setDetailView("tests")        },
           { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km", subtitle2: runWatchKm > 0 ? `dont ${runWatchKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} ${runOrigins.length ? runOrigins.join(", ") : "montre"}` : undefined },
-          { icon: <Trophy size={14} style={{ color: "#F5A623" }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
-          { icon: <UtensilsCrossed size={14} style={{ color: "#F59E0B" }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
+          { icon: <Trophy size={14} style={{ color: H.miel }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
+          { icon: <UtensilsCrossed size={14} style={{ color: H.ambre }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
         ].map((kpi) => (
           <KPICard key={kpi.title} {...kpi} />
         ))}
@@ -357,7 +357,7 @@ export default function RetoursPage() {
           marginBottom: 16, padding: "10px 14px", borderRadius: 8,
           background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
         }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#EF4444", marginBottom: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: H.rougeVif, marginBottom: 6 }}>
             Blessé / malade signalé dans le wellness
           </div>
           {injuryDays.map(([d, note]) => (
@@ -430,7 +430,7 @@ export default function RetoursPage() {
                 padding: "8px 20px", borderRadius: 4,
                 border: "none",
                 background: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ac : C.s2,
-                color: retourDraft.trim() !== (retourData?.comment ?? "") ? "#0E0C0A" : C.tx3,
+                color: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ink : C.tx3,
                 fontSize: 12, fontWeight: 700, cursor: "pointer",
                 fontFamily: "inherit", opacity: upsertRetour.isPending ? 0.6 : 1,
               }}
@@ -539,7 +539,7 @@ export default function RetoursPage() {
             <SectionHead
               n={1}
               title="Modifications planning athlète"
-              right={<span style={{ ...MONO, fontSize: 10.5, padding: "2px 9px", borderRadius: 999, background: C.o, color: "#0E0C0A" }}>{modifications.length}</span>}
+              right={<span style={{ ...MONO, fontSize: 10.5, padding: "2px 9px", borderRadius: 999, background: C.o, color: C.ink }}>{modifications.length}</span>}
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -566,7 +566,7 @@ export default function RetoursPage() {
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{mod.sessionName}</div>
                       <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
                         {dateLabel}
-                        {origLabel && <span style={{ color: "#F59E0B" }}> · Décalée du {origLabel}</span>}
+                        {origLabel && <span style={{ color: H.ambre }}> · Décalée du {origLabel}</span>}
                       </div>
                       {mod.rescheduleReason && (
                         <div style={{ fontSize: 11, color: C.tx3, marginTop: 4, fontStyle: "italic" }}>
@@ -576,12 +576,12 @@ export default function RetoursPage() {
                       {hasBonus && (
                         <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {bonusSetsCount > 0 && (
-                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(245,158,11,0.1)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.25)" }}>
+                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(245,158,11,0.1)", color: H.ambre, border: "1px solid rgba(245,158,11,0.25)" }}>
                               +{bonusSetsCount} série{bonusSetsCount > 1 ? "s" : ""} bonus
                             </span>
                           )}
                           {customExCount > 0 && (
-                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(59,141,240,0.1)", color: "#33B5FF", border: "1px solid rgba(59,141,240,0.25)" }}>
+                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(59,141,240,0.1)", color: C.b, border: "1px solid rgba(59,141,240,0.25)" }}>
                               +{customExCount} exercice{customExCount > 1 ? "s" : ""} ajouté{customExCount > 1 ? "s" : ""}
                             </span>
                           )}
@@ -590,7 +590,7 @@ export default function RetoursPage() {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
                       {isAlert && (
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(245,158,11,0.15)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.4)" }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(245,158,11,0.15)", color: H.ambre, border: "1px solid rgba(245,158,11,0.4)" }}>
                           À vérifier
                         </span>
                       )}
