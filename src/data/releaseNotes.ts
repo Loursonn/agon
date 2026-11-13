@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-editeur-energie-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Éditeur de séance d'énergie remis en page",
+    summary: "À l'ordinateur, l'éditeur de séance d'énergie suit maintenant trois temps : le profil de la séance en haut, les blocs au centre, l'enregistrement à droite.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le sport (course, vélo, natation, rameur…) se choisit d'un clic dans la carte du titre.",
+          "En haut, la durée et la distance estimées avec le profil de la séance, mis à jour à chaque bloc.",
+          "À droite, la consigne pour l'athlète et les boutons d'enregistrement restent visibles pendant que vous construisez les blocs.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-profil-sportif-ordi",
     date: "2026-11-13",
     kind: "feature",

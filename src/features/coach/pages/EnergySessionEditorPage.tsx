@@ -48,6 +48,8 @@ import BlockBankDrawer from "../components/specific/BlockBankDrawer";
 import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuality } from "@/features/shared/hooks/useSpecificTaxonomy";
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
 import { toast } from "sonner";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { ORDI_CARD, SectionHead, MONO as ORDI_MONO, DISPLAY } from "@/features/shared/components/ordi/OrdiUi";
 import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
 import { issueCounts } from "../components/import/importIssues";
 import ImportReportPanel from "../components/import/ImportReportPanel";
@@ -399,6 +401,7 @@ export default function EnergySessionEditorPage() {
   // Computed preview totals
   const flat = expandIntervals(root);
   const totals = computeTotals(flat);
+  const isDesktop = useIsDesktop();
 
   async function handleAddImageUrl() {
     const url = imageUrlInput.trim();
@@ -499,30 +502,40 @@ export default function EnergySessionEditorPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg }}>
-      {/* ── Header ── */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 20,
-        background: C.s1, borderBottom: `1px solid ${C.brd}`,
-        padding: "10px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-      }}>
+    <div style={{ minHeight: "100vh", background: C.bg, padding: isDesktop ? "24px 40px 48px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* ── Fil d'Ariane (planche CoachOrdiAEditeurEnergie) ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
         <button
           onClick={navigateBack}
-          style={{ background: "none", border: "none", color: C.tx3, fontSize: 18, cursor: "pointer", lineHeight: 1 }}
+          style={{ background: "none", border: "none", padding: 0, color: C.tx3, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
         >
-          ←
+          ‹ {athleteId ? "Programmation" : "Banque"}
         </button>
+        <span style={{ color: C.tx3 }}>›</span>
+        <span style={{ color: C.tx2 }}>{isEdit ? "Modifier la séance" : isSpecifique ? "Nouvelle séance spécifique" : "Nouvelle séance d’énergie"}</span>
+      </div>
+
+      {/* ── Carte titre : type, nom, sport, actions ── */}
+      <div style={{
+        ...ORDI_CARD, position: "relative", overflow: "hidden",
+        padding: "18px 22px 18px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+      }}>
+        <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isSpecifique ? ORANGE : C.b }} />
+        {!isSpecifique && (
+          <span style={{ background: C.b, color: "#0E0C0A", borderRadius: 999, padding: "2px 10px", fontSize: 11.5, fontWeight: 600 }}>Énergie</span>
+        )}
 
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nom de la séance…"
+          aria-label="Nom de la séance"
           style={{
-            flex: 1, minWidth: 180,
+            flex: 1, minWidth: 220,
             background: "transparent", border: "none",
             borderBottom: `1px solid ${C.brdL}`,
-            color: C.tx, fontSize: 18, fontWeight: 700,
-            fontFamily: "inherit", outline: "none", padding: "2px 0",
+            color: C.tx, fontSize: 24, ...DISPLAY,
+            outline: "none", padding: "2px 0",
           }}
         />
 
@@ -586,16 +599,23 @@ export default function EnergySessionEditorPage() {
                 </SelectContent>
               </Select>
               {/* Sport : décide du mode de la montre (Garmin) */}
-              <Select value={sport} onValueChange={(v) => setSport(v as EnergySport)}>
-                <SelectTrigger aria-label="Sport" style={{ width: 130, background: C.s2, border: `1px solid ${C.brd}`, color: C.tx, fontSize: 12 }}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ENERGY_SPORTS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div role="radiogroup" aria-label="Sport" style={{ display: "flex", background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 10, padding: 3, gap: 2 }}>
+                {ENERGY_SPORTS.map((s) => {
+                  const on = sport === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setSport(s.value as EnergySport)}
+                      style={{ height: 30, padding: "0 12px", borderRadius: 8, border: "none", background: on ? C.s2 : "transparent", color: on ? C.tx : C.tx3, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
               {/* Custom kind input */}
               {sessionKind === "custom" && (
                 <input
@@ -652,56 +672,51 @@ export default function EnergySessionEditorPage() {
           >
             Annuler
           </button>
-          <button
-            onClick={() => handleSave(false)}
-            disabled={isSaving}
-            style={{ padding: "7px 16px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
-          >
-            {isSaving ? "Enregistrement…" : "Enregistrer"}
-          </button>
-          {athleteId && (
-            <button
-              onClick={() => handleSave(true)}
-              disabled={isSaving}
-              style={{ padding: "7px 16px", borderRadius: 4, border: `1px solid ${C.g}50`, background: C.g + "15", color: C.g, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              Enregistrer & planifier
-            </button>
-          )}
         </div>
       </div>
 
+      {/* ── 01 Profil de la séance ── */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionHead n={1} title="Profil de la séance" />
+        <div style={{ ...ORDI_CARD, padding: "16px 20px", display: "flex", gap: 28, alignItems: "stretch", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 170 }}>
+            <div>
+              <div style={{ fontSize: 12, color: C.tx3 }}>Durée estimée</div>
+              <div style={{ ...ORDI_MONO, fontSize: 24, color: C.tx, marginTop: 4 }}>{totals.durationS > 0 ? `≈ ${formatSLong(totals.durationS)}` : "—"}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: C.tx3 }}>Distance estimée</div>
+              <div style={{ ...ORDI_MONO, fontSize: 24, color: C.tx, marginTop: 4 }}>
+                {totals.distanceM > 0 ? <>≈ {(totals.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}<span style={{ fontSize: 12, color: C.tx3 }}> km</span></> : "—"}
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 320 }}>
+            {isClassique ? (
+              <ClassiquePreview blocks={classiqueBlocks} />
+            ) : root.children.length === 0 ? (
+              <div style={{ color: C.tx3, fontSize: 12.5, paddingTop: 24 }}>
+                Ajoute des blocs pour voir le profil de la séance.
+              </div>
+            ) : (
+              <SessionPreview intervals={root} />
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ── Main layout ── */}
       <div style={{
-        display: "flex", gap: 0,
-        // Desktop: side by side; mobile: stacked (via media query not available inline — use flex-wrap)
-        flexWrap: "wrap",
-        minHeight: "calc(100vh - 61px)",
+        display: "grid", gap: 24, alignItems: "start",
+        gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 340px" : "1fr",
       }}>
 
-        {/* ── Builder col (2/3) ── */}
-        <div style={{
-          flex: "2 1 420px", padding: "20px 20px 40px",
-          borderRight: `1px solid ${C.brd}`,
-          minWidth: 0,
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
-            Structure
-          </div>
+        {/* ── 02 Blocs ── */}
+        <section style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+          <SectionHead n={2} title="Blocs" />
           {importIssues.length > 0 && (
             <ImportReportPanel issues={importIssues} onClose={() => setImportIssues([])} />
           )}
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Consigne de la séance (optionnel, affichée à l'athlète)…"
-            rows={notes ? 2 : 1}
-            style={{
-              width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 12,
-              background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx,
-              fontSize: 12, padding: "8px 10px", fontFamily: "inherit", outline: "none",
-            }}
-          />
           {isClassique ? (
             <ClassiqueBuilder
               blocks={classiqueBlocks}
@@ -712,36 +727,46 @@ export default function EnergySessionEditorPage() {
           ) : (
             <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
           )}
-        </div>
+        </section>
 
-        {/* ── Preview col (1/3) ── */}
-        <div style={{
-          flex: "1 1 280px",
-          position: "sticky",
-          top: 61,
-          alignSelf: "flex-start",
-          padding: "20px 16px",
-          maxHeight: "calc(100vh - 61px)",
-          overflowY: "auto",
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
-            Aperçu
+        {/* ── 03 Enregistrer ── */}
+        <aside style={{ display: "flex", flexDirection: "column", gap: 12, position: isDesktop ? "sticky" : "static", top: 16 }}>
+          <SectionHead n={3} title="Enregistrer" />
+          <div style={{ ...ORDI_CARD, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontSize: 12, color: C.tx3 }}>Consigne{athleteId ? " pour l’athlète" : ""}</span>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optionnel, affichée à l’athlète avec la séance…"
+                rows={3}
+                style={{
+                  width: "100%", boxSizing: "border-box", resize: "vertical",
+                  background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 10, color: C.tx,
+                  fontSize: 13, padding: "9px 11px", fontFamily: "inherit", outline: "none", lineHeight: 1.5,
+                }}
+              />
+            </label>
+            <button
+              onClick={() => handleSave(false)}
+              disabled={isSaving}
+              style={{ height: 40, borderRadius: 10, border: "none", background: C.ac, color: "#0E0C0A", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
+            >
+              {isSaving ? "Enregistrement…" : athleteId ? "Enregistrer" : "Enregistrer dans ma banque"}
+            </button>
+            {athleteId && (
+              <button
+                onClick={() => handleSave(true)}
+                disabled={isSaving}
+                style={{ height: 40, borderRadius: 10, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Enregistrer et programmer un jour…
+              </button>
+            )}
           </div>
 
-          {isClassique ? (
-            <ClassiquePreview blocks={classiqueBlocks} />
-          ) : root.children.length === 0 ? (
-            <div style={{ color: C.tx3, fontSize: 12, textAlign: "center", paddingTop: 40 }}>
-              Ajoute des intervalles pour voir l'aperçu
-            </div>
-          ) : (
-            <div style={{ background: C.s1, borderRadius: 4, padding: "14px 14px 10px", border: `1px solid ${C.brd}` }}>
-              <SessionPreview intervals={root} />
-            </div>
-          )}
-
           {/* Schema drawing */}
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 4 }}>
             {fieldSchema && (
               <div style={{ background: C.s1, borderRadius: 4, padding: 10, border: `1px solid ${C.brd}`, marginBottom: 8 }}>
                 <SchemaViewerWithZoom schema={fieldSchema} />
@@ -871,22 +896,7 @@ export default function EnergySessionEditorPage() {
             </label>
           </div>
 
-          {/* Mini totals recap */}
-          {totals.durationS > 0 && (
-            <div style={{ marginTop: 16, fontSize: 12, color: C.tx2, display: "flex", flexDirection: "column", gap: 4 }}>
-              <div>
-                <span style={{ color: C.tx3 }}>Durée estimée</span>{" "}
-                <strong style={{ color: C.tx }}>{formatSLong(totals.durationS)}</strong>
-              </div>
-              {totals.distanceM > 0 && (
-                <div>
-                  <span style={{ color: C.tx3 }}>Distance</span>{" "}
-                  <strong style={{ color: C.tx }}>{(totals.distanceM / 1000).toFixed(1)} km</strong>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        </aside>
       </div>
 
       {/* ── Import modal ── */}
