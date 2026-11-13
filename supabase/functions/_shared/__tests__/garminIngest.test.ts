@@ -362,6 +362,78 @@ describe("désinscription et permissions", () => {
   });
 });
 
+describe("désinscription et permissions : cas limites (T-garmin-tests)", () => {
+  it("désinscription d'un utilisateur inconnu : rien n'est supprimé chez les autres", async () => {
+    const row = inbox("deregistrations", { userId: "inconnu" });
+    const { db, t, rpcCalls } = memoryDb({
+      provider_connections: [connection()],
+      provider_activities: [{ id: "g", athlete_id: ATHLETE, source: "garmin" }],
+      provider_webhook_inbox: [row],
+    });
+    expect(await processInboxRow(row, { db })).toBe("unknown_user");
+    expect(rpcCalls.some((c) => c.name === "provider_forget")).toBe(false);
+    expect(t.provider_connections).toHaveLength(1);
+    expect(t.provider_activities).toHaveLength(1);
+    expect(t.provider_webhook_inbox).toHaveLength(0);
+  });
+
+  it("désinscription reçue deux fois : le second passage ne casse rien", async () => {
+    const { db, t } = memoryDb({
+      provider_connections: [connection()],
+      provider_activities: [{ id: "g", athlete_id: ATHLETE, source: "garmin" }],
+    });
+    expect(await processInboxRow(inbox("deregistrations", { userId: GARMIN_USER }, "d1"), { db })).toBe("forgotten");
+    expect(await processInboxRow(inbox("deregistrations", { userId: GARMIN_USER }, "d2"), { db })).toBe("unknown_user");
+    expect(t.provider_connections).toHaveLength(0);
+    expect(t.provider_activities).toHaveLength(0);
+  });
+
+  it("seule WORKOUT_IMPORT retirée : scopes mis à jour, activités et santé gardées", async () => {
+    const row = inbox("userPermissionsChange", { userId: GARMIN_USER, permissions: ["ACTIVITY_EXPORT", "HEALTH_EXPORT"] });
+    const { db, t } = memoryDb({
+      provider_connections: [connection({ granted_scopes: ["ACTIVITY_EXPORT", "HEALTH_EXPORT", "WORKOUT_IMPORT"] })],
+      provider_activities: [{ id: "g", athlete_id: ATHLETE, source: "garmin" }],
+      provider_dailies: [{ athlete_id: ATHLETE, source: "garmin", day: "2025-11-07" }],
+      provider_webhook_inbox: [row],
+    });
+    expect(await processInboxRow(row, { db })).toBe("permissions_updated");
+    expect(t.provider_connections[0].granted_scopes).toEqual(["ACTIVITY_EXPORT", "HEALTH_EXPORT"]);
+    expect(t.provider_activities).toHaveLength(1);
+    expect(t.provider_dailies).toHaveLength(1);
+  });
+
+  it("permission retirée puis activité reçue en retard : pas importée", async () => {
+    const { db, t } = memoryDb({ provider_connections: [connection()] });
+    await processInboxRow(inbox("userPermissionsChange", { userId: GARMIN_USER, permissions: ["HEALTH_EXPORT"] }, "p"), { db });
+    expect(await processInboxRow(inbox("activities", activityEntry, "a"), { db })).toBe("skipped");
+    expect(t.provider_activities ?? []).toHaveLength(0);
+  });
+
+  it("permission rendue : les activités suivantes sont de nouveau importées", async () => {
+    const { db, t } = memoryDb({ provider_connections: [connection({ granted_scopes: ["HEALTH_EXPORT"] })] });
+    await processInboxRow(inbox("userPermissionsChange", { userId: GARMIN_USER, permissions: ["HEALTH_EXPORT", "ACTIVITY_EXPORT"] }, "p"), { db });
+    expect(await processInboxRow(inbox("activities", activityEntry, "a"), { db })).toBe("imported");
+    expect(t.provider_activities).toHaveLength(1);
+  });
+});
+
+describe("doublons", () => {
+  it("même activité reçue en « activities » puis « manuallyUpdatedActivities » : une seule ligne", async () => {
+    const { db, t } = memoryDb({ provider_connections: [connection()] });
+    await processInboxRow(inbox("activities", activityEntry, "a"), { db });
+    await processInboxRow(inbox("manuallyUpdatedActivities", { ...activityEntry, distanceInMeters: 6100 }, "b"), { db });
+    expect(t.provider_activities).toHaveLength(1);
+  });
+
+  it("même notification traitée par le webhook puis par le cron : un seul effet", async () => {
+    const row = inbox("activities", activityEntry);
+    const { db, t } = memoryDb({ provider_connections: [connection()], provider_webhook_inbox: [row] });
+    await processInboxRow(row, { db });
+    await processInboxRow(row, { db });
+    expect(t.provider_activities).toHaveLength(1);
+  });
+});
+
 describe("drainInbox", () => {
   it("traite le lot pris et compte les issues", async () => {
     const rows = [inbox("activities", activityEntry, "1"), inbox("dailies", { userId: "x", calendarDate: "2025-11-07" }, "2"), inbox("healthSnapshot", { userId: GARMIN_USER }, "3")];

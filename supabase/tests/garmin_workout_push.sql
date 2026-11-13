@@ -71,6 +71,15 @@ EXCEPTION WHEN insufficient_privilege THEN
   INSERT INTO r(k,v) VALUES ('14 pas d''écriture directe de la connexion (true)', 'true');
 END $$;
 
+DO $$
+BEGIN
+  UPDATE provider_connections SET granted_scopes = ARRAY['WORKOUT_IMPORT'];
+  INSERT INTO r(k,v) VALUES ('15 athlète ne s''accorde pas une permission Garmin (true)',
+    (coalesce((SELECT granted_scopes FROM provider_connections WHERE provider = 'garmin'), '{}') = '{}')::text);
+EXCEPTION WHEN insufficient_privilege THEN
+  INSERT INTO r(k,v) VALUES ('15 athlète ne s''accorde pas une permission Garmin (true)', 'true');
+END $$;
+
 -- ── Le coach référent ──────────────────────────────────────────────────────
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', coach, 'role', 'authenticated')::text FROM ids), true);
 INSERT INTO r(k,v) VALUES ('20 coach lit les séances envoyées (true)', ((SELECT count(*) FROM provider_workout_pushes) >= 1)::text);
@@ -83,10 +92,11 @@ INSERT INTO r(k,v) VALUES ('30 autre coach ne voit rien (true)',
 
 RESET ROLE;
 
--- ── Déconnexion : le suivi part avec la connexion ─────────────────────────
-DELETE FROM provider_connections WHERE athlete_id = (SELECT ath FROM ids) AND provider = 'garmin';
-INSERT INTO r(k,v) VALUES ('40 suivi effacé à la déconnexion (true)',
-  ((SELECT count(*) FROM provider_workout_pushes WHERE athlete_id = (SELECT ath FROM ids)) = 0)::text);
+-- ── Déconnexion ou désinscription Garmin (provider_forget) : le suivi part avec la connexion
+SELECT public.provider_forget((SELECT ath FROM ids), 'garmin');
+INSERT INTO r(k,v) VALUES ('40 suivi effacé à la déconnexion / désinscription (true)',
+  ((SELECT count(*) FROM provider_workout_pushes WHERE athlete_id = (SELECT ath FROM ids)) = 0
+   AND NOT EXISTS (SELECT 1 FROM provider_connections WHERE athlete_id = (SELECT ath FROM ids) AND provider = 'garmin'))::text);
 
 SELECT k, v FROM r ORDER BY n;
 ROLLBACK;
