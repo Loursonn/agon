@@ -12,6 +12,9 @@ import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare, Footprints } from "lucide-react";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { C } from "@/lib/theme";
+import { DISPLAY, KICK, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
+
+const RETOURS_TITLE: React.CSSProperties = { margin: "0 0 12px", ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx };
 import { MuscleVolumePanel } from "@/features/coach/components/programmation/MuscleVolumePanel";
 import { useMuscleVolume } from "@/features/coach/components/programmation/hooks/useMuscleVolume";
 import { localISO } from "@/lib/date";
@@ -54,7 +57,7 @@ function RetoursMuscleVolume({ athleteId, weekStart }: { athleteId: string | und
     localISO(subWeeks(weekStart, 4)),
     localISO(addWeeks(weekStart, 3)),
   );
-  return <MuscleVolumePanel weeks={weeks} byWeek={byWeek} isLoading={isLoading} showDone title="Séries par muscle et par semaine" />;
+  return <MuscleVolumePanel weeks={weeks} byWeek={byWeek} isLoading={isLoading} showDone title="" />;
 }
 
 export default function RetoursPage() {
@@ -237,7 +240,7 @@ export default function RetoursPage() {
   if (tab === "bienetre" && athleteId) {
     return (
       <div style={{ padding: "16px 20px 80px", display: "flex", flexDirection: "column" }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, letterSpacing: "-0.3px", marginBottom: 12 }}>Retours</div>
+        <h1 style={RETOURS_TITLE}>Retours</h1>
         {tabSwitch}
         <CoachWellnessPanel athleteId={athleteId} firstName={firstName} />
       </div>
@@ -247,7 +250,7 @@ export default function RetoursPage() {
   if (tab === "sante" && athleteId) {
     return (
       <div style={{ padding: "16px 20px 80px", display: "flex", flexDirection: "column" }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, letterSpacing: "-0.3px", marginBottom: 12 }}>Retours</div>
+        <h1 style={RETOURS_TITLE}>Retours</h1>
         {tabSwitch}
         <AthleteSantePage
           coachView={{ firstName }}
@@ -274,8 +277,8 @@ export default function RetoursPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, letterSpacing: "-0.3px" }}>Retours</div>
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>{periodLabel}</div>
+          <h1 style={{ ...RETOURS_TITLE, marginBottom: 6 }}>Retours</h1>
+          <div style={{ ...KICK }}>{periodLabel}</div>
         </div>
 
         {/* View toggle + nav */}
@@ -527,15 +530,12 @@ export default function RetoursPage() {
       {/* ── Modifications planning athlète ── */}
       {modifications.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            Modifications planning athlète
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-              background: "rgba(245,158,11,0.12)", color: "#F59E0B",
-              border: "1px solid rgba(245,158,11,0.3)",
-            }}>
-              {modifications.length}
-            </span>
+          <div style={{ marginBottom: 12 }}>
+            <SectionHead
+              n={1}
+              title="Modifications planning athlète"
+              right={<span style={{ ...MONO, fontSize: 10.5, padding: "2px 9px", borderRadius: 999, background: C.o, color: "#0E0C0A" }}>{modifications.length}</span>}
+            />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {modifications.map((mod) => {
@@ -606,14 +606,16 @@ export default function RetoursPage() {
       )}
 
       {/* ── Séries par muscle par semaine ── */}
-      <div style={{ marginTop: 24 }}>
+      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionHead n={modifications.length > 0 ? 2 : 1} title="Séries par muscle et par semaine" />
         <RetoursMuscleVolume athleteId={athleteId} weekStart={selectedWeek} />
       </div>
 
       {/* ── Blessures ── */}
       {/* Lues dans `medical_entries` : ce que le coach voit ici est exactement ce
           que l'athlète a déclaré, détail compris. */}
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionHead n={modifications.length > 0 ? 3 : 2} title="Blessures" />
         {injuries.length > 0 ? (
           <div style={{ background: C.s1, borderRadius: 6, padding: 14, border: "1px solid " + C.r + "30" }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.r, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 10 }}>

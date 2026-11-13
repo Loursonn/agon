@@ -38,6 +38,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-retours-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retours : rubriques numérotées",
+    summary: "Sous le calendrier des Retours, les rubriques sont numérotées comme sur les autres pages : modifications du planning par l'athlète, séries par muscle, blessures.",
+    sections: [],
+  },
+  {
     id: "2026-11-13-analyse-course-hyrox",
     date: "2026-11-13",
     kind: "feature",
