@@ -23,6 +23,8 @@ import { useCommandPalette } from "./context/CommandPaletteContext";
 import { Search } from "lucide-react";
 import { useAppUpdates } from "@/features/shared/hooks/useAppUpdates";
 import OfflineBanner from "@/features/shared/components/OfflineBanner";
+import { useIsPhone } from "@/hooks/useIsPhone";
+import CoachPhoneShell from "./phone/CoachPhoneShell";
 
 // ── Agon brand icons (inline SVG, currentColor) ─────────────────────────────
 
@@ -368,7 +370,10 @@ function CoachShellInner() {
 export default function CoachShell() {
   const { profile } = useAuth();
   // Compte professionnel uniquement : pas d'espace coach.
+  const isPhone = useIsPhone();
   if (profile?.role === "staff") return <Navigate to="/staff" replace />;
+  // Téléphone : app coach à part (barre du bas, en-têtes des planches « Coach tél. »).
+  if (isPhone) return <CoachPhoneShell />;
   return (
     <CommandPaletteProvider>
       <CoachShellInner />

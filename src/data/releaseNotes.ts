@@ -38,6 +38,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-coach-telephone",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "L'espace coach sur téléphone",
+    summary: "Sur téléphone, l'espace coach a maintenant ses propres écrans : l'essentiel de la journée, vos athlètes et leur suivi, à une main. Sur ordinateur, rien ne change.",
+    sections: [
+      {
+        title: "Ce que vous trouvez sur téléphone",
+        points: [
+          "Accueil : ce qui est à traiter, les séances d'hier faites ou non avec les retours, celles du jour et les prochaines compétitions.",
+          "Athlètes : recherche, filtres Alerte et Compétition, ajout d'un athlète et partage de votre code coach.",
+          "Fiche d'un athlète : planning de la semaine, programmation, retours, wellness, santé (montre) et tests.",
+          "Planning : touchez une séance pour la déplacer, la dupliquer, la passer en repos, la retirer ou la modifier.",
+          "Modifier une séance : séries, répétitions, charge, RIR, tempo et repos, pour ce jour seulement ou à partir de cette séance.",
+          "Tests : saisissez un résultat ou faites passer un test prévu depuis votre téléphone.",
+          "Plus : nouveautés, outils, paramètres et mode athlète.",
+        ],
+      },
+      {
+        title: "Restent sur ordinateur",
+        points: [
+          "Les banques, l'import de texte, la gestion des co-coachs et le détail des retours séance par séance.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-weekly-review",
     date: "2026-11-13",
     kind: "feature",
