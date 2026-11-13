@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { HyroxPicto, hyroxStationOf } from "@/features/shared/components/HyroxPicto";
+import { HyroxPicto } from "@/features/shared/components/HyroxPicto";
+import { hyroxStationOf } from "@/features/shared/components/hyroxStation";
 import type { TestGroup } from "@/lib/athleteTestValues";
+import { RULER_PATH } from "./testGroupPaths";
 
 const INK = "#0E0C0A";
 
@@ -11,13 +13,6 @@ const PATHS: Partial<Record<TestGroup, ReactNode>> = {
   vitesse: <path d="M13 4.5A1.5 1.5 0 1 0 13 4.49M7 21L10 15L13 17V22M10 15L11 9L16 11L19 9M11 9L7 11V14" />,
   explosivite: <path d="M12 3V15M7 8L12 3L17 8M5 21H19" />,
 };
-/** Règle : mensurations, biométrie et tout le reste. */
-export const RULER_PATH = (
-  <>
-    <path d="M3 15L15 3L21 9L9 21Z" />
-    <path d="M7 11L9 13M10 8L12 10M13 5L15 7" />
-  </>
-);
 
 /** Carré de couleur avec le picto du groupe (HYROX : picto de la station). */
 export function TestGroupIcon({ group, color, testName, size = 24, radius = 10 }: {

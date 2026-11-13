@@ -5,7 +5,8 @@
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import type { ImportIssue } from "@/lib/import/yoxx/common";
-import ImportIssueList, { issueCounts, scrollToStep } from "./ImportIssueList";
+import ImportIssueList from "./ImportIssueList";
+import { issueCounts, scrollToStep } from "./importIssues";
 
 export default function ImportReportPanel({
   issues, onClose, onSelect,

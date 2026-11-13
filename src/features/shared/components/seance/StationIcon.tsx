@@ -1,4 +1,5 @@
-import { HyroxPicto, hyroxStationOf } from "@/features/shared/components/HyroxPicto";
+import { HyroxPicto } from "@/features/shared/components/HyroxPicto";
+import { hyroxStationOf } from "@/features/shared/components/hyroxStation";
 
 /**
  * Picto et couleur d'un exercice HYROX, d'après le nom du tour. Dessins du

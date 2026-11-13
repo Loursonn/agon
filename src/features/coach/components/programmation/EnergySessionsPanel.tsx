@@ -7,7 +7,8 @@ import { Input } from "@/ui/Input";
 import { Skeleton } from "@/ui/Skeleton";
 import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
 import type { EnergySessionRow } from "@/types/energy";
-import { SessionPreviewModal, KIND_COLOR, KIND_LABEL } from "@/features/coach/components/energy/SessionPreviewModal";
+import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
+import { KIND_COLOR, KIND_LABEL } from "@/features/coach/components/energy/energyLabels";
 import { DeleteEnergySessionButton } from "@/features/coach/components/energy/DeleteEnergySessionButton";
 import { BankPickerDialog } from "./BankPickerDialog";
 

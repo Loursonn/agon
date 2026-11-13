@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { ChevronLeft, MapPin } from "lucide-react";
-import { DateBox, FIELD_BOX } from "./DateBox";
+import { DateBox } from "./DateBox";
+import { FIELD_BOX } from "./dateFormat";
 import { toast } from "sonner";
 import { C, alpha } from "@/lib/theme";
 import { ROUGE, TYPE_COLOR } from "@/lib/peps";

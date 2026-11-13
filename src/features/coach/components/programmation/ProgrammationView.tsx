@@ -16,7 +16,7 @@ import { useProgrammation } from "./hooks/useProgrammation"
 import { useUpdateProgrammation } from "./hooks/useUpdateProgrammation"
 import ImportMuscuTextDialog from "../import/ImportMuscuTextDialog"
 import ImportReportPanel from "../import/ImportReportPanel"
-import { scrollToStep } from "../import/ImportIssueList"
+import { scrollToStep } from "../import/importIssues";
 import type { ImportIssue } from "@/lib/import/yoxx/common"
 import { useDuplicateProgSession } from "./hooks/useDuplicateProgSession"
 import { useSessionBank, useUpdateSessionBank } from "./hooks/useSessionBank"

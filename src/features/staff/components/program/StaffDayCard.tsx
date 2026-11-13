@@ -9,7 +9,7 @@ import type { ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule
 import type { ProgSession } from "@/features/coach/components/programmation/types";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 import { CATEGORY_COLOR } from "@/features/shared/components/fiches/ficheStyles";
-import { KIND_COLOR, KIND_LABEL } from "@/features/coach/components/energy/SessionPreviewModal";
+import { KIND_COLOR, KIND_LABEL } from "@/features/coach/components/energy/energyLabels";
 import { formatBlocTiming, formatExercice } from "../../lib/formatPrescription";
 
 const STATUS: Record<string, { label: string; color: string }> = {

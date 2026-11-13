@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { C } from "@/lib/theme";
-import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
+import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/energyLabels";
 import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import type { EnergySessionDetail, EnergyStepLog } from "@/features/shared/types/retours.types";
 

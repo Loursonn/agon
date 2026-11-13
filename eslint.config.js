@@ -24,6 +24,12 @@ export default tseslint.config(
     },
   },
   {
+    // Primitives shadcn (variantes exportées à côté du composant) et fournisseur
+    // de contexte + son hook : motif voulu, l'actualisation à chaud recharge la page.
+    files: ["src/components/ui/button.tsx", "src/components/ui/toggle.tsx", "src/components/ui/sidebar.tsx", "src/hooks/useAuth.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
+  {
     // Couche données (docs/COUCHE_API.md) : seul src/api/ parle à Supabase.
     // Migration terminée le 2026-11-08 : tout import direct est une erreur.
     files: ["src/**/*.{ts,tsx}"],

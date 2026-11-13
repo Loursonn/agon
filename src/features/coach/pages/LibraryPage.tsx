@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Dumbbell, X, Zap, Target } from "lucide-react";
+import { Dumbbell, X, Zap, Target, type LucideIcon } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -25,13 +25,13 @@ import { MethodCard } from "@/features/coach/components/library/MethodCard";
 import { MethodBuilder } from "@/features/coach/components/library/MethodBuilder";
 import type { SessionKind } from "@/types/energy";
 import type { TrainingMethod, MethodScope, MethodCategory } from "@/types/trainingMethods";
-import { formValuesToConfig } from "@/features/coach/components/library/MethodPreview";
+import { formValuesToConfig } from "@/features/coach/components/library/methodConfigConvert";
 
 // ── Sub-tab types ─────────────────────────────────────────────────────────────
 
 type LibTab = "musculaire" | "energetique" | "specifique";
 
-const TAB_ICONS: Record<LibTab, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
+const TAB_ICONS: Record<LibTab, LucideIcon> = {
   musculaire:  Dumbbell,
   energetique: Zap,
   specifique:  Target,
@@ -230,8 +230,6 @@ function EnergyTab() {
                 canEdit={isAuthor || isAdmin}
                 canVerify={canVerify}
                 canDelete={isAuthor || isAdmin}
-                canPublish={isAuthor || isAdmin || canVerify}
-                userId={profile?.id}
               />
             );
           })

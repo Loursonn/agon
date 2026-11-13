@@ -15,7 +15,8 @@ import {
 } from "@/lib/athleteTestValues";
 import { formatNumberFr, joinSeconds, parseNumberFr, recordOutcome, splitSeconds, type RecordOutcome } from "@/lib/testEntry";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
-import { DateBox, FIELD_BOX, fmtLongDay } from "./DateBox";
+import { DateBox } from "./DateBox";
+import { FIELD_BOX, fmtLongDay } from "./dateFormat";
 
 interface Props {
   testId: string | null;

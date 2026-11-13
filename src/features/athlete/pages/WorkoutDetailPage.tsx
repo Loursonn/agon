@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { blocColor } from "@/lib/peps";
-import { parseKm } from "@/features/shared/components/RunDistanceInput";
+import { parseKm } from "@/features/shared/components/runDistance";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";

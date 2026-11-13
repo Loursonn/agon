@@ -2,24 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { C } from "@/lib/theme";
 import type { FreeSession } from "@/features/shared/types/athlete";
+import { SPORTS } from "./freeActivitySports";
 
 const MONTHS_FR = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
 const DAYS_FULL_FR = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
-export const SPORTS = [
-  { key: "course",    abbr: "CO", label: "Course"       },
-  { key: "velo",      abbr: "VE", label: "Vélo"         },
-  { key: "natation",  abbr: "NA", label: "Natation"     },
-  { key: "muscu",     abbr: "MU", label: "Muscu"        },
-  { key: "marche",    abbr: "MA", label: "Marche"       },
-  { key: "yoga",      abbr: "YO", label: "Yoga"         },
-  { key: "football",  abbr: "FO", label: "Football"     },
-  { key: "tennis",    abbr: "TE", label: "Tennis"       },
-  { key: "boxe",      abbr: "BX", label: "Boxe"         },
-  { key: "escalade",  abbr: "ES", label: "Escalade"     },
-  { key: "ski",       abbr: "SK", label: "Ski"          },
-  { key: "autre",     abbr: "AU", label: "Autre"        },
-];
 
 const DISTANCE_SPORTS = ["course", "velo", "natation", "marche", "ski", "autre"];
 

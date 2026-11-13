@@ -9,7 +9,7 @@ import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT } from "@share
 import { DayDetailPanel } from "./DayDetailPanel";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsPill } from "./VideoRequestsList";
-import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
+import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/energyLabels";
 import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import type { WeeklyRetourData, WellnessDay, EnergyStepLog, FreeActivityDetail } from "@/features/shared/types/retours.types";
 

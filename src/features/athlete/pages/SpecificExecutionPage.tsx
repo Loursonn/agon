@@ -22,7 +22,8 @@ import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferenc
 import StepTimeline from "@/features/athlete/components/specific/StepTimeline";
 import ExecutionCard from "@/features/athlete/components/specific/ExecutionCard";
 import SessionEndForm from "@/features/athlete/components/specific/SessionEndForm";
-import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
+import { RunDistanceInput } from "@/features/shared/components/RunDistanceInput";
+import { initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/runDistance";
 import type { EnergySessionAssignmentRow, EnergyStep, BlockLogs } from "@/types/energy";
 import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";

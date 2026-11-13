@@ -190,7 +190,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
       const kcal = computeTargetKcal(tdee, nutTargetPct, nutStrategy);
       if (kcal) setNutTotalCalCoach(String(kcal));
     }
-  }, [tdee, nutTargetPct, nutStrategy, nutDeficitMode, nutRangeMin, nutRangeMax]);
+  }, [tdee, nutTargetPct, nutStrategy, nutDeficitMode, rangeKcalMin, rangeKcalMax]);
 
   // ── Sync grammes quand totalRefKcal change ────────────────────────────────
   useEffect(() => {
@@ -199,6 +199,8 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
     if (nutGlucidesPct) setNutGlucides(String(Math.round(kcal * parseFloat(nutGlucidesPct) / 100 / 4)));
     if (nutLipidesPct)  setNutLipides(String(Math.round(kcal * parseFloat(nutLipidesPct) / 100 / 9)));
     if (nutProteinesPct) setNutProteines(String(Math.round(kcal * parseFloat(nutProteinesPct) / 100 / 4)));
+    // Seulement quand le total change : les % modifiés à la main recalculent leurs grammes dans leur propre saisie.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nutTotalCalCoach]);
 
   // ── Macro helpers ─────────────────────────────────────────────────────────
@@ -290,7 +292,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
       if (w > 0 && bf > 0 && bf < 100)
         setMetaManual(calcKatchMcArdle(w, bf).toString());
     }
-  }, [metaMode, weightKg, heightCm, birthDate, gender, bodyFatPct]);
+  }, [metaMode, weightKg, heightCm, derivedAge, gender, bodyFatPct]);
 
   // ── Sauvegardes séparées ──────────────────────────────────────────────────
   async function handleSaveProfile() {
@@ -600,7 +602,7 @@ export default function AthleteProfileForm({ athlete, onClose, inline = false, i
                 </div>
                 <button
                   onClick={applyAutoCalc}
-                  style={{ padding: "6px 14px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  style={{ padding: "6px 14px", borderRadius: 4, border: "none", background: C.ac, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
                 >
                   Appliquer
                 </button>

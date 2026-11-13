@@ -11,7 +11,8 @@ import { C } from "@/lib/theme";
 import { parseEnergySession, type EnergyImportResult } from "@/lib/import/yoxx/parseEnergySession";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 import { formatSLong } from "@/lib/energy/formatTarget";
-import ImportIssueList, { issueCounts } from "./ImportIssueList";
+import ImportIssueList from "./ImportIssueList";
+import { issueCounts } from "./importIssues";
 import ImportTextDialogShell, { SectionTitle } from "./ImportTextDialogShell";
 
 const KIND_LABEL: Record<string, string> = {

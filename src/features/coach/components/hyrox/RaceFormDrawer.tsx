@@ -9,7 +9,7 @@ import { useCreateHyroxResult, useUpdateHyroxResult } from "@/features/shared/ho
 import {
   RACE_ORDER, STATION_KEYS, DIVISION_LABEL,
   FORMAT_LABEL, SEGMENT_LABEL,
-  type HyroxResult, type HyroxDivision, type HyroxFormat, type HyroxStatus,
+  type HyroxResult, type HyroxDivision, type SegmentKey, type HyroxFormat, type HyroxStatus,
 } from "@/features/shared/types/hyrox";
 import { toast } from "sonner";
 
@@ -118,11 +118,11 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
     if (!date || !eventName.trim()) { toast.error("Date et nom d'événement obligatoires"); return; }
     if (parsedTotal == null || parsedTotal <= 0) { toast.error("Total invalide"); return; }
 
-    const segFields: Record<string, number | null> = {};
+    const segFields = {} as Record<`${SegmentKey}_s`, number | null>;
     for (const k of RACE_ORDER) {
       const v = parsedSegments[k];
       if (v != null && (v <= 0 || v > 10800)) { toast.error(`${SEGMENT_LABEL[k]} : valeur invalide`); return; }
-      segFields[k + "_s"] = v;
+      segFields[`${k}_s`] = v;
     }
 
     const payload = {
