@@ -3590,7 +3590,7 @@ export default function WorkoutDetailPage() {
             </div>
             <div style={{ width: "100%", aspectRatio: "16/9", background: "#000" }}>
               <iframe
-                src={`https://www.youtube.com/embed/${videoModal.ytId}?rel=0`}
+                src={`https://www.youtube-nocookie.com/embed/${videoModal.ytId}?rel=0`}
                 style={{ width: "100%", height: "100%", border: "none" }}
                 allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"
                 allowFullScreen

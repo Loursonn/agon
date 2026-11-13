@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-documents-legaux-revus",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Conditions d'utilisation et confidentialité revues",
+    summary: "Les conditions d'utilisation et la politique de confidentialité ont été relues en entier. À votre prochaine connexion, vous et vos athlètes serez invités à accepter la nouvelle version.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Vos engagements de coach sont écrits noir sur blanc : les données de vos athlètes servent seulement à les accompagner, restent confidentielles et ne sortent pas d'Agon sans leur accord.",
+          "Si vous créez le compte d'un athlète avant sa première connexion, prévenez-le et n'y saisissez que le nécessaire.",
+          "Les analyses par intelligence artificielle sont réservées aux athlètes de 18 ans et plus : l'accord n'est plus proposé aux 15-17 ans.",
+          "Les professionnels de santé de votre staff ne doivent pas déposer de documents issus de leurs soins (comptes rendus, ordonnances) : Agon n'est pas un dossier patient.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-banque-ordi",
     date: "2026-11-13",
     kind: "feature",

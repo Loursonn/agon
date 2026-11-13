@@ -58,8 +58,9 @@ export default function Terms() {
         </P>
         <P>
           Vous devez avoir au moins 15 ans : votre date de naissance est demandée à l'inscription,
-          qui est refusée en dessous de cet âge. Entre 15 et 18 ans, l'accord de votre représentant
-          légal est requis.
+          qui est refusée en dessous de cet âge. Entre 15 et 18 ans, vous pouvez utiliser Agon et
+          consentir seul au traitement de vos données ; nous vous invitons à en parler avec vos
+          parents. Les fonctions d'intelligence artificielle sont réservées aux 18 ans et plus.
         </P>
         <P>
           Vous êtes responsable de la confidentialité de votre mot de passe et de toute activité
@@ -104,12 +105,38 @@ export default function Terms() {
           lui soient accessibles. Il peut mettre fin à ce rattachement à tout moment depuis son
           profil, ce qui coupe immédiatement cet accès.
         </P>
+        <P>
+          <strong>Engagements du coach.</strong> Le coach, et le co-coach, accèdent à des données de
+          santé de leurs athlètes. Pour l'usage qu'ils en font dans leur activité, ils en sont
+          responsables au sens du RGPD. Ils s'engagent à :
+        </P>
+        <UL
+          items={[
+            "n'utiliser ces données que pour accompagner l'athlète concerné, et les garder confidentielles ;",
+            "ne les communiquer à personne, ni les exporter hors d'Agon, sans l'accord de l'athlète ;",
+            "s'ils créent le compte d'un athlète avant sa première connexion, l'en avoir informé, n'y saisir que le nécessaire, et supprimer le compte s'il n'est pas utilisé ;",
+            "s'ils relient leur assistant d'intelligence artificielle (article 5), l'utiliser sur un compte qui leur est propre et, quand leur offre le permet, régler ce compte pour que leurs données ne servent pas à entraîner les modèles ;",
+            "nous signaler sans délai toute utilisation anormale de leur compte ou de leur clé d'assistant.",
+          ]}
+        />
+      </Section>
+
+      <Section title="4 bis. Professionnels du staff">
+        <P>
+          Un professionnel du staff accède aux données d'un athlète avec l'accord de celui-ci, dans
+          les domaines que le coach lui ouvre. Il est responsable de l'usage qu'il en fait dans sa
+          propre activité, et prend les mêmes engagements que le coach. Un professionnel de santé
+          reste tenu au secret professionnel : ce qu'il écrit dans Agon est visible de l'athlète,
+          de son coach et de son co-coach, et il ne doit y écrire que ce que l'athlète a accepté de
+          partager avec eux. Agon n'est pas un outil de dossier patient : il ne doit pas y déposer
+          de documents issus de ses soins.
+        </P>
       </Section>
 
       <Section title="5. Génération assistée par intelligence artificielle">
         <P>
           Le coach peut demander la génération d'une proposition de programme par un modèle
-          d'intelligence artificielle. Cette proposition est une <strong>suggestion</strong> : elle
+          d'intelligence artificielle, pour un athlète de 18 ans ou plus qui l'a accepté. Cette proposition est une <strong>suggestion</strong> : elle
           n'est jamais appliquée automatiquement et doit être relue, corrigée et validée par le
           coach, qui en assume la responsabilité.
         </P>
@@ -158,7 +185,9 @@ export default function Terms() {
         </P>
         <P>
           L'Éditeur peut faire évoluer les fonctionnalités. Si une évolution dégrade
-          significativement un usage existant, elle est annoncée dans l'application.
+          significativement un usage existant, elle est annoncée dans l'application. En cas
+          d'arrêt définitif du service, vous êtes prévenu au moins 30 jours à l'avance pour
+          pouvoir exporter vos données.
         </P>
         <P>
           Il vous appartient de conserver une copie de vos données importantes. La fonction d'export
@@ -173,11 +202,11 @@ export default function Terms() {
         </P>
         <UL
           items={[
-            "Une blessure ou un dommage corporel résultant de l'exécution d'un programme — cette responsabilité relève du coach et de l'athlète.",
+            "Les choix d'entraînement du coach et leur exécution par l'athlète : l'Éditeur ne prescrit aucun programme. Une blessure qui résulterait d'une erreur propre à l'application (calcul ou affichage faux, par exemple) reste à sa charge.",
             "Les conséquences de données inexactes que vous avez saisies.",
             "Une indisponibilité ou une défaillance d'un service tiers connecté.",
             "Une perte de données causée par la suppression de votre compte à votre initiative.",
-            "Les dommages indirects : perte d'exploitation, préjudice commercial, perte de chance.",
+            "Pour les utilisateurs qui agissent à titre professionnel (coachs, professionnels du staff) : les dommages indirects, tels que la perte d'exploitation ou le préjudice commercial.",
           ]}
         />
         <P>
@@ -198,6 +227,13 @@ export default function Terms() {
           commentaires, données saisies. Vous accordez à l'Éditeur le droit strictement technique de
           les héberger et de les afficher aux personnes autorisées, aux seules fins de fournir le
           service.
+        </P>
+        <P>
+          Un athlète garde l'accès, pour son usage personnel, aux programmes et séances qui lui ont
+          été assignés, y compris après la fin de son rattachement à son coach. Un coach qui rend
+          public un contenu dans Agon (exercice, séance) autorise les autres utilisateurs à
+          l'utiliser dans l'application ; il garantit en avoir les droits, et n'y publie aucune
+          photo d'une personne sans son accord.
         </P>
       </Section>
 
@@ -231,8 +267,11 @@ export default function Terms() {
       <Section title="12. Modification des conditions">
         <P>
           Les présentes conditions peuvent être modifiées. Chaque version porte un numéro et une
-          date. Toute modification substantielle est notifiée dans l'application. Si vous refusez
-          la nouvelle version, vous pouvez supprimer votre compte.
+          date. Toute modification substantielle est notifiée dans l'application au moins 15 jours
+          avant son entrée en vigueur, sauf si elle est imposée par la loi ou par la sécurité du
+          service ; si elle porte sur vos données de santé, votre accord vous est redemandé. Si
+          vous refusez la nouvelle version, vous pouvez exporter vos données et supprimer votre
+          compte.
         </P>
       </Section>
 

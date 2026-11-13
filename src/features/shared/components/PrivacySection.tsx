@@ -1,3 +1,4 @@
+import { canOfferAiConsent } from "@/lib/age";
 import { useState } from "react";
 import { toast } from "sonner";
 import { C } from "@/lib/theme";
@@ -111,6 +112,15 @@ export function PrivacySection() {
                   // montre jamais connectée n'aurait rien à désactiver.
                   if (!row && p !== "ai_programming" && p !== "staff_sharing") return null;
                   if (p === "staff_sharing" && !isAthlete) return null;
+                  // Moins de 18 ans : l'accord IA n'est pas proposé (conditions
+                  // Gemini et Claude). Un accord déjà donné reste retirable.
+                  if (p === "ai_programming" && !granted && !canOfferAiConsent(profile?.birth_date)) {
+                    return (
+                      <div key={p} style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+                        Les analyses par intelligence artificielle sont réservées aux 18 ans et plus.
+                      </div>
+                    );
+                  }
                   return (
                     <div key={p} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                       <button

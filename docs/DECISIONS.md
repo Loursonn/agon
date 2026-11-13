@@ -2279,3 +2279,26 @@ et son README.
   alimenté par elle.
 - Mise en œuvre à l'étape 3 de `docs/SANTE_TABLES.md`, qui attend la mesure des versions clientes (P4 :
   le suivi n'était pas monté dans l'app, corrigé sur dev le 13/11, actif au prochain déploiement de main).
+
+## 2026-11-13 — Revue juridique par Claude, à la place d'un juriste (décision d'Hugo du 13/11)
+
+- **Décision d'Hugo (13/11)** : pas de juriste, faute de moyens ; « on fait confiance à Claude pour lire vraiment toutes
+  les données ». La revue n'est **pas un avis d'avocat**. Elle part du schéma réel de la prod, de `src/api/*` et de
+  `supabase/functions/*`. Livrables : `docs/juridique/REVUE_2026-11.md` (risques classés et solutions, réponses aux
+  23 questions de `QUESTIONS_JURISTE_HDS.md`), `REGISTRE.md` (art. 30), `AIPD.md` (obligatoire : 4 critères WP248),
+  `REGISTRE_VIOLATIONS.md` (procédure, incident `test-media` inscrit).
+- **HDS (D7)** : sport, bien-être et montres hors champ de l'art. L.1111-8 CSP ; diagnostics et traitements écrits
+  par un professionnel de santé, antécédents et documents médicaux **dans le champ**. Recommandation : retirer ces
+  champs (coût nul) plutôt qu'un hébergeur HDS. Décision d'Hugo attendue (C1).
+- **IA réservée aux 18 ans** (conditions Gemini et Claude) : accord non proposé aux 15-17 ans côté client
+  (`canOfferAiConsent`, `@shared/domain/age`). Trigger en base prêt dans `docs/juridique/a-appliquer/`, à appliquer
+  avec l'accord d'Hugo (hors `supabase/migrations` tant qu'il n'est pas appliqué, sinon le job R2 rougit).
+- **Incident `test-media`** : violation inscrite au registre, risque jugé improbable (adresse impossible à deviner ni à
+  lister, jamais produite par l'app) → pas de notification CNIL ; information des athlètes concernés recommandée.
+- **Pages légales** : corrections regroupées **sans nouvelle montée** : `LEGAL_VERSION` reste `2026-11-13`, version
+  qu'aucun utilisateur n'a encore vue (prod en `2026-10-31`). Libellé de l'accord socle détaillé (archivé à l'acceptation).
+  Mineurs : l'accord parental annoncé et non vérifié est retiré (pas exigé à 15 ans, art. 45 loi I&L).
+- **Rôle du coach** : responsable de traitement distinct pour son usage, Agon responsable de la plateforme ; engagements
+  écrits dans les CGU §4 et §4 bis (staff, secret professionnel). À revoir si les coachs paient (accord art. 28).
+- Actions d'Hugo (DPA Supabase, facturation Gemini, offre Vercel, médiateur, téléphone, sauvegardes) :
+  `REVUE_2026-11.md` §5.

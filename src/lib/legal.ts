@@ -111,7 +111,7 @@ export const LEGAL_ROUTES = {
 /** Hébergeur — à citer en mentions légales (art. 6 III LCEN). */
 export const HOSTING = {
   name: "Vercel Inc.",
-  address: "340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis",
+  address: "440 N Barranca Avenue #4133, Covina, CA 91723, États-Unis",
   website: "https://vercel.com",
 } as const;
 
@@ -131,7 +131,11 @@ export interface Subprocessor {
   purpose: string;
   /** Localisation du traitement, pour la question des transferts hors UE. */
   location: string;
-  /** Mécanisme de transfert si hors Union européenne. */
+  /**
+   * Mécanisme de transfert si hors Union européenne. Seulement pour un
+   * sous-traitant : un responsable indépendant (Garmin, COROS) encadre ses
+   * propres transferts, et Agon n'a signé aucune clause type avec lui.
+   */
   transferMechanism?: string;
   role: ProcessorRole;
   privacyUrl: string;
@@ -151,6 +155,8 @@ export const SUBPROCESSORS: Subprocessor[] = [
     name: "Supabase Inc.",
     purpose: "Hébergement de la base de données, authentification, stockage des fichiers",
     location: "Union européenne (Irlande)",
+    transferMechanism:
+      "Société américaine : un accès depuis les États-Unis (support) reste possible, encadré par les clauses contractuelles types de l'accord de traitement Supabase",
     role: "subprocessor",
     privacyUrl: "https://supabase.com/privacy",
   },
@@ -158,7 +164,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
     name: "Vercel Inc.",
     purpose: "Hébergement et distribution de l'application web",
     location: "États-Unis",
-    transferMechanism: "Clauses contractuelles types + Data Privacy Framework",
+    transferMechanism: "Data Privacy Framework (Vercel est certifié) et accord de traitement Vercel",
     role: "subprocessor",
     privacyUrl: "https://vercel.com/legal/privacy-policy",
   },
@@ -167,7 +173,8 @@ export const SUBPROCESSORS: Subprocessor[] = [
     purpose:
       "Analyses, synthèses et visualisations des données d'entraînement, et génération assistée de programmes. Traitement par intelligence artificielle.",
     location: "Union européenne / États-Unis",
-    transferMechanism: "Clauses contractuelles types",
+    transferMechanism:
+      "Data Privacy Framework (Google LLC est certifié) et accord de traitement de Google pour les services payants",
     role: "subprocessor",
     privacyUrl: "https://ai.google.dev/gemini-api/terms",
   },
@@ -176,7 +183,6 @@ export const SUBPROCESSORS: Subprocessor[] = [
     purpose:
       "Récupération des données d'activité et de santé enregistrées par votre montre, après connexion volontaire de votre compte Garmin Connect.",
     location: "États-Unis",
-    transferMechanism: "Clauses contractuelles types",
     role: "independent",
     privacyUrl: "https://www.garmin.com/privacy/connect/",
     optional: true,
@@ -185,8 +191,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
     name: "COROS (Shenzhen Coros Sports Technology)",
     purpose:
       "Récupération des données d'activité enregistrées par votre montre, après connexion volontaire de votre compte COROS.",
-    location: "Union européenne (point d'accès UE) / Hong-Kong",
-    transferMechanism: "Clauses contractuelles types",
+    location: "Union européenne (point d'accès UE) / Chine",
     role: "independent",
     privacyUrl: "https://www.coros.com/privacy-policy",
     optional: true,
@@ -202,10 +207,11 @@ export const SUBPROCESSORS: Subprocessor[] = [
 export const RETENTION = [
   { data: "Compte et profil", duration: "Jusqu'à suppression du compte, puis 30 jours de sauvegarde" },
   { data: "Séances, charges, séries réalisées", duration: "Durée de vie du compte" },
+  { data: "Blessures, antécédents et documents médicaux", duration: "Durée de vie du compte, ou jusqu'à ce que vous ou l'auteur de l'entrée la supprimiez" },
   { data: "Données de bien-être, bilans hebdomadaires, poids, mensurations, photos du corps, blessures", duration: "Durée de vie du compte" },
   { data: "Données importées depuis une montre connectée, et copie intégrale des données Garmin", duration: "Durée de vie du compte, ou suppression immédiate à la déconnexion du service ou au retrait de l'accord" },
   { data: "Retours sur l'application", duration: "Durée de vie du compte" },
-  { data: "Journaux techniques de connexion", duration: "12 mois" },
+  { data: "Journaux techniques de connexion", duration: "Selon les réglages de nos hébergeurs (quelques jours aujourd'hui), 12 mois au plus" },
   { data: "Liens avec les professionnels de votre staff, et leurs droits", duration: "Durée de vie du compte (un accès retiré est conservé comme historique, sans plus aucune lecture possible)" },
   { data: "Historique de vos accords (preuve du consentement)", duration: "Durée de vie du compte, retraits compris ; à la suppression du compte, seule une trace anonyme (date, rôle, version) est gardée" },
   { data: "Sauvegardes automatiques de la base", duration: "30 jours au plus, puis effacement par rotation automatique" },

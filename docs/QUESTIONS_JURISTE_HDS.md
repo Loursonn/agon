@@ -1,5 +1,8 @@
 # Questions pour un juriste : données de santé, hébergement (HDS) et documents légaux
 
+> **Réponses** (13/11, revue par Claude à la place d'un juriste, décision d'Hugo) :
+> `docs/juridique/REVUE_2026-11.md` §4.
+
 Préparé le 2026-11-13 pour Hugo, avant l'avis demandé dans la roadmap (C-securite, décision D7).
 Rien ici n'est un avis juridique : ce sont des faits vérifiés dans le code et la base, puis des
 questions ouvertes. Toute phrase du type « il semble que » est une hypothèse à faire confirmer.

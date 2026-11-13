@@ -7,7 +7,7 @@ import { hasDecidedSince, type ConsentState } from "@/features/shared/hooks/useC
 
 // Pas de réseau : l'auth et la lecture des accords sont remplacées par des
 // valeurs fixes ; les fonctions pures (hasDecided, hasValidCoreConsent…) restent les vraies.
-const auth = { profile: { role: "athlete" } as { role: string }, logout: vi.fn() };
+const auth = { profile: { role: "athlete" } as { role: string; birth_date?: string | null }, logout: vi.fn() };
 let consents: ConsentState[] = [];
 const mutation = { mutateAsync: vi.fn(), isPending: false };
 
@@ -69,6 +69,22 @@ describe("ConsentGate · accord IA", () => {
       expect(screen.queryByText("L'IA dans ton suivi")).not.toBeInTheDocument();
       unmount();
     }
+  });
+
+  it("athlète de moins de 18 ans : pas d'écran IA, ni de case IA à l'inscription (conditions Gemini et Claude)", () => {
+    const sixteen = new Date();
+    sixteen.setFullYear(sixteen.getFullYear() - 16);
+    auth.profile = { role: "athlete", birth_date: sixteen.toISOString().slice(0, 10) };
+    consents = [core, staff];
+    const { unmount } = renderGate();
+    expect(screen.getByText("APP")).toBeInTheDocument();
+    expect(screen.queryByText("L'IA dans ton suivi")).not.toBeInTheDocument();
+    unmount();
+
+    consents = [];
+    renderGate();
+    expect(screen.getByText("Avant de commencer")).toBeInTheDocument();
+    expect(screen.queryByText(/intelligence artificielle/)).not.toBeInTheDocument();
   });
 
   it("coach_athlete est concerné, coach et staff ne le sont pas", () => {

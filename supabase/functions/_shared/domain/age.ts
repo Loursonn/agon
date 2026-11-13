@@ -65,3 +65,26 @@ export function birthDateError(birthDate: unknown, today: string, min: number = 
   if (age === null) return INVALID_BIRTH_DATE_MESSAGE; // née après aujourd'hui
   return age >= min ? null : MIN_AGE_MESSAGE;
 }
+
+/**
+ * Âge minimum pour l'accord « intelligence artificielle » (`ai_programming`).
+ *
+ * Les conditions de l'API Gemini (« Gemini API Additional Terms of Service »)
+ * interdisent de l'utiliser pour un service destiné aux moins de 18 ans ou
+ * susceptible d'être utilisé par eux, et les conditions grand public de Claude
+ * (assistant du coach) exigent aussi 18 ans. Agon accepte les 15-17 ans : on ne
+ * leur propose donc pas l'accord IA, et la base enregistre en refus un accord
+ * IA donné avant 18 ans (trigger `ai_consent_adults_only`, migration
+ * 20261113220000). Revue juridique : `docs/juridique/REVUE_2026-11.md`.
+ */
+export const AI_MIN_AGE = 18;
+
+/**
+ * L'accord IA peut-il être proposé ? Date de naissance inconnue (comptes créés
+ * avant le contrôle d'âge) : oui, comme en base — on ne peut rien en déduire.
+ */
+export function canOfferAiConsent(birthDate: string | null | undefined, today: string): boolean {
+  if (!birthDate) return true;
+  const age = ageOn(birthDate, today);
+  return age === null ? true : age >= AI_MIN_AGE;
+}

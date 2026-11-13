@@ -369,7 +369,7 @@ function LogView({exos,sets,updSets,completedSessions,completeSession,uncomplete
         </div>
         {videoEx.youtube_id?(
           <div style={{position:'relative',paddingBottom:'56.25%',height:0,overflow:'hidden',borderRadius:6,background:C.s1}}>
-            <iframe src={'https://www.youtube.com/embed/'+videoEx.youtube_id+'?autoplay=1'} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none'}} allow="autoplay; encrypted-media" allowFullScreen/>
+            <iframe src={'https://www.youtube-nocookie.com/embed/'+videoEx.youtube_id+'?autoplay=1'} style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none'}} allow="autoplay; encrypted-media" allowFullScreen/>
           </div>
         ):videoEx.image_url?(
           <img src={videoEx.image_url} style={{width:'100%',borderRadius:6,display:'block'}} alt={videoEx.name}/>

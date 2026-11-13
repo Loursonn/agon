@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { errorMessage } from "@/lib/errors";
 import { AI_CONSENT_SINCE, LEGAL_ROUTES } from "@/lib/legal";
+import { canOfferAiConsent } from "@/lib/age";
 import {
   CONSENT_COPY,
   hasDecided,
@@ -147,7 +148,10 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
 
   const athlete = isAthleteRole(profile?.role);
   const askStaff = athlete && !hasDecided(consents, "staff_sharing");
-  const askAi = athlete && !hasDecidedSince(consents, "ai_programming", AI_CONSENT_SINCE);
+  // Accord IA réservé aux 18 ans et plus (conditions Gemini et Claude) : un
+  // athlète de 15 à 17 ans ne le voit ni à l'inscription ni en écran court.
+  const aiOffered = canOfferAiConsent(profile?.birth_date);
+  const askAi = athlete && aiOffered && !hasDecidedSince(consents, "ai_programming", AI_CONSENT_SINCE);
 
   if (hasValidCoreConsent(consents)) {
     // Une question à la fois : l'accord IA d'abord, puis le staff s'il manque.
@@ -158,7 +162,8 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
   }
 
   // Une réponse staff déjà donnée n'est pas reposée (ni écrasée par une case vide).
-  const purposes: ConsentPurpose[] = askStaff ? [...GATE_PURPOSES, "staff_sharing"] : GATE_PURPOSES;
+  const gatePurposes = aiOffered ? GATE_PURPOSES : GATE_PURPOSES.filter((p) => p !== "ai_programming");
+  const purposes: ConsentPurpose[] = askStaff ? [...gatePurposes, "staff_sharing"] : gatePurposes;
   const coreChecked = !!checked.health_data;
   // Un compte déjà consentant mais sur une version antérieure du document :
   // le message doit dire que le texte a changé, pas accueillir l'utilisateur

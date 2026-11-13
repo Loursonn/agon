@@ -191,7 +191,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
               border: `1px solid ${C.brdL}`,
             }}>
               <iframe
-                src={`https://www.youtube.com/embed/${youtubeId}`}
+                src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
                 style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
                 allow="encrypted-media"
                 allowFullScreen

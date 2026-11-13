@@ -67,3 +67,22 @@ describe("signupBirthDateError", () => {
     expect(signupBirthDateError(20001108, today)).toBe(INVALID_BIRTH_DATE_MESSAGE);
   });
 });
+
+describe("accord IA réservé aux 18 ans et plus (conditions Gemini et Claude)", () => {
+  it("18 ans révolus le jour même : proposé", async () => {
+    const { canOfferAiConsent, AI_MIN_AGE } = await import("@/lib/age");
+    expect(AI_MIN_AGE).toBe(18);
+    expect(canOfferAiConsent("2008-11-13", "2026-11-13")).toBe(true);
+    expect(canOfferAiConsent("1990-01-01", "2026-11-13")).toBe(true);
+  });
+  it("15 à 17 ans : pas proposé", async () => {
+    const { canOfferAiConsent } = await import("@/lib/age");
+    expect(canOfferAiConsent("2008-11-14", "2026-11-13")).toBe(false);
+    expect(canOfferAiConsent("2011-01-01", "2026-11-13")).toBe(false);
+  });
+  it("date inconnue (compte créé avant le contrôle d'âge) : proposé, comme en base", async () => {
+    const { canOfferAiConsent } = await import("@/lib/age");
+    expect(canOfferAiConsent(null, "2026-11-13")).toBe(true);
+    expect(canOfferAiConsent(undefined, "2026-11-13")).toBe(true);
+  });
+});

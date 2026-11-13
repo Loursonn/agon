@@ -42,8 +42,8 @@ export default function PrivacyPolicy() {
         <strong>L'essentiel.</strong> Agon sert à partager votre entraînement avec votre coach :
         c'est la raison même du service, donc vos données d'entraînement et de bien-être sont
         visibles par le coach auquel vous êtes rattaché. Rien n'est vendu, rien n'est cédé à des
-        annonceurs, et aucune donnée n'est utilisée pour entraîner un modèle d'intelligence
-        artificielle. Vous pouvez à tout moment retirer votre consentement et supprimer
+        annonceurs, et ni Agon ni Google (pour les analyses par intelligence artificielle d'Agon)
+        n'utilisent vos données pour entraîner un modèle. Vous pouvez à tout moment retirer votre consentement et supprimer
         définitivement votre compte depuis l'application.
       </Callout>
 
@@ -66,8 +66,9 @@ export default function PrivacyPolicy() {
           ]}
         />
         <P>
-          Aucun délégué à la protection des données n'a été désigné, cette désignation n'étant pas
-          obligatoire au regard de la taille de la structure. Les demandes sont traitées
+          Aucun délégué à la protection des données n'a été désigné : cette désignation n'est
+          obligatoire que pour un traitement de données de santé à grande échelle (article 37 du
+          RGPD), ce qui n'est pas le cas d'Agon aujourd'hui. Les demandes sont traitées
           directement à l'adresse ci-dessus.
         </P>
       </Section>
@@ -112,7 +113,9 @@ export default function PrivacyPolicy() {
             "Bilan hebdomadaire : ressenti de la semaine (1 à 5), engagements, réponses libres, douleur éventuelle (zone, type, niveau de 0 à 10), message au coach, et un résumé chiffré de la semaine figé à l'envoi. Votre coach et votre staff ne le voient qu'une fois envoyé, jamais à l'état de brouillon.",
             "Taille, poids de corps, masse grasse, métabolisme de base, et mensurations que vous saisissez.",
             "Photos du corps (face, côté, dos, jambes) que vous déposez avec vos mensurations. Dans l'application, seuls vous et votre coach les voient.",
-            "Blessures et zones douloureuses que vous déclarez, avec leurs dates.",
+            "Blessures et zones douloureuses que vous déclarez, avec leurs dates, leur mécanisme, leur impact sur l'entraînement et, si elles sont renseignées, le diagnostic et le traitement indiqués par vous ou par un professionnel de votre staff.",
+            "Antécédents médicaux que vous ou votre staff renseignez : pathologies, allergies, opérations, traitements en cours, notes médicales ; et documents médicaux que vous joignez (comptes rendus, ordonnances, images).",
+            "Fichiers joints à vos tests (photos, vidéos, PDF) et captures d'écran de votre montre.",
             "Habitudes que vous suivez, et événements de votre calendrier (examens, voyages…) que vous ajoutez.",
             "Données de nutrition que vous saisissez.",
             "Commentaires et retours échangés avec votre coach.",
@@ -186,6 +189,13 @@ export default function PrivacyPolicy() {
           ]}
         />
         <P>
+          Certains contenus viennent de services tiers, qui reçoivent alors votre adresse IP : les
+          polices de caractères (Google Fonts), les vidéos d'exercices (YouTube, en mode « sans
+          cookie », chargées seulement quand vous lancez la vidéo) et, si votre coach en a
+          configuré une, sa page de prise de rendez-vous (Calendly, ouverte à votre demande).
+          Chacun de ces services applique sa propre politique de confidentialité.
+        </P>
+        <P>
           Nous n'utilisons <strong>aucun cookie publicitaire</strong>, aucun traceur tiers et aucun
           outil de mesure d'audience comportementale. Le seul stockage local est celui strictement
           nécessaire à votre session, qui ne requiert pas de consentement.
@@ -207,7 +217,7 @@ export default function PrivacyPolicy() {
               "Consentement explicite (art. 9.2.a)",
             ],
             [
-              "Permettre à votre coach de suivre votre progression, d'adapter votre programme et de prévenir le surentraînement ou la blessure",
+              "Permettre à votre coach de suivre votre progression, d'adapter votre programme et votre charge d'entraînement",
               "Données d'entraînement, de bien-être, de blessure, données de montre connectée",
               "Consentement explicite (art. 9.2.a)",
             ],
@@ -224,7 +234,7 @@ export default function PrivacyPolicy() {
             [
               "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Google Gemini utilisée par Agon, ou via l'assistant Claude de votre coach",
               "Historique d'entraînement, moyennes de bien-être (récupération, sommeil, stress, énergie), poids, objectifs, blessures déclarées ; pour l'assistant Claude, également vos compétitions, tests et les titres des événements de votre calendrier. Jamais les données Garmin ou COROS (voir 4.3)",
-              "Consentement explicite (art. 9.2.a)",
+              "Consentement explicite (art. 9.2.a), proposé seulement à partir de 18 ans",
             ],
             [
               "Améliorer l'application et corriger ses défauts à partir de vos retours et de la version utilisée",
@@ -239,15 +249,18 @@ export default function PrivacyPolicy() {
             [
               "Répondre à vos demandes et conserver la preuve de votre consentement",
               "Email, horodatage et version du consentement",
-              "Obligation légale (art. 6.1.c)",
+              "Obligation légale (art. 6.1.c, avec les art. 5.2 et 7.1)",
             ],
           ]}
         />
         <P>
           Nous ne faisons <strong>aucune prospection commerciale</strong>, aucun profilage
           publicitaire et aucune décision entièrement automatisée produisant des effets juridiques
-          à votre égard. Les propositions générées par intelligence artificielle sont des
-          suggestions soumises à la validation de votre coach, qui reste seul décideur.
+          à votre égard (article 22 du RGPD). Le feu du matin et la charge d'entraînement évaluent
+          automatiquement votre état de forme : c'est un profilage au sens de l'article 4.4, mais
+          il ne décide de rien ; c'est votre coach qui décide. Les propositions générées par
+          intelligence artificielle sont des suggestions soumises à la validation de votre coach,
+          qui reste seul décideur.
         </P>
       </Section>
 
@@ -256,9 +269,12 @@ export default function PrivacyPolicy() {
           4.1 Votre coach
         </h3>
         <P>
-          C'est la finalité même du service. Le coach auquel vous êtes rattaché accède à vos
-          séances, vos charges, votre bien-être, votre poids, vos blessures déclarées et, si vous
-          avez connecté une montre, aux données qu'elle transmet. Un coach ne voit{" "}
+          C'est la finalité même du service. Le coach auquel vous êtes rattaché, et votre
+          co-coach si vous en avez un, accèdent à vos séances, vos charges, votre bien-être, vos
+          bilans hebdomadaires une fois envoyés, votre poids, vos mensurations et photos du corps,
+          vos blessures et votre suivi médical (y compris ce qu'y écrivent les professionnels de
+          votre staff) et, si vous avez connecté une montre, aux données qu'elle transmet. Un
+          coach ne voit{" "}
           <strong>que</strong> les athlètes qui lui sont rattachés : cette restriction est
           appliquée au niveau de la base de données elle-même, et non seulement dans l'interface.
         </P>
@@ -267,8 +283,15 @@ export default function PrivacyPolicy() {
           données cesse immédiatement.
         </P>
         <P>
-          Si vous l'avez accepté (accord « intelligence artificielle », révocable dans votre profil),
-          votre coach peut aussi faire lire vos données d'entraînement par son assistant
+          Votre coach utilise ces données pour sa propre activité de coaching : pour cet usage, il
+          en est lui-même responsable. Nos conditions d'utilisation l'obligent à les garder
+          confidentielles, à ne les utiliser que pour vous accompagner et à ne les communiquer à
+          personne sans votre accord. Si votre coach a créé votre compte avant votre première
+          connexion, il s'engage à vous en avoir informé et à n'y avoir saisi que le nécessaire.
+        </P>
+        <P>
+          Si vous l'avez accepté (accord « intelligence artificielle », réservé aux 18 ans et plus,
+          révocable dans votre profil), votre coach peut aussi faire lire vos données d'entraînement par son assistant
           d'intelligence artificielle personnel, <strong>Claude, édité par Anthropic</strong>, au
           moyen d'une clé qu'il génère dans Agon. Cet assistant reçoit votre prénom, vos séances et
           charges réalisées, votre bien-être, votre poids, vos blessures déclarées (zones et dates),
@@ -311,15 +334,18 @@ export default function PrivacyPolicy() {
         <P>
           Dans les domaines ouverts en écriture, un professionnel peut ajouter des entrées à votre
           suivi médical, déposer des fiches et commenter. Ces contenus restent rattachés à votre
-          suivi et à la bibliothèque de votre coach, avec le nom de leur auteur.
+          suivi et à la bibliothèque de votre coach, avec le nom de leur auteur, et votre coach
+          les voit. Chaque professionnel est responsable de l'usage qu'il fait de vos données dans
+          sa propre activité ; les professionnels de santé restent tenus au secret professionnel.
         </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", margin: "16px 0 8px" }}>
           4.3 Nos prestataires techniques
         </h3>
         <P>
-          Ces tiers agissent sur nos instructions, dans le cadre d'un contrat conforme à l'article
-          28 du RGPD, et n'ont pas le droit d'utiliser vos données à leurs propres fins :
+          Ces tiers agissent sur nos instructions, dans le cadre de l'accord de traitement de
+          chacun (article 28 du RGPD), et n'ont pas le droit d'utiliser vos données à leurs propres
+          fins :
         </P>
         <Table
           headers={["Prestataire", "Rôle", "Localisation"]}
@@ -342,7 +368,9 @@ export default function PrivacyPolicy() {
           Google Gemini. Ces données{" "}
           <strong>ne sont pas utilisées pour entraîner les modèles de Google</strong>, conformément
           aux conditions de l'API payante. Aucune donnée issue d'un service tiers dont les
-          conditions l'interdisent n'est transmise à ce traitement.
+          conditions l'interdisent n'est transmise à ce traitement, et aucune donnée d'un
+          utilisateur de moins de 18 ans : l'accord « intelligence artificielle » ne lui est pas
+          proposé.
         </P>
         <P>
           <strong>Ne sont jamais transmis à une intelligence artificielle</strong>, ni à Gemini ni à
@@ -359,7 +387,8 @@ export default function PrivacyPolicy() {
           <strong>responsable de traitement indépendant</strong>, et non comme notre prestataire :
           il décide seul de ses propres traitements, et sa politique de confidentialité s'applique
           en parallèle de celle-ci. Pour exercer vos droits sur les données qu'il détient, c'est à
-          lui qu'il faut vous adresser.
+          lui qu'il faut vous adresser. Les échanges avec ce service ont lieu à votre demande ;
+          il encadre lui-même ses éventuels transferts hors de l'Union européenne.
         </P>
         <Table
           headers={["Service", "Ce que nous récupérons", "Sa politique"]}
@@ -394,10 +423,11 @@ export default function PrivacyPolicy() {
           L'application web est distribuée par {HOSTING.name} ({HOSTING.address}).
         </P>
         <P>
-          Certains prestataires sont établis hors de l'Union européenne. Ces transferts sont
-          encadrés par les clauses contractuelles types adoptées par la Commission européenne, et
-          le cas échéant par le Data Privacy Framework. Le détail figure au tableau de la section
-          4.3.
+          Certains prestataires sont établis hors de l'Union européenne, ou sont des sociétés
+          américaines. Ces transferts sont encadrés par le Data Privacy Framework (décision
+          d'adéquation de la Commission européenne du 10 juillet 2023) ou par les clauses
+          contractuelles types adoptées par la Commission. Le détail figure au tableau de la
+          section 4.3.
         </P>
       </Section>
 
@@ -466,6 +496,10 @@ export default function PrivacyPolicy() {
               <strong>Limitation et opposition</strong> — demander le gel d'un traitement, ou vous
               opposer à un traitement fondé sur l'intérêt légitime.
             </>,
+            <>
+              <strong>Directives après votre décès</strong> — définir ce que deviennent vos données
+              après votre mort (article 85 de la loi Informatique et Libertés), en nous écrivant.
+            </>,
           ]}
         />
         <P>
@@ -495,17 +529,20 @@ export default function PrivacyPolicy() {
           ]}
         />
         <P>
-          En cas de violation de données susceptible d'engendrer un risque élevé pour vos droits,
-          nous notifierons la CNIL dans les 72 heures et vous informerons directement.
+          En cas de violation de données, nous la consignons dans un registre interne. Si elle
+          présente un risque pour vos droits, nous la notifions à la CNIL dans les 72 heures ; si
+          ce risque est élevé, nous vous en informons aussi directement, sans tarder.
         </P>
       </Section>
 
       <Section title="9. Mineurs">
         <P>
           Le service n'est pas destiné aux personnes de moins de 15 ans. Votre date de naissance
-          est demandée à la création du compte : l'inscription est refusée en dessous de 15 ans. Si
-          vous avez entre 15 et 18 ans, l'accord de votre représentant légal est requis. Si nous
-          apprenons qu'un compte a été créé par un enfant de moins de 15 ans sans cet accord, nous le
+          est demandée à la création du compte : l'inscription est refusée en dessous de 15 ans.
+          À partir de 15 ans, vous pouvez consentir seul au traitement de vos données (article 45
+          de la loi Informatique et Libertés) ; nous vous invitons à en parler avec vos parents.
+          Les analyses par intelligence artificielle sont réservées aux 18 ans et plus. Si nous
+          apprenons qu'un compte a été créé par une personne de moins de 15 ans, nous le
           supprimons.
         </P>
       </Section>
