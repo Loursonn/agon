@@ -9,7 +9,7 @@
  *  - déjà connecté : acceptation en un clic.
  */
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { errorMessage } from "@/lib/errors";
 import { localIsoDay } from "@shared/domain/dates";
@@ -77,7 +77,7 @@ export default function StaffInviteAccept() {
         ? "Ce lien d'invitation a déjà été utilisé."
         : "Ce lien d'invitation a expiré.";
     return (
-      <Shell>
+      <Shell footer={<>Déjà un compte ? <Link to="/login" style={{ color: C.ac, textDecoration: "none" }}>Me connecter</Link></>}>
         <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, marginBottom: 8 }}>Invitation indisponible</div>
         <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.6 }}>{msg} Demande un nouveau lien à la personne qui t'a invité.</div>
       </Shell>

@@ -4,6 +4,7 @@
  * Admin : qui a vu chaque nouveauté (« vu par X / Y coachs »).
  */
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { C, alpha } from "@/lib/theme";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,22 +35,22 @@ export default function CoachUpdatesPage() {
   const totalCoaches = stats[0]?.total_coaches ?? null;
 
   return (
-    <div style={{ padding: "24px 20px 60px", width: "100%", boxSizing: "border-box" }}>
+    <div style={{ padding: "24px 20px 60px", width: "100%", maxWidth: 920, margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ ...DISPLAY, fontWeight: 300, fontSize: 28, letterSpacing: "0.06em", color: C.tx, margin: 0 }}>Nouveautés</h1>
-          {unseen.length > 0 && <div style={{ ...MONO, fontSize: 12, color: C.ac, marginTop: 4 }}>{unseen.length} non vue{unseen.length > 1 ? "s" : ""}</div>}
+          <h1 style={{ ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", color: C.tx, margin: 0 }}>Nouveautés</h1>
+          {unseen.length > 0 && <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac, marginTop: 8 }}>{unseen.length} non vue{unseen.length > 1 ? "s" : ""}</div>}
         </div>
         {user && unseen.length > 1 && (
           <button
             onClick={() => mark.mutate({ userId: user.id, updateIds: unseen.map(n => n.id) })}
-            style={{ minHeight: 38, padding: "6px 14px", borderRadius: 10, border: "1px solid " + alpha(C.ac, 0.45), background: "transparent", color: C.ac, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ minHeight: 36, padding: "0 14px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
           >
             Tout marquer comme vu ({unseen.length})
           </button>
         )}
       </div>
-      <p style={{ fontSize: 13, color: C.tx3, margin: "0 0 20px" }}>
+      <p style={{ fontSize: 13, color: C.tx3, margin: "0 0 24px" }}>
         Chaque mise à jour de l'app, résumée : ce qui change et à quoi ça te sert.
       </p>
       {isError && (
@@ -62,30 +63,31 @@ export default function CoachUpdatesPage() {
           const readers = stats.filter(s => s.update_id === note.id);
           const expanded = !seenAt || openIds.has(note.id);
           return (
-            <article key={note.id} style={{ background: C.s1, border: "1px solid " + (seenAt ? C.brd : alpha(C.ac, 0.45)), borderRadius: 14, padding: "16px 18px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <article key={note.id} style={{ background: C.s1, border: "1px solid " + (seenAt ? C.brd : alpha(C.ac, 0.4)), borderRadius: 14, padding: "20px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
                 <ReleaseNoteKindBadge kind={note.kind} />
-                <span style={{ fontSize: 11, color: C.tx3 }}>{fmtDate(note.date)}</span>
+                <span style={{ ...MONO, fontSize: 11.5, color: C.tx3 }}>{fmtDate(note.date)}</span>
                 {seenAt ? (
-                  <span style={{ fontSize: 11, color: C.g }}>· Vue le {fmtShort(seenAt)}</span>
+                  <span style={{ fontSize: 12, color: C.g }}>· Vue le {fmtShort(seenAt)}</span>
                 ) : (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: C.bg, background: C.ac, borderRadius: 999, padding: "1px 8px" }}>Non vue</span>
+                  <span style={{ ...MONO, display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, border: "1px solid " + alpha(C.ac, 0.53), color: C.ac, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Non vue</span>
                 )}
               </div>
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: C.tx, margin: "4px 0 4px" }}>{note.title}</h2>
-              <p style={{ fontSize: 13, color: C.tx2, margin: expanded ? "0 0 12px" : 0 }}>{note.summary}</p>
+              <h2 style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.3, color: C.tx, margin: "0 0 8px" }}>{note.title}</h2>
+              <p style={{ fontSize: 14, color: C.tx2, lineHeight: 1.55, margin: expanded ? "0 0 14px" : 0 }}>{note.summary}</p>
               {expanded && <ReleaseNoteContent note={note} />}
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 14 }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginTop: 14 }}>
                 {!seenAt && user && (
                   <button
                     onClick={() => mark.mutate({ userId: user.id, updateIds: [note.id] })}
-                    style={{ minHeight: 40, padding: "8px 18px", borderRadius: 10, border: "none", background: C.ac, color: C.bg, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 7, minHeight: 34, padding: "0 14px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
                   >
+                    <Check size={14} strokeWidth={1.5} aria-hidden />
                     J'ai vu
                   </button>
                 )}
                 {seenAt && (
-                  <button type="button" onClick={() => toggle(note.id)} style={{ padding: 0, background: "none", border: "none", color: C.ac, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button type="button" onClick={() => toggle(note.id)} style={{ padding: 0, background: "none", border: "none", color: C.ac, fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
                     {expanded ? "Replier" : "Voir le détail ›"}
                   </button>
                 )}

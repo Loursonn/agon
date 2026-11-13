@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-nouveautes-relookees",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Page Nouveautés plus lisible",
+    summary: "Les nouveautés non vues ressortent mieux et « J'ai vu » ne prend plus toute l'attention.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque nouveauté non vue porte une pastille « Non vue » et un contour doré.",
+          "Les points de détail sont listés plus clairement, avec une puce par point.",
+          "Un professionnel qui ouvre un lien d'invitation expiré peut maintenant se connecter directement depuis la page.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-charte-finale-couleurs",
     date: "2026-11-13",
     kind: "fix",
