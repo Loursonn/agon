@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-seance-retour-commentaires-tours",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance de montre : l'athlète corrige son retour et commente ses tours HYROX",
+    summary: "Sur l'onglet Séance d'une activité, l'athlète peut modifier sa difficulté ressentie et son commentaire, et laisser un mot sur un tour HYROX ; vous le voyez à une bulle dorée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Modifier mon retour » sous le retour de l'athlète : difficulté de 1 à 10 et commentaire, comme en fin de séance.",
+          "Tableau des tours HYROX : une bulle par tour. Dorée, elle contient le commentaire de l'athlète (passez la souris ou cliquez pour le lire).",
+          "Les stations s'appellent « Sled push 1 », « Wall balls 2 »… : la distance reste dans la colonne Prévu.",
+          "Minuteur EMOM : « Ensuite » annonce le repos jusqu'à la minute suivante au lieu d'une durée fixe.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-planning-semaine",
     date: "2026-11-13",
     kind: "feature",

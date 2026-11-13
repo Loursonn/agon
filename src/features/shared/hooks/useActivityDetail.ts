@@ -9,6 +9,8 @@ import {
   type LapDraft,
 } from "@/api/activityDetail";
 import { invalidatePlanLinks } from "@/api/plannedVsDone";
+import { invalidateEnergy, setEnergyRpe, updateEnergyAssignment } from "@/api/energy";
+import { invalidateWorkouts, setWorkoutNote, setWorkoutRpe } from "@/api/workouts";
 import { invalidateZoneModels } from "@/api/zoneModels";
 import { toast } from "sonner";
 
@@ -44,5 +46,33 @@ export function useSaveLaps(athleteId: string, activityId: string) {
         void invalidateActivityDetail(qc, athleteId);
       } else toast.error("Enregistrement des tours impossible");
     },
+  });
+}
+
+/**
+ * « Modifier mon retour » (athlète) : difficulté ressentie et commentaire de
+ * la séance prévue liée à l'activité. Mêmes écritures que la fin de séance.
+ */
+export function useSaveSeanceFeedback(athleteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { kind: "energy" | "workout"; plannedId: string; rpe: number | null; comment: string | null }) => {
+      const note = p.comment?.trim() ? p.comment.trim() : null;
+      if (p.kind === "energy") {
+        await setEnergyRpe(p.plannedId, p.rpe);
+        await updateEnergyAssignment(p.plannedId, { notes: note });
+      } else {
+        await setWorkoutRpe(p.plannedId, p.rpe);
+        await setWorkoutNote(p.plannedId, note);
+      }
+    },
+    onSuccess: (_d, p) => {
+      void invalidateActivityDetail(qc, athleteId);
+      void invalidatePlanLinks(qc, athleteId);
+      if (p.kind === "energy") void invalidateEnergy(qc, athleteId);
+      else void invalidateWorkouts(qc, { athleteId, logId: p.plannedId });
+      toast.success("Retour enregistré");
+    },
+    onError: () => toast.error("Retour non enregistré"),
   });
 }

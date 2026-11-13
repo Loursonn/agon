@@ -8,7 +8,7 @@ import {
   cutLapAt, displayLapNames, fmtDayLong, lapIndexAt, lapKind, mergeWithNext, moveBoundary, setLapBounds,
   sportFamily, summarizeBlocks,
 } from "@/lib/seance";
-import { useActivityDetail, useSaveLaps } from "@/features/shared/hooks/useActivityDetail";
+import { useActivityDetail, useSaveLaps, useSaveSeanceFeedback } from "@/features/shared/hooks/useActivityDetail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeanceHeader } from "./SeanceHeader";
 import { SeanceKeyFigures } from "./SeanceKeyFigures";
@@ -58,6 +58,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
   const compact = useIsMobile();
   const q = useActivityDetail(athleteId, activityId);
   const save = useSaveLaps(athleteId, activityId);
+  const saveFeedback = useSaveSeanceFeedback(athleteId);
   const detail = q.data;
 
   const [phoneView, setPhoneView] = useState<"main" | "tours">("main");
@@ -234,8 +235,18 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
       compact={compact}
     />
   );
-  const feedback = detail.link ? (
-    <SeanceFeedbackCard title={feedbackTitle} rpe={detail.link.feedbackRpe ?? null} comment={detail.link.feedbackComment ?? null} />
+  const link = detail.link;
+  const feedbackKind = link && (link.plannedKind === "energy" || link.plannedKind === "workout") ? link.plannedKind : null;
+  const feedback = link ? (
+    <SeanceFeedbackCard
+      title={feedbackTitle}
+      rpe={link.feedbackRpe ?? null}
+      comment={link.feedbackComment ?? null}
+      onSave={role === "athlete" && feedbackKind
+        ? (rpe, comment) => saveFeedback.mutateAsync({ kind: feedbackKind, plannedId: link.plannedId, rpe, comment })
+        : undefined}
+      saving={saveFeedback.isPending}
+    />
   ) : null;
   const banner = showBanner ? (
     <HyroxProposalBanner
@@ -408,6 +419,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
                     active={editing ? selected : activeLap}
                     onSelect={(i) => (editing ? setSelected(i) : (setActiveLap(i), setZoomLap(i)))}
                     onPatch={editing ? undefined : patchLap}
+                    canComment={role === "athlete"}
                   />
                 ) : (
                   <SeanceLapsTable
@@ -430,7 +442,9 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
             )}
           </div>
           {hyrox && !editing && (
-            <div style={{ fontSize: 11.5, color: C.tx3 }}>Réalisé et charge se corrigent directement dans le tableau.</div>
+            <div style={{ fontSize: 11.5, color: C.tx3 }}>
+              Réalisé et charge se corrigent directement dans le tableau · bulle dorée = commentaire {role === "athlete" ? "que tu as laissé" : "de l’athlète"} sur le tour{role === "athlete" ? " (touche la bulle pour en écrire un)" : ""}.
+            </div>
           )}
         </>
       )}

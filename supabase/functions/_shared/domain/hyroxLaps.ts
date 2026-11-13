@@ -72,7 +72,7 @@ const ROLE_NAMES: Record<string, string> = {
   rest: "Repos",
 };
 
-function distanceLabel(m: number): string {
+export function distanceLabel(m: number): string {
   return m >= 1000 && m % 100 === 0 ? `${(m / 1000).toLocaleString("fr-FR")} km` : `${Math.round(m)} m`;
 }
 

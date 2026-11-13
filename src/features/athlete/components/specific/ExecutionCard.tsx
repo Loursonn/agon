@@ -61,9 +61,17 @@ export default function ExecutionCard({ flat, index, secondsLeft, minuteLeft = n
   const hero = rest && upcoming ? upcoming.step : step;
   const heroDetail = rest && upcoming ? [fmtShort(stepSeconds(upcoming.step)), stepDetail(upcoming.step)].filter((s) => s && s !== "0 s").join(" · ") : stepDetail(step);
 
+  // EMOM : le repos qui suit n'a pas de durée fixe, c'est le reste de la minute.
+  const followingRest = following && isRestStep(following.step)
+    ? following.emom?.gap
+      ? following.emom.round >= following.emom.rounds
+        ? "Fin du dernier tour"
+        : following.emom.every === 60 ? "Repos jusqu'à la minute suivante" : "Repos jusqu'au départ suivant"
+      : `${PHASE_LABEL[following.step.role] ?? "Récup"} ${fmtShort(stepSeconds(following.step))}`
+    : null;
   const ensuite = !rest && following
-    ? isRestStep(following.step)
-      ? `${PHASE_LABEL[following.step.role] ?? "Récup"} ${fmtShort(stepSeconds(following.step))}${followingWork ? `, puis ${stepTitle(followingWork.step)}` : ""}`
+    ? followingRest
+      ? `${followingRest}${followingWork ? `, puis ${stepTitle(followingWork.step)}` : ""}`
       : stepTitle(following.step)
     : null;
 
