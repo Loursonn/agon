@@ -6,13 +6,13 @@ name: Sauvegarde quotidienne de la base (H8)
 # Décision : docs/DECISIONS.md, 2026-11-13 « Sauvegardes ».
 #
 # Secrets à créer (Settings › Secrets and variables › Actions) :
-#   SUPABASE_DB_URL     chaîne « Session pooler » de Supabase (Connect), mot de passe compris
+#   SUPABASE_DB_URL     chaîne « Session pooler » du compte lecture seule agon_backup (créé le 13/11)
 #   BACKUP_PASSPHRASE   phrase de chiffrement longue et aléatoire, gardée aussi dans le gestionnaire de mots de passe
 #   BACKUP_REPO_TOKEN   jeton GitHub « fine-grained » limité au dépôt privé, droit Contents: Read and write
 # Variable (facultative) : BACKUP_REPO, par défaut Loursonn/agon-backups.
 #
 # Restaurer : gh release download <tag> -R Loursonn/agon-backups, puis
-#   gpg --decrypt agon-*.tar.gz.gpg | tar xz   (demande la phrase), puis psql roles.sql, schema.sql, data.sql.
+#   gpg --decrypt agon-*.tar.gz.gpg | tar xz   (demande la phrase), puis pg_restore agon.dump (pg_restore -l pour le contenu).
 
 on:
   schedule:
@@ -46,19 +46,16 @@ jobs:
             echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: supabase/setup-cli@v1
-        if: steps.ready.outputs.ok == 'true'
-        with:
-          version: 2.95.4
-
       - name: Copier la base (lecture seule)
         if: steps.ready.outputs.ok == 'true'
         run: |
-          mkdir -p "$RUNNER_TEMP/dump" && cd "$RUNNER_TEMP/dump"
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f roles.sql --role-only
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema.sql
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f data.sql --use-copy --data-only
-          ls -la
+          mkdir -p "$RUNNER_TEMP/dump"
+          # Compte agon_backup : pg_read_all_data + bypassrls, aucune écriture possible.
+          # Schémas de l'app et des services Supabase utiles à une restauration (comptes, fichiers, crons).
+          docker run --rm --user "$(id -u):$(id -g)" -e PGURL="$SUPABASE_DB_URL" -v "$RUNNER_TEMP/dump:/out" postgres:17 \
+            sh -c 'pg_dump "$PGURL" -Fc --no-owner --no-privileges \
+              -n public -n auth -n storage -n cron -n supabase_migrations -f /out/agon.dump'
+          ls -la "$RUNNER_TEMP/dump"
 
       - name: Chiffrer
         if: steps.ready.outputs.ok == 'true'
