@@ -82,6 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           path: out
@@ -91,7 +92,9 @@ jobs:
           echo "## Rejeu des migrations" >> "$GITHUB_STEP_SUMMARY"
           echo "Fichiers en erreur : $(wc -l < out/migrations-failed.txt)" >> "$GITHUB_STEP_SUMMARY"
           { echo '```'; cat out/migrations-failed.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          diff -u out/prod.sql out/migrations.sql > out/schema.diff && rc=0 || rc=$?
+          # Mise en forme ignorée (lignes vides, ordre des colonnes) : supabase/tests/ci/normalize_schema.py
+          for s in prod migrations; do python3 supabase/tests/ci/normalize_schema.py "out/$s.sql" > "out/$s.norm.sql"; done
+          diff -u out/prod.norm.sql out/migrations.norm.sql > out/schema.diff && rc=0 || rc=$?
           echo "Lignes de diff (prod → migrations) : $(/usr/bin/grep -cE '^[-+][^-+]' out/schema.diff || true)" >> "$GITHUB_STEP_SUMMARY"
           { echo '```diff'; head -400 out/schema.diff; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           [ "$rc" = 0 ] && [ ! -s out/migrations-failed.txt ] && echo "DIFF VIDE" || { echo "Écarts : voir le résumé"; exit 1; }
