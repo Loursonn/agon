@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-tuto-import-strava",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Vos athlètes importent eux-mêmes leur historique Strava",
+    summary: "Dans Profil › Montres et données, le tutoriel « Importer mon historique Strava » a une nouvelle vidéo de 30 secondes et des étapes simples : demander l'archive sur Strava, la télécharger depuis l'e-mail, la décompresser, puis glisser le dossier dans la zone d'import. Plus besoin de vous transférer l'e-mail de Strava.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "L'athlète fait tout depuis un ordinateur, en 5 étapes, et ses sorties arrivent directement dans son historique.",
+          "Conseil donné dans le tuto : glisser le dossier plutôt que le choisir, l'ordinateur ne sélectionnant pas toujours tous les fichiers.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-seance-hyrox-coach",
     date: "2026-11-13",
     kind: "feature",
