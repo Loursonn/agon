@@ -45,3 +45,6 @@ keystore.properties
 *.apk
 google-services.json
 GoogleService-Info.plist
+
+# Réglages Claude Code propres à chaque machine (sorti de git le 2026-11-13)
+.claude/settings.local.json

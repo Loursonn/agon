@@ -211,7 +211,7 @@ Source : audit qualité.
 > Dates : Claude Max s'arrête le **11 novembre** → les chantiers lourds et transverses (beaucoup de fichiers, beaucoup d'agents) passent avant. App stores : janvier-février 2027.
 
 ### Phase 0 — Urgences (avant le 11/11) · ~1-2 j
-- [ ] Dump BDD + vérif PITR. PITR non activé (constaté le 2026-11-13, `docs/QUESTIONS_JURISTE_HDS.md`).
+- [x] Dump BDD + vérif PITR. PITR non activé (offre gratuite) ; à la place, copie chiffrée quotidienne `backup.yml` (dépôt privé, 30 jours), essai réel réussi le 2026-11-13.
 - [x] Lot sécurité S1→S10 (une migration, tests pgTAP associés).
 - [x] P1 : `sLoad` ne renvoie plus de valeur par défaut sur erreur + blocage des écritures non chargées.
 - [x] P2/P3 : brouillon local de la séance en cours (+ énergie, wellness).
@@ -220,10 +220,10 @@ Source : audit qualité.
 
 ### Phase 1 — Garde-fous (avant le 11/11) · ~1-2 j
 - [x] CI GitHub Actions (`npm run check` : `tsc` ≤ `.tsc-baseline` (99), lint, vitest, build) + Dependabot (vers `dev`). **2026-11-13 : 0 erreur TypeScript (`.tsc-baseline` = 0), 0 avertissement ESLint (P3).**
-- [ ] Protection de `main` + secret scanning (réglages GitHub, à faire par le propriétaire du repo). Vérifié le 2026-11-13 : `main` toujours sans protection.
+- [x] Protection de `main` + secret scanning : activés le 2026-11-13 (PR obligatoire, check « Types, lint, tests, build » requis, pas de force push ni de suppression ; secret scanning + push protection).
 - [x] Régénérer `types.ts`.
 - [x] Réécrire `CLAUDE.md` à partir du réel ; y mettre les règles de la mémoire d'Hugo ; supprimer `docs/CLAUDE.md` et `AUTOMATISATION PUSH`.
-- [ ] Sortir `settings.local.json` de git (JSON invalide ligne 80 : virgule manquante avant les lignes Windows) — décision Hugo/Tito. Toujours suivi par git et toujours invalide le 2026-11-13 (ligne 81).
+- [x] Sortir `settings.local.json` de git : virgule réparée (lignes Windows gardées), fichier retiré du suivi et ajouté au `.gitignore` le 2026-11-13 (décision d'Hugo).
 - [x] Créer les skills projet (§8) : `.claude/skills/`.
 - [x] Supprimer le code mort (84 fichiers, 14 500 lignes) et 24 dépendances inutiles.
 
