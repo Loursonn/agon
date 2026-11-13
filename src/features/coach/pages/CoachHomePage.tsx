@@ -294,7 +294,7 @@ export default function CoachHomePage() {
                 {wellnessInjuries.map((a, i) => (
                   <div
                     key={`${a.athleteId}_${a.day}`}
-                    onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?detail=wellness`)}
+                    onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?vue=wellness`)}
                     className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
                     style={{
                       borderBottom: i < wellnessInjuries.length - 1
@@ -358,7 +358,7 @@ export default function CoachHomePage() {
                   return (
                     <div
                       key={a.athleteId}
-                      onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?detail=wellness`)}
+                      onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?vue=wellness`)}
                       className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
                       style={{
                         borderBottom: i < wellnessAlerts.length - 1

@@ -266,7 +266,7 @@ function AppRoutes() {
               <Route path="review"        element={<Page><CoachAthleteReviewPage /></Page>} />
               <Route path="retours"       element={<Page><PhoneOr phone={<CoachPhoneRetours />} desktop={<RetoursPage />} /></Page>} />
               {/* Téléphone : onglet Wellness à part (ordinateur : dans Retours) */}
-              <Route path="wellness"      element={<Page><PhoneOr phone={<CoachPhoneWellness />} desktop={<Navigate to="../retours?detail=wellness" replace />} /></Page>} />
+              <Route path="wellness"      element={<Page><PhoneOr phone={<CoachPhoneWellness />} desktop={<Navigate to="../retours?vue=wellness" replace />} /></Page>} />
               {/* Legacy : Tests vit maintenant dans Profil athlète → Suivi Testing */}
               <Route path="tests"         element={<Page><PhoneOr phone={<CoachPhoneTests />} desktop={<Navigate to="../profil-sportif?view=testing" replace />} /></Page>} />
               <Route path="sante"         element={<Page><PhoneOr phone={<CoachPhoneSante />} desktop={<Navigate to="../donnees" replace />} /></Page>} />

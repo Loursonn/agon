@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-13-wellness-coach",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retours : un onglet Wellness complet",
+    summary: "Dans les Retours d'un athlète, l'onglet Wellness résume la forme du jour en une page, puis détaille ce qui l'explique.",
+    sections: [
+      {
+        title: "Vue d'ensemble",
+        points: [
+          "Le feu du matin avec sa phrase, puis quatre tuiles : VFC de nuit, FC de repos, ressenti sur 7 jours et courbatures.",
+          "« Ce matin » : les réponses du jour (récupération, sommeil, sérénité, énergie, fraîcheur, envie, douleur, malade).",
+        ],
+      },
+      {
+        title: "Détails",
+        points: [
+          "Les critères du feu cochés un par un, et ce qu'il manque pour passer au rouge.",
+          "Les courbes de VFC et de FC de repos avec la zone habituelle de l'athlète.",
+          "Une grille des 6 questions jour par jour, avec les jours sous l'habitude entourés.",
+          "Les alertes, les courbatures après chaque séance et la carte des zones sur 7 jours.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-13-import-fichiers-caches-mac",
     date: "2026-11-13",
     kind: "fix",
