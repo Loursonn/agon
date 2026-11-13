@@ -1,4 +1,10 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "dev": false,
+      "claude/*": false
+    }
+  },
   "headers": [
     {
       "source": "/version.json",
