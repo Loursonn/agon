@@ -2342,4 +2342,11 @@ et son README.
   staff ; la reprise de compte l'exigeait déjà). Le réglage Supabase (Auth › Email › Minimum password length, encore
   à 6) passe à 8 une fois `dev` en production, pour que l'ancien client ne bute pas sur une erreur serveur.
 - **AIPD (H9)** : `docs/juridique/AIPD.md` validée par Hugo le 13/11/2026.
+- **Téléphone (H6)** : numéro de l'éditeur et de Vercel ajoutés aux mentions légales (`src/lib/legal.ts`).
+- **Photos test-media (H5)** : Hugo prévient lui-même les 3 athlètes concernés (texte dans `REGISTRE_VIOLATIONS.md`).
+- **Sauvegardes (H8)** : offre gratuite gardée ; copie de la base chaque nuit par GitHub Actions (`backup.yml`,
+  `supabase db dump` en lecture seule), chiffrée AES-256 (gpg, phrase connue d'Hugo seul), déposée en « release »
+  dans un dépôt **privé** séparé (`Loursonn/agon-backups`) car le dépôt du code est public ; 30 jours gardés. Les
+  fichiers Storage ne sont pas copiés. GitHub ajouté aux sous-traitants (données chiffrées, sans la clé). Le
+  déclenchement planifié ne part que de `main` : actif après la mise en prod et la création des secrets.
 

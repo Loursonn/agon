@@ -1,0 +1,91 @@
+name: Sauvegarde quotidienne de la base (H8)
+
+# Copie chiffrée de la base de prod chaque nuit, gardée 30 jours, dans un dépôt PRIVÉ séparé
+# (ce dépôt-ci est public : rien n'y est stocké). Lecture seule sur la prod (pg_dump).
+# Les fichiers Storage (photos) ne sont pas copiés, seulement la base.
+# Décision : docs/DECISIONS.md, 2026-11-13 « Sauvegardes ».
+#
+# Secrets à créer (Settings › Secrets and variables › Actions) :
+#   SUPABASE_DB_URL     chaîne « Session pooler » de Supabase (Connect), mot de passe compris
+#   BACKUP_PASSPHRASE   phrase de chiffrement longue et aléatoire, gardée aussi dans le gestionnaire de mots de passe
+#   BACKUP_REPO_TOKEN   jeton GitHub « fine-grained » limité au dépôt privé, droit Contents: Read and write
+# Variable (facultative) : BACKUP_REPO, par défaut Loursonn/agon-backups.
+#
+# Restaurer : gh release download <tag> -R Loursonn/agon-backups, puis
+#   gpg --decrypt agon-*.tar.gz.gpg | tar xz   (demande la phrase), puis psql roles.sql, schema.sql, data.sql.
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # 3 h 17 / 4 h 17 heure de Paris, heure creuse pour le petit serveur
+  workflow_dispatch:
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      GH_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+      BACKUP_REPO: ${{ vars.BACKUP_REPO || 'Loursonn/agon-backups' }}
+    steps:
+      - name: Secrets présents ?
+        id: ready
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ] || [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Sauvegarde non configurée (secrets manquants) : rien n'est fait."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          version: 2.95.4
+
+      - name: Copier la base (lecture seule)
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/dump" && cd "$RUNNER_TEMP/dump"
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f data.sql --use-copy --data-only
+          ls -la
+
+      - name: Chiffrer
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          cd "$RUNNER_TEMP"
+          NAME="agon-$(date -u +%Y-%m-%d)"
+          tar czf - -C dump . | gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase-fd 3 -o "$NAME.tar.gz.gpg" 3<<<"$BACKUP_PASSPHRASE"
+          rm -rf dump
+          echo "NAME=$NAME" >> "$GITHUB_ENV"
+          ls -la "$NAME.tar.gz.gpg"
+
+      - name: Déposer dans le dépôt privé
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          cd "$RUNNER_TEMP"
+          gh release create "$NAME" "$NAME.tar.gz.gpg" -R "$BACKUP_REPO" \
+            --title "$NAME" --notes "Copie chiffrée de la base Agon du $(date -u +%d/%m/%Y)." \
+            || gh release upload "$NAME" "$NAME.tar.gz.gpg" -R "$BACKUP_REPO" --clobber
+
+      - name: Supprimer les copies de plus de 30 jours
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          LIMIT=$(date -u -d '30 days ago' +%Y-%m-%d)
+          gh release list -R "$BACKUP_REPO" --limit 200 --json tagName -q '.[].tagName' | while read -r tag; do
+            d="${tag#agon-}"
+            if [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && "$d" < "$LIMIT" ]]; then
+              gh release delete "$tag" -R "$BACKUP_REPO" --yes --cleanup-tag
+            fi
+          done

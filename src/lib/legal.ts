@@ -91,6 +91,8 @@ export const COMPANY = {
   siren: "940 221 187",
   /** Adresse du siège — obligatoire en mentions légales. */
   address: "36 Chemin de Charlemagne, 33133 Galgon, France",
+  /** Téléphone de l'éditeur — obligatoire en mentions légales (art. 6 III LCEN). */
+  phone: "06 68 20 33 05",
   /** Email de contact pour l'exercice des droits RGPD. */
   contactEmail: "prep.hugoo@gmail.com",
   /** Site web public — champ obligatoire du formulaire Garmin. */
@@ -112,6 +114,8 @@ export const LEGAL_ROUTES = {
 export const HOSTING = {
   name: "Vercel Inc.",
   address: "440 N Barranca Avenue #4133, Covina, CA 91723, États-Unis",
+  /** Téléphone de l'hébergeur — exigé par l'art. 6 III LCEN. */
+  phone: "+1 559 288 7060",
   website: "https://vercel.com",
 } as const;
 
@@ -167,6 +171,15 @@ export const SUBPROCESSORS: Subprocessor[] = [
     transferMechanism: "Data Privacy Framework (Vercel est certifié) et accord de traitement Vercel",
     role: "subprocessor",
     privacyUrl: "https://vercel.com/legal/privacy-policy",
+  },
+  {
+    name: "GitHub Inc.",
+    purpose:
+      "Stockage des sauvegardes de la base, chiffrées avant envoi : GitHub ne détient pas la clé et ne peut pas les lire. Gardées 30 jours.",
+    location: "États-Unis",
+    transferMechanism: "Data Privacy Framework (GitHub, filiale de Microsoft, est couvert) ; données chiffrées de bout en bout",
+    role: "subprocessor",
+    privacyUrl: "https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement",
   },
   {
     name: "Google Ireland Ltd. (Gemini API)",

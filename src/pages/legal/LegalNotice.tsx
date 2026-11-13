@@ -44,6 +44,12 @@ export default function LegalNotice() {
               </a>
             </>,
             <>
+              <strong>Téléphone :</strong>{" "}
+              <a href={`tel:${COMPANY.phone.replace(/\s/g, "")}`} style={{ color: ACCENT }}>
+                {COMPANY.phone}
+              </a>
+            </>,
+            <>
               <strong>TVA :</strong> {COMPANY.vat}
             </>,
             <>
@@ -61,6 +67,7 @@ export default function LegalNotice() {
               <strong>{HOSTING.name}</strong>
             </>,
             <>{HOSTING.address}</>,
+            <>Téléphone : {HOSTING.phone}</>,
             <>
               <a href={HOSTING.website} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT }}>
                 {HOSTING.website}
