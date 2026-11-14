@@ -5,7 +5,7 @@
  *
  * Calcul local et pur. Les mesures de montre (Garmin, COROS…) entrent ici
  * brutes — VFC de nuit, FC de repos, durée de sommeil — et ce module n'est
- * appelé par aucune fonction d'IA : rien de ce qu'il lit ne part vers Gemini.
+ * appelé par aucune fonction d'IA : rien de ce qu'il lit ne part vers un modèle d'IA.
  * Jamais les scores de marque (Body Battery, readiness, sommeil…).
  *
  * Une seule marque de montre par athlète : la plus récente. Les nuits d'une

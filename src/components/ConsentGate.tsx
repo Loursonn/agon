@@ -148,7 +148,7 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
 
   const athlete = isAthleteRole(profile?.role);
   const askStaff = athlete && !hasDecided(consents, "staff_sharing");
-  // Accord IA réservé aux 18 ans et plus (conditions Gemini et Claude) : un
+  // Accord IA réservé aux 18 ans et plus (conditions de Claude) : un
   // athlète de 15 à 17 ans ne le voit ni à l'inscription ni en écran court.
   const aiOffered = canOfferAiConsent(profile?.birth_date);
   const askAi = athlete && aiOffered && !hasDecidedSince(consents, "ai_programming", AI_CONSENT_SINCE);
@@ -356,15 +356,15 @@ function AiProgrammingStep({ isUpdate }: { isUpdate: boolean }) {
       intro={
         isUpdate ? (
           <>
-            Le texte de l'accord sur l'intelligence artificielle a changé : en plus de Google
-            Gemini, il nomme maintenant l'assistant Claude (Anthropic) de ton coach. Ta réponse
+            Le texte de l'accord sur l'intelligence artificielle a changé : il nomme maintenant
+            Claude (Anthropic), utilisé par Agon et par l'assistant de ton coach. Ta réponse
             précédente portait sur l'ancien texte, la question t'est donc reposée.
           </>
         ) : (
           <>
-            Ton coach peut s'appuyer sur des outils d'intelligence artificielle, Google Gemini et
-            son assistant Claude (Anthropic), pour analyser tes données d'entraînement et préparer
-            son travail. Rien ne leur est transmis sans ton accord.
+            Agon et ton coach peuvent s'appuyer sur l'intelligence artificielle Claude
+            (Anthropic) pour analyser tes données d'entraînement et préparer son travail. Rien ne
+            lui est transmis sans ton accord.
           </>
         )
       }

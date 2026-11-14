@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-ia-claude",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Analyses IA de vos athlètes : nouveau moteur, données mieux protégées",
+    summary:
+      "Les phrases d'analyse que vos athlètes lisent dans « Mon profil » sont maintenant rédigées par Claude (Anthropic). Leurs données ne servent jamais à entraîner les modèles.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les analyses rédigées par l'IA s'appuient toujours sur les chiffres de l'athlète : poids, sommeil, fatigue, assiduité, records.",
+          "Les données envoyées ne servent pas à entraîner les modèles et sont effacées au bout de 30 jours au plus.",
+          "Rien ne change pour vos athlètes : ceux qui ont accepté l'IA gardent leurs analyses, les autres gardent leurs statistiques sans texte rédigé.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-onglets-fiche-athlete-ecran-moyen",
     date: "2026-11-14",
     kind: "fix",

@@ -127,7 +127,7 @@ export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
                   if (!row && p !== "ai_programming" && p !== "staff_sharing") return null;
                   if (p === "staff_sharing" && !isAthlete) return null;
                   // Moins de 18 ans : l'accord IA n'est pas proposé (conditions
-                  // Gemini et Claude). Un accord déjà donné reste retirable.
+                  // de Claude). Un accord déjà donné reste retirable.
                   if (p === "ai_programming" && !granted && !canOfferAiConsent(profile?.birth_date)) {
                     return (
                       <div key={p} className="text-[11px] leading-[1.45] text-agon-tx3">

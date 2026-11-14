@@ -1,5 +1,5 @@
 /**
- * Garde-fou IA — ce qui peut atteindre Gemini, et sous quelles conditions.
+ * Garde-fou IA — ce qui peut atteindre le modèle d'IA (Claude), et sous quelles conditions.
  *
  * Deux problèmes distincts, traités ici au même endroit parce qu'ils ont la
  * même conséquence si on les rate : du texte non prévu part chez un tiers.
@@ -178,4 +178,17 @@ export async function isSourceAiEligible(
   source: DataSource,
 ): Promise<boolean> {
   return (await aiEligibleSources(admin, athleteId)).includes(source);
+}
+
+/**
+ * Règle de `hasConsent` (`auth.ts`), sans base : accordé, et sous un texte de
+ * version `since` ou plus récent quand `since` est donné.
+ */
+export function consentCounts(
+  row: { granted?: boolean | null; doc_version?: string | null } | null | undefined,
+  since?: string,
+): boolean {
+  if (!row?.granted) return false;
+  if (!since) return true;
+  return typeof row.doc_version === "string" && row.doc_version >= since;
 }

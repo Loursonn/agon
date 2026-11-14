@@ -232,7 +232,7 @@ export default function PrivacyPolicy() {
               "Consentement explicite et spécifique, donné service par service (art. 9.2.a)",
             ],
             [
-              "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Google Gemini utilisée par Agon, ou via l'assistant Claude de votre coach",
+              "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Claude (Anthropic) utilisée par Agon, ou via l'assistant Claude de votre coach",
               "Historique d'entraînement, moyennes de bien-être (récupération, sommeil, stress, énergie), poids, objectifs, blessures déclarées ; pour l'assistant Claude, également vos compétitions, tests et les titres des événements de votre calendrier. Jamais les données Garmin ou COROS (voir 4.3)",
               "Consentement explicite (art. 9.2.a), proposé seulement à partir de 18 ans",
             ],
@@ -303,12 +303,12 @@ export default function PrivacyPolicy() {
           qui décide. Il ne supprime jamais ce que vous avez déjà réalisé ou renseigné.
         </P>
         <P>
-          Anthropic n'est pas notre prestataire : vos données passent par le compte personnel de
-          votre coach, et leur usage — notamment pour l'entraînement des modèles — dépend des
+          Pour cet assistant, Anthropic n'est pas notre prestataire (contrairement aux analyses
+          d'Agon, voir 4.3) : vos données passent par le compte personnel de votre coach, et leur usage — notamment pour l'entraînement des modèles — dépend des
           réglages de ce compte, que nous ne contrôlons pas. Chaque lecture est journalisée : sur
           simple demande, nous pouvons vous indiquer quand vos données ont été transmises à cet
           assistant. Un accord donné avant le 30 octobre 2026, sous un texte qui ne nommait que
-          Google Gemini, ne vaut pas pour cet assistant.
+          Google Gemini, ne vaut ni pour cet assistant ni pour les analyses d'Agon par Claude.
         </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>
@@ -364,17 +364,19 @@ export default function PrivacyPolicy() {
         />
         <P>
           Concernant l'intelligence artificielle : lorsqu'une analyse, une synthèse ou une
-          proposition de programme est demandée, les données nécessaires sont transmises à l'API
-          Google Gemini. Ces données{" "}
-          <strong>ne sont pas utilisées pour entraîner les modèles de Google</strong>, conformément
-          aux conditions de l'API payante. Aucune donnée issue d'un service tiers dont les
+          proposition de programme est demandée par Agon, les données nécessaires sont transmises à
+          l'API Claude d'Anthropic, notre sous-traitant. Ces données{" "}
+          <strong>ne sont pas utilisées pour entraîner les modèles d'Anthropic</strong>, conformément
+          à ses conditions commerciales, et ne sont conservées que 30 jours au plus. Le traitement
+          peut avoir lieu hors de l'Union européenne, encadré par les clauses contractuelles types
+          de l'accord de traitement d'Anthropic. Aucune donnée issue d'un service tiers dont les
           conditions l'interdisent n'est transmise à ce traitement, et aucune donnée d'un
           utilisateur de moins de 18 ans : l'accord « intelligence artificielle » ne lui est pas
           proposé.
         </P>
         <P>
-          <strong>Ne sont jamais transmis à une intelligence artificielle</strong>, ni à Gemini ni à
-          l'assistant de votre coach : les données de vos montres Garmin et COROS et leur copie
+          <strong>Ne sont jamais transmis à une intelligence artificielle</strong>, ni à l'API Claude
+          d'Agon ni à l'assistant de votre coach : les données de vos montres Garmin et COROS et leur copie
           intégrale, vos photos du corps, la douleur et la maladie déclarées le matin, votre bilan
           hebdomadaire, le feu du matin et la charge calculée.
         </P>

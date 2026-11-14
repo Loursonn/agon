@@ -36,7 +36,7 @@ Constats valables pour toutes les catégories :
 |---|---|---|---|
 | Supabase (UE) | Sous-traitant : base, auth, fichiers | Tout | Prestataire → **pas un partage** |
 | Vercel (US) | Sous-traitant : hébergement web | Adresse IP, requêtes (pas de données en base) | Prestataire → **pas un partage** |
-| Google Gemini (API payante) | Sous-traitant IA | Données d'entraînement et de forme **saisies dans Agon ou importées par fichier**. **Jamais de données Garmin ni COROS** (`data_source_policies.ai_allowed = false`, vues `ai_provider_*`). Seulement si l'athlète a donné l'accord IA. | Prestataire → **pas un partage** (pas d'entraînement des modèles) |
+| Anthropic (API Claude, depuis le 14/11/2026) | Sous-traitant IA | Données d'entraînement et de forme **saisies dans Agon ou importées par fichier**. **Jamais de données Garmin ni COROS** (`data_source_policies.ai_allowed = false`, vues `ai_provider_*`). Seulement si l'athlète a donné l'accord IA. | Prestataire → **pas un partage** (pas d'entraînement des modèles) |
 | Garmin, COROS | Responsables indépendants | Ils **envoient** des données (sur connexion volontaire). Agon leur envoie : jetons, révocation, séances planifiées (`provider_workout_pushes`) | Source de collecte. L'envoi de séances vers Garmin = action demandée par l'utilisateur → pas un partage |
 | Anthropic (Claude, via le compte du coach) | **Ni prestataire ni choisi par Agon** : clé API générée par le coach (`coach-api`) | Prénom, séances, charges, bien-être, poids, blessures (zones, dates), compétitions, tests, données de montre autorisées, titres d'événements de calendrier. Seulement si l'athlète a donné l'accord IA. | **Probablement un partage** (voir §5, point 1) |
 | Staff et co-coach | Utilisateurs de l'app | Domaines ouverts par le coach, avec l'accord staff de l'athlète | Partage entre utilisateurs de l'app → pas un partage au sens des stores |
@@ -58,7 +58,7 @@ Légende : **Obl.** = obligatoire pour utiliser l'app ; **Fac.** = facultatif.
 
 ### 2.2 Santé et forme (données sensibles, art. 9 RGPD)
 
-| Donnée | Où | Obl./Fac. | Usage | Gemini | Anthropic |
+| Donnée | Où | Obl./Fac. | Usage | API Claude d'Agon | Assistant du coach |
 |---|---|---|---|---|---|
 | Séances, charges, séries, RPE/RIR, records | `workout_logs`, `set_logs`, `exercise_pr_logs`, `workout_rpe`, `energy_*`, `performance_logs` | Fac.* | Fonctionnement, suivi coach | Oui (agrégats) | Oui |
 | Bien-être (sommeil, fatigue, stress, courbatures) | `app_data` `asp:*`, `wellness_entries` | Fac. | Suivi coach, IA | Oui | Oui |
@@ -76,7 +76,7 @@ Légende : **Obl.** = obligatoire pour utiliser l'app ; **Fac.** = facultatif.
 Source : connexion volontaire Garmin ou COROS, ou import manuel de fichiers (FIT, TCX, GPX, archive
 Strava / Garmin). Toujours **facultatif**.
 
-| Donnée | Où | Gemini | Anthropic |
+| Donnée | Où | API Claude d'Agon | Assistant du coach |
 |---|---|---|---|
 | Activités : sport, durée, distance, allure, dénivelé, calories, tours, séries | `provider_activities`, `activity_laps`, `activity_sets`, `activity_zone_summaries` | Fichiers importés seulement | Fichiers importés seulement (vues `ai_provider_*`) |
 | Séries temporelles : FC, vitesse, cadence, puissance, altitude, température, dynamique de course | `activity_streams` | Non | Non (`coach-api` ne lit que les vues `ai_provider_activities` / `ai_provider_dailies`) |
@@ -190,7 +190,7 @@ lus dans l'agenda du téléphone), Navigation Web, Fichiers audio, E-mails, SMS,
 approximative, Identifiants de l'appareil, Journaux de plantage, Diagnostics.
 
 Remarques Google :
-- Les envois à Supabase, Vercel et Gemini sont des **prestataires** : Google ne les compte pas
+- Les envois à Supabase, Vercel et à l'API Claude (Anthropic) sont des **prestataires** : Google ne les compte pas
   comme partage.
 - Google exige aussi la **déclaration « Health apps »** (Contenu de l'appli → Applications de
   santé) : cocher « Suivi de l'activité et de la forme » et « Gestion de la santé » si le suivi
@@ -216,7 +216,7 @@ Remarques Google :
    (`profiles.client_build`) : absents de §2.4 « Données techniques ».
 6. **Tests, HYROX, compétitions, habitudes, événements de vie** : utilisés (et envoyés à
    l'assistant du coach selon §4.1) mais absents de la liste §2.2.
-7. **Vérifié, pas d'écart** : la nutrition ne part pas chez Gemini ; l'assistant du coach
+7. **Vérifié, pas d'écart** : la nutrition ne part pas chez l'IA d'Agon ; l'assistant du coach
    (`coach-api`) ne lit que les vues `ai_provider_*` (pas de Garmin, pas de COROS, pas de séries
    seconde par seconde ni de GPS). La politique pourrait le dire plus précisément que « données de
    montre autorisées ».

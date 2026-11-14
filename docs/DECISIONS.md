@@ -2464,3 +2464,24 @@ et son README.
   relu au chargement et quand l'app revient au premier plan ; l'utilisateur voit son propre « J'aime » tout de suite.
 - Les tâches cron ne sont pas en cause (toutes les 10-15 min au plus). Si la base resature, la piste suivante est
   la taille de la machine (offre payante), à trancher par Hugo.
+
+## 2026-11-14 — L'IA d'Agon passe de Gemini à Claude (API Anthropic)
+
+- La clé Gemini était sur le niveau gratuit de Google AI Studio : quotas limités et données réutilisables par
+  Google. Hugo choisit l'API Claude (Anthropic), payée à l'usage sur la console Anthropic. L'abonnement Claude Max
+  d'Hugo ne couvre pas l'usage API d'une app : facturation séparée.
+- Seule `athlete-insights` (phrases de synthèse de « Mon profil ») appelait encore l'IA. Elle utilise maintenant
+  `claude-sonnet-5-5` (SDK `@anthropic-ai/sdk@1.3.0`), effort bas, sorties structurées, repli automatique sur un
+  autre modèle Claude en cas de refus. Ordre de grandeur : 1 à 2 centimes par synthèse, une par athlète et par
+  jour au plus. Secret `ANTHROPIC_API_KEY` dans Supabase.
+- `ai-program` n'a plus d'appelant depuis la refonte #131 (ni sur `main`, ni sur `dev`) : laissée sur Gemini, à
+  retirer de la prod avec l'accord d'Hugo.
+- Côté serveur, l'accord IA ne compte que s'il a été donné sous le texte du 30/10/2026 ou plus récent
+  (`hasConsent(…, AI_ASSISTANT_SINCE)`). Ce texte nomme déjà Anthropic (Claude) : **décision d'Hugo, on garde les
+  accords donnés depuis**, sans redemander. Le cadre devient plus protecteur : Anthropic est sous-traitant, pas
+  d'entraînement sur les données, 30 jours de conservation au plus.
+- Pas d'hébergement « Union européenne seulement » sur l'API Anthropic (options : mondial ou États-Unis) :
+  transfert encadré par les clauses contractuelles types de l'accord de traitement d'Anthropic. Textes mis à jour :
+  accord IA, politique de confidentialité, liste des sous-traitants (`LEGAL_VERSION` 2026-11-14, sans
+  re-sollicitation), registre, AIPD, fiche stores.
+- Inchangé : rien des montres Garmin et COROS ne part vers l'IA ; accord IA réservé aux 18 ans et plus.

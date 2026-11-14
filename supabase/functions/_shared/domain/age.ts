@@ -69,10 +69,10 @@ export function birthDateError(birthDate: unknown, today: string, min: number = 
 /**
  * Âge minimum pour l'accord « intelligence artificielle » (`ai_programming`).
  *
- * Les conditions de l'API Gemini (« Gemini API Additional Terms of Service »)
- * interdisent de l'utiliser pour un service destiné aux moins de 18 ans ou
- * susceptible d'être utilisé par eux, et les conditions grand public de Claude
- * (assistant du coach) exigent aussi 18 ans. Agon accepte les 15-17 ans : on ne
+ * Choix d'origine : les conditions de l'API Gemini (IA d'Agon jusqu'au
+ * 14/11/2026) interdisaient les moins de 18 ans, et les conditions grand public
+ * de Claude (assistant du coach) exigent aussi 18 ans. Gardé avec l'API Claude :
+ * l'assistant du coach reçoit les mêmes données sous le même accord. Agon accepte les 15-17 ans : on ne
  * leur propose donc pas l'accord IA, et la base enregistre en refus un accord
  * IA donné avant 18 ans (trigger `ai_consent_adults_only`, migration
  * 20261113220000). Revue juridique : `docs/juridique/REVUE_2026-11.md`.
