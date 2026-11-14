@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { FieldType, FieldSchema, SchemaElement } from "@/types/energy";
 import { FIELD_BACKGROUNDS, FIELD_DISTANCE_LABELS, SCHEMA_COLORS, renderSchemaElementsSVG } from "@/lib/energy/renderSchema";
 import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,10 +32,9 @@ const TOOLS: { value: ToolType; label: string }[] = [
   { value: "select", label: "⬚ Sélection" },
 ];
 
-const S = {
-  bg: C.bg, card: C.bg, card2: H.carte,
-  border: H.anthracite, txt: H.blancCasse, muted: H.grisClair, accent: H.miel,
-} as const;
+/** Boutons secondaires de l'éditeur (anciens gris neutres → charte). */
+const GHOST_BTN = "cursor-pointer rounded border border-agon-brd-l bg-transparent px-3 py-2 text-[12px] font-semibold";
+const ACTION_BTN = "cursor-pointer rounded border border-agon-brd-l bg-transparent px-3.5 py-2.5 text-[13px] font-semibold text-agon-tx3";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -391,24 +391,17 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[95vw] w-full sm:max-w-[560px] p-0 border-0 bg-transparent"
-        style={{ borderRadius: 6 }}
+        className="max-w-[95vw] w-full sm:max-w-[560px] p-0 border-0 bg-transparent rounded-[6px] sm:rounded-[6px]"
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">Éditeur de schéma</DialogTitle>
-        <div style={{
-          background: S.bg, borderRadius: 6, padding: "16px",
-          border: `1px solid ${S.border}`, maxHeight: "90vh", overflowY: "auto",
-        }}>
+        <div className="max-h-[90vh] overflow-y-auto rounded-[6px] border border-agon-brd-l bg-agon-bg p-4">
           {/* ── Toolbar ── */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+          <div className="mb-2.5 flex flex-wrap gap-1.5">
             <select
               value={field}
               onChange={(e) => setField(e.target.value as FieldType)}
-              style={{
-                background: S.card, border: `1px solid ${S.border}`, color: S.txt,
-                fontSize: 12, padding: "8px 10px", borderRadius: 4, outline: "none",
-              }}
+              className="rounded border border-agon-brd-l bg-agon-bg px-2.5 py-2 text-[12px] text-agon-tx outline-none"
             >
               {FIELD_OPTIONS.map(f => (
                 <option key={f.value} value={f.value}>{f.label}</option>
@@ -418,13 +411,12 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               <button
                 key={t.value}
                 onClick={() => setTool(t.value)}
-                style={{
-                  background: tool === t.value ? "rgba(245,166,35,0.1)" : S.card,
-                  border: `1px solid ${tool === t.value ? S.accent : S.border}`,
-                  color: tool === t.value ? S.accent : S.muted,
-                  fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                  borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-                }}
+                className={cn(
+                  "cursor-pointer rounded border px-3 py-2 text-[12px] font-semibold",
+                  tool === t.value
+                    ? "border-agon-alerte bg-agon-alerte/10 text-agon-alerte"
+                    : "border-agon-brd-l bg-agon-bg text-agon-tx3",
+                )}
               >
                 {t.label}
               </button>
@@ -432,64 +424,53 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
           </div>
 
           {/* ── Color palette ── */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
-            <span style={{ fontSize: 11, color: S.muted, fontWeight: 600 }}>Allure :</span>
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-agon-tx3">Allure :</span>
             {SCHEMA_COLORS.map(({ color: c, label }) => (
               <div
                 key={c}
                 title={label}
                 onClick={() => setColor(c)}
-                style={{
-                  width: 26, height: 26, borderRadius: 99, background: c,
-                  border: color === c ? `2px solid ${C.tx}` : "2px solid transparent",
-                  cursor: "pointer",
-                }}
+                className={cn("h-[26px] w-[26px] cursor-pointer rounded-[99px] border-2", color === c ? "border-agon-tx" : "border-transparent")}
+                // Couleur d'allure : donnée du schéma.
+                style={{ background: c }}
               />
             ))}
           </div>
 
           {/* ── Distance toggle ── */}
           {field !== "vide" && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" }}>
+            <label className="mb-2.5 flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
                 checked={showDist}
                 onChange={(e) => setShowDist(e.target.checked)}
-                style={{ accentColor: S.accent, width: 16, height: 16, cursor: "pointer" }}
+                className="h-4 w-4 cursor-pointer accent-agon-alerte"
               />
-              <span style={{ fontSize: 12, color: S.muted, fontWeight: 600 }}>Afficher les distances</span>
+              <span className="text-[12px] font-semibold text-agon-tx3">Afficher les distances</span>
             </label>
           )}
 
           {/* ── SVG Canvas ── */}
-          <div style={{ position: "relative", borderRadius: 6, overflow: "hidden", border: `1px solid ${S.border}` }}>
+          <div className="relative overflow-hidden rounded-[6px] border border-agon-brd-l">
             {/* Text bubble */}
             {bubble && (
-              <div style={{
-                position: "absolute", left: bubble.x, top: bubble.y,
-                display: "flex", gap: 6,
-                background: S.card, border: `1px solid ${S.accent}`,
-                borderRadius: 4, padding: 6, zIndex: 10,
-              }}>
+              <div
+                className="absolute z-10 flex gap-1.5 rounded border border-agon-alerte bg-agon-bg p-1.5"
+                // Position du clic (valeur calculée).
+                style={{ left: bubble.x, top: bubble.y }}
+              >
                 <input
                   ref={bubbleInputRef}
                   value={bubble.value}
                   onChange={(e) => setBubble(prev => prev ? { ...prev, value: e.target.value } : null)}
                   onKeyDown={(e) => { if (e.key === "Enter") confirmText(); }}
                   placeholder="40m @ sprint"
-                  style={{
-                    width: 150, background: S.card2, border: `1px solid ${S.border}`,
-                    borderRadius: 7, color: S.txt, padding: "6px 8px", fontSize: 13,
-                    outline: "none", fontFamily: "inherit",
-                  }}
+                  className="w-[150px] rounded-[7px] border border-agon-brd-l bg-agon-s2 px-2 py-1.5 text-[13px] text-agon-tx outline-none"
                 />
                 <button
                   onClick={confirmText}
-                  style={{
-                    background: S.accent, border: "none", borderRadius: 7,
-                    color: H.encreOr, fontWeight: 700, padding: "0 10px",
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className="cursor-pointer rounded-[7px] bg-agon-alerte px-2.5 font-bold text-agon-ink"
                 >
                   ✓
                 </button>
@@ -499,10 +480,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
             <svg
               ref={svgRef}
               viewBox="0 0 500 320"
-              style={{
-                width: "100%", display: "block", touchAction: "none",
-                cursor: tool === "select" ? "default" : "crosshair",
-              }}
+              className={cn("block w-full touch-none", tool === "select" ? "cursor-default" : "cursor-crosshair")}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -514,7 +492,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
                 <g dangerouslySetInnerHTML={{ __html: FIELD_DISTANCE_LABELS[field] }} />
               )}
               {/* Elements */}
-              <g style={{ pointerEvents: tool === "select" ? "visiblePainted" : "none" }}>
+              <g className={tool === "select" ? "[pointer-events:visiblePainted]" : "pointer-events-none"}>
                 {renderElements()}
               </g>
               {/* Drawing in progress */}
@@ -523,7 +501,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
           </div>
 
           {/* ── Hint ── */}
-          <p style={{ fontSize: 11, color: S.muted, marginTop: 6 }}>
+          <p className="mt-1.5 text-[11px] text-agon-tx3">
             Droite/Flèche : chaque clic ajoute un angle · double-clic ou ✓ pour terminer.
           </p>
 
@@ -531,12 +509,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
           {isDrawing && (
             <button
               onClick={finishPoly}
-              style={{
-                marginTop: 6, background: "none",
-                border: `1px solid ${C.g}`, color: C.g,
-                fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="mt-1.5 cursor-pointer rounded border border-agon-succes bg-transparent px-3 py-2 text-[12px] font-semibold text-agon-succes"
             >
               ✓ Terminer le tracé
             </button>
@@ -544,35 +517,23 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
 
           {/* ── Selection bar ── */}
           {selIdx !== null && (
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div className="mt-2 flex gap-2">
               <button
                 onClick={deleteSel}
-                style={{
-                  background: "none", border: `1px solid ${H.rougeDoux}`, color: H.rougeDoux,
-                  fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                  borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-                }}
+                className="cursor-pointer rounded border border-agon-erreur bg-transparent px-3 py-2 text-[12px] font-semibold text-agon-erreur"
               >
                 Supprimer
               </button>
               <button
                 onClick={recolorSel}
-                style={{
-                  background: "none", border: `1px solid ${S.border}`, color: S.muted,
-                  fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                  borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-                }}
+                className={cn(GHOST_BTN, "text-agon-tx3")}
               >
                 Couleur active
               </button>
               {selEl?.type === "text" && (
                 <button
                   onClick={editSelText}
-                  style={{
-                    background: "none", border: `1px solid ${S.border}`, color: S.muted,
-                    fontSize: 12, fontWeight: 600, padding: "8px 12px",
-                    borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className={cn(GHOST_BTN, "text-agon-tx3")}
                 >
                   Modifier texte
                 </button>
@@ -581,47 +542,32 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
           )}
 
           {/* ── Legend ── */}
-          <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
+          <div className="mt-2 flex flex-wrap gap-3.5">
             {SCHEMA_COLORS.map(({ color: c, label }) => (
-              <span key={c} style={{ fontSize: 11, color: S.muted, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 14, height: 3, borderRadius: 2, background: c, display: "inline-block" }} />
+              <span key={c} className="flex items-center gap-[5px] text-[11px] text-agon-tx3">
+                <span className="inline-block h-[3px] w-3.5 rounded-[2px]" style={{ background: c }} />
                 {label}
               </span>
             ))}
           </div>
 
           {/* ── Actions ── */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "auto auto 1fr",
-            gap: 8, marginTop: 12,
-          }}>
+          <div className="mt-3 grid grid-cols-[auto_auto_1fr] gap-2">
             <button
               onClick={undo}
-              style={{
-                background: "none", border: `1px solid ${S.border}`, color: S.muted,
-                borderRadius: 4, padding: "10px 14px", fontSize: 13, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+              className={ACTION_BTN}
             >
               ↶ Annuler
             </button>
             <button
               onClick={clearAll}
-              style={{
-                background: "none", border: `1px solid ${S.border}`, color: S.muted,
-                borderRadius: 4, padding: "10px 14px", fontSize: 13, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+              className={ACTION_BTN}
             >
               Effacer
             </button>
             <button
               onClick={handleSave}
-              style={{
-                background: S.accent, color: H.encreOr, border: "none",
-                borderRadius: 4, padding: "10px", fontSize: 14, fontWeight: 700,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="cursor-pointer rounded bg-agon-alerte p-2.5 text-[14px] font-bold text-agon-ink"
             >
               Enregistrer le schéma
             </button>
