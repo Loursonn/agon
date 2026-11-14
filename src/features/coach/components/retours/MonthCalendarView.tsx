@@ -5,12 +5,17 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CheckCircle2, Trophy, FlaskConical, Zap, Footprints } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { wellnessView } from "@/lib/wellness";
 import { DayDetailPanel } from "./DayDetailPanel";
 import type { DailyData, WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
-const FREE_COLOR = H.sarcelle;
+/** Activité libre : patine de la charte (ancienne sarcelle). */
+const FREE_COLOR = C.pat;
+const ROW = "flex items-center gap-[3px]";
+const LEGEND = "flex items-center gap-1";
+const LEGEND_TEXT = "text-[9px] text-agon-tx3";
 
 interface MonthCalendarViewProps {
   month: Date;
@@ -61,19 +66,16 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
     <>
       <div>
         {/* Day-of-week header */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+        <div className="mb-1 grid grid-cols-7 gap-0.5">
           {DAY_LABELS.map((label) => (
-            <div key={label} style={{
-              textAlign: "center", fontSize: 10, fontWeight: 700,
-              color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", padding: "4px 0",
-            }}>
+            <div key={label} className="py-1 text-center text-[10px] font-bold uppercase tracking-[0.4px] text-agon-tx3">
               {label}
             </div>
           ))}
         </div>
 
         {/* Day grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+        <div className="grid grid-cols-7 gap-0.5">
           {allDays.map((day) => {
             const dateStr  = format(day, "yyyy-MM-dd");
             const inMonth  = isSameMonth(day, month);
@@ -89,26 +91,19 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
               <div
                 key={dateStr}
                 onClick={clickable ? () => handleDayClick(dateStr, wellness) : undefined}
-                style={{
-                  minHeight: 80,
-                  padding: "6px 7px",
-                  borderRadius: 4,
-                  border: today ? "2px solid " + C.ac : "1px solid " + C.brd,
-                  background: inMonth ? C.s1 : C.bg,
-                  opacity: inMonth ? 1 : 0.4,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                  cursor: clickable ? "pointer" : "default",
-                  transition: "background 100ms",
-                }}
+                className={cn(
+                  "flex min-h-[80px] flex-col gap-1 rounded-[4px] px-[7px] py-1.5 [transition:background_100ms]",
+                  today ? "border-2 border-agon-accent" : "border border-agon-brd",
+                  inMonth ? "bg-agon-s1" : "bg-agon-bg opacity-40",
+                  clickable ? "cursor-pointer" : "cursor-default",
+                )}
               >
                 {/* Day number */}
-                <span style={{
-                  fontSize: 12, fontWeight: today ? 800 : 500,
-                  color: today ? C.ac : inMonth ? C.tx : C.tx3,
-                  lineHeight: 1,
-                }}>
+                <span className={cn(
+                  "text-[12px]",
+                  today ? "font-extrabold text-agon-accent" : inMonth ? "font-medium text-agon-tx" : "font-medium text-agon-tx3",
+                  "leading-none",
+                )}>
                   {format(day, "d")}
                 </span>
 
@@ -117,22 +112,19 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
                   // Score recalculé (domaine wellness) : « — » si la saisie est incomplète, jamais 0.
                   const { score, reco, injuryNote } = wellnessView(wellness);
                   return (
-                    <div style={{ display: "flex", alignItems: "center", gap: 3 }} title={injuryNote ? `Blessé / malade : ${injuryNote}` : undefined}>
-                      <div style={{
-                        width: 7, height: 7, borderRadius: "50%",
-                        background: reco.c, flexShrink: 0,
-                      }} />
-                      <span style={{ fontSize: 9, color: C.tx3 }}>{score ?? "—"}</span>
-                      {injuryNote && <span style={{ fontSize: 9, fontWeight: 800, color: C.r }}>✚</span>}
+                    <div className={ROW} title={injuryNote ? `Blessé / malade : ${injuryNote}` : undefined}>
+                      <div className="size-[7px] flex-none rounded-full" style={{ background: reco.c }} />
+                      <span className="text-[9px] text-agon-tx3">{score ?? "—"}</span>
+                      {injuryNote && <span className="text-[9px] font-extrabold text-agon-erreur">✚</span>}
                     </div>
                   );
                 })()}
 
                 {/* Workouts completed */}
                 {data && data.workouts_completed > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  <div className={ROW}>
                     <CheckCircle2 size={10} color={C.g} />
-                    <span style={{ fontSize: 9, color: C.g, fontWeight: 600 }}>
+                    <span className="text-[9px] font-semibold text-agon-succes">
                       {data.workouts_completed}
                     </span>
                   </div>
@@ -140,22 +132,22 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
 
                 {/* Energy sessions */}
                 {energyByDate[dateStr] > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  <div className={ROW}>
                     <Zap size={9} color={C.o} />
-                    <span style={{ fontSize: 9, color: C.o }}>{energyByDate[dateStr]}</span>
+                    <span className="text-[9px] text-agon-alerte">{energyByDate[dateStr]}</span>
                   </div>
                 )}
 
                 {/* Free activities */}
                 {dayFreeCount > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  <div className={ROW}>
                     <Footprints size={9} color={FREE_COLOR} />
-                    <span style={{ fontSize: 9, color: FREE_COLOR }}>{dayFreeCount}</span>
+                    <span className="text-[9px] text-agon-patine">{dayFreeCount}</span>
                   </div>
                 )}
 
                 {/* Competition / Test icons */}
-                <div style={{ display: "flex", gap: 4, marginTop: "auto" }}>
+                <div className="mt-auto flex gap-1">
                   {data?.has_competition && <Trophy size={10} color={C.y} />}
                   {data?.has_test && <FlaskConical size={10} color={C.b} />}
                 </div>
@@ -165,36 +157,36 @@ export function MonthCalendarView({ month, dailyData, energyByDate = {}, workout
         </div>
 
         {/* Legend */}
-        <div style={{ display: "flex", gap: 14, marginTop: 10, flexWrap: "wrap" }}>
+        <div className="mt-2.5 flex flex-wrap gap-3.5">
           {[
-            { color: C.g, label: "Forme ≥ 70" },
-            { color: C.o, label: "Forme 50-69" },
-            { color: C.r, label: "Forme < 50" },
-          ].map(({ color, label }) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />
-              <span style={{ fontSize: 9, color: C.tx3 }}>{label}</span>
+            { dot: "bg-agon-succes", label: "Forme ≥ 70" },
+            { dot: "bg-agon-alerte", label: "Forme 50-69" },
+            { dot: "bg-agon-erreur", label: "Forme < 50" },
+          ].map(({ dot, label }) => (
+            <div key={label} className={LEGEND}>
+              <div className={cn("size-[7px] rounded-full", dot)} />
+              <span className={LEGEND_TEXT}>{label}</span>
             </div>
           ))}
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className={LEGEND}>
             <CheckCircle2 size={9} color={C.g} />
-            <span style={{ fontSize: 9, color: C.tx3 }}>Séances muscu</span>
+            <span className={LEGEND_TEXT}>Séances muscu</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className={LEGEND}>
             <Zap size={9} color={C.o} />
-            <span style={{ fontSize: 9, color: C.tx3 }}>Énergie</span>
+            <span className={LEGEND_TEXT}>Énergie</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className={LEGEND}>
             <Footprints size={9} color={FREE_COLOR} />
-            <span style={{ fontSize: 9, color: C.tx3 }}>Activité libre</span>
+            <span className={LEGEND_TEXT}>Activité libre</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className={LEGEND}>
             <Trophy size={9} color={C.y} />
-            <span style={{ fontSize: 9, color: C.tx3 }}>Compétition</span>
+            <span className={LEGEND_TEXT}>Compétition</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className={LEGEND}>
             <FlaskConical size={9} color={C.b} />
-            <span style={{ fontSize: 9, color: C.tx3 }}>Test</span>
+            <span className={LEGEND_TEXT}>Test</span>
           </div>
         </div>
       </div>

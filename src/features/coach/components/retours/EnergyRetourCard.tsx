@@ -3,17 +3,28 @@ import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, ChevronDown, ChevronUp } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/energyLabels";
 import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import type { EnergySessionDetail, EnergyStepLog } from "@/features/shared/types/retours.types";
 
 // ── Kind labels / colors ──────────────────────────────────────────────────────
 
+/** Type de séance : couleur de l'icône (SVG) et pastille teintée 12,5 %. */
 const KIND_COLOR: Record<string, string> = {
-  vo2: C.ac, tempo: C.b, seuil: H.ambre,
-  footing: H.emeraude, fartlek: H.rougeVif, autre: H.gris, custom: H.gris,
+  vo2: C.ac, tempo: C.b, seuil: C.o,
+  footing: C.g, fartlek: C.r, autre: C.pierre, custom: C.pierre,
 };
+const KIND_TINT: Record<string, string> = {
+  vo2: "bg-agon-accent/[0.125] text-agon-accent", tempo: "bg-agon-info/[0.125] text-agon-info",
+  seuil: "bg-agon-alerte/[0.125] text-agon-alerte", footing: "bg-agon-succes/[0.125] text-agon-succes",
+  fartlek: "bg-agon-erreur/[0.125] text-agon-erreur",
+};
+const KIND_TINT_OTHER = "bg-agon-pierre/[0.125] text-agon-pierre";
+const STEP_DONE = "text-[10px] font-bold text-agon-succes";
+const STEP_PARTIAL = "text-[10px] font-bold text-agon-alerte";
+const SECTION_LABEL = "text-[9px] font-bold uppercase tracking-[0.4px] text-agon-tx3";
 const KIND_LABEL: Record<string, string> = {
   vo2: "VO₂max", tempo: "Tempo", seuil: "Seuil",
   footing: "Footing", fartlek: "Fartlek", autre: "Autre", custom: "Custom",
@@ -28,16 +39,16 @@ const KIND_LABELS: Record<string, string> = {
 // ── Status pill ───────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg: Record<string, { label: string; bg: string; color: string }> = {
-    completed: { label: "Complétée",   bg: "rgba(34,201,147,0.15)", color: C.g },
-    missed:    { label: "Manquée",     bg: "rgba(239,68,68,0.15)",  color: H.rougeVif },
-    skipped:   { label: "Passée",      bg: "rgba(107,114,128,0.2)", color: H.grisMoyen },
-    planned:   { label: "Planifiée",   bg: "rgba(59,141,240,0.15)", color: C.b },
-    in_progress: { label: "En cours",  bg: "rgba(245,158,11,0.15)", color: H.ambre },
+  const cfg: Record<string, { label: string; tone: string }> = {
+    completed: { label: "Complétée",   tone: "bg-agon-succes/15 text-agon-succes" },
+    missed:    { label: "Manquée",     tone: "bg-agon-erreur/15 text-agon-erreur" },
+    skipped:   { label: "Passée",      tone: "bg-agon-pierre/20 text-agon-pierre" },
+    planned:   { label: "Planifiée",   tone: "bg-agon-info/15 text-agon-info" },
+    in_progress: { label: "En cours",  tone: "bg-agon-alerte/15 text-agon-alerte" },
   };
   const s = cfg[status] ?? cfg["planned"];
   return (
-    <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: s.bg, color: s.color }}>
+    <span className={cn("rounded-[4px] px-[7px] py-0.5 text-[10px] font-semibold", s.tone)}>
       {s.label}
     </span>
   );
@@ -52,7 +63,7 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
   const hasLog = log !== null;
 
   if (step.type === "interval") {
-    const rc  = ROLE_COLOR[step.role as string] ?? H.gris;
+    const rc  = ROLE_COLOR[step.role as string] ?? C.pierre;
     const dur = step.duration?.kind === "time"
       ? formatS(step.duration.value ?? 0)
       : step.duration?.kind === "distance"
@@ -63,41 +74,38 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
     const tgt = step.target ? formatTarget(step.target) : null;
 
     return (
-      <div style={{
-        display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "8px 10px", borderRadius: 4,
-        background: entry?.status === "done" ? C.g + "10"
-          : entry?.status === "partial" ? `${H.ambre}10`
-          : "transparent",
-      }}>
+      <div className={cn(
+        "flex items-start gap-2.5 rounded-[4px] px-2.5 py-2",
+        entry?.status === "done" ? "bg-agon-succes/[0.063]" : entry?.status === "partial" ? "bg-agon-alerte/[0.063]" : "bg-transparent",
+      )}>
         {/* Role bar */}
-        <div style={{ width: 3, height: 32, borderRadius: 2, background: rc, flexShrink: 0, marginTop: 2 }} />
+        <div className="mt-0.5 h-8 w-[3px] flex-none rounded-[2px]" style={{ background: rc }} />
         {/* Step info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: rc }}>{ROLE_LABEL_FR[step.role as string] ?? step.role}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{dur}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold" style={{ color: rc }}>{ROLE_LABEL_FR[step.role as string] ?? step.role}</span>
+            <span className="text-[12px] font-bold text-agon-tx">{dur}</span>
             {tgt && tgt !== "Libre" && (
-              <span style={{ fontSize: 10, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tgt}</span>
+              <span className="truncate text-[10px] text-agon-tx3">{tgt}</span>
             )}
           </div>
           {entry?.status === "partial" && entry.comment && (
-            <div style={{ fontSize: 10, color: H.ambre, marginTop: 2, fontStyle: "italic" }}>
+            <div className="mt-0.5 text-[10px] italic text-agon-alerte">
               {entry.comment}
             </div>
           )}
         </div>
         {/* Status badge */}
         {hasLog && (
-          <div style={{ flexShrink: 0 }}>
+          <div className="flex-none">
             {entry?.status === "done" && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: C.g }}>✓ Fait</span>
+              <span className={STEP_DONE}>✓ Fait</span>
             )}
             {entry?.status === "partial" && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: H.ambre }}>~ Partiel</span>
+              <span className={STEP_PARTIAL}>~ Partiel</span>
             )}
             {!entry && (
-              <span style={{ fontSize: 10, color: C.tx3 }}>—</span>
+              <span className="text-[10px] text-agon-tx3">—</span>
             )}
           </div>
         )}
@@ -109,25 +117,23 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const childCount = (step.children as any[])?.length ?? 0;
   return (
-    <div style={{
-      padding: "7px 10px", borderRadius: 4,
-      background: entry?.status === "done" ? C.g + "10"
-        : entry?.status === "partial" ? `${H.ambre}10`
-        : "rgba(59,141,240,0.06)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: C.b }}>× {step.repeat}</span>
-        <span style={{ fontSize: 10, color: C.tx3 }}>{childCount} étape{childCount !== 1 ? "s" : ""}</span>
+    <div className={cn(
+      "rounded-[4px] px-2.5 py-[7px]",
+      entry?.status === "done" ? "bg-agon-succes/[0.063]" : entry?.status === "partial" ? "bg-agon-alerte/[0.063]" : "bg-agon-info/[0.06]",
+    )}>
+      <div className="flex items-center gap-2.5">
+        <span className="text-[11px] font-extrabold text-agon-info">× {step.repeat}</span>
+        <span className="text-[10px] text-agon-tx3">{childCount} étape{childCount !== 1 ? "s" : ""}</span>
         {hasLog && (
-          <div style={{ marginLeft: "auto", flexShrink: 0 }}>
-            {entry?.status === "done"    && <span style={{ fontSize: 10, fontWeight: 700, color: C.g }}>✓ Fait</span>}
-            {entry?.status === "partial" && <span style={{ fontSize: 10, fontWeight: 700, color: H.ambre }}>~ Partiel</span>}
-            {!entry                      && <span style={{ fontSize: 10, color: C.tx3 }}>—</span>}
+          <div className="ml-auto flex-none">
+            {entry?.status === "done"    && <span className={STEP_DONE}>✓ Fait</span>}
+            {entry?.status === "partial" && <span className={STEP_PARTIAL}>~ Partiel</span>}
+            {!entry                      && <span className="text-[10px] text-agon-tx3">—</span>}
           </div>
         )}
       </div>
       {entry?.status === "partial" && entry.comment && (
-        <div style={{ fontSize: 10, color: H.ambre, marginTop: 4, fontStyle: "italic" }}>
+        <div className="mt-1 text-[10px] italic text-agon-alerte">
           {entry.comment}
         </div>
       )}
@@ -135,8 +141,10 @@ function StepLogRow({ step, log, index }: { step: any; log: Record<string, Energ
   );
 }
 
-function rpeColor(v: number) { return v <= 4 ? C.g : v <= 7 ? C.o : C.r; }
-function rpeBg(v: number)    { return v <= 4 ? C.gS : v <= 7 ? C.oS : C.rS; }
+/** RPE : vert jusqu'à 4, orange jusqu'à 7, rouge au-delà (aplat doux). */
+function rpeTone(v: number) {
+  return v <= 4 ? "bg-agon-succes-doux text-agon-succes" : v <= 7 ? "bg-agon-alerte-doux text-agon-alerte" : "bg-agon-erreur-doux text-agon-erreur";
+}
 
 // ── Main card ─────────────────────────────────────────────────────────────────
 
@@ -146,7 +154,8 @@ interface EnergyRetourCardProps {
 
 export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const kc = KIND_COLOR[session.session_kind ?? ""] ?? H.gris;
+  const kc = KIND_COLOR[session.session_kind ?? ""] ?? C.pierre;
+  const kindTint = KIND_TINT[session.session_kind ?? ""] ?? KIND_TINT_OTHER;
 
   // Support both step_log (old) and block_logs (new)
   const hasBlockLogs = session.block_logs && Object.keys(session.block_logs).length > 0;
@@ -159,7 +168,9 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
   const doneCount  = blVals.filter((b) => b.done).length;
   const totalCount = blVals.length;
 
-  const statusColor = session.partial ? C.b : session.completed ? C.g : C.o;
+  const statusTone = session.partial
+    ? "bg-agon-info/[0.145] text-agon-info"
+    : session.completed ? "bg-agon-succes/[0.145] text-agon-succes" : "bg-agon-alerte/[0.145] text-agon-alerte";
   const statusLabel = session.partial
     ? `✓ Partielle ${doneCount}/${totalCount}`
     : session.completed ? "✓ Complétée" : "Non faite";
@@ -169,42 +180,36 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
     : [];
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
+    <div className="overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1">
       {/* Header (clickable) */}
       <div
         onClick={() => setExpanded(v => !v)}
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", cursor: "pointer" }}
+        className="flex cursor-pointer items-center justify-between px-3.5 py-2.5"
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1, flexWrap: "wrap" }}>
-          <div style={{ width: 28, height: 28, borderRadius: 4, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div className={cn("flex size-7 flex-none items-center justify-center rounded-[4px]", kindTint)}>
             <Zap size={12} color={kc} />
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span className="truncate text-[13px] font-bold text-agon-tx">
             {session.session_label}
           </span>
-          <span style={{
-            fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-            background: statusColor + "25", color: statusColor,
-          }}>
+          <span className={cn("rounded-[4px] px-[7px] py-0.5 text-[10px] font-semibold", statusTone)}>
             {statusLabel}
           </span>
           <WatchRunTag match={session.watch_run} />
           {session.rpe_score != null && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: rpeBg(session.rpe_score), color: rpeColor(session.rpe_score),
-            }}>
+            <span className={cn("rounded-[4px] px-[7px] py-0.5 text-[10px] font-bold", rpeTone(session.rpe_score))}>
               RPE {session.rpe_score}/10
             </span>
           )}
           {session.session_kind && (
-            <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: kc + "20", color: kc, flexShrink: 0 }}>
+            <span className={cn("flex-none rounded-[4px] px-[5px] py-px text-[9px] font-bold", kindTint)}>
               {KIND_LABELS[session.session_kind] ?? session.session_kind}
             </span>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 8 }}>
-          <span style={{ fontSize: 10, color: C.tx3 }}>
+        <div className="ml-2 flex flex-none items-center gap-2">
+          <span className="text-[10px] text-agon-tx3">
             {format(new Date(session.date + "T12:00:00"), "EEE d MMM", { locale: fr })}
           </span>
           {expanded ? <ChevronUp size={13} color={C.tx3} /> : <ChevronDown size={13} color={C.tx3} />}
@@ -213,31 +218,29 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
 
       {/* Expanded */}
       {expanded && (
-        <div style={{ borderTop: "1px solid " + C.brd, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5 border-t border-agon-brd px-3.5 py-3">
           {/* Meta row */}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div className="flex flex-wrap gap-3">
             {session.duration_min != null && (
-              <div style={{ fontSize: 11, color: C.tx2 }}>
-                Durée : <span style={{ fontWeight: 600, color: C.tx }}>{session.duration_min} min</span>
+              <div className="text-[11px] text-agon-tx2">
+                Durée : <span className="font-semibold text-agon-tx">{session.duration_min} min</span>
               </div>
             )}
             {session.distance_m != null && (
-              <div style={{ fontSize: 11, color: C.tx2 }}>
-                Distance : <span style={{ fontWeight: 600, color: C.tx }}>{(session.distance_m / 1000).toFixed(2)} km</span>
+              <div className="text-[11px] text-agon-tx2">
+                Distance : <span className="font-semibold text-agon-tx">{(session.distance_m / 1000).toFixed(2)} km</span>
               </div>
             )}
           </div>
 
           {/* Block completion summary (new system) */}
           {hasBlockLogs && (
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <div className="flex flex-wrap gap-1.5">
               {Object.entries(session.block_logs!).map(([id, b], i) => (
-                <span key={id} style={{
-                  fontSize: 10, padding: "2px 8px", borderRadius: 6,
-                  background: b.done ? C.g + "20" : C.s2,
-                  color: b.done ? C.g : C.tx3,
-                  display: "flex", alignItems: "center", gap: 4,
-                }}>
+                <span key={id} className={cn(
+                  "flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-[10px]",
+                  b.done ? "bg-agon-succes/[0.125] text-agon-succes" : "bg-agon-s2 text-agon-tx3",
+                )}>
                   {b.done && <Check size={9} />}
                   Bloc {i + 1}
                 </span>
@@ -249,8 +252,8 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
           {blockEntries.length > 0 && (
             <div>
               {blockEntries.map(([id, b], i) => (
-                <div key={id} style={{ fontSize: 11, color: C.tx2, marginBottom: 3 }}>
-                  <span style={{ color: C.tx3 }}>Bloc {i + 1} : </span>{(b as { note?: string }).note}
+                <div key={id} className="mb-[3px] text-[11px] text-agon-tx2">
+                  <span className="text-agon-tx3">Bloc {i + 1} : </span>{(b as { note?: string }).note}
                 </div>
               ))}
             </div>
@@ -258,9 +261,9 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
 
           {/* Note */}
           {session.note && (
-            <div style={{ background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Note</div>
-              <div style={{ fontSize: 12, color: C.tx2 }}>{session.note}</div>
+            <div className="rounded-[4px] bg-agon-s2 px-2.5 py-2">
+              <div className={cn(SECTION_LABEL, "mb-[3px]")}>Note</div>
+              <div className="text-[12px] text-agon-tx2">{session.note}</div>
             </div>
           )}
 
@@ -270,13 +273,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
               href={session.activity_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                fontSize: 11, fontWeight: 600, color: H.orangeFeu,
-                padding: "6px 10px", borderRadius: 4,
-                background: "rgba(255,85,0,0.08)", border: "1px solid rgba(255,85,0,0.2)",
-                textDecoration: "none", width: "fit-content",
-              }}
+              className="inline-flex w-fit items-center gap-1.5 rounded-[4px] border border-agon-alerte/20 bg-agon-alerte/[0.08] px-2.5 py-1.5 text-[11px] font-semibold text-agon-alerte no-underline"
             >
               {session.activity_url.includes("strava") ? "Strava" : session.activity_url.includes("garmin") ? "Garmin" : "Activité"} ↗
             </a>
@@ -285,11 +282,11 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
           {/* Intervals: planned + step log (old system) */}
           {hasIntervals && (
             <div>
-              <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6, display: "flex", gap: 10 }}>
+              <div className={cn(SECTION_LABEL, "mb-1.5 flex gap-2.5")}>
                 <span>Déroulé</span>
-                {hasStepLog && <span style={{ color: C.ac }}>avec réalisé</span>}
+                {hasStepLog && <span className="text-agon-accent">avec réalisé</span>}
               </div>
-              <div style={{ background: C.s2, borderRadius: 4, padding: "4px 2px", display: "flex", flexDirection: "column", gap: 2 }}>
+              <div className="flex flex-col gap-0.5 rounded-[4px] bg-agon-s2 px-0.5 py-1">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {((session as any).intervals as any[]).map((step, i) => (
                   <StepLogRow
@@ -305,7 +302,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
           )}
 
           {!hasIntervals && !hasBlockLogs && !session.note && (
-            <div style={{ fontSize: 12, color: C.tx3, textAlign: "center", padding: "8px 0" }}>Aucun détail disponible</div>
+            <div className="py-2 text-center text-[12px] text-agon-tx3">Aucun détail disponible</div>
           )}
         </div>
       )}

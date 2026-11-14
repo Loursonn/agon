@@ -1,5 +1,4 @@
 import { eachDayOfInterval, startOfWeek, endOfWeek, format } from "date-fns";
-import { C } from "@/lib/theme";
 import { DayColumn } from "./DayColumn";
 import type { WeeklyRetourData, WellnessDay } from "@/features/shared/types/retours.types";
 
@@ -62,13 +61,8 @@ export function WeekView({ weekData, prevWeekData, athleteId }: WeekViewProps) {
 
   return (
     /* Horizontal scroll container */
-    <div style={{ overflowX: "auto", paddingBottom: 8 }}>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(7, minmax(130px, 1fr))",
-        gap: 8,
-        minWidth: 910,
-      }}>
+    <div className="overflow-x-auto pb-2">
+      <div className="grid min-w-[910px] grid-cols-[repeat(7,minmax(130px,1fr))] gap-2">
         {days.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           return (

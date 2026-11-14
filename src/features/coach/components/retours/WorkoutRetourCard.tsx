@@ -4,7 +4,8 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useParams } from "react-router-dom";
 import { ChevronDown, ChevronUp, MessageSquare, Heart, Check, Minus, X as XIcon, BarChart2 } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsList, VideoRequestsPill } from "./VideoRequestsList";
 import { StatusPill } from "@/features/shared/components/StatusPill";
@@ -20,14 +21,15 @@ import type {
 
 // ── Colors (match programmation) ─────────────────────────────────────────────
 
-const GREEN   = H.vert;
-const GREEN_S = "rgba(34,197,94,0.10)";
-const RED     = H.rougeVif;
-const RED_S   = "rgba(239,68,68,0.10)";
-const AMBER   = H.ambre;
-const AMBER_S = "rgba(245,158,11,0.10)";
-const VIOLET  = C.ac;
-const VIOLET_S = "rgba(123,111,255,0.12)";
+// Réussi = succès, incomplet = alerte, manqué = erreur (charte) ; teinte 10 %, filet 25 %.
+const OK_ROW = "border-agon-succes/25 bg-agon-succes/10";
+const PART_ROW = "border-agon-alerte/25 bg-agon-alerte/10";
+const MISS_ROW = "border-agon-erreur/25 bg-agon-erreur/10";
+const METHOD_CHIP = "rounded-[4px] bg-agon-accent/[0.12] px-[5px] py-px font-semibold text-agon-accent";
+const SET_ROW = "mb-[3px] flex items-center gap-2 rounded-[7px] border px-2 py-[5px]";
+const SET_NUM = "min-w-[22px] text-[11px] font-bold text-agon-tx3";
+const BLOCK_LABEL = "text-[9px] font-extrabold uppercase tracking-[0.5px]";
+const SMALL_LABEL = "text-[8px] font-bold uppercase tracking-[0.4px] text-agon-tx3";
 
 interface WorkoutType {
   id: string;
@@ -60,15 +62,11 @@ const VALID_STATUSES = ["planned", "in-progress", "completed", "missed", "skippe
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{
-      display: "flex", flexDirection: "column", gap: 2,
-      padding: "5px 9px", borderRadius: 7,
-      background: C.s1, border: "1px solid " + C.brdL,
-    }}>
-      <span style={{ fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+    <div className="flex flex-col gap-0.5 rounded-[7px] border border-agon-brd-l bg-agon-s1 px-[9px] py-[5px]">
+      <span className={SMALL_LABEL}>
         {label}
       </span>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.tx }}>{value}</span>
+      <span className="text-[11px] font-bold text-agon-tx">{value}</span>
     </div>
   );
 }
@@ -84,52 +82,41 @@ function SetRow({ set, index, plannedReps }: {
 
   if (!set.done) {
     return (
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "5px 8px", borderRadius: 7, marginBottom: 3,
-        background: RED_S, border: "1px solid " + RED + "40",
-      }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: C.tx3, minWidth: 22 }}>S{set.set_num}</span>
+      <div className={cn(SET_ROW, MISS_ROW)}>
+        <span className={SET_NUM}>S{set.set_num}</span>
         {hasData ? (
           <>
-            {set.kg != null && <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{set.kg} kg</span>}
-            {set.reps != null && <span style={{ fontSize: 12, color: C.tx }}>× {set.reps}</span>}
-            {set.rir != null && <span style={{ fontSize: 11, color: C.tx3 }}>RIR {set.rir}</span>}
-            <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: RED }}>✗</span>
+            {set.kg != null && <span className="text-[12px] font-bold text-agon-tx">{set.kg} kg</span>}
+            {set.reps != null && <span className="text-[12px] text-agon-tx">× {set.reps}</span>}
+            {set.rir != null && <span className="text-[11px] text-agon-tx3">RIR {set.rir}</span>}
+            <span className="ml-auto text-[12px] font-bold text-agon-erreur">✗</span>
           </>
         ) : (
-          <span style={{ fontSize: 11, color: RED }}>Non réalisé</span>
+          <span className="text-[11px] text-agon-erreur">Non réalisé</span>
         )}
       </div>
     );
   }
 
   const ok = plannedReps === undefined || (set.reps != null && set.reps >= plannedReps);
-  const color = ok ? GREEN : AMBER;
-
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 8,
-      padding: "5px 8px", borderRadius: 7, marginBottom: 3,
-      background: ok ? GREEN_S : AMBER_S,
-      border: "1px solid " + color + "40",
-    }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: C.tx3, minWidth: 22 }}>S{set.set_num}</span>
+    <div className={cn(SET_ROW, ok ? OK_ROW : PART_ROW)}>
+      <span className={SET_NUM}>S{set.set_num}</span>
       {set.kg != null && (
-        <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{set.kg} kg</span>
+        <span className="text-[12px] font-bold text-agon-tx">{set.kg} kg</span>
       )}
       {set.reps != null && (
-        <span style={{ fontSize: 12, color: C.tx }}>× {set.reps}</span>
+        <span className="text-[12px] text-agon-tx">× {set.reps}</span>
       )}
       {set.rir != null && (
-        <span style={{ fontSize: 11, color: C.tx3 }}>RIR {set.rir}</span>
+        <span className="text-[11px] text-agon-tx3">RIR {set.rir}</span>
       )}
       {set.method && (
-        <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: VIOLET_S, color: VIOLET, fontWeight: 600 }}>
+        <span className={cn(METHOD_CHIP, "text-[9px]")}>
           {set.method}
         </span>
       )}
-      <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color }}>
+      <span className={cn("ml-auto text-[12px] font-bold", ok ? "text-agon-succes" : "text-agon-alerte")}>
         {ok ? "✓" : "~"}
       </span>
     </div>
@@ -140,7 +127,7 @@ function SetRow({ set, index, plannedReps }: {
 
 function PlannedChips({ planned }: { planned: PlannedExercise }) {
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <div className="flex flex-wrap gap-1.5">
       <Chip label="Séries" value={String(planned.sets)} />
       <Chip label={planned.is_iso ? "Durée" : "Reps"} value={planned.reps_range ?? "—"} />
       {planned.kg != null && <Chip label="Charge" value={`${planned.kg}kg`} />}
@@ -156,7 +143,7 @@ function exoSummary(
   planned: PlannedExercise | undefined,
   performed: PerformedExercise | undefined,
   isCompleted: boolean,
-): { text: string; color: string } {
+): { text: string; tone: string } {
   if (performed && performed.sets.length > 0) {
     const doneSets = performed.sets.filter(s => s.done);
     if (doneSets.length > 0) {
@@ -170,20 +157,20 @@ function exoSummary(
       if (maxKg != null && avgReps != null) parts.push(`${maxKg}kg × ${avgReps}${u}`);
       else if (maxKg != null) parts.push(`${maxKg}kg`);
       else if (avgReps != null) parts.push(planned?.is_iso ? `${avgReps} s` : `${avgReps} reps`);
-      return { text: parts.join(" · "), color: doneSets.length >= plannedSets ? GREEN : AMBER };
+      return { text: parts.join(" · "), tone: doneSets.length >= plannedSets ? "text-agon-succes" : "text-agon-alerte" };
     }
     // All sets not done
     const p = planned ? ` · ${formatPlannedSetsReps(planned.sets, planned.reps_range)}` : "";
-    return { text: `Non réalisé${p}`, color: RED };
+    return { text: `Non réalisé${p}`, tone: "text-agon-erreur" };
   }
   if (isCompleted) {
     const p = planned ? ` · ${formatPlannedSetsReps(planned.sets, planned.reps_range)}` : "";
-    return { text: `Non réalisé${p}`, color: RED };
+    return { text: `Non réalisé${p}`, tone: "text-agon-erreur" };
   }
   if (planned) {
-    return { text: `${formatPlannedSetsReps(planned.sets, planned.reps_range)}${planned.kg != null ? ` @${planned.kg}kg` : ""}`, color: C.tx3 };
+    return { text: `${formatPlannedSetsReps(planned.sets, planned.reps_range)}${planned.kg != null ? ` @${planned.kg}kg` : ""}`, tone: "text-agon-tx3" };
   }
-  return { text: "—", color: C.tx3 };
+  return { text: "—", tone: "text-agon-tx3" };
 }
 
 // ── Parse planned reps for target comparison ─────────────────────────────────
@@ -221,9 +208,9 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
 
   const statusIcon = doneSetsCount > 0
     ? (doneSetsCount >= (planned?.sets ?? performed!.sets.length)
-      ? <Check size={12} style={{ color: GREEN }} />
-      : <Minus size={12} style={{ color: AMBER }} />)
-    : (hasSets || isCompleted ? <XIcon size={12} style={{ color: RED }} /> : null);
+      ? <Check size={12} className="text-agon-succes" />
+      : <Minus size={12} className="text-agon-alerte" />)
+    : (hasSets || isCompleted ? <XIcon size={12} className="text-agon-erreur" /> : null);
 
   const handleSave = () => {
     if (!commentText.trim()) return;
@@ -234,52 +221,41 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
   };
 
   return (
-    <div style={{
-      background: C.s2, borderRadius: 4, border: "1px solid " + C.brd,
-      overflow: "hidden",
-    }}>
+    <div className="overflow-hidden rounded-[4px] border border-agon-brd bg-agon-s2">
       {/* Collapsed header */}
       <button
         onClick={() => setOpen(v => !v)}
-        style={{
-          width: "100%", padding: "10px 12px",
-          display: "flex", alignItems: "center", gap: 8,
-          background: "transparent", border: "none", cursor: "pointer",
-          fontFamily: "inherit", textAlign: "left",
-        }}
+        className="flex w-full cursor-pointer items-center gap-2 border-none bg-transparent px-3 py-2.5 text-left"
       >
-        {statusIcon && <span style={{ flexShrink: 0, lineHeight: 0 }}>{statusIcon}</span>}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {statusIcon && <span className="flex-none leading-[0]">{statusIcon}</span>}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[12px] font-bold text-agon-tx">
             {exName}
             {!planned && hasSets && (
-              <span style={{ fontSize: 8, marginLeft: 5, padding: "1px 5px", borderRadius: 4, background: C.acS, color: C.ac, fontWeight: 600, verticalAlign: "middle" }}>
+              <span className="ml-[5px] rounded-[4px] bg-agon-accent-doux px-[5px] py-px align-middle text-[8px] font-semibold text-agon-accent">
                 Ajouté
               </span>
             )}
             {planned?.method && (
-              <span style={{ fontSize: 8, marginLeft: 5, padding: "1px 5px", borderRadius: 4, background: VIOLET_S, color: VIOLET, fontWeight: 600, verticalAlign: "middle" }}>
+              <span className={cn(METHOD_CHIP, "ml-[5px] align-middle text-[8px]")}>
                 {planned.method}
               </span>
             )}
           </div>
-          <div style={{ fontSize: 10, color: summary.color, marginTop: 2 }}>{summary.text}</div>
+          <div className={cn("mt-0.5 text-[10px]", summary.tone)}>{summary.text}</div>
         </div>
         {open ? <ChevronUp size={14} color={C.tx3} /> : <ChevronDown size={14} color={C.tx3} />}
       </button>
 
       {/* Expanded details */}
       {open && (
-        <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid " + C.brd }}>
+        <div className="flex flex-col gap-2 border-t border-agon-brd px-3 pb-2.5">
 
           {/* ── Prévu (chips style) ── */}
           {planned && (
-            <div style={{ paddingTop: 8 }}>
-              <div style={{
-                display: "flex", alignItems: "center", gap: 6, marginBottom: 6,
-                padding: "4px 0",
-              }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: VIOLET, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <div className="pt-2">
+              <div className="mb-1.5 flex items-center gap-1.5 py-1">
+                <span className={cn(BLOCK_LABEL, "text-agon-accent")}>
                   Prévu
                 </span>
               </div>
@@ -290,15 +266,12 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
           {/* ── Réalisé (colored set rows) ── */}
           {hasSets ? (
             <div>
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                marginBottom: 6, padding: "4px 0",
-              }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: GREEN, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              <div className="mb-1.5 flex items-center justify-between py-1">
+                <span className={cn(BLOCK_LABEL, "text-agon-succes")}>
                   Réalisé ({performed.sets.length} série{performed.sets.length > 1 ? "s" : ""})
                 </span>
                 {planned && (
-                  <span style={{ fontSize: 9, color: performed.sets.length >= planned.sets ? GREEN : AMBER, fontWeight: 700 }}>
+                  <span className={cn("text-[9px] font-bold", performed.sets.length >= planned.sets ? "text-agon-succes" : "text-agon-alerte")}>
                     {performed.sets.length}/{planned.sets}
                   </span>
                 )}
@@ -308,11 +281,7 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
               ))}
             </div>
           ) : isCompleted ? (
-            <div style={{
-              padding: "7px 10px", borderRadius: 7,
-              background: RED_S, border: "1px solid " + RED + "40",
-              fontSize: 11, color: RED, fontWeight: 600,
-            }}>
+            <div className={cn("rounded-[7px] border px-2.5 py-[7px] text-[11px] font-semibold text-agon-erreur", MISS_ROW)}>
               Aucune série enregistrée
             </div>
           ) : null}
@@ -320,22 +289,19 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
           {/* ── S-1 (previous week) ── */}
           {prevPerformed && prevPerformed.sets.length > 0 && (
             <div>
-              <div style={{ marginBottom: 4, padding: "4px 0" }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              <div className="mb-1 py-1">
+                <span className={cn(BLOCK_LABEL, "text-agon-tx3")}>
                   S-1
                 </span>
               </div>
-              <div style={{
-                padding: "6px 8px", borderRadius: 7,
-                background: C.s1, border: "1px solid " + C.brdL,
-              }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div className="rounded-[7px] border border-agon-brd-l bg-agon-s1 px-2 py-1.5">
+                <div className="flex flex-col gap-0.5">
                   {prevPerformed.sets.map((s) => (
-                    <div key={s.set_num} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: C.tx3 }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, minWidth: 22 }}>S{s.set_num}</span>
+                    <div key={s.set_num} className="flex items-center gap-2 text-[11px] text-agon-tx3">
+                      <span className="min-w-[22px] text-[10px] font-semibold">S{s.set_num}</span>
                       {s.kg != null && <span>{s.kg} kg</span>}
                       {s.reps != null && <span>× {s.reps}</span>}
-                      {s.rir != null && <span style={{ fontSize: 10 }}>RIR {s.rir}</span>}
+                      {s.rir != null && <span className="text-[10px]">RIR {s.rir}</span>}
                     </div>
                   ))}
                 </div>
@@ -345,33 +311,29 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
 
           {/* Athlete comment on exercise */}
           {athleteComment && (
-            <div style={{
-              padding: "5px 8px", borderRadius: 6,
-              background: AMBER_S, border: "1px solid " + AMBER + "30",
-            }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: AMBER, marginBottom: 2 }}>Commentaire athlète</div>
-              <div style={{ fontSize: 11, color: C.tx2, fontStyle: "italic" }}>{athleteComment}</div>
+            <div className="rounded-[6px] border border-agon-alerte/[0.188] bg-agon-alerte/10 px-2 py-[5px]">
+              <div className="mb-0.5 text-[9px] font-semibold text-agon-alerte">Commentaire athlète</div>
+              <div className="text-[11px] italic text-agon-tx2">{athleteComment}</div>
             </div>
           )}
 
           {/* Coach comment */}
           {existingComment && !commenting && (
-            <div style={{ background: C.acS, borderRadius: 6, padding: "5px 8px" }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: C.ac, marginBottom: 2 }}>Commentaire coach</div>
-              <div style={{ fontSize: 11, color: C.tx2 }}>{existingComment.comment}</div>
+            <div className="rounded-[6px] bg-agon-accent-doux px-2 py-[5px]">
+              <div className="mb-0.5 text-[9px] font-semibold text-agon-accent">Commentaire coach</div>
+              <div className="text-[11px] text-agon-tx2">{existingComment.comment}</div>
             </div>
           )}
 
           {/* Comment button + form */}
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="flex gap-1.5">
             {!commenting && (
               <button
                 onClick={() => { setCommenting(true); setCommentText(existingComment?.comment ?? ""); }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6,
-                  border: "1px solid " + C.brdL, background: existingComment ? C.acS : "transparent",
-                  color: existingComment ? C.ac : C.tx3, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-                }}
+                className={cn(
+                  "flex cursor-pointer items-center gap-1 rounded-[6px] border border-agon-brd-l px-2 py-[3px] text-[10px]",
+                  existingComment ? "bg-agon-accent-doux text-agon-accent" : "bg-transparent text-agon-tx3",
+                )}
               >
                 <MessageSquare size={10} />
                 {existingComment ? "Modifier" : "Commenter"}
@@ -380,20 +342,20 @@ function RetourExoAccordion({ exId, planned, performed, prevPerformed, isComplet
           </div>
 
           {commenting && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               <textarea
                 autoFocus placeholder="Ajouter un commentaire…"
                 value={commentText} onChange={(e) => setCommentText(e.target.value)}
                 rows={2}
-                style={{ width: "100%", background: C.s1, border: "1px solid " + C.brdL, borderRadius: 4, padding: "7px 10px", color: C.tx, fontSize: 12, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
+                className="box-border w-full resize-none rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-[7px] text-[12px] text-agon-tx outline-none"
               />
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="flex gap-1.5">
                 <button onClick={handleSave} disabled={!commentText.trim() || upsertComment.isPending}
-                  style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: C.acV, color: C.ink, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  className="cursor-pointer rounded-[7px] border-none bg-agon-or-vif px-3 py-[5px] text-[11px] font-bold text-agon-ink">
                   Enregistrer
                 </button>
                 <button onClick={() => { setCommenting(false); setCommentText(""); }}
-                  style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+                  className="cursor-pointer rounded-[7px] border border-agon-brd-l bg-transparent px-3 py-[5px] text-[11px] text-agon-tx3">
                   Annuler
                 </button>
               </div>
@@ -439,42 +401,42 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
   const totalSets = workout.performed_exercises.reduce((acc, e) => acc + e.sets.filter(s => s.done).length, 0);
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
+    <div className="overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1">
       {/* Header */}
       <div
         onClick={() => setExpanded((v) => !v)}
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", cursor: "pointer" }}
+        className="flex cursor-pointer items-center justify-between px-3.5 py-2.5"
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate text-[13px] font-bold text-agon-tx">
             {workout.session_name}
           </span>
           {workout.occurrence != null && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, flexShrink: 0 }}>n°{workout.occurrence}</span>
+            <span className="flex-none text-[10px] font-bold text-agon-tx3">n°{workout.occurrence}</span>
           )}
           <StatusPill status={validStatus} size="sm" />
           <VideoRequestsPill requests={workout.video_requests} />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 8 }}>
+        <div className="ml-2 flex flex-none items-center gap-2">
           {workout.wellness_day != null && (
-            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <div className="flex items-center gap-[3px]">
               <Heart size={10} color={C.tx3} />
-              <span style={{ fontSize: 10, color: C.tx3 }}>{workout.wellness_day}/10</span>
+              <span className="text-[10px] text-agon-tx3">{workout.wellness_day}/10</span>
             </div>
           )}
           {workout.rpe_score != null && (
-            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 6, background: C.s2, color: C.tx2, flexShrink: 0 }}>
+            <span className="flex-none rounded-[6px] bg-agon-s2 px-1.5 py-0.5 text-[10px] font-semibold text-agon-tx2">
               RPE {workout.rpe_score}/10
             </span>
           )}
-          <span style={{ fontSize: 10, color: C.tx3 }}>
+          <span className="text-[10px] text-agon-tx3">
             {format(new Date(workout.scheduled_date), "EEE d MMM", { locale: fr })}
           </span>
           {athleteId && workout.session_id && (
             <button
               onClick={(e) => { e.stopPropagation(); setShowEvolution(true); }}
               title="Prévu / Réalisé / Séance +1"
-              style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 4, border: "1px solid " + C.ac + "60", background: C.ac + "14", color: C.ac, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              className="flex cursor-pointer items-center gap-1 rounded-[4px] border border-agon-accent/[0.376] bg-agon-accent/[0.078] px-2 py-[3px] text-[10px] font-bold text-agon-accent"
             >
               <BarChart2 size={11} /> Évolution
             </button>
@@ -493,65 +455,60 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
       )}
 
       {expanded && (
-        <div style={{ borderTop: "1px solid " + C.brd, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-2 border-t border-agon-brd px-3.5 py-3">
           <VideoRequestsList requests={workout.video_requests} />
           {/* Meta + stats */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="flex flex-wrap gap-2">
             {workout.duration_s != null && (
-              <div style={{ fontSize: 11, color: C.tx2 }}>Durée : <span style={{ fontWeight: 600, color: C.tx }}>{Math.round(workout.duration_s / 60)} min</span></div>
+              <div className="text-[11px] text-agon-tx2">Durée : <span className="font-semibold text-agon-tx">{Math.round(workout.duration_s / 60)} min</span></div>
             )}
             {workout.rpe_score != null && (
-              <div style={{ fontSize: 11, color: C.tx2 }}>RPE : <span style={{ fontWeight: 600, color: C.tx }}>{workout.rpe_score}/10</span></div>
+              <div className="text-[11px] text-agon-tx2">RPE : <span className="font-semibold text-agon-tx">{workout.rpe_score}/10</span></div>
             )}
           </div>
 
           {/* Quick stats bar (same style as programmation) */}
           {isCompleted && allExerciseIds.length > 0 && (
-            <div style={{ display: "flex", gap: 1 }}>
+            <div className="flex gap-px">
               {[
-                { label: "Exercices", value: `${totalDone}/${totalPlanned || allExerciseIds.length}`, color: totalDone >= totalPlanned ? GREEN : AMBER },
-                { label: "Séries", value: String(totalSets), color: VIOLET },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ flex: 1, textAlign: "center", padding: "6px 4px", background: C.s2, borderRadius: 6 }}>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase" }}>{label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color, marginTop: 1 }}>{value}</div>
+                { label: "Exercices", value: `${totalDone}/${totalPlanned || allExerciseIds.length}`, tone: totalDone >= totalPlanned ? "text-agon-succes" : "text-agon-alerte" },
+                { label: "Séries", value: String(totalSets), tone: "text-agon-accent" },
+              ].map(({ label, value, tone }) => (
+                <div key={label} className="flex-1 rounded-[6px] bg-agon-s2 px-1 py-1.5 text-center">
+                  <div className="text-[8px] font-bold uppercase text-agon-tx3">{label}</div>
+                  <div className={cn("mt-px text-[14px] font-extrabold", tone)}>{value}</div>
                 </div>
               ))}
             </div>
           )}
 
           {workout.notes && (
-            <div style={{ background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>Note de séance</div>
-              <div style={{ fontSize: 12, color: C.tx2 }}>{workout.notes}</div>
+            <div className="rounded-[4px] bg-agon-s2 px-2.5 py-2">
+              <div className="mb-[3px] text-[9px] font-bold uppercase tracking-[0.4px] text-agon-tx3">Note de séance</div>
+              <div className="text-[12px] text-agon-tx2">{workout.notes}</div>
             </div>
           )}
 
           {/* Athlete session comment + forme (same style as programmation) */}
           {(workout.athlete_session_comment || workout.athlete_forme != null) && (
-            <div style={{
-              padding: "7px 10px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: C.s2,
-              display: "flex", flexDirection: "column", gap: 4,
-            }}>
+            <div className="flex flex-col gap-1 rounded-[4px] border border-agon-brd-l bg-agon-s2 px-2.5 py-[7px]">
               {workout.athlete_forme != null && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>Forme</span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 5,
-                    background: workout.athlete_forme >= 4 ? GREEN_S : workout.athlete_forme >= 3 ? AMBER_S : RED_S,
-                    color: workout.athlete_forme >= 4 ? GREEN : workout.athlete_forme >= 3 ? AMBER : RED,
-                  }}>
+                <div className="flex items-center gap-1.5">
+                  <span className={SMALL_LABEL}>Forme</span>
+                  <span className={cn(
+                    "rounded-[5px] px-1.5 py-px text-[11px] font-bold",
+                    workout.athlete_forme >= 4 ? "bg-agon-succes/10 text-agon-succes" : workout.athlete_forme >= 3 ? "bg-agon-alerte/10 text-agon-alerte" : "bg-agon-erreur/10 text-agon-erreur",
+                  )}>
                     {workout.athlete_forme}/5
                   </span>
                 </div>
               )}
               {workout.athlete_session_comment && (
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 2 }}>
+                  <div className={cn(SMALL_LABEL, "mb-0.5")}>
                     Commentaire athlète
                   </div>
-                  <div style={{ fontSize: 11, color: C.tx, fontStyle: "italic" }}>« {workout.athlete_session_comment} »</div>
+                  <div className="text-[11px] italic text-agon-tx">« {workout.athlete_session_comment} »</div>
                 </div>
               )}
             </div>
@@ -559,7 +516,7 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
 
           {/* Exercise accordions */}
           {allExerciseIds.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {allExerciseIds.map((exId) => (
                 <RetourExoAccordion
                   key={exId}

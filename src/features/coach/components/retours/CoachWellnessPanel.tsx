@@ -7,7 +7,8 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import { Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { C, alpha, H } from "@/lib/theme";
+import { C, alpha, token } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { addDays, localIsoDay, type IsoDay } from "@shared/domain/dates";
 import { WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT, wellnessScore, wellnessBand, type WellnessItem } from "@shared/domain/wellness";
 import type { LightResult } from "@shared/domain/wellnessLight";
@@ -17,7 +18,7 @@ import { useHealthWindow } from "@/features/athlete/hooks/useHealthWindow";
 import { baselineAt, dailyValues } from "@/lib/healthView";
 import { BODY_ZONES, DOMS_LEVEL_COLOR, DOMS_LEVEL_LABEL } from "@/lib/bodyZones";
 import { domsByWorkout, domsByZone, domsMaxLevels, feltSummary, itemGrid, type GridItem } from "@/lib/coachWellness";
-import { MONO, ORDI_CARD, Pill, SectionHead, Segmented, KICK } from "@/features/shared/components/ordi/OrdiUi";
+import { Pill, SectionHead, Segmented } from "@/features/shared/components/ordi/OrdiUi";
 import { frDate } from "@/features/shared/components/ordi/ordiStyles";
 
 type Span = "7" | "28" | "90";
@@ -30,8 +31,16 @@ const LIGHT: Record<LightResult["light"], { label: string; color: string }> = {
 };
 
 const ITEM_NAME: Record<GridItem, string> = { ...WELLNESS_ITEM_LABEL, envie: "Envie de s’entraîner" };
-/** Note 1 → 5 : rouge → vert. */
-const NOTE_COLOR = ["", C.r, C.o, C.ac, H.vertHerbe, C.g];
+/** Note 1 → 5 : rouge → vert (4 = vert-jaune de la charte, à la place du vert herbe hérité). */
+const NOTE_COLOR = ["", C.r, C.o, C.ac, token("--agon-zone5-2"), C.g];
+
+const CARD = "rounded-[14px] border border-agon-brd bg-agon-s1";
+const KICK = "agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-agon-tx2";
+const LINK_BTN = "cursor-pointer border-0 bg-transparent text-agon-accent";
+const COL = "flex flex-col gap-3";
+const ROW_TOP = "border-t border-agon-brd";
+const EMPTY = "text-[13px] text-agon-tx3";
+const LEGEND = "inline-flex items-center gap-1";
 
 const dec = (x: number | null | undefined, d = 1) => (x == null || !Number.isFinite(x) ? "—" : x.toLocaleString("fr-FR", { maximumFractionDigits: d, minimumFractionDigits: d }));
 const int = (x: number | null | undefined) => (x == null || !Number.isFinite(x) ? "—" : String(Math.round(x)));
@@ -43,32 +52,32 @@ function Tile({ title, state, stateColor, value, unit, line, onMore }: {
 }) {
   return (
     // Planche CoachWellness : tuile teintée de la couleur de l'état, liseré 3 px.
-    <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, border: `1px solid ${alpha(stateColor, 0.42)}`, background: alpha(stateColor, 0.12), padding: "14px 16px 14px 19px", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: stateColor }} />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</span>
+    <div className="relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-[14px] py-3.5 pl-[19px] pr-4" style={{ border: `1px solid ${alpha(stateColor, 0.42)}`, background: alpha(stateColor, 0.12) }}>
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: stateColor }} />
+      <div className="flex items-center justify-between gap-2">
+        <span className={cn(KICK, "truncate")}>{title}</span>
         <Pill color={stateColor} filled>{state}</Pill>
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-        <span style={{ ...MONO, fontSize: 32, color: value === "—" ? C.tx3 : stateColor, lineHeight: 1 }}>{value}</span>
-        {unit && <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{unit}</span>}
+      <div className="flex items-baseline gap-1.5">
+        <span className={cn("agon-mono text-[32px] leading-none", value === "—" && "text-agon-tx3")} style={value === "—" ? undefined : { color: stateColor }}>{value}</span>
+        {unit && <span className="agon-mono text-[12px] text-agon-tx2">{unit}</span>}
       </div>
-      <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.45, minHeight: 34 }}>{line}</div>
-      <button type="button" onClick={onMore} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.ac, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>Détails ›</button>
+      <div className="min-h-[34px] text-[12px] leading-[1.45] text-agon-tx2">{line}</div>
+      <button type="button" onClick={onMore} className={cn(LINK_BTN, "self-start p-0 text-[12.5px]")}>Détails ›</button>
     </div>
   );
 }
 
 function Check({ on }: { on: boolean }) {
-  return <span style={{ ...MONO, width: 16, display: "inline-block", color: on ? C.o : C.tx3 }}>{on ? "✓" : "–"}</span>;
+  return <span className={cn("agon-mono inline-block w-4", on ? "text-agon-alerte" : "text-agon-tx3")}>{on ? "✓" : "–"}</span>;
 }
 
 /** Carte du corps en lecture : niveau max de chaque zone sur la fenêtre. */
 function BodyRead({ levels }: { levels: Record<string, 1 | 2 | 3> }) {
   return (
-    <div style={{ display: "flex", gap: 18 }}>
+    <div className="flex gap-[18px]">
       {(["face", "dos"] as const).map((view) => (
-        <div key={view} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+        <div key={view} className="flex flex-col items-center gap-1.5">
           <svg viewBox="0 0 120 215" width={110} height={197} aria-label={`Courbatures, ${view}`}>
             {BODY_ZONES.filter((z) => z.view === view).flatMap((z) => z.rects.map((r, i) => {
               const lvl = levels[z.id];
@@ -81,7 +90,7 @@ function BodyRead({ levels }: { levels: Record<string, 1 | 2 | 3> }) {
               );
             }))}
           </svg>
-          <span style={{ ...KICK, fontSize: 10, color: C.tx3 }}>{view === "face" ? "Face" : "Dos"}</span>
+          <span className="agon-mono whitespace-nowrap text-[10px] uppercase tracking-[0.14em] text-agon-tx3">{view === "face" ? "Face" : "Dos"}</span>
         </div>
       ))}
     </div>
@@ -93,15 +102,15 @@ function WatchChart({ title, data, zone, unit, color, note }: {
 }) {
   const vals = data.map((d) => d.v).filter((v): v is number => v != null);
   return (
-    <div style={{ ...ORDI_CARD, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ fontSize: 13.5, color: C.tx }}>{title}</span>
-        <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{unit}</span>
+    <div className={cn(CARD, "flex min-w-0 flex-col gap-2 px-4 py-3.5")}>
+      <div className="flex justify-between gap-2">
+        <span className="text-[13.5px] text-agon-tx">{title}</span>
+        <span className="agon-mono text-[11px] text-agon-tx3">{unit}</span>
       </div>
       {vals.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: C.tx3, padding: "30px 0" }}>Pas de mesure de montre sur la période.</div>
+        <div className="py-[30px] text-[12.5px] text-agon-tx3">Pas de mesure de montre sur la période.</div>
       ) : (
-        <div style={{ height: 150 }}>
+        <div className="h-[150px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 6, right: 6, bottom: 0, left: -18 }}>
               {zone && <ReferenceArea y1={zone.low} y2={zone.high} fill={alpha(C.g, 0.1)} stroke="none" />}
@@ -113,7 +122,7 @@ function WatchChart({ title, data, zone, unit, color, note }: {
           </ResponsiveContainer>
         </div>
       )}
-      <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.45 }}>{note}</div>
+      <div className="text-[12px] leading-[1.45] text-agon-tx2">{note}</div>
     </div>
   );
 }
@@ -165,21 +174,21 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
   ] : [];
 
   const lightCard = (
-    <div style={{ ...ORDI_CARD, position: "relative", overflow: "hidden", padding: "18px 22px 18px 26px", display: "flex", gap: 22, alignItems: "center", flexWrap: "wrap",
-      ...(lt?.color ? { background: alpha(lt.color, 0.12), border: `1px solid ${alpha(lt.color, 0.42)}` } : {}) }}>
-      <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: lt?.color ?? C.brdL }} />
-      <span style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500, fontSize: 30, color: lt?.color ?? C.tx3 }}>
+    <div className={cn(CARD, "relative flex flex-wrap items-center gap-[22px] overflow-hidden py-[18px] pl-[26px] pr-[22px]")}
+      style={lt?.color ? { background: alpha(lt.color, 0.12), border: `1px solid ${alpha(lt.color, 0.42)}` } : undefined}>
+      <span className={cn("absolute inset-y-0 left-0 w-1", !lt && "bg-agon-brd-l")} style={lt ? { background: lt.color } : undefined} />
+      <span className={cn("agon-display text-[30px] font-medium tracking-[0.08em]", !lt && "text-agon-tx3")} style={lt ? { color: lt.color } : undefined}>
         {light.isLoading ? "…" : lt?.label ?? "—"}
       </span>
-      <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 15, color: C.tx }}>{r?.sentence ?? (light.isLoading ? "Calcul du feu…" : `Pas assez de données pour le feu de ${firstName}.`)}</span>
+      <div className="flex min-w-[260px] flex-1 flex-col gap-1">
+        <span className="text-[15px] text-agon-tx">{r?.sentence ?? (light.isLoading ? "Calcul du feu…" : `Pas assez de données pour le feu de ${firstName}.`)}</span>
         {r && r.light === "orange" && (
-          <span style={{ fontSize: 12.5, color: C.tx2 }}>
+          <span className="text-[12.5px] text-agon-tx2">
             {r.orange.length} signal{r.orange.length > 1 ? "aux" : ""} orange · {r.redSigns.length} signe{r.redSigns.length > 1 ? "s" : ""} d’accompagnement (rouge à partir de 2 avec la charge qui monte).
           </span>
         )}
       </div>
-      {!detail && <button type="button" onClick={() => setDetail(true)} style={{ background: "none", border: "none", color: C.ac, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Pourquoi ›</button>}
+      {!detail && <button type="button" onClick={() => setDetail(true)} className={cn(LINK_BTN, "text-[13px]")}>Pourquoi ›</button>}
     </div>
   );
 
@@ -187,13 +196,13 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
 
   if (!detail) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <span style={KICK}>Wellness · {frDate(addDays(today, -(Number(spanKey) - 1)), false)} → {frDate(today, false)}</span>
+      <div className="flex flex-col gap-[18px]">
+        <div className="flex items-center justify-between gap-3">
+          <span className={KICK}>Wellness · {frDate(addDays(today, -(Number(spanKey) - 1)), false)} → {frDate(today, false)}</span>
           {spanSwitch}
         </div>
         {lightCard}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
           <Tile title="VFC de nuit" state={hrvState.t} stateColor={hrvState.c} value={int(hrvMean)} unit="ms" onMore={() => setDetail(true)}
             line={hrvZone ? <>Zone {int(hrvZone.low)}–{int(hrvZone.high)}{hrv?.belowDays ? ` · ${hrv.belowDays} j dessous` : ""}</> : "Habitude en construction"} />
           <Tile title="FC de repos" state={rhrState.t} stateColor={rhrState.c} value={dec(r?.restingHr.mean7)} unit="bpm" onMore={() => setDetail(true)}
@@ -204,19 +213,19 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
             value={topZone ? topZone.label : "—"} onMore={() => setDetail(true)}
             line={topZone ? <>{topZone.days} jour{topZone.days > 1 ? "s" : ""} sur 7{topZone.workouts[0] ? ` · après ${topZone.workouts[0]}` : ""}</> : "Rien de signalé sur 7 jours"} />
         </div>
-        <div style={{ ...ORDI_CARD, padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={KICK}>{lastDay === today ? "Ce matin" : lastDay ? `Dernière saisie · ${frDate(lastDay, false)}` : "Ce matin"}</span>
-            <button type="button" onClick={() => setDetail(true)} style={{ background: "none", border: "none", color: C.ac, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>Détails ›</button>
+        <div className={cn(CARD, "flex flex-col gap-3 px-[18px] py-3.5")}>
+          <div className="flex items-center justify-between">
+            <span className={KICK}>{lastDay === today ? "Ce matin" : lastDay ? `Dernière saisie · ${frDate(lastDay, false)}` : "Ce matin"}</span>
+            <button type="button" onClick={() => setDetail(true)} className={cn(LINK_BTN, "text-[12.5px]")}>Détails ›</button>
           </div>
           {morning.length === 0 ? (
-            <div style={{ fontSize: 13, color: C.tx3 }}>{firstName} n’a pas encore rempli de wellness.</div>
+            <div className={EMPTY}>{firstName} n’a pas encore rempli de wellness.</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))", gap: 8 }}>
+            <div className="grid grid-cols-8 gap-2">
               {morning.map(([k, v]) => (
-                <div key={k} style={{ display: "flex", flexDirection: "column", gap: 4, padding: "8px 10px", background: C.bg, borderRadius: 10, border: `1px solid ${C.brd}` }}>
-                  <span style={{ fontSize: 11.5, color: C.tx3 }}>{k}</span>
-                  <span style={{ ...MONO, fontSize: 20, color: C.tx }}>{v}</span>
+                <div key={k} className="flex flex-col gap-1 rounded-[10px] border border-agon-brd bg-agon-bg px-2.5 py-2">
+                  <span className="text-[11.5px] text-agon-tx3">{k}</span>
+                  <span className="agon-mono text-[20px] text-agon-tx">{v}</span>
                 </div>
               ))}
             </div>
@@ -234,68 +243,68 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
   const painDays = Object.values(wh).filter((e) => e.day > addDays(today, -28) && ((e.pain ?? 0) > 0 || e.sick)).length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <button type="button" onClick={() => setDetail(false)} style={{ background: "none", border: "none", padding: 0, color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>‹ Wellness</button>
+    <div className="flex flex-col gap-[22px]">
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" onClick={() => setDetail(false)} className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-agon-tx2">‹ Wellness</button>
         {spanSwitch}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <span style={KICK}>Feu du jour</span>
+      <div className={COL}>
+        <span className={KICK}>Feu du jour</span>
         {lightCard}
         {r && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 12 }}>
-            <div style={{ ...ORDI_CARD, padding: "14px 16px" }}>
-              <div style={{ ...KICK, marginBottom: 8 }}>Signaux orange</div>
-              {r.orange.length === 0 ? <div style={{ fontSize: 13, color: C.tx3 }}>Aucun.</div> : r.orange.map((s) => (
-                <div key={s.key} style={{ display: "flex", gap: 8, padding: "6px 0", borderTop: `1px solid ${C.brd}`, fontSize: 13, color: C.tx }}><Check on />{s.text}</div>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-3">
+            <div className={cn(CARD, "px-4 py-3.5")}>
+              <div className={cn(KICK, "mb-2")}>Signaux orange</div>
+              {r.orange.length === 0 ? <div className={EMPTY}>Aucun.</div> : r.orange.map((s) => (
+                <div key={s.key} className={cn(ROW_TOP, "flex gap-2 py-1.5 text-[13px] text-agon-tx")}><Check on />{s.text}</div>
               ))}
             </div>
-            <div style={{ ...ORDI_CARD, padding: "14px 16px" }}>
-              <div style={{ ...KICK, marginBottom: 8 }}>Rouge si la charge monte et 2 signes ou plus</div>
-              {r.redSigns.length === 0 ? <div style={{ fontSize: 13, color: C.tx3 }}>Aucun signe.</div> : r.redSigns.map((s) => (
-                <div key={s.key} style={{ display: "flex", gap: 8, padding: "6px 0", borderTop: `1px solid ${C.brd}`, fontSize: 13, color: C.tx }}><Check on />{s.text}</div>
+            <div className={cn(CARD, "px-4 py-3.5")}>
+              <div className={cn(KICK, "mb-2")}>Rouge si la charge monte et 2 signes ou plus</div>
+              {r.redSigns.length === 0 ? <div className={EMPTY}>Aucun signe.</div> : r.redSigns.map((s) => (
+                <div key={s.key} className={cn(ROW_TOP, "flex gap-2 py-1.5 text-[13px] text-agon-tx")}><Check on />{s.text}</div>
               ))}
-              <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 8 }}>{r.redSigns.length} sur 2 · règles {r.version}</div>
+              <div className="mt-2 text-[11.5px] text-agon-tx3">{r.redSigns.length} sur 2 · règles {r.version}</div>
             </div>
           </div>
         )}
       </div>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <SectionHead n={1} title="Montre · VFC et FC de repos" right={attribution ? <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{attribution}</span> : undefined} />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
+      <section className={COL}>
+        <SectionHead n={1} title="Montre · VFC et FC de repos" right={attribution ? <span className="agon-mono text-[11px] text-agon-tx3">{attribution}</span> : undefined} />
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3">
           <WatchChart title="VFC de nuit" unit="ms" color={C.b} data={hrvSeries} zone={hrvZone}
             note={hrvZone ? <>Moyenne 7 j {int(hrvMean)} ms · zone {int(hrvZone.low)}–{int(hrvZone.high)} ms{hrv?.belowDays ? ` · sous la zone depuis ${hrv.belowDays} jour${hrv.belowDays > 1 ? "s" : ""}` : ""}</> : "Zone normale disponible après 14 nuits de mesure."} />
           <WatchChart title="FC de repos" unit="bpm" color={C.o} data={rhrSeries} zone={rhrBase ? { low: rhrBase.low, high: rhrBase.high } : null}
             note={<>Moyenne 7 j {dec(r?.restingHr.mean7)} bpm · habitude {r?.restingHr.baselineMean != null ? `${dec(r.restingHr.baselineMean)} bpm` : "—"}{rz != null ? ` · z ${rz > 0 ? "+" : ""}${dec(rz)}` : ""}</>} />
         </div>
-        <div style={{ fontSize: 11.5, color: C.tx3 }}>VFC lue sur 7 nuits (5 valides au moins), zone = moyenne ± 0,5 écart-type des 28 jours précédents.</div>
+        <div className="text-[11.5px] text-agon-tx3">VFC lue sur 7 nuits (5 valides au moins), zone = moyenne ± 0,5 écart-type des 28 jours précédents.</div>
       </section>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <section className={COL}>
         <SectionHead n={2} title={`Ressenti · 6 questions sur ${span === 90 ? 28 : span} jours`} />
-        <div style={{ ...ORDI_CARD, padding: "14px 16px", overflowX: "auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: `150px repeat(${grid[0]?.cells.length ?? 0}, minmax(18px, 1fr)) 48px`, gap: 3, alignItems: "center", minWidth: 520 }}>
+        <div className={cn(CARD, "overflow-x-auto px-4 py-3.5")}>
+          <div className="grid min-w-[520px] items-center gap-[3px]" style={{ gridTemplateColumns: `150px repeat(${grid[0]?.cells.length ?? 0}, minmax(18px, 1fr)) 48px` }}>
             <span />
-            {grid[0]?.cells.map((c) => <span key={c.day} title={frDate(c.day, false)} style={{ ...MONO, fontSize: 9, color: C.tx3, textAlign: "center" }}>{c.day.slice(8)}</span>)}
-            <span style={{ ...MONO, fontSize: 9.5, color: C.tx3, textAlign: "right" }}>Moy.</span>
+            {grid[0]?.cells.map((c) => <span key={c.day} title={frDate(c.day, false)} className="agon-mono text-center text-[9px] text-agon-tx3">{c.day.slice(8)}</span>)}
+            <span className="agon-mono text-right text-[9.5px] text-agon-tx3">Moy.</span>
             {grid.map((row) => (
               <FragmentRow key={row.item} label={ITEM_NAME[row.item]} cells={row.cells} mean={row.mean} />
             ))}
           </div>
-          <div style={{ display: "flex", gap: 14, marginTop: 12, fontSize: 11.5, color: C.tx3, flexWrap: "wrap" }}>
+          <div className="mt-3 flex flex-wrap gap-3.5 text-[11.5px] text-agon-tx3">
             <span>Note 1 → 5 :</span>
-            {[1, 2, 3, 4, 5].map((n) => <span key={n} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: NOTE_COLOR[n] }} />{n}</span>)}
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, border: `1.5px solid ${C.tx}` }} />Sous l’habitude</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: C.s2 }} />Pas de saisie</span>
+            {[1, 2, 3, 4, 5].map((n) => <span key={n} className={LEGEND}><span className="size-2.5 rounded-[3px]" style={{ background: NOTE_COLOR[n] }} />{n}</span>)}
+            <span className={LEGEND}><span className="size-2.5 rounded-[3px] border-[1.5px] border-agon-tx" />Sous l’habitude</span>
+            <span className={LEGEND}><span className="size-2.5 rounded-[3px] bg-agon-s2" />Pas de saisie</span>
           </div>
         </div>
       </section>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <section className={COL}>
         <SectionHead n={3} title="Alertes · écart à l’habitude" />
-        <div style={{ ...ORDI_CARD, padding: "4px 16px" }}>
+        <div className={cn(CARD, "px-4 py-1")}>
           {hrv?.below && hrvMean != null && (
             <AlertRow tag="À surveiller" color={C.o} title={`VFC de nuit ${int(hrvMean)} ms, sous la zone ${hrvZone ? `${int(hrvZone.low)}–${int(hrvZone.high)} ms` : ""}`} sub={`${hrv.belowDays} jour${hrv.belowDays > 1 ? "s" : ""} de suite · à croiser avec sommeil, envie, FC de repos`} />
           )}
@@ -308,30 +317,30 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
         </div>
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 22, alignItems: "start" }}>
-        <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(380px,1fr))] items-start gap-[22px]">
+        <section className={COL}>
           <SectionHead n={4} title="Courbatures après les séances · 28 jours" />
-          <div style={{ ...ORDI_CARD, padding: "4px 16px" }}>
-            {byWorkout.length === 0 ? <div style={{ fontSize: 13, color: C.tx3, padding: "12px 0" }}>Aucune séance rattachée à des courbatures.</div> : byWorkout.map((w) => (
-              <div key={w.name} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr) auto", gap: 12, padding: "10px 0", borderTop: `1px solid ${C.brd}`, fontSize: 13, alignItems: "center" }}>
-                <span style={{ color: C.tx }}>{w.name}</span>
-                <span style={{ color: C.tx2 }}>{w.zones.length ? w.zones.map((z) => z.label).join(" · ") : "—"}</span>
-                <span style={{ ...MONO, fontSize: 11, color: w.zones.length ? DOMS_LEVEL_COLOR[Math.max(...w.zones.map((z) => z.level)) as 1 | 2 | 3] : C.tx3 }}>
+          <div className={cn(CARD, "px-4 py-1")}>
+            {byWorkout.length === 0 ? <div className={cn(EMPTY, "py-3")}>Aucune séance rattachée à des courbatures.</div> : byWorkout.map((w) => (
+              <div key={w.name} className={cn(ROW_TOP, "grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] items-center gap-3 py-2.5 text-[13px]")}>
+                <span className="text-agon-tx">{w.name}</span>
+                <span className="text-agon-tx2">{w.zones.length ? w.zones.map((z) => z.label).join(" · ") : "—"}</span>
+                <span className="agon-mono text-[11px]" style={{ color: w.zones.length ? DOMS_LEVEL_COLOR[Math.max(...w.zones.map((z) => z.level)) as 1 | 2 | 3] : C.tx3 }}>
                   {w.zones.length ? DOMS_LEVEL_LABEL[Math.max(...w.zones.map((z) => z.level)) as 1 | 2 | 3] : "Aucune"}
                 </span>
               </div>
             ))}
           </div>
         </section>
-        <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <section className={COL}>
           <SectionHead n={5} title="Courbatures · 7 jours" />
-          <div style={{ ...ORDI_CARD, padding: "14px 16px", display: "flex", gap: 18, flexWrap: "wrap" }}>
+          <div className={cn(CARD, "flex flex-wrap gap-[18px] px-4 py-3.5")}>
             <BodyRead levels={domsMaxLevels(zones7)} />
-            <div style={{ flex: 1, minWidth: 180, display: "flex", flexDirection: "column" }}>
-              {zones7.length === 0 ? <span style={{ fontSize: 13, color: C.tx3 }}>Rien de signalé.</span> : zones7.map((z) => (
-                <div key={z.id} style={{ padding: "8px 0", borderTop: `1px solid ${C.brd}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: C.tx }}><span>{z.label}</span><span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>{z.days} j sur 7</span></div>
-                  <div style={{ fontSize: 11.5, color: C.tx3 }}>{DOMS_LEVEL_LABEL[z.maxLevel]}{z.workouts.length ? ` · après ${z.workouts.join(", ")}` : ""} · {z.dates.map(shortDay).join(", ")}</div>
+            <div className="flex min-w-[180px] flex-1 flex-col">
+              {zones7.length === 0 ? <span className={EMPTY}>Rien de signalé.</span> : zones7.map((z) => (
+                <div key={z.id} className={cn(ROW_TOP, "py-2")}>
+                  <div className="flex justify-between text-[13px] text-agon-tx"><span>{z.label}</span><span className="agon-mono text-[11px] text-agon-tx2">{z.days} j sur 7</span></div>
+                  <div className="text-[11.5px] text-agon-tx3">{DOMS_LEVEL_LABEL[z.maxLevel]}{z.workouts.length ? ` · après ${z.workouts.join(", ")}` : ""} · {z.dates.map(shortDay).join(", ")}</div>
                 </div>
               ))}
             </div>
@@ -339,18 +348,18 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
         </section>
       </div>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <section className={COL}>
         <SectionHead n={6} title={lastDay ? `Saisie du jour · ${frDate(lastDay, false)}` : "Saisie du jour"} />
-        {!last ? <div style={{ fontSize: 13, color: C.tx3 }}>Aucune saisie.</div> : (
-          <div style={{ ...ORDI_CARD, padding: "14px 16px", display: "flex", gap: 22, flexWrap: "wrap", alignItems: "center" }}>
+        {!last ? <div className={EMPTY}>Aucune saisie.</div> : (
+          <div className={cn(CARD, "flex flex-wrap items-center gap-[22px] px-4 py-3.5")}>
             <div>
-              <span style={{ ...MONO, fontSize: 30, color: C.tx }}>{int(lastScore)}</span><span style={{ ...MONO, fontSize: 12, color: C.tx3 }}> / 100</span>
-              <div style={{ fontSize: 12.5, color: C.tx2 }}>{wellnessBand(lastScore)?.label ?? "—"}</div>
+              <span className="agon-mono text-[30px] text-agon-tx">{int(lastScore)}</span><span className="agon-mono text-[12px] text-agon-tx3"> / 100</span>
+              <div className="text-[12.5px] text-agon-tx2">{wellnessBand(lastScore)?.label ?? "—"}</div>
             </div>
             {morning.map(([k, v]) => (
-              <div key={k} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontSize: 11.5, color: C.tx3 }}>{k}</span>
-                <span style={{ ...MONO, fontSize: 16, color: C.tx }}>{v}</span>
+              <div key={k} className="flex flex-col gap-0.5">
+                <span className="text-[11.5px] text-agon-tx3">{k}</span>
+                <span className="agon-mono text-[16px] text-agon-tx">{v}</span>
               </div>
             ))}
           </div>
@@ -363,23 +372,23 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
 function FragmentRow({ label, cells, mean }: { label: string; cells: { day: IsoDay; value: number | null; z: number | null }[]; mean: number | null }) {
   return (
     <>
-      <span style={{ fontSize: 12.5, color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
+      <span className="truncate text-[12.5px] text-agon-tx2">{label}</span>
       {cells.map((c) => (
         <span key={c.day} title={`${frDate(c.day, false)} · ${c.value ?? "pas de saisie"}`}
-          style={{ height: 20, borderRadius: 4, background: c.value != null ? alpha(NOTE_COLOR[Math.round(c.value)] ?? C.tx3, 0.75) : C.s2, boxShadow: c.z != null && c.z < -1 ? `inset 0 0 0 1.5px ${C.tx}` : "none" }} />
+          className="h-5 rounded-[4px]" style={{ background: c.value != null ? alpha(NOTE_COLOR[Math.round(c.value)] ?? C.tx3, 0.75) : C.s2, boxShadow: c.z != null && c.z < -1 ? `inset 0 0 0 1.5px ${C.tx}` : "none" }} />
       ))}
-      <span style={{ ...MONO, fontSize: 11, color: C.tx2, textAlign: "right" }}>{dec(mean)}</span>
+      <span className="agon-mono text-right text-[11px] text-agon-tx2">{dec(mean)}</span>
     </>
   );
 }
 
 function AlertRow({ tag, color, title, sub }: { tag: string; color: string; title: string; sub: string }) {
   return (
-    <div style={{ display: "flex", gap: 12, padding: "10px 0", borderTop: `1px solid ${C.brd}`, alignItems: "flex-start" }}>
+    <div className={cn(ROW_TOP, "flex items-start gap-3 py-2.5")}>
       <Pill color={color}>{tag}</Pill>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13.5, color: C.tx }}>{title}</div>
-        <div style={{ fontSize: 12, color: C.tx3 }}>{sub}</div>
+      <div className="flex-1">
+        <div className="text-[13.5px] text-agon-tx">{title}</div>
+        <div className="text-[12px] text-agon-tx3">{sub}</div>
       </div>
     </div>
   );
