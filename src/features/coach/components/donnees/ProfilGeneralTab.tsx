@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachPerfNotification from "@/components/coach/CoachPerfNotification";
 import type { Profile } from "@/hooks/useAuth";
+import { coachBirthDateHint } from "@/lib/aiBirthDateNotice";
 import type { Goals, Habit } from "@/features/shared/types/athlete";
 import { useHyroxFlag } from "@/features/shared/hooks/hyrox/useHyroxFlag";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
@@ -285,6 +286,9 @@ export function ProfilGeneralTab() {
               <Tile label="Âge" value={ap.age ? ap.age + " ans" : null} tone={COL.identity} />
               <Tile label="Taille" value={ap.height_cm ? ap.height_cm + " cm" : null} tone={COL.identity} />
             </div>
+            {coachBirthDateHint(ap) && (
+              <div className="mt-2 text-[11px] text-agon-tx3">{coachBirthDateHint(ap)}</div>
+            )}
           </>
         ) : (
           <div className="flex items-center justify-between">

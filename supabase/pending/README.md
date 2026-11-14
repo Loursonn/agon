@@ -6,7 +6,8 @@ Le job CI « Rejeu des migrations (R2) » compare `supabase/migrations/` au sch�
 
 ## 20261114120000 — IA coupée sans date de naissance (revue juridique C2, phase 2)
 
-Durcissement : à appliquer seulement avec l'accord d'Hugo. Aucune Edge Function à déployer :
+Durcissement : à appliquer **le 22/11/2026**. Hugo a donné son accord le 14/11, sous condition d'un préavis de 7 jours
+(jusqu'au 21/11 inclus, `AI_BIRTH_DATE_DEADLINE`). Aucune Edge Function à déployer :
 toutes les lectures serveur de l'accord IA passent par la vue `current_consents`
 (`hasConsent` d'`athlete-insights` et `ai-program`, liste des athlètes de `coach-api`,
 `ai_eligible_sources`).

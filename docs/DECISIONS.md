@@ -2569,3 +2569,17 @@ et son README.
   séance. Au-delà des 7 jours, le suivi se reconnaît à sa date enregistrée après la fenêtre ; le cron continue de
   le tenir à jour. Détail : `docs/integrations/GARMIN_TRAINING.md`.
 
+
+## 2026-11-14 — IA coupée sans date de naissance : 7 jours de préavis
+
+- Contexte : revue juridique C2, phase 2. L'accord IA (`ai_programming`) ne doit compter que pour un compte dont la
+  date de naissance est connue et indique 18 ans ou plus. Migration prête : `supabase/pending/20261114120000_ai_requires_birth_date.sql`
+  (vue `current_consents` + trigger `ai_consent_adults_only`), test à blanc en prod 32/32. 6 comptes ont dit oui à
+  l'IA sans date.
+- Décision d'Hugo : **préavis de 7 jours**. Les comptes ont jusqu'au **21/11/2026 inclus** pour saisir leur date ;
+  la migration s'applique le **22/11** (accord d'Hugo déjà donné, sous cette condition).
+- Côté app : l'écran « Ta date de naissance » (`BirthDateGate`, bloquant à l'ouverture, tous les rôles) affiche le
+  préavis aux comptes qui ont dit oui à l'IA. Un bandeau sur l'accueil serait inutile : l'écran passe avant l'accueil.
+  Côté coach : mention discrète sur la fiche athlète (Profil › Identité). Date limite en constante :
+  `AI_BIRTH_DATE_DEADLINE` (`src/lib/aiBirthDateNotice.ts`), testée.
+- Le 22/11 : procédure dans `supabase/pending/README.md` (section 20261114120000). Aucune Edge Function à déployer.

@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-date-naissance-ia",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Date de naissance : rappel avant le 21 novembre pour garder l'IA",
+    summary:
+      "Les analyses par IA sont réservées aux 18 ans et plus. À partir du 22 novembre, un athlète sans date de naissance n'y aura plus accès tant qu'il ne l'aura pas renseignée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "À sa prochaine connexion, l'athlète sans date de naissance la renseigne en une fois ; s'il a accepté l'IA, un message lui rappelle de le faire avant le 21 novembre.",
+          "Sur la fiche de ton athlète (Profil, bloc Identité), une petite mention t'indique s'il doit encore la renseigner : tu peux l'inviter à ouvrir l'app.",
+          "Dès que la date est saisie (18 ans ou plus), l'IA reprend sans rien à refaire.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-ia-echelles-forme",
     date: "2026-11-14",
     kind: "fix",

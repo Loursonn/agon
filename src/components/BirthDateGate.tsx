@@ -5,7 +5,9 @@ import { BirthDateRefused } from "@/api/profile";
 import { localIsoDay } from "@shared/domain/dates";
 import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { AUTH_INPUT } from "@/pages/auth/authStyles";
-import { AuthButton, AuthError, AuthField, AuthLogo, AuthScreen, AuthTitle } from "@/pages/auth/AuthUi";
+import { AuthButton, AuthError, AuthField, AuthLogo, AuthNotice, AuthScreen, AuthTitle } from "@/pages/auth/AuthUi";
+import { useConsents } from "@/features/shared/hooks/useConsent";
+import { aiBirthDateNotice } from "@/lib/aiBirthDateNotice";
 
 /**
  * Date de naissance des comptes qui n'en ont pas (créés avant le contrôle d'âge
@@ -27,9 +29,14 @@ export default function BirthDateGate({ children }: { children: React.ReactNode 
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [later, setLater] = useState(false);
+  // Même requête (même clé) que ConsentGate : rien de plus vers le serveur.
+  const { data: consents } = useConsents();
 
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
   if (!profile || profile.birth_date || profile.is_pending || later || !online) return <>{children}</>;
+
+  // Préavis : l'IA s'arrête après le 21/11 pour un compte sans date (décision du 2026-11-14).
+  const aiNotice = aiBirthDateNotice(!!consents?.find((c) => c.purpose === "ai_programming")?.granted);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -68,6 +75,7 @@ export default function BirthDateGate({ children }: { children: React.ReactNode 
             </>
           }
         />
+        {aiNotice && <AuthNotice>{aiNotice}</AuthNotice>}
         <AuthField label="Date de naissance" hint="Elle sert seulement à vérifier ton âge, comme à l’inscription.">
           <input
             id="birthDate"
