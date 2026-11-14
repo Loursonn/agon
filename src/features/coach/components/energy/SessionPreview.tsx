@@ -19,6 +19,7 @@ import {
 import type { EnergyGroup } from "@/types/energy";
 import HatchPattern from "./HatchPattern";
 import { formatTarget, formatS, formatSLong, formatExerciseStep } from "@/lib/energy/formatTarget";
+import { FitText } from "@/features/shared/components/FitText";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 import { formatTargetPaceEquivalents } from "@/lib/energy/paceEquivalents";
 import { useZoneModels } from "@/features/shared/hooks/useZoneModels";
@@ -372,15 +373,16 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
                 key={seg.key}
                 style={{
                   flex: seg.secs,
-                  textAlign: "center",
-                  fontSize: 9,
+                  display: "flex",
+                  justifyContent: "center",
                   color: C.tx3,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
                   minWidth: 0,
                 }}
               >
-                {(seg.secs / totalDur) > 0.05 ? `${seg.label} · ${formatS(seg.secs)}` : ""}
+                {/* « Z2 · 1:20:00 » rapetisse pour rester sous son segment, sans être coupé. */}
+                {(seg.secs / totalDur) > 0.05 && (
+                  <FitText base={9} min={7} style={{ textAlign: "center", lineHeight: 1.2 }}>{`${seg.label} · ${formatS(seg.secs)}`}</FitText>
+                )}
               </div>
             ))}
           </div>

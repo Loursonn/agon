@@ -8,6 +8,10 @@ import { providerAttribution } from "@/lib/activityDisplay";
 import { fmtHour } from "@/lib/seance";
 import type { DoneActivity } from "@/lib/plannedVsDone";
 import type { EnergySessionRow } from "@/types/energy";
+import { FitText } from "@/features/shared/components/FitText";
+
+/** Colonnes Libellé / Prévu / Fait : bornées à 0 pour qu'une valeur longue ne pousse pas la grille hors de la carte. */
+const COLS = "minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.1fr)";
 
 /**
  * Séance d'énergie faite avec une montre (planche EnergieTel, écran 05) :
@@ -61,14 +65,15 @@ export function EnergyDoneView({
         </span>
 
         <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 16, padding: "6px 14px 4px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr 1.1fr", padding: "8px 0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: COLS, columnGap: 8, padding: "8px 0" }}>
             <span /><span style={{ ...LABEL, textAlign: "right" }}>Prévu</span><span style={{ ...LABEL, color: C.tx2, textAlign: "right" }}>Fait</span>
           </div>
           {rows.map((r) => (
-            <div key={r.label} style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr 1.1fr", alignItems: "baseline", padding: "10px 0", borderTop: `1px solid ${C.brd}` }}>
-              <span style={{ fontSize: 14, color: C.tx2 }}>{r.label}</span>
-              <span style={{ ...MONO, fontSize: 14, color: C.tx2, textAlign: "right" }}>{r.planned}</span>
-              <span style={{ ...MONO, fontSize: 16, textAlign: "right" }}>{r.done}</span>
+            <div key={r.label} style={{ display: "grid", gridTemplateColumns: COLS, columnGap: 8, alignItems: "baseline", padding: "10px 0", borderTop: `1px solid ${C.brd}` }}>
+              <span style={{ fontSize: 14, color: C.tx2, minWidth: 0 }}>{r.label}</span>
+              {/* « 1 h 20 min » et plus : la valeur rapetisse pour rester dans sa colonne. */}
+              <FitText base={14} min={10} style={{ ...MONO, color: C.tx2, textAlign: "right", justifySelf: "end" }}>{r.planned}</FitText>
+              <FitText base={16} min={11} style={{ ...MONO, textAlign: "right", justifySelf: "end" }}>{r.done}</FitText>
             </div>
           ))}
         </div>

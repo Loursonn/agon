@@ -145,7 +145,7 @@ function BlockCard({ step, index, open, onToggle, onChange, onDuplicate, onDelet
         <span className={cn(MONO_CLS, "w-3.5 text-[12px] text-agon-tx3")}>{index + 1}</span>
         <button type="button" onClick={kind === "advanced" ? onDetail : onToggle} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 bg-transparent p-0 text-left text-agon-tx">
           <span className="w-[150px] flex-none text-[14px] font-semibold">{blockTitle(step)}</span>
-          <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] text-agon-tx2">
+          <span className="min-w-0 flex-1 break-words text-[12.5px] leading-snug text-agon-tx2">
             {blockSummary(step)}
             {kind === "advanced" && <span className="text-agon-accent"> · modifier en détail</span>}
           </span>
