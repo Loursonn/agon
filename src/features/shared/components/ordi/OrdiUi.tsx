@@ -29,17 +29,27 @@ export function PageHead({ title, kicker, actions, sub }: { title: ReactNode; ki
 }
 
 /** Rubrique numérotée : « 01 — Titre », info à droite, filet dessous, phrase d'aide. */
-export function SectionHead({ n, title, right, hint }: { n?: number; title: ReactNode; right?: ReactNode; hint?: ReactNode }) {
+export function SectionHead({ n, title, right, hint, color }: {
+  n?: number; title: ReactNode; right?: ReactNode; hint?: ReactNode;
+  /** Couleur de famille (catégorie de test, de fiche…) : compteur et filet de 2 px dans cette couleur. */
+  color?: string;
+}) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ paddingBottom: 10, borderBottom: `1px solid ${C.brd}` }}>
+      <div style={{ paddingBottom: 10, borderBottom: color ? "none" : `1px solid ${C.brd}` }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 22, flexWrap: "wrap" }}>
-          <span style={KICK}>
+          <span style={color ? { ...KICK, color: C.tx } : KICK}>
             {n != null && <span style={{ color: C.ac }}>{String(n).padStart(2, "0")} —</span>} {title}
           </span>
-          {right && <span style={{ fontSize: 12, color: C.tx3 }}>{right}</span>}
+          {right && (color ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span aria-hidden style={{ width: 22, height: 3, borderRadius: 2, background: color }} />
+              <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color }}>{right}</span>
+            </span>
+          ) : <span style={{ fontSize: 12, color: C.tx3 }}>{right}</span>)}
         </div>
       </div>
+      {color && <div style={{ height: 2, background: color, marginTop: -6 }} />}
       {hint && <div style={{ fontSize: 13, color: C.tx3, marginTop: 2, lineHeight: 1.5 }}>{hint}</div>}
     </div>
   );

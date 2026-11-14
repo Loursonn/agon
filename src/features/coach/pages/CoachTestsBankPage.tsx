@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { FlaskConical, Plus, Pencil, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { C, alpha, H } from "@/lib/theme";
-import { DISPLAY, KICK, SectionHead } from '@/features/shared/components/ordi/OrdiUi';
+import { DISPLAY, KICK, MONO, SectionHead } from '@/features/shared/components/ordi/OrdiUi';
 import { EmptyState } from '@/features/shared/components/EmptyState';
 import { ListSkeleton } from '@/features/shared/components/skeletons';
 import {
@@ -183,30 +183,32 @@ function TestCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Planche CoachTests : carte teintée de la couleur de la catégorie.
+  const cc = (test.category && TEST_CATEGORY_COLOR[test.category as TestCategory]) || C.ac;
 
   return (
     <div style={{
-      background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd,
-      overflow: 'hidden', transition: 'border-color 150ms ease-out',
+      background: alpha(cc, 0.12), borderRadius: 14, border: '1px solid ' + alpha(cc, 0.4),
+      boxShadow: `inset 3px 0 0 ${cc}`, overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+        display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px',
         cursor: 'pointer',
       }} onClick={() => setExpanded(e => !e)}>
         <div style={{
-          width: 36, height: 36, borderRadius: 4, flexShrink: 0,
-          background: test.kind === 'preset' ? 'rgba(255,201,51,0.12)' : 'rgba(245,166,35,0.12)',
+          width: 36, height: 36, boxSizing: 'border-box', borderRadius: 10, flexShrink: 0,
+          background: alpha(cc, 0.16), border: '1px solid ' + alpha(cc, 0.45),
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <FlaskConical size={16} color={test.kind === 'preset' ? C.ac : H.miel} />
+          <FlaskConical size={16} color={cc} />
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 2 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: C.tx }}>
             {test.name}
           </div>
-          <div style={{ fontSize: 11, color: C.tx3 }}>
+          <div style={{ fontSize: 12, color: C.tx3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {test.test_variables.length} variable{test.test_variables.length > 1 ? 's' : ''}
             {' · '}
             {test.test_variables.map(v => v.label).join(', ')}
@@ -214,31 +216,21 @@ function TestCard({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {test.category && (() => {
-            const cc = TEST_CATEGORY_COLOR[test.category as TestCategory] ?? C.tx3;
-            return (
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-                background: cc + '1A', color: cc, border: '1px solid ' + cc + '40',
-                textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap',
-              }}>
-                {TEST_CATEGORY_LABEL[test.category as TestCategory] ?? test.category}
-              </span>
-            );
-          })()}
-          <span style={{
-            fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-            background: C.s2, color: test.fill_mode === 'coach' ? C.o : C.tx3,
-            border: '1px solid ' + C.brdL, whiteSpace: 'nowrap',
-          }} title={test.fill_mode === 'coach' ? 'Rempli par le coach (vidéo à envoyer)' : 'Rempli par l’athlète'}>
+          {test.category && (
+            <span style={{ ...PILL, color: C.ink, background: cc }}>
+              {TEST_CATEGORY_LABEL[test.category as TestCategory] ?? test.category}
+            </span>
+          )}
+          <span
+            style={test.fill_mode === 'coach'
+              ? { ...PILL, color: C.ink, background: C.o }
+              : { ...PILL, color: C.tx2, background: C.s2, border: '1px solid ' + C.brdL, padding: '2px 8px' }}
+            title={test.fill_mode === 'coach' ? 'Rempli par le coach (vidéo à envoyer)' : 'Rempli par l’athlète'}
+          >
             {test.fill_mode === 'coach' ? 'Coach' : 'Athlète'}
           </span>
           {test.kind === 'preset' && (
-            <span style={{
-              fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-              background: 'rgba(255,201,51,0.12)', color: C.ac, textTransform: 'uppercase',
-              letterSpacing: '0.4px',
-            }}>
+            <span style={{ ...PILL, color: C.ac, background: alpha(C.ac, 0.1), border: '1px solid ' + C.brd, padding: '2px 8px' }}>
               Preset
             </span>
           )}
@@ -561,14 +553,15 @@ export default function CoachTestsBankPage() {
   }
 
   return (
-    <div style={{ padding: '40px 24px 60px', maxWidth: 800, margin: '0 auto' }}>
+    <div style={{ paddingBottom: 60 }}>
 
-      {/* En-tête */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-        <div>
-          <h1 style={{ margin: '0 0 8px', ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.tx }}>Tests</h1>
-          <div style={{ ...KICK }}>
-            Banque de tests · <span style={{ color: C.ac }}>{presets.length}</span> preset{presets.length > 1 ? 's' : ''} · <span style={{ color: C.ac }}>{custom.length}</span> test{custom.length > 1 ? 's' : ''} personnalisé{custom.length > 1 ? 's' : ''}
+      {/* En-tête pleine largeur, teinté rose (planche CoachTests) */}
+      <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, padding: '36px 40px 28px', borderBottom: '1px solid ' + C.brd, background: alpha(C.ame, 0.12) }}>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span style={{ ...KICK, color: C.ame }}>Tests</span>
+          <h1 style={{ margin: 0, ...DISPLAY, fontWeight: 300, fontSize: 32, lineHeight: 1.1, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.tx }}>Banque de tests</h1>
+          <div style={{ ...MONO, fontSize: 12, color: C.tx3, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 15, color: C.ame }}>{presets.length}</span> preset{presets.length > 1 ? 's' : ''} · <span style={{ fontSize: 15, color: C.ame }}>{custom.length}</span> test{custom.length > 1 ? 's' : ''} personnalisé{custom.length > 1 ? 's' : ''}
           </div>
         </div>
         {mode === 'idle' && (
@@ -576,7 +569,7 @@ export default function CoachTestsBankPage() {
             onClick={() => setMode('create')}
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 10, border: 'none',
+              position: 'relative', height: 40, boxSizing: 'border-box', padding: '0 18px', borderRadius: 10, border: 'none',
               background: C.ac, color: C.ink, fontSize: 12, fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
               transition: 'opacity 150ms ease-out',
@@ -588,6 +581,8 @@ export default function CoachTestsBankPage() {
           </button>
         )}
       </div>
+
+      <div style={{ padding: '32px 40px 0', maxWidth: 1040, margin: '0 auto', boxSizing: 'border-box' }}>
 
       {/* Formulaire création / édition (en haut) */}
       {mode === 'create' && (
@@ -621,8 +616,8 @@ export default function CoachTestsBankPage() {
               const inCat = presets.filter(t => t.category === cat);
               return (
                 <div key={cat}>
-                  <div style={{ marginBottom: 10 }}>
-                    <SectionHead n={idx + 1} title={TEST_CATEGORY_LABEL[cat]} right={`${inCat.length} test${inCat.length > 1 ? 's' : ''}`} />
+                  <div style={{ marginBottom: 12 }}>
+                    <SectionHead n={idx + 1} title={TEST_CATEGORY_LABEL[cat]} right={`${inCat.length} test${inCat.length > 1 ? 's' : ''}`} color={TEST_CATEGORY_COLOR[cat] ?? C.ac} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {inCat.map(t => (
@@ -690,9 +685,16 @@ export default function CoachTestsBankPage() {
           </section>
         </>
       )}
+      </div>
     </div>
   );
 }
+
+const PILL: React.CSSProperties = {
+  ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: '0.10em', textTransform: 'uppercase',
+  whiteSpace: 'nowrap', flex: 'none', borderRadius: 999, padding: '3px 9px', lineHeight: 1.3,
+};
+
 
 // ── Styles partagés ───────────────────────────────────────────────────────────
 
