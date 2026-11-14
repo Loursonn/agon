@@ -1,5 +1,5 @@
 import { LineChart, Line, YAxis, ResponsiveContainer } from "recharts";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { TrendPoint } from "@/lib/athleteTrends";
 
 interface Props {
@@ -22,36 +22,41 @@ interface Props {
 export function TrendCard({ label, value, unit, delta, deltaUnit = "", goodWhenUp = true, sub, series, color, progress, onClick }: Props) {
   const hasDelta = delta !== null && delta !== undefined && delta !== 0;
   const good = !hasDelta || goodWhenUp === null ? null : (delta! > 0) === goodWhenUp;
-  const deltaColor = good === null ? C.tx3 : good ? C.g : C.r;
+  const deltaClass = good === null ? "text-agon-tx3" : good ? "text-agon-succes" : "text-agon-erreur";
   const points = (series ?? []).filter(p => p.value !== null).length;
+  const empty = value === "—";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      style={{
-        background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "12px 12px 10px",
-        textAlign: "left", cursor: onClick ? "pointer" : "default", fontFamily: "inherit",
-        display: "flex", flexDirection: "column", gap: 4, minWidth: 0,
-      }}
+      className={cn(
+        "flex min-w-0 flex-col gap-1 rounded-[6px] border border-agon-brd bg-agon-s1 px-3 pb-2.5 pt-3 text-left",
+        onClick ? "cursor-pointer" : "cursor-default",
+      )}
     >
-      <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 22, fontWeight: 800, color: value === "—" ? C.tx3 : color, letterSpacing: "-0.5px", lineHeight: 1.1 }}>{value}</span>
-        {unit && value !== "—" && <span style={{ fontSize: 10, color: C.tx3 }}>{unit}</span>}
+      <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-agon-tx3">{label}</div>
+      <div className="flex flex-wrap items-baseline gap-1.5">
+        <span
+          className={cn("text-[22px] font-extrabold leading-[1.1] tracking-[-0.5px]", empty && "text-agon-tx3")}
+          style={empty ? undefined : { color }}
+        >
+          {value}
+        </span>
+        {unit && !empty && <span className="text-[10px] text-agon-tx3">{unit}</span>}
         {hasDelta && (
-          <span style={{ fontSize: 10, fontWeight: 700, color: deltaColor }}>
+          <span className={cn("text-[10px] font-bold", deltaClass)}>
             {delta! > 0 ? "▲" : "▼"} {Math.abs(delta!)}{deltaUnit}
           </span>
         )}
       </div>
-      {sub && <div style={{ fontSize: 10, color: C.tx3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
+      {sub && <div className="truncate text-[10px] text-agon-tx3">{sub}</div>}
       {progress !== undefined && progress !== null ? (
-        <div style={{ height: 5, background: C.s2, borderRadius: 3, overflow: "hidden", marginTop: 6 }}>
-          <div style={{ height: "100%", width: Math.min(100, Math.max(0, progress)) + "%", background: color, borderRadius: 3 }} />
+        <div className="mt-1.5 h-[5px] overflow-hidden rounded-[3px] bg-agon-s2">
+          <div className="h-full rounded-[3px]" style={{ width: Math.min(100, Math.max(0, progress)) + "%", background: color }} />
         </div>
       ) : points >= 2 ? (
-        <div style={{ height: 30, marginTop: 2 }}>
+        <div className="mt-0.5 h-[30px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={series} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
               <YAxis hide domain={["dataMin", "dataMax"]} />
@@ -60,7 +65,7 @@ export function TrendCard({ label, value, unit, delta, deltaUnit = "", goodWhenU
           </ResponsiveContainer>
         </div>
       ) : (
-        <div style={{ height: 30, display: "flex", alignItems: "center", fontSize: 10, color: C.tx3 }}>Pas assez de données</div>
+        <div className="flex h-[30px] items-center text-[10px] text-agon-tx3">Pas assez de données</div>
       )}
     </button>
   );
