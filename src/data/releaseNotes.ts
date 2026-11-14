@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-theme-du-jour-menu-rapide",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Thème du jour en un clic",
+    summary: "Dans le planning, clique sur l'en-tête d'un jour : un petit menu s'ouvre sur place, sans panneau sur le côté.",
+    sections: [
+      {
+        title: "Dans le planning (semaine et mois)",
+        points: [
+          "Choisis Hard, Moyen, Easy, Récup active ou Repos : c'est enregistré tout de suite.",
+          "« Ajouter un commentaire » te laisse écrire un mot sur la journée ; ton athlète le lit sous le thème de son jour.",
+          "« Retirer le thème » l'efface, et « Plus d'options… » ouvre le panneau complet (nom, dominante, couleur).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-blessures-et-staff-lisibles",
     date: "2026-11-14",
     kind: "feature",

@@ -2429,3 +2429,14 @@ et son README.
 - Premier essai à blanc tombé sur un deadlock avec une requête en cours (transaction annulée, rien changé) : la
   migration prend désormais ses verrous d'un coup en tête (`profiles`, `storage.objects`, `storage.buckets`, tables
   médicales), avec `lock_timeout`. À reprendre pour toute migration qui supprime une table liée à `profiles`.
+
+## 2026-11-14 — Banque d'exercices et thème du jour (Hugo)
+
+- **Banque** : on garde les types d'exercice actuels. Le sélecteur Musculaire / Énergétique / Spécifique de la
+  planche n'est pas repris : changer la taxonomie toucherait la programmation et les séances déjà faites, pour un
+  gain seulement visuel.
+- **Thème du jour** : un clic sur l'en-tête d'un jour du planning coach (semaine et mois) ouvre un menu sur place,
+  plus le panneau latéral. Le menu propose les intensités en un clic, un commentaire (la `note` du thème, que
+  l'athlète lit sous son thème), « Retirer » et « Plus d'options… », qui ouvre le panneau complet (nom, dominante,
+  couleur). Le reste de la case du jour ouvre toujours le panneau. Changer l'intensité garde une couleur choisie à
+  la main (`colorForIntensityPick`).
