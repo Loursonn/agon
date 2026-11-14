@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-pastille-importance-competitions",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Liste des compétitions : importance lisible",
+    summary: "Dans Planning › Compétitions, la pastille d'importance affiche la lettre (A, B, C) au lieu d'un texte qui débordait.",
+    sections: [
+      {
+        title: "Planning",
+        points: [
+          "Survole la pastille pour lire l'importance en toutes lettres.",
+          "Sur un écran étroit, « + Thème » et le thème du jour restent sur une ligne dans l'en-tête de chaque jour.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-invitation-staff-finitions",
     date: "2026-11-14",
     kind: "fix",
