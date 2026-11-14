@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-competitions-annuler-supprimer",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Annuler ou supprimer une compétition, bascule coach / athlète plus visible",
+    summary: "Une compétition annulée reste visible, barrée, mais ne compte plus dans les décomptes. Une compétition saisie par erreur se supprime. Sur téléphone, passer du mode coach au mode athlète se fait en un geste.",
+    sections: [
+      {
+        title: "Compétitions",
+        points: [
+          "Annuler : la compétition reste dans la liste et le calendrier, barrée, avec qui l'a annulée. Elle sort de la prochaine compétition, des J-x, de la frise et de ce que lit l'assistant. « Rétablir » la remet.",
+          "Supprimer : pour une faute de frappe. La confirmation prévient si un résultat HYROX, un plan de course ou un bilan de l'athlète y est rattaché (les résultats sont gardés, le bilan est perdu).",
+          "Où : Planning › Compétitions (icônes à droite de chaque ligne), en ouvrant une compétition depuis le calendrier, et sur téléphone en touchant la compétition dans le planning de l'athlète.",
+          "L'athlète peut aussi annuler ou supprimer ses compétitions, depuis « Mes compétitions » (bouton ⋯).",
+        ],
+      },
+      {
+        title: "Coach qui s'entraîne aussi",
+        points: [
+          "Côté athlète, la pastille « Mode coach » en haut de chaque page est plus lisible, et une carte « Passer à ton espace coach » ouvre l'onglet Profil.",
+          "Côté coach sur téléphone, une pastille « Athlète » est à côté de « Bonjour » sur l'accueil (le bouton reste aussi dans Plus).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-ia-claude",
     date: "2026-11-14",
     kind: "feature",

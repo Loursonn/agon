@@ -104,9 +104,11 @@ export function AthletePageHeader<K extends string>({
             <button
               type="button"
               onClick={chrome.onSwitchMode}
-              className="agon-mono cursor-pointer whitespace-nowrap rounded-full border border-agon-accent/35 bg-agon-accent/10 px-2 py-[3px] text-[10px] uppercase tracking-[0.08em] text-agon-accent lg:hidden"
+              aria-label="Passer en mode coach"
+              className="agon-mono flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-agon-accent/45 bg-agon-accent/10 px-2.5 text-[10.5px] uppercase tracking-[0.08em] text-agon-accent lg:hidden"
             >
-              Coach
+              <svg aria-hidden width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square"><path d="M4 8H18M14 4L18 8L14 12" /><path d="M20 16H6M10 12L6 16L10 20" /></svg>
+              Mode coach
             </button>
           )}
           {chrome && (
