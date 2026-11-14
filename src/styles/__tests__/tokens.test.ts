@@ -15,7 +15,7 @@ import { BLOC_COLORS, BT, C, H, HABIT_COLORS, PRIMARY, SECONDARY, SUCCESS, TERTI
 const LEGACY_C = {
   bg: "#0E0C0A", s1: "#1E1A16", s2: "#27221D",
   brd: "rgba(231,211,168,0.10)", brdL: "rgba(231,211,168,0.18)",
-  tx: "#FFFFFF", tx2: "#B9AE9C", tx3: "#7D7468",
+  tx: "#FFFFFF", tx2: "#B9AE9C", tx3: "#8E8780",
   ac: "#FFC933", acS: "rgba(255,201,51,0.12)",
   g: "#66F03C", gS: "rgba(102,240,60,0.1)", gV: "#66F03C", gP: "#3D6B24",
   o: "#FF9500", oS: "rgba(255,149,0,0.1)", oV: "#FF9500", oP: "#94560F",
@@ -69,7 +69,7 @@ describe("tokens — rendu historique", () => {
   });
 
   it("alias, blocs, habitudes et types de bloc inchangés", () => {
-    expect([PRIMARY, SECONDARY, TERTIARY, NEUTRAL, SUCCESS]).toEqual(["#FFC933", "#FFC933", "#FF9500", "#7D7468", "#66F03C"]);
+    expect([PRIMARY, SECONDARY, TERTIARY, NEUTRAL, SUCCESS]).toEqual(["#FFC933", "#FFC933", "#FF9500", "#8E8780", "#66F03C"]);
     expect(Object.fromEntries(Object.entries(BT).map(([k, v]) => [k, v.c]))).toEqual({
       // Direction « peps » (12/11) : Mvt principal or, Hypertrophie rose, Besoin bleu, Assoc. turquoise, Core orange.
       PERF: "#FFC933", ESTH: "#F060C0", BESOIN: "#33B5FF", ASSOC: "#2EE6C5", CORE: "#FF7A45",
@@ -85,7 +85,7 @@ describe("tokens — rendu historique", () => {
   });
 
   it("zones à 5 et 7 : suite froid → chaud du code (variante du canvas en attente d'Hugo)", () => {
-    expect(ZONE_COLORS_5).toEqual(["#33B5FF", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F"]);
+    expect(ZONE_COLORS_5).toEqual(["#66F03C", "#B5EB2E", "#FF9500", "#FF6A1F", "#FF3B1F"]);
     expect(ZONE_COLORS_7).toEqual(["#33B5FF", "#2EE6C5", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F", "#F060C0"]);
   });
 });

@@ -31,5 +31,5 @@ export function exTypeLabel(v: string | null | undefined): string {
 }
 
 export function exTypeColor(v: string | null | undefined): string {
-  return EX_TYPE_COLOR[v ?? ""] ?? "#7D7468";
+  return EX_TYPE_COLOR[v ?? ""] ?? "#8E8780";
 }
