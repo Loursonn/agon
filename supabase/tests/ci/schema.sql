@@ -1207,6 +1207,28 @@ $$;
 ALTER FUNCTION "public"."coach_profile_visible"("p_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."competitions_stamp_cancel"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF NEW.cancelled_at IS NULL THEN
+    NEW.cancelled_by := NULL;
+  ELSIF TG_OP = 'INSERT' OR OLD.cancelled_at IS NULL THEN
+    NEW.cancelled_at := now();
+    NEW.cancelled_by := auth.uid();
+  ELSE
+    NEW.cancelled_at := OLD.cancelled_at;
+    NEW.cancelled_by := OLD.cancelled_by;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."competitions_stamp_cancel"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."complete_energy_assignment"("p_assignment" "uuid", "p_block_logs" "jsonb" DEFAULT NULL::"jsonb", "p_notes" "text" DEFAULT NULL::"text", "p_duration_min" integer DEFAULT NULL::integer, "p_activity_url" "text" DEFAULT NULL::"text", "p_activity_type" "text" DEFAULT NULL::"text", "p_distance_km" numeric DEFAULT NULL::numeric, "p_rpe" smallint DEFAULT NULL::smallint) RETURNS "public"."energy_session_assignments"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -7383,6 +7405,8 @@ CREATE TABLE IF NOT EXISTS "public"."competitions" (
     "macrocycle_id" "uuid",
     "athlete_comment" "text",
     "date_end" "date",
+    "cancelled_at" timestamp with time zone,
+    "cancelled_by" "uuid",
     CONSTRAINT "competitions_date_end_check" CHECK ((("date_end" IS NULL) OR ("date_end" >= "date")))
 );
 
@@ -7395,6 +7419,14 @@ COMMENT ON COLUMN "public"."competitions"."athlete_comment" IS 'Visible par l''a
 
 
 COMMENT ON COLUMN "public"."competitions"."date_end" IS 'Dernier jour d''une compétition sur plusieurs jours (null = un jour)';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."cancelled_at" IS 'Annulée le (null = maintenue). Posé par le trigger competitions_stamp_cancel.';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."cancelled_by" IS 'Qui a annulé (coach, co-coach ou athlète). Posé par le trigger, null si rétablie.';
 
 
 
@@ -10203,6 +10235,10 @@ CREATE OR REPLACE TRIGGER "citation_likes_sync" AFTER INSERT OR DELETE ON "publi
 
 
 
+CREATE OR REPLACE TRIGGER "competitions_stamp_cancel" BEFORE INSERT OR UPDATE OF "cancelled_at", "cancelled_by" ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."competitions_stamp_cancel"();
+
+
+
 CREATE OR REPLACE TRIGGER "energy_session_assignments_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "scheduled_date", "status", "activity_type", "distance_km", "actual_duration_min" ON "public"."energy_session_assignments" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink"();
 
 
@@ -10644,6 +10680,11 @@ ALTER TABLE ONLY "public"."coach_api_rate"
 
 ALTER TABLE ONLY "public"."competitions"
     ADD CONSTRAINT "competitions_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."competitions"
+    ADD CONSTRAINT "competitions_cancelled_by_fkey" FOREIGN KEY ("cancelled_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -15573,6 +15614,11 @@ GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") T
 GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."competitions_stamp_cancel"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."competitions_stamp_cancel"() TO "service_role";
 
 
 

@@ -58,7 +58,8 @@ export function DroppableDay({
   const today     = isToday(date);
   const maxVisible = tall ? 99 : 3;
   const comps     = events.filter((e) => e.type === "competition");
-  const isCompDay = comps.length > 0;
+  // Une compétition annulée reste affichée (barrée) mais ne fait pas un jour de compétition.
+  const isCompDay = comps.some((e) => e.status !== "cancelled");
 
   return (
     <div
@@ -164,12 +165,16 @@ export function DroppableDay({
       )}
 
       {/* Jour de compétition — bandeau en tête du jour */}
-      {comps.map((cp) => (
+      {comps.map((cp) => {
+        const cancelled = cp.status === "cancelled";
+        return (
         <div
           key={cp.id}
-          title={competitionDayLabel(cp.raw?.type as string | undefined) + " — " + cp.title}
+          title={(cancelled ? "Annulée — " : competitionDayLabel(cp.raw?.type as string | undefined) + " — ") + cp.title}
           style={{
-            background: C.r, color: C.tx,
+            background: cancelled ? "transparent" : C.r, color: cancelled ? C.tx3 : C.tx,
+            border: cancelled ? `1px dashed ${C.brdL}` : undefined,
+            textDecoration: cancelled ? "line-through" : undefined,
             borderRadius: 3, padding: "1px 5px",
             fontSize: 9, fontWeight: 700, lineHeight: "15px",
             display: "flex", alignItems: "center", gap: 4,
@@ -179,7 +184,8 @@ export function DroppableDay({
           <Trophy size={9} style={{ flexShrink: 0 }} />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{cp.title}</span>
         </div>
-      ))}
+        );
+      })}
 
       {/* Life events — subtle informational bands */}
       {events.filter((e) => e.type === "life_event").map((le) => (

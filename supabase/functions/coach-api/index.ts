@@ -258,7 +258,8 @@ async function planState(admin: SupabaseClient, athleteId: string, dates: string
     "microcycles",
   );
   const [competitions, tests, placements, energyPlacements, themes] = await Promise.all([
-    q(admin.from("competitions").select("id, name, date, type, priority, location").eq("athlete_id", athleteId).order("date").limit(500), "competitions"),
+    // Annulées exclues (cancelled_at) : l'assistant ne planifie pas autour.
+    q(admin.from("competitions").select("id, name, date, type, priority, location").eq("athlete_id", athleteId).is("cancelled_at", null).order("date").limit(500), "competitions"),
     q(admin.from("test_sessions").select("id, title, date, type, completed").eq("athlete_id", athleteId).order("date").limit(500), "test_sessions"),
     dates.length === 0 ? [] : q(
       admin.from("workout_logs").select("session_id, scheduled_date, status, microcycle_id").eq("athlete_id", athleteId).in("scheduled_date", dates),
@@ -400,10 +401,10 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
       .select("energy_session_id, scheduled_date, status, rpe_score, actual_duration_min, distance_km, energy_sessions(name, session_kind, total_duration_s, total_distance_m)")
       .eq("athlete_id", athlete.id).gte("scheduled_date", from).lte("scheduled_date", to)
       .order("scheduled_date").limit(500),
-    // Pas `athlete_comment` ni `notes` : texte libre.
+    // Pas `athlete_comment` ni `notes` : texte libre. Annulées exclues.
     admin.from("competitions")
       .select("id, date, name, type, priority, location")
-      .eq("athlete_id", athlete.id).gte("date", from)
+      .eq("athlete_id", athlete.id).gte("date", from).is("cancelled_at", null)
       .order("date").limit(100),
     // Pas `results_note` ni `description`.
     admin.from("test_sessions")

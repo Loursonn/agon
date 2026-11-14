@@ -1252,6 +1252,8 @@ export type Database = {
         Row: {
           athlete_comment: string | null
           athlete_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
           coach_id: string
           created_at: string
           date: string
@@ -1269,6 +1271,8 @@ export type Database = {
         Insert: {
           athlete_comment?: string | null
           athlete_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           coach_id: string
           created_at?: string
           date: string
@@ -1286,6 +1290,8 @@ export type Database = {
         Update: {
           athlete_comment?: string | null
           athlete_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           coach_id?: string
           created_at?: string
           date?: string
@@ -1304,6 +1310,13 @@ export type Database = {
           {
             foreignKeyName: "competitions_athlete_id_fkey"
             columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competitions_cancelled_by_fkey"
+            columns: ["cancelled_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

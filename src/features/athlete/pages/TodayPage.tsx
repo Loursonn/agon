@@ -35,6 +35,7 @@ import { averageScore, wellnessBand } from "@shared/domain/wellness";
 import { calcScore, getReco, wellnessColor } from "@/lib/wellness";
 import { competitionAfter, eventTag, upcomingEvents } from "@/lib/athleteEvents";
 import { daysUntil } from "@/api/competitions";
+import { activeCompetitions } from "@shared/domain/competitions";
 import { fmtShortDay, haptic, localMonday } from "@/features/athlete/components/today/todayUtils";
 import { getFormeAdvice } from "@/features/athlete/components/today/todayFormeAdvice";
 import { indexDayThemesByDate } from "@/lib/dayTheme";
@@ -187,9 +188,11 @@ export default function TodayPage() {
   }, [activePlanData, today]);
 
   // ── Compétitions par jour (posées dans le planning comme une séance) ─────
+  // Les annulées en sont exclues : elles ne font ni un jour de compétition ni un bilan à écrire.
+  const activeComps = useMemo(() => activeCompetitions(allCompetitions), [allCompetitions]);
   const competitionsByDate = useMemo(() => {
     const m = new Map<string, CompetitionDayCardData[]>();
-    for (const c of allCompetitions) {
+    for (const c of activeComps) {
       m.set(c.date, [...(m.get(c.date) ?? []), {
         id: c.id, name: c.name, type: c.type, date: c.date,
         location: c.location, priority: c.priority,
@@ -197,11 +200,11 @@ export default function TodayPage() {
       }]);
     }
     return m;
-  }, [allCompetitions]);
+  }, [activeComps]);
   const todayComps = competitionsByDate.get(today) ?? [];
 
   // ── Compétitions passées sans bilan : restent « à commenter » jusqu'au bilan
-  const uncommentedComps = allCompetitions
+  const uncommentedComps = activeComps
     .filter((c) => c.date < today && !c.athlete_comment)
     .map((c) => competitionsByDate.get(c.date)!.find((x) => x.id === c.id)!);
 
@@ -405,7 +408,8 @@ export default function TodayPage() {
               );
               return upcoming.map((evt) => {
                 const isComp = evt.source === "competition";
-                const tint = isComp ? ROUGE : TYPE_COLOR.hyrox;
+                const isCancelledComp = evt.source === "competition" && evt.cancelled;
+                const tint = isCancelledComp ? C.tx3 : isComp ? ROUGE : TYPE_COLOR.hyrox;
                 const Icon = isComp ? Trophy : evt.kind === "voyage" ? Plane : evt.kind === "examen" ? GraduationCap : CalendarDays;
                 return (
                 <div key={evt.source + evt.id} className="flex flex-col gap-1.5">
@@ -413,7 +417,7 @@ export default function TodayPage() {
                     <Icon size={18} color={tint} strokeWidth={1.75} className="flex-none" />
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-[13px] font-medium text-agon-tx">{evt.title}</span>
+                        <span className={cn("truncate text-[13px] font-medium", isCancelledComp ? "text-agon-tx3 line-through" : "text-agon-tx")}>{evt.title}</span>
                         {evt.isNew && <span className="agon-mono inline-flex h-[22px] flex-none items-center whitespace-nowrap rounded-full bg-agon-accent px-2 text-[9.5px] font-medium uppercase tracking-[0.08em] text-agon-bg">Nouveau</span>}
                       </div>
                       <div className="agon-mono truncate text-[11px] uppercase tracking-[0.08em] text-agon-tx2">
@@ -701,7 +705,7 @@ export default function TodayPage() {
               </button>
             ) : null}
             {nextComp && (() => {
-              const then = competitionAfter(allCompetitions, nextComp.id, today);
+              const then = competitionAfter(activeComps, nextComp.id, today);
               if (!then) return null;
               const j = daysUntil(then.date, today);
               return (

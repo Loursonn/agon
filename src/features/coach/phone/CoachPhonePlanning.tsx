@@ -17,10 +17,13 @@ import { CARD, Chevron, MONO, PhonePage, fmtDec, rowLine } from "./phoneUi";
 import { CoachPhoneSessionSheet } from "./CoachPhoneSessionSheet";
 import { isDone, labelOf, typeOf, usePhoneEventActions } from "./usePhoneEventActions";
 import { useCurrentCycle } from "./CoachPhoneAthleteHeader";
+import { CompetitionActions, type CompetitionActionTarget } from "@/features/shared/components/CompetitionActions";
+import { cancelledByLabel } from "@shared/domain/competitions";
+import { useAuth } from "@/hooks/useAuth";
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const SHOWN: UnifiedCalendarEvent["type"][] = ["workout", "energy", "test", "competition", "free_activity"];
-const STATUS: Record<string, string> = { completed: "Fait", missed: "Manquée", in_progress: "En cours", skipped: "Repos" };
+const STATUS: Record<string, string> = { completed: "Fait", missed: "Manquée", in_progress: "En cours", skipped: "Repos", cancelled: "Annulée" };
 
 function StatTile({ label, value, unit, sub, color = C.tx }: { label: string; value: string; unit?: string; sub: string; color?: string }) {
   return (
@@ -38,7 +41,8 @@ function StatTile({ label, value, unit, sub, color = C.tx }: { label: string; va
 /**
  * Planning d'un athlète sur téléphone (planche CoachPhonePlanning) : une
  * semaine, 3 chiffres (séances, course, ratio de charge), une ligne par jour ;
- * toucher une séance ouvre la feuille Déplacer / Modifier.
+ * toucher une séance ouvre la feuille Déplacer / Modifier ; toucher une
+ * compétition ouvre Annuler / Rétablir / Supprimer.
  */
 export default function CoachPhonePlanning() {
   const { athleteId = "" } = useParams<{ athleteId: string }>();
@@ -60,6 +64,7 @@ export default function CoachPhonePlanning() {
 
   const [selected, setSelected] = useState<UnifiedCalendarEvent | null>(null);
   const [addDay, setAddDay] = useState<string | null>(null);
+  const [compSel, setCompSel] = useState<UnifiedCalendarEvent | null>(null);
 
   const events = useMemo(
     () => (cal.data ?? []).filter((e) => SHOWN.includes(e.type) && e.status !== "skipped"),
@@ -131,23 +136,25 @@ export default function CoachPhonePlanning() {
                 const col = TYPE_COLOR[typeOf(e)];
                 const sel = selected?.id === e.id;
                 const st = e.status ? STATUS[e.status] : undefined;
-                const clickable = e.type !== "competition" && e.type !== "free_activity";
+                const clickable = e.type !== "free_activity";
+                const cancelled = e.status === "cancelled";
                 return (
                   <button
                     key={`${e.type}-${e.id}`}
                     type="button"
                     disabled={!clickable}
-                    onClick={() => setSelected(e)}
+                    onClick={() => (e.type === "competition" ? setCompSel(e) : setSelected(e))}
                     style={{
                       position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "10px 10px 10px 14px", borderRadius: 12,
-                      background: alpha(col, sel ? 0.15 : 0.08), border: `1px solid ${sel ? col : alpha(col, 0.27)}`, overflow: "hidden",
+                      background: alpha(col, sel ? 0.15 : 0.08), border: `1px ${cancelled ? "dashed" : "solid"} ${sel ? col : alpha(col, 0.27)}`, overflow: "hidden",
                       textAlign: "left", color: C.tx, fontFamily: "inherit", cursor: clickable ? "pointer" : "default", width: "100%",
+                      ...(cancelled ? { opacity: 0.6 } : {}),
                     }}
                   >
                     <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: col }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: col }}>{labelOf(e)}</div>
-                      <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.title}</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: cancelled ? "line-through" : undefined }}>{e.title}</div>
                       {(st || e.rpe != null) && (
                         <div style={{ ...MONO, fontSize: 11, color: e.status === "missed" ? C.o : e.status === "completed" ? C.g : C.tx3 }}>
                           {[st, e.rpe != null ? `RPE ${e.rpe}` : null].filter(Boolean).join(" · ")}
@@ -175,10 +182,39 @@ export default function CoachPhonePlanning() {
         />
       )}
 
+      {compSel && <CompetitionSheet event={compSel} onClose={() => setCompSel(null)} />}
+
       {addDay && <AddSessionSheet athleteId={athleteId} date={addDay} onClose={() => setAddDay(null)} onAdd={(s) => assign.mutate(
         { sessionId: s.id, sessionName: s.name, athleteId, coachId, date: addDay }, { onSuccess: () => setAddDay(null) },
       )} pending={assign.isPending} />}
     </PhonePage>
+  );
+}
+
+/** Compétition touchée dans le planning : annuler (reste barrée), rétablir, supprimer. */
+function CompetitionSheet({ event, onClose }: { event: UnifiedCalendarEvent; onClose: () => void }) {
+  const { user } = useAuth();
+  const raw = (event.raw ?? {}) as Partial<CompetitionActionTarget> & { cancelled_by?: string | null; location?: string | null };
+  const comp: CompetitionActionTarget = {
+    id: event.id, athlete_id: String(raw.athlete_id ?? ""), name: event.title, cancelled_at: raw.cancelled_at ?? null,
+  };
+  const by = comp.cancelled_at ? cancelledByLabel({ cancelled_by: raw.cancelled_by, athlete_id: comp.athlete_id }, user?.id) : "";
+  return (
+    <Drawer open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DrawerContent style={{ background: C.s1, borderColor: C.brdL, color: C.tx }}>
+        <div style={{ padding: "6px 16px calc(18px + env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: comp.cancelled_at ? C.tx3 : TYPE_COLOR.competition }}>
+            {comp.cancelled_at ? `Annulée${by ? ` ${by}` : ""}` : "Compétition"}
+          </div>
+          <DrawerTitle style={{ fontSize: 17, fontWeight: 500, margin: 0, textDecoration: comp.cancelled_at ? "line-through" : undefined }}>{event.title}</DrawerTitle>
+          <DrawerDescription style={{ fontSize: 12.5, color: C.tx2, margin: 0 }}>
+            {new Date(event.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            {raw.location ? ` · ${raw.location}` : ""}
+          </DrawerDescription>
+          <CompetitionActions comp={comp} onDone={onClose} className="mt-1" />
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
 

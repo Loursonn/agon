@@ -7,10 +7,13 @@ import {
   createCompetition,
   daysUntil,
   deleteCompetition,
+  getCompetitionLinks,
   getNextCompetition,
   invalidateCompetitions,
   listCompetitions,
+  listCompetitionsBetween,
   listUpcomingCompetitions,
+  setCompetitionCancelled,
   setCompetitionComment,
   updateCompetition,
 } from "@/api/competitions";
@@ -64,6 +67,20 @@ describe("lectures", () => {
     expect(await listUpcomingCompetitions([], "2026-11-08", "2026-12-08")).toEqual([]);
   });
 
+  it("annulées : listées, mais hors prochaine compétition, à venir et retours", async () => {
+    const { db } = fakeDb({
+      competitions: [
+        comp("annulée", { date: "2026-11-10", cancelled_at: "2026-11-05T10:00:00Z" }),
+        comp("maintenue", { date: "2026-11-20" }),
+      ],
+    });
+    setDbForTests(db);
+    expect((await listCompetitions("a")).map((c) => c.id)).toEqual(["annulée", "maintenue"]);
+    expect((await getNextCompetition("a", "2026-11-08"))?.id).toBe("maintenue");
+    expect((await listUpcomingCompetitions(["a"], "2026-11-08", "2026-12-08")).map((c) => c.id)).toEqual(["maintenue"]);
+    expect((await listCompetitionsBetween("a", "2026-11-01", "2026-11-30")).map((c) => c.id)).toEqual(["maintenue"]);
+  });
+
   it("une erreur de lecture lève (jamais de liste vide silencieuse)", async () => {
     const { db } = fakeDb({ competitions: [comp("1", {})] }, { table: "competitions", op: "select" });
     setDbForTests(db);
@@ -86,6 +103,32 @@ describe("écritures", () => {
     expect((await setCompetitionComment(c.id, "Bonne course")).athlete_comment).toBe("Bonne course");
     await deleteCompetition(c.id);
     expect(tables.competitions).toHaveLength(0);
+  });
+
+  it("annule puis rétablit", async () => {
+    const { db, tables } = fakeDb({ competitions: [comp("1", {})] });
+    setDbForTests(db);
+    expect((await setCompetitionCancelled("1", true)).cancelled_at).toBeTruthy();
+    expect(tables.competitions[0].cancelled_at).toBeTruthy();
+    expect((await setCompetitionCancelled("1", false)).cancelled_at).toBeNull();
+  });
+
+  it("annulation refusée : lève", async () => {
+    const { db } = fakeDb({ competitions: [comp("1", {})] }, { table: "competitions", op: "update" });
+    setDbForTests(db);
+    await expect(setCompetitionCancelled("1", true)).rejects.toThrow("Compétition non annulée");
+    await expect(setCompetitionCancelled("1", false)).rejects.toThrow("Compétition non rétablie");
+  });
+
+  it("liens avant suppression : résultats, plans HYROX et bilan", async () => {
+    const { db } = fakeDb({
+      competitions: [comp("1", { athlete_comment: "Super" }), comp("2", {})],
+      hyrox_results: [{ id: "r1", competition_id: "1" }, { id: "r2", competition_id: "1" }, { id: "r3", competition_id: "2" }],
+      hyrox_race_plans: [{ id: "p1", competition_id: "1" }],
+    });
+    setDbForTests(db);
+    expect(await getCompetitionLinks("1")).toEqual({ results: 2, plans: 1, hasComment: true });
+    expect(await getCompetitionLinks("2")).toEqual({ results: 1, plans: 0, hasComment: false });
   });
 
   it("une écriture refusée lève", async () => {

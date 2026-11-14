@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { C, H } from "@/lib/theme";
 import { useCreateCompetition, useUpdateCompetition } from "@/hooks/useCompetitions";
 import { COMPETITION_META, type CompetitionType, type CompetitionPriority, type Competition } from "@/types/planning";
+import { CompetitionActions } from "@/features/shared/components/CompetitionActions";
 
 const PRIORITIES: { value: CompetitionPriority; label: string }[] = [
   { value: "A", label: "Importance A" },
@@ -218,6 +219,11 @@ export function CompetitionFormModal({ athleteId, coachId, existing, initialDate
           >
             {isPending ? (isEdit ? "Modification…" : "Ajout en cours…") : (isEdit ? "Enregistrer les modifications" : "Ajouter la compétition")}
           </button>
+
+          {/* Annuler (reste visible, barrée) / rétablir / supprimer */}
+          {isEdit && existing && (
+            <CompetitionActions comp={existing} onDone={onClose} className="border-t border-agon-brd pt-3.5" />
+          )}
         </form>
       </div>
     </>

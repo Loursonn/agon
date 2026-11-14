@@ -50,6 +50,12 @@ describe("eventTag", () => {
     const [v] = upcomingEvents([], [life({ kind: "examen", unavailable: false })], "2026-11-08", NOW);
     expect(eventTag(v)).toBe("Examen");
   });
+
+  it("compétition annulée : reste listée, étiquette « Annulée »", () => {
+    const [c] = upcomingEvents([comp({ cancelled_at: "2026-11-07T10:00:00Z" })], [], "2026-11-08", NOW);
+    expect(c).toMatchObject({ source: "competition", cancelled: true });
+    expect(eventTag(c)).toBe("Annulée");
+  });
 });
 
 describe("competitionAfter", () => {
@@ -58,5 +64,10 @@ describe("competitionAfter", () => {
     expect(competitionAfter(list, "a", "2026-11-08")?.id).toBe("b");
     expect(competitionAfter(list, "b", "2026-11-08")).toBeNull();
     expect(competitionAfter(list, null, "2026-11-08")).toBeNull();
+  });
+
+  it("saute les compétitions annulées", () => {
+    const list = [comp({ id: "a", date: "2026-11-22" }), comp({ id: "x", date: "2026-11-29", cancelled_at: "2026-11-07" }), comp({ id: "b", date: "2026-12-05" })];
+    expect(competitionAfter(list, "a", "2026-11-08")?.id).toBe("b");
   });
 });
