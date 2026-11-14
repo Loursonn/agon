@@ -1,9 +1,6 @@
 import { useState } from "react"
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { ProgSession } from "./types"
-
-const VIOLET = C.ac
-const VIOLET_S = "rgba(123,111,255,0.12)"
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 
@@ -13,33 +10,18 @@ interface SessionFormProps {
   onCancel: () => void
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", borderRadius: 4,
-  border: "1px solid " + C.brdL, background: C.s2,
-  color: C.tx, fontSize: 13, fontFamily: "inherit",
-  outline: "none", boxSizing: "border-box",
+const INPUT = "w-full rounded-[4px] border border-agon-brd-l bg-agon-s2 px-2.5 py-2 text-[13px] text-agon-tx outline-none"
+const LABEL = "mb-1 block text-[11px] font-semibold text-agon-tx3"
+const FIELD = "mb-3.5"
+/** Choix actif : aplat or 12 % (remplace le violet hérité). */
+const ON = "border-agon-accent bg-agon-accent/[0.12] font-bold text-agon-accent"
+
+function pill(active: boolean): string {
+  return cn("cursor-pointer rounded-[7px] border px-3.5 py-1.5 text-[12px] [transition:all_120ms]", active ? ON : "border-agon-brd-l bg-transparent font-semibold text-agon-tx3")
 }
 
-function pill(active: boolean): React.CSSProperties {
-  return {
-    padding: "6px 14px", borderRadius: 7,
-    border: "1px solid " + (active ? VIOLET : C.brdL),
-    background: active ? VIOLET_S : "transparent",
-    color: active ? VIOLET : C.tx3,
-    fontSize: 12, fontWeight: active ? 700 : 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-  }
-}
-
-function pillSmall(active: boolean): React.CSSProperties {
-  return {
-    padding: "5px 10px", borderRadius: 6,
-    border: "1px solid " + (active ? VIOLET : C.brdL),
-    background: active ? VIOLET_S : "transparent",
-    color: active ? VIOLET : C.tx3,
-    fontSize: 11, fontWeight: active ? 700 : 500,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-  }
+function pillSmall(active: boolean): string {
+  return cn("cursor-pointer rounded-[6px] border px-2.5 py-[5px] text-[11px] [transition:all_120ms]", active ? ON : "border-agon-brd-l bg-transparent font-medium text-agon-tx3")
 }
 
 export function SessionForm({ initial, onSubmit, onCancel }: SessionFormProps) {
@@ -63,53 +45,50 @@ export function SessionForm({ initial, onSubmit, onCancel }: SessionFormProps) {
   }
 
   return (
-    <div style={{
-      background: C.s1, borderRadius: 6, border: "1px solid " + C.brdL,
-      padding: "16px 18px", marginBottom: 12,
-    }}>
+    <div className="mb-3 rounded-[6px] border border-agon-brd-l bg-agon-s1 px-[18px] py-4">
       {/* Nom */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4, fontWeight: 600 }}>Nom de la séance</label>
+      <div className={FIELD}>
+        <label className={LABEL}>Nom de la séance</label>
         <input
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           placeholder="ex. Full Body, Upper, Legs…"
-          style={inputStyle}
+          className={INPUT}
         />
       </div>
 
       {/* Abréviation */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 4, fontWeight: 600 }}>Abréviation <span style={{ fontWeight: 400 }}>(max 6 car.)</span></label>
+      <div className={FIELD}>
+        <label className={LABEL}>Abréviation <span className="font-normal">(max 6 car.)</span></label>
         <input
           value={short}
           onChange={e => setShort(e.target.value.toUpperCase().slice(0, 6))}
           placeholder="FB, UPP, LEG…"
-          style={{ ...inputStyle, width: 120 }}
+          className={cn(INPUT, "w-[120px]")}
         />
       </div>
 
       {/* Type */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 6, fontWeight: 600 }}>Type</label>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => setRecurrence('weekly')} style={pill(recurrence === 'weekly')}>Récurrente</button>
-          <button onClick={() => setRecurrence('once')} style={pill(recurrence === 'once')}>Ponctuelle</button>
+      <div className={FIELD}>
+        <label className={cn(LABEL, "mb-1.5")}>Type</label>
+        <div className="flex gap-1.5">
+          <button onClick={() => setRecurrence('weekly')} className={pill(recurrence === 'weekly')}>Récurrente</button>
+          <button onClick={() => setRecurrence('once')} className={pill(recurrence === 'once')}>Ponctuelle</button>
         </div>
       </div>
 
       {/* Jour de la semaine (weekly only) */}
       {recurrence === 'weekly' && (
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 6, fontWeight: 600 }}>Jour de la semaine</label>
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <div className={FIELD}>
+          <label className={cn(LABEL, "mb-1.5")}>Jour de la semaine</label>
+          <div className="flex flex-wrap gap-1">
             {DOW.map((label, i) => (
               <button
                 key={i}
                 onClick={() => setDayOfWeek(dayOfWeek === i ? undefined : i)}
-                style={pillSmall(dayOfWeek === i)}
+                className={pillSmall(dayOfWeek === i)}
               >
                 {label}
               </button>
@@ -119,41 +98,41 @@ export function SessionForm({ initial, onSubmit, onCancel }: SessionFormProps) {
       )}
 
       {/* Multi-semaine */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 6, fontWeight: 600 }}>Multi-semaine</label>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <div className="mb-4">
+        <label className={cn(LABEL, "mb-1.5")}>Multi-semaine</label>
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setMultiSemaine(v => !v)}
-            style={pill(multiSemaine)}
+            className={pill(multiSemaine)}
           >
             {multiSemaine ? "Activé" : "Activer"}
           </button>
           {multiSemaine && (
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div className="flex items-center gap-1">
               <input
                 type="number"
                 value={nbSemaines}
                 onChange={e => setNbSemaines(Math.max(1, parseInt(e.target.value, 10) || 1))}
                 min={1} max={24}
-                style={{ width: 52, padding: "6px 8px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", textAlign: "center" }}
+                className="w-[52px] rounded-[7px] border border-agon-brd-l bg-agon-s2 px-2 py-1.5 text-center text-[13px] text-agon-tx outline-none"
               />
-              <span style={{ fontSize: 11, color: C.tx3 }}>semaines</span>
+              <span className="text-[11px] text-agon-tx3">semaines</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+      <div className="flex justify-end gap-2">
         <button
           onClick={onCancel}
-          style={{ padding: "8px 16px", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+          className="cursor-pointer rounded-[4px] border border-agon-brd-l bg-transparent px-4 py-2 text-[12px] font-semibold text-agon-tx2"
         >
           Annuler
         </button>
         <button
           onClick={handleSubmit}
-          style={{ padding: "8px 20px", borderRadius: 4, border: "none", background: VIOLET, color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+          className="cursor-pointer rounded-[4px] border-0 bg-agon-accent px-5 py-2 text-[12px] font-bold text-agon-tx"
         >
           Valider
         </button>

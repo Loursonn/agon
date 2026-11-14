@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { ChevronDown, Video } from "lucide-react"
 import type { Exercice, ExerciceParams, ClusterConfig, ParamValue } from "./types"
 import { defaultExerciceParams } from "./types"
@@ -14,10 +14,6 @@ import type { TrainingMethod } from "@/types/trainingMethods"
 import { methodConfigToExerciceParams } from "@/features/coach/components/library/methodConfigConvert";
 import { isWeekRecord, resolveExerciceParams, resolveVideoRequest, setVideoRequest } from "@/lib/sessionOccurrence"
 
-const VIOLET = C.ac
-const VIOLET_S = "rgba(123,111,255,0.12)"
-const ORANGE = H.miel
-
 interface ExerciceParamsProps {
   exercice: Exercice
   blocSeriesMode: 'libre' | 'fixe'
@@ -29,45 +25,39 @@ interface ExerciceParamsProps {
 }
 
 // ─── Style helpers ────────────────────────────────────────────────────────────
+// Actif = or de la charte (remplace le violet hérité) ; cluster = alerte (remplace le miel hérité).
 
-function pill(active: boolean, color = VIOLET): React.CSSProperties {
-  return {
-    padding: "6px 14px", borderRadius: 7,
-    border: "1px solid " + (active ? color : C.brdL),
-    background: active ? color + "20" : "transparent",
-    color: active ? color : C.tx3,
-    fontSize: 11, fontWeight: active ? 700 : 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 100ms",
-  }
+type Tone = "accent" | "alerte"
+const PILL_ON: Record<Tone, string> = {
+  accent: "border-agon-accent bg-agon-accent/[0.125] font-bold text-agon-accent",
+  alerte: "border-agon-alerte bg-agon-alerte/[0.125] font-bold text-agon-alerte",
+}
+const PILL_OFF = "border-agon-brd-l bg-transparent font-semibold text-agon-tx3"
+const PILL_BASE = "cursor-pointer border [transition:all_100ms]"
+
+function pill(active: boolean, tone: Tone = "accent"): string {
+  return cn(PILL_BASE, "rounded-[7px] px-3.5 py-1.5 text-[11px]", active ? PILL_ON[tone] : PILL_OFF)
 }
 
-function pillSmall(active: boolean, color = VIOLET): React.CSSProperties {
-  return {
-    padding: "4px 9px", borderRadius: 6,
-    border: "1px solid " + (active ? color : C.brdL),
-    background: active ? color + "20" : "transparent",
-    color: active ? color : C.tx3,
-    fontSize: 10, fontWeight: active ? 700 : 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 100ms",
-  }
+function pillSmall(active: boolean, tone: Tone = "accent"): string {
+  return cn(PILL_BASE, "rounded-[6px] px-[9px] py-1 text-[10px]", active ? PILL_ON[tone] : PILL_OFF)
 }
 
-function pillParSerie(active: boolean): React.CSSProperties {
-  return {
-    padding: "4px 9px", borderRadius: 6,
-    border: "1px solid " + (active ? VIOLET : C.brdL),
-    background: active ? VIOLET_S : "transparent",
-    color: active ? VIOLET : C.tx3,
-    fontSize: 10, fontWeight: active ? 700 : 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 100ms",
-  }
+function pillParSerie(active: boolean): string {
+  return cn(PILL_BASE, "rounded-[6px] px-[9px] py-1 text-[10px]", active ? "border-agon-accent bg-agon-accent/[0.12] font-bold text-agon-accent" : PILL_OFF)
 }
+
+const KICK = "text-[10px] font-extrabold uppercase tracking-[0.5px] text-agon-tx3"
+/** Champ des grilles « par série ». */
+const CELL = "w-full rounded-[6px] border border-agon-brd-l bg-agon-s1 px-1 py-[5px] text-agon-tx outline-none"
+const TEXTAREA = "w-full resize-y rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-2 text-[12px] text-agon-tx outline-none"
+const SYNTH = "rounded-[4px] border border-agon-brd-l bg-agon-s2 px-3.5 py-2"
 
 // ─── Inline section label ─────────────────────────────────────────────────────
 
 function InlineLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 800, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", flexShrink: 0 }}>
+    <div className={cn(KICK, "shrink-0")}>
       {children}
     </div>
   )
@@ -77,7 +67,7 @@ function InlineLabel({ children }: { children: React.ReactNode }) {
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brdL, padding: "10px 14px" }}>
+    <div className="rounded-[4px] border border-agon-brd-l bg-agon-s2 px-3.5 py-2.5">
       {children}
     </div>
   )
@@ -85,8 +75,8 @@ function Section({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ label, right }: { label: string; right?: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-      <div style={{ fontSize: 10, fontWeight: 800, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{label}</div>
+    <div className="mb-2.5 flex items-center justify-between">
+      <div className={KICK}>{label}</div>
       {right}
     </div>
   )
@@ -94,11 +84,15 @@ function SectionLabel({ label, right }: { label: string; right?: React.ReactNode
 
 // ─── Stepper — local state, no delay, click-to-edit ──────────────────────────
 
+const STEP_BTN = "size-[30px] shrink-0 border-0 bg-transparent text-[16px] text-agon-tx3"
+
 function Stepper({
-  value, onChange, min = 1, max = 20, step = 1, color = C.tx,
+  value, onChange, min = 1, max = 20, step = 1, tone = "text-agon-tx",
 }: {
   value: number; onChange: (v: number) => void
-  min?: number; max?: number; step?: number; color?: string
+  min?: number; max?: number; step?: number
+  /** Classe de couleur du chiffre. */
+  tone?: string
 }) {
   const [local, setLocal] = useState(value)
   const [editing, setEditing] = useState(false)
@@ -130,11 +124,11 @@ function Stepper({
   const displayVal = step < 1 ? local : String(local)
 
   return (
-    <div style={{ display: "flex", alignItems: "center", background: C.s1, borderRadius: 4, border: "1px solid " + C.brdL, overflow: "hidden", flexShrink: 0 }}>
+    <div className="flex shrink-0 items-center overflow-hidden rounded-[4px] border border-agon-brd-l bg-agon-s1">
       <button
         type="button"
         onClick={() => apply(local - step)}
-        style={{ width: 30, height: 30, border: "none", background: "transparent", color: C.tx3, cursor: local <= min ? "default" : "pointer", fontSize: 16, fontFamily: "inherit", flexShrink: 0, opacity: local <= min ? 0.3 : 1 }}
+        className={cn(STEP_BTN, local <= min ? "cursor-default opacity-30" : "cursor-pointer")}
       >−</button>
       {editing ? (
         <input
@@ -143,19 +137,19 @@ function Stepper({
           onChange={e => setEditText(e.target.value)}
           onBlur={commitEdit}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') commitEdit() }}
-          style={{ width: 40, border: "none", background: "transparent", color, fontSize: 14, fontWeight: 800, fontFamily: "inherit", outline: "none", textAlign: "center" as const, padding: 0 }}
+          className={cn("w-10 border-0 bg-transparent p-0 text-center text-[14px] font-extrabold outline-none", tone)}
         />
       ) : (
         <div
           onClick={startEdit}
           title="Cliquer pour saisir"
-          style={{ width: 40, textAlign: "center" as const, fontSize: 14, fontWeight: 800, color, fontFamily: "inherit", cursor: "text", userSelect: "none" as const }}
+          className={cn("w-10 cursor-text select-none text-center text-[14px] font-extrabold", tone)}
         >{displayVal}</div>
       )}
       <button
         type="button"
         onClick={() => apply(local + step)}
-        style={{ width: 30, height: 30, border: "none", background: "transparent", color: C.tx3, cursor: local >= max ? "default" : "pointer", fontSize: 16, fontFamily: "inherit", flexShrink: 0, opacity: local >= max ? 0.3 : 1 }}
+        className={cn(STEP_BTN, local >= max ? "cursor-default opacity-30" : "cursor-pointer")}
       >+</button>
     </div>
   )
@@ -282,7 +276,7 @@ export function ExerciceParamsPanel({
   const selectedMethod = methods.find(m => m.id === exercice.methode_id)
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 0" }}>
+    <div className="flex flex-col gap-2 py-2.5">
 
       {/* 1. Exercice */}
       <Section>
@@ -294,12 +288,10 @@ export function ExerciceParamsPanel({
             onClose={() => setShowSearch(false)}
           />
         ) : (
-          <button onClick={() => setShowSearch(true)} style={{
-            width: "100%", padding: "9px 12px", borderRadius: 4,
-            border: "1px solid " + C.brdL, background: C.s1,
-            color: exercice.exercise_name ? C.tx : C.tx3,
-            fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-          }}>
+          <button onClick={() => setShowSearch(true)} className={cn(
+            "w-full cursor-pointer rounded-[4px] border border-agon-brd-l bg-agon-s1 px-3 py-[9px] text-left text-[13px] font-semibold",
+            exercice.exercise_name ? "text-agon-tx" : "text-agon-tx3",
+          )}>
             {exercice.exercise_name || "Choisir un exercice…"}
           </button>
         )}
@@ -308,10 +300,10 @@ export function ExerciceParamsPanel({
       {/* 2. Mode + Méthode */}
       <Section>
         <SectionLabel label="Mode" />
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: exercice.mode === 'methode' || exercice.mode === 'libre' ? 10 : 0 }}>
-          <button onClick={() => updateMode('classique')} style={pill(exercice.mode === 'classique')}>Classique</button>
-          <button onClick={() => updateMode('methode')} style={pill(exercice.mode === 'methode')}>Méthode</button>
-          <button onClick={() => updateMode('libre')} style={pill(exercice.mode === 'libre')}>Libre</button>
+        <div className={cn("flex justify-center gap-1.5", (exercice.mode === 'methode' || exercice.mode === 'libre') && "mb-2.5")}>
+          <button onClick={() => updateMode('classique')} className={pill(exercice.mode === 'classique')}>Classique</button>
+          <button onClick={() => updateMode('methode')} className={pill(exercice.mode === 'methode')}>Méthode</button>
+          <button onClick={() => updateMode('libre')} className={pill(exercice.mode === 'libre')}>Libre</button>
         </div>
         {exercice.mode === 'libre' && (
           <textarea
@@ -320,44 +312,35 @@ export function ExerciceParamsPanel({
             placeholder="Texte libre (ex: 10 min de gainage au choix, circuit mobilité épaules...)"
             rows={3}
             autoFocus
-            style={{
-              width: "100%", padding: "8px 10px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: C.s1,
-              color: C.tx, fontSize: 12, fontFamily: "inherit",
-              outline: "none", resize: "vertical" as const,
-              boxSizing: "border-box" as const,
-            }}
+            className={TEXTAREA}
           />
         )}
         {exercice.mode === 'methode' && (
           <>
-            <button onClick={() => setShowMethodPicker(true)} style={{
-              width: "100%", padding: "9px 12px", borderRadius: 4,
-              border: "1px solid " + (selectedMethod ? VIOLET : C.brdL),
-              background: selectedMethod ? VIOLET_S : C.s1,
-              cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-            }}>
-              <div style={{ textAlign: "left" as const, minWidth: 0 }}>
+            <button onClick={() => setShowMethodPicker(true)} className={cn(
+              "flex w-full cursor-pointer items-center justify-between gap-2 rounded-[4px] border px-3 py-[9px]",
+              selectedMethod ? "border-agon-accent bg-agon-accent/[0.12]" : "border-agon-brd-l bg-agon-s1",
+            )}>
+              <div className="min-w-0 text-left">
                 {selectedMethod ? (
                   <>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: VIOLET }}>{selectedMethod.name}</div>
-                    <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{selectedMethod.category}</div>
+                    <div className="text-[13px] font-bold text-agon-accent">{selectedMethod.name}</div>
+                    <div className="mt-px text-[10px] text-agon-tx3">{selectedMethod.category}</div>
                   </>
                 ) : (
-                  <div style={{ fontSize: 13, color: C.tx3 }}>Choisir une méthode…</div>
+                  <div className="text-[13px] text-agon-tx3">Choisir une méthode…</div>
                 )}
               </div>
-              <ChevronDown size={14} color={C.tx3} />
+              <ChevronDown size={14} className="text-agon-tx3" />
             </button>
 
             {/* Set selector — only for scope='set' methods */}
             {selectedMethod?.scope === 'set' && nb > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 8 }}>
+              <div className="mt-2.5">
+                <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.4px] text-agon-tx3">
                   Appliquer sur le(s) set(s)
                 </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                <div className="flex flex-wrap gap-1.5">
                   {Array.from({ length: nb }, (_, i) => i + 1).map(n => {
                     const active = (exercice.applied_to_sets ?? []).includes(n)
                     return (
@@ -368,14 +351,10 @@ export function ExerciceParamsPanel({
                           const next = cur.includes(n) ? cur.filter(s => s !== n) : [...cur, n].sort((a, b) => a - b)
                           onChange({ ...exercice, applied_to_sets: next })
                         }}
-                        style={{
-                          width: 36, height: 36, borderRadius: 4,
-                          border: "2px solid " + (active ? VIOLET : C.brdL),
-                          background: active ? VIOLET_S : "transparent",
-                          color: active ? VIOLET : C.tx3,
-                          fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                        }}
+                        className={cn(
+                          "flex size-9 cursor-pointer items-center justify-center rounded-[4px] border-2 text-[13px] font-bold",
+                          active ? "border-agon-accent bg-agon-accent/[0.12] text-agon-accent" : "border-agon-brd-l bg-transparent text-agon-tx3",
+                        )}
                       >
                         {n}
                       </button>
@@ -383,7 +362,7 @@ export function ExerciceParamsPanel({
                   })}
                 </div>
                 {!(exercice.applied_to_sets ?? []).length && (
-                  <div style={{ fontSize: 11, color: C.o, marginTop: 6 }}>Sélectionne au moins un set.</div>
+                  <div className="mt-1.5 text-[11px] text-agon-alerte">Sélectionne au moins un set.</div>
                 )}
               </div>
             )}
@@ -396,12 +375,12 @@ export function ExerciceParamsPanel({
       <>
       {/* 3. Séries — one line */}
       <Section>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div className="flex items-center justify-between gap-2">
           <InlineLabel>Séries</InlineLabel>
           {blocSeriesMode === 'libre' ? (
             <Stepper value={params.nb_series} onChange={v => updateParams({ nb_series: v })} min={1} max={20} />
           ) : (
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.tx2 }}>{blocSeriesCount} (fixe)</span>
+            <span className="text-[13px] font-bold text-agon-tx2">{blocSeriesCount} (fixe)</span>
           )}
         </div>
       </Section>
@@ -409,7 +388,7 @@ export function ExerciceParamsPanel({
       {/* 4. Répétitions */}
       <Section>
         {/* Label row — always one line */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <div className="flex flex-wrap items-center gap-1.5">
           <InlineLabel>{currentRepsMode === 'iso' ? "Durée (s)" : "Répétitions"}</InlineLabel>
 
           {/* Inline value when global + no cluster */}
@@ -419,33 +398,33 @@ export function ExerciceParamsPanel({
               {/* Rep range: optional max */}
               {params.reps_max?.mode === 'global' && params.reps_max.value != null ? (
                 <>
-                  <span style={{ fontSize: 12, color: C.tx3, fontWeight: 700 }}>–</span>
+                  <span className="text-[12px] font-bold text-agon-tx3">–</span>
                   <Stepper value={params.reps_max.value} onChange={v => updateParams({ reps_max: { mode: 'global', value: v } })} min={repsGlobal + 1} max={100} />
-                  <button onClick={() => updateParams({ reps_max: undefined })} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.r + "40", background: C.r + "15", color: C.r, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>×</button>
+                  <button onClick={() => updateParams({ reps_max: undefined })} className="cursor-pointer rounded-[6px] border border-agon-erreur/25 bg-agon-erreur/[0.082] px-2 py-1 text-[10px] font-bold text-agon-erreur">×</button>
                 </>
               ) : (
                 <button
                   onClick={() => updateParams({ reps_max: { mode: 'global', value: repsGlobal + 4 } })}
-                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px dashed " + VIOLET + "60", background: VIOLET + "10", color: VIOLET, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  className="cursor-pointer rounded-[6px] border border-dashed border-agon-accent/[0.376] bg-agon-accent/[0.063] px-2.5 py-1 text-[10px] font-bold text-agon-accent"
                   title="Ajouter une fourchette (ex: 8-12)"
                 >
                   8–12
                 </button>
               )}
-              {currentRepsMode === 'iso' && <span style={{ fontSize: 10, color: C.tx3, fontWeight: 600 }}>s</span>}
+              {currentRepsMode === 'iso' && <span className="text-[10px] font-semibold text-agon-tx3">s</span>}
             </>
           )}
 
           {/* EC / ISO — aussi en mode « par série » ; enregistré pour l'occurrence éditée */}
           {!params.cluster && (
             <>
-              <button onClick={() => updateParams({ reps_mode: { mode: 'global', value: 'EC' } })} style={pillSmall(currentRepsMode === 'EC')}>EC</button>
-              <button onClick={() => updateParams({ reps_mode: { mode: 'global', value: 'iso' } })} style={pillSmall(currentRepsMode === 'iso')}>ISO</button>
+              <button onClick={() => updateParams({ reps_mode: { mode: 'global', value: 'EC' } })} className={pillSmall(currentRepsMode === 'EC')}>EC</button>
+              <button onClick={() => updateParams({ reps_mode: { mode: 'global', value: 'iso' } })} className={pillSmall(currentRepsMode === 'iso')}>ISO</button>
             </>
           )}
 
           {/* Right buttons */}
-          <div style={{ marginLeft: "auto", display: "flex", gap: 4, flexShrink: 0 }}>
+          <div className="ml-auto flex shrink-0 gap-1">
             <button
               onClick={() => {
                 if (params.reps.mode === 'par_serie') {
@@ -454,7 +433,7 @@ export function ExerciceParamsPanel({
                   updateParams({ reps: { mode: 'par_serie', values: Array(nb).fill(repsGlobal) } })
                 }
               }}
-              style={pillParSerie(params.reps.mode === 'par_serie')}
+              className={pillParSerie(params.reps.mode === 'par_serie')}
             >
               {params.reps.mode === 'par_serie' ? "↩ Global" : "Par série"}
             </button>
@@ -466,7 +445,7 @@ export function ExerciceParamsPanel({
                   updateParams({ cluster: { nb_clusters: 3, reps: [5, 4, 3], recup_sec: 15 } })
                 }
               }}
-              style={pillSmall(!!params.cluster, ORANGE)}
+              className={pillSmall(!!params.cluster, "alerte")}
             >
               {params.cluster ? "Cluster ✓" : "Cluster"}
             </button>
@@ -475,14 +454,14 @@ export function ExerciceParamsPanel({
 
         {/* Cluster editor */}
         {params.cluster && (
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-2">
             <ClusterEditor cluster={params.cluster} onChange={c => updateParams({ cluster: c })} />
           </div>
         )}
 
         {/* Par série grid */}
         {!params.cluster && params.reps.mode === 'par_serie' && (
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-2">
             <ParamSeriesGrid
               nb_series={nb}
               values={repsValues}
@@ -491,7 +470,7 @@ export function ExerciceParamsPanel({
                 <input type="number" value={v}
                   onChange={e => ch(Math.max(1, parseInt(e.target.value, 10) || 1))}
                   min={1} max={100}
-                  style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
+                  className={cn(CELL, "text-center text-[12px]")}
                 />
               )}
             />
@@ -512,7 +491,7 @@ export function ExerciceParamsPanel({
                   updateParams({ charge: { mode: 'par_serie', values: Array(nb).fill(chargeGlobal) } })
                 }
               }}
-              style={pillParSerie(params.charge.mode === 'par_serie')}
+              className={pillParSerie(params.charge.mode === 'par_serie')}
             >
               {params.charge.mode === 'par_serie' ? "↩ Global" : "Par série"}
             </button>
@@ -520,43 +499,43 @@ export function ExerciceParamsPanel({
         />
 
         {/* Unit pills */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 10 }}>
+        <div className="mb-2.5 flex justify-center gap-1.5">
           {(['%RM', 'kg', 'PDC'] as const).map(u => (
-            <button key={u} onClick={() => updateParams({ charge_unit: u })} style={pill(params.charge_unit === u)}>{u}</button>
+            <button key={u} onClick={() => updateParams({ charge_unit: u })} className={pill(params.charge_unit === u)}>{u}</button>
           ))}
         </div>
 
         {params.charge_unit === '%RM' && !bestRM && (
-          <div style={{ padding: "7px 10px", borderRadius: 4, marginBottom: 8, background: C.oS, border: "1px solid " + C.o + "40", fontSize: 11, color: C.o }}>
-            <div style={{ textAlign: "center", marginBottom: 6 }}>Aucun 1RM enregistré</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-              <span style={{ fontSize: 10, color: C.tx3 }}>1RM estimé :</span>
+          <div className="mb-2 rounded-[4px] border border-agon-alerte/25 bg-agon-alerte-doux px-2.5 py-[7px] text-[11px] text-agon-alerte">
+            <div className="mb-1.5 text-center">Aucun 1RM enregistré</div>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-[10px] text-agon-tx3">1RM estimé :</span>
               <input
                 type="number"
                 value={params.manual_rm ?? ""}
                 onChange={e => updateParams({ manual_rm: e.target.value === "" ? null : parseFloat(e.target.value) })}
                 placeholder="ex: 100"
                 min={0}
-                style={{ width: 70, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const }}
+                className="w-[70px] rounded-[6px] border border-agon-brd-l bg-agon-s1 px-1.5 py-1 text-center text-[12px] font-bold text-agon-tx outline-none"
               />
-              <span style={{ fontSize: 10, color: C.tx3 }}>kg</span>
+              <span className="text-[10px] text-agon-tx3">kg</span>
             </div>
           </div>
         )}
 
         {params.charge_unit !== 'PDC' && (
           params.charge.mode === 'global' ? (
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="flex justify-center">
+              <div className="flex items-center gap-1.5">
                 <input
                   type="number" value={chargeGlobal ?? ""}
                   onChange={e => updateParams({ charge: { mode: 'global', value: e.target.value === "" ? null : parseFloat(e.target.value) } })}
                   placeholder="—" min={0}
-                  style={{ width: 80, padding: "7px 8px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const }}
+                  className="w-20 rounded-[7px] border border-agon-brd-l bg-agon-s1 px-2 py-[7px] text-center text-[14px] font-bold text-agon-tx outline-none"
                 />
-                <span style={{ fontSize: 12, color: C.tx3, fontWeight: 600 }}>{params.charge_unit}</span>
+                <span className="text-[12px] font-semibold text-agon-tx3">{params.charge_unit}</span>
                 {params.charge_unit === '%RM' && (bestRM || params.manual_rm) && chargeGlobal !== null && (
-                  <span style={{ fontSize: 12, color: VIOLET, fontWeight: 700, background: VIOLET_S, padding: "2px 7px", borderRadius: 6, flexShrink: 0 }}>
+                  <span className="shrink-0 rounded-[6px] bg-agon-accent/[0.12] px-[7px] py-0.5 text-[12px] font-bold text-agon-accent">
                     ≈ {loadFromPctRm(bestRM?.kg ?? params.manual_rm, chargeGlobal as number)}kg
                   </span>
                 )}
@@ -571,7 +550,7 @@ export function ExerciceParamsPanel({
                 <input type="number" value={v ?? ""}
                   onChange={e => ch(e.target.value === "" ? null : parseFloat(e.target.value))}
                   placeholder="—"
-                  style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
+                  className={cn(CELL, "text-center text-[12px]")}
                 />
               )}
             />
@@ -581,14 +560,14 @@ export function ExerciceParamsPanel({
 
       {/* 6. RIR — one line */}
       <Section>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <div className="flex flex-wrap items-center gap-1.5">
           <InlineLabel>RIR</InlineLabel>
 
           {rirIsGlobal && (
             <>
               <button
                 onClick={() => updateParams({ rir: { mode: 'global', value: rirGlobal === null ? 2 : null } })}
-                style={pillSmall(rirGlobal === null)}
+                className={pillSmall(rirGlobal === null)}
               >
                 {rirGlobal === null ? "Libre ✓" : "Libre"}
               </button>
@@ -602,7 +581,7 @@ export function ExerciceParamsPanel({
             </>
           )}
 
-          <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+          <div className="ml-auto shrink-0">
             <button
               onClick={() => {
                 if (params.rir.mode === 'par_serie') {
@@ -611,7 +590,7 @@ export function ExerciceParamsPanel({
                   updateParams({ rir: { mode: 'par_serie', values: Array(nb).fill(rirGlobal ?? 2) as number[] } })
                 }
               }}
-              style={pillParSerie(params.rir.mode === 'par_serie')}
+              className={pillParSerie(params.rir.mode === 'par_serie')}
             >
               {params.rir.mode === 'par_serie' ? "↩ Global" : "Par série"}
             </button>
@@ -619,14 +598,14 @@ export function ExerciceParamsPanel({
         </div>
 
         {params.rir.mode === 'par_serie' && (
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-2">
             <ParamSeriesGrid
               nb_series={nb}
               values={rirValues as number[]}
               onChange={values => updateParams({ rir: { mode: 'par_serie', values } })}
               renderCell={(v, _i, ch) => (
                 <select value={v ?? 2} onChange={e => ch(parseFloat(e.target.value))}
-                  style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 11, fontFamily: "inherit", outline: "none" }}>
+                  className={cn(CELL, "text-[11px]")}>
                   {[0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5].map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               )}
@@ -637,20 +616,20 @@ export function ExerciceParamsPanel({
 
       {/* 7. Tempo — one line */}
       <Section>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <InlineLabel>Tempo</InlineLabel>
-          <span style={{ fontSize: 9, color: C.tx3, flexShrink: 0 }}>ecc–pause–con</span>
+          <span className="shrink-0 text-[9px] text-agon-tx3">ecc–pause–con</span>
 
           {params.tempo.mode === 'global' && (
             <input
               type="text" value={tempoGlobal}
               onChange={e => updateParams({ tempo: { mode: 'global', value: e.target.value } })}
               placeholder="3-1-2-0"
-              style={{ width: 88, padding: "5px 8px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const }}
+              className="w-[88px] rounded-[7px] border border-agon-brd-l bg-agon-s1 px-2 py-[5px] text-center text-[13px] font-bold text-agon-tx outline-none"
             />
           )}
 
-          <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+          <div className="ml-auto shrink-0">
             <button
               onClick={() => {
                 if (params.tempo.mode === 'par_serie') {
@@ -659,7 +638,7 @@ export function ExerciceParamsPanel({
                   updateParams({ tempo: { mode: 'par_serie', values: Array(nb).fill(tempoGlobal) } })
                 }
               }}
-              style={pillParSerie(params.tempo.mode === 'par_serie')}
+              className={pillParSerie(params.tempo.mode === 'par_serie')}
             >
               {params.tempo.mode === 'par_serie' ? "↩ Global" : "Par série"}
             </button>
@@ -667,14 +646,14 @@ export function ExerciceParamsPanel({
         </div>
 
         {params.tempo.mode === 'par_serie' && (
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-2">
             <ParamSeriesGrid
               nb_series={nb}
               values={tempoValues}
               onChange={values => updateParams({ tempo: { mode: 'par_serie', values } })}
               renderCell={(v, _i, ch) => (
                 <input type="text" value={v} onChange={e => ch(e.target.value)} placeholder="3-1-2-0"
-                  style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 11, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
+                  className={cn(CELL, "text-center text-[11px]")}
                 />
               )}
             />
@@ -684,7 +663,7 @@ export function ExerciceParamsPanel({
 
       {/* 8. Paramètres par semaine */}
       {!sessionMultiSemaine && (
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        <div className="flex justify-center">
           <button
             onClick={() => {
               const newMulti = !(exercice.multi_semaine ?? false)
@@ -697,7 +676,7 @@ export function ExerciceParamsPanel({
               }
               onChange({ ...exercice, multi_semaine: newMulti, params: newParams })
             }}
-            style={pill(exercice.multi_semaine ?? false)}
+            className={pill(exercice.multi_semaine ?? false)}
           >
             {(exercice.multi_semaine ?? false) ? "◉ Paramètres par semaine" : "◎ Paramètres par semaine"}
           </button>
@@ -714,13 +693,7 @@ export function ExerciceParamsPanel({
           onChange={e => onChange({ ...exercice, comment: e.target.value || undefined })}
           placeholder="Instruction pour l'athlète (ex: Garder les coudes serrés, tempo contrôlé...)"
           rows={2}
-          style={{
-            width: "100%", padding: "8px 10px", borderRadius: 4,
-            border: "1px solid " + C.brdL, background: C.s1,
-            color: C.tx, fontSize: 12, fontFamily: "inherit",
-            outline: "none", resize: "vertical" as const,
-            boxSizing: "border-box" as const,
-          }}
+          className={TEXTAREA}
         />
       </Section>
 
@@ -731,24 +704,19 @@ export function ExerciceParamsPanel({
           onClick={() => onChange(setVideoRequest(exercice, activeWeek, videoRequest
             ? { requested: false }
             : { requested: true, ...(lastVideoNote ? { note: lastVideoNote } : {}) }))}
-          style={{
-            display: "flex", alignItems: "center", gap: 8, width: "100%",
-            padding: "8px 10px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-            border: "1px solid " + (videoRequest ? VIOLET + "80" : C.brdL),
-            background: videoRequest ? VIOLET + "14" : "transparent",
-            color: videoRequest ? VIOLET : C.tx2, fontSize: 12, fontWeight: 700, textAlign: "left" as const,
-          }}
+          className={cn(
+            "flex w-full cursor-pointer items-center gap-2 rounded-[4px] border px-2.5 py-2 text-left text-[12px] font-bold",
+            videoRequest ? "border-agon-accent/50 bg-agon-accent/[0.078] text-agon-accent" : "border-agon-brd-l bg-transparent text-agon-tx2",
+          )}
         >
-          <span style={{
-            width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-            border: "2px solid " + (videoRequest ? VIOLET : C.brdL),
-            background: videoRequest ? VIOLET : "transparent", color: C.ink,
-            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900,
-          }}>{videoRequest ? "✓" : ""}</span>
+          <span className={cn(
+            "flex size-4 shrink-0 items-center justify-center rounded-[3px] border-2 text-[11px] font-black text-agon-ink",
+            videoRequest ? "border-agon-accent bg-agon-accent" : "border-agon-brd-l bg-transparent",
+          )}>{videoRequest ? "✓" : ""}</span>
           <Video size={13} />
           Retour vidéo demandé
           {multiSemaine && (
-            <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 500, color: C.tx3 }}>
+            <span className="ml-auto text-[10px] font-medium text-agon-tx3">
               dès la séance {activeWeek}
             </span>
           )}
@@ -758,23 +726,18 @@ export function ExerciceParamsPanel({
             value={videoRequest.note ?? ""}
             onChange={e => onChange(setVideoRequest(exercice, activeWeek, { requested: true, ...(e.target.value ? { note: e.target.value } : {}) }))}
             placeholder="Consigne (optionnel) : ex. dernière série, vue de profil"
-            style={{
-              width: "100%", marginTop: 6, padding: "7px 10px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: C.s1,
-              color: C.tx, fontSize: 12, fontFamily: "inherit",
-              outline: "none", boxSizing: "border-box" as const,
-            }}
+            className="mt-1.5 w-full rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-[7px] text-[12px] text-agon-tx outline-none"
           />
         )}
       </Section>
 
       {/* 10. Synthèse */}
       {exercice.mode !== 'libre' && (
-        <div style={{ padding: "8px 14px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2 }}>
+        <div className={SYNTH}>
           <SyntheseBar params={{ ...params, nb_series: nb }} />
         </div>
       )}
-      <div style={{ padding: "8px 14px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2 }}>
+      <div className={SYNTH}>
         <SyntheseBar params={{ ...params, nb_series: nb }} />
       </div>
 
@@ -792,6 +755,9 @@ export function ExerciceParamsPanel({
 }
 
 // ─── Cluster editor ───────────────────────────────────────────────────────────
+
+const CL_KICK = "text-[9px] font-bold uppercase tracking-[0.4px] text-agon-alerte"
+const CL_STEP = "h-[22px] w-6 cursor-pointer border border-agon-alerte/[0.376] bg-transparent text-[13px] text-agon-alerte"
 
 function ClusterEditor({ cluster, onChange }: { cluster: ClusterConfig; onChange: (c: ClusterConfig) => void }) {
   const safeReps: number[] = Array.isArray(cluster.reps)
@@ -815,37 +781,37 @@ function ClusterEditor({ cluster, onChange }: { cluster: ClusterConfig; onChange
   const pattern = safeReps.join("+")
 
   return (
-    <div style={{ padding: "10px", borderRadius: 4, border: "1px solid " + ORANGE + "50", background: ORANGE + "0A" }}>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-        <div style={{ textAlign: "center" as const }}>
-          <div style={{ fontSize: 9, color: ORANGE, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 4 }}>Clusters</div>
-          <Stepper value={cluster.nb_clusters} onChange={setNbClusters} min={2} max={8} color={ORANGE} />
+    <div className="rounded-[4px] border border-agon-alerte/[0.314] bg-agon-alerte/[0.039] p-2.5">
+      <div className="mb-2.5 flex items-center justify-center gap-2.5">
+        <div className="text-center">
+          <div className={cn(CL_KICK, "mb-1")}>Clusters</div>
+          <Stepper value={cluster.nb_clusters} onChange={setNbClusters} min={2} max={8} tone="text-agon-alerte" />
         </div>
-        <div style={{ textAlign: "center" as const }}>
-          <div style={{ fontSize: 9, color: ORANGE, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 4 }}>Récup (s)</div>
-          <Stepper value={cluster.recup_sec} onChange={v => onChange({ ...cluster, recup_sec: v })} min={5} max={120} color={ORANGE} />
+        <div className="text-center">
+          <div className={cn(CL_KICK, "mb-1")}>Récup (s)</div>
+          <Stepper value={cluster.recup_sec} onChange={v => onChange({ ...cluster, recup_sec: v })} min={5} max={120} tone="text-agon-alerte" />
         </div>
       </div>
 
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 9, color: ORANGE, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 6, textAlign: "center" as const }}>Reps / cluster</div>
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+      <div className="mb-2">
+        <div className={cn(CL_KICK, "mb-1.5 text-center")}>Reps / cluster</div>
+        <div className="flex flex-wrap justify-center gap-1.5">
           {safeReps.map((v, i) => (
-            <div key={i} style={{ textAlign: "center" as const }}>
-              <div style={{ fontSize: 9, color: ORANGE, marginBottom: 3 }}>C{i + 1}</div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                <button onClick={() => updateRep(i, Math.min(20, v + 1))} style={{ width: 24, height: 22, borderRadius: "5px 5px 0 0", border: "1px solid " + ORANGE + "60", background: "transparent", color: ORANGE, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>+</button>
-                <div style={{ width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: ORANGE, border: "1px solid " + ORANGE + "60", borderTop: "none", borderBottom: "none", background: ORANGE + "08" }}>{v}</div>
-                <button onClick={() => updateRep(i, Math.max(1, v - 1))} style={{ width: 24, height: 22, borderRadius: "0 0 5px 5px", border: "1px solid " + ORANGE + "60", background: "transparent", color: ORANGE, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>−</button>
+            <div key={i} className="text-center">
+              <div className="mb-[3px] text-[9px] text-agon-alerte">C{i + 1}</div>
+              <div className="flex flex-col items-center gap-px">
+                <button onClick={() => updateRep(i, Math.min(20, v + 1))} className={cn(CL_STEP, "rounded-t-[5px]")}>+</button>
+                <div className="flex h-[26px] w-7 items-center justify-center border-x border-agon-alerte/[0.376] bg-agon-alerte/[0.031] text-[13px] font-extrabold text-agon-alerte">{v}</div>
+                <button onClick={() => updateRep(i, Math.max(1, v - 1))} className={cn(CL_STEP, "rounded-b-[5px]")}>−</button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ textAlign: "center" as const, padding: "5px 10px", borderRadius: 7, background: ORANGE + "18", border: "1px solid " + ORANGE + "40" }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: ORANGE, letterSpacing: 2 }}>{pattern}</span>
-        <span style={{ fontSize: 10, color: ORANGE + "AA", marginLeft: 6 }}>+ {cluster.recup_sec}s repos</span>
+      <div className="rounded-[7px] border border-agon-alerte/25 bg-agon-alerte/[0.094] px-2.5 py-[5px] text-center">
+        <span className="text-[13px] font-extrabold tracking-[2px] text-agon-alerte">{pattern}</span>
+        <span className="ml-1.5 text-[10px] text-agon-alerte/[0.667]">+ {cluster.recup_sec}s repos</span>
       </div>
     </div>
   )

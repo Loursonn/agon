@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme"
+import { cn } from "@/lib/utils"
 import { getMC, mL, MTREE } from "@/lib/muscles"
 import { MAX_PRIMARY_MUSCLES, SECONDARY_FACTOR, formatSets, resolveMuscles } from "@/lib/muscleVolume"
 import type { Exercice, ExerciceMuscles } from "./types"
@@ -36,17 +36,17 @@ interface MuscleChipsProps {
 /** Lecture seule : principaux en plein, secondaires atténués. */
 export function MuscleChips({ muscles }: MuscleChipsProps) {
   if (!muscles.primary.length && !muscles.secondary.length) {
-    return <span style={{ fontSize: 9, color: C.tx3 }}>Muscles non définis</span>
+    return <span className="text-[9px] text-agon-tx3">Muscles non définis</span>
   }
   return (
     <>
       {muscles.primary.map((m) => (
-        <span key={m} style={{ fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 4, background: getMC(m) + "30", color: getMC(m) }}>
+        <span key={m} className="rounded-[4px] px-1.5 py-px text-[9px] font-extrabold" style={{ background: getMC(m) + "30", color: getMC(m) }}>
           {mL(m)}
         </span>
       ))}
       {muscles.secondary.map((m) => (
-        <span key={m} style={{ fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "transparent", border: "1px dashed " + getMC(m) + "70", color: getMC(m) }}>
+        <span key={m} className="rounded-[4px] border border-dashed bg-transparent px-1.5 py-px text-[9px] font-semibold" style={{ borderColor: getMC(m) + "70", color: getMC(m) }}>
           {mL(m)}
         </span>
       ))}
@@ -73,25 +73,25 @@ export function ExerciceMusclesEditor({ exercice, onChange }: ExerciceMusclesEdi
   const set = (m: ExerciceMuscles) => onChange({ ...exercice, muscles: m })
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+    <div className="mt-3">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="text-[10px] font-bold uppercase tracking-[0.4px] text-agon-tx3">
           Muscles travaillés
         </div>
         {overridden && (
           <button
             onClick={() => { const { muscles: _drop, ...rest } = exercice; onChange(rest as Exercice) }}
-            style={{ background: "none", border: "none", color: C.coach, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 0 }}
+            className="cursor-pointer border-0 bg-transparent p-0 text-[10px] font-semibold text-agon-coach"
           >
             Revenir à la banque
           </button>
         )}
       </div>
-      <div style={{ fontSize: 10, color: C.tx3, marginBottom: 8 }}>
+      <div className="mb-2 text-[10px] text-agon-tx3">
         Clique : 1er clic = principal (max {MAX_PRIMARY_MUSCLES}, compte 1 série) · 2e clic = secondaire (compte {formatSets(SECONDARY_FACTOR)}) · 3e clic = retirer.
         {!overridden && " Valeurs de la banque."}
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+      <div className="flex flex-wrap gap-[5px]">
         {PICKABLE.map((id) => {
           const role = roleOf(current, id)
           const color = getMC(id)
@@ -100,13 +100,12 @@ export function ExerciceMusclesEditor({ exercice, onChange }: ExerciceMusclesEdi
               key={id}
               onClick={() => set(nextMuscles(current, id))}
               title={role === "primary" ? "Principal" : role === "secondary" ? "Secondaire" : "Non travaillé"}
-              style={{
-                fontSize: 10, fontWeight: role ? 700 : 500, padding: "3px 9px", borderRadius: 6,
-                cursor: "pointer", fontFamily: "inherit",
-                border: role === "secondary" ? "1px dashed " + color : "1px solid " + (role ? color : C.brdL),
-                background: role === "primary" ? color + "35" : "transparent",
-                color: role ? color : C.tx3,
-              }}
+              className={cn(
+                "cursor-pointer rounded-[6px] border px-[9px] py-[3px] text-[10px]",
+                role ? "font-bold" : "border-agon-brd-l bg-transparent font-medium text-agon-tx3",
+                role === "secondary" && "border-dashed bg-transparent",
+              )}
+              style={role ? { borderColor: color, color, background: role === "primary" ? color + "35" : undefined } : undefined}
             >
               {mL(id)}{role === "primary" ? " ●" : role === "secondary" ? " ◐" : ""}
             </button>

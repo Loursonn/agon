@@ -4,7 +4,7 @@ import { formatClusterReps } from "./clusterFormat"
 import { formatRepsAt, formatSetsReps, hasIso } from "@/lib/formatSetsReps"
 import { IsoBadge } from "@/features/shared/components/IsoBadge"
 
-const VIOLET = C.ac
+const LINE = "text-[11px] font-semibold"
 
 interface SyntheseBarProps {
   params: ExerciceParams
@@ -23,7 +23,7 @@ function formatCharge(value: number | null, unit: ExerciceParams['charge_unit'])
 }
 
 export function SyntheseBar({ params, color }: SyntheseBarProps) {
-  const accent = color ?? VIOLET
+  const accent = color ?? C.ac
   const { nb_series, cluster, reps, charge_unit, charge, rir, tempo } = params
   const iso = hasIso(params) ? <IsoBadge /> : null
 
@@ -39,7 +39,7 @@ export function SyntheseBar({ params, color }: SyntheseBarProps) {
     else if (chargeVal != null) text += ` @ ${formatCharge(chargeVal, charge_unit)}`
     if (rirVal != null) text += ` — RIR ${rirVal}`
     return (
-      <div style={{ fontSize: 11, color: accent, fontFamily: "inherit", fontWeight: 600 }}>
+      <div className={LINE} style={{ color: accent }}>
         {text}{iso}
       </div>
     )
@@ -53,7 +53,7 @@ export function SyntheseBar({ params, color }: SyntheseBarProps) {
     if (rirVal != null) text += ` — RIR ${rirVal}`
     if (tempoVal) text += ` — Tempo ${tempoVal}`
     return (
-      <div style={{ fontSize: 11, color: accent, fontFamily: "inherit", fontWeight: 600 }}>
+      <div className={LINE} style={{ color: accent }}>
         {text}{iso}
       </div>
     )
@@ -72,7 +72,7 @@ export function SyntheseBar({ params, color }: SyntheseBarProps) {
     let text = parts.join(' / ')
     if (rirVal != null) text += ` — RIR ${rirVal}`
     return (
-      <div style={{ fontSize: 11, color: accent, fontFamily: "inherit", fontWeight: 600 }}>
+      <div className={LINE} style={{ color: accent }}>
         {text}{iso}
       </div>
     )
@@ -89,8 +89,8 @@ export function SyntheseBar({ params, color }: SyntheseBarProps) {
   if (tempoVal) text += ` — Tempo ${tempoVal}`
 
   return (
-    <div style={{ fontSize: 11, color: accent, fontFamily: "inherit", fontWeight: 600 }}>
-      {text ? <>{text}{iso}</> : <span style={{ color: C.tx3 }}>Aucun paramètre défini</span>}
+    <div className={LINE} style={{ color: accent }}>
+      {text ? <>{text}{iso}</> : <span className="text-agon-tx3">Aucun paramètre défini</span>}
     </div>
   )
 }

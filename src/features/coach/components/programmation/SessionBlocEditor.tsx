@@ -8,6 +8,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { Plus, Library, BookmarkPlus } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import type { Bloc, ProgSession } from "./types"
@@ -21,7 +22,9 @@ import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/Fich
 import { SaveToBankDialog, type SaveToBankTarget } from "./SaveToBankDialog"
 import { maxDefinedWeek, resolveExerciceParams } from "@/lib/sessionOccurrence"
 
-const VIOLET = C.ac
+const KICK = "text-[10px] font-bold uppercase tracking-[0.5px] text-agon-tx3"
+/** Bouton pointillé « Nouveau bloc » / « Depuis la banque » : or au survol. */
+const DASHED_BTN = "flex flex-1 cursor-pointer items-center justify-center gap-[5px] rounded-[4px] border border-dashed py-2.5 text-[12px] font-semibold [transition:border-color_120ms,color_120ms] hover:border-agon-accent hover:text-agon-accent"
 
 interface SessionBlocEditorProps {
   session: ProgSession
@@ -157,10 +160,10 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
   }
 
   return (
-    <div style={{ padding: "12px 0" }}>
+    <div className="py-3">
       {/* SemaineNav — only if session has multi_semaine */}
       {session.multi_semaine && !hideWeekNav && (
-        <div style={{ marginBottom: 12 }}>
+        <div className="mb-3">
           <SemaineNav
             cycleId={cycleId}
             activeWeek={activeWeek}
@@ -173,8 +176,8 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
 
       {/* Fiches rattachées à la séance */}
       {sessionFiches && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <div className="mb-2.5 flex flex-wrap items-center gap-2">
+          <span className={KICK}>
             Fiches de la séance
           </span>
           <FicheAttachmentsEditor
@@ -189,16 +192,10 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
 
       {/* Save whole session to the bank */}
       {bankActions && session.blocs.length > 0 && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+        <div className="mb-2 flex justify-end">
           <button
             onClick={() => setSaveTarget({ kind: 'session', session })}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "5px 10px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: "transparent",
-              color: C.tx3, fontSize: 11, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
+            className="flex cursor-pointer items-center gap-[5px] rounded-[4px] border border-agon-brd-l bg-transparent px-2.5 py-[5px] text-[11px] font-semibold text-agon-tx3"
           >
             <BookmarkPlus size={12} />
             Enregistrer la séance dans la banque
@@ -235,7 +232,7 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
 
       {/* Empty blocs state */}
       {!isAddingBloc && session.blocs.length === 0 && (
-        <div style={{ textAlign: "center", padding: "30px 20px", color: C.tx3, fontSize: 12 }}>
+        <div className="px-5 py-[30px] text-center text-[12px] text-agon-tx3">
           Aucun bloc — ajoutes-en un pour commencer.
         </div>
       )}
@@ -250,44 +247,36 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
 
       {/* Bank picker */}
       {showBankPicker && (
-        <div style={{
-          marginTop: 8, padding: 10, borderRadius: 4,
-          border: "1px solid " + VIOLET + "40", background: VIOLET + "08",
-        }}>
-          <div style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+        <div className="mt-2 rounded-[4px] border border-agon-accent/25 bg-agon-accent/[0.031] p-2.5">
+          <div className={cn(KICK, "mb-2")}>
             Blocs de la banque
           </div>
           {bankBlocs.length === 0 ? (
-            <div style={{ fontSize: 12, color: C.tx3, padding: "4px 0 8px" }}>
+            <div className="pb-2 pt-1 text-[12px] text-agon-tx3">
               Aucun bloc préconstruit — crée-les dans Banque → Musculation → Blocs.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="flex flex-col gap-2.5">
               {BLOC_CATEGORIES.map(cat => {
                 const catBlocs = bankBlocs.filter(b => (b.category ?? 'Mixte') === cat)
                 if (catBlocs.length === 0) return null
                 return (
                   <div key={cat}>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5 }}>
+                    <div className="mb-[5px] text-[9px] font-extrabold uppercase tracking-[0.5px] text-agon-tx3">
                       {cat}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    <div className="flex flex-col gap-[5px]">
                       {catBlocs.map(b => (
                         <button
                           key={b.id}
                           onClick={() => addBlocFromBank(b)}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                            padding: "9px 10px", borderRadius: 4,
-                            border: "1px solid " + C.brdL, background: C.s1, color: C.tx,
-                            fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                          }}
+                          className="flex cursor-pointer items-center gap-2 rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-[9px] text-left text-[12px] font-semibold text-agon-tx"
                         >
-                          <span style={{ width: 8, height: 8, borderRadius: 3, background: b.color ?? VIOLET, flexShrink: 0 }} />
-                          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span className="size-2 shrink-0 rounded-[3px]" style={{ background: b.color ?? C.ac }} />
+                          <span className="min-w-0 flex-1 truncate">
                             {b.name || "Bloc sans nom"}
                           </span>
-                          <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
+                          <span className="shrink-0 text-[10px] text-agon-tx3">
                             {b.exercices.length} ex.
                           </span>
                         </button>
@@ -300,7 +289,7 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
           )}
           <button
             onClick={() => setShowBankPicker(false)}
-            style={{ width: "100%", marginTop: 6, padding: "6px 0", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+            className="mt-1.5 w-full cursor-pointer rounded-[7px] border border-agon-brd-l bg-transparent py-1.5 text-[11px] text-agon-tx3"
           >
             Annuler
           </button>
@@ -308,40 +297,17 @@ export function SessionBlocEditor({ session, cycleId, athleteId, onChange, initi
       )}
 
       {/* Add bloc buttons */}
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+      <div className="mt-2 flex gap-2">
         <button
           onClick={() => { setIsAddingBloc(true); setShowBankPicker(false) }}
-          style={{
-            flex: 1,
-            padding: "10px 0", borderRadius: 4,
-            border: "1px dashed " + C.brdL, background: "transparent",
-            color: C.tx3, fontSize: 12, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-            transition: "border-color 120ms, color 120ms",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = VIOLET; e.currentTarget.style.color = VIOLET }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = C.brdL; e.currentTarget.style.color = C.tx3 }}
+          className={cn(DASHED_BTN, "border-agon-brd-l bg-transparent text-agon-tx3")}
         >
           <Plus size={13} />
           Nouveau bloc
         </button>
         <button
           onClick={() => { setShowBankPicker(p => !p); setIsAddingBloc(false) }}
-          style={{
-            flex: 1,
-            padding: "10px 0", borderRadius: 4,
-            border: "1px dashed " + (showBankPicker ? VIOLET : C.brdL),
-            background: showBankPicker ? VIOLET + "0F" : "transparent",
-            color: showBankPicker ? VIOLET : C.tx3, fontSize: 12, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-            transition: "border-color 120ms, color 120ms",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = VIOLET; e.currentTarget.style.color = VIOLET }}
-          onMouseLeave={e => {
-            if (!showBankPicker) { e.currentTarget.style.borderColor = C.brdL; e.currentTarget.style.color = C.tx3 }
-          }}
+          className={cn(DASHED_BTN, showBankPicker ? "border-agon-accent bg-agon-accent/[0.059] text-agon-accent" : "border-agon-brd-l bg-transparent text-agon-tx3")}
         >
           <Library size={13} />
           Depuis la banque
