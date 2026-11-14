@@ -43,6 +43,16 @@ export interface ExerciceCardProps {
   onCommentChange: (c: string) => void;
   onStartRest: (key: string, sec: number) => void;
   onStopRest: () => void;
+  /** −15 s / +15 s sur la récup en cours. */
+  onAdjustRest?: (deltaSec: number) => void;
+}
+
+/** « série 3 · 70 kg × 6 » pour la carte de récup (planche SeanceEnCours). */
+function nextSetLabel(idx: number, st: SetState | undefined, unit: string): string {
+  const kg = st?.kg ? st.kg.replace(".", ",") : "";
+  const load = unit === "PDC" || !kg ? "" : ` · ${kg}${unit === "kg" ? " kg" : ` ${unit}`}`;
+  const reps = st?.reps ? `${load ? " ×" : " ·"} ${st.reps}` : "";
+  return `série ${idx + 1}${load}${reps}`;
 }
 
 export function ExerciceCard({
@@ -73,6 +83,7 @@ export function ExerciceCard({
   onCommentChange,
   onStartRest,
   onStopRest,
+  onAdjustRest,
 }: ExerciceCardProps) {
   const [showComment, setShowComment] = useState(false);
   const isPDC = params.charge_unit === "PDC";
@@ -287,6 +298,7 @@ export function ExerciceCard({
                           total={restTotal}
                           onStart={() => onStartRest(`${exId}:${flatIdx}:cluster`, c.recup_sec)}
                           onStop={onStopRest}
+                    onAdjust={onAdjustRest}
                           canEdit={canEdit}
                         />
                       )}
@@ -304,6 +316,7 @@ export function ExerciceCard({
                     total={restTotal}
                     onStart={() => onStartRest(setStripKey, restSec)}
                     onStop={onStopRest}
+                    onAdjust={onAdjustRest}
                     canEdit={canEdit}
                   />
                 )}
@@ -338,6 +351,8 @@ export function ExerciceCard({
                 total={restTotal}
                 onStart={() => onStartRest(stripKey, restSec)}
                 onStop={onStopRest}
+                onAdjust={onAdjustRest}
+                next={nextSetLabel(i + 1, sets[i + 1], params.charge_unit)}
                 canEdit={canEdit}
               />
               )}

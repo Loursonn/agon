@@ -31,6 +31,8 @@ export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, 
     : "28px 1.1fr 0.8fr 1.3fr 0.7fr 42px";
 
   const live = state.done || isCurrent;
+  // Décimales à la française (« 1,5 », « 57,5 × 8 ») : le stockage garde le point
+  const fr = (v: string) => v.replace(".", ",");
   // Planche SeanceEnCours : valeurs en Geist Mono 16, grises tant que la série n'est ni faite ni en cours
   function cell(field: "kg" | "reps" | "rir", val: string) {
     return (
@@ -51,7 +53,7 @@ export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, 
           textDecoration: state.skipped ? "line-through" : "none",
         }}
       >
-        {val || <span style={{ color: C.tx3, fontSize: 13 }}>—</span>}
+        {val ? fr(val) : <span style={{ color: C.tx3, fontSize: 13 }}>—</span>}
       </div>
     );
   }
@@ -112,7 +114,7 @@ export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, 
           whiteSpace: "nowrap",
         }}
       >
-        {prevStr || "—"}
+        {prevStr && prevStr !== "—" ? fr(prevStr).replace(/\s*×\s*/, " × ") : "—"}
       </div>
 
       {/* rir */}

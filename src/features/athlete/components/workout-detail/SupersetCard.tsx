@@ -46,11 +46,12 @@ export interface SupersetCardProps {
   canEdit: boolean;
   onStartRest: (key: string, sec: number) => void;
   onStopRest: () => void;
+  onAdjustRest?: (deltaSec: number) => void;
 }
 
 export function SupersetCard({
   groupKey, members, blocColor, restSec, timingMode,
-  restActiveKey, restLeft, restTotal, canEdit, onStartRest, onStopRest,
+  restActiveKey, restLeft, restTotal, canEdit, onStartRest, onStopRest, onAdjustRest,
 }: SupersetCardProps) {
   const rounds = Math.max(...members.map((m) => m.sets.length), 0);
   // Repos entre tours : seulement en timing "repos" (départ = chrono bloc, libre = rien)
@@ -218,6 +219,7 @@ export function SupersetCard({
                   total={restTotal}
                   onStart={() => onStartRest(`ss:${groupKey}:${r}`, restSec)}
                   onStop={onStopRest}
+                  onAdjust={onAdjustRest}
                   canEdit={canEdit}
                 />
               )}
