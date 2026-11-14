@@ -4,14 +4,14 @@
  * L'ouverture marque la fiche comme vue (seen_at), sauf en mode observation.
  */
 import { useEffect, useRef } from "react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { FICHE_CATEGORY_LABEL, variantLabel } from "@/features/shared/types/fiches";
 import { useAthleteDocs, useDoc, useDocVariants } from "@/features/shared/hooks/fiches/useDocs";
 import { useMarkDocSeen } from "@/features/shared/hooks/fiches/useDocMutations";
 import { FichePreview } from "./FichePreview";
 import { FicheCommentThread } from "./FicheCommentThread";
-import { CATEGORY_COLOR, input, label } from "./ficheStyles";
+import { CATEGORY_TEXT, INPUT, LABEL } from "./ficheStyles";
 
 interface Props {
   docId: string;
@@ -55,60 +55,52 @@ export function FicheViewer({ docId, athleteId, viewOnly, onClose, onSwapVariant
   const coachId = doc?.coach_id ?? profile?.coach_id ?? user?.id ?? "";
 
   return (
-    <div role={inline ? "region" : "dialog"} aria-modal={inline ? undefined : true} aria-label={doc?.title ?? "Fiche"} style={inline ? {
-      background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, overflow: "hidden",
-      display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 140px)", position: "sticky", top: 16,
-    } : {
-      position: "fixed", inset: 0, zIndex: 250, background: C.bg,
-      display: "flex", flexDirection: "column",
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-        paddingTop: "max(8px, env(safe-area-inset-top))",
-        borderBottom: "1px solid " + C.brd, flexShrink: 0,
-      }}>
-        <button onClick={onClose} aria-label={inline ? "Fermer la fiche" : "Retour"} style={{
-          minWidth: 44, minHeight: 44, borderRadius: 4, border: "1px solid " + C.brdL,
-          background: "transparent", color: C.tx, fontSize: 18, cursor: "pointer", fontFamily: "inherit",
-        }}>{inline ? "×" : "←"}</button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+    <div role={inline ? "region" : "dialog"} aria-modal={inline ? undefined : true} aria-label={doc?.title ?? "Fiche"} className={cn(
+      "flex flex-col",
+      inline
+        ? "sticky top-4 max-h-[calc(100vh-140px)] overflow-hidden rounded-[14px] border border-agon-brd bg-agon-s1"
+        : "fixed inset-0 z-[250] bg-agon-bg",
+    )}>
+      <div className="flex shrink-0 items-center gap-2 border-b border-agon-brd px-3 pb-2 pt-[max(8px,env(safe-area-inset-top))]">
+        <button onClick={onClose} aria-label={inline ? "Fermer la fiche" : "Retour"} className="min-h-11 min-w-11 cursor-pointer rounded-[4px] border border-agon-brd-l bg-transparent font-[inherit] text-[18px] text-agon-tx">{inline ? "×" : "←"}</button>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[14px] font-bold text-agon-tx">
             {doc?.title ?? (isLoading ? "Chargement…" : "Fiche indisponible")}
           </div>
           {doc && (
-            <div style={{ fontSize: 11, color: CATEGORY_COLOR[doc.category] }}>
+            <div className={cn("text-[11px]", CATEGORY_TEXT[doc.category])}>
               {FICHE_CATEGORY_LABEL[doc.category]}
-              {(doc.origin_id || doc.variant_label) && <span style={{ color: C.tx3 }}> · {variantLabel(doc)}</span>}
+              {(doc.origin_id || doc.variant_label) && <span className="text-agon-tx3"> · {variantLabel(doc)}</span>}
             </div>
           )}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "12px 12px 32px" }}>
+      <div className="flex-1 overflow-y-auto px-3 pb-8 pt-3 [-webkit-overflow-scrolling:touch]">
         {!doc && !isLoading && (
-          <div style={{ textAlign: "center", color: C.tx3, fontSize: 13, padding: "40px 16px" }}>
+          <div className="px-4 py-10 text-center text-[13px] text-agon-tx3">
             Cette fiche n'est plus accessible.
           </div>
         )}
         {doc && (
-          <div style={{ maxWidth: 820, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="mx-auto flex max-w-[820px] flex-col gap-3.5">
             {family.length > 1 && (
               <div>
-                <span style={label}>Version</span>
-                <select style={input} value={doc.id} onChange={e => onSwapVariant(e.target.value)}>
+                <span className={LABEL}>Version</span>
+                <select className={INPUT} value={doc.id} onChange={e => onSwapVariant(e.target.value)}>
                   {family.map(d => <option key={d.id} value={d.id}>{variantLabel(d)}</option>)}
                 </select>
               </div>
             )}
             {coachNote && (
-              <div style={{ background: C.coachS, border: "1px solid " + C.coach + "40", borderRadius: 6, padding: "10px 12px" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.coach, marginBottom: 4 }}>Note du coach</div>
-                <div style={{ fontSize: 13, color: C.tx, whiteSpace: "pre-wrap" }}>{coachNote}</div>
+              <div className="rounded-[6px] border border-agon-coach/[0.25] bg-agon-coach-doux px-3 py-2.5">
+                <div className="mb-1 text-[11px] font-bold text-agon-coach">Note du coach</div>
+                <div className="whitespace-pre-wrap text-[13px] text-agon-tx">{coachNote}</div>
               </div>
             )}
-            {doc.description && <div style={{ fontSize: 13, color: C.tx2 }}>{doc.description}</div>}
+            {doc.description && <div className="text-[13px] text-agon-tx2">{doc.description}</div>}
             <FichePreview doc={doc} />
-            <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14 }}>
+            <div className="border-t border-agon-brd pt-3.5">
               <FicheCommentThread docId={doc.id} athleteId={athleteId} coachId={coachId} />
             </div>
           </div>

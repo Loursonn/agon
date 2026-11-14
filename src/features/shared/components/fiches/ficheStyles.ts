@@ -94,3 +94,14 @@ export const CATEGORY_SOFT: Record<FicheCategory, string> = {
   autre: "border-agon-tx3/[0.25] bg-agon-tx3/[0.08]",
 };
 export const SECTION_TITLE = "m-0 mb-2 text-[12px] font-bold uppercase tracking-[0.5px] text-agon-tx3";
+/** Texte coloré par catégorie (libellé de la fiche ouverte). */
+export const CATEGORY_TEXT: Record<FicheCategory, string> = {
+  mobilite: "text-agon-patine",
+  pacing: "text-agon-info",
+  prevention: "text-agon-alerte",
+  recuperation: "text-agon-succes",
+  nutrition: "text-agon-amethyste",
+  education: "text-agon-accent",
+  questionnaire: "text-agon-tx2",
+  autre: "text-agon-tx3",
+};
