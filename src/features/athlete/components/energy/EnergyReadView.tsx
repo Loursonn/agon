@@ -5,7 +5,7 @@ import { TYPE_COLOR } from "@/lib/peps";
 import { DISPLAY, KICKER, LABEL, MONO } from "@/features/shared/components/seance/seanceUi";
 import { profileBars, readBlocks, sessionLine, type ReadBlock, type Refs } from "@/lib/energy/energyRun";
 import type { EnergySessionRow } from "@/types/energy";
-import { tintCard, tintColor } from "./energyTint";
+import { tintColor } from "./energyTint";
 
 /**
  * Lecture d'une séance d'énergie avant de la faire (planche EnergieTel, écrans
@@ -107,24 +107,27 @@ export function EnergyReadView({
   );
 }
 
+/** Ligne de bloc (planche EnergieTelCas, « Lecture ») : barre de couleur, bloc à gauche, la cible en grand à droite. */
 function BlockRow({ b }: { b: ReadBlock }) {
   const color = tintColor(b.tint);
   return (
-    <div style={{ ...tintCard(color), borderRadius: 14, position: "relative", overflow: "hidden", padding: "12px 14px 12px 17px", display: "flex", flexDirection: "column", gap: 4 }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
-      <span style={{ ...LABEL, color: C.tx2 }}>{b.title}</span>
-      <div style={{ fontSize: 16, lineHeight: 1.35 }}>{b.phrase}</div>
+    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "12px 14px", display: "flex", gap: 12, alignItems: "stretch" }}>
+      <span aria-hidden style={{ width: 4, borderRadius: 2, background: color, flex: "none" }} />
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+        <span style={{ ...LABEL, color: C.tx2 }}>{b.title}</span>
+        <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.35 }}>{b.phrase}</div>
+        {b.tints.length > 1 && (
+          <div aria-hidden style={{ display: "flex", gap: 4, marginTop: 2 }}>
+            {b.tints.map((t, i) => <span key={i} style={{ width: 18, height: 4, borderRadius: 2, background: tintColor(t) }} />)}
+          </div>
+        )}
+      </div>
       {b.target && (
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ ...MONO, fontSize: 28, lineHeight: 1.1, color }}>
-            {b.target.value}<span style={{ fontSize: 13, color: C.tx2 }}>{b.target.unit}</span>
+        <div style={{ flex: "none", maxWidth: "48%", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 4, textAlign: "right" }}>
+          <span style={{ ...MONO, fontSize: 22, lineHeight: 1.1, color }}>
+            {b.target.value}<span style={{ fontSize: 12, color: C.tx2 }}>{b.target.unit}</span>
           </span>
-          {b.target.secondary && <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{b.target.secondary}</span>}
-        </div>
-      )}
-      {b.tints.length > 1 && (
-        <div aria-hidden style={{ display: "flex", gap: 4, marginTop: 2 }}>
-          {b.tints.map((t, i) => <span key={i} style={{ width: 18, height: 4, borderRadius: 2, background: tintColor(t) }} />)}
+          {b.target.secondary && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{b.target.secondary}</span>}
         </div>
       )}
     </div>

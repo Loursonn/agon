@@ -162,7 +162,8 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
                   onClick={() => setType(t.value)}
                   style={{
                     height: 36, boxSizing: "border-box", padding: "0 14px", borderRadius: 999, fontSize: 13.5, fontFamily: "inherit", cursor: "pointer",
-                    border: on ? `1.5px solid ${c}` : `1px solid ${alpha(C.tx, 0.18)}`, background: on ? `${c}24` : "transparent", color: on ? C.tx : C.tx2,
+                    border: on ? `1px solid ${c}` : `1px solid ${alpha(C.tx, 0.18)}`, background: on ? c : "transparent", color: on ? C.ink : C.tx2,
+                    fontWeight: on ? 500 : 400,
                   }}
                 >
                   {t.label}
