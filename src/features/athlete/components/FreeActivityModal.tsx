@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { SPORTS } from "./freeActivitySports";
 
@@ -9,6 +9,12 @@ const DAYS_FULL_FR = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Di
 
 
 const DISTANCE_SPORTS = ["course", "velo", "natation", "marche", "ski", "autre"];
+
+const LABEL = "text-[11px] font-semibold uppercase tracking-[0.5px] text-agon-tx3";
+const INPUT = "box-border w-full rounded-[4px] border border-agon-brd-l bg-agon-s2 px-3 py-[9px] font-[inherit] text-agon-tx [outline:none]";
+/** Intensité 1-3 / 4-6 / 7-10 : texte et curseur. */
+const INTENSITY_TEXT = ["text-agon-succes", "text-agon-alerte", "text-agon-erreur"];
+const INTENSITY_ACCENT = ["accent-agon-succes", "accent-agon-alerte", "accent-agon-erreur"];
 
 interface FreeActivityModalProps {
   date: string | null;
@@ -77,66 +83,57 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
     onClose();
   }
 
-  const intensityColor = intensity <= 3 ? C.g : intensity <= 6 ? C.o : C.r;
+  const intensityTone = intensity <= 3 ? 0 : intensity <= 6 ? 1 : 2;
 
   return (
     <Drawer open={open} onOpenChange={(v) => !v && onClose()}>
-      <DrawerContent style={{ background: C.s1, borderTop: "1px solid " + C.brd, padding: "0 0 32px" }}>
-        <DrawerHeader style={{ padding: "16px 20px 12px", display: "flex", alignItems: "center" }}>
-          <div style={{ flex: 1 }}>
-            <DrawerTitle style={{ fontSize: 16, fontWeight: 700, color: C.tx }}>
+      <DrawerContent className="border-t-agon-brd bg-agon-s1 p-0 pb-8">
+        <DrawerHeader className="flex items-center px-5 pb-3 pt-4">
+          <div className="flex-1">
+            <DrawerTitle className="text-[16px] font-bold text-agon-tx">
               {isEdit ? "Modifier l'activité" : "Activité libre"}
-              {dateLabel ? <span style={{ fontSize: 13, fontWeight: 400, color: C.tx3, marginLeft: 8 }}>{dateLabel}</span> : null}
+              {dateLabel ? <span className="ml-2 text-[13px] font-normal text-agon-tx3">{dateLabel}</span> : null}
             </DrawerTitle>
           </div>
           {isEdit && onDelete && existing && (
             <button
               onClick={() => setConfirmDel((v) => !v)}
-              style={{
-                padding: "5px 12px", borderRadius: 4,
-                border: "1px solid " + C.r + "50", background: "rgba(239,75,75,0.08)",
-                color: C.r, fontSize: 11, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="cursor-pointer rounded-[4px] border border-agon-erreur/[0.31] bg-agon-erreur/[0.08] px-3 py-[5px] font-[inherit] text-[11px] font-semibold text-agon-erreur"
             >
               Supprimer
             </button>
           )}
         </DrawerHeader>
 
-        <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="flex flex-col gap-4 px-5">
           {confirmDel && isEdit && onDelete && existing && (
-            <div style={{ padding: "10px 12px", borderRadius: 4, background: C.rS, border: "1px solid " + C.r + "40" }}>
-              <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cette activité ?</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="button" onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-                <button type="button" onClick={() => { onDelete(existing.id); onClose(); }} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "none", background: C.r, color: C.ink, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+            <div className="rounded-[4px] border border-agon-erreur/[0.25] bg-agon-erreur-doux px-3 py-2.5">
+              <div className="mb-2.5 text-[12px] text-agon-tx2">Supprimer cette activité ?</div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setConfirmDel(false)} className="flex-1 cursor-pointer rounded-[4px] border border-agon-brd-l bg-transparent py-2 font-[inherit] text-[12px] font-semibold text-agon-tx2">Annuler</button>
+                <button type="button" onClick={() => { onDelete(existing.id); onClose(); }} className="flex-1 cursor-pointer rounded-[4px] border-none bg-agon-erreur py-2 font-[inherit] text-[12px] font-bold text-agon-ink">Supprimer</button>
               </div>
             </div>
           )}
           {/* Sport picker */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+            <div className={cn(LABEL, "mb-2")}>
               Sport
             </div>
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 4 }}>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
               {SPORTS.map((s) => {
                 const active = sport.key === s.key;
                 return (
                   <button
                     key={s.key}
                     onClick={() => { setSport(s); if (s.key === "autre") setTimeout(() => labelRef.current?.focus(), 50); }}
-                    style={{
-                      flexShrink: 0, padding: "8px 12px", borderRadius: 4,
-                      border: "1px solid " + (active ? C.ac + "80" : C.brd),
-                      background: active ? C.acS : C.s2,
-                      cursor: "pointer", fontFamily: "inherit",
-                      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                      minWidth: 52,
-                    }}
+                    className={cn(
+                      "flex min-w-[52px] shrink-0 cursor-pointer flex-col items-center gap-[3px] rounded-[4px] border px-3 py-2 font-[inherit]",
+                      active ? "border-agon-accent/[0.5] bg-agon-accent-doux text-agon-accent" : "border-agon-brd bg-agon-s2 text-agon-tx3",
+                    )}
                   >
-                    <span style={{ fontSize: 11, fontWeight: 800, color: active ? C.ac : C.tx3 }}>{s.abbr}</span>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: active ? C.ac : C.tx3 }}>{s.label}</span>
+                    <span className="text-[11px] font-extrabold">{s.abbr}</span>
+                    <span className="text-[9px] font-semibold">{s.label}</span>
                   </button>
                 );
               })}
@@ -147,20 +144,15 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
                 value={customLabel}
                 onChange={(e) => setCustomLabel(e.target.value)}
                 placeholder="Nom de l'activité…"
-                style={{
-                  marginTop: 8, width: "100%", padding: "9px 12px",
-                  borderRadius: 4, border: "1px solid " + C.brdL,
-                  background: C.s2, color: C.tx, fontSize: 13,
-                  fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none",
-                }}
+                className={cn(INPUT, "mt-2 text-[13px]")}
               />
             )}
           </div>
 
           {/* Duration + distance + intensity */}
-          <div style={{ display: "grid", gridTemplateColumns: showDistance ? "1fr 1fr" : "1fr 1fr", gap: 12 }}>
+          <div className="grid grid-cols-[1fr_1fr] gap-3">
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+              <div className={cn(LABEL, "mb-1.5")}>
                 Durée (min)
               </div>
               <input
@@ -169,17 +161,12 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 placeholder="ex: 45"
-                style={{
-                  width: "100%", padding: "9px 12px", borderRadius: 4,
-                  border: "1px solid " + C.brdL, background: C.s2,
-                  color: C.tx, fontSize: 14, fontWeight: 700,
-                  fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none",
-                }}
+                className={cn(INPUT, "text-[14px] font-bold")}
               />
             </div>
             {showDistance && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+                <div className={cn(LABEL, "mb-1.5")}>
                   Distance (km)
                 </div>
                 <input
@@ -189,31 +176,26 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
                   value={distanceKm}
                   onChange={(e) => setDistanceKm(e.target.value)}
                   placeholder="ex: 10"
-                  style={{
-                    width: "100%", padding: "9px 12px", borderRadius: 4,
-                    border: "1px solid " + C.brdL, background: C.s2,
-                    color: C.tx, fontSize: 14, fontWeight: 700,
-                    fontFamily: "inherit", boxSizing: "border-box" as const, outline: "none",
-                  }}
+                  className={cn(INPUT, "text-[14px] font-bold")}
                 />
               </div>
             )}
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
-              Intensité — <span style={{ color: intensityColor, fontWeight: 700 }}>{intensity}/10</span>
+            <div className={cn(LABEL, "mb-1.5")}>
+              Intensité — <span className={cn("font-bold", INTENSITY_TEXT[intensityTone])}>{intensity}/10</span>
             </div>
             <input
               type="range"
               min={1} max={10} value={intensity}
               onChange={(e) => setIntensity(Number(e.target.value))}
-              style={{ width: "100%", accentColor: intensityColor, marginTop: 6 }}
+              className={cn("mt-1.5 w-full", INTENSITY_ACCENT[intensityTone])}
             />
           </div>
 
           {/* Note */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+            <div className={cn(LABEL, "mb-1.5")}>
               Note (optionnel)
             </div>
             <textarea
@@ -221,23 +203,13 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
               onChange={(e) => setNote(e.target.value)}
               placeholder="Comment tu t'es senti…"
               rows={2}
-              style={{
-                width: "100%", padding: "9px 12px", borderRadius: 4,
-                border: "1px solid " + C.brdL, background: C.s2,
-                color: C.tx, fontSize: 13, fontFamily: "inherit",
-                resize: "none", outline: "none", boxSizing: "border-box" as const,
-              }}
+              className={cn(INPUT, "resize-none text-[13px]")}
             />
           </div>
 
           <button
             onClick={handleSave}
-            style={{
-              width: "100%", padding: "13px 0", borderRadius: 6,
-              border: "none", background: C.acV, color: C.ink,
-              fontSize: 14, fontWeight: 700, cursor: "pointer",
-              fontFamily: "inherit", minHeight: 44,
-            }}
+            className="min-h-[44px] w-full cursor-pointer rounded-[6px] border-none bg-agon-accent py-[13px] font-[inherit] text-[14px] font-bold text-agon-ink"
           >
             {isEdit ? "Enregistrer les modifications" : "Enregistrer"}
           </button>
