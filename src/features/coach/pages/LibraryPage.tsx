@@ -1,7 +1,7 @@
 ﻿import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Dumbbell, X, Zap } from "lucide-react";
-import { C, alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -32,11 +32,38 @@ import { formValuesToConfig } from "@/features/coach/components/library/methodCo
 type LibTab = "musculaire" | "energetique" | "specifique";
 
 
-const TABS: { key: LibTab; label: string; color: string }[] = [
-  { key: "musculaire",  label: "Musculaire",  color: C.ac },
-  { key: "energetique", label: "Énergétique", color: C.b },
-  { key: "specifique",  label: "Spécifique",  color: C.o },
+const TABS: { key: LibTab; label: string; swatch: string }[] = [
+  { key: "musculaire",  label: "Musculaire",  swatch: "bg-agon-accent" },
+  { key: "energetique", label: "Énergétique", swatch: "bg-agon-info" },
+  { key: "specifique",  label: "Spécifique",  swatch: "bg-agon-alerte" },
 ];
+
+// ── Classes partagées ─────────────────────────────────────────────────────────
+
+const FILTERS_ROW = "mb-5 flex flex-wrap items-center gap-2.5 border-b border-agon-brd pb-4 pt-3.5";
+const SEGMENTS = "flex gap-0.5 rounded bg-agon-s2 p-0.5";
+const SEARCH = "min-w-[140px] max-w-[260px] flex-1 rounded-[6px] border border-agon-brd bg-agon-s2 px-2.5 py-[5px] text-[12px] text-agon-tx outline-none";
+const COUNT = "whitespace-nowrap text-[11px] text-agon-tx3";
+const PRIMARY_BTN = "cursor-pointer whitespace-nowrap rounded bg-agon-or-vif px-3.5 py-[7px] text-[12px] font-semibold text-agon-ink";
+const SKELETON_CARD = "overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1";
+const BAR = "rounded bg-agon-s2";
+
+/** Segment d'un filtre ; `onText` = couleur du texte actif. */
+function segment(on: boolean, onText: string) {
+  return cn(
+    "cursor-pointer rounded-[6px] px-3 py-[5px] text-[12px] [transition:all_120ms]",
+    on ? cn("bg-agon-accent font-semibold", onText) : "bg-transparent font-normal text-agon-tx3",
+  );
+}
+
+/** Pastille de sous-onglet (Exercices / Méthodes…). */
+function pill(on: boolean) {
+  return cn(
+    "box-border h-8 cursor-pointer rounded-full border px-3.5 text-[12px]",
+    on ? "border-agon-accent bg-agon-accent/[0.14] font-medium text-agon-accent"
+      : "border-agon-brd-l bg-transparent font-normal text-agon-tx2",
+  );
+}
 
 // ── Energy sub-tab constants ──────────────────────────────────────────────────
 
@@ -64,13 +91,13 @@ const KIND_OPTIONS: { value: string; label: string }[] = [
 
 function SkeletonCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
-      <div style={{ height: 3, background: C.s2 }} />
-      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ height: 13, width: "60%", background: C.s2, borderRadius: 4 }} />
-        <div style={{ height: 9,  width: "30%", background: C.s2, borderRadius: 4 }} />
-        <div style={{ height: 120, background: C.s2, borderRadius: 6 }} />
-        <div style={{ height: 10, width: "40%", background: C.s2, borderRadius: 4 }} />
+    <div className={SKELETON_CARD}>
+      <div className="h-[3px] bg-agon-s2" />
+      <div className="flex flex-col gap-2.5 px-3.5 py-3">
+        <div className={cn(BAR, "h-[13px] w-[60%]")} />
+        <div className={cn(BAR, "h-[9px] w-[30%]")} />
+        <div className="h-[120px] rounded-[6px] bg-agon-s2" />
+        <div className={cn(BAR, "h-2.5 w-[40%]")} />
       </div>
     </div>
   );
@@ -107,25 +134,14 @@ function EnergyTab() {
   return (
     <div>
       {/* Filters row */}
-      <div style={{
-        display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
-        padding: "14px 0 16px",
-        borderBottom: `1px solid ${C.brd}`,
-        marginBottom: 20,
-      }}>
+      <div className={FILTERS_ROW}>
         {/* Filter tabs */}
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
+        <div className={SEGMENTS}>
           {FILTER_TABS.map((t) => (
             <button
               key={t.value}
               onClick={() => setFilterTab(t.value)}
-              style={{
-                padding: "5px 12px", borderRadius: 6, border: "none",
-                background: filterTab === t.value ? C.ac : "transparent",
-                color: filterTab === t.value ? C.ink : C.tx3,
-                fontSize: 12, fontWeight: filterTab === t.value ? 600 : 400,
-                cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-              }}
+              className={segment(filterTab === t.value, "text-agon-ink")}
             >
               {t.label}
             </button>
@@ -134,10 +150,7 @@ function EnergyTab() {
 
         {/* Kind select */}
         <Select value={kindFilter} onValueChange={setKind}>
-          <SelectTrigger style={{
-            width: 160, background: C.s2, border: `1px solid ${C.brd}`,
-            color: C.tx, fontSize: 12, height: 32,
-          }}>
+          <SelectTrigger className="h-8 w-[160px] border-agon-brd bg-agon-s2 text-[12px] leading-5 text-agon-tx">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -152,16 +165,11 @@ function EnergyTab() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher…"
-          style={{
-            flex: 1, minWidth: 140, maxWidth: 260,
-            background: C.s2, border: `1px solid ${C.brd}`,
-            borderRadius: 6, color: C.tx, fontSize: 12,
-            padding: "5px 10px", fontFamily: "inherit", outline: "none",
-          }}
+          className={SEARCH}
         />
 
         {!isLoading && (
-          <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>
+          <span className={COUNT}>
             {filtered.length} séance{filtered.length !== 1 ? "s" : ""}
           </span>
         )}
@@ -169,47 +177,30 @@ function EnergyTab() {
         <button
           onClick={() => navigate("/coach/energy-library/new?import=texte")}
           title="Coller une séance écrite au format YOXX"
-          style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.ac}40`,
-            background: C.ac + "12", color: C.ac, fontSize: 12,
-            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className="ml-auto cursor-pointer whitespace-nowrap rounded border border-agon-accent/25 bg-agon-accent/[0.071] px-3.5 py-[7px] text-[12px] font-semibold text-agon-accent"
         >
           Importer un texte
         </button>
         <button
           onClick={() => navigate("/coach/energy-library/new")}
-          style={{
-            padding: "7px 14px", borderRadius: 4, border: "none",
-            background: C.acV, color: C.ink, fontSize: 12,
-            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className={PRIMARY_BTN}
         >
           + Nouvelle séance
         </button>
       </div>
 
       {/* Grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-        gap: 16,
-        alignItems: "start",
-      }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] items-start gap-4">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
         ) : filtered.length === 0 ? (
-          <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "60px 20px", color: C.tx3 }}>
-            <div style={{ marginBottom: 12 }}><Zap size={36} style={{ color: C.tx3 }} /></div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>Aucune séance</div>
-            <div style={{ fontSize: 13, marginBottom: 20 }}>Créez la première séance de la banque énergétique.</div>
+          <div className="col-span-full px-5 py-[60px] text-center text-agon-tx3">
+            <div className="mb-3"><Zap size={36} className="text-agon-tx3" /></div>
+            <div className="mb-1.5 text-[15px] font-semibold text-agon-tx2">Aucune séance</div>
+            <div className="mb-5 text-[13px]">Créez la première séance de la banque énergétique.</div>
             <button
               onClick={() => navigate("/coach/energy-library/new")}
-              style={{
-                padding: "9px 20px", borderRadius: 4, border: "none",
-                background: C.acV, color: C.ink, fontSize: 13,
-                fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="cursor-pointer rounded bg-agon-or-vif px-5 py-[9px] text-[13px] font-semibold text-agon-ink"
             >
               + Nouvelle séance
             </button>
@@ -246,16 +237,16 @@ const SCOPE_OPTIONS: { value: "all" | MethodScope; label: string }[] = [
 
 function SkeletonMethodCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
-      <div style={{ height: 3, background: C.s2 }} />
-      <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ height: 14, width: "55%", background: C.s2, borderRadius: 4 }} />
-        <div style={{ display: "flex", gap: 6 }}>
-          <div style={{ height: 16, width: 50, background: C.s2, borderRadius: 4 }} />
-          <div style={{ height: 16, width: 70, background: C.s2, borderRadius: 4 }} />
+    <div className={SKELETON_CARD}>
+      <div className="h-[3px] bg-agon-s2" />
+      <div className="flex flex-col gap-2.5 px-4 py-3.5">
+        <div className={cn(BAR, "h-3.5 w-[55%]")} />
+        <div className="flex gap-1.5">
+          <div className={cn(BAR, "h-4 w-[50px]")} />
+          <div className={cn(BAR, "h-4 w-[70px]")} />
         </div>
-        <div style={{ height: 36, background: C.s2, borderRadius: 6 }} />
-        <div style={{ height: 10, width: "30%", background: C.s2, borderRadius: 4 }} />
+        <div className="h-9 rounded-[6px] bg-agon-s2" />
+        <div className={cn(BAR, "h-2.5 w-[30%]")} />
       </div>
     </div>
   );
@@ -324,20 +315,11 @@ function MethodsTab({ coachId }: { coachId: string }) {
   return (
     <div>
       {/* Filters row */}
-      <div style={{
-        display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
-        padding: "14px 0 16px", borderBottom: `1px solid ${C.brd}`, marginBottom: 20,
-      }}>
+      <div className={FILTERS_ROW}>
         {/* Scope */}
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
+        <div className={SEGMENTS}>
           {SCOPE_OPTIONS.map((t) => (
-            <button key={t.value} onClick={() => setScopeFilter(t.value)} style={{
-              padding: "5px 12px", borderRadius: 6, border: "none",
-              background: scopeFilter === t.value ? C.ac : "transparent",
-              color: scopeFilter === t.value ? C.tx : C.tx3,
-              fontSize: 12, fontWeight: scopeFilter === t.value ? 600 : 400,
-              cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-            }}>
+            <button key={t.value} onClick={() => setScopeFilter(t.value)} className={segment(scopeFilter === t.value, "text-agon-tx")}>
               {t.label}
             </button>
           ))}
@@ -347,11 +329,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{
-            padding: "5px 10px", borderRadius: 4, border: `1px solid ${C.brd}`,
-            background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit",
-            cursor: "pointer", outline: "none", height: 32,
-          }}
+          className="h-8 cursor-pointer rounded border border-agon-brd bg-agon-s2 px-2.5 py-[5px] text-[12px] text-agon-tx outline-none"
         >
           <option value="all">Toutes les catégories</option>
           {categoryOptions.map((c) => (
@@ -360,15 +338,9 @@ function MethodsTab({ coachId }: { coachId: string }) {
         </select>
 
         {/* Official / custom */}
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
+        <div className={SEGMENTS}>
           {(["all", "official", "custom"] as const).map((v) => (
-            <button key={v} onClick={() => setOfficialFilter(v)} style={{
-              padding: "5px 12px", borderRadius: 6, border: "none",
-              background: officialFilter === v ? C.ac : "transparent",
-              color: officialFilter === v ? C.tx : C.tx3,
-              fontSize: 12, fontWeight: officialFilter === v ? 600 : 400,
-              cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-            }}>
+            <button key={v} onClick={() => setOfficialFilter(v)} className={segment(officialFilter === v, "text-agon-tx")}>
               {v === "all" ? "Toutes" : v === "official" ? "Officielles" : "Custom"}
             </button>
           ))}
@@ -379,42 +351,26 @@ function MethodsTab({ coachId }: { coachId: string }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher…"
-          style={{
-            flex: 1, minWidth: 140, maxWidth: 260,
-            background: C.s2, border: `1px solid ${C.brd}`,
-            borderRadius: 6, color: C.tx, fontSize: 12,
-            padding: "5px 10px", fontFamily: "inherit", outline: "none",
-          }}
+          className={SEARCH}
         />
 
         {!isLoading && (
-          <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>
+          <span className={COUNT}>
             {filtered.length} méthode{filtered.length !== 1 ? "s" : ""}
           </span>
         )}
 
-        <button
-          onClick={openCreate}
-          style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
-            background: C.acV, color: C.ink, fontSize: 12,
-            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
-        >
+        <button onClick={openCreate} className={cn(PRIMARY_BTN, "ml-auto")}>
           + Créer une méthode
         </button>
       </div>
 
       {/* Grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-        gap: 16, alignItems: "start",
-      }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] items-start gap-4">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => <SkeletonMethodCard key={i} />)
         ) : filtered.length === 0 ? (
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div className="col-span-full">
             <EmptyState
               icon={Dumbbell}
               title="Aucune méthode"
@@ -442,28 +398,21 @@ function MethodsTab({ coachId }: { coachId: string }) {
         <>
           <div
             onClick={() => setSheetOpen(false)}
-            style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.65)" }}
+            className="fixed inset-0 z-[90] bg-black/65"
           />
-          <div style={{
-            position: "fixed", top: "50%", left: "50%", zIndex: 91,
-            transform: "translate(-50%, -50%)",
-            background: C.bg, borderRadius: 6,
-            width: "min(96vw, 820px)", maxHeight: "90vh",
-            display: "flex", flexDirection: "column",
-            border: `1px solid ${C.brdL}`,
-          }}>
-            <div style={{ padding: "16px 20px 14px", borderBottom: `1px solid ${C.brd}`, flexShrink: 0, display: "flex", alignItems: "center" }}>
-              <div style={{ flex: 1, fontSize: 15, fontWeight: 800, color: C.tx }}>
+          <div className="fixed left-1/2 top-1/2 z-[91] flex max-h-[90vh] w-[min(96vw,820px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[6px] border border-agon-brd-l bg-agon-bg">
+            <div className="flex shrink-0 items-center border-b border-agon-brd px-5 pb-3.5 pt-4">
+              <div className="flex-1 text-[15px] font-extrabold text-agon-tx">
                 {editing ? "Modifier la méthode" : "Nouvelle méthode"}
               </div>
               <button
                 onClick={() => setSheetOpen(false)}
-                style={{ width: 30, height: 30, borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                className="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded border border-agon-brd-l bg-transparent text-agon-tx3"
               >
                 <X size={14} />
               </button>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+            <div className="flex-1 overflow-y-auto p-5">
               <MethodBuilder
                 key={editing?.id ?? "new"}
                 initial={editing ?? undefined}
@@ -498,33 +447,23 @@ export default function LibraryPage() {
   if (!user) return null;
 
   return (
-    <div style={{ padding: "0 24px 60px" }}>
+    <div className="px-6 pb-[60px]">
 
       {/* Sub-tabs */}
-      <div
-        style={{
-          display: "flex", gap: 0,
-          borderBottom: `1px solid ${C.brd}`,
-          marginBottom: 0,
-          paddingTop: 16,
-        }}
-      >
-        {TABS.map(({ key, label, color }) => {
+      <div className="flex gap-0 border-b border-agon-brd pt-4">
+        {TABS.map(({ key, label, swatch }) => {
           const on = activeTab === key;
           // Planche CoachBanque : carré de couleur par type, soulignement or.
           return (
             <button
               key={key}
               onClick={() => setTab(key)}
-              style={{
-                height: 40, padding: "0 16px", border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: 13, fontWeight: on ? 500 : 400, color: on ? C.ac : C.tx2, whiteSpace: "nowrap",
-                boxShadow: on ? `inset 0 -2px 0 ${C.ac}` : "none",
-                background: "transparent",
-                display: "flex", alignItems: "center", gap: 8,
-              }}
+              className={cn(
+                "flex h-10 cursor-pointer items-center gap-2 whitespace-nowrap bg-transparent px-4 text-[13px]",
+                on ? "font-medium text-agon-accent shadow-[inset_0_-2px_0_var(--agon-accent)]" : "font-normal text-agon-tx2",
+              )}
             >
-              <span aria-hidden style={{ width: 9, height: 9, borderRadius: 2, flex: "none", background: color }} />
+              <span aria-hidden className={cn("h-[9px] w-[9px] flex-none rounded-[2px]", swatch)} />
               {label}
             </button>
           );
@@ -532,11 +471,11 @@ export default function LibraryPage() {
       </div>
 
       {/* Tab content */}
-      <div style={{ paddingTop: 20 }}>
+      <div className="pt-5">
         {activeTab === "musculaire" && (
           <>
             {/* Sous-onglets Exercices / Méthodes / Blocs / Séances */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+            <div className="mb-4 flex gap-1.5">
               {[
                 { k: "exercices", l: "Exercices" },
                 { k: "methodes",  l: "Méthodes" },
@@ -546,13 +485,7 @@ export default function LibraryPage() {
                 <button
                   key={t.k}
                   onClick={() => setMuscuTab(t.k as typeof muscuTab)}
-                  style={{
-                    height: 32, boxSizing: "border-box", padding: "0 14px", borderRadius: 999,
-                    border: "1px solid " + (muscuTab === t.k ? C.ac : C.brdL),
-                    background: muscuTab === t.k ? alpha(C.ac, 0.14) : "transparent",
-                    color: muscuTab === t.k ? C.ac : C.tx2,
-                    fontSize: 12, fontWeight: muscuTab === t.k ? 500 : 400, cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className={pill(muscuTab === t.k)}
                 >{t.l}</button>
               ))}
             </div>
@@ -566,18 +499,12 @@ export default function LibraryPage() {
         {activeTab === "specifique"  && (
           <>
             {/* Sous-onglets Séances / Blocs */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+            <div className="mb-4 flex gap-1.5">
               {[{ k: "seances", l: "Séances" }, { k: "blocs", l: "Blocs" }].map(t => (
                 <button
                   key={t.k}
                   onClick={() => setSpecTab(t.k as "seances" | "blocs")}
-                  style={{
-                    height: 32, boxSizing: "border-box", padding: "0 14px", borderRadius: 999,
-                    border: "1px solid " + (specTab === t.k ? C.ac : C.brdL),
-                    background: specTab === t.k ? alpha(C.ac, 0.14) : "transparent",
-                    color: specTab === t.k ? C.ac : C.tx2,
-                    fontSize: 12, fontWeight: specTab === t.k ? 500 : 400, cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className={pill(specTab === t.k)}
                 >{t.l}</button>
               ))}
             </div>
