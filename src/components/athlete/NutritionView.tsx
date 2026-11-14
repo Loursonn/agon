@@ -378,11 +378,13 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
             </button>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={isDesktop
+            ? { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 380px", gridTemplateRows: "auto 1fr", gap: 16, alignItems: "start" }
+            : { display: "flex", flexDirection: "column", gap: 14 }}>
 
-            {/* Calories actives */}
+            {/* Calories actives (PC : colonne de droite, planche AthOrdiBAlimentation) */}
             {showActiveCal && (
-              <label style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14, border: `1px solid ${ROUGE_VIF}73`, background: tint(ROUGE_VIF) }}>
+              <label style={{ ...(isDesktop ? { gridColumn: 2, gridRow: 1, padding: "16px 18px" } : { padding: "10px 12px" }), display: "flex", alignItems: "center", gap: 12, borderRadius: 14, border: `1px solid ${ROUGE_VIF}73`, background: tint(ROUGE_VIF) }}>
                 <IconSquare color={ROUGE_VIF} size={32}>{STRATEGY_ICON.seche}</IconSquare>
                 <span style={{ flex: 1, fontSize: 13 }}>
                   Calories actives brûlées
@@ -401,8 +403,8 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
             )}
 
             {/* Total du jour + macros */}
-            <div style={{ background: C.s1, border: `1px solid ${C.brdL}`, borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ background: C.s1, border: `1px solid ${C.brdL}`, borderRadius: isDesktop ? 16 : 14, padding: isDesktop ? "24px 28px" : 16, display: "flex", flexDirection: isDesktop ? "row" : "column", alignItems: isDesktop ? "center" : undefined, gap: isDesktop ? 36 : 16, ...(isDesktop ? { gridColumn: 1, gridRow: "1 / span 2" } : {}) }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, flex: "none" }}>
                 <div style={{ position: "relative", width: 160, height: 160, flex: "none" }}>
                   <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden>
                     <defs><linearGradient id="nutri-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor={C.o} /><stop offset="1" stopColor={C.ac} /></linearGradient></defs>
@@ -427,6 +429,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
                 )}
               </div>
 
+              <div style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 18 : 16, flex: 1, minWidth: 0 }}>
               {macroTargets.map(m => {
                 const consumed = log[m.key] ?? null;
                 const target = m.targetG;
@@ -458,8 +461,9 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
                   </div>
                 );
               })}
+              </div>
 
-              {!viewOnly && (
+              {!viewOnly && !isDesktop && (
                 <button
                   onClick={handleSave}
                   disabled={saving}
@@ -469,6 +473,15 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
                 </button>
               )}
             </div>
+            {!viewOnly && isDesktop && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{ gridColumn: 2, gridRow: 2, alignSelf: "end", height: 48, width: "100%", borderRadius: 10, border: "none", background: saving ? C.s2 : C.ac, color: saving ? C.tx3 : INK, fontSize: 14, fontWeight: 600, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}
+              >
+                {saving ? "Enregistrement…" : "Enregistrer ma journée"}
+              </button>
+            )}
           </div>
         )}
       </section>

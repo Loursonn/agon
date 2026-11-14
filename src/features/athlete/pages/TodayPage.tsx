@@ -290,12 +290,13 @@ export default function TodayPage() {
       <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
       {/* En-tête — symbole, date, prénom, citation (maquette « Aujourd'hui ») */}
       <AthletePageHeader
-        title={<>Bonjour,<br />{athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlète"}</>}
-        titleSize={30}
+        title={<>Bonjour,{isDesktop ? " " : <br />}{athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlète"}</>}
+        titleSize={isDesktop ? 34 : 30}
         titleGap={24}
-        padding="52px 20px 22px"
+        padding={isDesktop ? "22px 20px 0" : "52px 20px 22px"}
         background={`${C.bg} url(/maquette/accueil-fond.svg) center/cover no-repeat`}
         decor={<TodayDial />}
+        inline={isDesktop}
       >
         {show("quote") && <CitationFigure />}
       </AthletePageHeader>

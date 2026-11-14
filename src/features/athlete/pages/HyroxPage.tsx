@@ -34,7 +34,7 @@ export default function AthleteHyroxPage() {
 
   // Téléphone : colonne de 480 px. PC : colonne élargie (les vues dessinent leurs grilles dedans).
   return (
-    <div className="mx-auto w-full max-w-[480px] font-ui lg:max-w-4xl">
+    <div className="mx-auto w-full max-w-[480px] font-ui lg:max-w-[1248px]">
       <AthletePageHeader
         title="HYROX"
         titleSize={26}
@@ -45,7 +45,7 @@ export default function AthleteHyroxPage() {
         tabTone="gold"
       />
 
-      <div className="px-5 pb-10 pt-6 lg:px-agon-xl">
+      <div className="px-5 pb-10 pt-6">
         {tab === "courses" && <RacesView />}
         {tab === "stations" && <StationsView />}
         {tab === "runs" && <RunsView />}

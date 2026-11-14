@@ -191,7 +191,7 @@ export function ProgramSessionsView() {
           </div>
 
           <section className="flex flex-col gap-[18px]">
-            <div className="flex items-center gap-agon-md">
+            <div className="flex items-center gap-agon-md lg:mx-auto lg:w-full lg:max-w-[440px]">
               <button
                 type="button"
                 aria-label="Semaine précédente"

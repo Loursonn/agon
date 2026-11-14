@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-app-athlete-nouveau-style",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "L'app de tes athlètes prend le nouveau style",
+    summary: "Sur téléphone comme sur ordinateur, tes athlètes retrouvent des couleurs franches et des écrans plus lisibles.",
+    sections: [
+      {
+        title: "Sur téléphone",
+        points: [
+          "Fiches : la fiche que tu viens d'envoyer s'affiche en grande carte avec ton mot, et chaque fiche porte la couleur de sa catégorie.",
+          "Aperçu d'une séance depuis le Programme : chaque bloc garde sa couleur, comme dans ta programmation.",
+          "Santé : les phases de sommeil (profond, léger, paradoxal, éveil) en une barre colorée, et un état Normal / Bas / Haut plus visible.",
+        ],
+      },
+      {
+        title: "Sur ordinateur",
+        points: [
+          "En-tête plus compact sur toutes les pages, avec le nom et les initiales de l'athlète en haut à droite.",
+          "Alimentation : le suivi du jour sur deux colonnes, calories actives et enregistrement à droite.",
+          "HYROX utilise toute la largeur de l'écran et les fiches s'ouvrent à côté de la liste.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-vue-coach-ordinateur-relookee",
     date: "2026-11-14",
     kind: "feature",
