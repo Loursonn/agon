@@ -180,7 +180,7 @@ export default function CoachPhoneAthletes() {
             <div style={{ ...MONO, fontSize: 20, letterSpacing: "0.12em", color: C.ac, marginTop: 2 }}>{profile.coach_code}</div>
           </div>
           <button type="button" onClick={() => void shareCoachCode(profile.coach_code!)} style={{
-            height: 36, padding: "0 14px", borderRadius: 10, border: `1px solid ${alpha(C.ac, 0.55)}`, color: C.ac, background: "transparent",
+            height: 36, padding: "0 14px", borderRadius: 10, border: `1px solid ${C.brdL}`, color: C.tx, background: "transparent",
             fontSize: 13, fontFamily: "inherit", cursor: "pointer",
           }}>Partager</button>
         </div>

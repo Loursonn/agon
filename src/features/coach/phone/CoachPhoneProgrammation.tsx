@@ -166,8 +166,8 @@ function ProgrammationList() {
       })}
 
       <button type="button" onClick={() => setCreating(true)} style={{
-        height: 46, borderRadius: 12, border: `1px dashed ${alpha(C.ac, 0.45)}`, background: "transparent",
-        color: C.ac, fontSize: 13.5, fontFamily: "inherit", cursor: "pointer",
+        height: 46, borderRadius: 12, border: `1px solid ${C.brdL}`, background: "transparent",
+        color: C.tx, fontSize: 13.5, fontFamily: "inherit", cursor: "pointer",
       }}>+ Créer une séance</button>
       <div style={{ fontSize: 11.5, color: C.tx3, textAlign: "center" }}>Les banques et l’import de texte restent sur ordinateur.</div>
 
