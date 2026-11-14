@@ -3,7 +3,8 @@ import { useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, ChevronDown, ChevronUp } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import LogView from "@/components/athlete/LogView";
 import {
@@ -20,8 +21,8 @@ import { RunDistanceInput } from "@/features/shared/components/RunDistanceInput"
 import { initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/runDistance";
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: C.ac, tempo: C.b, seuil: H.ambre,
-  footing: H.emeraude, fartlek: H.rougeVif, autre: H.gris, custom: H.gris,
+  vo2: C.ac, tempo: C.b, seuil: C.o,
+  footing: C.g, fartlek: C.r, autre: C.tx3, custom: C.tx3,
 };
 const KIND_LABEL: Record<string, string> = {
   vo2: "VO₂max", tempo: "Tempo", seuil: "Seuil",
@@ -60,12 +61,20 @@ function assignmentStatus(a: EnergySessionAssignmentRow, today: string): "comple
   return "planned";
 }
 
-const STATUS_COLOR = {
-  completed: C.g,
-  partial:   C.b,
-  missed:    C.r,
-  planned:   "",
+const STATUS_PILL = {
+  completed: "bg-agon-succes/[0.125] text-agon-succes",
+  partial:   "bg-agon-info/[0.125] text-agon-info",
+  missed:    "bg-agon-erreur/[0.125] text-agon-erreur",
+  planned:   "bg-agon-tx3/[0.125] text-agon-tx3",
 };
+const STATUS_BORDER = {
+  completed: "border-agon-succes/[0.25]",
+  partial:   "border-agon-info/[0.25]",
+  missed:    "border-agon-erreur/[0.25]",
+  planned:   "border-agon-brd-l",
+};
+const INPUT = "box-border w-full rounded-[4px] border border-agon-brd-l bg-agon-s2 px-2.5 font-[inherit] text-agon-tx [outline:none]";
+const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-[0.4px] text-agon-tx3";
 const STATUS_LABEL = {
   completed: "Fait",
   partial:   "En cours",
@@ -94,7 +103,6 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
   const workBlocks = getWorkIntervals(es?.intervals ?? []);
   const isComplex = workBlocks.length > 1;
   const status = assignmentStatus(a, today);
-  const statusColor = STATUS_COLOR[status] || C.tx3;
   const isLogable = status !== "completed";
 
   const [open, setOpen] = useState(false);
@@ -149,62 +157,53 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
   const allBlocksDone = workBlocks.length === 0 || workBlocks.every(b => localBlocks[b.id]?.done);
 
   return (
-    <div style={{
-      borderRadius: 6, border: "1px solid " + (status === "missed" ? C.r + "40" : status === "completed" ? C.g + "40" : status === "partial" ? `${C.b}40` : C.brdL),
-      background: C.s1, marginBottom: 10, overflow: "hidden",
-    }}>
+    <div className={cn("mb-2.5 overflow-hidden rounded-[6px] border bg-agon-s1", STATUS_BORDER[status])}>
       {/* Header row */}
       <div
-        style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: isLogable ? "pointer" : "default" }}
+        className={cn("flex items-center gap-2.5 px-3.5 py-3", isLogable ? "cursor-pointer" : "cursor-default")}
         onClick={() => isLogable && setOpen(o => !o)}
       >
-        <div style={{
-          width: 32, height: 32, borderRadius: 4, flexShrink: 0,
-          background: (status === "missed" ? C.r : status === "completed" ? C.g : kindColor) + "20",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
+        <div
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-[4px]",
+            status === "missed" && "bg-agon-erreur/[0.125]",
+            status === "completed" && "bg-agon-succes/[0.125]",
+          )}
+          style={status === "missed" || status === "completed" ? undefined : { background: kindColor + "20" }}
+        >
           {status === "completed"
             ? <Check size={15} color={C.g} />
             : <Zap size={15} color={status === "missed" ? C.r : kindColor} />}
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: status === "missed" ? C.tx3 : C.tx, marginBottom: 1 }}>
+        <div className="min-w-0 flex-1">
+          <div className={cn("mb-px text-[13px] font-bold", status === "missed" ? "text-agon-tx3" : "text-agon-tx")}>
             {es?.name ?? "Séance énergie"}
           </div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="flex flex-wrap items-center gap-1.5">
             {kind && (
-              <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 5, background: kindColor + "20", color: kindColor }}>
+              <span className="rounded-[5px] px-[5px] py-px text-[9px] font-bold" style={{ background: kindColor + "20", color: kindColor }}>
                 {KIND_LABEL[kind] ?? kind}
               </span>
             )}
-            <span style={{ fontSize: 10, color: C.tx3 }}>{dateStr}</span>
+            <span className="text-[10px] text-agon-tx3">{dateStr}</span>
             {es?.total_duration_s != null && (
-              <span style={{ fontSize: 10, color: C.tx3 }}>{Math.round(es.total_duration_s / 60)} min</span>
+              <span className="text-[10px] text-agon-tx3">{Math.round(es.total_duration_s / 60)} min</span>
             )}
             {a.rpe_score != null && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: C.ac }}>RPE {a.rpe_score}/10</span>
+              <span className="text-[10px] font-bold text-agon-accent">RPE {a.rpe_score}/10</span>
             )}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {statusColor && (
-            <span style={{
-              fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
-              background: statusColor + "20", color: statusColor,
-            }}>
-              {STATUS_LABEL[status]}
-            </span>
-          )}
+        <div className="flex items-center gap-1.5">
+          <span className={cn("rounded-[6px] px-[7px] py-0.5 text-[9px] font-bold", STATUS_PILL[status])}>
+            {STATUS_LABEL[status]}
+          </span>
           {status === "completed" && (
             <button
               onClick={e => { e.stopPropagation(); handleUnvalidate(); }}
-              style={{
-                fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 6,
-                border: "1px solid " + C.r + "40", background: "transparent", color: C.r,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="cursor-pointer rounded-[6px] border border-agon-erreur/[0.25] bg-transparent px-[7px] py-0.5 font-[inherit] text-[9px] font-semibold text-agon-erreur"
             >Dévalider</button>
           )}
           {isLogable && (
@@ -215,44 +214,34 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
 
       {/* Logging panel */}
       {open && isLogable && (
-        <div style={{ borderTop: "1px solid " + C.brd, padding: "14px 14px 16px" }}>
+        <div className="border-t border-agon-brd px-3.5 pb-4 pt-3.5">
           {isComplex ? (
             <>
-              <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>
+              <div className={cn(FIELD_LABEL, "mb-2.5")}>
                 Blocs d'effort
               </div>
               {workBlocks.map((b, i) => {
                 const done = localBlocks[b.id]?.done ?? false;
                 return (
-                  <div key={b.id} style={{
-                    display: "flex", alignItems: "flex-start", gap: 10,
-                    padding: "10px 0", borderBottom: i < workBlocks.length - 1 ? "1px solid " + C.brdL : "none",
-                  }}>
+                  <div key={b.id} className={cn("flex items-start gap-2.5 py-2.5", i < workBlocks.length - 1 && "border-b border-agon-brd-l")}>
                     <button
                       onClick={() => setLocalBlocks(prev => ({ ...prev, [b.id]: { ...prev[b.id], done: !done } }))}
-                      style={{
-                        width: 26, height: 26, borderRadius: 7, flexShrink: 0,
-                        border: "1.5px solid " + (done ? C.g : C.brdL),
-                        background: done ? C.g + "20" : "transparent",
-                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                      }}
+                      className={cn(
+                        "flex size-[26px] shrink-0 cursor-pointer items-center justify-center rounded-[7px] border-[1.5px]",
+                        done ? "border-agon-succes bg-agon-succes/[0.125]" : "border-agon-brd-l bg-transparent",
+                      )}
                     >
                       {done && <Check size={13} color={C.g} />}
                     </button>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: done ? C.tx3 : C.tx, marginBottom: 4 }}>
+                    <div className="min-w-0 flex-1">
+                      <div className={cn("mb-1 text-[12px] font-semibold", done ? "text-agon-tx3" : "text-agon-tx")}>
                         Bloc {i + 1} — {fmtIntervalLabel(b)}
                       </div>
                       <input
                         placeholder="Note (optionnel)"
                         value={localBlocks[b.id]?.note ?? ""}
                         onChange={e => setLocalBlocks(prev => ({ ...prev, [b.id]: { ...prev[b.id], note: e.target.value } }))}
-                        style={{
-                          width: "100%", padding: "6px 10px", borderRadius: 4,
-                          border: "1px solid " + C.brdL, background: C.s2,
-                          color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
-                          boxSizing: "border-box",
-                        }}
+                        className={cn(INPUT, "py-1.5 text-[12px]")}
                       />
                     </div>
                   </div>
@@ -260,14 +249,14 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               })}
             </>
           ) : (
-            <div style={{ fontSize: 12, color: C.tx3, marginBottom: 12 }}>
+            <div className="mb-3 text-[12px] text-agon-tx3">
               {workBlocks.length === 1 ? fmtIntervalLabel(workBlocks[0]) : "Séance continue"}
             </div>
           )}
 
           {/* Duration input */}
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
+          <div className="mt-3">
+            <div className={cn(FIELD_LABEL, "mb-1.5")}>
               Durée réelle (min)
             </div>
             <input
@@ -277,12 +266,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               value={actualDuration}
               onChange={e => setActualDuration(e.target.value)}
               placeholder="Durée en minutes"
-              style={{
-                width: "100%", padding: "8px 10px", borderRadius: 4,
-                border: "1px solid " + C.brdL, background: C.s2,
-                color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
-                boxSizing: "border-box",
-              }}
+              className={cn(INPUT, "py-2 text-[13px]")}
             />
           </div>
 
@@ -292,16 +276,11 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
             value={globalNote}
             onChange={e => setGlobalNote(e.target.value)}
             rows={2}
-            style={{
-              width: "100%", marginTop: 12, padding: "8px 10px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: C.s2,
-              color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
-              resize: "none", boxSizing: "border-box",
-            }}
+            className={cn(INPUT, "mt-3 resize-none py-2 text-[12px]")}
           />
 
           {/* Activité + km (volume de course) */}
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-3">
             <RunDistanceInput value={runDist} onChange={setRunDist} />
           </div>
 
@@ -311,26 +290,16 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
             placeholder="Lien Strava ou Garmin (optionnel)"
             value={activityUrl}
             onChange={e => setActivityUrl(e.target.value)}
-            style={{
-              width: "100%", marginTop: 12, padding: "8px 10px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: C.s2,
-              color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
-              boxSizing: "border-box",
-            }}
+            className={cn(INPUT, "mt-3 py-2 text-[12px]")}
           />
 
           <button
             onClick={handleValidate}
             disabled={complete.isPending}
-            style={{
-              width: "100%", marginTop: 10, padding: "11px 0", borderRadius: 4,
-              border: "none",
-              background: C.g,
-              color: C.tx,
-              fontSize: 13, fontWeight: 700, cursor: complete.isPending ? "default" : "pointer",
-              fontFamily: "inherit",
-              opacity: complete.isPending ? 0.7 : 1,
-            }}
+            className={cn(
+              "mt-2.5 w-full rounded-[4px] border-none bg-agon-succes py-[11px] font-[inherit] text-[13px] font-bold text-agon-ink",
+              complete.isPending ? "cursor-default opacity-70" : "cursor-pointer",
+            )}
           >
             {complete.isPending ? "Validation…" : "Valider la séance ✓"}
           </button>
@@ -355,17 +324,17 @@ function EnergyAthleteView({ athleteId }: { athleteId: string }) {
     .sort((a, b) => (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? ""));
 
   if (isLoading) {
-    return <div style={{ padding: "24px 16px", textAlign: "center", color: C.tx3, fontSize: 13 }}>Chargement…</div>;
+    return <div className="px-4 py-6 text-center text-[13px] text-agon-tx3">Chargement…</div>;
   }
 
   if (visible.length === 0) {
     return (
-      <div style={{ padding: "48px 20px", textAlign: "center" }}>
-        <Zap size={36} style={{ color: C.tx3, margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 4 }}>
+      <div className="px-5 py-12 text-center">
+        <Zap size={36} className="mx-auto mb-3 mt-0 text-agon-tx3" />
+        <div className="mb-1 text-[14px] font-bold text-agon-tx">
           Aucune séance énergétique
         </div>
-        <div style={{ fontSize: 12, color: C.tx3 }}>Ton coach planifiera tes séances cardio ici.</div>
+        <div className="text-[12px] text-agon-tx3">Ton coach planifiera tes séances cardio ici.</div>
       </div>
     );
   }
@@ -373,7 +342,7 @@ function EnergyAthleteView({ athleteId }: { athleteId: string }) {
   const rpeAssignment = rpeAssignmentId ? assignments.find(a => a.id === rpeAssignmentId) : null;
 
   return (
-    <div style={{ padding: "16px" }}>
+    <div className="p-4">
       {visible.map(a => (
         <EnergySessionCard
           key={a.id}
@@ -386,16 +355,12 @@ function EnergyAthleteView({ athleteId }: { athleteId: string }) {
 
       {rpeAssignment && (
         <>
-          <div onClick={() => setRpeAssignmentId(null)} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)" }} />
-          <div style={{
-            position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
-            background: C.s1, borderRadius: "6px 6px 0 0", borderTop: "1px solid " + C.brd,
-            padding: "24px 20px 40px", animation: "rpeSlideUp 220ms ease-out",
-          }}>
+          <div onClick={() => setRpeAssignmentId(null)} className="fixed inset-0 z-[100] bg-agon-ink/[0.6]" />
+          <div className="fixed inset-x-0 bottom-0 z-[101] animate-[rpeSlideUp_220ms_ease-out] rounded-t-[6px] border-t border-agon-brd bg-agon-s1 px-5 pb-10 pt-6">
             <style>{`@keyframes rpeSlideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: C.brdL, margin: "0 auto 20px" }} />
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, marginBottom: 4 }}>Comment s'est passée la séance ?</div>
-            <div style={{ fontSize: 12, color: C.tx3, marginBottom: 24 }}>Évalue ton effort global (échelle Foster 1-10)</div>
+            <div className="mx-auto mb-5 h-1 w-9 rounded-[2px] bg-agon-brd-l" />
+            <div className="mb-1 text-[16px] font-extrabold text-agon-tx">Comment s'est passée la séance ?</div>
+            <div className="mb-6 text-[12px] text-agon-tx3">Évalue ton effort global (échelle Foster 1-10)</div>
             <RpeGridInline
               onSubmit={(v) => upsertRpe.mutate({ id: rpeAssignment.id, athleteId, rpe_score: v }, { onSettled: () => setRpeAssignmentId(null) })}
               onSkip={() => setRpeAssignmentId(null)}
@@ -413,49 +378,53 @@ const FOSTER: Record<number, string> = {
   5: "Difficile", 6: "Difficile+", 7: "Difficile++", 8: "Très difficile",
   9: "Très difficile+", 10: "Maximal",
 };
-function rpeColor(v: number) { return v <= 4 ? C.g : v <= 7 ? C.o : C.r; }
-function rpeBg(v: number) { return v <= 4 ? C.gS : v <= 7 ? C.oS : C.rS; }
+type RpeTone = "succes" | "alerte" | "erreur";
+function rpeTone(v: number): RpeTone { return v <= 4 ? "succes" : v <= 7 ? "alerte" : "erreur"; }
+/** Case choisie : contour (hex 80), fond doux, texte. */
+const RPE_CELL: Record<RpeTone, string> = {
+  succes: "border-agon-succes/[0.5] bg-agon-succes-doux text-agon-succes",
+  alerte: "border-agon-alerte/[0.5] bg-agon-alerte-doux text-agon-alerte",
+  erreur: "border-agon-erreur/[0.5] bg-agon-erreur-doux text-agon-erreur",
+};
+const RPE_LABEL: Record<RpeTone, string> = {
+  succes: "bg-agon-succes-doux text-agon-succes",
+  alerte: "bg-agon-alerte-doux text-agon-alerte",
+  erreur: "bg-agon-erreur-doux text-agon-erreur",
+};
 
 function RpeGridInline({ onSubmit, onSkip, isPending }: { onSubmit: (v: number) => void; onSkip: () => void; isPending: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="mb-4 grid grid-cols-[repeat(5,1fr)] gap-2">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
-          <button key={v} onClick={() => setSelected(v)} style={{
-            padding: "14px 0", borderRadius: 6,
-            border: "1px solid " + (selected === v ? rpeColor(v) + "80" : C.brdL),
-            background: selected === v ? rpeBg(v) : C.s2,
-            color: selected === v ? rpeColor(v) : C.tx2,
-            fontSize: 18, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-          }}>{v}</button>
+          <button
+            key={v}
+            onClick={() => setSelected(v)}
+            className={cn(
+              "cursor-pointer rounded-[6px] border py-3.5 font-[inherit] text-[18px] font-extrabold",
+              selected === v ? RPE_CELL[rpeTone(v)] : "border-agon-brd-l bg-agon-s2 text-agon-tx2",
+            )}
+          >{v}</button>
         ))}
       </div>
-      <div style={{
-        minHeight: 28, textAlign: "center", marginBottom: 28, fontSize: 13, fontWeight: 600,
-        color: selected != null ? rpeColor(selected) : C.tx3,
-        background: selected != null ? rpeBg(selected) : "transparent",
-        borderRadius: 4, padding: "4px 12px",
-      }}>
+      <div className={cn(
+        "mb-7 min-h-[28px] rounded-[4px] px-3 py-1 text-center text-[13px] font-semibold",
+        selected != null ? RPE_LABEL[rpeTone(selected)] : "bg-transparent text-agon-tx3",
+      )}>
         {selected != null ? `${selected}/10 — ${FOSTER[selected]}` : "Sélectionne une valeur"}
       </div>
       <button
         onClick={() => selected != null && onSubmit(selected)}
         disabled={isPending || selected == null}
-        style={{
-          width: "100%", padding: "15px 0", borderRadius: 6, border: "none",
-          background: selected != null ? C.ac : C.s2,
-          color: selected != null ? C.tx : C.tx3,
-          fontSize: 14, fontWeight: 700, cursor: selected != null ? "pointer" : "default",
-          fontFamily: "inherit",
-        }}
+        className={cn(
+          "w-full rounded-[6px] border-none py-[15px] font-[inherit] text-[14px] font-bold",
+          selected != null ? "cursor-pointer bg-agon-accent text-agon-ink" : "cursor-default bg-agon-s2 text-agon-tx3",
+        )}
       >
         {isPending ? "Enregistrement…" : "Enregistrer"}
       </button>
-      <button onClick={onSkip} style={{
-        width: "100%", marginTop: 12, padding: "10px 0", border: "none",
-        background: "transparent", color: C.tx3, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-      }}>Passer</button>
+      <button onClick={onSkip} className="mt-3 w-full cursor-pointer border-none bg-transparent py-2.5 font-[inherit] text-[13px] text-agon-tx3">Passer</button>
     </>
   );
 }
@@ -491,9 +460,16 @@ export default function LogSeancePage() {
   return (
     <>
       {/* Sub-tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid " + C.brd, background: C.bg, paddingLeft: 16, paddingRight: 16, gap: 0 }}>
+      <div className="flex gap-0 border-b border-agon-brd bg-agon-bg px-4">
         {[{ k: "muscu", l: "Musculation" }, { k: "energie", l: "Énergétique" }, { k: "specifique", l: "Spécifique" }].map(t => (
-          <button key={t.k} onClick={() => setLogSubTab(t.k)} style={{ padding: "10px 14px", border: "none", borderBottom: "2px solid " + (logSubTab === t.k ? C.ac : "transparent"), background: "transparent", color: logSubTab === t.k ? C.ac : C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" as const, letterSpacing: "0.3px", flexShrink: 0 }}>{t.l}</button>
+          <button
+            key={t.k}
+            onClick={() => setLogSubTab(t.k)}
+            className={cn(
+              "shrink-0 cursor-pointer border-0 border-b-2 bg-transparent px-3.5 py-2.5 font-[inherit] text-[11px] font-semibold uppercase tracking-[0.3px]",
+              logSubTab === t.k ? "border-agon-accent text-agon-accent" : "border-transparent text-agon-tx3",
+            )}
+          >{t.l}</button>
         ))}
       </div>
 
@@ -529,10 +505,10 @@ export default function LogSeancePage() {
       )}
 
       {logSubTab === "specifique" && (
-        <div style={{ padding: "40px 20px", textAlign: "center" }}>
-          <Zap size={32} style={{ color: C.tx3, marginBottom: 12, display: "block", marginLeft: "auto", marginRight: "auto" }} />
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 6 }}>Séances Spécifiques</div>
-          <div style={{ fontSize: 13, color: C.tx3 }}>Cette fonctionnalité sera disponible prochainement.</div>
+        <div className="px-5 py-10 text-center">
+          <Zap size={32} className="mx-auto mb-3 block text-agon-tx3" />
+          <div className="mb-1.5 text-[15px] font-bold text-agon-tx">Séances Spécifiques</div>
+          <div className="text-[13px] text-agon-tx3">Cette fonctionnalité sera disponible prochainement.</div>
         </div>
       )}
     </>
