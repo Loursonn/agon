@@ -22,7 +22,7 @@ export const ZONE_COLORS_3 = [token("--agon-zone-1"), token("--agon-zone-2"), to
 /**
  * Couleurs des zones, du froid au chaud, cohérentes avec les 3 zones
  * (vert / orange / rouge). Un seul endroit dans le code.
- * - 5 zones : bleu, vert, or, orange, rouge ;
+ * - 5 zones : vert, vert-jaune, orange, orange vif, rouge (décidé par Hugo le 14/11) ;
  * - 7 zones : bleu, turquoise, vert, or, orange, rouge, rose.
  */
 export const ZONE_COLORS_5 = [1, 2, 3, 4, 5].map((i) => token(`--agon-zone5-${i}`));

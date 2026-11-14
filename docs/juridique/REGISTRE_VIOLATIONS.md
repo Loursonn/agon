@@ -39,7 +39,7 @@ Ne jamais y écrire de nom d'athlète, de chemin de fichier complet ni de donné
 | Évaluation | Risque **improbable** au sens de l'art. 33.1 (vraisemblance négligeable) |
 | Décision | Pas de notification à la CNIL ; information des athlètes concernés recommandée (non obligatoire) ; à revoir si un journal montre un accès anonyme à ces fichiers |
 | Mesures | Bucket privé, lecture par URL signée de 10 min, règles propriétaire / coach, test `supabase/tests/test_media_storage.sql` ; à venir : test CI refusant tout bucket public hors liste blanche (AIPD A2) |
-| Responsable de la décision | Hugo TANGUY, le 13/11/2026 : pas de notification CNIL ; les 3 athlètes sont prévenus par Hugo (message ci-dessous). Journaux Storage : rétention d'un jour sur l'offre gratuite, la période exposée n'est plus consultable |
+| Responsable de la décision | Hugo TANGUY, le 13/11/2026 : pas de notification CNIL ; les 3 athlètes sont prévenus par Hugo (message ci-dessous) ; information faite, confirmée par Hugo le 14/11/2026. Journaux Storage : rétention d'un jour sur l'offre gratuite, la période exposée n'est plus consultable |
 
 Texte proposé pour informer un athlète concerné (à envoyer par Hugo ou le coach) :
 

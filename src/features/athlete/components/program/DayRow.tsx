@@ -78,7 +78,7 @@ export function DayRow({
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
           }}
         >
-          <span style={{ ...MONO, fontSize: 9.5, color: isToday ? C.bg : C.tx3 }}>{DOW_SHORT_FR[day.dow]}</span>
+          <span style={{ ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: isToday ? C.bg : C.tx3 }}>{DOW_SHORT_FR[day.dow]}</span>
           <span style={{ ...MONO, fontSize: 16 }}>{dateNum}</span>
         </div>
         {!viewOnly && (

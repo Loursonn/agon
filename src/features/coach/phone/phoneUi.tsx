@@ -72,12 +72,11 @@ export function Tag({ children, color = C.tx2, filled = false }: { children: Rea
   );
 }
 
-/** Pastille de couleur (feu, wellness). `null` = gris, sans halo. */
+/** Pastille de couleur (feu, wellness). `null` = gris. Jamais de halo (peps). */
 export function Dot({ color, size = 10 }: { color: string | null; size?: number }) {
   return (
     <span aria-hidden style={{
       width: size, height: size, flex: "none", borderRadius: "50%", background: color ?? C.s2,
-      boxShadow: color ? `0 0 ${size - 2}px ${color}` : "none",
     }} />
   );
 }

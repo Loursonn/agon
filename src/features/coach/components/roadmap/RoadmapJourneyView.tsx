@@ -358,7 +358,7 @@ export function RoadmapJourneyView({
           <div style={{
             height: "100%", borderRadius: 6,
             width: `${globalPct}%`,
-            background: `linear-gradient(90deg, ${C.ac}, ${C.g})`,
+            background: C.ac,
             transition: "width 600ms ease-out",
           }} />
         </div>

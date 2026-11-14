@@ -31,7 +31,7 @@ function TodoCard({ t, onOpen }: { t: Todo; onOpen: () => void }) {
   return (
     <button type="button" onClick={onOpen} style={{
       position: "relative", display: "flex", gap: 12, alignItems: "center", padding: "12px 14px 12px 16px", borderRadius: 14,
-      background: `radial-gradient(120% 100% at 100% 0%, ${alpha(t.color, 0.11)}, transparent 60%), ${C.s1}`,
+      background: alpha(t.color, 0.1),
       border: `1px solid ${alpha(t.color, 0.27)}`, overflow: "hidden", textAlign: "left", color: C.tx, fontFamily: "inherit", cursor: "pointer", width: "100%",
     }}>
       <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: t.color }} />

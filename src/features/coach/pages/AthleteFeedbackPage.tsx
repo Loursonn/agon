@@ -5,7 +5,8 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { initials } from "@/lib/initials";
 import { feedbackPageLabel } from "@/lib/feedbackPage";
 import {
@@ -14,7 +15,7 @@ import {
 } from "@/features/shared/hooks/useAppFeedback";
 import type { AppFeedbackRow, AppFeedbackKind, AppFeedbackStatus } from "@/features/shared/hooks/useAppFeedback";
 
-const KIND_COLOR: Record<AppFeedbackKind, string>     = { bug: C.r, idea: C.ac, other: C.tx3 };
+const KIND_COLOR: Record<AppFeedbackKind, string>     = { bug: C.rouge, idea: C.ac, other: C.tx3 };
 const STATUS_COLOR: Record<AppFeedbackStatus, string> = { new: C.b, in_progress: C.o, done: C.g };
 const STATUSES: AppFeedbackStatus[] = ["new", "in_progress", "done"];
 
@@ -51,34 +52,38 @@ export default function AthleteFeedbackPage() {
   const rows = filter === "all" ? data : data.filter(r => r.status === filter);
 
   return (
-    <div style={{ padding: "24px 20px", maxWidth: 860, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: C.tx, flex: 1 }}>Avis athlètes</div>
-        {!isLoading && !error && (
-          <div style={{ fontSize: 12, color: C.tx3 }}>
-            {data.length} retour{data.length > 1 ? "s" : ""} · {counts.new} nouveau{counts.new > 1 ? "x" : ""}
-          </div>
-        )}
+    <div style={{ padding: "24px 20px 48px", maxWidth: 920, margin: "0 auto", boxSizing: "border-box", width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <h1 style={{ ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", color: C.tx, margin: 0 }}>Avis athlètes</h1>
+          {!isLoading && !error && (
+            <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac }}>
+              {data.length} retour{data.length > 1 ? "s" : ""} · {counts.new} nouveau{counts.new > 1 ? "x" : ""}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", padding: 3, border: "1px solid " + C.brd, borderRadius: 10, gap: 2 }}>
+          {(["new", "in_progress", "done", "all"] as Filter[]).map(f => {
+            const on = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  height: 30, display: "flex", alignItems: "center", padding: "0 14px", borderRadius: 8, border: "none",
+                  background: on ? C.s2 : "transparent", color: on ? C.tx : C.tx3,
+                  fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                }}
+              >
+                {FILTER_LABEL[f]}
+                <span style={{ ...MONO, marginLeft: 6, color: on ? C.tx2 : C.tx3 }}>{counts[f]}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 18 }}>
+      <div style={{ fontSize: 13, color: C.tx3, marginTop: 12, marginBottom: 24 }}>
         Bugs et idées envoyés depuis l'app athlète (Mon profil → Signaler un bug / une idée). Visible par l'admin et les coachs certifiés.
-      </div>
-
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
-        {(["new", "in_progress", "done", "all"] as Filter[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              padding: "6px 12px", borderRadius: 4, border: "1px solid " + (filter === f ? C.ac : C.brd),
-              background: filter === f ? C.acS : "transparent", color: filter === f ? C.ac : C.tx2,
-              fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            {FILTER_LABEL[f]}
-            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 999, background: filter === f ? C.ac + "28" : C.s2, color: filter === f ? C.ac : C.tx3 }}>{counts[f]}</span>
-          </button>
-        ))}
       </div>
 
       {isLoading ? (
@@ -86,26 +91,26 @@ export default function AthleteFeedbackPage() {
       ) : error ? (
         <div style={{ color: C.r, fontSize: 13 }}>Impossible de charger les retours (table app_feedback absente ou accès refusé).</div>
       ) : rows.length === 0 ? (
-        <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: 32, textAlign: "center", color: C.tx3, fontSize: 13 }}>
+        <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: 32, textAlign: "center", color: C.tx3, fontSize: 13 }}>
           Aucun retour {filter !== "all" ? "dans cette catégorie" : "pour l'instant"}.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {rows.map(r => (
-            <div key={r.id} style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <div aria-hidden style={{ width: 34, height: 34, borderRadius: "50%", background: C.s2, border: "1px solid " + C.brd, color: C.tx2, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div key={r.id} style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: "16px 20px", display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <div aria-hidden style={{ ...MONO, width: 36, height: 36, boxSizing: "border-box", borderRadius: "50%", border: "1px solid " + C.ac, color: C.ac, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {initials(authorName(r))}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: KIND_COLOR[r.kind], background: KIND_COLOR[r.kind] + "18", padding: "2px 8px", borderRadius: 5 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                <span style={{ ...MONO, display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.ink, background: KIND_COLOR[r.kind], padding: "4px 9px", borderRadius: 999 }}>
                   {FEEDBACK_KIND_LABEL[r.kind]}
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{authorName(r)}</span>
-                <span style={{ fontSize: 11, color: C.tx3 }}>{fmtDate(r.created_at)}</span>
-                {r.page && <span style={{ fontSize: 11, color: C.tx3 }}>· {feedbackPageLabel(r.page)}</span>}
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.tx }}>{authorName(r)}</span>
+                <span style={{ ...MONO, fontSize: 11.5, color: C.tx3 }}>{fmtDate(r.created_at)}</span>
+                {r.page && <span style={{ fontSize: 12, color: C.tx3 }}>· {feedbackPageLabel(r.page)}</span>}
               </div>
-              <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap", marginBottom: 12 }}>{r.content}</div>
+              <div style={{ fontSize: 14, color: C.tx2, lineHeight: 1.55, whiteSpace: "pre-wrap", marginBottom: 10 }}>{r.content}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {STATUSES.map(s => (
                   <button
@@ -113,9 +118,9 @@ export default function AthleteFeedbackPage() {
                     disabled={updateStatus.isPending}
                     onClick={() => r.status !== s && updateStatus.mutate({ id: r.id, status: s }, { onError: () => toast.error("Erreur de mise à jour") })}
                     style={{
-                      padding: "4px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                      border: "1px solid " + (r.status === s ? STATUS_COLOR[s] : C.brd),
-                      background: r.status === s ? STATUS_COLOR[s] + "20" : "transparent",
+                      height: 28, display: "flex", alignItems: "center", padding: "0 12px", borderRadius: 8, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                      border: "1px solid " + (r.status === s ? alpha(STATUS_COLOR[s], 0.4) : C.brd),
+                      background: r.status === s ? alpha(STATUS_COLOR[s], 0.14) : "transparent",
                       color: r.status === s ? STATUS_COLOR[s] : C.tx3,
                     }}
                   >

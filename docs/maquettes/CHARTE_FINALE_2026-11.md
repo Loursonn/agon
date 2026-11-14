@@ -38,7 +38,7 @@ La direction peps est déjà dans le fichier depuis le 12 nov. Vérifié ligne �
 
 | Token | Valeur actuelle | Nouvelle valeur | Pourquoi |
 |---|---|---|---|
-| `--agon-tx3` | `#7D7468` | `#8E8780` | **À valider par Hugo.** Toutes les maquettes peps utilisent #8E8780 pour les labels et unités. #7D7468 fait 4,25:1 sur le fond et 3,76:1 sur une carte (sous 4,5) ; #8E8780 fait 5,51:1 et 4,88:1. Casse `tokens.test.ts` (NEUTRAL attendu #7D7468) : mettre à jour le test. |
+| `--agon-tx3` | `#7D7468` | `#8E8780` | **Décidé par Hugo le 14/11.** Toutes les maquettes peps utilisent #8E8780 pour les labels et unités. #7D7468 fait 4,25:1 sur le fond et 3,76:1 sur une carte (sous 4,5) ; #8E8780 fait 5,51:1 et 4,88:1. Casse `tokens.test.ts` (NEUTRAL attendu #7D7468) : mettre à jour le test. |
 | `--agon-ui-bg` | `hsl(20 17% 3%)` | `var(--agon-bg)` | Composants shadcn alignés sur la charte (le commentaire du fichier l'annonce pour la charte finale). |
 | `--agon-ui-s1` | `hsl(24 14% 10%)` | `var(--agon-s1)` | idem |
 | `--agon-ui-s2` | `hsl(24 12% 13%)` | `var(--agon-s2)` | idem |
@@ -82,7 +82,7 @@ Aujourd'hui composées dans `src/lib/seance.ts` (`ZONE_COLORS_5`, `ZONE_COLORS_7
 | `--agon-zone7-6` | `var(--agon-rouge)` #FF3B1F |
 | `--agon-zone7-7` | `var(--agon-amethyste-vif)` #F060C0 |
 
-**Choix à trancher (Hugo)** : la note « Pages manquantes » du canvas (12 nov., point 4) proposait pour 5 zones une suite vert → rouge `#66F03C · #B5EB2E · #FF9500 · #FF6A1F · #FF3B1F`. Le code et le brief de la séance d'énergie (13 nov.) gardent la suite froid → chaud ci-dessus. Les valeurs ci-dessus sont celles du code ; ne changer qu'après décision.
+**Décidé par Hugo le 14/11** : suite vert → rouge. La note « Pages manquantes » du canvas (12 nov., point 4) proposait pour 5 zones une suite vert → rouge `#66F03C · #B5EB2E · #FF9500 · #FF6A1F · #FF3B1F`. Le code et le brief de la séance d'énergie (13 nov.) gardaient la suite froid → chaud. Les valeurs du tableau ci-dessus (froid → chaud) sont remplacées pour 5 zones par `#66F03C · #B5EB2E · #FF9500 · #FF6A1F · #FF3B1F` ; 7 zones inchangées.
 
 ### Peps : cartes, états, boutons
 

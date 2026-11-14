@@ -11,12 +11,12 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { CommandPaletteProvider } from "./context/CommandPaletteContext";
 import { CommandPalette } from "./components/CommandPalette";
 import { useCommandPalette } from "./context/CommandPaletteContext";
@@ -66,8 +66,8 @@ const SIDEBAR_STYLE: React.CSSProperties = {
   "--sidebar-width-icon": "64px",
   "--sidebar-background": C.bg,
   "--sidebar-foreground": C.tx3,
-  "--sidebar-border": "rgba(231,211,168,0.2)",
-  "--sidebar-accent": "rgba(255,201,51,0.10)",
+  "--sidebar-border": C.brd,
+  "--sidebar-accent": alpha(C.ac, 0.12),
   "--sidebar-accent-foreground": C.ac,
   "--sidebar-ring": C.ac,
 } as React.CSSProperties;
@@ -101,7 +101,7 @@ function CoachSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      style={{ background: C.bg, borderRight: "1px solid rgba(231,211,168,0.2)" }}
+      style={{ background: C.bg, borderRight: `1px solid ${C.brd}` }}
     >
       {/* Le tiroir mobile est rendu dans un portail, hors des variables CSS du
           provider : le fond est donc posé ici, identique à celui du PC. */}
@@ -114,16 +114,16 @@ function CoachSidebar() {
           </>
         )}
         {/* Logo */}
-        <SidebarHeader style={{ padding: "16px 14px 12px", borderBottom: "1px solid rgba(231,211,168,0.2)" }}>
+        <SidebarHeader style={{ height: 64, padding: "0 20px", justifyContent: "center", borderBottom: `1px solid ${C.brd}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
-              src="/brand/agon-symbole-favicon-marbre.svg"
+              src="/brand/agon-symbole-or.svg"
               alt="Agon"
-              style={{ width: 32, height: 32, flexShrink: 0 }}
+              style={{ width: 26, height: 26, flexShrink: 0 }}
             />
             <span
               className="group-data-[collapsible=icon]:hidden"
-              style={{ fontSize: 13, fontWeight: 700, color: C.tx, letterSpacing: "-0.3px" }}
+              style={{ ...DISPLAY, fontSize: 15, fontWeight: 400, letterSpacing: "0.22em", textTransform: "uppercase", color: C.tx }}
             >
               Agon
             </span>
@@ -131,34 +131,34 @@ function CoachSidebar() {
         </SidebarHeader>
 
         {/* Search button — opens command palette */}
-        <div className="group-data-[collapsible=icon]:hidden" style={{ padding: "8px 10px 4px" }}>
+        <div className="group-data-[collapsible=icon]:hidden" style={{ padding: "14px 14px 6px" }}>
           <button
             onClick={() => { closeDrawer(); toggle(); }}
             className="coach-sidebar-search"
             style={{
               width: "100%", display: "flex", alignItems: "center", gap: 8,
-              padding: "7px 10px", borderRadius: 4,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.04)",
+              padding: "8px 10px", borderRadius: 8,
+              border: `1px solid ${C.brd}`,
+              background: "transparent",
               color: C.tx3, fontSize: 12, cursor: "pointer",
               fontFamily: "inherit", transition: "border-color 150ms ease-out",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.ac + "60")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)")}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = alpha(C.ac, 0.4))}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brd)}
           >
             <Search size={13} style={{ flexShrink: 0 }} />
             <span className="coach-sidebar-label" style={{ flex: 1, textAlign: "left" }}>
               Rechercher…
             </span>
-            <span className="coach-sidebar-label" style={{ fontSize: 10, opacity: 0.5, letterSpacing: "0.02em" }}>
+            <span className="coach-sidebar-label" style={{ ...MONO, fontSize: 10 }}>
               ⌘K
             </span>
           </button>
         </div>
 
         {/* Nav items */}
-        <SidebarContent style={{ padding: "8px 0" }}>
-          <SidebarMenu>
+        <SidebarContent style={{ padding: "8px 0", flex: "none", overflow: "visible" }}>
+          <SidebarMenu style={{ gap: 2 }}>
             {NAV_ITEMS.filter(item =>
             (!item.certified || profile?.is_certified_coach) &&
             (!item.roadmap   || profile?.is_certified_coach || profile?.is_admin)
@@ -172,14 +172,15 @@ function CoachSidebar() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
-                      padding: "9px 14px",
+                      gap: 12,
+                      height: "auto",
+                      padding: "10px 20px",
                       borderRadius: 0,
-                      borderLeft: "2px solid " + (active ? C.ac : "transparent"),
-                      background: active ? "rgba(255,201,51,0.10)" : "transparent",
+                      boxShadow: active ? `inset 2px 0 0 ${C.ac}` : "none",
+                      background: active ? alpha(C.ac, 0.12) : "transparent",
                       color: active ? C.ac : C.tx2,
                       fontSize: 13,
-                      fontWeight: active ? 600 : 400,
+                      fontWeight: 400,
                       cursor: "pointer",
                       width: "100%",
                       transition: "all 150ms",
@@ -198,8 +199,8 @@ function CoachSidebar() {
                     <span className="group-data-[collapsible=icon]:hidden" style={{ flex: 1 }}>{item.label}</span>
                     {item.path === "/coach/nouveautes" && unseenUpdates > 0 && (
                       <span aria-label={`${unseenUpdates} nouveauté(s) non vue(s)`} style={{
-                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 5px", background: C.ac, color: C.ink,
-                        fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        ...MONO, fontSize: 11, fontWeight: 500, lineHeight: 1.3, borderRadius: 999, padding: "4px 9px",
+                        background: C.ac, color: C.ink, display: "inline-flex", alignItems: "center", justifyContent: "center",
                       }}>{unseenUpdates}</span>
                     )}
                   </SidebarMenuButton>
@@ -209,20 +210,26 @@ function CoachSidebar() {
           </SidebarMenu>
         </SidebarContent>
 
+        {/* Motif colonnes sous la navigation (planche Coach) */}
+        <div
+          aria-hidden
+          className="group-data-[collapsible=icon]:hidden"
+          style={{ flex: 1, minHeight: 0, background: "url(/brand/agon-fond-colonnes.svg) center bottom / cover no-repeat", opacity: 0.18 }}
+        />
+
         {/* Footer — coach profile */}
-        <SidebarFooter style={{ padding: "12px 14px", borderTop: "1px solid rgba(231,211,168,0.2)" }}>
-          <SidebarSeparator style={{ marginBottom: 10, background: C.brd }} />
+        <SidebarFooter style={{ padding: "14px 20px", borderTop: `1px solid ${C.brd}` }}>
 
           <div
             className="group-data-[collapsible=icon]:hidden"
-            style={{ display: "flex", alignItems: "center", gap: 8 }}
+            style={{ display: "flex", alignItems: "center", gap: 10 }}
           >
             <div
               style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: C.coach + "25", border: "1px solid " + C.coach + "40",
+                width: 30, height: 30, borderRadius: "50%",
+                border: `1px solid ${C.ac}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, fontWeight: 700, color: C.coach, flexShrink: 0,
+                ...MONO, fontSize: 11, color: C.ac, flexShrink: 0,
               }}
             >
               {(profile?.full_name || "?").charAt(0).toUpperCase()}
@@ -230,7 +237,7 @@ function CoachSidebar() {
             <div style={{ minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 12, fontWeight: 600, color: C.tx,
+                  fontSize: 12, fontWeight: 500, color: C.tx,
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}
               >
@@ -239,7 +246,7 @@ function CoachSidebar() {
               <button
                 onClick={() => void logout()}
                 style={{
-                  fontSize: 10, color: C.tx3, background: "none", border: "none",
+                  fontSize: 11, color: C.tx3, background: "none", border: "none",
                   cursor: "pointer", fontFamily: "inherit", padding: 0,
                   transition: "color 150ms",
                 }}
@@ -273,18 +280,18 @@ function CoachShellInner() {
       <SidebarInset className="min-w-0" style={{ background: C.bg, display: "flex", flexDirection: "column" }}>
         {/* Topbar with trigger */}
         <div
-          className="px-3 md:px-4"
+          className="px-3 md:px-7"
           style={{
             position: "sticky", top: 0, zIndex: 10,
-            background: C.s1, borderBottom: "1px solid " + C.brd,
-            paddingTop: 8, paddingBottom: 8, display: "flex", alignItems: "center", gap: 8,
-            flexShrink: 0, minHeight: 45,
+            background: C.bg, borderBottom: `1px solid ${C.brd}`,
+            display: "flex", alignItems: "center", gap: 10,
+            flexShrink: 0, height: 52,
           }}
         >
           <SidebarTrigger
             aria-label="Menu"
             className="h-9 w-9 md:h-7 md:w-7"
-            style={{
+                        style={{
               borderRadius: 6,
               border: "1px solid " + C.brdL, background: "transparent",
               color: C.tx3, cursor: "pointer", display: "flex",
@@ -293,7 +300,7 @@ function CoachShellInner() {
           />
           {/* Mobile : le logo remplace celui de la sidebar, cachée dans le tiroir */}
           <img
-            src="/brand/agon-symbole-favicon-marbre.svg"
+            src="/brand/agon-symbole-or.svg"
             alt="Agon"
             className="md:hidden"
             style={{ width: 24, height: 24, flexShrink: 0 }}
@@ -305,19 +312,19 @@ function CoachShellInner() {
             className="min-h-9 md:min-h-0"
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              padding: "5px 12px", borderRadius: 4,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.04)",
+              padding: "6px 12px", borderRadius: 8,
+              border: `1px solid ${C.brd}`,
+              background: "transparent",
               color: C.tx3, fontSize: 12, cursor: "pointer",
               fontFamily: "inherit", transition: "border-color 150ms ease-out",
               whiteSpace: "nowrap",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.ac + "60")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)")}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = alpha(C.ac, 0.4))}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brd)}
           >
             <Search size={12} />
             <span className="hidden md:inline">Rechercher</span>
-            <kbd className="hidden md:inline" style={{ fontSize: 10, opacity: 0.5, marginLeft: 2, fontFamily: "inherit" }}>⌘K</kbd>
+            <kbd className="hidden md:inline" style={{ ...MONO, fontSize: 10, marginLeft: 2 }}>⌘K</kbd>
           </button>
           {/* Espace pro — coach qui est aussi staff d'athlètes d'autres coachs */}
           {isStaffElsewhere && (
@@ -325,10 +332,10 @@ function CoachShellInner() {
               onClick={() => navigate("/staff")}
               className="min-h-9 md:min-h-0"
               style={{
-                marginLeft: "auto", padding: "5px 12px", borderRadius: 6,
-                border: "1px solid " + C.brdL, background: "transparent", color: C.tx2,
-                fontSize: 11, fontWeight: 700, cursor: "pointer",
-                fontFamily: "inherit", whiteSpace: "nowrap",
+                marginLeft: "auto", padding: "6px 14px", borderRadius: 8,
+                border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2,
+                ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
               Staff
@@ -340,11 +347,10 @@ function CoachShellInner() {
               onClick={() => navigate("/athlete")}
               className="min-h-9 md:min-h-0"
               style={{
-                marginLeft: isStaffElsewhere ? 0 : "auto", padding: "5px 12px", borderRadius: 6,
-                border: "1px solid " + C.coach + "40",
-                background: C.coach + "15", color: C.coach,
-                fontSize: 11, fontWeight: 700, cursor: "pointer",
-                fontFamily: "inherit", whiteSpace: "nowrap",
+                marginLeft: isStaffElsewhere ? 0 : "auto", padding: "6px 14px", borderRadius: 8,
+                border: `1px solid ${C.ac}`, background: "transparent", color: C.ac,
+                ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
               Mode Athlète

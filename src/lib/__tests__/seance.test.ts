@@ -40,8 +40,8 @@ describe("zones", () => {
     expect(zoneColor(null)).toBe("#8E8780");
   });
 
-  it("5 et 7 zones : du froid au chaud", () => {
-    expect([1, 2, 3, 4, 5].map((z) => zoneColor(z, 5))).toEqual(["#33B5FF", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F"]);
+  it("5 zones : vert → rouge ; 7 zones : du froid au chaud", () => {
+    expect([1, 2, 3, 4, 5].map((z) => zoneColor(z, 5))).toEqual(["#66F03C", "#B5EB2E", "#FF9500", "#FF6A1F", "#FF3B1F"]);
     expect([1, 2, 3, 4, 5, 6, 7].map((z) => zoneColor(z, 7))).toEqual(
       ["#33B5FF", "#2EE6C5", "#66F03C", "#FFC933", "#FF9500", "#FF3B1F", "#F060C0"],
     );

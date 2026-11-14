@@ -38,6 +38,88 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-vue-coach-ordinateur-relookee",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Ton espace coach sur ordinateur prend le nouveau style",
+    summary: "Accueil, menu, fiche athlète, tests, fiches et banque : des couleurs franches pour repérer d'un coup d'œil ce qui demande ton attention.",
+    sections: [
+      {
+        title: "Accueil et menu",
+        points: [
+          "En-tête avec la citation du jour et deux tuiles colorées : séances manquées hier et tests de la semaine.",
+          "Chaque athlète du jour affiche son wellness dans une pastille de couleur et l'état de sa séance (en cours, terminée, RPE).",
+          "Les alertes (blessure, séance manquée, wellness en baisse) ressortent en cartes colorées.",
+        ],
+      },
+      {
+        title: "Fiche athlète",
+        points: [
+          "Planning semaine : chaque jour a son en-tête coloré selon son thème, et chaque séance sa couleur de type.",
+          "Retours : tuiles chiffrées colorées, colonnes des jours à la couleur du wellness, statut de chaque séance en pastille (faite, manquée, déplacée).",
+          "Santé : les mesures de la montre et le wellness déclaré côte à côte, sur toute la largeur de l'écran.",
+        ],
+      },
+      {
+        title: "Tests, fiches et banque",
+        points: [
+          "Chaque catégorie a sa couleur, reprise dans les titres, les filtres et les cartes.",
+          "Banque d'exercices : recherche et filtres sur une seule ligne, chaque type d'exercice a sa couleur (Musculaire en or, Haltérophilie en rose, Pliométrie en orange, Mobilité en turquoise).",
+        ],
+      },
+      {
+        title: "Avis, paramètres et HYROX",
+        points: [
+          "Avis athlètes : chaque retour en carte, type en pastille (bug en rouge, idée en or), filtres regroupés en haut à droite.",
+          "Course HYROX : en-tête orange avec le nom de la course en grand et le chrono, temps course / stations / roxzone en tuiles.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-seance-energie-athlete-telephone",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Séances d'énergie : plus lisibles pour tes athlètes, avec un minuteur plein écran",
+    summary: "Sur son téléphone, ton athlète lit ta séance de course, de vélo ou de rameur en quelques secondes, puis la suit en plein écran pendant l'effort.",
+    sections: [
+      {
+        title: "Avant la séance",
+        points: [
+          "Durée et distance en une ligne, puis le profil de la séance en barres colorées par zone.",
+          "Chaque bloc se lit comme une phrase (« 2 × (5 × 400 m, récup 1 min 30 s trot) ») avec une seule cible en grand : allure, watts ou zone.",
+          "Tes consignes restent repliées sous « Consignes du coach », le détail complet est toujours accessible.",
+        ],
+      },
+      {
+        title: "Pendant la séance",
+        points: [
+          "Chrono géant à la couleur de la zone visée, bleu pendant les récups, et le bloc suivant toujours affiché.",
+          "Un bloc en distance se termine au bouton (« 400 m fait »), comme le bouton tour d'une montre ; les départs fixes partent à l'heure.",
+          "Pause, « Passer » et « Terminer » à portée de pouce ; à la fin, la durée réelle est reprise dans la notation.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-direction-peps",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Un style plus net, partout",
+    summary: "Les écrans coach et athlète passent au style « peps » : couleurs franches en aplat, plus de halos ni de dégradés.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Cartes, alertes et séances prennent la couleur de leur type en aplat léger, sans halo lumineux.",
+          "Un seul bouton principal or par écran ; les autres boutons ont un contour fin et un texte blanc.",
+          "Les libellés discrets sont un peu plus clairs, donc plus faciles à lire.",
+          "Les graphiques à 5 zones de fréquence cardiaque vont maintenant du vert au rouge.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-comptes-pre-crees-6-mois",
     date: "2026-11-14",
     kind: "feature",

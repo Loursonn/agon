@@ -6,7 +6,8 @@ import { useDroppable } from "@dnd-kit/core";
 import { C, alpha, H } from "@/lib/theme";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { DayThemePill } from "@/features/shared/components/DayThemePill";
-import { dayThemeFullLabel, type DayThemeLike } from "@/lib/dayTheme";
+import { dayThemeChipLabel, dayThemeColors, dayThemeFullLabel, isDayThemeEmpty, type DayThemeLike } from "@/lib/dayTheme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import type { ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
 import { DayFiches } from "@/features/shared/components/fiches/DayFiches";
 import type { PlanningCardModel } from "@/lib/planningCard";
@@ -62,8 +63,19 @@ export function DroppableDay({
     <div
       ref={setNodeRef}
       onClick={onClick}
-      style={{
-        height: tall ? undefined : 110,
+      style={tall ? {
+        minHeight: 440,
+        background: isOver ? C.acS : "transparent",
+        border: "1px solid " + (isOver ? alpha(C.ac, 0.4) : "transparent"),
+        borderRadius: 12,
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        position: "relative",
+        minWidth: 0,
+      } : {
+        height: 110,
         minHeight: tall ? 440 : undefined,
         overflow: "hidden",
         background: isOver
@@ -90,17 +102,35 @@ export function DroppableDay({
       {/* Numéro du jour + thème du jour.
           La pastille partage la ligne du numéro : la case fait 110 px en
           `overflow: hidden`, une ligne de plus chasserait un événement. */}
-      {tall ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, paddingBottom: 4 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: today ? C.ac : C.tx3 }}>
-              {format(date, "EEE", { locale: fr }).replace(".", "")}
-            </span>
-            <span style={{ fontFamily: CARD_MONO, fontSize: 20, color: today ? C.ac : C.tx }}>{format(date, "d")}</span>
+      {tall ? (() => {
+        // En-tête du jour en carte (planche CoachPlanningLarge3) : filet de
+        // couleur du thème en haut, jour + numéro, thème en pastille pleine.
+        const themed = !isDayThemeEmpty(dayTheme);
+        const tc = themed ? dayThemeColors(dayTheme) : null;
+        const accent = isCompDay ? C.r : tc?.bg ?? null;
+        return (
+          <div style={{
+            position: "relative", overflow: "hidden", flexShrink: 0, padding: "12px 12px 10px", borderRadius: 12,
+            border: "1px solid " + (today ? alpha(C.ac, 0.45) : C.brd), background: C.s1,
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, minWidth: 0,
+          }}>
+            {accent && <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, height: 4, background: accent }} />}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexShrink: 0 }}>
+              <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: today ? C.ac : C.tx3 }}>
+                {format(date, "EEE", { locale: fr }).replace(".", "")}
+              </span>
+              <span style={{ ...MONO, fontSize: 20, color: today ? C.ac : C.tx }}>{format(date, "d")}</span>
+            </div>
+            {tc && (
+              <span title={dayThemeFullLabel(dayTheme)} style={{
+                ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
+                borderRadius: 999, padding: "4px 9px", background: tc.bg, color: tc.fg,
+                minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>{dayThemeChipLabel(dayTheme)}</span>
+            )}
           </div>
-          {dayTheme && <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />}
-        </div>
-      ) : (
+        );
+      })() : (
       <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
         <div
           style={{
@@ -171,7 +201,7 @@ export function DroppableDay({
         const overflow = Math.max(0, regularEvents.length + watchFree.length - maxAfterLife);
         const freeShown = watchFree.slice(0, Math.max(0, maxAfterLife - regularEvents.length));
         return (
-          <div style={{ display: "flex", flexDirection: "column", gap: tall ? 6 : 2, flex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: tall ? 10 : 2, flex: 1 }}>
             {regularEvents.slice(0, maxAfterLife).map((ev) => (
               <DraggableEventChip
                 key={ev.id} event={ev} compact={!tall} card={tall} athleteId={athleteId} coachId={coachId} onEventClick={onEventClick}

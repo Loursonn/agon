@@ -87,7 +87,7 @@ export default function SettingsPage() {
   return (
     <div style={{ padding: isDesktop ? "32px 48px 48px" : "24px 20px 40px", maxWidth: isDesktop ? 1248 : 560, margin: "0 auto", boxSizing: "border-box" }}>
       <h1 style={{ ...DISPLAY, margin: 0, fontWeight: 300, fontSize: 28, letterSpacing: "0.06em", color: C.tx }}>Paramètres</h1>
-      <div style={{ fontSize: 13.5, color: C.tx2, marginTop: 6, marginBottom: 24 }}>Compte coach · {profile?.full_name || "—"}</div>
+      <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac, marginTop: 8, marginBottom: 24 }}>Compte coach · {profile?.full_name || "—"}</div>
 
       <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1fr) minmax(0, 1fr)" : "1fr", gap: 16, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -95,7 +95,7 @@ export default function SettingsPage() {
           <div style={card}>
             <span style={kick}>Profil coach</span>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ width: 44, height: 44, borderRadius: "50%", background: alpha(C.ac, 0.14), color: C.ac, display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 16, flex: "none" }}>
+              <span style={{ width: 44, height: 44, boxSizing: "border-box", borderRadius: "50%", border: "1px solid " + C.ac, color: C.ac, display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 16, flex: "none" }}>
                 {initials(profile?.full_name || "?")}
               </span>
               <div style={{ minWidth: 0 }}>

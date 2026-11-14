@@ -256,11 +256,12 @@ function ExerciseBank({coachId,onAddToExos}){
   const hasFilter=fMuscles.length>0||fEquip||fDiff||fType;
   return(<div style={{padding:'0 0 60px'}}>
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-      <div><div style={{fontSize:16,fontWeight:700}}>Banque d'exercices</div><div style={{fontSize:11,color:C.tx3}}>{total} exercice{total>1?'s':''}</div></div>
-      <button onClick={()=>setShowCreate(true)} style={{padding:'8px 16px',borderRadius:999,border:'none',background:C.ac,color:'#0E0C0A',fontSize:12.5,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>+ Créer</button>
+      <div><h1 style={{margin:0,fontFamily:"Archivo,system-ui,sans-serif",fontStretch:"125%",textTransform:"uppercase",fontWeight:300,fontSize:28,lineHeight:1.1,letterSpacing:"0.06em",color:C.tx}}>Banque d'exercices</h1><div style={{fontFamily:"'Geist Mono',monospace",fontSize:12,color:C.tx3,marginTop:6}}><span style={{color:C.tx2}}>{total}</span> exercice{total>1?'s':''}</div></div>
+      <button onClick={()=>setShowCreate(true)} style={{height:40,padding:'0 18px',borderRadius:12,border:'none',background:C.ac,color:'#0E0C0A',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>+ Créer</button>
     </div>
-    <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un exercice..." style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1px solid '+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:'inherit',boxSizing:'border-box',marginBottom:10,outline:'none'}}/>
-    <div style={{display:'flex',gap:6,marginBottom:fMuscles.length>0?8:14,overflowX:'auto',paddingBottom:4}}>
+    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:fMuscles.length>0?8:16}}>
+    <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un exercice..." style={{flex:'1 1 320px',minWidth:0,height:40,padding:'0 14px',borderRadius:10,border:'1px solid '+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:'inherit',boxSizing:'border-box',outline:'none'}}/>
+    <div style={{display:'flex',gap:6,alignItems:'center'}}>
       <button onClick={()=>setShowMusclePanel(v=>!v)} style={{flexShrink:0,padding:'5px 12px',borderRadius:999,border:'1px solid '+(fMuscles.length>0?C.ac:C.brdL),background:fMuscles.length>0?C.acS:C.s1,color:fMuscles.length>0?C.ac:C.tx3,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:5}}>
         Muscles{fMuscles.length>0&&<span style={{background:C.ac,color:'#fff',borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:700}}>{fMuscles.length}</span>}
       </button>
@@ -270,6 +271,7 @@ function ExerciseBank({coachId,onAddToExos}){
         </select>
       ))}
       {hasFilter&&<button onClick={()=>{setFMuscles([]);setFEquip('');setFDiff('');setFType('');}} style={{flexShrink:0,padding:'5px 10px',borderRadius:4,border:'1px solid '+C.r+'50',background:C.rS,color:C.r,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>✕</button>}
+    </div>
     </div>
     {showMusclePanel&&<div style={{background:C.s1,borderRadius:6,padding:'10px 12px',marginBottom:10,border:'1px solid '+C.brdL}}>
       <div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:8}}>Principal ou secondaire</div>
@@ -287,16 +289,16 @@ function ExerciseBank({coachId,onAddToExos}){
         <div style={{display:'flex',flexWrap:'wrap',gap:14,justifyContent:'flex-end',fontSize:11,color:C.tx2,marginBottom:12}}>
           {EX_TYPES.map(t=>(
             <span key={t.value} style={{display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>
-              <span style={{width:10,height:10,borderRadius:3,background:exTypeColor(t.value),boxShadow:'0 0 8px '+alpha(exTypeColor(t.value),0.55)}}/>{t.label}
+              <span style={{width:10,height:10,borderRadius:3,background:exTypeColor(t.value)}}/>{t.label}
             </span>
           ))}
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:16}}>
           {exList.map(ex=>{const tc=exTypeColor(ex.ex_type);const thumb=ex.youtube_id?`https://img.youtube.com/vi/${ex.youtube_id}/mqdefault.jpg`:ex.image_url;return(
-            <div key={ex.id} onClick={()=>{setTypeMenu(null);setSel(ex);}} style={{background:`radial-gradient(90% 120% at 0% 100%,${alpha(tc,0.16)},transparent 60%),${C.s1}`,borderRadius:14,border:'1px solid '+alpha(tc,0.4),cursor:'pointer',position:'relative',display:'flex',flexDirection:'column',overflow:'visible'}}>
-              <div style={{width:'100%',height:110,background:`radial-gradient(70% 100% at 50% 45%,${alpha(tc,0.3)},transparent 70%),${C.s2}`,position:'relative',overflow:'hidden',borderRadius:'14px 14px 0 0',borderBottom:'1px solid '+alpha(tc,0.35)}}>
+            <div key={ex.id} onClick={()=>{setTypeMenu(null);setSel(ex);}} style={{background:alpha(tc,0.12),borderRadius:14,border:'1px solid '+alpha(tc,0.4),cursor:'pointer',position:'relative',display:'flex',flexDirection:'column',overflow:'visible'}}>
+              <div style={{width:'100%',height:110,background:alpha(tc,0.12),position:'relative',overflow:'hidden',borderRadius:'14px 14px 0 0',borderBottom:'1px solid '+alpha(tc,0.35)}}>
                 {thumb&&<img src={thumb} style={{width:'100%',height:'100%',objectFit:'cover',opacity:0.35}} alt={ex.name}/>}
-                {ex.youtube_id&&<span style={{position:'absolute',left:'50%',top:'50%',width:34,height:34,margin:'-17px 0 0 -17px',borderRadius:'50%',background:tc,boxShadow:'0 0 18px '+alpha(tc,0.55),display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#0E0C0A'}}>▶</span>}
+                {ex.youtube_id&&<span style={{position:'absolute',left:'50%',top:'50%',width:34,height:34,margin:'-17px 0 0 -17px',borderRadius:'50%',background:tc,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#0E0C0A'}}>▶</span>}
                 <div style={{position:'absolute',left:10,right:10,top:10,display:'flex',justifyContent:'space-between',gap:6,minWidth:0}}>
                 <span style={{flexShrink:0,fontFamily:"'Geist Mono',monospace",fontSize:10.5,fontWeight:500,letterSpacing:'0.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#0E0C0A',background:ex.is_verified?C.g:C.o,borderRadius:999,padding:'3px 9px'}}>{ex.is_verified?'Officiel':'Communauté'}</span>
                 {/* Pastille type — clic = changement rapide */}

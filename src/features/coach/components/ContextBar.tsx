@@ -8,6 +8,7 @@ import { countAthleteChoices, workoutKeys } from "@/api/workouts";
 import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
 import { C, H } from "@/lib/theme";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import {
@@ -137,7 +138,7 @@ export default function ContextBar() {
         position: "sticky",
         top: 0,
         zIndex: 9,
-        background: "rgba(29,28,30,0.9)",
+        background: C.bg,
         borderBottom: "1px solid " + C.brd,
         flexShrink: 0,
       }}
@@ -147,18 +148,17 @@ export default function ContextBar() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
-          padding: "6px 16px",
-          borderBottom: "1px solid " + C.brd,
+          gap: 14,
+          padding: "14px 24px 6px",
         }}
       >
         {/* Avatar */}
         <div
           style={{
-            width: 24, height: 24, borderRadius: "50%",
-            background: C.coach + "25", border: "1px solid " + C.coach + "40",
+            width: 36, height: 36, boxSizing: "border-box", borderRadius: "50%",
+            border: "1px solid " + C.ac,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 9, fontWeight: 800, color: C.coach, flexShrink: 0,
+            ...MONO, fontSize: 12, color: C.ac, flexShrink: 0,
           }}
         >
           {initials}
@@ -167,18 +167,20 @@ export default function ContextBar() {
         {/* Name */}
         <div
           style={{
-            fontSize: 12, fontWeight: 700, color: C.tx,
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            display: "flex", alignItems: "baseline", gap: 14,
+            overflow: "hidden", whiteSpace: "nowrap",
             flex: 1, minWidth: 0,
           }}
         >
-          {fullName}
+          <span style={{ ...DISPLAY, fontSize: 17, fontWeight: 400, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx, overflow: "hidden", textOverflow: "ellipsis" }}>
+            {fullName}
+          </span>
           {selectedAthlete?.id === user?.id && (
-            <span style={{ fontSize: 9, color: C.ac, marginLeft: 5, fontWeight: 500 }}>(moi)</span>
+            <span style={{ ...MONO, fontSize: 11, color: C.ac }}>(moi)</span>
           )}
           {blockConfig?.blockName && (
-            <span style={{ fontSize: 10, color: C.tx3, marginLeft: 8, fontWeight: 400 }}>
-              {blockConfig.blockName} · S{currentWeek}/{tw}
+            <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: C.tx3, overflow: "hidden", textOverflow: "ellipsis" }}>
+              {blockConfig.blockName} · S{currentWeek} / {tw}
             </span>
           )}
         </div>
@@ -194,15 +196,13 @@ export default function ContextBar() {
             onClick={() => navigate(`/coach/athletes/${athleteId}/retours`)}
             title="Voir les modifications athlète"
             style={{
-              display: "flex", alignItems: "center", gap: 4,
-              padding: "3px 8px", borderRadius: 6,
-              border: "1px solid rgba(245,158,11,0.4)",
-              background: "rgba(245,158,11,0.12)",
-              color: H.ambre, fontSize: 10, fontWeight: 700,
-              cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+              ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
+              padding: "4px 9px", borderRadius: 999, border: "none",
+              background: C.o, color: C.ink, whiteSpace: "nowrap",
+              cursor: "pointer", flexShrink: 0,
             }}
           >
-            {modifCount}
+            {modifCount} modif{modifCount > 1 ? "s" : ""}
           </button>
         )}
 
@@ -213,11 +213,10 @@ export default function ContextBar() {
             onClick={() => setDraftsOpen(true)}
             title={claudeDrafts.length > 0 ? "Propositions de Claude en attente" : "Ce que Claude a inscrit récemment"}
             style={{
-              display: "flex", alignItems: "center", gap: 4,
-              padding: "3px 8px", borderRadius: 6,
-              border: "1px solid " + C.coach + "50",
-              background: C.coachS,
-              color: C.coach, fontSize: 10, fontWeight: 700,
+              display: "flex", alignItems: "center", gap: 6,
+              height: 30, boxSizing: "border-box", padding: "0 12px", borderRadius: 8,
+              border: "1px solid " + C.brdL, background: "transparent",
+              color: C.tx2, fontSize: 12,
               cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
             }}
           >
@@ -233,9 +232,9 @@ export default function ContextBar() {
           <PopoverTrigger asChild>
             <button
               style={{
-                padding: "5px 12px", borderRadius: 4,
+                height: 30, boxSizing: "border-box", padding: "0 12px", borderRadius: 8,
                 border: "1px solid " + C.brdL, background: "transparent",
-                color: C.tx2, fontSize: 11, fontWeight: 500,
+                color: C.tx2, fontSize: 12, whiteSpace: "nowrap",
                 cursor: "pointer", fontFamily: "inherit",
                 transition: "border-color 150ms, color 150ms",
                 flexShrink: 0,
@@ -302,7 +301,7 @@ export default function ContextBar() {
       </div>
 
       {/* Main tabs */}
-      <div style={{ display: "flex", padding: "0 20px", gap: 0, overflowX: "auto" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", padding: "0 10px", gap: 0, overflowX: "auto" }}>
         {TABS.map((tab) => {
           const active = tab.key === activeTab;
           return (
@@ -310,14 +309,15 @@ export default function ContextBar() {
               key={tab.key}
               onClick={() => goTab(tab.key)}
               style={{
-                padding: "10px 14px",
+                height: 42,
+                padding: "0 14px",
                 border: "none",
                 marginLeft: tab.pushRight ? "auto" : undefined,
-                borderBottom: "2px solid " + (active ? C.coach : "transparent"),
+                boxShadow: active ? `inset 0 -2px 0 ${C.ac}` : "none",
                 background: "transparent",
                 color: active ? C.tx : C.tx3,
-                fontSize: 12,
-                fontWeight: active ? 600 : 400,
+                fontSize: 13,
+                fontWeight: 400,
                 cursor: "pointer",
                 fontFamily: "inherit",
                 whiteSpace: "nowrap",
@@ -338,16 +338,8 @@ export default function ContextBar() {
 
       {/* Sub-tabs (Saison/Frise/Mois/Synthèse ou Bloc/Semaine/Jour) */}
       {subTabs.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            padding: "0 20px",
-            gap: 4,
-            overflowX: "auto",
-            borderTop: "1px solid " + C.brd,
-            background: "rgba(255,255,255,0.02)",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", padding: "10px 24px", borderTop: "1px solid " + C.brd, overflowX: "auto" }}>
+          <div style={{ display: "flex", padding: 3, gap: 2, border: "1px solid " + C.brd, borderRadius: 10 }}>
           {subTabs.map((sub) => {
             const active = sub.key === activeSubTab;
             return (
@@ -355,14 +347,14 @@ export default function ContextBar() {
                 key={sub.key}
                 onClick={() => goSubTab(sub.key)}
                 style={{
-                  padding: "7px 12px",
+                  height: 26,
+                  padding: "0 12px",
                   border: "none",
-                  borderRadius: 0,
-                  borderBottom: "2px solid " + (active ? C.ac : "transparent"),
-                  background: "transparent",
-                  color: active ? C.ac : C.tx3,
-                  fontSize: 11,
-                  fontWeight: active ? 600 : 400,
+                  borderRadius: 7,
+                  background: active ? C.s2 : "transparent",
+                  color: active ? C.tx : C.tx3,
+                  fontSize: 12,
+                  fontWeight: 400,
                   cursor: "pointer",
                   fontFamily: "inherit",
                   whiteSpace: "nowrap",
@@ -373,6 +365,7 @@ export default function ContextBar() {
               </button>
             );
           })}
+          </div>
         </div>
       )}
     </div>

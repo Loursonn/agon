@@ -1,4 +1,5 @@
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface KPICardProps {
@@ -10,14 +11,45 @@ interface KPICardProps {
   valueColor?: string;
   loading?: boolean;
   onClick?: () => void;
+  /** Tuile colorée (planche CoachRetours) : aplat 12 %, liseré 3 px, chiffre mono dans la couleur. */
+  accent?: string;
 }
 
 /**
  * Single KPI tile for the coach home dashboard.
  */
 export function KPICard({
-  icon, title, value, subtitle, subtitle2, valueColor, loading = false, onClick,
+  icon, title, value, subtitle, subtitle2, valueColor, loading = false, onClick, accent,
 }: KPICardProps) {
+  if (accent) {
+    return (
+      <div
+        onClick={onClick}
+        role={onClick ? "button" : undefined}
+        style={{
+          position: "relative", overflow: "hidden", borderRadius: 14, padding: "14px 16px 14px 19px",
+          border: `1px solid ${alpha(accent, 0.42)}`, background: alpha(accent, 0.12),
+          display: "flex", flexDirection: "column", gap: 8, cursor: onClick ? "pointer" : "default", minWidth: 0,
+        }}
+      >
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: accent }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <span style={{ display: "flex", alignItems: "center", color: accent, flexShrink: 0 }}>{icon}</span>
+          <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</span>
+        </div>
+        {loading ? (
+          <Skeleton style={{ height: 32, width: "60%", borderRadius: 6, background: C.s2 }} />
+        ) : (
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap" }}>
+            <span style={{ ...MONO, fontSize: 32, lineHeight: 1, color: value == null ? C.tx3 : accent }}>{value ?? "—"}</span>
+            {subtitle && <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{subtitle}</span>}
+          </div>
+        )}
+        <div style={{ fontSize: 11.5, color: C.tx2, height: 16, lineHeight: "16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{subtitle2 ?? ""}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={onClick}

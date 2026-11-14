@@ -79,7 +79,7 @@ export function PlanningBank({
                   border: "1px solid " + (active ? color + "70" : C.brd),
                   background: active ? color + "1A" : C.s2,
                   color: active ? color : C.tx3,
-                  fontSize: 10.5, fontWeight: active ? 700 : 500,
+                  fontSize: 11, fontWeight: active ? 700 : 500,
                   cursor: "pointer", fontFamily: "inherit", transition: "all 130ms",
                 }}
               >

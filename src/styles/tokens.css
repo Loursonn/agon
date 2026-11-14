@@ -53,7 +53,7 @@
   /* ── Texte ──────────────────────────────────────────────────────────── */
   --agon-tx: #FFFFFF;                       /* C.tx  */
   --agon-tx2: #B9AE9C;                      /* C.tx2 secondaire */
-  --agon-tx3: #7D7468;                      /* C.tx3 discret, placeholder */
+  --agon-tx3: #8E8780;                      /* C.tx3 discret, placeholder (Hugo, 14/11 : 4,9:1 sur carte) */
   --agon-ink: var(--agon-bg);               /* texte posé sur un aplat or / clair */
 
   /* ── Rôles ──────────────────────────────────────────────────────────── */
@@ -100,12 +100,12 @@
   --agon-zone-2: var(--agon-ocre-vif);      /* SV1 → SV2 */
   --agon-zone-3: var(--agon-rouge);         /* au-dessus de SV2 (maquette, plus rouge que terracotta) */
   --agon-cadence: var(--agon-turquoise-vif); /* courbe de cadence */
-  /* Suites de zones à 5 et 7 zones (lues par src/lib/seance.ts). Suite froid → chaud du code :
-     la variante vert → rouge du canvas attend la décision d'Hugo (CHARTE_FINALE_2026-11 §3). */
-  --agon-zone5-1: var(--agon-ardoise-vif);
-  --agon-zone5-2: var(--agon-vert-vif);
-  --agon-zone5-3: var(--agon-or-vif);
-  --agon-zone5-4: var(--agon-ocre-vif);
+  /* Suites de zones à 5 et 7 zones (lues par src/lib/seance.ts). 5 zones : vert → rouge
+     (décidé par Hugo le 14/11, CHARTE_FINALE_2026-11 §3). 7 zones : froid → chaud. */
+  --agon-zone5-1: var(--agon-vert-vif);
+  --agon-zone5-2: #B5EB2E;                  /* vert-jaune */
+  --agon-zone5-3: var(--agon-ocre-vif);
+  --agon-zone5-4: #FF6A1F;                  /* orange vif */
   --agon-zone5-5: var(--agon-rouge);
   --agon-zone7-1: var(--agon-ardoise-vif);
   --agon-zone7-2: var(--agon-turquoise-vif);

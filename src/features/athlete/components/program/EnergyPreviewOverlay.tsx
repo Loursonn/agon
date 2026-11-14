@@ -4,6 +4,8 @@ import { SessionPreviewModal } from "@/features/coach/components/energy/SessionP
 import type { StepState } from "@/features/athlete/components/program/programTypes";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useState } from "react";
+import { EnergyPreviewOverlay as EnergyDayOverlay } from "@/features/athlete/components/today/EnergyPreviewOverlay";
+import type { UnifiedCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 
 // ── Energy preview overlay ────────────────────────────────────────────────────
 
@@ -54,9 +56,18 @@ export function EnergyPreviewOverlay({
     </>
   );
   if (!session) return null;
-  void assignmentId;
 
   const isCompleted = initialStatus === "completed";
+
+  // Séance d'énergie du jour (ou déjà faite) : même parcours que l'accueil
+  // (lecture, plein écran, faite sur la montre, notation — planche EnergieTel).
+  const energyKind = session.session_kind !== "specifique" && session.format !== "classique";
+  if (energyKind && (isNowToday || isCompleted)) {
+    const event = {
+      id: assignmentId, energySessionId, status: initialStatus, date: isNowToday ? today : scheduledDate, raw: {},
+    } as unknown as UnifiedCalendarEvent;
+    return <EnergyDayOverlay event={event} athleteId={athleteId} onClose={onClose} />;
+  }
 
   // — Active mode: interactive step-by-step validation —
   if (sessionActive) {

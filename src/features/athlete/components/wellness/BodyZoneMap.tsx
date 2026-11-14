@@ -1,7 +1,7 @@
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { BODY_ZONES, DOMS_LEVEL_COLOR, DOMS_LEVEL_LABEL, levelsList, setZoneLevel, touchZone, type BodyView } from "@/lib/bodyZones";
 import type { DomsLevel, DomsLevels } from "@shared/domain/wellness";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 
 const IDLE_FILL = "rgba(231,211,168,0.07)";
 const IDLE_STROKE = "rgba(231,211,168,0.16)";
@@ -61,7 +61,7 @@ export function BodyZoneMap({
 
   return (
     <>
-      <div style={{ padding: 14, borderRadius: 14, background: `radial-gradient(90% 70% at 50% 40%,rgba(255,149,0,0.12),transparent 70%),${C.s1}`, border: "1px solid rgba(231,211,168,0.10)", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ padding: 14, borderRadius: 14, background: alpha(C.o, 0.1), border: "1px solid rgba(231,211,168,0.10)", display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-around" }}>
           {figure("face")}
           {figure("dos")}

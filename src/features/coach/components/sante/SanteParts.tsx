@@ -22,11 +22,11 @@ export function DayBars({ pts, color = C.b, h = 44, max = 100 }: { pts: Array<{ 
         const last = i === pts.length - 1;
         return (
           <div key={p.day} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 0 }}>
-            <span style={{ ...MONO, fontSize: 10.5, color: last ? C.tx : C.tx3 }}>{p.v == null ? "—" : Math.round(p.v)}</span>
+            <span style={{ ...MONO, fontSize: 11, color: last ? C.tx : C.tx3 }}>{p.v == null ? "—" : Math.round(p.v)}</span>
             <div style={{ height: h, width: "100%", display: "flex", alignItems: "flex-end" }}>
               <div style={{ width: "100%", height: p.v == null ? 2 : Math.max(2, (Math.min(p.v, max) / max) * h), borderRadius: 3, background: p.v == null ? C.brd : color, opacity: last ? 1 : 0.55 }} />
             </div>
-            <span style={{ fontSize: 10.5, color: C.tx3 }}>{weekday(p.day)}</span>
+            <span style={{ fontSize: 11, color: C.tx3 }}>{weekday(p.day)}</span>
           </div>
         );
       })}

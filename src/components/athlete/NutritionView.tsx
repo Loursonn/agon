@@ -36,8 +36,8 @@ const STRATEGY_META: Record<string, { label: string; color: string; verb: string
   prise_de_masse: { label: "Prise de masse", color: C.b, verb: "Surplus visé" },
 };
 
-/** Fond teinté des cartes de la planche. */
-const tint = (color: string, a = "29", b = "0F") => `linear-gradient(160deg, ${color}${a}, ${color}${b}), ${C.s1}`;
+/** Fond teinté des cartes de la planche : aplat de la couleur à 12 % (peps, sans dégradé). */
+const tint = (color: string) => `${color}1F`;
 const KICK: React.CSSProperties = { ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.tx2 };
 
 function SectionTitle({ n, children }: { n: string; children: React.ReactNode }) {
@@ -51,10 +51,10 @@ function SectionTitle({ n, children }: { n: string; children: React.ReactNode })
   );
 }
 
-function IconSquare({ color, size = 32, children, glow }: { color: string; size?: number; children: React.ReactNode; glow?: boolean }) {
+function IconSquare({ color, size = 32, children }: { color: string; size?: number; children: React.ReactNode }) {
   const inner = Math.round(size * 0.5);
   return (
-    <span aria-hidden style={{ width: size, height: size, flex: "none", borderRadius: 10, background: color, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: glow ? `0 0 14px ${color}66` : undefined }}>
+    <span aria-hidden style={{ width: size, height: size, flex: "none", borderRadius: 10, background: color, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <svg width={inner} height={inner} viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="1.8" strokeLinecap="square">{children}</svg>
     </span>
   );
@@ -301,7 +301,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
       {(streakData || weightData) && (
         <div style={isDesktop ? { display: "contents" } : { display: "grid", gridTemplateColumns: streakData && weightData ? "1fr 1fr" : "1fr", gap: 10 }}>
           {streakData && (
-            <div style={{ borderRadius: 14, padding: 14, border: `1px solid ${C.o}66`, background: tint(C.o, "24", "0D"), display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+            <div style={{ borderRadius: 14, padding: 14, border: `1px solid ${C.o}66`, background: tint(C.o), display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <IconSquare color={C.o} size={24}>{STRATEGY_ICON.seche}</IconSquare>
                 <span style={KICK}>Série en cours</span>
@@ -326,7 +326,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
           )}
 
           {weightData && (
-            <div style={{ borderRadius: 14, padding: 14, border: `1px solid ${C.b}66`, background: tint(C.b, "24", "0D"), display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+            <div style={{ borderRadius: 14, padding: 14, border: `1px solid ${C.b}66`, background: tint(C.b), display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <IconSquare color={C.b} size={24}><path d="M5 20H19L17 8H7Z" /><circle cx="12" cy="5" r="2" /></IconSquare>
                 <span style={KICK}>Poids</span>

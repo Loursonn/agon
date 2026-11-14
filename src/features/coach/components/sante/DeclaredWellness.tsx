@@ -47,7 +47,7 @@ export function DeclaredWellness({ athleteId, firstName, n, onOpenWellness }: { 
           <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: 12.5, color: C.tx3 }}>Saisi par {firstName} aujourd’hui</span>
-              {band && <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: TONE_COLOR[band.tone], border: `1px solid ${alpha(TONE_COLOR[band.tone], 0.5)}`, borderRadius: 999, padding: "2px 9px" }}>{band.label}</span>}
+              {band && <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: TONE_COLOR[band.tone], border: `1px solid ${alpha(TONE_COLOR[band.tone], 0.5)}`, borderRadius: 999, padding: "2px 9px" }}>{band.label}</span>}
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ ...MONO, fontSize: 30, lineHeight: 1 }}>{score ?? "—"}</span>

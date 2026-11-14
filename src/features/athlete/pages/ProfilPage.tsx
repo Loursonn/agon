@@ -1,6 +1,5 @@
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { C, H } from "@/lib/theme";
@@ -107,7 +106,7 @@ export default function ProfilPage() {
 
   return (
     <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
-    <AthletePageHeader title="Profil" background={headerGlow(undefined, C.b)} />
+    <AthletePageHeader title="Profil" />
     {/* Ordinateur (planche AthOrdiBProfil) : rubriques sur deux colonnes. */}
     <div className="[&>*]:break-inside-avoid" style={{ padding: "24px 20px 40px", scrollbarWidth: "none", ...(isDesktop ? { columns: 2, columnGap: 32 } : {}) }}>
       {/* ── Profil ── */}
@@ -134,7 +133,7 @@ export default function ProfilPage() {
             <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, paddingTop: 8 }}>
               <span style={{
                 width: 52, height: 52, flex: "none", boxSizing: "border-box", borderRadius: "50%",
-                border: `2px solid ${C.ac}`, boxShadow: `0 0 0 4px ${C.ac}24, 0 0 22px ${C.ac}59`,
+                border: `2px solid ${C.ac}`, boxShadow: `0 0 0 4px ${C.ac}24`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 ...DISPLAY, fontSize: 20, color: H.sableClair,
               }}>
@@ -150,7 +149,7 @@ export default function ProfilPage() {
                   style={{
                     height: 36, padding: "0 16px", borderRadius: 10, border: "none",
                     background: C.ac, color: C.ink, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
-                    boxShadow: `0 4px 16px ${C.ac}4D`, cursor: "pointer", fontFamily: "inherit",
+                    cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
                   Modifier
@@ -172,8 +171,8 @@ export default function ProfilPage() {
             </div>
 
             {/* Poids : dernière pesée + 3 dernières + poids cible */}
-            <div style={{ position: "relative", zIndex: 1, overflow: "hidden", borderRadius: 14, padding: "12px 12px 12px 15px", display: "flex", flexDirection: "column", gap: 10, border: `1px solid ${C.g}66`, background: `radial-gradient(90% 120% at 100% 0%, ${C.g}33, transparent 60%), linear-gradient(160deg, ${C.g}24, ${C.g}0D), ${C.s1}` }}>
-              <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.g, boxShadow: `0 0 12px ${C.g}99` }} />
+            <div style={{ position: "relative", zIndex: 1, overflow: "hidden", borderRadius: 14, padding: "12px 12px 12px 15px", display: "flex", flexDirection: "column", gap: 10, border: `1px solid ${C.g}66`, background: `${C.g}1F` }}>
+              <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.g }} />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 8 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
                   <span style={{ ...KICKER, color: C.tx2 }}>Poids</span>
@@ -263,7 +262,7 @@ export default function ProfilPage() {
 
       {/* ── Déconnexion ── */}
       {!viewOnly && (
-        <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${C.rouge}66`, background: `linear-gradient(160deg, ${C.rouge}1F, ${C.rouge}0A), ${C.s1}` }}>
+        <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${C.rouge}66`, background: `${C.rouge}1F` }}>
           <button
             onClick={async () => {
               if (!confirmLogout()) return;

@@ -80,10 +80,10 @@ export default function CoachPhoneWellness() {
     <PhonePage gap={12} style={{ paddingTop: 14 }}>
       <div style={{
         padding: 14, borderRadius: 14, display: "flex", flexDirection: "column", gap: 6,
-        background: `radial-gradient(120% 120% at 100% 0%, ${alpha(col, 0.16)}, transparent 60%), ${C.s1}`, border: `1px solid ${alpha(col, 0.35)}`,
+        background: alpha(col, 0.1), border: `1px solid ${alpha(col, 0.35)}`,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span aria-hidden style={{ width: 14, height: 14, borderRadius: "50%", background: r ? col : "transparent", border: r ? "none" : `1px solid ${C.brdL}`, boxShadow: r ? `0 0 12px ${col}` : "none" }} />
+          <span aria-hidden style={{ width: 14, height: 14, borderRadius: "50%", background: r ? col : "transparent", border: r ? "none" : `1px solid ${C.brdL}` }} />
           <span style={{ fontSize: 17, fontWeight: 500, color: r ? col : C.tx3, flex: 1 }}>{r ? LIGHT_LABEL[r.light] : "Feu du matin —"}</span>
           {r && signals.length > 0 && (
             <button type="button" aria-expanded={why} onClick={() => setWhy((v) => !v)} style={{ background: "none", border: "none", color: C.ac, fontSize: 13, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>

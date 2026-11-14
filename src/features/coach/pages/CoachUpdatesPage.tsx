@@ -70,7 +70,7 @@ export default function CoachUpdatesPage() {
                 {seenAt ? (
                   <span style={{ fontSize: 12, color: C.g }}>· Vue le {fmtShort(seenAt)}</span>
                 ) : (
-                  <span style={{ ...MONO, display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, border: "1px solid " + alpha(C.ac, 0.53), color: C.ac, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Non vue</span>
+                  <span style={{ ...MONO, display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, border: "1px solid " + alpha(C.ac, 0.53), color: C.ac, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Non vue</span>
                 )}
               </div>
               <h2 style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.3, color: C.tx, margin: "0 0 8px" }}>{note.title}</h2>

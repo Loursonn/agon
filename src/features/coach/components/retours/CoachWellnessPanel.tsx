@@ -42,14 +42,16 @@ function Tile({ title, state, stateColor, value, unit, line, onMore }: {
   title: string; state: string; stateColor: string; value: string; unit?: string; line: ReactNode; onMore: () => void;
 }) {
   return (
-    <div style={{ ...ORDI_CARD, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+    // Planche CoachWellness : tuile teintée de la couleur de l'état, liseré 3 px.
+    <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, border: `1px solid ${alpha(stateColor, 0.42)}`, background: alpha(stateColor, 0.12), padding: "14px 16px 14px 19px", display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: stateColor }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 13.5, color: C.tx }}>{title}</span>
-        <Pill color={stateColor}>{state}</Pill>
+        <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</span>
+        <Pill color={stateColor} filled>{state}</Pill>
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-        <span style={{ ...MONO, fontSize: 30, color: C.tx, lineHeight: 1 }}>{value}</span>
-        {unit && <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>{unit}</span>}
+        <span style={{ ...MONO, fontSize: 32, color: value === "—" ? C.tx3 : stateColor, lineHeight: 1 }}>{value}</span>
+        {unit && <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{unit}</span>}
       </div>
       <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.45, minHeight: 34 }}>{line}</div>
       <button type="button" onClick={onMore} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.ac, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>Détails ›</button>
@@ -163,9 +165,10 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
   ] : [];
 
   const lightCard = (
-    <div style={{ ...ORDI_CARD, position: "relative", overflow: "hidden", padding: "18px 22px 18px 26px", display: "flex", gap: 22, alignItems: "center", flexWrap: "wrap" }}>
+    <div style={{ ...ORDI_CARD, position: "relative", overflow: "hidden", padding: "18px 22px 18px 26px", display: "flex", gap: 22, alignItems: "center", flexWrap: "wrap",
+      ...(lt?.color ? { background: alpha(lt.color, 0.12), border: `1px solid ${alpha(lt.color, 0.42)}` } : {}) }}>
       <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: lt?.color ?? C.brdL }} />
-      <span style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 300, fontSize: 30, color: lt?.color ?? C.tx3 }}>
+      <span style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500, fontSize: 30, color: lt?.color ?? C.tx3 }}>
         {light.isLoading ? "…" : lt?.label ?? "—"}
       </span>
       <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 4 }}>

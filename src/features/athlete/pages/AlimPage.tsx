@@ -1,5 +1,4 @@
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import NutritionView from "@/components/athlete/NutritionView";
 import { useNutritionStrategy } from "@/features/shared/hooks/useNutrition";
@@ -21,7 +20,7 @@ export default function AlimPage() {
 
   return (
     <div className="mx-auto w-full max-w-[480px] lg:max-w-none">
-    <AthletePageHeader title="Alimentation" dateStyle="long" background={headerGlow(C.g, C.o)} />
+    <AthletePageHeader title="Alimentation" dateStyle="long" />
     <NutritionView
       athleteId={athleteId}
       bmr={bmr}

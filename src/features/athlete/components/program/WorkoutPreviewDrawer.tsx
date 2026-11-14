@@ -5,6 +5,8 @@ import { formatClusterReps } from "@/features/coach/components/programmation/clu
 import { formatReps, hasIso, isAllIso } from "@/lib/formatSetsReps";
 import { isMissedWeekSession } from "@/features/athlete/components/program/programUtils";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
+import { blocColor } from "@/lib/peps";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 
 // ── Workout preview drawer ────────────────────────────────────────────────────
 
@@ -30,7 +32,7 @@ export function WorkoutPreviewDrawer({
     <Drawer open onOpenChange={(v) => !v && onClose()}>
       <DrawerContent style={{ background: C.s1, borderTop: "1px solid " + C.brd, padding: 0, maxHeight: "86vh", display: "flex", flexDirection: "column" }}>
         <DrawerHeader style={{ padding: "16px 20px 8px", flexShrink: 0 }}>
-          <DrawerTitle style={{ fontSize: 16, fontWeight: 700, color: C.tx }}>
+          <DrawerTitle style={{ fontSize: 17, fontWeight: 600, color: C.tx }}>
             {session.sessionName}
           </DrawerTitle>
         </DrawerHeader>
@@ -45,10 +47,10 @@ export function WorkoutPreviewDrawer({
             {workout.blocs.map((bloc, blocIdx) => (
               <div key={bloc.id} style={{ marginBottom: 14 }}>
                 {/* Bloc header */}
-                <div style={{ fontSize: 10, fontWeight: 700, color: C.ac, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
-                  Bloc {String.fromCharCode(65 + blocIdx)}{bloc.name ? " — " + bloc.name : ""}
+                <div style={{ ...MONO, fontSize: 11, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>
+                  <span style={{ color: blocColor(bloc.color, blocIdx) }}>Bloc {String.fromCharCode(65 + blocIdx)}</span>{bloc.name && bloc.name.trim().toUpperCase() !== String.fromCharCode(65 + blocIdx) ? " — " + bloc.name : ""}
                 </div>
-                <div style={{ background: C.s2, borderRadius: 6, overflow: "hidden" }}>
+                <div style={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 12, overflow: "hidden" }}>
                   {bloc.exercices.map((ex, idx) => {
                     // Superset : chaîne d'exercices liés (superset_with_next), comme en séance
                     const prevLinked = idx > 0 && !!bloc.exercices[idx - 1].superset_with_next;
@@ -84,24 +86,24 @@ export function WorkoutPreviewDrawer({
                         }}
                       >
                         <div style={{
-                          width: 24, height: 24, borderRadius: 6, flexShrink: 0,
-                          background: C.ac + "20", color: C.ac,
+                          ...MONO, width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                          background: blocColor(bloc.color, blocIdx), color: C.ink,
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 10, fontWeight: 800,
+                          fontSize: 11, fontWeight: 500,
                         }}>
                           {String.fromCharCode(65 + blocIdx)}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, display: "block" }}>
+                          <span style={{ fontSize: 14, fontWeight: 500, color: C.tx, display: "block" }}>
                             {ex.exercise_name}
                           </span>
                           <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 10, color: C.tx3 }}>{nb} séries × {ex.params ? formatReps(ex.params) : reps}{ex.params?.cluster || isAllIso(ex.params) ? "" : " reps"}{hasIso(ex.params) ? " · Iso" : ""}</span>
+                            <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>{nb} séries × {ex.params ? formatReps(ex.params) : reps}{ex.params?.cluster || isAllIso(ex.params) ? "" : " reps"}{hasIso(ex.params) ? " · Iso" : ""}</span>
                             {rir != null && (
-                              <span style={{ fontSize: 10, color: C.tx3 }}>· RIR {rir}</span>
+                              <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>· RIR {rir}</span>
                             )}
                             {tempo && (
-                              <span style={{ fontSize: 10, color: C.tx3 }}>· T {tempo}</span>
+                              <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>· T {tempo}</span>
                             )}
                           </div>
                         </div>
@@ -124,9 +126,9 @@ export function WorkoutPreviewDrawer({
             <button
               onClick={onStart}
               style={{
-                width: "100%", padding: "14px 0", borderRadius: 6, border: "none",
-                background: C.acV, color: C.ink,
-                fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 44,
+                width: "100%", height: 52, borderRadius: 12, border: "none",
+                background: C.ac, color: C.ink,
+                fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               }}
             >
               Démarrer la séance ▶
@@ -137,9 +139,9 @@ export function WorkoutPreviewDrawer({
             <button
               onClick={onReschedule}
               style={{
-                width: "100%", padding: "11px 0", borderRadius: 6,
-                border: "1px solid " + C.brd, background: "transparent",
-                color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                width: "100%", height: 48, borderRadius: 12,
+                border: "1px solid " + C.brdL, background: "transparent",
+                color: C.tx, fontSize: 14, fontWeight: 500, cursor: "pointer",
                 fontFamily: "inherit",
               }}
             >

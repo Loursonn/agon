@@ -1,19 +1,22 @@
 /**
- * CoachUpdatesCard — accueil coach : la plus récente des nouveautés non vues
- * (maquette « Accueil coach »), bouton « J'ai vu » qui fait passer à la suivante.
- * Une fois vues, elles restent consultables dans la page Nouveautés (sidebar).
+ * CoachUpdatesCard — bandeau « Nouveauté » de l'accueil coach (planche
+ * `Coach.dc.html`) : la plus récente des nouveautés non vues sur une ligne,
+ * « Voir le détail » déplie le contenu, la croix la marque comme vue (la
+ * suivante prend sa place). Les nouveautés vues restent dans la page Nouveautés.
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { X } from "lucide-react";
+import { C, alpha } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppUpdates, useMarkAppUpdateSeen } from "@/features/shared/hooks/useAppUpdates";
 import { ReleaseNoteContent } from "./ReleaseNoteContent";
-import { ReleaseNoteKindBadge } from "./ReleaseNoteKindBadge";
 
-function fmtDate(iso: string) {
-  return new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
-}
+const LINK = {
+  ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: C.ac,
+  background: "none", border: "none", padding: 0, cursor: "pointer", whiteSpace: "nowrap" as const,
+};
 
 export function CoachUpdatesCard() {
   const { user } = useAuth();
@@ -23,51 +26,45 @@ export function CoachUpdatesCard() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (!user || isError || unseen.length === 0) return null;
+  const note = unseen[0];
+  const open = expanded === note.id;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {unseen.slice(0, 1).map((note) => {
-        const open = expanded === note.id;
-        return (
-          <div key={note.id} style={{
-            background: C.s1,
-            border: "1px solid " + C.ac + "40", borderRadius: 6, padding: "14px 16px",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-              <ReleaseNoteKindBadge kind={note.kind} />
-              <span style={{ fontSize: 11, color: C.tx3 }}>{fmtDate(note.date)}</span>
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginBottom: 4 }}>{note.title}</div>
-            <div style={{ fontSize: 13, color: C.tx2, marginBottom: open ? 12 : 10 }}>{note.summary}</div>
-            {open && <div style={{ marginBottom: 12 }}><ReleaseNoteContent note={note} /></div>}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                onClick={() => mark.mutate({ userId: user.id, updateIds: [note.id] })}
-                disabled={mark.isPending}
-                style={{
-                  minHeight: 40, padding: "8px 16px", borderRadius: 4, border: "none",
-                  background: C.acV, color: C.ink, fontSize: 13, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}
-              >
-                J'ai vu
-              </button>
-              {!open && (
-                <button onClick={() => setExpanded(note.id)} style={{
-                  minHeight: 40, padding: "8px 14px", borderRadius: 4, border: "1px solid " + C.brdL,
-                  background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>Voir le détail</button>
-              )}
-              <button onClick={() => navigate("/coach/nouveautes")} style={{
-                minHeight: 40, padding: "8px 14px", borderRadius: 4, border: "none",
-                background: "transparent", color: C.tx3, fontSize: 12, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}>{unseen.length > 1 ? `Toutes les nouveautés (${unseen.length - 1} autre${unseen.length > 2 ? "s" : ""}) →` : "Toutes les nouveautés →"}</button>
-            </div>
-          </div>
-        );
-      })}
+    <div style={{
+      position: "relative", overflow: "hidden", borderRadius: 14,
+      border: `1px solid ${alpha(C.ac, 0.4)}`, background: alpha(C.ac, 0.12),
+    }}>
+      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "16px 20px 16px 23px" }}>
+        <span style={{
+          ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
+          background: C.ac, color: C.ink, borderRadius: 999, padding: "4px 9px", flex: "none",
+        }}>Nouveauté</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{note.title}</div>
+          <div style={{ fontSize: 12, color: C.tx2, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{note.summary}</div>
+        </div>
+        <button type="button" style={LINK} onClick={() => setExpanded(open ? null : note.id)}>
+          {open ? "Masquer" : "Voir le détail"}
+        </button>
+        <button type="button" style={LINK} onClick={() => navigate("/coach/nouveautes")}>
+          {unseen.length > 1 ? `Toutes les nouveautés (${unseen.length}) →` : "Toutes les nouveautés →"}
+        </button>
+        <button
+          type="button"
+          aria-label="Marquer comme vue"
+          title="Marquer comme vue"
+          disabled={mark.isPending}
+          onClick={() => mark.mutate({ userId: user.id, updateIds: [note.id] })}
+          style={{
+            width: 26, height: 26, flex: "none", borderRadius: 6, border: `1px solid ${C.brdL}`, background: "transparent",
+            color: C.tx2, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+          }}
+        >
+          <X size={14} strokeWidth={1.75} />
+        </button>
+      </div>
+      {open && <div style={{ padding: "0 20px 16px 23px" }}><ReleaseNoteContent note={note} /></div>}
     </div>
   );
 }

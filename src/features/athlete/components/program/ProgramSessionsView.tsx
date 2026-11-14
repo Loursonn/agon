@@ -204,7 +204,7 @@ export function ProgramSessionsView() {
                 type="button"
                 onClick={() => setWeekOffset(0)}
                 disabled={weekOffset === 0}
-                className={cn("min-w-0 flex-1 bg-transparent p-0 text-left", weekOffset === 0 ? "cursor-default" : "cursor-pointer")}
+                className={cn("min-w-0 flex-1 bg-transparent p-0 text-center", weekOffset === 0 ? "cursor-default" : "cursor-pointer")}
               >
                 <div style={{ ...DISPLAY, fontSize: 15, color: C.tx }}>{weekLabel(weekOffset)}</div>
                 <div style={{ ...MONO, fontSize: 11, color: C.tx3, marginTop: 2 }}>

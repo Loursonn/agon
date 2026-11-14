@@ -19,10 +19,10 @@ export const EX_TYPE_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 export const EX_TYPE_COLOR: Record<string, string> = {
-  muscu:         "#EF4444",
-  halterophilie: "#8b5cf6",
-  plio:          "#F5A623",
-  mobilite:      "#66F03C",
+  muscu:         "#FFC933",
+  halterophilie: "#F060C0",
+  plio:          "#FF9500",
+  mobilite:      "#2EE6C5",
   vitesse:       "#33B5FF",
 };
 
@@ -31,5 +31,5 @@ export function exTypeLabel(v: string | null | undefined): string {
 }
 
 export function exTypeColor(v: string | null | undefined): string {
-  return EX_TYPE_COLOR[v ?? ""] ?? "#7D7468";
+  return EX_TYPE_COLOR[v ?? ""] ?? "#8E8780";
 }

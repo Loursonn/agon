@@ -122,7 +122,7 @@ export default function CoachPhonePlanning() {
                 d >= today ? (
                   <button type="button" onClick={() => setAddDay(d)} style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 46, borderRadius: 12,
-                    border: `1px dashed ${alpha(C.ac, 0.4)}`, color: C.ac, fontSize: 13, background: "transparent", fontFamily: "inherit", cursor: "pointer",
+                    border: `1px solid ${C.brdL}`, color: C.tx, fontSize: 13, background: "transparent", fontFamily: "inherit", cursor: "pointer",
                   }}>+ Ajouter</button>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", height: 46, padding: "0 14px", borderRadius: 12, background: C.s1, color: C.tx3, fontSize: 13 }}>Repos</div>

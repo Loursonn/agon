@@ -9,8 +9,8 @@ import { check, db, unwrap, unwrapRows } from "./client";
  *
  * Rien de ce qui relève des soins n'est écrit ici (décision du 2026-11-13, hors
  * hébergement de données de santé) : ni diagnostic, ni traitement, ni « vu
- * par », ni antécédents (`medical_history`), ni documents médicaux
- * (`medical_attachments`, bucket `medical`). La base les refuse aussi.
+ * par », ni antécédents, ni documents médicaux. Colonnes, tables et bucket
+ * correspondants supprimés de la base le 2026-11-14 (P44).
  *
  * Les droits sont ceux de la RLS : l'athlète, ses coachs (`is_coach_of`, co-coach
  * compris) et le staff autorisé sur le domaine « medical ». Ce module ne les

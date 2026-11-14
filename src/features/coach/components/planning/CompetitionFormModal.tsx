@@ -214,7 +214,6 @@ export function CompetitionFormModal({ athleteId, coachId, existing, initialDate
               color: name.trim() && date ? C.tx : C.tx3,
               fontSize: 14, fontWeight: 700, cursor: name.trim() && date ? "pointer" : "default",
               fontFamily: "inherit", minHeight: 44,
-              boxShadow: name.trim() && date ? "0 4px 16px rgba(244,114,182,0.3)" : "none",
             }}
           >
             {isPending ? (isEdit ? "Modification…" : "Ajout en cours…") : (isEdit ? "Enregistrer les modifications" : "Ajouter la compétition")}

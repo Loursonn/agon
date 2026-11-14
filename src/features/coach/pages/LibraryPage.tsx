@@ -122,7 +122,7 @@ function EnergyTab() {
               style={{
                 padding: "5px 12px", borderRadius: 6, border: "none",
                 background: filterTab === t.value ? C.ac : "transparent",
-                color: filterTab === t.value ? C.tx : C.tx3,
+                color: filterTab === t.value ? C.ink : C.tx3,
                 fontSize: 12, fontWeight: filterTab === t.value ? 600 : 400,
                 cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
               }}
@@ -518,9 +518,9 @@ export default function LibraryPage() {
               onClick={() => setTab(key)}
               style={{
                 height: 40, padding: "0 16px", border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: 13, fontWeight: on ? 500 : 400, color: on ? C.tx : C.tx2, whiteSpace: "nowrap",
-                boxShadow: on ? `inset 0 -3px 0 ${C.ac}` : "none",
-                background: on ? `linear-gradient(0deg, ${alpha(C.ac, 0.12)}, transparent 70%)` : "transparent",
+                fontSize: 13, fontWeight: on ? 500 : 400, color: on ? C.ac : C.tx2, whiteSpace: "nowrap",
+                boxShadow: on ? `inset 0 -2px 0 ${C.ac}` : "none",
+                background: "transparent",
                 display: "flex", alignItems: "center", gap: 8,
               }}
             >

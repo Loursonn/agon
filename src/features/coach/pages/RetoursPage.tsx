@@ -14,7 +14,7 @@ import {
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare, Footprints } from "lucide-react";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
-import { C, H } from "@/lib/theme";
+import { C, H, alpha } from "@/lib/theme";
 import { DISPLAY, KICK, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 
 const RETOURS_TITLE: React.CSSProperties = { margin: "0 0 12px", ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx };
@@ -262,9 +262,9 @@ export default function RetoursPage() {
               <SanteKicker n={1}>Ressenti / mesuré · ce matin</SanteKicker>
               <div style={{ fontSize: 12.5, color: C.tx3 }}>Ce que {firstName} déclare face à ce que mesure sa montre.</div>
               <FeltVsMeasured athleteId={athleteId} firstName={firstName} />
-              <SanteKicker n={2} style={{ marginTop: 14 }}>Mesures de la montre</SanteKicker>
             </section>
           }
+          montreTitle={<SanteKicker n={2} style={{ marginTop: 14 }}>Mesures de la montre</SanteKicker>}
           bottom={
             <>
               <DeclaredWellness athleteId={athleteId} firstName={firstName} n={3} onOpenWellness={() => setTab("bienetre")} />
@@ -283,7 +283,7 @@ export default function RetoursPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
           <h1 style={{ ...RETOURS_TITLE, marginBottom: 6 }}>Retours</h1>
-          <div style={{ ...KICK }}>{periodLabel}</div>
+          <div style={{ ...KICK, color: C.ac }}>{periodLabel}</div>
         </div>
 
         {/* View toggle + nav */}
@@ -339,14 +339,14 @@ export default function RetoursPage() {
       </div>
 
       {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
         {[
-          { icon: <Heart size={14} style={{ color: C.g }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
-          { icon: <Dumbbell size={14} style={{ color: C.ac }} />,            title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate}%` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
-          { icon: <FlaskConical size={14} style={{ color: C.b }} />,         title: "Tests",           value: testsVal,    subtitle: undefined,                                                onClick: () => setDetailView("tests")        },
-          { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km", subtitle2: runWatchKm > 0 ? `dont ${runWatchKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} ${runOrigins.length ? runOrigins.join(", ") : "montre"}` : undefined },
-          { icon: <Trophy size={14} style={{ color: H.miel }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
-          { icon: <UtensilsCrossed size={14} style={{ color: H.ambre }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
+          { icon: <Heart size={14} />,           accent: C.g,     title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
+          { icon: <Dumbbell size={14} />,        accent: C.ac,    title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate} %` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
+          { icon: <FlaskConical size={14} />,    accent: C.ame,   title: "Tests",           value: testsVal,    subtitle: undefined,                                                onClick: () => setDetailView("tests")        },
+          { icon: <Footprints size={14} />,      accent: C.b,     title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km", subtitle2: runWatchKm > 0 ? `dont ${runWatchKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} ${runOrigins.length ? runOrigins.join(", ") : "montre"}` : undefined },
+          { icon: <Trophy size={14} />,          accent: C.rouge, title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
+          { icon: <UtensilsCrossed size={14} />, accent: C.r,     title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
         ].map((kpi) => (
           <KPICard key={kpi.title} {...kpi} />
         ))}
@@ -382,12 +382,13 @@ export default function RetoursPage() {
 
       {/* Coach retour */}
       {viewMode === "week" && (
-        <div style={{ marginTop: 16, background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{ position: "relative", overflow: "hidden", marginTop: 16, background: C.s1, borderRadius: 14, border: `1px solid ${alpha(C.ac, 0.4)}`, padding: "18px 20px 18px 23px" }}>
+          <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <MessageSquare size={14} color={C.ac} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Retour coach</span>
+            <span style={{ ...DISPLAY, fontSize: 14, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx }}>Retour coach</span>
             {retourData?.comment && retourDraft === retourData.comment && (
-              <span style={{ fontSize: 9, color: C.g, fontWeight: 600 }}>Enregistré</span>
+              <span style={{ ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ink, background: C.g, borderRadius: 999, padding: "4px 9px" }}>Enregistré</span>
             )}
             {retourData?.comment && (
               <span style={{ marginLeft: "auto", fontSize: 11, color: C.tx3, display: "flex", alignItems: "center", gap: 5 }}>
@@ -407,9 +408,9 @@ export default function RetoursPage() {
             placeholder="Écris ton retour sur la semaine ici… L'athlète le verra sur son accueil jusqu'à ce qu'il réagisse."
             rows={4}
             style={{
-              width: "100%", padding: "10px 12px", borderRadius: 4,
-              border: "1px solid " + C.brdL, background: C.s2,
-              color: C.tx, fontSize: 13, fontFamily: "inherit",
+              width: "100%", minHeight: 84, padding: "14px 16px", borderRadius: 10,
+              border: "1px solid " + C.brdL, background: C.bg,
+              color: C.tx, fontSize: 14, fontFamily: "inherit",
               resize: "vertical", outline: "none", boxSizing: "border-box",
               lineHeight: 1.5,
             }}
@@ -427,11 +428,11 @@ export default function RetoursPage() {
               }}
               disabled={upsertRetour.isPending || retourDraft.trim() === (retourData?.comment ?? "")}
               style={{
-                padding: "8px 20px", borderRadius: 4,
+                height: 38, padding: "0 20px", borderRadius: 10,
                 border: "none",
                 background: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ac : C.s2,
                 color: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ink : C.tx3,
-                fontSize: 12, fontWeight: 700, cursor: "pointer",
+                fontSize: 14, fontWeight: 600, cursor: "pointer",
                 fontFamily: "inherit", opacity: upsertRetour.isPending ? 0.6 : 1,
               }}
             >
@@ -539,7 +540,7 @@ export default function RetoursPage() {
             <SectionHead
               n={1}
               title="Modifications planning athlète"
-              right={<span style={{ ...MONO, fontSize: 10.5, padding: "2px 9px", borderRadius: 999, background: C.o, color: C.ink }}>{modifications.length}</span>}
+              right={<span style={{ ...MONO, fontSize: 11, padding: "2px 9px", borderRadius: 999, background: C.o, color: C.ink }}>{modifications.length}</span>}
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

@@ -145,7 +145,7 @@ export default function CoachPhoneSante() {
       ) : (
         <>
           {gaps.length > 0 && (
-            <div style={{ padding: 14, borderRadius: 14, background: `radial-gradient(120% 120% at 100% 0%, ${alpha(C.o, 0.14)}, transparent 60%), ${C.s1}`, border: `1px solid ${alpha(C.o, 0.35)}`, display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ padding: 14, borderRadius: 14, background: alpha(C.o, 0.1), border: `1px solid ${alpha(C.o, 0.35)}`, display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ ...KICKER, color: C.tx2 }}>Écart avec son ressenti</span>
                 <Tag color={C.o} filled>À vérifier</Tag>

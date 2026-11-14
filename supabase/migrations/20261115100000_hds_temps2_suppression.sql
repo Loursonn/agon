@@ -16,6 +16,13 @@
 -- Garde-fous : la migration s'arrête (rien n'est supprimé) si une ligne ou un
 -- fichier subsiste. Prod au 2026-11-13 : 0 ligne, 0 fichier, 0 champ rempli.
 
+-- Verrous pris d'un coup, dans cet ordre : appliquée sans, la migration a
+-- croisé une requête en cours (deadlock, rien changé). profiles est référencé
+-- par les clés étrangères des deux tables supprimées.
+LOCK TABLE public.profiles, storage.objects, storage.buckets,
+  public.medical_attachments, public.medical_history, public.medical_entries
+  IN ACCESS EXCLUSIVE MODE;
+
 -- ── 0. Rien à perdre ────────────────────────────────────────────────────────
 DO $$
 BEGIN

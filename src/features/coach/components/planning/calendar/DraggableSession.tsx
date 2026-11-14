@@ -27,25 +27,34 @@ export function DraggableSession({
   });
   const name = session.name ?? session.label ?? "Séance";
 
+  const Icon = sessionType === "energy" ? Zap : sessionType === "test" ? FlaskConical : sessionType === "biometric" ? Ruler : Dumbbell;
+
   if (variant === "card") {
+    // Carte du bandeau « Programmer » (planche CoachPlanningLarge3) : aplat
+    // 12 %, liseré 3 px, pictogramme plein, titre sur une ligne.
     return (
       <div
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        title={name}
+        title={`${BANK_TYPE_LABEL[sessionType]} · ${name}`}
         style={{
-          width: 186, flex: "none", minHeight: 84, boxSizing: "border-box",
-          padding: "10px 12px", borderRadius: 12, position: "relative", overflow: "hidden",
-          border: "1px solid " + alpha(color, 0.35),
-          background: `linear-gradient(135deg, ${alpha(color, 0.16)} 0%, ${C.s2} 62%)`,
+          width: 186, height: 64, flex: "none", boxSizing: "border-box",
+          padding: "10px 10px 10px 14px", borderRadius: 10, position: "relative", overflow: "hidden",
+          border: "1px solid " + alpha(color, 0.33),
+          background: alpha(color, 0.12),
           cursor: "grab", userSelect: "none", opacity: isDragging ? 0.45 : 1,
-          display: "flex", flexDirection: "column", gap: 6,
+          display: "flex", alignItems: "center", gap: 10,
         }}
       >
-        <span style={{ fontFamily: CARD_MONO, fontSize: 9.5, letterSpacing: "0.12em", textTransform: "uppercase", color }}>{BANK_TYPE_LABEL[sessionType]}</span>
-        <span style={{ fontSize: 13, fontWeight: 600, color: C.tx, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{name}</span>
-        {meta && <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, color: C.tx3, letterSpacing: "0.06em", textTransform: "uppercase", marginTop: "auto" }}>{meta}</span>}
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
+        <span aria-hidden style={{ width: 24, height: 24, flex: "none", borderRadius: 7, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: C.ink }}>
+          <Icon size={13} strokeWidth={2} />
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+          {meta && <div style={{ fontFamily: CARD_MONO, fontSize: 10, color: C.tx3, letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta}</div>}
+        </div>
       </div>
     );
   }

@@ -1,10 +1,9 @@
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { DayBars } from "@/features/coach/components/sante/SanteParts";
 import { useHealthWindow } from "@/features/athlete/hooks/useHealthWindow";
 import { localIsoDay, type IsoDay } from "@shared/domain/dates";
@@ -25,7 +24,11 @@ type Span = "day" | "7" | "28";
 function StatePill({ state }: { state: HealthState }) {
   if (!state) return null;
   const s = STATE[state];
-  return <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: s.color, border: `1px solid ${s.color}88`, borderRadius: 999, padding: "1px 8px", whiteSpace: "nowrap" }}>{s.label}</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, height: 20, padding: "0 7px", borderRadius: 999, background: alpha(s.color, 0.14), color: s.color, fontSize: 11, whiteSpace: "nowrap", flex: "none" }}>
+      <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />{s.label}
+    </span>
+  );
 }
 
 /** Courbe : points du jour, zone habituelle en bande. */
@@ -73,7 +76,7 @@ const hm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("fr-F
  *   et suivie du wellness déclaré et des courbes ressenti / mesuré (`bottom`).
  *   Moyennes « 28 j » explicites et score de sommeil des 7 nuits en barres.
  */
-export default function AthleteSantePage({ coachView, top, bottom }: { coachView?: { firstName: string }; top?: ReactNode; bottom?: ReactNode } = {}) {
+export default function AthleteSantePage({ coachView, top, montreTitle, bottom }: { coachView?: { firstName: string }; top?: ReactNode; montreTitle?: ReactNode; bottom?: ReactNode } = {}) {
   const isDesktop = useIsDesktop();
   const { athleteId } = useAthleteContext();
   const day = localIsoDay();
@@ -107,7 +110,7 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
     const streak = streakOf(opened.values, day, opened.state);
     return (
       <div style={{ maxWidth: 480, margin: coachView ? 0 : "0 auto" }}>
-        {!coachView && <AthletePageHeader title={opened.def.label} titleSize={22} background={headerGlow(C.b, undefined)} />}
+        {!coachView && <AthletePageHeader title={opened.def.label} titleSize={22} />}
         <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
           <button type="button" onClick={() => setOpen(null)} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.tx3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>‹ Santé</button>
           {opened.source && <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{opened.source}</div>}
@@ -141,11 +144,11 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
   }
 
   const [sleep, ...rest] = views;
-  return (
-    <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
-      {!coachView && <AthletePageHeader title="Santé" titleSize={24} background={headerGlow(C.b, undefined)} />}
-      <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {top}
+  // Vue coach ordinateur (planche CoachOrdiASante) : pleine largeur, mesures de
+  // la montre à gauche, wellness déclaré à droite.
+  const coachWide = !!coachView && isDesktop;
+  const montre = (
+      <>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, color: C.tx2 }}>
           <span>{fmtDayShort(day, !!coachView)}</span>
           {source && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{source}</span>}
@@ -178,11 +181,33 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
                   </div>
                 )}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginTop: 10 }}>
-                {([["Profond", today?.sleepDeepMin], ["Léger", today?.sleepLightMin], ["Paradoxal", today?.sleepRemMin], ["Éveil", today?.sleepAwakeMin]] as const).map(([k, v]) => (
-                  <div key={k}><div style={{ fontSize: 10.5, color: C.tx3 }}>{k}</div><div style={{ ...MONO, fontSize: 12.5 }}>{fmtMinutes(v ?? null)}</div></div>
-                ))}
-              </div>
+              {(() => {
+                const phases = [
+                  { k: "Profond", v: today?.sleepDeepMin ?? null, c: C.bP },
+                  { k: "Léger", v: today?.sleepLightMin ?? null, c: C.b },
+                  { k: "Paradoxal", v: today?.sleepRemMin ?? null, c: C.ame },
+                  { k: "Éveil", v: today?.sleepAwakeMin ?? null, c: C.tx3 },
+                ];
+                const total = phases.reduce((a, p) => a + (p.v ?? 0), 0);
+                return (
+                  <>
+                    {total > 0 && (
+                      <div aria-hidden style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", gap: 2, marginTop: 14 }}>
+                        {phases.map((p) => (p.v ?? 0) > 0 && <span key={p.k} style={{ width: `${((p.v ?? 0) / total) * 100}%`, background: p.c }} />)}
+                      </div>
+                    )}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", marginTop: 10, fontSize: 12 }}>
+                      {phases.map((p) => (
+                        <div key={p.k} style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                          <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: p.c, flex: "none" }} />
+                          <span style={{ color: C.tx2 }}>{p.k}</span>
+                          <span style={{ ...MONO, color: C.tx }}>{fmtMinutes(p.v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
               {coachView && sleepScore7.some((p) => p.v != null) ? (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Score de sommeil · 7 nuits</div>
@@ -228,6 +253,28 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
             )}
           </>
         )}
+      </>
+  );
+
+  if (coachWide) {
+    return (
+      <div style={{ width: "100%", padding: "0 0 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {top}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>{montreTitle}{montre}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>{bottom}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: "100%", maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
+      {!coachView && <AthletePageHeader title="Santé" titleSize={24} />}
+      <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {top}
+        {montreTitle}
+        {montre}
         {bottom}
       </div>
     </div>
