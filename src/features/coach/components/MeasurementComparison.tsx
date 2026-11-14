@@ -7,9 +7,9 @@
  */
 import { useMemo, useState } from 'react';
 import { Ruler, Camera } from 'lucide-react';
-import { C } from '@/lib/theme';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import {
   MEASUREMENT_FIELDS, PHOTO_SLOTS,
   type MeasurementKey, type PhotoSlot, type MeasurementLog,
@@ -20,11 +20,25 @@ function daysBetween(a: string, b: string): number {
   return Math.round((new Date(b + 'T12:00:00').getTime() - new Date(a + 'T12:00:00').getTime()) / 86_400_000);
 }
 
-function fmtDelta(d: number, unit: string): { text: string; color: string } {
+function fmtDelta(d: number, unit: string): { text: string; tone: string } {
   const sign = d > 0 ? '+' : '';
-  const color = d > 0 ? C.g : d < 0 ? C.r : C.tx3;
-  return { text: `${sign}${Math.round(d * 10) / 10} ${unit}`, color };
+  const tone = d > 0 ? 'text-agon-succes' : d < 0 ? 'text-agon-erreur' : 'text-agon-tx3';
+  return { text: `${sign}${Math.round(d * 10) / 10} ${unit}`, tone };
 }
+
+/** Pastille de filtre (item de mensuration ou de photo). */
+function filterChip(active: boolean, has: boolean) {
+  return cn(
+    'rounded px-3 py-1.5 text-[12px] font-bold border',
+    has ? 'cursor-pointer' : 'cursor-default opacity-40',
+    active ? 'border-agon-succes bg-agon-succes-doux text-agon-succes'
+      : cn('border-agon-brd-l bg-transparent', has ? 'text-agon-tx2' : 'text-agon-tx3'),
+  );
+}
+
+const FILTERS = 'mb-3.5 flex flex-wrap gap-1.5';
+const EMPTY_ITEM = 'py-2 text-[12px] italic text-agon-tx3';
+const CARD = 'rounded-[6px] border border-agon-brd bg-agon-s1';
 
 // ── Onglet Mensurations ───────────────────────────────────────────────────────
 
@@ -88,24 +102,11 @@ function MeasurementsTab({ logs }: { logs: MeasurementLog[] }) {
   return (
     <div>
       {/* Filtre item */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+      <div className={FILTERS}>
         {MEASUREMENT_FIELDS.map(f => {
-          const active = f.key === sel;
           const has = logs.some(l => hasFieldData(l, f));
           return (
-            <button
-              key={f.key}
-              onClick={() => setSel(f.key)}
-              disabled={!has}
-              style={{
-                padding: '6px 12px', borderRadius: 4, fontSize: 12, fontWeight: 700,
-                fontFamily: 'inherit', cursor: has ? 'pointer' : 'default',
-                border: '1px solid ' + (active ? C.g : C.brdL),
-                background: active ? C.gS : 'transparent',
-                color: active ? C.g : has ? C.tx2 : C.tx3,
-                opacity: has ? 1 : 0.4,
-              }}
-            >
+            <button key={f.key} onClick={() => setSel(f.key)} disabled={!has} className={filterChip(f.key === sel, has)}>
               {f.label}
             </button>
           );
@@ -113,51 +114,46 @@ function MeasurementsTab({ logs }: { logs: MeasurementLog[] }) {
       </div>
 
       {rows.length === 0 ? (
-        <div style={{ fontSize: 12, color: C.tx3, fontStyle: 'italic', padding: '8px 0' }}>
-          Aucune saisie pour cet item.
-        </div>
+        <div className={EMPTY_ITEM}>Aucune saisie pour cet item.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {rows.map(({ log, val, label, deltaVal, deltaDays, deltaWeight }) => {
             const dv = deltaVal != null ? fmtDelta(deltaVal, 'cm') : null;
             const dw = deltaWeight != null ? fmtDelta(deltaWeight, 'kg') : null;
             return (
-              <div key={log.id} style={{
-                background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4,
-                padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12,
-              }}>
-                <div style={{ minWidth: 70 }}>
-                  <div style={{ fontSize: 11, color: C.tx3 }}>
+              <div key={log.id} className="flex items-center gap-3 rounded border border-agon-brd bg-agon-s1 px-3.5 py-2.5">
+                <div className="min-w-[70px]">
+                  <div className="text-[11px] text-agon-tx3">
                     {format(new Date(log.date + 'T12:00:00'), 'd MMM yy', { locale: fr })}
                   </div>
                 </div>
-                <div style={{ minWidth: 76 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: 20, fontWeight: 800, color: C.tx }}>{Math.round(val * 10) / 10}</span>
-                    <span style={{ fontSize: 11, color: C.tx3 }}>cm</span>
+                <div className="min-w-[76px]">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[20px] font-extrabold text-agon-tx">{Math.round(val * 10) / 10}</span>
+                    <span className="text-[11px] text-agon-tx3">cm</span>
                   </div>
-                  {label && <div style={{ fontSize: 9, color: C.tx3 }}>{label}</div>}
+                  {label && <div className="text-[9px] text-agon-tx3">{label}</div>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 64 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.tx2 }}>
+                <div className="flex min-w-[64px] items-baseline gap-1">
+                  <span className="text-[13px] font-bold text-agon-tx2">
                     {log.weight_kg != null ? log.weight_kg : '—'}
                   </span>
-                  <span style={{ fontSize: 10, color: C.tx3 }}>kg</span>
+                  <span className="text-[10px] text-agon-tx3">kg</span>
                 </div>
-                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                <div className="ml-auto text-right">
                   {dv && deltaDays != null ? (
                     <>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: dv.color }}>
-                        {dv.text} <span style={{ fontSize: 11, color: C.tx3, fontWeight: 500 }}>en {deltaDays}j</span>
+                      <div className={cn('text-[13px] font-bold', dv.tone)}>
+                        {dv.text} <span className="text-[11px] font-medium text-agon-tx3">en {deltaDays}j</span>
                       </div>
                       {dw && (
-                        <div style={{ fontSize: 10, color: C.tx3 }}>
-                          poids <span style={{ color: dw.color, fontWeight: 700 }}>{dw.text}</span>
+                        <div className="text-[10px] text-agon-tx3">
+                          poids <span className={cn('font-bold', dw.tone)}>{dw.text}</span>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div style={{ fontSize: 10, color: C.tx3, fontStyle: 'italic' }}>1ʳᵉ saisie</div>
+                    <div className="text-[10px] italic text-agon-tx3">1ʳᵉ saisie</div>
                   )}
                 </div>
               </div>
@@ -188,24 +184,11 @@ function PhotosTab({ logs }: { logs: MeasurementLog[] }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+      <div className={FILTERS}>
         {PHOTO_SLOTS.map(s => {
-          const active = s.key === sel;
           const has = logs.some(l => l.photos?.[s.key]);
           return (
-            <button
-              key={s.key}
-              onClick={() => setSel(s.key)}
-              disabled={!has}
-              style={{
-                padding: '6px 12px', borderRadius: 4, fontSize: 12, fontWeight: 700,
-                fontFamily: 'inherit', cursor: has ? 'pointer' : 'default',
-                border: '1px solid ' + (active ? C.g : C.brdL),
-                background: active ? C.gS : 'transparent',
-                color: active ? C.g : has ? C.tx2 : C.tx3,
-                opacity: has ? 1 : 0.4,
-              }}
-            >
+            <button key={s.key} onClick={() => setSel(s.key)} disabled={!has} className={filterChip(s.key === sel, has)}>
               {s.label}
             </button>
           );
@@ -213,27 +196,25 @@ function PhotosTab({ logs }: { logs: MeasurementLog[] }) {
       </div>
 
       {items.length === 0 ? (
-        <div style={{ fontSize: 12, color: C.tx3, fontStyle: 'italic', padding: '8px 0' }}>
-          Aucune photo pour cet item.
-        </div>
+        <div className={EMPTY_ITEM}>Aucune photo pour cet item.</div>
       ) : (
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
+        <div className="flex gap-3 overflow-x-auto pb-1.5">
           {items.map(it => (
-            <div key={it.path} style={{ flexShrink: 0, width: 150 }}>
-              <div style={{ width: 150, height: 200, borderRadius: 4, overflow: 'hidden', background: C.s2, border: '1px solid ' + C.brd }}>
+            <div key={it.path} className="w-[150px] shrink-0">
+              <div className="h-[200px] w-[150px] overflow-hidden rounded border border-agon-brd bg-agon-s2">
                 {urls[it.path] ? (
-                  <img src={urls[it.path]} alt={it.date} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={urls[it.path]} alt={it.date} className="h-full w-full object-cover" />
                 ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Camera size={18} color={C.tx3} />
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Camera size={18} className="text-agon-tx3" />
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 11, color: C.tx2, fontWeight: 600, marginTop: 6 }}>
+              <div className="mt-1.5 text-[11px] font-semibold text-agon-tx2">
                 {format(new Date(it.date + 'T12:00:00'), 'd MMM yyyy', { locale: fr })}
               </div>
               {it.weight != null && (
-                <div style={{ fontSize: 10, color: C.tx3 }}>{it.weight} kg</div>
+                <div className="text-[10px] text-agon-tx3">{it.weight} kg</div>
               )}
             </div>
           ))}
@@ -250,36 +231,32 @@ export default function MeasurementComparison({ athleteId }: { athleteId: string
   const [tab, setTab] = useState<'mensu' | 'photos'>('mensu');
 
   return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: C.g, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 24, height: 2, background: C.g, borderRadius: 1 }} />
+    <div className="mb-7">
+      <div className="mb-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.06em] text-agon-succes">
+        <div className="h-0.5 w-6 rounded-[1px] bg-agon-succes" />
         Mensurations &amp; photos
       </div>
 
       {isLoading ? (
-        <div style={{ height: 80, background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd }} />
+        <div className={cn('h-20', CARD)} />
       ) : logs.length === 0 ? (
-        <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 6, padding: '20px', textAlign: 'center', color: C.tx3, fontSize: 12 }}>
+        <div className={cn(CARD, 'p-5 text-center text-[12px] text-agon-tx3')}>
           L'athlète n'a pas encore saisi de mensurations.
         </div>
       ) : (
-        <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 6, padding: '16px' }}>
+        <div className={cn(CARD, 'p-4')}>
           {/* Onglets */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          <div className="mb-4 flex gap-1.5">
             {([['mensu', 'Mensurations', Ruler], ['photos', 'Photos', Camera]] as const).map(([k, label, Icon]) => {
               const active = tab === k;
               return (
                 <button
                   key={k}
                   onClick={() => setTab(k)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 14px', borderRadius: 4, fontSize: 12, fontWeight: 700,
-                    fontFamily: 'inherit', cursor: 'pointer',
-                    border: '1px solid ' + (active ? C.g + '60' : C.brdL),
-                    background: active ? C.gS : 'transparent',
-                    color: active ? C.g : C.tx3,
-                  }}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-1.5 rounded border px-3.5 py-[7px] text-[12px] font-bold',
+                    active ? 'border-agon-succes/[0.376] bg-agon-succes-doux text-agon-succes' : 'border-agon-brd-l bg-transparent text-agon-tx3',
+                  )}
                 >
                   <Icon size={13} /> {label}
                 </button>

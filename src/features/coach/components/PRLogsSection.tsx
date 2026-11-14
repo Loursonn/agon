@@ -16,7 +16,7 @@ import {
   Plus, X, ChevronDown, ChevronRight, Trophy, Search,
   Link, Zap, Pencil, RefreshCw,
 } from "lucide-react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import {
   usePRsByRef,
   useAddPRLog,
@@ -33,33 +33,29 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-const inp = (extra?: React.CSSProperties): React.CSSProperties => ({
-  background: C.s2,
-  border: `1px solid ${C.brd}`,
-  borderRadius: 7,
-  color: C.tx,
-  fontSize: 13,
-  padding: "7px 10px",
-  fontFamily: "inherit",
-  outline: "none",
-  width: "100%",
-  boxSizing: "border-box",
-  ...extra,
-});
+/** Champ de saisie (taille et marges ajustables par classes en plus). */
+const INP = "w-full rounded-[7px] border border-agon-brd bg-agon-s2 px-2.5 py-[7px] text-[13px] text-agon-tx outline-none";
+/** Icône de recherche posée dans un champ. */
+const SEARCH_ICON = "absolute top-1/2 -translate-y-1/2 text-agon-tx3";
+/** Petit bouton en pointillés (Lier, PR). */
+const DASHED_BTN = "flex cursor-pointer items-center gap-[3px] rounded-[5px] border border-dashed border-agon-brd-l px-2 py-[3px] text-[10px]";
+/** Bouton de l'en-tête (Sync, Ajouter). */
+const HEAD_BTN = "flex items-center gap-[5px] rounded-[7px] border border-agon-brd-l bg-transparent px-3 py-1.5 text-[12px] font-semibold";
+const KICKER = "text-[10px] uppercase tracking-[0.4px] text-agon-tx3";
 
 // ─── Source badge ─────────────────────────────────────────────────────────────
 
 function SourceBadge({ source, reps, kg }: { source: PRLog["source"]; reps?: number | null; kg?: number | null }) {
   if (source === "computed") {
     return (
-      <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: `${C.ac}20`, color: C.ac, display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+      <span className="flex shrink-0 items-center gap-0.5 rounded px-[5px] py-px text-[9px] font-bold text-agon-accent bg-agon-accent/[0.125]">
         <Zap size={8} />
         {reps && kg ? `${kg}kg×${reps}` : "auto"}
       </span>
     );
   }
   return (
-    <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: `${C.tx3}15`, color: C.tx3, display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+    <span className="flex shrink-0 items-center gap-0.5 rounded px-[5px] py-px text-[9px] font-bold text-agon-tx3 bg-agon-tx3/[0.082]">
       <Pencil size={8} />
       manuel
     </span>
@@ -105,47 +101,39 @@ function AddPRForm({ athleteId, existingRefs, defaultRef, onDone }: AddPRFormPro
 
   const canSubmit = !!ref.trim() && (mode === "direct" ? !!kg : !!epleyKg) && !!date;
 
+
   return (
-    <div style={{ background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+    <div className="flex flex-col gap-2.5 rounded border border-agon-brd bg-agon-s2 p-3.5">
+      <div className="flex items-center gap-2.5">
+        <div className="flex-1 text-[12px] font-bold uppercase tracking-[0.4px] text-agon-tx3">
           Nouveau record
         </div>
-        <div style={{ display: "flex", background: C.s1, borderRadius: 6, padding: 2, gap: 2 }}>
+        <div className="flex gap-0.5 rounded-[6px] bg-agon-s1 p-0.5">
           {(["direct", "epley"] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)} style={{
-              padding: "3px 9px", borderRadius: 5, border: "none", fontFamily: "inherit",
-              background: mode === m ? C.ac : "transparent",
-              color: mode === m ? C.tx : C.tx3,
-              fontSize: 10, fontWeight: mode === m ? 700 : 400, cursor: "pointer",
-            }}>
+            <button key={m} onClick={() => setMode(m)} className={cn(
+              "cursor-pointer rounded-[5px] border-none px-[9px] py-[3px] text-[10px]",
+              mode === m ? "bg-agon-accent font-bold text-agon-tx" : "bg-transparent font-normal text-agon-tx3",
+            )}>
               {m === "direct" ? "1RM direct" : "Via reps (Epley)"}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ position: "relative" }}>
+      <div className="relative">
         <input
           value={ref}
           onChange={e => { setRef(e.target.value); setShowSugg(true); }}
           onFocus={() => setShowSugg(true)}
           onBlur={() => setTimeout(() => setShowSugg(false), 150)}
           placeholder="Référence exercice (ex: Développé couché)"
-          style={inp()}
+          className={INP}
           disabled={!!defaultRef}
         />
         {showSugg && filtered.length > 0 && (
-          <div style={{
-            position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
-            background: C.bg, border: `1px solid ${C.brd}`, borderRadius: 7, marginTop: 2,
-          }}>
+          <div className="absolute left-0 right-0 top-full z-10 mt-0.5 rounded-[7px] border border-agon-brd bg-agon-bg">
             {filtered.map(r => (
-              <button key={r} onMouseDown={() => { setRef(r); setShowSugg(false); }} style={{
-                display: "block", width: "100%", textAlign: "left",
-                padding: "8px 12px", border: "none", background: "transparent",
-                color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-              }}>
+              <button key={r} onMouseDown={() => { setRef(r); setShowSugg(false); }} className="block w-full cursor-pointer border-none bg-transparent px-3 py-2 text-left text-[13px] text-agon-tx">
                 {r}
               </button>
             ))}
@@ -154,39 +142,33 @@ function AddPRForm({ athleteId, existingRefs, defaultRef, onDone }: AddPRFormPro
       </div>
 
       {mode === "direct" ? (
-        <div style={{ display: "flex", gap: 8 }}>
-          <input type="number" value={kg} onChange={e => setKg(e.target.value)} placeholder="1RM (kg)" style={inp({ flex: "1" })} step="0.5" min="0" />
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp({ flex: "1" })} />
+        <div className="flex gap-2">
+          <input type="number" value={kg} onChange={e => setKg(e.target.value)} placeholder="1RM (kg)" className={cn(INP, "flex-1")} step="0.5" min="0" />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className={cn(INP, "flex-1")} />
         </div>
       ) : (
         <div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-            <input type="number" value={kg} onChange={e => setKg(e.target.value)} placeholder="Charge (kg)" style={inp({ flex: "1" })} step="0.5" min="0" />
-            <input type="number" value={reps} onChange={e => setReps(e.target.value)} placeholder="Reps" style={inp({ flex: "1" })} min="1" max="30" />
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp({ flex: "1" })} />
+          <div className="mb-1.5 flex gap-2">
+            <input type="number" value={kg} onChange={e => setKg(e.target.value)} placeholder="Charge (kg)" className={cn(INP, "flex-1")} step="0.5" min="0" />
+            <input type="number" value={reps} onChange={e => setReps(e.target.value)} placeholder="Reps" className={cn(INP, "flex-1")} min="1" max="30" />
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={cn(INP, "flex-1")} />
           </div>
           {epleyKg !== null && (
-            <div style={{ padding: "6px 10px", borderRadius: 6, background: `${C.g}15`, border: `1px solid ${C.g}30`, fontSize: 12 }}>
-              1RM Epley estimé : <strong style={{ color: C.g }}>{epleyKg} kg</strong>
+            <div className="rounded-[6px] border border-agon-succes/[0.188] bg-agon-succes/[0.082] px-2.5 py-1.5 text-[12px]">
+              1RM Epley estimé : <strong className="text-agon-succes">{epleyKg} kg</strong>
             </div>
           )}
         </div>
       )}
 
-      <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optionnel)" style={inp()} />
+      <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optionnel)" className={INP} />
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={onDone} style={{
-          flex: 1, padding: "8px 0", borderRadius: 7,
-          border: `1px solid ${C.brdL}`, background: "transparent",
-          color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-        }}>Annuler</button>
-        <button onClick={handleSubmit} disabled={!canSubmit || addPR.isPending} style={{
-          flex: 2, padding: "8px 0", borderRadius: 7, border: "none",
-          background: canSubmit ? C.ac : C.s2,
-          color: canSubmit ? C.tx : C.tx3,
-          fontSize: 12, fontWeight: 700, cursor: canSubmit ? "pointer" : "default", fontFamily: "inherit",
-        }}>
+      <div className="flex gap-2">
+        <button onClick={onDone} className="flex-1 cursor-pointer rounded-[7px] border border-agon-brd-l bg-transparent py-2 text-[12px] font-semibold text-agon-tx2">Annuler</button>
+        <button onClick={handleSubmit} disabled={!canSubmit || addPR.isPending} className={cn(
+          "flex-[2] rounded-[7px] border-none py-2 text-[12px] font-bold",
+          canSubmit ? "cursor-pointer bg-agon-accent text-agon-tx" : "cursor-default bg-agon-s2 text-agon-tx3",
+        )}>
           {addPR.isPending ? "…" : "Enregistrer"}
         </button>
       </div>
@@ -230,41 +212,31 @@ function PRCard({
     [linkable, linkSearch]
   );
 
+
   return (
-    <div style={{ overflow: "hidden" }}>
+    <div className="overflow-hidden">
       {/* Header — always visible */}
-      <button onClick={() => setOpen(p => !p)} style={{
-        width: "100%", display: "flex", alignItems: "center", gap: 6,
-        padding: "9px 10px", border: "none", background: "transparent",
-        cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-      }}>
-        <Trophy size={11} color={C.g} style={{ flexShrink: 0 }} />
-        <div style={{
-          flex: 1, fontSize: 12, fontWeight: 700, color: C.tx,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
+      <button onClick={() => setOpen(p => !p)} className="flex w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-2.5 py-[9px] text-left">
+        <Trophy size={11} className="shrink-0 text-agon-succes" />
+        <div className="flex-1 truncate text-[12px] font-bold text-agon-tx">
           {exerciseRef}
         </div>
-        <span style={{ fontSize: 14, fontWeight: 800, color: C.g, flexShrink: 0 }}>{best.kg}</span>
-        <span style={{ fontSize: 9, color: C.tx3, flexShrink: 0, marginRight: 2 }}>kg</span>
-        {open ? <ChevronDown size={11} color={C.tx3} style={{ flexShrink: 0 }} /> : <ChevronRight size={11} color={C.tx3} style={{ flexShrink: 0 }} />}
+        <span className="shrink-0 text-[14px] font-extrabold text-agon-succes">{best.kg}</span>
+        <span className="mr-0.5 shrink-0 text-[9px] text-agon-tx3">kg</span>
+        {open ? <ChevronDown size={11} className="shrink-0 text-agon-tx3" /> : <ChevronRight size={11} className="shrink-0 text-agon-tx3" />}
       </button>
 
       {/* Expanded detail */}
       {open && (
-        <div style={{ borderTop: `1px solid ${C.brd}`, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6, background: C.s2 }}>
+        <div className="flex flex-col gap-1.5 border-t border-agon-brd bg-agon-s2 px-2.5 py-2">
           {/* PR history */}
           {prs.map(pr => (
-            <div key={pr.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              {pr.id === best.id ? <Trophy size={9} color={C.g} style={{ flexShrink: 0 }} /> : <div style={{ width: 9, flexShrink: 0 }} />}
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.tx, flex: 1 }}>{pr.kg} kg</span>
+            <div key={pr.id} className="flex items-center gap-[5px]">
+              {pr.id === best.id ? <Trophy size={9} className="shrink-0 text-agon-succes" /> : <div className="w-[9px] shrink-0" />}
+              <span className="flex-1 text-[11px] font-bold text-agon-tx">{pr.kg} kg</span>
               <SourceBadge source={pr.source} reps={pr.source_reps} kg={pr.source_kg} />
-              <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>{formatDate(pr.date)}</span>
-              <button onClick={() => deletePR.mutate({ id: pr.id, athleteId })} style={{
-                width: 18, height: 18, borderRadius: 4, border: "none",
-                background: "transparent", color: C.tx3, cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
+              <span className="shrink-0 text-[10px] text-agon-tx3">{formatDate(pr.date)}</span>
+              <button onClick={() => deletePR.mutate({ id: pr.id, athleteId })} className="flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded border-none bg-transparent text-agon-tx3">
                 <X size={9} />
               </button>
             </div>
@@ -272,18 +244,11 @@ function PRCard({
 
           {/* Linked exercise chips */}
           {linkedExercises.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 2 }}>
+            <div className="mt-0.5 flex flex-wrap gap-[3px]">
               {linkedExercises.map(e => (
-                <div key={e.id} style={{
-                  display: "flex", alignItems: "center", gap: 2,
-                  padding: "2px 6px", borderRadius: 4,
-                  background: `${C.coach}15`, border: `1px solid ${C.coach}25`,
-                }}>
-                  <span style={{ fontSize: 9, color: C.coach, fontWeight: 600 }}>{e.name}</span>
-                  <button onClick={() => onUnlinkExercise(e)} style={{
-                    border: "none", background: "transparent", color: C.tx3,
-                    cursor: "pointer", padding: 0, display: "flex", alignItems: "center",
-                  }}>
+                <div key={e.id} className="flex items-center gap-0.5 rounded border border-agon-coach/[0.145] bg-agon-coach/[0.082] px-1.5 py-0.5">
+                  <span className="text-[9px] font-semibold text-agon-coach">{e.name}</span>
+                  <button onClick={() => onUnlinkExercise(e)} className="flex cursor-pointer items-center border-none bg-transparent p-0 text-agon-tx3">
                     <X size={7} />
                   </button>
                 </div>
@@ -292,59 +257,44 @@ function PRCard({
           )}
 
           {/* Action buttons */}
-          <div style={{ display: "flex", gap: 5 }}>
+          <div className="flex gap-[5px]">
             <button
               onClick={() => { setShowLink(p => !p); setLinkSearch(""); }}
-              style={{
-                padding: "3px 8px", borderRadius: 5,
-                border: `1px dashed ${C.brdL}`, background: showLink ? `${C.ac}12` : "transparent",
-                color: showLink ? C.ac : C.tx3, fontSize: 10, cursor: "pointer",
-                fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
-              }}
+              className={cn(DASHED_BTN, showLink ? "bg-agon-accent/[0.071] text-agon-accent" : "bg-transparent text-agon-tx3")}
             >
               <Link size={8} /> Lier
             </button>
-            <button onClick={onAddPR} style={{
-              padding: "3px 8px", borderRadius: 5,
-              border: `1px dashed ${C.brdL}`, background: "transparent",
-              color: C.tx3, fontSize: 10, cursor: "pointer",
-              fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
-            }}>
+            <button onClick={onAddPR} className={cn(DASHED_BTN, "bg-transparent text-agon-tx3")}>
               <Plus size={8} /> PR
             </button>
           </div>
 
           {/* Inline link picker with search */}
           {showLink && (
-            <div style={{ background: C.bg, border: `1px solid ${C.brd}`, borderRadius: 7, overflow: "hidden" }}>
-              <div style={{ position: "relative", padding: 5, borderBottom: `1px solid ${C.brd}` }}>
-                <Search size={10} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: C.tx3 }} />
+            <div className="overflow-hidden rounded-[7px] border border-agon-brd bg-agon-bg">
+              <div className="relative border-b border-agon-brd p-[5px]">
+                <Search size={10} className={cn(SEARCH_ICON, "left-[13px]")} />
                 <input
                   autoFocus
                   value={linkSearch}
                   onChange={e => setLinkSearch(e.target.value)}
                   placeholder="Rechercher un exercice…"
-                  style={inp({ fontSize: 11, padding: "5px 8px 5px 26px" })}
+                  className={cn(INP, "py-[5px] pl-[26px] pr-2 text-[11px]")}
                 />
               </div>
-              <div style={{ maxHeight: 130, overflowY: "auto" }}>
+              <div className="max-h-[130px] overflow-y-auto">
                 {filteredLink.length === 0 ? (
-                  <div style={{ padding: "8px 10px", fontSize: 11, color: C.tx3 }}>Aucun exercice trouvé</div>
+                  <div className="px-2.5 py-2 text-[11px] text-agon-tx3">Aucun exercice trouvé</div>
                 ) : (
                   filteredLink.map(e => (
                     <button
                       key={e.id}
                       onClick={() => { onLinkExercise(e, exerciseRef); setShowLink(false); }}
-                      style={{
-                        display: "flex", alignItems: "center", width: "100%", textAlign: "left",
-                        padding: "6px 10px", border: "none", background: "transparent",
-                        color: C.tx, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-                        borderBottom: `1px solid ${C.brd}`, gap: 6,
-                      }}
+                      className="flex w-full cursor-pointer items-center gap-1.5 border-0 border-b border-solid border-agon-brd bg-transparent px-2.5 py-1.5 text-left text-[11px] text-agon-tx"
                     >
-                      <span style={{ flex: 1 }}>{e.name}</span>
+                      <span className="flex-1">{e.name}</span>
                       {e.rm_ref && (
-                        <span style={{ fontSize: 9, color: C.tx3 }}>→ {e.rm_ref}</span>
+                        <span className="text-[9px] text-agon-tx3">→ {e.rm_ref}</span>
                       )}
                     </button>
                   ))
@@ -389,69 +339,53 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
   const isCustomRef    = ref !== defaultRef;
   const refExists      = existingRefs.includes(ref);
 
+
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.55)" }} />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", zIndex: 201,
-        transform: "translate(-50%, -50%)",
-        background: C.bg, borderRadius: 6, width: "min(92vw, 420px)", border: `1px solid ${C.brdL}`,
-        display: "flex", flexDirection: "column", overflow: "hidden",
-      }}>
+      <div onClick={onClose} className="fixed inset-0 z-[200] bg-black/[0.55]" />
+      <div className="fixed left-1/2 top-1/2 z-[201] flex w-[min(92vw,420px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[6px] border border-agon-brd-l bg-agon-bg">
         {/* Header */}
-        <div style={{ padding: "14px 18px 10px", borderBottom: `1px solid ${C.brd}`, display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ flex: 1, fontSize: 14, fontWeight: 800, color: C.tx }}>Lier à une référence RM</div>
+        <div className="flex items-center gap-2 border-b border-agon-brd px-[18px] pb-2.5 pt-3.5">
+          <div className="flex-1 text-[14px] font-extrabold text-agon-tx">Lier à une référence RM</div>
           {bulk && (
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.ac, background: `${C.ac}15`, padding: "2px 8px", borderRadius: 6 }}>
+            <div className="rounded-[6px] bg-agon-accent/[0.082] px-2 py-0.5 text-[11px] font-bold text-agon-accent">
               {bulk.current} / {bulk.total}
             </div>
           )}
-          <button onClick={onClose} style={{ border: "none", background: "transparent", color: C.tx3, cursor: "pointer", padding: 2 }}>
+          <button onClick={onClose} className="cursor-pointer border-none bg-transparent p-0.5 text-agon-tx3">
             <X size={14} />
           </button>
         </div>
 
-        <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3 px-[18px] py-3.5">
           {/* Exercise label */}
-          <div style={{
-            padding: "8px 12px", borderRadius: 4,
-            background: `${C.coach}12`, border: `1px solid ${C.coach}25`,
-            fontSize: 13, fontWeight: 700, color: C.coach,
-          }}>
+          <div className="rounded border border-agon-coach/[0.145] bg-agon-coach/[0.071] px-3 py-2 text-[13px] font-bold text-agon-coach">
             {exercise.name}
           </div>
 
           {/* Search input */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
+            <div className={cn(KICKER, "mb-1.5 font-semibold")}>
               Référence RM cible
             </div>
-            <div style={{ position: "relative" }}>
-              <Search size={11} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: C.tx3 }} />
+            <div className="relative">
+              <Search size={11} className={cn(SEARCH_ICON, "left-[9px]")} />
               <input
                 autoFocus
                 value={ref}
                 onChange={e => setRef(e.target.value)}
                 placeholder="Tapez pour rechercher…"
-                style={inp({ paddingLeft: 26 })}
+                className={cn(INP, "pl-[26px]")}
               />
             </div>
             {/* Always-visible filtered list */}
             {filtered.length > 0 && (
-              <div style={{
-                marginTop: 4, background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
-                maxHeight: 160, overflowY: "auto",
-              }}>
+              <div className="mt-1 max-h-[160px] overflow-y-auto rounded border border-agon-brd bg-agon-s2">
                 {filtered.map(r => (
-                  <button key={r} onMouseDown={() => setRef(r)} style={{
-                    display: "block", width: "100%", textAlign: "left",
-                    padding: "8px 12px", border: "none", background: "transparent",
-                    color: C.tx, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-                    borderBottom: `1px solid ${C.brd}`,
-                  }}>
+                  <button key={r} onMouseDown={() => setRef(r)} className="block w-full cursor-pointer border-0 border-b border-solid border-agon-brd bg-transparent px-3 py-2 text-left text-[12px] text-agon-tx">
                     {r}
                     {existingRefs.includes(r) && (
-                      <span style={{ fontSize: 9, color: C.g, marginLeft: 6 }}>✓ PR existant</span>
+                      <span className="ml-1.5 text-[9px] text-agon-succes">✓ PR existant</span>
                     )}
                   </button>
                 ))}
@@ -460,33 +394,30 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
           </div>
 
           {/* Preview */}
-          <div style={{
-            background: C.s2, borderRadius: 4, padding: "10px 14px",
-            border: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 6,
-          }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+          <div className="flex flex-col gap-1.5 rounded border border-agon-brd bg-agon-s2 px-3.5 py-2.5">
+            <div className={cn(KICKER, "font-bold")}>
               Aperçu
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-              <span style={{ color: C.tx2 }}>{exercise.name}</span>
-              <span style={{ color: C.tx3, fontSize: 10 }}>→</span>
-              <span style={{ fontWeight: 700, color: refExists ? C.g : C.ac }}>
+            <div className="flex items-center gap-1.5 text-[12px]">
+              <span className="text-agon-tx2">{exercise.name}</span>
+              <span className="text-[10px] text-agon-tx3">→</span>
+              <span className={cn("font-bold", refExists ? "text-agon-succes" : "text-agon-accent")}>
                 {ref || "—"}
               </span>
               {refExists
-                ? <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 4, background: `${C.g}20`, color: C.g }}>ref existante</span>
+                ? <span className="rounded bg-agon-succes/[0.125] px-[5px] py-px text-[10px] text-agon-succes">ref existante</span>
                 : ref && ref !== defaultRef
-                  ? <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 4, background: `${C.ac}20`, color: C.ac }}>nouvelle ref</span>
-                  : <span style={{ fontSize: 10, color: C.tx3 }}>(nom par défaut)</span>
+                  ? <span className="rounded bg-agon-accent/[0.125] px-[5px] py-px text-[10px] text-agon-accent">nouvelle ref</span>
+                  : <span className="text-[10px] text-agon-tx3">(nom par défaut)</span>
               }
             </div>
             {alreadyLinked.length > 0 && (
-              <div style={{ fontSize: 11, color: C.tx3 }}>
+              <div className="text-[11px] text-agon-tx3">
                 Regroupé avec : {alreadyLinked.map(e => e.name).join(", ")}
               </div>
             )}
             {isCustomRef && (
-              <div style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>
+              <div className="text-[11px] italic text-agon-tx3">
                 Les PRs de "{exercise.name}" contribueront au pool "{ref}".
               </div>
             )}
@@ -494,30 +425,20 @@ function LinkDialog({ exercise, existingRefs, allExercises, onConfirm, onDismiss
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "10px 18px 14px", display: "flex", gap: 8 }}>
-          <button onClick={() => onDismiss(exercise)} style={{
-            padding: "8px 14px", borderRadius: 4,
-            border: `1px solid ${C.r}40`, background: C.rS,
-            color: C.r, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-          }}>
+        <div className="flex gap-2 px-[18px] pb-3.5 pt-2.5">
+          <button onClick={() => onDismiss(exercise)} className="cursor-pointer rounded border border-agon-erreur/25 bg-agon-erreur-doux px-3.5 py-2 text-[12px] font-semibold text-agon-erreur">
             Pas de RM
           </button>
-          <button onClick={onClose} style={{
-            flex: 1, padding: "8px 0", borderRadius: 4,
-            border: `1px solid ${C.brdL}`, background: "transparent",
-            color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-          }}>
+          <button onClick={onClose} className="flex-1 cursor-pointer rounded border border-agon-brd-l bg-transparent py-2 text-[12px] font-semibold text-agon-tx2">
             {bulk ? "Passer" : "Annuler"}
           </button>
           <button
             onClick={() => { if (ref.trim()) { onConfirm(exercise, ref.trim()); } }}
             disabled={!ref.trim()}
-            style={{
-              flex: 2, padding: "8px 0", borderRadius: 4, border: "none",
-              background: ref.trim() ? C.g : C.s2,
-              color: ref.trim() ? C.tx : C.tx3,
-              fontSize: 12, fontWeight: 700, cursor: ref.trim() ? "pointer" : "default", fontFamily: "inherit",
-            }}
+            className={cn(
+              "flex-[2] rounded border-none py-2 text-[12px] font-bold",
+              ref.trim() ? "cursor-pointer bg-agon-succes text-agon-tx" : "cursor-default bg-agon-s2 text-agon-tx3",
+            )}
           >
             {bulk ? "Confirmer →" : "Confirmer"}
           </button>
@@ -625,45 +546,35 @@ export function PRLogsSection({ athleteId, exercises = [], onUpdateExerciseRef }
   function handleUnlink(ex: Exercise) { onUpdateExerciseRef?.(ex.id, undefined); }
   function handleDismiss(ex: Exercise) { setDismissed(prev => new Set([...prev, ex.id])); }
 
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, fontSize: 14, fontWeight: 800, color: C.tx }}>Records personnels (1RM)</div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex-1 text-[14px] font-extrabold text-agon-tx">Records personnels (1RM)</div>
         <button
           onClick={() => sync({ athleteId, exercises })}
           disabled={syncing}
           title="Recalcule les PRs depuis tout l'historique de séances"
-          style={{
-            display: "flex", alignItems: "center", gap: 5,
-            padding: "6px 12px", borderRadius: 7,
-            border: `1px solid ${C.brdL}`, background: "transparent",
-            color: C.tx3, fontSize: 12, fontWeight: 600,
-            cursor: syncing ? "wait" : "pointer", fontFamily: "inherit",
-          }}
+          className={cn(HEAD_BTN, "text-agon-tx3", syncing ? "cursor-wait" : "cursor-pointer")}
         >
           <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
           {syncing ? "Calcul…" : "Sync"}
         </button>
-        <button onClick={() => setAdding("")} style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "6px 12px", borderRadius: 7,
-          border: `1px solid ${C.brdL}`, background: "transparent",
-          color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-        }}>
+        <button onClick={() => setAdding("")} className={cn(HEAD_BTN, "cursor-pointer text-agon-tx2")}>
           <Plus size={13} /> Ajouter
         </button>
       </div>
 
       {/* Search */}
       {Object.keys(byRef).length > 3 && (
-        <div style={{ position: "relative" }}>
-          <Search size={12} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.tx3 }} />
+        <div className="relative">
+          <Search size={12} className={cn(SEARCH_ICON, "left-2.5")} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher…"
-            style={inp({ paddingLeft: 28, fontSize: 12 })}
+            className={cn(INP, "pl-7 text-[12px]")}
           />
         </div>
       )}
@@ -680,45 +591,32 @@ export function PRLogsSection({ athleteId, exercises = [], onUpdateExerciseRef }
 
       {/* Loading */}
       {isLoading ? (
-        <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>
+        <div className="text-[12px] text-agon-tx3">Chargement…</div>
       ) : refs.length === 0 && unlinkedExercises.length === 0 && adding === null ? (
-        <div style={{
-          textAlign: "center", padding: "24px 16px",
-          border: `1px dashed ${C.brd}`, borderRadius: 4, color: C.tx3, fontSize: 13,
-        }}>
+        <div className="rounded border border-dashed border-agon-brd px-4 py-6 text-center text-[13px] text-agon-tx3">
           Aucun record enregistré.<br />
-          <span style={{ fontSize: 11 }}>Les PRs sont calculés automatiquement depuis les séances, ou tu peux en ajouter manuellement.</span>
+          <span className="text-[11px]">Les PRs sont calculés automatiquement depuis les séances, ou tu peux en ajouter manuellement.</span>
         </div>
       ) : (
         <>
           {/* PR cards — 3-column muscle group boxes */}
           {muscleOrder.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, alignItems: "start" }}>
+            <div className="grid grid-cols-3 items-start gap-2">
               {muscleOrder.map(muscle => (
-                <div key={muscle} style={{
-                  border: `1px solid ${C.brd}`,
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  background: C.s1,
-                }}>
+                <div key={muscle} className="overflow-hidden rounded border border-agon-brd bg-agon-s1">
                   {/* Muscle group header */}
-                  <div style={{
-                    padding: "7px 10px",
-                    borderBottom: `1px solid ${C.brd}`,
-                    background: C.s2,
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                  }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: C.tx2, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  <div className="flex items-center justify-between border-b border-agon-brd bg-agon-s2 px-2.5 py-[7px]">
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.5px] text-agon-tx2">
                       {muscle}
                     </span>
-                    <span style={{ fontSize: 9, color: C.tx3 }}>
+                    <span className="text-[9px] text-agon-tx3">
                       {refsByMuscle[muscle].length}
                     </span>
                   </div>
                   {/* PR cards stacked */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  <div className="flex flex-col gap-0">
                     {refsByMuscle[muscle].map((ref, i) => (
-                      <div key={ref} style={{ borderTop: i > 0 ? `1px solid ${C.brd}` : undefined }}>
+                      <div key={ref} className={i > 0 ? "border-t border-agon-brd" : undefined}>
                         <PRCard
                           exerciseRef={ref}
                           prs={byRef[ref]}
@@ -740,50 +638,23 @@ export function PRLogsSection({ athleteId, exercises = [], onUpdateExerciseRef }
           {/* Unlinked exercises */}
           {unlinkedExercises.length > 0 && onUpdateExerciseRef && (
             <div>
-              <div style={{
-                fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase",
-                letterSpacing: "0.4px", marginBottom: 5,
-                display: "flex", alignItems: "center", gap: 6,
-              }}>
-                <Link size={9} color={C.tx3} />
-                <span style={{ flex: 1 }}>Sans ref explicite ({unlinkedExercises.length})</span>
-                <button onClick={startBulk} style={{
-                  padding: "2px 10px", borderRadius: 5,
-                  border: `1px solid ${C.ac}50`, background: `${C.ac}12`,
-                  color: C.ac, fontSize: 10, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", gap: 3,
-                  textTransform: "none", letterSpacing: 0,
-                }}>
+              <div className={cn(KICKER, "mb-[5px] flex items-center gap-1.5 font-semibold")}>
+                <Link size={9} className="text-agon-tx3" />
+                <span className="flex-1">Sans ref explicite ({unlinkedExercises.length})</span>
+                <button onClick={startBulk} className="flex cursor-pointer items-center gap-[3px] rounded-[5px] border border-agon-accent/[0.314] bg-agon-accent/[0.071] px-2.5 py-0.5 text-[10px] font-bold normal-case tracking-normal text-agon-accent">
                   <Link size={8} /> Assigner tous
                 </button>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <div className="flex flex-col gap-[3px]">
                 {unlinkedExercises.map(ex => (
-                  <div key={ex.id} style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "6px 10px", borderRadius: 7,
-                    background: C.s2, border: `1px solid ${C.brd}`,
-                  }}>
-                    <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: C.tx2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div key={ex.id} className="flex items-center gap-2 rounded-[7px] border border-agon-brd bg-agon-s2 px-2.5 py-1.5">
+                    <div className="flex-1 truncate text-[11px] font-semibold text-agon-tx2">
                       {ex.name}
                     </div>
-                    <button onClick={() => setLinkingEx(ex)} style={{
-                      padding: "2px 8px", borderRadius: 4,
-                      border: `1px solid ${C.g}50`, background: `${C.g}10`,
-                      color: C.g, fontSize: 10, fontWeight: 600,
-                      cursor: "pointer", fontFamily: "inherit",
-                      display: "flex", alignItems: "center", gap: 3,
-                    }}>
+                    <button onClick={() => setLinkingEx(ex)} className="flex cursor-pointer items-center gap-[3px] rounded border border-agon-succes/[0.314] bg-agon-succes/[0.063] px-2 py-0.5 text-[10px] font-semibold text-agon-succes">
                       <Link size={8} /> Regrouper
                     </button>
-                    <button onClick={() => handleDismiss(ex)} title="Pas de RM" style={{
-                      width: 20, height: 20, borderRadius: 4,
-                      border: `1px solid ${C.brdL}`, background: "transparent",
-                      color: C.tx3, fontSize: 10, cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontFamily: "inherit", flexShrink: 0,
-                    }}>
+                    <button onClick={() => handleDismiss(ex)} title="Pas de RM" className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border border-agon-brd-l bg-transparent text-[10px] text-agon-tx3">
                       ✕
                     </button>
                   </div>
