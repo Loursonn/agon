@@ -2502,3 +2502,47 @@ et son README.
   « Blessé / malade » réécrite avec zones et notes. Jamais transmis à l'IA.
 - Poids du wellness : champ texte à clavier décimal ; l'athlète tape « 72,4 », le stockage reçoit 72.4
   (`src/lib/weightInput.ts`).
+
+## 2026-11-15 — Policies RLS accélérées sans en changer le sens
+
+- Constat : sur la base gratuite (instance nano), chaque ligne lue évaluait `is_coach_of`, `staff_can`, etc., même
+  pour un utilisateur qui ne pouvait pas être concerné (un athlète payait `staff_can` et `is_coach_of` sur ses
+  propres lignes). Ces fonctions SQL ne sont pas « inlinées » (SECURITY DEFINER / SET search_path / sous-requêtes) :
+  exécutées ligne par ligne. `is_coach_of` (SECURITY INVOKER) relançait en plus toute la RLS de `profiles` à chaque
+  appel. Les tables sont minuscules (36 profils, 340 lignes `app_data`) : tout le temps partait dans ces appels.
+- Décision (migration `20261115193700_rls_perf_preconditions.sql`, appliquée avec l'accord d'Hugo) :
+  - `auth.uid()`, `auth.role()`, `current_user_is_admin()`, `my_coach_id()` écrits `(SELECT …)` : une fois par requête ;
+  - deux préconditions calculées une fois par requête, `i_am_coach()` (coache au moins un athlète ou rôle coach) et
+    `i_am_staff()` (au moins un lien staff actif), placées devant chaque fonction coach / staff :
+    `((SELECT public.i_am_coach()) AND is_coach_of(athlete_id))`. Toute fonction coach vraie implique
+    `i_am_coach()`, toute fonction staff vraie implique `i_am_staff()` : même valeur, NULL compris ;
+  - `is_coach_of` passe en SECURITY DEFINER, corps équivalent (la ligne cherchée est toujours visible via la policy
+    permissive `profiles_select_athletes`, aucune policy restrictive sur `profiles`).
+  - 316 policies réécrites mécaniquement depuis `pg_policies` (public + storage), `citation_likes` laissée (table en
+    retrait). La règle de `CLAUDE.md` reste : les policies coach passent par `is_coach_of`, jamais `coach_id = auth.uid()`.
+- Preuve, à blanc sur la prod (BEGIN … ROLLBACK) :
+  - formules : 352 expressions modifiées, ancienne vs nouvelle sur 10 profils de rôle × échantillon de lignes,
+    64 130 évaluations, 0 écart (`supabase/tests/rls_perf_equivalence.sql`) ; `is_coach_of` nouvelle vs ancienne
+    pour chaque utilisateur × chaque profil, 1 444 cas, 0 écart ;
+  - visibilité réelle (RLS active) avant / après sur 86 tables × 9 rôles (athlète, coach, staff actif, staff
+    inactif, co-coach, athlète co-coaché, admin, sans lien, anon) : 0 écart ;
+  - matrice des rôles lecture + écriture (`supabase/tests/rls_perf_roles.sql`) : verte avant et après.
+- Gain mesuré (EXPLAIN ANALYZE dans la base, meilleur de 3, ms, avant → après) :
+
+  | Qui | Requête | Avant | Après |
+  |---|---|---|---|
+  | athlète | séances d'énergie (`energy_sessions`) | 1 050 | 2,5 |
+  | athlète | microcycles | 888 | 89 |
+  | athlète | `app_data` (12 clés) | 1,2 | 0,3 |
+  | coach | séances d'énergie | 1 173 | 11 |
+  | coach | `app_data` d'un athlète | 13,9 | 1,0 |
+  | coach | séances d'un athlète | 17,1 | 1,0 |
+  | coach | wellness de ses athlètes | 24,9 | 2,9 |
+  | staff | séances d'un athlète | 22,0 | 1,6 |
+  | staff | `app_data` d'un athlète | 7,5 | 1,7 |
+
+  Les requêtes en prod payaient en plus la concurrence (moyenne `pg_stat_statements` de `app_data` : 82 ms).
+- Retour arrière : `supabase/rollback/20261115193700_rls_perf_preconditions.sql` (expressions d'avant, `is_coach_of`
+  en invoker, fonctions retirées), puis une migration datée équivalente pour garder le rejeu R2 aligné.
+- Pour la suite : toute nouvelle policy suit la forme rapide (skill `migration-bdd`). Reste lent : `microcycles`
+  (`cycle_athlete_id` par ligne, en invoker), à reprendre si besoin.

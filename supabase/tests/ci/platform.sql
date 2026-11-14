@@ -14,46 +14,46 @@ ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "Public read images" ON storage.objects AS PERMISSIVE FOR SELECT TO public USING ((bucket_id = 'exercise-images'::text));
 CREATE POLICY "Public read pdfs" ON storage.objects AS PERMISSIVE FOR SELECT TO public USING ((bucket_id = 'exercise-pdfs'::text));
-CREATE POLICY athlete_delete_test_media ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'test-media'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
-CREATE POLICY athlete_read_test_media ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'test-media'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of_folder((storage.foldername(name))[1]))));
-CREATE POLICY athlete_upload_test_media ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'test-media'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
-CREATE POLICY coach_delete_athlete_test_media ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'test-media'::text) AND is_coach_of_folder((storage.foldername(name))[1])));
-CREATE POLICY coach_upload_athlete_test_media ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'test-media'::text) AND is_coach_of_folder((storage.foldername(name))[1])));
-CREATE POLICY coach_upload_test_media ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'test-media'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND (EXISTS ( SELECT 1
+CREATE POLICY athlete_delete_test_media ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'test-media'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text)));
+CREATE POLICY athlete_read_test_media ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'test-media'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR (( SELECT i_am_coach() AS i_am_coach) AND is_coach_of_folder((storage.foldername(name))[1])))));
+CREATE POLICY athlete_upload_test_media ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'test-media'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text)));
+CREATE POLICY coach_delete_athlete_test_media ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'test-media'::text) AND (( SELECT i_am_coach() AS i_am_coach) AND is_coach_of_folder((storage.foldername(name))[1]))));
+CREATE POLICY coach_upload_athlete_test_media ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'test-media'::text) AND (( SELECT i_am_coach() AS i_am_coach) AND is_coach_of_folder((storage.foldername(name))[1]))));
+CREATE POLICY coach_upload_test_media ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'test-media'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) AND (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'coach'::text))))));
-CREATE POLICY owner_update_test_media ON storage.objects AS PERMISSIVE FOR UPDATE TO authenticated USING (((bucket_id = 'test-media'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of_folder((storage.foldername(name))[1])))) WITH CHECK (((bucket_id = 'test-media'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of_folder((storage.foldername(name))[1]))));
-CREATE POLICY docs_storage_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'docs'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR (((storage.foldername(name))[2] = 'athletes'::text) AND ((storage.foldername(name))[3] = (auth.uid())::text) AND ((NOT (EXISTS ( SELECT 1
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.role = 'coach'::text))))));
+CREATE POLICY docs_storage_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'docs'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR (((storage.foldername(name))[2] = 'athletes'::text) AND ((storage.foldername(name))[3] = (( SELECT auth.uid() AS uid))::text) AND ((NOT (EXISTS ( SELECT 1
    FROM docs d
   WHERE (d.file_path = objects.name)))) OR (EXISTS ( SELECT 1
    FROM docs d
-  WHERE ((d.file_path = objects.name) AND (d.uploaded_by = auth.uid()))))) AND (NOT (EXISTS ( SELECT 1
+  WHERE ((d.file_path = objects.name) AND (d.uploaded_by = ( SELECT auth.uid() AS uid)))))) AND (NOT (EXISTS ( SELECT 1
    FROM doc_comments c
-  WHERE ((c.image_path = objects.name) AND (c.author_id <> auth.uid())))))))));
-CREATE POLICY docs_storage_insert ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'docs'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR (((storage.foldername(name))[1] = (my_coach_id())::text) AND ((storage.foldername(name))[2] = 'athletes'::text) AND ((storage.foldername(name))[3] = (auth.uid())::text)))));
-CREATE POLICY docs_storage_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'docs'::text) AND (can_read_doc_file(name) OR (owner_id = (auth.uid())::text))));
-CREATE POLICY energy_photo_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'energy-exercise-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+  WHERE ((c.image_path = objects.name) AND (c.author_id <> ( SELECT auth.uid() AS uid))))))))));
+CREATE POLICY docs_storage_insert ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'docs'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR (((storage.foldername(name))[1] = (( SELECT my_coach_id() AS my_coach_id))::text) AND ((storage.foldername(name))[2] = 'athletes'::text) AND ((storage.foldername(name))[3] = (( SELECT auth.uid() AS uid))::text)))));
+CREATE POLICY docs_storage_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'docs'::text) AND (can_read_doc_file(name) OR (owner_id = (( SELECT auth.uid() AS uid))::text))));
+CREATE POLICY energy_photo_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'energy-exercise-photos'::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1])));
 CREATE POLICY energy_photo_select ON storage.objects AS PERMISSIVE FOR SELECT TO public USING ((bucket_id = 'energy-exercise-photos'::text));
 CREATE POLICY energy_photo_upload ON storage.objects AS PERMISSIVE FOR INSERT TO public WITH CHECK (((bucket_id = 'energy-exercise-photos'::text) AND (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND ((profiles.role = ANY (ARRAY['coach'::text, 'coach_athlete'::text])) OR (profiles.is_admin = true)))))));
-CREATE POLICY garmin_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'garmin-screenshots'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
-CREATE POLICY garmin_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'garmin-screenshots'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of_folder((storage.foldername(name))[1]) OR current_user_is_admin())));
-CREATE POLICY garmin_upload ON storage.objects AS PERMISSIVE FOR INSERT TO public WITH CHECK (((bucket_id = 'garmin-screenshots'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
-CREATE POLICY provider_raw_own_read ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'provider-raw'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND ((profiles.role = ANY (ARRAY['coach'::text, 'coach_athlete'::text])) OR (profiles.is_admin = true)))))));
+CREATE POLICY garmin_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'garmin-screenshots'::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1])));
+CREATE POLICY garmin_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'garmin-screenshots'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR (( SELECT i_am_coach() AS i_am_coach) AND is_coach_of_folder((storage.foldername(name))[1])) OR ( SELECT current_user_is_admin() AS current_user_is_admin))));
+CREATE POLICY garmin_upload ON storage.objects AS PERMISSIVE FOR INSERT TO public WITH CHECK (((bucket_id = 'garmin-screenshots'::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1])));
+CREATE POLICY owner_update_test_media ON storage.objects AS PERMISSIVE FOR UPDATE TO authenticated USING (((bucket_id = 'test-media'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR (( SELECT i_am_coach() AS i_am_coach) AND is_coach_of_folder((storage.foldername(name))[1]))))) WITH CHECK (((bucket_id = 'test-media'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR (( SELECT i_am_coach() AS i_am_coach) AND is_coach_of_folder((storage.foldername(name))[1])))));
+CREATE POLICY provider_raw_own_read ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'provider-raw'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text)));
 CREATE POLICY staff_docs_storage_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'docs'::text) AND ((EXISTS ( SELECT 1
    FROM docs d
-  WHERE ((d.file_path = objects.name) AND staff_can_edit_doc(d.id)))) OR (EXISTS ( SELECT 1
+  WHERE ((d.file_path = objects.name) AND (( SELECT i_am_staff() AS i_am_staff) AND staff_can_edit_doc(d.id))))) OR (EXISTS ( SELECT 1
    FROM doc_comments c
-  WHERE ((c.image_path = objects.name) AND (c.author_id = auth.uid())))) OR ((owner_id = (auth.uid())::text) AND (NOT (EXISTS ( SELECT 1
+  WHERE ((c.image_path = objects.name) AND (c.author_id = ( SELECT auth.uid() AS uid))))) OR ((owner_id = (( SELECT auth.uid() AS uid))::text) AND (NOT (EXISTS ( SELECT 1
    FROM docs d
   WHERE (d.file_path = objects.name)))) AND (NOT (EXISTS ( SELECT 1
    FROM doc_comments c
-  WHERE (c.image_path = objects.name)))) AND staff_can_write_docs_path(name)))));
-CREATE POLICY staff_docs_storage_insert ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'docs'::text) AND staff_can_write_docs_path(name)));
-CREATE POLICY test_files_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'test-files'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
-CREATE POLICY test_files_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'test-files'::text) AND (((storage.foldername(name))[1] = (auth.uid())::text) OR is_coach_of_folder((storage.foldername(name))[1]) OR current_user_is_admin())));
-CREATE POLICY test_files_upload ON storage.objects AS PERMISSIVE FOR INSERT TO public WITH CHECK (((bucket_id = 'test-files'::text) AND ((auth.uid())::text = (storage.foldername(name))[1])));
+  WHERE (c.image_path = objects.name)))) AND (( SELECT i_am_staff() AS i_am_staff) AND staff_can_write_docs_path(name))))));
+CREATE POLICY staff_docs_storage_insert ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'docs'::text) AND (( SELECT i_am_staff() AS i_am_staff) AND staff_can_write_docs_path(name))));
+CREATE POLICY test_files_delete ON storage.objects AS PERMISSIVE FOR DELETE TO public USING (((bucket_id = 'test-files'::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1])));
+CREATE POLICY test_files_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'test-files'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR (( SELECT i_am_coach() AS i_am_coach) AND is_coach_of_folder((storage.foldername(name))[1])) OR ( SELECT current_user_is_admin() AS current_user_is_admin))));
+CREATE POLICY test_files_upload ON storage.objects AS PERMISSIVE FOR INSERT TO public WITH CHECK (((bucket_id = 'test-files'::text) AND ((( SELECT auth.uid() AS uid))::text = (storage.foldername(name))[1])));
 
 -- Tâches planifiées (cron.job), mêmes noms et horaires qu'en prod.
 SELECT cron.schedule('account-retention', '30 4 * * 1', 'SELECT public.trigger_account_retention();');

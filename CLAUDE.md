@@ -25,7 +25,7 @@ Feuille de route et dette connue : `docs/AUDIT_REFONTE_2026-11.md` (à lire avan
 | staff | `/staff` | kiné, coach adjoint, nutri : droits par lien d'invitation, gérés par le coach (`docs/STAFF_FEATURE.md`) |
 | admin | — | `profiles.is_admin` (Hugo) : liste des coachs, certification, roadmap |
 
-`profiles.coach_id` = coach référent. **Toute policy RLS passe par `is_coach_of(athlete_id)`** (référent OU co-coach), jamais `coach_id = auth.uid()` en dur. Autres helpers : `is_co_coach_of`, `my_coach_id`, `staff_can`, `current_user_is_admin`, `is_coach_of_folder` (chemins Storage).
+`profiles.coach_id` = coach référent. **Toute policy RLS passe par `is_coach_of(athlete_id)`** (référent OU co-coach), jamais `coach_id = auth.uid()` en dur. Pour la vitesse (base gratuite, décision 2026-11-15) : écrire `(SELECT auth.uid())`, et précéder chaque appel par ligne de sa précondition calculée une fois par requête : `((SELECT public.i_am_coach()) AND is_coach_of(athlete_id))`, `((SELECT public.i_am_staff()) AND staff_can(…))`. Autres helpers : `is_co_coach_of`, `my_coach_id`, `staff_can`, `current_user_is_admin`, `is_coach_of_folder` (chemins Storage).
 
 ## Où est le code
 

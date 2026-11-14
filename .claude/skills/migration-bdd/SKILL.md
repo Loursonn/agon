@@ -10,6 +10,7 @@ Il n'y a **qu'une base : la prod**. Pas de staging, pas de Docker local.
 ## Écrire
 - Fichier `supabase/migrations/AAAAMMJJHHMMSS_nom.sql`, idempotent quand c'est possible (`IF NOT EXISTS`, `CREATE OR REPLACE`, `DROP POLICY IF EXISTS`).
 - RLS activée sur toute nouvelle table. Policies via `is_coach_of(athlete_id)`, `auth.uid() = athlete_id`, `staff_can(...)`, `current_user_is_admin()`. **Jamais** `coach_id = auth.uid()` en dur (casse le co-coach).
+- Forme rapide (obligatoire, `20261115193700_rls_perf_preconditions.sql`) : `athlete_id = (SELECT auth.uid())`, `(SELECT public.current_user_is_admin())`, `((SELECT public.i_am_coach()) AND is_coach_of(athlete_id))` (idem `can_coach_athlete`, `is_co_coach_of`, `is_coach_partner`, `is_coach_of_folder`), `((SELECT public.i_am_staff()) AND staff_can(...))` (idem `staff_can_edit*`, `staff_can_write_*`). Sans précondition, la fonction tourne à chaque ligne pour tout le monde. Une nouvelle fonction « coach » ou « staff » doit rester vraie seulement si `i_am_coach()` / `i_am_staff()` l'est.
 - Fonctions `SECURITY DEFINER` : `SET search_path = public`, vérifier `auth.uid()` dedans, `REVOKE ALL … FROM PUBLIC, anon` puis `GRANT EXECUTE` au strict nécessaire.
 - Storage : chemins préfixés par l'uuid de l'athlète ; policies via `is_coach_of_folder`.
 - Donnée personnelle nouvelle ? Skill `rgpd-check`.

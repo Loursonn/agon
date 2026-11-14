@@ -38,6 +38,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-acces-base-plus-rapide",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Pages plus rapides : les contrôles d'accès allégés",
+    summary:
+      "Le serveur vérifiait qui a le droit de voir chaque donnée de façon très coûteuse. Même règles, même confidentialité, mais calculées bien plus vite : les fiches athlètes, le planning et les séances s'ouvrent plus vite, surtout aux heures chargées.",
+    sections: [],
+  },
+  {
     id: "2026-11-14-wellness-poids-virgule",
     date: "2026-11-14",
     kind: "fix",

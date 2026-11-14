@@ -6065,6 +6065,8 @@ export type Database = {
           model_id: string
         }[]
       }
+      i_am_coach: { Args: never; Returns: boolean }
+      i_am_staff: { Args: never; Returns: boolean }
       in_todo: { Args: never; Returns: boolean }
       is_athlete_coach: {
         Args: { athlete_uuid: string; p_coach: string }
