@@ -12,6 +12,10 @@ import { queueIsDurable } from "@/lib/offline/writes";
 import { useCompleteEnergyAssignment, useUpdateEnergyAssignment, useUpsertEnergyRpe } from "@/features/shared/hooks/useEnergyAssignments";
 import { useEffect, useRef, useState } from "react";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
+import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
+import { EnergyReadView } from "@/features/athlete/components/energy/EnergyReadView";
+import { EnergyRunScreen } from "@/features/athlete/components/energy/EnergyRunScreen";
+import { WatchPushBadge } from "@/features/athlete/components/today/WatchPushBadge";
 
 export function EnergyPreviewOverlay({
   event,
@@ -26,7 +30,10 @@ export function EnergyPreviewOverlay({
   const assignmentId = event.id;
   const isCompleted  = event.status === "completed";
 
-  const [phase, setPhase]               = useState<"preview" | "log" | "rpe">("preview");
+  const [phase, setPhase]               = useState<"preview" | "run" | "log" | "rpe">("preview");
+  // Lecture avant la séance (planche EnergieTel) ; l'ancien aperçu reste
+  // accessible par « Voir le détail complet » (schéma, images, fiches).
+  const [showDetail, setShowDetail]     = useState(false);
   const [localBlocks, setLocalBlocks]   = useState<BlockLogs>({});
   const [globalNote, setGlobalNote]     = useState("");
   const [actualDuration, setActualDuration] = useState<string>("");
@@ -34,6 +41,7 @@ export function EnergyPreviewOverlay({
   const [rpeSelected, setRpeSelected]   = useState<number | null>(null);
 
   const { data: session, isLoading, isError } = useEnergySession(sessionId);
+  const { data: refs } = useAthleteReferences(athleteId);
   const complete        = useCompleteEnergyAssignment();
   const updateAssignment = useUpdateEnergyAssignment();
   const upsertRpe       = useUpsertEnergyRpe();
@@ -73,7 +81,7 @@ export function EnergyPreviewOverlay({
 
   // Brouillon local de la saisie en cours (par athlète + séance du jour), écrit
   // à chaque modification pendant la saisie, purgé une fois la validation confirmée.
-  const energyDraft: EnergyDraft = { phase, localBlocks, globalNote, actualDuration, runDist };
+  const energyDraft: EnergyDraft = { phase: phase === "run" ? "preview" : phase, localBlocks, globalNote, actualDuration, runDist };
   const energyDraftJson = JSON.stringify(energyDraft);
   useEffect(() => {
     if (!draftReadyRef.current || isCompleted || !athleteId || phase !== "log" || complete.isSuccess) return;
@@ -319,12 +327,42 @@ export function EnergyPreviewOverlay({
     );
   }
 
+  // ── Phase RUN (plein écran) ───────────────────────────────────────────────
+  if (phase === "run") {
+    return (
+      <EnergyRunScreen
+        steps={session.intervals ?? []}
+        refs={refs}
+        onExit={(elapsedS, finished) => {
+          if (elapsedS >= 60) setActualDuration(String(Math.round(elapsedS / 60)));
+          // Séance allée au bout : tous les blocs d'effort sont cochés d'office.
+          if (finished) setLocalBlocks((prev) => Object.fromEntries(Object.entries(prev).map(([k, v]) => [k, { ...v, done: true }])));
+          setPhase("log");
+        }}
+      />
+    );
+  }
+
   // ── Phase PREVIEW ─────────────────────────────────────────────────────────
+  const readable = !isCompleted && session.session_kind !== "specifique" && session.format !== "classique";
+  if (readable && !showDetail) {
+    return (
+      <EnergyReadView
+        session={session}
+        refs={refs}
+        badge={<WatchPushBadge athleteId={athleteId} kind="energy" sourceId={assignmentId} />}
+        onClose={onClose}
+        onStart={() => setPhase("run")}
+        onNote={() => setPhase("log")}
+        onDetail={() => setShowDetail(true)}
+      />
+    );
+  }
   return (
     <SessionPreviewModal
       session={session}
       athleteId={athleteId}
-      onClose={onClose}
+      onClose={readable ? () => setShowDetail(false) : onClose}
       onValidate={!isCompleted ? () => setPhase("log") : undefined}
       onUnvalidate={isCompleted ? handleUnvalidate : undefined}
     />

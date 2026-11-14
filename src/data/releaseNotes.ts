@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-seance-energie-athlete-telephone",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Séances d'énergie : plus lisibles pour tes athlètes, avec un minuteur plein écran",
+    summary: "Sur son téléphone, ton athlète lit ta séance de course, de vélo ou de rameur en quelques secondes, puis la suit en plein écran pendant l'effort.",
+    sections: [
+      {
+        title: "Avant la séance",
+        points: [
+          "Durée et distance en une ligne, puis le profil de la séance en barres colorées par zone.",
+          "Chaque bloc se lit comme une phrase (« 2 × (5 × 400 m, récup 1 min 30 s trot) ») avec une seule cible en grand : allure, watts ou zone.",
+          "Tes consignes restent repliées sous « Consignes du coach », le détail complet est toujours accessible.",
+        ],
+      },
+      {
+        title: "Pendant la séance",
+        points: [
+          "Chrono géant à la couleur de la zone visée, bleu pendant les récups, et le bloc suivant toujours affiché.",
+          "Un bloc en distance se termine au bouton (« 400 m fait »), comme le bouton tour d'une montre ; les départs fixes partent à l'heure.",
+          "Pause, « Passer » et « Terminer » à portée de pouce ; à la fin, la durée réelle est reprise dans la notation.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-direction-peps",
     date: "2026-11-14",
     kind: "feature",
