@@ -1,19 +1,17 @@
-import { useMemo } from "react";
+/**
+ * Accueil coach ordinateur — planche `Coach.dc.html` (canvas « Agon · maquettes
+ * app », peps). En-tête pleine largeur sur fond « arène » : date, grand titre,
+ * citation sans cadre, tuiles « Manquées hier » / « Tests à venir ». Puis le
+ * bandeau Nouveauté et deux colonnes de sections numérotées.
+ */
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, type Variants } from "framer-motion";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import {
-  Users, Calendar, FlaskConical, ChevronRight,
-  Heart, Dumbbell, Trophy, Layers, ArrowUpRight,
-  AlertTriangle, Clock, Flag, Medal, ClipboardList,
-  Zap, Check, XCircle, SkipForward, BarChart3, Circle,
-  CalendarDays,
-} from "lucide-react";
+import { Check, ChevronRight, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/features/shared/components/EmptyState";
-import { StatusPill } from "@/features/coach/components/dashboard/StatusPill";
-import { useCoachDashboard } from "@/features/shared/hooks/useCoachDashboard";
+import { useCoachDashboard, type SessionStatus } from "@/features/shared/hooks/useCoachDashboard";
 import { usePlanningMargin } from "@/features/shared/hooks/usePlanningMargin";
 import { useRecentRecords } from "@/features/shared/hooks/useRecentRecords";
 import { useUpcomingCompetitions } from "@/features/shared/hooks/useUpcomingCompetitions";
@@ -22,37 +20,16 @@ import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWork
 import { useWellnessAlerts } from "@/features/shared/hooks/useWellnessAlerts";
 import { formatAssessment } from "@/lib/wellnessBaseline";
 import { useAuth } from "@/hooks/useAuth";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { localISO } from "@/lib/date";
-import { CitationDuJour } from "@/features/shared/components/CitationDuJour";
+import { CitationFigure } from "@/features/shared/components/CitationDuJour";
 import { CoachUpdatesCard } from "@/features/coach/components/updates/CoachUpdatesCard";
-import { priorityLabel, COMPETITION_META } from "@/types/planning";
-import type { SessionStatus } from "@/features/shared/hooks/useCoachDashboard";
 
-// ── Animation variants ─────────────────────────────────────────────────────────
+// ── Petits éléments de la planche ─────────────────────────────────────────────
 
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
-};
-
-const stagger: Variants = {
-  hidden: {},
-  show:   { transition: { staggerChildren: 0.07 } },
-};
-
-// ── Visual mappings ────────────────────────────────────────────────────────────
-
-const STATUS_ICON: Record<SessionStatus, React.ReactNode> = {
-  planned:     <ClipboardList size={12} style={{ color: C.tx3 }} />,
-  in_progress: <Zap size={12} style={{ color: C.y }} />,
-  completed:   <Check size={12} style={{ color: C.g }} />,
-  missed:      <XCircle size={12} style={{ color: C.r }} />,
-  skipped:     <SkipForward size={12} style={{ color: C.tx3 }} />,
-};
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
+const KICK: CSSProperties = { ...MONO, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 };
+const ROW_LINE = "1px solid rgba(231,211,168,0.08)";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -60,49 +37,135 @@ function initials(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function SectionTitle({ n, children }: { n?: number; icon?: React.ReactNode; children: React.ReactNode }) {
+/** Pastille pleine (« Terminé », « RPE 7 ») ; `null` = contour neutre (« Planifié »). */
+function Pill({ color, children }: { color: string | null; children: ReactNode }) {
   return (
-    <p className="mb-3 flex items-center gap-1.5" style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2 }}>
-      {n != null && <span style={{ color: C.ac }}>{String(n).padStart(2, "0")} —</span>}
+    <span style={{
+      ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap",
+      flex: "none", borderRadius: 999, lineHeight: 1.3,
+      ...(color
+        ? { color: C.ink, background: color, padding: "3px 9px" }
+        : { color: C.tx2, background: "rgba(231,211,168,0.06)", border: `1px solid ${C.brdL}`, padding: "2px 8px" }),
+    }}>{children}</span>
+  );
+}
+
+/** Rond d'initiales : plein de la couleur (wellness, alerte), sinon neutre. */
+function Avatar({ name, color }: { name: string; color?: string | null }) {
+  const base: CSSProperties = {
+    width: 38, height: 38, boxSizing: "border-box", borderRadius: "50%", flex: "none",
+    display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 12,
+  };
+  return color
+    ? <span style={{ ...base, background: color, color: C.ink, fontWeight: 500, boxShadow: `0 0 0 3px ${alpha(color, 0.18)}` }}>{initials(name)}</span>
+    : <span style={{ ...base, border: "1px solid rgba(231,211,168,0.22)", background: C.s2, color: C.tx2 }}>{initials(name)}</span>;
+}
+
+function SectionHead({ n, children }: { n: number; children: ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <h2 style={{ margin: 0, height: 20, display: "flex", alignItems: "center", ...MONO, fontWeight: 400, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>
+        <span style={{ color: C.ac }}>{String(n).padStart(2, "0")} —</span>&nbsp;{children}
+      </h2>
+      <div style={{ height: 1, background: "rgba(231,211,168,0.12)" }} />
+    </div>
+  );
+}
+
+function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <SectionHead n={n}>{title}</SectionHead>
       {children}
-    </p>
+    </section>
   );
 }
 
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+const panel: CSSProperties = { background: C.s1, border: "1px solid rgba(231,211,168,0.12)", borderRadius: 14, overflow: "hidden" };
+
+function Empty({ children }: { children: ReactNode }) {
+  return <div style={{ ...panel, padding: "18px 16px", fontSize: 12.5, color: C.tx3, textAlign: "center" }}>{children}</div>;
+}
+
+function Loading({ n = 3 }: { n?: number }) {
   return (
-    <div className={`bg-agon-s1 border border-[rgba(231,211,168,0.15)] rounded-2xl overflow-hidden ${className}`}>
+    <div style={{ ...panel, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+      {Array.from({ length: n }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl bg-agon-s2" />)}
+    </div>
+  );
+}
+
+/** Carte d'alerte teintée (Blessé, À traiter, Alertes wellness, À clôturer…) : aplat 12 %, liseré 3 px. */
+function TintCard({ color, borderAlpha = 0.42, onClick, children, gap = 16, pad = "14px 18px 14px 21px" }: {
+  color: string; borderAlpha?: number; onClick?: () => void; children: ReactNode; gap?: number; pad?: string;
+}) {
+  return (
+    <button type="button" onClick={onClick} style={{
+      position: "relative", overflow: "hidden", display: "flex", alignItems: "center", gap, padding: pad, width: "100%",
+      background: alpha(color, 0.12), border: `1px solid ${alpha(color, borderAlpha)}`, borderRadius: 14,
+      color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: onClick ? "pointer" : "default",
+    }}>
+      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
       {children}
-    </div>
+    </button>
   );
 }
 
-function SkeletonRows({ n = 3 }: { n?: number }) {
+function TwoLines({ title, sub }: { title: ReactNode; sub: ReactNode }) {
+  const one: CSSProperties = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
   return (
-    <div className="flex flex-col gap-2 p-4">
-      {Array.from({ length: n }).map((_, i) => (
-        <Skeleton key={i} className="h-12 w-full rounded-xl bg-agon-s2" />
-      ))}
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ ...one, fontSize: 14, fontWeight: 500 }}>{title}</div>
+      <div style={{ ...one, fontSize: 12, color: C.tx2, marginTop: 2 }}>{sub}</div>
     </div>
   );
 }
 
-// ── Athlete avatar (2 letters) ─────────────────────────────────────────────────
-function Avatar({ name, color }: { name: string; color?: string }) {
-  const c = color ?? C.ac;
+const Chevron = () => <ChevronRight size={16} strokeWidth={1.5} style={{ color: C.tx3, flex: "none" }} aria-hidden />;
+
+// ── Séance du jour ────────────────────────────────────────────────────────────
+
+const STATUS_PILL: Record<SessionStatus, { label: string; color: string | null }> = {
+  planned:     { label: "Planifié", color: null },
+  in_progress: { label: "En cours", color: C.b },
+  completed:   { label: "Terminé",  color: C.g },
+  missed:      { label: "Manqué",   color: C.rouge },
+  skipped:     { label: "Sauté",    color: C.o },
+};
+
+function rpeColor(rpe: number) {
+  return rpe >= 8 ? C.rouge : rpe >= 7 ? C.o : rpe >= 5 ? C.ac : C.g;
+}
+
+/** Case de la séance : pleine (cochée) une fois commencée, en contour tant qu'elle est planifiée. */
+function SessionBox({ status }: { status: SessionStatus }) {
+  const planned = status === "planned";
+  return planned
+    ? <span aria-hidden style={{ width: 20, height: 20, boxSizing: "border-box", flex: "none", borderRadius: 6, border: `1.5px solid ${C.ac}`, background: alpha(C.ac, 0.12) }} />
+    : (
+      <span aria-hidden style={{ width: 20, height: 20, flex: "none", borderRadius: 6, background: C.ac, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Check size={13} strokeWidth={2.5} style={{ color: C.ink }} />
+      </span>
+    );
+}
+
+function WellnessBox({ score, color }: { score: number | null; color: string }) {
+  const box: CSSProperties = {
+    position: "relative", overflow: "hidden", width: 64, height: 36, boxSizing: "border-box", borderRadius: 8,
+    display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 22, lineHeight: 1,
+  };
+  if (score == null) {
+    return <span style={{ ...box, background: "rgba(231,211,168,0.04)", border: "1px solid rgba(231,211,168,0.12)", color: C.tx3 }}>—</span>;
+  }
   return (
-    <div
-      className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
-      style={{ background: c + "22", color: c, border: `1.5px solid ${c}40` }}
-    >
-      {initials(name)}
-    </div>
+    <span style={{ ...box, background: alpha(color, 0.14), border: `1px solid ${alpha(color, 0.45)}`, color }}>
+      {score}
+      <span aria-hidden style={{ position: "absolute", left: 0, bottom: 0, height: 3, width: `${Math.max(0, Math.min(100, score))}%`, background: color }} />
+    </span>
   );
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CoachHomePage() {
   const navigate  = useNavigate();
@@ -138,577 +201,343 @@ export default function CoachHomePage() {
   const compA  = competitions.filter((c) => c.priority === "A" && c.daysUntil <= 14);
   const compBC = competitions.filter((c) => !(c.priority === "A" && c.daysUntil <= 14));
 
+  const tiles = [
+    { label: "Manquées hier", count: missedSessions.length, unit: missedSessions.length > 1 ? "séances" : "séance", color: C.o, loading: isLoadingMissed },
+    { label: "Tests à venir", count: upcomingTests.length, unit: "cette semaine", color: C.ame, loading: isLoadingTests },
+  ];
+
   return (
-    <div className="w-full px-6 py-6 pb-20">
+    <div className="w-full pb-20">
 
-      {/* ── Header ── */}
-      <motion.div variants={stagger} initial="hidden" animate="show" className="mb-8">
-        <motion.div variants={fadeUp}>
-          <p className="capitalize" style={{ ...MONO, fontSize: 11, letterSpacing: "0.1em", color: C.tx3 }}>
-            {todayLabel} · {athletes.length} athlète{athletes.length !== 1 ? "s" : ""}
-            {isCoachAthlete && canCoachSelf ? " · ton programme inclus" : ""}
-          </p>
-          <h1 className="mt-1" style={{ ...DISPLAY, fontSize: 28, color: C.tx }}>
-            Bonjour, {firstName}
-          </h1>
-        </motion.div>
-
-        <motion.div variants={fadeUp} className="mt-5">
-          <CitationDuJour />
-        </motion.div>
-
-        {/* Action counters */}
-        <motion.div variants={fadeUp} className="mt-5 grid grid-cols-2 gap-3">
-          <ActionCounter
-            icon={<AlertTriangle size={16} style={{ color: C.o }} />}
-            label="Manquées hier"
-            count={missedSessions.length}
-            loading={isLoadingMissed}
-            color={missedSessions.length > 0 ? C.o : C.tx3}
-            onClick={() => navigate("/coach/athletes")}
-          />
-          <ActionCounter
-            icon={<FlaskConical size={16} style={{ color: C.b }} />}
-            label="Tests à venir"
-            count={upcomingTests.length}
-            loading={isLoadingTests}
-            color={upcomingTests.length > 0 ? C.b : C.tx3}
-            onClick={() => navigate("/coach/athletes")}
-          />
-        </motion.div>
-
-        <div className="mt-5">
-          <CoachUpdatesCard />
+      {/* ── En-tête sur fond « arène » ── */}
+      <header style={{
+        position: "relative", overflow: "hidden", padding: "40px 40px 34px", borderBottom: `1px solid ${C.brd}`,
+        background: `url(/brand/agon-fond-arene-entete.svg) center/cover, ${C.bg}`,
+      }}>
+        <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 40, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 680, minWidth: 0 }}>
+            <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac }}>
+              {todayLabel} · {athletes.length} athlète{athletes.length !== 1 ? "s" : ""}
+              {isCoachAthlete && canCoachSelf ? " · ton programme inclus" : ""}
+            </span>
+            <h1 style={{ margin: 0, ...DISPLAY, fontWeight: 300, fontSize: 44, lineHeight: 1.1, letterSpacing: "0.06em", color: C.tx }}>
+              Bonjour, {firstName}
+            </h1>
+            <CitationFigure barWidth={3} margin="8px 0 0" />
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            {tiles.map((t) => (
+              <button key={t.label} type="button" onClick={() => navigate("/coach/athletes")} style={{
+                width: 168, boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 8, padding: "16px 18px 16px 21px",
+                borderRadius: 14, position: "relative", overflow: "hidden", textAlign: "left", fontFamily: "inherit", cursor: "pointer",
+                background: alpha(t.color, 0.12), border: `1px solid ${alpha(t.color, 0.45)}`, color: C.tx,
+              }}>
+                <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: t.color }} />
+                <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>{t.label}</span>
+                <span style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  {t.loading
+                    ? <Skeleton className="h-12 w-10 rounded bg-agon-s2" />
+                    : <span style={{ ...MONO, fontSize: 48, lineHeight: 1, color: t.color }}>{t.count}</span>}
+                  <span style={{ fontSize: 12, color: C.tx2, whiteSpace: "nowrap" }}>{t.unit}</span>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </motion.div>
+      </header>
 
-      {/* ── Two-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div style={{ padding: "28px 40px 48px", display: "flex", flexDirection: "column", gap: 32 }}>
+        <CoachUpdatesCard />
 
-        {/* ── Left column (2/3) ── */}
-        <motion.div variants={stagger} initial="hidden" animate="show" className="lg:col-span-2 flex flex-col gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 32, alignItems: "start" }}>
 
-          {/* ── Aujourd'hui ── */}
-          <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Calendar size={11} style={{ color: C.tx3 }} />}>Aujourd'hui</SectionTitle>
-            <Card>
-              {isLoadingToday ? (
-                <SkeletonRows n={3} />
-              ) : todayAthletes.length === 0 ? (
-                <p className="text-[12px] text-center py-6" style={{ color: C.tx3 }}>
-                  Aucune séance planifiée aujourd'hui
-                </p>
+          {/* ── Colonne gauche (2/3) ── */}
+          <div className="lg:col-span-2" style={{ display: "flex", flexDirection: "column", gap: 32, minWidth: 0 }}>
+
+            <Section n={nx()} title="Aujourd’hui">
+              {isLoadingToday ? <Loading /> : todayAthletes.length === 0 ? (
+                <Empty>Aucune séance planifiée aujourd’hui</Empty>
               ) : (
-                <div>
+                <div style={panel}>
                   {todayAthletes.map((a, i) => (
-                    <div
+                    <button
                       key={a.athleteId}
+                      type="button"
                       onClick={() => navigate(`/coach/athletes/${a.athleteId}/planning`)}
-                      className="flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.03)]"
+                      className="hover:bg-[rgba(255,255,255,0.02)]"
                       style={{
-                        borderBottom: i < todayAthletes.length - 1
-                          ? "1px solid rgba(231,211,168,0.1)"
-                          : undefined,
+                        display: "flex", alignItems: "center", gap: 16, padding: "14px 18px", width: "100%",
+                        background: "transparent", border: "none", borderBottom: i < todayAthletes.length - 1 ? ROW_LINE : "none",
+                        color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: "pointer",
                       }}
                     >
-                      {/* Avatar */}
-                      <Avatar
-                        name={a.athleteName}
-                        color={a.wellnessScore != null ? a.wellnessColor : undefined}
-                      />
-
-                      {/* Name + program */}
-                      <div className="w-[130px] shrink-0 min-w-0">
-                        <p className="text-[13px] font-bold truncate" style={{ color: C.tx }}>
-                          {a.athleteName}
-                        </p>
-                        <p className="text-[10px] truncate mt-0.5" style={{ color: C.tx3 }}>
-                          {/* fallback subtitle */}
-                          {a.sessions[0]?.sessionName ? "—" : "Pas de séance"}
-                        </p>
+                      <Avatar name={a.athleteName} color={a.wellnessScore != null ? a.wellnessColor : null} />
+                      <div style={{ width: 140, flex: "none", minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.athleteName}</div>
+                        <div style={{ fontSize: 11, color: C.tx3 }}>{a.wellnessLabel ?? "—"}</div>
                       </div>
-
-                      {/* Séance du jour */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-bold uppercase tracking-wider mb-1" style={{ color: C.tx3 }}>
-                          Séance du jour
-                        </p>
-                        {a.sessions.length > 0 ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {a.sessions.map((s) => (
-                              <span key={s.id} className="flex items-center gap-1.5">
-                                <span className="text-[12px]">{STATUS_ICON[s.status]}</span>
-                                <span className="text-[12px] font-bold truncate max-w-[100px]" style={{ color: C.tx }}>
-                                  {s.sessionName ?? "Séance"}
-                                </span>
-                                <StatusPill status={s.status} />
-                                {s.rpeScore != null && (
-                                  <span className="text-[10px] font-bold px-1.5 py-px rounded bg-[rgba(59,141,240,0.12)] text-agon-info border border-[rgba(59,141,240,0.2)]">
-                                    RPE {s.rpeScore}
-                                  </span>
-                                )}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-[11px]" style={{ color: C.tx3 }}>Repos</p>
-                        )}
-                      </div>
-
-                      {/* Wellness */}
-                      <div className="shrink-0 text-right min-w-[60px]">
-                        <p className="text-[9px] font-bold uppercase tracking-wider mb-1" style={{ color: C.tx3 }}>
-                          Wellness
-                        </p>
-                        <div className="flex items-center justify-end gap-1">
-                          <Heart
-                            size={13}
-                            style={{
-                              color:       a.wellnessScore != null ? a.wellnessColor : C.tx3,
-                              fill:        a.wellnessScore != null ? a.wellnessColor + "50" : "none",
-                              strokeWidth: 2,
-                            }}
-                          />
-                          <span
-                            className="text-[14px] font-extrabold leading-none"
-                            style={{ color: a.wellnessScore != null ? a.wellnessColor : C.tx3 }}
-                          >
-                            {a.wellnessScore ?? "—"}
-                          </span>
+                      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 5 }}>
+                        <span style={KICK}>Séance du jour</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {a.sessions.length === 0 ? (
+                            <span style={{ display: "flex", alignItems: "center", gap: 8, height: 24 }}>
+                              <span aria-hidden style={{ width: 20, height: 20, boxSizing: "border-box", flex: "none", borderRadius: 6, border: `1.5px solid ${C.tx3}`, background: alpha(C.pierre, 0.12) }} />
+                              <span style={{ fontSize: 13, color: C.tx3 }}>Repos</span>
+                            </span>
+                          ) : a.sessions.map((s) => (
+                            <span key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, height: 24, minWidth: 0, whiteSpace: "nowrap" }}>
+                              <SessionBox status={s.status} />
+                              <span style={{ fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis" }}>{s.sessionName ?? "Séance"}</span>
+                              <Pill color={STATUS_PILL[s.status].color}>{STATUS_PILL[s.status].label}</Pill>
+                              {s.rpeScore != null && <Pill color={rpeColor(s.rpeScore)}>RPE {s.rpeScore}</Pill>}
+                            </span>
+                          ))}
                         </div>
                       </div>
-
-                      <ChevronRight size={13} style={{ color: C.tx3 }} className="shrink-0 ml-1" />
-                    </div>
+                      <div style={{ width: 92, flex: "none", display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
+                        <span style={KICK}>Wellness</span>
+                        <WellnessBox score={a.wellnessScore} color={a.wellnessColor} />
+                      </div>
+                      <Chevron />
+                    </button>
                   ))}
                 </div>
               )}
-            </Card>
-          </motion.div>
+            </Section>
 
-          {/* ── Blessé / malade — réponse du wellness (aujourd'hui ou hier) ── */}
-          {wellnessInjuries.length > 0 && (
-            <motion.div variants={fadeUp}>
-              <SectionTitle n={nx()} icon={<AlertTriangle size={11} style={{ color: C.r }} />}>Blessé / malade</SectionTitle>
-              <Card>
-                {wellnessInjuries.map((a, i) => (
-                  <div
-                    key={`${a.athleteId}_${a.day}`}
-                    onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?vue=wellness`)}
-                    className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
-                    style={{
-                      borderBottom: i < wellnessInjuries.length - 1
-                        ? "1px solid rgba(231,211,168,0.1)"
-                        : undefined,
-                      borderLeft: `3px solid ${C.r}`,
-                    }}
-                  >
-                    <Avatar name={a.athleteName} color={C.r} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold" style={{ color: C.tx }}>{a.athleteName}</p>
-                      <p className="text-[11px] mt-0.5" style={{ color: C.tx2 }}>
-                        {a.day === localISO() ? "Aujourd'hui" : "Hier"} — {a.note}
-                      </p>
-                    </div>
-                    <ChevronRight size={13} style={{ color: C.tx3 }} />
-                  </div>
-                ))}
-              </Card>
-            </motion.div>
-          )}
+            {/* Blessé / malade — réponse du wellness (aujourd'hui ou hier) */}
+            {wellnessInjuries.length > 0 && (
+              <Section n={nx()} title="Blessé / malade">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {wellnessInjuries.map((a) => (
+                    <TintCard key={`${a.athleteId}_${a.day}`} color={C.rouge} onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?vue=wellness`)}>
+                      <Avatar name={a.athleteName} color={C.rouge} />
+                      <TwoLines title={a.athleteName} sub={`${a.day === localISO() ? "Aujourd’hui" : "Hier"} — ${a.note}`} />
+                      <Pill color={C.rouge}>Blessé</Pill>
+                      <Chevron />
+                    </TintCard>
+                  ))}
+                </div>
+              </Section>
+            )}
 
-          {/* ── À traiter — séances manquées ── */}
-          {missedSessions.length > 0 && (
-            <motion.div variants={fadeUp}>
-              <SectionTitle n={nx()} icon={<AlertTriangle size={11} style={{ color: C.o }} />}>À traiter</SectionTitle>
-              <Card>
-                {missedSessions.map((m, i) => (
-                  <div
-                    key={`${m.athleteId}_${m.date}`}
-                    onClick={() => navigate(`/coach/athletes/${m.athleteId}/planning`)}
-                    className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(251,146,60,0.05)] transition-colors"
-                    style={{
-                      borderBottom: i < missedSessions.length - 1
-                        ? "1px solid rgba(231,211,168,0.1)"
-                        : undefined,
-                      borderLeft: `3px solid ${C.o}`,
-                    }}
-                  >
-                    <Avatar name={m.athleteName} color={C.o} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold" style={{ color: C.tx }}>{m.athleteName}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                        {m.sessionName ?? "Séance"} — non réalisée hier
-                      </p>
-                    </div>
-                    <ChevronRight size={13} style={{ color: C.tx3 }} />
-                  </div>
-                ))}
-              </Card>
-            </motion.div>
-          )}
+            {/* À traiter — séances manquées */}
+            {missedSessions.length > 0 && (
+              <Section n={nx()} title="À traiter">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {missedSessions.map((m) => (
+                    <TintCard key={`${m.athleteId}_${m.date}`} color={C.o} onClick={() => navigate(`/coach/athletes/${m.athleteId}/planning`)}>
+                      <Avatar name={m.athleteName} color={C.o} />
+                      <TwoLines title={m.athleteName} sub={`${m.sessionName ?? "Séance"} — non réalisée hier`} />
+                      <Pill color={C.rouge}>Manqué</Pill>
+                      <Chevron />
+                    </TintCard>
+                  ))}
+                </div>
+              </Section>
+            )}
 
-          {/* ── Alertes wellness — écart à l'habitude de l'athlète ── */}
-          {wellnessAlerts.length > 0 && (
-            <motion.div variants={fadeUp}>
-              <SectionTitle n={nx()} icon={<Heart size={11} style={{ color: C.r }} />}>Alertes wellness</SectionTitle>
-              <Card>
-                {wellnessAlerts.map((a, i) => {
-                  const accent = a.assessment.level === "alerte" ? C.r : C.o;
-                  return (
-                    <div
-                      key={a.athleteId}
-                      onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?vue=wellness`)}
-                      className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
-                      style={{
-                        borderBottom: i < wellnessAlerts.length - 1
-                          ? "1px solid rgba(231,211,168,0.1)"
-                          : undefined,
-                        borderLeft: `3px solid ${accent}`,
-                      }}
-                    >
-                      <Avatar name={a.athleteName} color={accent} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold" style={{ color: C.tx }}>{a.athleteName}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                          {formatAssessment(a.assessment)}
-                          {a.assessment.twoConsecutive && " · 2 saisies de suite"}
-                        </p>
-                      </div>
-                      <ChevronRight size={13} style={{ color: C.tx3 }} />
-                    </div>
-                  );
-                })}
-              </Card>
-            </motion.div>
-          )}
-
-          {/* ── Séances à clôturer ── */}
-          {unfinished.length > 0 && (
-            <motion.div variants={fadeUp}>
-              <SectionTitle n={nx()} icon={<Flag size={11} style={{ color: C.tx3 }} />}>Séances à clôturer</SectionTitle>
-              <Card>
-                {unfinished.slice(0, 8).map((w, i) => {
-                  const name = athleteNameById.get(w.athleteId)
-                    ?? (w.athleteId === user?.id ? (profile?.full_name ?? "Moi") : "Athlète");
-                  return (
-                    <div
-                      key={w.id}
-                      onClick={() => navigate(`/coach/athletes/${w.athleteId}/planning`)}
-                      className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
-                      style={{
-                        borderBottom: i < Math.min(unfinished.length, 8) - 1
-                          ? "1px solid rgba(231,211,168,0.1)"
-                          : undefined,
-                        borderLeft: `3px solid ${C.y}`,
-                      }}
-                    >
-                      <Avatar name={name} color={C.y} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold" style={{ color: C.tx }}>{name}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                          {w.sessionName} — {format(new Date(w.scheduledDate + "T12:00:00"), "d MMM", { locale: fr })} ·{" "}
-                          {w.loggedSets} série{w.loggedSets > 1 ? "s" : ""} saisie{w.loggedSets > 1 ? "s" : ""}, jamais terminée
-                        </p>
-                      </div>
-                      <ChevronRight size={13} style={{ color: C.tx3 }} />
-                    </div>
-                  );
-                })}
-              </Card>
-            </motion.div>
-          )}
-
-          {/* ── Activité récente ── */}
-          <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Clock size={11} style={{ color: C.tx3 }} />}>Activité récente</SectionTitle>
-            <Card>
-              {loadActivity ? (
-                <SkeletonRows n={4} />
-              ) : activities.length === 0 ? (
-                <p className="text-[12px] text-center py-6" style={{ color: C.tx3 }}>
-                  Aucune activité récente
-                </p>
-              ) : (
-                <div>
-                  {activities.map((act, i) => {
-                    const cfg =
-                      act.type === "session"  ? { Icon: Dumbbell, bg: C.acS,  color: C.ac  } :
-                      act.type === "wellness" ? { Icon: Heart,    bg: C.gS,   color: C.g   } :
-                                                { Icon: Trophy,   bg: C.yS,   color: C.y   };
+            {/* Alertes wellness — écart à l'habitude de l'athlète */}
+            {wellnessAlerts.length > 0 && (
+              <Section n={nx()} title="Alertes wellness">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {wellnessAlerts.map((a) => {
+                    const alerte = a.assessment.level === "alerte";
+                    const accent = alerte ? C.rouge : C.o;
                     return (
-                      <div
+                      <TintCard key={a.athleteId} color={accent} onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?vue=wellness`)}>
+                        <Avatar name={a.athleteName} color={accent} />
+                        <TwoLines
+                          title={a.athleteName}
+                          sub={`${formatAssessment(a.assessment)}${a.assessment.twoConsecutive ? " · 2 saisies de suite" : ""}`}
+                        />
+                        <Pill color={accent}>{alerte ? "Alerte" : "À surveiller"}</Pill>
+                        <Chevron />
+                      </TintCard>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            {/* Séances à clôturer */}
+            {unfinished.length > 0 && (
+              <Section n={nx()} title="Séances à clôturer">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {unfinished.slice(0, 8).map((w) => {
+                    const name = athleteNameById.get(w.athleteId)
+                      ?? (w.athleteId === user?.id ? (profile?.full_name ?? "Moi") : "Athlète");
+                    return (
+                      <TintCard key={w.id} color={C.ac} borderAlpha={0.3} onClick={() => navigate(`/coach/athletes/${w.athleteId}/planning`)}>
+                        <Avatar name={name} />
+                        <TwoLines
+                          title={name}
+                          sub={<>
+                            <span style={{ color: C.ac }}>{w.sessionName}</span>
+                            {" — "}{format(new Date(w.scheduledDate + "T12:00:00"), "d MMM", { locale: fr })} ·{" "}
+                            {w.loggedSets} série{w.loggedSets > 1 ? "s" : ""} saisie{w.loggedSets > 1 ? "s" : ""}, jamais terminée
+                          </>}
+                        />
+                        <Chevron />
+                      </TintCard>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
+
+            <Section n={nx()} title="Activité récente">
+              {loadActivity ? <Loading n={4} /> : activities.length === 0 ? (
+                <Empty>Aucune activité récente</Empty>
+              ) : (
+                <div style={panel}>
+                  {activities.map((act, i) => {
+                    const dot = act.type === "session" ? C.g : act.type === "wellness" ? C.ac : C.b;
+                    return (
+                      <button
                         key={act.id}
+                        type="button"
                         onClick={() => navigate(`/coach/athletes/${act.athleteId}/planning`)}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+                        className="hover:bg-[rgba(255,255,255,0.02)]"
                         style={{
-                          borderBottom: i < activities.length - 1
-                            ? "1px solid rgba(231,211,168,0.08)"
-                            : undefined,
+                          display: "flex", alignItems: "center", gap: 14, padding: "13px 18px", width: "100%",
+                          background: "transparent", border: "none", borderBottom: i < activities.length - 1 ? ROW_LINE : "none",
+                          textAlign: "left", fontFamily: "inherit", cursor: "pointer",
                         }}
                       >
-                        <div
-                          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: cfg.bg }}
-                        >
-                          <cfg.Icon size={14} style={{ color: cfg.color }} strokeWidth={2} />
-                        </div>
-                        <p className="flex-1 text-[12px] truncate" style={{ color: C.tx2 }}>{act.label}</p>
-                        <p className="text-[11px] shrink-0" style={{ color: C.tx3 }}>
+                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: dot, flex: "none" }} />
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{act.label}</span>
+                        <span style={{ fontSize: 12, color: C.tx3, whiteSpace: "nowrap" }}>
                           {formatDistanceToNow(act.updatedAt, { locale: fr, addSuffix: true })}
-                        </p>
-                      </div>
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
               )}
-            </Card>
-          </motion.div>
+            </Section>
 
-          {/* Self as athlete shortcut */}
-          {isCoachAthlete && canCoachSelf && user && (
-            <motion.div variants={fadeUp}>
-              <SectionTitle icon={<Dumbbell size={11} style={{ color: C.tx3 }} />}>Mon programme</SectionTitle>
-              <button
-                onClick={() => navigate(`/coach/athletes/${user.id}/planning`)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-colors hover:border-[rgba(255,201,51,0.5)]"
-                style={{ background: C.acS, border: `1px solid ${C.ac}40`, fontFamily: "inherit" }}
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
-                  style={{ background: C.ac + "22", color: C.ac, border: `1.5px solid ${C.ac}40` }}
-                >
-                  {initials(profile?.full_name ?? "?")}
-                </div>
-                <div>
-                  <p className="text-[13px] font-bold" style={{ color: C.tx }}>{profile?.full_name}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: C.ac }}>Mon programme personnel</p>
-                </div>
-                <ChevronRight size={14} style={{ color: C.ac }} className="ml-auto" />
-              </button>
-            </motion.div>
-          )}
+            {/* Raccourci vers son propre programme (coach-athlète) */}
+            {isCoachAthlete && canCoachSelf && user && (
+              <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <TintCard color={C.ac} borderAlpha={0.38} onClick={() => navigate(`/coach/athletes/${user.id}/planning`)}>
+                  <Avatar name={profile?.full_name ?? "?"} color={C.ac} />
+                  <TwoLines title={profile?.full_name} sub={<span style={{ color: C.ac }}>Mon programme personnel</span>} />
+                  <Chevron />
+                </TintCard>
+              </section>
+            )}
 
-          {/* Empty state */}
-          {athletes.length === 0 && !isCoachAthlete && (
-            <motion.div variants={fadeUp}>
+            {athletes.length === 0 && !isCoachAthlete && (
               <EmptyState
                 icon={Users}
                 title="Aucun athlète pour l'instant"
                 description={`Code coach : ${profile?.coach_code ?? "—"} — partage-le pour que tes athlètes te rejoignent.`}
                 cta={{ label: "Gérer les athlètes", onClick: () => navigate("/coach/athletes") }}
               />
-            </motion.div>
-          )}
-        </motion.div>
+            )}
+          </div>
 
-        {/* ── Right column (1/3) ── */}
-        <motion.div variants={stagger} initial="hidden" animate="show" className="flex flex-col gap-6">
+          {/* ── Colonne droite (1/3) ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 32, minWidth: 0 }}>
 
-          {/* ── À anticiper ── */}
-          <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<CalendarDays size={11} style={{ color: C.tx3 }} />}>À anticiper</SectionTitle>
-            <Card>
-              {loadMargin ? (
-                <SkeletonRows n={3} />
-              ) : endingSoon.length === 0 ? (
-                <p className="text-[11px] text-center py-5" style={{ color: C.tx3 }}>
-                  Aucun cycle se terminant bientôt
-                </p>
+            <Section n={nx()} title="À anticiper">
+              {loadMargin ? <Loading /> : endingSoon.length === 0 ? (
+                <Empty>Aucun cycle ne se termine bientôt</Empty>
               ) : (
-                <div>
-                  {endingSoon.map((c, i) => {
-                    const urgent = c.daysLeft <= 7;
-                    const color  = urgent ? C.r : C.o;
-                    return (
-                      <div
-                        key={c.cycleId}
-                        onClick={() => navigate(`/coach/athletes/${c.athleteId}/planning`)}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.03)]"
-                        style={{
-                          borderBottom: i < endingSoon.length - 1
-                            ? "1px solid rgba(231,211,168,0.1)"
-                            : undefined,
-                        }}
-                      >
-                        {/* Icon */}
-                        <div
-                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: color + "18" }}
-                        >
-                          <Layers size={15} style={{ color }} strokeWidth={2} />
-                        </div>
-
-                        {/* Text */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-bold truncate" style={{ color: C.tx }}>
-                            {c.athleteName} · fin du cycle
-                          </p>
-                          <p className="text-[10px] truncate mt-0.5" style={{ color: C.tx3 }}>
-                            Dans {c.daysLeft}j · jusqu'au {format(parseISO(c.endDate), "d MMM", { locale: fr })}
-                          </p>
-                        </div>
-
-                        {/* Action */}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/coach/athletes/${c.athleteId}/planning`); }}
-                          className="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors"
-                          style={{
-                            color,
-                            borderColor: color + "50",
-                            background:  color + "12",
-                            fontFamily: "inherit",
-                          }}
-                          onMouseEnter={(el) => ((el.currentTarget as HTMLElement).style.background = color + "22")}
-                          onMouseLeave={(el) => ((el.currentTarget as HTMLElement).style.background = color + "12")}
-                        >
-                          Planifier
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          </motion.div>
-
-          {/* ── Records & tests ── */}
-          <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Medal size={11} style={{ color: C.tx3 }} />}>Records & tests</SectionTitle>
-            <Card>
-              {loadRecords ? (
-                <SkeletonRows n={3} />
-              ) : records.length === 0 ? (
-                <p className="text-[11px] text-center py-5" style={{ color: C.tx3 }}>
-                  Aucun résultat récent
-                </p>
-              ) : (
-                <div>
-                  {records.map((r, i) => (
-                    <div
-                      key={r.id}
-                      onClick={() => navigate(`/coach/athletes/${r.athleteId}/tests`)}
-                      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
-                      style={{
-                        borderBottom: i < records.length - 1
-                          ? "1px solid rgba(231,211,168,0.08)"
-                          : undefined,
-                      }}
-                    >
-                      <span className="shrink-0 leading-none flex items-center justify-center w-[18px] h-[18px]">
-                        {r.coachValidated === true
-                          ? <Trophy size={16} style={{ color: C.y }} />
-                          : r.coachValidated === null
-                            ? <Circle size={14} style={{ color: C.b }} />
-                            : <BarChart3 size={16} style={{ color: C.tx3 }} />}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold truncate" style={{ color: C.tx }}>{r.metricName}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>{r.athleteName}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-[13px] font-extrabold leading-none" style={{ color: C.ac }}>
-                          {r.value}
-                          <span className="text-[10px] font-normal ml-0.5" style={{ color: C.tx3 }}>{r.unit}</span>
-                        </p>
-                        <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                          {format(parseISO(r.date), "dd/MM")}
-                        </p>
-                      </div>
-                    </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {endingSoon.map((c) => (
+                    <TintCard key={c.cycleId} color={C.ac} borderAlpha={0.38} gap={14} pad="14px 16px 14px 19px" onClick={() => navigate(`/coach/athletes/${c.athleteId}/planning`)}>
+                      <TwoLines
+                        title={`${c.athleteName} · fin du cycle`}
+                        sub={<>
+                          <span style={{ color: C.ac }}>Dans <span style={MONO}>{c.daysLeft}</span> j</span>
+                          {" · jusqu’au "}{format(parseISO(c.endDate), "d MMM", { locale: fr })}
+                        </>}
+                      />
+                      <span style={{
+                        height: 34, display: "inline-flex", alignItems: "center", padding: "0 14px", borderRadius: 8, flex: "none",
+                        background: C.ac, color: C.ink, fontWeight: 600, fontSize: 14, whiteSpace: "nowrap",
+                      }}>Planifier</span>
+                    </TintCard>
                   ))}
                 </div>
               )}
-            </Card>
-          </motion.div>
+            </Section>
 
-          {/* ── Compétitions ── */}
-          <motion.div variants={fadeUp}>
-            <SectionTitle n={nx()} icon={<Trophy size={11} style={{ color: C.tx3 }} />}>Compétitions</SectionTitle>
-            <Card>
-              {loadCompet ? (
-                <SkeletonRows n={3} />
-              ) : competitions.length === 0 ? (
-                <p className="text-[11px] text-center py-5" style={{ color: C.tx3 }}>
-                  Aucune compétition dans les 30 jours
-                </p>
+            <Section n={nx()} title="Records & tests">
+              {loadRecords ? <Loading /> : records.length === 0 ? (
+                <Empty>Aucun résultat récent</Empty>
               ) : (
-                <div>
-                  {[...compA, ...compBC].map((c, i, arr) => {
-                    const meta   = COMPETITION_META[c.type];
-                    const isUrgent = compA.includes(c);
-                    const color  = isUrgent ? C.r : C.tx3;
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => navigate(`/coach/athletes/${c.athlete_id}/planning`)}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
-                        style={{
-                          borderBottom: i < arr.length - 1
-                            ? "1px solid rgba(231,211,168,0.08)"
-                            : undefined,
-                          background: isUrgent ? C.rS : "transparent",
-                        }}
-                      >
-                        <span className="text-[10px] font-extrabold shrink-0 w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: meta.color + "18", color: meta.color }}>{meta.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-bold truncate" style={{ color: C.tx }}>{c.name}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: C.tx3 }}>
-                            {c.athleteName} · {priorityLabel(c.priority)}
-                          </p>
-                        </div>
-                        <span
-                          className="text-[12px] font-extrabold shrink-0"
-                          style={{ color }}
-                        >
-                          J-{c.daysUntil}
+                <div style={{ background: alpha(C.ame, 0.1), border: `1px solid ${alpha(C.ame, 0.3)}`, borderRadius: 14, overflow: "hidden" }}>
+                  {records.map((r, i) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => navigate(`/coach/athletes/${r.athleteId}/tests`)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", width: "100%",
+                        background: "transparent", border: "none", borderBottom: i < records.length - 1 ? ROW_LINE : "none",
+                        color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: "pointer",
+                      }}
+                    >
+                      {r.coachValidated === true ? (
+                        <span aria-label="Validé" style={{ width: 26, height: 26, flex: "none", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: C.g }}>
+                          <Check size={15} strokeWidth={2.5} style={{ color: C.ink }} />
                         </span>
+                      ) : (
+                        <span aria-label="À valider" style={{ width: 26, height: 26, boxSizing: "border-box", flex: "none", borderRadius: 8, border: `1.5px dashed ${C.ame}`, background: alpha(C.ame, 0.1) }} />
+                      )}
+                      <TwoLines title={r.metricName} sub={<span style={{ color: C.tx3 }}>{r.athleteName}</span>} />
+                      <div style={{ textAlign: "right", flex: "none" }}>
+                        <div style={{ ...MONO, fontSize: 20, lineHeight: 1.15, color: C.ac, whiteSpace: "nowrap" }}>
+                          {r.value}<span style={{ fontSize: 11, color: C.tx2 }}> {r.unit}</span>
+                        </div>
+                        <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{format(parseISO(r.date), "dd/MM")}</div>
                       </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Section>
+
+            <Section n={nx()} title="Compétitions">
+              {loadCompet ? <Loading /> : competitions.length === 0 ? (
+                <Empty>Aucune compétition dans les 30 jours</Empty>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[...compA, ...compBC].map((c) => {
+                    const urgent = compA.includes(c);
+                    const prio = c.priority === "A" ? C.rouge : c.priority === "B" ? C.o : null;
+                    const body = (
+                      <>
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
+                          <div style={{ fontSize: 12, color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.athleteName}</div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "none" }}>
+                          {c.priority && <Pill color={prio}>Importance {c.priority}</Pill>}
+                          <span style={{ ...MONO, fontSize: urgent ? 22 : 17, lineHeight: 1, color: urgent ? C.rouge : C.tx, minWidth: 52, textAlign: "right" }}>J-{c.daysUntil}</span>
+                        </div>
+                      </>
+                    );
+                    return urgent ? (
+                      <TintCard key={c.id} color={C.rouge} gap={12} pad="14px 16px 14px 19px" onClick={() => navigate(`/coach/athletes/${c.athlete_id}/planning`)}>
+                        {body}
+                      </TintCard>
+                    ) : (
+                      <button key={c.id} type="button" onClick={() => navigate(`/coach/athletes/${c.athlete_id}/planning`)} style={{
+                        ...panel, display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%",
+                        color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: "pointer",
+                      }}>{body}</button>
                     );
                   })}
                 </div>
               )}
-            </Card>
-          </motion.div>
-
-        </motion.div>
+            </Section>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
-
-// ── Action counter tile ────────────────────────────────────────────────────────
-
-interface ActionCounterProps {
-  icon:     React.ReactNode;
-  label:    string;
-  count:    number;
-  loading:  boolean;
-  color:    string;
-  onClick?: () => void;
-}
-
-function ActionCounter({ icon, label, count, loading, color, onClick }: ActionCounterProps) {
-  return (
-    <div
-      onClick={onClick}
-      className="flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl border transition-all cursor-pointer"
-      style={{
-        background:  count > 0 ? color + "12" : C.s1,
-        borderColor: count > 0 ? color + "45" : "rgba(231,211,168,0.15)",
-      }}
-    >
-      <span className="leading-none flex items-center justify-center">{icon}</span>
-      {loading ? (
-        <Skeleton className="h-7 w-10 rounded bg-agon-s2" />
-      ) : (
-        <p className="text-[26px] font-extrabold leading-none" style={{ color: count > 0 ? color : C.tx3 }}>
-          {count}
-        </p>
-      )}
-      <p className="text-[9px] font-bold uppercase tracking-wide text-center leading-tight" style={{ color: C.tx3 }}>
-        {label}
-      </p>
     </div>
   );
 }
