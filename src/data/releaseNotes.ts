@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-avis-app-etoiles",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Avis sur l'app : les étoiles sont de retour",
+    summary: "Dans le formulaire « Donne ton avis » de l'athlète, les cinq étoiles de la note étaient devenues des boutons vides, et l'écran de remerciement n'avait plus d'icône. Elles s'affichent de nouveau et se remplissent en or jusqu'à la note choisie.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Tes athlètes voient à nouveau les cinq étoiles pour noter l'app.",
+          "Après l'envoi, une coche verte confirme que l'avis est bien parti.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-pastille-importance-competitions",
     date: "2026-11-14",
     kind: "fix",

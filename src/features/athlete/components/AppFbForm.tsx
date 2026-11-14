@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CircleCheck, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import type { AppFeedbackEntry } from "@/features/shared/types/athlete";
@@ -28,7 +29,7 @@ export default function AppFbForm({ onClose }: Props) {
 
   if (done) return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
-      <div className="text-[40px]"></div>
+      <CircleCheck size={40} strokeWidth={1.5} className="text-agon-succes" aria-hidden />
       <div className="text-[18px] font-extrabold text-agon-succes">Merci !</div>
       <div className="text-[13px] text-agon-tx2">Ton avis nous aide à améliorer l'app.</div>
     </div>
@@ -47,12 +48,16 @@ export default function AppFbForm({ onClose }: Props) {
             <button
               key={n}
               onClick={() => setRating(n)}
+              aria-label={`${n} sur 5`}
+              aria-pressed={rating === n}
               className={cn(
-                "cursor-pointer border-none bg-transparent px-1.5 py-1 text-[32px] [transition:all_0.15s]",
-                rating && n <= rating ? "opacity-100" : "opacity-30",
+                "cursor-pointer border-none bg-transparent px-1.5 py-1 [transition:all_0.15s]",
+                rating && n <= rating ? "text-agon-accent" : "text-agon-tx3 opacity-50",
                 rating === n ? "scale-[1.2]" : "scale-100",
               )}
-            ></button>
+            >
+              <Star size={32} strokeWidth={1.5} fill={rating && n <= rating ? "currentColor" : "none"} />
+            </button>
           ))}
         </div>
         <div className="mt-1.5 text-center text-[12px] text-agon-tx3">
