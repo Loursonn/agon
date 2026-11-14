@@ -4,21 +4,22 @@
  * All use shadcn Skeleton (animate-pulse) with dark theme colors.
  */
 import { Skeleton } from "@/components/ui/skeleton";
-import { C } from "@/lib/theme";
+
+const PANEL = "border border-agon-tx/[0.06] bg-agon-s1";
 
 // ── PageSkeleton ──────────────────────────────────────────────────────────────
 /** Full-page loading state — header + 3 content blocks */
 export function PageSkeleton() {
   return (
-    <div style={{ padding: "24px 24px 48px", maxWidth: 1100, margin: "0 auto" }}>
-      <Skeleton className="h-7 w-48 mb-2" style={{ background: "rgba(255,255,255,0.06)" }} />
-      <Skeleton className="h-4 w-32 mb-8" style={{ background: "rgba(255,255,255,0.04)" }} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginBottom: 32 }}>
+    <div className="mx-auto max-w-[1100px] px-6 pb-12 pt-6">
+      <Skeleton className="mb-2 h-7 w-48 bg-agon-tx/[0.06]" />
+      <Skeleton className="mb-8 h-4 w-32 bg-agon-tx/[0.04]" />
+      <div className="mb-8 grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
       </div>
-      <Skeleton className="h-4 w-24 mb-3" style={{ background: "rgba(255,255,255,0.04)" }} />
+      <Skeleton className="mb-3 h-4 w-24 bg-agon-tx/[0.04]" />
       <ListSkeleton rows={5} />
     </div>
   );
@@ -28,17 +29,10 @@ export function PageSkeleton() {
 /** Single metric/info card loading state */
 export function CardSkeleton() {
   return (
-    <div
-      style={{
-        padding: "16px",
-        borderRadius: 6,
-        border: "1px solid rgba(255,255,255,0.06)",
-        background: C.s1,
-      }}
-    >
-      <Skeleton className="h-3 w-20 mb-3" style={{ background: "rgba(255,255,255,0.06)" }} />
-      <Skeleton className="h-8 w-16 mb-2" style={{ background: "rgba(255,255,255,0.08)" }} />
-      <Skeleton className="h-3 w-28" style={{ background: "rgba(255,255,255,0.04)" }} />
+    <div className={`${PANEL} rounded-[6px] p-4`}>
+      <Skeleton className="mb-3 h-3 w-20 bg-agon-tx/[0.06]" />
+      <Skeleton className="mb-2 h-8 w-16 bg-agon-tx/[0.08]" />
+      <Skeleton className="h-3 w-28 bg-agon-tx/[0.04]" />
     </div>
   );
 }
@@ -46,43 +40,24 @@ export function CardSkeleton() {
 // ── TableSkeleton ─────────────────────────────────────────────────────────────
 /** Table/list with header row loading state */
 export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
+  const grid = { gridTemplateColumns: `repeat(${cols}, 1fr)` };
   return (
-    <div
-      style={{
-        borderRadius: 6,
-        border: "1px solid rgba(255,255,255,0.06)",
-        background: C.s1,
-        overflow: "hidden",
-      }}
-    >
+    <div className={`${PANEL} overflow-hidden rounded-[6px]`}>
       {/* Header */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gap: 12,
-          padding: "12px 16px",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
+      <div className="grid gap-3 border-b border-agon-tx/[0.06] px-4 py-3" style={grid}>
         {Array.from({ length: cols }).map((_, i) => (
-          <Skeleton key={i} className="h-3" style={{ background: "rgba(255,255,255,0.06)", width: i === 0 ? "70%" : "50%" }} />
+          <Skeleton key={i} className={`h-3 bg-agon-tx/[0.06] ${i === 0 ? "w-[70%]" : "w-1/2"}`} />
         ))}
       </div>
       {/* Rows */}
       {Array.from({ length: rows }).map((_, r) => (
         <div
           key={r}
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            gap: 12,
-            padding: "12px 16px",
-            borderBottom: r < rows - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-          }}
+          className={`grid gap-3 px-4 py-3 ${r < rows - 1 ? "border-b border-agon-tx/[0.04]" : ""}`}
+          style={grid}
         >
           {Array.from({ length: cols }).map((_, c) => (
-            <Skeleton key={c} className="h-4" style={{ background: "rgba(255,255,255,0.05)", width: c === 0 ? "80%" : "60%" }} />
+            <Skeleton key={c} className={`h-4 bg-agon-tx/[0.05] ${c === 0 ? "w-4/5" : "w-3/5"}`} />
           ))}
         </div>
       ))}
@@ -94,17 +69,10 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
 /** Chart/graph area loading state */
 export function ChartSkeleton({ height = 200 }: { height?: number }) {
   return (
-    <div
-      style={{
-        borderRadius: 6,
-        border: "1px solid rgba(255,255,255,0.06)",
-        background: C.s1,
-        padding: 16,
-      }}
-    >
-      <Skeleton className="h-3 w-28 mb-2" style={{ background: "rgba(255,255,255,0.06)" }} />
-      <Skeleton className="h-3 w-16 mb-4" style={{ background: "rgba(255,255,255,0.04)" }} />
-      <Skeleton style={{ height, borderRadius: 4, background: "rgba(255,255,255,0.05)" }} />
+    <div className={`${PANEL} rounded-[6px] p-4`}>
+      <Skeleton className="mb-2 h-3 w-28 bg-agon-tx/[0.06]" />
+      <Skeleton className="mb-4 h-3 w-16 bg-agon-tx/[0.04]" />
+      <Skeleton className="rounded-[4px] bg-agon-tx/[0.05]" style={{ height }} />
     </div>
   );
 }
@@ -113,27 +81,13 @@ export function ChartSkeleton({ height = 200 }: { height?: number }) {
 /** Vertical list of items loading state */
 export function ListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="flex flex-col gap-2">
       {Array.from({ length: rows }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "12px 16px",
-            borderRadius: 4,
-            border: "1px solid rgba(255,255,255,0.06)",
-            background: C.s1,
-          }}
-        >
-          <Skeleton
-            className="rounded-full shrink-0"
-            style={{ width: 36, height: 36, background: "rgba(255,255,255,0.06)" }}
-          />
-          <div style={{ flex: 1 }}>
-            <Skeleton className="h-3.5 mb-1.5" style={{ background: "rgba(255,255,255,0.07)", width: `${60 + (i % 3) * 10}%` }} />
-            <Skeleton className="h-3" style={{ background: "rgba(255,255,255,0.04)", width: `${40 + (i % 2) * 15}%` }} />
+        <div key={i} className={`${PANEL} flex items-center gap-3 rounded-[4px] px-4 py-3`}>
+          <Skeleton className="size-9 shrink-0 rounded-full bg-agon-tx/[0.06]" />
+          <div className="flex-1">
+            <Skeleton className="mb-1.5 h-3.5 bg-agon-tx/[0.07]" style={{ width: `${60 + (i % 3) * 10}%` }} />
+            <Skeleton className="h-3 bg-agon-tx/[0.04]" style={{ width: `${40 + (i % 2) * 15}%` }} />
           </div>
         </div>
       ))}
