@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-staff-semaine-entiere",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Ton staff voit toute la semaine d'un coup",
+    summary: "Dans l'onglet Programme de l'espace staff, les 7 jours tiennent à l'écran sans défiler sur le côté.",
+    sections: [
+      {
+        title: "Pour ton staff",
+        points: [
+          "Sur ordinateur, l'onglet Programme affiche la semaine entière ; le détail des accès s'ouvre avec le bouton « Tes accès ».",
+          "Les séances de la semaine sont plus lisibles : titre sur toute la largeur, statut juste en dessous, couleurs des tests et compétitions comme dans le reste d'Agon.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-competitions-semaine-ordinateur",
     date: "2026-11-14",
     kind: "fix",

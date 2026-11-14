@@ -4,8 +4,9 @@
  * RLS filtre de toute façon côté base : un onglet masqué ici n'est qu'un
  * confort, jamais la protection.
  */
+import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth, type Profile } from "@/hooks/useAuth";
 import { AthleteProvider } from "@/features/shared/context/AthleteContext";
@@ -72,8 +73,17 @@ function AccessTab({ link }: { link: MyStaffAthlete }) {
 
 const LEVEL_TXT = { write: "Écriture", read: "Lecture", none: "Non partagé" } as const;
 
-/** Ordinateur (planche CoachOrdiBStaffFiche) : « Tes accès » toujours visibles à droite. */
-function AccessAside({ link }: { link: MyStaffAthlete }) {
+/**
+ * Onglets dont le contenu est un calendrier de 7 jours (Programme) : le panneau
+ * « Tes accès » s'y replie derrière un bouton pour que la semaine tienne sans défiler.
+ */
+const WIDE_TABS: ReadonlySet<string> = new Set(["seances"]);
+
+/**
+ * Ordinateur (planche CoachOrdiBStaffFiche) : « Tes accès » à droite. `floating` :
+ * panneau déroulé sous le bouton « Tes accès » des onglets larges.
+ */
+function AccessAside({ link, floating }: { link: MyStaffAthlete; floating?: boolean }) {
   const navigate = useNavigate();
   const revoke = useRevokeStaffLink();
   const first = link.athleteFirstName ?? link.athleteName;
@@ -86,7 +96,12 @@ function AccessAside({ link }: { link: MyStaffAthlete }) {
     </div>
   );
   return (
-    <aside style={{ position: "sticky", top: 180, background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: "18px 20px" }}>
+    <aside style={{
+      ...(floating
+        ? { position: "absolute", top: "calc(100% + 8px)", right: 0, width: 340, zIndex: 8, boxShadow: "0 18px 40px " + alpha(C.bg, 0.6) }
+        : { position: "sticky", top: 180 }),
+      background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: "18px 20px", boxSizing: "border-box",
+    }}>
       <span style={{ ...KICK, color: C.tx2 }}>Tes accès sur {first}</span>
       <div style={{ marginTop: 10 }}>
         {STAFF_DOMAINS.map((d) => row(d, DOMAIN_LABEL[d], link.permissions[d]))}
@@ -164,6 +179,7 @@ export default function StaffAthleteArea() {
   const link = links.find((l) => l.athleteId === athleteId);
   const { data: athleteProfile } = useStaffAthleteProfile(link ? athleteId : undefined);
   const isMobile = useIsMobile();
+  const [accessOpen, setAccessOpen] = useState(false);
 
   if (isLoading) return <div style={{ padding: 24, fontSize: 13, color: C.tx3 }}>Chargement…</div>;
   if (!link || !user) {
@@ -181,6 +197,9 @@ export default function StaffAthleteArea() {
   const tabs = TABS.filter((t) => canRead(link.permissions, t.key));
   const requested = params.get("tab");
   const active = requested === "acces" ? "acces" : tabs.find((t) => t.key === requested)?.key ?? tabs[0]?.key ?? "acces";
+  // Calendrier de la semaine : pleine largeur, accès repliés derrière un bouton.
+  const wide = !isMobile && WIDE_TABS.has(active);
+  const aside = !isMobile && active !== "acces" && !wide;
 
   return (
     <AthleteProvider
@@ -244,21 +263,38 @@ export default function StaffAthleteArea() {
           </div>
         </div>
       </div>
-      <div style={{ maxWidth: 1248, margin: "0 auto", boxSizing: "border-box", padding: isMobile ? "16px 16px 60px" : "28px 24px 48px", display: !isMobile && active !== "acces" ? "grid" : "block", gridTemplateColumns: "minmax(0, 1fr) 340px", gap: 24, alignItems: "start" }}>
+      <div style={{ maxWidth: 1248, margin: "0 auto", boxSizing: "border-box", padding: isMobile ? "16px 16px 60px" : "28px 24px 48px", display: aside ? "grid" : "block", gridTemplateColumns: "minmax(0, 1fr) 340px", gap: 24, alignItems: "start" }}>
         {active === "acces" ? (
           <AccessTab link={link} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
             {!isMobile && (
-              <PageHead
-                title={TABS.find((t) => t.key === active)?.label ?? DOMAIN_LABEL[active]}
-                kicker={canWrite(link.permissions, active) ? "Lecture et écriture" : "Lecture seule"}
-              />
+              <div style={{ position: "relative" }}>
+                <PageHead
+                  title={TABS.find((t) => t.key === active)?.label ?? DOMAIN_LABEL[active]}
+                  kicker={canWrite(link.permissions, active) ? "Lecture et écriture" : "Lecture seule"}
+                  actions={wide ? (
+                    <button
+                      type="button"
+                      aria-expanded={accessOpen}
+                      onClick={() => setAccessOpen((o) => !o)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 8, height: 36, padding: "0 14px", borderRadius: 10, cursor: "pointer",
+                        fontFamily: "inherit", fontSize: 13, color: C.tx, background: accessOpen ? C.s2 : C.s1, border: "1px solid " + C.brd,
+                      }}
+                    >
+                      Tes accès sur {link.athleteFirstName ?? link.athleteName}
+                      <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.tx2} strokeWidth="1.6" strokeLinecap="square" style={{ transform: accessOpen ? "rotate(180deg)" : undefined }}><path d="M6 9L12 15L18 9" /></svg>
+                    </button>
+                  ) : undefined}
+                />
+                {wide && accessOpen && <AccessAside link={link} floating />}
+              </div>
             )}
             <DomainContent domain={active} link={link} userId={user.id} />
           </div>
         )}
-        {!isMobile && active !== "acces" && <AccessAside link={link} />}
+        {aside && <AccessAside link={link} />}
       </div>
     </AthleteProvider>
   );

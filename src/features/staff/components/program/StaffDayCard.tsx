@@ -3,7 +3,8 @@
  * (blocs, exercices, séries × reps, charge, RIR), séances énergie, tests,
  * compétitions, et les fiches posées sur ce jour.
  */
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { TYPE_COLOR } from "@/lib/peps";
 import type { UnifiedCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
 import type { ProgSession } from "@/features/coach/components/programmation/types";
@@ -34,11 +35,10 @@ function WorkoutBlock({ event, session, occurrence, athleteId }: {
   const blocs = [...(session?.blocs ?? [])].sort((a, b) => a.sort_order - b.sort_order);
   const ficheAtts = [...(session?.fiches ?? []), ...blocs.flatMap((b) => b.fiches ?? [])];
   return (
-    <div style={{ borderLeft: "3px solid " + C.ac, background: C.s2, borderRadius: 4, padding: "8px 10px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: C.tx, flex: 1, minWidth: 0 }}>{event.title}</span>
-        <StatusBadge status={event.status} rpe={event.rpe} />
-      </div>
+    <div style={{ borderLeft: "3px solid " + C.ac, background: C.s2, borderRadius: 8, padding: "8px 10px" }}>
+      {/* Titre sur toute la largeur, statut dessous : la semaine tient en 7 colonnes étroites. */}
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, lineHeight: 1.3 }}>{event.title}</div>
+      <div style={{ marginTop: 2 }}><StatusBadge status={event.status} rpe={event.rpe} /></div>
       {session && occurrence > 1 && (
         <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>Séance n° {occurrence}</div>
       )}
@@ -85,12 +85,10 @@ function OtherEvent({ event, onOpenEnergy }: { event: UnifiedCalendarEvent; onOp
     return (
       <button
         onClick={() => event.energySessionId && onOpenEnergy(event.energySessionId)}
-        style={{ textAlign: "left", width: "100%", borderLeft: "3px solid " + kc, background: C.s2, borderRadius: 4, padding: "8px 10px", border: "none", borderLeftStyle: "solid", cursor: event.energySessionId ? "pointer" : "default", fontFamily: "inherit" }}
+        style={{ textAlign: "left", width: "100%", background: C.s2, borderRadius: 8, padding: "8px 10px", border: "none", borderLeft: "3px solid " + kc, cursor: event.energySessionId ? "pointer" : "default", fontFamily: "inherit" }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: C.tx, flex: 1, minWidth: 0 }}>{event.title}</span>
-          <StatusBadge status={event.status} rpe={event.rpe} />
-        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, lineHeight: 1.3 }}>{event.title}</div>
+        <div style={{ marginTop: 2 }}><StatusBadge status={event.status} rpe={event.rpe} /></div>
         <div style={{ fontSize: 11, color: kc, marginTop: 2 }}>
           {KIND_LABEL[event.sessionKind ?? ""] ?? "Énergie"}{event.energySessionId && <span style={{ color: C.tx3 }}> · voir le détail ›</span>}
         </div>
@@ -98,9 +96,9 @@ function OtherEvent({ event, onOpenEnergy }: { event: UnifiedCalendarEvent; onOp
     );
   }
   const meta: Record<string, { color: string; prefix: string }> = {
-    test: { color: H.cuivre, prefix: "Test" },
-    competition: { color: C.r, prefix: "Compétition" },
-    free_activity: { color: C.pat, prefix: event.sport ?? "Activité" },
+    test: { color: TYPE_COLOR.test, prefix: "Test" },
+    competition: { color: TYPE_COLOR.competition, prefix: "Compétition" },
+    free_activity: { color: TYPE_COLOR.libre, prefix: event.sport ?? "Activité" },
     life_event: { color: C.tx3, prefix: "Événement" },
   };
   const m = meta[event.type] ?? { color: C.tx3, prefix: "" };
@@ -109,7 +107,7 @@ function OtherEvent({ event, onOpenEnergy }: { event: UnifiedCalendarEvent; onOp
       : event.type === "free_activity" && event.duration ? `${event.duration} min`
         : event.type === "test" ? (event.completed ? "Fait" : "Prévu") : "";
   return (
-    <div style={{ borderLeft: "3px solid " + m.color, background: C.s2, borderRadius: 4, padding: "7px 10px" }}>
+    <div style={{ borderLeft: "3px solid " + m.color, background: C.s2, borderRadius: 8, padding: "7px 10px" }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: m.color, textTransform: "uppercase", letterSpacing: "0.4px" }}>{m.prefix}</div>
       <div style={{ fontSize: 12.5, fontWeight: 700, color: C.tx }}>{event.title}</div>
       {detail && <div style={{ fontSize: 11, color: C.tx3 }}>{detail}</div>}
@@ -144,13 +142,13 @@ export function StaffDayCard(p: DayCardProps) {
 
   return (
     <div style={{
-      background: C.s1, border: "1px solid " + (p.isToday ? C.ac + "70" : C.brd), borderRadius: 6,
+      background: C.s1, border: "1px solid " + (p.isToday ? C.ac + "70" : C.brd), borderRadius: 12,
       padding: 10, display: "flex", flexDirection: "column", gap: 8, minWidth: 0,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span style={{ fontSize: 11, fontWeight: 800, color: p.isToday ? C.ac : C.tx3, letterSpacing: "0.5px" }}>{DAY[p.date.getDay()]}</span>
-        <span style={{ fontSize: 15, fontWeight: 800, color: p.isToday ? C.ac : C.tx }}>{p.date.getDate()}</span>
-        {p.isToday && <span style={{ fontSize: 9, fontWeight: 800, color: C.ac, border: "1px solid " + C.ac + "60", borderRadius: 3, padding: "0 4px" }}>AUJOURD'HUI</span>}
+        {/* Aujourd'hui : bordure et date en or (plus de badge texte, qui débordait de la colonne). */}
+        <span title={p.isToday ? "Aujourd'hui" : undefined} style={{ fontSize: 15, fontWeight: 800, color: p.isToday ? C.ac : C.tx }}>{p.date.getDate()}</span>
         <span style={{ flex: 1 }} />
         {p.canAddFiche && (
           <button
