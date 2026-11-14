@@ -5,14 +5,16 @@
  */
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useEnergySessions } from "@/features/shared/hooks/useEnergySessions";
 import { useSpecificSports, usePhysicalQualities } from "@/features/shared/hooks/useSpecificTaxonomy";
 import SpecificSessionCard from "./SpecificSessionCard";
 import type { EnergySessionRow } from "@/types/energy";
 
-const ORANGE = H.miel;
+/** Couleur par défaut d'un sport sans couleur (donnée : reste en style). */
+const SPORT_FALLBACK = C.o;
 
 type FilterTab = "all" | "mine" | "verified";
 
@@ -22,14 +24,32 @@ const FILTER_TABS: { value: FilterTab; label: string }[] = [
   { value: "verified", label: "Vérifiées" },
 ];
 
+/** Puce de qualité active, par teinte (classes écrites en entier pour Tailwind). */
+const CHIP_ON = {
+  alerte: "border-agon-alerte bg-agon-alerte/[0.094] text-agon-alerte",
+  accent: "border-agon-accent bg-agon-accent/[0.094] text-agon-accent",
+  tx2:    "border-agon-tx2 bg-agon-tx2/[0.094] text-agon-tx2",
+} as const;
+
+function chip(active: boolean, tone: keyof typeof CHIP_ON) {
+  return cn(
+    "cursor-pointer whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold [transition:all_150ms]",
+    active ? CHIP_ON[tone] : "border-agon-brd-l bg-transparent text-agon-tx3",
+  );
+}
+
+const RAIL_BTN = "flex cursor-pointer items-center gap-2 rounded px-2.5 py-[7px] text-left text-[12px] [transition:all_150ms]";
+const GRID = "grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4";
+const PRIMARY = "cursor-pointer rounded bg-agon-alerte font-semibold text-agon-ink";
+
 function SkeletonCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
-      <div style={{ height: 3, background: C.s2 }} />
-      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ height: 13, width: "60%", background: C.s2, borderRadius: 4 }} />
-        <div style={{ height: 9,  width: "30%", background: C.s2, borderRadius: 4 }} />
-        <div style={{ height: 80, background: C.s2, borderRadius: 6 }} />
+    <div className="overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1">
+      <div className="h-[3px] bg-agon-s2" />
+      <div className="flex flex-col gap-2.5 px-3.5 py-3">
+        <div className="h-[13px] w-[60%] rounded bg-agon-s2" />
+        <div className="h-[9px] w-[30%] rounded bg-agon-s2" />
+        <div className="h-20 rounded-[6px] bg-agon-s2" />
       </div>
     </div>
   );
@@ -128,34 +148,19 @@ export default function SpecificCatalog() {
     setSelectedQuality("all");
   }
 
-  const chip = (active: boolean, color: string) => ({
-    padding: "4px 10px", borderRadius: 999,
-    border: `1px solid ${active ? color : C.brdL}`,
-    background: active ? color + "18" : "transparent",
-    color: active ? color : C.tx3,
-    fontSize: 11, fontWeight: 600, cursor: "pointer",
-    fontFamily: "inherit", transition: "all 150ms", whiteSpace: "nowrap" as const,
-  });
-
   return (
     <div>
       {/* ── Header : filtres + recherche + CTA ── */}
-      <div style={{
-        display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
-        padding: "14px 0 16px", borderBottom: `1px solid ${C.brd}`, marginBottom: 0,
-      }}>
-        <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-agon-brd pb-4 pt-3.5">
+        <div className="flex gap-0.5 rounded bg-agon-s2 p-0.5">
           {FILTER_TABS.map((t) => (
             <button
               key={t.value}
               onClick={() => setFilterTab(t.value)}
-              style={{
-                padding: "5px 12px", borderRadius: 6, border: "none",
-                background: filterTab === t.value ? ORANGE : "transparent",
-                color: filterTab === t.value ? H.encreOr : C.tx3,
-                fontSize: 12, fontWeight: filterTab === t.value ? 600 : 400,
-                cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-              }}
+              className={cn(
+                "cursor-pointer rounded-[6px] px-3 py-[5px] text-[12px] [transition:all_120ms]",
+                filterTab === t.value ? "bg-agon-alerte font-semibold text-agon-ink" : "bg-transparent font-normal text-agon-tx3",
+              )}
             >
               {t.label}
             </button>
@@ -166,16 +171,11 @@ export default function SpecificCatalog() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher…"
-          style={{
-            flex: 1, minWidth: 140, maxWidth: 260,
-            background: C.s2, border: `1px solid ${C.brd}`,
-            borderRadius: 6, color: C.tx, fontSize: 12,
-            padding: "5px 10px", fontFamily: "inherit", outline: "none",
-          }}
+          className="min-w-[140px] max-w-[260px] flex-1 rounded-[6px] border border-agon-brd bg-agon-s2 px-2.5 py-[5px] text-[12px] text-agon-tx outline-none"
         />
 
         {!isLoading && (
-          <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>
+          <span className="whitespace-nowrap text-[11px] text-agon-tx3">
             {visible.length} séance{visible.length !== 1 ? "s" : ""}
           </span>
         )}
@@ -183,71 +183,46 @@ export default function SpecificCatalog() {
         <button
           onClick={() => navigate("/coach/energy-library/new?kind=specifique&import=texte")}
           title="Coller une séance écrite au format YOXX"
-          style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: `1px solid ${ORANGE}40`,
-            background: ORANGE + "12", color: ORANGE, fontSize: 12,
-            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className="ml-auto cursor-pointer whitespace-nowrap rounded border border-agon-alerte/25 bg-agon-alerte/[0.071] px-3.5 py-[7px] text-[12px] font-semibold text-agon-alerte"
         >
           Importer un texte
         </button>
         <button
           onClick={() => navigate("/coach/energy-library/new?kind=specifique")}
-          style={{
-            padding: "7px 14px", borderRadius: 4, border: "none",
-            background: ORANGE, color: H.encreOr, fontSize: 12,
-            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className={cn(PRIMARY, "whitespace-nowrap px-3.5 py-[7px] text-[12px]")}
         >
           + Nouvelle séance
         </button>
       </div>
 
       {/* ── Layout : rail sports + contenu ── */}
-      <div style={{ display: "flex", gap: 0, alignItems: "stretch" }}>
+      <div className="flex items-stretch gap-0">
 
         {/* Rail sports */}
-        <div style={{
-          width: 190, flexShrink: 0,
-          borderRight: `1px solid ${C.brd}`,
-          padding: "16px 12px 16px 0",
-          display: "flex", flexDirection: "column", gap: 2,
-        }}>
+        <div className="flex w-[190px] shrink-0 flex-col gap-0.5 border-r border-agon-brd py-4 pl-0 pr-3">
           <button
             onClick={() => selectSport("all")}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "7px 10px", borderRadius: 4, border: "none",
-              background: selectedSport === "all" ? ORANGE + "18" : "transparent",
-              color: selectedSport === "all" ? ORANGE : C.tx2,
-              fontSize: 12, fontWeight: selectedSport === "all" ? 700 : 500,
-              cursor: "pointer", fontFamily: "inherit", textAlign: "left", transition: "all 150ms",
-            }}
+            className={cn(RAIL_BTN, selectedSport === "all" ? "bg-agon-alerte/[0.094] font-bold text-agon-alerte" : "bg-transparent font-medium text-agon-tx2")}
           >
-            <span style={{ flex: 1 }}>Tous les sports</span>
-            <span style={{ fontSize: 10, color: C.tx3 }}>{scoped.length}</span>
+            <span className="flex-1">Tous les sports</span>
+            <span className="text-[10px] text-agon-tx3">{scoped.length}</span>
           </button>
 
           {sports.map((sport) => {
             const count = countBySport.get(sport.id) ?? 0;
             const active = selectedSport === sport.id;
-            const color = sport.color || ORANGE;
+            // Couleur du sport = donnée : reste en style.
+            const color = sport.color || SPORT_FALLBACK;
             return (
               <button
                 key={sport.id}
                 onClick={() => selectSport(sport.id)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "7px 10px", borderRadius: 4, border: "none",
-                  background: active ? color + "18" : "transparent",
-                  color: active ? color : count > 0 ? C.tx2 : C.tx3,
-                  fontSize: 12, fontWeight: active ? 700 : 500,
-                  cursor: "pointer", fontFamily: "inherit", textAlign: "left", transition: "all 150ms",
-                }}
+                className={cn(RAIL_BTN, active ? "font-bold" : cn("bg-transparent font-medium", count > 0 ? "text-agon-tx2" : "text-agon-tx3"))}
+                style={active ? { background: color + "18", color } : undefined}
               >
-                <span style={{ width: 7, height: 7, borderRadius: 999, background: color, flexShrink: 0, opacity: count > 0 || active ? 1 : 0.35 }} />
-                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sport.name}</span>
-                {count > 0 && <span style={{ fontSize: 10, color: active ? color : C.tx3 }}>{count}</span>}
+                <span className={cn("h-[7px] w-[7px] shrink-0 rounded-full", count > 0 || active ? "opacity-100" : "opacity-[0.35]")} style={{ background: color }} />
+                <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{sport.name}</span>
+                {count > 0 && <span className={cn("text-[10px]", !active && "text-agon-tx3")} style={active ? { color } : undefined}>{count}</span>}
               </button>
             );
           })}
@@ -255,37 +230,30 @@ export default function SpecificCatalog() {
           {(countBySport.get("__none__") ?? 0) > 0 && (
             <button
               onClick={() => selectSport("__none__")}
-              style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "7px 10px", borderRadius: 4, border: "none",
-                background: selectedSport === "__none__" ? C.s2 : "transparent",
-                color: selectedSport === "__none__" ? C.tx : C.tx3,
-                fontSize: 12, fontWeight: selectedSport === "__none__" ? 700 : 500,
-                cursor: "pointer", fontFamily: "inherit", textAlign: "left", transition: "all 150ms",
-              }}
+              className={cn(RAIL_BTN, selectedSport === "__none__" ? "bg-agon-s2 font-bold text-agon-tx" : "bg-transparent font-medium text-agon-tx3")}
             >
-              <span style={{ flex: 1 }}>Sans sport</span>
-              <span style={{ fontSize: 10, color: C.tx3 }}>{countBySport.get("__none__")}</span>
+              <span className="flex-1">Sans sport</span>
+              <span className="text-[10px] text-agon-tx3">{countBySport.get("__none__")}</span>
             </button>
           )}
         </div>
 
         {/* Contenu principal */}
-        <div style={{ flex: 1, minWidth: 0, padding: "16px 0 0 20px" }}>
+        <div className="min-w-0 flex-1 pl-5 pt-4">
 
           {/* Puces qualités */}
           {(qualitiesInSport.length > 0 || hasUnclassified) && (
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
-              <button onClick={() => setSelectedQuality("all")} style={chip(selectedQuality === "all", ORANGE)}>
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              <button onClick={() => setSelectedQuality("all")} className={chip(selectedQuality === "all", "alerte")}>
                 Toutes
               </button>
               {qualitiesInSport.map((q) => (
-                <button key={q.id} onClick={() => setSelectedQuality(q.id)} style={chip(selectedQuality === q.id, C.ac)}>
+                <button key={q.id} onClick={() => setSelectedQuality(q.id)} className={chip(selectedQuality === q.id, "accent")}>
                   {q.name}
                 </button>
               ))}
               {hasUnclassified && (
-                <button onClick={() => setSelectedQuality("__none__")} style={chip(selectedQuality === "__none__", C.tx2)}>
+                <button onClick={() => setSelectedQuality("__none__")} className={chip(selectedQuality === "__none__", "tx2")}>
                   Non classées
                 </button>
               )}
@@ -293,44 +261,36 @@ export default function SpecificCatalog() {
           )}
 
           {isLoading ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+            <div className={GRID}>
               {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
           ) : visible.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 20px", color: C.tx3 }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}></div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>
+            <div className="px-5 py-[60px] text-center text-agon-tx3">
+              <div className="mb-3 text-[36px]"></div>
+              <div className="mb-1.5 text-[15px] font-semibold text-agon-tx2">
                 {specificSessions.length === 0 ? "Aucune séance spécifique" : "Aucune séance ici"}
               </div>
-              <div style={{ fontSize: 13, marginBottom: 20 }}>
+              <div className="mb-5 text-[13px]">
                 {specificSessions.length === 0
                   ? "Créez la première séance spécifique (WOD ou Classique)."
                   : "Aucune séance pour ce sport / cette qualité avec ces filtres."}
               </div>
               <button
                 onClick={() => navigate("/coach/energy-library/new?kind=specifique")}
-                style={{
-                  padding: "9px 20px", borderRadius: 4, border: "none",
-                  background: ORANGE, color: H.encreOr, fontSize: 13,
-                  fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                }}
+                className={cn(PRIMARY, "px-5 py-[9px] text-[13px]")}
               >
                 + Nouvelle séance
               </button>
             </div>
           ) : (
             groups.map((group) => (
-              <div key={group.key} style={{ marginBottom: 28 }}>
-                <div style={{
-                  fontSize: 11, fontWeight: 800, color: C.tx3,
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                  marginBottom: 10, display: "flex", alignItems: "center", gap: 8,
-                }}>
+              <div key={group.key} className="mb-7">
+                <div className="mb-2.5 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.08em] text-agon-tx3">
                   {group.label}
-                  <span style={{ fontWeight: 600, color: C.tx3, opacity: 0.7 }}>{group.items.length}</span>
-                  <span style={{ flex: 1, height: 1, background: C.brd }} />
+                  <span className="font-semibold text-agon-tx3 opacity-70">{group.items.length}</span>
+                  <span className="h-px flex-1 bg-agon-brd" />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, alignItems: "start" }}>
+                <div className={cn(GRID, "items-start")}>
                   {group.items.map((session) => {
                     const isAuthor = session.created_by === profile?.id;
                     const isAdmin  = !!profile?.is_admin;
