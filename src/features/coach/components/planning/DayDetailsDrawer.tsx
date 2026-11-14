@@ -212,10 +212,10 @@ export function DayDetailsDrawer({
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <Trophy size={20} color={C.r} style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                        {competitionDayLabel(e.raw?.type as string | undefined)}
+                      <div style={{ fontSize: 9, fontWeight: 700, color: e.status === "cancelled" ? C.tx3 : C.r, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        {e.status === "cancelled" ? "Annulée" : competitionDayLabel(e.raw?.type as string | undefined)}
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: C.tx }}>{e.title}</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: e.status === "cancelled" ? C.tx3 : C.tx, textDecoration: e.status === "cancelled" ? "line-through" : undefined }}>{e.title}</div>
                       {e.raw?.location && (
                         <div style={{ fontSize: 11, color: C.tx3, marginTop: 1 }}>{String(e.raw.location)}</div>
                       )}

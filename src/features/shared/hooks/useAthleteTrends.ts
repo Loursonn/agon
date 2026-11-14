@@ -1,6 +1,6 @@
 /**
  * useAthleteTrends — agrège wellness / poids / sommeil / records / assiduité
- * sur N jours glissants (Mon profil athlète), + phrases de synthèse (Gemini, repli règles).
+ * sur N jours glissants (Mon profil athlète), + phrases de synthèse (Claude, repli règles).
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -47,7 +47,7 @@ export function useAthleteTrends(days: number): { summary: TrendSummary; ready: 
   return { summary, ready: prsReady && logsReady };
 }
 
-// ── Phrases de synthèse : Gemini 1×/jour/athlète (cache local), repli sur règles ──
+// ── Phrases de synthèse : Claude 1×/jour/athlète (cache local), repli sur règles ──
 
 const CACHE_PREFIX = "insights:";
 

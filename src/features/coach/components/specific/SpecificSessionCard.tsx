@@ -4,7 +4,8 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import SessionPreview from "../energy/SessionPreview";
 import type { EnergySessionRow, EnergyGroup } from "@/types/energy";
 import type { SpecificSport, PhysicalQuality } from "@/types/specific";
@@ -16,7 +17,26 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatSLong } from "@/lib/energy/formatTarget";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 
-const ORANGE = H.miel;
+/** Couleur par défaut d'un sport sans couleur (donnée : reste en style). */
+const SPORT_FALLBACK = C.o;
+
+const BADGE = "rounded px-1.5 py-0.5 text-[9px] font-bold";
+const FORMAT_TONE = {
+  Classique: "bg-agon-succes/[0.125] text-agon-succes",
+  Mixte:     "bg-agon-accent/[0.125] text-agon-accent",
+  WOD:       "bg-agon-alerte/[0.125] text-agon-alerte",
+} as const;
+
+/** Bouton d'action au survol, par teinte (classes écrites en entier). */
+const ACTION_TONE = {
+  succes: "border-agon-succes/25 bg-agon-succes/[0.071] text-agon-succes",
+  accent: "border-agon-accent/25 bg-agon-accent/[0.071] text-agon-accent",
+  tx2:    "border-agon-tx2/25 bg-agon-tx2/[0.071] text-agon-tx2",
+  erreur: "border-agon-erreur/25 bg-agon-erreur/[0.071] text-agon-erreur",
+} as const;
+
+const FIELD = "w-full rounded-[6px] border border-agon-brd bg-agon-s2 px-2.5 py-2 text-[13px] text-agon-tx";
+const EMPTY_PREVIEW = "flex h-10 items-center justify-center rounded-[6px] bg-agon-s2";
 
 interface Props {
   session: EnergySessionRow;
@@ -41,7 +61,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
   const [hovered, setHovered] = useState(false);
 
   const isClassique = session.format === "classique";
-  const accent = sport?.color || ORANGE;
+  const accent = sport?.color || SPORT_FALLBACK;
 
   const root: EnergyGroup = {
     type: "group", id: "__root__", role: "open", repeat: 1,
@@ -80,81 +100,58 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
     } as Parameters<typeof createMutation.mutateAsync>[0]);
   }
 
-  const actionBtn = (label: string, color: string, onClick: () => void) => (
+  const actionBtn = (label: string, tone: keyof typeof ACTION_TONE, onClick: () => void) => (
     <button
       key={label}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      style={{
-        padding: "4px 9px", borderRadius: 6, border: `1px solid ${color}40`,
-        background: color + "12", color, fontSize: 10, fontWeight: 600,
-        cursor: "pointer", fontFamily: "inherit", transition: "all 150ms",
-      }}
+      className={cn("cursor-pointer rounded-[6px] border px-[9px] py-1 text-[10px] font-semibold [transition:all_150ms]", ACTION_TONE[tone])}
     >
       {label}
     </button>
   );
+
+  const lit = hovered && canEdit;
 
   return (
     <div
       onClick={handleEdit}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{
-        background: C.s1,
-        border: `1px solid ${hovered && canEdit ? accent + "60" : C.brd}`,
-        borderRadius: 6,
-        overflow: "hidden",
-        cursor: canEdit ? "pointer" : "default",
-        transition: "border-color 150ms, box-shadow 150ms",
-        boxShadow: hovered && canEdit ? `0 0 0 1px ${accent}20` : "none",
-        display: "flex",
-        flexDirection: "column",
-      }}
+      className={cn(
+        "flex flex-col overflow-hidden rounded-[6px] border bg-agon-s1 [transition:border-color_150ms,box-shadow_150ms]",
+        canEdit ? "cursor-pointer" : "cursor-default",
+        !lit && "border-agon-brd",
+      )}
+      // Couleur du sport = donnée : bordure et halo au survol restent en style.
+      style={lit ? { borderColor: accent + "60", boxShadow: `0 0 0 1px ${accent}20` } : undefined}
     >
-      <div style={{ height: 3, background: accent, opacity: 0.7 }} />
+      <div className="h-[3px] opacity-70" style={{ background: accent }} />
 
-      <div style={{ padding: "10px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="flex flex-1 flex-col gap-1.5 px-3 py-2.5">
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: 13, fontWeight: 700, color: C.tx,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              marginBottom: 4,
-            }}>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-bold text-agon-tx">
               {session.name || "Sans titre"}
             </div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <div className="flex flex-wrap gap-1">
               {sport && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: (sport.color || ORANGE) + "20", color: sport.color || ORANGE,
-                }}>
+                <span className={BADGE} style={{ background: (sport.color || SPORT_FALLBACK) + "20", color: sport.color || SPORT_FALLBACK }}>
                   {sport.name}
                 </span>
               )}
               {quality && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: `${C.ac}20`, color: C.ac,
-                }}>
+                <span className={cn(BADGE, "bg-agon-accent/[0.125] text-agon-accent")}>
                   {quality.name}
                 </span>
               )}
               {/* Format pill */}
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                background: formatLabel === "Classique" ? `${C.g}20` : formatLabel === "Mixte" ? `${C.ac}20` : ORANGE + "20",
-                color: formatLabel === "Classique" ? C.g : formatLabel === "Mixte" ? C.ac : ORANGE,
-              }}>
+              <span className={cn(BADGE, FORMAT_TONE[formatLabel])}>
                 {formatLabel}
               </span>
               {session.is_verified && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: C.g + "20", color: C.g,
-                }}>
+                <span className={cn(BADGE, "bg-agon-succes/[0.125] text-agon-succes")}>
                   ✓ Officiel
                 </span>
               )}
@@ -165,12 +162,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
             <button
               onClick={(e) => { e.stopPropagation(); verifyMutation.mutate({ id: session.id, verify: true }); }}
               disabled={verifyMutation.isPending}
-              style={{
-                padding: "4px 8px", borderRadius: 6, flexShrink: 0,
-                border: `1px solid ${C.g}50`, background: C.g + "12",
-                color: C.g, fontSize: 10, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="shrink-0 cursor-pointer rounded-[6px] border border-agon-succes/[0.314] bg-agon-succes/[0.071] px-2 py-1 text-[10px] font-semibold text-agon-succes"
             >
               Vérifier
             </button>
@@ -180,19 +172,18 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
         {/* Preview */}
         {isClassique ? (
           blocks.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div className="flex flex-col gap-1">
               {blocks.slice(0, 3).map((b) => {
                 const wod = isWodBlock(b);
                 return (
-                  <div key={b.id} style={{
-                    background: C.s2, borderRadius: 6, padding: "5px 8px",
-                    display: "flex", alignItems: "center", gap: 6,
-                    borderLeft: `2px solid ${wod ? ORANGE : C.g}80`,
-                  }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: C.tx2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div key={b.id} className={cn(
+                    "flex items-center gap-1.5 rounded-[6px] border-l-2 bg-agon-s2 px-2 py-[5px]",
+                    wod ? "border-agon-alerte/[0.502]" : "border-agon-succes/[0.502]",
+                  )}>
+                    <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-bold text-agon-tx2">
                       {b.title || "Bloc"}
                     </span>
-                    <span style={{ fontSize: 9, color: C.tx3, flexShrink: 0, marginLeft: "auto" }}>
+                    <span className="ml-auto shrink-0 text-[9px] text-agon-tx3">
                       {wod
                         ? `${b.steps.length} étape${b.steps.length > 1 ? "s" : ""}`
                         : `${b.items.length} exo${b.items.length > 1 ? "s" : ""}`}
@@ -201,26 +192,26 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
                 );
               })}
               {blocks.length > 3 && (
-                <span style={{ fontSize: 9, color: C.tx3, paddingLeft: 2 }}>+ {blocks.length - 3} bloc{blocks.length - 3 > 1 ? "s" : ""}</span>
+                <span className="pl-0.5 text-[9px] text-agon-tx3">+ {blocks.length - 3} bloc{blocks.length - 3 > 1 ? "s" : ""}</span>
               )}
             </div>
           ) : (
-            <div style={{ height: 40, background: C.s2, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 10, color: C.tx3 }}>Aucun bloc</span>
+            <div className={EMPTY_PREVIEW}>
+              <span className="text-[10px] text-agon-tx3">Aucun bloc</span>
             </div>
           )
         ) : root.children.length > 0 ? (
-          <div style={{ pointerEvents: "none" }}>
+          <div className="pointer-events-none">
             <SessionPreview intervals={root} compact />
           </div>
         ) : (
-          <div style={{ height: 40, background: C.s2, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 10, color: C.tx3 }}>Aucun intervalle</span>
+          <div className={EMPTY_PREVIEW}>
+            <span className="text-[10px] text-agon-tx3">Aucun intervalle</span>
           </div>
         )}
 
         {/* Footer : metadata + hover actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 10, color: C.tx3, marginTop: "auto", minHeight: 24 }}>
+        <div className="mt-auto flex min-h-[24px] items-center gap-3 text-[10px] text-agon-tx3">
           {!isClassique && totals.durationS > 0 && <span>{formatSLong(totals.durationS)}</span>}
           {!isClassique && totals.workCount > 0 && <span>{totals.workCount} eff.</span>}
           {isClassique && blocks.length > 0 && (
@@ -231,15 +222,12 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
 
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              marginLeft: "auto", display: "flex", gap: 4,
-              opacity: hovered ? 1 : 0, transition: "opacity 150ms",
-            }}
+            className={cn("ml-auto flex gap-1 [transition:opacity_150ms]", hovered ? "opacity-100" : "opacity-0")}
           >
-            {actionBtn("Attribuer", C.g, () => setShowAssign(true))}
-            {canEdit && actionBtn("Modifier", C.ac, handleEdit)}
-            {actionBtn("Dupliquer", C.tx2, handleDuplicate)}
-            {canDelete && actionBtn("Supprimer", C.r, () => setShowConfirmDelete(true))}
+            {actionBtn("Attribuer", "succes", () => setShowAssign(true))}
+            {canEdit && actionBtn("Modifier", "accent", handleEdit)}
+            {actionBtn("Dupliquer", "tx2", handleDuplicate)}
+            {canDelete && actionBtn("Supprimer", "erreur", () => setShowConfirmDelete(true))}
           </div>
         </div>
       </div>
@@ -253,21 +241,18 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
       {showAssign && (
         <div
           onClick={(e) => { e.stopPropagation(); setShowAssign(false); }}
-          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60"
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 6, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} className="w-[340px] rounded-[6px] border border-agon-brd bg-agon-s1 p-6">
+            <div className="mb-4 text-[15px] font-bold text-agon-tx">
               Attribuer « {session.name} »
             </div>
 
-            <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Athlète</div>
+            <div className="mb-1.5 text-[11px] text-agon-tx3">Athlète</div>
             <select
               value={assignAthleteId}
               onChange={(e) => setAssignAthleteId(e.target.value)}
-              style={{
-                width: "100%", background: C.s2, border: `1px solid ${C.brd}`,
-                borderRadius: 6, color: C.tx, fontSize: 13, padding: "8px 10px", fontFamily: "inherit", marginBottom: 12,
-              }}
+              className={cn(FIELD, "mb-3")}
             >
               <option value="">Choisir un athlète…</option>
               {athletes.map((a) => (
@@ -275,22 +260,18 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
               ))}
             </select>
 
-            <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Date</div>
+            <div className="mb-1.5 text-[11px] text-agon-tx3">Date</div>
             <input
               type="date"
               value={assignDate}
               onChange={(e) => setAssignDate(e.target.value)}
-              style={{
-                width: "100%", background: C.s2, border: `1px solid ${C.brd}`,
-                borderRadius: 6, color: C.tx, fontSize: 13, padding: "8px 10px", fontFamily: "inherit",
-                boxSizing: "border-box",
-              }}
+              className={cn(FIELD, "box-border")}
             />
 
-            <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setShowAssign(false)}
-                style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                className="cursor-pointer rounded border border-agon-brd bg-transparent px-3.5 py-[7px] text-[13px] text-agon-tx2"
               >
                 Annuler
               </button>
@@ -306,12 +287,10 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
                   setShowAssign(false);
                 }}
                 disabled={!assignAthleteId || assignMutation.isPending}
-                style={{
-                  padding: "7px 14px", borderRadius: 4, border: "none",
-                  background: assignAthleteId ? C.g : C.tx3, color: C.tx,
-                  fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                  opacity: assignAthleteId ? 1 : 0.5,
-                }}
+                className={cn(
+                  "cursor-pointer rounded px-3.5 py-[7px] text-[13px] font-semibold text-agon-tx",
+                  assignAthleteId ? "bg-agon-succes opacity-100" : "bg-agon-tx3 opacity-50",
+                )}
               >
                 {assignMutation.isPending ? "…" : "Attribuer"}
               </button>

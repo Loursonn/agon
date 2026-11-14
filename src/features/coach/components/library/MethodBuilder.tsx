@@ -8,7 +8,7 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X, Plus, ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { MethodPreview } from "./MethodPreview";
 import { exerciceParamsToMethodConfig, methodConfigToExerciceParams, methodConfigToText } from "./methodConfigConvert";
 import type { RestConfig } from "./methodConfigConvert";
@@ -33,79 +33,83 @@ type FormValues = z.infer<typeof schema>;
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
-const VIOLET = C.ac
-const VIOLET_S = "rgba(123,111,255,0.12)"
-const GREEN  = H.vert
-const GREEN_S  = "rgba(34,197,94,0.10)"
-const AMBER  = H.ambre
-const AMBER_S  = "rgba(245,158,11,0.10)"
-const ORANGE = H.miel
+/** Teinte d'une portée (classes écrites en entier pour Tailwind). */
+type Tone = "succes" | "alerte" | "accent"
+
+const TONE: Record<Tone, { text: string; border: string; bg: string; soft: string; pillOn: string }> = {
+  succes: {
+    text: "text-agon-succes", border: "border-agon-succes", bg: "bg-agon-succes", soft: "bg-agon-succes/[0.1]",
+    pillOn: "border-agon-succes bg-agon-succes/[0.125] text-agon-succes",
+  },
+  alerte: {
+    text: "text-agon-alerte", border: "border-agon-alerte", bg: "bg-agon-alerte", soft: "bg-agon-alerte/[0.1]",
+    pillOn: "border-agon-alerte bg-agon-alerte/[0.125] text-agon-alerte",
+  },
+  accent: {
+    text: "text-agon-accent", border: "border-agon-accent", bg: "bg-agon-accent", soft: "bg-agon-accent/[0.12]",
+    pillOn: "border-agon-accent bg-agon-accent/[0.125] text-agon-accent",
+  },
+}
 
 const SCOPE_META = {
-  classic:  { color: GREEN,  colorS: GREEN_S,  label: "Classique",  desc: "Séries × reps — template simple" },
-  set:      { color: AMBER,  colorS: AMBER_S,  label: "Sous-série", desc: "S'applique à une série spécifique (cluster, drop-set…)" },
-  exercise: { color: VIOLET, colorS: VIOLET_S, label: "Exercice",   desc: "Remplace entièrement le pattern de séries" },
-} as const
+  classic:  { tone: "succes", label: "Classique",  desc: "Séries × reps — template simple" },
+  set:      { tone: "alerte", label: "Sous-série", desc: "S'applique à une série spécifique (cluster, drop-set…)" },
+  exercise: { tone: "accent", label: "Exercice",   desc: "Remplace entièrement le pattern de séries" },
+} as const satisfies Record<MethodScope, { tone: Tone; label: string; desc: string }>
 
 // ─── Style helpers ────────────────────────────────────────────────────────────
 
-function pill(active: boolean, color = VIOLET): React.CSSProperties {
-  return {
-    padding: "6px 14px", borderRadius: 7,
-    border: "1px solid " + (active ? color : C.brdL),
-    background: active ? color + "20" : "transparent",
-    color: active ? color : C.tx3,
-    fontSize: 11, fontWeight: active ? 700 : 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 100ms",
-  }
+const PILL_OFF = "border-agon-brd-l bg-transparent font-semibold text-agon-tx3"
+
+function pill(active: boolean, tone: Tone = "accent") {
+  return cn(
+    "cursor-pointer rounded-[7px] border px-3.5 py-1.5 text-[11px] [transition:all_100ms]",
+    active ? cn(TONE[tone].pillOn, "font-bold") : PILL_OFF,
+  )
 }
 
-function pillSmall(active: boolean, color = VIOLET): React.CSSProperties {
-  return {
-    padding: "4px 9px", borderRadius: 6,
-    border: "1px solid " + (active ? color : C.brdL),
-    background: active ? color + "20" : "transparent",
-    color: active ? color : C.tx3,
-    fontSize: 10, fontWeight: active ? 700 : 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 100ms",
-  }
+function pillSmall(active: boolean, tone: Tone = "accent") {
+  return cn(
+    "cursor-pointer rounded-[6px] border px-[9px] py-1 text-[10px] [transition:all_100ms]",
+    active ? cn(TONE[tone].pillOn, "font-bold") : PILL_OFF,
+  )
 }
 
-function pillParSerie(active: boolean): React.CSSProperties {
-  return {
-    padding: "4px 9px", borderRadius: 6,
-    border: "1px solid " + (active ? VIOLET : C.brdL),
-    background: active ? VIOLET_S : "transparent",
-    color: active ? VIOLET : C.tx3,
-    fontSize: 10, fontWeight: active ? 700 : 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 100ms",
-  }
+function pillParSerie(active: boolean) {
+  return cn(
+    "cursor-pointer rounded-[6px] border px-[9px] py-1 text-[10px] [transition:all_100ms]",
+    active ? "border-agon-accent bg-agon-accent/[0.12] font-bold text-agon-accent" : PILL_OFF,
+  )
 }
 
-const numInputStyle: React.CSSProperties = {
-  padding: "7px 10px", borderRadius: 7, border: `1px solid ${C.brdL}`,
-  background: C.s1, color: C.tx, fontSize: 14, fontWeight: 700,
-  fontFamily: "inherit", outline: "none", textAlign: "center" as const, width: 80,
-  boxSizing: "border-box" as const,
-}
+const NUM_INPUT = "box-border w-20 rounded-[7px] border border-agon-brd-l bg-agon-s1 px-2.5 py-[7px] text-center text-[14px] font-bold text-agon-tx outline-none"
+const TEXT_INPUT = "box-border w-full rounded border border-agon-brd-l bg-agon-s2 px-2.5 py-2 text-[13px] text-agon-tx outline-none"
+/** Case d'une grille « par série ». */
+const CELL = "box-border w-full rounded-[6px] border border-agon-brd-l bg-agon-s1 px-1 py-[5px] text-agon-tx outline-none"
+const KICKER = "text-[10px] font-extrabold uppercase tracking-[0.5px] text-agon-tx3"
+const SMALL_KICKER = "text-[10px] font-bold uppercase tracking-[0.4px] text-agon-tx3"
+const MENU = "overflow-hidden rounded border border-agon-brd-l bg-agon-bg"
+const MENU_ITEM = "w-full cursor-pointer border-b border-agon-brd bg-transparent px-3 py-2 text-left text-agon-tx"
 
-const textInputStyle: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", borderRadius: 4,
-  border: `1px solid ${C.brdL}`, background: C.s2,
-  color: C.tx, fontSize: 13, fontFamily: "inherit",
-  outline: "none", boxSizing: "border-box" as const,
-}
+// Éditeur de sous-séries / clusters (teinte alerte).
+const CLUSTER_BOX = "rounded border border-agon-alerte/[0.314] bg-agon-alerte/[0.039] p-2.5"
+const CLUSTER_KICKER = "text-[9px] font-bold uppercase tracking-[0.4px] text-agon-alerte"
+const CLUSTER_STEP = "cursor-pointer border border-agon-alerte/[0.376] bg-transparent text-agon-alerte"
+const CLUSTER_VALUE = "flex items-center justify-center border-x border-agon-alerte/[0.376] bg-agon-alerte/[0.031] font-extrabold text-agon-alerte"
+const CLUSTER_SUM = "border border-agon-alerte/25 bg-agon-alerte/[0.094] text-center"
+
+const STEP_BTN = "h-[30px] w-[30px] shrink-0 bg-transparent text-[16px] text-agon-tx3"
 
 // ─── Base components ──────────────────────────────────────────────────────────
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
-  return <div style={{ fontSize: 11, color: C.r, marginTop: 4 }}>{message}</div>;
+  return <div className="mt-1 text-[11px] text-agon-erreur">{message}</div>;
 }
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ background: C.s2, borderRadius: 4, border: "1px solid " + C.brdL, padding: "10px 14px" }}>
+    <div className="rounded border border-agon-brd-l bg-agon-s2 px-3.5 py-2.5">
       {children}
     </div>
   )
@@ -113,8 +117,8 @@ function Section({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ label, right }: { label: string; right?: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-      <div style={{ fontSize: 10, fontWeight: 800, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{label}</div>
+    <div className="mb-2.5 flex items-center justify-between">
+      <div className={KICKER}>{label}</div>
       {right}
     </div>
   )
@@ -122,15 +126,16 @@ function SectionLabel({ label, right }: { label: string; right?: React.ReactNode
 
 function InlineLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 800, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", flexShrink: 0 }}>
+    <div className={cn(KICKER, "shrink-0")}>
       {children}
     </div>
   )
 }
 
-function Stepper({ value, onChange, min = 1, max = 20, step = 1, color = C.tx }: {
+/** `valueClass` = couleur du chiffre (classe text-agon-*). */
+function Stepper({ value, onChange, min = 1, max = 20, step = 1, valueClass = "text-agon-tx" }: {
   value: number; onChange: (v: number) => void
-  min?: number; max?: number; step?: number; color?: string
+  min?: number; max?: number; step?: number; valueClass?: string
 }) {
   const [local, setLocal] = useState(value)
   const [editing, setEditing] = useState(false)
@@ -151,22 +156,22 @@ function Stepper({ value, onChange, min = 1, max = 20, step = 1, color = C.tx }:
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", background: C.s1, borderRadius: 4, border: "1px solid " + C.brdL, overflow: "hidden", flexShrink: 0 }}>
+    <div className="flex shrink-0 items-center overflow-hidden rounded border border-agon-brd-l bg-agon-s1">
       <button type="button" onClick={() => apply(local - step)}
-        style={{ width: 30, height: 30, border: "none", background: "transparent", color: C.tx3, cursor: local <= min ? "default" : "pointer", fontSize: 16, fontFamily: "inherit", flexShrink: 0, opacity: local <= min ? 0.3 : 1 }}>−</button>
+        className={cn(STEP_BTN, local <= min ? "cursor-default opacity-30" : "cursor-pointer opacity-100")}>−</button>
       {editing ? (
         <input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
           onBlur={commitEdit}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') commitEdit() }}
-          style={{ width: 40, border: "none", background: "transparent", color, fontSize: 14, fontWeight: 800, fontFamily: "inherit", outline: "none", textAlign: "center" as const, padding: 0 }} />
+          className={cn("w-10 bg-transparent p-0 text-center text-[14px] font-extrabold outline-none", valueClass)} />
       ) : (
         <div onClick={() => { setEditText(String(local)); setEditing(true) }} title="Cliquer pour saisir"
-          style={{ width: 40, textAlign: "center" as const, fontSize: 14, fontWeight: 800, color, fontFamily: "inherit", cursor: "text", userSelect: "none" as const }}>
+          className={cn("w-10 cursor-text select-none text-center text-[14px] font-extrabold", valueClass)}>
           {local}
         </div>
       )}
       <button type="button" onClick={() => apply(local + step)}
-        style={{ width: 30, height: 30, border: "none", background: "transparent", color: C.tx3, cursor: local >= max ? "default" : "pointer", fontSize: 16, fontFamily: "inherit", flexShrink: 0, opacity: local >= max ? 0.3 : 1 }}>+</button>
+        className={cn(STEP_BTN, local >= max ? "cursor-default opacity-30" : "cursor-pointer opacity-100")}>+</button>
     </div>
   )
 }
@@ -182,22 +187,22 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
   }
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+      <div className="mb-2 flex flex-wrap gap-1.5">
         {value.map((tag) => (
-          <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: VIOLET_S, color: VIOLET, fontSize: 11, fontWeight: 600 }}>
+          <span key={tag} className="inline-flex items-center gap-1 rounded-[6px] bg-agon-accent/[0.12] px-2 py-[3px] text-[11px] font-semibold text-agon-accent">
             {tag}
             <button type="button" onClick={() => onChange(value.filter(t => t !== tag))}
-              style={{ background: "none", border: "none", cursor: "pointer", color: VIOLET, padding: 0, display: "flex", lineHeight: 1 }}>
+              className="flex cursor-pointer bg-transparent p-0 leading-none text-agon-accent">
               <X size={10} />
             </button>
           </span>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 6 }}>
+      <div className="flex gap-1.5">
         <input value={draft} onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder="Ajouter un tag…" style={{ ...textInputStyle, flex: 1 }} />
-        <button type="button" onClick={add} style={{ width: 34, height: 34, borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          placeholder="Ajouter un tag…" className={cn(TEXT_INPUT, "flex-1")} />
+        <button type="button" onClick={add} className="flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded border border-agon-brd-l bg-transparent text-agon-tx3">
           <Plus size={14} />
         </button>
       </div>
@@ -214,16 +219,16 @@ function CategoryInput({ value, onChange, suggestions, error }: {
   const wrapRef = useRef<HTMLDivElement>(null);
   const filtered = suggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()) && s !== value);
   return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
+    <div ref={wrapRef} className="relative">
       <input value={value} onChange={e => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="ex: Intensification, Volume, Technique…" style={textInputStyle} autoComplete="off" />
+        placeholder="ex: Intensification, Volume, Technique…" className={TEXT_INPUT} autoComplete="off" />
       {error && <FieldError message={error} />}
       {open && filtered.length > 0 && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 4, overflow: "hidden" }}>
+        <div className={cn(MENU, "absolute left-0 right-0 top-[calc(100%+4px)] z-50")}>
           {filtered.map(s => (
             <button key={s} type="button" onMouseDown={() => { onChange(s); setOpen(false); }}
-              style={{ width: "100%", padding: "8px 12px", textAlign: "left" as const, border: "none", borderBottom: `1px solid ${C.brd}`, background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              className={cn(MENU_ITEM, "text-[13px]")}>
               {s}
             </button>
           ))}
@@ -241,11 +246,11 @@ function Step1({ control, errors, existingCategories }: {
   existingCategories: string[];
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       <Section>
         <SectionLabel label="Nom de la méthode *" />
         <Controller name="name" control={control} render={({ field }) => (
-          <input {...field} placeholder="ex: 3 sous-séries décroissantes…" style={textInputStyle} maxLength={60} />
+          <input {...field} placeholder="ex: 3 sous-séries décroissantes…" className={TEXT_INPUT} maxLength={60} />
         )} />
         <FieldError message={errors.name?.message} />
       </Section>
@@ -253,31 +258,30 @@ function Step1({ control, errors, existingCategories }: {
       <Section>
         <SectionLabel label="Description (optionnelle)" />
         <Controller name="description" control={control} render={({ field }) => (
-          <textarea {...field} rows={3} placeholder="Comment utiliser cette méthode…" style={{ ...textInputStyle, resize: "vertical" as const }} maxLength={300} />
+          <textarea {...field} rows={3} placeholder="Comment utiliser cette méthode…" className={cn(TEXT_INPUT, "resize-y")} maxLength={300} />
         )} />
       </Section>
 
       <Section>
         <SectionLabel label="Application" />
         <Controller name="scope" control={control} render={({ field }) => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="flex flex-col gap-1.5">
             {(Object.entries(SCOPE_META) as [keyof typeof SCOPE_META, typeof SCOPE_META[keyof typeof SCOPE_META]][]).map(([v, cfg]) => {
               const active = field.value === v
+              const t = TONE[cfg.tone]
               return (
-                <button key={v} type="button" onClick={() => field.onChange(v)} style={{
-                  padding: "10px 14px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-                  border: "1px solid " + (active ? cfg.color : C.brdL),
-                  background: active ? cfg.colorS : C.s1,
-                  display: "flex", alignItems: "center", gap: 10, textAlign: "left" as const, transition: "all 100ms",
-                }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: active ? cfg.color : C.tx3 + "50", transition: "background 100ms" }} />
+                <button key={v} type="button" onClick={() => field.onChange(v)} className={cn(
+                  "flex cursor-pointer items-center gap-2.5 rounded border px-3.5 py-2.5 text-left [transition:all_100ms]",
+                  active ? cn(t.border, t.soft) : "border-agon-brd-l bg-agon-s1",
+                )}>
+                  <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full [transition:background_100ms]", active ? t.bg : "bg-agon-tx3/[0.314]")} />
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: active ? cfg.color : C.tx }}>{cfg.label}</div>
-                    <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{cfg.desc}</div>
+                    <div className={cn("text-[12px] font-bold", active ? t.text : "text-agon-tx")}>{cfg.label}</div>
+                    <div className="mt-px text-[10px] text-agon-tx3">{cfg.desc}</div>
                   </div>
                   {active && (
-                    <div style={{ marginLeft: "auto", width: 18, height: 18, borderRadius: "50%", background: cfg.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Check size={10} color={C.tx} />
+                    <div className={cn("ml-auto flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full", t.bg)}>
+                      <Check size={10} className="text-agon-tx" />
                     </div>
                   )}
                 </button>
@@ -318,11 +322,12 @@ function ensureLength<T>(arr: T[], length: number, fill: T): T[] {
 interface MethodParamsPanelProps {
   params: ExerciceParams
   scope: MethodScope
-  color: string
+  tone: Tone
   onChange: (p: ExerciceParams) => void
 }
 
-function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanelProps) {
+function MethodParamsPanel({ params, scope, tone, onChange }: MethodParamsPanelProps) {
+  const valueClass = TONE[tone].text
   function up(partial: Partial<ExerciceParams>) {
     onChange({ ...params, ...partial })
   }
@@ -375,77 +380,77 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
     }
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="flex flex-col gap-2">
         {/* Sous-séries */}
         <Section>
-          <div style={{ padding: "10px", borderRadius: 4, border: "1px solid " + AMBER + "50", background: AMBER + "0A" }}>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-              <div style={{ textAlign: "center" as const }}>
-                <div style={{ fontSize: 9, color: AMBER, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 4 }}>Sous-séries</div>
-                <Stepper value={cluster.nb_clusters} onChange={setNbClusters} min={2} max={10} color={AMBER} />
+          <div className={CLUSTER_BOX}>
+            <div className="mb-2.5 flex items-center justify-center gap-2.5">
+              <div className="text-center">
+                <div className={cn(CLUSTER_KICKER, "mb-1")}>Sous-séries</div>
+                <Stepper value={cluster.nb_clusters} onChange={setNbClusters} min={2} max={10} valueClass="text-agon-alerte" />
               </div>
-              <div style={{ textAlign: "center" as const }}>
-                <div style={{ fontSize: 9, color: AMBER, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 4 }}>Récup intra (s)</div>
-                <Stepper value={cluster.recup_sec} onChange={v => setCluster({ ...cluster, recup_sec: v })} min={0} max={300} color={AMBER} />
+              <div className="text-center">
+                <div className={cn(CLUSTER_KICKER, "mb-1")}>Récup intra (s)</div>
+                <Stepper value={cluster.recup_sec} onChange={v => setCluster({ ...cluster, recup_sec: v })} min={0} max={300} valueClass="text-agon-alerte" />
               </div>
             </div>
 
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 9, color: AMBER, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 6, textAlign: "center" as const }}>Reps par sous-série</div>
-              <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+            <div className="mb-2">
+              <div className={cn(CLUSTER_KICKER, "mb-1.5 text-center")}>Reps par sous-série</div>
+              <div className="flex flex-wrap justify-center gap-1.5">
                 {safeReps.map((v, i) => (
-                  <div key={i} style={{ textAlign: "center" as const }}>
-                    <div style={{ fontSize: 9, color: AMBER, marginBottom: 3 }}>SS{i + 1}</div>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                      <button onClick={() => updateRep(i, Math.min(50, v + 1))} style={{ width: 24, height: 22, borderRadius: "5px 5px 0 0", border: "1px solid " + AMBER + "60", background: "transparent", color: AMBER, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>+</button>
-                      <div style={{ width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: AMBER, border: "1px solid " + AMBER + "60", borderTop: "none", borderBottom: "none", background: AMBER + "08" }}>{v}</div>
-                      <button onClick={() => updateRep(i, Math.max(1, v - 1))} style={{ width: 24, height: 22, borderRadius: "0 0 5px 5px", border: "1px solid " + AMBER + "60", background: "transparent", color: AMBER, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>−</button>
+                  <div key={i} className="text-center">
+                    <div className="mb-[3px] text-[9px] text-agon-alerte">SS{i + 1}</div>
+                    <div className="flex flex-col items-center gap-px">
+                      <button onClick={() => updateRep(i, Math.min(50, v + 1))} className={cn(CLUSTER_STEP, "h-[22px] w-6 rounded-t-[5px] text-[13px]")}>+</button>
+                      <div className={cn(CLUSTER_VALUE, "h-[26px] w-7 text-[13px]")}>{v}</div>
+                      <button onClick={() => updateRep(i, Math.max(1, v - 1))} className={cn(CLUSTER_STEP, "h-[22px] w-6 rounded-b-[5px] text-[13px]")}>−</button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div style={{ textAlign: "center" as const, padding: "5px 10px", borderRadius: 7, background: AMBER + "18", border: "1px solid " + AMBER + "40" }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: AMBER, letterSpacing: 2 }}>{safeReps.join("+")}</span>
-              <span style={{ fontSize: 10, color: AMBER + "AA", marginLeft: 6 }}>+ {cluster.recup_sec}s récup</span>
+            <div className={cn(CLUSTER_SUM, "rounded-[7px] px-2.5 py-[5px]")}>
+              <span className="text-[13px] font-extrabold tracking-[2px] text-agon-alerte">{safeReps.join("+")}</span>
+              <span className="ml-1.5 text-[10px] text-agon-alerte/[0.667]">+ {cluster.recup_sec}s récup</span>
             </div>
           </div>
         </Section>
 
         {/* Charge */}
-        <ChargeSection params={params} nb={nb} chargeGlobal={chargeGlobal} chargeValues={chargeValues} color={color} up={up} />
+        <ChargeSection params={params} nb={nb} chargeGlobal={chargeGlobal} chargeValues={chargeValues} tone={tone} up={up} />
 
         {/* RIR */}
-        <RirSection params={params} nb={nb} rirGlobal={rirGlobal} rirValues={rirValues} color={color} up={up} />
+        <RirSection params={params} nb={nb} rirGlobal={rirGlobal} rirValues={rirValues} tone={tone} up={up} />
       </div>
     )
   }
 
   // ── Classic / Exercise scope ──
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="flex flex-col gap-2">
 
       {/* Séries — one line */}
       <Section>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div className="flex items-center justify-between gap-2">
           <InlineLabel>Séries</InlineLabel>
-          <Stepper value={params.nb_series} onChange={v => up({ nb_series: v })} min={1} max={20} color={color} />
+          <Stepper value={params.nb_series} onChange={v => up({ nb_series: v })} min={1} max={20} valueClass={valueClass} />
         </div>
       </Section>
 
       {/* Répétitions */}
       <Section>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <div className="flex flex-wrap items-center gap-1.5">
           <InlineLabel>Répétitions</InlineLabel>
           {!params.cluster && params.reps.mode === 'global' && (
             <>
-              <Stepper value={repsGlobal} onChange={v => up({ reps: { mode: 'global', value: v } })} min={1} max={100} color={color} />
-              <button onClick={() => up({ reps_mode: { mode: 'global', value: 'EC' } })} style={pillSmall(currentRepsMode === 'EC', color)}>EC</button>
-              <button onClick={() => up({ reps_mode: { mode: 'global', value: 'iso' } })} style={pillSmall(currentRepsMode === 'iso', color)}>ISO</button>
+              <Stepper value={repsGlobal} onChange={v => up({ reps: { mode: 'global', value: v } })} min={1} max={100} valueClass={valueClass} />
+              <button onClick={() => up({ reps_mode: { mode: 'global', value: 'EC' } })} className={pillSmall(currentRepsMode === 'EC', tone)}>EC</button>
+              <button onClick={() => up({ reps_mode: { mode: 'global', value: 'iso' } })} className={pillSmall(currentRepsMode === 'iso', tone)}>ISO</button>
             </>
           )}
-          <div style={{ marginLeft: "auto", display: "flex", gap: 4, flexShrink: 0 }}>
+          <div className="ml-auto flex shrink-0 gap-1">
             <button
               onClick={() => {
                 if (params.reps.mode === 'par_serie') {
@@ -454,7 +459,7 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
                   up({ reps: { mode: 'par_serie', values: Array(nb).fill(repsGlobal) } })
                 }
               }}
-              style={pillParSerie(params.reps.mode === 'par_serie')}
+              className={pillParSerie(params.reps.mode === 'par_serie')}
             >
               {params.reps.mode === 'par_serie' ? "↩ Global" : "Par série"}
             </button>
@@ -466,7 +471,7 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
                   up({ cluster: { nb_clusters: 3, reps: [5, 4, 3], recup_sec: 15 } })
                 }
               }}
-              style={pillSmall(!!params.cluster, ORANGE)}
+              className={pillSmall(!!params.cluster, "alerte")}
             >
               {params.cluster ? "Cluster ✓" : "Cluster"}
             </button>
@@ -474,18 +479,18 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
         </div>
 
         {params.cluster && (
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-2">
             <ClusterEditorInline cluster={params.cluster} onChange={c => up({ cluster: c })} />
           </div>
         )}
         {!params.cluster && params.reps.mode === 'par_serie' && (
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-2">
             <ParamSeriesGrid nb_series={nb} values={repsValues}
               onChange={values => up({ reps: { mode: 'par_serie', values } })}
               renderCell={(v, _i, ch) => (
                 <input type="number" value={v} onChange={e => ch(Math.max(1, parseInt(e.target.value, 10) || 1))}
                   min={1} max={100}
-                  style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
+                  className={cn(CELL, "text-center text-[12px]")}
                 />
               )}
             />
@@ -494,28 +499,28 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
       </Section>
 
       {/* Récupération entre séries */}
-      <RecupSection params={params} color={color} up={up} />
+      <RecupSection params={params} tone={tone} up={up} />
 
       {/* Charge */}
-      <ChargeSection params={params} nb={nb} chargeGlobal={chargeGlobal} chargeValues={chargeValues} color={color} up={up} />
+      <ChargeSection params={params} nb={nb} chargeGlobal={chargeGlobal} chargeValues={chargeValues} tone={tone} up={up} />
 
       {/* RIR */}
-      <RirSection params={params} nb={nb} rirGlobal={rirGlobal} rirValues={rirValues} color={color} up={up} />
+      <RirSection params={params} nb={nb} rirGlobal={rirGlobal} rirValues={rirValues} tone={tone} up={up} />
 
       {/* Tempo (exercise scope only) */}
       {scope === 'exercise' && (
         <Section>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="flex items-center gap-1.5">
             <InlineLabel>Tempo</InlineLabel>
-            <span style={{ fontSize: 9, color: C.tx3, flexShrink: 0 }}>ecc–pause–con</span>
+            <span className="shrink-0 text-[9px] text-agon-tx3">ecc–pause–con</span>
             {params.tempo.mode === 'global' && (
               <input type="text" value={tempoGlobal}
                 onChange={e => up({ tempo: { mode: 'global', value: e.target.value } })}
                 placeholder="3-1-2-0"
-                style={{ width: 88, padding: "5px 8px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const }}
+                className="w-[88px] rounded-[7px] border border-agon-brd-l bg-agon-s1 px-2 py-[5px] text-center text-[13px] font-bold text-agon-tx outline-none"
               />
             )}
-            <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+            <div className="ml-auto shrink-0">
               <button
                 onClick={() => {
                   if (params.tempo.mode === 'par_serie') {
@@ -524,19 +529,19 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
                     up({ tempo: { mode: 'par_serie', values: Array(nb).fill(tempoGlobal) } })
                   }
                 }}
-                style={pillParSerie(params.tempo.mode === 'par_serie')}
+                className={pillParSerie(params.tempo.mode === 'par_serie')}
               >
                 {params.tempo.mode === 'par_serie' ? "↩ Global" : "Par série"}
               </button>
             </div>
           </div>
           {params.tempo.mode === 'par_serie' && (
-            <div style={{ marginTop: 8 }}>
+            <div className="mt-2">
               <ParamSeriesGrid nb_series={nb} values={tempoValues}
                 onChange={values => up({ tempo: { mode: 'par_serie', values } })}
                 renderCell={(v, _i, ch) => (
                   <input type="text" value={v} onChange={e => ch(e.target.value)} placeholder="3-1-2"
-                    style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 11, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
+                    className={cn(CELL, "text-center text-[11px]")}
                   />
                 )}
               />
@@ -553,11 +558,11 @@ function MethodParamsPanel({ params, scope, color, onChange }: MethodParamsPanel
 interface SubSectionProps {
   params: ExerciceParams
   nb: number
-  color: string
+  tone: Tone
   up: (p: Partial<ExerciceParams>) => void
 }
 
-function RecupSection({ params, color, up }: Omit<SubSectionProps, 'nb'>) {
+function RecupSection({ params, tone, up }: Omit<SubSectionProps, 'nb'>) {
   // Store rest config separately — ExerciceParams doesn't have it, so we use a data attribute approach
   // Instead: store as string in tempo's par_serie... nope.
   // Actually: we expose a restConfig field via a wrapper state in MethodParamsPanel
@@ -577,11 +582,11 @@ function RecupSection({ params, color, up }: Omit<SubSectionProps, 'nb'>) {
   // FINAL DECISION: Add a rest config as an additional prop to MethodParamsPanel
   // But that requires changing the interface. For now, let's skip and default to free.
   // We'll add rest as a simple UI-only section that calls a separate onRestChange prop.
-  void up; void color; void params; // suppress unused warnings
+  void up; void tone; void params; // suppress unused warnings
   return null  // rest handled externally for now
 }
 
-function ChargeSection({ params, nb, chargeGlobal, chargeValues, color, up }: SubSectionProps & { chargeGlobal: number | null, chargeValues: (number | null)[] }) {
+function ChargeSection({ params, nb, chargeGlobal, chargeValues, tone, up }: SubSectionProps & { chargeGlobal: number | null, chargeValues: (number | null)[] }) {
   return (
     <Section>
       <SectionLabel
@@ -595,29 +600,29 @@ function ChargeSection({ params, nb, chargeGlobal, chargeValues, color, up }: Su
                 up({ charge: { mode: 'par_serie', values: Array(nb).fill(chargeGlobal) } })
               }
             }}
-            style={pillParSerie(params.charge.mode === 'par_serie')}
+            className={pillParSerie(params.charge.mode === 'par_serie')}
           >
             {params.charge.mode === 'par_serie' ? "↩ Global" : "Par série"}
           </button>
         }
       />
 
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 10 }}>
+      <div className="mb-2.5 flex justify-center gap-1.5">
         {(['%RM', 'kg', 'PDC'] as const).map(u => (
-          <button key={u} onClick={() => up({ charge_unit: u })} style={pill(params.charge_unit === u, color)}>{u}</button>
+          <button key={u} onClick={() => up({ charge_unit: u })} className={pill(params.charge_unit === u, tone)}>{u}</button>
         ))}
       </div>
 
       {params.charge_unit !== 'PDC' && (
         params.charge.mode === 'global' ? (
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div className="flex justify-center">
+            <div className="flex items-center gap-1.5">
               <input type="number" value={chargeGlobal ?? ""}
                 onChange={e => up({ charge: { mode: 'global', value: e.target.value === "" ? null : parseFloat(e.target.value) } })}
                 placeholder="—" min={0}
-                style={{ width: 80, padding: "7px 8px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none", textAlign: "center" as const }}
+                className="w-20 rounded-[7px] border border-agon-brd-l bg-agon-s1 px-2 py-[7px] text-center text-[14px] font-bold text-agon-tx outline-none"
               />
-              <span style={{ fontSize: 12, color: C.tx3, fontWeight: 600 }}>{params.charge_unit}</span>
+              <span className="text-[12px] font-semibold text-agon-tx3">{params.charge_unit}</span>
             </div>
           </div>
         ) : (
@@ -627,7 +632,7 @@ function ChargeSection({ params, nb, chargeGlobal, chargeValues, color, up }: Su
               <input type="number" value={v ?? ""}
                 onChange={e => ch(e.target.value === "" ? null : parseFloat(e.target.value))}
                 placeholder="—"
-                style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", textAlign: "center" as const, boxSizing: "border-box" as const }}
+                className={cn(CELL, "text-center text-[12px]")}
               />
             )}
           />
@@ -637,26 +642,26 @@ function ChargeSection({ params, nb, chargeGlobal, chargeValues, color, up }: Su
   )
 }
 
-function RirSection({ params, nb, rirGlobal, rirValues, color, up }: SubSectionProps & { rirGlobal: number | null, rirValues: (number | null)[] }) {
+function RirSection({ params, nb, rirGlobal, rirValues, tone, up }: SubSectionProps & { rirGlobal: number | null, rirValues: (number | null)[] }) {
   const rirIsGlobal = params.rir.mode === 'global'
   return (
     <Section>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      <div className="flex flex-wrap items-center gap-1.5">
         <InlineLabel>RIR</InlineLabel>
         {rirIsGlobal && (
           <>
             <button
               onClick={() => up({ rir: { mode: 'global', value: rirGlobal === null ? 2 : null } })}
-              style={pillSmall(rirGlobal === null, color)}
+              className={pillSmall(rirGlobal === null, tone)}
             >
               {rirGlobal === null ? "Libre ✓" : "Libre"}
             </button>
             {rirGlobal !== null && (
-              <Stepper value={rirGlobal} onChange={v => up({ rir: { mode: 'global', value: v } })} min={0} max={5} step={0.5} color={color} />
+              <Stepper value={rirGlobal} onChange={v => up({ rir: { mode: 'global', value: v } })} min={0} max={5} step={0.5} valueClass={TONE[tone].text} />
             )}
           </>
         )}
-        <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+        <div className="ml-auto shrink-0">
           <button
             onClick={() => {
               if (params.rir.mode === 'par_serie') {
@@ -665,19 +670,19 @@ function RirSection({ params, nb, rirGlobal, rirValues, color, up }: SubSectionP
                 up({ rir: { mode: 'par_serie', values: Array(nb).fill(rirGlobal ?? 2) as number[] } })
               }
             }}
-            style={pillParSerie(params.rir.mode === 'par_serie')}
+            className={pillParSerie(params.rir.mode === 'par_serie')}
           >
             {params.rir.mode === 'par_serie' ? "↩ Global" : "Par série"}
           </button>
         </div>
       </div>
       {params.rir.mode === 'par_serie' && (
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-2">
           <ParamSeriesGrid nb_series={nb} values={rirValues as number[]}
             onChange={values => up({ rir: { mode: 'par_serie', values } })}
             renderCell={(v, _i, ch) => (
               <select value={v ?? 2} onChange={e => ch(parseFloat(e.target.value))}
-                style={{ width: "100%", padding: "5px 4px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 11, fontFamily: "inherit", outline: "none" }}>
+                className={cn(CELL, "text-[11px]")}>
                 {[0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5].map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             )}
@@ -699,32 +704,32 @@ function ClusterEditorInline({ cluster, onChange }: { cluster: ClusterConfig; on
     onChange({ ...cluster, nb_clusters: n, reps: next })
   }
   return (
-    <div style={{ padding: "10px", borderRadius: 4, border: "1px solid " + ORANGE + "50", background: ORANGE + "0A" }}>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-        <div style={{ textAlign: "center" as const }}>
-          <div style={{ fontSize: 9, color: ORANGE, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 3 }}>Clusters</div>
-          <Stepper value={cluster.nb_clusters} onChange={setNb} min={2} max={8} color={ORANGE} />
+    <div className={CLUSTER_BOX}>
+      <div className="mb-2 flex items-center justify-center gap-2.5">
+        <div className="text-center">
+          <div className={cn(CLUSTER_KICKER, "mb-[3px]")}>Clusters</div>
+          <Stepper value={cluster.nb_clusters} onChange={setNb} min={2} max={8} valueClass="text-agon-alerte" />
         </div>
-        <div style={{ textAlign: "center" as const }}>
-          <div style={{ fontSize: 9, color: ORANGE, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 3 }}>Récup (s)</div>
-          <Stepper value={cluster.recup_sec} onChange={v => onChange({ ...cluster, recup_sec: v })} min={5} max={120} color={ORANGE} />
+        <div className="text-center">
+          <div className={cn(CLUSTER_KICKER, "mb-[3px]")}>Récup (s)</div>
+          <Stepper value={cluster.recup_sec} onChange={v => onChange({ ...cluster, recup_sec: v })} min={5} max={120} valueClass="text-agon-alerte" />
         </div>
       </div>
-      <div style={{ display: "flex", gap: 5, justifyContent: "center", flexWrap: "wrap", marginBottom: 6 }}>
+      <div className="mb-1.5 flex flex-wrap justify-center gap-[5px]">
         {safeReps.map((v, i) => (
-          <div key={i} style={{ textAlign: "center" as const }}>
-            <div style={{ fontSize: 9, color: ORANGE, marginBottom: 2 }}>C{i + 1}</div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-              <button onClick={() => updateRep(i, Math.min(20, v + 1))} style={{ width: 22, height: 20, borderRadius: "4px 4px 0 0", border: "1px solid " + ORANGE + "60", background: "transparent", color: ORANGE, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>+</button>
-              <div style={{ width: 26, height: 24, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: ORANGE, border: "1px solid " + ORANGE + "60", borderTop: "none", borderBottom: "none", background: ORANGE + "08" }}>{v}</div>
-              <button onClick={() => updateRep(i, Math.max(1, v - 1))} style={{ width: 22, height: 20, borderRadius: "0 0 4px 4px", border: "1px solid " + ORANGE + "60", background: "transparent", color: ORANGE, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>−</button>
+          <div key={i} className="text-center">
+            <div className="mb-0.5 text-[9px] text-agon-alerte">C{i + 1}</div>
+            <div className="flex flex-col items-center gap-px">
+              <button onClick={() => updateRep(i, Math.min(20, v + 1))} className={cn(CLUSTER_STEP, "h-5 w-[22px] rounded-t-[4px] text-[12px]")}>+</button>
+              <div className={cn(CLUSTER_VALUE, "h-6 w-[26px] text-[12px]")}>{v}</div>
+              <button onClick={() => updateRep(i, Math.max(1, v - 1))} className={cn(CLUSTER_STEP, "h-5 w-[22px] rounded-b-[4px] text-[12px]")}>−</button>
             </div>
           </div>
         ))}
       </div>
-      <div style={{ textAlign: "center" as const, padding: "4px 8px", borderRadius: 6, background: ORANGE + "18", border: "1px solid " + ORANGE + "40" }}>
-        <span style={{ fontSize: 12, fontWeight: 800, color: ORANGE, letterSpacing: 2 }}>{safeReps.join("+")}</span>
-        <span style={{ fontSize: 10, color: ORANGE + "AA", marginLeft: 5 }}>+ {cluster.recup_sec}s</span>
+      <div className={cn(CLUSTER_SUM, "rounded-[6px] px-2 py-1")}>
+        <span className="text-[12px] font-extrabold tracking-[2px] text-agon-alerte">{safeReps.join("+")}</span>
+        <span className="ml-[5px] text-[10px] text-agon-alerte/[0.667]">+ {cluster.recup_sec}s</span>
       </div>
     </div>
   )
@@ -732,29 +737,29 @@ function ClusterEditorInline({ cluster, onChange }: { cluster: ClusterConfig; on
 
 // ─── Récupération section (standalone, uses local state in WeekFormSlot/main) ─
 
-function RecupSectionFull({ rest, color, onChange }: { rest: RestConfig; color: string; onChange: (r: RestConfig) => void }) {
+function RecupSectionFull({ rest, tone, onChange }: { rest: RestConfig; tone: Tone; onChange: (r: RestConfig) => void }) {
   return (
     <Section>
       <SectionLabel label="Récupération entre séries" />
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: rest.type !== 'free' ? 10 : 0 }}>
+      <div className={cn("flex justify-center gap-1.5", rest.type !== 'free' ? "mb-2.5" : "mb-0")}>
         {(['free', 'fixed', 'variable'] as const).map(t => (
-          <button key={t} onClick={() => onChange({ ...rest, type: t })} style={pill(rest.type === t, color)}>
+          <button key={t} onClick={() => onChange({ ...rest, type: t })} className={pill(rest.type === t, tone)}>
             {t === 'free' ? 'Libre' : t === 'fixed' ? 'Fixe' : 'Variable'}
           </button>
         ))}
       </div>
       {rest.type === 'fixed' && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-          <input type="number" value={rest.seconds} onChange={e => onChange({ ...rest, seconds: +e.target.value })} style={numInputStyle} min={0} max={600} />
-          <span style={{ fontSize: 12, color: C.tx3 }}>secondes</span>
+        <div className="flex items-center justify-center gap-2">
+          <input type="number" value={rest.seconds} onChange={e => onChange({ ...rest, seconds: +e.target.value })} className={NUM_INPUT} min={0} max={600} />
+          <span className="text-[12px] text-agon-tx3">secondes</span>
         </div>
       )}
       {rest.type === 'variable' && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-          <input type="number" value={rest.min_s} onChange={e => onChange({ ...rest, min_s: +e.target.value })} style={numInputStyle} min={0} max={600} />
-          <span style={{ fontSize: 12, color: C.tx3 }}>à</span>
-          <input type="number" value={rest.max_s} onChange={e => onChange({ ...rest, max_s: +e.target.value })} style={numInputStyle} min={0} max={600} />
-          <span style={{ fontSize: 12, color: C.tx3 }}>secondes</span>
+        <div className="flex items-center justify-center gap-2">
+          <input type="number" value={rest.min_s} onChange={e => onChange({ ...rest, min_s: +e.target.value })} className={NUM_INPUT} min={0} max={600} />
+          <span className="text-[12px] text-agon-tx3">à</span>
+          <input type="number" value={rest.max_s} onChange={e => onChange({ ...rest, max_s: +e.target.value })} className={NUM_INPUT} min={0} max={600} />
+          <span className="text-[12px] text-agon-tx3">secondes</span>
         </div>
       )}
     </Section>
@@ -772,6 +777,7 @@ function WeekFormSlot({ week, scope, initialConfig, isDeload, onChange, onCopyFr
   const [expanded, setExpanded] = useState(false);
   const [showCopyMenu, setShowCopyMenu] = useState(false);
   const scopeMeta = SCOPE_META[scope]
+  const t = TONE[scopeMeta.tone]
 
   const [params, setParams] = useState<ExerciceParams>(() => {
     if (initialConfig && Object.keys(initialConfig).length > 1) {
@@ -810,29 +816,29 @@ function WeekFormSlot({ week, scope, initialConfig, isDeload, onChange, onCopyFr
   const preview = previewConfig ? methodConfigToText(previewConfig as MethodConfig) : "—"
 
   return (
-    <div style={{ borderRadius: 4, border: `1px solid ${expanded ? scopeMeta.color : C.brdL}`, overflow: "hidden", marginBottom: 5 }}>
-      <div onClick={() => setExpanded(p => !p)} style={{ padding: "9px 14px", background: expanded ? scopeMeta.colorS : C.s2, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "all 100ms" }}>
-        <div style={{ width: 20, height: 20, borderRadius: 6, background: expanded ? scopeMeta.color : C.s1, border: `1px solid ${expanded ? scopeMeta.color : C.brdL}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontSize: 9, fontWeight: 900, color: expanded ? C.tx : C.tx3 }}>S{week}</span>
+    <div className={cn("mb-[5px] overflow-hidden rounded border", expanded ? t.border : "border-agon-brd-l")}>
+      <div onClick={() => setExpanded(p => !p)} className={cn("flex cursor-pointer items-center gap-2.5 px-3.5 py-[9px] [transition:all_100ms]", expanded ? t.soft : "bg-agon-s2")}>
+        <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border", expanded ? cn(t.bg, t.border) : "border-agon-brd-l bg-agon-s1")}>
+          <span className={cn("text-[9px] font-black", expanded ? "text-agon-tx" : "text-agon-tx3")}>S{week}</span>
         </div>
-        <span style={{ flex: 1, fontSize: 10, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>{preview}</span>
-        {isDeload && <span style={{ fontSize: 9, color: scopeMeta.color, fontWeight: 700, background: scopeMeta.colorS, padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}>déload</span>}
+        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-agon-tx3 [font-family:monospace]">{preview}</span>
+        {isDeload && <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold", t.text, t.soft)}>déload</span>}
         {onCopyFrom && prevWeeks && prevWeeks.length > 0 && (
-          <div style={{ position: "relative" as const, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => setShowCopyMenu(p => !p)}
               title="Copier depuis une autre semaine"
-              style={{ fontSize: 9, fontWeight: 700, color: C.tx3, background: C.s2, border: `1px solid ${C.brdL}`, borderRadius: 5, padding: "2px 7px", cursor: "pointer", fontFamily: "inherit" }}
+              className="cursor-pointer rounded-[5px] border border-agon-brd-l bg-agon-s2 px-[7px] py-0.5 text-[9px] font-bold text-agon-tx3"
             >
               Copier ▾
             </button>
             {showCopyMenu && (
-              <div style={{ position: "absolute" as const, right: 0, top: "calc(100% + 4px)", zIndex: 20, background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 4, overflow: "hidden", minWidth: 100 }}>
+              <div className={cn(MENU, "absolute right-0 top-[calc(100%+4px)] z-20 min-w-[100px]")}>
                 {prevWeeks.map(w => (
                   <button key={w} type="button"
                     onClick={() => { onCopyFrom(w); setShowCopyMenu(false) }}
-                    style={{ width: "100%", padding: "8px 12px", textAlign: "left" as const, border: "none", borderBottom: `1px solid ${C.brd}`, background: "transparent", color: C.tx, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                    className={cn(MENU_ITEM, "text-[12px]")}
                   >
                     Copier S{w}
                   </button>
@@ -841,13 +847,13 @@ function WeekFormSlot({ week, scope, initialConfig, isDeload, onChange, onCopyFr
             )}
           </div>
         )}
-        <span style={{ fontSize: 10, color: C.tx3 }}>{expanded ? "▲" : "▼"}</span>
+        <span className="text-[10px] text-agon-tx3">{expanded ? "▲" : "▼"}</span>
       </div>
       {expanded && (
-        <div style={{ padding: "12px", borderTop: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 8 }}>
-          <MethodParamsPanel params={params} scope={scope} color={scopeMeta.color} onChange={handleParamsChange} />
+        <div className="flex flex-col gap-2 border-t border-agon-brd p-3">
+          <MethodParamsPanel params={params} scope={scope} tone={scopeMeta.tone} onChange={handleParamsChange} />
           {scope !== 'set' && (
-            <RecupSectionFull rest={rest} color={scopeMeta.color} onChange={handleRestChange} />
+            <RecupSectionFull rest={rest} tone={scopeMeta.tone} onChange={handleRestChange} />
           )}
           <MethodPreview config={previewConfig} compact />
         </div>
@@ -917,6 +923,7 @@ export function MethodBuilder({ initial, coachId: _coachId, onSubmit, onCancel, 
 
   const scope = watch("scope")
   const scopeMeta = SCOPE_META[scope] ?? SCOPE_META.classic
+  const t = TONE[scopeMeta.tone]
 
   // Step2 local ExerciceParams state
   const [params, setParams] = useState<ExerciceParams>(() => {
@@ -963,20 +970,20 @@ export function MethodBuilder({ initial, coachId: _coachId, onSubmit, onCancel, 
   const previewConfig = exerciceParamsToMethodConfig(params, rest, scope)
 
   return (
-    <form onSubmit={e => e.preventDefault()} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <form onSubmit={e => e.preventDefault()} className="flex h-full flex-col">
       {/* Step indicator */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+      <div className="mb-4">
+        <div className="mb-2 flex gap-1.5">
           {[1, 2].map(s => (
-            <div key={s} style={{ flex: 1, height: 3, borderRadius: 3, background: step >= s ? scopeMeta.color : C.brdL, transition: "background 200ms" }} />
+            <div key={s} className={cn("h-[3px] flex-1 rounded-[3px] [transition:background_200ms]", step >= s ? t.bg : "bg-agon-brd-l")} />
           ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
+        <div className="flex items-center justify-between">
+          <div className={SMALL_KICKER}>
             Étape {step} / 2 — {step === 1 ? "Informations générales" : "Paramètres"}
           </div>
           {step === 2 && (
-            <div style={{ fontSize: 9, fontWeight: 700, color: scopeMeta.color, background: scopeMeta.colorS, padding: "2px 7px", borderRadius: 4 }}>
+            <div className={cn("rounded px-[7px] py-0.5 text-[9px] font-bold", t.text, t.soft)}>
               {scopeMeta.label}
             </div>
           )}
@@ -984,49 +991,49 @@ export function MethodBuilder({ initial, coachId: _coachId, onSubmit, onCancel, 
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", paddingRight: 2 }}>
+      <div className="flex-1 overflow-y-auto pr-0.5">
         {step === 1 && (
           <Step1 control={control} errors={errors} existingCategories={existingCategories} />
         )}
 
         {step === 2 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
 
             {/* Base params — hidden when multi-week active */}
             {!multiWeek && (
               <>
-                <MethodParamsPanel params={params} scope={scope} color={scopeMeta.color} onChange={setParams} />
+                <MethodParamsPanel params={params} scope={scope} tone={scopeMeta.tone} onChange={setParams} />
                 {scope !== 'set' && (
-                  <RecupSectionFull rest={rest} color={scopeMeta.color} onChange={setRest} />
+                  <RecupSectionFull rest={rest} tone={scopeMeta.tone} onChange={setRest} />
                 )}
-                <div style={{ marginTop: 4 }}>
+                <div className="mt-1">
                   <MethodPreview config={previewConfig} />
                 </div>
               </>
             )}
 
             {/* Multi-week */}
-            <div style={{ paddingTop: multiWeek ? 0 : 14, borderTop: multiWeek ? "none" : `1px solid ${C.brd}` }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div className={multiWeek ? "pt-0" : "border-t border-agon-brd pt-3.5"}>
+              <div className="mb-2.5 flex items-center justify-between">
                 <button type="button"
                   onClick={() => {
                     if (!multiWeek) setWeeklyConfigs(Array.from({ length: weekCount }, (_, i) => ({ week: i + 1, config: {} as MethodConfig })))
                     setMultiWeek(!multiWeek)
                   }}
-                  style={pill(multiWeek, scopeMeta.color)}
+                  className={pill(multiWeek, scopeMeta.tone)}
                 >
                   {multiWeek ? "✓ Protocole multi-semaines" : "Protocole multi-semaines"}
                 </button>
                 {multiWeek && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>Semaines</span>
-                    <Stepper value={weekCount} onChange={n => resizeWC(Math.max(2, Math.min(16, n)))} min={2} max={16} color={scopeMeta.color} />
+                  <div className="flex items-center gap-2">
+                    <span className={SMALL_KICKER}>Semaines</span>
+                    <Stepper value={weekCount} onChange={n => resizeWC(Math.max(2, Math.min(16, n)))} min={2} max={16} valueClass={t.text} />
                   </div>
                 )}
               </div>
               {multiWeek && (
                 <div>
-                  <div style={{ fontSize: 10, color: C.tx3, marginBottom: 8 }}>Configure chaque semaine. Clique pour ouvrir.</div>
+                  <div className="mb-2 text-[10px] text-agon-tx3">Configure chaque semaine. Clique pour ouvrir.</div>
                   {weeklyConfigs.map((wc, idx) => (
                     <WeekFormSlot
                       key={`${wc.week}-${copyKeys[wc.week] ?? 0}`}
@@ -1047,17 +1054,20 @@ export function MethodBuilder({ initial, coachId: _coachId, onSubmit, onCancel, 
       </div>
 
       {/* Footer */}
-      <div style={{ display: "flex", gap: 8, paddingTop: 14, borderTop: `1px solid ${C.brd}`, marginTop: 14, flexShrink: 0 }}>
+      <div className="mt-3.5 flex shrink-0 gap-2 border-t border-agon-brd pt-3.5">
         {step === 1 ? (
-          <button type="button" onClick={onCancel} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button type="button" onClick={onCancel} className="flex-1 cursor-pointer rounded border border-agon-brd-l bg-transparent py-2.5 text-[13px] font-semibold text-agon-tx2">
             Annuler
           </button>
         ) : (
-          <button type="button" onClick={() => setStep(1)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 16px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          <button type="button" onClick={() => setStep(1)} className="flex cursor-pointer items-center gap-1 rounded border border-agon-brd-l bg-transparent px-4 py-2.5 text-[13px] font-semibold text-agon-tx2">
             <ChevronLeft size={14} />Retour
           </button>
         )}
-        <button type="button" onClick={handleNext} disabled={!!loading} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: loading ? C.s2 : scopeMeta.color, color: loading ? C.tx3 : C.tx, fontSize: 13, fontWeight: 700, cursor: loading ? "default" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 150ms" }}>
+        <button type="button" onClick={handleNext} disabled={!!loading} className={cn(
+          "flex flex-1 items-center justify-center gap-1.5 rounded py-2.5 text-[13px] font-bold [transition:background_150ms]",
+          loading ? "cursor-default bg-agon-s2 text-agon-tx3" : cn("cursor-pointer text-agon-tx", t.bg),
+        )}>
           {step === 1 ? <><span>Suivant</span><ChevronRight size={14} /></> :
            loading ? "Enregistrement…" :
            <><Check size={14} /><span>{initial ? "Mettre à jour" : "Créer la méthode"}</span></>}

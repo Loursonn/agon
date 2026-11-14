@@ -52,7 +52,7 @@ function well(day: string, v: Partial<WellnessEntry> & { n?: number }): Wellness
   return {
     day, items: { fatigue: n, sommeil: n, stress: n, energie: n, doms: n },
     sleep: { bedtime: null, wake: null, hours: null, interrupted: null, interruptNote: null },
-    domsZones: [], domsPoints: [], domsLevels: {}, envie: v.envie ?? null, pain: v.pain ?? null, sick: v.sick ?? null,
+    domsZones: [], domsPoints: [], domsLevels: {}, envie: v.envie ?? null, pain: v.pain ?? null, painLevels: {}, sick: v.sick ?? null,
     domsWorkout: null, injuryNote: null, weightKg: null, archived: v.archived ?? false,
   };
 }

@@ -3,9 +3,9 @@
  * le planning de l'athlète et du coach. Un clic ouvre la fiche (viewer par
  * query param, monté par la page hôte).
  */
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useFicheViewer } from "@/features/shared/hooks/fiches/useFicheViewer";
-import { CATEGORY_COLOR } from "@/features/shared/components/fiches/ficheStyles";
+import { CATEGORY_SOFT } from "@/features/shared/components/fiches/ficheStyles";
 import type { ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
 
 export function DayFiches({ items, compact }: { items: ScheduledDoc[]; compact?: boolean }) {
@@ -13,33 +13,30 @@ export function DayFiches({ items, compact }: { items: ScheduledDoc[]; compact?:
   const visible = items.filter((f) => f.doc);
   if (visible.length === 0) return null;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 2 : 4 }}>
-      {visible.map((f) => {
-        const color = CATEGORY_COLOR[f.doc!.category] ?? C.b;
-        return (
-          <button
-            key={f.id}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); viewer.open(f.doc!.id); }}
-            title={f.note ?? f.doc!.title}
-            style={{
-              display: "flex", alignItems: "center", gap: 6, textAlign: "left", width: "100%", minWidth: 0,
-              padding: compact ? "1px 4px" : "6px 10px", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
-              background: color + "14", border: "1px solid " + color + "40",
-            }}
-          >
-            <span style={{ fontSize: compact ? 9 : 12 }}>📄</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontSize: compact ? 10 : 12, fontWeight: 600, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {f.doc!.title}
-              </span>
-              {!compact && f.note && (
-                <span style={{ display: "block", fontSize: 11, color: C.tx2 }}>{f.note}</span>
-              )}
+    <div className={cn("flex flex-col", compact ? "gap-0.5" : "gap-1")}>
+      {visible.map((f) => (
+        <button
+          key={f.id}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); viewer.open(f.doc!.id); }}
+          title={f.note ?? f.doc!.title}
+          className={cn(
+            "flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded-[4px] border text-left font-[inherit]",
+            compact ? "px-1 py-px" : "px-2.5 py-1.5",
+            CATEGORY_SOFT[f.doc!.category] ?? "border-agon-info/[0.25] bg-agon-info/[0.08]",
+          )}
+        >
+          <span className={compact ? "text-[9px]" : "text-[12px]"}>📄</span>
+          <span className="min-w-0 flex-1">
+            <span className={cn("block truncate font-semibold text-agon-tx", compact ? "text-[10px]" : "text-[12px]")}>
+              {f.doc!.title}
             </span>
-          </button>
-        );
-      })}
+            {!compact && f.note && (
+              <span className="block text-[11px] text-agon-tx2">{f.note}</span>
+            )}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

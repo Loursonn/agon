@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { C, alpha } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 import { TIPS, TIPS_EVENT, pendingTip, setTip, tipPlacement } from "@/lib/onboarding";
 
 type Box = { top: number; bottom: number; left: number; width: number; height: number };
@@ -54,24 +53,28 @@ export function TodayTips({ uid }: { uid: string | null | undefined }) {
 
   const card = (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac, whiteSpace: "nowrap" }}>Astuce {index + 1} / {TIPS.length}</span>
-        <button type="button" onClick={() => setTip(uid, null)} style={{ fontSize: 12.5, color: C.tx3, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}>Passer</button>
+      <div className="flex items-center justify-between">
+        <span className="agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-agon-accent">Astuce {index + 1} / {TIPS.length}</span>
+        <button type="button" onClick={() => setTip(uid, null)} className="cursor-pointer border-none bg-transparent p-0 font-[inherit] text-[12.5px] text-agon-tx3">Passer</button>
       </div>
-      <div style={{ fontSize: 15, fontWeight: 500, marginTop: 8, color: C.tx }}>{tip.title}</div>
-      <div style={{ fontSize: 13, color: C.tx2, marginTop: 4, lineHeight: 1.5 }}>{tip.text}</div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-        <button type="button" onClick={() => setTip(uid, index + 1)} style={{ height: 36, padding: "0 16px", borderRadius: 10, border: "none", background: C.ac, color: C.bg, fontWeight: 600, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}>
+      <div className="mt-2 text-[15px] font-medium text-agon-tx">{tip.title}</div>
+      <div className="mt-1 text-[13px] leading-[1.5] text-agon-tx2">{tip.text}</div>
+      <div className="mt-3 flex justify-end">
+        <button type="button" onClick={() => setTip(uid, index + 1)} className="h-9 cursor-pointer rounded-[10px] border-none bg-agon-accent px-4 font-[inherit] text-[13.5px] font-semibold text-agon-ink">
           {last ? "Compris" : "Suivant"}
         </button>
       </div>
     </>
   );
-  const shell = { padding: 16, borderRadius: 16, background: C.s2, border: `1px solid ${alpha(C.ac, 0.5)}`, boxShadow: "0 12px 32px rgba(0,0,0,0.5)", boxSizing: "border-box" as const };
+  const shell = "box-border rounded-2xl border border-agon-accent/50 bg-agon-s2 p-4 shadow-[0_12px_32px] shadow-black/50";
 
   if (!place || !box) {
     return (
-      <div role="dialog" aria-label={`Astuce ${index + 1} sur ${TIPS.length}`} style={{ ...shell, position: "fixed", left: 16, right: 16, bottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)", zIndex: 150, maxWidth: 440, margin: "0 auto" }}>
+      <div
+        role="dialog"
+        aria-label={`Astuce ${index + 1} sur ${TIPS.length}`}
+        className={cn(shell, "fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom,0px)+96px)] z-[150] mx-auto max-w-[440px]")}
+      >
         {card}
       </div>
     );
@@ -80,17 +83,25 @@ export function TodayTips({ uid }: { uid: string | null | undefined }) {
   return (
     <>
       {/* Halo or autour de la cible */}
-      <div aria-hidden style={{ position: "fixed", zIndex: 149, pointerEvents: "none", top: box.top - 4, left: box.left - 4, width: box.width + 8, height: box.height + 8, borderRadius: 14, boxShadow: `0 0 0 2px ${C.ac}, 0 0 0 9999px rgba(0,0,0,0.45)` }} />
-      <div role="dialog" aria-label={`Astuce ${index + 1} sur ${TIPS.length}`} style={{
-        ...shell, position: "fixed", zIndex: 150, left: place.left, width: place.width,
-        ...(place.below ? { top: place.y } : { bottom: place.y }),
-      }}>
-        <span aria-hidden style={{
-          position: "absolute", left: place.arrowX - 7, width: 14, height: 14, background: C.s2, transform: "rotate(45deg)",
-          ...(place.below
-            ? { top: -8, borderLeft: `1px solid ${alpha(C.ac, 0.5)}`, borderTop: `1px solid ${alpha(C.ac, 0.5)}` }
-            : { bottom: -8, borderRight: `1px solid ${alpha(C.ac, 0.5)}`, borderBottom: `1px solid ${alpha(C.ac, 0.5)}` }),
-        }} />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed z-[149] rounded-[14px] shadow-[0_0_0_9999px] shadow-black/[0.45] ring-2 ring-agon-accent"
+        style={{ top: box.top - 4, left: box.left - 4, width: box.width + 8, height: box.height + 8 }}
+      />
+      <div
+        role="dialog"
+        aria-label={`Astuce ${index + 1} sur ${TIPS.length}`}
+        className={cn(shell, "fixed z-[150]")}
+        style={{ left: place.left, width: place.width, ...(place.below ? { top: place.y } : { bottom: place.y }) }}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "absolute size-3.5 rotate-45 bg-agon-s2",
+            place.below ? "-top-2 border-l border-t border-agon-accent/50" : "-bottom-2 border-b border-r border-agon-accent/50",
+          )}
+          style={{ left: place.arrowX - 7 }}
+        />
         {card}
       </div>
     </>

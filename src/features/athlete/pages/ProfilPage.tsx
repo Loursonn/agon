@@ -1,5 +1,6 @@
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { useAthleteChrome } from "@/features/athlete/context/AthleteChromeContext";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ export default function ProfilPage() {
     athleteId, athleteProfile, viewOnly, freeSessions,
     weightLog, saveWeighIn, nutritionStrategy, bodyWeight,
   } = useAthleteContext();
+  const chrome = useAthleteChrome();
 
   const [editing, setEditing] = useState(false);
   const displayProfile = athleteProfile ?? profile;
@@ -97,6 +99,25 @@ export default function ProfilPage() {
     {/* Ordinateur (planche AthOrdiBProfil) : profil à gauche (1/3), le reste à droite (2/3). */}
     <div className={cn("px-5 pb-10 pt-6 [scrollbar-width:none]", isDesktop && "grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-x-8")}>
       <div className={isDesktop ? "flex min-w-0 flex-col" : "contents"}>
+      {/* ── Bascule vers l'espace coach (coach-athlète) ── */}
+      {!viewOnly && chrome?.onSwitchMode && (
+        <button
+          type="button"
+          onClick={chrome.onSwitchMode}
+          className={cn(CARD, "mb-6 flex w-full cursor-pointer items-center gap-3.5 border-agon-accent/40 p-4 text-left font-[inherit] text-agon-tx")}
+        >
+          <span aria-hidden className="flex size-10 flex-none items-center justify-center rounded-full border border-agon-accent/45 text-agon-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square"><path d="M4 8H18M14 4L18 8L14 12" /><path d="M20 16H6M10 12L6 16L10 20" /></svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="agon-mono block text-[10.5px] uppercase tracking-[0.12em] text-agon-accent">Mode coach</span>
+            <span className="block text-[15px] font-medium">Passer à ton espace coach</span>
+            <span className="block text-[12px] text-agon-tx3">Tes athlètes, leur planning et leurs retours</span>
+          </span>
+          <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square" className="flex-none text-agon-tx3"><path d="M9 5L16 12L9 19" /></svg>
+        </button>
+      )}
+
       {/* ── Profil ── */}
       <div className="mb-6">
         <SectionTitle n="01">Profil</SectionTitle>

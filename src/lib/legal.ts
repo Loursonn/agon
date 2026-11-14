@@ -22,7 +22,7 @@
  * Les corrections purement rédactionnelles (typo, reformulation) ne doivent PAS
  * l'incrémenter, sinon on harcèle les utilisateurs pour rien.
  */
-export const LEGAL_VERSION = "2026-11-13";
+export const LEGAL_VERSION = "2026-11-14";
 
 /**
  * Plus ancienne version sous laquelle l'accord socle (`health_data`) reste
@@ -51,11 +51,16 @@ export const CORE_CONSENT_SINCE = "2026-11-13";
  * Claude : l'athlète est re-sollicité par `ConsentGate`. Même valeur que
  * `AI_ASSISTANT_SINCE` côté serveur (`supabase/functions/_shared/coachApiOps.ts`),
  * vérifiée par un test.
+ *
+ * 14 novembre 2026 : l'IA d'Agon passe de Gemini à Claude (API Anthropic).
+ * Anthropic étant déjà nommé dans le texte du 30 octobre, et le cadre devenant
+ * plus protecteur (sous-traitance, pas d'entraînement), les accords donnés
+ * depuis restent valables : décision d'Hugo, `docs/DECISIONS.md`.
  */
 export const AI_CONSENT_SINCE = "2026-10-30";
 
 /** Date d'entrée en vigueur affichée en tête des documents. */
-export const LEGAL_EFFECTIVE_DATE = "13 novembre 2026";
+export const LEGAL_EFFECTIVE_DATE = "14 novembre 2026";
 
 /**
  * Marqueur des champs que seul Hugo peut renseigner (données d'état civil et
@@ -182,14 +187,14 @@ export const SUBPROCESSORS: Subprocessor[] = [
     privacyUrl: "https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement",
   },
   {
-    name: "Google Ireland Ltd. (Gemini API)",
+    name: "Anthropic (API Claude)",
     purpose:
-      "Analyses, synthèses et visualisations des données d'entraînement, et génération assistée de programmes. Traitement par intelligence artificielle.",
-    location: "Union européenne / États-Unis",
+      "Analyses et synthèses des données d'entraînement par intelligence artificielle. Traitement par intelligence artificielle, sur la base de l'accord « intelligence artificielle ».",
+    location: "États-Unis / monde (traitement mondial, sans hébergement réservé à l'Union européenne)",
     transferMechanism:
-      "Data Privacy Framework (Google LLC est certifié) et accord de traitement de Google pour les services payants",
+      "Clauses contractuelles types de l'accord de traitement d'Anthropic ; données non utilisées pour entraîner les modèles, conservées 30 jours au plus",
     role: "subprocessor",
-    privacyUrl: "https://ai.google.dev/gemini-api/terms",
+    privacyUrl: "https://www.anthropic.com/legal/privacy",
   },
   {
     name: "Garmin International, Inc.",

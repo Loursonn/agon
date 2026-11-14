@@ -24,9 +24,8 @@ import { formatS, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { estimateIntervalDuration, targetToIntensityPct, intensityToColor } from "@/lib/energy";
 import IntervalEditor from "./IntervalEditor";
 import ExerciseStepEditor from "./ExerciseStepEditor";
-import { C, H } from "@/lib/theme";
-
-const EXO_COLOR = C.ac;
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 // ── Role colors ───────────────────────────────────────────────────────────────
 
@@ -38,6 +37,25 @@ const ROLE_COLOR: Record<string, string> = {
   cooldown: C.b,
   open:     C.tx3,
 };
+
+type RoleTone = { row: string; borderL: string; badge: string; repeat: string };
+/** Teinte des en-têtes de groupe par rôle (mêmes couleurs que ROLE_COLOR, classes écrites en entier). */
+const TONES = {
+  alerte: { row: "bg-agon-alerte/[0.071]", borderL: "border-l-agon-alerte", badge: "bg-agon-alerte/[0.133] text-agon-alerte", repeat: "border-agon-alerte/25 bg-agon-alerte/[0.125] text-agon-alerte" },
+  accent: { row: "bg-agon-accent/[0.071]", borderL: "border-l-agon-accent", badge: "bg-agon-accent/[0.133] text-agon-accent", repeat: "border-agon-accent/25 bg-agon-accent/[0.125] text-agon-accent" },
+  succes: { row: "bg-agon-succes/[0.071]", borderL: "border-l-agon-succes", badge: "bg-agon-succes/[0.133] text-agon-succes", repeat: "border-agon-succes/25 bg-agon-succes/[0.125] text-agon-succes" },
+  info:   { row: "bg-agon-info/[0.071]",   borderL: "border-l-agon-info",   badge: "bg-agon-info/[0.133] text-agon-info",     repeat: "border-agon-info/25 bg-agon-info/[0.125] text-agon-info" },
+  tx3:    { row: "bg-agon-tx3/[0.071]",    borderL: "border-l-agon-tx3",    badge: "bg-agon-tx3/[0.133] text-agon-tx3",       repeat: "border-agon-tx3/25 bg-agon-tx3/[0.125] text-agon-tx3" },
+} satisfies Record<string, RoleTone>;
+const ROLE_TONE: Record<string, RoleTone> = {
+  warmup: TONES.alerte, work: TONES.accent, recovery: TONES.succes, rest: TONES.info, cooldown: TONES.info, open: TONES.tx3,
+};
+
+const ROW = "mb-0.5 flex items-center gap-2 rounded border-l-[3px] pr-2";
+const HANDLE = "shrink-0 cursor-grab text-[14px] text-agon-tx3";
+const BADGE = "shrink-0 rounded px-[5px] py-0.5 text-[9px]";
+const SMALL_INPUT = "rounded border border-agon-brd bg-agon-s2 px-1.5 py-0.5 text-agon-tx";
+const ACCENT_BTN = "cursor-pointer rounded border border-agon-accent/[0.314] bg-agon-accent/[0.071] px-3.5 py-[7px] text-[12px] font-semibold text-agon-accent";
 
 const ROLE_LABEL: Record<string, string> = {
   warmup: "Écha.", work: "Effort", recovery: "Récup.", rest: "Repos", cooldown: "Retour", open: "Libre",
@@ -56,12 +74,8 @@ function SortableItem({ id, children }: { id: string; children: (listeners: Reco
     <div
       ref={setNodeRef}
       data-step-id={id}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.4 : 1,
-        zIndex: isDragging ? 999 : undefined,
-      }}
+      className={isDragging ? "z-[999] opacity-40" : "opacity-100"}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
     >
       {children(listeners as Record<string, unknown>)}
@@ -89,45 +103,33 @@ function IntervalRow({
 
   return (
     <div
-      style={{
-        display: "flex", alignItems: "center", gap: 8,
-        paddingLeft: 12 + depth * 20,
-        paddingRight: 8, paddingTop: 6, paddingBottom: 6,
-        borderLeft: `3px solid ${color}`,
-        background: depth > 0 ? "rgba(255,255,255,0.02)" : "transparent",
-        borderRadius: 4,
-        marginBottom: 2,
-      }}
+      className={cn(ROW, "py-1.5", depth > 0 ? "bg-white/[0.02]" : "bg-transparent")}
+      // Retrait (profondeur) et teinte d'intensité : valeurs calculées.
+      style={{ paddingLeft: 12 + depth * 20, borderLeftColor: color }}
     >
       {/* Drag handle */}
       <div
         {...listeners}
-        style={{ cursor: "grab", color: C.tx3, fontSize: 14, flexShrink: 0, paddingRight: 2 }}
+        className={cn(HANDLE, "pr-0.5")}
       >
         ⋮⋮
       </div>
 
       {/* Role badge */}
-      <span style={{
-        fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 4,
-        background: color + "22", color, flexShrink: 0,
-      }}>
+      <span className={cn(BADGE, "font-bold")} style={{ background: color + "22", color }}>
         {ROLE_LABEL[interval.role] ?? interval.role}
       </span>
 
       {/* Equipment badge */}
       {interval.equipment && (
-        <span style={{
-          fontSize: 9, fontWeight: 600, padding: "2px 5px", borderRadius: 4,
-          background: C.b + "22", color: C.b, flexShrink: 0,
-        }}>
+        <span className={cn(BADGE, "bg-agon-info/[0.133] font-semibold text-agon-info")}>
           {EQUIPMENT_LABEL[interval.equipment] ?? interval.equipment}
         </span>
       )}
 
       {/* Summary */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: C.tx, fontWeight: 500, overflowWrap: "anywhere", lineHeight: 1.4 }}>
+      <div className="min-w-0 flex-1">
+        <div className="text-[12px] font-medium leading-[1.4] text-agon-tx [overflow-wrap:anywhere]">
           {interval.duration.kind === "distance"
             ? `${interval.duration.value ?? 0}m`
             : interval.duration.kind === "calories"
@@ -138,15 +140,15 @@ function IntervalRow({
           }{targetStr && targetStr !== "Libre" ? ` @ ${targetStr}` : ""}
         </div>
         {interval.notes && (
-          <div style={{ fontSize: 10, color: C.tx3, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
+          <div className="whitespace-pre-wrap text-[10px] leading-[1.4] text-agon-tx3 [overflow-wrap:anywhere]">
             {interval.notes}
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} style={{ display: "block" }} /></ActionBtn>
+      <div className="flex shrink-0 gap-1">
+        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} className="block" /></ActionBtn>
         <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
         <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
       </div>
@@ -171,42 +173,34 @@ function ExerciseRow({
 
   return (
     <div
-      style={{
-        display: "flex", alignItems: "center", gap: 8,
-        paddingLeft: 12 + depth * 20,
-        paddingRight: 8, paddingTop: 6, paddingBottom: 6,
-        borderLeft: `3px solid ${EXO_COLOR}`,
-        background: depth > 0 ? "rgba(255,255,255,0.02)" : "transparent",
-        borderRadius: 4, marginBottom: 2,
-      }}
+      className={cn(ROW, "border-l-agon-accent py-1.5", depth > 0 ? "bg-white/[0.02]" : "bg-transparent")}
+      // Retrait selon la profondeur (valeur calculée).
+      style={{ paddingLeft: 12 + depth * 20 }}
     >
-      <div {...listeners} style={{ cursor: "grab", color: C.tx3, fontSize: 14, flexShrink: 0, paddingRight: 2 }}>⋮⋮</div>
+      <div {...listeners} className={cn(HANDLE, "pr-0.5")}>⋮⋮</div>
 
-      <span style={{
-        fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 4,
-        background: EXO_COLOR + "22", color: EXO_COLOR, flexShrink: 0,
-      }}>
+      <span className={cn(BADGE, "bg-agon-accent/[0.133] font-bold text-agon-accent")}>
         EXERCICE
       </span>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, color: C.tx, fontWeight: 600, overflowWrap: "anywhere", lineHeight: 1.4 }}>
+      <div className="min-w-0 flex-1">
+        <div className="text-[12px] font-semibold leading-[1.4] text-agon-tx [overflow-wrap:anywhere]">
           {exercise.exercise_name}
         </div>
         {summary && (
-          <div style={{ fontSize: 10, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-agon-tx3">
             {summary}
           </div>
         )}
         {exercise.notes && (
-          <div style={{ fontSize: 10, color: C.tx3, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
+          <div className="whitespace-pre-wrap text-[10px] leading-[1.4] text-agon-tx3 [overflow-wrap:anywhere]">
             {exercise.notes}
           </div>
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} style={{ display: "block" }} /></ActionBtn>
+      <div className="flex shrink-0 gap-1">
+        <ActionBtn onClick={onEdit} title="Modifier les paramètres"><Settings size={12} className="block" /></ActionBtn>
         <ActionBtn onClick={onDuplicate} title="Dupliquer">⧉</ActionBtn>
         <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
       </div>
@@ -254,23 +248,18 @@ function GroupRowHeader({
   const [repeatVal, setRepeatVal] = useState(group.repeat);
   const [editingDeparture, setEditingDeparture] = useState(false);
   const [departureVal, setDepartureVal] = useState(group.departure_every_s ? toMMSS(group.departure_every_s) : "1:00");
-  const color = ROLE_COLOR[group.role] ?? C.tx3;
+  const tone = ROLE_TONE[group.role] ?? TONES.tx3;
 
   return (
     <>
     <div
-      style={{
-        display: "flex", alignItems: "center", gap: 8,
-        paddingLeft: 12 + depth * 20, paddingRight: 8,
-        paddingTop: 5, paddingBottom: 5,
-        background: color + "12",
-        borderLeft: `3px solid ${color}`,
-        borderRadius: 4, marginBottom: 2,
-      }}
+      className={cn(ROW, "py-[5px]", tone.row, tone.borderL)}
+      // Retrait selon la profondeur (valeur calculée).
+      style={{ paddingLeft: 12 + depth * 20 }}
     >
-      <div {...listeners} style={{ cursor: "grab", color: C.tx3, fontSize: 14, flexShrink: 0 }}>⋮⋮</div>
+      <div {...listeners} className={HANDLE}>⋮⋮</div>
 
-      <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 4, background: color + "22", color, flexShrink: 0 }}>
+      <span className={cn(BADGE, "font-bold", tone.badge)}>
         GROUPE
       </span>
 
@@ -284,12 +273,12 @@ function GroupRowHeader({
           onChange={(e) => setRepeatVal(Number(e.target.value))}
           onBlur={() => { onEditRepeat(repeatVal); setEditingRepeat(false); }}
           onKeyDown={(e) => { if (e.key === "Enter") { onEditRepeat(repeatVal); setEditingRepeat(false); } }}
-          style={{ width: 50, background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx, fontSize: 12, padding: "2px 6px", fontFamily: "inherit" }}
+          className={cn(SMALL_INPUT, "w-[50px] text-[12px]")}
         />
       ) : (
         <button
           onClick={() => { setRepeatVal(group.repeat); setEditingRepeat(true); }}
-          style={{ background: color + "20", border: `1px solid ${color}40`, borderRadius: 6, color, fontSize: 11, fontWeight: 700, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+          className={cn("cursor-pointer rounded-[6px] border px-2 py-0.5 text-[11px] font-bold", tone.repeat)}
         >
           × {group.repeat}
         </button>
@@ -310,12 +299,12 @@ function GroupRowHeader({
                 if (e.key === "Escape") { onEditDeparture(undefined); setEditingDeparture(false); }
               }}
               placeholder="mm:ss"
-              style={{ width: 55, background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx, fontSize: 11, padding: "2px 6px", fontFamily: "inherit" }}
+              className={cn(SMALL_INPUT, "w-[55px] text-[11px]")}
             />
           ) : (
             <button
               onClick={() => { setDepartureVal(toMMSS(group.departure_every_s!)); setEditingDeparture(true); }}
-              style={{ background: H.miel + "20", border: `1px solid ${H.miel}40`, borderRadius: 6, color: H.miel, fontSize: 10, fontWeight: 600, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+              className="cursor-pointer rounded-[6px] border border-agon-alerte/25 bg-agon-alerte/[0.125] px-2 py-0.5 text-[10px] font-semibold text-agon-alerte"
               title="Départ fixe — cliquer pour modifier, Échap pour supprimer"
             >
               /{toMMSS(group.departure_every_s)}
@@ -324,7 +313,7 @@ function GroupRowHeader({
         ) : (
           <button
             onClick={() => { setDepartureVal("1:00"); onEditDeparture(60); setEditingDeparture(true); }}
-            style={{ background: "transparent", border: `1px dashed ${C.brd}`, borderRadius: 6, color: C.tx3, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded-[6px] border border-dashed border-agon-brd bg-transparent px-2 py-0.5 text-[10px] text-agon-tx3"
             title="Ajouter départ fixe (toutes les X min)"
           >
             + Départ fixe
@@ -332,7 +321,7 @@ function GroupRowHeader({
         )
       )}
 
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
 
       {/* Add children */}
       <ActionBtn onClick={onAddInterval} title="+ Intervalle">＋I</ActionBtn>
@@ -345,7 +334,7 @@ function GroupRowHeader({
       <ActionBtn onClick={onDelete} title="Supprimer" danger>✕</ActionBtn>
     </div>
     {onEditInstructions && showInstructions && (
-      <div style={{ paddingLeft: 15 + depth * 20, paddingRight: 8, marginBottom: 4 }}>
+      <div className="mb-1 pr-2" style={{ paddingLeft: 15 + depth * 20 }}>
         <textarea
           autoFocus={!group.instructions}
           value={instructionsVal}
@@ -353,12 +342,7 @@ function GroupRowHeader({
           onBlur={() => onEditInstructions(instructionsVal.trim() || undefined)}
           placeholder="Consignes du groupe (ex. allure régulière, récup active…)"
           rows={2}
-          style={{
-            width: "100%", boxSizing: "border-box", resize: "vertical",
-            background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
-            color: C.tx, fontSize: 12, lineHeight: 1.4, padding: "6px 8px",
-            fontFamily: "inherit", outline: "none",
-          }}
+          className="box-border w-full resize-y rounded border border-agon-brd bg-agon-s2 px-2 py-1.5 text-[12px] leading-[1.4] text-agon-tx outline-none"
         />
       </div>
     )}
@@ -375,17 +359,10 @@ function ActionBtn({ onClick, title, children, danger }: {
     <button
       onClick={onClick}
       title={title}
-      style={{
-        background: "transparent",
-        border: `1px solid ${danger ? C.r + "40" : C.brd}`,
-        borderRadius: 4,
-        color: danger ? C.r : C.tx3,
-        fontSize: 11, padding: "2px 5px",
-        cursor: "pointer", fontFamily: "inherit",
-        transition: "background 120ms",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = danger ? C.r + "15" : "rgba(255,255,255,0.05)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      className={cn(
+        "cursor-pointer rounded border bg-transparent px-[5px] py-0.5 text-[11px] [transition:background_120ms]",
+        danger ? "border-agon-erreur/25 text-agon-erreur hover:bg-agon-erreur/[0.082]" : "border-agon-brd text-agon-tx3 hover:bg-white/[0.05]",
+      )}
     >
       {children}
     </button>
@@ -533,15 +510,11 @@ export default function IntervalBuilder({ root, onChange, athleteId, sessionKind
     <div>
       {/* Interval list */}
       {empty ? (
-        <div style={{
-          textAlign: "center", padding: "32px 16px",
-          color: C.tx3, fontSize: 13,
-          border: `1px dashed ${C.brd}`, borderRadius: 4,
-        }}>
+        <div className="rounded border border-dashed border-agon-brd px-4 py-8 text-center text-[13px] text-agon-tx3">
           Aucun intervalle.{" "}
           <button
             onClick={() => onChange(addStepToGroup(root, root.id, makeInterval()))}
-            style={{ color: C.ac, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}
+            className="cursor-pointer bg-transparent text-[13px] text-agon-accent"
           >
             Ajouter un premier intervalle
           </button>
@@ -559,39 +532,24 @@ export default function IntervalBuilder({ root, onChange, athleteId, sessionKind
       )}
 
       {/* Footer */}
-      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+      <div className="mt-3 flex flex-wrap gap-2">
         <button
           onClick={() => onChange(addStepToGroup(root, root.id, makeInterval()))}
-          style={{
-            padding: "7px 14px", borderRadius: 4,
-            border: `1px solid ${C.ac}50`, background: C.ac + "12",
-            color: C.ac, fontSize: 12, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
+          className={ACCENT_BTN}
         >
           + Intervalle
         </button>
         {isSpecifique && (
           <button
             onClick={handleAddExercise}
-            style={{
-              padding: "7px 14px", borderRadius: 4,
-              border: `1px solid ${EXO_COLOR}50`, background: EXO_COLOR + "12",
-              color: EXO_COLOR, fontSize: 12, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
+            className={ACCENT_BTN}
           >
             + Exercice
           </button>
         )}
         <button
           onClick={() => onChange(addStepToGroup(root, root.id, makeGroup()))}
-          style={{
-            padding: "7px 14px", borderRadius: 4,
-            border: `1px solid ${C.brd}`, background: "transparent",
-            color: C.tx2, fontSize: 12,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
+          className="cursor-pointer rounded border border-agon-brd bg-transparent px-3.5 py-[7px] text-[12px] text-agon-tx2"
         >
           + Groupe répété
         </button>

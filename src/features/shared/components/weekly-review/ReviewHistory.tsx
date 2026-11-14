@@ -1,9 +1,9 @@
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { addDays, localIsoDay } from "@shared/domain/dates";
 import { useWeeklyReview, useWeeklyReviews } from "@/features/shared/hooks/useWeeklyReview";
 import { lastReviewWeek, reviewState, REVIEW_STATE_LABEL } from "@/lib/weekly-review";
 import { ReviewAnswersView, ReviewSection, ReviewSummaryCard } from "./ReviewParts";
-import { LIGHT_COLOR, REVIEW_CARD } from "./reviewStyle";
+import { REVIEW_CARD_CLASS } from "./reviewStyle";
 
 const fmtDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
@@ -15,17 +15,18 @@ export function ReviewWeekPicker({ athleteId, week, onPick }: { athleteId: strin
   const last = lastReviewWeek(today);
   const weeks = Array.from({ length: 12 }, (_, i) => addDays(last, -7 * i));
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <div className="flex flex-wrap gap-1.5">
       {weeks.map((w) => {
         const st = reviewState(w, today, byWeek.get(w) ?? null);
-        const color = st === "received" ? LIGHT_COLOR.green : st === "missed" ? C.tx3 : LIGHT_COLOR.orange;
+        // Feux de marque (LIGHT_COLOR) : envoyée = vert, à venir / en retard = orange, manquée = gris.
+        const dot = st === "received" ? "bg-agon-succes" : st === "missed" ? "bg-agon-tx3 opacity-50" : "bg-agon-alerte";
         return (
           <button key={w} type="button" onClick={() => onPick(w)} title={REVIEW_STATE_LABEL[st]} aria-pressed={w === week}
-            style={{
-              height: 30, padding: "0 10px", borderRadius: 15, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
-              border: `1px solid ${w === week ? C.ac : C.brd}`, background: w === week ? C.acS : "transparent", color: C.tx2,
-            }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, opacity: st === "missed" ? 0.5 : 1 }} />
+            className={cn(
+              "inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[15px] border px-2.5 text-[12px] text-agon-tx2",
+              w === week ? "border-agon-accent bg-agon-accent-doux" : "border-agon-brd bg-transparent",
+            )}>
+            <span className={cn("size-[7px] rounded-full", dot)} />
             {fmtDay(w)}
           </button>
         );
@@ -38,13 +39,13 @@ export function ReviewWeekPicker({ athleteId, week, onPick }: { athleteId: strin
 export function ReviewReadOnly({ athleteId, week }: { athleteId: string; week: string }) {
   const today = localIsoDay();
   const { data: review, isLoading, error } = useWeeklyReview(athleteId, week);
-  if (isLoading) return <div style={{ color: C.tx3, fontSize: 13 }}>Chargement…</div>;
-  if (error) return <div style={{ color: C.r, fontSize: 13 }}>Review indisponible : {(error as Error).message}</div>;
+  if (isLoading) return <div className="text-[13px] text-agon-tx3">Chargement…</div>;
+  if (error) return <div className="text-[13px] text-agon-erreur">Review indisponible : {(error as Error).message}</div>;
   if (!review || review.status !== "submitted") {
-    return <div style={{ ...REVIEW_CARD, color: C.tx2, fontSize: 13.5 }}>{REVIEW_STATE_LABEL[reviewState(week, today, null)]} : pas de review envoyée pour cette semaine.</div>;
+    return <div className={cn(REVIEW_CARD_CLASS, "text-[13.5px] text-agon-tx2")}>{REVIEW_STATE_LABEL[reviewState(week, today, null)]} : pas de review envoyée pour cette semaine.</div>;
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="flex flex-col gap-3.5">
       <ReviewSection n="01" title="Bilan de la semaine (figé à l'envoi)">
         <ReviewSummaryCard summary={review.auto} />
       </ReviewSection>

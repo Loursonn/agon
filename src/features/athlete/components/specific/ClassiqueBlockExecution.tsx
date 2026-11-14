@@ -1,18 +1,18 @@
 import { Check, Timer } from "lucide-react";
 import type { ClassiqueBlock, WodBlock } from "@/types/specific";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
-import { C, alpha } from "@/lib/theme";
-import { TYPE_COLOR } from "@/lib/peps";
-
-const HYROX = TYPE_COLOR.hyrox;
+import { cn } from "@/lib/utils";
 
 function CheckBox({ on, size = 24 }: { on: boolean; size?: number }) {
   return (
-    <span aria-hidden style={{
-      width: size, height: size, borderRadius: "50%", flex: "none", display: "flex", alignItems: "center", justifyContent: "center",
-      background: on ? C.g : "transparent", border: on ? "none" : `1.5px solid ${alpha(C.tx, 0.3)}`,
-    }}>
-      {on && <Check size={size * 0.6} color={C.bg} strokeWidth={2.5} />}
+    <span
+      aria-hidden
+      className={cn(
+        "flex flex-none items-center justify-center rounded-full",
+        on ? "border-none bg-agon-succes" : "border-[1.5px] border-agon-tx/[0.3] bg-transparent",
+      )}
+      style={{ width: size, height: size }}
+    >
+      {on && <Check size={size * 0.6} className="text-agon-ink" strokeWidth={2.5} />}
     </span>
   );
 }
@@ -37,24 +37,28 @@ export function ClassiqueBlockExecution({ block, number, blockLogs, onToggle, on
   const allDone = block.items.length > 0 && done === block.items.length;
   const title = `Bloc ${number}${block.title ? ` · ${block.title}` : ""}`;
   return (
-    <div style={{
-      marginBottom: 10, breakInside: "avoid", borderRadius: 14, background: C.s1,
-      border: `1px solid ${allDone ? alpha(C.g, 0.35) : done > 0 ? alpha(HYROX, 0.45) : C.brd}`, overflow: "hidden",
-    }}>
+    <div
+      className={cn(
+        "mb-2.5 break-inside-avoid overflow-hidden rounded-[14px] border bg-agon-s1",
+        allDone ? "border-agon-succes/[0.35]" : done > 0 ? "border-agon-type-hyrox/[0.45]" : "border-agon-brd",
+      )}
+    >
       <button
         type="button"
         aria-label={allDone ? `${title} : tout décocher` : `${title} : tout cocher`}
         onClick={() => onToggleAll(block.items.map((it) => it.id), !allDone)}
-        style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 14px", background: "transparent", border: "none", color: C.tx, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}
+        className="flex w-full cursor-pointer items-center gap-3 border-none bg-transparent p-3.5 text-left text-agon-tx"
       >
         <CheckBox on={allDone} />
-        <span style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: allDone ? C.tx2 : C.tx }}>{title}</span>
-        <span style={{ ...MONO, fontSize: 12.5, color: allDone ? C.g : done > 0 ? HYROX : C.tx3 }}>{done} / {block.items.length}</span>
+        <span className={cn("flex-1 text-[14.5px] font-medium", allDone ? "text-agon-tx2" : "text-agon-tx")}>{title}</span>
+        <span className={cn("agon-mono text-[12.5px]", allDone ? "text-agon-succes" : done > 0 ? "text-agon-type-hyrox" : "text-agon-tx3")}>
+          {done} / {block.items.length}
+        </span>
       </button>
       {!allDone && (
-        <div style={{ padding: "0 14px 10px" }}>
+        <div className="px-3.5 pb-2.5">
           {block.instructions && (
-            <div style={{ whiteSpace: "pre-wrap", fontSize: 12.5, color: C.tx2, lineHeight: 1.45, padding: "8px 10px", marginBottom: 6, borderRadius: 10, background: C.bg, borderLeft: `2px solid ${HYROX}` }}>
+            <div className="mb-1.5 whitespace-pre-wrap rounded-[10px] border-l-2 border-agon-type-hyrox bg-agon-bg px-2.5 py-2 text-[12.5px] leading-[1.45] text-agon-tx2">
               {block.instructions}
             </div>
           )}
@@ -66,15 +70,17 @@ export function ClassiqueBlockExecution({ block, number, blockLogs, onToggle, on
                 type="button"
                 aria-pressed={on}
                 onClick={() => onToggle(item.id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 48, padding: "8px 0", borderTop: `1px solid ${C.brd}`, borderLeft: "none", borderRight: "none", borderBottom: "none", background: "transparent", color: C.tx, textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}
+                className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 border-x-0 border-b-0 border-t border-agon-brd bg-transparent py-2 text-left text-agon-tx"
               >
                 <CheckBox on={on} size={22} />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 14, color: on ? C.tx3 : C.tx, textDecoration: on ? "line-through" : "none" }}>{item.name}</span>
-                  {item.notes && <span style={{ display: "block", fontSize: 11.5, color: C.tx3, marginTop: 2, whiteSpace: "pre-wrap" }}>{item.notes}</span>}
+                <span className="min-w-0 flex-1">
+                  <span className={cn("block text-[14px]", on ? "text-agon-tx3 line-through" : "text-agon-tx no-underline")}>{item.name}</span>
+                  {item.notes && <span className="mt-0.5 block whitespace-pre-wrap text-[11.5px] text-agon-tx3">{item.notes}</span>}
                 </span>
                 {item.prescription && (
-                  <span style={{ ...MONO, maxWidth: "55%", whiteSpace: "pre-wrap", textAlign: "right", fontSize: 12.5, color: on ? C.tx3 : C.tx2 }}>{item.prescription}</span>
+                  <span className={cn("agon-mono max-w-[55%] whitespace-pre-wrap text-right text-[12.5px]", on ? "text-agon-tx3" : "text-agon-tx2")}>
+                    {item.prescription}
+                  </span>
                 )}
               </button>
             );
@@ -89,13 +95,25 @@ export function ClassiqueBlockExecution({ block, number, blockLogs, onToggle, on
 export function WodBlockExecution({ block, number, done, onTimer }: { block: WodBlock; number: number; done: boolean; onTimer: () => void }) {
   const title = `Bloc ${number}${block.title ? ` · ${block.title}` : ""}`;
   return (
-    <div style={{ marginBottom: 10, breakInside: "avoid", borderRadius: 14, background: C.s1, border: `1px dashed ${alpha(HYROX, done ? 0.25 : 0.55)}`, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
+    <div
+      className={cn(
+        "mb-2.5 flex break-inside-avoid items-center gap-3 rounded-[14px] border border-dashed bg-agon-s1 p-3.5",
+        done ? "border-agon-type-hyrox/[0.25]" : "border-agon-type-hyrox/[0.55]",
+      )}
+    >
       <CheckBox on={done} />
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 14.5, fontWeight: 500, color: done ? C.tx2 : C.tx }}>{title}</span>
-        {block.instructions && !done && <span style={{ display: "block", fontSize: 12, color: C.tx3, marginTop: 2, whiteSpace: "pre-wrap" }}>{block.instructions}</span>}
+      <span className="min-w-0 flex-1">
+        <span className={cn("block text-[14.5px] font-medium", done ? "text-agon-tx2" : "text-agon-tx")}>{title}</span>
+        {block.instructions && !done && <span className="mt-0.5 block whitespace-pre-wrap text-[12px] text-agon-tx3">{block.instructions}</span>}
       </span>
-      <button type="button" onClick={onTimer} style={{ display: "flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", borderRadius: 999, border: "none", background: done ? alpha(HYROX, 0.16) : HYROX, color: done ? HYROX : C.bg, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flex: "none" }}>
+      <button
+        type="button"
+        onClick={onTimer}
+        className={cn(
+          "flex h-9 flex-none cursor-pointer items-center gap-1.5 rounded-full border-none px-3.5 text-[13px] font-semibold",
+          done ? "bg-agon-type-hyrox/[0.16] text-agon-type-hyrox" : "bg-agon-type-hyrox text-agon-ink",
+        )}
+      >
         <Timer size={15} strokeWidth={2} /> {done ? "Relancer" : "Minuteur"}
       </button>
     </div>

@@ -14,7 +14,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor";
 import { syncEnergySessionAthletes } from "@/features/shared/hooks/fiches/syncDocAssignments";
@@ -49,8 +50,7 @@ import BlockBankDrawer from "../components/specific/BlockBankDrawer";
 import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuality } from "@/features/shared/hooks/useSpecificTaxonomy";
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
 import { toast } from "sonner";
-import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { Avatar, CheckBox, ORDI_CARD, SectionHead, MONO as ORDI_MONO, DISPLAY } from "@/features/shared/components/ordi/OrdiUi";
+import { Avatar, CheckBox, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
 import { issueCounts } from "../components/import/importIssues";
 import ImportReportPanel from "../components/import/ImportReportPanel";
@@ -70,14 +70,32 @@ const SESSION_KINDS: { value: SessionKind; label: string }[] = [
   { value: "custom",     label: "Type personnalisé…" },
 ];
 
-const ORANGE = H.miel;
+// ── Classes partagées ───────────────────────────────────────────────────────
 
+/** Carte des planches « ordi » (ORDI_CARD en classes). */
+const ORDI_CARD_CLS = "rounded-[14px] border border-agon-brd bg-agon-s1";
+/** Titre Archivo étiré (DISPLAY en classes). */
+const DISPLAY_CLS = "font-display [font-stretch:125%] uppercase font-light tracking-[0.05em]";
+const ACCENT_BTN = "cursor-pointer rounded border border-agon-accent/25 bg-agon-accent/[0.071] px-3.5 py-[7px] text-[12px] font-semibold text-agon-accent";
+const KICKER = "mb-2 text-[11px] font-bold uppercase tracking-[0.05em] text-agon-tx3";
 
 // ── Import session modal ─────────────────────────────────────────────────────
 
-const KIND_COLOR: Record<string, string> = {
-  vo2: C.ac, tempo: C.b, seuil: H.ambre,
-  footing: H.vert, fartlek: H.rose, autre: H.gris, custom: H.turquoise,
+type ImportTone = { hover: string; soft: string; text: string };
+/** Teinte par type de séance (classes écrites en entier pour Tailwind). */
+const IMPORT_TONES = {
+  accent:    { hover: "hover:border-agon-accent/[0.376]",    soft: "bg-agon-accent/[0.125]",    text: "text-agon-accent" },
+  info:      { hover: "hover:border-agon-info/[0.376]",      soft: "bg-agon-info/[0.125]",      text: "text-agon-info" },
+  alerte:    { hover: "hover:border-agon-alerte/[0.376]",    soft: "bg-agon-alerte/[0.125]",    text: "text-agon-alerte" },
+  succes:    { hover: "hover:border-agon-succes/[0.376]",    soft: "bg-agon-succes/[0.125]",    text: "text-agon-succes" },
+  amethyste: { hover: "hover:border-agon-amethyste/[0.376]", soft: "bg-agon-amethyste/[0.125]", text: "text-agon-amethyste" },
+  patine:    { hover: "hover:border-agon-patine/[0.376]",    soft: "bg-agon-patine/[0.125]",    text: "text-agon-patine" },
+  tx3:       { hover: "hover:border-agon-tx3/[0.376]",       soft: "bg-agon-tx3/[0.125]",       text: "text-agon-tx3" },
+} satisfies Record<string, ImportTone>;
+
+const KIND_TONE: Record<string, ImportTone> = {
+  vo2: IMPORT_TONES.accent, tempo: IMPORT_TONES.info, seuil: IMPORT_TONES.alerte,
+  footing: IMPORT_TONES.succes, fartlek: IMPORT_TONES.amethyste, autre: IMPORT_TONES.tx3, custom: IMPORT_TONES.patine,
 };
 
 function deepCloneIntervals(steps: EnergyStep[]): EnergyStep[] {
@@ -105,64 +123,53 @@ function ImportSessionModal({ onImport, onClose }: {
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)" }} />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", zIndex: 61,
-        transform: "translate(-50%, -50%)",
-        width: 520, maxWidth: "94vw", maxHeight: "80vh",
-        background: C.s1, borderRadius: 6, border: `1px solid ${C.brd}`,
-        display: "flex", flexDirection: "column",
-        animation: "fadeScaleIn 150ms ease-out",
-      }}>
+      <div onClick={onClose} className="fixed inset-0 z-[60] bg-black/60" />
+      <div className="fixed left-1/2 top-1/2 z-[61] flex max-h-[80vh] w-[520px] max-w-[94vw] flex-col rounded-[6px] border border-agon-brd bg-agon-s1 [transform:translate(-50%,-50%)] animate-[fadeScaleIn_150ms_ease-out]">
         <style>{`@keyframes fadeScaleIn { from { opacity:0; transform:translate(-50%,-50%) scale(0.96) } to { opacity:1; transform:translate(-50%,-50%) scale(1) } }`}</style>
 
-        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.brd}`, flexShrink: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>Importer une séance existante</div>
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>La structure sera copiée — l'original ne sera pas modifié</div>
+        <div className="shrink-0 border-b border-agon-brd px-5 py-4">
+          <div className="text-[15px] font-extrabold text-agon-tx">Importer une séance existante</div>
+          <div className="mt-0.5 text-[11px] text-agon-tx3">La structure sera copiée — l'original ne sera pas modifié</div>
         </div>
 
-        <div style={{ padding: "10px 20px", borderBottom: `1px solid ${C.brd}`, flexShrink: 0 }}>
+        <div className="shrink-0 border-b border-agon-brd px-5 py-2.5">
           <input
             autoFocus value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher…"
-            style={{ width: "100%", padding: "8px 10px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+            className="box-border w-full rounded border border-agon-brd-l bg-agon-s2 px-2.5 py-2 text-[12px] text-agon-tx outline-none"
           />
         </div>
 
-        <div style={{ overflowY: "auto", padding: "12px 20px", flex: 1, scrollbarWidth: "none" }}>
+        <div className="flex-1 overflow-y-auto px-5 py-3 [scrollbar-width:none]">
           {isLoading ? (
-            <div style={{ textAlign: "center", padding: "30px 0", color: C.tx3, fontSize: 12 }}>Chargement…</div>
+            <div className="py-[30px] text-center text-[12px] text-agon-tx3">Chargement…</div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "30px 0", color: C.tx3, fontSize: 13 }}>
+            <div className="py-[30px] text-center text-[13px] text-agon-tx3">
               {search ? "Aucun résultat" : "Aucune séance disponible"}
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {filtered.map((s) => {
-                const kc = KIND_COLOR[s.session_kind] ?? H.gris;
+                const tone = KIND_TONE[s.session_kind] ?? IMPORT_TONES.tx3;
                 return (
                   <div
                     key={s.id}
                     onClick={() => onImport(s)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "10px 12px", borderRadius: 4,
-                      border: `1px solid ${C.brdL}`, background: C.s2,
-                      cursor: "pointer", transition: "border-color 120ms",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = kc + "60")}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.brdL)}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2.5 rounded border border-agon-brd-l bg-agon-s2 px-3 py-2.5 [transition:border-color_120ms]",
+                      tone.hover,
+                    )}
                   >
-                    <div style={{ width: 30, height: 30, borderRadius: 4, background: kc + "20", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Zap size={14} style={{ color: kc }} />
+                    <div className={cn("flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded", tone.soft)}>
+                      <Zap size={14} className={tone.text} />
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
-                      <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>
+                    <div className="min-w-0 flex-1">
+                      <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-bold text-agon-tx">{s.name}</div>
+                      <div className="mt-px text-[10px] text-agon-tx3">
                         {s.session_kind}{s.total_duration_s ? ` · ${Math.round(s.total_duration_s / 60)} min` : ""}
                       </div>
                     </div>
-                    <span style={{ fontSize: 11, color: C.ac, fontWeight: 600, flexShrink: 0 }}>Importer</span>
+                    <span className="shrink-0 text-[11px] font-semibold text-agon-accent">Importer</span>
                   </div>
                 );
               })}
@@ -170,8 +177,8 @@ function ImportSessionModal({ onImport, onClose }: {
           )}
         </div>
 
-        <div style={{ padding: "12px 20px", borderTop: `1px solid ${C.brd}`, flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+        <div className="shrink-0 border-t border-agon-brd px-5 py-3">
+          <button onClick={onClose} className="cursor-pointer rounded border border-agon-brd-l bg-transparent px-3.5 py-2 text-[12px] text-agon-tx2">
             Annuler
           </button>
         </div>
@@ -357,7 +364,6 @@ export default function EnergySessionEditorPage() {
   // Computed preview totals
   const flat = expandIntervals(root);
   const totals = computeTotals(flat);
-  const isDesktop = useIsDesktop();
 
   async function handleAddImageUrl() {
     const url = imageUrlInput.trim();
@@ -454,32 +460,29 @@ export default function EnergySessionEditorPage() {
 
   if (isLoading && isEdit) {
     return (
-      <div style={{ padding: 32, color: C.tx3, fontSize: 13 }}>Chargement…</div>
+      <div className="p-8 text-[13px] text-agon-tx3">Chargement…</div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, padding: isDesktop ? "24px 40px 48px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+    <div className="flex min-h-screen flex-col gap-5 bg-agon-bg px-4 pb-10 pt-4 lg:px-10 lg:pb-12 lg:pt-6">
       {/* ── Fil d'Ariane (planche CoachOrdiAEditeurEnergie) ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+      <div className="flex items-center gap-2 text-[13px]">
         <button
           onClick={navigateBack}
-          style={{ background: "none", border: "none", padding: 0, color: C.tx3, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+          className="cursor-pointer bg-transparent p-0 text-[13px] text-agon-tx3"
         >
           ‹ {athleteId ? "Programmation" : "Banque"}
         </button>
-        <span style={{ color: C.tx3 }}>›</span>
-        <span style={{ color: C.tx2 }}>{isEdit ? "Modifier la séance" : isSpecifique ? "Nouvelle séance spécifique" : "Nouvelle séance d’énergie"}</span>
+        <span className="text-agon-tx3">›</span>
+        <span className="text-agon-tx2">{isEdit ? "Modifier la séance" : isSpecifique ? "Nouvelle séance spécifique" : "Nouvelle séance d’énergie"}</span>
       </div>
 
       {/* ── Carte titre : type, nom, sport, actions ── */}
-      <div style={{
-        ...ORDI_CARD, position: "relative", overflow: "hidden",
-        padding: "18px 22px 18px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
-      }}>
-        <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isSpecifique ? ORANGE : C.b }} />
+      <div className={cn(ORDI_CARD_CLS, "relative flex flex-wrap items-center gap-3.5 overflow-hidden py-[18px] pl-[26px] pr-[22px]")}>
+        <span className={cn("absolute inset-y-0 left-0 w-[3px]", isSpecifique ? "bg-agon-alerte" : "bg-agon-info")} />
         {!isSpecifique && (
-          <span style={{ background: C.b, color: C.ink, borderRadius: 999, padding: "2px 10px", fontSize: 11.5, fontWeight: 600 }}>Énergie</span>
+          <span className="rounded-[999px] bg-agon-info px-2.5 py-0.5 text-[11.5px] font-semibold text-agon-ink">Énergie</span>
         )}
 
         <input
@@ -487,23 +490,14 @@ export default function EnergySessionEditorPage() {
           onChange={(e) => setName(e.target.value)}
           placeholder="Nom de la séance…"
           aria-label="Nom de la séance"
-          style={{
-            flex: 1, minWidth: 220,
-            background: "transparent", border: "none",
-            borderBottom: `1px solid ${C.brdL}`,
-            color: C.tx, fontSize: 24, ...DISPLAY,
-            outline: "none", padding: "2px 0",
-          }}
+          className={cn("min-w-[220px] flex-1 border-b border-agon-brd-l bg-transparent py-0.5 text-[24px] text-agon-tx outline-none", DISPLAY_CLS)}
         />
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="flex flex-wrap items-center gap-2">
           {sessionKind === "specifique" ? (
             <>
               {/* Spécifique badge */}
-              <span style={{
-                padding: "5px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                background: ORANGE + "20", color: ORANGE,
-              }}>
+              <span className="rounded-[6px] bg-agon-alerte/[0.125] px-2.5 py-[5px] text-[12px] font-semibold text-agon-alerte">
                 Spécifique
               </span>
               {/* Sport */}
@@ -514,7 +508,7 @@ export default function EnergySessionEditorPage() {
                 onChange={setSportId}
                 onCreate={async (n) => user?.id ? await createSport.mutateAsync({ name: n, coachId: user.id }) : undefined}
                 width={140}
-                accent={ORANGE}
+                accent={C.o}
               />
               {/* Qualité physique */}
               <TaxonomySelect
@@ -531,12 +525,7 @@ export default function EnergySessionEditorPage() {
                 <button
                   onClick={convertLegacyToBlocks}
                   title="Encapsule les intervalles actuels dans un bloc WOD"
-                  style={{
-                    padding: "5px 12px", borderRadius: 6,
-                    border: `1px solid ${ORANGE}40`, background: ORANGE + "0D",
-                    color: ORANGE, fontSize: 11, fontWeight: 600,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className="cursor-pointer rounded-[6px] border border-agon-alerte/25 bg-agon-alerte/[0.051] px-3 py-[5px] text-[11px] font-semibold text-agon-alerte"
                 >
                   Convertir en blocs
                 </button>
@@ -546,7 +535,7 @@ export default function EnergySessionEditorPage() {
             <>
               {/* Energy session kind */}
               <Select value={sessionKind} onValueChange={(v) => setSessionKind(v as SessionKind)}>
-                <SelectTrigger style={{ width: 170, background: C.s2, border: `1px solid ${C.brd}`, color: C.tx, fontSize: 12 }}>
+                <SelectTrigger className="w-[170px] border-agon-brd bg-agon-s2 text-[12px] leading-5 text-agon-tx">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -556,7 +545,7 @@ export default function EnergySessionEditorPage() {
                 </SelectContent>
               </Select>
               {/* Sport : décide du mode de la montre (Garmin) */}
-              <div role="radiogroup" aria-label="Sport" style={{ display: "flex", background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 10, padding: 3, gap: 2 }}>
+              <div role="radiogroup" aria-label="Sport" className="flex gap-0.5 rounded-[10px] border border-agon-brd-l bg-agon-bg p-[3px]">
                 {ENERGY_SPORTS.map((s) => {
                   const on = sport === s.value;
                   return (
@@ -566,7 +555,10 @@ export default function EnergySessionEditorPage() {
                       role="radio"
                       aria-checked={on}
                       onClick={() => setSport(s.value as EnergySport)}
-                      style={{ height: 30, padding: "0 12px", borderRadius: 8, border: "none", background: on ? C.s2 : "transparent", color: on ? C.tx : C.tx3, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                      className={cn(
+                        "h-[30px] cursor-pointer whitespace-nowrap rounded-[8px] px-3 text-[12.5px]",
+                        on ? "bg-agon-s2 font-semibold text-agon-tx" : "bg-transparent font-medium text-agon-tx3",
+                      )}
                     >
                       {s.label}
                     </button>
@@ -579,11 +571,7 @@ export default function EnergySessionEditorPage() {
                   value={customKind}
                   onChange={(e) => setCustomKind(e.target.value)}
                   placeholder="Nom du type…"
-                  style={{
-                    width: 140, background: C.s2, border: `1px solid ${C.brd}`,
-                    borderRadius: 6, color: C.tx, fontSize: 12,
-                    padding: "6px 10px", fontFamily: "inherit", outline: "none",
-                  }}
+                  className="w-[140px] rounded-[6px] border border-agon-brd bg-agon-s2 px-2.5 py-1.5 text-[12px] text-agon-tx outline-none"
                 />
               )}
             </>
@@ -598,18 +586,18 @@ export default function EnergySessionEditorPage() {
               variant="outline"
               size="sm"
             >
-              <ToggleGroupItem value="continu" style={{ fontSize: 11 }}>Continu</ToggleGroupItem>
-              <ToggleGroupItem value="fractionne" style={{ fontSize: 11 }}>Fractionné</ToggleGroupItem>
+              <ToggleGroupItem value="continu" className="text-[11px] leading-5">Continu</ToggleGroupItem>
+              <ToggleGroupItem value="fractionne" className="text-[11px] leading-5">Fractionné</ToggleGroupItem>
             </ToggleGroup>
           )}
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginLeft: "auto" }}>
+        <div className="ml-auto flex flex-wrap gap-2">
           {!isEdit && (
             <button
               onClick={() => setShowImport(true)}
-              style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              className={ACCENT_BTN}
             >
               Importer une séance
             </button>
@@ -618,14 +606,14 @@ export default function EnergySessionEditorPage() {
             <button
               onClick={() => setShowTextImport(true)}
               title="Coller une séance écrite au format YOXX"
-              style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.ac}40`, background: C.ac + "12", color: C.ac, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              className={ACCENT_BTN}
             >
               Importer un texte
             </button>
           )}
           <button
             onClick={navigateBack}
-            style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded border border-agon-brd bg-transparent px-3.5 py-[7px] text-[12px] text-agon-tx2"
           >
             Annuler
           </button>
@@ -633,26 +621,26 @@ export default function EnergySessionEditorPage() {
       </div>
 
       {/* ── 01 Profil de la séance ── */}
-      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <section className="flex flex-col gap-3">
         <SectionHead n={1} title="Profil de la séance" />
-        <div style={{ ...ORDI_CARD, padding: "16px 20px", display: "flex", gap: 28, alignItems: "stretch", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 170 }}>
+        <div className={cn(ORDI_CARD_CLS, "flex flex-wrap items-stretch gap-7 px-5 py-4")}>
+          <div className="flex min-w-[170px] flex-col gap-3.5">
             <div>
-              <div style={{ fontSize: 12, color: C.tx3 }}>Durée estimée</div>
-              <div style={{ ...ORDI_MONO, fontSize: 24, color: C.tx, marginTop: 4 }}>{totals.durationS > 0 ? `≈ ${formatSLong(totals.durationS)}` : "—"}</div>
+              <div className="text-[12px] text-agon-tx3">Durée estimée</div>
+              <div className="mt-1 font-data text-[24px] tabular-nums text-agon-tx">{totals.durationS > 0 ? `≈ ${formatSLong(totals.durationS)}` : "—"}</div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: C.tx3 }}>Distance estimée</div>
-              <div style={{ ...ORDI_MONO, fontSize: 24, color: C.tx, marginTop: 4 }}>
-                {totals.distanceM > 0 ? <>≈ {(totals.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}<span style={{ fontSize: 12, color: C.tx3 }}> km</span></> : "—"}
+              <div className="text-[12px] text-agon-tx3">Distance estimée</div>
+              <div className="mt-1 font-data text-[24px] tabular-nums text-agon-tx">
+                {totals.distanceM > 0 ? <>≈ {(totals.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}<span className="text-[12px] text-agon-tx3"> km</span></> : "—"}
               </div>
             </div>
           </div>
-          <div style={{ flex: 1, minWidth: 320 }}>
+          <div className="min-w-[320px] flex-1">
             {isClassique ? (
               <ClassiquePreview blocks={classiqueBlocks} />
             ) : root.children.length === 0 ? (
-              <div style={{ color: C.tx3, fontSize: 12.5, paddingTop: 24 }}>
+              <div className="pt-6 text-[12.5px] text-agon-tx3">
                 Ajoute des blocs pour voir le profil de la séance.
               </div>
             ) : (
@@ -663,13 +651,10 @@ export default function EnergySessionEditorPage() {
       </section>
 
       {/* ── Main layout ── */}
-      <div style={{
-        display: "grid", gap: 24, alignItems: "start",
-        gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 340px" : "1fr",
-      }}>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
 
         {/* ── 02 Blocs ── */}
-        <section style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+        <section className="flex min-w-0 flex-col gap-3">
           <SectionHead n={2} title="Blocs" />
           {importIssues.length > 0 && (
             <ImportReportPanel issues={importIssues} onClose={() => setImportIssues([])} />
@@ -689,97 +674,88 @@ export default function EnergySessionEditorPage() {
         </section>
 
         {/* ── 03 Enregistrer ── */}
-        <aside style={{ display: "flex", flexDirection: "column", gap: 12, position: isDesktop ? "sticky" : "static", top: 16 }}>
+        <aside className="static top-4 flex flex-col gap-3 lg:sticky">
           <SectionHead n={3} title="Enregistrer" />
-          <div style={{ ...ORDI_CARD, padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className={cn(ORDI_CARD_CLS, "flex flex-col gap-3.5 p-4")}>
             {athleteId && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <span style={{ fontSize: 12, color: C.tx3 }}>Enregistrer pour</span>
+              <div className="flex flex-col gap-2.5">
+                <span className="text-[12px] text-agon-tx3">Enregistrer pour</span>
                 <SaveOption on={!bankOnly} onSelect={() => setBankOnly(false)}>
                   <Avatar name={athleteName} size={24} />
-                  <span style={{ fontSize: 13.5, fontWeight: 500, color: C.tx }}>{athleteName}</span>
+                  <span className="text-[13.5px] font-medium text-agon-tx">{athleteName}</span>
                 </SaveOption>
                 {!bankOnly && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 26 }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 12.5, color: C.tx3, width: 22 }}>Le</span>
+                  <div className="flex flex-col gap-2.5 pl-[26px]">
+                    <label className="flex items-center gap-2">
+                      <span className="w-[22px] text-[12.5px] text-agon-tx3">Le</span>
                       <input
                         type="date"
                         value={planDate}
                         onChange={(e) => setPlanDate(e.target.value)}
                         aria-label="Date de la séance"
-                        style={{ flex: 1, height: 34, boxSizing: "border-box", background: C.s2, border: `1px solid ${C.brdL}`, borderRadius: 8, color: C.tx, fontSize: 13, padding: "0 10px", fontFamily: "inherit" }}
+                        className="box-border h-[34px] flex-1 rounded-[8px] border border-agon-brd-l bg-agon-s2 px-2.5 text-[13px] text-agon-tx"
                       />
                     </label>
-                    {!planDate && <span style={{ fontSize: 11.5, color: C.tx3 }}>Sans date, la séance reste à programmer.</span>}
+                    {!planDate && <span className="text-[11.5px] text-agon-tx3">Sans date, la séance reste à programmer.</span>}
                     <CheckBox checked={keepCopy} onChange={setKeepCopy} label="Garder aussi une copie dans ma banque" />
                   </div>
                 )}
                 {!isEdit && (
                   <SaveOption on={bankOnly} onSelect={() => setBankOnly(true)}>
                     <span>
-                      <span style={{ display: "block", fontSize: 13.5, fontWeight: 500, color: C.tx }}>Ma banque seulement</span>
-                      <span style={{ display: "block", fontSize: 12, color: C.tx3 }}>À programmer plus tard, pour tout athlète</span>
+                      <span className="block text-[13.5px] font-medium text-agon-tx">Ma banque seulement</span>
+                      <span className="block text-[12px] text-agon-tx3">À programmer plus tard, pour tout athlète</span>
                     </span>
                   </SaveOption>
                 )}
               </div>
             )}
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 12, color: C.tx3 }}>{athleteId && !bankOnly ? `Consigne pour ${athleteFirst}` : "Consigne"}</span>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[12px] text-agon-tx3">{athleteId && !bankOnly ? `Consigne pour ${athleteFirst}` : "Consigne"}</span>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Optionnel, affichée à l’athlète avec la séance…"
                 rows={3}
-                style={{
-                  width: "100%", boxSizing: "border-box", resize: "vertical",
-                  background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 10, color: C.tx,
-                  fontSize: 13, padding: "9px 11px", fontFamily: "inherit", outline: "none", lineHeight: 1.5,
-                }}
+                className="box-border w-full resize-y rounded-[10px] border border-agon-brd-l bg-agon-bg px-[11px] py-[9px] text-[13px] leading-[1.5] text-agon-tx outline-none"
               />
             </label>
             <button
               onClick={() => void handleSave()}
               disabled={isSaving}
-              style={{ height: 40, borderRadius: 10, border: "none", background: C.ac, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
+              className={cn(
+                "h-10 cursor-pointer rounded-[10px] bg-agon-accent text-[13.5px] font-semibold text-agon-ink",
+                isSaving ? "opacity-70" : "opacity-100",
+              )}
             >
               {isSaving ? "Enregistrement…" : athleteId && !bankOnly ? `Enregistrer pour ${athleteName}` : "Enregistrer dans ma banque"}
             </button>
             <button
               onClick={navigateBack}
-              style={{ alignSelf: "center", background: "none", border: "none", color: C.tx3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
+              className="cursor-pointer self-center bg-transparent text-[12.5px] text-agon-tx3"
             >
               Annuler
             </button>
           </div>
 
           {/* Schema drawing */}
-          <div style={{ marginTop: 4 }}>
+          <div className="mt-1">
             {fieldSchema && (
-              <div style={{ background: C.s1, borderRadius: 4, padding: 10, border: `1px solid ${C.brd}`, marginBottom: 8 }}>
+              <div className="mb-2 rounded border border-agon-brd bg-agon-s1 p-2.5">
                 <SchemaViewerWithZoom schema={fieldSchema} />
               </div>
             )}
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowSchemaEditor(true)}
-                style={{
-                  flex: 1, padding: "10px 0", borderRadius: 4,
-                  border: `1px dashed ${C.brdL}`, background: "transparent",
-                  color: C.tx3, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                }}
+                className="flex-1 cursor-pointer rounded border border-dashed border-agon-brd-l bg-transparent py-2.5 text-[12px] font-semibold text-agon-tx3"
               >
                 {fieldSchema ? "Modifier le schéma" : "Ajouter un schéma terrain"}
               </button>
               {fieldSchema && (
                 <button
                   onClick={() => setFieldSchema(null)}
-                  style={{
-                    padding: "10px 12px", borderRadius: 4,
-                    border: `1px solid rgba(239,68,68,0.3)`, background: "rgba(239,68,68,0.08)",
-                    color: H.rougeVif, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className="cursor-pointer rounded border border-agon-erreur/30 bg-agon-erreur/[0.08] px-3 py-2.5 text-[12px] font-semibold text-agon-erreur"
                 >
                   ✕
                 </button>
@@ -795,36 +771,29 @@ export default function EnergySessionEditorPage() {
           />
 
           {/* ── Fiches ── */}
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+          <div className="mt-4">
+            <div className={KICKER}>
               Fiches
             </div>
             <FicheAttachmentsEditor value={fiches} onChange={setFiches} athleteId={athleteId} />
           </div>
 
           {/* ── Illustrations ── */}
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+          <div className="mt-4">
+            <div className={KICKER}>
               Illustrations
             </div>
 
             {/* Existing images */}
             {images.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              <div className="mb-2 flex flex-wrap gap-2">
                 {images.map((img, i) => (
-                  <div key={i} style={{ position: "relative", width: 80, height: 80, borderRadius: 4, overflow: "hidden", border: `1px solid ${C.brd}`, cursor: "pointer" }}
+                  <div key={i} className="relative h-20 w-20 cursor-pointer overflow-hidden rounded border border-agon-brd"
                     onClick={() => setPreviewImage(img.url)}>
-                    <img src={img.url} alt={img.caption || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={img.url} alt={img.caption || ""} className="h-full w-full object-cover" />
                     <button
                       onClick={(e) => { e.stopPropagation(); setImages(prev => prev.filter((_, j) => j !== i)); }}
-                      style={{
-                        position: "absolute", top: 2, right: 2,
-                        width: 20, height: 20, borderRadius: "50%",
-                        background: "rgba(0,0,0,0.6)", border: "none",
-                        color: C.tx, fontSize: 12, cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        lineHeight: 1,
-                      }}
+                      className="absolute right-0.5 top-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-[50%] bg-black/60 text-[12px] leading-none text-agon-tx"
                     >
                       ✕
                     </button>
@@ -834,47 +803,37 @@ export default function EnergySessionEditorPage() {
             )}
 
             {/* URL input */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+            <div className="mb-1.5 flex gap-1.5">
               <input
                 value={imageUrlInput}
                 onChange={(e) => setImageUrlInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddImageUrl(); } }}
                 placeholder="Coller une URL d'image…"
-                style={{
-                  flex: 1, padding: "7px 10px", borderRadius: 4,
-                  border: `1px solid ${C.brd}`, background: C.s2,
-                  color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
-                }}
+                className="flex-1 rounded border border-agon-brd bg-agon-s2 px-2.5 py-[7px] text-[12px] text-agon-tx outline-none"
               />
               <button
                 onClick={handleAddImageUrl}
                 disabled={!imageUrlInput.trim()}
-                style={{
-                  padding: "7px 12px", borderRadius: 4,
-                  border: `1px solid ${C.ac}40`, background: C.ac + "12",
-                  color: C.ac, fontSize: 12, fontWeight: 600,
-                  cursor: imageUrlInput.trim() ? "pointer" : "default",
-                  fontFamily: "inherit", opacity: imageUrlInput.trim() ? 1 : 0.5,
-                }}
+                className={cn(
+                  "rounded border border-agon-accent/25 bg-agon-accent/[0.071] px-3 py-[7px] text-[12px] font-semibold text-agon-accent",
+                  imageUrlInput.trim() ? "cursor-pointer opacity-100" : "cursor-default opacity-50",
+                )}
               >
                 +
               </button>
             </div>
 
             {/* File upload */}
-            <label style={{
-              display: "block", padding: "10px 0", borderRadius: 4,
-              border: `1px dashed ${C.brdL}`, background: "transparent",
-              color: isUploading ? C.ac : C.tx3, fontSize: 12, fontWeight: 600,
-              cursor: isUploading ? "wait" : "pointer", fontFamily: "inherit",
-              textAlign: "center",
-            }}>
+            <label className={cn(
+              "block rounded border border-dashed border-agon-brd-l bg-transparent py-2.5 text-center text-[12px] font-semibold",
+              isUploading ? "cursor-wait text-agon-accent" : "cursor-pointer text-agon-tx3",
+            )}>
               {isUploading ? "Upload en cours…" : "Glisser ou cliquer pour ajouter une photo"}
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                style={{ display: "none" }}
+                className="hidden"
                 disabled={isUploading}
                 onChange={(e) => {
                   const files = e.target.files;
@@ -924,17 +883,12 @@ export default function EnergySessionEditorPage() {
       {previewImage && (
         <div
           onClick={() => setPreviewImage(null)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 9999,
-            background: "rgba(0,0,0,0.85)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "zoom-out",
-          }}
+          className="fixed inset-0 z-[9999] flex cursor-zoom-out items-center justify-center bg-black/[0.85]"
         >
           <img
             src={previewImage}
             alt=""
-            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 4 }}
+            className="max-h-[90vh] max-w-[90vw] rounded object-contain"
           />
         </div>
       )}
@@ -950,10 +904,10 @@ function SaveOption({ on, onSelect, children }: { on: boolean; onSelect: () => v
       role="radio"
       aria-checked={on}
       onClick={onSelect}
-      style={{ display: "flex", alignItems: "center", gap: 10, padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+      className="flex cursor-pointer items-center gap-2.5 bg-transparent p-0 text-left"
     >
-      <span aria-hidden style={{ width: 16, height: 16, flex: "none", boxSizing: "border-box", borderRadius: 999, border: `1px solid ${on ? C.ac : C.brdL}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {on && <span style={{ width: 8, height: 8, borderRadius: 999, background: C.ac }} />}
+      <span aria-hidden className={cn("box-border flex h-4 w-4 flex-none items-center justify-center rounded-[999px] border", on ? "border-agon-accent" : "border-agon-brd-l")}>
+        {on && <span className="h-2 w-2 rounded-[999px] bg-agon-accent" />}
       </span>
       {children}
     </button>

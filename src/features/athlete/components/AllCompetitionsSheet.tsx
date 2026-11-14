@@ -1,20 +1,48 @@
-import { X } from "lucide-react";
+import { useState } from "react";
+import { MoreHorizontal, X } from "lucide-react";
 import { format, parseISO, differenceInCalendarDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { localISO } from "@/lib/date";
 import { COMPETITION_META, priorityLabel, type Competition, type CompetitionType } from "@/types/planning";
 import { CompetitionDayCard } from "./CompetitionDayCard";
+import { CompetitionActions } from "@/features/shared/components/CompetitionActions";
+import { cancelledByLabel, isCancelled } from "@shared/domain/competitions";
+import { useAuth } from "@/hooks/useAuth";
 
-/** Liste de toutes les compétitions de l'athlète : à venir puis passées (avec bilan). */
+/**
+ * Liste de toutes les compétitions de l'athlète : à venir puis passées (avec
+ * bilan). « ⋯ » sur chaque ligne : annuler (reste barrée), rétablir, supprimer.
+ */
 export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
   competitions: Competition[];
   viewOnly?: boolean;
   onClose: () => void;
 }) {
   const today = localISO();
+  const { user } = useAuth();
+  const [open, setOpen] = useState<string | null>(null);
   const upcoming = competitions.filter((c) => c.date >= today).sort((a, b) => a.date.localeCompare(b.date));
   const past = competitions.filter((c) => c.date < today).sort((a, b) => b.date.localeCompare(a.date));
+  const nUp = upcoming.filter((c) => !isCancelled(c)).length;
+  const nPast = past.filter((c) => !isCancelled(c)).length;
+  const nCancelled = competitions.length - nUp - nPast;
+  const toggle = (id: string) => setOpen((o) => (o === id ? null : id));
+  const manage = (c: Competition) => !viewOnly && open === c.id && (
+    <CompetitionActions comp={c} onDone={() => setOpen(null)} className="mt-2" />
+  );
+  const moreBtn = (c: Competition) => !viewOnly && (
+    <button
+      type="button"
+      onClick={() => toggle(c.id)}
+      aria-label={`Annuler ou supprimer ${c.name}`}
+      aria-expanded={open === c.id}
+      className={cn(
+        "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border bg-transparent",
+        open === c.id ? "border-agon-accent/40 text-agon-accent" : "border-agon-brd-l text-agon-tx3",
+      )}
+    ><MoreHorizontal size={15} /></button>
+  );
 
   return (
     <div className="fixed inset-0 z-[300] flex items-end justify-center">
@@ -24,11 +52,12 @@ export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
           <div className="flex-1">
             <div className="text-[15px] font-extrabold text-agon-tx">Mes compétitions</div>
             <div className="mt-0.5 text-[11px] text-agon-tx3">
-              {upcoming.length} à venir · {past.length} passée{past.length > 1 ? "s" : ""}
+              {nUp} à venir · {nPast} passée{nPast > 1 ? "s" : ""}{nCancelled > 0 ? ` · ${nCancelled} annulée${nCancelled > 1 ? "s" : ""}` : ""}
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Fermer"
             className="flex size-8 cursor-pointer items-center justify-center rounded-[4px] border border-agon-brd-l bg-transparent text-agon-tx3"
           ><X size={14} /></button>
         </div>
@@ -45,26 +74,22 @@ export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
                 {upcoming.map((c) => {
                   const meta = COMPETITION_META[c.type as CompetitionType] ?? COMPETITION_META.autre;
                   const days = differenceInCalendarDays(parseISO(c.date), parseISO(today));
+                  const cancelled = isCancelled(c);
                   return (
-                    <div key={c.id} className={cn(
-                      "flex items-center gap-3 rounded-[6px] border bg-agon-s1 px-3.5 py-3",
-                      c.priority === "A" ? "border-agon-coach/[0.31]" : "border-agon-brd",
-                    )}>
-                      <div className="w-11 shrink-0 text-center">
-                        <div className={cn("text-[15px] font-black", days <= 7 ? "text-agon-coach" : "text-agon-tx")}>
-                          {days === 0 ? "J" : `J-${days}`}
+                    <div key={c.id}>
+                      <div className={cn(
+                        "flex items-center gap-3 rounded-[6px] border bg-agon-s1 px-3.5 py-3",
+                        cancelled ? "border-dashed border-agon-brd-l" : c.priority === "A" ? "border-agon-coach/[0.31]" : "border-agon-brd",
+                      )}>
+                        <div className="w-11 shrink-0 text-center">
+                          <div className={cn("text-[15px] font-black", cancelled ? "text-agon-tx3" : days <= 7 ? "text-agon-coach" : "text-agon-tx")}>
+                            {cancelled ? "—" : days === 0 ? "J" : `J-${days}`}
+                          </div>
                         </div>
+                        <CompInfo c={c} meta={meta.label} viewerId={user?.id} />
+                        {moreBtn(c)}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[14px] font-bold text-agon-tx">{c.name}</span>
-                          <PriorityBadge priority={c.priority} />
-                        </div>
-                        <div className="mt-[3px] text-[11px] text-agon-tx3">
-                          {meta.label} · {format(parseISO(c.date), "EEE d MMM yyyy", { locale: fr })}
-                          {c.location ? ` · ${c.location}` : ""}
-                        </div>
-                      </div>
+                      {manage(c)}
                     </div>
                   );
                 })}
@@ -77,21 +102,57 @@ export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
               <SectionTitle>Passées</SectionTitle>
               <div className="flex flex-col gap-2.5">
                 {past.map((c) => (
-                  <CompetitionDayCard
-                    key={c.id}
-                    competition={{
-                      id: c.id, name: c.name, type: c.type, date: c.date,
-                      location: c.location, priority: c.priority,
-                      athlete_comment: c.athlete_comment ?? null,
-                    }}
-                    viewOnly={viewOnly}
-                    showDate
-                  />
+                  <div key={c.id}>
+                    {isCancelled(c) ? (
+                      // Annulée : pas de bilan à écrire
+                      <div className="flex items-center gap-3 rounded-[6px] border border-dashed border-agon-brd-l bg-agon-s1 px-3.5 py-3">
+                        <CompInfo c={c} meta={(COMPETITION_META[c.type as CompetitionType] ?? COMPETITION_META.autre).label} viewerId={user?.id} />
+                        {moreBtn(c)}
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <CompetitionDayCard
+                            competition={{
+                              id: c.id, name: c.name, type: c.type, date: c.date,
+                              location: c.location, priority: c.priority,
+                              athlete_comment: c.athlete_comment ?? null,
+                            }}
+                            viewOnly={viewOnly}
+                            showDate
+                          />
+                        </div>
+                        {moreBtn(c)}
+                      </div>
+                    )}
+                    {manage(c)}
+                  </div>
                 ))}
               </div>
             </section>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CompInfo({ c, meta, viewerId }: { c: Competition; meta: string; viewerId?: string }) {
+  const cancelled = isCancelled(c);
+  const by = cancelled ? cancelledByLabel(c, viewerId) : "";
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={cn("text-[14px] font-bold", cancelled ? "text-agon-tx3 line-through" : "text-agon-tx")}>{c.name}</span>
+        {cancelled ? (
+          <span className="rounded-[6px] border border-agon-brd-l px-[7px] py-0.5 text-[9px] font-bold text-agon-tx2">
+            Annulée{by ? ` ${by}` : ""}
+          </span>
+        ) : <PriorityBadge priority={c.priority} />}
+      </div>
+      <div className="mt-[3px] text-[11px] text-agon-tx3">
+        {meta} · {format(parseISO(c.date), "EEE d MMM yyyy", { locale: fr })}
+        {c.location ? ` · ${c.location}` : ""}
       </div>
     </div>
   );

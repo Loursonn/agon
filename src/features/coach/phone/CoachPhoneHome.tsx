@@ -136,7 +136,20 @@ export default function CoachPhoneHome() {
           </button>
         </span>
       </div>
-      <h1 style={{ margin: 0, ...DISPLAY, fontSize: 22 }}>Bonjour, {firstName}</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <h1 style={{ margin: 0, ...DISPLAY, fontSize: 22, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bonjour, {firstName}</h1>
+        {/* Bascule vers l'espace athlète (même condition que l'onglet Plus) */}
+        {(profile?.role === "coach" || profile?.role === "coach_athlete") && (
+          <button type="button" aria-label="Passer en mode athlète" onClick={() => open("/athlete")} style={{
+            display: "flex", alignItems: "center", gap: 6, height: 28, padding: "0 10px", borderRadius: 999, flex: "none",
+            border: `1px solid ${alpha(C.ac, 0.45)}`, background: alpha(C.ac, 0.1), color: C.ac, cursor: "pointer",
+            ...MONO, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap",
+          }}>
+            <svg aria-hidden width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square"><path d="M4 8H18M14 4L18 8L14 12" /><path d="M20 16H6M10 12L6 16L10 20" /></svg>
+            Athlète
+          </button>
+        )}
+      </div>
       <div style={{ display: "flex", gap: 8 }}>
         <Counter value={todos.length} label="À traiter" color={ROUGE} />
         <Counter value={missedSessions.length} label="Manquée hier" color={C.o} />

@@ -548,7 +548,7 @@ export function CalendarMonthView({
                 { label: "Complétées",   count: events.filter((e) => e.status === "completed").length, tone: "text-agon-succes"    },
                 { label: "Manquées",     count: events.filter((e) => e.status === "missed").length,    tone: "text-agon-erreur"    },
                 { label: "Tests",        count: events.filter((e) => e.type === "test").length,        tone: "text-agon-type-test" },
-                { label: "Compétitions", count: events.filter((e) => e.type === "competition").length, tone: "text-agon-erreur"    },
+                { label: "Compétitions", count: events.filter((e) => e.type === "competition" && e.status !== "cancelled").length, tone: "text-agon-erreur"    },
               ].map(({ label, count, tone }) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <span className={cn("text-[15px] font-extrabold", tone)}>{count}</span>

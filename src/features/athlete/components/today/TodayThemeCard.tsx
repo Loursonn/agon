@@ -1,5 +1,4 @@
 import { C } from "@/lib/theme";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { dayTint } from "@/lib/peps";
 import {
   DAY_THEME_DOMINANTE_LABEL,
@@ -25,21 +24,21 @@ export function TodayThemeCard({ theme }: { theme: DayThemeLike | null | undefin
   const title = normalizeDayThemeLabel(theme.label) || dominante || intensity || "";
   const note = (theme.note ?? "").trim();
   return (
-    <div style={{ position: "relative", overflow: "hidden", borderRadius: 12, border: `1px solid ${tint}73`, background: `${tint}21`, padding: "12px 14px 12px 17px", display: "flex", flexDirection: "column", gap: 4 }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: tint }} />
-      <div aria-hidden style={{ position: "absolute", inset: 0, background: "url(/maquette/theme-frise.svg) left center/auto 100% repeat-x", opacity: 0.12 }} />
-      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: tint }}>Thème du jour</span>
-        <span style={{ flex: 1 }} />
+    <div className="relative flex flex-col gap-1 overflow-hidden rounded-xl border py-3 pl-[17px] pr-3.5" style={{ borderColor: `${tint}73`, background: `${tint}21` }}>
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tint }} />
+      <div aria-hidden className="absolute inset-0 bg-[url(/maquette/theme-frise.svg)] bg-[length:auto_100%] bg-[left_center] bg-repeat-x opacity-[0.12]" />
+      <div className="relative flex flex-wrap items-center gap-1.5">
+        <span className="agon-mono text-[11px] uppercase tracking-[0.14em]" style={{ color: tint }}>Thème du jour</span>
+        <span className="flex-1" />
         {intensity && <TypePill color={tint}>{intensity}</TypePill>}
         {dominante && (
-          <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: tint, border: `1px solid ${tint}73`, borderRadius: 999, padding: "2px 8px" }}>
+          <span className="agon-mono rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.10em]" style={{ color: tint, borderColor: `${tint}73` }}>
             {dominante}
           </span>
         )}
       </div>
-      {title && <div style={{ position: "relative", ...DISPLAY, fontSize: 15, color: C.tx }}>{title}</div>}
-      {note && <div style={{ position: "relative", fontSize: 12, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{note}</div>}
+      {title && <div className="agon-display relative text-[15px] text-agon-tx">{title}</div>}
+      {note && <div className="relative whitespace-pre-wrap text-[12px] leading-[1.5] text-agon-tx2">{note}</div>}
     </div>
   );
 }

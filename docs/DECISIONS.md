@@ -2441,6 +2441,18 @@ et son README.
   couleur). Le reste de la case du jour ouvre toujours le panneau. Changer l'intensité garde une couleur choisie à
   la main (`colorForIntensityPick`).
 
+## 2026-11-14 — Badge cycle de l'accueil staff : option A, sans RPC
+
+- Le badge « HYROX PARIS · S1 / 5 » (planche CoachOrdiBStaffAccueil) est le cycle en cours de l'athlète et le rang
+  de la semaine, comme sur l'en-tête téléphone du coach (`useCurrentCycle`).
+- **A retenue** : lecture côté client avec les requêtes existantes (`cycles`, `microcycles`). Le pro qui a
+  « Planification » en lecture les lit déjà en prod (`staff_cycles_read`, `staff_microcycles_read`, via
+  `staff_can`) ; le badge s'affiche seulement si `canRead(planification)` et l'accord `staff_sharing`. Aucune
+  donnée ni aucun destinataire nouveau : rien à changer côté RGPD.
+- **B écartée** : pas de RPC `staff_cycle_badges()` tant que la requête client suffit (deux petites lectures par
+  athlète). Test à blanc 12/12 avant décision (planification fermée, accord retiré, lien révoqué : rien de
+  visible). Fichiers retirés de `supabase/pending/`.
+
 ## 2026-11-14 — Plus d'abonnement temps réel (base de prod saturée)
 
 - Le 14/11 après-midi, la base de prod (plan gratuit, ~0,5 Go de RAM) a cessé de répondre, puis est restée lente
@@ -2452,3 +2464,85 @@ et son README.
   relu au chargement et quand l'app revient au premier plan ; l'utilisateur voit son propre « J'aime » tout de suite.
 - Les tâches cron ne sont pas en cause (toutes les 10-15 min au plus). Si la base resature, la piste suivante est
   la taille de la machine (offre payante), à trancher par Hugo.
+- Mise à jour le même jour (Hugo) : les « J'aime » des citations sont **retirés** de l'app (bouton, compteur,
+  lectures). Les tables `citation_likes` / `citation_stats` restent en base (export RGPD inchangé) ; leur
+  suppression éventuelle passera par une migration validée par Hugo.
+
+## 2026-11-14 — L'IA d'Agon passe de Gemini à Claude (API Anthropic)
+
+- La clé Gemini était sur le niveau gratuit de Google AI Studio : quotas limités et données réutilisables par
+  Google. Hugo choisit l'API Claude (Anthropic), payée à l'usage sur la console Anthropic. L'abonnement Claude Max
+  d'Hugo ne couvre pas l'usage API d'une app : facturation séparée.
+- Seule `athlete-insights` (phrases de synthèse de « Mon profil ») appelait encore l'IA. Elle utilise maintenant
+  `claude-sonnet-5-5` (SDK `@anthropic-ai/sdk@1.3.0`), effort bas, sorties structurées, repli automatique sur un
+  autre modèle Claude en cas de refus. Ordre de grandeur : 1 à 2 centimes par synthèse, une par athlète et par
+  jour au plus. Secret `ANTHROPIC_API_KEY` dans Supabase.
+- `ai-program` n'a plus d'appelant depuis la refonte #131 (ni sur `main`, ni sur `dev`) : laissée sur Gemini, à
+  retirer de la prod avec l'accord d'Hugo.
+- Côté serveur, l'accord IA ne compte que s'il a été donné sous le texte du 30/10/2026 ou plus récent
+  (`hasConsent(…, AI_ASSISTANT_SINCE)`). Ce texte nomme déjà Anthropic (Claude) : **décision d'Hugo, on garde les
+  accords donnés depuis**, sans redemander. Le cadre devient plus protecteur : Anthropic est sous-traitant, pas
+  d'entraînement sur les données, 30 jours de conservation au plus.
+- Pas d'hébergement « Union européenne seulement » sur l'API Anthropic (options : mondial ou États-Unis) :
+  transfert encadré par les clauses contractuelles types de l'accord de traitement d'Anthropic. Textes mis à jour :
+  accord IA, politique de confidentialité, liste des sous-traitants (`LEGAL_VERSION` 2026-11-14, sans
+  re-sollicitation), registre, AIPD, fiche stores.
+- Inchangé : rien des montres Garmin et COROS ne part vers l'IA ; accord IA réservé aux 18 ans et plus.
+
+## 2026-11-14 — Wellness : carte douleur séparée des courbatures, poids à virgule
+
+- Demande d'Hugo : « Douleur : oui / non », puis un **2ᵉ corps** (fond rouge, zones articulaires et dos : cou,
+  épaule, coude, poignet, thorax, abdomen, hanche, cuisse, genou, tibia, cheville, nuque, haut du dos, lombaires,
+  fessier, ischios, mollet, Achille), distinct de celui des courbatures (muscles). **Plusieurs zones, une note
+  0-10 par zone** ; repères sous l'échelle : 0 aucune, 1-3 gêne, 4 douleur, 10 insupportable.
+- Stockage : `asp:wh` garde `painLevels: { zone: note }` ; colonne `wellness_entries.pain_levels` (migration
+  `20261115130000`, appliquée en prod avec l'accord d'Hugo). `pain` reste la note du jour = la plus forte des
+  zones (feu du matin inchangé). Douleurs saisies avant : **gardées telles quelles**, sans zone.
+- Coach : pastilles par zone dans le détail du jour (Retours), zone la plus forte dans le panneau wellness, note
+  « Blessé / malade » réécrite avec zones et notes. Jamais transmis à l'IA.
+- Poids du wellness : champ texte à clavier décimal ; l'athlète tape « 72,4 », le stockage reçoit 72.4
+  (`src/lib/weightInput.ts`).
+
+## 2026-11-15 — Policies RLS accélérées sans en changer le sens
+
+- Constat : sur la base gratuite (instance nano), chaque ligne lue évaluait `is_coach_of`, `staff_can`, etc., même
+  pour un utilisateur qui ne pouvait pas être concerné (un athlète payait `staff_can` et `is_coach_of` sur ses
+  propres lignes). Ces fonctions SQL ne sont pas « inlinées » (SECURITY DEFINER / SET search_path / sous-requêtes) :
+  exécutées ligne par ligne. `is_coach_of` (SECURITY INVOKER) relançait en plus toute la RLS de `profiles` à chaque
+  appel. Les tables sont minuscules (36 profils, 340 lignes `app_data`) : tout le temps partait dans ces appels.
+- Décision (migration `20261115193700_rls_perf_preconditions.sql`, appliquée avec l'accord d'Hugo) :
+  - `auth.uid()`, `auth.role()`, `current_user_is_admin()`, `my_coach_id()` écrits `(SELECT …)` : une fois par requête ;
+  - deux préconditions calculées une fois par requête, `i_am_coach()` (coache au moins un athlète ou rôle coach) et
+    `i_am_staff()` (au moins un lien staff actif), placées devant chaque fonction coach / staff :
+    `((SELECT public.i_am_coach()) AND is_coach_of(athlete_id))`. Toute fonction coach vraie implique
+    `i_am_coach()`, toute fonction staff vraie implique `i_am_staff()` : même valeur, NULL compris ;
+  - `is_coach_of` passe en SECURITY DEFINER, corps équivalent (la ligne cherchée est toujours visible via la policy
+    permissive `profiles_select_athletes`, aucune policy restrictive sur `profiles`).
+  - 316 policies réécrites mécaniquement depuis `pg_policies` (public + storage), `citation_likes` laissée (table en
+    retrait). La règle de `CLAUDE.md` reste : les policies coach passent par `is_coach_of`, jamais `coach_id = auth.uid()`.
+- Preuve, à blanc sur la prod (BEGIN … ROLLBACK) :
+  - formules : 352 expressions modifiées, ancienne vs nouvelle sur 10 profils de rôle × échantillon de lignes,
+    64 130 évaluations, 0 écart (`supabase/tests/rls_perf_equivalence.sql`) ; `is_coach_of` nouvelle vs ancienne
+    pour chaque utilisateur × chaque profil, 1 444 cas, 0 écart ;
+  - visibilité réelle (RLS active) avant / après sur 86 tables × 9 rôles (athlète, coach, staff actif, staff
+    inactif, co-coach, athlète co-coaché, admin, sans lien, anon) : 0 écart ;
+  - matrice des rôles lecture + écriture (`supabase/tests/rls_perf_roles.sql`) : verte avant et après.
+- Gain mesuré (EXPLAIN ANALYZE dans la base, meilleur de 3, ms, avant → après) :
+
+  | Qui | Requête | Avant | Après |
+  |---|---|---|---|
+  | athlète | séances d'énergie (`energy_sessions`) | 1 050 | 2,5 |
+  | athlète | microcycles | 888 | 89 |
+  | athlète | `app_data` (12 clés) | 1,2 | 0,3 |
+  | coach | séances d'énergie | 1 173 | 11 |
+  | coach | `app_data` d'un athlète | 13,9 | 1,0 |
+  | coach | séances d'un athlète | 17,1 | 1,0 |
+  | coach | wellness de ses athlètes | 24,9 | 2,9 |
+  | staff | séances d'un athlète | 22,0 | 1,6 |
+  | staff | `app_data` d'un athlète | 7,5 | 1,7 |
+
+  Les requêtes en prod payaient en plus la concurrence (moyenne `pg_stat_statements` de `app_data` : 82 ms).
+- Retour arrière : `supabase/rollback/20261115193700_rls_perf_preconditions.sql` (expressions d'avant, `is_coach_of`
+  en invoker, fonctions retirées), puis une migration datée équivalente pour garder le rejeu R2 aligné.
+- Pour la suite : toute nouvelle policy suit la forme rapide (skill `migration-bdd`). Reste lent : `microcycles`
+  (`cycle_athlete_id` par ligne, en invoker), à reprendre si besoin.

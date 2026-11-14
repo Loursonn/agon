@@ -5,7 +5,8 @@
  */
 import { useMemo, useState } from "react";
 import { X, Trash2, Zap, ListChecks, Plus } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { genId } from "@/lib/energy/treeUtils";
 import { useAuth } from "@/hooks/useAuth";
 import IntervalBuilder from "../energy/IntervalBuilder";
@@ -20,8 +21,20 @@ import {
 import type { EnergyGroup, EnergyStep } from "@/types/energy";
 import type { ClassiqueItem, SpecificBlockRow, BlockKind } from "@/types/specific";
 
-const ORANGE = H.miel;
-const GREEN  = C.g;
+/** Teinte d'un sport sans couleur, passée à TaxonomySelect (valeur de couleur). */
+const SPORT_ACCENT = C.o;
+
+const FIELD = "min-w-0 rounded-[6px] border border-agon-brd bg-agon-s2 text-agon-tx outline-none";
+const PRIMARY = "cursor-pointer rounded bg-agon-alerte font-semibold text-agon-ink";
+const GHOST_ICON = "flex cursor-pointer bg-transparent p-0.5 text-agon-tx3 hover:text-agon-erreur";
+const BADGE = "rounded px-1.5 py-0.5 text-[9px] font-bold";
+const OVERLAY = "fixed inset-0 bg-black/65";
+
+/** Carte de bloc : bandeau, pastille et bordure au survol (WOD = alerte, Classique = succès). */
+const KIND_TONE = {
+  wod:       { stripe: "bg-agon-alerte", badge: "bg-agon-alerte/[0.125] text-agon-alerte", hover: "hover:border-agon-alerte/[0.376]" },
+  classique: { stripe: "bg-agon-succes", badge: "bg-agon-succes/[0.125] text-agon-succes", hover: "hover:border-agon-succes/[0.376]" },
+} as const;
 
 // ── Editor modal ─────────────────────────────────────────────────────────────
 
@@ -74,45 +87,32 @@ function BlockEditorModal({ initial, onClose }: {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   }
 
-  const inputStyle: React.CSSProperties = {
-    background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 6,
-    color: C.tx, fontSize: 12, padding: "6px 8px",
-    fontFamily: "inherit", outline: "none", minWidth: 0,
-  };
-
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.65)" }} />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", zIndex: 91,
-        transform: "translate(-50%, -50%)",
-        background: C.bg, borderRadius: 6,
-        width: "min(96vw, 760px)", maxHeight: "90vh",
-        display: "flex", flexDirection: "column",
-        border: `1px solid ${C.brdL}`,
-      }}>
+      <div onClick={onClose} className={cn(OVERLAY, "z-[90]")} />
+      <div className="fixed left-1/2 top-1/2 z-[91] flex max-h-[90vh] w-[min(96vw,760px)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-[6px] border border-agon-brd-l bg-agon-bg">
         {/* Header */}
-        <div style={{ padding: "16px 20px 14px", borderBottom: `1px solid ${C.brd}`, flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ flex: 1, fontSize: 15, fontWeight: 800, color: C.tx }}>
+        <div className="flex shrink-0 items-center gap-2.5 border-b border-agon-brd px-5 pb-3.5 pt-4">
+          <div className="flex-1 text-[15px] font-extrabold text-agon-tx">
             {initial ? "Modifier le bloc" : "Nouveau bloc"}
           </div>
           <button
             onClick={onClose}
-            style={{ width: 30, height: 30, borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            className="flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded border border-agon-brd-l bg-transparent text-agon-tx3"
           >
             <X size={14} />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px" }}>
+        <div className="flex-1 overflow-y-auto px-5 py-[18px]">
           {/* Meta row */}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
+          <div className="mb-4 flex flex-wrap items-center gap-2.5">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nom du bloc…"
-              style={{ ...inputStyle, flex: 1, minWidth: 180, fontSize: 13, fontWeight: 700, padding: "8px 10px" }}
+              className={cn(FIELD, "min-w-[180px] flex-1 px-2.5 py-2 text-[13px] font-bold")}
             />
             <TaxonomySelect
               placeholder="Sport"
@@ -121,7 +121,7 @@ function BlockEditorModal({ initial, onClose }: {
               onChange={setSportId}
               onCreate={async (n) => user?.id ? await createSport.mutateAsync({ name: n, coachId: user.id }) : undefined}
               width={140}
-              accent={ORANGE}
+              accent={SPORT_ACCENT}
             />
             <TaxonomySelect
               placeholder="Qualité"
@@ -133,19 +133,15 @@ function BlockEditorModal({ initial, onClose }: {
               accent={C.ac}
             />
             {/* Kind toggle */}
-            <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
+            <div className="flex gap-0.5 rounded bg-agon-s2 p-0.5">
               {(["classique", "wod"] as const).map((k) => (
                 <button
                   key={k}
                   onClick={() => setKind(k)}
-                  style={{
-                    padding: "5px 12px", borderRadius: 6, border: "none",
-                    display: "flex", alignItems: "center", gap: 5,
-                    background: kind === k ? (k === "wod" ? ORANGE : GREEN) : "transparent",
-                    color: kind === k ? H.encreOr : C.tx3,
-                    fontSize: 11, fontWeight: kind === k ? 700 : 400,
-                    cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-                  }}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-[5px] rounded-[6px] px-3 py-[5px] text-[11px] [transition:all_120ms]",
+                    kind === k ? cn(KIND_TONE[k].stripe, "font-bold text-agon-ink") : "bg-transparent font-normal text-agon-tx3",
+                  )}
                 >
                   {k === "wod" ? <Zap size={11} /> : <ListChecks size={11} />}
                   {k === "wod" ? "WOD" : "Classique"}
@@ -159,7 +155,7 @@ function BlockEditorModal({ initial, onClose }: {
             onChange={(e) => setInstructions(e.target.value)}
             placeholder="Consignes du bloc (optionnel)…"
             rows={2}
-            style={{ ...inputStyle, width: "100%", boxSizing: "border-box", resize: "vertical", lineHeight: 1.4, marginBottom: 16 }}
+            className={cn(FIELD, "mb-4 box-border w-full resize-y px-2 py-1.5 text-[12px] leading-[1.4]")}
           />
 
           {/* Content */}
@@ -170,15 +166,13 @@ function BlockEditorModal({ initial, onClose }: {
               sessionKind="specifique"
             />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {items.map((item) => (
-                <div key={item.id} style={{ display: "flex", gap: 6, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <div key={item.id} className="flex flex-wrap items-start gap-1.5">
                   <SpecificItemFields item={item} onChange={(patch) => updateItem(item.id, patch)} />
                   <button
                     onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
-                    style={{ background: "none", border: "none", color: C.tx3, cursor: "pointer", padding: 2, display: "flex" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = C.r)}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = C.tx3)}
+                    className={GHOST_ICON}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -186,13 +180,7 @@ function BlockEditorModal({ initial, onClose }: {
               ))}
               <button
                 onClick={() => setItems((prev) => [...prev, { id: genId(), name: "" }])}
-                style={{
-                  marginTop: 4, display: "flex", alignItems: "center", gap: 5,
-                  padding: "6px 10px", borderRadius: 6,
-                  border: `1px dashed ${C.brdL}`, background: "transparent",
-                  color: C.tx3, fontSize: 11, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "inherit", alignSelf: "flex-start",
-                }}
+                className="mt-1 flex cursor-pointer items-center gap-[5px] self-start rounded-[6px] border border-dashed border-agon-brd-l bg-transparent px-2.5 py-1.5 text-[11px] font-semibold text-agon-tx3"
               >
                 <Plus size={11} /> Exercice / consigne
               </button>
@@ -201,21 +189,17 @@ function BlockEditorModal({ initial, onClose }: {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "12px 20px", borderTop: `1px solid ${C.brd}`, display: "flex", gap: 8, justifyContent: "flex-end", flexShrink: 0 }}>
+        <div className="flex shrink-0 justify-end gap-2 border-t border-agon-brd px-5 py-3">
           <button
             onClick={onClose}
-            style={{ padding: "8px 14px", borderRadius: 4, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded border border-agon-brd-l bg-transparent px-3.5 py-2 text-[12px] text-agon-tx2"
           >
             Annuler
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            style={{
-              padding: "8px 16px", borderRadius: 4, border: "none",
-              background: ORANGE, color: H.encreOr, fontSize: 12, fontWeight: 700,
-              cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1,
-            }}
+            className={cn(PRIMARY, "px-4 py-2 text-[12px] font-bold", isSaving ? "opacity-70" : "opacity-100")}
           >
             {isSaving ? "Enregistrement…" : "Enregistrer"}
           </button>
@@ -263,10 +247,7 @@ export default function SpecificBlockBankView() {
   return (
     <div>
       {/* Filters row */}
-      <div style={{
-        display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
-        padding: "14px 0 16px", borderBottom: `1px solid ${C.brd}`, marginBottom: 20,
-      }}>
+      <div className="mb-5 flex flex-wrap items-center gap-2.5 border-b border-agon-brd pb-4 pt-3.5">
         <TaxonomySelect
           placeholder="Tous les sports"
           options={sports}
@@ -274,7 +255,7 @@ export default function SpecificBlockBankView() {
           onChange={(id) => setSportFilter(id ?? "all")}
           onCreate={async (n) => user?.id ? await createSport.mutateAsync({ name: n, coachId: user.id }) : undefined}
           width={160}
-          accent={ORANGE}
+          accent={SPORT_ACCENT}
         />
         <TaxonomySelect
           placeholder="Toutes les qualités"
@@ -290,27 +271,18 @@ export default function SpecificBlockBankView() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher…"
-          style={{
-            flex: 1, minWidth: 140, maxWidth: 260,
-            background: C.s2, border: `1px solid ${C.brd}`,
-            borderRadius: 6, color: C.tx, fontSize: 12,
-            padding: "5px 10px", fontFamily: "inherit", outline: "none",
-          }}
+          className={cn(FIELD, "min-w-[140px] max-w-[260px] flex-1 px-2.5 py-[5px] text-[12px]")}
         />
 
         {!isLoading && (
-          <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>
+          <span className="whitespace-nowrap text-[11px] text-agon-tx3">
             {filtered.length} bloc{filtered.length !== 1 ? "s" : ""}
           </span>
         )}
 
         <button
           onClick={openCreate}
-          style={{
-            marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
-            background: ORANGE, color: H.encreOr, fontSize: 12,
-            fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className={cn(PRIMARY, "ml-auto whitespace-nowrap px-3.5 py-[7px] text-[12px]")}
         >
           + Nouveau bloc
         </button>
@@ -318,73 +290,60 @@ export default function SpecificBlockBankView() {
 
       {/* Grid */}
       {isLoading ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: C.tx3, fontSize: 12 }}>Chargement…</div>
+        <div className="py-10 text-center text-[12px] text-agon-tx3">Chargement…</div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: C.tx3 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}></div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>
+        <div className="px-5 py-[60px] text-center text-agon-tx3">
+          <div className="mb-3 text-[36px]"></div>
+          <div className="mb-1.5 text-[15px] font-semibold text-agon-tx2">
             {blocks.length === 0 ? "Aucun bloc dans la banque" : "Aucun bloc pour ces filtres"}
           </div>
-          <div style={{ fontSize: 13, marginBottom: 20 }}>
+          <div className="mb-5 text-[13px]">
             {blocks.length === 0
               ? "Crée un bloc réutilisable (Classique ou WOD), ou enregistre-en un depuis le builder de séance."
               : "Ajuste les filtres Sport / Qualité."}
           </div>
           <button
             onClick={openCreate}
-            style={{
-              padding: "9px 20px", borderRadius: 4, border: "none",
-              background: ORANGE, color: H.encreOr, fontSize: 13,
-              fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-            }}
+            className={cn(PRIMARY, "px-5 py-[9px] text-[13px]")}
           >
             + Nouveau bloc
           </button>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, alignItems: "start" }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] items-start gap-4">
           {filtered.map((b) => {
             const isWod   = b.content.kind === "wod";
             const sport   = b.sport_id ? sportById.get(b.sport_id) : undefined;
             const quality = b.quality_id ? qualityById.get(b.quality_id) : undefined;
-            const accent  = isWod ? ORANGE : GREEN;
+            const tone    = KIND_TONE[isWod ? "wod" : "classique"];
             const items   = b.content.items ?? [];
             const nSteps  = (b.content.steps ?? []).length;
             return (
               <div
                 key={b.id}
                 onClick={() => openEdit(b)}
-                style={{
-                  background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6,
-                  overflow: "hidden", cursor: "pointer",
-                  transition: "border-color 150ms",
-                }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = accent + "60")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brd)}
+                className={cn("cursor-pointer overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1 [transition:border-color_150ms]", tone.hover)}
               >
-                <div style={{ height: 3, background: accent, opacity: 0.7 }} />
-                <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
+                <div className={cn("h-[3px] opacity-70", tone.stripe)} />
+                <div className="flex flex-col gap-1.5 px-3 py-2.5">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-bold text-agon-tx">
                         {b.name}
                       </div>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        <span style={{
-                          fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 4,
-                          background: accent + "20", color: accent,
-                          display: "inline-flex", alignItems: "center", gap: 3,
-                        }}>
+                      <div className="flex flex-wrap gap-1">
+                        <span className={cn(BADGE, "inline-flex items-center gap-[3px] font-extrabold", tone.badge)}>
                           {isWod ? <Zap size={8} /> : <ListChecks size={8} />}
                           {isWod ? "WOD" : "CLASSIQUE"}
                         </span>
                         {sport && (
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: (sport.color || ORANGE) + "20", color: sport.color || ORANGE }}>
+                          // Couleur du sport = donnée : reste en style.
+                          <span className={BADGE} style={{ background: (sport.color || SPORT_ACCENT) + "20", color: sport.color || SPORT_ACCENT }}>
                             {sport.name}
                           </span>
                         )}
                         {quality && (
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${C.ac}20`, color: C.ac }}>
+                          <span className={cn(BADGE, "bg-agon-accent/[0.125] text-agon-accent")}>
                             {quality.name}
                           </span>
                         )}
@@ -393,15 +352,13 @@ export default function SpecificBlockBankView() {
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmDelete(b); }}
                       title="Supprimer"
-                      style={{ background: "none", border: "none", color: C.tx3, cursor: "pointer", padding: 2, display: "flex", flexShrink: 0 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = C.r)}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = C.tx3)}
+                      className={cn(GHOST_ICON, "shrink-0")}
                     >
                       <Trash2 size={13} />
                     </button>
                   </div>
 
-                  <div style={{ fontSize: 10, color: C.tx3 }}>
+                  <div className="text-[10px] text-agon-tx3">
                     {isWod
                       ? `${nSteps} étape${nSteps > 1 ? "s" : ""}`
                       : `${items.length} exo${items.length > 1 ? "s" : ""}${items.length > 0 ? ` — ${items.slice(0, 3).map((i) => i.name).filter(Boolean).join(", ")}${items.length > 3 ? "…" : ""}` : ""}`}
@@ -426,23 +383,23 @@ export default function SpecificBlockBankView() {
       {confirmDelete && (
         <div
           onClick={() => setConfirmDelete(null)}
-          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60"
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 6, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Supprimer le bloc ?</div>
-            <div style={{ fontSize: 12, color: C.tx3, marginBottom: 18 }}>
+          <div onClick={(e) => e.stopPropagation()} className="w-[340px] rounded-[6px] border border-agon-brd bg-agon-s1 p-6">
+            <div className="mb-2 text-[15px] font-bold text-agon-tx">Supprimer le bloc ?</div>
+            <div className="mb-[18px] text-[12px] text-agon-tx3">
               « {confirmDelete.name} » sera retiré de la banque. Les séances qui l'ont déjà importé ne sont pas affectées.
             </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmDelete(null)}
-                style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                className="cursor-pointer rounded border border-agon-brd bg-transparent px-3.5 py-[7px] text-[13px] text-agon-tx2"
               >
                 Annuler
               </button>
               <button
                 onClick={() => { deleteBlock.mutate(confirmDelete.id); setConfirmDelete(null); }}
-                style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                className="cursor-pointer rounded bg-agon-erreur-vif px-3.5 py-[7px] text-[13px] font-semibold text-agon-ink"
               >
                 Supprimer
               </button>

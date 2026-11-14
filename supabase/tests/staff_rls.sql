@@ -36,6 +36,11 @@ DO $$ BEGIN
   INSERT INTO r(k,v) VALUES ('G1 insert direct hors RPC', 'ACCEPTÉ (KO)');
 EXCEPTION WHEN OTHERS THEN INSERT INTO r(k,v) VALUES ('G1 insert direct hors RPC', 'refusé (OK)'); END $$;
 
+-- En prod, l'athlète choisi a pu déjà accorder staff_sharing : on retire l'accord le temps du test
+-- (annulé en fin de test), pour que cette partie soit bien « sans consentement ».
+INSERT INTO user_consents(user_id, purpose, granted, doc_version, statement)
+SELECT athlete, 'staff_sharing', false, 'test', 'TEST RLS — annulé' FROM ids;
+
 -- ===== STAFF, sans consentement : rien de l'athlète n'est visible =====
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims', (SELECT json_build_object('sub', staff, 'role','authenticated')::text FROM ids), true);

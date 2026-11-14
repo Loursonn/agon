@@ -9,8 +9,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { C, alpha } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/ordi/OrdiUi"
+import { cn } from "@/lib/utils"
 import { Plus, Pencil, X, ChevronDown, ChevronUp, CalendarPlus, Copy, Library, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useProgrammation } from "./hooks/useProgrammation"
@@ -32,8 +31,16 @@ import { MuscleVolumePanel } from "./MuscleVolumePanel"
 import { useMuscleVolume } from "./hooks/useMuscleVolume"
 import { localISO } from "@/lib/date"
 
-const VIOLET = C.ac
-const VIOLET_S = "rgba(123,111,255,0.12)"
+/** Bouton carré 32 px de la carte séance ; actif = aplat or 12 % (remplace le violet hérité). */
+const ICON_BTN = "flex size-8 cursor-pointer items-center justify-center rounded-[8px] border border-agon-brd-l"
+const ICON_IDLE = "bg-agon-bg/[0.45] text-agon-tx3"
+const ICON_ON = "bg-agon-accent/[0.12] text-agon-accent"
+const PANEL = "border-t border-agon-brd-l bg-agon-s2 px-3.5 py-2.5"
+const PANEL_KICK = "mb-2 text-[10px] font-bold uppercase tracking-[0.5px] text-agon-tx3"
+const CANCEL_BTN = "mt-1.5 w-full cursor-pointer rounded-[7px] border border-agon-brd-l bg-transparent py-1.5 text-[11px] text-agon-tx3"
+const DANGER_BTN = "shrink-0 cursor-pointer border-0 bg-agon-erreur-vif text-[11px] font-bold text-agon-ink"
+const TOP_BTN = "flex h-[34px] cursor-pointer items-center gap-[5px] whitespace-nowrap rounded-[10px] text-[12px]"
+const ACCENT_BTN = "cursor-pointer border-0 bg-agon-accent text-[12px] font-bold text-agon-tx"
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 
@@ -85,23 +92,21 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
   ].filter(a => a.id !== athleteId)
 
   return (
-    <div style={{
-      position: "relative", borderRadius: 14, overflow: "hidden", marginBottom: 10,
-      border: "1px solid " + (isOpen ? alpha(C.ac, 0.6) : C.brd),
-      background: isOpen ? alpha(C.ac, 0.12) : C.s1,
-      transition: "border-color 150ms",
-    }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isOpen ? C.ac : alpha(C.ac, 0.5) }} />
+    <div className={cn(
+      "relative mb-2.5 overflow-hidden rounded-[14px] border [transition:border-color_150ms]",
+      isOpen ? "border-agon-accent/60 bg-agon-accent/[0.12]" : "border-agon-brd bg-agon-s1",
+    )}>
+      <span aria-hidden className={cn("absolute inset-y-0 left-0 w-[3px]", isOpen ? "bg-agon-accent" : "bg-agon-accent/50")} />
       {/* Card header (planche CoachProgrammation : 64 px) */}
       <div
-        style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 64, boxSizing: "border-box", padding: "0 16px 0 19px", cursor: "pointer" }}
+        className="flex min-h-16 cursor-pointer items-center gap-3 pl-[19px] pr-4"
         onClick={onToggle}
       >
         {/* Drag handle */}
         <div
           {...(dragHandleProps ?? {})}
           onClick={e => e.stopPropagation()}
-          style={{ cursor: "grab", color: C.tx3, display: "flex", alignItems: "center", flexShrink: 0 }}
+          className="flex shrink-0 cursor-grab items-center text-agon-tx3"
         >
           <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
             <circle cx="4" cy="2.5" r="1.2" fill="currentColor" />
@@ -115,97 +120,86 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
 
         {/* Day badge */}
         {session.day_of_week !== undefined ? (
-          <div style={{
-            minWidth: 40, height: 24, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center",
-            borderRadius: 6, background: C.s2, border: "1px solid " + C.brdL, color: C.tx,
-            ...MONO, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", flexShrink: 0,
-          }}>
+          <div className="agon-mono flex h-6 min-w-10 shrink-0 items-center justify-center rounded-[6px] border border-agon-brd-l bg-agon-s2 text-[11px] uppercase tracking-[0.08em] text-agon-tx">
             {DOW[session.day_of_week]}
           </div>
         ) : session.recurrence === 'once' ? (
-          <div style={{
-            padding: "3px 8px", borderRadius: 6,
-            background: C.s2, color: C.tx3,
-            fontSize: 10, fontWeight: 700, flexShrink: 0,
-          }}>
+          <div className="shrink-0 rounded-[6px] bg-agon-s2 px-2 py-[3px] text-[10px] font-bold text-agon-tx3">
             Ponct.
           </div>
         ) : null}
 
         {/* Short badge — hidden when no code defined */}
         {session.short && session.short !== "?" && (
-          <div style={{
-            height: 24, display: "flex", alignItems: "center", padding: "0 8px", borderRadius: 6,
-            background: C.ac, color: C.ink, ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", flexShrink: 0,
-          }}>
+          <div className="agon-mono flex h-6 shrink-0 items-center rounded-[6px] bg-agon-accent px-2 text-[11px] font-medium tracking-[0.06em] text-agon-ink">
             {session.short}
           </div>
         )}
 
         {/* Name + meta */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 500, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-medium text-agon-tx">
             {session.name || "Séance sans nom"}
           </div>
-          <div style={{ ...MONO, fontSize: 11, color: C.tx2, marginTop: 2 }}>
+          <div className="agon-mono mt-0.5 text-[11px] text-agon-tx2">
             {session.blocs.length} bloc{session.blocs.length !== 1 ? "s" : ""} · {totalExercices(session)} exercice{totalExercices(session) !== 1 ? "s" : ""}
             {session.multi_semaine && session.nb_semaines ? ` · ${session.nb_semaines} sem.` : ""}
           </div>
         </div>
 
         {/* Actions */}
-        <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        <div className="flex shrink-0 gap-1" onClick={e => e.stopPropagation()}>
           <button
             onClick={onEdit}
-            style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: alpha(C.bg, 0.45), color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            className={cn(ICON_BTN, ICON_IDLE)}
           ><Pencil size={12} /></button>
 
           <button
             onClick={() => { setShowPlace(p => !p); setShowDuplicate(false) }}
             title="Placer dans le planning"
-            style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: showPlace ? VIOLET_S : alpha(C.bg, 0.45), color: showPlace ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}
+            className={cn(ICON_BTN, "text-[12px]", showPlace ? ICON_ON : ICON_IDLE)}
           ><CalendarPlus size={12} /></button>
 
           <button
             onClick={() => { setShowDuplicate(p => !p); setShowPlace(false) }}
             title="Dupliquer chez un autre athlète"
-            style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: showDuplicate ? VIOLET_S : alpha(C.bg, 0.45), color: showDuplicate ? VIOLET : C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            className={cn(ICON_BTN, showDuplicate ? ICON_ON : ICON_IDLE)}
           ><Copy size={12} /></button>
 
           {confirmDelete ? (
             <>
               <button
                 onClick={onDelete}
-                style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: C.rV, color: C.ink, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
+                className={cn(DANGER_BTN, "rounded-[7px] px-2.5 py-1")}
               >Supprimer</button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + C.brdL, background: alpha(C.bg, 0.45), color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                className={cn(ICON_BTN, ICON_IDLE)}
               ><X size={12} /></button>
             </>
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 8, border: "1px solid " + alpha(C.r, 0.55), background: alpha(C.r, 0.12), color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              className="flex size-8 cursor-pointer items-center justify-center rounded-[8px] border border-agon-erreur/55 bg-agon-erreur/[0.12] text-agon-erreur"
             ><X size={12} /></button>
           )}
         </div>
 
         {/* Expand chevron */}
-        <div style={{ color: C.tx3, flexShrink: 0 }}>
+        <div className="shrink-0 text-agon-tx3">
           {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </div>
       </div>
 
       {/* Place panel */}
       {showPlace && (
-        <div style={{ padding: "10px 14px", borderTop: "1px solid " + C.brdL, background: C.s2 }}>
-          <div style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+        <div className={PANEL}>
+          <div className={PANEL_KICK}>
             Placer dans le planning
           </div>
           {session.recurrence === 'weekly' && session.day_of_week !== undefined && cycleId ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ fontSize: 11, color: C.tx3 }}>
+            <div className="flex flex-col gap-2">
+              <div className="text-[11px] text-agon-tx3">
                 Récurrence hebdomadaire — génère une séance par semaine du cycle
               </div>
               <button
@@ -221,18 +215,18 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                   setShowPlace(false)
                 }}
                 disabled={placeSession.isPending}
-                style={{ padding: "10px 0", borderRadius: 4, border: "none", background: VIOLET, color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                className={cn(ACCENT_BTN, "rounded-[4px] py-2.5")}
               >
                 {placeSession.isPending ? "En cours…" : "Générer tout le cycle ▶"}
               </button>
             </div>
           ) : (
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={placeDate}
                 onChange={e => setPlaceDate(e.target.value)}
-                style={{ flex: 1, padding: "8px 10px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none" }}
+                className="flex-1 rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-2 text-[13px] text-agon-tx outline-none"
               />
               <button
                 onClick={async () => {
@@ -247,7 +241,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                   setShowPlace(false)
                 }}
                 disabled={placeSession.isPending}
-                style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: VIOLET, color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                className={cn(ACCENT_BTN, "rounded-[4px] px-4 py-2")}
               >
                 {placeSession.isPending ? "…" : "Placer"}
               </button>
@@ -255,7 +249,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
           )}
           <button
             onClick={() => setShowPlace(false)}
-            style={{ width: "100%", marginTop: 6, padding: "6px 0", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+            className={CANCEL_BTN}
           >
             Annuler
           </button>
@@ -264,14 +258,14 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
 
       {/* Duplicate panel */}
       {showDuplicate && (
-        <div style={{ padding: "10px 14px", borderTop: "1px solid " + C.brdL, background: C.s2 }}>
-          <div style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+        <div className={PANEL}>
+          <div className={PANEL_KICK}>
             Dupliquer chez un athlète
           </div>
           {targetAthletes.length === 0 ? (
-            <div style={{ fontSize: 12, color: C.tx3, padding: "6px 0" }}>Aucun autre athlète disponible</div>
+            <div className="py-1.5 text-[12px] text-agon-tx3">Aucun autre athlète disponible</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {targetAthletes.map(a => (
                 <button
                   key={a.id}
@@ -281,15 +275,12 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
                     setShowDuplicate(false)
                     toast.success(`"${session.name || session.short}" dupliquée chez ${a.full_name} — place-la dans un cycle depuis sa programmation`)
                   }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                    padding: "8px 10px", borderRadius: 4,
-                    border: "1px solid " + C.brdL, background: C.s1, color: C.tx,
-                    fontSize: 12, fontWeight: 600, cursor: duplicateSession.isPending ? "not-allowed" : "pointer",
-                    fontFamily: "inherit", opacity: duplicateSession.isPending ? 0.6 : 1,
-                  }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-2 text-left text-[12px] font-semibold text-agon-tx",
+                    duplicateSession.isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                  )}
                 >
-                  <Copy size={11} style={{ color: VIOLET, flexShrink: 0 }} />
+                  <Copy size={11} className="shrink-0 text-agon-accent" />
                   {a.id === profile?.id ? `Moi — ${a.full_name}` : a.full_name}
                 </button>
               ))}
@@ -297,7 +288,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
           )}
           <button
             onClick={() => setShowDuplicate(false)}
-            style={{ width: "100%", marginTop: 6, padding: "6px 0", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+            className={CANCEL_BTN}
           >
             Annuler
           </button>
@@ -306,7 +297,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
 
       {/* Expanded: SessionBlocEditor */}
       {isOpen && (
-        <div style={{ borderTop: "1px solid " + C.brdL, padding: "0 14px 14px" }}>
+        <div className="border-t border-agon-brd-l px-3.5 pb-3.5">
           <SessionBlocEditor
             session={session}
             cycleId={cycleId}
@@ -459,7 +450,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
 
   if (isLoading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="flex flex-col gap-2.5">
         {[1, 2].map(i => <CardSkeleton key={i} />)}
       </div>
     )
@@ -468,17 +459,10 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
   return (
     <div>
       {/* Top bar */}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
+      <div className="mb-3.5 flex flex-wrap justify-end gap-2">
         <button
           onClick={() => { setShowSessionBank(p => !p); setIsAddingSession(false); setBankTemplate(null) }}
-          style={{
-            display: "flex", alignItems: "center", gap: 5,
-            height: 34, boxSizing: "border-box", padding: "0 14px", borderRadius: 10,
-            border: "1px solid " + (showSessionBank ? C.ac : C.brdL),
-            background: showSessionBank ? alpha(C.ac, 0.08) : "transparent",
-            color: showSessionBank ? C.ac : C.tx2,
-            fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className={cn(TOP_BTN, "border px-3.5", showSessionBank ? "border-agon-accent bg-agon-accent/[0.08] text-agon-accent" : "border-agon-brd-l bg-transparent text-agon-tx2")}
         >
           <Library size={13} />
           Depuis la banque
@@ -486,23 +470,13 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
         <button
           onClick={() => { setShowTextImport(true); setIsAddingSession(false); setShowSessionBank(false) }}
           title="Coller une séance écrite au format YOXX"
-          style={{
-            display: "flex", alignItems: "center", gap: 5,
-            height: 34, boxSizing: "border-box", padding: "0 14px", borderRadius: 10,
-            border: "1px solid " + C.brdL, background: "transparent", color: C.tx2,
-            fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className={cn(TOP_BTN, "border border-agon-brd-l bg-transparent px-3.5 text-agon-tx2")}
         >
           Importer un texte
         </button>
         <button
           onClick={() => { setIsAddingSession(true); setEditingSessionId(null); setShowSessionBank(false); setBankTemplate(null) }}
-          style={{
-            display: "flex", alignItems: "center", gap: 5,
-            height: 34, boxSizing: "border-box", padding: "0 18px", borderRadius: 10,
-            border: "none", background: C.ac, color: C.ink,
-            fontSize: 11, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-          }}
+          className="flex h-[34px] cursor-pointer items-center gap-[5px] whitespace-nowrap rounded-[10px] border-0 bg-agon-accent px-[18px] text-[11px] font-semibold uppercase text-agon-ink"
         >
           <Plus size={13} />
           Créer une séance
@@ -530,35 +504,29 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
 
       {/* Session bank picker */}
       {showSessionBank && (
-        <div style={{ marginBottom: 12, padding: 10, borderRadius: 4, border: "1px solid " + VIOLET + "40", background: VIOLET + "08" }}>
-          <div style={{ fontSize: 10, color: C.tx3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+        <div className="mb-3 rounded-[4px] border border-agon-accent/25 bg-agon-accent/[0.031] p-2.5">
+          <div className={PANEL_KICK}>
             Séances de la banque
           </div>
           {bankSessions.length === 0 ? (
-            <div style={{ fontSize: 12, color: C.tx3, padding: "4px 0 8px" }}>
+            <div className="pb-2 pt-1 text-[12px] text-agon-tx3">
               Aucune séance enregistrée — utilise « Enregistrer la séance dans la banque » dans une séance, ou Bibliothèque → Musculaire → Séances.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div className="flex flex-col gap-[5px]">
               {bankSessions.map(t => {
                 const nbEx = totalExercices(t)
                 const confirming = confirmBankDeleteId === t.id
                 return (
-                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div key={t.id} className="flex items-center gap-[5px]">
                     <button
                       onClick={() => { setBankTemplate(t); setShowSessionBank(false); setIsAddingSession(true); setEditingSessionId(null) }}
-                      style={{
-                        flex: 1, minWidth: 0,
-                        display: "flex", alignItems: "center", gap: 8, textAlign: "left",
-                        padding: "9px 10px", borderRadius: 4,
-                        border: "1px solid " + C.brdL, background: C.s1, color: C.tx,
-                        fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                      }}
+                      className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-[9px] text-left text-[12px] font-semibold text-agon-tx"
                     >
-                      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <span className="min-w-0 flex-1 truncate">
                         {t.name || "Séance sans nom"}
                       </span>
-                      <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
+                      <span className="shrink-0 text-[10px] text-agon-tx3">
                         {t.blocs.length} bloc{t.blocs.length !== 1 ? "s" : ""} · {nbEx} ex.
                       </span>
                     </button>
@@ -570,12 +538,12 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
                             setConfirmBankDeleteId(null)
                             toast.success(`"${t.name || "Séance"}" retirée de la banque`)
                           }}
-                          style={{ padding: "0 10px", height: 34, borderRadius: 4, border: "none", background: C.rV, color: C.ink, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "inherit", flexShrink: 0 }}
+                          className={cn(DANGER_BTN, "h-[34px] rounded-[4px] px-2.5")}
                         >Supprimer</button>
                         <button
                           onClick={() => setConfirmBankDeleteId(null)}
                           title="Annuler"
-                          style={{ width: 34, height: 34, borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                          className="flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[4px] border border-agon-brd-l bg-transparent text-agon-tx3"
                         ><X size={12} /></button>
                       </>
                     ) : (
@@ -583,7 +551,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
                         onClick={() => setConfirmBankDeleteId(t.id)}
                         title="Supprimer de la banque"
                         aria-label={`Supprimer ${t.name || "la séance"} de la banque`}
-                        style={{ width: 34, height: 34, borderRadius: 4, border: "1px solid " + C.r + "40", background: C.rS, color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                        className="flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[4px] border border-agon-erreur/25 bg-agon-erreur-doux text-agon-erreur"
                       ><Trash2 size={12} /></button>
                     )}
                   </div>
@@ -593,7 +561,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
           )}
           <button
             onClick={() => setShowSessionBank(false)}
-            style={{ width: "100%", marginTop: 6, padding: "6px 0", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+            className={CANCEL_BTN}
           >
             Annuler
           </button>
@@ -612,20 +580,15 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
 
       {/* Empty state */}
       {!isAddingSession && sessions.length === 0 && (
-        <div style={{ textAlign: "center", padding: "50px 20px" }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}></div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 4 }}>Aucune séance</div>
-          <div style={{ fontSize: 12, color: C.tx3, marginBottom: 20 }}>
+        <div className="px-5 py-[50px] text-center">
+          <div className="mb-3 text-[36px]"></div>
+          <div className="mb-1 text-[15px] font-bold text-agon-tx">Aucune séance</div>
+          <div className="mb-5 text-[12px] text-agon-tx3">
             Crée ta première séance pour commencer à programmer.
           </div>
           <button
             onClick={() => setIsAddingSession(true)}
-            style={{
-              padding: "10px 22px", borderRadius: 4,
-              border: "none", background: VIOLET, color: C.tx,
-              fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-              display: "inline-flex", alignItems: "center", gap: 6,
-            }}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[4px] border-0 bg-agon-accent px-[22px] py-2.5 text-[13px] font-bold text-agon-tx"
           >
             <Plus size={14} />
             Créer une séance
@@ -647,7 +610,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
             // If this session is being edited (meta), show inline form instead of card
             if (editingSessionId === session.id) {
               return (
-                <div key={session.id} style={{ marginBottom: 8 }}>
+                <div key={session.id} className="mb-2">
                   <SessionForm
                     initial={session}
                     onSubmit={data => updateSessionMeta(session.id, data)}

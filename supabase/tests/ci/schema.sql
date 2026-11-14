@@ -1207,6 +1207,28 @@ $$;
 ALTER FUNCTION "public"."coach_profile_visible"("p_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."competitions_stamp_cancel"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF NEW.cancelled_at IS NULL THEN
+    NEW.cancelled_by := NULL;
+  ELSIF TG_OP = 'INSERT' OR OLD.cancelled_at IS NULL THEN
+    NEW.cancelled_at := now();
+    NEW.cancelled_by := auth.uid();
+  ELSE
+    NEW.cancelled_at := OLD.cancelled_at;
+    NEW.cancelled_by := OLD.cancelled_by;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."competitions_stamp_cancel"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."complete_energy_assignment"("p_assignment" "uuid", "p_block_logs" "jsonb" DEFAULT NULL::"jsonb", "p_notes" "text" DEFAULT NULL::"text", "p_duration_min" integer DEFAULT NULL::integer, "p_activity_url" "text" DEFAULT NULL::"text", "p_activity_type" "text" DEFAULT NULL::"text", "p_distance_km" numeric DEFAULT NULL::numeric, "p_rpe" smallint DEFAULT NULL::smallint) RETURNS "public"."energy_session_assignments"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2075,6 +2097,7 @@ CREATE TABLE IF NOT EXISTS "public"."wellness_entries" (
     "doms_levels" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "doms_workout_id" "uuid",
     "doms_workout_name" "text",
+    "pain_levels" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     CONSTRAINT "wellness_entries_doms_check" CHECK ((("doms" >= (1)::numeric) AND ("doms" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_doms_levels_check" CHECK (("jsonb_typeof"("doms_levels") = 'object'::"text")),
     CONSTRAINT "wellness_entries_doms_points_check" CHECK (("jsonb_typeof"("doms_points") = 'array'::"text")),
@@ -2083,6 +2106,7 @@ CREATE TABLE IF NOT EXISTS "public"."wellness_entries" (
     CONSTRAINT "wellness_entries_envie_check" CHECK ((("envie" >= (1)::numeric) AND ("envie" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_fatigue_check" CHECK ((("fatigue" >= (1)::numeric) AND ("fatigue" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_pain_check" CHECK ((("pain" >= 0) AND ("pain" <= 10))),
+    CONSTRAINT "wellness_entries_pain_levels_check" CHECK (("jsonb_typeof"("pain_levels") = 'object'::"text")),
     CONSTRAINT "wellness_entries_sleep_hours_check" CHECK ((("sleep_hours" >= (0)::numeric) AND ("sleep_hours" <= (24)::numeric))),
     CONSTRAINT "wellness_entries_sommeil_check" CHECK ((("sommeil" >= (1)::numeric) AND ("sommeil" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_stress_check" CHECK ((("stress" >= (1)::numeric) AND ("stress" <= (5)::numeric))),
@@ -2153,9 +2177,20 @@ BEGIN
     SELECT jsonb_object_agg(z.k, (z.v #>> '{}')::smallint)
       FROM jsonb_each(CASE WHEN jsonb_typeof(p_v->'domsLevels') = 'object' THEN p_v->'domsLevels' ELSE '{}'::jsonb END) AS z(k, v)
      WHERE jsonb_typeof(z.v) = 'number' AND (z.v #>> '{}')::numeric IN (1, 2, 3)), '{}'::jsonb);
-  r.pain := CASE WHEN public.health_num(p_v->'pain') BETWEEN 0 AND 10
-                  AND public.health_num(p_v->'pain') = trunc(public.health_num(p_v->'pain'))
-                 THEN public.health_num(p_v->'pain')::smallint END;
+  -- Carte douleur (2ᵉ corps, 14/11) : { zone: 0..10 entier }, le reste écarté.
+  r.pain_levels := coalesce((
+    SELECT jsonb_object_agg(z.k, (z.v #>> '{}')::smallint)
+      FROM jsonb_each(CASE WHEN jsonb_typeof(p_v->'painLevels') = 'object' THEN p_v->'painLevels' ELSE '{}'::jsonb END) AS z(k, v)
+     WHERE btrim(z.k) <> '' AND length(z.k) <= 40
+       AND jsonb_typeof(z.v) = 'number'
+       AND (z.v #>> '{}')::numeric BETWEEN 0 AND 10
+       AND (z.v #>> '{}')::numeric = trunc((z.v #>> '{}')::numeric)), '{}'::jsonb);
+  -- Note du jour : la plus forte des zones s'il y en a (`painOf` du domaine), sinon la note seule.
+  r.pain := CASE
+    WHEN r.pain_levels <> '{}'::jsonb THEN (SELECT max((v #>> '{}')::smallint) FROM jsonb_each(r.pain_levels) AS t(k, v))
+    WHEN public.health_num(p_v->'pain') BETWEEN 0 AND 10
+     AND public.health_num(p_v->'pain') = trunc(public.health_num(p_v->'pain'))
+    THEN public.health_num(p_v->'pain')::smallint END;
   r.sick := CASE WHEN jsonb_typeof(p_v->'sick') = 'boolean' THEN (p_v->>'sick')::boolean END;
   -- Séance de la veille à laquelle les courbatures sont rattachées (planche wellness).
   IF jsonb_typeof(p_v->'domsWorkout') = 'object'
@@ -2379,10 +2414,10 @@ BEGIN
   )
   INSERT INTO public.wellness_entries AS t (
     athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours,
-    sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name)
+    sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name, pain_levels)
   SELECT p_athlete, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours,
          sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived,
-         envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name
+         envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name, pain_levels
     FROM src
   ON CONFLICT (athlete_id, day) DO UPDATE SET
     fatigue = EXCLUDED.fatigue, sommeil = EXCLUDED.sommeil, stress = EXCLUDED.stress,
@@ -2392,16 +2427,17 @@ BEGIN
     doms_points = EXCLUDED.doms_points, injury_note = EXCLUDED.injury_note,
     weight_kg = EXCLUDED.weight_kg, archived = EXCLUDED.archived, envie = EXCLUDED.envie,
     pain = EXCLUDED.pain, sick = EXCLUDED.sick, doms_levels = EXCLUDED.doms_levels,
-    doms_workout_id = EXCLUDED.doms_workout_id, doms_workout_name = EXCLUDED.doms_workout_name, updated_at = now()
+    doms_workout_id = EXCLUDED.doms_workout_id, doms_workout_name = EXCLUDED.doms_workout_name,
+    pain_levels = EXCLUDED.pain_levels, updated_at = now()
   WHERE (t.fatigue, t.sommeil, t.stress, t.energie, t.doms, t.bedtime, t.wake, t.sleep_hours,
          t.sleep_interrupted, t.sleep_interrupt_note, t.doms_zones, t.doms_points, t.injury_note,
-         t.weight_kg, t.archived, t.envie, t.pain, t.sick, t.doms_levels, t.doms_workout_id, t.doms_workout_name)
+         t.weight_kg, t.archived, t.envie, t.pain, t.sick, t.doms_levels, t.doms_workout_id, t.doms_workout_name, t.pain_levels)
         IS DISTINCT FROM
         (EXCLUDED.fatigue, EXCLUDED.sommeil, EXCLUDED.stress, EXCLUDED.energie, EXCLUDED.doms,
          EXCLUDED.bedtime, EXCLUDED.wake, EXCLUDED.sleep_hours, EXCLUDED.sleep_interrupted,
          EXCLUDED.sleep_interrupt_note, EXCLUDED.doms_zones, EXCLUDED.doms_points, EXCLUDED.injury_note,
          EXCLUDED.weight_kg, EXCLUDED.archived, EXCLUDED.envie, EXCLUDED.pain, EXCLUDED.sick,
-         EXCLUDED.doms_levels, EXCLUDED.doms_workout_id, EXCLUDED.doms_workout_name);
+         EXCLUDED.doms_levels, EXCLUDED.doms_workout_id, EXCLUDED.doms_workout_name, EXCLUDED.pain_levels);
 END;
 $_$;
 
@@ -2512,6 +2548,44 @@ $$;
 ALTER FUNCTION "public"."hyrox_test_analyses_freeze"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."i_am_coach"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT auth.uid() IS NOT NULL AND (
+    EXISTS (SELECT 1 FROM public.profiles WHERE coach_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.athlete_co_coaches WHERE co_coach_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.profiles
+                WHERE id = auth.uid() AND role IN ('coach', 'coach_athlete'))
+  );
+$$;
+
+
+ALTER FUNCTION "public"."i_am_coach"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."i_am_coach"() IS 'Précondition RLS, calculée une fois par requête via (SELECT public.i_am_coach()) : vraie si l''utilisateur coache au moins un athlète (référent ou co-coach) ou a le rôle coach. Toute fonction coach vraie (is_coach_of, can_coach_athlete…) l''implique.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."i_am_staff"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT auth.uid() IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.athlete_staff
+     WHERE staff_id = auth.uid() AND status = 'active'
+  );
+$$;
+
+
+ALTER FUNCTION "public"."i_am_staff"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."i_am_staff"() IS 'Précondition RLS, calculée une fois par requête via (SELECT public.i_am_staff()) : vraie si l''utilisateur a au moins un lien staff actif. Toute fonction staff vraie (staff_can, staff_can_edit…) l''implique.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."is_athlete_coach"("athlete_uuid" "uuid", "p_coach" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -2543,21 +2617,25 @@ ALTER FUNCTION "public"."is_co_coach_of"("athlete_uuid" "uuid") OWNER TO "postgr
 
 
 CREATE OR REPLACE FUNCTION "public"."is_coach_of"("athlete_uuid" "uuid") RETURNS boolean
-    LANGUAGE "sql" STABLE
+    LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = athlete_uuid
       AND coach_id = auth.uid()
-  ) OR public.is_co_coach_of(athlete_uuid);
+  ) OR EXISTS (
+    SELECT 1 FROM public.athlete_co_coaches cc
+     WHERE cc.athlete_id = athlete_uuid
+       AND cc.co_coach_id = auth.uid()
+  );
 $$;
 
 
 ALTER FUNCTION "public"."is_coach_of"("athlete_uuid" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."is_coach_of"("athlete_uuid" "uuid") IS 'Retourne true si auth.uid() est le coach de l''athlète donné.';
+COMMENT ON FUNCTION "public"."is_coach_of"("athlete_uuid" "uuid") IS 'Retourne true si auth.uid() est le coach (référent ou co-coach) de l''athlète donné. SECURITY DEFINER depuis 20261115193700 (perf), même résultat qu''en invoker.';
 
 
 
@@ -7383,6 +7461,8 @@ CREATE TABLE IF NOT EXISTS "public"."competitions" (
     "macrocycle_id" "uuid",
     "athlete_comment" "text",
     "date_end" "date",
+    "cancelled_at" timestamp with time zone,
+    "cancelled_by" "uuid",
     CONSTRAINT "competitions_date_end_check" CHECK ((("date_end" IS NULL) OR ("date_end" >= "date")))
 );
 
@@ -7395,6 +7475,14 @@ COMMENT ON COLUMN "public"."competitions"."athlete_comment" IS 'Visible par l''a
 
 
 COMMENT ON COLUMN "public"."competitions"."date_end" IS 'Dernier jour d''une compétition sur plusieurs jours (null = un jour)';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."cancelled_at" IS 'Annulée le (null = maintenue). Posé par le trigger competitions_stamp_cancel.';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."cancelled_by" IS 'Qui a annulé (coach, co-coach ou athlète). Posé par le trigger, null si rétablie.';
 
 
 
@@ -9531,6 +9619,10 @@ CREATE INDEX "coach_api_keys_coach_idx" ON "public"."coach_api_keys" USING "btre
 
 
 
+CREATE INDEX "competitions_cancelled_by_fk_idx" ON "public"."competitions" USING "btree" ("cancelled_by");
+
+
+
 CREATE INDEX "competitions_coach_id_fk_idx" ON "public"."competitions" USING "btree" ("coach_id");
 
 
@@ -10203,6 +10295,10 @@ CREATE OR REPLACE TRIGGER "citation_likes_sync" AFTER INSERT OR DELETE ON "publi
 
 
 
+CREATE OR REPLACE TRIGGER "competitions_stamp_cancel" BEFORE INSERT OR UPDATE OF "cancelled_at", "cancelled_by" ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."competitions_stamp_cancel"();
+
+
+
 CREATE OR REPLACE TRIGGER "energy_session_assignments_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "scheduled_date", "status", "activity_type", "distance_km", "actual_duration_min" ON "public"."energy_session_assignments" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink"();
 
 
@@ -10644,6 +10740,11 @@ ALTER TABLE ONLY "public"."coach_api_rate"
 
 ALTER TABLE ONLY "public"."competitions"
     ADD CONSTRAINT "competitions_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."competitions"
+    ADD CONSTRAINT "competitions_cancelled_by_fkey" FOREIGN KEY ("cancelled_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -11286,21 +11387,21 @@ ALTER TABLE ONLY "public"."workout_rpe"
 
 
 
-CREATE POLICY "Coach can unlink own athletes" ON "public"."profiles" FOR UPDATE USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" IS NULL));
+CREATE POLICY "Coach can unlink own athletes" ON "public"."profiles" FOR UPDATE USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" IS NULL));
 
 
 
-CREATE POLICY "Service write" ON "public"."exercises" USING (("auth"."role"() = 'service_role'::"text"));
+CREATE POLICY "Service write" ON "public"."exercises" USING ((( SELECT "auth"."role"() AS "role") = 'service_role'::"text"));
 
 
 
-CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
+CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE USING ((( SELECT "auth"."uid"() AS "uid") = "id")) WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "id"));
 
 
 
-CREATE POLICY "acc_select" ON "public"."athlete_co_coaches" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR ("co_coach_id" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+CREATE POLICY "acc_select" ON "public"."athlete_co_coaches" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("co_coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "athlete_co_coaches"."athlete_id") AND ("p"."coach_id" = "auth"."uid"()))))));
+  WHERE (("p"."id" = "athlete_co_coaches"."athlete_id") AND ("p"."coach_id" = ( SELECT "auth"."uid"() AS "uid")))))));
 
 
 
@@ -11313,60 +11414,60 @@ ALTER TABLE "public"."account_retention_notices" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."activity_laps" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "activity_laps_read" ON "public"."activity_laps" FOR SELECT TO "authenticated" USING ("public"."activity_detail_visible"("athlete_id", "source"));
+CREATE POLICY "activity_laps_read" ON "public"."activity_laps" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ((( SELECT "public"."i_am_coach"() AS "i_am_coach") OR ( SELECT "public"."i_am_staff"() AS "i_am_staff")) AND "public"."activity_detail_visible"("athlete_id", "source"))));
 
 
 
 ALTER TABLE "public"."activity_plan_links" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "activity_plan_links_read" ON "public"."activity_plan_links" FOR SELECT TO "authenticated" USING ("public"."activity_detail_visible"("athlete_id", "source"));
+CREATE POLICY "activity_plan_links_read" ON "public"."activity_plan_links" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ((( SELECT "public"."i_am_coach"() AS "i_am_coach") OR ( SELECT "public"."i_am_staff"() AS "i_am_staff")) AND "public"."activity_detail_visible"("athlete_id", "source"))));
 
 
 
 ALTER TABLE "public"."activity_sets" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "activity_sets_read" ON "public"."activity_sets" FOR SELECT TO "authenticated" USING ("public"."activity_detail_visible"("athlete_id", "source"));
+CREATE POLICY "activity_sets_read" ON "public"."activity_sets" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ((( SELECT "public"."i_am_coach"() AS "i_am_coach") OR ( SELECT "public"."i_am_staff"() AS "i_am_staff")) AND "public"."activity_detail_visible"("athlete_id", "source"))));
 
 
 
 ALTER TABLE "public"."activity_streams" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "activity_streams_read" ON "public"."activity_streams" FOR SELECT TO "authenticated" USING ("public"."activity_detail_visible"("athlete_id", "source"));
+CREATE POLICY "activity_streams_read" ON "public"."activity_streams" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ((( SELECT "public"."i_am_coach"() AS "i_am_coach") OR ( SELECT "public"."i_am_staff"() AS "i_am_staff")) AND "public"."activity_detail_visible"("athlete_id", "source"))));
 
 
 
 ALTER TABLE "public"."activity_zone_summaries" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "activity_zone_summaries_read" ON "public"."activity_zone_summaries" FOR SELECT TO "authenticated" USING ("public"."activity_detail_visible"("athlete_id", "source"));
+CREATE POLICY "activity_zone_summaries_read" ON "public"."activity_zone_summaries" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ((( SELECT "public"."i_am_coach"() AS "i_am_coach") OR ( SELECT "public"."i_am_staff"() AS "i_am_staff")) AND "public"."activity_detail_visible"("athlete_id", "source"))));
 
 
 
-CREATE POLICY "api_all_coach" ON "public"."athlete_profile_items" USING (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "api_all_coach" ON "public"."athlete_profile_items" USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))) WITH CHECK (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))) WITH CHECK (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "api_select" ON "public"."athlete_profile_items" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "api_select" ON "public"."athlete_profile_items" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
 ALTER TABLE "public"."app_data" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "app_data_coach" ON "public"."app_data" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "app_data_coach" ON "public"."app_data" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "app_data_self" ON "public"."app_data" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "app_data_self" ON "public"."app_data" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -11375,41 +11476,41 @@ ALTER TABLE "public"."app_feedback" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "app_feedback_delete" ON "public"."app_feedback" FOR DELETE USING ((EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
 
 
 
-CREATE POLICY "app_feedback_insert_own" ON "public"."app_feedback" FOR INSERT WITH CHECK (("author_id" = "auth"."uid"()));
+CREATE POLICY "app_feedback_insert_own" ON "public"."app_feedback" FOR INSERT WITH CHECK (("author_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "app_feedback_select" ON "public"."app_feedback" FOR SELECT USING ((("author_id" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+CREATE POLICY "app_feedback_select" ON "public"."app_feedback" FOR SELECT USING ((("author_id" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true)))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true)))))));
 
 
 
 CREATE POLICY "app_feedback_update" ON "public"."app_feedback" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
 
 
 
 ALTER TABLE "public"."app_update_reads" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "app_update_reads_own_insert" ON "public"."app_update_reads" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = "auth"."uid"()));
+CREATE POLICY "app_update_reads_own_insert" ON "public"."app_update_reads" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "app_update_reads_own_select" ON "public"."app_update_reads" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
+CREATE POLICY "app_update_reads_own_select" ON "public"."app_update_reads" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."athlete_claims" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "athlete_claims_select_coach" ON "public"."athlete_claims" FOR SELECT TO "authenticated" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "athlete_claims_select_coach" ON "public"."athlete_claims" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
@@ -11419,15 +11520,15 @@ ALTER TABLE "public"."athlete_co_coaches" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."athlete_life_events" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "athlete_own_measurements" ON "public"."measurement_logs" TO "authenticated" USING (("athlete_id" = "auth"."uid"())) WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "athlete_own_measurements" ON "public"."measurement_logs" TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "athlete_own_prs" ON "public"."exercise_pr_logs" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "athlete_own_prs" ON "public"."exercise_pr_logs" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "athlete_own_rpe" ON "public"."workout_rpe" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "athlete_own_rpe" ON "public"."workout_rpe" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -11437,11 +11538,11 @@ ALTER TABLE "public"."athlete_profile_items" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."athlete_staff" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "athlete_staff_select" ON "public"."athlete_staff" FOR SELECT TO "authenticated" USING ((("staff_id" = "auth"."uid"()) OR ("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "athlete_staff_select" ON "public"."athlete_staff" FOR SELECT TO "authenticated" USING ((("staff_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "athlete_staff_update" ON "public"."athlete_staff" FOR UPDATE TO "authenticated" USING ((("staff_id" = "auth"."uid"()) OR ("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))) WITH CHECK ((("staff_id" = "auth"."uid"()) OR ("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "athlete_staff_update" ON "public"."athlete_staff" FOR UPDATE TO "authenticated" USING ((("staff_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))) WITH CHECK ((("staff_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
@@ -11451,104 +11552,104 @@ ALTER TABLE "public"."athlete_test_results" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."athlete_test_values" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "atr_delete" ON "public"."athlete_test_results" FOR DELETE USING (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "atr_delete" ON "public"."athlete_test_results" FOR DELETE USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "atr_insert" ON "public"."athlete_test_results" FOR INSERT WITH CHECK (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "atr_insert" ON "public"."athlete_test_results" FOR INSERT WITH CHECK (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "atr_select" ON "public"."athlete_test_results" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "atr_select" ON "public"."athlete_test_results" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "atr_update" ON "public"."athlete_test_results" FOR UPDATE USING (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "atr_update" ON "public"."athlete_test_results" FOR UPDATE USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
 CREATE POLICY "atv_delete" ON "public"."athlete_test_values" FOR DELETE USING ((EXISTS ( SELECT 1
    FROM "public"."athlete_test_results" "r"
-  WHERE (("r"."id" = "athlete_test_values"."result_id") AND ("public"."is_coach_of"("r"."athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("r"."id" = "athlete_test_values"."result_id") AND ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("r"."athlete_id")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))))));
 
 
 
 CREATE POLICY "atv_insert" ON "public"."athlete_test_values" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."athlete_test_results" "r"
-  WHERE (("r"."id" = "athlete_test_values"."result_id") AND ("public"."is_coach_of"("r"."athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("r"."id" = "athlete_test_values"."result_id") AND ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("r"."athlete_id")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))))));
 
 
 
 CREATE POLICY "atv_select" ON "public"."athlete_test_values" FOR SELECT USING ((EXISTS ( SELECT 1
    FROM "public"."athlete_test_results" "r"
-  WHERE (("r"."id" = "athlete_test_values"."result_id") AND (("r"."athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("r"."athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("r"."id" = "athlete_test_values"."result_id") AND (("r"."athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("r"."athlete_id")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))))));
 
 
 
 CREATE POLICY "atv_update" ON "public"."athlete_test_values" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."athlete_test_results" "r"
-  WHERE (("r"."id" = "athlete_test_values"."result_id") AND ("public"."is_coach_of"("r"."athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("r"."id" = "athlete_test_values"."result_id") AND ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("r"."athlete_id")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))))));
 
 
 
 ALTER TABLE "public"."body_weight_goals" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "body_weight_goals_coach" ON "public"."body_weight_goals" FOR SELECT TO "authenticated" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "body_weight_goals_coach" ON "public"."body_weight_goals" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "body_weight_goals_self" ON "public"."body_weight_goals" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "body_weight_goals_self" ON "public"."body_weight_goals" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "body_weight_goals_staff" ON "public"."body_weight_goals" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text"));
+CREATE POLICY "body_weight_goals_staff" ON "public"."body_weight_goals" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text")));
 
 
 
 ALTER TABLE "public"."body_weight_logs" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "body_weight_logs_coach" ON "public"."body_weight_logs" FOR SELECT TO "authenticated" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "body_weight_logs_coach" ON "public"."body_weight_logs" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "body_weight_logs_self" ON "public"."body_weight_logs" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "body_weight_logs_self" ON "public"."body_weight_logs" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "body_weight_logs_staff" ON "public"."body_weight_logs" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text"));
+CREATE POLICY "body_weight_logs_staff" ON "public"."body_weight_logs" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text")));
 
 
 
 ALTER TABLE "public"."body_weight_milestones" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "body_weight_milestones_coach" ON "public"."body_weight_milestones" FOR SELECT TO "authenticated" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "body_weight_milestones_coach" ON "public"."body_weight_milestones" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "body_weight_milestones_self" ON "public"."body_weight_milestones" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "body_weight_milestones_self" ON "public"."body_weight_milestones" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "body_weight_milestones_staff" ON "public"."body_weight_milestones" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text"));
+CREATE POLICY "body_weight_milestones_staff" ON "public"."body_weight_milestones" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text")));
 
 
 
@@ -11577,112 +11678,112 @@ CREATE POLICY "citation_stats: lecture" ON "public"."citation_stats" FOR SELECT 
 ALTER TABLE "public"."coach_api_access_log" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "coach_api_access_log_select_own" ON "public"."coach_api_access_log" FOR SELECT TO "authenticated" USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "coach_api_access_log_select_own" ON "public"."coach_api_access_log" FOR SELECT TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."coach_api_drafts" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "coach_api_drafts_decide_own" ON "public"."coach_api_drafts" FOR UPDATE TO "authenticated" USING ((("coach_id" = "auth"."uid"()) AND ("status" = 'pending'::"text"))) WITH CHECK ((("coach_id" = "auth"."uid"()) AND ("status" = 'rejected'::"text")));
+CREATE POLICY "coach_api_drafts_decide_own" ON "public"."coach_api_drafts" FOR UPDATE TO "authenticated" USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("status" = 'pending'::"text"))) WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("status" = 'rejected'::"text")));
 
 
 
-CREATE POLICY "coach_api_drafts_select_own" ON "public"."coach_api_drafts" FOR SELECT TO "authenticated" USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "coach_api_drafts_select_own" ON "public"."coach_api_drafts" FOR SELECT TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."coach_api_keys" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "coach_api_keys_insert_own" ON "public"."coach_api_keys" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = "auth"."uid"()) AND ("revoked_at" IS NULL) AND ("last_used_at" IS NULL) AND (EXISTS ( SELECT 1
+CREATE POLICY "coach_api_keys_insert_own" ON "public"."coach_api_keys" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("revoked_at" IS NULL) AND ("last_used_at" IS NULL) AND (EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND ("p"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("p"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
-CREATE POLICY "coach_api_keys_revoke_own" ON "public"."coach_api_keys" FOR UPDATE TO "authenticated" USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" = "auth"."uid"()));
+CREATE POLICY "coach_api_keys_revoke_own" ON "public"."coach_api_keys" FOR UPDATE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "coach_api_keys_select_own" ON "public"."coach_api_keys" FOR SELECT TO "authenticated" USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "coach_api_keys_select_own" ON "public"."coach_api_keys" FOR SELECT TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."coach_api_rate" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "coach_delete_athlete_prs" ON "public"."exercise_pr_logs" FOR DELETE USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "coach_delete_athlete_prs" ON "public"."exercise_pr_logs" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "coach_insert_athlete_prs" ON "public"."exercise_pr_logs" FOR INSERT WITH CHECK ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "coach_insert_athlete_prs" ON "public"."exercise_pr_logs" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "coach_read_athlete_rpe" ON "public"."workout_rpe" FOR SELECT USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "coach_read_athlete_rpe" ON "public"."workout_rpe" FOR SELECT USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "coach_read_measurements" ON "public"."measurement_logs" FOR SELECT USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "coach_read_measurements" ON "public"."measurement_logs" FOR SELECT USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "coach_sees_athlete_prs" ON "public"."exercise_pr_logs" FOR SELECT USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "coach_sees_athlete_prs" ON "public"."exercise_pr_logs" FOR SELECT USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "coaches_can_update_athlete_profiles" ON "public"."profiles" FOR UPDATE USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" = "auth"."uid"()));
+CREATE POLICY "coaches_can_update_athlete_profiles" ON "public"."profiles" FOR UPDATE USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."competitions" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "competitions_delete" ON "public"."competitions" FOR DELETE USING ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "competitions_delete" ON "public"."competitions" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "competitions_delete_athlete" ON "public"."competitions" FOR DELETE USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "competitions_delete_athlete" ON "public"."competitions" FOR DELETE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "competitions_insert" ON "public"."competitions" FOR INSERT WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "competitions_insert" ON "public"."competitions" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "competitions_insert_athlete" ON "public"."competitions" FOR INSERT WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "competitions_insert_athlete" ON "public"."competitions" FOR INSERT WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "competitions_select" ON "public"."competitions" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."can_coach_athlete"("athlete_id")));
+CREATE POLICY "competitions_select" ON "public"."competitions" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))));
 
 
 
-CREATE POLICY "competitions_update" ON "public"."competitions" FOR UPDATE USING ("public"."can_coach_athlete"("athlete_id")) WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "competitions_update" ON "public"."competitions" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "competitions_update_athlete" ON "public"."competitions" FOR UPDATE USING (("athlete_id" = "auth"."uid"())) WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "competitions_update_athlete" ON "public"."competitions" FOR UPDATE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."cycles" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "cycles_delete" ON "public"."cycles" FOR DELETE USING ("public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))));
+CREATE POLICY "cycles_delete" ON "public"."cycles" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")))));
 
 
 
-CREATE POLICY "cycles_insert" ON "public"."cycles" FOR INSERT WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")))));
+CREATE POLICY "cycles_insert" ON "public"."cycles" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))))));
 
 
 
-CREATE POLICY "cycles_select" ON "public"."cycles" FOR SELECT USING (((COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")) = "auth"."uid"()) OR "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")))));
+CREATE POLICY "cycles_select" ON "public"."cycles" FOR SELECT USING (((COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")) = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))))));
 
 
 
-CREATE POLICY "cycles_update" ON "public"."cycles" FOR UPDATE USING ("public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")))) WITH CHECK ("public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))));
+CREATE POLICY "cycles_update" ON "public"."cycles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")))));
 
 
 
@@ -11699,78 +11800,78 @@ ALTER TABLE "public"."day_themes" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."doc_assignments" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "doc_assignments_athlete_select" ON "public"."doc_assignments" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "doc_assignments_athlete_select" ON "public"."doc_assignments" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "doc_assignments_coach_all" ON "public"."doc_assignments" TO "authenticated" USING ("public"."is_coach_of"("athlete_id")) WITH CHECK ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "doc_assignments_coach_all" ON "public"."doc_assignments" TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
 ALTER TABLE "public"."doc_comments" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "doc_comments_delete_own" ON "public"."doc_comments" FOR DELETE TO "authenticated" USING (("author_id" = "auth"."uid"()));
+CREATE POLICY "doc_comments_delete_own" ON "public"."doc_comments" FOR DELETE TO "authenticated" USING (("author_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "doc_comments_insert" ON "public"."doc_comments" FOR INSERT TO "authenticated" WITH CHECK ((("author_id" = "auth"."uid"()) AND (("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")) AND "public"."can_read_doc"("doc_id")));
+CREATE POLICY "doc_comments_insert" ON "public"."doc_comments" FOR INSERT TO "authenticated" WITH CHECK ((("author_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))) AND "public"."can_read_doc"("doc_id")));
 
 
 
-CREATE POLICY "doc_comments_select" ON "public"."doc_comments" FOR SELECT TO "authenticated" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "doc_comments_select" ON "public"."doc_comments" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
 ALTER TABLE "public"."doc_schedule" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "doc_schedule_delete" ON "public"."doc_schedule" FOR DELETE TO "authenticated" USING (("public"."is_coach_of"("athlete_id") OR "public"."staff_can_edit"("athlete_id", 'fiches'::"text", "added_by")));
+CREATE POLICY "doc_schedule_delete" ON "public"."doc_schedule" FOR DELETE TO "authenticated" USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_edit"("athlete_id", 'fiches'::"text", "added_by"))));
 
 
 
-CREATE POLICY "doc_schedule_insert" ON "public"."doc_schedule" FOR INSERT WITH CHECK ((("added_by" = "auth"."uid"()) AND (("public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text") AND "public"."staff_doc_for_athlete"("doc_id", "athlete_id")) OR ("public"."is_coach_of"("athlete_id") AND (EXISTS ( SELECT 1
+CREATE POLICY "doc_schedule_insert" ON "public"."doc_schedule" FOR INSERT WITH CHECK ((("added_by" = ( SELECT "auth"."uid"() AS "uid")) AND ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text") AND "public"."staff_doc_for_athlete"("doc_id", "athlete_id")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id") AND (EXISTS ( SELECT 1
    FROM "public"."docs" "d"
-  WHERE (("d"."id" = "doc_schedule"."doc_id") AND (("d"."coach_id" = "auth"."uid"()) OR "public"."is_athlete_coach"("doc_schedule"."athlete_id", "d"."coach_id")))))))));
+  WHERE (("d"."id" = "doc_schedule"."doc_id") AND (("d"."coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR "public"."is_athlete_coach"("doc_schedule"."athlete_id", "d"."coach_id")))))))));
 
 
 
-CREATE POLICY "doc_schedule_select" ON "public"."doc_schedule" FOR SELECT TO "authenticated" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR "public"."staff_can"("athlete_id", 'fiches'::"text", 'read'::"text")));
+CREATE POLICY "doc_schedule_select" ON "public"."doc_schedule" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'fiches'::"text", 'read'::"text"))));
 
 
 
 ALTER TABLE "public"."docs" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "docs_athlete_delete" ON "public"."docs" FOR DELETE TO "authenticated" USING ((("athlete_id" = "auth"."uid"()) AND ("uploaded_by" = "auth"."uid"())));
+CREATE POLICY "docs_athlete_delete" ON "public"."docs" FOR DELETE TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("uploaded_by" = ( SELECT "auth"."uid"() AS "uid"))));
 
 
 
-CREATE POLICY "docs_athlete_insert" ON "public"."docs" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = "auth"."uid"()) AND ("uploaded_by" = "auth"."uid"()) AND ("is_self_service" = false) AND ("origin_id" IS NULL) AND ("coach_id" = "public"."my_coach_id"())));
+CREATE POLICY "docs_athlete_insert" ON "public"."docs" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("uploaded_by" = ( SELECT "auth"."uid"() AS "uid")) AND ("is_self_service" = false) AND ("origin_id" IS NULL) AND ("coach_id" = ( SELECT "public"."my_coach_id"() AS "my_coach_id"))));
 
 
 
-CREATE POLICY "docs_coach_delete" ON "public"."docs" FOR DELETE USING ((("coach_id" = "auth"."uid"()) OR (("athlete_id" IS NOT NULL) AND "public"."is_coach_of"("athlete_id"))));
+CREATE POLICY "docs_coach_delete" ON "public"."docs" FOR DELETE USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (("athlete_id" IS NOT NULL) AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))));
 
 
 
-CREATE POLICY "docs_coach_insert" ON "public"."docs" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = "auth"."uid"()) AND ("uploaded_by" = "auth"."uid"()) AND (("athlete_id" IS NULL) OR "public"."is_coach_of"("athlete_id"))));
+CREATE POLICY "docs_coach_insert" ON "public"."docs" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("uploaded_by" = ( SELECT "auth"."uid"() AS "uid")) AND (("athlete_id" IS NULL) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))));
 
 
 
-CREATE POLICY "docs_coach_update" ON "public"."docs" FOR UPDATE USING ((("coach_id" = "auth"."uid"()) OR "public"."doc_for_my_athlete"("id"))) WITH CHECK ((("coach_id" = "auth"."uid"()) OR "public"."is_coach_partner"("coach_id")));
+CREATE POLICY "docs_coach_update" ON "public"."docs" FOR UPDATE USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."doc_for_my_athlete"("id")))) WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_partner"("coach_id"))));
 
 
 
-CREATE POLICY "docs_select" ON "public"."docs" FOR SELECT TO "authenticated" USING ((("coach_id" = "auth"."uid"()) OR ("uploaded_by" = "auth"."uid"()) OR ("athlete_id" = "auth"."uid"()) OR "public"."can_read_doc"("id")));
+CREATE POLICY "docs_select" ON "public"."docs" FOR SELECT TO "authenticated" USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("uploaded_by" = ( SELECT "auth"."uid"() AS "uid")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR "public"."can_read_doc"("id")));
 
 
 
-CREATE POLICY "dt_athlete_select" ON "public"."day_themes" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "dt_athlete_select" ON "public"."day_themes" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "dt_coach_all" ON "public"."day_themes" TO "authenticated" USING ((("coach_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))) WITH CHECK ((("coach_id" = "auth"."uid"()) AND (("athlete_id" IS NULL) OR "public"."is_coach_of"("athlete_id"))));
+CREATE POLICY "dt_coach_all" ON "public"."day_themes" TO "authenticated" USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))) WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("athlete_id" IS NULL) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))));
 
 
 
@@ -11780,61 +11881,61 @@ ALTER TABLE "public"."energy_session_assignments" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."energy_sessions" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "es_delete" ON "public"."energy_sessions" FOR DELETE USING ((("created_by" = "auth"."uid"()) OR (("athlete_id" IS NOT NULL) AND "public"."is_coach_of"("athlete_id"))));
+CREATE POLICY "es_delete" ON "public"."energy_sessions" FOR DELETE USING ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (("athlete_id" IS NOT NULL) AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))));
 
 
 
-CREATE POLICY "es_insert" ON "public"."energy_sessions" FOR INSERT TO "authenticated" WITH CHECK ((("is_verified" = false) AND ("created_by" = "auth"."uid"()) AND (("athlete_id" IS NULL) OR ("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))));
+CREATE POLICY "es_insert" ON "public"."energy_sessions" FOR INSERT TO "authenticated" WITH CHECK ((("is_verified" = false) AND ("created_by" = ( SELECT "auth"."uid"() AS "uid")) AND (("athlete_id" IS NULL) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))));
 
 
 
-CREATE POLICY "es_select" ON "public"."energy_sessions" FOR SELECT USING ((("is_public" = true) OR ("created_by" = "auth"."uid"()) OR ("athlete_id" = "auth"."uid"()) OR (("athlete_id" IS NOT NULL) AND "public"."is_coach_of"("athlete_id")) OR ("id" IN ( SELECT "a"."energy_session_id"
+CREATE POLICY "es_select" ON "public"."energy_sessions" FOR SELECT USING ((("is_public" = true) OR ("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (("athlete_id" IS NOT NULL) AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))) OR ("id" IN ( SELECT "a"."energy_session_id"
    FROM "public"."energy_session_assignments" "a"
-  WHERE ("a"."athlete_id" = "auth"."uid"()))) OR ("id" IN ( SELECT "a"."energy_session_id"
+  WHERE ("a"."athlete_id" = ( SELECT "auth"."uid"() AS "uid")))) OR ("id" IN ( SELECT "a"."energy_session_id"
    FROM "public"."energy_session_assignments" "a"
-  WHERE "public"."is_coach_of"("a"."athlete_id")))));
+  WHERE (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("a"."athlete_id"))))));
 
 
 
-CREATE POLICY "es_update_author" ON "public"."energy_sessions" FOR UPDATE USING ((("created_by" = "auth"."uid"()) OR (("athlete_id" IS NOT NULL) AND "public"."is_coach_of"("athlete_id")) OR ("id" IN ( SELECT "a"."energy_session_id"
+CREATE POLICY "es_update_author" ON "public"."energy_sessions" FOR UPDATE USING ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (("athlete_id" IS NOT NULL) AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))) OR ("id" IN ( SELECT "a"."energy_session_id"
    FROM "public"."energy_session_assignments" "a"
-  WHERE "public"."is_coach_of"("a"."athlete_id"))))) WITH CHECK ((("created_by" = "auth"."uid"()) OR (("athlete_id" IS NOT NULL) AND "public"."is_coach_of"("athlete_id")) OR ("id" IN ( SELECT "a"."energy_session_id"
+  WHERE (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("a"."athlete_id")))))) WITH CHECK ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (("athlete_id" IS NOT NULL) AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))) OR ("id" IN ( SELECT "a"."energy_session_id"
    FROM "public"."energy_session_assignments" "a"
-  WHERE "public"."is_coach_of"("a"."athlete_id")))));
+  WHERE (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("a"."athlete_id"))))));
 
 
 
 CREATE POLICY "es_update_certify" ON "public"."energy_sessions" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true)))))) WITH CHECK ((EXISTS ( SELECT 1
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true)))))) WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "esa_delete" ON "public"."energy_session_assignments" FOR DELETE TO "authenticated" USING (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "esa_delete" ON "public"."energy_session_assignments" FOR DELETE TO "authenticated" USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "esa_insert" ON "public"."energy_session_assignments" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "esa_insert" ON "public"."energy_session_assignments" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "esa_select" ON "public"."energy_session_assignments" FOR SELECT TO "authenticated" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "esa_select" ON "public"."energy_session_assignments" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "esa_update" ON "public"."energy_session_assignments" FOR UPDATE TO "authenticated" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "esa_update" ON "public"."energy_session_assignments" FOR UPDATE TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))) WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))) WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
@@ -11846,19 +11947,19 @@ ALTER TABLE "public"."exercises" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "exercises_delete_admin" ON "public"."exercises" FOR DELETE USING (((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))) OR (("created_by" = "auth"."uid"()) AND ("is_verified" = false))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))) OR (("created_by" = ( SELECT "auth"."uid"() AS "uid")) AND ("is_verified" = false))));
 
 
 
-CREATE POLICY "exercises_insert_admin" ON "public"."exercises" FOR INSERT WITH CHECK ((("auth"."uid"() IS NOT NULL) AND (EXISTS ( SELECT 1
+CREATE POLICY "exercises_insert_admin" ON "public"."exercises" FOR INSERT WITH CHECK (((( SELECT "auth"."uid"() AS "uid") IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "exercises_insert_coach" ON "public"."exercises" FOR INSERT WITH CHECK ((("auth"."uid"() IS NOT NULL) AND ("is_verified" = false) AND (EXISTS ( SELECT 1
+CREATE POLICY "exercises_insert_coach" ON "public"."exercises" FOR INSERT WITH CHECK (((( SELECT "auth"."uid"() AS "uid") IS NOT NULL) AND ("is_verified" = false) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
@@ -11868,135 +11969,135 @@ CREATE POLICY "exercises_select_all" ON "public"."exercises" FOR SELECT USING (t
 
 CREATE POLICY "exercises_update_admin" ON "public"."exercises" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))));
 
 
 
 CREATE POLICY "exercises_update_certified" ON "public"."exercises" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true)))))) WITH CHECK ((EXISTS ( SELECT 1
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true)))))) WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("profiles"."is_certified_coach" = true) OR ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "exercises_update_own" ON "public"."exercises" FOR UPDATE USING ((("created_by" = "auth"."uid"()) AND ("is_verified" = false)));
+CREATE POLICY "exercises_update_own" ON "public"."exercises" FOR UPDATE USING ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) AND ("is_verified" = false)));
 
 
 
 ALTER TABLE "public"."habit_logs" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "habit_logs_delete" ON "public"."habit_logs" FOR DELETE USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "habit_logs_delete" ON "public"."habit_logs" FOR DELETE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "habit_logs_insert" ON "public"."habit_logs" FOR INSERT WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "habit_logs_insert" ON "public"."habit_logs" FOR INSERT WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "habit_logs_select" ON "public"."habit_logs" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "habit_logs_select" ON "public"."habit_logs" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "habit_logs_update" ON "public"."habit_logs" FOR UPDATE USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "habit_logs_update" ON "public"."habit_logs" FOR UPDATE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."habits" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "habits_delete" ON "public"."habits" FOR DELETE USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "habits_delete" ON "public"."habits" FOR DELETE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "habits_insert" ON "public"."habits" FOR INSERT WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "habits_insert" ON "public"."habits" FOR INSERT WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "habits_select" ON "public"."habits" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "habits_select" ON "public"."habits" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "habits_update" ON "public"."habits" FOR UPDATE USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "habits_update" ON "public"."habits" FOR UPDATE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."health_sync_errors" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "health_sync_errors_admin" ON "public"."health_sync_errors" FOR SELECT TO "authenticated" USING ("public"."current_user_is_admin"());
+CREATE POLICY "health_sync_errors_admin" ON "public"."health_sync_errors" FOR SELECT TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
 
 
 
-CREATE POLICY "hr_delete" ON "public"."hyrox_results" FOR DELETE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hr_delete" ON "public"."hyrox_results" FOR DELETE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hr_insert" ON "public"."hyrox_results" FOR INSERT WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hr_insert" ON "public"."hyrox_results" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hr_select" ON "public"."hyrox_results" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hr_select" ON "public"."hyrox_results" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hr_update" ON "public"."hyrox_results" FOR UPDATE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hr_update" ON "public"."hyrox_results" FOR UPDATE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
 ALTER TABLE "public"."hr_zone_models" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "hr_zone_models_read" ON "public"."hr_zone_models" FOR SELECT TO "authenticated" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR "public"."staff_can"("athlete_id", 'seances'::"text", 'read'::"text")));
+CREATE POLICY "hr_zone_models_read" ON "public"."hr_zone_models" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'seances'::"text", 'read'::"text"))));
 
 
 
-CREATE POLICY "hrp_delete" ON "public"."hyrox_race_plans" FOR DELETE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hrp_delete" ON "public"."hyrox_race_plans" FOR DELETE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hrp_insert" ON "public"."hyrox_race_plans" FOR INSERT WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hrp_insert" ON "public"."hyrox_race_plans" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hrp_select" ON "public"."hyrox_race_plans" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hrp_select" ON "public"."hyrox_race_plans" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hrp_update" ON "public"."hyrox_race_plans" FOR UPDATE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hrp_update" ON "public"."hyrox_race_plans" FOR UPDATE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
 CREATE POLICY "hrs_delete" ON "public"."hyrox_reference_segments" FOR DELETE USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
 CREATE POLICY "hrs_insert" ON "public"."hyrox_reference_segments" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12006,43 +12107,43 @@ CREATE POLICY "hrs_select" ON "public"."hyrox_reference_segments" FOR SELECT TO 
 
 CREATE POLICY "hrs_update" ON "public"."hyrox_reference_segments" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
-CREATE POLICY "hta_delete" ON "public"."hyrox_test_analyses" FOR DELETE USING (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hta_delete" ON "public"."hyrox_test_analyses" FOR DELETE USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hta_insert" ON "public"."hyrox_test_analyses" FOR INSERT WITH CHECK (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hta_insert" ON "public"."hyrox_test_analyses" FOR INSERT WITH CHECK (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hta_select" ON "public"."hyrox_test_analyses" FOR SELECT USING (((("athlete_id" = "auth"."uid"()) AND ("validated_at" IS NOT NULL)) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hta_select" ON "public"."hyrox_test_analyses" FOR SELECT USING (((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("validated_at" IS NOT NULL)) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
-CREATE POLICY "hta_update" ON "public"."hyrox_test_analyses" FOR UPDATE USING (("public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "hta_update" ON "public"."hyrox_test_analyses" FOR UPDATE USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
 
 
 
 CREATE POLICY "htad_all" ON "public"."hyrox_test_axes_drafts" USING ((EXISTS ( SELECT 1
    FROM "public"."hyrox_test_analyses" "a"
-  WHERE (("a"."id" = "hyrox_test_axes_drafts"."analysis_id") AND ("public"."is_coach_of"("a"."athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("a"."id" = "hyrox_test_axes_drafts"."analysis_id") AND ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("a"."athlete_id")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin")))))))) WITH CHECK ((EXISTS ( SELECT 1
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))))))) WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."hyrox_test_analyses" "a"
-  WHERE (("a"."id" = "hyrox_test_axes_drafts"."analysis_id") AND ("public"."is_coach_of"("a"."athlete_id") OR (EXISTS ( SELECT 1
+  WHERE (("a"."id" = "hyrox_test_axes_drafts"."analysis_id") AND ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("a"."athlete_id")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))))))));
 
 
 
@@ -12051,13 +12152,13 @@ ALTER TABLE "public"."hyrox_axes_params" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "hyrox_axes_params_delete" ON "public"."hyrox_axes_params" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
 CREATE POLICY "hyrox_axes_params_insert" ON "public"."hyrox_axes_params" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12067,7 +12168,7 @@ CREATE POLICY "hyrox_axes_params_select" ON "public"."hyrox_axes_params" FOR SEL
 
 CREATE POLICY "hyrox_axes_params_update" ON "public"."hyrox_axes_params" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12091,13 +12192,13 @@ ALTER TABLE "public"."hyrox_test_grid_versions" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "hyrox_test_grid_versions_delete" ON "public"."hyrox_test_grid_versions" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
 CREATE POLICY "hyrox_test_grid_versions_insert" ON "public"."hyrox_test_grid_versions" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12107,7 +12208,7 @@ CREATE POLICY "hyrox_test_grid_versions_select" ON "public"."hyrox_test_grid_ver
 
 CREATE POLICY "hyrox_test_grid_versions_update" ON "public"."hyrox_test_grid_versions" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12116,13 +12217,13 @@ ALTER TABLE "public"."hyrox_test_grids" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "hyrox_test_grids_delete" ON "public"."hyrox_test_grids" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
 CREATE POLICY "hyrox_test_grids_insert" ON "public"."hyrox_test_grids" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12132,7 +12233,7 @@ CREATE POLICY "hyrox_test_grids_select" ON "public"."hyrox_test_grids" FOR SELEC
 
 CREATE POLICY "hyrox_test_grids_update" ON "public"."hyrox_test_grids" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12141,13 +12242,13 @@ ALTER TABLE "public"."hyrox_test_params" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "hyrox_test_params_delete" ON "public"."hyrox_test_params" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
 CREATE POLICY "hyrox_test_params_insert" ON "public"."hyrox_test_params" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12157,7 +12258,7 @@ CREATE POLICY "hyrox_test_params_select" ON "public"."hyrox_test_params" FOR SEL
 
 CREATE POLICY "hyrox_test_params_update" ON "public"."hyrox_test_params" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12166,13 +12267,13 @@ ALTER TABLE "public"."hyrox_work_axes_rules" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "hyrox_work_axes_rules_delete" ON "public"."hyrox_work_axes_rules" FOR DELETE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
 CREATE POLICY "hyrox_work_axes_rules_insert" ON "public"."hyrox_work_axes_rules" FOR INSERT TO "authenticated" WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
@@ -12182,42 +12283,42 @@ CREATE POLICY "hyrox_work_axes_rules_select" ON "public"."hyrox_work_axes_rules"
 
 CREATE POLICY "hyrox_work_axes_rules_update" ON "public"."hyrox_work_axes_rules" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND "profiles"."is_admin"))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin"))));
 
 
 
-CREATE POLICY "life_events_delete" ON "public"."athlete_life_events" FOR DELETE USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "life_events_delete" ON "public"."athlete_life_events" FOR DELETE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "life_events_insert" ON "public"."athlete_life_events" FOR INSERT WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "life_events_insert" ON "public"."athlete_life_events" FOR INSERT WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "life_events_select" ON "public"."athlete_life_events" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "life_events_select" ON "public"."athlete_life_events" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "life_events_update" ON "public"."athlete_life_events" FOR UPDATE USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "life_events_update" ON "public"."athlete_life_events" FOR UPDATE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."macrocycles" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "macrocycles_delete" ON "public"."macrocycles" FOR DELETE USING ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "macrocycles_delete" ON "public"."macrocycles" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "macrocycles_insert" ON "public"."macrocycles" FOR INSERT WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "macrocycles_insert" ON "public"."macrocycles" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "macrocycles_select" ON "public"."macrocycles" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."can_coach_athlete"("athlete_id")));
+CREATE POLICY "macrocycles_select" ON "public"."macrocycles" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))));
 
 
 
-CREATE POLICY "macrocycles_update" ON "public"."macrocycles" FOR UPDATE USING ("public"."can_coach_athlete"("athlete_id")) WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "macrocycles_update" ON "public"."macrocycles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
@@ -12227,7 +12328,7 @@ ALTER TABLE "public"."measurement_logs" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."medical_entries" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "medical_entries_all" ON "public"."medical_entries" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))) WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "medical_entries_all" ON "public"."medical_entries" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))) WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
@@ -12236,39 +12337,39 @@ ALTER TABLE "public"."mesocycles" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "mesocycles_delete" ON "public"."mesocycles" FOR DELETE USING ((EXISTS ( SELECT 1
    FROM "public"."macrocycles" "m"
-  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND "public"."can_coach_athlete"("m"."athlete_id")))));
+  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("m"."athlete_id"))))));
 
 
 
 CREATE POLICY "mesocycles_insert" ON "public"."mesocycles" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."macrocycles" "m"
-  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND "public"."can_coach_athlete"("m"."athlete_id")))));
+  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("m"."athlete_id"))))));
 
 
 
 CREATE POLICY "mesocycles_select" ON "public"."mesocycles" FOR SELECT USING ((EXISTS ( SELECT 1
    FROM "public"."macrocycles" "m"
-  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND (("m"."athlete_id" = "auth"."uid"()) OR "public"."can_coach_athlete"("m"."athlete_id"))))));
+  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND (("m"."athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("m"."athlete_id")))))));
 
 
 
 CREATE POLICY "mesocycles_update" ON "public"."mesocycles" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."macrocycles" "m"
-  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND "public"."can_coach_athlete"("m"."athlete_id"))))) WITH CHECK ((EXISTS ( SELECT 1
+  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("m"."athlete_id")))))) WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."macrocycles" "m"
-  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND "public"."can_coach_athlete"("m"."athlete_id")))));
+  WHERE (("m"."id" = "mesocycles"."macrocycle_id") AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("m"."athlete_id"))))));
 
 
 
-CREATE POLICY "methods_delete_own" ON "public"."training_methods" FOR DELETE USING ((("created_by" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+CREATE POLICY "methods_delete_own" ON "public"."training_methods" FOR DELETE USING ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
 CREATE POLICY "methods_insert_coach" ON "public"."training_methods" FOR INSERT WITH CHECK ((("is_official" = false) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
@@ -12276,68 +12377,68 @@ CREATE POLICY "methods_select_all" ON "public"."training_methods" FOR SELECT USI
 
 
 
-CREATE POLICY "methods_update_own" ON "public"."training_methods" FOR UPDATE USING ((("created_by" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+CREATE POLICY "methods_update_own" ON "public"."training_methods" FOR UPDATE USING ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
 ALTER TABLE "public"."microcycles" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "microcycles_delete" ON "public"."microcycles" FOR DELETE USING ("public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id")));
+CREATE POLICY "microcycles_delete" ON "public"."microcycles" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))));
 
 
 
-CREATE POLICY "microcycles_insert" ON "public"."microcycles" FOR INSERT WITH CHECK ("public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id")));
+CREATE POLICY "microcycles_insert" ON "public"."microcycles" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))));
 
 
 
-CREATE POLICY "microcycles_select" ON "public"."microcycles" FOR SELECT USING ((("public"."cycle_athlete_id"("cycle_id") = "auth"."uid"()) OR "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))));
+CREATE POLICY "microcycles_select" ON "public"."microcycles" FOR SELECT USING ((("public"."cycle_athlete_id"("cycle_id") = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id")))));
 
 
 
-CREATE POLICY "microcycles_update" ON "public"."microcycles" FOR UPDATE USING ("public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))) WITH CHECK ("public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id")));
+CREATE POLICY "microcycles_update" ON "public"."microcycles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id")))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))));
 
 
 
-CREATE POLICY "perf_delete" ON "public"."performance_logs" FOR DELETE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "perf_delete" ON "public"."performance_logs" FOR DELETE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "perf_insert" ON "public"."performance_logs" FOR INSERT WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "perf_insert" ON "public"."performance_logs" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "perf_notif_insert" ON "public"."performance_notifications" FOR INSERT WITH CHECK ((("athlete_id" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+CREATE POLICY "perf_notif_insert" ON "public"."performance_notifications" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "perf_notif_select" ON "public"."performance_notifications" FOR SELECT USING ((("coach_id" = "auth"."uid"()) OR ("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "perf_notif_select" ON "public"."performance_notifications" FOR SELECT USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "perf_notif_update" ON "public"."performance_notifications" FOR UPDATE USING ((("coach_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "perf_notif_update" ON "public"."performance_notifications" FOR UPDATE USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "perf_select" ON "public"."performance_logs" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "perf_select" ON "public"."performance_logs" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "perf_update" ON "public"."performance_logs" FOR UPDATE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "perf_update" ON "public"."performance_logs" FOR UPDATE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
@@ -12353,56 +12454,56 @@ ALTER TABLE "public"."physical_qualities" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."planning_blocks" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "planning_blocks_delete" ON "public"."planning_blocks" FOR DELETE USING ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "planning_blocks_delete" ON "public"."planning_blocks" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "planning_blocks_insert" ON "public"."planning_blocks" FOR INSERT WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "planning_blocks_insert" ON "public"."planning_blocks" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "planning_blocks_select" ON "public"."planning_blocks" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."can_coach_athlete"("athlete_id")));
+CREATE POLICY "planning_blocks_select" ON "public"."planning_blocks" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))));
 
 
 
-CREATE POLICY "planning_blocks_update" ON "public"."planning_blocks" FOR UPDATE USING ("public"."can_coach_athlete"("athlete_id")) WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "planning_blocks_update" ON "public"."planning_blocks" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "pq_delete" ON "public"."physical_qualities" FOR DELETE TO "authenticated" USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "pq_delete" ON "public"."physical_qualities" FOR DELETE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "pq_insert" ON "public"."physical_qualities" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "pq_insert" ON "public"."physical_qualities" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
-CREATE POLICY "pq_select" ON "public"."physical_qualities" FOR SELECT USING ((("coach_id" IS NULL) OR ("coach_id" = "auth"."uid"()) OR "public"."is_coach_partner"("coach_id")));
+CREATE POLICY "pq_select" ON "public"."physical_qualities" FOR SELECT USING ((("coach_id" IS NULL) OR ("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_partner"("coach_id"))));
 
 
 
-CREATE POLICY "pq_update" ON "public"."physical_qualities" FOR UPDATE TO "authenticated" USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" = "auth"."uid"()));
+CREATE POLICY "pq_update" ON "public"."physical_qualities" FOR UPDATE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "profiles_insert_own" ON "public"."profiles" FOR INSERT WITH CHECK (("auth"."uid"() = "id"));
+CREATE POLICY "profiles_insert_own" ON "public"."profiles" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "id"));
 
 
 
-CREATE POLICY "profiles_select_athletes" ON "public"."profiles" FOR SELECT USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "profiles_select_athletes" ON "public"."profiles" FOR SELECT USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "profiles_select_co_coached" ON "public"."profiles" FOR SELECT USING ("public"."is_co_coach_of"("id"));
+CREATE POLICY "profiles_select_co_coached" ON "public"."profiles" FOR SELECT USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_co_coach_of"("id")));
 
 
 
-CREATE POLICY "profiles_select_own" ON "public"."profiles" FOR SELECT USING (("auth"."uid"() = "id"));
+CREATE POLICY "profiles_select_own" ON "public"."profiles" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
 
 
 
@@ -12414,52 +12515,52 @@ CREATE POLICY "profiles_select_staff_members" ON "public"."profiles" FOR SELECT 
 
 
 
-CREATE POLICY "profiles_update_co_coached" ON "public"."profiles" FOR UPDATE USING ("public"."is_co_coach_of"("id")) WITH CHECK ("public"."is_co_coach_of"("id"));
+CREATE POLICY "profiles_update_co_coached" ON "public"."profiles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_co_coach_of"("id"))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_co_coach_of"("id")));
 
 
 
-CREATE POLICY "profiles_update_own" ON "public"."profiles" FOR UPDATE USING (("auth"."uid"() = "id"));
+CREATE POLICY "profiles_update_own" ON "public"."profiles" FOR UPDATE USING ((( SELECT "auth"."uid"() AS "uid") = "id"));
 
 
 
 ALTER TABLE "public"."provider_activities" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "provider_activities_coach_read" ON "public"."provider_activities" FOR SELECT TO "authenticated" USING (("public"."is_coach_of"("athlete_id") AND (EXISTS ( SELECT 1
+CREATE POLICY "provider_activities_coach_read" ON "public"."provider_activities" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id") AND (EXISTS ( SELECT 1
    FROM "public"."data_source_policies" "p"
   WHERE (("p"."source" = "provider_activities"."source") AND "p"."coach_visible"))) AND "public"."source_consent_granted"("athlete_id", "source")));
 
 
 
-CREATE POLICY "provider_activities_own_file_import" ON "public"."provider_activities" TO "authenticated" USING ((("athlete_id" = "auth"."uid"()) AND ("source" = 'file_import'::"public"."data_source"))) WITH CHECK ((("athlete_id" = "auth"."uid"()) AND ("source" = 'file_import'::"public"."data_source")));
+CREATE POLICY "provider_activities_own_file_import" ON "public"."provider_activities" TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("source" = 'file_import'::"public"."data_source"))) WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("source" = 'file_import'::"public"."data_source")));
 
 
 
-CREATE POLICY "provider_activities_own_read" ON "public"."provider_activities" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "provider_activities_own_read" ON "public"."provider_activities" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."provider_connections" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "provider_connections_coach_read" ON "public"."provider_connections" FOR SELECT TO "authenticated" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "provider_connections_coach_read" ON "public"."provider_connections" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "provider_connections_own_read" ON "public"."provider_connections" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "provider_connections_own_read" ON "public"."provider_connections" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."provider_dailies" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "provider_dailies_coach_read" ON "public"."provider_dailies" FOR SELECT TO "authenticated" USING (("public"."is_coach_of"("athlete_id") AND (EXISTS ( SELECT 1
+CREATE POLICY "provider_dailies_coach_read" ON "public"."provider_dailies" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id") AND (EXISTS ( SELECT 1
    FROM "public"."data_source_policies" "p"
   WHERE (("p"."source" = "provider_dailies"."source") AND "p"."coach_visible"))) AND "public"."source_consent_granted"("athlete_id", "source")));
 
 
 
-CREATE POLICY "provider_dailies_own_read" ON "public"."provider_dailies" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "provider_dailies_own_read" ON "public"."provider_dailies" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -12469,14 +12570,14 @@ ALTER TABLE "public"."provider_fit_quota" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."provider_intraday" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "provider_intraday_read" ON "public"."provider_intraday" FOR SELECT TO "authenticated" USING ("public"."activity_detail_visible"("athlete_id", "source"));
+CREATE POLICY "provider_intraday_read" ON "public"."provider_intraday" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ((( SELECT "public"."i_am_coach"() AS "i_am_coach") OR ( SELECT "public"."i_am_staff"() AS "i_am_staff")) AND "public"."activity_detail_visible"("athlete_id", "source"))));
 
 
 
 ALTER TABLE "public"."provider_moveiq" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "provider_moveiq_read" ON "public"."provider_moveiq" FOR SELECT TO "authenticated" USING ("public"."activity_detail_visible"("athlete_id", "source"));
+CREATE POLICY "provider_moveiq_read" ON "public"."provider_moveiq" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ((( SELECT "public"."i_am_coach"() AS "i_am_coach") OR ( SELECT "public"."i_am_staff"() AS "i_am_staff")) AND "public"."activity_detail_visible"("athlete_id", "source"))));
 
 
 
@@ -12489,7 +12590,7 @@ ALTER TABLE "public"."provider_oauth_states" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."provider_raw_records" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "provider_raw_records_own_read" ON "public"."provider_raw_records" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "provider_raw_records_own_read" ON "public"."provider_raw_records" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -12502,11 +12603,11 @@ ALTER TABLE "public"."provider_webhook_inbox" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."provider_workout_pushes" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "provider_workout_pushes_coach_read" ON "public"."provider_workout_pushes" FOR SELECT TO "authenticated" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "provider_workout_pushes_coach_read" ON "public"."provider_workout_pushes" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "provider_workout_pushes_own_read" ON "public"."provider_workout_pushes" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "provider_workout_pushes_own_read" ON "public"."provider_workout_pushes" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -12515,19 +12616,19 @@ ALTER TABLE "public"."roadmap_items" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "roadmap_items_admin_write" ON "public"."roadmap_items" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND ("p"."is_admin" = true)))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("p"."is_admin" = true)))));
 
 
 
 CREATE POLICY "roadmap_items_coach_suggest" ON "public"."roadmap_items" FOR INSERT WITH CHECK ((("status" = 'idea'::"text") AND (EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND ("p"."is_certified_coach" = true))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("p"."is_certified_coach" = true))))));
 
 
 
 CREATE POLICY "roadmap_items_select" ON "public"."roadmap_items" FOR SELECT USING ((EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
 
 
 
@@ -12536,13 +12637,13 @@ ALTER TABLE "public"."roadmap_phases" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "roadmap_phases_select" ON "public"."roadmap_phases" FOR SELECT USING ((EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
 
 
 
 CREATE POLICY "roadmap_phases_write" ON "public"."roadmap_phases" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND ("p"."is_admin" = true)))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("p"."is_admin" = true)))));
 
 
 
@@ -12551,50 +12652,50 @@ ALTER TABLE "public"."roadmap_votes" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "roadmap_votes_select" ON "public"."roadmap_votes" FOR SELECT USING ((EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true))))));
 
 
 
-CREATE POLICY "roadmap_votes_write" ON "public"."roadmap_votes" USING (("user_id" = "auth"."uid"())) WITH CHECK ((("user_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "roadmap_votes_write" ON "public"."roadmap_votes" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
    FROM "public"."profiles" "p"
-  WHERE (("p"."id" = "auth"."uid"()) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true)))))));
+  WHERE (("p"."id" = ( SELECT "auth"."uid"() AS "uid")) AND (("p"."is_certified_coach" = true) OR ("p"."is_admin" = true)))))));
 
 
 
-CREATE POLICY "sb_delete" ON "public"."specific_blocks" FOR DELETE TO "authenticated" USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "sb_delete" ON "public"."specific_blocks" FOR DELETE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "sb_insert" ON "public"."specific_blocks" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "sb_insert" ON "public"."specific_blocks" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
-CREATE POLICY "sb_select" ON "public"."specific_blocks" FOR SELECT TO "authenticated" USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "sb_select" ON "public"."specific_blocks" FOR SELECT TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "sb_update" ON "public"."specific_blocks" FOR UPDATE TO "authenticated" USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" = "auth"."uid"()));
+CREATE POLICY "sb_update" ON "public"."specific_blocks" FOR UPDATE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."seasons" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "seasons_delete" ON "public"."seasons" FOR DELETE USING ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "seasons_delete" ON "public"."seasons" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "seasons_insert" ON "public"."seasons" FOR INSERT WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "seasons_insert" ON "public"."seasons" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
-CREATE POLICY "seasons_select" ON "public"."seasons" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."can_coach_athlete"("athlete_id")));
+CREATE POLICY "seasons_select" ON "public"."seasons" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))));
 
 
 
-CREATE POLICY "seasons_update" ON "public"."seasons" FOR UPDATE USING ("public"."can_coach_athlete"("athlete_id")) WITH CHECK ("public"."can_coach_athlete"("athlete_id"));
+CREATE POLICY "seasons_update" ON "public"."seasons" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id"))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("athlete_id")));
 
 
 
@@ -12604,271 +12705,271 @@ ALTER TABLE "public"."specific_blocks" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."specific_sports" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "ss_delete" ON "public"."specific_sports" FOR DELETE TO "authenticated" USING (("coach_id" = "auth"."uid"()));
+CREATE POLICY "ss_delete" ON "public"."specific_sports" FOR DELETE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "ss_insert" ON "public"."specific_sports" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "ss_insert" ON "public"."specific_sports" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
-CREATE POLICY "ss_select" ON "public"."specific_sports" FOR SELECT USING ((("coach_id" IS NULL) OR ("coach_id" = "auth"."uid"()) OR "public"."is_coach_partner"("coach_id")));
+CREATE POLICY "ss_select" ON "public"."specific_sports" FOR SELECT USING ((("coach_id" IS NULL) OR ("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_partner"("coach_id"))));
 
 
 
-CREATE POLICY "ss_update" ON "public"."specific_sports" FOR UPDATE TO "authenticated" USING (("coach_id" = "auth"."uid"())) WITH CHECK (("coach_id" = "auth"."uid"()));
+CREATE POLICY "ss_update" ON "public"."specific_sports" FOR UPDATE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "staff_app_data_read" ON "public"."app_data" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", "public"."staff_app_data_domain"("key"), 'read'::"text"));
+CREATE POLICY "staff_app_data_read" ON "public"."app_data" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", "public"."staff_app_data_domain"("key"), 'read'::"text")));
 
 
 
-CREATE POLICY "staff_athlete_test_results_read" ON "public"."athlete_test_results" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'tests'::"text", 'read'::"text"));
+CREATE POLICY "staff_athlete_test_results_read" ON "public"."athlete_test_results" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'tests'::"text", 'read'::"text")));
 
 
 
 CREATE POLICY "staff_athlete_test_values_read" ON "public"."athlete_test_values" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."athlete_test_results" "r"
-  WHERE (("r"."id" = "athlete_test_values"."result_id") AND "public"."staff_can"("r"."athlete_id", 'tests'::"text", 'read'::"text")))));
+  WHERE (("r"."id" = "athlete_test_values"."result_id") AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("r"."athlete_id", 'tests'::"text", 'read'::"text"))))));
 
 
 
-CREATE POLICY "staff_competitions_read" ON "public"."competitions" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text"));
+CREATE POLICY "staff_competitions_read" ON "public"."competitions" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_cycles_read" ON "public"."cycles" FOR SELECT TO "authenticated" USING ("public"."staff_can"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")), 'planification'::"text", 'read'::"text"));
+CREATE POLICY "staff_cycles_read" ON "public"."cycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")), 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_day_themes_read" ON "public"."day_themes" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text"));
+CREATE POLICY "staff_day_themes_read" ON "public"."day_themes" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_doc_assignments_delete" ON "public"."doc_assignments" FOR DELETE TO "authenticated" USING ("public"."staff_can_edit"("athlete_id", 'fiches'::"text", "assigned_by"));
+CREATE POLICY "staff_doc_assignments_delete" ON "public"."doc_assignments" FOR DELETE TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_edit"("athlete_id", 'fiches'::"text", "assigned_by")));
 
 
 
-CREATE POLICY "staff_doc_assignments_insert" ON "public"."doc_assignments" FOR INSERT TO "authenticated" WITH CHECK ((("assigned_by" = "auth"."uid"()) AND "public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text") AND "public"."staff_doc_for_athlete"("doc_id", "athlete_id")));
+CREATE POLICY "staff_doc_assignments_insert" ON "public"."doc_assignments" FOR INSERT TO "authenticated" WITH CHECK ((("assigned_by" = ( SELECT "auth"."uid"() AS "uid")) AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text")) AND "public"."staff_doc_for_athlete"("doc_id", "athlete_id")));
 
 
 
-CREATE POLICY "staff_doc_assignments_read" ON "public"."doc_assignments" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'fiches'::"text", 'read'::"text"));
+CREATE POLICY "staff_doc_assignments_read" ON "public"."doc_assignments" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'fiches'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_doc_comments_insert" ON "public"."doc_comments" FOR INSERT TO "authenticated" WITH CHECK ((("author_id" = "auth"."uid"()) AND "public"."staff_can"("athlete_id", 'commentaires'::"text", 'write'::"text") AND "public"."can_read_doc"("doc_id")));
+CREATE POLICY "staff_doc_comments_insert" ON "public"."doc_comments" FOR INSERT TO "authenticated" WITH CHECK ((("author_id" = ( SELECT "auth"."uid"() AS "uid")) AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'commentaires'::"text", 'write'::"text")) AND "public"."can_read_doc"("doc_id")));
 
 
 
-CREATE POLICY "staff_doc_comments_read" ON "public"."doc_comments" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'commentaires'::"text", 'read'::"text"));
+CREATE POLICY "staff_doc_comments_read" ON "public"."doc_comments" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'commentaires'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_docs_delete" ON "public"."docs" FOR DELETE TO "authenticated" USING ("public"."staff_can_edit_doc"("id"));
+CREATE POLICY "staff_docs_delete" ON "public"."docs" FOR DELETE TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_edit_doc"("id")));
 
 
 
-CREATE POLICY "staff_docs_insert" ON "public"."docs" FOR INSERT TO "authenticated" WITH CHECK ((("uploaded_by" = "auth"."uid"()) AND ("coach_id" <> "auth"."uid"()) AND ("is_self_service" = false) AND "public"."staff_can_write_bank"("coach_id") AND (("athlete_id" IS NULL) OR "public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text"))));
+CREATE POLICY "staff_docs_insert" ON "public"."docs" FOR INSERT TO "authenticated" WITH CHECK ((("uploaded_by" = ( SELECT "auth"."uid"() AS "uid")) AND ("coach_id" <> ( SELECT "auth"."uid"() AS "uid")) AND ("is_self_service" = false) AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_write_bank"("coach_id")) AND (("athlete_id" IS NULL) OR (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text")))));
 
 
 
-CREATE POLICY "staff_docs_update" ON "public"."docs" FOR UPDATE TO "authenticated" USING ("public"."staff_can_edit_doc"("id")) WITH CHECK ((("is_self_service" = false) AND "public"."staff_can_write_bank"("coach_id") AND (("athlete_id" IS NULL) OR "public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text"))));
+CREATE POLICY "staff_docs_update" ON "public"."docs" FOR UPDATE TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_edit_doc"("id"))) WITH CHECK ((("is_self_service" = false) AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_write_bank"("coach_id")) AND (("athlete_id" IS NULL) OR (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'fiches'::"text", 'write'::"text")))));
 
 
 
-CREATE POLICY "staff_energy_sessions_read" ON "public"."energy_sessions" FOR SELECT TO "authenticated" USING (("public"."staff_can"("athlete_id", 'seances'::"text", 'read'::"text") OR (EXISTS ( SELECT 1
+CREATE POLICY "staff_energy_sessions_read" ON "public"."energy_sessions" FOR SELECT TO "authenticated" USING (((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'seances'::"text", 'read'::"text")) OR (EXISTS ( SELECT 1
    FROM "public"."energy_session_assignments" "a"
-  WHERE (("a"."energy_session_id" = "energy_sessions"."id") AND "public"."staff_can"("a"."athlete_id", 'seances'::"text", 'read'::"text"))))));
+  WHERE (("a"."energy_session_id" = "energy_sessions"."id") AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("a"."athlete_id", 'seances'::"text", 'read'::"text")))))));
 
 
 
-CREATE POLICY "staff_esa_read" ON "public"."energy_session_assignments" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'seances'::"text", 'read'::"text"));
+CREATE POLICY "staff_esa_read" ON "public"."energy_session_assignments" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'seances'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_exercise_pr_logs_read" ON "public"."exercise_pr_logs" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text"));
+CREATE POLICY "staff_exercise_pr_logs_read" ON "public"."exercise_pr_logs" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_habit_logs_read" ON "public"."habit_logs" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text"));
+CREATE POLICY "staff_habit_logs_read" ON "public"."habit_logs" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_habits_read" ON "public"."habits" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text"));
+CREATE POLICY "staff_habits_read" ON "public"."habits" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text")));
 
 
 
 ALTER TABLE "public"."staff_invitations" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "staff_invitations_delete" ON "public"."staff_invitations" FOR DELETE TO "authenticated" USING ((("used_at" IS NULL) AND (("invited_by" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))));
+CREATE POLICY "staff_invitations_delete" ON "public"."staff_invitations" FOR DELETE TO "authenticated" USING ((("used_at" IS NULL) AND (("invited_by" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))));
 
 
 
-CREATE POLICY "staff_invitations_insert" ON "public"."staff_invitations" FOR INSERT TO "authenticated" WITH CHECK ((("invited_by" = "auth"."uid"()) AND ("public"."is_coach_of"("athlete_id") OR ("athlete_id" = "auth"."uid"()))));
+CREATE POLICY "staff_invitations_insert" ON "public"."staff_invitations" FOR INSERT TO "authenticated" WITH CHECK ((("invited_by" = ( SELECT "auth"."uid"() AS "uid")) AND ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")))));
 
 
 
-CREATE POLICY "staff_invitations_select" ON "public"."staff_invitations" FOR SELECT TO "authenticated" USING ((("invited_by" = "auth"."uid"()) OR ("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "staff_invitations_select" ON "public"."staff_invitations" FOR SELECT TO "authenticated" USING ((("invited_by" = ( SELECT "auth"."uid"() AS "uid")) OR ("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "staff_life_events_read" ON "public"."athlete_life_events" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text"));
+CREATE POLICY "staff_life_events_read" ON "public"."athlete_life_events" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_macrocycles_read" ON "public"."macrocycles" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text"));
+CREATE POLICY "staff_macrocycles_read" ON "public"."macrocycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_measurement_logs_read" ON "public"."measurement_logs" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text"));
+CREATE POLICY "staff_measurement_logs_read" ON "public"."measurement_logs" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'nutrition'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_medical_entries_delete" ON "public"."medical_entries" FOR DELETE TO "authenticated" USING ("public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by"));
+CREATE POLICY "staff_medical_entries_delete" ON "public"."medical_entries" FOR DELETE TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by")));
 
 
 
-CREATE POLICY "staff_medical_entries_insert" ON "public"."medical_entries" FOR INSERT TO "authenticated" WITH CHECK ((("created_by" = "auth"."uid"()) AND "public"."staff_can"("athlete_id", 'medical'::"text", 'write'::"text")));
+CREATE POLICY "staff_medical_entries_insert" ON "public"."medical_entries" FOR INSERT TO "authenticated" WITH CHECK ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'write'::"text"))));
 
 
 
-CREATE POLICY "staff_medical_entries_read" ON "public"."medical_entries" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text"));
+CREATE POLICY "staff_medical_entries_read" ON "public"."medical_entries" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_medical_entries_update" ON "public"."medical_entries" FOR UPDATE TO "authenticated" USING ("public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by")) WITH CHECK ("public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by"));
+CREATE POLICY "staff_medical_entries_update" ON "public"."medical_entries" FOR UPDATE TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by"))) WITH CHECK ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by")));
 
 
 
-CREATE POLICY "staff_mesocycles_read" ON "public"."mesocycles" FOR SELECT TO "authenticated" USING ("public"."staff_can"(( SELECT "m"."athlete_id"
+CREATE POLICY "staff_mesocycles_read" ON "public"."mesocycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"(( SELECT "m"."athlete_id"
    FROM "public"."macrocycles" "m"
-  WHERE ("m"."id" = "mesocycles"."macrocycle_id")), 'planification'::"text", 'read'::"text"));
+  WHERE ("m"."id" = "mesocycles"."macrocycle_id")), 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_microcycles_read" ON "public"."microcycles" FOR SELECT TO "authenticated" USING ("public"."staff_can"("public"."cycle_athlete_id"("cycle_id"), 'planification'::"text", 'read'::"text"));
+CREATE POLICY "staff_microcycles_read" ON "public"."microcycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("public"."cycle_athlete_id"("cycle_id"), 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_performance_logs_read" ON "public"."performance_logs" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text"));
+CREATE POLICY "staff_performance_logs_read" ON "public"."performance_logs" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_planning_blocks_read" ON "public"."planning_blocks" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text"));
+CREATE POLICY "staff_planning_blocks_read" ON "public"."planning_blocks" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_seasons_read" ON "public"."seasons" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text"));
+CREATE POLICY "staff_seasons_read" ON "public"."seasons" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'planification'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_test_results_read" ON "public"."test_results" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'tests'::"text", 'read'::"text"));
+CREATE POLICY "staff_test_results_read" ON "public"."test_results" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'tests'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_test_sessions_read" ON "public"."test_sessions" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'tests'::"text", 'read'::"text"));
+CREATE POLICY "staff_test_sessions_read" ON "public"."test_sessions" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'tests'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_weekly_retours_read" ON "public"."weekly_retours" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'commentaires'::"text", 'read'::"text"));
+CREATE POLICY "staff_weekly_retours_read" ON "public"."weekly_retours" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'commentaires'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_workout_exercise_comments_read" ON "public"."workout_exercise_comments" FOR SELECT TO "authenticated" USING ("public"."staff_can"("public"."workout_log_athlete_id"("workout_log_id"), 'commentaires'::"text", 'read'::"text"));
+CREATE POLICY "staff_workout_exercise_comments_read" ON "public"."workout_exercise_comments" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("public"."workout_log_athlete_id"("workout_log_id"), 'commentaires'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_workout_logs_read" ON "public"."workout_logs" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text"));
+CREATE POLICY "staff_workout_logs_read" ON "public"."workout_logs" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "staff_workout_rpe_read" ON "public"."workout_rpe" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text"));
+CREATE POLICY "staff_workout_rpe_read" ON "public"."workout_rpe" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'logs'::"text", 'read'::"text")));
 
 
 
-CREATE POLICY "td_delete" ON "public"."test_definitions" FOR DELETE USING ((("auth"."uid"() = "created_by") OR (EXISTS ( SELECT 1
+CREATE POLICY "td_delete" ON "public"."test_definitions" FOR DELETE USING (((( SELECT "auth"."uid"() AS "uid") = "created_by") OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
 CREATE POLICY "td_delete_coach_library" ON "public"."test_definitions" FOR DELETE TO "authenticated" USING ((("created_by" IS NULL) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
-CREATE POLICY "td_insert" ON "public"."test_definitions" FOR INSERT WITH CHECK ((("auth"."uid"() = "created_by") OR (EXISTS ( SELECT 1
+CREATE POLICY "td_insert" ON "public"."test_definitions" FOR INSERT WITH CHECK (((( SELECT "auth"."uid"() AS "uid") = "created_by") OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "td_select" ON "public"."test_definitions" FOR SELECT USING (("auth"."uid"() IS NOT NULL));
+CREATE POLICY "td_select" ON "public"."test_definitions" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") IS NOT NULL));
 
 
 
-CREATE POLICY "td_update" ON "public"."test_definitions" FOR UPDATE USING ((("auth"."uid"() = "created_by") OR (EXISTS ( SELECT 1
+CREATE POLICY "td_update" ON "public"."test_definitions" FOR UPDATE USING (((( SELECT "auth"."uid"() AS "uid") = "created_by") OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
 CREATE POLICY "td_update_coach_library" ON "public"."test_definitions" FOR UPDATE TO "authenticated" USING ((("created_by" IS NULL) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"]))))))) WITH CHECK (("created_by" IS NULL));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"]))))))) WITH CHECK (("created_by" IS NULL));
 
 
 
 ALTER TABLE "public"."test_definitions" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "test_delete" ON "public"."test_sessions" FOR DELETE USING ((("athlete_id" = "auth"."uid"()) OR ("coach_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "test_delete" ON "public"."test_sessions" FOR DELETE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "test_insert" ON "public"."test_sessions" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = "auth"."uid"()) OR (("coach_id" = "auth"."uid"()) AND (("athlete_id" IS NULL) OR "public"."is_coach_of"("athlete_id"))) OR "public"."current_user_is_admin"()));
+CREATE POLICY "test_insert" ON "public"."test_sessions" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("athlete_id" IS NULL) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
 
 
 
 ALTER TABLE "public"."test_results" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "test_results_delete" ON "public"."test_results" FOR DELETE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "test_results_delete" ON "public"."test_results" FOR DELETE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "test_results_insert" ON "public"."test_results" FOR INSERT WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "test_results_insert" ON "public"."test_results" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "test_results_select" ON "public"."test_results" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "test_results_select" ON "public"."test_results" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "test_results_update" ON "public"."test_results" FOR UPDATE USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "test_results_update" ON "public"."test_results" FOR UPDATE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "test_select" ON "public"."test_sessions" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR ("coach_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "test_select" ON "public"."test_sessions" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
 ALTER TABLE "public"."test_sessions" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "test_update" ON "public"."test_sessions" FOR UPDATE USING ((("athlete_id" = "auth"."uid"()) OR ("coach_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id") OR (EXISTS ( SELECT 1
+CREATE POLICY "test_update" ON "public"."test_sessions" FOR UPDATE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
@@ -12878,25 +12979,25 @@ ALTER TABLE "public"."test_variables" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."tests" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "tests_delete" ON "public"."tests" FOR DELETE USING ((("created_by" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+CREATE POLICY "tests_delete" ON "public"."tests" FOR DELETE USING ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
-CREATE POLICY "tests_insert" ON "public"."tests" FOR INSERT WITH CHECK ((("created_by" = "auth"."uid"()) AND (EXISTS ( SELECT 1
+CREATE POLICY "tests_insert" ON "public"."tests" FOR INSERT WITH CHECK ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
-CREATE POLICY "tests_select" ON "public"."tests" FOR SELECT USING (("auth"."uid"() IS NOT NULL));
+CREATE POLICY "tests_select" ON "public"."tests" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") IS NOT NULL));
 
 
 
-CREATE POLICY "tests_update" ON "public"."tests" FOR UPDATE USING ((("created_by" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+CREATE POLICY "tests_update" ON "public"."tests" FOR UPDATE USING ((("created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true))))));
 
 
 
@@ -12905,29 +13006,29 @@ ALTER TABLE "public"."training_methods" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "tv_delete" ON "public"."test_variables" FOR DELETE USING ((EXISTS ( SELECT 1
    FROM "public"."test_definitions" "td"
-  WHERE (("td"."id" = "test_variables"."test_definition_id") AND (("td"."created_by" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+  WHERE (("td"."id" = "test_variables"."test_definition_id") AND (("td"."created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))))));
 
 
 
 CREATE POLICY "tv_insert" ON "public"."test_variables" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."test_definitions" "td"
-  WHERE (("td"."id" = "test_variables"."test_definition_id") AND (("td"."created_by" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+  WHERE (("td"."id" = "test_variables"."test_definition_id") AND (("td"."created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))))));
 
 
 
-CREATE POLICY "tv_select" ON "public"."test_variables" FOR SELECT USING (("auth"."uid"() IS NOT NULL));
+CREATE POLICY "tv_select" ON "public"."test_variables" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") IS NOT NULL));
 
 
 
 CREATE POLICY "tv_update" ON "public"."test_variables" FOR UPDATE USING ((EXISTS ( SELECT 1
    FROM "public"."test_definitions" "td"
-  WHERE (("td"."id" = "test_variables"."test_definition_id") AND (("td"."created_by" = "auth"."uid"()) OR (EXISTS ( SELECT 1
+  WHERE (("td"."id" = "test_variables"."test_definition_id") AND (("td"."created_by" = ( SELECT "auth"."uid"() AS "uid")) OR (EXISTS ( SELECT 1
            FROM "public"."profiles"
-          WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))))))));
+          WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."is_admin" = true)))))))));
 
 
 
@@ -12935,22 +13036,22 @@ CREATE POLICY "tv_write_coach_library" ON "public"."test_variables" TO "authenti
    FROM "public"."test_definitions" "td"
   WHERE (("td"."id" = "test_variables"."test_definition_id") AND ("td"."created_by" IS NULL)))) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"]))))))) WITH CHECK (((EXISTS ( SELECT 1
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"]))))))) WITH CHECK (((EXISTS ( SELECT 1
    FROM "public"."test_definitions" "td"
   WHERE (("td"."id" = "test_variables"."test_definition_id") AND ("td"."created_by" IS NULL)))) AND (EXISTS ( SELECT 1
    FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
+  WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND ("profiles"."role" = ANY (ARRAY['coach'::"text", 'coach_athlete'::"text"])))))));
 
 
 
 ALTER TABLE "public"."user_consents" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "user_consents_insert_own" ON "public"."user_consents" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = "auth"."uid"()));
+CREATE POLICY "user_consents_insert_own" ON "public"."user_consents" FOR INSERT TO "authenticated" WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "user_consents_select_own" ON "public"."user_consents" FOR SELECT TO "authenticated" USING (("user_id" = "auth"."uid"()));
+CREATE POLICY "user_consents_select_own" ON "public"."user_consents" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -12960,30 +13061,30 @@ ALTER TABLE "public"."weekly_retours" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."weekly_reviews" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "weekly_reviews_coach" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING ((("status" = 'submitted'::"text") AND "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "weekly_reviews_coach" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING ((("status" = 'submitted'::"text") AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "weekly_reviews_self" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "weekly_reviews_self" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "weekly_reviews_staff" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING ((("status" = 'submitted'::"text") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text")));
+CREATE POLICY "weekly_reviews_staff" ON "public"."weekly_reviews" FOR SELECT TO "authenticated" USING ((("status" = 'submitted'::"text") AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text"))));
 
 
 
 ALTER TABLE "public"."wellness_entries" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "wellness_entries_coach" ON "public"."wellness_entries" FOR SELECT TO "authenticated" USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "wellness_entries_coach" ON "public"."wellness_entries" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "wellness_entries_self" ON "public"."wellness_entries" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "wellness_entries_self" ON "public"."wellness_entries" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "wellness_entries_staff" ON "public"."wellness_entries" FOR SELECT TO "authenticated" USING (((NOT "archived") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text")));
+CREATE POLICY "wellness_entries_staff" ON "public"."wellness_entries" FOR SELECT TO "authenticated" USING (((NOT "archived") AND (( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text"))));
 
 
 
@@ -12992,59 +13093,59 @@ ALTER TABLE "public"."workout_exercise_comments" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "workout_exercise_comments_coach_read" ON "public"."workout_exercise_comments" FOR SELECT USING ((EXISTS ( SELECT 1
    FROM "public"."workout_logs" "wl"
-  WHERE (("wl"."id" = "workout_exercise_comments"."workout_log_id") AND "public"."is_coach_of"("wl"."athlete_id")))));
+  WHERE (("wl"."id" = "workout_exercise_comments"."workout_log_id") AND (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("wl"."athlete_id"))))));
 
 
 
 CREATE POLICY "workout_exercise_comments_self" ON "public"."workout_exercise_comments" USING ((EXISTS ( SELECT 1
    FROM "public"."workout_logs" "wl"
-  WHERE (("wl"."id" = "workout_exercise_comments"."workout_log_id") AND ("wl"."athlete_id" = "auth"."uid"())))));
+  WHERE (("wl"."id" = "workout_exercise_comments"."workout_log_id") AND ("wl"."athlete_id" = ( SELECT "auth"."uid"() AS "uid"))))));
 
 
 
 ALTER TABLE "public"."workout_logs" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "workout_logs_coach_delete" ON "public"."workout_logs" FOR DELETE USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "workout_logs_coach_delete" ON "public"."workout_logs" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "workout_logs_coach_insert" ON "public"."workout_logs" FOR INSERT WITH CHECK ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "workout_logs_coach_insert" ON "public"."workout_logs" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "workout_logs_coach_read" ON "public"."workout_logs" FOR SELECT USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "workout_logs_coach_read" ON "public"."workout_logs" FOR SELECT USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "workout_logs_coach_update" ON "public"."workout_logs" FOR UPDATE USING ("public"."is_coach_of"("athlete_id"));
+CREATE POLICY "workout_logs_coach_update" ON "public"."workout_logs" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
 
-CREATE POLICY "workout_logs_self_insert" ON "public"."workout_logs" FOR INSERT WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "workout_logs_self_insert" ON "public"."workout_logs" FOR INSERT WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "workout_logs_self_select" ON "public"."workout_logs" FOR SELECT USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "workout_logs_self_select" ON "public"."workout_logs" FOR SELECT USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "workout_logs_self_update" ON "public"."workout_logs" FOR UPDATE USING (("athlete_id" = "auth"."uid"())) WITH CHECK (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "workout_logs_self_update" ON "public"."workout_logs" FOR UPDATE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
 ALTER TABLE "public"."workout_rpe" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "workout_rpe_select" ON "public"."workout_rpe" FOR SELECT USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
+CREATE POLICY "workout_rpe_select" ON "public"."workout_rpe" FOR SELECT USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
-CREATE POLICY "wr_athlete_select" ON "public"."weekly_retours" FOR SELECT TO "authenticated" USING (("athlete_id" = "auth"."uid"()));
+CREATE POLICY "wr_athlete_select" ON "public"."weekly_retours" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "wr_coach_all" ON "public"."weekly_retours" TO "authenticated" USING ((("coach_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))) WITH CHECK ((("coach_id" = "auth"."uid"()) AND (("athlete_id" IS NULL) OR "public"."is_coach_of"("athlete_id"))));
+CREATE POLICY "wr_coach_all" ON "public"."weekly_retours" TO "authenticated" USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))) WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND (("athlete_id" IS NULL) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")))));
 
 
 
@@ -15573,6 +15674,11 @@ GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") T
 GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."columns_are"("name", "name", "name"[], "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."competitions_stamp_cancel"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."competitions_stamp_cancel"() TO "service_role";
 
 
 
@@ -18223,6 +18329,20 @@ GRANT ALL ON FUNCTION "public"."hr_zone_bounds_at"("p_athlete" "uuid", "p_day" "
 GRANT ALL ON FUNCTION "public"."hyrox_test_analyses_freeze"() TO "anon";
 GRANT ALL ON FUNCTION "public"."hyrox_test_analyses_freeze"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."hyrox_test_analyses_freeze"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."i_am_coach"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."i_am_coach"() TO "anon";
+GRANT ALL ON FUNCTION "public"."i_am_coach"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."i_am_coach"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."i_am_staff"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."i_am_staff"() TO "anon";
+GRANT ALL ON FUNCTION "public"."i_am_staff"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."i_am_staff"() TO "service_role";
 
 
 

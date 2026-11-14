@@ -6,7 +6,6 @@
  *   - testing  : Suivi Testing
  */
 import { useSearchParams } from "react-router-dom";
-import { C } from "@/lib/theme";
 import ProfilSportifPage from "./ProfilSportifPage";
 import TestPage from "./TestPage";
 import { ProfilGeneralTab } from "@/features/coach/components/donnees/ProfilGeneralTab";
@@ -36,14 +35,14 @@ export default function ProfilAthletePage() {
   const { title, subtitle } = HEADERS[view];
 
   return (
-    <div style={{ padding: "0 24px 60px" }}>
+    <div className="px-6 pb-[60px]">
       {/* Header commun aux sous-onglets ; « Profil sportif » a son propre titre (planche). */}
-      {view !== "sportif" && <div style={{ padding: "20px 0 16px" }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: C.tx }}>{title}</div>
-        <div style={{ fontSize: 12, color: C.tx3, marginTop: 4 }}>{subtitle}</div>
+      {view !== "sportif" && <div className="pb-4 pt-5">
+        <div className="text-[20px] font-extrabold text-agon-tx">{title}</div>
+        <div className="mt-1 text-[12px] text-agon-tx3">{subtitle}</div>
       </div>}
 
-      {view === "sportif" && <div style={{ paddingTop: 24 }}><ProfilSportifPage /></div>}
+      {view === "sportif" && <div className="pt-6"><ProfilSportifPage /></div>}
       {view === "general" && <ProfilGeneralTab />}
       {view === "testing" && <TestPage embedded />}
     </div>

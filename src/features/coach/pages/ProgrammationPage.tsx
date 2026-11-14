@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { C, alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { Skeleton } from "@/ui/Skeleton";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,9 +21,9 @@ import { ConfirmTrashDialog } from "@/features/coach/components/programmation/Co
 import { DayPickerSheet } from "@/features/coach/components/programmation/DayPickerSheet";
 
 const SUB_TABS = [
-  { k: "muscu", l: "Musculation", color: C.ac },
-  { k: "energie", l: "Énergétique", color: C.b },
-  { k: "specifique", l: "Spécifique", color: C.o },
+  { k: "muscu", l: "Musculation", color: "bg-agon-accent" },
+  { k: "energie", l: "Énergétique", color: "bg-agon-info" },
+  { k: "specifique", l: "Spécifique", color: "bg-agon-alerte" },
 ];
 
 export default function ProgrammationPage() {
@@ -166,7 +166,7 @@ export default function ProgrammationPage() {
       />
 
       {/* Onglets de la planche CoachProgrammation : carré de couleur par type, soulignement or */}
-      <div role="tablist" style={{ display: "flex", borderBottom: `1px solid ${C.brd}`, marginBottom: 16, overflowX: "auto" }}>
+      <div role="tablist" className="mb-4 flex overflow-x-auto border-b border-agon-brd">
         {SUB_TABS.map((t) => {
           const on = subTab === t.k;
           return (
@@ -176,15 +176,12 @@ export default function ProgrammationPage() {
               role="tab"
               aria-selected={on}
               onClick={() => setSubTab(t.k)}
-              style={{
-                height: 40, display: "flex", alignItems: "center", gap: 8, padding: "0 16px", border: "none", cursor: "pointer",
-                fontFamily: "inherit", fontSize: 13, fontWeight: on ? 500 : 400, whiteSpace: "nowrap",
-                color: on ? C.tx : C.tx2,
-                boxShadow: on ? `inset 0 -3px 0 ${C.ac}` : "none",
-                background: on ? alpha(C.ac, 0.12) : "transparent",
-              }}
+              className={cn(
+                "flex h-10 cursor-pointer items-center gap-2 whitespace-nowrap border-0 px-4 text-[13px]",
+                on ? "bg-agon-accent/[0.12] font-medium text-agon-tx shadow-[inset_0_-3px_0_var(--agon-accent)]" : "bg-transparent font-normal text-agon-tx2",
+              )}
             >
-              <span aria-hidden style={{ width: 9, height: 9, borderRadius: 2, flex: "none", background: t.color }} />
+              <span aria-hidden className={cn("size-[9px] flex-none rounded-[2px]", t.color)} />
               {t.l}
             </button>
           );

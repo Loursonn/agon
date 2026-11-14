@@ -1,5 +1,5 @@
 /**
- * Ce que le serveur accepte de transmettre à Gemini.
+ * Ce que le serveur accepte de transmettre au modèle d'IA.
  *
  * Les cas testés ici sont ceux qui, avant `sanitizeTrendStats`, passaient
  * directement du corps de requête au prompt : champs inconnus, texte libre,

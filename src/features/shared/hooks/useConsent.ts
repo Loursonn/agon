@@ -36,9 +36,9 @@ export const CONSENT_COPY: Record<
   },
   ai_programming: {
     label:
-      "J'accepte que mes données d'entraînement soient traitées par des outils d'intelligence artificielle, l'API Google Gemini utilisée par Agon et l'assistant Claude (Anthropic) de mon coach, pour en produire des analyses, des synthèses et des visualisations, et proposer à mon coach des axes de travail et de développement.",
+      "J'accepte que mes données d'entraînement soient traitées par l'intelligence artificielle Claude (Anthropic), utilisée par Agon et par l'assistant de mon coach, pour en produire des analyses, des synthèses et des visualisations, et proposer à mon coach des axes de travail et de développement.",
     detail:
-      "Facultatif, et révocable à tout moment. Ton coach reste seul à décider de tes programmes : l'IA l'aide à t'analyser et à préparer son travail, et n'inscrit rien dans Agon sans son accord. L'assistant de ton coach voit aussi les titres des événements que tu ajoutes à ton calendrier (examens, voyages…) : n'y écris rien que tu ne veux pas partager. Via Gemini, tes données ne servent pas à entraîner les modèles de Google. Via Claude, elles passent par le compte personnel de ton coach : leur usage dépend des réglages de ce compte, qu'Agon ne contrôle pas. Si tu refuses, tu gardes tes statistiques et tes graphiques, sans analyse rédigée par l'IA. Réservé aux 18 ans et plus.",
+      "Facultatif, et révocable à tout moment. Ton coach reste seul à décider de tes programmes : l'IA l'aide à t'analyser et à préparer son travail, et n'inscrit rien dans Agon sans son accord. L'assistant de ton coach voit aussi les titres des événements que tu ajoutes à ton calendrier (examens, voyages…) : n'y écris rien que tu ne veux pas partager. Pour les analyses d'Agon, tes données ne servent pas à entraîner les modèles d'Anthropic. Pour l'assistant de ton coach, elles passent par son compte personnel : leur usage dépend des réglages de ce compte, qu'Agon ne contrôle pas. Si tu refuses, tu gardes tes statistiques et tes graphiques, sans analyse rédigée par l'IA. Réservé aux 18 ans et plus.",
     required: false,
   },
   garmin_sync: {

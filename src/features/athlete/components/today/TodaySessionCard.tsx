@@ -1,6 +1,5 @@
-import { useState, type ReactNode, type CSSProperties } from "react";
-import { C } from "@/lib/theme";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import { useState, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import { blocColor } from "@/lib/peps";
 import { blocLetter, prescriptionLine } from "@/lib/todayPreview";
 import type { SessionPreviewItem } from "@/features/shared/hooks/useWeekProgram";
@@ -53,45 +52,42 @@ export function TodaySessionCard({
       <path d={up ? "M6 15L12 9L18 15" : "M6 9L12 15L18 9"} />
     </svg>
   );
-  const headBtn: CSSProperties = {
-    flex: "none", height: 36, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", borderRadius: 10,
-    border: "1px solid rgba(231,211,168,0.18)", background: "rgba(14,12,10,0.35)", color: C.tx,
-    fontSize: 13, fontWeight: 500, fontFamily: "inherit", cursor: "pointer",
-  };
-  const rowTop = "1px solid rgba(231,211,168,0.10)";
+  const headBtn =
+    "flex h-9 flex-none cursor-pointer items-center gap-1.5 rounded-[10px] border border-agon-brd-l bg-agon-bg/[0.35] px-3 font-[inherit] text-[13px] font-medium text-agon-tx";
+  const rowTop = "border-t border-agon-brd";
 
   return (
-    <div style={{ position: "relative", overflow: "hidden", borderRadius: 14, border: `1px solid ${color}73`, background: `${color}1F` }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color, zIndex: 1 }} />
-      {pattern && <div aria-hidden style={{ position: "absolute", inset: 0, background: "url(/maquette/carte-seance-motif.svg) center/cover", opacity: 0.14 }} />}
-      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, padding: "12px 12px 12px 17px" }}>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="relative overflow-hidden rounded-[14px] border" style={{ borderColor: `${color}73`, background: `${color}1F` }}>
+      <span aria-hidden className="absolute inset-y-0 left-0 z-[1] w-[3px]" style={{ background: color }} />
+      {pattern && <div aria-hidden className="absolute inset-0 bg-[url(/maquette/carte-seance-motif.svg)] bg-cover bg-center opacity-[0.14]" />}
+      <div className="relative flex items-center gap-3 py-3 pl-[17px] pr-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="flex items-center gap-2">
             <TypePill color={color}>{typeLabel}</TypePill>
-            {time && <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.08em", color: C.tx2 }}>{time}</span>}
+            {time && <span className="agon-mono text-[11px] tracking-[0.08em] text-agon-tx2">{time}</span>}
             {badge}
           </div>
-          <div style={{ ...DISPLAY, fontSize: 14, fontWeight: 500, lineHeight: 1.3, letterSpacing: "0.06em", color: C.tx, overflowWrap: "anywhere" }}>{title}</div>
+          <div className="agon-display text-[14px] font-medium leading-[1.3] tracking-[0.06em] text-agon-tx [overflow-wrap:anywhere]">{title}</div>
         </div>
         {canOpen ? (
-          <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} style={headBtn}>
+          <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={headBtn}>
             {open ? "Fermer" : "Aperçu"} {chevron(open)}
           </button>
         ) : onDetail ? (
-          <button type="button" onClick={onDetail} style={headBtn}>
+          <button type="button" onClick={onDetail} className={headBtn}>
             Aperçu {chevron(false)}
           </button>
         ) : null}
       </div>
 
       {open && (
-        <div style={{ position: "relative", padding: "0 14px 14px 17px", display: "flex", flexDirection: "column" }}>
+        <div className="relative flex flex-col pb-3.5 pl-[17px] pr-3.5">
           {hasPreview && (
             <>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 0 8px" }}>
-                <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>Aperçu</span>
-                <span style={{ flex: 1 }} />
-                <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3 }}>
+              <div className="flex items-center gap-2 pb-2 pt-0.5">
+                <span className="agon-mono text-[11px] uppercase tracking-[0.14em] text-agon-tx3">Aperçu</span>
+                <span className="flex-1" />
+                <span className="agon-mono text-[11px] uppercase tracking-[0.06em] text-agon-tx3">
                   {items!.length} exercice{items!.length > 1 ? "s" : ""}
                 </span>
               </div>
@@ -100,23 +96,23 @@ export function TodaySessionCard({
                 const bc = blocColor(it.blocColor, bi);
                 const line = prescriptionLine(it.mode, it.params);
                 return (
-                  <div key={it.id + i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: rowTop, whiteSpace: "nowrap" }}>
-                    <span style={{ ...MONO, width: 20, height: 20, flex: "none", borderRadius: 6, background: bc, color: C.bg, fontSize: 11, fontWeight: 500, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                  <div key={it.id + i} className={cn("flex items-center gap-2.5 whitespace-nowrap py-2", rowTop)}>
+                    <span className="agon-mono inline-flex size-5 flex-none items-center justify-center rounded-[6px] text-[11px] font-medium text-agon-ink" style={{ background: bc }}>
                       {blocLetter(bi)}
                     </span>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: C.tx, overflow: "hidden", textOverflow: "ellipsis" }}>{it.name}</span>
-                    {line && <span style={{ ...MONO, fontSize: 12, color: C.tx2, flex: "none" }}>{line}</span>}
+                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis text-[13px] text-agon-tx">{it.name}</span>
+                    {line && <span className="agon-mono flex-none text-[12px] text-agon-tx2">{line}</span>}
                   </div>
                 );
               })}
             </>
           )}
-          {extra && <div style={{ padding: "8px 0", borderTop: hasPreview ? rowTop : undefined }}>{extra}</div>}
+          {extra && <div className={cn("py-2", hasPreview && rowTop)}>{extra}</div>}
           {onDetail && (
             <button
               type="button"
               onClick={onDetail}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 0 14px", borderTop: hasPreview || extra ? rowTop : undefined, borderLeft: "none", borderRight: "none", borderBottom: "none", background: "none", color: C.ac, fontSize: 14, fontWeight: 500, fontFamily: "inherit", cursor: "pointer", textAlign: "left" }}
+              className={cn("flex cursor-pointer items-center gap-1.5 bg-transparent pb-3.5 pt-3 text-left font-[inherit] text-[14px] font-medium text-agon-accent", (hasPreview || extra) && rowTop)}
             >
               Voir le détail de la séance <span aria-hidden>→</span>
             </button>
@@ -125,7 +121,7 @@ export function TodaySessionCard({
             <button
               type="button"
               onClick={onStart}
-              style={{ width: "100%", height: 52, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 12, border: "none", background: C.ac, color: C.bg, fontSize: 15, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}
+              className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border-none bg-agon-accent font-[inherit] text-[15px] font-semibold text-agon-ink"
             >
               {startLabel}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 4L20 12L7 20Z" /></svg>

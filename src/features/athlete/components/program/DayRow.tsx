@@ -50,7 +50,10 @@ export function DayRow({
   const isPast  = day.date < today;
   const d       = new Date(day.date + "T12:00:00");
   const dateNum = d.getDate();
-  const isCompDay = day.competitions.length > 0;
+  // Une compétition annulée reste affichée, barrée, mais ne fait pas un jour de compétition.
+  const activeComps = day.competitions.filter((c) => !c.cancelled);
+  const cancelledComps = day.competitions.filter((c) => c.cancelled);
+  const isCompDay = activeComps.length > 0;
   // Une séance rattachée à une activité de montre devient sa carte (jamais deux cartes).
   const watchCards = watch ? watchCardsOfDay(watch.day, watch.now) : [];
   const linkedCard = new Map(watchCards.filter((c) => c.planned).map((c) => [`${c.planned!.kind}:${c.planned!.id}`, c]));
@@ -103,8 +106,18 @@ export function DayRow({
         )}
 
         {/* Jour de compétition — en tête, séances éventuelles dessous */}
-        {isCompDay && day.competitions.map(c => (
+        {isCompDay && activeComps.map(c => (
           <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} compact={vertical} />
+        ))}
+        {cancelledComps.map((c) => (
+          <div key={c.id} style={{
+            display: "flex", flexDirection: vertical ? "column" : "row", alignItems: vertical ? "flex-start" : "center", gap: vertical ? 3 : 8,
+            padding: vertical ? "7px 8px" : "7px 10px", borderRadius: 10, fontSize: 12.5, color: C.tx3, minWidth: 0,
+            border: `1px dashed ${C.brdL}`,
+          }}>
+            <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", flex: "none" }}>Annulée</span>
+            <span title={c.name} style={{ minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textDecoration: "line-through" }}>{c.name}</span>
+          </div>
         ))}
 
         {/* Événements de vie (vacances, stage, examen…) : « Indisponible » si l'athlète ne peut pas s'entraîner. */}

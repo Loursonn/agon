@@ -4,9 +4,9 @@
  * Vignettes réordonnables ; l'assemblage se fait à l'envoi (photosToFicheFile).
  */
 import { useEffect, useMemo, useRef } from "react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { MAX_FICHE_PHOTOS } from "@/lib/photosToFiche";
-import { btnGhost } from "@/features/shared/components/fiches/ficheStyles";
+import { BTN_GHOST } from "@/features/shared/components/fiches/ficheStyles";
 
 const isTouch = () => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 
@@ -51,44 +51,43 @@ export function PhotoFicheCapture({ photos, onChange, disabled }: {
   };
   const remove = (i: number) => onChange(photos.filter((_, k) => k !== i));
 
-  const small: React.CSSProperties = {
-    width: 22, height: 22, borderRadius: 3, border: "none", background: "rgba(0,0,0,0.65)", color: C.tx,
-    fontSize: 12, lineHeight: "22px", padding: 0, cursor: "pointer", fontFamily: "inherit",
-  };
+  const small = "h-[22px] rounded-[3px] border-none bg-black/[0.65] p-0 font-[inherit] text-[12px] leading-[22px] text-agon-tx";
+  const smallBtn = cn(small, "w-[22px] cursor-pointer");
+  const pickBtn = cn(BTN_GHOST, "min-w-[140px] flex-1", disabled || full ? "opacity-50" : "opacity-100");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
         {touch && (
           <button type="button" disabled={disabled || full} onClick={() => cameraRef.current?.click()}
-            style={{ ...btnGhost, flex: 1, minWidth: 140, opacity: disabled || full ? 0.5 : 1 }}>
+            className={pickBtn}>
             📷 Prendre une photo
           </button>
         )}
         <button type="button" disabled={disabled || full} onClick={() => galleryRef.current?.click()}
-          style={{ ...btnGhost, flex: 1, minWidth: 140, opacity: disabled || full ? 0.5 : 1 }}>
+          className={pickBtn}>
           {touch ? "🖼 Depuis la galerie" : "🖼 Ajouter des photos"}
         </button>
       </div>
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
-      <input ref={galleryRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+      <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden"
         onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
 
       {photos.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(84px, 1fr))", gap: 6 }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-1.5">
           {photos.map((p, i) => (
-            <div key={urls[i]} style={{ position: "relative", aspectRatio: "3 / 4", borderRadius: 4, overflow: "hidden", border: "1px solid " + C.brd, background: C.s2 }}>
-              <img src={urls[i]} alt={`Photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              <span style={{ position: "absolute", top: 3, left: 3, ...small, width: "auto", padding: "0 6px", cursor: "default" }}>{i + 1}</span>
+            <div key={urls[i]} className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-agon-brd bg-agon-s2">
+              <img src={urls[i]} alt={`Photo ${i + 1}`} className="block size-full object-cover" />
+              <span className={cn(small, "absolute left-[3px] top-[3px] w-auto cursor-default px-1.5")}>{i + 1}</span>
               <button type="button" aria-label={`Retirer la photo ${i + 1}`} onClick={() => remove(i)} disabled={disabled}
-                style={{ position: "absolute", top: 3, right: 3, ...small }}>×</button>
+                className={cn(smallBtn, "absolute right-[3px] top-[3px]")}>×</button>
               {photos.length > 1 && (
-                <div style={{ position: "absolute", bottom: 3, left: 3, right: 3, display: "flex", justifyContent: "space-between" }}>
+                <div className="absolute inset-x-[3px] bottom-[3px] flex justify-between">
                   <button type="button" aria-label="Mettre la photo avant" onClick={() => move(i, -1)} disabled={disabled || i === 0}
-                    style={{ ...small, visibility: i === 0 ? "hidden" : "visible" }}>‹</button>
+                    className={cn(smallBtn, i === 0 ? "invisible" : "visible")}>‹</button>
                   <button type="button" aria-label="Mettre la photo après" onClick={() => move(i, 1)} disabled={disabled || i === photos.length - 1}
-                    style={{ ...small, visibility: i === photos.length - 1 ? "hidden" : "visible" }}>›</button>
+                    className={cn(smallBtn, i === photos.length - 1 ? "invisible" : "visible")}>›</button>
                 </div>
               )}
             </div>
@@ -96,7 +95,7 @@ export function PhotoFicheCapture({ photos, onChange, disabled }: {
         </div>
       )}
 
-      <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+      <div className="text-[11px] leading-[1.45] text-agon-tx3">
         {photos.length === 0
           ? `Photos compressées avant envoi. Plusieurs photos = un seul PDF, une page par photo (${MAX_FICHE_PHOTOS} max).`
           : photos.length === 1

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { GripVertical, X, Check, Video } from "lucide-react"
 import type { Exercice } from "./types"
 import { SyntheseBar } from "./SyntheseBar"
@@ -11,7 +12,9 @@ import { resolveMuscles } from "@/lib/muscleVolume"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 import { resolveExerciceParams, resolveVideoRequest } from "@/lib/sessionOccurrence"
 
-const VIOLET = C.ac
+/** Étiquette « méthode / libre / vidéo » : couleur du bloc posée en style. */
+const TAG = "shrink-0 rounded-[4px] px-[5px] py-px text-[8px] font-bold"
+const SQ_BTN = "flex size-6 cursor-pointer items-center justify-center rounded-[6px]"
 
 interface ExerciceRowProps {
   exercice: Exercice
@@ -59,7 +62,7 @@ export function ExerciceRow({
   const [showRm, setShowRm] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  const accent = accentColor ?? VIOLET
+  const accent = accentColor ?? C.ac
   const accentSoft = accent + "1F"
 
   const { best: bestRM } = useExerciceRM(athleteId, exercice)
@@ -72,67 +75,59 @@ export function ExerciceRow({
   const hasName = !!exercice.exercise_name
 
   return (
-    <div data-step-id={exercice.id} style={{
-      borderRadius: 4,
-      border: "1px solid " + (showParams ? accent + "50" : C.brdL),
-      background: showParams ? accent + "08" : C.s1,
-      overflow: "hidden",
-      transition: "border-color 150ms, background 150ms",
-    }}>
+    <div
+      data-step-id={exercice.id}
+      className={cn(
+        "overflow-hidden rounded-[4px] border [transition:border-color_150ms,background_150ms]",
+        !showParams && "border-agon-brd-l bg-agon-s1",
+      )}
+      style={showParams ? { borderColor: accent + "50", background: accent + "08" } : undefined}
+    >
       {/* Row */}
       <div
         onClick={() => setShowParams(p => !p)}
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", cursor: "pointer" }}
+        className="flex cursor-pointer items-center gap-1.5 px-2.5 py-[7px]"
       >
 
         {/* Drag */}
         <div
           {...(dragHandleProps ?? {})}
           onClick={(e) => e.stopPropagation()}
-          style={{ cursor: "grab", color: C.tx3 + "70", display: "flex", alignItems: "center", flexShrink: 0 }}
+          className="flex shrink-0 cursor-grab items-center text-agon-tx3/[0.44]"
         >
           <GripVertical size={12} />
         </div>
 
         {/* Index badge */}
-        <div style={{
-          width: 18, height: 18, borderRadius: 5,
-          background: hasName ? accentSoft : C.s2,
-          color: hasName ? accent : C.tx3,
-          fontSize: 9, fontWeight: 800,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-        }}>
+        <div
+          className={cn("flex size-[18px] shrink-0 items-center justify-center rounded-[5px] text-[9px] font-extrabold", !hasName && "bg-agon-s2 text-agon-tx3")}
+          style={hasName ? { background: accentSoft, color: accent } : undefined}
+        >
           {index + 1}
         </div>
 
         {/* Exercise info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="min-w-0 flex-1">
           {/* Name row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
-            <div style={{
-              fontSize: 12, fontWeight: 700,
-              color: hasName ? C.tx : C.tx3,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              minWidth: 0, flex: 1,
-            }}>
+          <div className="flex min-w-0 items-center gap-[5px]">
+            <div className={cn("min-w-0 flex-1 truncate text-[12px] font-bold", hasName ? "text-agon-tx" : "text-agon-tx3")}>
               {exercice.exercise_name || (exercice.mode === 'libre' ? "Note libre" : "Exercice non défini")}
             </div>
 
             {exercice.mode === 'methode' && exercice.methode_id && (
-              <div style={{ fontSize: 8, fontWeight: 700, color: accent, background: accentSoft, padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>
+              <div className={TAG} style={{ color: accent, background: accentSoft }}>
                 méthode
               </div>
             )}
 
             {exercice.mode === 'libre' && (
-              <div style={{ fontSize: 8, fontWeight: 700, color: accent, background: accentSoft, padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>
+              <div className={TAG} style={{ color: accent, background: accentSoft }}>
                 libre
               </div>
             )}
 
             {resolveVideoRequest(exercice, activeWeek) && (
-              <div title="Retour vidéo demandé" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 8, fontWeight: 700, color: accent, background: accentSoft, padding: "1px 5px", borderRadius: 4, flexShrink: 0 }}>
+              <div title="Retour vidéo demandé" className={cn(TAG, "flex items-center gap-[3px]")} style={{ color: accent, background: accentSoft }}>
                 <Video size={9} /> vidéo
               </div>
             )}
@@ -141,15 +136,11 @@ export function ExerciceRow({
             {hasName && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowRm(true) }}
-                style={{
-                  background: bestRM ? accentSoft : C.s2,
-                  border: "1px solid " + (bestRM ? accent + "40" : C.brdL),
-                  color: bestRM ? accent : C.tx3,
-                  fontSize: 9, fontWeight: 700,
-                  borderRadius: 5, padding: "1px 6px",
-                  cursor: "pointer", fontFamily: "inherit",
-                  flexShrink: 0, whiteSpace: "nowrap",
-                }}
+                className={cn(
+                  "shrink-0 cursor-pointer whitespace-nowrap rounded-[5px] border px-1.5 py-px text-[9px] font-bold",
+                  !bestRM && "border-agon-brd-l bg-agon-s2 text-agon-tx3",
+                )}
+                style={bestRM ? { background: accentSoft, borderColor: accent + "40", color: accent } : undefined}
               >
                 {bestRM ? `${bestRM.kg}kg 1RM` : "— 1RM"}
               </button>
@@ -158,40 +149,40 @@ export function ExerciceRow({
 
           {exercice.mode === 'libre' ? (
             exercice.libre_text && (
-              <div style={{ marginTop: 2, fontSize: 11, color: accent, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div className="mt-0.5 truncate text-[11px] font-semibold" style={{ color: accent }}>
                 {exercice.libre_text}
               </div>
             )
           ) : displayParams && (
-            <div style={{ marginTop: 2 }}>
+            <div className="mt-0.5">
               <SyntheseBar params={displayParams} color={accent} />
             </div>
           )}
 
           {exercice.mode !== 'libre' && hasName && (
-            <div style={{ marginTop: 3, display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+            <div className="mt-[3px] flex flex-wrap items-center gap-1">
               <MuscleChips muscles={muscles} />
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+        <div className="flex shrink-0 gap-[3px]">
           {confirmingDelete ? (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete() }}
-                style={{ width: 24, height: 24, borderRadius: 6, border: "none", background: C.rV, color: C.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                className={cn(SQ_BTN, "border-0 bg-agon-erreur-vif text-agon-ink")}
               ><Check size={11} /></button>
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false) }}
-                style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                className={cn(SQ_BTN, "border border-agon-brd-l bg-transparent text-agon-tx3")}
               ><X size={11} /></button>
             </>
           ) : (
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true) }}
-              style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.r + "40", background: C.rS, color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              className={cn(SQ_BTN, "border border-agon-erreur/25 bg-agon-erreur-doux text-agon-erreur")}
             ><X size={11} /></button>
           )}
         </div>
@@ -199,7 +190,7 @@ export function ExerciceRow({
 
       {/* Params panel */}
       {showParams && (
-        <div style={{ borderTop: "1px solid " + accent + "30", padding: "0 10px 12px" }}>
+        <div className="border-t px-2.5 pb-3" style={{ borderTopColor: accent + "30" }}>
           <ExerciceParamsPanel
             exercice={exercice}
             blocSeriesMode={blocSeriesMode}

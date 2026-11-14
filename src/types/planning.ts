@@ -21,10 +21,14 @@ export interface Competition {
   /** Dernier jour d'une compétition sur plusieurs jours (null = un jour). */
   date_end?: string | null;
   athlete_comment?: string | null;
+  /** Annulée le (null = maintenue) : posé par le serveur. */
+  cancelled_at?: string | null;
+  /** Qui a annulé (coach, co-coach ou athlète) : posé par le serveur. */
+  cancelled_by?: string | null;
   created_at: string;
 }
 
-export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'athlete_comment'>;
+export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'athlete_comment' | 'cancelled_at' | 'cancelled_by'>;
 
 /** Libellé du jour dans le planning (« Jour de compétition », « Jour de match »…) */
 export function competitionDayLabel(type: string | null | undefined): string {

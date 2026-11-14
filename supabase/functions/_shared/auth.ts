@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consentCounts } from "./aiGuard.ts";
 
 /**
  * Vérification d'identité commune aux Edge Functions.
@@ -8,7 +9,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  * `Authorization`, que Supabase accepte dès lors qu'il contient la clé anonyme
  * — laquelle est publique, présente dans le bundle JavaScript, donc connue de
  * quiconque ouvre les outils de développement. N'importe qui pouvait donc
- * appeler ces fonctions et consommer le quota Gemini, indéfiniment.
+ * appeler ces fonctions et consommer le quota du modèle d'IA, indéfiniment.
  *
  * `getUser()` sur la clé anonyme échoue : seul un véritable jeton de session
  * utilisateur est accepté. C'est précisément la distinction qu'on veut.
@@ -104,8 +105,13 @@ export async function canActForAthlete(user: AuthedUser, athleteId: string): Pro
  * Utilisé pour refuser le traitement par IA aux utilisateurs qui l'ont refusé :
  * le consentement doit avoir un effet réel côté serveur, sinon la case cochée
  * dans l'interface n'est qu'un décor.
+ *
+ * `since` (format `AAAA-MM-JJ`) : l'accord ne compte que s'il a été donné sous
+ * un texte de cette version ou plus récent. Sert quand le destinataire a
+ * changé : un accord donné sous un texte qui ne le nommait pas ne vaut pas
+ * pour lui.
  */
-export async function hasConsent(userId: string, purpose: string): Promise<boolean> {
+export async function hasConsent(userId: string, purpose: string, since?: string): Promise<boolean> {
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -113,12 +119,12 @@ export async function hasConsent(userId: string, purpose: string): Promise<boole
 
   const { data } = await admin
     .from("current_consents")
-    .select("granted")
+    .select("granted, doc_version")
     .eq("user_id", userId)
     .eq("purpose", purpose)
     .maybeSingle();
 
-  return !!data?.granted;
+  return consentCounts(data, since);
 }
 
 /**

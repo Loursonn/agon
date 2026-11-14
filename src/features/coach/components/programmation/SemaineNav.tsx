@@ -1,9 +1,8 @@
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useCycleWeeks } from "./hooks/useProgramCycles"
 import { Copy } from "lucide-react"
 
-const VIOLET = C.ac
-const VIOLET_S = "rgba(123,111,255,0.12)"
+const PILL = "cursor-pointer rounded-[6px] border px-2.5 py-1 text-[11px]"
 
 interface SemaineNavProps {
   cycleId: string | undefined
@@ -21,8 +20,8 @@ export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek,
   const count = Math.max(microcycles.length, weekCount ?? 0, 1)
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 8 }}>
-      <div style={{ display: "flex", gap: 4, flex: 1, flexWrap: "wrap" }}>
+    <div className="flex items-center gap-1.5 pt-2">
+      <div className="flex flex-1 flex-wrap gap-1">
         {Array.from({ length: count }).map((_, i) => {
           const week = i + 1
           const active = activeWeek === week
@@ -30,15 +29,10 @@ export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek,
             <button
               key={week}
               onClick={() => onWeekChange(week)}
-              style={{
-                padding: "4px 10px", borderRadius: 6,
-                border: "1px solid " + (active ? VIOLET : C.brdL),
-                background: active ? VIOLET_S : "transparent",
-                color: active ? VIOLET : C.tx3,
-                fontSize: 11, fontWeight: active ? 700 : 500,
-                cursor: "pointer", fontFamily: "inherit",
-                transition: "all 120ms",
-              }}
+              className={cn(
+                PILL, "[transition:all_120ms]",
+                active ? "border-agon-accent bg-agon-accent/[0.12] font-bold text-agon-accent" : "border-agon-brd-l bg-transparent font-medium text-agon-tx3",
+              )}
             >
               S{week}
             </button>
@@ -47,14 +41,7 @@ export function SemaineNav({ cycleId, activeWeek, onWeekChange, onDuplicateWeek,
       </div>
       <button
         onClick={onDuplicateWeek}
-        style={{
-          display: "flex", alignItems: "center", gap: 4,
-          padding: "4px 10px", borderRadius: 6,
-          border: "1px solid " + C.brdL, background: "transparent",
-          color: C.tx3, fontSize: 11, fontWeight: 600,
-          cursor: "pointer", fontFamily: "inherit",
-          flexShrink: 0,
-        }}
+        className={cn(PILL, "flex shrink-0 items-center gap-1 border-agon-brd-l bg-transparent font-semibold text-agon-tx3")}
       >
         <Copy size={11} />
         Dupliquer sem.

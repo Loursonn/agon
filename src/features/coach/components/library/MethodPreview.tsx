@@ -3,7 +3,6 @@
  * S'adapte au scope (set ou exercise) et se met à jour en temps réel.
  * Aucun nom de méthode inscrit en dur : purement paramétrique.
  */
-import { C } from "@/lib/theme";
 import type { MethodConfig, SetMethodConfig, ExerciseMethodConfig, ClassicMethodConfig, FullWeekConfig, MethodScope } from "@/types/trainingMethods";
 import type { ExerciceParams } from "../programmation/types";
 import { buildClassicPreview, buildExercisePreview, buildSetPreview, type RestConfig } from "./methodConfigConvert";
@@ -18,7 +17,7 @@ interface MethodPreviewProps {
 export function MethodPreview({ config, compact = false }: MethodPreviewProps) {
   if (!config || !config.scope) {
     return (
-      <div style={{ fontSize: 12, color: C.tx3, fontStyle: "italic" }}>
+      <div className="text-[12px] italic text-agon-tx3">
         Aperçu disponible après configuration
       </div>
     );
@@ -39,24 +38,18 @@ export function MethodPreview({ config, compact = false }: MethodPreviewProps) {
 
   if (compact) {
     return (
-      <div style={{
-        fontSize: 11, color: C.tx3,
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}>
+      <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-agon-tx3">
         {preview}
       </div>
     );
   }
 
   return (
-    <div style={{
-      background: C.s2, borderRadius: 4, padding: "10px 14px",
-      border: `1px solid ${C.brdL}`,
-    }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+    <div className="rounded border border-agon-brd-l bg-agon-s2 px-3.5 py-2.5">
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.5px] text-agon-tx3">
         Aperçu
       </div>
-      <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5, fontFamily: "monospace" }}>
+      <div className="text-[13px] leading-[1.5] text-agon-tx2 [font-family:monospace]">
         {preview}
       </div>
     </div>
@@ -71,4 +64,3 @@ export function MethodPreview({ config, compact = false }: MethodPreviewProps) {
 
 
 // ─── Builder for partial form values → MethodConfig ──────────────────────────
-

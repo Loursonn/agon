@@ -6,7 +6,8 @@ import { useState } from "react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 interface Option {
   id: string;
@@ -27,7 +28,7 @@ interface Props {
 
 const NONE = "__none__";
 
-export default function TaxonomySelect({ placeholder, options, value, onChange, onCreate, width = 150, accent = H.miel }: Props) {
+export default function TaxonomySelect({ placeholder, options, value, onChange, onCreate, width = 150, accent = C.o }: Props) {
   const [adding, setAdding]   = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving]   = useState(false);
@@ -48,7 +49,7 @@ export default function TaxonomySelect({ placeholder, options, value, onChange, 
 
   if (adding) {
     return (
-      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+      <div className="flex items-center gap-1">
         <input
           autoFocus
           value={newName}
@@ -58,30 +59,21 @@ export default function TaxonomySelect({ placeholder, options, value, onChange, 
             if (e.key === "Escape") { setAdding(false); setNewName(""); }
           }}
           placeholder={placeholder + "…"}
-          style={{
-            width: width - 10, background: C.s2, border: `1px solid ${accent}60`,
-            borderRadius: 6, color: C.tx, fontSize: 12,
-            padding: "6px 10px", fontFamily: "inherit", outline: "none",
-          }}
+          // Largeur et teinte = props : restent en style.
+          className="rounded-[6px] border bg-agon-s2 px-2.5 py-1.5 text-[12px] text-agon-tx outline-none"
+          style={{ width: width - 10, borderColor: accent + "60" }}
         />
         <button
           onClick={handleCreate}
           disabled={saving || !newName.trim()}
-          style={{
-            padding: "6px 10px", borderRadius: 6, border: "none",
-            background: accent, color: H.encreOr, fontSize: 12, fontWeight: 700,
-            cursor: "pointer", fontFamily: "inherit", opacity: saving || !newName.trim() ? 0.5 : 1,
-          }}
+          className={cn("cursor-pointer rounded-[6px] px-2.5 py-1.5 text-[12px] font-bold text-agon-ink", saving || !newName.trim() ? "opacity-50" : "opacity-100")}
+          style={{ background: accent }}
         >
           {saving ? "…" : "OK"}
         </button>
         <button
           onClick={() => { setAdding(false); setNewName(""); }}
-          style={{
-            padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.brd}`,
-            background: "transparent", color: C.tx3, fontSize: 12,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
+          className="cursor-pointer rounded-[6px] border border-agon-brd bg-transparent px-2 py-1.5 text-[12px] text-agon-tx3"
         >
           ✕
         </button>
@@ -97,24 +89,24 @@ export default function TaxonomySelect({ placeholder, options, value, onChange, 
         onChange(v === NONE ? null : v);
       }}
     >
-      <SelectTrigger style={{ width, background: C.s2, border: `1px solid ${C.brd}`, color: C.tx, fontSize: 12, borderRadius: 4 }}>
+      <SelectTrigger className="rounded border-agon-brd bg-agon-s2 text-[12px] leading-5 text-agon-tx" style={{ width }}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       {/* zIndex > modals (91/310) sinon le dropdown passe derrière les popups */}
-      <SelectContent style={{ zIndex: 400 }}>
+      <SelectContent className="z-[400]">
         <SelectItem value={NONE}>
-          <span style={{ color: C.tx3 }}>{placeholder}</span>
+          <span className="text-agon-tx3">{placeholder}</span>
         </SelectItem>
         {options.map((o) => (
           <SelectItem key={o.id} value={o.id}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              {o.color && <span style={{ width: 7, height: 7, borderRadius: 999, background: o.color, display: "inline-block" }} />}
+            <span className="inline-flex items-center gap-1.5">
+              {o.color && <span className="inline-block h-[7px] w-[7px] rounded-full" style={{ background: o.color }} />}
               {o.name}
             </span>
           </SelectItem>
         ))}
         <SelectItem value="__add__">
-          <span style={{ color: accent, fontWeight: 600 }}>+ Ajouter…</span>
+          <span className="font-semibold" style={{ color: accent }}>+ Ajouter…</span>
         </SelectItem>
       </SelectContent>
     </Select>

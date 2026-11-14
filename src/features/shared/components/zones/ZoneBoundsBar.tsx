@@ -1,5 +1,3 @@
-import { C } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { zoneColor } from "@/lib/seance";
 import { zoneNames } from "@shared/domain/hrZones";
 
@@ -11,19 +9,19 @@ export function ZoneBoundsBar({ bounds }: { bounds: readonly number[] }) {
   const n = bounds.length + 1;
   const names = zoneNames(n);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div aria-hidden style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden" }}>
-        {names.map((_, i) => <span key={i} style={{ flex: 1, background: zoneColor(i + 1, n) }} />)}
+    <div className="flex flex-col gap-1.5">
+      <div aria-hidden className="flex h-2 overflow-hidden rounded-[4px]">
+        {names.map((_, i) => <span key={i} className="flex-1" style={{ background: zoneColor(i + 1, n) }} />)}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", columnGap: 10, rowGap: 4, alignItems: "center" }}>
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 gap-y-1">
         {names.map((name, i) => {
           const lo = i === 0 ? null : bounds[i - 1];
           const hi = i === n - 1 ? null : bounds[i] - 1;
           return (
-            <div key={i} style={{ display: "contents" }}>
-              <span style={{ ...MONO, fontSize: 11, color: C.bg, background: zoneColor(i + 1, n), borderRadius: 999, padding: "1px 7px" }}>Z{i + 1}</span>
-              <span style={{ fontSize: 12, color: C.tx2 }}>{name}</span>
-              <span style={{ ...MONO, fontSize: 12, color: C.tx, textAlign: "right" }}>
+            <div key={i} className="contents">
+              <span className="agon-mono rounded-full px-[7px] py-px text-[11px] text-agon-bg" style={{ background: zoneColor(i + 1, n) }}>Z{i + 1}</span>
+              <span className="text-[12px] text-agon-tx2">{name}</span>
+              <span className="agon-mono text-right text-[12px] text-agon-tx">
                 {lo == null ? `< ${bounds[0]}` : hi == null ? `≥ ${lo}` : `${lo}–${hi}`} bpm
               </span>
             </div>

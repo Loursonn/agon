@@ -9,14 +9,16 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { ExerciseInterval, IntervalRole } from "@/types/energy";
 import { genId } from "@/lib/energy/treeUtils";
 import { ExerciceSearch } from "@/features/coach/components/programmation/ExerciceSearch";
 import { toast } from "sonner";
 import { saveExerciseYoutubeId } from "@/api/energy";
 
-const EXO_COLOR = C.ac;
+const LABEL = "mb-1 block text-[11px] font-semibold text-agon-tx3";
+const INPUT = "box-border w-full rounded border border-agon-brd-l bg-agon-s2 px-2.5 py-2 text-[13px] text-agon-tx outline-none";
+const TRIGGER = "border-agon-brd-l bg-agon-s2 text-[12px] leading-5 text-agon-tx";
 
 const ROLES: { value: IntervalRole; label: string }[] = [
   { value: "work",     label: "Effort" },
@@ -115,30 +117,20 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
     onOpenChange(false);
   }
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: 11, color: C.tx3, fontWeight: 600, marginBottom: 4, display: "block",
-  };
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "8px 10px", borderRadius: 4,
-    border: `1px solid ${C.brdL}`, background: C.s2,
-    color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
-    boxSizing: "border-box",
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" style={{ background: C.bg, borderLeft: `1px solid ${C.brd}`, width: 380, maxWidth: "100vw", display: "flex", flexDirection: "column" }}>
+      <SheetContent side="right" className="flex w-[380px] max-w-[100vw] flex-col border-l border-agon-brd bg-agon-bg sm:max-w-[100vw]">
         <SheetHeader>
-          <SheetTitle style={{ color: C.tx, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: EXO_COLOR, flexShrink: 0 }} />
+          <SheetTitle className="flex items-center gap-2 text-agon-tx">
+            <span className="h-2 w-2 shrink-0 rounded-[50%] bg-agon-accent" />
             {isNew ? "Ajouter un exercice" : "Modifier l'exercice"}
           </SheetTitle>
         </SheetHeader>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 0", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto py-4">
           {/* Exercise picker */}
           <div>
-            <label style={labelStyle}>Exercice</label>
+            <label className={LABEL}>Exercice</label>
             {showSearch ? (
               <ExerciceSearch
                 value={exerciseName}
@@ -154,23 +146,19 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
             ) : (
               <button
                 onClick={() => setShowSearch(true)}
-                style={{
-                  ...inputStyle,
-                  cursor: "pointer", textAlign: "left",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                }}
+                className={cn(INPUT, "flex cursor-pointer items-center justify-between text-left")}
               >
-                <span style={{ color: exerciseName ? C.tx : C.tx3 }}>
+                <span className={exerciseName ? "text-agon-tx" : "text-agon-tx3"}>
                   {exerciseName || "Choisir un exercice…"}
                 </span>
-                <span style={{ fontSize: 10, color: EXO_COLOR }}></span>
+                <span className="text-[10px] text-agon-accent"></span>
               </button>
             )}
           </div>
 
           {/* Video link */}
           <div>
-            <label style={labelStyle}>Lien vidéo YouTube</label>
+            <label className={LABEL}>Lien vidéo YouTube</label>
             <input
               value={youtubeId ? `https://youtube.com/watch?v=${youtubeId}` : ""}
               onChange={(e) => {
@@ -180,19 +168,16 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
                 setYoutubeId(m ? m[1] : raw);
               }}
               placeholder="https://youtube.com/watch?v=..."
-              style={inputStyle}
+              className={INPUT}
             />
           </div>
 
           {/* Video preview */}
           {youtubeId && (
-            <div style={{
-              position: "relative", paddingBottom: "56.25%", borderRadius: 4, overflow: "hidden",
-              border: `1px solid ${C.brdL}`,
-            }}>
+            <div className="relative overflow-hidden rounded border border-agon-brd-l pb-[56.25%]">
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
-                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                className="absolute left-0 top-0 h-full w-full border-none"
                 allow="encrypted-media"
                 allowFullScreen
               />
@@ -201,9 +186,9 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
 
           {/* Role */}
           <div>
-            <label style={labelStyle}>Rôle</label>
+            <label className={LABEL}>Rôle</label>
             <Select value={role} onValueChange={(v) => setRole(v as IntervalRole)}>
-              <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brdL}`, color: C.tx, fontSize: 12 }}>
+              <SelectTrigger className={TRIGGER}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -214,39 +199,39 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
 
           {/* Reps range */}
           <div>
-            <label style={labelStyle}>Répétitions</label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <label className={LABEL}>Répétitions</label>
+            <div className="flex items-center gap-2">
               <input
                 type="number" min={0}
                 value={repsMin ?? ""}
                 onChange={(e) => setRepsMin(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="Min"
-                style={{ ...inputStyle, flex: 1 }}
+                className={cn(INPUT, "flex-1")}
               />
-              <span style={{ color: C.tx3, fontSize: 13 }}>–</span>
+              <span className="text-[13px] text-agon-tx3">–</span>
               <input
                 type="number" min={0}
                 value={repsMax ?? ""}
                 onChange={(e) => setRepsMax(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="Max (optionnel)"
-                style={{ ...inputStyle, flex: 1 }}
+                className={cn(INPUT, "flex-1")}
               />
             </div>
           </div>
 
           {/* Weight */}
           <div>
-            <label style={labelStyle}>Charge</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <label className={LABEL}>Charge</label>
+            <div className="flex gap-2">
               <input
                 type="number" min={0} step={0.5}
                 value={weightKg ?? ""}
                 onChange={(e) => setWeightKg(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="—"
-                style={{ ...inputStyle, flex: 1 }}
+                className={cn(INPUT, "flex-1")}
               />
               <Select value={weightUnit} onValueChange={(v) => setWeightUnit(v as "kg" | "bw" | "pct_rm")}>
-                <SelectTrigger style={{ width: 120, background: C.s2, border: `1px solid ${C.brdL}`, color: C.tx, fontSize: 12 }}>
+                <SelectTrigger className={cn(TRIGGER, "w-[120px]")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -258,17 +243,17 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
 
           {/* Duration / distance (optional) */}
           <div>
-            <label style={labelStyle}>Durée ou distance (optionnel)</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <label className={LABEL}>Durée ou distance (optionnel)</label>
+            <div className="flex gap-2">
               <input
                 type="number" min={0}
                 value={durationS ?? ""}
                 onChange={(e) => setDurationS(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="Laisser vide si reps uniquement"
-                style={{ ...inputStyle, flex: 1 }}
+                className={cn(INPUT, "flex-1")}
               />
               <Select value={durationKind} onValueChange={(v) => setDurationKind(v as "time" | "distance")}>
-                <SelectTrigger style={{ width: 120, background: C.s2, border: `1px solid ${C.brdL}`, color: C.tx, fontSize: 12 }}>
+                <SelectTrigger className={cn(TRIGGER, "w-[120px]")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,39 +266,33 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
 
           {/* Notes */}
           <div>
-            <label style={labelStyle}>Notes</label>
+            <label className={LABEL}>Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Standard RX, tempo 3010…"
               rows={2}
-              style={{ ...inputStyle, resize: "vertical" }}
+              className={cn(INPUT, "resize-y")}
             />
           </div>
 
         </div>
 
-        <SheetFooter style={{ borderTop: `1px solid ${C.brd}`, paddingTop: 12 }}>
-          <div style={{ display: "flex", gap: 8, width: "100%" }}>
+        <SheetFooter className="border-t border-agon-brd pt-3">
+          <div className="flex w-full gap-2">
             <button
               onClick={() => onOpenChange(false)}
-              style={{
-                flex: 1, padding: "10px 14px", borderRadius: 4,
-                border: `1px solid ${C.brdL}`, background: "transparent",
-                color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="flex-1 cursor-pointer rounded border border-agon-brd-l bg-transparent px-3.5 py-2.5 text-[13px] text-agon-tx2"
             >
               Annuler
             </button>
             <button
               onClick={handleSave}
               disabled={!exerciseId}
-              style={{
-                flex: 1, padding: "10px 14px", borderRadius: 4,
-                border: "none", background: EXO_COLOR, color: C.tx,
-                fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                opacity: exerciseId ? 1 : 0.5,
-              }}
+              className={cn(
+                "flex-1 cursor-pointer rounded bg-agon-accent px-3.5 py-2.5 text-[13px] font-bold text-agon-tx",
+                exerciseId ? "opacity-100" : "opacity-50",
+              )}
             >
               {isNew ? "Ajouter" : "Enregistrer"}
             </button>

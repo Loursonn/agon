@@ -3,12 +3,16 @@
  * RPE (1-10), respected (oui/adaptée), free text comment.
  */
 import { useState } from "react";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 interface Props {
   onSubmit: (data: { rpe: number; respected: boolean; comment: string }) => void;
   isPending?: boolean;
 }
+
+const LABEL = "mb-2 block text-[12px] font-semibold text-agon-tx3";
+const CHOICE = "cursor-pointer rounded-[4px] border font-semibold";
+const IDLE = "border-agon-brd bg-agon-s2 text-agon-tx3";
 
 export default function SessionEndForm({ onSubmit, isPending }: Props) {
   const [rpe, setRpe] = useState<number | null>(null);
@@ -24,28 +28,19 @@ export default function SessionEndForm({ onSubmit, isPending }: Props) {
   }
 
   return (
-    <div style={{
-      background: `var(--card, ${C.bg})`, border: `1px solid var(--border, ${H.anthracite})`,
-      borderRadius: 6, padding: 18,
-    }}>
+    <div className="rounded-[6px] border border-agon-brd bg-agon-s1 p-[18px]">
       {/* RPE */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: 12, color: H.grisClair, fontWeight: 600, marginBottom: 8 }}>
-          RPE global (1-10)
-        </label>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+      <div className="mb-4">
+        <label className={LABEL}>RPE global (1-10)</label>
+        <div className="flex flex-wrap gap-[5px]">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
             <button
               key={v}
               onClick={() => setRpe(v)}
-              style={{
-                flex: 1, minWidth: 30,
-                background: rpe === v ? "rgba(229,72,77,0.15)" : `var(--card2, ${H.carte})`,
-                border: `1px solid ${rpe === v ? H.rougeDoux : `var(--border, ${H.anthracite})`}`,
-                color: rpe === v ? H.rougeDoux : H.grisClair,
-                borderRadius: 4, padding: "9px 0", fontWeight: 700,
-                cursor: "pointer", fontSize: 13, fontFamily: "inherit",
-              }}
+              className={cn(
+                "min-w-[30px] flex-1 cursor-pointer rounded-[4px] border py-[9px] text-[13px] font-bold",
+                rpe === v ? "border-agon-erreur bg-agon-erreur/[0.15] text-agon-erreur" : IDLE,
+              )}
             >
               {v}
             </button>
@@ -54,32 +49,18 @@ export default function SessionEndForm({ onSubmit, isPending }: Props) {
       </div>
 
       {/* Respected */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: 12, color: H.grisClair, fontWeight: 600, marginBottom: 8 }}>
-          Séance respectée ?
-        </label>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div className="mb-4">
+        <label className={LABEL}>Séance respectée ?</label>
+        <div className="grid grid-cols-[1fr_1fr] gap-2">
           <button
             onClick={() => setRespected(true)}
-            style={{
-              background: respected === true ? "rgba(34,201,147,0.1)" : `var(--card2, ${H.carte})`,
-              border: `1px solid ${respected === true ? C.g : `var(--border, ${H.anthracite})`}`,
-              color: respected === true ? C.g : H.grisClair,
-              borderRadius: 4, padding: 10, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
+            className={cn(CHOICE, "p-2.5", respected === true ? "border-agon-succes bg-agon-succes/[0.1] text-agon-succes" : IDLE)}
           >
             Oui ✓
           </button>
           <button
             onClick={() => setRespected(false)}
-            style={{
-              background: respected === false ? "rgba(245,166,35,0.1)" : `var(--card2, ${H.carte})`,
-              border: `1px solid ${respected === false ? H.miel : `var(--border, ${H.anthracite})`}`,
-              color: respected === false ? H.miel : H.grisClair,
-              borderRadius: 4, padding: 10, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
+            className={cn(CHOICE, "p-2.5", respected === false ? "border-agon-alerte bg-agon-alerte/[0.1] text-agon-alerte" : IDLE)}
           >
             Adaptée
           </button>
@@ -87,22 +68,14 @@ export default function SessionEndForm({ onSubmit, isPending }: Props) {
       </div>
 
       {/* Comment */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: 12, color: H.grisClair, fontWeight: 600, marginBottom: 8 }}>
-          Ressenti / commentaire
-        </label>
+      <div className="mb-4">
+        <label className={LABEL}>Ressenti / commentaire</label>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={2}
           placeholder="Dernier tour dur, cardio ok…"
-          style={{
-            width: "100%", background: `var(--card2, ${H.carte})`,
-            border: `1px solid var(--border, ${H.anthracite})`,
-            borderRadius: 4, color: H.blancCasse, padding: "10px 12px",
-            fontSize: 14, fontFamily: "inherit", outline: "none",
-            boxSizing: "border-box", resize: "vertical",
-          }}
+          className="box-border w-full resize-y rounded-[4px] border border-agon-brd bg-agon-s2 px-3 py-2.5 text-[14px] text-agon-tx [outline:none]"
         />
       </div>
 
@@ -110,12 +83,10 @@ export default function SessionEndForm({ onSubmit, isPending }: Props) {
       <button
         onClick={handleSubmit}
         disabled={isPending}
-        style={{
-          width: "100%", background: C.g, color: H.vertNuit,
-          border: "none", borderRadius: 6, padding: 13,
-          fontSize: 15, fontWeight: 700, cursor: "pointer",
-          fontFamily: "inherit", opacity: isPending ? 0.7 : 1,
-        }}
+        className={cn(
+          "w-full cursor-pointer rounded-[6px] border-none bg-agon-succes p-[13px] text-[15px] font-bold text-agon-ink",
+          isPending ? "opacity-70" : "opacity-100",
+        )}
       >
         {isPending ? "Enregistrement…" : "Terminer la séance"}
       </button>

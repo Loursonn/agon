@@ -21,7 +21,7 @@ Légende : **[C]** = n'apparaît que si le coach l'a activé ou renseigné.
 2. **Confirmation par e-mail** avant la première connexion (penser aux spams).
 3. **Écran « Avant de commencer »** à la première connexion :
    - accord obligatoire sur le traitement des données de santé et leur partage avec le coach ;
-   - accord facultatif IA (Google Gemini) : si refusé, le coach construit les programmes à la main. Modifiable à tout moment dans Profil → Confidentialité.
+   - accord facultatif IA (Claude, Anthropic) : si refusé, le coach construit les programmes à la main. Modifiable à tout moment dans Profil → Confidentialité.
 4. Mot de passe oublié → lien par e-mail. La déconnexion ne ferme que l'appareil courant.
 5. **Changer de coach** : tiroir Profil → « Mon coach » → « Quitter mon coach » puis « Rejoindre un coach » avec le nouveau code. L'historique est conservé.
 

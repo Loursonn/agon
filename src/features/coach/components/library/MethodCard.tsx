@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { Pencil, Copy, Trash2, ChevronDown, ChevronUp, Star } from "lucide-react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { MethodPreview } from "./MethodPreview";
 import { methodConfigToText } from "./methodConfigConvert";
 import type { TrainingMethod, MethodScope, FullWeekConfig, MethodConfig } from "@/types/trainingMethods";
@@ -17,12 +17,16 @@ const SCOPE_LABEL: Record<MethodScope, string> = {
   exercise: "Exercice",
 };
 
-const SCOPE_COLOR: Record<MethodScope, string> = {
-  classic:  C.g,
-  set:      C.ac,
-  exercise: C.coach,
+/** Bandeau et pastille de portée (classes écrites en entier pour Tailwind). */
+const SCOPE_TONE: Record<MethodScope | "none", { stripe: string; badge: string }> = {
+  classic:  { stripe: "bg-agon-succes", badge: "bg-agon-succes/[0.125] text-agon-succes" },
+  set:      { stripe: "bg-agon-accent", badge: "bg-agon-accent/[0.125] text-agon-accent" },
+  exercise: { stripe: "bg-agon-coach",  badge: "bg-agon-coach/[0.125] text-agon-coach" },
+  none:     { stripe: "bg-agon-tx3",    badge: "bg-agon-tx3/[0.125] text-agon-tx3" },
 };
 
+const BADGE = "rounded px-1.5 py-0.5 text-[9px] font-bold";
+const OUTLINE_BTN = "cursor-pointer rounded border border-agon-brd-l bg-transparent text-[11px]";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -42,60 +46,43 @@ export function MethodCard({
   const [expanded, setExpanded] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
 
-  const scopeColor = SCOPE_COLOR[method.scope] ?? C.tx3;
+  const scope = SCOPE_TONE[method.scope] ?? SCOPE_TONE.none;
   const weeklyConfigs = (method.config as unknown as Record<string, unknown>)?.weekly_configs as FullWeekConfig[] | undefined;
   const weekCount = weeklyConfigs?.length ?? 0;
 
   return (
-    <div style={{
-      background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6,
-      overflow: "hidden", display: "flex", flexDirection: "column",
-      transition: "border-color 150ms",
-    }}>
+    <div className="flex flex-col overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1 [transition:border-color_150ms]">
       {/* Color stripe */}
-      <div style={{ height: 3, background: scopeColor }} />
+      <div className={cn("h-[3px]", scope.stripe)} />
 
-      <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="flex flex-col gap-2.5 px-4 py-3.5">
         {/* Header row */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 6, lineHeight: 1.3 }}>
+        <div className="flex items-start gap-2.5">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 text-[14px] font-bold leading-[1.3] text-agon-tx">
               {method.name}
             </div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <div className="flex flex-wrap gap-[5px]">
               {/* Scope badge */}
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                background: `${scopeColor}20`, color: scopeColor, textTransform: "uppercase",
-              }}>
+              <span className={cn(BADGE, "uppercase", scope.badge)}>
                 {SCOPE_LABEL[method.scope]}
               </span>
               {/* Category badge */}
               {method.category && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: `${C.tx3}15`, color: C.tx3, textTransform: "uppercase",
-                }}>
+                <span className={cn(BADGE, "uppercase bg-agon-tx3/[0.082] text-agon-tx3")}>
                   {method.category}
                 </span>
               )}
               {/* Multi-week badge */}
               {weekCount > 0 && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: "rgba(123,111,255,0.15)", color: C.ac,
-                }}>
+                <span className={cn(BADGE, "bg-agon-accent/[0.15] text-agon-accent")}>
                   {weekCount} sem.
                 </span>
               )}
               {/* Official badge */}
               {method.is_official && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: C.yS, color: C.y,
-                  display: "inline-flex", alignItems: "center", gap: 3,
-                }}>
-                  <Star size={8} fill={C.y} /> Officiel
+                <span className={cn(BADGE, "inline-flex items-center gap-[3px] bg-agon-or-clair-doux text-agon-or-clair")}>
+                  <Star size={8} className="fill-agon-or-clair" /> Officiel
                 </span>
               )}
             </div>
@@ -104,11 +91,10 @@ export function MethodCard({
 
         {/* Description */}
         {method.description && (
-          <div style={{
-            fontSize: 12, color: C.tx3, lineHeight: 1.5,
-            display: "-webkit-box", WebkitLineClamp: expanded ? undefined : 2,
-            WebkitBoxOrient: "vertical", overflow: expanded ? "visible" : "hidden",
-          }}>
+          <div className={cn(
+            "text-[12px] leading-[1.5] text-agon-tx3 [display:-webkit-box] [-webkit-box-orient:vertical]",
+            expanded ? "overflow-visible" : "overflow-hidden [-webkit-line-clamp:2]",
+          )}>
             {method.description}
           </div>
         )}
@@ -118,11 +104,11 @@ export function MethodCard({
 
         {/* Weekly protocol display */}
         {weekCount > 0 && weeklyConfigs && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
+          <div className="mt-1 flex flex-col gap-[3px]">
             {weeklyConfigs.map((wc) => (
-              <div key={wc.week} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                <span style={{ fontSize: 9, fontWeight: 700, color: C.ac, flexShrink: 0, minWidth: 20 }}>S{wc.week}</span>
-                <span style={{ fontSize: 10, color: C.tx3, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div key={wc.week} className="flex items-baseline gap-2">
+                <span className="min-w-[20px] shrink-0 text-[9px] font-bold text-agon-accent">S{wc.week}</span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-agon-tx3 [font-family:monospace]">
                   {wc.config ? methodConfigToText(wc.config as MethodConfig) : "—"}
                 </span>
               </div>
@@ -132,12 +118,9 @@ export function MethodCard({
 
         {/* Tags */}
         {method.tags.length > 0 && (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <div className="flex flex-wrap gap-1">
             {method.tags.map((tag) => (
-              <span key={tag} style={{
-                fontSize: 10, padding: "2px 7px", borderRadius: 6,
-                background: C.s2, color: C.tx3, border: `1px solid ${C.brdL}`,
-              }}>
+              <span key={tag} className="rounded-[6px] border border-agon-brd-l bg-agon-s2 px-[7px] py-0.5 text-[10px] text-agon-tx3">
                 {tag}
               </span>
             ))}
@@ -145,7 +128,7 @@ export function MethodCard({
         )}
 
         {/* Author */}
-        <div style={{ fontSize: 10, color: C.tx3 }}>
+        <div className="text-[10px] text-agon-tx3">
           {method.is_official ? "Méthode officielle" : creatorName ? `Par ${creatorName}` : "Coach"}
         </div>
 
@@ -154,11 +137,7 @@ export function MethodCard({
           <button
             type="button"
             onClick={() => setExpanded((p) => !p)}
-            style={{
-              background: "none", border: "none", cursor: "pointer", color: C.tx3,
-              fontSize: 11, display: "flex", alignItems: "center", gap: 4, padding: 0,
-              fontFamily: "inherit",
-            }}
+            className="flex cursor-pointer items-center gap-1 bg-transparent p-0 text-[11px] text-agon-tx3"
           >
             {expanded ? <><ChevronUp size={12} /> Réduire</> : <><ChevronDown size={12} /> Voir plus</>}
           </button>
@@ -166,18 +145,12 @@ export function MethodCard({
 
         {/* Actions */}
         {canEdit && (
-          <div style={{ display: "flex", gap: 6, paddingTop: 6, borderTop: `1px solid ${C.brd}` }}>
+          <div className="flex gap-1.5 border-t border-agon-brd pt-1.5">
             {onEdit && (
               <button
                 type="button"
                 onClick={() => onEdit(method)}
-                style={{
-                  flex: 1, padding: "6px 0", borderRadius: 4,
-                  border: `1px solid ${C.brdL}`, background: "transparent",
-                  color: C.tx2, fontSize: 11, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                }}
+                className={cn(OUTLINE_BTN, "flex flex-1 items-center justify-center gap-[5px] py-1.5 font-semibold text-agon-tx2")}
               >
                 <Pencil size={11} /> Modifier
               </button>
@@ -186,12 +159,7 @@ export function MethodCard({
               <button
                 type="button"
                 onClick={() => onDuplicate(method)}
-                style={{
-                  padding: "6px 10px", borderRadius: 4,
-                  border: `1px solid ${C.brdL}`, background: "transparent",
-                  color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}
+                className={cn(OUTLINE_BTN, "flex items-center justify-center px-2.5 py-1.5 text-agon-tx3")}
                 title="Dupliquer"
               >
                 <Copy size={12} />
@@ -201,39 +169,25 @@ export function MethodCard({
               <button
                 type="button"
                 onClick={() => setConfirmDel(true)}
-                style={{
-                  padding: "6px 10px", borderRadius: 4,
-                  border: `1px solid ${C.r}40`, background: C.rS,
-                  color: C.r, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}
+                className="flex cursor-pointer items-center justify-center rounded border border-agon-erreur/25 bg-agon-erreur-doux px-2.5 py-1.5 text-[11px] text-agon-erreur"
                 title="Supprimer"
               >
                 <Trash2 size={12} />
               </button>
             )}
             {onDelete && confirmDel && (
-              <div style={{ display: "flex", gap: 5, flex: 1 }}>
+              <div className="flex flex-1 gap-[5px]">
                 <button
                   type="button"
                   onClick={() => { onDelete(method); setConfirmDel(false); }}
-                  style={{
-                    flex: 1, padding: "6px 0", borderRadius: 4,
-                    border: "none", background: C.r,
-                    color: C.tx, fontSize: 11, fontWeight: 700,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className="flex-1 cursor-pointer rounded bg-agon-erreur py-1.5 text-[11px] font-bold text-agon-tx"
                 >
                   Confirmer
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDel(false)}
-                  style={{
-                    padding: "6px 10px", borderRadius: 4,
-                    border: `1px solid ${C.brdL}`, background: "transparent",
-                    color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  className={cn(OUTLINE_BTN, "px-2.5 py-1.5 text-agon-tx3")}
                 >
                   Annuler
                 </button>

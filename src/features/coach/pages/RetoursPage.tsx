@@ -14,10 +14,19 @@ import {
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare, Footprints } from "lucide-react";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
-import { C, H, alpha } from "@/lib/theme";
-import { DISPLAY, KICK, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 
-const RETOURS_TITLE: React.CSSProperties = { margin: "0 0 12px", ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx };
+const RETOURS_TITLE = "agon-display m-0 mb-3 text-[30px] font-medium tracking-[0.06em] text-agon-tx leading-[1.1]";
+const KICK = "agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em]";
+const NAV_BTN = "flex size-7 cursor-pointer items-center justify-center rounded-[4px] border border-agon-brd bg-agon-s1 text-agon-tx2";
+const PAGE = "px-4 pb-20 pt-4 md:px-5";
+/** Statut d'une séance modifiée par l'athlète. */
+const MOD_STATUS_TONE: Record<string, string> = {
+  completed: "bg-agon-succes-doux text-agon-succes",
+  missed: "bg-agon-erreur/[0.12] text-agon-erreur",
+};
 import { MuscleVolumePanel } from "@/features/coach/components/programmation/MuscleVolumePanel";
 import { useMuscleVolume } from "@/features/coach/components/programmation/hooks/useMuscleVolume";
 import { localISO } from "@/lib/date";
@@ -136,11 +145,11 @@ export default function RetoursPage() {
   const activeQ = viewMode === "month" ? monthQ : weekQ;
   if (activeQ.isError && !activeQ.data) {
     return (
-      <div style={{ padding: 32, textAlign: "center", color: C.tx2, fontSize: 14 }}>
-        <p style={{ marginBottom: 12 }}>Les retours de cette période n'ont pas pu être chargés.</p>
+      <div className="p-8 text-center text-[14px] text-agon-tx2">
+        <p className="mb-3">Les retours de cette période n'ont pas pu être chargés.</p>
         <button
           onClick={() => void activeQ.refetch()}
-          style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, cursor: "pointer", fontFamily: "inherit" }}
+          className="cursor-pointer rounded-[6px] border border-agon-brd-l bg-transparent px-4 py-2 text-agon-tx"
         >
           Réessayer
         </button>
@@ -228,12 +237,12 @@ export default function RetoursPage() {
 
   const firstName = ((athleteProfile as { full_name?: string | null } | null)?.full_name ?? "").trim().split(/\s+/)[0] || "L’athlète";
   const tabSwitch = (
-    <div role="tablist" style={{ display: "flex", background: C.s2, borderRadius: 8, padding: 2, alignSelf: "flex-start", marginBottom: 16 }}>
+    <div role="tablist" className="mb-4 flex self-start rounded-[8px] bg-agon-s2 p-0.5">
       {(["wellness", "bienetre", "sante"] as const).map((k) => (
-        <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} style={{
-          padding: "5px 14px", borderRadius: 6, border: "none", background: tab === k ? C.s1 : "transparent",
-          color: tab === k ? C.tx : C.tx3, fontSize: 12, fontWeight: tab === k ? 600 : 500, cursor: "pointer", fontFamily: "inherit",
-        }}>
+        <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn(
+          "cursor-pointer rounded-[6px] border-none px-3.5 py-[5px] text-[12px]",
+          tab === k ? "bg-agon-s1 font-semibold text-agon-tx" : "bg-transparent font-medium text-agon-tx3",
+        )}>
           {k === "wellness" ? "Retours" : k === "bienetre" ? "Wellness" : "Santé"}
         </button>
       ))}
@@ -242,8 +251,8 @@ export default function RetoursPage() {
 
   if (tab === "bienetre" && athleteId) {
     return (
-      <div style={{ padding: "16px 20px 80px", display: "flex", flexDirection: "column" }}>
-        <h1 style={RETOURS_TITLE}>Retours</h1>
+      <div className={cn(PAGE, "flex flex-col")}>
+        <h1 className={RETOURS_TITLE}>Retours</h1>
         {tabSwitch}
         <CoachWellnessPanel athleteId={athleteId} firstName={firstName} />
       </div>
@@ -252,15 +261,15 @@ export default function RetoursPage() {
 
   if (tab === "sante" && athleteId) {
     return (
-      <div style={{ padding: "16px 20px 80px", display: "flex", flexDirection: "column" }}>
-        <h1 style={RETOURS_TITLE}>Retours</h1>
+      <div className={cn(PAGE, "flex flex-col")}>
+        <h1 className={RETOURS_TITLE}>Retours</h1>
         {tabSwitch}
         <AthleteSantePage
           coachView={{ firstName }}
           top={
-            <section style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+            <section className="mb-3 flex flex-col gap-2.5">
               <SanteKicker n={1}>Ressenti / mesuré · ce matin</SanteKicker>
-              <div style={{ fontSize: 12.5, color: C.tx3 }}>Ce que {firstName} déclare face à ce que mesure sa montre.</div>
+              <div className="text-[12.5px] text-agon-tx3">Ce que {firstName} déclare face à ce que mesure sa montre.</div>
               <FeltVsMeasured athleteId={athleteId} firstName={firstName} />
             </section>
           }
@@ -277,27 +286,24 @@ export default function RetoursPage() {
   }
 
   return (
-    <div style={{ padding: "16px 20px 80px" }}>
+    <div className={PAGE}>
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 style={{ ...RETOURS_TITLE, marginBottom: 6 }}>Retours</h1>
-          <div style={{ ...KICK, color: C.ac }}>{periodLabel}</div>
+          <h1 className={cn(RETOURS_TITLE, "mb-1.5")}>Retours</h1>
+          <div className={cn(KICK, "text-agon-accent")}>{periodLabel}</div>
         </div>
 
         {/* View toggle + nav */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="flex items-center gap-2">
           {/* Month/Week toggle */}
-          <div style={{ display: "flex", background: C.s2, borderRadius: 4, padding: 2 }}>
+          <div className="flex rounded-[4px] bg-agon-s2 p-0.5">
             {(["week", "month"] as ViewMode[]).map((m) => (
-              <button key={m} onClick={() => setViewMode(m)} style={{
-                padding: "4px 10px", borderRadius: 6, border: "none",
-                background: viewMode === m ? C.s1 : "transparent",
-                color: viewMode === m ? C.tx : C.tx3,
-                fontSize: 11, fontWeight: viewMode === m ? 700 : 500,
-                cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-              }}>
+              <button key={m} onClick={() => setViewMode(m)} className={cn(
+                "cursor-pointer rounded-[6px] border-none px-2.5 py-1 text-[11px] [transition:all_120ms]",
+                viewMode === m ? "bg-agon-s1 font-bold text-agon-tx" : "bg-transparent font-medium text-agon-tx3",
+              )}>
                 {m === "week" ? "Semaine" : "Mois"}
               </button>
             ))}
@@ -308,7 +314,7 @@ export default function RetoursPage() {
             onClick={() => viewMode === "month"
               ? setSelectedMonth(m => subMonths(m, 1))
               : setSelectedWeek(w => subWeeks(w, 1))}
-            style={navBtn}
+            className={NAV_BTN}
           >
             <ChevronLeft size={14} />
           </button>
@@ -316,7 +322,7 @@ export default function RetoursPage() {
             onClick={() => viewMode === "month"
               ? setSelectedMonth(startOfMonth(new Date()))
               : setSelectedWeek(startOfWeek(new Date(), { weekStartsOn: 1 }))}
-            style={{ ...navBtn, padding: "5px 10px", fontSize: 11, fontWeight: 600 }}
+            className={cn(NAV_BTN, "px-2.5 py-[5px] text-[11px] font-semibold")}
           >
             Auj.
           </button>
@@ -324,7 +330,7 @@ export default function RetoursPage() {
             onClick={() => viewMode === "month"
               ? setSelectedMonth(m => addMonths(m, 1))
               : setSelectedWeek(w => addWeeks(w, 1))}
-            style={navBtn}
+            className={NAV_BTN}
           >
             <ChevronRight size={14} />
           </button>
@@ -334,12 +340,12 @@ export default function RetoursPage() {
       {tabSwitch}
 
       {/* Feu du matin calculé (règles du 07/11) */}
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-4">
         <WellnessLightBadge result={light.data} loading={light.isLoading} detail />
       </div>
 
       {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
+      <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5">
         {[
           { icon: <Heart size={14} />,           accent: C.g,     title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
           { icon: <Dumbbell size={14} />,        accent: C.ac,    title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate} %` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
@@ -353,16 +359,13 @@ export default function RetoursPage() {
       </div>
 
       {injuryDays.length > 0 && (
-        <div role="alert" style={{
-          marginBottom: 16, padding: "10px 14px", borderRadius: 8,
-          background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: H.rougeVif, marginBottom: 6 }}>
+        <div role="alert" className="mb-4 rounded-[8px] border border-agon-erreur/30 bg-agon-erreur/[0.08] px-3.5 py-2.5">
+          <div className="mb-1.5 text-[12px] font-bold text-agon-erreur">
             Blessé / malade signalé dans le wellness
           </div>
           {injuryDays.map(([d, note]) => (
-            <div key={d} style={{ fontSize: 12, color: C.tx, lineHeight: 1.5 }}>
-              <span style={{ color: C.tx3, marginRight: 8 }}>
+            <div key={d} className="text-[12px] text-agon-tx leading-normal">
+              <span className="mr-2 text-agon-tx3">
                 {format(new Date(d + "T12:00:00"), "EEE d MMM", { locale: fr })}
               </span>
               {note}
@@ -382,20 +385,20 @@ export default function RetoursPage() {
 
       {/* Coach retour */}
       {viewMode === "week" && (
-        <div style={{ position: "relative", overflow: "hidden", marginTop: 16, background: C.s1, borderRadius: 14, border: `1px solid ${alpha(C.ac, 0.4)}`, padding: "18px 20px 18px 23px" }}>
-          <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div className="relative mt-4 overflow-hidden rounded-[14px] border border-agon-accent/40 bg-agon-s1 py-[18px] pl-[23px] pr-5">
+          <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-agon-accent" />
+          <div className="mb-3 flex flex-wrap items-center gap-2.5">
             <MessageSquare size={14} color={C.ac} />
-            <span style={{ ...DISPLAY, fontSize: 14, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx }}>Retour coach</span>
+            <span className="agon-display text-[14px] font-medium tracking-[0.08em] text-agon-tx">Retour coach</span>
             {retourData?.comment && retourDraft === retourData.comment && (
-              <span style={{ ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ink, background: C.g, borderRadius: 999, padding: "4px 9px" }}>Enregistré</span>
+              <span className="agon-mono rounded-full bg-agon-succes px-[9px] py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-agon-ink">Enregistré</span>
             )}
             {retourData?.comment && (
-              <span style={{ marginLeft: "auto", fontSize: 11, color: C.tx3, display: "flex", alignItems: "center", gap: 5 }}>
+              <span className="ml-auto flex items-center gap-[5px] text-[11px] text-agon-tx3">
                 {retourData.athlete_reaction ? (
                   <>
                     Vu par l'athlète
-                    <span style={{ fontSize: 14 }}>{reactionEmoji(retourData.athlete_reaction)}</span>
+                    <span className="text-[14px]">{reactionEmoji(retourData.athlete_reaction)}</span>
                     {retourData.reacted_at && new Date(retourData.reacted_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                   </>
                 ) : "Pas encore vu"}
@@ -407,15 +410,9 @@ export default function RetoursPage() {
             onChange={(e) => setRetourDraft(e.target.value)}
             placeholder="Écris ton retour sur la semaine ici… L'athlète le verra sur son accueil jusqu'à ce qu'il réagisse."
             rows={4}
-            style={{
-              width: "100%", minHeight: 84, padding: "14px 16px", borderRadius: 10,
-              border: "1px solid " + C.brdL, background: C.bg,
-              color: C.tx, fontSize: 14, fontFamily: "inherit",
-              resize: "vertical", outline: "none", boxSizing: "border-box",
-              lineHeight: 1.5,
-            }}
+            className="box-border min-h-[84px] w-full resize-y rounded-[10px] border border-agon-brd-l bg-agon-bg px-4 py-3.5 text-[14px] text-agon-tx outline-none leading-normal"
           />
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <div className="mt-2 flex justify-end">
             <button
               onClick={() => {
                 if (!athleteId || !user?.id) return;
@@ -427,14 +424,11 @@ export default function RetoursPage() {
                 });
               }}
               disabled={upsertRetour.isPending || retourDraft.trim() === (retourData?.comment ?? "")}
-              style={{
-                height: 38, padding: "0 20px", borderRadius: 10,
-                border: "none",
-                background: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ac : C.s2,
-                color: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ink : C.tx3,
-                fontSize: 14, fontWeight: 600, cursor: "pointer",
-                fontFamily: "inherit", opacity: upsertRetour.isPending ? 0.6 : 1,
-              }}
+              className={cn(
+                "h-[38px] cursor-pointer rounded-[10px] border-none px-5 text-[14px] font-semibold",
+                retourDraft.trim() !== (retourData?.comment ?? "") ? "bg-agon-accent text-agon-ink" : "bg-agon-s2 text-agon-tx3",
+                upsertRetour.isPending && "opacity-60",
+              )}
             >
               {upsertRetour.isPending ? "Enregistrement…" : "Enregistrer"}
             </button>
@@ -535,15 +529,15 @@ export default function RetoursPage() {
 
       {/* ── Modifications planning athlète ── */}
       {modifications.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <div style={{ marginBottom: 12 }}>
+        <div className="mt-6">
+          <div className="mb-3">
             <SectionHead
               n={1}
               title="Modifications planning athlète"
-              right={<span style={{ ...MONO, fontSize: 11, padding: "2px 9px", borderRadius: 999, background: C.o, color: C.ink }}>{modifications.length}</span>}
+              right={<span className="agon-mono rounded-full bg-agon-alerte px-[9px] py-0.5 text-[11px] text-agon-ink">{modifications.length}</span>}
             />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {modifications.map((mod) => {
               const isAlert   = mod.coachAlert;
               const hasBonus  = mod.athleteModifications !== null;
@@ -557,49 +551,42 @@ export default function RetoursPage() {
               return (
                 <div
                   key={mod.id}
-                  style={{
-                    background: C.s1, borderRadius: 6, padding: "12px 14px",
-                    border: "1px solid " + (isAlert ? "rgba(245,158,11,0.4)" : C.brd),
-                  }}
+                  className={cn("rounded-[6px] border bg-agon-s1 px-3.5 py-3", isAlert ? "border-agon-alerte/40" : "border-agon-brd")}
                 >
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{mod.sessionName}</div>
-                      <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-bold text-agon-tx">{mod.sessionName}</div>
+                      <div className="mt-0.5 text-[11px] text-agon-tx3">
                         {dateLabel}
-                        {origLabel && <span style={{ color: H.ambre }}> · Décalée du {origLabel}</span>}
+                        {origLabel && <span className="text-agon-alerte"> · Décalée du {origLabel}</span>}
                       </div>
                       {mod.rescheduleReason && (
-                        <div style={{ fontSize: 11, color: C.tx3, marginTop: 4, fontStyle: "italic" }}>
+                        <div className="mt-1 text-[11px] italic text-agon-tx3">
                           « {mod.rescheduleReason} »
                         </div>
                       )}
                       {hasBonus && (
-                        <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {bonusSetsCount > 0 && (
-                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(245,158,11,0.1)", color: H.ambre, border: "1px solid rgba(245,158,11,0.25)" }}>
+                            <span className="rounded-[6px] border border-agon-alerte/25 bg-agon-alerte/10 px-2 py-0.5 text-[10px] text-agon-alerte">
                               +{bonusSetsCount} série{bonusSetsCount > 1 ? "s" : ""} bonus
                             </span>
                           )}
                           {customExCount > 0 && (
-                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(59,141,240,0.1)", color: C.b, border: "1px solid rgba(59,141,240,0.25)" }}>
+                            <span className="rounded-[6px] border border-agon-info/25 bg-agon-info/10 px-2 py-0.5 text-[10px] text-agon-info">
                               +{customExCount} exercice{customExCount > 1 ? "s" : ""} ajouté{customExCount > 1 ? "s" : ""}
                             </span>
                           )}
                         </div>
                       )}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                    <div className="flex flex-none flex-col items-end gap-1">
                       {isAlert && (
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(245,158,11,0.15)", color: H.ambre, border: "1px solid rgba(245,158,11,0.4)" }}>
+                        <span className="rounded-[6px] border border-agon-alerte/40 bg-agon-alerte/15 px-[7px] py-0.5 text-[9px] font-bold text-agon-alerte">
                           À vérifier
                         </span>
                       )}
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
-                        background: mod.status === "completed" ? C.gS : mod.status === "missed" ? "rgba(239,75,75,0.12)" : C.s2,
-                        color: mod.status === "completed" ? C.g : mod.status === "missed" ? C.r : C.tx3,
-                      }}>
+                      <span className={cn("rounded-[6px] px-[7px] py-0.5 text-[9px] font-bold", MOD_STATUS_TONE[mod.status] ?? "bg-agon-s2 text-agon-tx3")}>
                         {mod.status === "completed" ? "✓ Complétée" : mod.status === "missed" ? "Manquée" : mod.status === "in_progress" ? "En cours" : "Planifiée"}
                       </span>
                     </div>
@@ -612,7 +599,7 @@ export default function RetoursPage() {
       )}
 
       {/* ── Séries par muscle par semaine ── */}
-      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="mt-6 flex flex-col gap-3">
         <SectionHead n={modifications.length > 0 ? 2 : 1} title="Séries par muscle et par semaine" />
         <RetoursMuscleVolume athleteId={athleteId} weekStart={selectedWeek} />
       </div>
@@ -620,34 +607,36 @@ export default function RetoursPage() {
       {/* ── Blessures ── */}
       {/* Lues dans `medical_entries` : ce que le coach voit ici est exactement ce
           que l'athlète a déclaré, détail compris. */}
-      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="mt-6 flex flex-col gap-3">
         <SectionHead n={modifications.length > 0 ? 3 : 2} title="Blessures" />
         {injuries.length > 0 ? (
-          <div style={{ background: C.s1, borderRadius: 6, padding: 14, border: "1px solid " + C.r + "30" }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.r, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 10 }}>
+          <div className="rounded-[6px] border border-agon-erreur/[0.188] bg-agon-s1 p-3.5">
+            <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.5px] text-agon-erreur">
               Blessures ({activeCount} active{activeCount > 1 ? "s" : ""})
             </div>
             {injuries.map(inj => {
               const ongoing = inj.status === "en_cours";
-              const sc = ongoing ? C.r : C.g;
               return (
-                <div key={inj.id} style={{ padding: "8px 12px", borderRadius: 4, background: C.s2, border: "1px solid " + sc + "30", marginBottom: 4 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: C.tx }}>{inj.title}</div>
-                      <div style={{ fontSize: 10, color: C.tx3 }}>
+                <div key={inj.id} className={cn("mb-1 rounded-[4px] border bg-agon-s2 px-3 py-2", ongoing ? "border-agon-erreur/[0.188]" : "border-agon-succes/[0.188]")}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[12px] font-semibold text-agon-tx">{inj.title}</div>
+                      <div className="text-[10px] text-agon-tx3">
                         {[injurySummary(inj), fmtInjuryDate(inj.date), inj.declared_by ? DECLARED_BY_LABEL[inj.declared_by] : null]
                           .filter(Boolean).join(" · ")}
                       </div>
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: sc, padding: "2px 8px", borderRadius: 5, background: sc + "15", flexShrink: 0 }}>
+                    <span className={cn(
+                      "flex-none rounded-[5px] px-2 py-0.5 text-[10px] font-bold",
+                      ongoing ? "bg-agon-erreur/[0.082] text-agon-erreur" : "bg-agon-succes/[0.082] text-agon-succes",
+                    )}>
                       {MEDICAL_STATUS_LABEL[inj.status]}
                     </span>
                   </div>
                   {injuryFacts(inj).length > 0 && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {injuryFacts(inj).map(({ l, v }) => (
-                        <span key={l} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: C.s1, border: "1px solid " + C.brd, color: C.tx2 }}>
+                        <span key={l} className="rounded-[4px] border border-agon-brd bg-agon-s1 px-[7px] py-0.5 text-[9px] text-agon-tx2">
                           {l} : {v}
                         </span>
                       ))}
@@ -658,18 +647,11 @@ export default function RetoursPage() {
             })}
           </div>
         ) : (
-          <div style={{ background: C.s1, borderRadius: 6, padding: "14px", border: "1px solid " + C.g + "30", textAlign: "center" }}>
-            <span style={{ fontSize: 12, color: C.g, fontWeight: 600 }}>Aucune blessure</span>
+          <div className="rounded-[6px] border border-agon-succes/[0.188] bg-agon-s1 p-3.5 text-center">
+            <span className="text-[12px] font-semibold text-agon-succes">Aucune blessure</span>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-const navBtn: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center",
-  width: 28, height: 28, borderRadius: 4,
-  border: "1px solid " + C.brd, background: C.s1,
-  color: C.tx2, cursor: "pointer", fontFamily: "inherit",
-};

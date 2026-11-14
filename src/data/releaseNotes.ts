@@ -38,6 +38,156 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-acces-base-plus-rapide",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Pages plus rapides : les contrôles d'accès allégés",
+    summary:
+      "Le serveur vérifiait qui a le droit de voir chaque donnée de façon très coûteuse. Même règles, même confidentialité, mais calculées bien plus vite : les fiches athlètes, le planning et les séances s'ouvrent plus vite, surtout aux heures chargées.",
+    sections: [],
+  },
+  {
+    id: "2026-11-14-wellness-poids-virgule",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Wellness : le poids se tape avec une virgule",
+    summary: "Sur téléphone, l'athlète peut écrire 72,4 kg dans son wellness du matin : la virgule n'efface plus la pesée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le champ Poids du wellness ouvre le clavier chiffres avec la virgule et garde la décimale (72,4).",
+          "La pesée arrive bien dans la courbe de poids de l'athlète, comme avant.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-wellness-carte-douleur",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Wellness : la douleur a sa propre carte du corps",
+    summary:
+      "Le matin, l'athlète répond « Douleur : oui / non ». Si oui, il touche la zone sur un 2ᵉ corps (genou, cheville, lombaires…), distinct de celui des courbatures, et la note de 0 à 10.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Deux cartes séparées : courbatures (muscles sollicités la veille) et douleur (articulations, dos, tendons), pour ne plus confondre les deux.",
+          "Une note de 0 à 10 par zone, avec les repères sous l'échelle : 0 aucune, 1 à 3 gêne, 4 douleur, 10 insupportable. Plusieurs zones possibles.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Dans les Retours, le détail du jour affiche une pastille par zone douloureuse (« Douleur genou · 6/10 »), à côté des courbatures.",
+          "La note « Blessé / malade » reprend les zones et leurs notes ; le feu du matin compte la zone la plus douloureuse.",
+          "Les douleurs saisies avant aujourd'hui restent affichées telles quelles, sans zone.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-citation-sans-jaime",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Accueil plus léger : la citation du jour sans « J'aime »",
+    summary:
+      "La citation du jour reste sur l'accueil de vos athlètes, sans bouton « J'aime » ni compteur. L'accueil s'ouvre plus vite et sollicite moins le serveur.",
+    sections: [],
+  },
+  {
+    id: "2026-11-14-competitions-annuler-supprimer",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Annuler ou supprimer une compétition, bascule coach / athlète plus visible",
+    summary: "Une compétition annulée reste visible, barrée, mais ne compte plus dans les décomptes. Une compétition saisie par erreur se supprime. Sur téléphone, passer du mode coach au mode athlète se fait en un geste.",
+    sections: [
+      {
+        title: "Compétitions",
+        points: [
+          "Annuler : la compétition reste dans la liste et le calendrier, barrée, avec qui l'a annulée. Elle sort de la prochaine compétition, des J-x, de la frise et de ce que lit l'assistant. « Rétablir » la remet.",
+          "Supprimer : pour une faute de frappe. La confirmation prévient si un résultat HYROX, un plan de course ou un bilan de l'athlète y est rattaché (les résultats sont gardés, le bilan est perdu).",
+          "Où : Planning › Compétitions (icônes à droite de chaque ligne), en ouvrant une compétition depuis le calendrier, et sur téléphone en touchant la compétition dans le planning de l'athlète.",
+          "L'athlète peut aussi annuler ou supprimer ses compétitions, depuis « Mes compétitions » (bouton ⋯).",
+        ],
+      },
+      {
+        title: "Coach qui s'entraîne aussi",
+        points: [
+          "Côté athlète, la pastille « Mode coach » en haut de chaque page est plus lisible, et une carte « Passer à ton espace coach » ouvre l'onglet Profil.",
+          "Côté coach sur téléphone, une pastille « Athlète » est à côté de « Bonjour » sur l'accueil (le bouton reste aussi dans Plus).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-ia-claude",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Analyses IA de vos athlètes : nouveau moteur, données mieux protégées",
+    summary:
+      "Les phrases d'analyse que vos athlètes lisent dans « Mon profil » sont maintenant rédigées par Claude (Anthropic). Leurs données ne servent jamais à entraîner les modèles.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les analyses rédigées par l'IA s'appuient toujours sur les chiffres de l'athlète : poids, sommeil, fatigue, assiduité, records.",
+          "Les données envoyées ne servent pas à entraîner les modèles et sont effacées au bout de 30 jours au plus.",
+          "Rien ne change pour vos athlètes : ceux qui ont accepté l'IA gardent leurs analyses, les autres gardent leurs statistiques sans texte rédigé.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-onglets-fiche-athlete-ecran-moyen",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Onglets de la fiche athlète visibles en entier",
+    summary: "Sur un écran d'ordinateur moyen (environ 1100 px de large), « Historique » était coupé au bord et la barre d'onglets défilait sur le côté. Tous les onglets tiennent maintenant sur une ligne.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sur un écran de moins de 1280 px, « Profil athlète » devient « Profil » et « Coachs & staff » devient « Staff ». Survole l'onglet pour lire le nom complet.",
+          "Sur un grand écran, rien ne change.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-staff-cycle-en-cours",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Ton staff voit où en est l'athlète dans son cycle",
+    summary: "Sur l'accueil d'un kiné, d'un ostéo ou d'un nutritionniste, chaque athlète affiche maintenant son cycle en cours et la semaine du jour, par exemple « HYROX PARIS · S1 / 5 ».",
+    sections: [
+      {
+        title: "Qui le voit",
+        points: [
+          "Seulement les pros à qui tu as ouvert la planification, en lecture ou en écriture : c'est déjà le cas par défaut pour tous les métiers sauf « Autre ».",
+          "Si tu fermes la planification, ou si l'athlète n'a pas donné son accord au partage avec son staff, le badge n'apparaît pas.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-avis-app-etoiles",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Avis sur l'app : les étoiles sont de retour",
+    summary: "Dans le formulaire « Donne ton avis » de l'athlète, les cinq étoiles de la note étaient devenues des boutons vides, et l'écran de remerciement n'avait plus d'icône. Elles s'affichent de nouveau et se remplissent en or jusqu'à la note choisie.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Tes athlètes voient à nouveau les cinq étoiles pour noter l'app.",
+          "Après l'envoi, une coche verte confirme que l'avis est bien parti.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-pastille-importance-competitions",
     date: "2026-11-14",
     kind: "fix",

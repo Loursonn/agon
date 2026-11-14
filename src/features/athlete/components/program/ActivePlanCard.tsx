@@ -1,31 +1,36 @@
 import type { ActiveMesocycle } from "@/features/shared/hooks/useActivePlan";
-import { C } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 
 // ── Plan actif card ───────────────────────────────────────────────────────────
 
 export function ActivePlanCard({ meso }: { meso: ActiveMesocycle }) {
   const total = Math.max(1, meso.totalWeeks);
   return (
-    <div style={{ borderRadius: 14, border: "1px solid " + C.brd, background: C.s1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>Plan actif</div>
-          <div style={{ fontSize: 14, color: C.tx, marginTop: 2 }}>{meso.name}</div>
+    <div className="flex flex-col gap-2.5 rounded-[14px] border border-agon-brd bg-agon-s1 px-3.5 py-3">
+      <div className="flex items-end gap-2.5">
+        <div className="min-w-0 flex-1">
+          <div className="agon-mono text-[10px] uppercase tracking-[0.12em] text-agon-tx3">Plan actif</div>
+          <div className="mt-0.5 text-[14px] text-agon-tx">{meso.name}</div>
           {(meso.macroName || meso.objective) && (
-            <div style={{ fontSize: 12, color: C.tx3, marginTop: 2 }}>{[meso.macroName, meso.objective].filter(Boolean).join(" · ")}</div>
+            <div className="mt-0.5 text-[12px] text-agon-tx3">{[meso.macroName, meso.objective].filter(Boolean).join(" · ")}</div>
           )}
         </div>
-        <span style={{ ...MONO, fontSize: 13, color: C.tx, flex: "none" }}>
-          S{meso.currentWeek} <span style={{ color: C.tx3 }}>/ {meso.totalWeeks}</span>
+        <span className="agon-mono flex-none text-[13px] text-agon-tx">
+          S{meso.currentWeek} <span className="text-agon-tx3">/ {meso.totalWeeks}</span>
         </span>
       </div>
-      <div aria-label={`Semaine ${meso.currentWeek} sur ${meso.totalWeeks}`} style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(total, 24)}, 1fr)`, gap: 4 }}>
+      <div aria-label={`Semaine ${meso.currentWeek} sur ${meso.totalWeeks}`} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(total, 24)}, 1fr)` }}>
         {Array.from({ length: Math.min(total, 24) }, (_, i) => (
-          <span key={i} style={{ height: 4, borderRadius: 2, background: i + 1 < meso.currentWeek ? C.ac : i + 1 === meso.currentWeek ? "rgba(255,201,51,0.5)" : "rgba(231,211,168,0.12)" }} />
+          <span
+            key={i}
+            className={cn(
+              "h-1 rounded-[2px]",
+              i + 1 < meso.currentWeek ? "bg-agon-accent" : i + 1 === meso.currentWeek ? "bg-agon-accent/50" : "bg-agon-sable/[0.12]",
+            )}
+          />
         ))}
       </div>
-      <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>
+      <div className="agon-mono text-[11px] text-agon-tx3">
         {meso.completionPct} % des séances faites{meso.frequency != null ? ` · ${meso.frequency} par semaine` : ""}
       </div>
     </div>

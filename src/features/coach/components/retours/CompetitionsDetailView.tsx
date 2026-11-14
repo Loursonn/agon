@@ -3,6 +3,8 @@ import { Trophy, X, MapPin } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { SHEET_CLOSE, SHEET_HEAD, SHEET_OVERLAY, SHEET_PANEL, SHEET_SUB, SHEET_TITLE, STAT_CARD, STAT_LABEL, STAT_VALUE, TYPE_TAG } from "./detailSheet";
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import type { CompetitionDetail } from "@/features/shared/types/retours.types";
 
@@ -11,30 +13,35 @@ interface CompetitionsDetailViewProps {
   onClose: () => void;
 }
 
-const PRIORITY_COLORS: Record<string, string> = { A: C.r, B: C.o, C: C.y };
+/** Importance A / B / C : pastille teintée 12,5 %. */
+const PRIORITY_TONE: Record<string, string> = {
+  A: "bg-agon-erreur/[0.125] text-agon-erreur",
+  B: "bg-agon-alerte/[0.125] text-agon-alerte",
+  C: "bg-agon-or-clair/[0.125] text-agon-or-clair",
+};
 
 function CompCard({ comp }: { comp: CompetitionDetail }) {
   return (
-    <div style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
+    <div className="rounded-[4px] bg-agon-s2 px-3.5 py-3">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-[13px] font-bold text-agon-tx">
             {comp.name}
           </span>
           {comp.type && (
-            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: C.brd, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.3px", flexShrink: 0 }}>
+            <span className={TYPE_TAG}>
               {comp.type}
             </span>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <div className="flex flex-none items-center gap-2">
           {comp.priority && (
-            <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: PRIORITY_COLORS[comp.priority] + "20", color: PRIORITY_COLORS[comp.priority] }}>
+            <span className={cn("rounded-[6px] px-2 py-0.5 text-[10px] font-extrabold", PRIORITY_TONE[comp.priority])}>
               {priorityLabel(comp.priority)}
             </span>
           )}
-          <span style={{ fontSize: 10, color: C.tx3 }}>
+          <span className="text-[10px] text-agon-tx3">
             {format(parseISO(comp.date), "d MMM yyyy", { locale: fr })}
           </span>
         </div>
@@ -42,20 +49,20 @@ function CompCard({ comp }: { comp: CompetitionDetail }) {
 
       {/* Location */}
       {comp.location && (
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
+        <div className="mb-2 flex items-center gap-[5px]">
           <MapPin size={10} color={C.tx3} />
-          <span style={{ fontSize: 11, color: C.tx3 }}>{comp.location}</span>
+          <span className="text-[11px] text-agon-tx3">{comp.location}</span>
         </div>
       )}
 
       {/* Retour de l'athlète (lecture seule) */}
       {comp.athlete_comment ? (
-        <div style={{ background: C.acS, borderRadius: 4, padding: "8px 10px" }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3 }}>Retour de l'athlète</div>
-          <div style={{ fontSize: 12, color: C.tx2, whiteSpace: "pre-wrap" }}>{comp.athlete_comment}</div>
+        <div className="rounded-[4px] bg-agon-accent-doux px-2.5 py-2">
+          <div className="mb-[3px] text-[9px] font-bold text-agon-accent">Retour de l'athlète</div>
+          <div className="whitespace-pre-wrap text-[12px] text-agon-tx2">{comp.athlete_comment}</div>
         </div>
       ) : (
-        <div style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>Pas encore de retour de l'athlète</div>
+        <div className="text-[11px] italic text-agon-tx3">Pas encore de retour de l'athlète</div>
       )}
     </div>
   );
@@ -67,28 +74,28 @@ export function CompetitionsDetailView({ competitions, onClose }: CompetitionsDe
   const countC = competitions.filter((c) => c.priority === "C").length;
 
   return (
-    <div style={overlayStyle}>
-      <div style={panelStyle}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+    <div className={SHEET_OVERLAY}>
+      <div className={SHEET_PANEL}>
+        <div className={SHEET_HEAD}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>Compétitions — détails</div>
-            <div style={{ fontSize: 11, color: C.tx3 }}>{competitions.length} au total</div>
+            <div className={SHEET_TITLE}>Compétitions — détails</div>
+            <div className={SHEET_SUB}>{competitions.length} au total</div>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}><X size={16} /></button>
+          <button onClick={onClose} className={SHEET_CLOSE}><X size={16} /></button>
         </div>
 
         {/* Stats row */}
         {competitions.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
+          <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
-              { label: "Total",       value: competitions.length, color: C.ac },
-              { label: "Importance A",  value: countA,              color: C.r  },
-              { label: "Importance B",  value: countB,              color: C.o  },
-              { label: "Importance C",  value: countC,              color: C.y  },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+              { label: "Total",       value: competitions.length, tone: "text-agon-accent" },
+              { label: "Importance A",  value: countA,              tone: "text-agon-erreur" },
+              { label: "Importance B",  value: countB,              tone: "text-agon-alerte" },
+              { label: "Importance C",  value: countC,              tone: "text-agon-or-clair" },
+            ].map(({ label, value, tone }) => (
+              <div key={label} className={STAT_CARD}>
+                <div className={STAT_LABEL}>{label}</div>
+                <div className={cn(STAT_VALUE, "text-[20px] leading-none", tone)}>{value}</div>
               </div>
             ))}
           </div>
@@ -97,7 +104,7 @@ export function CompetitionsDetailView({ competitions, onClose }: CompetitionsDe
         {competitions.length === 0
           ? <EmptyState icon={Trophy} title="Aucune compétition ce mois" />
           : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="flex flex-col gap-2.5">
               {competitions.map((c) => <CompCard key={c.id} comp={c} />)}
             </div>
           )
@@ -106,22 +113,3 @@ export function CompetitionsDetailView({ competitions, onClose }: CompetitionsDe
     </div>
   );
 }
-
-const overlayStyle: React.CSSProperties = {
-  position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-  zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
-};
-
-const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "6px 6px 0 0",
-  width: "100%", maxWidth: 860,
-  maxHeight: "92vh", overflowY: "auto",
-  padding: "20px 20px 40px",
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 4,
-  border: "1px solid " + C.brd, background: C.s2,
-  color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-};

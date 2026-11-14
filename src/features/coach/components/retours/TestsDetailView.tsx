@@ -2,6 +2,8 @@ import { FlaskConical, X, CheckCircle2, Clock, ShieldCheck } from "lucide-react"
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { SHEET_CLOSE, SHEET_HEAD, SHEET_OVERLAY, SHEET_PANEL, SHEET_SUB, SHEET_TITLE, SMALL_KICK, STAT_CARD, STAT_LABEL, STAT_VALUE, TYPE_TAG } from "./detailSheet";
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import type { TestDetail } from "@/features/shared/types/retours.types";
 
@@ -16,30 +18,30 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
   const rate       = tests.length > 0 ? Math.round(completed / tests.length * 100) : null;
 
   return (
-    <div style={overlayStyle}>
-      <div style={panelStyle}>
+    <div className={SHEET_OVERLAY}>
+      <div className={SHEET_PANEL}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div className={SHEET_HEAD}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>Tests — détails</div>
-            <div style={{ fontSize: 11, color: C.tx3 }}>
+            <div className={SHEET_TITLE}>Tests — détails</div>
+            <div className={SHEET_SUB}>
               {completed} / {tests.length} réalisé{completed !== 1 ? "s" : ""}
             </div>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}><X size={16} /></button>
+          <button onClick={onClose} className={SHEET_CLOSE}><X size={16} /></button>
         </div>
 
         {/* Stats row */}
         {tests.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
+          <div className="mb-5 grid grid-cols-3 gap-2">
             {[
-              { label: "Réalisés",          value: `${completed}/${tests.length}`, color: completed === tests.length ? C.g : C.o },
-              { label: "Taux réalisation",  value: rate != null ? `${rate}%` : "—", color: rate != null && rate >= 70 ? C.g : C.o },
-              { label: "Validés coach",     value: `${validated}/${completed || 1}`, color: C.ac },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 17, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+              { label: "Réalisés",          value: `${completed}/${tests.length}`, tone: completed === tests.length ? "text-agon-succes" : "text-agon-alerte" },
+              { label: "Taux réalisation",  value: rate != null ? `${rate}%` : "—", tone: rate != null && rate >= 70 ? "text-agon-succes" : "text-agon-alerte" },
+              { label: "Validés coach",     value: `${validated}/${completed || 1}`, tone: "text-agon-accent" },
+            ].map(({ label, value, tone }) => (
+              <div key={label} className={STAT_CARD}>
+                <div className={STAT_LABEL}>{label}</div>
+                <div className={cn(STAT_VALUE, "text-[17px] leading-none", tone)}>{value}</div>
               </div>
             ))}
           </div>
@@ -48,35 +50,35 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
         {tests.length === 0 ? (
           <EmptyState icon={FlaskConical} title="Aucun test ce mois" />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             {tests.map((t) => (
-              <div key={t.id} style={{ background: C.s2, borderRadius: 4, padding: "12px 14px" }}>
+              <div key={t.id} className="rounded-[4px] bg-agon-s2 px-3.5 py-3">
                 {/* Title + status row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{t.title}</span>
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-bold text-agon-tx">{t.title}</span>
                     {t.type && (
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: C.brd, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                      <span className={TYPE_TAG}>
                         {t.type}
                       </span>
                     )}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="flex items-center gap-1.5">
                     {t.coach_validated && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <div className="flex items-center gap-[3px]">
                         <ShieldCheck size={11} color={C.g} />
-                        <span style={{ fontSize: 9, color: C.g }}>Validé</span>
+                        <span className="text-[9px] text-agon-succes">Validé</span>
                       </div>
                     )}
-                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <div className="flex items-center gap-[3px]">
                       {t.completed
                         ? <CheckCircle2 size={11} color={C.g} />
                         : <Clock size={11} color={C.o} />}
-                      <span style={{ fontSize: 9, color: t.completed ? C.g : C.o }}>
+                      <span className={cn("text-[9px]", t.completed ? "text-agon-succes" : "text-agon-alerte")}>
                         {t.completed ? "Réalisé" : "Non réalisé"}
                       </span>
                     </div>
-                    <span style={{ fontSize: 10, color: C.tx3 }}>
+                    <span className="text-[10px] text-agon-tx3">
                       {format(parseISO(t.date), "d MMM", { locale: fr })}
                     </span>
                   </div>
@@ -84,11 +86,11 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
 
                 {/* Results note */}
                 {t.results_note && (
-                  <div style={{ background: C.s1, borderRadius: 4, padding: "8px 10px" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>
+                  <div className="rounded-[4px] bg-agon-s1 px-2.5 py-2">
+                    <div className={SMALL_KICK}>
                       Résultats
                     </div>
-                    <div style={{ fontSize: 12, color: C.tx2 }}>{t.results_note}</div>
+                    <div className="text-[12px] text-agon-tx2">{t.results_note}</div>
                   </div>
                 )}
               </div>
@@ -99,22 +101,3 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
     </div>
   );
 }
-
-const overlayStyle: React.CSSProperties = {
-  position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-  zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
-};
-
-const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "6px 6px 0 0",
-  width: "100%", maxWidth: 860,
-  maxHeight: "92vh", overflowY: "auto",
-  padding: "20px 20px 40px",
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 4,
-  border: "1px solid " + C.brd, background: C.s2,
-  color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-};

@@ -4,9 +4,9 @@
  */
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Check } from 'lucide-react';
-import { C, H } from "@/lib/theme";
+import { cn } from '@/lib/utils';
 import {
-  TEST_CATEGORY_ORDER, TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, PHYSIO_METRICS,
+  TEST_CATEGORY_ORDER, TEST_CATEGORY_LABEL, PHYSIO_METRICS,
   type TestCategory,
 } from '@/features/shared/types/tests';
 import {
@@ -19,6 +19,23 @@ import { Film } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+/** Classes d'une couleur (catégorie de test ou palier de note), écrites en entier pour Tailwind. */
+interface Tone {
+  text: string;
+  fill: string;   // fond plein
+  edge: string;   // bordure pleine
+  soft: string;   // bordure 25 %
+}
+
+/** Couleur de chaque catégorie (même correspondance que TEST_CATEGORY_COLOR). */
+const CAT: Record<TestCategory, Tone & { head: string; add: string }> = {
+  bilan_articulaire: { text: 'text-agon-info', fill: 'bg-agon-info', edge: 'border-agon-info', soft: 'border-agon-info/25', head: 'bg-agon-info/[0.078]', add: 'border-agon-info/[0.314] bg-agon-info/[0.071] text-agon-info' },
+  endurance:         { text: 'text-agon-succes', fill: 'bg-agon-succes', edge: 'border-agon-succes', soft: 'border-agon-succes/25', head: 'bg-agon-succes/[0.078]', add: 'border-agon-succes/[0.314] bg-agon-succes/[0.071] text-agon-succes' },
+  force:             { text: 'text-agon-erreur', fill: 'bg-agon-erreur', edge: 'border-agon-erreur', soft: 'border-agon-erreur/25', head: 'bg-agon-erreur/[0.078]', add: 'border-agon-erreur/[0.314] bg-agon-erreur/[0.071] text-agon-erreur' },
+  explosivite:       { text: 'text-agon-alerte', fill: 'bg-agon-alerte', edge: 'border-agon-alerte', soft: 'border-agon-alerte/25', head: 'bg-agon-alerte/[0.078]', add: 'border-agon-alerte/[0.314] bg-agon-alerte/[0.071] text-agon-alerte' },
+  vitesse:           { text: 'text-agon-accent', fill: 'bg-agon-accent', edge: 'border-agon-accent', soft: 'border-agon-accent/25', head: 'bg-agon-accent/[0.078]', add: 'border-agon-accent/[0.314] bg-agon-accent/[0.071] text-agon-accent' },
+};
+
 function ratingLabel(r: number | null): string {
   if (r == null) return 'Non noté';
   if (r >= 5) return 'Excellent';
@@ -28,9 +45,30 @@ function ratingLabel(r: number | null): string {
   return 'Faible';
 }
 
-function RatingDots({ value, color, onPick }: { value: number | null; color: string; onPick?: (v: number) => void }) {
+/** Couleur d'une note /5 (rouge → vert). */
+const SCORE_NONE: Tone & { chip: string } = { text: 'text-agon-tx3', fill: 'bg-agon-tx3', edge: 'border-agon-tx3', soft: 'border-agon-tx3/25', chip: 'bg-agon-tx3/[0.102]' };
+const SCORE_TONES: (Tone & { chip: string })[] = [
+  { text: 'text-agon-erreur', fill: 'bg-agon-erreur', edge: 'border-agon-erreur', soft: 'border-agon-erreur/25', chip: 'bg-agon-erreur/[0.102]' },
+  { text: 'text-agon-alerte', fill: 'bg-agon-alerte', edge: 'border-agon-alerte', soft: 'border-agon-alerte/25', chip: 'bg-agon-alerte/[0.102]' },
+  { text: 'text-agon-zone5-2', fill: 'bg-agon-zone5-2', edge: 'border-agon-zone5-2', soft: 'border-agon-zone5-2/25', chip: 'bg-agon-zone5-2/[0.102]' },
+  { text: 'text-agon-succes', fill: 'bg-agon-succes', edge: 'border-agon-succes', soft: 'border-agon-succes/25', chip: 'bg-agon-succes/[0.102]' },
+];
+function scoreTone(n: number | null) {
+  if (n == null) return SCORE_NONE;
+  if (n <= 1) return SCORE_TONES[0];
+  if (n <= 3) return SCORE_TONES[1];
+  if (n <= 4) return SCORE_TONES[2];
+  return SCORE_TONES[3];
+}
+
+const MUTED = 'text-[12px] text-agon-tx3';
+const MUTED_I = 'text-[12px] italic text-agon-tx3';
+const INPUT = 'w-full rounded border border-agon-brd-l bg-agon-s1 px-2.5 py-[7px] text-agon-tx outline-none';
+const ICON_BTN = 'flex h-[26px] w-[26px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border border-agon-brd-l bg-transparent';
+
+function RatingDots({ value, tone, onPick }: { value: number | null; tone: Tone; onPick?: (v: number) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
+    <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map(n => {
         const on = value != null && n <= value;
         return (
@@ -38,12 +76,11 @@ function RatingDots({ value, color, onPick }: { value: number | null; color: str
             key={n}
             onClick={onPick ? () => onPick(n) : undefined}
             disabled={!onPick}
-            style={{
-              width: 14, height: 14, borderRadius: '50%', padding: 0,
-              border: '1px solid ' + (on ? color : C.brdL),
-              background: on ? color : 'transparent',
-              cursor: onPick ? 'pointer' : 'default',
-            }}
+            className={cn(
+              'h-3.5 w-3.5 rounded-full border p-0',
+              on ? cn(tone.edge, tone.fill) : 'border-agon-brd-l bg-transparent',
+              onPick ? 'cursor-pointer' : 'cursor-default',
+            )}
           />
         );
       })}
@@ -54,9 +91,9 @@ function RatingDots({ value, color, onPick }: { value: number | null; color: str
 interface FormState { category: TestCategory; label: string; rating: number | null; note: string }
 
 function ItemForm({
-  color, initial, saving, onSave, onCancel,
+  tone, initial, saving, onSave, onCancel,
 }: {
-  color: string;
+  tone: Tone;
   initial: FormState;
   saving: boolean;
   onSave: (f: FormState) => void;
@@ -65,28 +102,35 @@ function ItemForm({
   const [f, setF] = useState<FormState>(initial);
   const valid = f.label.trim().length > 0;
   return (
-    <div style={{ background: C.s2, borderRadius: 4, padding: 12, display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid ' + color + '40' }}>
+    <div className={cn('flex flex-col gap-2.5 rounded border bg-agon-s2 p-3', tone.soft)}>
       <input
         value={f.label}
         onChange={e => setF(s => ({ ...s, label: e.target.value }))}
         placeholder="Item (ex: RE hanche, Force max…)"
         autoFocus
-        style={{ width: '100%', padding: '7px 10px', borderRadius: 4, border: '1px solid ' + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+        className={cn(INPUT, 'text-[13px]')}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 11, color: C.tx3, minWidth: 50 }}>Note /5</span>
-        <RatingDots value={f.rating} color={color} onPick={n => setF(s => ({ ...s, rating: s.rating === n ? null : n }))} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: f.rating != null ? color : C.tx3, marginLeft: 4 }}>{ratingLabel(f.rating)}</span>
+      <div className="flex items-center gap-2.5">
+        <span className="min-w-[50px] text-[11px] text-agon-tx3">Note /5</span>
+        <RatingDots value={f.rating} tone={tone} onPick={n => setF(s => ({ ...s, rating: s.rating === n ? null : n }))} />
+        <span className={cn('ml-1 text-[11px] font-bold', f.rating != null ? tone.text : 'text-agon-tx3')}>{ratingLabel(f.rating)}</span>
       </div>
       <input
         value={f.note}
         onChange={e => setF(s => ({ ...s, note: e.target.value }))}
         placeholder="Note / commentaire (optionnel)"
-        style={{ width: '100%', padding: '7px 10px', borderRadius: 4, border: '1px solid ' + C.brdL, background: C.s1, color: C.tx, fontSize: 12, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+        className={cn(INPUT, 'text-[12px]')}
       />
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '6px 12px', borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-        <button onClick={() => valid && onSave(f)} disabled={!valid || saving} style={{ padding: '6px 14px', borderRadius: 4, border: 'none', background: valid ? color : C.s1, color: valid ? C.tx : C.tx3, fontSize: 12, fontWeight: 700, cursor: valid ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div className="flex justify-end gap-2">
+        <button onClick={onCancel} className="cursor-pointer rounded border border-agon-brd-l bg-transparent px-3 py-1.5 text-[12px] text-agon-tx3">Annuler</button>
+        <button
+          onClick={() => valid && onSave(f)}
+          disabled={!valid || saving}
+          className={cn(
+            'flex items-center gap-[5px] rounded border-none px-3.5 py-1.5 text-[12px] font-bold',
+            valid ? cn(tone.fill, 'cursor-pointer text-agon-tx') : 'cursor-default bg-agon-s1 text-agon-tx3',
+          )}
+        >
           <Check size={13} /> {saving ? '…' : 'OK'}
         </button>
       </div>
@@ -94,37 +138,23 @@ function ItemForm({
   );
 }
 
-function ItemRow({ item, color, onEdit, onDelete }: { item: ProfileItem; color: string; onEdit: () => void; onDelete: () => void }) {
+function ItemRow({ item, tone, onEdit, onDelete }: { item: ProfileItem; tone: Tone; onEdit: () => void; onDelete: () => void }) {
   return (
-    <div style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{item.label}</div>
-        {item.note && <div style={{ fontSize: 11, color: C.tx3, fontStyle: 'italic', marginTop: 2 }}>{item.note}</div>}
+    <div className="flex items-center gap-3 rounded border border-agon-brd bg-agon-s1 px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-bold text-agon-tx">{item.label}</div>
+        {item.note && <div className="mt-0.5 text-[11px] italic text-agon-tx3">{item.note}</div>}
       </div>
-      <RatingDots value={item.rating} color={color} />
-      <span style={{ fontSize: 11, fontWeight: 700, color: item.rating != null ? color : C.tx3, minWidth: 64, textAlign: 'right' }}>
+      <RatingDots value={item.rating} tone={tone} />
+      <span className={cn('min-w-[64px] text-right text-[11px] font-bold', item.rating != null ? tone.text : 'text-agon-tx3')}>
         {ratingLabel(item.rating)}
       </span>
-      <div style={{ display: 'flex', gap: 4 }}>
-        <button onClick={onEdit} style={iconBtn(C.tx3)}><Pencil size={12} /></button>
-        <button onClick={onDelete} style={iconBtn(C.r)}><Trash2 size={12} /></button>
+      <div className="flex gap-1">
+        <button onClick={onEdit} className={cn(ICON_BTN, 'text-agon-tx3')}><Pencil size={12} /></button>
+        <button onClick={onDelete} className={cn(ICON_BTN, 'text-agon-erreur')}><Trash2 size={12} /></button>
       </div>
     </div>
   );
-}
-
-function iconBtn(color: string): React.CSSProperties {
-  return { width: 26, height: 26, borderRadius: 6, border: '1px solid ' + C.brdL, background: 'transparent', color, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
-}
-
-// ── Couleur /5 (nuance rouge → vert) ──────────────────────────────────────────
-function scoreColor(n: number | null): string {
-  if (n == null) return C.tx3;
-  if (n <= 1) return C.r;
-  if (n <= 2) return C.o;
-  if (n <= 3) return C.o;
-  if (n <= 4) return H.citron;
-  return C.g;
 }
 
 // ── Vue Bilan articulaire (dérivée des tests, groupée par articulation) ────────
@@ -136,28 +166,25 @@ function fmtScore(n: number | null): string {
 function EvolutionModal({ item, onClose }: { item: ArticularAction; onClose: () => void }) {
   const asc = [...item.history].reverse(); // chronologique
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-    >
-      <div onClick={e => e.stopPropagation()} style={{ background: C.s1, border: '1px solid ' + C.brd, borderRadius: 6, padding: 20, width: '100%', maxWidth: 440 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>{item.action}</div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx3, fontSize: 16, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
+    <div onClick={onClose} className="fixed inset-0 z-[400] flex items-center justify-center bg-black/70 p-6">
+      <div onClick={e => e.stopPropagation()} className="w-full max-w-[440px] rounded-[6px] border border-agon-brd bg-agon-s1 p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="text-[15px] font-extrabold text-agon-tx">{item.action}</div>
+          <button onClick={onClose} className="h-7 w-7 cursor-pointer rounded border border-agon-brd-l bg-transparent text-[16px] text-agon-tx3">×</button>
         </div>
 
         {asc.length === 0 ? (
-          <div style={{ fontSize: 12, color: C.tx3, fontStyle: 'italic', padding: '20px 0', textAlign: 'center' }}>Aucune saisie pour le moment.</div>
+          <div className={cn(MUTED_I, 'py-5 text-center')}>Aucune saisie pour le moment.</div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 150, padding: '0 4px' }}>
+          <div className="flex h-[150px] items-end gap-2.5 px-1">
             {asc.map((h, i) => {
-              const hc = scoreColor(h.score);
+              const hc = scoreTone(h.score);
               const pct = ((h.score ?? 0) / 5) * 100;
               return (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, height: '100%', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: hc }}>{fmtScore(h.score)}</span>
-                  <div style={{ width: '100%', maxWidth: 32, height: `${Math.max(pct, 4)}%`, background: hc, borderRadius: '5px 5px 0 0' }} />
-                  <span style={{ fontSize: 9, color: C.tx3, textAlign: 'center', lineHeight: 1.2 }}>
+                <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-[5px]">
+                  <span className={cn('text-[11px] font-extrabold', hc.text)}>{fmtScore(h.score)}</span>
+                  <div className={cn('w-full max-w-[32px] rounded-t-[5px]', hc.fill)} style={{ height: `${Math.max(pct, 4)}%` }} />
+                  <span className="text-center text-[9px] leading-[1.2] text-agon-tx3">
                     {format(new Date(h.date + 'T12:00:00'), 'd MMM', { locale: fr })}
                   </span>
                 </div>
@@ -171,15 +198,15 @@ function EvolutionModal({ item, onClose }: { item: ArticularAction; onClose: () 
 }
 
 // ── Vue Endurance (VMA extrapolée du Demi-Cooper : distance / 100) ─────────────
-function MiniBars({ points, color, fmt }: { points: { date: string; value: number }[]; color: string; fmt: (n: number) => string }) {
+function MiniBars({ points, tone, fmt }: { points: { date: string; value: number }[]; tone: Tone; fmt: (n: number) => string }) {
   const max = Math.max(...points.map(p => p.value), 1);
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 90, marginTop: 12 }}>
+    <div className="mt-3 flex h-[90px] items-end gap-2">
       {points.map((p, i) => (
-        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color }}>{fmt(p.value)}</span>
-          <div style={{ width: '100%', maxWidth: 30, height: `${Math.max((p.value / max) * 100, 4)}%`, background: color, borderRadius: '4px 4px 0 0' }} />
-          <span style={{ fontSize: 9, color: C.tx3 }}>{format(new Date(p.date + 'T12:00:00'), 'd MMM', { locale: fr })}</span>
+        <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+          <span className={cn('text-[10px] font-extrabold', tone.text)}>{fmt(p.value)}</span>
+          <div className={cn('w-full max-w-[30px] rounded-t', tone.fill)} style={{ height: `${Math.max((p.value / max) * 100, 4)}%` }} />
+          <span className="text-[9px] text-agon-tx3">{format(new Date(p.date + 'T12:00:00'), 'd MMM', { locale: fr })}</span>
         </div>
       ))}
     </div>
@@ -193,16 +220,16 @@ function applyExtrap(value: number, op: 'div' | 'mul' | null, factor: number | n
 }
 
 function CategoryDerivedProfile({ athleteId, category }: { athleteId: string; category: 'endurance' | 'force' | 'explosivite' | 'vitesse' }) {
-  const color = TEST_CATEGORY_COLOR[category];
+  const tone = CAT[category];
   const { data: series = [], isLoading } = useCategoryTestSeries(athleteId, category);
 
-  if (isLoading) return <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>;
-  if (series.length === 0) return <div style={{ fontSize: 12, color: C.tx3, fontStyle: 'italic' }}>Aucune donnée pour cette catégorie.</div>;
+  if (isLoading) return <div className={MUTED}>Chargement…</div>;
+  if (series.length === 0) return <div className={MUTED_I}>Aucune donnée pour cette catégorie.</div>;
 
   const extrap = series.filter(s => s.extrapMetric);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="flex flex-col gap-4">
       {/* Valeurs physiologiques extrapolées */}
       {extrap.map(s => {
         const metric = PHYSIO_METRICS.find(m => m.key === s.extrapMetric);
@@ -211,33 +238,33 @@ function CategoryDerivedProfile({ athleteId, category }: { athleteId: string; ca
         const lastRaw = s.points[s.points.length - 1];
         const opSym = s.extrapOp === 'mul' ? '×' : '÷';
         return (
-          <div key={'x' + s.testId + s.varId} style={{ background: C.s1, border: '1px solid ' + color + '40', borderRadius: 6, padding: '14px 16px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div key={'x' + s.testId + s.varId} className={cn('rounded-[6px] border bg-agon-s1 px-4 py-3.5', tone.soft)}>
+            <div className={cn('text-[11px] font-bold uppercase tracking-[0.04em]', tone.text)}>
               {metric?.label ?? s.extrapMetric} extrapolé{metric?.label?.endsWith('A') ? 'e' : ''}
             </div>
-            <div style={{ fontSize: 10, color: C.tx3, marginBottom: 8 }}>
+            <div className="mb-2 text-[10px] text-agon-tx3">
               {s.testName} — {s.varLabel} {opSym} {s.extrapFactor}
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span style={{ fontSize: 34, fontWeight: 800, color: C.tx, lineHeight: 1 }}>{last.value}</span>
-              <span style={{ fontSize: 13, color: C.tx3 }}>{metric?.unit}</span>
-              <span style={{ fontSize: 11, color: C.tx3, marginLeft: 'auto' }}>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[34px] font-extrabold leading-none text-agon-tx">{last.value}</span>
+              <span className="text-[13px] text-agon-tx3">{metric?.unit}</span>
+              <span className="ml-auto text-[11px] text-agon-tx3">
                 {lastRaw.value} {s.unit} · {format(new Date(last.date + 'T12:00:00'), 'd MMM yyyy', { locale: fr })}
               </span>
             </div>
-            {pts.length > 1 && <MiniBars points={pts} color={color} fmt={n => `${n}`} />}
+            {pts.length > 1 && <MiniBars points={pts} tone={tone} fmt={n => `${n}`} />}
           </div>
         );
       })}
 
       {/* Valeurs brutes des tests */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="flex flex-col gap-2">
         {series.map(s => {
           const last = s.points[s.points.length - 1];
           return (
-            <div key={s.testId + s.varId} style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4, padding: '8px 12px' }}>
-              <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.tx }}>{s.testName}{s.varLabel && s.varLabel !== s.testName ? ` · ${s.varLabel}` : ''}</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color }}>{last.value % 1 === 0 ? last.value : last.value.toFixed(1)}<span style={{ fontSize: 10, color: C.tx3, fontWeight: 500 }}> {s.unit}</span></span>
+            <div key={s.testId + s.varId} className="flex items-center gap-2.5 rounded border border-agon-brd bg-agon-s1 px-3 py-2">
+              <span className="flex-1 text-[12px] font-semibold text-agon-tx">{s.testName}{s.varLabel && s.varLabel !== s.testName ? ` · ${s.varLabel}` : ''}</span>
+              <span className={cn('text-[14px] font-extrabold', tone.text)}>{last.value % 1 === 0 ? last.value : last.value.toFixed(1)}<span className="text-[10px] font-medium text-agon-tx3"> {s.unit}</span></span>
             </div>
           );
         })}
@@ -250,34 +277,34 @@ function ArticularProfile({ athleteId }: { athleteId: string }) {
   const { data: groups = [], isLoading } = useArticularProfile(athleteId);
   const [selected, setSelected] = useState<ArticularAction | null>(null);
 
-  if (isLoading) return <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>;
+  if (isLoading) return <div className={MUTED}>Chargement…</div>;
   if (groups.length === 0) {
-    return <div style={{ fontSize: 12, color: C.tx3, fontStyle: 'italic' }}>Aucun test articulaire dans la banque.</div>;
+    return <div className={MUTED_I}>Aucun test articulaire dans la banque.</div>;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="flex flex-col gap-[18px]">
       {groups.map(g => (
         <div key={g.articulation}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: C.tx, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.04em] text-agon-tx">
             {g.articulation}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
             {g.items.map(it => {
-              const sc = scoreColor(it.score);
+              const sc = scoreTone(it.score);
               return (
                 <button
                   key={it.testId}
                   onClick={() => setSelected(it)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.s1, border: '1px solid ' + C.brd, borderRadius: 4, padding: '8px 10px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                  className="flex cursor-pointer items-center gap-2 rounded border border-agon-brd bg-agon-s1 px-2.5 py-2 text-left"
                 >
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: C.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.action}</span>
+                  <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-agon-tx">{it.action}</span>
                   {it.mediaUrl && (
-                    <a href={it.mediaUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: C.tx3, display: 'flex', flexShrink: 0 }} title="Média explicatif">
+                    <a href={it.mediaUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="flex shrink-0 text-agon-tx3" title="Média explicatif">
                       <Film size={12} />
                     </a>
                   )}
-                  <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: sc, background: sc + '1A', border: '1px solid ' + sc + '40', borderRadius: 6, padding: '2px 8px', minWidth: 38, textAlign: 'center' }}>
+                  <span className={cn('min-w-[38px] shrink-0 rounded-[6px] border px-2 py-0.5 text-center text-[12px] font-extrabold', sc.text, sc.chip, sc.soft)}>
                     {fmtScore(it.score)}
                   </span>
                 </button>
@@ -310,31 +337,28 @@ export default function CategoryProfiles({ athleteId }: { athleteId: string }) {
     }
   }
 
-  const cc = TEST_CATEGORY_COLOR[selectedCat];
+  const cc = CAT[selectedCat];
   const catItems = items.filter(i => i.category === selectedCat);
   const addingHere = active?.mode === 'add' && active.category === selectedCat;
 
   return (
-    <section style={{ border: '1px solid ' + C.brd, borderRadius: 6, overflow: 'hidden' }}>
+    <section className="overflow-hidden rounded-[6px] border border-agon-brd">
       {/* Header : titre + boutons filtres (1 catégorie à la fois) */}
-      <div style={{ padding: '12px 18px', borderBottom: '1px solid ' + C.brd, background: cc + '14', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: C.tx, textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 'auto' }}>
+      <div className={cn('flex flex-wrap items-center gap-3 border-b border-agon-brd px-[18px] py-3', cc.head)}>
+        <span className="mr-auto text-[13px] font-extrabold uppercase tracking-[0.06em] text-agon-tx">
           Profil par catégorie
         </span>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap gap-1.5">
           {TEST_CATEGORY_ORDER.map(cat => {
-            const c = TEST_CATEGORY_COLOR[cat];
             const on = cat === selectedCat;
             return (
               <button
                 key={cat}
                 onClick={() => { setSelectedCat(cat); setActive(null); }}
-                style={{
-                  padding: '5px 11px', borderRadius: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
-                  border: '1px solid ' + (on ? c : C.brdL),
-                  background: on ? c : 'transparent',
-                  color: on ? C.tx : C.tx3,
-                }}
+                className={cn(
+                  'cursor-pointer rounded border px-[11px] py-[5px] text-[11px] font-bold',
+                  on ? cn(CAT[cat].edge, CAT[cat].fill, 'text-agon-tx') : 'border-agon-brd-l bg-transparent text-agon-tx3',
+                )}
               >
                 {TEST_CATEGORY_LABEL[cat]}
               </button>
@@ -343,41 +367,41 @@ export default function CategoryProfiles({ athleteId }: { athleteId: string }) {
         </div>
       </div>
 
-      <div style={{ padding: 18 }}>
+      <div className="p-[18px]">
         {selectedCat === 'bilan_articulaire' ? (
           <ArticularProfile athleteId={athleteId} />
         ) : selectedCat === 'endurance' ? (
           <CategoryDerivedProfile athleteId={athleteId} category="endurance" />
         ) : (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: cc, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 22, height: 3, borderRadius: 2, background: cc }} />
+            <div className="mb-2.5 flex items-center justify-between">
+              <div className={cn('flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.5px]', cc.text)}>
+                <div className={cn('h-[3px] w-[22px] rounded-[2px]', cc.fill)} />
                 {TEST_CATEGORY_LABEL[selectedCat]}
               </div>
               {!active && (
-                <button onClick={() => setActive({ mode: 'add', category: selectedCat })} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: '1px solid ' + cc + '50', background: cc + '12', color: cc, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => setActive({ mode: 'add', category: selectedCat })} className={cn('flex cursor-pointer items-center gap-[5px] rounded-[7px] border px-2.5 py-1 text-[11px] font-bold', cc.add)}>
                   <Plus size={12} /> Item
                 </button>
               )}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="flex flex-col gap-2">
               {isLoading ? (
-                <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>
+                <div className={MUTED}>Chargement…</div>
               ) : (
                 <>
                   {catItems.map(item =>
                     active?.mode === 'edit' && active.item.id === item.id ? (
                       <ItemForm
-                        key={item.id} color={cc}
+                        key={item.id} tone={cc}
                         initial={{ category: selectedCat, label: item.label, rating: item.rating, note: item.note ?? '' }}
                         saving={updateM.isPending}
                         onSave={save}
                         onCancel={() => setActive(null)}
                       />
                     ) : (
-                      <ItemRow key={item.id} item={item} color={cc}
+                      <ItemRow key={item.id} item={item} tone={cc}
                         onEdit={() => setActive({ mode: 'edit', item })}
                         onDelete={() => deleteM.mutate(item.id)}
                       />
@@ -385,7 +409,7 @@ export default function CategoryProfiles({ athleteId }: { athleteId: string }) {
                   )}
                   {addingHere && (
                     <ItemForm
-                      color={cc}
+                      tone={cc}
                       initial={{ category: selectedCat, label: '', rating: null, note: '' }}
                       saving={createM.isPending}
                       onSave={save}
@@ -393,7 +417,7 @@ export default function CategoryProfiles({ athleteId }: { athleteId: string }) {
                     />
                   )}
                   {catItems.length === 0 && !addingHere && (
-                    <div style={{ fontSize: 11, color: C.tx3, fontStyle: 'italic', padding: '2px 0' }}>Aucun item.</div>
+                    <div className="py-0.5 text-[11px] italic text-agon-tx3">Aucun item.</div>
                   )}
                 </>
               )}

@@ -13,8 +13,6 @@ import { tableMissing } from "./wellness";
  *   src/data/releaseNotes.ts.
  * - Roadmap (`roadmap_phases`, `roadmap_items`, `roadmap_votes`) : coachs
  *   certifiés et admin (RLS) ; phases réservées à l'admin.
- * - Citation du jour : likes (`citation_likes`) et compteur (`citation_stats`,
- *   tenu par la base, suivi en temps réel).
  * - Retours sur l'app (`app_feedback`) : l'athlète envoie, admin / coach
  *   certifié trient.
  * - Anciens retours en `app_data` (`asp:coach_feedback`, `app:user_feedback`).
@@ -193,27 +191,6 @@ export async function updateRoadmapItem({ id, ...updates }: UpdateItemInput): Pr
 
 export async function deleteRoadmapItem(id: string): Promise<void> {
   check(await db().from("roadmap_items").delete().eq("id", id), "Item non supprimé");
-}
-
-// ── Citation du jour ─────────────────────────────────────────────────────────
-
-/** Like de l'utilisateur et nombre de likes de la citation. */
-export async function getCitationState(userId: string, quoteId: number): Promise<{ liked: boolean; count: number }> {
-  const [likeRes, statsRes] = await Promise.all([
-    db().from("citation_likes").select("quote_id").eq("user_id", userId).eq("quote_id", quoteId).maybeSingle(),
-    db().from("citation_stats").select("likes").eq("quote_id", quoteId).maybeSingle(),
-  ]);
-  const like = unwrap(likeRes, "Lecture du like impossible");
-  const stats = unwrap(statsRes, "Lecture des likes impossible");
-  return { liked: !!like, count: stats?.likes ?? 0 };
-}
-
-export async function setCitationLiked(userId: string, quoteId: number, liked: boolean): Promise<void> {
-  if (liked) {
-    check(await db().from("citation_likes").insert({ user_id: userId, quote_id: quoteId }), "Like non enregistré");
-  } else {
-    check(await db().from("citation_likes").delete().eq("user_id", userId).eq("quote_id", quoteId), "Like non retiré");
-  }
 }
 
 // ── Retours sur l'app (table app_feedback) ───────────────────────────────────

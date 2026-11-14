@@ -7,6 +7,8 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend, Cell,
 } from "recharts";
 import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { SHEET_CLOSE, SHEET_OVERLAY, SHEET_PANEL, SHEET_SUB, SHEET_TITLE, STAT_CARD, STAT_LABEL, STAT_VALUE } from "./detailSheet";
 import { domsReading } from "@/lib/wellnessBaseline";
 import { wellnessView } from "@/lib/wellness";
 import { WELLNESS_ITEM_SHORT, averageItem, averageScore } from "@shared/domain/wellness";
@@ -34,6 +36,15 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "sommeil",     label: "Tunnel de sommeil" },
 ];
 
+const TONE = {
+  succes: "text-agon-succes", alerte: "text-agon-alerte", erreur: "text-agon-erreur",
+  info: "text-agon-info", accent: "text-agon-accent", orClair: "text-agon-or-clair",
+};
+/** Bon / moyen / à améliorer. */
+const tier = (good: boolean, ok: boolean) => (good ? TONE.succes : ok ? TONE.alerte : TONE.erreur);
+const SMALL = "text-[10px] text-agon-tx2";
+
+/** Bulle Recharts (contentStyle attend un objet). */
 const TOOLTIP_STYLE = {
   background: C.s1,
   border: "1px solid " + C.brd,
@@ -82,20 +93,20 @@ function SleepTooltip({ active, payload, label }: any) {
   const item = payload[0]?.payload;
   if (!item) return null;
   return (
-    <div style={{ ...TOOLTIP_STYLE, padding: "8px 12px", minWidth: 130 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.tx, marginBottom: 4 }}>{label}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        <div style={{ fontSize: 10, color: C.tx2 }}>
-          Coucher : <span style={{ fontWeight: 700, color: C.b }}>{item.bedLabel}</span>
+    <div className="min-w-[130px] rounded-[4px] border border-agon-brd bg-agon-s1 px-3 py-2 text-[11px] text-agon-tx">
+      <div className="mb-1 text-[11px] font-bold text-agon-tx">{label}</div>
+      <div className="flex flex-col gap-[3px]">
+        <div className={SMALL}>
+          Coucher : <span className="font-bold text-agon-info">{item.bedLabel}</span>
         </div>
-        <div style={{ fontSize: 10, color: C.tx2 }}>
-          Lever : <span style={{ fontWeight: 700, color: C.g }}>{item.upLabel}</span>
+        <div className={SMALL}>
+          Lever : <span className="font-bold text-agon-succes">{item.upLabel}</span>
         </div>
-        <div style={{ fontSize: 10, color: C.tx2 }}>
-          Durée : <span style={{ fontWeight: 700, color: C.tx }}>{item.durLabel}</span>
+        <div className={SMALL}>
+          Durée : <span className="font-bold text-agon-tx">{item.durLabel}</span>
         </div>
         {!item.isReal && (
-          <div style={{ fontSize: 9, color: C.tx3, fontStyle: "italic", marginTop: 2 }}>* estimé</div>
+          <div className="mt-0.5 text-[9px] italic text-agon-tx3">* estimé</div>
         )}
       </div>
     </div>
@@ -195,62 +206,59 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
   const avgDoms    = averageItem(views, "doms");
 
   return (
-    <div style={overlayStyle}>
-      <div style={panelStyle}>
+    <div className={SHEET_OVERLAY}>
+      <div className={SHEET_PANEL}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div className="mb-5 flex items-center justify-between">
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>Wellness — détails</div>
-            <div style={{ fontSize: 11, color: C.tx3 }}>{entries.length} jours avec données</div>
+            <div className={SHEET_TITLE}>Wellness — détails</div>
+            <div className={SHEET_SUB}>{entries.length} jours avec données</div>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}><X size={16} /></button>
+          <button onClick={onClose} className={SHEET_CLOSE}><X size={16} /></button>
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))", gap: 8, marginBottom: 20 }}>
+        <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-2">
           {[
-            { label: "Score moy.", value: avgScore, unit: "/100", color: C.ac },
-            { label: WELLNESS_ITEM_SHORT.fatigue, value: avgFatigue,  unit: "/5",   color: C.o  },
-            { label: WELLNESS_ITEM_SHORT.sommeil, value: avgSommeil,  unit: "/5",   color: C.b  },
-            { label: WELLNESS_ITEM_SHORT.stress,  value: avgStress,   unit: "/5",   color: C.r  },
-            { label: WELLNESS_ITEM_SHORT.energie, value: avgEnergie,  unit: "/5",   color: C.g  },
+            { label: "Score moy.", value: avgScore, unit: "/100", color: TONE.accent },
+            { label: WELLNESS_ITEM_SHORT.fatigue, value: avgFatigue,  unit: "/5",   color: TONE.alerte },
+            { label: WELLNESS_ITEM_SHORT.sommeil, value: avgSommeil,  unit: "/5",   color: TONE.info },
+            { label: WELLNESS_ITEM_SHORT.stress,  value: avgStress,   unit: "/5",   color: TONE.erreur },
+            { label: WELLNESS_ITEM_SHORT.energie, value: avgEnergie,  unit: "/5",   color: TONE.succes },
             // L'athlète note sa fraîcheur (1 = DOMS intenses, 5 = aucune douleur) :
             // on redit la moyenne en courbatures pour éviter la lecture à l'envers.
             {
-              label: "Fraîcheur musc.", value: avgDoms, unit: "/5", color: C.y,
+              label: "Fraîcheur musc.", value: avgDoms, unit: "/5", color: TONE.orClair,
               sub: avgDoms != null ? domsReading(avgDoms) : null,
             },
           ].map(({ label, value, unit, color, sub }: {
             label: string; value: number | null; unit: string; color: string; sub?: string | null;
           }) => (
-            <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>
+            <div key={label} className={STAT_CARD}>
+              <div className={STAT_LABEL}>{label}</div>
+              <div className={cn(STAT_VALUE, "text-[20px] leading-none", color)}>
                 {value ?? "—"}
               </div>
-              <div style={{ fontSize: 9, color: C.tx3 }}>{unit}</div>
-              {sub && <div style={{ fontSize: 9, color, marginTop: 2 }}>{sub}</div>}
+              <div className="text-[9px] text-agon-tx3">{unit}</div>
+              {sub && <div className={cn("mt-0.5 text-[9px]", color)}>{sub}</div>}
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.s2, padding: 3, borderRadius: 4 }}>
+        <div className="mb-4 flex gap-1 rounded-[4px] bg-agon-s2 p-[3px]">
           {TABS.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              flex: 1, padding: "6px 0", borderRadius: 6, border: "none",
-              background: tab === t.key ? C.s1 : "transparent",
-              color: tab === t.key ? C.tx : C.tx3,
-              fontSize: 11, fontWeight: tab === t.key ? 700 : 500,
-              cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-            }}>
+            <button key={t.key} onClick={() => setTab(t.key)} className={cn(
+              "flex-1 cursor-pointer rounded-[6px] border-0 py-1.5 text-[11px] [transition:all_120ms]",
+              tab === t.key ? "bg-agon-s1 font-bold text-agon-tx" : "bg-transparent font-medium text-agon-tx3",
+            )}>
               {t.label}
             </button>
           ))}
         </div>
 
         {entries.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 0", color: C.tx3, fontSize: 13 }}>
+          <div className="py-10 text-center text-[13px] text-agon-tx3">
             Aucune donnée wellness
           </div>
         )}
@@ -327,7 +335,7 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
                   label: "Durée moy.",
                   value: fmtDur(avgSleepDur),
                   sub: durDelta != null ? (durDelta >= 0 ? `+${durDelta}min vs obj.` : `${durDelta}min vs obj.`) : undefined,
-                  color: durDelta == null ? C.b : durDelta >= -15 ? C.g : durDelta >= -45 ? C.o : C.r,
+                  color: durDelta == null ? TONE.info : tier(durDelta >= -15, durDelta >= -45),
                 });
 
               if (avgBedDev != null)
@@ -335,7 +343,7 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
                   label: "Régularité coucher",
                   value: `±${avgBedDev}min`,
                   sub: avgBedDev <= 15 ? "Excellent" : avgBedDev <= 30 ? "Bon" : "À améliorer",
-                  color: avgBedDev <= 15 ? C.g : avgBedDev <= 30 ? C.o : C.r,
+                  color: tier(avgBedDev <= 15, avgBedDev <= 30),
                 });
 
               if (avgUpDev != null)
@@ -343,19 +351,19 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
                   label: "Régularité lever",
                   value: `±${avgUpDev}min`,
                   sub: avgUpDev <= 15 ? "Excellent" : avgUpDev <= 30 ? "Bon" : "À améliorer",
-                  color: avgUpDev <= 15 ? C.g : avgUpDev <= 30 ? C.o : C.r,
+                  color: tier(avgUpDev <= 15, avgUpDev <= 30),
                 });
 
               if (realSleepCount > 0)
-                statCards.push({ label: "Données réelles", value: `${realSleepCount}/${entries.length}`, color: C.g });
+                statCards.push({ label: "Données réelles", value: `${realSleepCount}/${entries.length}`, color: TONE.succes });
 
               return statCards.length > 0 ? (
-                <div style={{ display: "grid", gridTemplateColumns: `repeat(${statCards.length}, 1fr)`, gap: 8, marginBottom: 16 }}>
+                <div className="mb-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${statCards.length}, 1fr)` }}>
                   {statCards.map(({ label, value, sub, color }) => (
-                    <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
-                      {sub && <div style={{ fontSize: 9, color: C.tx3, marginTop: 3 }}>{sub}</div>}
+                    <div key={label} className={STAT_CARD}>
+                      <div className={STAT_LABEL}>{label}</div>
+                      <div className={cn(STAT_VALUE, "text-[18px] leading-none", color)}>{value}</div>
+                      {sub && <div className="mt-[3px] text-[9px] text-agon-tx3">{sub}</div>}
                     </div>
                   ))}
                 </div>
@@ -422,7 +430,7 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
             </ResponsiveContainer>
 
             {sleepData.some((s) => !s.isReal) && (
-              <div style={{ marginTop: 8, fontSize: 10, color: C.tx3, fontStyle: "italic", textAlign: "right" }}>
+              <div className="mt-2 text-right text-[10px] italic text-agon-tx3">
                 Barres transparentes = horaires estimés (pas de données réelles)
               </div>
             )}
@@ -432,22 +440,3 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
     </div>
   );
 }
-
-const overlayStyle: React.CSSProperties = {
-  position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-  zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
-};
-
-const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "6px 6px 0 0",
-  width: "100%", maxWidth: 860,
-  maxHeight: "92vh", overflowY: "auto",
-  padding: "20px 20px 40px",
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 4,
-  border: "1px solid " + C.brd, background: C.s2,
-  color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-};

@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react";
-import { C } from "@/lib/theme";
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -17,39 +16,17 @@ interface EmptyStateProps {
  */
 export function EmptyState({ icon: Icon, title, description, cta }: EmptyStateProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "48px 24px",
-        borderRadius: 6,
-        border: "1px dashed rgba(255,255,255,0.08)",
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 6,
-          background: "rgba(255,201,51,0.10)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 16,
-        }}
-      >
-        <Icon size={22} color={C.ac} strokeWidth={1.5} />
+    <div className="flex flex-col items-center justify-center rounded-[6px] border border-dashed border-agon-tx/[0.08] px-6 py-12 text-center">
+      <div className="mb-4 flex size-12 items-center justify-center rounded-[6px] bg-agon-accent/[0.10]">
+        <Icon size={22} strokeWidth={1.5} className="text-agon-accent" />
       </div>
 
-      <div style={{ fontSize: 14, fontWeight: 600, color: C.tx, marginBottom: 6 }}>
+      <div className="mb-1.5 text-[14px] font-semibold text-agon-tx">
         {title}
       </div>
 
       {description && (
-        <div style={{ fontSize: 12, color: C.tx3, maxWidth: 280, lineHeight: 1.5 }}>
+        <div className="max-w-[280px] text-[12px] leading-[1.5] text-agon-tx3">
           {description}
         </div>
       )}
@@ -57,25 +34,7 @@ export function EmptyState({ icon: Icon, title, description, cta }: EmptyStatePr
       {cta && (
         <button
           onClick={cta.onClick}
-          style={{
-            marginTop: 20,
-            padding: "8px 20px",
-            borderRadius: 4,
-            border: "1px solid " + C.ac + "50",
-            background: "rgba(255,201,51,0.12)",
-            color: C.ac,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            transition: "background 150ms ease-out",
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "rgba(255,201,51,0.22)")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "rgba(255,201,51,0.12)")
-          }
+          className="mt-5 cursor-pointer rounded-[4px] border border-agon-accent/[0.31] bg-agon-accent/[0.12] px-5 py-2 font-[inherit] text-[13px] font-semibold text-agon-accent [transition:background_150ms_ease-out] hover:bg-agon-accent/[0.22]"
         >
           {cta.label}
         </button>

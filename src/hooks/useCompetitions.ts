@@ -5,9 +5,11 @@ import {
   deleteCompetition,
   invalidateCompetitions,
   listCompetitions,
+  setCompetitionCancelled,
   updateCompetition,
   type CompetitionPatch,
 } from '@/api/competitions';
+import { invalidateHyrox } from '@/api/hyrox';
 import type { Competition, CompetitionInsert } from '@/types/planning';
 
 /**
@@ -48,6 +50,16 @@ export function useDeleteCompetition() {
   const qc = useQueryClient();
   return useMutation<void, Error, { id: string; athlete_id: string }>({
     mutationFn: ({ id }) => deleteCompetition(id),
+    // Résultats et plans HYROX détachés : leurs écrans se rafraîchissent aussi.
+    onSuccess: (_data, vars) => Promise.all([invalidateCompetitions(qc, vars.athlete_id), invalidateHyrox(qc, vars.athlete_id)]),
+  });
+}
+
+/** Annuler (`cancelled: true`) ou rétablir une compétition. */
+export function useSetCompetitionCancelled() {
+  const qc = useQueryClient();
+  return useMutation<Competition, Error, { id: string; athlete_id: string; cancelled: boolean }>({
+    mutationFn: ({ id, cancelled }) => setCompetitionCancelled(id, cancelled),
     onSuccess: (_data, vars) => invalidateCompetitions(qc, vars.athlete_id),
   });
 }

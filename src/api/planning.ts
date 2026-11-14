@@ -3,6 +3,7 @@ import { localISO } from "@/lib/date";
 import { computeOccurrences } from "@/lib/sessionOccurrence";
 import { listTestSessionsBetween } from "./tests";
 import { listCompetitions } from "./competitions";
+import { activeCompetitions, isCancelled } from "@shared/domain/competitions";
 import { listLifeEvents } from "./lifeEvents";
 import { readAppData } from "./appData";
 import { listEnergyAssignments } from "./energy";
@@ -50,7 +51,7 @@ export interface TimelineData extends CycleTree {
   tests: TimelineTestSession[];
 }
 
-/** Frise : périodisation + compétitions et tests de la fenêtre affichée. */
+/** Frise : périodisation + compétitions maintenues (pas les annulées) et tests de la fenêtre affichée. */
 export async function getTimeline(athleteId: string, start: IsoDay, end: IsoDay): Promise<TimelineData> {
   const [tree, comps, tests] = await Promise.all([
     getCycleTree(athleteId, { from: start, to: end }),
@@ -59,7 +60,7 @@ export async function getTimeline(athleteId: string, start: IsoDay, end: IsoDay)
   ]);
   return {
     ...tree,
-    competitions: comps.filter((c) => c.date >= start && c.date <= end) as unknown as TimelineCompetition[],
+    competitions: activeCompetitions(comps).filter((c) => c.date >= start && c.date <= end) as unknown as TimelineCompetition[],
     tests,
   };
 }
@@ -124,6 +125,8 @@ export interface CompetitionBrief {
   location: string | null;
   priority: "A" | "B" | "C" | null;
   athlete_comment: string | null;
+  /** Annulée : affichée barrée, ne fait pas du jour un jour de compétition. */
+  cancelled?: boolean;
 }
 
 export interface WeekDay {
@@ -307,6 +310,7 @@ export async function getActivePlan(athleteId: string, weekOffset = 0): Promise<
       push(compsByDate, d, {
         id: c.id, name: c.name, type: c.type, date: c.date, location: c.location ?? null,
         priority: (c.priority ?? null) as CompetitionBrief["priority"], athlete_comment: c.athlete_comment ?? null,
+        cancelled: isCancelled(c),
       });
     }
   }
@@ -392,7 +396,7 @@ export interface UnifiedCalendarEvent {
   type: UCEventType;
   date: string;           // "YYYY-MM-DD"
   title: string;
-  status?: string;        // planned | completed | missed | skipped
+  status?: string;        // planned | completed | missed | skipped ; compétition : cancelled
   rpe?: number | null;
   // Séance muscu
   sessionId?: string;
@@ -484,6 +488,8 @@ export async function getCalendarEvents(
     events.push({
       id: c.id, type: "competition", date: c.date, title: c.name,
       priority: c.priority ?? undefined, location: c.location ?? undefined,
+      // Annulée : affichée barrée dans le calendrier, hors des décomptes.
+      ...(isCancelled(c) ? { status: "cancelled" } : {}),
       raw: c as unknown as Record<string, unknown>,
     });
   }

@@ -8,7 +8,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { Settings, X, Plus, GripVertical, Link2, BookmarkPlus } from "lucide-react"
 import type { Bloc, Exercice } from "./types"
 import { defaultExerciceParams } from "./types"
@@ -16,8 +16,10 @@ import { BlocForm } from "./BlocForm"
 import { ExerciceRow } from "./ExerciceRow"
 import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor"
 
-const VIOLET = C.ac
-const VIOLET_S = "rgba(123,111,255,0.12)"
+/** Bouton carré 24 px de l'en-tête du bloc. */
+const SQ_BTN = "flex size-6 cursor-pointer items-center justify-center rounded-[6px] border"
+const SQ_IDLE = "border-agon-brd-l bg-transparent text-agon-tx3"
+const META = "text-[9px] text-agon-tx3"
 
 
 function hexToRgba(hex: string, alpha: number) {
@@ -159,16 +161,10 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
   const bColor = blocColor(bloc.color, index)
 
   return (
-    <div style={{
-      borderRadius: 6,
-      border: "1px solid " + C.brdL,
-      overflow: "hidden",
-      marginBottom: 12,
-      background: C.s1,
-    }}>
+    <div className="mb-3 overflow-hidden rounded-[6px] border border-agon-brd-l bg-agon-s1">
       {/* Header */}
       {editing ? (
-        <div style={{ padding: "14px 16px 14px 20px", borderBottom: "1px solid " + C.brdL }}>
+        <div className="border-b border-agon-brd-l py-3.5 pl-5 pr-4">
           <BlocForm
             initial={bloc}
             onSubmit={data => { onChange({ ...bloc, ...data }); setEditing(false) }}
@@ -176,29 +172,23 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
           />
         </div>
       ) : (
-        <div style={{ padding: "8px 10px 8px 16px", borderBottom: "1px solid " + C.brdL + "80" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="py-2 pl-4 pr-2.5">
+          <div className="flex items-center gap-1.5">
             {/* Drag */}
             <div
               {...(dragHandleProps ?? {})}
-              style={{ cursor: "grab", color: C.tx3 + "80", display: "flex", alignItems: "center", flexShrink: 0 }}
+              className="flex shrink-0 cursor-grab items-center text-agon-tx3/50"
             >
               <GripVertical size={12} />
             </div>
 
             {/* Bloc number badge */}
-            <div style={{
-              width: 18, height: 18, borderRadius: 5,
-              background: hexToRgba(bColor, 0.15), color: bColor,
-              fontSize: 9, fontWeight: 900,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}>
+            <div className="flex size-[18px] shrink-0 items-center justify-center rounded-[5px] text-[9px] font-black" style={{ background: hexToRgba(bColor, 0.15), color: bColor }}>
               {index + 1}
             </div>
 
             {/* Name — editable */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="min-w-0 flex-1">
               {editingName ? (
                 <input
                   autoFocus
@@ -209,38 +199,38 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
                     if (e.key === 'Enter') { onChange({ ...bloc, name: nameValue.trim() || bloc.name }); setEditingName(false) }
                     if (e.key === 'Escape') setEditingName(false)
                   }}
-                  style={{ width: "100%", padding: "2px 6px", borderRadius: 5, border: "1px solid " + VIOLET, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 700, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                  className="w-full rounded-[5px] border border-agon-accent bg-agon-s2 px-1.5 py-0.5 text-[13px] font-bold text-agon-tx outline-none"
                 />
               ) : (
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+                <div className="flex min-w-0 items-baseline gap-1.5">
                   <div
                     onClick={() => { setEditingName(true); setNameValue(bloc.name) }}
-                    style={{ fontSize: 13, fontWeight: 700, color: C.tx, cursor: "text", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    className="cursor-text truncate text-[13px] font-bold text-agon-tx"
                   >
-                    {bloc.name || <span style={{ color: C.tx3 }}>Bloc sans nom</span>}
+                    {bloc.name || <span className="text-agon-tx3">Bloc sans nom</span>}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                    {exCount > 0 && <span style={{ fontSize: 9, color: C.tx3 }}>{exCount} ex.</span>}
-                    <span style={{ fontSize: 9, color: C.tx3 + "80" }}>·</span>
-                    <span style={{ fontSize: 9, color: C.tx3 }}>{timing}</span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {exCount > 0 && <span className={META}>{exCount} ex.</span>}
+                    <span className="text-[9px] text-agon-tx3/50">·</span>
+                    <span className={META}>{timing}</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Actions */}
-            <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+            <div className="flex shrink-0 gap-[3px]">
               <button
                 onClick={() => setEditing(true)}
                 title="Modifier le bloc"
-                style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                className={cn(SQ_BTN, SQ_IDLE)}
               ><Settings size={11} /></button>
 
               {onSaveToBank && (
                 <button
                   onClick={onSaveToBank}
                   title="Enregistrer dans la banque de blocs"
-                  style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  className={cn(SQ_BTN, SQ_IDLE)}
                 ><BookmarkPlus size={11} /></button>
               )}
 
@@ -248,17 +238,17 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
                 <>
                   <button
                     onClick={onDelete}
-                    style={{ padding: "0 8px", height: 24, borderRadius: 6, border: "none", background: C.rV, color: C.ink, cursor: "pointer", fontSize: 10, fontWeight: 700, fontFamily: "inherit" }}
+                    className="h-6 cursor-pointer rounded-[6px] border-0 bg-agon-erreur-vif px-2 text-[10px] font-bold text-agon-ink"
                   >Supprimer</button>
                   <button
                     onClick={() => setConfirmDelete(false)}
-                    style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    className={cn(SQ_BTN, SQ_IDLE)}
                   ><X size={11} /></button>
                 </>
               ) : (
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid " + C.r + "40", background: C.rS, color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  className={cn(SQ_BTN, "border-agon-erreur/25 bg-agon-erreur-doux text-agon-erreur")}
                 ><X size={11} /></button>
               )}
             </div>
@@ -267,12 +257,12 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
             <div
               onClick={() => setEditing(true)}
               title="Modifier les consignes"
-              style={{ marginTop: 6, marginLeft: 36, fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", cursor: "pointer" }}
+              className="ml-9 mt-1.5 cursor-pointer whitespace-pre-wrap text-[11px] leading-[1.4] text-agon-tx2"
             >
               {bloc.instructions}
             </div>
           )}
-          <div style={{ marginTop: 6, marginLeft: 36 }}>
+          <div className="ml-9 mt-1.5">
             <FicheAttachmentsEditor
               compact
               value={bloc.fiches}
@@ -285,17 +275,14 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
       )}
 
       {/* Exercises */}
-      <div style={{ padding: "8px 10px 10px 12px" }}>
-        <div style={{
-          background: hexToRgba(bColor, 0.05),
-          border: "1px solid " + hexToRgba(bColor, 0.18),
-          borderRadius: 4,
-          padding: bloc.exercices.length > 0 ? "6px" : "0",
-          marginBottom: bloc.exercices.length > 0 ? 6 : 0,
-        }}>
+      <div className="pb-2.5 pl-3 pr-2.5 pt-2">
+        <div
+          className={cn("rounded-[4px] border", bloc.exercices.length > 0 && "mb-1.5 p-1.5")}
+          style={{ background: hexToRgba(bColor, 0.05), borderColor: hexToRgba(bColor, 0.18) }}
+        >
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleExerciceDragEnd}>
             <SortableContext items={bloc.exercices.map(e => e.id)} strategy={verticalListSortingStrategy}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div className="flex flex-col gap-1">
                 {bloc.exercices.map((ex, i) => (
                   <Fragment key={ex.id}>
                     <SortableExercice
@@ -314,22 +301,16 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
                     />
                     {/* Superset link toggle between consecutive exercises */}
                     {i < bloc.exercices.length - 1 && (
-                      <div style={{ display: "flex", justifyContent: "center", margin: "-2px 0" }}>
+                      <div className="-my-0.5 flex justify-center">
                         <button
                           onClick={() => updateExercice(i, { ...ex, superset_with_next: !ex.superset_with_next })}
                           title={ex.superset_with_next ? "Délier (retirer le superset)" : "Lier en superset avec l'exercice suivant"}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 4,
-                            padding: "1px 8px", borderRadius: 4,
-                            border: "1px " + (ex.superset_with_next ? "solid " + VIOLET : "dashed " + C.brdL),
-                            background: ex.superset_with_next ? VIOLET_S : "transparent",
-                            color: ex.superset_with_next ? VIOLET : C.tx3,
-                            fontSize: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                            opacity: ex.superset_with_next ? 1 : 0.55,
-                            transition: "all 120ms",
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.opacity = "1" }}
-                          onMouseLeave={e => { e.currentTarget.style.opacity = ex.superset_with_next ? "1" : "0.55" }}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-1 rounded-[4px] border px-2 py-px text-[9px] font-bold [transition:all_120ms]",
+                            ex.superset_with_next
+                              ? "border-solid border-agon-accent bg-agon-accent/[0.12] text-agon-accent"
+                              : "border-dashed border-agon-brd-l bg-transparent text-agon-tx3 opacity-[0.55] hover:opacity-100",
+                          )}
                         >
                           <Link2 size={9} />
                           {ex.superset_with_next ? "Superset" : "Lier"}
@@ -346,17 +327,10 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
         {/* Add exercise */}
         <button
           onClick={addExercice}
-          style={{
-            width: "100%", marginTop: bloc.exercices.length > 0 ? 6 : 0,
-            padding: "7px 0", borderRadius: 4,
-            border: "1px dashed " + C.brdL, background: "transparent",
-            color: C.tx3, fontSize: 12, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-            transition: "border-color 120ms, color 120ms",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = VIOLET; e.currentTarget.style.color = VIOLET }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = C.brdL; e.currentTarget.style.color = C.tx3 }}
+          className={cn(
+            "flex w-full cursor-pointer items-center justify-center gap-[5px] rounded-[4px] border border-dashed border-agon-brd-l bg-transparent py-[7px] text-[12px] font-semibold text-agon-tx3 [transition:border-color_120ms,color_120ms] hover:border-agon-accent hover:text-agon-accent",
+            bloc.exercices.length > 0 && "mt-1.5",
+          )}
         >
           <Plus size={13} />
           Ajouter un exercice

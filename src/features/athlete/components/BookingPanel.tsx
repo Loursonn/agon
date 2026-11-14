@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import {
   CALENDLY_MIN_HEIGHT,
   buildCalendlyEmbedUrl,
@@ -72,51 +72,30 @@ export default function BookingPanel({
   }, [onClose]);
 
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 300,
-        background: C.bg, display: "flex", flexDirection: "column",
-      }}
-    >
+    <div className="fixed inset-0 z-[300] flex flex-col bg-agon-bg">
       {/* En-tête */}
-      <div
-        style={{
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "12px 14px", borderBottom: "1px solid " + C.brd,
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-agon-brd px-3.5 py-3">
         <button
           onClick={onClose}
           aria-label="Fermer"
-          style={{
-            width: 28, height: 28, borderRadius: 4,
-            border: "1px solid " + C.brdL, background: "transparent",
-            color: C.tx2, fontSize: 18, cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-          }}
+          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-[4px] border border-agon-brd-l bg-transparent text-[18px] text-agon-tx2"
         >
           ×
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>Mon point hebdo</div>
-          <div
-            style={{
-              fontSize: 11, color: C.tx3,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}
-          >
+        <div className="min-w-0 flex-1">
+          <div className="text-[14px] font-bold text-agon-tx">Mon point hebdo</div>
+          <div className="truncate text-[11px] text-agon-tx3">
             avec {coachName}
           </div>
         </div>
       </div>
 
       {/* Widget */}
-      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+      <div className="flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch]">
         {embedUrl ? (
           <>
             {!loaded && (
-              <div style={{ padding: "32px 16px", textAlign: "center", fontSize: 12, color: C.tx3 }}>
+              <div className="px-4 py-8 text-center text-[12px] text-agon-tx3">
                 Chargement des créneaux…
               </div>
             )}
@@ -126,15 +105,12 @@ export default function BookingPanel({
               onLoad={() => setLoaded(true)}
               // La hauteur mini évite un scroll imbriqué sur mobile : Calendly
               // gère sa propre mise en page dès qu'il a la place.
-              style={{
-                display: loaded ? "block" : "none",
-                width: "100%", border: "none",
-                height: "100%", minHeight: CALENDLY_MIN_HEIGHT,
-              }}
+              className={cn("h-full w-full border-none", loaded ? "block" : "hidden")}
+              style={{ minHeight: CALENDLY_MIN_HEIGHT }}
             />
           </>
         ) : (
-          <div style={{ padding: "32px 16px", textAlign: "center", fontSize: 12, color: C.tx3 }}>
+          <div className="px-4 py-8 text-center text-[12px] text-agon-tx3">
             Le lien de réservation de ton coach est invalide. Préviens-le.
           </div>
         )}
@@ -142,17 +118,12 @@ export default function BookingPanel({
 
       {/* Secours : si l'iframe est bloquée (bloqueur, webview), on sort du cadre. */}
       {fallbackUrl && (
-        <div
-          style={{
-            padding: "10px 14px", borderTop: "1px solid " + C.brd,
-            textAlign: "center", flexShrink: 0,
-          }}
-        >
+        <div className="shrink-0 border-t border-agon-brd px-3.5 py-2.5 text-center">
           <a
             href={fallbackUrl}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ fontSize: 11, color: C.tx3, textDecoration: "underline" }}
+            className="text-[11px] text-agon-tx3 underline"
           >
             Ouvrir dans Calendly
           </a>

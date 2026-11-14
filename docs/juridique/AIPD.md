@@ -41,7 +41,7 @@ Inventaire complet des données : `REGISTRE.md` (T1 à T8).
 - Responsable de traitement de la plateforme : Agon (Hugo TANGUY, EI).
 - Coachs, co-coachs, professionnels du staff : destinataires, responsables distincts de l'usage
   qu'ils font des données dans leur propre activité (`REVUE_2026-11.md` §2.8).
-- Sous-traitants : Supabase (base, Irlande), Vercel (site, États-Unis), Google (API Gemini).
+- Sous-traitants : Supabase (base, Irlande), Vercel (site, États-Unis), Anthropic (API Claude, depuis le 14/11/2026 ; remplace Google Gemini).
 - Responsables indépendants : Garmin, COROS.
 
 **Supports.** Navigateur ou application de l'utilisateur → Supabase (PostgreSQL avec RLS,
@@ -58,9 +58,9 @@ Storage, Edge Functions Deno, Vault) ; Vercel ne sert que le code du site. Donn�
 | Durées (art. 5.1.e) | Durée de vie du compte ; effacement à la suppression ; purge hebdomadaire des comptes pré-créés jamais réclamés (6 mois) ; comptes inactifs (3 ans) en attente d'un service d'e-mail | **En partie** (A6) |
 | Information (art. 12-14) | Politique détaillée, version 2026-11-13 ; complétée par cette revue | Conforme après corrections |
 | Droits (art. 15-22) | Export JSON complet en libre-service, suppression en libre-service (app et page web), retrait des accords en un clic | Conforme |
-| Sous-traitance (art. 28) | DPA Supabase non signé, statut Vercel et Gemini à vérifier | **Non conforme tant que H1-H3 ne sont pas faits** |
+| Sous-traitance (art. 28) | DPA Supabase non signé, statut Vercel et accord de traitement Anthropic à vérifier | **Non conforme tant que H1-H3 ne sont pas faits** |
 | Transferts (chap. V) | Vercel et Google certifiés DPF ; Supabase par clauses types | Conforme après H2 |
-| Mineurs (art. 8, loi I&L art. 45) | 15 ans minimum vérifié en base ; IA ouverte aux 15-17 ans alors que Gemini et Claude l'interdisent | **Corrigé** : client et trigger en base (C2) |
+| Mineurs (art. 8, loi I&L art. 45) | 15 ans minimum vérifié en base ; IA ouverte aux 15-17 ans alors que les conditions des fournisseurs d'IA l'interdisent | **Corrigé** : client et trigger en base (C2) |
 | Hébergement de santé (CSP L.1111-8) | Diagnostic, traitement, antécédents et documents médicaux retirés le 13/11 (C1) : plus aucune donnée de soins, hors champ | Conforme depuis le 13/11 |
 
 ## 4. Risques
@@ -126,7 +126,7 @@ dans `docs/DECISIONS.md`).
 |---|---|---|---|
 | C1 | **Fait le 13/11** : champs diagnostic / traitement / « vu par » / antécédents / documents médicaux retirés (écrans, API, base). Valeurs existantes recopiées dans les notes de l'athlète, entrée « pathologie » supprimée (accord d'Hugo). Temps 2 : supprimer colonnes, tables et bucket après la mise en production de `dev` | dev | Fait ; temps 2 au prochain déploiement |
 | C2 | Accord IA 18 ans : client (fait, sur `dev`), trigger en base appliqué le 13/11 | — | Fait |
-| H1-H3 | DPA Supabase signé, facturation Gemini active, offre Vercel compatible | Hugo | Avant les stores |
+| H1-H3 | DPA Supabase signé, compte API Anthropic avec accord de traitement, offre Vercel compatible | Hugo | Avant les stores |
 | A1 | Finir la correction des règles trop larges | session `policies-prod-trop-large` | En cours |
 | A2 | **Fait le 13/11** : test CI `supabase/tests/storage_public_buckets.sql` (drapeau `public` et lecture d'un fichier témoin par un anonyme ou un compte sans lien), sur les buckets de la prod (`platform.sql`, job « Tests SQL ») et sur ceux des migrations (job R2). Liste blanche : `energy-exercise-photos`, `exercise-images`, `exercise-pdfs`, `public-assets` | dev | Fait |
 | A3 | Mot de passe : 8 caractères minimum au lieu de 6. **Client fait le 13/11** (formulaires, `src/api/auth.ts` refuse toute inscription ou changement à moins de 8, Edge Function `claim-athlete`). Reste : réglage « Minimum password length » à 8 dans Supabase Auth (Hugo), MFA proposé aux coachs | dev + Hugo (réglage) | Avant les stores |

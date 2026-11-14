@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Activity, Target, Zap, X } from "lucide-react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { SHEET_CLOSE, SHEET_HEAD, SHEET_OVERLAY, SHEET_PANEL, SHEET_SUB, SHEET_TITLE, STAT_CARD, STAT_LABEL, STAT_VALUE } from "./detailSheet";
 import { WorkoutRetourCard } from "./WorkoutRetourCard";
 import { EnergyRetourCard } from "./EnergyRetourCard";
 import { EmptyState } from "@/features/shared/components/EmptyState";
@@ -50,53 +51,48 @@ export function WorkoutsDetailView({ workouts, energySessions, onClose }: Workou
   const energyDone = energySessions.filter((e) => e.completed).length;
 
   return (
-    <div style={overlayStyle}>
-      <div style={panelStyle}>
+    <div className={SHEET_OVERLAY}>
+      <div className={SHEET_PANEL}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div className={SHEET_HEAD}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>Séances — détails</div>
-            <div style={{ fontSize: 11, color: C.tx3 }}>
+            <div className={SHEET_TITLE}>Séances — détails</div>
+            <div className={SHEET_SUB}>
               {completed.length} / {workouts.length} muscu+spé complétées
             </div>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}><X size={16} /></button>
+          <button onClick={onClose} className={SHEET_CLOSE}><X size={16} /></button>
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            { label: "Taux complétion", value: completionRate != null ? `${completionRate}%` : "—", color: completionRate != null && completionRate >= 70 ? C.g : C.o },
-            { label: "RPE moyen",       value: avgRpe != null ? `${avgRpe}/10` : "—",             color: C.ac },
-            { label: "Durée moyenne",   value: avgDurMin != null ? `${avgDurMin} min` : "—",       color: C.b  },
-            { label: "Énergie faites",  value: `${energyDone}/${energySessions.length}`,           color: C.o  },
+            { label: "Taux complétion", value: completionRate != null ? `${completionRate}%` : "—", color: completionRate != null && completionRate >= 70 ? "text-agon-succes" : "text-agon-alerte" },
+            { label: "RPE moyen",       value: avgRpe != null ? `${avgRpe}/10` : "—",             color: "text-agon-accent" },
+            { label: "Durée moyenne",   value: avgDurMin != null ? `${avgDurMin} min` : "—",       color: "text-agon-info" },
+            { label: "Énergie faites",  value: `${energyDone}/${energySessions.length}`,           color: "text-agon-alerte" },
           ].map(({ label, value, color }) => (
-            <div key={label} style={{ background: C.s2, borderRadius: 4, padding: "10px 12px", textAlign: "center" }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 17, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+            <div key={label} className={STAT_CARD}>
+              <div className={STAT_LABEL}>{label}</div>
+              <div className={cn(STAT_VALUE, "text-[17px] leading-none", color)}>{value}</div>
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.s2, padding: 3, borderRadius: 4 }}>
+        <div className="mb-4 flex gap-1 rounded-[4px] bg-agon-s2 p-[3px]">
           {TABS.map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-              padding: "7px 0", borderRadius: 6, border: "none",
-              background: tab === t.key ? C.s1 : "transparent",
-              color: tab === t.key ? C.tx : C.tx3,
-              fontSize: 11, fontWeight: tab === t.key ? 700 : 500,
-              cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-            }}>
+            <button key={t.key} onClick={() => setTab(t.key)} className={cn(
+              "flex flex-1 cursor-pointer items-center justify-center gap-[5px] rounded-[6px] border-none py-[7px] text-[11px] [transition:all_120ms]",
+              tab === t.key ? "bg-agon-s1 font-bold text-agon-tx" : "bg-transparent font-medium text-agon-tx3",
+            )}>
               {t.icon}
               {t.label}
               {counts[t.key] > 0 && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4,
-                  background: tab === t.key ? C.ac + "30" : C.brd,
-                  color:      tab === t.key ? C.ac : C.tx3,
-                }}>
+                <span className={cn(
+                  "rounded-[4px] px-[5px] py-px text-[9px] font-bold",
+                  tab === t.key ? "bg-agon-accent/[0.188] text-agon-accent" : "bg-agon-brd text-agon-tx3",
+                )}>
                   {counts[t.key]}
                 </span>
               )}
@@ -105,7 +101,7 @@ export function WorkoutsDetailView({ workouts, energySessions, onClose }: Workou
         </div>
 
         {/* Content */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {tab === "muscu" && (
             muscu.length === 0
               ? <EmptyState icon={Activity} title="Aucune séance muscu ce mois" />
@@ -128,22 +124,3 @@ export function WorkoutsDetailView({ workouts, energySessions, onClose }: Workou
     </div>
   );
 }
-
-const overlayStyle: React.CSSProperties = {
-  position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-  zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center",
-};
-
-const panelStyle: React.CSSProperties = {
-  background: C.s1, borderRadius: "6px 6px 0 0",
-  width: "100%", maxWidth: 860,
-  maxHeight: "92vh", overflowY: "auto",
-  padding: "20px 20px 40px",
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center",
-  width: 32, height: 32, borderRadius: 4,
-  border: "1px solid " + C.brd, background: C.s2,
-  color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-};

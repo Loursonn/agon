@@ -20,6 +20,7 @@ export function toWellnessDay(e: WellnessEntry): WellnessDay {
     domsLevels: e.domsLevels,
     envie: e.envie,
     pain: e.pain,
+    painLevels: e.painLevels,
     sick: e.sick,
     domsWorkout: e.domsWorkout,
     coucher: e.sleep.bedtime ?? undefined,

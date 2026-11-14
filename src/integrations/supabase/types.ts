@@ -1252,6 +1252,8 @@ export type Database = {
         Row: {
           athlete_comment: string | null
           athlete_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
           coach_id: string
           created_at: string
           date: string
@@ -1269,6 +1271,8 @@ export type Database = {
         Insert: {
           athlete_comment?: string | null
           athlete_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           coach_id: string
           created_at?: string
           date: string
@@ -1286,6 +1290,8 @@ export type Database = {
         Update: {
           athlete_comment?: string | null
           athlete_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           coach_id?: string
           created_at?: string
           date?: string
@@ -1304,6 +1310,13 @@ export type Database = {
           {
             foreignKeyName: "competitions_athlete_id_fkey"
             columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competitions_cancelled_by_fkey"
+            columns: ["cancelled_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5164,6 +5177,7 @@ export type Database = {
           fatigue: number | null
           injury_note: string | null
           pain: number | null
+          pain_levels: Json
           score: number | null
           sick: boolean | null
           sleep_hours: number | null
@@ -5192,6 +5206,7 @@ export type Database = {
           fatigue?: number | null
           injury_note?: string | null
           pain?: number | null
+          pain_levels?: Json
           score?: number | null
           sick?: boolean | null
           sleep_hours?: number | null
@@ -5220,6 +5235,7 @@ export type Database = {
           fatigue?: number | null
           injury_note?: string | null
           pain?: number | null
+          pain_levels?: Json
           score?: number | null
           sick?: boolean | null
           sleep_hours?: number | null
@@ -6008,6 +6024,7 @@ export type Database = {
           fatigue: number | null
           injury_note: string | null
           pain: number | null
+          pain_levels: Json
           score: number | null
           sick: boolean | null
           sleep_hours: number | null
@@ -6048,6 +6065,8 @@ export type Database = {
           model_id: string
         }[]
       }
+      i_am_coach: { Args: never; Returns: boolean }
+      i_am_staff: { Args: never; Returns: boolean }
       in_todo: { Args: never; Returns: boolean }
       is_athlete_coach: {
         Args: { athlete_uuid: string; p_coach: string }

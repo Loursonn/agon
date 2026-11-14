@@ -299,7 +299,8 @@ export async function listStaffPlanning(athleteId: string): Promise<StaffPlanIte
     db().from("seasons").select("id, name, start_date, end_date").eq("athlete_id", athleteId),
     db().from("macrocycles").select("id, name, start_date, end_date, objective").eq("athlete_id", athleteId),
     db().from("cycles").select("id, name, start_date, end_date, objective").eq("athlete_id", athleteId),
-    db().from("competitions").select("id, name, date, location, priority, type").eq("athlete_id", athleteId),
+    // Annulées exclues : le staff voit le planning qui tient.
+    db().from("competitions").select("id, name, date, location, priority, type").eq("athlete_id", athleteId).is("cancelled_at", null),
   ]);
   const what = "Lecture du planning impossible";
   const items: StaffPlanItem[] = [

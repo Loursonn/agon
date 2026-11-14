@@ -2,14 +2,17 @@
  * ClassiquePreview — aperçu lecture seule d'une séance par blocs (mix Classique / WOD).
  */
 import { Youtube } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import SessionPreview from "../energy/SessionPreview";
 import type { EnergyGroup } from "@/types/energy";
 import type { SessionBlock, ClassiqueBlock, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 
-const ORANGE = H.miel;
-const GREEN  = C.g;
+/** Teinte par type de bloc : WOD (miel hérité → alerte) ou classique (succès). */
+const TONE = {
+  wod:       { head: "bg-agon-alerte/[0.051]", text: "text-agon-alerte", badge: "bg-agon-alerte/[0.125] text-agon-alerte" },
+  classique: { head: "bg-agon-succes/[0.051]", text: "text-agon-succes", badge: "bg-agon-succes/[0.125] text-agon-succes" },
+} as const;
 
 function hasContent(b: SessionBlock): boolean {
   if (isWodBlock(b)) return b.title.trim().length > 0 || b.steps.length > 0;
@@ -21,47 +24,40 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
 
   if (realBlocks.length === 0) {
     return (
-      <div style={{ color: C.tx3, fontSize: 12, textAlign: "center", paddingTop: 40 }}>
+      <div className="pt-10 text-center text-[12px] text-agon-tx3">
         Ajoute des blocs pour voir l'aperçu
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       {realBlocks.map((block, idx) => {
         const wod = isWodBlock(block);
-        const accent = wod ? ORANGE : GREEN;
+        const tone = wod ? TONE.wod : TONE.classique;
         return (
-          <div key={block.id} style={{ background: C.s1, borderRadius: 4, border: `1px solid ${C.brd}`, overflow: "hidden" }}>
-            <div style={{
-              padding: "8px 12px", background: accent + "0D",
-              borderBottom: `1px solid ${C.brd}`,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: accent }}>{idx + 1}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, minWidth: 0, overflowWrap: "anywhere" }}>{block.title || "Bloc"}</span>
-              <span style={{
-                fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 4,
-                background: accent + "20", color: accent,
-              }}>
+          <div key={block.id} className="overflow-hidden rounded border border-agon-brd bg-agon-s1">
+            <div className={cn("flex items-center gap-2 border-b border-agon-brd px-3 py-2", tone.head)}>
+              <span className={cn("text-[10px] font-extrabold", tone.text)}>{idx + 1}</span>
+              <span className="min-w-0 text-[12px] font-bold text-agon-tx [overflow-wrap:anywhere]">{block.title || "Bloc"}</span>
+              <span className={cn("rounded px-1.5 py-px text-[8px] font-extrabold", tone.badge)}>
                 {wod ? "WOD" : "CLASSIQUE"}
               </span>
               {!wod && (
-                <span style={{ fontSize: 10, color: C.tx3, marginLeft: "auto" }}>
+                <span className="ml-auto text-[10px] text-agon-tx3">
                   {(block as ClassiqueBlock).items.filter((i) => i.name.trim()).length} exo{(block as ClassiqueBlock).items.filter((i) => i.name.trim()).length > 1 ? "s" : ""}
                 </span>
               )}
             </div>
 
             {block.instructions && (
-              <div style={{ padding: "6px 12px 0", fontSize: 11, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
+              <div className="whitespace-pre-wrap px-3 pt-1.5 text-[11px] leading-[1.4] text-agon-tx2">
                 {block.instructions}
               </div>
             )}
 
             {wod ? (
-              <div style={{ padding: "8px 10px" }}>
+              <div className="px-2.5 py-2">
                 {(block as WodBlock).steps.length > 0 ? (
                   <SessionPreview
                     intervals={{
@@ -71,25 +67,26 @@ export default function ClassiquePreview({ blocks }: { blocks: SessionBlock[] })
                     compact
                   />
                 ) : (
-                  <span style={{ fontSize: 11, color: C.tx3 }}>Aucun intervalle</span>
+                  <span className="text-[11px] text-agon-tx3">Aucun intervalle</span>
                 )}
               </div>
             ) : (
-              <div style={{ padding: "6px 12px 8px" }}>
+              <div className="px-3 pb-2 pt-1.5">
                 {(block as ClassiqueBlock).items.filter((i) => i.name.trim()).map((item) => (
-                  <div key={item.id} style={{ display: "flex", flexWrap: "wrap", gap: "2px 8px", alignItems: "baseline", padding: "4px 0", borderBottom: `1px solid ${C.brd}30` }}>
-                    <span style={{ fontSize: 11, color: C.tx, flex: "1 1 120px", minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.4 }}>
+                  // Pas de filet : l'ancien style (couleur rgba + « 30 ») était invalide, donc jamais affiché.
+                  <div key={item.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1">
+                    <span className="min-w-0 flex-[1_1_120px] text-[11px] leading-[1.4] text-agon-tx [overflow-wrap:anywhere]">
                       {item.name}
-                      {item.youtube_id && <Youtube size={11} color={H.rougeVif} style={{ marginLeft: 5, verticalAlign: "middle" }} />}
+                      {item.youtube_id && <Youtube size={11} className="ml-[5px] align-middle text-agon-erreur" />}
                     </span>
                     {item.prescription && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: GREEN, minWidth: 0, maxWidth: "100%", whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>{item.prescription}</span>
+                      <span className="min-w-0 max-w-full whitespace-pre-wrap text-[11px] font-bold leading-[1.4] text-agon-succes [overflow-wrap:anywhere]">{item.prescription}</span>
                     )}
                     {item.rest && (
-                      <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>R : {item.rest}</span>
+                      <span className="shrink-0 text-[10px] text-agon-tx3">R : {item.rest}</span>
                     )}
                     {item.notes && (
-                      <div style={{ flexBasis: "100%", fontSize: 10, color: C.tx3, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
+                      <div className="basis-full whitespace-pre-wrap text-[10px] leading-[1.4] text-agon-tx3 [overflow-wrap:anywhere]">
                         {item.notes}
                       </div>
                     )}

@@ -77,9 +77,9 @@ moins une fois par an.
 | Rubrique | Contenu |
 |---|---|
 | Finalité | Synthèses « Tendances » pour l'athlète (`athlete-insights`), propositions de programme au coach (`ai-program`), lecture par l'assistant Claude du coach (`coach-api`). |
-| Base légale | Art. 9.2.a, consentement explicite spécifique et facultatif (`ai_programming`, version `AI_CONSENT_SINCE`), **réservé aux 18 ans et plus** (conditions Gemini et Claude ; garde-fou client livré, trigger base à appliquer, risque C2). |
+| Base légale | Art. 9.2.a, consentement explicite spécifique et facultatif (`ai_programming`, version `AI_CONSENT_SINCE`), **réservé aux 18 ans et plus** (conditions de Claude ; garde-fou client livré, trigger base à appliquer, risque C2). |
 | Données envoyées | Historique d'entraînement, moyennes de bien-être (fatigue, stress, sommeil, score), poids, objectifs, blessures (zones et dates) ; pour `coach-api` aussi prénom, compétitions, tests, titres d'événements de calendrier, vues `ai_provider_*` (fichiers importés seulement). Jamais : Garmin, COROS, photos, douleur et maladie du matin, bilan hebdomadaire, feu, charge, séries temporelles, GPS. |
-| Destinataires | Google (API Gemini payante, sous-traitant, DPA « Products where Google is a Data Processor ») ; Anthropic via le compte personnel du coach (le coach en est responsable, Agon ne le choisit pas). |
+| Destinataires | Anthropic (API Claude, sous-traitant d'Agon depuis le 14/11/2026, accord de traitement d'Anthropic, pas d'entraînement, 30 jours de conservation au plus, traitement mondial) ; Anthropic aussi via le compte personnel du coach (le coach en est responsable, Agon ne le choisit pas). Google Gemini n'est plus utilisé. |
 | Durée | Pas de conservation des réponses brutes chez Agon au-delà de l'affichage ; journal des lectures `coach_api_access_log` et brouillons `coach_api_drafts` : durée de vie du compte. Chez Google (offre payante) : rétention limitée pour détection d'abus selon ses conditions. |
 | Transferts | Google LLC : Data Privacy Framework + clauses types du DPA Google. |
 
@@ -117,7 +117,7 @@ moins une fois par an.
 |---|---|---|---|---|
 | Supabase Inc. (sur AWS Irlande) | Sous-traitant : base, auth, fichiers | Données en Irlande ; société américaine | DPA Supabase avec clauses types | **À signer** (H2) |
 | Vercel Inc. | Sous-traitant : distribution du site | États-Unis | DPF (certifié, vérifié le 13/11) + DPA Vercel | **À vérifier** : offre utilisée (H3) |
-| Google (API Gemini payante) | Sous-traitant IA | UE / États-Unis | DPF + DPA Google | **À vérifier** : facturation active (H1) |
+| Anthropic (API Claude) | Sous-traitant IA (depuis le 14/11/2026, remplace Google Gemini) | États-Unis / mondial | Accord de traitement Anthropic (clauses contractuelles types) | **À faire** : accepter les conditions commerciales et l'accord de traitement à la création du compte API |
 | Garmin, COROS | Responsables indépendants | États-Unis / Chine (point d'accès UE) | Leurs propres conditions | Accords développeur |
 | Anthropic (assistant du coach) | Ni sous-traitant ni choisi par Agon | États-Unis | Compte personnel du coach | Aucun |
 | YouTube (vidéos d'exercices, mode `youtube-nocookie`), Calendly (prise de rendez-vous du coach) | Contenus tiers chargés par le navigateur | États-Unis | Conditions de chaque service | Aucun |

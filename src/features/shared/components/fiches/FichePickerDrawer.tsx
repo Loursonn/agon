@@ -4,7 +4,7 @@
  * Après sélection : variante par défaut + « Varier selon la semaine ».
  */
 import { useMemo, useState } from "react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import {
   FICHE_CATEGORIES, FICHE_CATEGORY_LABEL, groupFamilies, resolveFicheForWeek, variantLabel,
@@ -12,7 +12,11 @@ import {
 import type { Doc, DocFamily, FicheAttachment, FicheCategory } from "@/features/shared/types/fiches";
 import { useAthleteDocs, useDocsBank, useDocsByIds } from "@/features/shared/hooks/fiches/useDocs";
 import { FicheImportDialog } from "@/features/coach/components/fiches/FicheImportDialog";
-import { CATEGORY_COLOR, btnGhost, btnPrimary, chip, input, label } from "./ficheStyles";
+import {
+  BTN_GHOST, BTN_PRIMARY, CATEGORY_BORDER_L, CATEGORY_CHIP_ON, CHIP, CHIP_OFF, CHIP_ON_ACCENT, INPUT, LABEL,
+} from "./ficheStyles";
+
+const chip = (active: boolean, on: string = CHIP_ON_ACCENT) => cn(CHIP, active ? on : CHIP_OFF);
 
 type Tab = "banque" | "athlete" | "import";
 
@@ -113,35 +117,31 @@ export function FichePickerDrawer({
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.55)" }} />
-      <aside style={{
-        position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 91, width: "min(520px, 100vw)",
-        background: C.bg, borderLeft: "1px solid " + C.brd, display: "flex", flexDirection: "column",
-      }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ flex: 1, fontSize: 15, fontWeight: 800, color: C.tx }}>{initial ? "Modifier la fiche" : "Ajouter une fiche"}</div>
-          <button onClick={onClose} aria-label="Fermer" style={{ ...btnGhost, minWidth: 40, padding: 0 }}>×</button>
+      <div onClick={onClose} className="fixed inset-0 z-[90] bg-agon-ink/[0.55]" />
+      <aside className="fixed inset-y-0 right-0 z-[91] flex w-[min(520px,100vw)] flex-col border-l border-agon-brd bg-agon-bg">
+        <div className="flex items-center gap-2.5 border-b border-agon-brd px-4 py-3">
+          <div className="flex-1 text-[15px] font-extrabold text-agon-tx">{initial ? "Modifier la fiche" : "Ajouter une fiche"}</div>
+          <button onClick={onClose} aria-label="Fermer" className={cn(BTN_GHOST, "min-w-10 p-0")}>×</button>
         </div>
 
         {!family ? (
           <>
-            <div style={{ display: "flex", gap: 2, padding: "10px 16px 0" }}>
+            <div className="flex gap-0.5 px-4 pt-2.5">
               {tabs.map(t => (
-                <button key={t.k} onClick={() => setTab(t.k)} style={{
-                  flex: 1, minHeight: 40, border: "none", borderBottom: "2px solid " + (tab === t.k ? C.ac : "transparent"),
-                  background: "transparent", color: tab === t.k ? C.ac : C.tx3, fontSize: 12, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>{t.l}</button>
+                <button key={t.k} onClick={() => setTab(t.k)} className={cn(
+                  "min-h-10 flex-1 cursor-pointer border-0 border-b-2 border-solid bg-transparent font-[inherit] text-[12px] font-bold",
+                  tab === t.k ? "border-b-agon-accent text-agon-accent" : "border-b-transparent text-agon-tx3",
+                )}>{t.l}</button>
               ))}
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+            <div className="flex-1 overflow-y-auto p-4">
               {/* Formulaire d'import toujours monté (masqué hors onglet) : la saisie
                   survit aux changements d'onglet et à la bascule banque / perso */}
-              <div style={{ display: tab === "import" ? "block" : "none" }}>
+              <div className={tab === "import" ? "block" : "hidden"}>
                 {athleteId && (
-                  <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                    <button style={chip(!importPersonal)} onClick={() => setImportPersonal(false)}>Dans la banque</button>
-                    <button style={chip(importPersonal)} onClick={() => setImportPersonal(true)}>Fiche perso de {athleteName ?? "l'athlète"}</button>
+                  <div className="mb-3 flex gap-1.5">
+                    <button className={chip(!importPersonal)} onClick={() => setImportPersonal(false)}>Dans la banque</button>
+                    <button className={chip(importPersonal)} onClick={() => setImportPersonal(true)}>Fiche perso de {athleteName ?? "l'athlète"}</button>
                   </div>
                 )}
                 <FicheImportDialog
@@ -153,35 +153,33 @@ export function FichePickerDrawer({
               </div>
               {tab !== "import" && (
                 <>
-                  <input style={{ ...input, marginBottom: 8 }} placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} />
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                    <button style={chip(cat === "all")} onClick={() => setCat("all")}>Toutes</button>
+                  <input className={cn(INPUT, "mb-2")} placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} />
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    <button className={chip(cat === "all")} onClick={() => setCat("all")}>Toutes</button>
                     {FICHE_CATEGORIES.map(c => (
-                      <button key={c} style={chip(cat === c, CATEGORY_COLOR[c])} onClick={() => setCat(cat === c ? "all" : c)}>{FICHE_CATEGORY_LABEL[c]}</button>
+                      <button key={c} className={chip(cat === c, CATEGORY_CHIP_ON[c])} onClick={() => setCat(cat === c ? "all" : c)}>{FICHE_CATEGORY_LABEL[c]}</button>
                     ))}
                   </div>
                   {list.length === 0 ? (
-                    <div style={{ fontSize: 13, color: C.tx3, padding: "20px 0", textAlign: "center" }}>
+                    <div className="py-5 text-center text-[13px] text-agon-tx3">
                       {tab === "athlete" ? `Aucune fiche personnelle pour ${athleteName ?? "cet athlète"}.` : "Aucune fiche. Utilise l'onglet Importer."}
                     </div>
                   ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div className="flex flex-col gap-1.5">
                       {list.map(f => (
-                        <button key={f.origin.id} onClick={() => pickFamily(f)} style={{
-                          display: "flex", alignItems: "center", gap: 10, textAlign: "left", minHeight: 48,
-                          padding: "8px 12px", background: C.s1, border: "1px solid " + C.brd,
-                          borderLeft: "3px solid " + CATEGORY_COLOR[f.origin.category], borderRadius: 4,
-                          cursor: "pointer", fontFamily: "inherit",
-                        }}>
-                          <span style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: C.tx }}>📄 {f.origin.title}</span>
-                            <span style={{ fontSize: 11, color: C.tx3 }}>
+                        <button key={f.origin.id} onClick={() => pickFamily(f)} className={cn(
+                          "flex min-h-12 cursor-pointer items-center gap-2.5 rounded-[4px] border border-l-[3px] border-agon-brd bg-agon-s1 px-3 py-2 text-left font-[inherit]",
+                          CATEGORY_BORDER_L[f.origin.category],
+                        )}>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13px] font-bold text-agon-tx">📄 {f.origin.title}</span>
+                            <span className="text-[11px] text-agon-tx3">
                               {FICHE_CATEGORY_LABEL[f.origin.category]}
                               {f.variants.length > 0 && ` · ${f.variants.length + 1} versions`}
                               {f.origin.is_self_service && " · Libre-service"}
                             </span>
                           </span>
-                          <span style={{ color: C.tx3 }}>›</span>
+                          <span className="text-agon-tx3">›</span>
                         </button>
                       ))}
                     </div>
@@ -191,23 +189,23 @@ export function FichePickerDrawer({
             </div>
           </>
         ) : (
-          <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: C.tx }}>📄 {family.origin.title}</div>
-              <button style={btnGhost} onClick={() => setFamilyId(null)}>Changer</button>
+          <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 text-[14px] font-bold text-agon-tx">📄 {family.origin.title}</div>
+              <button className={BTN_GHOST} onClick={() => setFamilyId(null)}>Changer</button>
             </div>
             {family.origin.archived_at && (
-              <div style={{ fontSize: 11, color: C.o }}>Fiche archivée : reste lisible là où elle est déjà rattachée.</div>
+              <div className="text-[11px] text-agon-alerte">Fiche archivée : reste lisible là où elle est déjà rattachée.</div>
             )}
             <div>
-              <span style={label}>{vary ? "Variante par défaut" : "Variante"}</span>
-              <select style={input} value={effectiveDefault} onChange={e => setDefaultId(e.target.value)} disabled={famDocs.length < 2}>
+              <span className={LABEL}>{vary ? "Variante par défaut" : "Variante"}</span>
+              <select className={INPUT} value={effectiveDefault} onChange={e => setDefaultId(e.target.value)} disabled={famDocs.length < 2}>
                 {famDocs.map(d => <option key={d.id} value={d.id}>{variantLabel(d)}</option>)}
               </select>
             </div>
             {!docOnly && weeks.length > 1 && famDocs.length > 1 && (
               <div>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.tx2, cursor: "pointer", minHeight: 40 }}>
+                <label className="flex min-h-10 cursor-pointer items-center gap-2 text-[13px] text-agon-tx2">
                   <input type="checkbox" checked={vary} onChange={e => {
                     setVary(e.target.checked);
                     if (e.target.checked && effectiveDefault) {
@@ -217,11 +215,11 @@ export function FichePickerDrawer({
                   Varier selon la semaine
                 </label>
                 {vary && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8, marginTop: 6 }}>
+                  <div className="mt-1.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2">
                     {weeks.map(w => (
                       <div key={w}>
-                        <span style={label}>S{w}</span>
-                        <select style={input} value={weekMap[w] ?? effectiveDefault} onChange={e => setWeekMap(m => ({ ...m, [w]: e.target.value }))}>
+                        <span className={LABEL}>S{w}</span>
+                        <select className={INPUT} value={weekMap[w] ?? effectiveDefault} onChange={e => setWeekMap(m => ({ ...m, [w]: e.target.value }))}>
                           {famDocs.map(d => <option key={d.id} value={d.id}>{variantLabel(d)}</option>)}
                         </select>
                       </div>
@@ -232,13 +230,13 @@ export function FichePickerDrawer({
             )}
             {withNote && (
               <div>
-                <span style={label}>Note pour l'athlète (optionnel)</span>
-                <textarea style={{ ...input, minHeight: 60 }} value={note} onChange={e => setNote(e.target.value)} />
+                <span className={LABEL}>Note pour l'athlète (optionnel)</span>
+                <textarea className={cn(INPUT, "min-h-[60px]")} value={note} onChange={e => setNote(e.target.value)} />
               </div>
             )}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: "auto" }}>
-              <button style={btnGhost} onClick={onClose}>Annuler</button>
-              <button style={btnPrimary} onClick={save}>{confirmLabel ?? (initial ? "Enregistrer" : "Rattacher")}</button>
+            <div className="mt-auto flex justify-end gap-2">
+              <button className={BTN_GHOST} onClick={onClose}>Annuler</button>
+              <button className={BTN_PRIMARY} onClick={save}>{confirmLabel ?? (initial ? "Enregistrer" : "Rattacher")}</button>
             </div>
           </div>
         )}

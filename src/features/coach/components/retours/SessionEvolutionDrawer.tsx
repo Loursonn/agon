@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { X } from "lucide-react"
 import { toast } from "sonner"
-import { C } from "@/lib/theme"
 import { QK } from "@/lib/queryKeys"
 import { programKeys } from "@/api/program"
 import { ProgSessionWeekDrawer } from "@/features/coach/components/programmation/ProgSessionWeekDrawer"
@@ -73,14 +72,14 @@ export function SessionEvolutionDrawer({ athleteId, sessionId, occurrence, onClo
 
   if (!isSuccess || !session) {
     return (
-      <div style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
-        <div style={{ position: "relative", maxWidth: 360, width: "100%", background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "16px 16px 14px" }}>
-          <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: C.tx }}>Vue évolutive indisponible</span>
-            <button onClick={onClose} style={{ background: "transparent", border: "none", color: C.tx3, cursor: "pointer", display: "flex" }}><X size={14} /></button>
+      <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+        <div onClick={onClose} className="absolute inset-0 bg-black/50" />
+        <div className="relative w-full max-w-[360px] rounded-[6px] border border-agon-brd bg-agon-s1 px-4 pb-3.5 pt-4">
+          <div className="mb-2 flex items-center">
+            <span className="flex-1 text-[13px] font-bold text-agon-tx">Vue évolutive indisponible</span>
+            <button onClick={onClose} className="flex cursor-pointer border-0 bg-transparent text-agon-tx3"><X size={14} /></button>
           </div>
-          <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>
+          <div className="text-[12px] leading-[1.5] text-agon-tx3">
             {isSuccess
               ? "Cette séance n'existe plus dans la programmation de l'athlète."
               : "Impossible de charger la programmation."}

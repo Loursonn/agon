@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QK } from "@/lib/queryKeys";
 import type { Competition, CompetitionInsert } from "@/types/planning";
 import { localIsoDay, type IsoDay } from "@shared/domain/dates";
+import type { CompetitionLinks } from "@shared/domain/competitions";
 import { check, db, unwrap, unwrapRows } from "./client";
 
 /**
@@ -15,6 +16,9 @@ import { check, db, unwrap, unwrapRows } from "./client";
  *   compétition est un jour du planning.
  * - Le commentaire de l'athlète (`athlete_comment`) est écrit par les Retours
  *   (hors de ce module pour l'instant).
+ * - Annulée (`cancelled_at`) : reste dans `listCompetitions` (affichée barrée),
+ *   sort de la prochaine compétition, des compétitions à venir et des retours
+ *   (`@shared/domain/competitions`).
  */
 
 export type { Competition, CompetitionInsert };
@@ -32,6 +36,8 @@ export const competitionKeys = {
   athlete: (athleteId: string) => ["competitions", athleteId] as const,
   list: (athleteId: string) => ["competitions", athleteId, "list"] as const,
   next: (athleteId: string) => ["competitions", athleteId, "next"] as const,
+  /** Ce qui est rattaché à une compétition (confirmation de suppression). */
+  links: (athleteId: string, id: string) => ["competitions", athleteId, "links", id] as const,
   /** Vue multi-athlètes (accueil coach) ; invalidée par toute écriture. */
   upcoming: (athleteIds: readonly string[], from: IsoDay, to: IsoDay) =>
     ["competitions", "_many", sorted(athleteIds), "upcoming", from, to] as const,
@@ -71,7 +77,7 @@ export function daysUntil(date: string, today: IsoDay = localIsoDay()): number {
 
 // ── Lectures ─────────────────────────────────────────────────────────────────
 
-/** Toutes les compétitions d'un athlète (toutes saisons), par date croissante. */
+/** Toutes les compétitions d'un athlète (toutes saisons), annulées comprises, par date croissante. */
 export async function listCompetitions(athleteId: string): Promise<Competition[]> {
   const rows = unwrapRows(
     await db().from("competitions").select("*").eq("athlete_id", athleteId).order("date", { ascending: true }),
@@ -80,7 +86,7 @@ export async function listCompetitions(athleteId: string): Promise<Competition[]
   return rows as unknown as Competition[];
 }
 
-/** Prochaine compétition (aujourd'hui compris), ou `null`. */
+/** Prochaine compétition maintenue (aujourd'hui compris), ou `null`. */
 export async function getNextCompetition(
   athleteId: string,
   today: IsoDay = localIsoDay(),
@@ -91,6 +97,7 @@ export async function getNextCompetition(
       .select("*")
       .eq("athlete_id", athleteId)
       .gte("date", today)
+      .is("cancelled_at", null)
       .order("date", { ascending: true })
       .limit(1)
       .maybeSingle(),
@@ -101,7 +108,7 @@ export async function getNextCompetition(
   return { ...comp, daysUntil: daysUntil(comp.date, today) };
 }
 
-/** Compétitions de plusieurs athlètes entre deux jours inclus, par date croissante. */
+/** Compétitions maintenues de plusieurs athlètes entre deux jours inclus, par date croissante. */
 export async function listUpcomingCompetitions(
   athleteIds: readonly string[],
   from: IsoDay,
@@ -115,6 +122,7 @@ export async function listUpcomingCompetitions(
       .in("athlete_id", [...athleteIds])
       .gte("date", from)
       .lte("date", to)
+      .is("cancelled_at", null)
       .order("date", { ascending: true }),
     "Compétitions à venir non chargées",
   );
@@ -143,6 +151,35 @@ export async function updateCompetition(id: string, updates: CompetitionPatch): 
   return row as unknown as Competition;
 }
 
+/**
+ * Annule (`true`) ou rétablit (`false`) une compétition. La date et l'auteur
+ * de l'annulation sont posés par le serveur (trigger `competitions_stamp_cancel`).
+ */
+export async function setCompetitionCancelled(id: string, cancelled: boolean): Promise<Competition> {
+  const row = unwrap(
+    await db().from("competitions")
+      .update({ cancelled_at: cancelled ? new Date().toISOString() : null } as never)
+      .eq("id", id).select().single(),
+    cancelled ? "Compétition non annulée" : "Compétition non rétablie",
+  );
+  if (!row) throw new Error(cancelled ? "Compétition non annulée" : "Compétition non rétablie");
+  return row as unknown as Competition;
+}
+
+/** Ce qui est rattaché à une compétition (avant suppression) : résultats et plans HYROX, bilan. */
+export async function getCompetitionLinks(id: string): Promise<CompetitionLinks> {
+  const [results, plans, comp] = await Promise.all([
+    db().from("hyrox_results").select("id").eq("competition_id", id),
+    db().from("hyrox_race_plans").select("id").eq("competition_id", id),
+    db().from("competitions").select("athlete_comment").eq("id", id).maybeSingle(),
+  ]);
+  const r = unwrapRows(results, "Résultats liés non chargés");
+  const p = unwrapRows(plans, "Plans liés non chargés");
+  const c = unwrap(comp, "Compétition non chargée") as { athlete_comment?: string | null } | null;
+  return { results: r.length, plans: p.length, hasComment: !!c?.athlete_comment?.trim() };
+}
+
+/** Supprime la compétition. Résultats et plans HYROX restent, détachés (`ON DELETE SET NULL`). */
 export async function deleteCompetition(id: string): Promise<void> {
   check(await db().from("competitions").delete().eq("id", id), "Compétition non supprimée");
 }
@@ -157,11 +194,11 @@ export async function setCompetitionComment(id: string, athleteComment: string):
   return row as unknown as Competition;
 }
 
-/** Compétitions d'une période (bornes incluses), par date. Lève en cas d'erreur. */
+/** Compétitions maintenues d'une période (bornes incluses), par date : retours. Lève en cas d'erreur. */
 export async function listCompetitionsBetween(athleteId: string, from: string, to: string): Promise<Competition[]> {
   const rows = unwrapRows(
     await db().from("competitions").select("*").eq("athlete_id", athleteId)
-      .gte("date", from).lte("date", to).order("date", { ascending: true }),
+      .gte("date", from).lte("date", to).is("cancelled_at", null).order("date", { ascending: true }),
     "Compétitions non chargées",
   );
   return rows as unknown as Competition[];

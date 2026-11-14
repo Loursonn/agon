@@ -9,7 +9,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { getWellnessHistory, wellnessKeys } from "@/api/wellness";
 import { recentWeights } from "@/api/profile";
 import MeasurementComparison from "@/features/coach/components/MeasurementComparison";
@@ -25,9 +25,12 @@ import { storedFcZones as pickFcZones } from "@/api/references";
 import { activeModelAt } from "@shared/domain/hrZones";
 import { localIsoDay } from "@shared/domain/dates";
 import { useZoneModels } from "@/features/shared/hooks/useZoneModels";
-import { KICK, ORDI_CARD, PageHead, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
+import { KICK, PageHead, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 import { RefGroup, RefRow, RefTable, ThresholdTile } from "@/features/coach/components/profil/ProfilOrdi";
 import { refSource } from "@/features/coach/components/profil/refSource";
+
+/** Carte « ordi » (ORDI_CARD d'OrdiUi) en classes. */
+const ORDI_CARD_CLS = "rounded-[14px] border border-agon-brd bg-agon-s1";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,24 +63,24 @@ const METRICS: MetricDef[] = [
 
 const PREDEFINED_KEYS = new Set(METRICS.map((m) => m.key));
 
-const CATEGORY_COLOR: Record<Category, string> = {
-  cardio:    H.rougeVif,
-  vitesse:   C.b,
-  puissance: H.ambre,
-  corpo:     H.emeraude,
-  custom:    C.ac,
-};
 
 // ── Zone FC computations ──────────────────────────────────────────────────────
 
-interface FcZoneDef { label: string; color: string; zoneKey: string }
+/** Couleurs des 5 zones (charte `--agon-zone5-*`), classes écrites en entier. */
+const ZONE_BAR = ["bg-agon-zone5-1", "bg-agon-zone5-2", "bg-agon-zone5-3", "bg-agon-zone5-4", "bg-agon-zone5-5"] as const;
+const ZONE_INPUT = [
+  "border-agon-zone5-1/[0.376]", "border-agon-zone5-2/[0.376]", "border-agon-zone5-3/[0.376]",
+  "border-agon-zone5-4/[0.376]", "border-agon-zone5-5/[0.376]",
+] as const;
+
+interface FcZoneDef { label: string; zoneKey: string }
 
 const FC_ZONES_DEF: FcZoneDef[] = [
-  { label: "Z1 — Récupération", color: H.vert, zoneKey: "FCzone_Z1_max" },
-  { label: "Z2 — Endurance",    color: H.citron, zoneKey: "FCzone_Z2_max" },
-  { label: "Z3 — Tempo",        color: H.jauneFonce, zoneKey: "FCzone_Z3_max" },
-  { label: "Z4 — Seuil",        color: H.orange, zoneKey: "FCzone_Z4_max" },
-  { label: "Z5 — VO₂max",       color: H.rougeVif, zoneKey: "FCzone_Z5_max" },
+  { label: "Z1 — Récupération", zoneKey: "FCzone_Z1_max" },
+  { label: "Z2 — Endurance",    zoneKey: "FCzone_Z2_max" },
+  { label: "Z3 — Tempo",        zoneKey: "FCzone_Z3_max" },
+  { label: "Z4 — Seuil",        zoneKey: "FCzone_Z4_max" },
+  { label: "Z5 — VO₂max",       zoneKey: "FCzone_Z5_max" },
 ];
 
 const computeDefaultFcZones = defaultFiveZoneMaxes;
@@ -91,22 +94,22 @@ function vmaZones(vma: number) {
     return `${m}:${ss}`;
   };
   return [
-    { label: "Z1 — Footing",   min: p(0.65), max: p(0.72), color: H.vert },
-    { label: "Z2 — Endurance", min: p(0.72), max: p(0.82), color: H.citron },
-    { label: "Z3 — Tempo",     min: p(0.82), max: p(0.89), color: H.jauneFonce },
-    { label: "Z4 — Seuil",     min: p(0.89), max: p(0.95), color: H.orange },
-    { label: "Z5 — VMA",       min: p(0.95), max: p(1.05), color: H.rougeVif },
+    { label: "Z1 — Footing",   min: p(0.65), max: p(0.72), bar: ZONE_BAR[0] },
+    { label: "Z2 — Endurance", min: p(0.72), max: p(0.82), bar: ZONE_BAR[1] },
+    { label: "Z3 — Tempo",     min: p(0.82), max: p(0.89), bar: ZONE_BAR[2] },
+    { label: "Z4 — Seuil",     min: p(0.89), max: p(0.95), bar: ZONE_BAR[3] },
+    { label: "Z5 — VMA",       min: p(0.95), max: p(1.05), bar: ZONE_BAR[4] },
   ];
 }
 
 function ftpZones(ftp: number) {
   const w = (pct: number) => Math.round(ftp * pct);
   return [
-    { label: "Z1 — Récupération", range: `< ${w(0.55)} W`,                        color: H.vert },
-    { label: "Z2 — Endurance",    range: `${w(0.55)}–${w(0.75)} W`,               color: H.citron },
-    { label: "Z3 — Tempo",        range: `${w(0.75)}–${w(0.90)} W`,               color: H.jauneFonce },
-    { label: "Z4 — Seuil",        range: `${w(0.90)}–${w(1.05)} W`,               color: H.orange },
-    { label: "Z5 — VO₂max",       range: `${w(1.05)}–${w(1.20)} W`,               color: H.rougeVif },
+    { label: "Z1 — Récupération", range: `< ${w(0.55)} W`,                        bar: ZONE_BAR[0] },
+    { label: "Z2 — Endurance",    range: `${w(0.55)}–${w(0.75)} W`,               bar: ZONE_BAR[1] },
+    { label: "Z3 — Tempo",        range: `${w(0.75)}–${w(0.90)} W`,               bar: ZONE_BAR[2] },
+    { label: "Z4 — Seuil",        range: `${w(0.90)}–${w(1.05)} W`,               bar: ZONE_BAR[3] },
+    { label: "Z5 — VO₂max",       range: `${w(1.05)}–${w(1.20)} W`,               bar: ZONE_BAR[4] },
   ];
 }
 
@@ -171,62 +174,55 @@ type StrategyKey = "maintenance" | "seche" | "prise_de_masse";
 const STRATEGY_LABEL: Record<StrategyKey, string> = {
   maintenance: "Maintenance", seche: "Sèche", prise_de_masse: "Prise de masse",
 };
-const STRATEGY_COLOR: Record<StrategyKey, string> = {
-  maintenance: C.b, seche: C.r, prise_de_masse: C.g,
+/** Badge de stratégie : texte, aplat 10 %, bordure 25 %. */
+const STRATEGY_BADGE: Record<StrategyKey, string> = {
+  maintenance: "border-agon-info/25 bg-agon-info/[0.102] text-agon-info",
+  seche: "border-agon-erreur/25 bg-agon-erreur/[0.102] text-agon-erreur",
+  prise_de_masse: "border-agon-succes/25 bg-agon-succes/[0.102] text-agon-succes",
 };
 
 function WeightDerivedCard({ athleteId, strategy }: { athleteId: string; strategy?: StrategyKey | null }) {
   const { data, isLoading } = useLastWeights(athleteId);
-  const color = CATEGORY_COLOR.corpo;
 
   return (
     <div
-      style={{
-        background: C.s1, border: "1px solid " + C.brd, borderRadius: 6,
-        padding: "16px", display: "flex", flexDirection: "column", gap: 12,
-        alignItems: "center", justifyContent: "center", textAlign: "center",
-        opacity: isLoading ? 0.6 : 1,
-        height: "100%", boxSizing: "border-box",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + "50")}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.brd)}
+      className={cn(
+        "flex h-full flex-col items-center justify-center gap-3 rounded-[6px] border border-agon-brd bg-agon-s1 p-4 text-center hover:border-agon-succes/[0.314]",
+        isLoading && "opacity-60",
+      )}
     >
-      <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+      <div className="text-[11px] font-bold uppercase tracking-[0.04em] text-agon-succes">
         Poids
       </div>
 
       {data ? (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-            <span style={{ fontSize: 34, fontWeight: 800, color: C.tx, lineHeight: 1 }}>{data.avg}</span>
-            <span style={{ fontSize: 14, color: C.tx3 }}>kg</span>
+        <div className="flex flex-col items-center gap-[3px]">
+          <div className="flex items-baseline gap-[5px]">
+            <span className="text-[34px] font-extrabold text-agon-tx leading-none">{data.avg}</span>
+            <span className="text-[14px] text-agon-tx3">kg</span>
           </div>
-          <div style={{ fontSize: 9, color: C.tx3 }}>
+          <div className="text-[9px] text-agon-tx3">
             moy. {data.count} dernières
             {safeDate(data.lastDate) && " · " + safeDate(data.lastDate)!.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: 12, color: C.tx3, fontStyle: "italic" }}>
+        <div className="text-[12px] italic text-agon-tx3">
           {isLoading ? "…" : "Aucune saisie de poids"}
         </div>
       )}
 
       {/* Stratégie nutrition actuelle */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-        <div style={{ fontSize: 9, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      <div className="flex flex-col items-center gap-1">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.5px] text-agon-tx3">
           Stratégie
         </div>
         {strategy ? (
-          <span style={{
-            fontSize: 12, fontWeight: 700, color: STRATEGY_COLOR[strategy],
-            background: STRATEGY_COLOR[strategy] + "1A", border: "1px solid " + STRATEGY_COLOR[strategy] + "40",
-            padding: "4px 12px", borderRadius: 6,
-          }}>
+          <span className={cn("rounded-[6px] border px-3 py-1 text-[12px] font-bold", STRATEGY_BADGE[strategy])}>
             {STRATEGY_LABEL[strategy]}
           </span>
         ) : (
-          <span style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>Non définie</span>
+          <span className="text-[11px] italic text-agon-tx3">Non définie</span>
         )}
       </div>
     </div>
@@ -234,6 +230,13 @@ function WeightDerivedCard({ athleteId, strategy }: { athleteId: string; strateg
 }
 
 // ── FC Zone Editor ────────────────────────────────────────────────────────────
+
+const CARD = "overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1";
+const ZONE_ROW = "flex items-center gap-2.5 px-3.5 py-2";
+const ZONE_BAR_SHAPE = "h-5 w-1 shrink-0 rounded-[2px]";
+const ZONE_INPUT_BASE = "w-[65px] rounded-[6px] border bg-agon-s2 px-[7px] py-1 text-right text-[12px] font-bold text-agon-tx outline-none";
+const ZONE_VALUE = "min-w-[65px] text-right text-[12px] font-bold text-agon-tx";
+const GHOST_BTN = "cursor-pointer rounded-[7px] border border-agon-brd-l bg-transparent px-3 py-1.5 text-[11px] text-agon-tx3";
 
 function FcZoneEditor({
   fcmax, fcrep, storedZones, onSaveZones, saving,
@@ -284,14 +287,14 @@ function FcZoneEditor({
   const prevMax = (i: number) => i === 0 ? displayZ0 : displayVals[i - 1];
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
+    <div className={CARD}>
       {/* Header */}
-      <div style={{ padding: "10px 14px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="flex items-center justify-between border-b border-agon-brd px-3.5 py-2.5">
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>
+          <div className="text-[12px] font-bold text-agon-tx">
             Zones FC — FCmax {fcmax} bpm{fcrep ? ` · repos ${fcrep} bpm` : ""}
           </div>
-          <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>
+          <div className="mt-px text-[10px] text-agon-tx3">
             {custom ? "Bornes personnalisées (connectées au module énergie)" : "Calculé automatiquement"}
           </div>
         </div>
@@ -300,31 +303,21 @@ function FcZoneEditor({
             if (!custom) { setCustom(true); setDrafts(defaults.map(String)); }
             else { setCustom(false); }
           }}
-          style={{
-            padding: "4px 10px", borderRadius: 6,
-            border: "1px solid " + (custom ? C.ac + "60" : C.brdL),
-            background: custom ? C.ac + "15" : "transparent",
-            color: custom ? C.ac : C.tx3, fontSize: 11, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
+          className={cn(
+            "cursor-pointer rounded-[6px] border px-2.5 py-1 text-[11px] font-semibold",
+            custom ? "border-agon-accent/[0.376] bg-agon-accent/[0.082] text-agon-accent" : "border-agon-brd-l bg-transparent text-agon-tx3",
+          )}
         >
           {custom ? "Personnalisé ✓" : "Personnaliser"}
         </button>
       </div>
 
       {/* Z0 min row — FC de départ activité */}
-      <div
-        style={{
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "8px 14px",
-          borderBottom: "1px solid " + C.brd,
-          background: "rgba(255,255,255,0.02)",
-        }}
-      >
-        <div style={{ width: 4, height: 20, borderRadius: 2, background: C.tx3, flexShrink: 0 }} />
-        <span style={{ fontSize: 12, color: C.tx3, fontWeight: 600, flex: 1 }}>FC départ activité</span>
-        <span style={{ fontSize: 10, color: C.tx3, minWidth: 50 }}>0 bpm</span>
-        <span style={{ fontSize: 10, color: C.tx3 }}>→</span>
+      <div className={cn(ZONE_ROW, "border-b border-agon-brd bg-white/[0.02]")}>
+        <div className={cn(ZONE_BAR_SHAPE, "bg-agon-tx3")} />
+        <span className="flex-1 text-[12px] font-semibold text-agon-tx3">FC départ activité</span>
+        <span className="min-w-[50px] text-[10px] text-agon-tx3">0 bpm</span>
+        <span className="text-[10px] text-agon-tx3">→</span>
         {custom ? (
           <input
             type="number"
@@ -332,19 +325,14 @@ function FcZoneEditor({
             onChange={(e) => setDraftZ0(e.target.value)}
             min={0}
             max={150}
-            style={{
-              width: 65, padding: "4px 7px", borderRadius: 6,
-              border: "1px solid " + C.tx3 + "40", background: C.s2,
-              color: C.tx, fontSize: 12, fontWeight: 700, fontFamily: "inherit", outline: "none",
-              textAlign: "right",
-            }}
+            className={cn(ZONE_INPUT_BASE, "border-agon-tx3/25")}
           />
         ) : (
-          <span style={{ fontSize: 12, color: C.tx, fontWeight: 700, minWidth: 65, textAlign: "right" }}>
+          <span className={ZONE_VALUE}>
             {displayZ0}
           </span>
         )}
-        <span style={{ fontSize: 11, color: C.tx3, minWidth: 24 }}>bpm</span>
+        <span className="min-w-6 text-[11px] text-agon-tx3">bpm</span>
       </div>
 
       {/* Zone rows */}
@@ -352,18 +340,14 @@ function FcZoneEditor({
         {FC_ZONES_DEF.map((z, i) => (
           <div
             key={z.zoneKey}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 14px",
-              borderBottom: i < FC_ZONES_DEF.length - 1 ? "1px solid " + C.brd : "none",
-            }}
+            className={cn(ZONE_ROW, i < FC_ZONES_DEF.length - 1 && "border-b border-agon-brd")}
           >
-            <div style={{ width: 4, height: 20, borderRadius: 2, background: z.color, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: C.tx, fontWeight: 600, flex: 1 }}>{z.label}</span>
-            <span style={{ fontSize: 11, color: C.tx3, minWidth: 50 }}>
+            <div className={cn(ZONE_BAR_SHAPE, ZONE_BAR[i])} />
+            <span className="flex-1 text-[12px] font-semibold text-agon-tx">{z.label}</span>
+            <span className="min-w-[50px] text-[11px] text-agon-tx3">
               {prevMax(i)} bpm
             </span>
-            <span style={{ fontSize: 10, color: C.tx3 }}>→</span>
+            <span className="text-[10px] text-agon-tx3">→</span>
             {custom ? (
               <input
                 type="number"
@@ -371,36 +355,31 @@ function FcZoneEditor({
                 onChange={(e) => setDraft(i, e.target.value)}
                 min={prevMax(i) + 1}
                 max={250}
-                style={{
-                  width: 65, padding: "4px 7px", borderRadius: 6,
-                  border: "1px solid " + z.color + "60", background: C.s2,
-                  color: C.tx, fontSize: 12, fontWeight: 700, fontFamily: "inherit", outline: "none",
-                  textAlign: "right",
-                }}
+                className={cn(ZONE_INPUT_BASE, ZONE_INPUT[i])}
               />
             ) : (
-              <span style={{ fontSize: 12, color: C.tx, fontWeight: 700, minWidth: 65, textAlign: "right" }}>
+              <span className={ZONE_VALUE}>
                 {displayVals[i]}
               </span>
             )}
-            <span style={{ fontSize: 11, color: C.tx3, minWidth: 24 }}>bpm</span>
+            <span className="min-w-6 text-[11px] text-agon-tx3">bpm</span>
           </div>
         ))}
       </div>
 
       {/* Footer actions */}
       {custom && (
-        <div style={{ padding: "10px 14px", borderTop: "1px solid " + C.brd, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <div className="flex justify-end gap-2 border-t border-agon-brd px-3.5 py-2.5">
           <button
             onClick={resetToDefaults}
-            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+            className={GHOST_BTN}
           >
             Réinitialiser
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: C.acV, color: C.ink, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded-[7px] border-none bg-agon-or-vif px-3.5 py-1.5 text-[11px] font-bold text-agon-ink"
           >
             {saving ? "…" : "Enregistrer les zones"}
           </button>
@@ -419,6 +398,9 @@ const CUSTOM_CATEGORIES: { value: Category; label: string }[] = [
   { value: "corpo",     label: "Corporel"           },
   { value: "custom",    label: "Autre"              },
 ];
+
+const FIELD_LABEL = "mb-1 text-[10px] text-agon-tx3";
+const FIELD = "w-full rounded-[7px] border border-agon-brd-l bg-agon-s2 px-2.5 py-[7px] text-[12px] text-agon-tx outline-none";
 
 function CustomMetricForm({ onSave, saving }: { onSave: (name: string, value: number, unit: string, category: Category) => void; saving: boolean }) {
   const [open, setOpen] = useState(false);
@@ -439,15 +421,7 @@ function CustomMetricForm({ onSave, saving }: { onSave: (name: string, value: nu
   if (!open) return (
     <button
       onClick={() => setOpen(true)}
-      style={{
-        display: "flex", alignItems: "center", gap: 6,
-        padding: "8px 16px", borderRadius: 4, width: "100%",
-        border: "1px dashed " + C.brdL, background: "transparent",
-        color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-        justifyContent: "center", transition: "all 150ms",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.ac + "60"; e.currentTarget.style.color = C.ac; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.brdL; e.currentTarget.style.color = C.tx3; }}
+      className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-[4px] border border-dashed border-agon-brd-l bg-transparent px-4 py-2 text-[12px] text-agon-tx3 [transition:all_150ms] hover:border-agon-accent/[0.376] hover:text-agon-accent"
     >
       <Plus size={13} />
       Ajouter une donnée personnalisée
@@ -455,54 +429,54 @@ function CustomMetricForm({ onSave, saving }: { onSave: (name: string, value: nu
   );
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + CATEGORY_COLOR.custom + "50", borderRadius: 6, padding: "16px" }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: CATEGORY_COLOR.custom, marginBottom: 12 }}>Nouvelle donnée</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+    <div className="rounded-[6px] border border-agon-accent/[0.314] bg-agon-s1 p-4">
+      <div className="mb-3 text-[12px] font-bold text-agon-accent">Nouvelle donnée</div>
+      <div className="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>Nom</div>
+          <div className={FIELD_LABEL}>Nom</div>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="ex. Lactatémie, Indice…"
             autoFocus
-            style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+            className={FIELD}
           />
         </div>
         <div>
-          <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>Catégorie</div>
+          <div className={FIELD_LABEL}>Catégorie</div>
           <select
             value={cat}
             onChange={(e) => setCat(e.target.value as Category)}
-            style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none" }}
+            className={FIELD}
           >
             {CUSTOM_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </div>
         <div>
-          <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>Valeur</div>
+          <div className={FIELD_LABEL}>Valeur</div>
           <input
             type="number"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="0"
-            style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+            className={FIELD}
           />
         </div>
         <div>
-          <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>Unité</div>
+          <div className={FIELD_LABEL}>Unité</div>
           <input
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
             placeholder="mmol/L, %, s…"
-            style={{ width: "100%", padding: "7px 10px", borderRadius: 7, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+            className={FIELD}
           />
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <button onClick={() => setOpen(false)} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setOpen(false)} className={GHOST_BTN}>
           Annuler
         </button>
-        <button onClick={handleSubmit} disabled={saving} style={{ padding: "6px 16px", borderRadius: 7, border: "none", background: CATEGORY_COLOR.custom, color: C.tx, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={handleSubmit} disabled={saving} className="cursor-pointer rounded-[7px] border-none bg-agon-accent px-4 py-1.5 text-[11px] font-bold text-agon-tx">
           {saving ? "…" : "Ajouter"}
         </button>
       </div>
@@ -514,18 +488,18 @@ function CustomMetricForm({ onSave, saving }: { onSave: (name: string, value: nu
 
 function ZoneTableSimple({ title, rows }: {
   title: string;
-  rows: Array<{ label: string; range?: string; min?: string; max?: string; color: string }>;
+  rows: Array<{ label: string; range?: string; min?: string; max?: string; bar: string }>;
 }) {
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, overflow: "hidden" }}>
-      <div style={{ padding: "10px 14px", borderBottom: "1px solid " + C.brd, fontSize: 12, fontWeight: 700, color: C.tx }}>
+    <div className={CARD}>
+      <div className="border-b border-agon-brd px-3.5 py-2.5 text-[12px] font-bold text-agon-tx">
         {title}
       </div>
       {rows.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderBottom: i < rows.length - 1 ? "1px solid " + C.brd : "none" }}>
-          <div style={{ width: 4, height: 20, borderRadius: 2, background: r.color, flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: C.tx, fontWeight: 600, flex: 1 }}>{r.label}</span>
-          <span style={{ fontSize: 11, color: C.tx2, fontWeight: 600, textAlign: "right" }}>
+        <div key={i} className={cn(ZONE_ROW, i < rows.length - 1 && "border-b border-agon-brd")}>
+          <div className={cn(ZONE_BAR_SHAPE, r.bar)} />
+          <span className="flex-1 text-[12px] font-semibold text-agon-tx">{r.label}</span>
+          <span className="text-right text-[11px] font-semibold text-agon-tx2">
             {r.range ?? `${r.min} → ${r.max}`}
           </span>
         </div>
@@ -590,24 +564,24 @@ export default function ProfilSportifPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="flex flex-col gap-6">
       <PageHead
         title="Profil sportif"
         sub={`Seuils, zones et références de ${first}. Chaque valeur garde sa date et sa source.`}
       />
       {isLoading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
+        <div className="grid grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} style={{ height: 150, ...ORDI_CARD }} />
+            <div key={i} className={cn("h-[150px]", ORDI_CARD_CLS)} />
           ))}
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+        <div className="flex flex-col gap-7">
 
           {/* ── 01 FC et seuils ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             <SectionHead n={1} title="Fréquence cardiaque et seuils" />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
               {three && (
                 <>
                   <ThresholdTile label="SV1" hint="seuil 1" value={three.bounds[0]} unit="bpm" date={three.validFrom}
@@ -629,10 +603,10 @@ export default function ProfilSportifPage() {
           </div>
 
           {/* ── 02 Zones FC ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             <SectionHead n={2} title="Zones de fréquence cardiaque" />
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 12, border: `1px solid ${C.brdL}`, background: C.s1, fontSize: 13.5 }}>
-              <span><b style={{ fontWeight: 500 }}>Ces zones servent à l'onglet Séance</b><span style={{ color: C.tx2 }}> : couleur de la courbe de FC, temps par zone et zone de chaque tour, pour toutes les activités de {first}.</span></span>
+            <div className="flex items-center gap-3 rounded-[12px] border border-agon-brd-l bg-agon-s1 px-4 py-3 text-[13.5px]">
+              <span><b className="font-medium">Ces zones servent à l'onglet Séance</b><span className="text-agon-tx2"> : couleur de la courbe de FC, temps par zone et zone de chaque tour, pour toutes les activités de {first}.</span></span>
             </div>
             <ZoneModelPanel
               athleteId={athleteId!}
@@ -648,14 +622,14 @@ export default function ProfilSportifPage() {
                   saving={saveFcZones.isPending}
                 />
               ) : (
-                <div style={{ fontSize: 12, color: C.tx3 }}>Renseigne la FC max pour régler les 5 zones.</div>
+                <div className="text-[12px] text-agon-tx3">Renseigne la FC max pour régler les 5 zones.</div>
               )}
             />
           </div>
 
           {/* ── 03 Références · 04 Métriques personnalisées ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 520px), 1fr))", gap: 20, alignItems: "start" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,520px),1fr))] items-start gap-5">
+            <div className="flex flex-col gap-3">
               <SectionHead n={3} title="Références de performance" />
               <RefTable>
                 <RefGroup title="Endurance" first />
@@ -673,31 +647,31 @@ export default function ProfilSportifPage() {
                 onUse={(v) => upsert.mutate({ metricName: "VC", value: v, unit: "km/h" })}
               />
               {(vma || ftp) && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
                   {vma && (
                     <ZoneTableSimple
                       title={`Zones allure — VMA ${vma} km/h`}
-                      rows={vmaZones(vma).map((z) => ({ label: z.label, min: z.min + "/km", max: z.max + "/km", color: z.color }))}
+                      rows={vmaZones(vma).map((z) => ({ label: z.label, min: z.min + "/km", max: z.max + "/km", bar: z.bar }))}
                     />
                   )}
                   {ftp && (
                     <ZoneTableSimple
                       title={`Zones puissance — FTP ${ftp} W`}
-                      rows={ftpZones(ftp).map((z) => ({ label: z.label, range: z.range, color: z.color }))}
+                      rows={ftpZones(ftp).map((z) => ({ label: z.label, range: z.range, bar: z.bar }))}
                     />
                   )}
                 </div>
               )}
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="flex flex-col gap-3">
               <SectionHead n={4} title="Métriques personnalisées" />
               <RefTable>
                 {customEntries.length === 0 && (
-                  <div style={{ padding: "14px 18px", fontSize: 13, color: C.tx3 }}>Aucune métrique personnalisée.</div>
+                  <div className="px-[18px] py-3.5 text-[13px] text-agon-tx3">Aucune métrique personnalisée.</div>
                 )}
                 {customEntries.map(([key, ref], i) => (
-                  <div key={key} style={i === 0 ? { marginTop: -1 } : undefined}>
+                  <div key={key} className={cn(i === 0 && "-mt-px")}>
                     <RefRow
                       label={key}
                       value={ref.value}
@@ -710,7 +684,7 @@ export default function ProfilSportifPage() {
                     />
                   </div>
                 ))}
-                <div style={{ padding: "14px 18px", borderTop: `1px solid ${C.brd}` }}>
+                <div className="border-t border-agon-brd px-[18px] py-3.5">
                   <CustomMetricForm
                     saving={upsert.isPending}
                     onSave={(name, value, unit, _cat) =>
@@ -723,27 +697,27 @@ export default function ProfilSportifPage() {
           </div>
 
           {/* ── Hors planche, gardé : biométrie, records 1RM, profil par catégorie ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             <SectionHead n={5} title="Biométrie" />
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "stretch" }}>
-              <div style={{ flex: "1 1 200px", minWidth: 200, maxWidth: 300, display: "flex" }}>
-                <div style={{ flex: 1 }}>
+            <div className="flex flex-wrap items-stretch gap-3">
+              <div className="flex min-w-[200px] max-w-[300px] flex-[1_1_200px]">
+                <div className="flex-1">
                   <WeightDerivedCard athleteId={athleteId!} strategy={nutritionStrategy?.strategy ?? null} />
                 </div>
               </div>
-              <div style={{ flex: "3 1 320px", minWidth: 300, ...ORDI_CARD, padding: 16 }}>
-                <div style={{ ...KICK, marginBottom: 10 }}>Évolution du poids</div>
+              <div className={cn("min-w-[300px] flex-[3_1_320px] p-4", ORDI_CARD_CLS)}>
+                <div style={KICK} className="mb-2.5">Évolution du poids</div>
                 {Object.keys(weightLog).length > 0 ? (
                   <WeightChart log={weightLog} milestones={weightMilestones} target={bodyWeight.target} nutritionStrategy={nutritionStrategy} />
                 ) : (
-                  <div style={{ textAlign: "center", color: C.tx3, fontSize: 12, padding: "14px 0" }}>Aucune mesure</div>
+                  <div className="py-3.5 text-center text-[12px] text-agon-tx3">Aucune mesure</div>
                 )}
               </div>
             </div>
             <MeasurementComparison athleteId={athleteId!} />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             <SectionHead n={6} title="Records personnels (1RM)" />
             <PRLogsSection
               athleteId={athleteId!}
@@ -762,7 +736,7 @@ export default function ProfilSportifPage() {
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-3">
             <SectionHead n={7} title="Profil par catégorie" />
             <CategoryProfiles athleteId={athleteId!} />
           </div>

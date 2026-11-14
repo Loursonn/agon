@@ -3,7 +3,7 @@
  * Texte + une image optionnelle (compressée en WebP avant envoi).
  */
 import { useRef, useState } from "react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useAddDocComment, useDeleteDocComment, useDocComments,
@@ -13,7 +13,7 @@ import type { DocComment } from "@/features/shared/types/fiches";
 import { personName, useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { professionLabel } from "@/features/staff/lib/staffPermissions";
-import { btnGhost, btnPrimary, input, sectionTitle } from "./ficheStyles";
+import { BTN_GHOST, BTN_PRIMARY, INPUT, SECTION_TITLE } from "./ficheStyles";
 
 interface Props {
   docId: string;
@@ -28,10 +28,10 @@ interface Props {
 
 function CommentImage({ path }: { path: string }) {
   const { data: url } = useDocSignedUrl(path);
-  if (!url) return <div style={{ height: 80, background: C.s2, borderRadius: 4, marginTop: 6 }} />;
+  if (!url) return <div className="mt-1.5 h-20 rounded-[4px] bg-agon-s2" />;
   return (
     <a href={url} target="_blank" rel="noopener noreferrer">
-      <img src={url} alt="Pièce jointe" style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 4, marginTop: 6, display: "block" }} />
+      <img src={url} alt="Pièce jointe" className="mt-1.5 block max-h-[260px] max-w-full rounded-[4px]" />
     </a>
   );
 }
@@ -74,33 +74,32 @@ export function FicheCommentThread({ docId, athleteId, coachId, athleteName, rea
 
   return (
     <div>
-      <h3 style={sectionTitle}>Commentaires</h3>
+      <h3 className={SECTION_TITLE}>Commentaires</h3>
       {isLoading ? (
-        <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>
+        <div className="text-[12px] text-agon-tx3">Chargement…</div>
       ) : comments.length === 0 ? (
-        <div style={{ fontSize: 12, color: C.tx3, marginBottom: 10 }}>Aucun commentaire pour l'instant.</div>
+        <div className="mb-2.5 text-[12px] text-agon-tx3">Aucun commentaire pour l'instant.</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+        <div className="mb-3 flex flex-col gap-2">
           {comments.map(c => {
             const mine = c.author_id === user?.id;
             return (
-              <div key={c.id} style={{
-                alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "88%",
-                background: mine ? C.acS : C.s1, border: "1px solid " + (mine ? C.ac + "30" : C.brd),
-                borderRadius: 6, padding: "8px 10px",
-              }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 10, color: C.tx3, marginBottom: 2 }}>
-                  <span style={{ fontWeight: 700, color: mine ? C.ac : C.tx2 }}>{author(c)}</span>
+              <div key={c.id} className={cn(
+                "max-w-[88%] rounded-[6px] border px-2.5 py-2",
+                mine ? "self-end border-agon-accent/[0.19] bg-agon-accent-doux" : "self-start border-agon-brd bg-agon-s1",
+              )}>
+                <div className="mb-0.5 flex items-center gap-2 text-[10px] text-agon-tx3">
+                  <span className={cn("font-bold", mine ? "text-agon-accent" : "text-agon-tx2")}>{author(c)}</span>
                   <span>{fmt(c.created_at)}</span>
                   {mine && (
                     <button
                       onClick={() => del.mutate(c)}
                       aria-label="Supprimer le commentaire"
-                      style={{ marginLeft: "auto", background: "none", border: "none", color: C.tx3, cursor: "pointer", fontSize: 13, minWidth: 28, minHeight: 28, fontFamily: "inherit" }}
+                      className="ml-auto min-h-7 min-w-7 cursor-pointer border-none bg-transparent font-[inherit] text-[13px] text-agon-tx3"
                     >×</button>
                   )}
                 </div>
-                {c.body && <div style={{ fontSize: 13, color: C.tx, whiteSpace: "pre-wrap" }}>{c.body}</div>}
+                {c.body && <div className="whitespace-pre-wrap text-[13px] text-agon-tx">{c.body}</div>}
                 {c.image_path && <CommentImage path={c.image_path} />}
               </div>
             );
@@ -114,27 +113,27 @@ export function FicheCommentThread({ docId, athleteId, coachId, athleteName, rea
         onChange={e => setBody(e.target.value)}
         placeholder="Une question, un retour sur la fiche…"
         rows={2}
-        style={{ ...input, resize: "vertical", minHeight: 60 }}
+        className={cn(INPUT, "min-h-[60px] resize-y")}
       />
-      <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <button type="button" onClick={() => fileRef.current?.click()} style={btnGhost}>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => fileRef.current?.click()} className={BTN_GHOST}>
           {image ? "Changer l'image" : "+ Image"}
         </button>
         {image && (
-          <span style={{ fontSize: 11, color: C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
+          <span className="max-w-[140px] truncate text-[11px] text-agon-tx3">
             {image.name}
-            <button onClick={() => setImage(null)} aria-label="Retirer l'image" style={{ background: "none", border: "none", color: C.tx3, cursor: "pointer", marginLeft: 4, fontFamily: "inherit" }}>×</button>
+            <button onClick={() => setImage(null)} aria-label="Retirer l'image" className="ml-1 cursor-pointer border-none bg-transparent font-[inherit] text-agon-tx3">×</button>
           </span>
         )}
-        <div style={{ flex: 1 }} />
-        <button type="button" onClick={send} disabled={!canSend} style={{ ...btnPrimary, opacity: canSend ? 1 : 0.5 }}>
+        <div className="flex-1" />
+        <button type="button" onClick={send} disabled={!canSend} className={cn(BTN_PRIMARY, canSend ? "opacity-100" : "opacity-50")}>
           {add.isPending ? "Envoi…" : "Envoyer"}
         </button>
         <input
           ref={fileRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          style={{ display: "none" }}
+          className="hidden"
           onChange={e => { setImage(e.target.files?.[0] ?? null); e.target.value = ""; }}
         />
       </div>

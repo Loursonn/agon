@@ -1,11 +1,14 @@
-import { C, alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { Light, LightResult } from "@shared/domain/wellnessLight";
 
 const LABEL: Record<Light, string> = { green: "Feu vert", orange: "Feu orange", red: "Feu rouge" };
 
-function colorOf(light: Light): string {
-  return light === "red" ? C.r : light === "orange" ? C.o : C.g;
-}
+/** Couleurs de marque du feu : pastille, texte, cadre (bord 40 %, fond 10 %). */
+const TONE: Record<Light, { dot: string; text: string; box: string }> = {
+  green: { dot: "bg-agon-succes", text: "text-agon-succes", box: "border-agon-succes/[0.4] bg-agon-succes/[0.1]" },
+  orange: { dot: "bg-agon-alerte", text: "text-agon-alerte", box: "border-agon-alerte/[0.4] bg-agon-alerte/[0.1]" },
+  red: { dot: "bg-agon-erreur", text: "text-agon-erreur", box: "border-agon-erreur/[0.4] bg-agon-erreur/[0.1]" },
+};
 
 /**
  * Feu du matin calculé (`_shared/domain/wellnessLight.ts`) : pastille, libellé,
@@ -24,34 +27,31 @@ export function WellnessLightBadge({
   if (loading) return null;
   if (!result) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.tx3 }} aria-label="Feu du matin : pas de donnée">
-        <span aria-hidden style={{ width: 10, height: 10, borderRadius: "50%", border: `1px solid ${C.brdL}` }} />
+      <div className="flex items-center gap-2 text-[13px] text-agon-tx3" aria-label="Feu du matin : pas de donnée">
+        <span aria-hidden className="size-2.5 rounded-full border border-agon-brd-l" />
         Feu du matin —
       </div>
     );
   }
-  const col = colorOf(result.light);
+  const tone = TONE[result.light];
   const others = [...result.orange, ...result.redSigns]
     .map((s) => s.text)
     .filter((t, i, all) => t !== result.sentence && all.indexOf(t) === i);
   return (
     <div
       role="status"
-      style={{
-        display: "flex", flexDirection: "column", gap: 4, padding: "8px 12px", borderRadius: 10,
-        border: `1px solid ${alpha(col, 0.4)}`, background: alpha(col, 0.1),
-      }}
+      className={cn("flex flex-col gap-1 rounded-[10px] border px-3 py-2", tone.box)}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-        <span aria-hidden style={{ width: 10, height: 10, borderRadius: "50%", background: col, flex: "none" }} />
-        <span style={{ fontWeight: 600, fontSize: 13, color: col, whiteSpace: "nowrap" }}>{LABEL[result.light]}</span>
-        <span style={{ fontSize: 13, color: C.tx2, minWidth: 0 }}>{result.sentence}</span>
+      <div className="flex min-w-0 items-center gap-2">
+        <span aria-hidden className={cn("size-2.5 flex-none rounded-full", tone.dot)} />
+        <span className={cn("whitespace-nowrap text-[13px] font-semibold", tone.text)}>{LABEL[result.light]}</span>
+        <span className="min-w-0 text-[13px] text-agon-tx2">{result.sentence}</span>
       </div>
       {detail && others.length > 0 && (
-        <div style={{ fontSize: 12, color: C.tx3, paddingLeft: 18 }}>{others.join(" · ")}</div>
+        <div className="pl-[18px] text-[12px] text-agon-tx3">{others.join(" · ")}</div>
       )}
       {detail && (
-        <div style={{ fontSize: 11, color: C.tx3, paddingLeft: 18 }}>
+        <div className="pl-[18px] text-[11px] text-agon-tx3">
           {result.brand ? `Mesures ${result.brand === "garmin" ? "Garmin" : result.brand === "coros" ? "COROS" : result.brand}` : "Sans montre : rouge seulement si malade"}
           {result.hrv.dayIndex != null && result.hrv.dayIndex < 14 ? ` · alerte VFC active au 14e jour (J${result.hrv.dayIndex})` : ""}
         </div>
