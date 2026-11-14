@@ -16,6 +16,8 @@
  *   node scripts/seed-demo.mjs --link athlete [--app http://localhost:5173]   # lien magique de connexion
  *   node scripts/seed-demo.mjs --link coach
  *   node scripts/seed-demo.mjs --link staff
+ *   node scripts/seed-demo.mjs --seulement-staff  # ajoute seulement Sam Démo au staff de Léa, sans mot de passe
+ *                                                 # ni effacement (coach et Léa intacts) ; ne fait rien si c'est déjà fait
  *   node scripts/seed-demo.mjs --delete   # supprime les trois comptes démo et leurs données
  *
  * Mot de passe : uniquement par la variable d'environnement DEMO_PASSWORD, le même pour les trois
@@ -375,7 +377,66 @@ async function seed() {
   console.log("  Connexion : node scripts/seed-demo.mjs --link athlete");
 }
 
-const mode = args.includes("--delete") ? "delete" : args.includes("--link") ? "link" : "seed";
+/* =========================================================== */
+/**
+ * Session d'un compte démo sans mot de passe : lien magique généré côté serveur, puis vérifié
+ * côté client (comme un clic sur le lien). Le jeton ne sort jamais du processus.
+ */
+async function sessionOf(email) {
+  const gen = await must(sb.auth.admin.generateLink({ type: "magiclink", email }), "lien magique " + email);
+  const client = createClient(URL_, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error } = await client.auth.verifyOtp({ token_hash: gen.properties.hashed_token, type: "magiclink" });
+  if (error) throw new Error("session " + email + " : " + error.message);
+  return client;
+}
+
+/**
+ * --seulement-staff : ajoute seulement la kiné « Sam Démo » au staff de Léa, sans toucher au coach
+ * ni à Léa (leurs données restent). Aucun mot de passe : le compte staff est créé avec un mot de
+ * passe aléatoire jamais affiché (connexion par --link staff), les sessions coach et staff passent
+ * par lien magique. Idempotent : si le lien actif existe déjà, ne fait rien.
+ */
+async function seedStaffOnly() {
+  const coachU = await findUser(COACH_EMAIL), athU = await findUser(ATHLETE_EMAIL);
+  if (!coachU || !athU) { console.error("✗ Comptes démo coach / athlète absents : lancer d'abord le seed complet."); process.exit(1); }
+  const ath = await must(sb.from("profiles").select("id,coach_id").eq("id", athU.id).maybeSingle(), "profil athlète");
+  if (!ath || ath.coach_id !== coachU.id) { console.error("✗ Léa Démo n'est pas rattachée au coach démo."); process.exit(1); }
+
+  let staffU = await findUser(STAFF_EMAIL);
+  if (!staffU) {
+    const created = await must(sb.auth.admin.createUser({
+      email: STAFF_EMAIL, password: crypto.randomBytes(24).toString("base64url"), email_confirm: true,
+      user_metadata: { full_name: "Sam Démo", role: "staff" },
+    }), "createUser " + STAFF_EMAIL);
+    staffU = created.user;
+    console.log("créé", STAFF_EMAIL);
+  } else console.log("réutilisé", STAFF_EMAIL);
+  const STAFF = staffU.id;
+
+  const prof = await must(sb.from("profiles").select("id,role").eq("id", STAFF).maybeSingle(), "profil staff");
+  if (!prof) {
+    await must(sb.from("profiles").insert({ id: STAFF, role: "staff", full_name: "Sam Démo", first_name: "Sam", last_name: "Démo", profession: "kine", birth_date: "1991-03-08", is_pending: false }), "profile staff");
+    console.log("profil staff créé");
+  } else if (prof.role !== "staff") { console.error("✗ Le compte", STAFF_EMAIL, "a un profil", prof.role, ": arrêt."); process.exit(1); }
+
+  const linked = await must(sb.from("athlete_staff").select("id,status").eq("athlete_id", athU.id).eq("staff_id", STAFF).maybeSingle(), "lien staff");
+  if (linked?.status === "active") { console.log("✓ Sam Démo est déjà dans le staff de Léa Démo : rien à faire."); return; }
+
+  // Invitation en attente réutilisée, sinon créée par le coach (même grille que le seed complet).
+  const asCoach = await sessionOf(COACH_EMAIL);
+  const pending = await must(asCoach.from("staff_invitations").select("token").eq("athlete_id", athU.id).eq("email", STAFF_EMAIL)
+    .is("used_at", null).gt("expires_at", new Date().toISOString()).limit(1), "invitations en attente");
+  const token = pending[0]?.token ?? (await must(asCoach.from("staff_invitations").insert({
+    athlete_id: athU.id, email: STAFF_EMAIL, profession: "kine", invited_by: coachU.id, invited_by_role: "coach",
+    permissions: { seances: "read", fiches: "write", planification: "read", logs: "read", wellness: "read", medical: "write", nutrition: "none", tests: "read", commentaires: "write" },
+  }).select("token").single(), "invitation staff")).token;
+  const asStaff = await sessionOf(STAFF_EMAIL);
+  await must(asStaff.rpc("accept_staff_invitation", { p_token: token }), "acceptation staff");
+  console.log("✓ Sam Démo (kiné) ajoutée au staff de Léa Démo. Connexion : node scripts/seed-demo.mjs --link staff");
+}
+
+const mode = args.includes("--delete") ? "delete" : args.includes("--link") ? "link" : args.includes("--seulement-staff") ? "staff" : "seed";
 if (mode === "delete") await remove();
 else if (mode === "link") await link(argVal("--link"));
+else if (mode === "staff") await seedStaffOnly();
 else await seed();
