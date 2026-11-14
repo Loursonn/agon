@@ -6,15 +6,14 @@
  * Une mesure absente s'affiche « — ».
  */
 import type { ReactNode } from "react";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { ratioZone, LOAD_PARAMS, type WeekLoad } from "@shared/domain/trainingLoad";
 import { useLoadWeeks } from "@/features/shared/hooks/useLoadWeeks";
 import { zoneColor } from "@/lib/seance";
 
 
 const GOLD = C.ac;
-const BLUE = C.b;
-const MONO = "'Geist Mono', monospace";
 const DASH = "—";
 
 const int = (x: number | null | undefined) => (x == null || !Number.isFinite(x) ? DASH : Math.round(x).toLocaleString("fr-FR"));
@@ -29,28 +28,39 @@ function isoWeek(day: string): number {
   return 1 + Math.round(((t.getTime() - y.getTime()) / 86_400_000 - 3 + ((y.getUTCDay() + 6) % 7)) / 7);
 }
 
-function Kicker({ children, color = C.tx2 }: { children: ReactNode; color?: string }) {
+function Kicker({ children, className = "text-agon-tx2" }: { children: ReactNode; className?: string }) {
   return (
-    <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color, whiteSpace: "nowrap" }}>
+    <span className={cn("agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em]", className)}>
       {children}
     </span>
   );
 }
 
-function Card({ color, children }: { color: string; children: ReactNode }) {
+type Tone = "gold" | "blue";
+const CARD_EDGE: Record<Tone, { edge: string; bar: string }> = {
+  gold: { edge: "border-agon-accent/[0.267]", bar: "bg-agon-accent" },
+  blue: { edge: "border-agon-info/[0.267]", bar: "bg-agon-info" },
+};
+
+/** Carte à liseré : ton de la charte, ou couleur calculée (zones). */
+function Card({ tone, color, children }: { tone?: Tone; color?: string; children: ReactNode }) {
+  const t = tone ? CARD_EDGE[tone] : null;
   return (
-    <div style={{ position: "relative", overflow: "hidden", padding: "12px 14px 12px 16px", border: `1px solid ${color}44`, borderRadius: 12, background: C.s1, display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-      <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
+    <div
+      className={cn("relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-[12px] border bg-agon-s1 py-3 pl-4 pr-3.5", t?.edge)}
+      style={color ? { borderColor: alpha(color, 0.267) } : undefined}
+    >
+      <span className={cn("absolute inset-y-0 left-0 w-[3px]", t?.bar)} style={color ? { background: color } : undefined} />
       {children}
     </div>
   );
 }
 
-function Big({ value, unit, color }: { value: string; unit?: string; color: string }) {
+function Big({ value, unit, className }: { value: string; unit?: string; className: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap" }}>
-      <span style={{ fontFamily: MONO, fontSize: 26, lineHeight: 1, color }}>{value}</span>
-      {unit && <span style={{ fontFamily: MONO, fontSize: 11, color: C.tx3 }}>{unit}</span>}
+    <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className={cn("agon-mono text-[26px] leading-none", className)}>{value}</span>
+      {unit && <span className="agon-mono text-[11px] text-agon-tx3">{unit}</span>}
     </div>
   );
 }
@@ -71,7 +81,7 @@ function Bars({ weeks }: { weeks: WeekLoad[] }) {
             {ph != null && ph > 0 && (
               <rect x={x + 0.8} y={H - ph} width={bw - 1.6} height={Math.max(2, ph)} rx={3} fill="rgba(255,201,51,0.08)" stroke={GOLD} strokeDasharray="3 2" />
             )}
-            <text x={x + bw / 2} y={H + 14} textAnchor="middle" fill={last ? GOLD : C.tx3} style={{ fontFamily: MONO, fontSize: 9.5 }}>
+            <text x={x + bw / 2} y={H + 14} textAnchor="middle" fill={last ? GOLD : C.tx3} className="agon-mono text-[9.5px]">
               S{isoWeek(w.from)}
             </text>
           </g>
@@ -86,14 +96,14 @@ function RatioGauge({ ratio }: { ratio: number | null }) {
   const min = 0.6, max = 1.8;
   const pos = (v: number) => `${((Math.min(Math.max(v, min), max) - min) / (max - min)) * 100}%`;
   const zone = ratioZone(ratio);
-  const color = zone === "in" ? C.g : zone ? C.o : C.tx3;
+  const color = zone === "in" ? "bg-agon-succes" : zone ? "bg-agon-alerte" : "bg-agon-tx3";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ position: "relative", height: 8, borderRadius: 4, background: C.s2 }}>
-        <span style={{ position: "absolute", top: 0, bottom: 0, left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: "rgba(102,240,60,0.25)", borderRadius: 4 }} />
-        {ratio != null && <span style={{ position: "absolute", top: -3, width: 3, height: 14, left: pos(ratio), background: color, borderRadius: 2 }} />}
+    <div className="flex flex-col gap-1.5">
+      <div className="relative h-2 rounded-[4px] bg-agon-s2">
+        <span className="absolute inset-y-0 rounded-[4px] bg-agon-succes/25" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})` }} />
+        {ratio != null && <span className={cn("absolute -top-[3px] h-3.5 w-[3px] rounded-[2px]", color)} style={{ left: pos(ratio) }} />}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontFamily: MONO, fontSize: 9.5, color: C.tx3 }}>
+      <div className="agon-mono flex justify-between text-[9.5px] text-agon-tx3">
         <span>{dec(min, 1)}</span><span>Zone {dec(lo, 1)}–{dec(hi, 1)}</span><span>{dec(max, 1)}</span>
       </div>
     </div>
@@ -102,8 +112,8 @@ function RatioGauge({ ratio }: { ratio: number | null }) {
 
 export function WeekLoadPanel({ athleteId, weekStart }: { athleteId: string; weekStart: string }) {
   const { data, isLoading, isError } = useLoadWeeks(athleteId, weekStart, 6);
-  if (isLoading) return <div style={{ height: 180, borderRadius: 12, background: C.s1, border: "1px solid " + C.brd }} />;
-  if (isError || !data) return <div style={{ fontSize: 12, color: C.tx3 }}>Charge de la semaine : lecture impossible.</div>;
+  if (isLoading) return <div className="h-[180px] rounded-[12px] border border-agon-brd bg-agon-s1" />;
+  if (isError || !data) return <div className="text-[12px] text-agon-tx3">Charge de la semaine : lecture impossible.</div>;
   const w = data.weeks[data.weeks.length - 1];
   const sessionsDone = w.sessions.filter((s) => s.done !== null).length;
   const sessionsPlanned = w.sessions.filter((s) => s.planned !== null).length;
@@ -113,22 +123,25 @@ export function WeekLoadPanel({ athleteId, weekStart }: { athleteId: string; wee
   }, [0, 0, 0]);
   const zTotal = z[0] + z[1] + z[2];
 
+  const ratioTone = ratioZone(w.ratio) === "in" ? "text-agon-succes" : ratioZone(w.ratio) ? "text-agon-alerte" : "text-agon-tx3";
+  const NOTE = "text-[11px] text-agon-tx2";
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <Kicker>Charge de la semaine en cours</Kicker>
-        <span style={{ fontSize: 11.5, color: C.tx3 }}>Points YOXX : 1 pt = 1 min en zone 1</span>
+        <span className="text-[11.5px] text-agon-tx3">Points YOXX : 1 pt = 1 min en zone 1</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-        <Card color={GOLD}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5">
+        <Card tone="gold">
           <Kicker>Séances</Kicker>
-          <Big value={String(sessionsDone)} unit={sessionsPlanned ? `/ ${sessionsPlanned} prévues` : undefined} color={GOLD} />
-          <div style={{ fontSize: 11, color: C.tx2 }}>{w.keySessions} séance{w.keySessions > 1 ? "s" : ""} clé{w.keySessions > 1 ? "s" : ""}</div>
+          <Big value={String(sessionsDone)} unit={sessionsPlanned ? `/ ${sessionsPlanned} prévues` : undefined} className="text-agon-accent" />
+          <div className={NOTE}>{w.keySessions} séance{w.keySessions > 1 ? "s" : ""} clé{w.keySessions > 1 ? "s" : ""}</div>
         </Card>
-        <Card color={BLUE}>
+        <Card tone="blue">
           <Kicker>Volume course</Kicker>
-          <Big value={w.km.total > 0 ? dec(w.km.total, 1) : DASH} unit="km" color={BLUE} />
-          <div style={{ fontSize: 11, color: C.tx2 }}>
+          <Big value={w.km.total > 0 ? dec(w.km.total, 1) : DASH} unit="km" className="text-agon-info" />
+          <div className={NOTE}>
             {pct(w.kmVariationPct)} vs semaine précédente · dont compromised {w.km.compromised > 0 ? dec(w.km.compromised, 1) : DASH} km
           </div>
         </Card>
@@ -136,43 +149,43 @@ export function WeekLoadPanel({ athleteId, weekStart }: { athleteId: string; wee
           <Kicker>Zones d’intensité</Kicker>
           {zTotal > 0 ? (
             <>
-              <div style={{ display: "flex", gap: 2, borderRadius: 3, overflow: "hidden" }}>
-                {z.map((m, i) => m > 0 && <span key={i} style={{ flex: m, height: 10, background: zoneColor(i + 1, 3) }} />)}
+              <div className="flex gap-0.5 overflow-hidden rounded-[3px]">
+                {z.map((m, i) => m > 0 && <span key={i} className="h-2.5" style={{ flex: m, background: zoneColor(i + 1, 3) }} />)}
               </div>
-              <div style={{ display: "flex", gap: 10, fontFamily: MONO, fontSize: 10, color: C.tx2 }}>
+              <div className="agon-mono flex gap-2.5 text-[10px] text-agon-tx2">
                 {z.map((m, i) => <span key={i}>Z{i + 1} {Math.round((m / zTotal) * 100)} %</span>)}
               </div>
             </>
           ) : (
-            <div style={{ fontSize: 11, color: C.tx3 }}>{DASH} Temps par zone : course et ergos, montre ou séance prévue.</div>
+            <div className="text-[11px] text-agon-tx3">{DASH} Temps par zone : course et ergos, montre ou séance prévue.</div>
           )}
         </Card>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
-        <Card color={GOLD}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-2.5">
+        <Card tone="gold">
+          <div className="flex justify-between">
             <Kicker>Charge semaine</Kicker>
-            <span style={{ fontFamily: MONO, fontSize: 11, color: C.tx2 }}>prévu {int(w.planned)} · {pct(w.gapPct)}</span>
+            <span className="agon-mono text-[11px] text-agon-tx2">prévu {int(w.planned)} · {pct(w.gapPct)}</span>
           </div>
-          <Big value={int(w.done)} unit="pts" color={GOLD} />
+          <Big value={int(w.done)} unit="pts" className="text-agon-accent" />
           <Bars weeks={data.weeks} />
-          <div style={{ fontSize: 11, color: C.tx2 }}>
+          <div className={NOTE}>
             Monotonie {dec(w.monotony)} · contrainte {int(w.strain)}
             {w.top ? ` · plus coûteuse : ${w.top.label} (${int(w.top.points)} pts, ${Math.round(w.top.sharePct)} %)` : ""}
           </div>
           {data.missingRirSessions > 0 && (
-            <div style={{ fontSize: 11, color: C.o }}>
+            <div className="text-[11px] text-agon-alerte">
               {data.missingRirSessions} séance{data.missingRirSessions > 1 ? "s" : ""} de muscu sans RIR : 0,75 par série appliqué.
             </div>
           )}
         </Card>
-        <Card color={BLUE}>
+        <Card tone="blue">
           <Kicker>Aiguë 7 j · chronique 28 j</Kicker>
-          <Big value={`${int(w.done)} / ${int(w.chronic)}`} unit="pts" color={C.tx} />
-          <Kicker color={C.tx3}>Ratio aiguë / chronique</Kicker>
-          <Big value={dec(w.ratio)} color={ratioZone(w.ratio) === "in" ? C.g : ratioZone(w.ratio) ? C.o : C.tx3} />
+          <Big value={`${int(w.done)} / ${int(w.chronic)}`} unit="pts" className="text-agon-tx" />
+          <Kicker className="text-agon-tx3">Ratio aiguë / chronique</Kicker>
+          <Big value={dec(w.ratio)} className={ratioTone} />
           <RatioGauge ratio={w.ratio} />
-          <div style={{ fontSize: 11, color: C.tx3 }}>Contexte seulement : le ratio ne déclenche aucune alerte.</div>
+          <div className="text-[11px] text-agon-tx3">Contexte seulement : le ratio ne déclenche aucune alerte.</div>
         </Card>
       </div>
     </div>
