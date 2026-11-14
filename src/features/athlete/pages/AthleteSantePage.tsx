@@ -72,7 +72,7 @@ const hm = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("fr-F
  *   et suivie du wellness déclaré et des courbes ressenti / mesuré (`bottom`).
  *   Moyennes « 28 j » explicites et score de sommeil des 7 nuits en barres.
  */
-export default function AthleteSantePage({ coachView, top, bottom }: { coachView?: { firstName: string }; top?: ReactNode; bottom?: ReactNode } = {}) {
+export default function AthleteSantePage({ coachView, top, montreTitle, bottom }: { coachView?: { firstName: string }; top?: ReactNode; montreTitle?: ReactNode; bottom?: ReactNode } = {}) {
   const isDesktop = useIsDesktop();
   const { athleteId } = useAthleteContext();
   const day = localIsoDay();
@@ -140,11 +140,11 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
   }
 
   const [sleep, ...rest] = views;
-  return (
-    <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
-      {!coachView && <AthletePageHeader title="Santé" titleSize={24} />}
-      <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {top}
+  // Vue coach ordinateur (planche CoachOrdiASante) : pleine largeur, mesures de
+  // la montre à gauche, wellness déclaré à droite.
+  const coachWide = !!coachView && isDesktop;
+  const montre = (
+      <>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, color: C.tx2 }}>
           <span>{fmtDayShort(day, !!coachView)}</span>
           {source && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{source}</span>}
@@ -227,6 +227,28 @@ export default function AthleteSantePage({ coachView, top, bottom }: { coachView
             )}
           </>
         )}
+      </>
+  );
+
+  if (coachWide) {
+    return (
+      <div style={{ width: "100%", padding: "0 0 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {top}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>{montreTitle}{montre}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>{bottom}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: "100%", maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
+      {!coachView && <AthletePageHeader title="Santé" titleSize={24} />}
+      <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {top}
+        {montreTitle}
+        {montre}
         {bottom}
       </div>
     </div>

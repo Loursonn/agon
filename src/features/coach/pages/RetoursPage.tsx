@@ -262,9 +262,9 @@ export default function RetoursPage() {
               <SanteKicker n={1}>Ressenti / mesuré · ce matin</SanteKicker>
               <div style={{ fontSize: 12.5, color: C.tx3 }}>Ce que {firstName} déclare face à ce que mesure sa montre.</div>
               <FeltVsMeasured athleteId={athleteId} firstName={firstName} />
-              <SanteKicker n={2} style={{ marginTop: 14 }}>Mesures de la montre</SanteKicker>
             </section>
           }
+          montreTitle={<SanteKicker n={2} style={{ marginTop: 14 }}>Mesures de la montre</SanteKicker>}
           bottom={
             <>
               <DeclaredWellness athleteId={athleteId} firstName={firstName} n={3} onOpenWellness={() => setTab("bienetre")} />
