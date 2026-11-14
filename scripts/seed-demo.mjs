@@ -347,7 +347,7 @@ async function seed() {
 
   /* --- médical, HYROX, mensurations --- */
   await must(sb.from("medical_entries").insert({ athlete_id: ATH, kind: "blessure", title: "Entorse cheville gauche", zone: "Cheville gauche", date: ymd(addDays(today, -120)), status: "gueri", injury_type: "traumatique", training_impact: "adapte", days_off: 10, declared_by: "athlete", created_by: ATH }), "medical");
-  await must(sb.from("hyrox_results").insert({ athlete_id: ATH, date: ymd(addDays(today, -60)), format: "solo", division: "women", status: "finished", source: "manual", event_name: "HYROX Paris", venue: "Paris", total_s: 4368, run_1_s: 268, run_2_s: 292, run_3_s: 300, run_4_s: 298, run_5_s: 305, run_6_s: 310, run_7_s: 312, run_8_s: 305, ski_s: 262, sled_push_s: 215, sled_pull_s: 262, bbj_s: 300, row_s: 270, farmers_s: 138, lunges_s: 250, wall_balls_s: 355, roxzone_total_s: 216, penalties_s: 0, created_by: ATH }), "hyrox");
+  await must(sb.from("hyrox_results").insert({ athlete_id: ATH, date: ymd(addDays(today, -60)), format: "solo", division: "women", status: "finished", source: "manual", event_name: "HYROX Paris", venue: "Paris", total_s: 4658, run_1_s: 268, run_2_s: 292, run_3_s: 300, run_4_s: 298, run_5_s: 305, run_6_s: 310, run_7_s: 312, run_8_s: 305, ski_s: 262, sled_push_s: 215, sled_pull_s: 262, bbj_s: 300, row_s: 270, farmers_s: 138, lunges_s: 250, wall_balls_s: 355, roxzone_total_s: 216, penalties_s: 0, created_by: ATH }), "hyrox");
   await must(sb.from("measurement_logs").insert({ athlete_id: ATH, date: ymd(addDays(today, -2)), weight_kg: 78.4, bras_g: 31, bras_d: 31.5, epaules: 108, poitrine: 94, taille: 74, hanche: 98, cuisse_g: 58, cuisse_d: 58.5, mollet_g: 37, mollet_d: 37, photos: {} }), "measurements");
 
 
