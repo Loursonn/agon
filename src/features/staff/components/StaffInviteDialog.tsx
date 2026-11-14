@@ -96,7 +96,7 @@ export function StaffInviteDialog({
               />
               <button
                 onClick={async () => { if (await copyText(url)) toast.success("Lien copié"); }}
-                style={{ padding: "8px 14px", borderRadius: 4, border: "none", background: C.ac, color: "#0E0C0A", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "8px 14px", borderRadius: 4, border: "none", background: C.ac, color: C.ink, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Copier
               </button>
@@ -159,7 +159,7 @@ export function StaffInviteDialog({
               <button
                 onClick={submit}
                 disabled={create.isPending}
-                style={{ padding: "9px 16px", borderRadius: 4, border: "none", background: C.ac, color: "#0E0C0A", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: create.isPending ? 0.6 : 1 }}
+                style={{ padding: "9px 16px", borderRadius: 4, border: "none", background: C.ac, color: C.ink, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: create.isPending ? 0.6 : 1 }}
               >
                 {create.isPending ? "Création…" : "Créer le lien d'invitation"}
               </button>

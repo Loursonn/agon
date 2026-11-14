@@ -1,6 +1,9 @@
+import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { Link, useLocation } from "react-router-dom";
+import { C, H } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
 import { confirmLogout, logoutDevice } from "@/lib/offline/logoutDevice";
@@ -9,15 +12,16 @@ import { todayKey } from "@/lib/date";
 import { MedicalEntriesSection } from "@/features/shared/components/medical/MedicalEntriesSection";
 import { RunningVolumeCard } from "@/features/shared/components/RunningVolumeCard";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
-import { StravaExportTutorial } from "@/features/athlete/components/StravaExportTutorial";
 import { AthleteStaffPanel } from "@/features/staff/components/AthleteStaffPanel";
 import { CoCoachPanel } from "@/features/shared/components/CoCoachPanel";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import type { ReactNode } from "react";
 
 const MONTHS_FR = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
 
 function todayShort(): string {
-  const d = new Date();
-  return `${d.getDate()} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
+  // Planche : « dim. 8 nov. »
+  return new Date().toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
 }
 
 function ageFromBirth(birth: string | null | undefined): number | null {
@@ -39,7 +43,6 @@ function shortDate(isoDate: string): string {
   return `${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
 }
 
-const fmtKg = (kg: number) => `${kg.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} kg`;
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
@@ -54,19 +57,28 @@ const labelStyle: React.CSSProperties = {
 };
 const btnPrimary: React.CSSProperties = {
   padding: "10px 20px", borderRadius: 4, border: "none",
-  background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700,
+  background: C.acV, color: C.ink, fontSize: 13, fontWeight: 700,
   cursor: "pointer", fontFamily: "inherit",
 };
-const sectionTitle: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase",
-  letterSpacing: "0.5px", marginBottom: 12,
-};
+/** Titre numéroté de la planche « Profil athlète » : « 01 — Profil » + filet. */
+function SectionTitle({ n, children }: { n: string; children: ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+      <h2 style={{ margin: 0, height: 20, display: "flex", alignItems: "center", ...MONO, fontWeight: 400, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>
+        <span style={{ color: C.ac }}>{n} —</span>&nbsp;{children}
+      </h2>
+      <div style={{ height: 1, background: C.brd }} />
+    </div>
+  );
+}
+const KICKER: React.CSSProperties = { ...MONO, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.tx3 };
 const card: React.CSSProperties = {
-  background: C.s1, borderRadius: 6, padding: 16,
+  background: C.s1, borderRadius: 14, padding: 16,
   border: "1px solid " + C.brd,
 };
 
 export default function ProfilPage() {
+  const isDesktop = useIsDesktop();
   const { profile, updateAthleteProfile } = useAuth();
   const {
     athleteId, athleteProfile, viewOnly, freeSessions,
@@ -94,10 +106,13 @@ export default function ProfilPage() {
   const targetWeight = nutritionStrategy?.target_weight ?? (bodyWeight?.target || null);
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 40px", scrollbarWidth: "none" }}>
+    <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
+    <AthletePageHeader title="Profil" background={headerGlow(undefined, C.b)} />
+    {/* Ordinateur (planche AthOrdiBProfil) : rubriques sur deux colonnes. */}
+    <div className="[&>*]:break-inside-avoid" style={{ padding: "24px 20px 40px", scrollbarWidth: "none", ...(isDesktop ? { columns: 2, columnGap: 32 } : {}) }}>
       {/* ── Profil ── */}
       <div style={{ marginBottom: 24 }}>
-        <div style={sectionTitle}>Profil</div>
+        <SectionTitle n="01">Profil</SectionTitle>
         {editing && athleteId ? (
           <ProfileEditForm
             profile={displayProfile}
@@ -114,29 +129,28 @@ export default function ProfilPage() {
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <div style={{ ...card, position: "relative", overflow: "hidden" }}>
-            <div aria-hidden style={{ position: "absolute", top: 0, left: 0, right: 0, height: 20, backgroundImage: "url(/brand/agon-pattern-frise-meandre-sombre.svg)", backgroundSize: "600px", backgroundRepeat: "repeat-x", opacity: 0.18, pointerEvents: "none", zIndex: 0, maskImage: "linear-gradient(180deg, #000 0%, transparent 100%)", WebkitMaskImage: "linear-gradient(180deg, #000 0%, transparent 100%)" }} />
-            <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: "50%",
-                background: C.coach + "25", border: "1px solid " + C.coach + "40",
+          <div style={{ ...card, padding: 18, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div aria-hidden style={{ position: "absolute", top: 0, left: 0, right: 0, height: 22, backgroundImage: "url(/brand/agon-pattern-frise-meandre-sombre.svg)", backgroundSize: "auto 22px", backgroundRepeat: "repeat-x", opacity: 0.22, pointerEvents: "none", zIndex: 0 }} />
+            <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, paddingTop: 8 }}>
+              <span style={{
+                width: 52, height: 52, flex: "none", boxSizing: "border-box", borderRadius: "50%",
+                border: `2px solid ${C.ac}`, boxShadow: `0 0 0 4px ${C.ac}24, 0 0 22px ${C.ac}59`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 20, fontWeight: 800, color: C.coach, flexShrink: 0,
+                ...DISPLAY, fontSize: 20, color: H.sableClair,
               }}>
                 {(displayProfile?.full_name ?? "?").charAt(0).toUpperCase()}
-              </div>
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>{displayProfile?.full_name ?? "—"}</div>
-                <div style={{ fontSize: 11, color: C.tx3 }}>{todayShort()}</div>
+                <div style={{ ...DISPLAY, fontSize: 16, letterSpacing: "0.05em", fontWeight: 400, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayProfile?.full_name ?? "—"}</div>
+                <div style={{ fontSize: 12, color: C.tx3 }}>{todayShort()}</div>
               </div>
               {!viewOnly && (
                 <button
                   onClick={() => setEditing(true)}
                   style={{
-                    padding: "6px 14px", borderRadius: 4,
-                    border: "1px solid " + C.coach + "50", background: C.coach + "15",
-                    color: C.coach, fontSize: 12, fontWeight: 600,
-                    cursor: "pointer", fontFamily: "inherit",
+                    height: 36, padding: "0 16px", borderRadius: 10, border: "none",
+                    background: C.ac, color: C.ink, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+                    boxShadow: `0 4px 16px ${C.ac}4D`, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
                   Modifier
@@ -150,48 +164,75 @@ export default function ProfilPage() {
                 { l: "Taille", v: displayProfile?.height_cm ? `${displayProfile.height_cm} cm` : "—" },
                 { l: "Genre", v: displayProfile?.gender === "male" ? "Homme" : displayProfile?.gender === "female" ? "Femme" : "—" },
               ].map(({ l, v }) => (
-                <div key={l} style={{ background: C.s2, borderRadius: 4, padding: "8px 12px", minWidth: 0 }}>
-                  <div style={{ fontSize: 9, color: C.tx3 }}>{l}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>{v}</div>
+                <div key={l} style={{ background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+                  <span style={KICKER}>{l}</span>
+                  <span style={{ fontSize: 15, fontWeight: 500, color: C.tx, whiteSpace: "nowrap" }}>{v}</span>
                 </div>
               ))}
             </div>
 
             {/* Poids : dernière pesée + 3 dernières + poids cible */}
-            <div style={{ position: "relative", zIndex: 1, marginTop: 8, background: C.s2, borderRadius: 4, padding: "10px 12px" }}>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                <div>
-                  <div style={{ fontSize: 9, color: C.tx3 }}>Poids</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: C.tx }}>{currentWeight != null ? fmtKg(currentWeight) : "—"}</div>
+            <div style={{ position: "relative", zIndex: 1, overflow: "hidden", borderRadius: 14, padding: "12px 12px 12px 15px", display: "flex", flexDirection: "column", gap: 10, border: `1px solid ${C.g}66`, background: `radial-gradient(90% 120% at 100% 0%, ${C.g}33, transparent 60%), linear-gradient(160deg, ${C.g}24, ${C.g}0D), ${C.s1}` }}>
+              <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.g, boxShadow: `0 0 12px ${C.g}99` }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                  <span style={{ ...KICKER, color: C.tx2 }}>Poids</span>
+                  <span style={{ ...MONO, fontSize: 32, lineHeight: 1, color: currentWeight != null ? C.g : C.tx3, whiteSpace: "nowrap" }}>
+                    {currentWeight != null ? currentWeight.toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—"}
+                    {currentWeight != null && <span style={{ fontSize: 12, color: C.tx2 }}> kg</span>}
+                  </span>
                 </div>
                 {targetWeight ? (
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 9, color: C.tx3 }}>Poids cible</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.ac }}>{fmtKg(targetWeight)}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, textAlign: "right" }}>
+                    <span style={{ ...KICKER, color: C.tx2 }}>Poids cible</span>
+                    <span style={{ ...MONO, fontSize: 18, lineHeight: 1.1, color: C.ac, whiteSpace: "nowrap" }}>
+                      {Number(targetWeight).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}<span style={{ fontSize: 11, color: C.tx3 }}> kg</span>
+                    </span>
                   </div>
                 ) : null}
               </div>
               {weighIns.length > 0 ? (
-                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  {weighIns.slice(0, 3).map((w) => (
-                    <div key={w.date} style={{ flex: 1, background: C.s1, borderRadius: 4, padding: "5px 8px", minWidth: 0 }}>
-                      <div style={{ fontSize: 9, color: C.tx3 }}>{shortDate(w.date)}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.tx2 }}>{fmtKg(w.kg)}</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {weighIns.slice(0, 3).map((w, i) => (
+                    <div key={w.date} style={{ flex: 1, minWidth: 0, borderRadius: 8, padding: "6px 10px", display: "flex", flexDirection: "column", gap: 2, background: i === 0 ? `${C.g}29` : C.s2, border: `1px solid ${i === 0 ? C.g + "73" : C.brd}` }}>
+                      <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2 }}>{shortDate(w.date)}</span>
+                      <span style={{ ...MONO, fontSize: 13, lineHeight: 1.1, color: i === 0 ? C.g : C.tx, whiteSpace: "nowrap" }}>
+                        {w.kg.toLocaleString("fr-FR", { maximumFractionDigits: 1 })}<span style={{ fontSize: 11, color: C.tx3 }}> kg</span>
+                      </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>Aucune pesée — ajoute ton poids dans le bilan du jour ou via « Modifier ».</div>
+                <div style={{ fontSize: 11, color: C.tx3 }}>Aucune pesée : ajoute ton poids dans le bilan du jour ou via « Modifier ».</div>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Antécédents médicaux ── */}
+      {!viewOnly && (
+        <Link
+          to="/athlete/zones"
+          style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: -12, marginBottom: 24, textDecoration: "none", color: C.tx, fontSize: 14, fontWeight: 600 }}
+        >
+          Mes seuils et zones FC
+          <span aria-hidden style={{ color: C.tx3 }}>›</span>
+        </Link>
+      )}
+      {!viewOnly && (
+        <Link
+          to="/athlete/montres"
+          style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: -16, marginBottom: 24, textDecoration: "none", color: C.tx, fontSize: 14, fontWeight: 600 }}
+        >
+          Montres et données
+          <span aria-hidden style={{ color: C.tx3 }}>›</span>
+        </Link>
+      )}
+
+      {/* ── Blessures ── */}
       {athleteId && (
         <div style={{ marginBottom: 24 }}>
-          <div style={sectionTitle}>Antécédents médicaux</div>
+          <SectionTitle n="02">Blessures</SectionTitle>
           <MedicalEntriesSection athleteId={athleteId} canEdit />
         </div>
       )}
@@ -199,7 +240,7 @@ export default function ProfilPage() {
       {/* ── Mes coachs (double coach) ── */}
       {!viewOnly && athleteId && (
         <div id="mes-coachs" style={{ marginBottom: 24, scrollMarginTop: 56 }}>
-          <div style={sectionTitle}>Mes coachs</div>
+          <SectionTitle n="03">Mes coachs</SectionTitle>
           <CoCoachPanel athleteId={athleteId} athleteName={displayProfile?.full_name ?? "toi"} mode="athlete" />
         </div>
       )}
@@ -207,28 +248,22 @@ export default function ProfilPage() {
       {/* ── Mon staff (kiné, ostéo, nutritionniste…) ── */}
       {!viewOnly && athleteId && (
         <div id="mon-staff" style={{ marginBottom: 24 }}>
-          <div style={sectionTitle}>Mon staff</div>
+          <SectionTitle n="04">Mon staff</SectionTitle>
           <AthleteStaffPanel athleteId={athleteId} athleteName={displayProfile?.full_name ?? "toi"} mode="athlete" />
         </div>
       )}
 
       {/* ── Volume de course à pied ── */}
       <div style={{ marginBottom: 24 }}>
-        <div style={sectionTitle}>Volume de course à pied</div>
+        <SectionTitle n="05">Volume de course à pied</SectionTitle>
         <RunningVolumeCard volume={volume} isLoading={volumeLoading} />
       </div>
 
-      {/* ── Données Strava ── */}
-      {!viewOnly && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={sectionTitle}>Données Strava</div>
-          <StravaExportTutorial />
-        </div>
-      )}
+      {/* Données Strava : déplacées dans « Montres et données » (planche Ath2Montres). */}
 
       {/* ── Déconnexion ── */}
       {!viewOnly && (
-        <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+        <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${C.rouge}66`, background: `linear-gradient(160deg, ${C.rouge}1F, ${C.rouge}0A), ${C.s1}` }}>
           <button
             onClick={async () => {
               if (!confirmLogout()) return;
@@ -236,17 +271,17 @@ export default function ProfilPage() {
               window.location.href = "/login";
             }}
             style={{
-              width: "100%", padding: "14px 16px", border: "none",
-              background: "transparent", textAlign: "left",
-              color: "#FF5A33", fontSize: 13, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", gap: 8, minHeight: 44,
+              width: "100%", height: 48, border: "none", background: "transparent",
+              color: C.rouge, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             }}
           >
-            <span>⏻</span> Déconnexion
+            <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square"><path d="M12 3V11M7 6.5A7 7 0 1 0 17 6.5" /></svg>
+            Déconnexion
           </button>
         </div>
       )}
+    </div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ SELECT
   (SELECT a.id FROM profiles a JOIN profiles c ON c.id = a.coach_id
     WHERE a.role = 'athlete' AND a.coach_id <> a.id AND NOT coalesce(a.is_pending, false)
       AND NOT coalesce(c.is_admin, false)
-    ORDER BY EXISTS (SELECT 1 FROM medical_history m WHERE m.athlete_id = a.id) DESC LIMIT 1) AS athlete,
+    ORDER BY EXISTS (SELECT 1 FROM medical_entries m WHERE m.athlete_id = a.id) DESC LIMIT 1) AS athlete,
   NULL::uuid AS coach,
   NULL::uuid AS other_coach,
   (SELECT id FROM profiles WHERE is_admin LIMIT 1) AS admin,
@@ -86,13 +86,13 @@ END $$;
 DO $$ BEGIN
   INSERT INTO t_res VALUES ('policies: doublons supprimés',
     NOT EXISTS (SELECT 1 FROM pg_policies WHERE (tablename, policyname) IN (
-      ('exercises', 'Public read'), ('medical_history', 'coach_read_athlete_medical'),
+      ('exercises', 'Public read'),
       ('workout_rpe', 'workout_rpe_insert'), ('workout_rpe', 'workout_rpe_update'),
       ('workout_rpe', 'workout_rpe_delete'), ('objects', 'coach_delete_test_media'))), '');
   INSERT INTO t_res VALUES ('policies: policies couvrantes gardées',
     (SELECT count(*) FROM pg_policies WHERE (tablename, policyname) IN (
-      ('exercises', 'exercises_select_all'), ('medical_history', 'coach_write_athlete_medical'),
-      ('workout_rpe', 'athlete_own_rpe'), ('objects', 'athlete_delete_test_media'))) = 4, '');
+      ('exercises', 'exercises_select_all'),
+      ('workout_rpe', 'athlete_own_rpe'), ('objects', 'athlete_delete_test_media'))) = 3, '');
   INSERT INTO t_res VALUES ('policies: plus aucun doublon strict (même cmd, rôles, USING, CHECK)',
     NOT EXISTS (SELECT 1 FROM pg_policies GROUP BY schemaname, tablename, cmd, roles, permissive, qual, with_check
                  HAVING count(*) > 1), '');
@@ -105,7 +105,7 @@ END $$;
 -- Mesures de référence (postgres, sans RLS), pour comparer avec chaque rôle
 CREATE TEMP TABLE t_ref AS
 SELECT
-  (SELECT count(*) FROM medical_history WHERE athlete_id = (SELECT athlete FROM t_ids)) AS med,
+  (SELECT count(*) FROM medical_entries WHERE athlete_id = (SELECT athlete FROM t_ids)) AS med,
   (SELECT count(*) FROM exercises) AS exos;
 GRANT ALL ON t_ref TO anon, authenticated;
 
@@ -115,8 +115,8 @@ SELECT set_config('request.jwt.claims', '{"role":"anon"}', true);
 DO $$ DECLARE n int; BEGIN
   INSERT INTO t_res VALUES ('anon: pas d''EXECUTE sur set_own_coach',
     NOT has_function_privilege('anon', 'public.set_own_coach(uuid)', 'EXECUTE'), '');
-  SELECT count(*) INTO n FROM medical_history;
-  INSERT INTO t_res VALUES ('anon: ne voit aucun antécédent médical', n = 0, n::text);
+  SELECT count(*) INTO n FROM medical_entries;
+  INSERT INTO t_res VALUES ('anon: ne voit aucune blessure', n = 0, n::text);
   SELECT count(*) INTO n FROM exercises;
   INSERT INTO t_res VALUES ('anon: banque d''exercices toujours lisible (comme avant)', n = (SELECT exos FROM t_ref), n::text);
 END $$;
@@ -127,8 +127,8 @@ SELECT set_config('request.jwt.claims', json_build_object('sub', (SELECT coach F
 SET LOCAL ROLE authenticated;
 DO $$ DECLARE ids record; n int; BEGIN
   SELECT * INTO ids FROM t_ids;
-  SELECT count(*) INTO n FROM medical_history WHERE athlete_id = ids.athlete;
-  INSERT INTO t_res VALUES ('coach: lit toujours les antécédents de son athlète', n = (SELECT med FROM t_ref), n::text);
+  SELECT count(*) INTO n FROM medical_entries WHERE athlete_id = ids.athlete;
+  INSERT INTO t_res VALUES ('coach: lit toujours les blessures de son athlète', n = (SELECT med FROM t_ref), n::text);
 END $$;
 RESET ROLE;
 
@@ -137,8 +137,8 @@ SELECT set_config('request.jwt.claims', json_build_object('sub', (SELECT other_c
 SET LOCAL ROLE authenticated;
 DO $$ DECLARE ids record; n int; BEGIN
   SELECT * INTO ids FROM t_ids;
-  SELECT count(*) INTO n FROM medical_history WHERE athlete_id = ids.athlete;
-  INSERT INTO t_res VALUES ('autre coach: ne lit pas les antécédents', n = 0, n::text);
+  SELECT count(*) INTO n FROM medical_entries WHERE athlete_id = ids.athlete;
+  INSERT INTO t_res VALUES ('autre coach: ne lit pas les blessures', n = 0, n::text);
   BEGIN PERFORM complete_energy_assignment(ids.esa); INSERT INTO t_res VALUES ('autre coach: séance énergie refusée', false, 'exécuté');
   EXCEPTION WHEN OTHERS THEN INSERT INTO t_res VALUES ('autre coach: séance énergie refusée', SQLSTATE = '42501', SQLSTATE); END;
 END $$;

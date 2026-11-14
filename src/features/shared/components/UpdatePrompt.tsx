@@ -81,7 +81,7 @@ export default function UpdatePrompt() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { applyIfSafe(); }, [needRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { applyIfSafe(); }, [needRefresh]);
 
   useEffect(() => {
     if (!needRefresh || !dismissed) return;

@@ -68,7 +68,7 @@ export function ChildOverflowDialog({
           {altParentName && (
             <button
               onClick={onConfirmMultiParent}
-              style={{ ...btnBase, background: C.oV, color: "#0E0C0A" }}
+              style={{ ...btnBase, background: C.oV, color: C.ink }}
             >
               Confirmer — rattacher aussi à "{altParentName}"
             </button>

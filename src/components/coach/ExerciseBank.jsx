@@ -3,10 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   createBankExercise, deleteExercise, getExerciseBankPage, mergeExercises, searchMergeCandidates, updateExercise,
 } from "@/api/exercises";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 import { MTREE, getMC, mL, ALL_MIDS, normPrimary } from "@/lib/muscles";
 import { normalizeExName, normForMatch, fuzzyExMatch } from "@/lib/exercises";
 import { EX_TYPES, exTypeLabel, exTypeColor } from "@/lib/exerciseTypes";
+import { GarminEquivalentField } from "@/features/coach/components/GarminEquivalentField";
 const parseYtId=v=>{const m=(v||'').match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);return m?m[1]:v.trim();};
 function ExerciseCreateModal({coachId,onSave,onClose}){
   const{profile}=useAuth();
@@ -166,7 +167,7 @@ function ExerciseDetailModal({ex,coachId,onClose,onAdd,onDelete,onMergeClick,onR
   return(<div style={{position:'fixed',inset:0,zIndex:300,background:'rgba(0,0,0,0.88)',overflowY:'auto'}} onClick={onClose}>
     <div style={{minHeight:'100%',display:'flex',alignItems:'flex-end'}} onClick={e=>e.stopPropagation()}>
       <div style={{width:'100%',background:C.s1,borderRadius:'6px 6px 0 0',maxHeight:'92vh',overflowY:'auto',paddingBottom:40}}>
-        {localYtId&&<div style={{width:'100%',maxWidth:420,margin:'0 auto',background:'#000',aspectRatio:'16/9'}}><iframe src={`https://www.youtube.com/embed/${localYtId}?rel=0`} style={{width:'100%',height:'100%',border:'none'}} allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowFullScreen/></div>}
+        {localYtId&&<div style={{width:'100%',maxWidth:420,margin:'0 auto',background:'#000',aspectRatio:'16/9'}}><iframe src={`https://www.youtube-nocookie.com/embed/${localYtId}?rel=0`} style={{width:'100%',height:'100%',border:'none'}} allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowFullScreen/></div>}
         {!localYtId&&ex.image_url&&<img src={ex.image_url} style={{width:'100%',maxWidth:420,margin:'0 auto',aspectRatio:'16/9',objectFit:'cover',display:'block'}} alt={ex.name}/>}
         {!localYtId&&!ex.image_url&&<div style={{width:'100%',aspectRatio:'16/9',background:C.s2,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:C.tx3}}>Exercice</div>}
         <div style={{padding:'16px 16px 0'}}>
@@ -193,6 +194,7 @@ function ExerciseDetailModal({ex,coachId,onClose,onAdd,onDelete,onMergeClick,onR
           </div>
           {(isOwner||isCertified)&&<button onClick={()=>setShowEdit(v=>!v)} style={{width:'100%',padding:'8px 0',borderRadius:4,border:'1px solid '+C.brdL,background:showEdit?C.s2:'transparent',color:C.tx2,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit',marginBottom:10}}>{showEdit?'Fermer l\'édition':'Modifier les caractéristiques'}</button>}
           {(isOwner||isCertified)&&showEdit&&<ExerciseCharacteristicsPanel ex={ex} onSaved={onRefresh}/>}
+          {(isOwner||isCertified)&&showEdit&&<GarminEquivalentField ex={ex} onSaved={onRefresh}/>}
           {ex.instructions&&<div style={{marginBottom:12}}><div style={{fontSize:10,fontWeight:700,color:C.tx3,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:6}}>Instructions</div><div style={{fontSize:12,color:C.tx2,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{ex.instructions}</div></div>}
           {ex.tips&&<div style={{marginBottom:16,padding:'10px 12px',borderRadius:4,background:C.oS,border:'1px solid '+C.o+'30'}}><div style={{fontSize:10,fontWeight:700,color:C.o,marginBottom:4}}>Conseils</div><div style={{fontSize:12,color:C.tx2,lineHeight:1.6}}>{ex.tips}</div></div>}
           <button onClick={onAdd} style={{width:'100%',padding:'12px 0',borderRadius:6,border:'none',background:C.ac,color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit',marginBottom:8}}>+ Ajouter à mes exercices</button>
@@ -255,15 +257,15 @@ function ExerciseBank({coachId,onAddToExos}){
   return(<div style={{padding:'0 0 60px'}}>
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
       <div><div style={{fontSize:16,fontWeight:700}}>Banque d'exercices</div><div style={{fontSize:11,color:C.tx3}}>{total} exercice{total>1?'s':''}</div></div>
-      <button onClick={()=>setShowCreate(true)} style={{padding:'7px 14px',borderRadius:4,border:'none',background:C.ac,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+ Créer</button>
+      <button onClick={()=>setShowCreate(true)} style={{padding:'8px 16px',borderRadius:999,border:'none',background:C.ac,color:'#0E0C0A',fontSize:12.5,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>+ Créer</button>
     </div>
-    <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un exercice..." style={{width:'100%',padding:'10px 14px',borderRadius:4,border:'1px solid '+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:'inherit',boxSizing:'border-box',marginBottom:10,outline:'none'}}/>
+    <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un exercice..." style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1px solid '+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:'inherit',boxSizing:'border-box',marginBottom:10,outline:'none'}}/>
     <div style={{display:'flex',gap:6,marginBottom:fMuscles.length>0?8:14,overflowX:'auto',paddingBottom:4}}>
-      <button onClick={()=>setShowMusclePanel(v=>!v)} style={{flexShrink:0,padding:'5px 10px',borderRadius:4,border:'1px solid '+(fMuscles.length>0?C.ac:C.brdL),background:fMuscles.length>0?C.acS:C.s1,color:fMuscles.length>0?C.ac:C.tx3,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:5}}>
+      <button onClick={()=>setShowMusclePanel(v=>!v)} style={{flexShrink:0,padding:'5px 12px',borderRadius:999,border:'1px solid '+(fMuscles.length>0?C.ac:C.brdL),background:fMuscles.length>0?C.acS:C.s1,color:fMuscles.length>0?C.ac:C.tx3,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:5}}>
         Muscles{fMuscles.length>0&&<span style={{background:C.ac,color:'#fff',borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:700}}>{fMuscles.length}</span>}
       </button>
       {[{l:'Équip.',v:fEquip,s:setFEquip,o:EQUIPS.map(e=>({value:e,label:e}))},{l:'Niveau',v:fDiff,s:setFDiff,o:['Débutant','Intermédiaire','Avancé'].map(d=>({value:d,label:d}))},{l:'Type',v:fType,s:setFType,o:EX_TYPES}].map(({l,v,s,o})=>(
-        <select key={l} value={v} onChange={e=>{s(e.target.value);setPage(0);}} style={{flexShrink:0,padding:'5px 8px',borderRadius:4,border:'1px solid '+(v?C.ac:C.brdL),background:v?C.acS:C.s1,color:v?C.ac:C.tx3,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',outline:'none'}}>
+        <select key={l} value={v} onChange={e=>{s(e.target.value);setPage(0);}} style={{flexShrink:0,padding:'5px 10px',borderRadius:999,border:'1px solid '+(v?C.ac:C.brdL),background:v?C.acS:C.s1,color:v?C.ac:C.tx3,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',outline:'none'}}>
           <option value=''>{l}</option>{o.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}
         </select>
       ))}
@@ -282,30 +284,39 @@ function ExerciseBank({coachId,onAddToExos}){
     </div>}
     {loading?<div style={{textAlign:'center',padding:'40px 0',color:C.tx3,fontSize:13}}>Chargement...</div>:(
       <>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-          {exList.map(ex=>(
-            <div key={ex.id} onClick={()=>{setTypeMenu(null);setSel(ex);}} style={{background:C.s1,borderRadius:6,border:'1px solid '+C.brd,cursor:'pointer',position:'relative'}}>
-              <div style={{width:'100%',height:90,background:C.s2,position:'relative',overflow:'hidden',borderRadius:'6px 6px 0 0'}}>
-                {ex.youtube_id?<img src={`https://img.youtube.com/vi/${ex.youtube_id}/mqdefault.jpg`} style={{width:'100%',height:'100%',objectFit:'cover'}} alt={ex.name}/>:ex.image_url?<img src={ex.image_url} style={{width:'100%',height:'100%',objectFit:'cover'}} alt={ex.name}/>:<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:C.tx3,fontSize:11}}>Exercice</div>}
-                {ex.youtube_id&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{width:30,height:30,borderRadius:'50%',background:'rgba(0,0,0,0.65)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#fff'}}>▶</div></div>}
-                <div style={{position:'absolute',top:4,left:4,padding:'2px 6px',borderRadius:5,background:'rgba(0,0,0,0.72)',fontSize:9,color:ex.is_verified?C.g:C.o,fontWeight:700}}>{ex.is_verified?'✓ Off.':'Comm.'}</div>
-              </div>
-              <div style={{padding:'8px 10px'}}>
-                <div style={{fontSize:12,fontWeight:700,color:C.tx,marginBottom:2,lineHeight:1.3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{ex.name}</div>
-                {ex.youtube_id&&<a href={`https://youtube.com/watch?v=${ex.youtube_id}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:10,color:'#E5484D',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:3,marginBottom:3}}>▶ Voir la vidéo</a>}
-                <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingRight:70,minHeight:18}}>
-                  {ex.target&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:C.acS,color:C.ac,fontWeight:600}}>{ex.target}</span>}
-                  {ex.equipment&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:C.s2,color:C.tx3}}>{ex.equipment}</span>}
+        <div style={{display:'flex',flexWrap:'wrap',gap:14,justifyContent:'flex-end',fontSize:11,color:C.tx2,marginBottom:12}}>
+          {EX_TYPES.map(t=>(
+            <span key={t.value} style={{display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>
+              <span style={{width:10,height:10,borderRadius:3,background:exTypeColor(t.value),boxShadow:'0 0 8px '+alpha(exTypeColor(t.value),0.55)}}/>{t.label}
+            </span>
+          ))}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:16}}>
+          {exList.map(ex=>{const tc=exTypeColor(ex.ex_type);const thumb=ex.youtube_id?`https://img.youtube.com/vi/${ex.youtube_id}/mqdefault.jpg`:ex.image_url;return(
+            <div key={ex.id} onClick={()=>{setTypeMenu(null);setSel(ex);}} style={{background:`radial-gradient(90% 120% at 0% 100%,${alpha(tc,0.16)},transparent 60%),${C.s1}`,borderRadius:14,border:'1px solid '+alpha(tc,0.4),cursor:'pointer',position:'relative',display:'flex',flexDirection:'column',overflow:'visible'}}>
+              <div style={{width:'100%',height:110,background:`radial-gradient(70% 100% at 50% 45%,${alpha(tc,0.3)},transparent 70%),${C.s2}`,position:'relative',overflow:'hidden',borderRadius:'14px 14px 0 0',borderBottom:'1px solid '+alpha(tc,0.35)}}>
+                {thumb&&<img src={thumb} style={{width:'100%',height:'100%',objectFit:'cover',opacity:0.35}} alt={ex.name}/>}
+                {ex.youtube_id&&<span style={{position:'absolute',left:'50%',top:'50%',width:34,height:34,margin:'-17px 0 0 -17px',borderRadius:'50%',background:tc,boxShadow:'0 0 18px '+alpha(tc,0.55),display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#0E0C0A'}}>▶</span>}
+                <div style={{position:'absolute',left:10,right:10,top:10,display:'flex',justifyContent:'space-between',gap:6,minWidth:0}}>
+                <span style={{flexShrink:0,fontFamily:"'Geist Mono',monospace",fontSize:10.5,fontWeight:500,letterSpacing:'0.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#0E0C0A',background:ex.is_verified?C.g:C.o,borderRadius:999,padding:'3px 9px'}}>{ex.is_verified?'Officiel':'Communauté'}</span>
+                {/* Pastille type — clic = changement rapide */}
+                <span
+                  onClick={e=>{e.stopPropagation();if(canQuickType(ex))setTypeMenu(typeMenu===ex.id?null:ex.id);}}
+                  title={canQuickType(ex)?'Cliquer pour changer le type':exTypeLabel(ex.ex_type)}
+                  style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',fontFamily:"'Geist Mono',monospace",fontSize:10.5,fontWeight:500,letterSpacing:'0.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:ex.ex_type?'#0E0C0A':C.tx3,background:ex.ex_type?tc:C.s2,border:ex.ex_type?'none':'1px solid '+C.brdL,borderRadius:999,padding:'3px 9px',cursor:canQuickType(ex)?'pointer':'default'}}
+                >{ex.ex_type?exTypeLabel(ex.ex_type):'Type ?'}</span>
                 </div>
               </div>
-              {/* Ruban type — bas droite, clic = changement rapide */}
-              <span
-                onClick={e=>{e.stopPropagation();if(canQuickType(ex))setTypeMenu(typeMenu===ex.id?null:ex.id);}}
-                title={canQuickType(ex)?'Cliquer pour changer le type':exTypeLabel(ex.ex_type)}
-                style={{position:'absolute',right:0,bottom:8,padding:'3px 8px 3px 10px',borderRadius:'4px 0 0 8px',background:ex.ex_type?exTypeColor(ex.ex_type):C.s2,color:ex.ex_type?'#fff':C.tx3,fontSize:9,fontWeight:800,letterSpacing:'0.02em',cursor:canQuickType(ex)?'pointer':'default',whiteSpace:'nowrap'}}
-              >{ex.ex_type?exTypeLabel(ex.ex_type):'Type ?'}</span>
+              <div style={{padding:'14px 16px 16px',display:'flex',flexDirection:'column',gap:10,flex:1,minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:500,color:C.tx,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={ex.name}>{ex.name}</div>
+                {ex.youtube_id&&<a href={`https://youtube.com/watch?v=${ex.youtube_id}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:11,color:tc,textDecoration:'none',display:'inline-flex',alignItems:'center',gap:6,alignSelf:'flex-start'}}>▶ Voir la vidéo</a>}
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:'auto'}}>
+                  {ex.target&&<span style={{fontFamily:"'Geist Mono',monospace",fontSize:11,letterSpacing:'0.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:tc,background:alpha(tc,0.12),border:'1px solid '+alpha(tc,0.4),borderRadius:999,padding:'3px 9px'}}>{ex.target}</span>}
+                  {ex.equipment&&<span style={{fontFamily:"'Geist Mono',monospace",fontSize:11,letterSpacing:'0.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:C.tx2,background:alpha(C.tx,0.06),border:'1px solid '+C.brd,borderRadius:999,padding:'3px 9px'}}>{ex.equipment}</span>}
+                </div>
+              </div>
               {typeMenu===ex.id&&(
-                <div onClick={e=>e.stopPropagation()} style={{position:'absolute',right:6,bottom:30,zIndex:60,background:C.s1,border:'1px solid '+C.brdL,borderRadius:4,overflow:'hidden',minWidth:150}}>
+                <div onClick={e=>e.stopPropagation()} style={{position:'absolute',right:10,top:38,zIndex:60,background:C.s1,border:'1px solid '+C.brdL,borderRadius:8,overflow:'hidden',minWidth:150}}>
                   {EX_TYPES.map(t=>{const on=ex.ex_type===t.value;return(
                     <button key={t.value} onClick={()=>quickSetType(ex,t.value)} style={{display:'flex',alignItems:'center',gap:8,width:'100%',padding:'8px 12px',border:'none',background:on?C.s2:'transparent',color:on?exTypeColor(t.value):C.tx,fontSize:12,fontWeight:on?700:400,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}
                       onMouseEnter={e=>(e.currentTarget.style.background=C.s2)} onMouseLeave={e=>(e.currentTarget.style.background=on?C.s2:'transparent')}>
@@ -316,7 +327,7 @@ function ExerciseBank({coachId,onAddToExos}){
                 </div>
               )}
             </div>
-          ))}
+          );})}
         </div>
         {total>PAGE&&<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,marginTop:16}}>
           <button onClick={()=>setPage(p=>Math.max(0,p-1))} disabled={page===0} style={{padding:'6px 14px',borderRadius:4,border:'1px solid '+C.brdL,background:C.s1,color:page===0?C.tx3:C.tx,cursor:page===0?'default':'pointer',fontFamily:'inherit',fontSize:12}}>←</button>

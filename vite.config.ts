@@ -67,6 +67,7 @@ export default defineConfig(() => ({
       },
       workbox: {
         // Shell + tous les chunks lazy : une page jamais ouverte s'affiche hors ligne.
+        // Les polices (src/styles/fonts.css, servies par le site) sont dans le précache via woff2.
         globPatterns: ["**/*.{js,mjs,css,html,svg,png,ico,woff2,webmanifest}"],
         // Le worker PDF (1 Mo) ne sert qu'à afficher une fiche PDF, elle-même
         // téléchargée depuis Supabase : inutile hors ligne.
@@ -82,20 +83,6 @@ export default defineConfig(() => ({
             // Supabase (REST, Auth, Storage, Edge Functions) : jamais en cache SW.
             urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co") || url.pathname.startsWith("/functions/v1/"),
             handler: "NetworkOnly",
-          },
-          {
-            urlPattern: ({ url }) => url.origin === "https://fonts.googleapis.com",
-            handler: "StaleWhileRevalidate",
-            options: { cacheName: "google-fonts-css" },
-          },
-          {
-            urlPattern: ({ url }) => url.origin === "https://fonts.gstatic.com",
-            handler: "CacheFirst",
-            options: {
-              cacheName: "google-fonts-files",
-              expiration: { maxEntries: 30, maxAgeSeconds: 365 * 24 * 3600 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
           },
         ],
       },

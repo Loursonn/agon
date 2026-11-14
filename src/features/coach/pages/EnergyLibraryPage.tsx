@@ -68,7 +68,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
         onClick={onNew}
         style={{
           padding: "9px 20px", borderRadius: 4, border: "none",
-          background: C.acV, color: "#0E0C0A", fontSize: 13,
+          background: C.acV, color: C.ink, fontSize: 13,
           fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
         }}
       >
@@ -125,7 +125,7 @@ export default function EnergyLibraryPage() {
         {/* Title row */}
         <div style={{
           padding: "14px 20px 10px",
-          display: "flex", alignItems: "center", gap: 12,
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
         }}>
           <h1 style={{ fontSize: 18, fontWeight: 800, color: C.tx, margin: 0, flex: 1 }}>
             Banque énergétique
@@ -145,7 +145,7 @@ export default function EnergyLibraryPage() {
             onClick={() => navigate("/coach/energy-library/new")}
             style={{
               padding: "8px 16px", borderRadius: 4, border: "none",
-              background: C.acV, color: "#0E0C0A", fontSize: 13,
+              background: C.acV, color: C.ink, fontSize: 13,
               fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               whiteSpace: "nowrap",
             }}
@@ -168,7 +168,7 @@ export default function EnergyLibraryPage() {
                 style={{
                   padding: "5px 12px", borderRadius: 6, border: "none",
                   background: tab === t.value ? C.ac : "transparent",
-                  color: tab === t.value ? "#fff" : C.tx3,
+                  color: tab === t.value ? C.tx : C.tx3,
                   fontSize: 12, fontWeight: tab === t.value ? 600 : 400,
                   cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
                 }}

@@ -4,13 +4,30 @@
  * des séances faites et à faire, wellness, retour hebdo, fiche, événements, compétition, tests, HYROX, nutrition,
  * séances de montre (course, HYROX) et 7 jours de santé (scripts/seed-demo-montre.mjs).
  *
+ * Sert aussi de compte de relecture pour l'App Store et Google Play (P13) : les deux comptes sont
+ * permanents, avec un mot de passe fixe, et le script se rejoue sans changer leurs identifiants.
+ *
  * Usage :
- *   node scripts/seed-demo.mjs            # (re)crée tout, à rejouer le jour des captures (dates relatives à aujourd'hui)
+ *   DEMO_PASSWORD=… node scripts/seed-demo.mjs                 # crée les comptes s'ils n'existent pas, sinon
+ *                                                              # efface leurs données et les recrée (dates relatives
+ *                                                              # à aujourd'hui) ; mot de passe et identifiants inchangés
+ *   DEMO_PASSWORD=… node scripts/seed-demo.mjs --set-password  # idem, et remplace le mot de passe des comptes existants
  *   node scripts/seed-demo.mjs --link athlete [--app http://localhost:5173]   # lien magique de connexion
  *   node scripts/seed-demo.mjs --link coach
  *   node scripts/seed-demo.mjs --delete   # supprime les deux comptes démo et leurs données
  *
- * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité). DEMO_PASSWORD optionnel (sinon mot de passe aléatoire).
+ * Mot de passe : uniquement par la variable d'environnement DEMO_PASSWORD, le même pour les deux
+ * comptes. Il est stocké dans le gestionnaire de mots de passe d'Hugo ; il n'est jamais affiché par
+ * le script ni écrit dans le repo (pas dans .env.example, pas dans un commit, pas dans un ticket).
+ * Il sert aussi au script à ouvrir la session de l'athlète démo pour les RPC santé.
+ *
+ * Idempotent : relancé, le script repart d'un compte vide (suppression du profil, qui efface en
+ * cascade toutes les données, comme delete-account) puis recrée le jeu de démo. Rien n'est dupliqué,
+ * et ce qu'un relecteur a saisi entre-temps disparaît.
+ *
+ * Écrit dans la base de production : ne jamais le lancer sans l'accord d'Hugo.
+ *
+ * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité).
  * Les données santé (wellness, poids, palier, objectif) passent par les RPC avec la session de l'athlète démo ;
  * `weight_set_goal` doit être appliquée en base (migration 20261110110000).
  */
@@ -33,7 +50,7 @@ const sb = createClient(URL_, KEY, { auth: { persistSession: false, autoRefreshT
 
 const COACH_EMAIL = "demo.coach@agon-demo.fr";
 const ATHLETE_EMAIL = "lea.demo@agon-demo.fr";
-const PASSWORD = process.env.DEMO_PASSWORD || crypto.randomBytes(12).toString("base64url");
+const PASSWORD = process.env.DEMO_PASSWORD || "";
 const args = process.argv.slice(2);
 const argVal = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
 
@@ -63,12 +80,10 @@ async function findUser(email) {
 }
 
 /* =========================================================== */
-async function remove() {
-  for (const email of [ATHLETE_EMAIL, COACH_EMAIL]) {
-    const u = await findUser(email);
-    if (!u) continue;
+/** Efface les données et le profil d'un compte démo ; le compte de connexion reste. */
+async function wipeData(u) {
     // tables sans cascade possible : on nettoie explicitement par athlete_id / coach_id
-    const byAth = ["app_data", "workout_rpe", "workout_logs", "energy_session_assignments", "weekly_retours", "day_themes", "competitions",
+    const byAth = ["app_data", "workout_logs", "energy_session_assignments", "weekly_retours", "day_themes", "competitions",
       "athlete_life_events", "doc_schedule", "doc_comments", "doc_assignments", "athlete_test_values", "athlete_test_results", "test_sessions",
       "provider_intraday", "provider_moveiq", "provider_dailies", "provider_activities", "hr_zone_models",
       "performance_logs", "medical_entries", "exercise_pr_logs", "hyrox_results", "measurement_logs", "microcycles", "cycles", "user_consents"];
@@ -81,10 +96,39 @@ async function remove() {
     for (const d of docs || []) { if (d.file_path) await sb.storage.from("docs").remove([d.file_path]); }
     await sb.from("docs").delete().eq("coach_id", u.id);
     await sb.from("energy_sessions").delete().eq("created_by", u.id);
+    // Le profil part en dernier : sa suppression efface en cascade tout le reste (séries, santé,
+    // montre, ce qu'un relecteur a saisi…), comme pour un vrai compte.
     await sb.from("profiles").delete().eq("id", u.id);
+}
+
+async function remove() {
+  for (const email of [ATHLETE_EMAIL, COACH_EMAIL]) {
+    const u = await findUser(email);
+    if (!u) continue;
+    await wipeData(u);
     const { error } = await sb.auth.admin.deleteUser(u.id);
     if (error) console.error("deleteUser", email, error.message); else console.log("supprimé", email);
   }
+}
+
+/**
+ * Compte démo stable : réutilisé s'il existe (données effacées, mot de passe gardé sauf
+ * --set-password), créé sinon. Renvoie l'identifiant, inchangé d'un lancement à l'autre.
+ */
+async function ensureAccount(email, metadata) {
+  const existing = await findUser(email);
+  if (!existing) {
+    const created = await must(sb.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true, user_metadata: metadata }), "createUser " + email);
+    console.log("créé", email);
+    return created.user.id;
+  }
+  await wipeData(existing);
+  if (args.includes("--set-password")) {
+    await must(sb.auth.admin.updateUserById(existing.id, { password: PASSWORD }), "mot de passe " + email);
+    console.log("mot de passe remplacé", email);
+  }
+  console.log("réutilisé", email);
+  return existing.id;
 }
 
 async function link(role) {
@@ -98,12 +142,17 @@ async function link(role) {
 
 /* =========================================================== */
 async function seed() {
-  await remove();
+  if (!PASSWORD) { console.error("DEMO_PASSWORD manquant (gestionnaire de mots de passe d'Hugo)."); process.exit(1); }
+  // Vérifié avant tout effacement : un mauvais mot de passe ne doit pas laisser un jeu à moitié recréé.
+  if (!args.includes("--set-password") && (await findUser(ATHLETE_EMAIL))) {
+    const probe = createClient(URL_, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { error } = await probe.auth.signInWithPassword({ email: ATHLETE_EMAIL, password: PASSWORD });
+    if (error) { console.error("✗ DEMO_PASSWORD ne correspond pas au compte démo existant. Relancer avec --set-password pour le remplacer."); process.exit(1); }
+  }
 
-  /* --- comptes --- */
-  const coachUser = await must(sb.auth.admin.createUser({ email: COACH_EMAIL, password: PASSWORD, email_confirm: true, user_metadata: { full_name: "Agon Démo", role: "coach" } }), "createUser coach");
-  const athUser = await must(sb.auth.admin.createUser({ email: ATHLETE_EMAIL, password: PASSWORD, email_confirm: true, user_metadata: { full_name: "Léa Démo", role: "athlete" } }), "createUser athlète");
-  const COACH = coachUser.user.id, ATH = athUser.user.id;
+  /* --- comptes (athlète d'abord : ses données référencent le coach) --- */
+  const ATH = await ensureAccount(ATHLETE_EMAIL, { full_name: "Léa Démo", role: "athlete" });
+  const COACH = await ensureAccount(COACH_EMAIL, { full_name: "Agon Démo", role: "coach" });
   console.log("coach", COACH, "| athlète", ATH);
 
   await must(sb.from("profiles").insert({ id: COACH, role: "coach", full_name: "Agon Démo", first_name: "Agon", last_name: "Démo", coach_code: "DEMO42", booking_url: "https://calendly.com/agon-demo/point-hebdo", is_pending: false }), "profile coach");
@@ -187,7 +236,6 @@ async function seed() {
   // semaines suivantes
   for (let w = 1; w <= 2; w++) { const mon = mondayOf(w); logs.push(logRow(sHaut, mon, w, "planned")); logs.push(logRow(sBas, addDays(mon, 2), w, "planned")); logs.push(logRow(sMob, addDays(mon, 4), w, "planned")); }
   await must(sb.from("workout_logs").insert(logs), "workout_logs");
-  await must(sb.from("workout_rpe").insert(logs.filter((l) => l.rpe_score).map((l) => ({ workout_log_id: l.id, athlete_id: ATH, rpe_score: l.rpe_score }))), "workout_rpe");
 
   /* --- app_data --- */
   const wh = {}, wlog = {};
@@ -215,7 +263,11 @@ async function seed() {
      Les RPC contrôlent auth.uid() : on les appelle donc avec la session de l'athlète
      (clé publique + mot de passe du compte de démo), pas avec la clé service. */
   const asAthlete = createClient(URL_, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
-  await must(asAthlete.auth.signInWithPassword({ email: ATHLETE_EMAIL, password: PASSWORD }), "connexion athlète démo");
+  const login = await asAthlete.auth.signInWithPassword({ email: ATHLETE_EMAIL, password: PASSWORD });
+  if (login.error) {
+    console.error("✗ connexion athlète démo : DEMO_PASSWORD ne correspond pas au compte existant. Relancer avec --set-password pour le remplacer.");
+    throw new Error("connexion athlète démo");
+  }
   const rpc = (fn, args) => must(asAthlete.rpc(fn, args), fn);
   for (const k of Object.keys(wh).sort()) {
     const day = `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`;

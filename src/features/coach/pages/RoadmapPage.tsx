@@ -126,7 +126,7 @@ export default function RoadmapPage() {
               onClick={openNewPhase}
               style={{
                 marginTop: 20, padding: "9px 20px", borderRadius: 4,
-                border: "none", background: C.acV, color: "#0E0C0A",
+                border: "none", background: C.acV, color: C.ink,
                 fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               }}
             >

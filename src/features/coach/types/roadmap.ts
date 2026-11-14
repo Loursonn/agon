@@ -1,3 +1,4 @@
+import { C, H } from "@/lib/theme";
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type RoadmapPhaseStatus = 'planned' | 'in_progress' | 'shipped'
@@ -53,11 +54,11 @@ export const ITEM_STATUS_LABEL: Record<RoadmapItemStatus, string> = {
 }
 
 export const ITEM_STATUS_COLOR: Record<RoadmapItemStatus, string> = {
-  idea:        '#7D7468',
-  backlog:     '#60a5fa',
-  planned:     '#facc15',
-  in_progress: '#f97316',
-  shipped:     '#22c55e',
+  idea:        C.tx3,
+  backlog:     H.bleuCiel,
+  planned:     H.jaune,
+  in_progress: H.orange,
+  shipped:     H.vert,
 }
 
 export const CATEGORY_LABEL: Record<RoadmapCategory, string> = {
@@ -70,12 +71,12 @@ export const CATEGORY_LABEL: Record<RoadmapCategory, string> = {
 }
 
 export const CATEGORY_COLOR: Record<RoadmapCategory, string> = {
-  coach:     '#FFC933',
-  athlete:   '#22c55e',
-  planning:  '#3b82f6',
-  nutrition: '#f97316',
-  infra:     '#6b7280',
-  ux:        '#ec4899',
+  coach:     C.ac,
+  athlete:   H.vert,
+  planning:  H.bleuRoi,
+  nutrition: H.orange,
+  infra:     H.gris,
+  ux:        H.rose,
 }
 
 export const PRIORITY_LABEL: Record<RoadmapPriority, string> = {
@@ -86,14 +87,14 @@ export const PRIORITY_LABEL: Record<RoadmapPriority, string> = {
 }
 
 export const PRIORITY_COLOR: Record<RoadmapPriority, string> = {
-  P0: '#ef4444',
-  P1: '#f97316',
-  P2: '#facc15',
-  P3: '#6b7280',
+  P0: H.rougeVif,
+  P1: H.orange,
+  P2: H.jaune,
+  P3: H.gris,
 }
 
 export const PHASE_STATUS_COLOR: Record<RoadmapPhaseStatus, string> = {
-  planned:     '#6b7280',
-  in_progress: '#f97316',
-  shipped:     '#22c55e',
+  planned:     H.gris,
+  in_progress: H.orange,
+  shipped:     H.vert,
 }

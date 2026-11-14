@@ -269,16 +269,7 @@ export async function readZipEntry(source: ByteSource, entry: ZipEntry): Promise
     );
   }
 
-  const header = await source.read(entry.headerOffset, 30);
-  const headerView = view(header);
-  if (header.length < 30 || headerView.getUint32(0, true) !== SIG.localHeader) {
-    throw new ZipError(`${entry.name} : en-tête local introuvable`);
-  }
-  // La longueur du nom et celle du champ étendu diffèrent souvent de celles du
-  // répertoire central : c'est l'en-tête local qui dit où commencent les données.
-  const dataStart = entry.headerOffset + 30 +
-    headerView.getUint16(26, true) + headerView.getUint16(28, true);
-
+  const dataStart = await dataStartOf(source, entry);
   const raw = await source.read(dataStart, entry.compressedSize);
   if (raw.length < entry.compressedSize) {
     throw new ZipError(`${entry.name} : données tronquées`);
@@ -289,6 +280,63 @@ export async function readZipEntry(source: ByteSource, entry: ZipEntry): Promise
   throw new ZipError(
     `${entry.name} : méthode de compression ${entry.method} non prise en charge`,
   );
+}
+
+/**
+ * Taille maximale d'un zip imbriqué décompressé en mémoire.
+ *
+ * L'export de compte Garmin range ses fichiers d'activité dans des zips
+ * (`DI-Connect-Uploaded-Files/UploadedFiles_0-_Part1.zip`…) à l'intérieur du
+ * zip principal. Un zip imbriqué *stocké* se lit par tranches sans copie ; un
+ * zip imbriqué *compressé* doit être déplié en mémoire, un à la fois.
+ */
+export const MAX_NESTED_ZIP_BYTES = 768 * 1024 * 1024;
+
+/** Vue sur une tranche d'une autre source, sans copie. */
+export function sliceSource(source: ByteSource, start: number, size: number): ByteSource {
+  return {
+    size,
+    read: (offset, length) => source.read(start + offset, Math.max(0, Math.min(length, size - offset))),
+  };
+}
+
+/** Le nom désigne-t-il un zip à ouvrir (hors métadonnées macOS) ? */
+export function isNestedZipName(path: string): boolean {
+  const base = path.split("/").pop() ?? path;
+  return /\.zip$/i.test(base) && !base.startsWith("._") && !path.startsWith("__MACOSX/");
+}
+
+/**
+ * Ouvre un zip contenu dans un autre. Stocké : lu en place. Compressé :
+ * déplié en mémoire (borné), à relâcher par l'appelant avant le suivant.
+ */
+export async function openNestedZip(source: ByteSource, entry: ZipEntry): Promise<ByteSource> {
+  const dataStart = await dataStartOf(source, entry);
+  if (entry.method === 0) return sliceSource(source, dataStart, entry.compressedSize);
+  if (entry.method !== 8) {
+    throw new ZipError(`${entry.name} : méthode de compression ${entry.method} non prise en charge`);
+  }
+  if (entry.uncompressedSize > MAX_NESTED_ZIP_BYTES) {
+    throw new ZipError(
+      `${entry.name} : ${Math.round(entry.uncompressedSize / 1_048_576)} Mo une fois décompressé, trop gros pour être ouvert ici`,
+    );
+  }
+  const raw = await source.read(dataStart, entry.compressedSize);
+  if (raw.length < entry.compressedSize) throw new ZipError(`${entry.name} : données tronquées`);
+  return bytesSource(await decompress(raw, "deflate-raw", entry.name, MAX_NESTED_ZIP_BYTES));
+}
+
+/** Début des données d'une entrée, d'après son en-tête local. */
+async function dataStartOf(source: ByteSource, entry: ZipEntry): Promise<number> {
+  const header = await source.read(entry.headerOffset, 30);
+  const headerView = view(header);
+  if (header.length < 30 || headerView.getUint32(0, true) !== SIG.localHeader) {
+    throw new ZipError(`${entry.name} : en-tête local introuvable`);
+  }
+  // La longueur du nom et celle du champ étendu diffèrent souvent de celles du
+  // répertoire central : c'est l'en-tête local qui dit où commencent les données.
+  return entry.headerOffset + 30 +
+    headerView.getUint16(26, true) + headerView.getUint16(28, true);
 }
 
 /** Contenu d'un fichier `.gz`. */
@@ -307,6 +355,7 @@ async function decompress(
   bytes: Uint8Array,
   format: "gzip" | "deflate-raw",
   name: string,
+  limit = MAX_MEMBER_BYTES,
 ): Promise<Uint8Array> {
   /*
     Flux construit à la main plutôt que `new Blob([bytes]).stream()` : `Blob`
@@ -336,10 +385,10 @@ async function decompress(
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;
-      if (total > MAX_MEMBER_BYTES) {
+      if (total > limit) {
         await reader.cancel();
         throw new ZipError(
-          `${name} : décompression au-delà de ${MAX_MEMBER_BYTES / 1_048_576} Mo, interrompue`,
+          `${name} : décompression au-delà de ${limit / 1_048_576} Mo, interrompue`,
         );
       }
       chunks.push(new Uint8Array(value));

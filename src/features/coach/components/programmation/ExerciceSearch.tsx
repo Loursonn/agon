@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/useAuth"
 import { useCreateExercise, useExerciseSearch } from "@/features/shared/hooks/useExerciseLibrary"
 import { Search, Plus } from "lucide-react"
 import { EX_TYPES, exTypeLabel, exTypeColor } from "@/lib/exerciseTypes"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 
 interface ExerciceSearchProps {
   value: string

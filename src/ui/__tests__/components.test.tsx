@@ -30,8 +30,10 @@ describe("Button", () => {
       </Button>,
     );
     const cls = screen.getByRole("button").className;
-    expect(cls).toContain("text-agon-erreur");
-    expect(cls).toContain("text-agon-lg");
+    // Danger : contour rouge, jamais plein (canvas 12/11).
+    expect(cls).toContain("text-agon-rouge");
+    expect(cls.split(" ")).not.toContain("bg-agon-rouge");
+    expect(cls).toContain("h-[var(--agon-btn-h-tel)]"); // 52 px (tokens.css)
     expect(cls).toContain("w-full");
   });
 
@@ -42,7 +44,7 @@ describe("Button", () => {
       </Button>,
     );
     const link = screen.getByRole("link", { name: "Lien" });
-    expect(link.className).toContain("bg-agon-s2");
+    expect(link.className).toContain("border-agon-brd-l");
     expect(link).not.toHaveAttribute("type");
   });
 });

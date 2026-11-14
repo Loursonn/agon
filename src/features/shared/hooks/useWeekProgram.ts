@@ -14,6 +14,10 @@ export interface SessionPreviewItem {
   name: string;
   mode: "classique" | "methode" | "libre";
   params: ExerciceParams | null;
+  /** Rang du bloc dans la séance (lettre A, B, C… de l'aperçu). */
+  blocIndex?: number;
+  /** Couleur enregistrée du bloc (affichée via `blocColor`). */
+  blocColor?: string | null;
 }
 
 export interface TestSess {
@@ -124,11 +128,13 @@ export function useWeekProgram(weekStart: string | null): DayProgram[] {
             const prog = progSessions.find((p) => p.id === wl.session_id);
             const ovr = (wl.athlete_modifications as AthleteModifications | null)?.coachOverride?.blocs as Bloc[] | undefined;
             const blocs: Bloc[] = ovr?.length ? ovr : prog?.blocs ?? [];
-            const items: SessionPreviewItem[] = blocs.flatMap((b) => b.exercices.map((ex) => ({
+            const items: SessionPreviewItem[] = blocs.flatMap((b, bi) => b.exercices.map((ex) => ({
               id: ex.id,
               name: ex.exercise_name,
               mode: ex.mode,
               params: ex.mode === "libre" ? null : resolveExerciceParams(ex.params, wl.occurrence),
+              blocIndex: bi,
+              blocColor: b.color ?? null,
             })));
             return {
               session,

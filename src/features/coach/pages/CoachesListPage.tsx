@@ -5,7 +5,7 @@ import { fr } from 'date-fns/locale';
 import { Users, ShieldCheck, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { C } from '@/lib/theme';
+import { C, H } from "@/lib/theme";
 import { EmptyState } from '@/features/shared/components/EmptyState';
 import { ListSkeleton } from '@/features/shared/components/skeletons';
 import { useCoachesList, useToggleCertifiedCoach } from '@/features/shared/hooks/useCoachesList';
@@ -62,7 +62,7 @@ function CoachRow({
             {coach.full_name}
           </span>
           {isSelf && <Badge label="Vous" color={C.ac} />}
-          {coach.is_admin && <Badge label="Admin" color="#F5A623" />}
+          {coach.is_admin && <Badge label="Admin" color={H.miel} />}
           {coach.is_certified_coach && <Badge label="Certifié" color={C.g} />}
         </div>
         <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
@@ -83,7 +83,7 @@ function CoachRow({
               padding: '6px 12px', borderRadius: 4,
               border: '1px solid rgba(239,75,75,0.3)',
               background: 'rgba(239,75,75,0.08)',
-              color: '#FF5A33', fontSize: 11, fontWeight: 600,
+              color: C.r, fontSize: 11, fontWeight: 600,
               cursor: toggling ? 'default' : 'pointer', fontFamily: 'inherit',
               transition: 'background 150ms ease-out',
               flexShrink: 0,

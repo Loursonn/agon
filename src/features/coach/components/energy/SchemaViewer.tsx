@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { FieldSchema } from "@/types/energy";
 import { FIELD_BACKGROUNDS, FIELD_DISTANCE_LABELS, SCHEMA_COLORS, renderSchemaElementsSVG } from "@/lib/energy/renderSchema";
+import { H } from "@/lib/theme";
 
 // ── SchemaViewer ─────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ export function SchemaViewer({ schema, compact, onClick }: ViewerProps) {
       style={{
         borderRadius: compact ? 10 : 14,
         overflow: "hidden",
-        border: "1px solid var(--border, #2E2D33)",
+        border: `1px solid var(--border, ${H.anthracite})`,
         cursor: onClick ? "pointer" : "default",
         lineHeight: 0,
       }}
@@ -54,11 +55,11 @@ export function SchemaFullscreenDialog({ schema, open, onOpenChange }: Fullscree
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[95vw] w-full sm:max-w-[700px] p-4 bg-[#0E0C0A] border-[#2E2D33]"
+        className="max-w-[95vw] w-full sm:max-w-[700px] p-4 bg-agon-bg border-agon-h-anthracite"
         style={{ borderRadius: 6 }}
       >
         <DialogTitle className="sr-only">Schéma</DialogTitle>
-        <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid #2E2D33" }}>
+        <div style={{ borderRadius: 6, overflow: "hidden", border: `1px solid ${H.anthracite}` }}>
           <svg
             viewBox="0 0 500 320"
             style={{ width: "100%", display: "block", touchAction: "manipulation" }}
@@ -72,7 +73,7 @@ export function SchemaFullscreenDialog({ schema, open, onOpenChange }: Fullscree
         {/* Legend */}
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 8 }}>
           {SCHEMA_COLORS.map(({ color, label }) => (
-            <span key={color} style={{ fontSize: 11, color: "#8B8A92", display: "flex", alignItems: "center", gap: 5 }}>
+            <span key={color} style={{ fontSize: 11, color: H.grisClair, display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ width: 14, height: 3, borderRadius: 2, background: color, display: "inline-block" }} />
               {label}
             </span>

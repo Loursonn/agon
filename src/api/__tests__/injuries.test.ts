@@ -2,8 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { fakeDb, type Row } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
 import {
-  addAttachment, deleteAttachment, deleteEntry, getHistory, invalidateMedical, listEntries,
-  medicalKeys, saveEntry, signedUrls, upsertHistory,
+  deleteEntry, invalidateMedical, listEntries, medicalKeys, saveEntry,
 } from "@/api/injuries";
 import type { MedicalEntryInput } from "@/features/shared/types/medical";
 
@@ -25,9 +24,9 @@ function setup(tables: Record<string, Row[]> = {}, opts: { me?: string; storageF
 }
 
 const input: MedicalEntryInput = {
-  kind: "blessure", title: "Genou", zone: "Genou G", date: "2026-11-01", diagnosis: null, treatment: null,
+  title: "Genou", zone: "Genou G", date: "2026-11-01",
   status: "en_cours", notes: null, injury_type: null, mechanism: null, context: null, pain_level: 3,
-  training_impact: "adapte", days_off: null, diagnosed_by: null, return_date: null,
+  training_impact: "adapte", days_off: null, return_date: null,
 };
 
 describe("api/injuries", () => {
@@ -54,62 +53,29 @@ describe("api/injuries", () => {
     setup({ medical_entries: [{ id: "e1", athlete_id: "a" }, { id: "e2", athlete_id: "b" }] });
     expect((await listEntries("a")).map((e) => e.id)).toEqual(["e1"]);
     setup({}, { failOn: { table: "medical_entries", op: "select" } });
-    await expect(listEntries("a")).rejects.toThrow(/Lecture des antécédents impossible/);
+    await expect(listEntries("a")).rejects.toThrow(/Lecture des blessures impossible/);
   });
 
-  it("deleteEntry retire les fichiers puis la ligne ; garde la ligne si les fichiers résistent", async () => {
-    const entry = { id: "e1", medical_attachments: [{ file_path: "a/e1/f1.jpg" }] } as never;
-    let s = setup({ medical_entries: [{ id: "e1", athlete_id: "a" }] });
-    await deleteEntry(entry);
-    expect(s.files.has("a/e1/f1.jpg")).toBe(false);
+  it("deleteEntry retire la ligne", async () => {
+    const s = setup({ medical_entries: [{ id: "e1", athlete_id: "a" }] });
+    await deleteEntry({ id: "e1" });
     expect(s.tables.medical_entries).toHaveLength(0);
-
-    s = setup({ medical_entries: [{ id: "e1", athlete_id: "a" }] }, { storageFails: true });
-    await expect(deleteEntry(entry)).rejects.toThrow(/Suppression des fichiers impossible/);
-    expect(s.tables.medical_entries).toHaveLength(1);
   });
 
-  it("addAttachment : chemin préfixé par l'athlète, refus de format et de poids, fichier retiré si la ligne échoue", async () => {
-    let s = setup({ medical_attachments: [] }, { me: "a" });
-    await addAttachment("a", "e1", new Blob(["x"], { type: "application/pdf" }), "compte-rendu.pdf");
-    const row = s.tables.medical_attachments[0];
-    expect(row).toMatchObject({ entry_id: "e1", athlete_id: "a", file_name: "compte-rendu.pdf", mime_type: "application/pdf", created_by: "a" });
-    expect(String(row.file_path)).toMatch(/^a\/e1\/.+\.pdf$/);
-    expect(s.files.has(String(row.file_path))).toBe(true);
-
-    await expect(addAttachment("a", "e1", new Blob(["x"], { type: "text/plain" }), "x.txt")).rejects.toThrow(/Format non pris en charge/);
-    const big = { type: "image/jpeg", size: 11 * 1024 * 1024 } as Blob;
-    await expect(addAttachment("a", "e1", big, "x.jpg")).rejects.toThrow(/10 Mo max/);
-
-    s = setup({}, { failOn: { table: "medical_attachments", op: "insert" } });
-    const before = s.files.size;
-    await expect(addAttachment("a", "e1", new Blob(["x"], { type: "image/png" }), "p.png")).rejects.toThrow(/Enregistrement du fichier impossible/);
-    expect(s.files.size).toBe(before);
+  it("toute saisie est une blessure, sans diagnostic, traitement ni « vu par »", async () => {
+    const { tables } = setup({ medical_entries: [] }, { me: "a" });
+    await saveEntry("a", { input: { ...input, diagnosis: "x", kind: "pathologie" } as never });
+    // L'appelant ne peut pas changer le type ; la base vide aussi les colonnes de soins.
+    expect(tables.medical_entries[0]).toMatchObject({ kind: "blessure" });
+    expect(Object.keys(input)).not.toEqual(expect.arrayContaining(["diagnosis"]));
+    expect(Object.keys(input)).not.toContain("treatment");
+    expect(Object.keys(input)).not.toContain("diagnosed_by");
   });
 
-  it("deleteAttachment et signedUrls", async () => {
-    const s = setup({ medical_attachments: [{ id: "f1", file_path: "a/e1/f1.jpg" }] });
-    expect(await signedUrls(["a/e1/f1.jpg"])).toEqual({ "a/e1/f1.jpg": "https://signe/a/e1/f1.jpg" });
-    expect(await signedUrls([])).toEqual({});
-    await deleteAttachment({ id: "f1", file_path: "a/e1/f1.jpg" });
-    expect(s.tables.medical_attachments).toHaveLength(0);
-    expect(s.files.size).toBe(0);
-  });
-
-  it("fiche d'antécédents : null si absente, upsert par athlète", async () => {
-    const { tables } = setup({ medical_history: [] });
-    expect(await getHistory("a")).toBeNull();
-    const h = { conditions: "", allergies: "pollen", surgeries: [], past_injuries: [], current_treatments: "", medical_notes: "" };
-    await upsertHistory("a", h);
-    await upsertHistory("a", { ...h, allergies: "aucune" });
-    expect(tables.medical_history).toHaveLength(1);
-    expect(await getHistory("a")).toMatchObject({ allergies: "aucune" });
-  });
-
-  it("invalidateMedical : antécédents et fiche, préfixe ['medical', athlète]", async () => {
+  it("invalidateMedical : blessures, préfixe ['medical', athlète]", async () => {
     const qc = { invalidateQueries: vi.fn().mockResolvedValue(undefined) };
     await invalidateMedical(qc as never, "a");
-    expect(qc.invalidateQueries.mock.calls.map((c) => c[0].queryKey)).toEqual([medicalKeys.entries("a"), medicalKeys.history("a")]);
-    expect(medicalKeys.signedUrls("a", ["p"]).slice(0, 2)).toEqual(medicalKeys.all("a"));
+    expect(qc.invalidateQueries.mock.calls.map((c) => c[0].queryKey)).toEqual([medicalKeys.entries("a")]);
+    expect(medicalKeys.entries("a").slice(0, 2)).toEqual(medicalKeys.all("a"));
   });
 });

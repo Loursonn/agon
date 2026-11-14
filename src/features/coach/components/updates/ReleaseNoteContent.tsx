@@ -1,5 +1,6 @@
 /** Détail d'une nouveauté : sections + points. */
 import { C } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import type { ReleaseNote } from "@/data/releaseNotes";
 import { ReleaseNoteResourceBox } from "./ReleaseNoteResourceBox";
 
@@ -8,12 +9,16 @@ export function ReleaseNoteContent({ note }: { note: ReleaseNote }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {note.sections.map(sec => (
         <div key={sec.title}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+          {/* Planche CoachOrdiBNouveautes : titre mono espacé, puces rondes or. */}
+          <div style={{ ...MONO, fontSize: 11, color: C.tx2, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 7 }}>
             {sec.title}
           </div>
-          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
+          <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
             {sec.points.map(p => (
-              <li key={p} style={{ fontSize: 13, color: C.tx2, lineHeight: 1.5 }}>{p}</li>
+              <li key={p} style={{ display: "flex", gap: 10, fontSize: 13.5, color: C.tx2, lineHeight: 1.55 }}>
+                <span aria-hidden style={{ width: 5, height: 5, borderRadius: "50%", background: C.ac, flex: "none", marginTop: 8 }} />
+                <span>{p}</span>
+              </li>
             ))}
           </ul>
         </div>

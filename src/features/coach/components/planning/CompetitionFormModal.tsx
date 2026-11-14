@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useCreateCompetition, useUpdateCompetition } from "@/hooks/useCompetitions";
 import { COMPETITION_META, type CompetitionType, type CompetitionPriority, type Competition } from "@/types/planning";
 
@@ -182,9 +182,9 @@ export function CompetitionFormModal({ athleteId, coachId, existing, initialDate
                   style={{
                     flex: 1, padding: "9px 0", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                     fontSize: 12, fontWeight: priority === p.value ? 700 : 400,
-                    border: "1px solid " + (priority === p.value ? "#F5A62360" : C.brdL),
-                    background: priority === p.value ? "#F5A62318" : C.s2,
-                    color: priority === p.value ? "#F5A623" : C.tx2,
+                    border: "1px solid " + (priority === p.value ? `${H.miel}60` : C.brdL),
+                    background: priority === p.value ? `${H.miel}18` : C.s2,
+                    color: priority === p.value ? H.miel : C.tx2,
                   }}
                 >
                   {p.label}
@@ -211,7 +211,7 @@ export function CompetitionFormModal({ athleteId, coachId, existing, initialDate
             style={{
               marginTop: 4, padding: "13px 0", borderRadius: 6, border: "none",
               background: name.trim() && date ? C.coach : C.s2,
-              color: name.trim() && date ? "#fff" : C.tx3,
+              color: name.trim() && date ? C.tx : C.tx3,
               fontSize: 14, fontWeight: 700, cursor: name.trim() && date ? "pointer" : "default",
               fontFamily: "inherit", minHeight: 44,
               boxShadow: name.trim() && date ? "0 4px 16px rgba(244,114,182,0.3)" : "none",

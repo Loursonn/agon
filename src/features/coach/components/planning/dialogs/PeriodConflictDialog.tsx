@@ -87,7 +87,7 @@ export function PeriodConflictDialog({
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <button
             onClick={onShiftFollowing}
-            style={{ ...btnBase, background: color, color: "#fff" }}
+            style={{ ...btnBase, background: color, color: C.tx }}
           >
             Décaler les périodes suivantes en cascade
           </button>

@@ -71,7 +71,7 @@ function CascadeModal({
           suivant{count > 1 ? "s" : ""}.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.oV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCascade} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.oV, color: C.ink, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Bouger tout le planning
           </button>
           <button onClick={onSingle} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -115,7 +115,7 @@ function MesoReassignModal({
           )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onReassign} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onReassign} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.acV, color: C.ink, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Déplacer dans "{newMeso.name}" ✓
           </button>
           <button onClick={onKeep} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -398,7 +398,7 @@ export function CycleDrawer({
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             width: "100%", padding: "12px 0", borderRadius: 4, border: "none",
-            background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700,
+            background: C.acV, color: C.ink, fontSize: 13, fontWeight: 700,
             cursor: "pointer", fontFamily: "inherit",
           }}
         >
@@ -608,7 +608,7 @@ export function CycleDrawer({
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-                <button onClick={deleteCycle} disabled={deleting} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: deleting ? 0.6 : 1 }}>
+                <button onClick={deleteCycle} disabled={deleting} style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: deleting ? 0.6 : 1 }}>
                   {deleting ? "Suppression…" : "Confirmer"}
                 </button>
               </div>
@@ -659,7 +659,7 @@ export function CycleDrawer({
               À ne faire que si tu sais ce que tu fais.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={() => { setConfirmStartChange(false); runSaveDates(); }} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.oV, color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              <button onClick={() => { setConfirmStartChange(false); runSaveDates(); }} style={{ width: "100%", padding: "11px 0", borderRadius: 4, border: "none", background: C.oV, color: C.ink, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 Oui, appliquer
               </button>
               <button onClick={() => setConfirmStartChange(false)} style={{ width: "100%", padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>

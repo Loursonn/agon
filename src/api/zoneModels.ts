@@ -23,10 +23,15 @@ export const zoneModelKeys = {
 
 /** Après un enregistrement ou une décision : modèles, bornes datées, résumés. */
 export function invalidateZoneModels(qc: QueryClient, athleteId: string): Promise<void> {
-  return qc.invalidateQueries({ queryKey: zoneModelKeys.all(athleteId) });
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: zoneModelKeys.all(athleteId) }),
+    // Charge YOXX (`loadKeys`) : les minutes sont classées avec ces zones.
+    qc.invalidateQueries({ queryKey: ["load", athleteId] }),
+  ]).then(() => undefined);
 }
 
-export type ZoneModelStatus = "active" | "proposed" | "rejected";
+/** `replaced` : modèle plus ancien écarté par « Appliquer aussi aux séances passées » (gardé pour l'historique). */
+export type ZoneModelStatus = "active" | "proposed" | "rejected" | "replaced";
 
 export interface ZoneModelRow {
   id: string;
@@ -36,16 +41,20 @@ export interface ZoneModelRow {
   status: ZoneModelStatus;
   origin: "manual" | "test";
   testResultId: string | null;
+  createdBy: string | null;
+  decidedBy: string | null;
   decidedAt: string | null;
+  createdAt: string;
 }
 
 export async function getZoneModels(athleteId: string): Promise<ZoneModelRow[]> {
   const rows = unwrapRows(
     await db()
       .from("hr_zone_models")
-      .select("id, kind, bounds, valid_from, status, origin, test_result_id, decided_at")
+      .select("id, kind, bounds, valid_from, status, origin, test_result_id, created_by, decided_by, decided_at, created_at")
       .eq("athlete_id", athleteId)
-      .order("valid_from", { ascending: false }),
+      .order("valid_from", { ascending: false })
+      .order("created_at", { ascending: false }),
     "modèles de zones",
   );
   return rows.map((r) => ({
@@ -56,7 +65,10 @@ export async function getZoneModels(athleteId: string): Promise<ZoneModelRow[]> 
     status: r.status as ZoneModelStatus,
     origin: r.origin as "manual" | "test",
     testResultId: r.test_result_id,
+    createdBy: r.created_by,
+    decidedBy: r.decided_by,
     decidedAt: r.decided_at,
+    createdAt: r.created_at,
   }));
 }
 
@@ -76,14 +88,14 @@ export async function getBoundsAt(athleteId: string, day: IsoDay): Promise<Bound
   return bounds ? { modelId: r.model_id ?? null, kind: r.kind as ZoneModelKind, bounds } : null;
 }
 
-/** Nouveau modèle actif (athlète ou coach). Lève si les bornes sont incohérentes. */
+/** Nouveau modèle actif, enregistré par le coach (référent ou co-coach). Lève si les bornes sont incohérentes. */
 export async function saveZoneModel(
   athleteId: string,
   kind: ZoneModelKind,
   bounds: readonly number[],
   validFrom: IsoDay,
 ): Promise<string> {
-  const ok = validBounds(bounds);
+  const ok = kind === "five" ? [] : validBounds(bounds);
   if (!ok || (kind === "three" && ok.length !== 2)) {
     throw new ApiError("modèle de zones", { message: "bornes incohérentes" });
   }
@@ -98,6 +110,14 @@ export async function saveZoneModel(
 /** Le coach valide ou refuse une proposition issue d'un test. */
 export async function decideZoneModel(id: string, accept: boolean): Promise<void> {
   check(await db().rpc("decide_hr_zone_model", { p_id: id, p_accept: accept }), "décision sur les zones");
+}
+
+/**
+ * « Appliquer aussi aux séances passées » : le modèle vaut depuis toujours,
+ * les plus anciens passent à `replaced` et les temps par zone sont recalculés.
+ */
+export async function applyZoneModelToPast(id: string): Promise<void> {
+  check(await db().rpc("apply_hr_zone_model_to_past", { p_id: id }), "zones sur les séances passées");
 }
 
 export interface ZoneSummary {

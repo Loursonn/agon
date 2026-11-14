@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Activity, Pencil, Trash2 } from "lucide-react";
+import RaceAnalysis from "@/features/shared/components/hyrox/RaceAnalysis";
 import { C } from "@/lib/theme";
 import { formatMmSs, formatDelta } from "@/lib/time";
 import {
@@ -76,6 +77,7 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
   const { data: refs = [] } = useHyroxReferences();
   const deleteMut = useDeleteHyroxResult(athleteId);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // Build refLookup wrapper
   const refLookup: RefLookup = useMemo(
@@ -100,6 +102,8 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
   // Percentile for total
   const totalRef = pickRef(refs, refDiv, "total", bracket);
   const totalPct = totalRef ? percentile(race.total_s, totalRef) : null;
+
+  if (showAnalysis) return <RaceAnalysis race={race} onBack={() => setShowAnalysis(false)} />;
 
   const handleDelete = () => {
     deleteMut.mutate(race.id, { onSuccess: onBack });
@@ -187,6 +191,19 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowAnalysis(true)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+          height: 40, marginBottom: 12, borderRadius: 8, border: "1px solid " + C.ac,
+          background: "transparent", color: C.ac, fontWeight: 700, fontSize: 13,
+          cursor: "pointer", fontFamily: "inherit",
+        }}
+      >
+        <Activity size={14} /> Analyse de course · montre, runs, gains, carte à partager
+      </button>
 
       {/* Three metric pills */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
@@ -565,7 +582,7 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
                 style={{
                   flex: 1, padding: "8px 0", borderRadius: 6,
                   border: "none", background: C.r,
-                  color: "#fff", fontSize: 12, fontWeight: 700,
+                  color: C.tx, fontSize: 12, fontWeight: 700,
                   cursor: "pointer", fontFamily: "inherit",
                   opacity: deleteMut.isPending ? 0.6 : 1,
                 }}

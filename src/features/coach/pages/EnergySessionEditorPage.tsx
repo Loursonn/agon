@@ -7,14 +7,14 @@
  *   /coach/energy-library/new
  *   /coach/energy-library/:sessionId/edit
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Zap } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useQueryClient } from "@tanstack/react-query";
 import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/FicheAttachmentsEditor";
 import { syncEnergySessionAthletes } from "@/features/shared/hooks/fiches/syncDocAssignments";
@@ -22,11 +22,13 @@ import type { FicheAttachment } from "@/features/shared/types/fiches";
 import { makeRootGroup, genId } from "@/lib/energy/treeUtils";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 import { formatSLong } from "@/lib/energy/formatTarget";
+import { ENERGY_SPORTS, energySportOf, type EnergySport } from "@/lib/energy/sports";
 import type { EnergyGroup, EnergyStep, SessionKind, StructureType, FieldSchema, SessionImage } from "@/types/energy";
 import { useAuth } from "@/hooks/useAuth";
 import { uploadEnergySessionImage } from "@/api/energy";
 import { compressImage } from "@/lib/compressImage";
 import IntervalBuilder from "../components/energy/IntervalBuilder";
+import { EnergyBlockCards } from "../components/energy/EnergyBlockCards";
 import SessionPreview from "../components/energy/SessionPreview";
 import SchemaEditor from "../components/energy/SchemaEditor";
 import { SchemaViewerWithZoom } from "../components/energy/SchemaViewer";
@@ -47,8 +49,10 @@ import BlockBankDrawer from "../components/specific/BlockBankDrawer";
 import { useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuality } from "@/features/shared/hooks/useSpecificTaxonomy";
 import { useCreateSpecificBlock } from "@/features/shared/hooks/useSpecificBlocks";
 import { toast } from "sonner";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { Avatar, CheckBox, ORDI_CARD, SectionHead, MONO as ORDI_MONO, DISPLAY } from "@/features/shared/components/ordi/OrdiUi";
 import ImportEnergyTextDialog from "../components/import/ImportEnergyTextDialog";
-import { issueCounts } from "../components/import/ImportIssueList";
+import { issueCounts } from "../components/import/importIssues";
 import ImportReportPanel from "../components/import/ImportReportPanel";
 import ImportSpecificTextDialog, { type SpecificImportApply } from "../components/import/ImportSpecificTextDialog";
 import type { EnergyImportResult } from "@/lib/import/yoxx/parseEnergySession";
@@ -66,70 +70,19 @@ const SESSION_KINDS: { value: SessionKind; label: string }[] = [
   { value: "custom",     label: "Type personnalisé…" },
 ];
 
-const ORANGE = "#F5A623";
+const ORANGE = H.miel;
 
-
-// ── Assign modal (simple) ─────────────────────────────────────────────────────
-
-function AssignModal({
-  sessionId, athleteId, onClose,
-}: { sessionId: string; athleteId: string; onClose: () => void }) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const assign = useAssignEnergySession();
-
-  async function handleAssign() {
-    await assign.mutateAsync({ energy_session_id: sessionId, athlete_id: athleteId, scheduled_date: date, status: "planned" });
-    onClose();
-  }
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 100,
-      background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{ background: C.s1, borderRadius: 6, padding: 24, width: 320, border: `1px solid ${C.brd}` }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>Planifier la séance</div>
-        <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Date</div>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          style={{
-            width: "100%", background: C.s2, border: `1px solid ${C.brd}`,
-            borderRadius: 6, color: C.tx, fontSize: 13, padding: "6px 10px", fontFamily: "inherit",
-          }}
-        />
-        <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
-          <button
-            onClick={onClose}
-            style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleAssign}
-            disabled={assign.isPending}
-            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.gV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-          >
-            {assign.isPending ? "…" : "Planifier"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Import session modal ─────────────────────────────────────────────────────
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-  footing: "#22C55E", fartlek: "#EC4899", autre: "#6B7280", custom: "#14B8A6",
+  vo2: C.ac, tempo: C.b, seuil: H.ambre,
+  footing: H.vert, fartlek: H.rose, autre: H.gris, custom: H.turquoise,
 };
 
 function deepCloneIntervals(steps: EnergyStep[]): EnergyStep[] {
   return steps.map((s): EnergyStep => {
     if (s.type === "interval" || s.type === "exercise") return { ...s, id: genId() };
-    if (s.type === "interval") return { ...s, id: genId() };
     return {
       ...s,
       id: genId(),
@@ -186,7 +139,7 @@ function ImportSessionModal({ onImport, onClose }: {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {filtered.map((s) => {
-                const kc = KIND_COLOR[s.session_kind] ?? "#6B7280";
+                const kc = KIND_COLOR[s.session_kind] ?? H.gris;
                 return (
                   <div
                     key={s.id}
@@ -232,7 +185,7 @@ function ImportSessionModal({ onImport, onClose }: {
 export default function EnergySessionEditorPage() {
   const { athleteId, sessionId } = useParams<{ athleteId?: string; sessionId?: string }>();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, athletes } = useAuth();
   const navigate = useNavigate();
   const isEdit = !!sessionId;
   const kindFromUrl = searchParams.get("kind") as SessionKind | null;
@@ -247,6 +200,7 @@ export default function EnergySessionEditorPage() {
   const [name, setName] = useState("");
   const [sessionKind, setSessionKind] = useState<SessionKind>(kindFromUrl ?? "vo2");
   const [customKind, setCustomKind] = useState("vo2");
+  const [sport, setSport] = useState<EnergySport>("course");
   const [structureType, setStructureType] = useState<StructureType>("fractionne");
   const [root, setRoot] = useState<EnergyGroup>(makeRootGroup);
   const [fieldSchema, setFieldSchema] = useState<FieldSchema | null>(null);
@@ -257,8 +211,11 @@ export default function EnergySessionEditorPage() {
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
+  // Enregistrer (planche CoachOrdiAEditeurEnergie) : pour l'athlète à une date, copie dans la banque, ou banque seule.
+  const [planDate, setPlanDate] = useState(searchParams.get("date") ?? "");
+  const [keepCopy, setKeepCopy] = useState(false);
+  const [bankOnly, setBankOnly] = useState(false);
+  const assign = useAssignEnergySession();
   const [showImport, setShowImport] = useState(false);
   // Import texte YOXX (?import=texte ouvre directement la fenêtre)
   const [showTextImport, setShowTextImport] = useState(searchParams.get("import") === "texte");
@@ -276,6 +233,8 @@ export default function EnergySessionEditorPage() {
 
   const isSpecifique = sessionKind === "specifique";
   const isClassique  = isSpecifique && format === "classique";
+  const athleteName = athletes.find((a) => a.id === athleteId)?.full_name?.trim() || "l’athlète";
+  const athleteFirst = athleteName.split(/\s+/)[0];
 
   const { data: sports = [] }    = useSpecificSports();
   const { data: qualities = [] } = usePhysicalQualities();
@@ -289,6 +248,7 @@ export default function EnergySessionEditorPage() {
       setName(existingSession.name);
       setSessionKind(existingSession.session_kind);
       setCustomKind(existingSession.custom_kind || "vo2");
+      setSport(energySportOf(existingSession.modality));
       setStructureType(existingSession.structure_type);
       // Wrap intervals in a root group
       const rootG: EnergyGroup = {
@@ -315,6 +275,7 @@ export default function EnergySessionEditorPage() {
     setSessionKind(session.session_kind);
     setCustomKind(session.custom_kind || "vo2");
     setCustomKind(session.custom_kind ?? "");
+    setSport(energySportOf(session.modality));
     setStructureType(session.structure_type);
     setNotes(session.notes ?? "");
     const clonedChildren = deepCloneIntervals(session.intervals ?? []);
@@ -396,6 +357,7 @@ export default function EnergySessionEditorPage() {
   // Computed preview totals
   const flat = expandIntervals(root);
   const totals = computeTotals(flat);
+  const isDesktop = useIsDesktop();
 
   async function handleAddImageUrl() {
     const url = imageUrlInput.trim();
@@ -430,15 +392,16 @@ export default function EnergySessionEditorPage() {
     }
   }
 
-  async function handleSave(andPlan = false) {
-    const effectiveKind = sessionKind === "custom" ? "custom" : sessionKind;
-    const payload = {
+  async function handleSave() {
+    const effectiveKind: SessionKind = sessionKind;
+    const base = {
       name: name.trim() || "Séance sans titre",
       session_kind: effectiveKind,
       custom_kind: sessionKind === "specifique"
         ? (existingSession?.custom_kind ?? null)
         : (sessionKind === "custom" ? customKind : null),
-      modality: null,
+      // Spécifique : séance « course sur tapis » côté montre, le sport n'est pas demandé.
+      modality: isSpecifique ? (existingSession?.modality ?? null) : sport,
       notes: notes.trim() || null,
       structure_type: structureType,
       intervals: root.children,
@@ -452,28 +415,29 @@ export default function EnergySessionEditorPage() {
         ? { blocks: classiqueBlocks }
         : null,
       created_by: user?.id ?? null,
-      ...(athleteId ? { athlete_id: athleteId } : {}),
     };
 
+    const forAthlete = !!athleteId && !bankOnly;
+    const payload = { ...base, ...(forAthlete ? { athlete_id: athleteId } : {}) };
+    type CreateInput = Parameters<typeof createMutation.mutateAsync>[0];
+
+    let id: string | null = null;
     if (isEdit && sessionId) {
       await updateMutation.mutateAsync({ id: sessionId, ...payload });
       // Attributions 'energie' des athlètes qui ont cette séance au planning
       void syncEnergySessionAthletes(sessionId, qc);
-      if (andPlan && athleteId) {
-        setSavedSessionId(sessionId);
-        setShowAssignModal(true);
-      } else {
-        navigateBack();
-      }
+      id = sessionId;
     } else {
-      const created = await createMutation.mutateAsync(payload as Parameters<typeof createMutation.mutateAsync>[0]);
-      if (andPlan && athleteId && created?.id) {
-        setSavedSessionId(created.id);
-        setShowAssignModal(true);
-      } else {
-        navigateBack();
-      }
+      const created = await createMutation.mutateAsync(payload as CreateInput);
+      id = created?.id ?? null;
     }
+    // « Garder aussi une copie dans ma banque » : une 2e séance, sans athlète.
+    if (forAthlete && keepCopy) await createMutation.mutateAsync(base as CreateInput);
+    if (forAthlete && planDate && id) {
+      await assign.mutateAsync({ energy_session_id: id, athlete_id: athleteId!, scheduled_date: planDate, status: "planned" });
+    }
+    if (athleteId && !forAthlete) toast.success("Séance ajoutée à ta banque");
+    navigateBack();
   }
 
   function navigateBack() {
@@ -486,7 +450,7 @@ export default function EnergySessionEditorPage() {
     }
   }
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isSaving = createMutation.isPending || updateMutation.isPending || assign.isPending;
 
   if (isLoading && isEdit) {
     return (
@@ -495,30 +459,40 @@ export default function EnergySessionEditorPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg }}>
-      {/* ── Header ── */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 20,
-        background: C.s1, borderBottom: `1px solid ${C.brd}`,
-        padding: "10px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-      }}>
+    <div style={{ minHeight: "100vh", background: C.bg, padding: isDesktop ? "24px 40px 48px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* ── Fil d'Ariane (planche CoachOrdiAEditeurEnergie) ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
         <button
           onClick={navigateBack}
-          style={{ background: "none", border: "none", color: C.tx3, fontSize: 18, cursor: "pointer", lineHeight: 1 }}
+          style={{ background: "none", border: "none", padding: 0, color: C.tx3, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
         >
-          ←
+          ‹ {athleteId ? "Programmation" : "Banque"}
         </button>
+        <span style={{ color: C.tx3 }}>›</span>
+        <span style={{ color: C.tx2 }}>{isEdit ? "Modifier la séance" : isSpecifique ? "Nouvelle séance spécifique" : "Nouvelle séance d’énergie"}</span>
+      </div>
+
+      {/* ── Carte titre : type, nom, sport, actions ── */}
+      <div style={{
+        ...ORDI_CARD, position: "relative", overflow: "hidden",
+        padding: "18px 22px 18px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+      }}>
+        <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isSpecifique ? ORANGE : C.b }} />
+        {!isSpecifique && (
+          <span style={{ background: C.b, color: C.ink, borderRadius: 999, padding: "2px 10px", fontSize: 11.5, fontWeight: 600 }}>Énergie</span>
+        )}
 
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nom de la séance…"
+          aria-label="Nom de la séance"
           style={{
-            flex: 1, minWidth: 180,
+            flex: 1, minWidth: 220,
             background: "transparent", border: "none",
             borderBottom: `1px solid ${C.brdL}`,
-            color: C.tx, fontSize: 18, fontWeight: 700,
-            fontFamily: "inherit", outline: "none", padding: "2px 0",
+            color: C.tx, fontSize: 24, ...DISPLAY,
+            outline: "none", padding: "2px 0",
           }}
         />
 
@@ -550,7 +524,7 @@ export default function EnergySessionEditorPage() {
                 onChange={setQualityId}
                 onCreate={async (n) => user?.id ? await createQuality.mutateAsync({ name: n, coachId: user.id }) : undefined}
                 width={150}
-                accent="#FFC933"
+                accent={C.ac}
               />
               {/* Legacy WOD pleine page : proposer la conversion en blocs */}
               {format === "wod" && (
@@ -581,6 +555,24 @@ export default function EnergySessionEditorPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {/* Sport : décide du mode de la montre (Garmin) */}
+              <div role="radiogroup" aria-label="Sport" style={{ display: "flex", background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 10, padding: 3, gap: 2 }}>
+                {ENERGY_SPORTS.map((s) => {
+                  const on = sport === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setSport(s.value as EnergySport)}
+                      style={{ height: 30, padding: "0 12px", borderRadius: 8, border: "none", background: on ? C.s2 : "transparent", color: on ? C.tx : C.tx3, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
               {/* Custom kind input */}
               {sessionKind === "custom" && (
                 <input
@@ -613,7 +605,7 @@ export default function EnergySessionEditorPage() {
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginLeft: "auto" }}>
           {!isEdit && (
             <button
               onClick={() => setShowImport(true)}
@@ -637,56 +629,51 @@ export default function EnergySessionEditorPage() {
           >
             Annuler
           </button>
-          <button
-            onClick={() => handleSave(false)}
-            disabled={isSaving}
-            style={{ padding: "7px 16px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
-          >
-            {isSaving ? "Enregistrement…" : "Enregistrer"}
-          </button>
-          {athleteId && (
-            <button
-              onClick={() => handleSave(true)}
-              disabled={isSaving}
-              style={{ padding: "7px 16px", borderRadius: 4, border: `1px solid ${C.g}50`, background: C.g + "15", color: C.g, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              Enregistrer & planifier
-            </button>
-          )}
         </div>
       </div>
 
+      {/* ── 01 Profil de la séance ── */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionHead n={1} title="Profil de la séance" />
+        <div style={{ ...ORDI_CARD, padding: "16px 20px", display: "flex", gap: 28, alignItems: "stretch", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 170 }}>
+            <div>
+              <div style={{ fontSize: 12, color: C.tx3 }}>Durée estimée</div>
+              <div style={{ ...ORDI_MONO, fontSize: 24, color: C.tx, marginTop: 4 }}>{totals.durationS > 0 ? `≈ ${formatSLong(totals.durationS)}` : "—"}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: C.tx3 }}>Distance estimée</div>
+              <div style={{ ...ORDI_MONO, fontSize: 24, color: C.tx, marginTop: 4 }}>
+                {totals.distanceM > 0 ? <>≈ {(totals.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}<span style={{ fontSize: 12, color: C.tx3 }}> km</span></> : "—"}
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 320 }}>
+            {isClassique ? (
+              <ClassiquePreview blocks={classiqueBlocks} />
+            ) : root.children.length === 0 ? (
+              <div style={{ color: C.tx3, fontSize: 12.5, paddingTop: 24 }}>
+                Ajoute des blocs pour voir le profil de la séance.
+              </div>
+            ) : (
+              <SessionPreview intervals={root} />
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ── Main layout ── */}
       <div style={{
-        display: "flex", gap: 0,
-        // Desktop: side by side; mobile: stacked (via media query not available inline — use flex-wrap)
-        flexWrap: "wrap",
-        minHeight: "calc(100vh - 61px)",
+        display: "grid", gap: 24, alignItems: "start",
+        gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 340px" : "1fr",
       }}>
 
-        {/* ── Builder col (2/3) ── */}
-        <div style={{
-          flex: "2 1 420px", padding: "20px 20px 40px",
-          borderRight: `1px solid ${C.brd}`,
-          minWidth: 0,
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
-            Structure
-          </div>
+        {/* ── 02 Blocs ── */}
+        <section style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+          <SectionHead n={2} title="Blocs" />
           {importIssues.length > 0 && (
             <ImportReportPanel issues={importIssues} onClose={() => setImportIssues([])} />
           )}
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Consigne de la séance (optionnel, affichée à l'athlète)…"
-            rows={notes ? 2 : 1}
-            style={{
-              width: "100%", boxSizing: "border-box", resize: "vertical", marginBottom: 12,
-              background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, color: C.tx,
-              fontSize: 12, padding: "8px 10px", fontFamily: "inherit", outline: "none",
-            }}
-          />
           {isClassique ? (
             <ClassiqueBuilder
               blocks={classiqueBlocks}
@@ -695,38 +682,80 @@ export default function EnergySessionEditorPage() {
               onSaveBlockToBank={handleSaveBlockToBank}
             />
           ) : (
-            <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
+            isSpecifique
+              ? <IntervalBuilder root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
+              : <EnergyBlockCards root={root} onChange={setRoot} athleteId={athleteId} sessionKind={sessionKind} />
           )}
-        </div>
+        </section>
 
-        {/* ── Preview col (1/3) ── */}
-        <div style={{
-          flex: "1 1 280px",
-          position: "sticky",
-          top: 61,
-          alignSelf: "flex-start",
-          padding: "20px 16px",
-          maxHeight: "calc(100vh - 61px)",
-          overflowY: "auto",
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
-            Aperçu
+        {/* ── 03 Enregistrer ── */}
+        <aside style={{ display: "flex", flexDirection: "column", gap: 12, position: isDesktop ? "sticky" : "static", top: 16 }}>
+          <SectionHead n={3} title="Enregistrer" />
+          <div style={{ ...ORDI_CARD, padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+            {athleteId && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <span style={{ fontSize: 12, color: C.tx3 }}>Enregistrer pour</span>
+                <SaveOption on={!bankOnly} onSelect={() => setBankOnly(false)}>
+                  <Avatar name={athleteName} size={24} />
+                  <span style={{ fontSize: 13.5, fontWeight: 500, color: C.tx }}>{athleteName}</span>
+                </SaveOption>
+                {!bankOnly && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 26 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12.5, color: C.tx3, width: 22 }}>Le</span>
+                      <input
+                        type="date"
+                        value={planDate}
+                        onChange={(e) => setPlanDate(e.target.value)}
+                        aria-label="Date de la séance"
+                        style={{ flex: 1, height: 34, boxSizing: "border-box", background: C.s2, border: `1px solid ${C.brdL}`, borderRadius: 8, color: C.tx, fontSize: 13, padding: "0 10px", fontFamily: "inherit" }}
+                      />
+                    </label>
+                    {!planDate && <span style={{ fontSize: 11.5, color: C.tx3 }}>Sans date, la séance reste à programmer.</span>}
+                    <CheckBox checked={keepCopy} onChange={setKeepCopy} label="Garder aussi une copie dans ma banque" />
+                  </div>
+                )}
+                {!isEdit && (
+                  <SaveOption on={bankOnly} onSelect={() => setBankOnly(true)}>
+                    <span>
+                      <span style={{ display: "block", fontSize: 13.5, fontWeight: 500, color: C.tx }}>Ma banque seulement</span>
+                      <span style={{ display: "block", fontSize: 12, color: C.tx3 }}>À programmer plus tard, pour tout athlète</span>
+                    </span>
+                  </SaveOption>
+                )}
+              </div>
+            )}
+            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontSize: 12, color: C.tx3 }}>{athleteId && !bankOnly ? `Consigne pour ${athleteFirst}` : "Consigne"}</span>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optionnel, affichée à l’athlète avec la séance…"
+                rows={3}
+                style={{
+                  width: "100%", boxSizing: "border-box", resize: "vertical",
+                  background: C.bg, border: `1px solid ${C.brdL}`, borderRadius: 10, color: C.tx,
+                  fontSize: 13, padding: "9px 11px", fontFamily: "inherit", outline: "none", lineHeight: 1.5,
+                }}
+              />
+            </label>
+            <button
+              onClick={() => void handleSave()}
+              disabled={isSaving}
+              style={{ height: 40, borderRadius: 10, border: "none", background: C.ac, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1 }}
+            >
+              {isSaving ? "Enregistrement…" : athleteId && !bankOnly ? `Enregistrer pour ${athleteName}` : "Enregistrer dans ma banque"}
+            </button>
+            <button
+              onClick={navigateBack}
+              style={{ alignSelf: "center", background: "none", border: "none", color: C.tx3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Annuler
+            </button>
           </div>
 
-          {isClassique ? (
-            <ClassiquePreview blocks={classiqueBlocks} />
-          ) : root.children.length === 0 ? (
-            <div style={{ color: C.tx3, fontSize: 12, textAlign: "center", paddingTop: 40 }}>
-              Ajoute des intervalles pour voir l'aperçu
-            </div>
-          ) : (
-            <div style={{ background: C.s1, borderRadius: 4, padding: "14px 14px 10px", border: `1px solid ${C.brd}` }}>
-              <SessionPreview intervals={root} />
-            </div>
-          )}
-
           {/* Schema drawing */}
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 4 }}>
             {fieldSchema && (
               <div style={{ background: C.s1, borderRadius: 4, padding: 10, border: `1px solid ${C.brd}`, marginBottom: 8 }}>
                 <SchemaViewerWithZoom schema={fieldSchema} />
@@ -749,7 +778,7 @@ export default function EnergySessionEditorPage() {
                   style={{
                     padding: "10px 12px", borderRadius: 4,
                     border: `1px solid rgba(239,68,68,0.3)`, background: "rgba(239,68,68,0.08)",
-                    color: "#EF4444", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    color: H.rougeVif, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
                   ✕
@@ -792,7 +821,7 @@ export default function EnergySessionEditorPage() {
                         position: "absolute", top: 2, right: 2,
                         width: 20, height: 20, borderRadius: "50%",
                         background: "rgba(0,0,0,0.6)", border: "none",
-                        color: "#fff", fontSize: 12, cursor: "pointer",
+                        color: C.tx, fontSize: 12, cursor: "pointer",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         lineHeight: 1,
                       }}
@@ -856,22 +885,7 @@ export default function EnergySessionEditorPage() {
             </label>
           </div>
 
-          {/* Mini totals recap */}
-          {totals.durationS > 0 && (
-            <div style={{ marginTop: 16, fontSize: 12, color: C.tx2, display: "flex", flexDirection: "column", gap: 4 }}>
-              <div>
-                <span style={{ color: C.tx3 }}>Durée estimée</span>{" "}
-                <strong style={{ color: C.tx }}>{formatSLong(totals.durationS)}</strong>
-              </div>
-              {totals.distanceM > 0 && (
-                <div>
-                  <span style={{ color: C.tx3 }}>Distance</span>{" "}
-                  <strong style={{ color: C.tx }}>{(totals.distanceM / 1000).toFixed(1)} km</strong>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        </aside>
       </div>
 
       {/* ── Import modal ── */}
@@ -906,15 +920,6 @@ export default function EnergySessionEditorPage() {
         />
       )}
 
-      {/* ── Assign modal ── */}
-      {showAssignModal && savedSessionId && athleteId && (
-        <AssignModal
-          sessionId={savedSessionId}
-          athleteId={athleteId}
-          onClose={() => { setShowAssignModal(false); navigateBack(); }}
-        />
-      )}
-
       {/* ── Image lightbox ── */}
       {previewImage && (
         <div
@@ -934,5 +939,23 @@ export default function EnergySessionEditorPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Choix rond de la planche (« Enregistrer pour Léa » / « Ma banque seulement »). */
+function SaveOption({ on, onSelect, children }: { on: boolean; onSelect: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      onClick={onSelect}
+      style={{ display: "flex", alignItems: "center", gap: 10, padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+    >
+      <span aria-hidden style={{ width: 16, height: 16, flex: "none", boxSizing: "border-box", borderRadius: 999, border: `1px solid ${on ? C.ac : C.brdL}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {on && <span style={{ width: 8, height: 8, borderRadius: 999, background: C.ac }} />}
+      </span>
+      {children}
+    </button>
   );
 }

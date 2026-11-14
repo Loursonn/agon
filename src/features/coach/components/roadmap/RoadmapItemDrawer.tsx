@@ -11,6 +11,7 @@ import { z } from "zod";
 import { X } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useCreateItem, useUpdateItem } from "@/features/shared/hooks/useRoadmap";
+import type { CreateItemInput } from "@/api/appContent";
 import type { RoadmapItem, RoadmapPhase, RoadmapCategory, RoadmapItemStatus, RoadmapPriority } from "@/features/coach/types/roadmap";
 import { CATEGORY_LABEL, CATEGORY_COLOR, PRIORITY_LABEL, PRIORITY_COLOR, ITEM_STATUS_LABEL, ITEM_STATUS_COLOR } from "@/features/coach/types/roadmap";
 
@@ -139,7 +140,8 @@ export function RoadmapItemDrawer({ item, phases, isAdmin, onClose, defaultPhase
     if (isEdit) {
       update.mutate({ id: item!.id, ...payload }, { onSuccess: onClose });
     } else {
-      create.mutate(payload, { onSuccess: onClose });
+      // Champs obligatoires garantis par le schéma zod (z.infer les rend optionnels sans strictNullChecks).
+      create.mutate(payload as CreateItemInput, { onSuccess: onClose });
     }
   }
 
@@ -281,7 +283,7 @@ export function RoadmapItemDrawer({ item, phases, isAdmin, onClose, defaultPhase
               style={{
                 flex: 2, padding: "9px 0", borderRadius: 4,
                 border: "none", background: C.ac,
-                color: "#fff", fontSize: 13, fontWeight: 700,
+                color: C.tx, fontSize: 13, fontWeight: 700,
                 cursor: busy ? "not-allowed" : "pointer",
                 opacity: busy ? 0.6 : 1, fontFamily: "inherit",
               }}

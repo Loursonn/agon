@@ -4,8 +4,11 @@ import { localIsoDay } from "@shared/domain/dates";
 import {
   estimateOneRm,
   newRecordsFromSets,
+  parseRecordLinks,
   recordRefOf,
+  resolveRecordRef,
   type RecordCandidate,
+  type RecordLinks,
   type RecordRefSource,
   type RecordSet,
 } from "@shared/domain/performance";
@@ -85,11 +88,10 @@ export async function getBestByRef(athleteId: string): Promise<Record<string, PR
 
 /**
  * Liens « exercice → record » posés par le coach (Profil sportif, `rm_ref`
- * sur les exercices de l'ancien programme `asp:exos`). Clé : nom d'exercice
- * en minuscules, et `id:<exercise_id>` quand l'exercice vient de la banque.
- * Le programme du moment (`asp:exos`) l'emporte sur les cycles archivés.
+ * sur les exercices de l'ancien programme `asp:exos`). Lecture ici, calcul
+ * partagé (`parseRecordLinks`, aussi utilisé par l'envoi vers la montre).
  */
-export type RecordLinks = Record<string, string>;
+export type { RecordLinks };
 
 export async function getRecordLinks(athleteId: string): Promise<RecordLinks> {
   const keys = unwrapRows(
@@ -103,35 +105,10 @@ export async function getRecordLinks(athleteId: string): Promise<RecordLinks> {
     await db().from("app_data").select("key, value").eq("athlete_id", athleteId).in("key", keys),
     "Liens de records non chargés",
   );
-  // Programme courant en dernier : il écrase les cycles archivés.
-  rows.sort((a, b) => (a.key === "asp:exos" ? 1 : 0) - (b.key === "asp:exos" ? 1 : 0));
-  const links: RecordLinks = {};
-  for (const row of rows) {
-    const value = row.value as Record<string, unknown> | null;
-    if (!value || typeof value !== "object") continue;
-    for (const list of Object.values(value)) {
-      if (!Array.isArray(list)) continue;
-      for (const ex of list as { name?: string; exercise_id?: string; rm_ref?: string }[]) {
-        const ref = ex?.rm_ref?.trim();
-        if (!ref) continue;
-        if (ex.name?.trim()) links[ex.name.trim().toLowerCase()] = ref;
-        if (ex.exercise_id) links[`id:${ex.exercise_id}`] = ref;
-      }
-    }
-  }
-  return links;
+  return parseRecordLinks(rows.map((r) => ({ key: r.key as string, value: r.value })));
 }
 
-/** Référence de record d'un exercice programmé, en tenant compte des liens du coach. */
-export function resolveRecordRef(
-  ex: { exercise_name?: string | null; exercise_id?: string | null; rm_ref?: string | null },
-  links: RecordLinks = {},
-): string | null {
-  if (ex.rm_ref?.trim()) return ex.rm_ref.trim();
-  const byId = ex.exercise_id ? links[`id:${ex.exercise_id}`] : undefined;
-  const byName = ex.exercise_name ? links[ex.exercise_name.trim().toLowerCase()] : undefined;
-  return byId ?? byName ?? recordRefOf({ exercise_name: ex.exercise_name });
-}
+export { resolveRecordRef };
 
 export { recordRefOf, type RecordRefSource };
 

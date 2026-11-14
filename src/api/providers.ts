@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { ApiError, db, unwrapRows } from "./client";
+import { ApiError, db, unwrap, unwrapRows } from "./client";
 
 /**
  * Montres connectées et activités importées : tables BRUTES
@@ -27,11 +27,19 @@ export const providerKeys = {
    * `invalidateWorkouts` et `useEnergyAssignments` invalident `['runningVolume', aid]`.
    */
   manualRuns: (aid: string, from: string) => ["runningVolume", aid, from] as const,
+  /** Séances envoyées sur la montre (suivi de l'envoi). */
+  workoutPushes: (aid: string, from: string) => ["providers", aid, "workoutPushes", from] as const,
 };
 
 /** Après un import, une synchro, une déconnexion : connexions, sorties, volume de course montre. */
 export function invalidateProviders(qc: QueryClient, athleteId: string): Promise<void> {
-  return qc.invalidateQueries({ queryKey: providerKeys.all(athleteId) });
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: providerKeys.all(athleteId) }),
+    // Charge YOXX et VC (`loadKeys`, `criticalSpeedKeys`) lisent les activités.
+    qc.invalidateQueries({ queryKey: ["load", athleteId] }),
+    qc.invalidateQueries({ queryKey: ["wellnessLight", athleteId] }),
+    qc.invalidateQueries({ queryKey: ["criticalSpeed", athleteId] }),
+  ]).then(() => undefined);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -54,6 +62,8 @@ export interface ProviderConnection {
   lastSyncAt: string | null;
   syncedThrough: string | null;
   lastError: string | null;
+  /** Envoi des séances programmées sur la montre (Garmin), coupable par l'athlète. */
+  pushWorkouts: boolean;
 }
 
 export interface ProviderActivity {
@@ -112,7 +122,7 @@ export const num = (v: unknown): number | null => {
 export async function getConnections(athleteId: string): Promise<ProviderConnection[]> {
   const rows = unwrapRows(
     await db().from("provider_connections")
-      .select("id, provider, status, granted_scopes, connected_at, last_sync_at, synced_through, last_error")
+      .select("id, provider, status, granted_scopes, connected_at, last_sync_at, synced_through, last_error, push_workouts")
       .eq("athlete_id", athleteId),
     "Lecture des montres connectées impossible",
   );
@@ -125,6 +135,57 @@ export async function getConnections(athleteId: string): Promise<ProviderConnect
     lastSyncAt: r.last_sync_at,
     syncedThrough: r.synced_through,
     lastError: r.last_error,
+    pushWorkouts: r.push_workouts ?? true,
+  }));
+}
+
+// ── Envoi des séances sur la montre ──────────────────────────────────────────
+
+/** Une séance Agon envoyée (ou refusée) sur la montre, telle que le serveur la suit. */
+export interface WorkoutPush {
+  id: string;
+  provider: ProviderName;
+  sourceKind: "energy" | "strength";
+  sourceId: string;
+  scheduledDate: string;
+  status: "sent" | "error" | "rejected";
+  warnings: string[];
+  lastError: string | null;
+  sentAt: string | null;
+}
+
+/**
+ * Coupe ou rouvre l'envoi des séances sur la montre. Seul l'athlète décide
+ * (la fonction SQL ne touche que sa propre connexion). Renvoie `false` si
+ * aucune connexion n'a été modifiée.
+ */
+export async function setWorkoutPush(provider: ProviderName, enabled: boolean): Promise<boolean> {
+  return !!unwrap(
+    await db().rpc("set_workout_push", { p_provider: provider, p_enabled: enabled }),
+    "Réglage de l'envoi sur la montre impossible",
+  );
+}
+
+/** Séances envoyées à partir d'un jour (`YYYY-MM-DD`). Lève si la lecture échoue. */
+export async function getWorkoutPushes(athleteId: string, from: string): Promise<WorkoutPush[]> {
+  const rows = unwrapRows(
+    await db().from("provider_workout_pushes")
+      .select("id, provider, source_kind, source_id, scheduled_date, status, warnings, last_error, sent_at")
+      .eq("athlete_id", athleteId)
+      .gte("scheduled_date", from)
+      .order("scheduled_date"),
+    "Lecture des séances envoyées sur la montre impossible",
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    provider: r.provider as ProviderName,
+    sourceKind: r.source_kind as WorkoutPush["sourceKind"],
+    sourceId: r.source_id,
+    scheduledDate: r.scheduled_date,
+    status: r.status as WorkoutPush["status"],
+    warnings: r.warnings ?? [],
+    lastError: r.last_error,
+    sentAt: r.sent_at,
   }));
 }
 
@@ -488,4 +549,27 @@ export async function mergeActivities(
 export async function saveActivityDetail(activityId: string, payload: Record<string, unknown>): Promise<void> {
   const res = await db().rpc("activity_detail_upsert", { p_activity: activityId, p_detail: payload as never });
   if (res.error) throw new ApiError("Enregistrement du détail de l'activité impossible", res.error);
+}
+
+// ── Retirer une activité (P38) ───────────────────────────────────────────────
+
+export interface RemovedActivity {
+  removed: boolean;
+  /** Liens vers une séance prévue retirés avec elle (la séance reste). */
+  unlinked: number;
+}
+
+/**
+ * Retire d'Agon une activité de montre ou de fichier (supprimée dans Garmin
+ * Connect, doublon, erreur). Athlète, ou son coach (`is_coach_of`). La RPC
+ * `remove_provider_activity` supprime la ligne et ses détails (courbe, tours,
+ * séries, zones, lien au planning) ; elle refuse une séance saisie dans Agon.
+ * Après : `invalidateProviders`, `invalidateActivityDetail`, `invalidatePlanLinks`.
+ */
+export async function removeProviderActivity(activityId: string): Promise<RemovedActivity> {
+  const data = unwrap(
+    await db().rpc("remove_provider_activity", { p_activity: activityId }),
+    "Activité non retirée",
+  ) as { removed?: unknown; unlinked?: unknown } | null;
+  return { removed: data?.removed === true, unlinked: Number(data?.unlinked ?? 0) || 0 };
 }

@@ -4,6 +4,7 @@
  */
 import { useMemo, useState } from "react";
 import { C } from "@/lib/theme";
+import { DISPLAY, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
 import { useAuth } from "@/hooks/useAuth";
 import { formatFileSize } from "@/lib/compressImage";
 import { FICHE_CATEGORIES, FICHE_CATEGORY_LABEL } from "@/features/shared/types/fiches";
@@ -53,7 +54,7 @@ export default function FichesPage() {
     <div style={{ minHeight: "100vh", background: C.bg }}>
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: C.s1, borderBottom: `1px solid ${C.brd}` }}>
         <div style={{ padding: "14px 20px 10px", display: "flex", alignItems: "center", gap: 12 }}>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: C.tx, margin: 0, flex: 1 }}>Fiches</h1>
+          <h1 style={{ ...DISPLAY, fontSize: 30, fontWeight: 500, lineHeight: 1.1, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx, margin: 0, flex: 1 }}>Fiches</h1>
           <button style={btnPrimary} onClick={() => setImportOpen(true)}>+ Importer</button>
         </div>
         <div style={{ padding: "0 20px 10px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -89,33 +90,36 @@ export default function FichesPage() {
             </div>
             {families.length === 0 && <button style={btnPrimary} onClick={() => setImportOpen(true)}>+ Importer des fiches</button>}
           </div>
-        ) : grouped.map(g => (
-          <section key={g.cat}>
-            <h2 style={{ fontSize: 12, fontWeight: 700, color: CATEGORY_COLOR[g.cat], textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px" }}>
-              {FICHE_CATEGORY_LABEL[g.cat]} · {g.items.length}
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+        ) : grouped.map((g, idx) => (
+          <section key={g.cat} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <SectionHead n={idx + 1} title={FICHE_CATEGORY_LABEL[g.cat]} right={`${g.items.length} fiche${g.items.length > 1 ? "s" : ""}`} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
               {g.items.map(f => (
                 <button
                   key={f.origin.id}
                   onClick={() => setOpenId(f.origin.id)}
                   style={{
-                    textAlign: "left", background: C.s1, border: "1px solid " + C.brd, borderRadius: 6,
-                    borderTop: "3px solid " + CATEGORY_COLOR[f.origin.category],
-                    padding: "12px 14px", cursor: "pointer", fontFamily: "inherit",
+                    position: "relative", overflow: "hidden",
+                    textAlign: "left", background: C.s1, border: "1px solid " + C.brd, borderRadius: 14,
+                    padding: "14px 16px 14px 19px", cursor: "pointer", fontFamily: "inherit", color: C.tx,
                     opacity: f.origin.archived_at ? 0.6 : 1, minHeight: 88,
                   }}
                 >
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.tx, marginBottom: 4 }}>📄 {f.origin.title}</div>
+                  <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: CATEGORY_COLOR[f.origin.category] }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 500, color: C.tx, marginBottom: 4 }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.origin.title}</span>
+                    {f.origin.is_self_service && (
+                      <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", flex: "none", color: C.ink, background: C.g, borderRadius: 999, padding: "2px 8px" }}>Libre-service</span>
+                    )}
+                  </div>
                   {f.origin.description && (
                     <div style={{ fontSize: 12, color: C.tx3, marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {f.origin.description}
                     </div>
                   )}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", fontSize: 10, color: C.tx3 }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", ...MONO, fontSize: 11, color: C.tx3 }}>
                     <span>{f.origin.kind === "pdf" ? "PDF" : "Image"} · {formatFileSize(f.origin.file_size)}</span>
                     {f.variants.length > 0 && <span style={{ color: C.tx2 }}>· {f.variants.length + 1} versions</span>}
-                    {f.origin.is_self_service && <span style={{ color: C.g, fontWeight: 700 }}>· Libre-service</span>}
                     {f.origin.archived_at && <span>· Archivée</span>}
                     {f.origin.tags.slice(0, 3).map(t => <span key={t}>#{t}</span>)}
                   </div>

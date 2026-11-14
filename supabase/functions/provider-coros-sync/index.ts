@@ -44,13 +44,15 @@ import {
   resolveDateArgs,
   shiftDay,
   ymd,
+  isCorosAnomaly,
+  type FitListing,
 } from "../_shared/coros.ts";
 import { McpClient, McpError, type McpTool, resolveTool } from "../_shared/mcp.ts";
 import { looksLikeFit, parseFit } from "../_shared/activityFiles/fit.ts";
 import type { ParsedActivity } from "../_shared/activityFiles/types.ts";
 import { normalizeActivity } from "../_shared/activityFiles/normalize.ts";
 import { detailPayload, type NormalizedActivity } from "../_shared/activityFiles/stream.ts";
-import { type IngestOutcome, type Rejection, type SweepResult, sweepFitWindows } from "./sweep.ts";
+import { type IngestOutcome, parseEnvNumber, type Rejection, type SweepResult, sweepFitWindows } from "./sweep.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,10 +66,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const envNumber = (name: string, fallback: number) => {
-  const v = Number(Deno.env.get(name) ?? "");
-  return Number.isFinite(v) && v >= 0 ? v : fallback;
-};
+const envNumber = (name: string, fallback: number) => parseEnvNumber(Deno.env.get(name), fallback);
 
 /*
   Profondeur d'historique récupérée à la première synchronisation. Réglable par
@@ -102,6 +101,9 @@ const DEADLINE_MS = envNumber("COROS_SYNC_DEADLINE_MS", 110_000);
 /** Durée du verrou de synchronisation : plus long que la plus longue exécution. */
 const LOCK_TTL_S = 600;
 
+/** Délai maximal du téléchargement d'un FIT. */
+const FIT_DOWNLOAD_TIMEOUT_MS = 30_000;
+
 /** Largeur initiale de la fenêtre de dates demandée pour les FIT. */
 const WINDOW_SPAN = 30;
 
@@ -127,6 +129,63 @@ interface SyncReport {
   warnings?: string[];
   /** Ce qui reste à faire et quand (quota, budget, temps) — pas une erreur. */
   pending?: string;
+  /**
+   * Où le temps est passé (compteurs et durées, aucune donnée d'athlète) : sans
+   * cela, « interrompue avant la limite de temps » ne dit pas quelle étape est
+   * lente — l'ouverture de session, la liste des fichiers ou leur téléchargement.
+   */
+  timing?: SyncTiming;
+  /**
+   * L'appel de liste des FIT tel qu'il est fait : outil, paramètres publiés
+   * (nom, type, format, début de description) et arguments envoyés pour la
+   * fenêtre récente. Aucune donnée d'athlète ; sert à confronter le schéma
+   * réel de COROS à ce qu'on envoie quand COROS refuse l'appel.
+   */
+  fitCall?: {
+    tool: string;
+    params: Record<string, string>;
+    required: string[];
+    args: Record<string, unknown>;
+  };
+  /**
+   * Refus « anomalies » de COROS sur la liste des FIT : variantes essayées une
+   * fois, résultat réduit à sa forme (`urls:N`, `vide`, `erreur:…`). Aucun
+   * fichier n'est téléchargé par la sonde.
+   */
+  fitProbe?: Record<string, string>;
+}
+
+interface CallStats {
+  calls: number;
+  totalMs: number;
+  maxMs: number;
+}
+
+interface SyncTiming {
+  /** Jeton + ouverture de session MCP + liste des outils. */
+  setupMs: number;
+  list: CallStats;
+  ingest: CallStats;
+  /** Fenêtres terminées : récentes, rattrapage. */
+  windows: { recent: number; backfill: number };
+  totalMs: number;
+}
+
+const newStats = (): CallStats => ({ calls: 0, totalMs: 0, maxMs: 0 });
+
+/** Chronomètre un appel asynchrone dans `stats`, même s'il lève. */
+function timed<A extends unknown[], R>(stats: CallStats, fn: (...a: A) => Promise<R>) {
+  return async (...a: A): Promise<R> => {
+    const t = Date.now();
+    try {
+      return await fn(...a);
+    } finally {
+      const d = Date.now() - t;
+      stats.calls++;
+      stats.totalMs += d;
+      stats.maxMs = Math.max(stats.maxMs, d);
+    }
+  };
 }
 
 const emptyReport = (conn: Connection): SyncReport => ({
@@ -348,7 +407,8 @@ async function ingestFit(
 
   let bytes: Uint8Array;
   try {
-    const res = await fetch(url);
+    // Un fichier qui ne vient pas ne doit pas manger tout le temps de l'exécution.
+    const res = await fetch(url, { signal: AbortSignal.timeout(FIT_DOWNLOAD_TIMEOUT_MS) });
     if (!res.ok) {
       return { kind: "retry", reason: `téléchargement refusé (${res.status})`, quota: res.status === 429 };
     }
@@ -548,6 +608,19 @@ async function syncConnection(
   }
 
   const { mcp, tools } = await listToolsWithRetry(admin, conn, host);
+  /*
+    Session utilisée pour la liste des FIT. Remplacée par une session neuve si
+    COROS refuse avec sa garde « anomalies » et que la session neuve passe.
+  */
+  let fitMcp = mcp;
+  const timing: SyncTiming = {
+    setupMs: Date.now() - startedAt,
+    list: newStats(),
+    ingest: newStats(),
+    windows: { recent: 0, backfill: 0 },
+    totalMs: 0,
+  };
+  report.timing = timing;
 
   /*
     La liste réelle des outils, demandée une fois par exécution, avec le schéma
@@ -593,14 +666,67 @@ async function syncConnection(
       rescanDays: RESCAN_DAYS,
     });
 
+    {
+      const props = toolByName(fitToolName)?.inputSchema?.properties ?? {};
+      report.fitCall = {
+        tool: spec.tool,
+        params: Object.fromEntries(
+          Object.entries(props).map(([k, v]) => {
+            const p = v as { type?: unknown; format?: string; description?: string };
+            return [k, [String(p.type ?? "?"), p.format ?? "", (p.description ?? "").slice(0, 120)].filter(Boolean).join(" · ")];
+          }),
+        ),
+        required: (toolByName(fitToolName)?.inputSchema as { required?: string[] } | undefined)?.required ?? [],
+        args: buildDateArgs(spec, plan.recent.from, plan.recent.to, COROS_FIT_LIMITS.perCall),
+      };
+    }
+
     const deps = {
-      list: async (range: { from: string; to: string }) => {
-        const result = await mcp.callTool(
-          spec.tool,
-          buildDateArgs(spec, range.from, range.to, COROS_FIT_LIMITS.perCall),
-        );
-        return classifyFitListing(result);
-      },
+      list: timed(timing.list, async (range: { from: string; to: string }) => {
+        const args = buildDateArgs(spec, range.from, range.to, COROS_FIT_LIMITS.perCall);
+        const listing = classifyFitListing(await fitMcp.callTool(spec.tool, args));
+        if (listing.kind !== "error" || !isCorosAnomaly(listing.reason) || report.fitProbe) return listing;
+
+        // Une seule fois par exécution : variantes, pour savoir ce que la garde refuse.
+        const probe: Record<string, string> = {};
+        report.fitProbe = probe;
+        const shape = (l: FitListing) =>
+          l.kind === "urls" ? `urls:${l.urls.length}` : l.kind === "empty" ? "vide" : `erreur:${l.reason.slice(0, 80)}`;
+        const token = await freshAccessToken(admin, conn);
+        const fresh = () => new McpClient({ host, accessToken: token });
+        let adopted: FitListing | null = null;
+        try {
+          const s1 = fresh();
+          const l1 = classifyFitListing(await s1.callTool(spec.tool, args));
+          probe.nouvelleSession = shape(l1);
+          if (l1.kind !== "error") {
+            fitMcp = s1;
+            adopted = l1;
+          }
+        } catch (e) {
+          probe.nouvelleSession = `exception:${errMsg(e).slice(0, 80)}`;
+        }
+        try {
+          const day = spec.format === "iso" ? range.to : range.to.replace(/-/g, "");
+          const l2 = classifyFitListing(await fresh().callTool(spec.tool, { [spec.start]: day }));
+          probe.unJourSansLimit = shape(l2);
+        } catch (e) {
+          probe.unJourSansLimit = `exception:${errMsg(e).slice(0, 80)}`;
+        }
+        const recordsTool = resolveTool(tools, COROS_TOOLS.sportRecords, /sport.*record|activit(y|ies).*list/i);
+        if (recordsTool) {
+          try {
+            const r = await fresh().callTool(recordsTool, {});
+            probe.listeActivites = r.isError
+              ? `erreur:${r.text.slice(0, 80)}`
+              : isCorosAnomaly(r.text) ? `anomalie` : `ok:${r.text.length} car.`;
+          } catch (e) {
+            probe.listeActivites = `exception:${errMsg(e).slice(0, 80)}`;
+          }
+        }
+        console.log(`provider-coros-sync: connexion ${conn.id} : sonde`, JSON.stringify(probe));
+        return adopted ?? listing;
+      }),
       quotaRemaining: async () => {
         const { data, error } = await admin.rpc("provider_fit_quota_remaining", {
           p_connection_id: conn.id,
@@ -624,7 +750,7 @@ async function syncConnection(
           p_limit: COROS_FIT_LIMITS.perDay,
         });
       },
-      ingest: (url: string) => ingestFit(admin, conn.athlete_id, url),
+      ingest: timed(timing.ingest, (url: string) => ingestFit(admin, conn.athlete_id, url)),
       hasTime: () => Date.now() - startedAt < DEADLINE_MS,
     };
     const opts = { span: WINDOW_SPAN, perCall: COROS_FIT_LIMITS.perCall, budget };
@@ -656,6 +782,7 @@ async function syncConnection(
       report.error = `Synchronisation interrompue : ${errMsg(e).slice(0, 200)}`;
     }
 
+    timing.windows = { recent: recent?.windows ?? 0, backfill: backfill?.windows ?? 0 };
     report.syncedThrough = nextSyncedThrough(plan, {
       backfillThrough: backfill?.processedThrough ?? null,
       recentThrough: recent?.processedThrough ?? null,
@@ -690,6 +817,9 @@ async function syncConnection(
       warnings.push(`données quotidiennes non lues : ${errMsg(e).slice(0, 200)}`);
     }
   }
+
+  timing.totalMs = Date.now() - startedAt;
+  console.log(`provider-coros-sync: connexion ${conn.id} : durées`, JSON.stringify(timing));
 
   await admin
     .from("provider_connections")

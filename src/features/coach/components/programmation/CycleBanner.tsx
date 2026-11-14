@@ -1,4 +1,5 @@
-import { cn } from "@/lib/utils";
+import { C, alpha } from "@/lib/theme";
+import { DISPLAY, KICK, MONO } from "@/features/shared/components/ordi/OrdiUi";
 import { Button } from "@/ui/Button";
 import { Tag } from "@/ui/Tag";
 
@@ -44,7 +45,16 @@ export function CycleBanner({
     : "Cycle en cours";
 
   return (
-    <section className="mb-agon-lg rounded-lg border border-agon-info/30 bg-agon-s1 px-agon-lg py-agon-md font-ui text-agon-tx">
+    // Planche CoachProgrammation : bandeau or, liseré 3 px, nom en Archivo.
+    <section
+      className="mb-agon-lg font-ui text-agon-tx"
+      style={{
+        position: "relative", overflow: "hidden", borderRadius: 14, padding: "20px 22px 20px 25px",
+        border: `1px solid ${alpha(C.ac, 0.45)}`,
+        background: `radial-gradient(40% 160% at 100% 50%, ${alpha(C.o, 0.12)}, transparent 60%), ${C.s1}`,
+      }}
+    >
+      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
       {loading ? (
         <div className="flex items-center gap-agon-md">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-agon-coach border-t-transparent" />
@@ -54,11 +64,11 @@ export function CycleBanner({
         <div className="flex flex-col gap-agon-md md:flex-row md:items-center md:gap-agon-xl">
           <div className="flex min-w-0 flex-1 items-center gap-agon-md">
             <div className="min-w-0 flex-1">
-              <div className={cn("mb-agon-xs text-agon-xs font-semibold uppercase tracking-wide", cycleEnded ? "text-agon-tx3" : "text-agon-info")}>
+              <div style={{ ...KICK, marginBottom: 6, color: cycleEnded ? C.tx3 : C.ac }}>
                 {statusLabel}
               </div>
-              <div className="truncate text-agon-lg font-extrabold">{activeCycle.name}</div>
-              <div className="mt-agon-2xs text-agon-xs text-agon-tx3">
+              <div className="truncate" style={{ ...DISPLAY, fontSize: 24, lineHeight: 1.15, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{activeCycle.name}</div>
+              <div style={{ ...MONO, fontSize: 12, color: C.tx2, marginTop: 6 }}>
                 {formatDate(activeCycle.start_date)} → {formatDate(activeCycle.end_date)}
                 {cycleEnded ? " · terminé" : activeCycle.start_date > todayISO ? " · à venir" : ` · S${currentWeek}/${totalWeeks}`}
               </div>

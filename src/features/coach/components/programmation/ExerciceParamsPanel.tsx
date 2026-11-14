@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { C } from "@/lib/theme"
+import { C, H } from "@/lib/theme";
 import { ChevronDown, Video } from "lucide-react"
 import type { Exercice, ExerciceParams, ClusterConfig, ParamValue } from "./types"
 import { defaultExerciceParams } from "./types"
@@ -11,12 +11,12 @@ import { useTrainingMethods } from "@/features/shared/hooks/useTrainingMethods"
 import { useExerciceRM } from "./hooks/useExerciceRM"
 import { loadFromPctRm } from "@shared/domain/performance"
 import type { TrainingMethod } from "@/types/trainingMethods"
-import { methodConfigToExerciceParams } from "@/features/coach/components/library/MethodPreview"
+import { methodConfigToExerciceParams } from "@/features/coach/components/library/methodConfigConvert";
 import { isWeekRecord, resolveExerciceParams, resolveVideoRequest, setVideoRequest } from "@/lib/sessionOccurrence"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
-const ORANGE = "#F5A623"
+const ORANGE = H.miel
 
 interface ExerciceParamsProps {
   exercice: Exercice
@@ -268,7 +268,7 @@ export function ExerciceParamsPanel({
 
   // rir can be null (Libre mode)
   const rirIsGlobal = params.rir.mode === 'global'
-  const rirGlobal: number | null = rirIsGlobal ? params.rir.value : 2
+  const rirGlobal: number | null = params.rir.mode === 'global' ? params.rir.value : 2
   const rirValues = params.rir.mode === 'par_serie'
     ? ensureLength(params.rir.values as (number | null)[], nb, 2)
     : Array(nb).fill(rirGlobal ?? 2)
@@ -742,7 +742,7 @@ export function ExerciceParamsPanel({
           <span style={{
             width: 16, height: 16, borderRadius: 3, flexShrink: 0,
             border: "2px solid " + (videoRequest ? VIOLET : C.brdL),
-            background: videoRequest ? VIOLET : "transparent", color: "#0E0C0A",
+            background: videoRequest ? VIOLET : "transparent", color: C.ink,
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900,
           }}>{videoRequest ? "✓" : ""}</span>
           <Video size={13} />

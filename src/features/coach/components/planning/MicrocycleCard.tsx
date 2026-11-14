@@ -16,7 +16,7 @@ export const MicrocycleCard = memo(function MicrocycleCard({ micro, athleteId }:
 
   return (
     <div
-      className="rounded-lg border border-[#7D7468]/20 bg-[#7D7468]/5 px-3 py-2.5"
+      className="rounded-lg border border-agon-tx3/20 bg-agon-tx3/5 px-3 py-2.5"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
@@ -36,25 +36,25 @@ export const MicrocycleCard = memo(function MicrocycleCard({ micro, athleteId }:
       {/* Mini-stats grid */}
       <div className="grid grid-cols-3 gap-1.5">
         {/* Séances */}
-        <div className="rounded-md p-1.5 bg-[#FFC933]/10 border border-[#FFC933]/20">
+        <div className="rounded-md p-1.5 bg-agon-accent/10 border border-agon-accent/20">
           <div className="text-[9px] text-white/40 mb-0.5">Séances</div>
-          <div className="text-sm font-bold text-[#FFC933]">
+          <div className="text-sm font-bold text-agon-accent">
             {stats ? `${stats.completed}/${stats.planned}` : "—"}
           </div>
         </div>
 
         {/* RPE */}
-        <div className="rounded-md p-1.5 bg-[#FF9500]/10 border border-[#FF9500]/20">
+        <div className="rounded-md p-1.5 bg-agon-alerte/10 border border-agon-alerte/20">
           <div className="text-[9px] text-white/40 mb-0.5">RPE moy.</div>
-          <div className="text-sm font-bold text-[#FF9500]">
+          <div className="text-sm font-bold text-agon-alerte">
             {stats?.avg_rpe != null ? stats.avg_rpe.toFixed(1) : "—"}
           </div>
         </div>
 
         {/* Wellness */}
-        <div className="rounded-md p-1.5 bg-[#22C55E]/10 border border-[#22C55E]/20">
+        <div className="rounded-md p-1.5 bg-agon-h-vert/10 border border-agon-h-vert/20">
           <div className="text-[9px] text-white/40 mb-0.5">Wellness</div>
-          <div className="text-sm font-bold text-[#22C55E]">
+          <div className="text-sm font-bold text-agon-h-vert">
             {stats?.avg_wellness != null ? `${stats.avg_wellness}/100` : "—"}
           </div>
         </div>

@@ -5,7 +5,8 @@
 import { useState } from "react";
 import { Pencil, Copy, Trash2, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { C } from "@/lib/theme";
-import { MethodPreview, methodConfigToText } from "./MethodPreview";
+import { MethodPreview } from "./MethodPreview";
+import { methodConfigToText } from "./methodConfigConvert";
 import type { TrainingMethod, MethodScope, FullWeekConfig, MethodConfig } from "@/types/trainingMethods";
 
 // ─── Labels / colors ──────────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ export function MethodCard({
               {weekCount > 0 && (
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: "rgba(123,111,255,0.15)", color: "#FFC933",
+                  background: "rgba(123,111,255,0.15)", color: C.ac,
                 }}>
                   {weekCount} sem.
                 </span>
@@ -120,7 +121,7 @@ export function MethodCard({
           <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
             {weeklyConfigs.map((wc) => (
               <div key={wc.week} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                <span style={{ fontSize: 9, fontWeight: 700, color: "#FFC933", flexShrink: 0, minWidth: 20 }}>S{wc.week}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: C.ac, flexShrink: 0, minWidth: 20 }}>S{wc.week}</span>
                 <span style={{ fontSize: 10, color: C.tx3, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {wc.config ? methodConfigToText(wc.config as MethodConfig) : "—"}
                 </span>
@@ -219,7 +220,7 @@ export function MethodCard({
                   style={{
                     flex: 1, padding: "6px 0", borderRadius: 4,
                     border: "none", background: C.r,
-                    color: "#fff", fontSize: 11, fontWeight: 700,
+                    color: C.tx, fontSize: 11, fontWeight: 700,
                     cursor: "pointer", fontFamily: "inherit",
                   }}
                 >

@@ -66,11 +66,30 @@ export type Database = {
         }
         Relationships: []
       }
+      account_retention_notices: {
+        Row: {
+          notified_at: string
+          purge_after: string
+          user_id: string
+        }
+        Insert: {
+          notified_at?: string
+          purge_after: string
+          user_id: string
+        }
+        Update: {
+          notified_at?: string
+          purge_after?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       activity_laps: {
         Row: {
           activity_id: string
           ai_allowed: boolean
           athlete_id: string
+          comment: string | null
           created_at: string
           distance_override_m: number | null
           end_s: number
@@ -92,6 +111,7 @@ export type Database = {
           activity_id: string
           ai_allowed?: boolean
           athlete_id: string
+          comment?: string | null
           created_at?: string
           distance_override_m?: number | null
           end_s: number
@@ -113,6 +133,7 @@ export type Database = {
           activity_id?: string
           ai_allowed?: boolean
           athlete_id?: string
+          comment?: string | null
           created_at?: string
           distance_override_m?: number | null
           end_s?: number
@@ -690,7 +711,10 @@ export type Database = {
           date_end: string
           date_start: string
           id: string
+          kind: string
+          location: string | null
           title: string
+          unavailable: boolean
         }
         Insert: {
           athlete_id: string
@@ -698,7 +722,10 @@ export type Database = {
           date_end: string
           date_start: string
           id?: string
+          kind?: string
+          location?: string | null
           title: string
+          unavailable?: boolean
         }
         Update: {
           athlete_id?: string
@@ -706,7 +733,10 @@ export type Database = {
           date_end?: string
           date_start?: string
           id?: string
+          kind?: string
+          location?: string | null
           title?: string
+          unavailable?: boolean
         }
         Relationships: [
           {
@@ -848,7 +878,9 @@ export type Database = {
       athlete_test_results: {
         Row: {
           athlete_id: string
+          comment: string | null
           created_at: string | null
+          feeling: number | null
           id: string
           notes: string | null
           performed_at: string
@@ -857,7 +889,9 @@ export type Database = {
         }
         Insert: {
           athlete_id: string
+          comment?: string | null
           created_at?: string | null
+          feeling?: number | null
           id?: string
           notes?: string | null
           performed_at?: string
@@ -866,7 +900,9 @@ export type Database = {
         }
         Update: {
           athlete_id?: string
+          comment?: string | null
           created_at?: string | null
+          feeling?: number | null
           id?: string
           notes?: string | null
           performed_at?: string
@@ -1219,6 +1255,7 @@ export type Database = {
           coach_id: string
           created_at: string
           date: string
+          date_end: string | null
           id: string
           location: string | null
           macrocycle_id: string | null
@@ -1235,6 +1272,7 @@ export type Database = {
           coach_id: string
           created_at?: string
           date: string
+          date_end?: string | null
           id?: string
           location?: string | null
           macrocycle_id?: string | null
@@ -1251,6 +1289,7 @@ export type Database = {
           coach_id?: string
           created_at?: string
           date?: string
+          date_end?: string | null
           id?: string
           location?: string | null
           macrocycle_id?: string | null
@@ -1967,6 +2006,8 @@ export type Database = {
           difficulty: string | null
           equipment: string | null
           ex_type: string | null
+          garmin_category: string | null
+          garmin_exercise: string | null
           gif_url: string | null
           id: string
           image_url: string | null
@@ -1993,6 +2034,8 @@ export type Database = {
           difficulty?: string | null
           equipment?: string | null
           ex_type?: string | null
+          garmin_category?: string | null
+          garmin_exercise?: string | null
           gif_url?: string | null
           id?: string
           image_url?: string | null
@@ -2019,6 +2062,8 @@ export type Database = {
           difficulty?: string | null
           equipment?: string | null
           ex_type?: string | null
+          garmin_category?: string | null
+          garmin_exercise?: string | null
           gif_url?: string | null
           id?: string
           image_url?: string | null
@@ -2180,6 +2225,7 @@ export type Database = {
           id: string
           kind: string
           origin: string
+          refs_day: string | null
           status: string
           test_result_id: string | null
           valid_from: string
@@ -2194,6 +2240,7 @@ export type Database = {
           id?: string
           kind: string
           origin?: string
+          refs_day?: string | null
           status?: string
           test_result_id?: string | null
           valid_from?: string
@@ -2208,6 +2255,7 @@ export type Database = {
           id?: string
           kind?: string
           origin?: string
+          refs_day?: string | null
           status?: string
           test_result_id?: string | null
           valid_from?: string
@@ -2898,41 +2946,6 @@ export type Database = {
           },
         ]
       }
-      invitations: {
-        Row: {
-          coach_id: string
-          created_at: string | null
-          email: string | null
-          id: string
-          token: string
-          used_at: string | null
-        }
-        Insert: {
-          coach_id: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          token?: string
-          used_at?: string | null
-        }
-        Update: {
-          coach_id?: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          token?: string
-          used_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invitations_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       macrocycles: {
         Row: {
           athlete_id: string
@@ -3604,6 +3617,7 @@ export type Database = {
           is_hyrox_athlete: boolean
           is_pending: boolean
           last_name: string | null
+          onboarded_at: string | null
           profession: string | null
           role: string
           weight_kg: number | null
@@ -3633,6 +3647,7 @@ export type Database = {
           is_hyrox_athlete?: boolean
           is_pending?: boolean
           last_name?: string | null
+          onboarded_at?: string | null
           profession?: string | null
           role: string
           weight_kg?: number | null
@@ -3662,6 +3677,7 @@ export type Database = {
           is_hyrox_athlete?: boolean
           is_pending?: boolean
           last_name?: string | null
+          onboarded_at?: string | null
           profession?: string | null
           role?: string
           weight_kg?: number | null
@@ -3785,6 +3801,7 @@ export type Database = {
           last_error: string | null
           last_sync_at: string | null
           provider: Database["public"]["Enums"]["data_source"]
+          push_workouts: boolean
           status: Database["public"]["Enums"]["provider_status"]
           sync_lock_token: string | null
           sync_locked_until: string | null
@@ -3801,6 +3818,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           provider: Database["public"]["Enums"]["data_source"]
+          push_workouts?: boolean
           status?: Database["public"]["Enums"]["provider_status"]
           sync_lock_token?: string | null
           sync_locked_until?: string | null
@@ -3817,6 +3835,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           provider?: Database["public"]["Enums"]["data_source"]
+          push_workouts?: boolean
           status?: Database["public"]["Enums"]["provider_status"]
           sync_lock_token?: string | null
           sync_locked_until?: string | null
@@ -4363,68 +4382,62 @@ export type Database = {
         }
         Relationships: []
       }
-      retours: {
+      provider_workout_pushes: {
         Row: {
           athlete_id: string
-          content: string
-          created_at: string
+          attempts: number
+          external_schedule_id: string | null
+          external_workout_id: string | null
           id: string
+          last_error: string | null
+          payload_hash: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          scheduled_date: string
+          sent_at: string | null
+          source_id: string
+          source_kind: string
+          status: string
+          updated_at: string
+          warnings: string[]
         }
         Insert: {
           athlete_id: string
-          content: string
-          created_at?: string
+          attempts?: number
+          external_schedule_id?: string | null
+          external_workout_id?: string | null
           id?: string
+          last_error?: string | null
+          payload_hash?: string | null
+          provider: Database["public"]["Enums"]["data_source"]
+          scheduled_date: string
+          sent_at?: string | null
+          source_id: string
+          source_kind: string
+          status: string
+          updated_at?: string
+          warnings?: string[]
         }
         Update: {
           athlete_id?: string
-          content?: string
-          created_at?: string
+          attempts?: number
+          external_schedule_id?: string | null
+          external_workout_id?: string | null
           id?: string
+          last_error?: string | null
+          payload_hash?: string | null
+          provider?: Database["public"]["Enums"]["data_source"]
+          scheduled_date?: string
+          sent_at?: string | null
+          source_id?: string
+          source_kind?: string
+          status?: string
+          updated_at?: string
+          warnings?: string[]
         }
         Relationships: [
           {
-            foreignKeyName: "retours_athlete_id_fkey"
+            foreignKeyName: "provider_workout_pushes_athlete_id_fkey"
             columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      retours_votes: {
-        Row: {
-          created_at: string
-          id: string
-          retour_id: string
-          user_id: string
-          vote: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          retour_id: string
-          user_id: string
-          vote: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          retour_id?: string
-          user_id?: string
-          vote?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "retours_votes_retour_id_fkey"
-            columns: ["retour_id"]
-            isOneToOne: false
-            referencedRelation: "retours"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "retours_votes_user_id_fkey"
-            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5200,6 +5213,53 @@ export type Database = {
           },
         ]
       }
+      weekly_reviews: {
+        Row: {
+          answers: Json
+          athlete_id: string
+          auto: Json | null
+          created_at: string
+          id: string
+          light: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          answers?: Json
+          athlete_id: string
+          auto?: Json | null
+          created_at?: string
+          id?: string
+          light?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          answers?: Json
+          athlete_id?: string
+          auto?: Json | null
+          created_at?: string
+          id?: string
+          light?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reviews_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wellness_entries: {
         Row: {
           archived: boolean
@@ -5208,12 +5268,18 @@ export type Database = {
           created_at: string
           day: string
           doms: number | null
+          doms_levels: Json
           doms_points: Json
+          doms_workout_id: string | null
+          doms_workout_name: string | null
           doms_zones: string[]
           energie: number | null
+          envie: number | null
           fatigue: number | null
           injury_note: string | null
+          pain: number | null
           score: number | null
+          sick: boolean | null
           sleep_hours: number | null
           sleep_interrupt_note: string | null
           sleep_interrupted: boolean | null
@@ -5230,12 +5296,18 @@ export type Database = {
           created_at?: string
           day: string
           doms?: number | null
+          doms_levels?: Json
           doms_points?: Json
+          doms_workout_id?: string | null
+          doms_workout_name?: string | null
           doms_zones?: string[]
           energie?: number | null
+          envie?: number | null
           fatigue?: number | null
           injury_note?: string | null
+          pain?: number | null
           score?: number | null
+          sick?: boolean | null
           sleep_hours?: number | null
           sleep_interrupt_note?: string | null
           sleep_interrupted?: boolean | null
@@ -5252,12 +5324,18 @@ export type Database = {
           created_at?: string
           day?: string
           doms?: number | null
+          doms_levels?: Json
           doms_points?: Json
+          doms_workout_id?: string | null
+          doms_workout_name?: string | null
           doms_zones?: string[]
           energie?: number | null
+          envie?: number | null
           fatigue?: number | null
           injury_note?: string | null
+          pain?: number | null
           score?: number | null
+          sick?: boolean | null
           sleep_hours?: number | null
           sleep_interrupt_note?: string | null
           sleep_interrupted?: boolean | null
@@ -5736,6 +5814,20 @@ export type Database = {
         }
       }
       accept_staff_invitation: { Args: { p_token: string }; Returns: string }
+      account_retention_candidates: {
+        Args: { p_now?: string }
+        Returns: {
+          action: string
+          user_id: string
+        }[]
+      }
+      account_retention_preview: {
+        Args: { p_now?: string }
+        Returns: {
+          action: string
+          comptes: number
+        }[]
+      }
       activity_detail_upsert: {
         Args: { p_activity: string; p_detail: Json }
         Returns: Json
@@ -5744,6 +5836,15 @@ export type Database = {
         Args: {
           p_athlete: string
           p_source: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: boolean
+      }
+      activity_from_garmin_device: {
+        Args: {
+          p_device: string
+          p_raw: Json
+          p_source: Database["public"]["Enums"]["data_source"]
+          p_sources: string[]
         }
         Returns: boolean
       }
@@ -5766,6 +5867,7 @@ export type Database = {
         Args: { p_athlete: string }
         Returns: Database["public"]["Enums"]["data_source"][]
       }
+      apply_hr_zone_model_to_past: { Args: { p_id: string }; Returns: number }
       auto_link_day: {
         Args: { p_athlete: string; p_day: string }
         Returns: number
@@ -5776,6 +5878,7 @@ export type Database = {
       close_unfinished_workouts: { Args: never; Returns: number }
       coach_api_hit: { Args: { p_key: string }; Returns: number }
       coach_code_exists: { Args: { p_code: string }; Returns: boolean }
+      coach_preview_by_code: { Args: { p_code: string }; Returns: string }
       coach_profile_visible: { Args: { p_id: string }; Returns: boolean }
       col_is_null:
         | {
@@ -5982,8 +6085,10 @@ export type Database = {
         Returns: {
           athlete_name: string
           coach_name: string
+          expires_at: string
           invited_by_role: string
           inviter_name: string
+          permissions: Json
           profession: string
           status: string
         }[]
@@ -6007,12 +6112,18 @@ export type Database = {
           created_at: string
           day: string
           doms: number | null
+          doms_levels: Json
           doms_points: Json
+          doms_workout_id: string | null
+          doms_workout_name: string | null
           doms_zones: string[]
           energie: number | null
+          envie: number | null
           fatigue: number | null
           injury_note: string | null
+          pain: number | null
           score: number | null
+          sick: boolean | null
           sleep_hours: number | null
           sleep_interrupt_note: string | null
           sleep_interrupted: boolean | null
@@ -6052,7 +6163,6 @@ export type Database = {
         }[]
       }
       in_todo: { Args: never; Returns: boolean }
-      invitation_is_valid: { Args: { p_token: string }; Returns: boolean }
       is_athlete_coach: {
         Args: { athlete_uuid: string; p_coach: string }
         Returns: boolean
@@ -6084,6 +6194,7 @@ export type Database = {
       lives_ok: { Args: { "": string }; Returns: string }
       mark_doc_seen: { Args: { doc_uuid: string }; Returns: undefined }
       mark_missed_workouts: { Args: never; Returns: number }
+      mark_onboarded: { Args: never; Returns: string }
       merge_provider_activities: {
         Args: {
           p_activities: Json
@@ -6320,7 +6431,6 @@ export type Database = {
         Args: { p_reaction: string; p_retour_id: string }
         Returns: undefined
       }
-      redeem_invitation: { Args: { p_token: string }; Returns: string }
       refresh_activity_zone_summary: {
         Args: { p_activity: string }
         Returns: undefined
@@ -6330,6 +6440,7 @@ export type Database = {
         Returns: number
       }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
+      remove_provider_activity: { Args: { p_activity: string }; Returns: Json }
       reopen_energy_assignment: {
         Args: { p_assignment: string }
         Returns: {
@@ -6436,6 +6547,33 @@ export type Database = {
         }
         Returns: string
       }
+      save_weekly_review: {
+        Args: {
+          p_answers: Json
+          p_auto?: Json
+          p_light?: string
+          p_submit?: boolean
+          p_week: string
+        }
+        Returns: {
+          answers: Json
+          athlete_id: string
+          auto: Json | null
+          created_at: string
+          id: string
+          light: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          week_start: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "weekly_reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       schedule_doc: {
         Args: {
           p_athlete: string
@@ -6457,6 +6595,7 @@ export type Database = {
         Args: { athlete_id: string; hidden: boolean }
         Returns: undefined
       }
+      set_coach_athlete: { Args: { p_enabled: boolean }; Returns: string }
       set_coach_override: {
         Args: { p_log: string; p_override: Json }
         Returns: {
@@ -6544,6 +6683,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_my_birth_date: { Args: { p_birth: string }; Returns: string }
       set_own_coach: { Args: { p_coach: string }; Returns: string }
       set_performance_reference: {
         Args: {
@@ -6555,6 +6695,13 @@ export type Database = {
           p_value: number
         }
         Returns: string
+      }
+      set_workout_push: {
+        Args: {
+          p_enabled: boolean
+          p_provider: Database["public"]["Enums"]["data_source"]
+        }
+        Returns: boolean
       }
       set_workout_rpe: {
         Args: { p_log: string; p_rpe: number }
@@ -6678,9 +6825,15 @@ export type Database = {
         Args: { p_certified: boolean; p_target_id: string }
         Returns: undefined
       }
+      trigger_account_retention: { Args: never; Returns: undefined }
       trigger_coros_sync: { Args: never; Returns: undefined }
       trigger_garmin_maintenance: { Args: never; Returns: undefined }
+      trigger_garmin_workouts: { Args: never; Returns: undefined }
       unlink_athlete: { Args: { athlete_id: string }; Returns: undefined }
+      weekly_review_open: {
+        Args: { p_today: string; p_week: string }
+        Returns: boolean
+      }
       weight_record_milestone: {
         Args: { p_athlete: string; p_day: string; p_kg: number }
         Returns: Json

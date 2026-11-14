@@ -36,6 +36,8 @@ export interface DetailLap {
   origin: LapOrigin;
   status: LapStatus;
   needsReview: boolean;
+  /** Mot de l'athlète ou du coach sur ce tour / cette station (« Poignées glissantes… »). */
+  comment?: string | null;
 }
 
 export interface DetailLapWithMetrics extends DetailLap {
@@ -50,6 +52,15 @@ export interface ActivitySummaryInput {
   startedAt: string;
   localDate: string;
   deviceName: string | null;
+  /** Résumé du fournisseur : affiché quand la série n'est pas (encore) là. */
+  distanceM?: number | null;
+  durationS?: number | null;
+  avgHr?: number | null;
+  maxHr?: number | null;
+  /** Arrivée dans Agon (« Synchronisée à 19 h 26 »). */
+  importedAt?: string | null;
+  /** Nom donné à la sortie (Strava, fichier), à défaut de séance prévue. */
+  title?: string | null;
 }
 
 export interface PlanLinkInfo {
@@ -59,6 +70,9 @@ export interface PlanLinkInfo {
   status: "auto" | "confirmed";
   /** Nom de la séance prévue (« HYROX simulation »), si connu. */
   plannedName: string | null;
+  /** Retour de l'athlète sur la séance prévue (RPE 1-10 et commentaire), si saisi. */
+  feedbackRpe?: number | null;
+  feedbackComment?: string | null;
 }
 
 export interface ActivityDetailInput {
@@ -97,6 +111,8 @@ export interface ActivityDetail {
   sets: StrengthSet[];
   link: PlanLinkInfo | null;
   plannedBlocks: readonly ExpectedBlock[] | null;
+  /** Tours d'origine de la montre (« Revenir aux tours de la montre »). */
+  watchLaps: WatchLap[];
 }
 
 const PROVIDER_LABEL: Record<string, string> = { garmin: "Garmin", coros: "COROS", garmin_export: "Garmin" };
@@ -104,7 +120,11 @@ const PROVIDER_LABEL: Record<string, string> = { garmin: "Garmin", coros: "COROS
 /** Attribution affichée avec chaque activité (règle Garmin : « Garmin [appareil] »). */
 export function attributionOf(source: string, deviceName: string | null): string {
   const brand = PROVIDER_LABEL[source];
-  if (!brand) return source === "file" || source === "manual_file" ? "Import fichier" : source;
+  if (!brand) {
+    if (source !== "file_import" && source !== "file" && source !== "manual_file") return source;
+    const d = deviceName?.trim();
+    return d && d.toLowerCase() !== "unknown" ? `Import fichier · ${d}` : "Import fichier";
+  }
   const dev = deviceName?.trim();
   if (!dev || dev.toLowerCase() === "unknown") return brand;
   return dev.toLowerCase().startsWith(brand.toLowerCase()) ? dev : `${brand} ${dev}`;
@@ -179,7 +199,25 @@ export function buildActivityDetail(input: ActivityDetailInput): ActivityDetail 
     sets: [...input.sets],
     link: input.link,
     plannedBlocks: input.plannedBlocks,
+    watchLaps: [...input.watchLaps],
   };
+}
+
+/**
+ * Métriques recalculées en direct pendant le mode « Modifier les tours » :
+ * mêmes règles qu'à la lecture (valeurs de la montre si le tour est le sien).
+ */
+export function recomputeLaps(
+  detail: Pick<ActivityDetail, "stream" | "activity" | "bounds" | "watchLaps" | "plannedBlocks">,
+  laps: readonly DetailLap[],
+): DetailLapWithMetrics[] {
+  if (!detail.stream) return [];
+  return lapsWithMetrics(
+    detail.stream,
+    laps,
+    { sport: detail.activity.sport, bounds: detail.bounds?.bounds ?? null, watchLaps: detail.watchLaps, smoothedAlt: null },
+    detail.plannedBlocks,
+  );
 }
 
 /** Découpage proposé par Agon d'après la série et la séance prévue (à enregistrer avec `resetLapsToProposal`). */

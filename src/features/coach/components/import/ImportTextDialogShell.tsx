@@ -4,13 +4,9 @@
  */
 import { useState, type ReactNode } from "react";
 import { C } from "@/lib/theme";
+import { mono, ghostBtn } from "./importTextStyles";
 
-export const mono = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
-export const ghostBtn: React.CSSProperties = {
-  padding: "7px 12px", borderRadius: 4, border: `1px solid ${C.brdL}`,
-  background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-};
 
 export default function ImportTextDialogShell({
   title, text, onTextChange, placeholder, example, cheatsheet, children,
@@ -99,7 +95,7 @@ export default function ImportTextDialogShell({
             onClick={onImport}
             style={{
               padding: "8px 16px", borderRadius: 4, border: "none",
-              background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700,
+              background: C.acV, color: C.ink, fontSize: 12, fontWeight: 700,
               cursor: canImport && !importing ? "pointer" : "not-allowed",
               opacity: canImport && !importing ? 1 : 0.4, fontFamily: "inherit",
             }}

@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, ChevronDown, ChevronUp } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import LogView from "@/components/athlete/LogView";
 import {
@@ -15,11 +15,13 @@ import {
 import { RpeSheet } from "@/features/athlete/components/RpeSheet";
 import type { EnergySessionAssignmentRow, EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
 import { localISO } from "@/lib/date";
-import { RunDistanceInput, initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/RunDistanceInput";
+import type { ExosMap } from "@/features/shared/types/athlete";
+import { RunDistanceInput } from "@/features/shared/components/RunDistanceInput";
+import { initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/runDistance";
 
 const KIND_COLOR: Record<string, string> = {
-  vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-  footing: "#10B981", fartlek: "#EF4444", autre: "#6B7280", custom: "#6B7280",
+  vo2: C.ac, tempo: C.b, seuil: H.ambre,
+  footing: H.emeraude, fartlek: H.rougeVif, autre: H.gris, custom: H.gris,
 };
 const KIND_LABEL: Record<string, string> = {
   vo2: "VO₂max", tempo: "Tempo", seuil: "Seuil",
@@ -59,9 +61,9 @@ function assignmentStatus(a: EnergySessionAssignmentRow, today: string): "comple
 }
 
 const STATUS_COLOR = {
-  completed: "#66F03C",
-  partial:   "#33B5FF",
-  missed:    "#FF5A33",
+  completed: C.g,
+  partial:   C.b,
+  missed:    C.r,
   planned:   "",
 };
 const STATUS_LABEL = {
@@ -148,7 +150,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
 
   return (
     <div style={{
-      borderRadius: 6, border: "1px solid " + (status === "missed" ? C.r + "40" : status === "completed" ? C.g + "40" : status === "partial" ? "#33B5FF40" : C.brdL),
+      borderRadius: 6, border: "1px solid " + (status === "missed" ? C.r + "40" : status === "completed" ? C.g + "40" : status === "partial" ? `${C.b}40` : C.brdL),
       background: C.s1, marginBottom: 10, overflow: "hidden",
     }}>
       {/* Header row */}
@@ -181,7 +183,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               <span style={{ fontSize: 10, color: C.tx3 }}>{Math.round(es.total_duration_s / 60)} min</span>
             )}
             {a.rpe_score != null && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#FFC933" }}>RPE {a.rpe_score}/10</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.ac }}>RPE {a.rpe_score}/10</span>
             )}
           </div>
         </div>
@@ -324,7 +326,7 @@ function EnergySessionCard({ a, athleteId, today, onRpeDone }: EnergySessionCard
               width: "100%", marginTop: 10, padding: "11px 0", borderRadius: 4,
               border: "none",
               background: C.g,
-              color: "#fff",
+              color: C.tx,
               fontSize: 13, fontWeight: 700, cursor: complete.isPending ? "default" : "pointer",
               fontFamily: "inherit",
               opacity: complete.isPending ? 0.7 : 1,
@@ -443,7 +445,7 @@ function RpeGridInline({ onSubmit, onSkip, isPending }: { onSubmit: (v: number) 
         style={{
           width: "100%", padding: "15px 0", borderRadius: 6, border: "none",
           background: selected != null ? C.ac : C.s2,
-          color: selected != null ? "#fff" : C.tx3,
+          color: selected != null ? C.tx : C.tx3,
           fontSize: 14, fontWeight: 700, cursor: selected != null ? "pointer" : "default",
           fontFamily: "inherit",
         }}
@@ -508,7 +510,7 @@ export default function LogSeancePage() {
           onTimerStart={timerStart} onTimerStop={timerStop}
           viewOnly={viewOnly} sessionLogs={sessionLogs} setSessionLogs={setSessionLogs}
           freeSessions={freeSessions} setFreeSessions={setFreeSessions}
-          onAddExercise={(sessId: string, ex: unknown) => setExos(prev => ({ ...prev, [sessId]: [...(prev[sessId] || []), ex] }))}
+          onAddExercise={(sessId: string, ex: unknown) => setExos(prev => ({ ...prev, [sessId]: [...(prev[sessId] || []), ex as ExosMap[string][number]] }))}
           weekSchedule={weekSchedule}
           onSessionCompleted={(sid: string, wk: number) => setRpePending({ sessionId: sid, scheduledDate: computeScheduledDate(sid, wk) })}
         />

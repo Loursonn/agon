@@ -6,7 +6,7 @@
  *   compact    mode compact (hauteur réduite, sans zone bar)
  */
 import { useRef, useState, useLayoutEffect } from "react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import {
   expandIntervals,
   computeTotals,
@@ -21,6 +21,9 @@ import HatchPattern from "./HatchPattern";
 import { formatTarget, formatS, formatSLong, formatExerciseStep } from "@/lib/energy/formatTarget";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 import { formatTargetPaceEquivalents } from "@/lib/energy/paceEquivalents";
+import { useZoneModels } from "@/features/shared/hooks/useZoneModels";
+import { activeModelAt } from "@shared/domain/hrZones";
+import { localIsoDay } from "@shared/domain/dates";
 
 // ── Zone colors (anchors) ─────────────────────────────────────────────────────
 const ZONE_COLORS = {
@@ -29,7 +32,7 @@ const ZONE_COLORS = {
   z3: intensityToColor(60),
   z4: intensityToColor(82),
   z5: intensityToColor(95),
-  unc: "#3A383C",
+  unc: H.grisArdoise,
 } as const;
 
 // ── Tick computation ──────────────────────────────────────────────────────────
@@ -86,6 +89,14 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const { data: refs } = useAthleteReferences(athleteId);
+  const { data: zoneModels } = useZoneModels(athleteId);
+  const zoneModel = zoneModels ? activeModelAt(zoneModels, localIsoDay()) : null;
+  const sv = zoneModel?.kind === "three" && zoneModel.bounds.length >= 2 ? zoneModel.bounds : null;
+  const estimateBasis = [
+    refs?.VMA != null ? `VMA ${String(refs.VMA).replace(".", ",")} km/h` : null,
+    sv ? `SV1 ${sv[0]}` : null,
+    sv ? `SV2 ${sv[1]}` : null,
+  ].filter((x): x is string => x !== null);
   const calcOptions = refs && Object.keys(refs).length > 0 ? { athleteReferences: refs } : undefined;
 
   // Measure container width (ResizeObserver)
@@ -167,7 +178,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
           const w      = Math.max(1, x2 - x);
           const isExo  = fi.interval.type === "exercise";
           const barH   = isExo ? Math.max(2, 0.55 * BAR_AREA) : Math.max(2, (displayPct / 100) * BAR_AREA);
-          const fill   = isExo ? "#FFC933" : intensityToColor(displayPct);
+          const fill   = isExo ? C.ac : intensityToColor(displayPct);
           const opacity = isExo ? 0.8 : isFallback ? 0.55 : 0.85;
           const barY   = BAR_AREA - barH;
 
@@ -372,6 +383,11 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
                 {(seg.secs / totalDur) > 0.05 ? `${seg.label} · ${formatS(seg.secs)}` : ""}
               </div>
             ))}
+          </div>
+          {/* Légende : lecture du profil + références utilisées */}
+          <div style={{ marginTop: 8, fontSize: 10.5, color: C.tx3, lineHeight: 1.5 }}>
+            Hauteur = intensité · couleur = zone
+            {estimateBasis.length > 0 && <><br />Estimé avec {estimateBasis.join(" · ")}</>}
           </div>
         </div>
       )}

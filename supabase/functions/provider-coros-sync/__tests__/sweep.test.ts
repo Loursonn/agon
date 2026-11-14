@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { FitListing, FitWindow } from "../../_shared/coros";
-import { type IngestOutcome, type SweepDeps, sweepFitWindows } from "../sweep";
+import { type IngestOutcome, parseEnvNumber, type SweepDeps, sweepFitWindows } from "../sweep";
 
 /** Un fichier par jour listé dans `files` (jour → nombre de fichiers). */
 function harness(opts: {
@@ -200,5 +200,41 @@ describe("sweepFitWindows — temps", () => {
     const r = await sweepFitWindows(h.deps, "2026-01-01", "2026-12-31", { ...OPTS, span: 30 });
     expect(r.stop).toBe("deadline");
     expect(r.processedThrough).toBe("2026-01-30");
+  });
+
+  it("temps écoulé pendant les resserrements : arrêt « deadline », pas d'appel de trop", async () => {
+    // 30 jours chargés : la fenêtre doit être resserrée plusieurs fois.
+    const files: Record<string, number> = {};
+    for (let d = 1; d <= 30; d++) files[`2026-01-${String(d).padStart(2, "0")}`] = 1;
+    const h = harness({ files, time: 2 });
+    const r = await sweepFitWindows(h.deps, "2026-01-01", "2026-12-31", OPTS);
+    expect(r.stop).toBe("deadline");
+    expect(r.processedThrough).toBeNull();
+    expect(r.error).toBeUndefined();
+    expect(h.listed).toHaveLength(2);
+    expect(r.lists).toBe(2);
+    expect(h.ingested).toHaveLength(0);
+  });
+
+  it("compte les fenêtres terminées et les appels de liste", async () => {
+    const h = harness({ files: { "2026-01-05": 1 } });
+    const r = await sweepFitWindows(h.deps, "2026-01-01", "2026-03-31", OPTS);
+    expect(r).toMatchObject({ windows: 3, lists: 3, processedThrough: "2026-03-31" });
+  });
+});
+
+describe("parseEnvNumber", () => {
+  it("variable absente ou vide : valeur par défaut, jamais 0", () => {
+    expect(parseEnvNumber(undefined, 110_000)).toBe(110_000);
+    expect(parseEnvNumber(null, 365)).toBe(365);
+    expect(parseEnvNumber("", 365)).toBe(365);
+    expect(parseEnvNumber("  ", 2)).toBe(2);
+  });
+
+  it("valeur lisible : prise ; négative ou illisible : défaut", () => {
+    expect(parseEnvNumber("90", 365)).toBe(90);
+    expect(parseEnvNumber("0", 2)).toBe(0);
+    expect(parseEnvNumber("-5", 2)).toBe(2);
+    expect(parseEnvNumber("abc", 2)).toBe(2);
   });
 });

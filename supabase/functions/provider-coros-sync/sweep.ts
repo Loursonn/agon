@@ -66,6 +66,10 @@ export interface SweepResult {
   warnings: string[];
   /** Fichiers réservés sur le quota. */
   used: number;
+  /** Fenêtres terminées (listées et téléchargées en entier). */
+  windows: number;
+  /** Appels de liste, resserrements compris. */
+  lists: number;
 }
 
 export async function sweepFitWindows(
@@ -82,6 +86,8 @@ export async function sweepFitWindows(
     rejected: [],
     warnings: [],
     used: 0,
+    windows: 0,
+    lists: 0,
   };
   const stop = (s: SweepStop, error?: string): SweepResult => {
     out.stop = s;
@@ -108,10 +114,13 @@ export async function sweepFitWindows(
       fichiers : on le fait même budget épuisé, ce qui laisse le curseur
       traverser les périodes sans activité.
     */
-    for (;;) {
+    for (let attempt = 0; ; attempt++) {
       range = planFitWindow(cursor, to, span);
       if (!range) return stop("done");
+      // Chaque resserrement est un appel de plus : il doit tenir dans le temps.
+      if (attempt > 0 && !deps.hasTime()) return stop("deadline");
       let listing: FitListing;
+      out.lists++;
       try {
         listing = await deps.list(range);
       } catch (e) {
@@ -169,9 +178,21 @@ export async function sweepFitWindows(
     }
 
     out.processedThrough = range.to;
+    out.windows++;
     if (deps.onWindowDone) await deps.onWindowDone(range);
     cursor = shiftDay(range.to, 1);
   }
 
   return stop("done");
+}
+
+/**
+ * Réglage numérique lu dans l'environnement. Absent ou vide → valeur par
+ * défaut : `Number("")` vaut 0, et un délai de 0 ms arrêtait chaque
+ * synchronisation avant le premier appel (P7, 13/11/2026).
+ */
+export function parseEnvNumber(raw: string | undefined | null, fallback: number): number {
+  if (raw == null || raw.trim() === "") return fallback;
+  const v = Number(raw);
+  return Number.isFinite(v) && v >= 0 ? v : fallback;
 }

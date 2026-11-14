@@ -17,6 +17,7 @@ import { useStaffAthleteProfile } from "../hooks/useStaffAthleteData";
 import { useRevokeStaffLink } from "../hooks/useAthleteStaff";
 import {
   DOMAIN_LABEL,
+  STAFF_DOMAINS,
   canRead,
   canWrite,
   professionLabel,
@@ -27,6 +28,7 @@ import { StaffFichesTab } from "../components/tabs/StaffFichesTab";
 import { StaffLogsTab } from "../components/tabs/StaffLogsTab";
 import { StaffPlanningTab } from "../components/tabs/StaffPlanningTab";
 import { StaffWellnessTab } from "../components/tabs/StaffWellnessTab";
+import { StaffReviewsSection } from "../components/tabs/StaffReviewsSection";
 import { StaffCommentsTab } from "../components/tabs/StaffCommentsTab";
 import { StaffProgramTab } from "../components/program/StaffProgramTab";
 
@@ -35,7 +37,7 @@ const TABS: { key: StaffDomain; label: string }[] = [
   { key: "planification", label: "Planification" },
   { key: "logs", label: "Séances réalisées" },
   { key: "wellness", label: "Bien-être" },
-  { key: "medical", label: "Médical" },
+  { key: "medical", label: "Blessures" },
   { key: "nutrition", label: "Nutrition" },
   { key: "tests", label: "Tests" },
   { key: "fiches", label: "Fiches" },
@@ -48,7 +50,7 @@ function AccessTab({ link }: { link: MyStaffAthlete }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 620 }}>
       <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.6 }}>
-        Droits réglés par {link.coachName ?? "le coach principal"}. Ce que tu crées (fiches, saisies médicales) va dans
+        Droits réglés par {link.coachName ?? "le coach principal"}. Ce que tu crées (fiches, blessures saisies) va dans
         sa banque, à ton nom.
         {link.canEditCoachContent
           ? " Tu peux aussi modifier ses contenus dans les domaines en écriture."
@@ -63,6 +65,46 @@ function AccessTab({ link }: { link: MyStaffAthlete }) {
         Me retirer du staff de {link.athleteFirstName ?? link.athleteName}
       </button>
     </div>
+  );
+}
+
+/** Ordinateur (planche CoachOrdiBStaffFiche) : « Tes accès » toujours visibles à droite. */
+function AccessAside({ link }: { link: MyStaffAthlete }) {
+  const navigate = useNavigate();
+  const revoke = useRevokeStaffLink();
+  const first = link.athleteFirstName ?? link.athleteName;
+  return (
+    <aside style={{ position: "sticky", top: 156, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, padding: "14px 16px" }}>
+        <div style={{ fontFamily: "var(--agon-font-data)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, marginBottom: 8 }}>Tes accès sur {first}</div>
+        {STAFF_DOMAINS.map((d) => {
+          const lvl = link.permissions[d];
+          const txt = lvl === "write" ? "Écriture" : lvl === "read" ? "Lecture" : "Non partagé";
+          return (
+            <div key={d} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "7px 0", borderTop: "1px solid " + C.brd, fontSize: 13 }}>
+              <span style={{ color: lvl === "none" ? C.tx3 : C.tx }}>{DOMAIN_LABEL[d]}</span>
+              <span style={{ fontFamily: "var(--agon-font-data)", fontSize: 11.5, color: lvl === "write" ? C.ac : lvl === "read" ? C.tx2 : C.tx3 }}>{txt}</span>
+            </div>
+          );
+        })}
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "7px 0", borderTop: "1px solid " + C.brd, fontSize: 13 }}>
+          <span style={{ color: C.tx3 }}>Montres connectées</span>
+          <span style={{ fontFamily: "var(--agon-font-data)", fontSize: 11.5, color: C.tx3 }}>Non partagé</span>
+        </div>
+      </div>
+      <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.55 }}>
+        Droits réglés par {link.coachName ?? "le coach principal"}.{" "}
+        {link.canEditCoachContent ? "Tu peux aussi modifier ses contenus dans les domaines en écriture." : "Tu ne modifies que ce que tu as créé ;"} tes notes vont dans sa banque, à ton nom.
+      </div>
+      <button
+        type="button"
+        onClick={() => revoke.mutate(link.linkId, { onSuccess: () => navigate("/staff", { replace: true }) })}
+        disabled={revoke.isPending}
+        style={{ alignSelf: "flex-start", padding: "8px 14px", borderRadius: 10, border: "1px solid " + C.r + "60", background: "transparent", color: C.r, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
+      >
+        Me retirer du staff de {first}
+      </button>
+    </aside>
   );
 }
 
@@ -88,7 +130,7 @@ function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: My
     case "logs":
       return <StaffLogsTab athleteId={link.athleteId} />;
     case "wellness":
-      return <StaffWellnessTab />;
+      return <><StaffWellnessTab /><StaffReviewsSection athleteId={link.athleteId} /></>;
     case "medical": {
       const write = canWrite(link.permissions, "medical");
       return (
@@ -97,7 +139,6 @@ function DomainContent({ domain, link, userId }: { domain: StaffDomain; link: My
             athleteId={link.athleteId}
             canEdit={write}
             asStaff
-            canEditHistory={false}
             canEditEntry={(e) => e.created_by === userId || (link.canEditCoachContent && !!link.coachId && e.created_by === link.coachId)}
           />
         </div>
@@ -122,6 +163,7 @@ export default function StaffAthleteArea() {
   const { data: links = [], isLoading } = useMyStaffLinks();
   const link = links.find((l) => l.athleteId === athleteId);
   const { data: athleteProfile } = useStaffAthleteProfile(link ? athleteId : undefined);
+  const isMobile = useIsMobile();
 
   if (isLoading) return <div style={{ padding: 24, fontSize: 13, color: C.tx3 }}>Chargement…</div>;
   if (!link || !user) {
@@ -148,11 +190,11 @@ export default function StaffAthleteArea() {
       athleteProfile={(athleteProfile as Profile | null | undefined) ?? null}
       userName={link.athleteName}
     >
-      <div style={{ position: "sticky", top: 48, zIndex: 9, background: "rgba(29,28,30,0.95)", borderBottom: "1px solid " + C.brd }}>
+      <div style={{ position: "sticky", top: 64, zIndex: 9, background: "rgba(29,28,30,0.95)", borderBottom: "1px solid " + C.brd }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 6px", flexWrap: "wrap" }}>
-          <button onClick={() => navigate("/staff")} aria-label="Retour" style={{ background: "none", border: "none", color: C.tx3, fontSize: 18, cursor: "pointer" }}>‹</button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: C.tx }}>{link.athleteName}</div>
+            <button onClick={() => navigate("/staff")} style={{ background: "none", border: "none", padding: 0, marginBottom: 2, color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>‹ Mes athlètes</button>
+            <div style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 300, fontSize: 18, color: C.tx }}>{link.athleteName}</div>
             <div style={{ fontSize: 11, color: C.tx3 }}>
               Coach principal : {link.coachName ?? "aucun"} · tu interviens en tant que {professionLabel(link.profession).toLowerCase()}
             </div>
@@ -168,7 +210,7 @@ export default function StaffAthleteArea() {
                 onClick={() => setParams({ tab: t.key }, { replace: true })}
                 style={{
                   padding: "9px 12px", border: "none", background: "transparent", whiteSpace: "nowrap",
-                  borderBottom: "2px solid " + (on ? C.b : "transparent"), color: on ? C.tx : C.tx3,
+                  borderBottom: "2px solid " + (on ? C.ac : "transparent"), color: on ? C.tx : C.tx3,
                   fontSize: 12, fontWeight: on ? 600 : 400, cursor: "pointer", fontFamily: "inherit",
                 }}
                 title={t.key !== "acces" ? `${DOMAIN_LABEL[t.key as StaffDomain]} · ${write ? "lecture et écriture" : "lecture"}` : undefined}
@@ -179,10 +221,11 @@ export default function StaffAthleteArea() {
           })}
         </div>
       </div>
-      <div style={{ padding: "16px 16px 60px" }}>
+      <div style={{ padding: isMobile ? "16px 16px 60px" : "24px 32px 60px", display: !isMobile && active !== "acces" ? "grid" : "block", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 32, alignItems: "start" }}>
         {active === "acces"
           ? <AccessTab link={link} />
           : <DomainContent domain={active} link={link} userId={user.id} />}
+        {!isMobile && active !== "acces" && <AccessAside link={link} />}
       </div>
     </AthleteProvider>
   );

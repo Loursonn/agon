@@ -81,6 +81,7 @@ export function useCoachDashboard() {
   });
 
   // ── Merge: today's athletes ─────────────────────────────────────────────────
+  const logs = logsQ.data;
   const todayAthletes = useMemo<TodayAthlete[]>(() => {
     // Seulement la saisie d'AUJOURD'HUI (jour ISO local) : sinon le score est périmé.
     const wellMap: Record<string, WellnessEntry> = {};
@@ -88,8 +89,8 @@ export function useCoachDashboard() {
       if (h[today]) wellMap[aid] = h[today];
     }
 
-    const logsByAthlete: Record<string, (typeof logsQ.data)[number][]> = {};
-    (logsQ.data ?? []).forEach((r) => {
+    const logsByAthlete: Record<string, NonNullable<typeof logs>[number][]> = {};
+    (logs ?? []).forEach((r) => {
       logsByAthlete[r.athlete_id] ??= [];
       logsByAthlete[r.athlete_id].push(r);
     });
@@ -120,7 +121,7 @@ export function useCoachDashboard() {
           injuryNote:    entry?.injuryNote ?? null,
         };
       });
-  }, [logsQ.data, wellQ.data, athletes, today]);
+  }, [logs, wellQ.data, athletes, today]);
 
   // ── Missed sessions ─────────────────────────────────────────────────────────
   const missedSessions = useMemo<MissedSession[]>(() => {

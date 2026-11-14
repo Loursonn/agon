@@ -1,13 +1,13 @@
 import { useState } from "react"
 import { toast } from "sonner"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth"
 import type { Bloc, ProgSession } from "./types"
 import { useBlocBank, useUpdateBlocBank } from "./hooks/useBlocBank"
 import { useSessionBank, useUpdateSessionBank } from "./hooks/useSessionBank"
 import { hasMultiWeekParams, prepareBloc, prepareSession, type BankWeekMode } from "./bankUtils"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 export type SaveToBankTarget =
@@ -133,7 +133,7 @@ export function SaveToBankDialog({ target, activeWeek, onClose }: SaveToBankDial
           <button
             onClick={handleSave}
             disabled={loading || saving}
-            style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: VIOLET, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: loading || saving ? "default" : "pointer", opacity: loading || saving ? 0.6 : 1, fontFamily: "inherit" }}
+            style={{ flex: 1, padding: "10px 0", borderRadius: 4, border: "none", background: VIOLET, color: C.ink, fontSize: 12, fontWeight: 700, cursor: loading || saving ? "default" : "pointer", opacity: loading || saving ? 0.6 : 1, fontFamily: "inherit" }}
           >{saving ? "Enregistrement…" : "Enregistrer"}</button>
         </div>
       </div>

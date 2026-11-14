@@ -19,6 +19,7 @@
  */
 
 import { removeRawFiles } from "./providers/rawStore.ts";
+import { withdrawFutureWorkouts } from "./garminTraining/withdraw.ts";
 
 // ─────────────────────────────── Types ───────────────────────────────────────
 
@@ -482,6 +483,15 @@ export async function revokeAndForget(
       } catch (e) {
         // On tente quand même avec le jeton connu : il peut encore valoir.
         warnings.push(`rafraîchissement impossible avant révocation : ${e instanceof Error ? e.message : String(e)}`);
+      }
+      if (adapter.provider === "garmin") {
+        // Séances Agon à venir dans le calendrier Garmin : à retirer tant que l'accès existe.
+        // Au mieux : rien ici ne doit empêcher la révocation qui suit.
+        try {
+          warnings.push(...(await withdrawFutureWorkouts(db, p.athleteId, accessToken, { fetchImpl: opts.fetchImpl })));
+        } catch (e) {
+          warnings.push(`séances Garmin à venir non retirées : ${e instanceof Error ? e.message : String(e)}`);
+        }
       }
       revoked = await adapter.revoke({ accessToken, refreshToken: stored.refreshToken });
       if (!revoked) warnings.push(`${adapter.label} n'a pas confirmé la révocation`);

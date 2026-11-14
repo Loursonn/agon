@@ -249,7 +249,7 @@ describe("looksLikeActivityName", () => {
   });
 
   it("écarte le reste", () => {
-    for (const name of ["activities.csv", "photo.jpg", "notes.txt", "1.gpx.bak"]) {
+    for (const name of ["activities.csv", "photo.jpg", "notes.txt", "1.gpx.bak", "._21410211957.fit.gz", "__MACOSX/activities/._1.fit", ".DS_Store"]) {
       expect(looksLikeActivityName(name)).toBe(false);
     }
   });

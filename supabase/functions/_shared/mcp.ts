@@ -173,7 +173,15 @@ export interface McpClientOptions {
   path?: string;
   /** Nom annoncé au serveur, utile de l'autre côté pour le diagnostic. */
   clientName?: string;
+  /**
+   * Délai maximal d'un aller-retour, en ms. Sans lui, un serveur qui ne répond
+   * pas consomme tout le temps d'une exécution sans laisser de trace.
+   */
+  timeoutMs?: number;
 }
+
+/** Délai par défaut d'un appel MCP. */
+export const MCP_TIMEOUT_MS = 40_000;
 
 /**
  * Session MCP. À créer une fois par exécution, pas une fois par outil :
@@ -184,6 +192,7 @@ export class McpClient {
   private readonly endpoint: string;
   private readonly accessToken: string;
   private readonly clientName: string;
+  private readonly timeoutMs: number;
   private sessionId: string | null = null;
   private nextId = 1;
   private initialized = false;
@@ -192,6 +201,7 @@ export class McpClient {
     this.endpoint = `${opts.host.replace(/\/+$/, "")}${opts.path ?? "/mcp"}`;
     this.accessToken = opts.accessToken;
     this.clientName = opts.clientName ?? "Agon";
+    this.timeoutMs = opts.timeoutMs ?? MCP_TIMEOUT_MS;
   }
 
   private headers(): Record<string, string> {
@@ -209,17 +219,34 @@ export class McpClient {
 
   private async send(payload: unknown, expectResponse: boolean): Promise<JsonRpcResponse | null> {
     let res: Response;
+    let text: string;
+    const ctrl = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      ctrl.abort();
+    }, this.timeoutMs);
     try {
       res = await fetch(this.endpoint, {
         method: "POST",
         headers: this.headers(),
         body: JSON.stringify(payload),
+        signal: ctrl.signal,
       });
+      // Le corps compte dans le délai : un flux SSE peut rester ouvert.
+      text = await res.text();
     } catch (e) {
+      if (timedOut) {
+        throw new McpError(
+          `MCP sans réponse après ${Math.round(this.timeoutMs / 1000)} s (${this.endpoint})`,
+        );
+      }
       // Panne réseau : erreur explicite, jamais confondue avec une réponse vide.
       throw new McpError(
         `MCP injoignable (${this.endpoint}) : ${e instanceof Error ? e.message : String(e)}`,
       );
+    } finally {
+      clearTimeout(timer);
     }
 
     /*
@@ -228,8 +255,6 @@ export class McpClient {
     */
     const session = res.headers.get("mcp-session-id");
     if (session) this.sessionId = session;
-
-    const text = await res.text();
 
     if (!res.ok) {
       /*

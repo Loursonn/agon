@@ -76,7 +76,9 @@ Le client de ce lot **retombe sur `app_data`** si la table n'existe pas (erreur 
 
 Mesure avant 3 et 4 : `git rev-list --count origin/main..origin/dev` (le client de prod vient de `main`) et ancienneté des PWA : aucune télémétrie de version aujourd'hui. Proposition : à l'étape 2, ajouter un contrôle de version au démarrage (fichier `version.json` servi par Vercel, rechargement forcé si l'app est plus vieille) ; l'étape 4 attend ensuite au moins 30 jours.
 
-**Fait (P4)** : `/version.json` + rechargement propre (`src/lib/versionCheck.ts`, `UpdatePrompt`) ; suivi serveur par `profiles.client_build` / `client_build_at` et la RPC `report_client_build` (migration `20261110110000_client_build.sql`, test `supabase/tests/client_build.sql`, appel `ClientBuildReporter`). Comptage : `select client_build, count(*) from profiles where client_build_at > now() - interval '30 days' group by 1 order by 2 desc;`. Test à blanc vert le 2026-11-09 ; migration à appliquer AVANT de merger vers `main` (sinon l'appel échoue en silence).
+**Blocage de l'étape 3 (constaté le 2026-11-13)** : `ClientBuildReporter` était importé mais jamais monté (`App.tsx`), donc aucun appareil n'a remonté sa version (0 profil avec `client_build`). Corrigé sur dev (f80124a) ; la mesure ne commence qu'au prochain déploiement de main, puis il faut le délai PWA. Rien d'autre ne bloque le code de l'étape 3.
+
+**Fait (P4)** : `/version.json` + rechargement propre (`src/lib/versionCheck.ts`, `UpdatePrompt`) ; suivi serveur par `profiles.client_build` / `client_build_at` et la RPC `report_client_build` (migration `20261110110000_client_build.sql`, test `supabase/tests/client_build.sql`, appel `ClientBuildReporter`). Comptage : `select client_build, count(*) from profiles where client_build_at > now() - interval '30 days' group by 1 order by 2 desc;`. Test à blanc vert le 2026-11-09 ; migration appliquée en prod. **Correctif 2026-11-13** : `ClientBuildReporter` était importé dans `App.tsx` mais jamais rendu, d'où 0 profil avec `client_build` en prod ; il est maintenant monté dans `AuthProvider`. Le comptage ne vaut qu'à partir de la mise en prod de ce correctif.
 
 
 ### Lecteurs migrés (P5, 2026-11-09) et écrivains encore branchés sur les clés legacy
@@ -85,7 +87,7 @@ Lecteurs : **plus aucun code ne lit `asp:wh`, `asp:wellness`, `asp:wlog`, `asp:w
 - ✅ `src/features/shared/hooks/useAthletePersistedState.ts` → `getWellnessHistory({ includeArchived: false })` (+ `toLegacyWellnessHistory`, `toLegacyToday`), `getWeightLog` + `toLegacyWeightLog`, `getWeightMilestones` + `toLegacyMilestones`, `getBodyWeightGoal` + `toLegacyBodyWeight`. Les composants reçoivent les mêmes formes qu'avant (clés compactes `YYYYMMDD`, `{ current, target }` à 0 si absent). Une lecture en erreur bloque l'écriture de la clé (`markKeyLoad` dans `src/lib/storage.ts`, même garde que `sLoadResult`) et relance la lecture automatique.
 - ✅ `useWeeklyRetours.ts`, `useMonthlyRetours.ts` → `getWellnessHistory` (archives comprises). `retoursWellnessHistory` supprimé.
 - ✅ `src/api/appContent.ts` `listRecentActivity` → dernier `wellness_entries.updated_at` non archivé de chaque athlète (repli `app_data` si table absente).
-- ✅ `supabase/functions/coach-api` + `_shared/coachApiRead.ts` → `_shared/coachApiHealth.ts` (`readSummaryHealth`) lit `wellness_entries`, `body_weight_logs`, `body_weight_goals` sur la période. `asp:goals` et `asp:prog` restent dans `app_data` (hors périmètre santé). **À redéployer** : `supabase functions deploy coach-api`, accord d'Hugo requis.
+- ✅ `supabase/functions/coach-api` + `_shared/coachApiRead.ts` → `_shared/coachApiHealth.ts` (`readSummaryHealth`) lit `wellness_entries`, `body_weight_logs`, `body_weight_goals` sur la période. `asp:goals` et `asp:prog` restent dans `app_data` (hors périmètre santé). Déployée en prod le 2026-11-09 (version en ligne vérifiée identique au code le 2026-11-13).
 - Composants qui lisent l'état du contexte (`StatsCharts.jsx`, `WellnessFlow.jsx`, `NutritionView.tsx`, `ProfileDrawer.tsx`, `ProfilSportifPage.tsx`, `StaffWellnessTab.tsx`…) : rien changé.
 - Lecture des lignes dans le domaine partagé : `wellnessRowToEntry` / `wellnessRowsToHistory` (`_shared/domain/wellness.ts`), réexportés par `src/api/wellness.ts`.
 
@@ -93,7 +95,7 @@ Contrat de `coach-api` : sortie de `GET /athletes/:id/summary` strictement ident
 
 Limite connue : `wellnessHistory` du contexte ne contient plus les clés parasites (`"1"`..`"4"`) ni les champs inconnus d'une saisie ; quand un écrivain réécrit encore le blob `asp:wh` entier, il l'écrit nettoyé (le trigger projette de toute façon l'état nettoyé). Sans effet sur les tables.
 
-Écrivains qui réécrivaient un blob entier : **P6 (2026-11-10) les a tous passés par RPC** (code ; migration `20261110110100_weight_set_goal.sql` à appliquer) :
+Écrivains qui réécrivaient un blob entier : **P6 (2026-11-10) les a tous passés par RPC** (migration `20261110110100_weight_set_goal.sql` appliquée en prod le 2026-11-10) :
 - `ProfilPage.tsx` → `saveWeighIn` (file hors ligne, RPC `weight_set_day`).
 - Objectif → `weight_set_goal` (`saveWeightGoal`) ; les setters blob sans appelant sont supprimés.
 - `useAthleteLogic.archiveAndNewBlock` : `asp:wh = {}` après archivage ; les saisies passent `archived = true` si elles sont dans `asp:blockHistory` (désormais toujours le cas quand il reste du wellness). Reste un écrivain blob (`asp:blockHistory`, programme) : hors santé, voir P17.
@@ -110,8 +112,8 @@ Proposition (étape 3, à valider) :
 1. `body_weight_logs` = **seule source** du poids du jour. Le formulaire wellness, la fiche profil et les mensurations écrivent une pesée par `weight_set_day`.
 2. `wellness_entries.weight_kg` : gardé jusqu'à l'étape 4 pour la compatibilité, puis supprimé (lecture par jointure sur `body_weight_logs`).
 3. `measurement_logs.weight_kg` : reste un instantané de la séance de mesures, mais saisi = pesée écrite dans `body_weight_logs` ; reprise unique du jour sans pesée (1 cas).
-4. `profiles.weight_kg` : devient dérivé (trigger sur `body_weight_logs` → dernière pesée), la fiche ne l'écrit plus directement. **Décision d'Hugo** : à la fusion, pour les 10 athlètes où la fiche et la dernière pesée diffèrent, laquelle garder ? (recommandé : la dernière pesée ; la valeur de fiche est copiée dans l'export avant).
-5. Objectif : `body_weight_goals.target_kg` et `nutrition strategy.target_weight` coexistent (l'écran prend la stratégie d'abord). Garder un seul objectif (recommandé : celui de la stratégie nutrition, `target_kg` alimenté par elle).
+4. `profiles.weight_kg` : devient dérivé (trigger sur `body_weight_logs` → dernière pesée), la fiche ne l'écrit plus directement. **Tranché par Hugo le 2026-11-13 : la dernière pesée** fait foi ; la valeur de fiche est copiée dans l'export avant la fusion.
+5. Objectif : `body_weight_goals.target_kg` et `nutrition strategy.target_weight` coexistent (l'écran prend la stratégie d'abord). **Tranché par Hugo le 2026-11-13 : la stratégie nutrition** est la seule source ; `target_kg` est alimenté par elle.
 
 ## 6. Rollback
 
@@ -126,7 +128,7 @@ Proposition (étape 3, à valider) :
 |---|---|---|
 | Accès : athlète, coachs (`is_coach_of`), staff autorisé (`staff_can` + consentement), rien pour anon | OK (testé) | migration §2 |
 | Suppression de compte : cascade `profiles → tables` (aucun bucket) ; `health_sync_errors` en cascade aussi | OK (testé D2) | — |
-| Export : les 4 tables à ajouter à `ATHLETE_TABLES` | **à faire** (autre agent) | `src/lib/dataExport.ts` |
+| Export : les 4 tables dans l'export athlète | OK | `src/lib/dataExport.ts` |
 | Finalité : même donnée, mêmes destinataires | OK, `legal.ts` inchangé | — |
 | IA : aucune nouvelle donnée envoyée (`athlete-insights` reçoit des agrégats, `coach-api` inchangé) ; pas de Garmin | OK | — |
 | Logs : `RAISE WARNING` = clé + code SQL, jamais de valeur | OK | migration §5 |

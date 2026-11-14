@@ -1,8 +1,8 @@
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { useCycleWeeks } from "./hooks/useProgramCycles"
 import { Copy } from "lucide-react"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 interface SemaineNavProps {

@@ -9,7 +9,7 @@ import { Input } from "@/ui/Input";
 import { Skeleton } from "@/ui/Skeleton";
 import { useEnergySessions, useCreateEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import type { EnergySessionRow } from "@/types/energy";
-import { KIND_COLOR, KIND_LABEL } from "@/features/coach/components/energy/SessionPreviewModal";
+import { KIND_COLOR, KIND_LABEL } from "@/features/coach/components/energy/energyLabels";
 import { DeleteEnergySessionButton } from "@/features/coach/components/energy/DeleteEnergySessionButton";
 
 type PickerTab = "generale" | "perso" | "athletes";

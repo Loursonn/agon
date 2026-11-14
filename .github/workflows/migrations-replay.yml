@@ -1,0 +1,112 @@
+name: Rejeu des migrations (R2)
+
+# Étape R2 de docs/PLAN_LEGACY.md §3 (décision 7) : rejouer supabase/migrations/ dans l'ordre sur
+# une base Supabase LOCALE et éphémère, puis comparer le schéma public obtenu à celui de la prod
+# (supabase/tests/ci/schema.sql, chargé sur une autre base éphémère). Jamais la prod.
+# Bloquant depuis le 2026-11-13 (diff vide, historique réaligné par `migration repair`) : une migration
+# qui ne rejoue pas, ou un changement de la prod sans migration (schema.sql à jour), rend le job rouge.
+
+on:
+  push:
+    branches: [dev]
+    paths: [supabase/migrations/**, supabase/tests/ci/schema.sql, supabase/tests/storage_public_buckets.sql, .github/workflows/migrations-replay.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: migrations-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Schéma ${{ matrix.side }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        side: [migrations, prod]
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.95.4
+
+      - name: Démarrer Supabase local (base vide)
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir base && cd base
+          supabase init --force >/dev/null
+          mkdir -p supabase/.temp && echo 17.6.1.084 > supabase/.temp/postgres-version
+          supabase start -x realtime,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Rejouer les migrations, une par une, dans l'ordre
+        if: matrix.side == 'migrations'
+        run: |
+          : > "$RUNNER_TEMP/failed.txt"
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            if ! PGOPTIONS="-c client_min_messages=error" psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "$f" > "$RUNNER_TEMP/out.txt" 2>&1; then
+              echo "$(basename "$f") : $(/usr/bin/grep -m1 ERROR "$RUNNER_TEMP/out.txt" | cut -c1-300)" | tee -a "$RUNNER_TEMP/failed.txt"
+            fi
+          done
+          echo "$(wc -l < "$RUNNER_TEMP/failed.txt") fichier(s) en erreur sur $(ls supabase/migrations/*.sql | wc -l)"
+
+      - name: Charger le schéma de la prod
+        if: matrix.side == 'prod'
+        run: |
+          : > "$RUNNER_TEMP/failed.txt"
+          for f in before_schema schema; do
+            PGOPTIONS="-c client_min_messages=error" psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -f "supabase/tests/ci/$f.sql"
+          done
+
+      - name: Dump du schéma public, normalisé
+        run: |
+          db=$(docker ps --format '{{.Names}}' | /usr/bin/grep -m1 supabase_db)
+          docker exec "$db" pg_dump -U postgres --schema-only --schema=public --no-owner postgres \
+            | /usr/bin/grep -vE '^(--|SET |SELECT pg_catalog\.set_config|\\(un)?restrict )' | cat -s > "$RUNNER_TEMP/${{ matrix.side }}.sql"
+          cp "$RUNNER_TEMP/failed.txt" "$RUNNER_TEMP/${{ matrix.side }}-failed.txt"
+          wc -l "$RUNNER_TEMP/${{ matrix.side }}.sql"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: schema-${{ matrix.side }}
+          path: |
+            ${{ runner.temp }}/${{ matrix.side }}.sql
+            ${{ runner.temp }}/${{ matrix.side }}-failed.txt
+
+      # AIPD A2 : un bucket rendu public (ou lisible sans compte) par une migration rend le job rouge,
+      # même si supabase/tests/ci/platform.sql n'a pas été mis à jour.
+      - name: Buckets publics hors liste blanche (AIPD A2)
+        if: matrix.side == 'migrations'
+        run: |
+          (cd supabase/tests && npm i --no-save --no-package-lock --prefix . pg@8 >/dev/null)
+          node supabase/tests/ci/run.mjs supabase/tests/storage_public_buckets.sql
+
+  diff:
+    name: Diff migrations ↔ prod
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Écarts
+        run: |
+          echo "## Rejeu des migrations" >> "$GITHUB_STEP_SUMMARY"
+          echo "Fichiers en erreur : $(wc -l < out/migrations-failed.txt)" >> "$GITHUB_STEP_SUMMARY"
+          { echo '```'; cat out/migrations-failed.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # Mise en forme ignorée (lignes vides, ordre des colonnes) : supabase/tests/ci/normalize_schema.py
+          for s in prod migrations; do python3 supabase/tests/ci/normalize_schema.py "out/$s.sql" > "out/$s.norm.sql"; done
+          diff -u out/prod.norm.sql out/migrations.norm.sql > out/schema.diff && rc=0 || rc=$?
+          echo "Lignes de diff (prod → migrations) : $(/usr/bin/grep -cE '^[-+][^-+]' out/schema.diff || true)" >> "$GITHUB_STEP_SUMMARY"
+          { echo '```diff'; head -400 out/schema.diff; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          [ "$rc" = 0 ] && [ ! -s out/migrations-failed.txt ] && echo "DIFF VIDE" || { echo "Écarts : voir le résumé"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schema-diff
+          path: out/schema.diff

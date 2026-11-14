@@ -19,6 +19,7 @@ import { fr } from "date-fns/locale";
 import type { SummaryMesocycle } from "./hooks/usePlanningSummary";
 import { useMesoLoad } from "./hooks/useMesoLoad";
 import { CycleSummary } from "./CycleSummary";
+import { C, H } from "@/lib/theme";
 
 interface Props {
   meso:      SummaryMesocycle;
@@ -26,7 +27,7 @@ interface Props {
 }
 
 const ZONE_COLORS: Record<string, string> = {
-  Z1: "#22C55E", Z2: "#84CC16", Z3: "#EAB308", Z4: "#F97316", Z5: "#EF4444",
+  Z1: H.vert, Z2: H.citron, Z3: H.jauneFonce, Z4: H.orange, Z5: H.rougeVif,
 };
 
 export function MesocycleSummary({ meso, athleteId }: Props) {
@@ -49,15 +50,15 @@ export function MesocycleSummary({ meso, athleteId }: Props) {
   return (
     <AccordionItem
       value={meso.id}
-      className="rounded-xl border border-[#FFC933]/30 bg-[#FFC933]/10 overflow-hidden"
+      className="rounded-xl border border-agon-accent/30 bg-agon-accent/10 overflow-hidden"
     >
-      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors [&>svg]:text-[#FFC933]/60">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors [&>svg]:text-agon-accent/60">
         <div className="flex items-center gap-2 text-left">
-          <Layers size={14} className="text-[#FFC933] shrink-0" />
+          <Layers size={14} className="text-agon-accent shrink-0" />
           <span className="text-sm font-bold text-white">{meso.name}</span>
           <span className="text-xs text-white/40">{dateRange}</span>
           <div className="ml-auto mr-2 flex gap-1.5">
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FFC933]/20 text-[#FFC933] font-semibold">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-agon-accent/20 text-agon-accent font-semibold">
               {numWeeks} sem.
             </span>
             {totalMicros > 0 && (
@@ -85,7 +86,7 @@ export function MesocycleSummary({ meso, athleteId }: Props) {
                       <span
                         key={z}
                         className="text-[10px] px-1.5 py-0.5 rounded font-bold"
-                        style={{ color: ZONE_COLORS[z] ?? "#fff", background: (ZONE_COLORS[z] ?? "#fff") + "20" }}
+                        style={{ color: ZONE_COLORS[z] ?? C.tx, background: (ZONE_COLORS[z] ?? C.tx) + "20" }}
                       >
                         {z}
                       </span>
@@ -108,25 +109,26 @@ export function MesocycleSummary({ meso, athleteId }: Props) {
           {/* Load chart */}
           {loadData.length > 0 && (
             <div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Charge hebdomadaire</p>
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Charge hebdomadaire · points YOXX (prévu / réalisé)</p>
               <ResponsiveContainer width="100%" height={120}>
                 <BarChart data={loadData} margin={{ top: 2, right: 4, left: -24, bottom: 0 }} barCategoryGap="20%">
                   <XAxis
                     dataKey="week"
-                    stroke="#7D7468"
-                    tick={{ fill: "#7D7468", fontSize: 9 }}
+                    stroke={C.tx3}
+                    tick={{ fill: C.tx3, fontSize: 9 }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis hide />
                   <Tooltip
-                    contentStyle={{ backgroundColor: "#0E0C0A", border: "none", borderRadius: 4, fontSize: 10 }}
-                    cursor={{ fill: "#FFC933", opacity: 0.1 }}
-                    labelStyle={{ color: "#fff" }}
-                    itemStyle={{ color: "#FFC933" }}
-                    formatter={(v: number) => [v, "Charge"]}
+                    contentStyle={{ backgroundColor: C.bg, border: "none", borderRadius: 4, fontSize: 10 }}
+                    cursor={{ fill: C.ac, opacity: 0.1 }}
+                    labelStyle={{ color: C.tx }}
+                    itemStyle={{ color: C.ac }}
+                    formatter={(v: number | null, name: string) => [v ?? "—", name === "planned" ? "Prévu" : "Réalisé"]}
                   />
-                  <Bar dataKey="load" fill="#FFC933" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="planned" fill={C.ac} fillOpacity={0.25} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="load" fill={C.ac} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -160,7 +162,7 @@ function InfoCard({
   valueStyle?:  React.CSSProperties;
 }) {
   return (
-    <div className="rounded-lg p-3 bg-[#0E0C0A]/50 border border-white/5">
+    <div className="rounded-lg p-3 bg-agon-bg/50 border border-white/5">
       <p className="text-[9px] text-white/40 uppercase tracking-wider mb-1">{label}</p>
       {renderValue ? (
         renderValue()

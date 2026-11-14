@@ -1,7 +1,7 @@
 ﻿import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Dumbbell, X, Zap, Target } from "lucide-react";
-import { C } from "@/lib/theme";
+import { Dumbbell, X, Zap } from "lucide-react";
+import { C, alpha } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -25,22 +25,17 @@ import { MethodCard } from "@/features/coach/components/library/MethodCard";
 import { MethodBuilder } from "@/features/coach/components/library/MethodBuilder";
 import type { SessionKind } from "@/types/energy";
 import type { TrainingMethod, MethodScope, MethodCategory } from "@/types/trainingMethods";
-import { formValuesToConfig } from "@/features/coach/components/library/MethodPreview";
+import { formValuesToConfig } from "@/features/coach/components/library/methodConfigConvert";
 
 // ── Sub-tab types ─────────────────────────────────────────────────────────────
 
 type LibTab = "musculaire" | "energetique" | "specifique";
 
-const TAB_ICONS: Record<LibTab, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
-  musculaire:  Dumbbell,
-  energetique: Zap,
-  specifique:  Target,
-};
 
-const TABS: { key: LibTab; label: string }[] = [
-  { key: "musculaire",  label: "Musculaire"  },
-  { key: "energetique", label: "Énergétique" },
-  { key: "specifique",  label: "Spécifique"  },
+const TABS: { key: LibTab; label: string; color: string }[] = [
+  { key: "musculaire",  label: "Musculaire",  color: C.ac },
+  { key: "energetique", label: "Énergétique", color: C.b },
+  { key: "specifique",  label: "Spécifique",  color: C.o },
 ];
 
 // ── Energy sub-tab constants ──────────────────────────────────────────────────
@@ -127,7 +122,7 @@ function EnergyTab() {
               style={{
                 padding: "5px 12px", borderRadius: 6, border: "none",
                 background: filterTab === t.value ? C.ac : "transparent",
-                color: filterTab === t.value ? "#fff" : C.tx3,
+                color: filterTab === t.value ? C.tx : C.tx3,
                 fontSize: 12, fontWeight: filterTab === t.value ? 600 : 400,
                 cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
               }}
@@ -186,7 +181,7 @@ function EnergyTab() {
           onClick={() => navigate("/coach/energy-library/new")}
           style={{
             padding: "7px 14px", borderRadius: 4, border: "none",
-            background: C.acV, color: "#0E0C0A", fontSize: 12,
+            background: C.acV, color: C.ink, fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -212,7 +207,7 @@ function EnergyTab() {
               onClick={() => navigate("/coach/energy-library/new")}
               style={{
                 padding: "9px 20px", borderRadius: 4, border: "none",
-                background: C.acV, color: "#0E0C0A", fontSize: 13,
+                background: C.acV, color: C.ink, fontSize: 13,
                 fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               }}
             >
@@ -230,8 +225,6 @@ function EnergyTab() {
                 canEdit={isAuthor || isAdmin}
                 canVerify={canVerify}
                 canDelete={isAuthor || isAdmin}
-                canPublish={isAuthor || isAdmin || canVerify}
-                userId={profile?.id}
               />
             );
           })
@@ -341,7 +334,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
             <button key={t.value} onClick={() => setScopeFilter(t.value)} style={{
               padding: "5px 12px", borderRadius: 6, border: "none",
               background: scopeFilter === t.value ? C.ac : "transparent",
-              color: scopeFilter === t.value ? "#fff" : C.tx3,
+              color: scopeFilter === t.value ? C.tx : C.tx3,
               fontSize: 12, fontWeight: scopeFilter === t.value ? 600 : 400,
               cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
             }}>
@@ -372,7 +365,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
             <button key={v} onClick={() => setOfficialFilter(v)} style={{
               padding: "5px 12px", borderRadius: 6, border: "none",
               background: officialFilter === v ? C.ac : "transparent",
-              color: officialFilter === v ? "#fff" : C.tx3,
+              color: officialFilter === v ? C.tx : C.tx3,
               fontSize: 12, fontWeight: officialFilter === v ? 600 : 400,
               cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
             }}>
@@ -404,7 +397,7 @@ function MethodsTab({ coachId }: { coachId: string }) {
           onClick={openCreate}
           style={{
             marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
-            background: C.acV, color: "#0E0C0A", fontSize: 12,
+            background: C.acV, color: C.ink, fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -516,23 +509,22 @@ export default function LibraryPage() {
           paddingTop: 16,
         }}
       >
-        {TABS.map(({ key, label }) => {
-          const Icon = TAB_ICONS[key];
+        {TABS.map(({ key, label, color }) => {
+          const on = activeTab === key;
+          // Planche CoachBanque : carré de couleur par type, soulignement or.
           return (
             <button
               key={key}
               onClick={() => setTab(key)}
               style={{
-                padding: "8px 18px", border: "none", background: "transparent",
-                color: activeTab === key ? C.ac : C.tx3,
-                fontSize: 13, fontWeight: activeTab === key ? 700 : 400,
-                cursor: "pointer", fontFamily: "inherit",
-                borderBottom: "2px solid " + (activeTab === key ? C.ac : "transparent"),
-                display: "flex", alignItems: "center", gap: 6,
-                transition: "color 150ms",
+                height: 40, padding: "0 16px", border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: on ? 500 : 400, color: on ? C.tx : C.tx2, whiteSpace: "nowrap",
+                boxShadow: on ? `inset 0 -3px 0 ${C.ac}` : "none",
+                background: on ? `linear-gradient(0deg, ${alpha(C.ac, 0.12)}, transparent 70%)` : "transparent",
+                display: "flex", alignItems: "center", gap: 8,
               }}
             >
-              <Icon size={15} style={{ color: activeTab === key ? C.ac : C.tx3 }} />
+              <span aria-hidden style={{ width: 9, height: 9, borderRadius: 2, flex: "none", background: color }} />
               {label}
             </button>
           );
@@ -555,11 +547,11 @@ export default function LibraryPage() {
                   key={t.k}
                   onClick={() => setMuscuTab(t.k as typeof muscuTab)}
                   style={{
-                    padding: "6px 14px", borderRadius: 4,
+                    height: 32, boxSizing: "border-box", padding: "0 14px", borderRadius: 999,
                     border: "1px solid " + (muscuTab === t.k ? C.ac : C.brdL),
-                    background: muscuTab === t.k ? C.acS : "transparent",
-                    color: muscuTab === t.k ? C.ac : C.tx3,
-                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    background: muscuTab === t.k ? alpha(C.ac, 0.14) : "transparent",
+                    color: muscuTab === t.k ? C.ac : C.tx2,
+                    fontSize: 12, fontWeight: muscuTab === t.k ? 500 : 400, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >{t.l}</button>
               ))}
@@ -580,11 +572,11 @@ export default function LibraryPage() {
                   key={t.k}
                   onClick={() => setSpecTab(t.k as "seances" | "blocs")}
                   style={{
-                    padding: "6px 14px", borderRadius: 4,
-                    border: "1px solid " + (specTab === t.k ? "#F5A623" : C.brdL),
-                    background: specTab === t.k ? "#F5A62315" : "transparent",
-                    color: specTab === t.k ? "#F5A623" : C.tx3,
-                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    height: 32, boxSizing: "border-box", padding: "0 14px", borderRadius: 999,
+                    border: "1px solid " + (specTab === t.k ? C.ac : C.brdL),
+                    background: specTab === t.k ? alpha(C.ac, 0.14) : "transparent",
+                    color: specTab === t.k ? C.ac : C.tx2,
+                    fontSize: 12, fontWeight: specTab === t.k ? 500 : 400, cursor: "pointer", fontFamily: "inherit",
                   }}
                 >{t.l}</button>
               ))}

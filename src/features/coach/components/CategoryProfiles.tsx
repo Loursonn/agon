@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Check } from 'lucide-react';
-import { C } from '@/lib/theme';
+import { C, H } from "@/lib/theme";
 import {
   TEST_CATEGORY_ORDER, TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, PHYSIO_METRICS,
   type TestCategory,
@@ -86,7 +86,7 @@ function ItemForm({
       />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button onClick={onCancel} style={{ padding: '6px 12px', borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-        <button onClick={() => valid && onSave(f)} disabled={!valid || saving} style={{ padding: '6px 14px', borderRadius: 4, border: 'none', background: valid ? color : C.s1, color: valid ? '#fff' : C.tx3, fontSize: 12, fontWeight: 700, cursor: valid ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <button onClick={() => valid && onSave(f)} disabled={!valid || saving} style={{ padding: '6px 14px', borderRadius: 4, border: 'none', background: valid ? color : C.s1, color: valid ? C.tx : C.tx3, fontSize: 12, fontWeight: 700, cursor: valid ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
           <Check size={13} /> {saving ? '…' : 'OK'}
         </button>
       </div>
@@ -120,11 +120,11 @@ function iconBtn(color: string): React.CSSProperties {
 // ── Couleur /5 (nuance rouge → vert) ──────────────────────────────────────────
 function scoreColor(n: number | null): string {
   if (n == null) return C.tx3;
-  if (n <= 1) return '#FF5A33';
-  if (n <= 2) return '#FF9500';
-  if (n <= 3) return '#FF9500';
-  if (n <= 4) return '#84CC16';
-  return '#66F03C';
+  if (n <= 1) return C.r;
+  if (n <= 2) return C.o;
+  if (n <= 3) return C.o;
+  if (n <= 4) return H.citron;
+  return C.g;
 }
 
 // ── Vue Bilan articulaire (dérivée des tests, groupée par articulation) ────────
@@ -333,7 +333,7 @@ export default function CategoryProfiles({ athleteId }: { athleteId: string }) {
                   padding: '5px 11px', borderRadius: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
                   border: '1px solid ' + (on ? c : C.brdL),
                   background: on ? c : 'transparent',
-                  color: on ? '#fff' : C.tx3,
+                  color: on ? C.tx : C.tx3,
                 }}
               >
                 {TEST_CATEGORY_LABEL[cat]}

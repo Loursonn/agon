@@ -16,7 +16,7 @@ import { ExerciceSearch } from "@/features/coach/components/programmation/Exerci
 import { toast } from "sonner";
 import { saveExerciseYoutubeId } from "@/api/energy";
 
-const EXO_COLOR = "#FFC933";
+const EXO_COLOR = C.ac;
 
 const ROLES: { value: IntervalRole; label: string }[] = [
   { value: "work",     label: "Effort" },
@@ -191,7 +191,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
               border: `1px solid ${C.brdL}`,
             }}>
               <iframe
-                src={`https://www.youtube.com/embed/${youtubeId}`}
+                src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
                 style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
                 allow="encrypted-media"
                 allowFullScreen
@@ -310,7 +310,7 @@ export default function ExerciseStepEditor({ open, onOpenChange, exercise, onSav
               disabled={!exerciseId}
               style={{
                 flex: 1, padding: "10px 14px", borderRadius: 4,
-                border: "none", background: EXO_COLOR, color: "#fff",
+                border: "none", background: EXO_COLOR, color: C.tx,
                 fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                 opacity: exerciseId ? 1 : 0.5,
               }}

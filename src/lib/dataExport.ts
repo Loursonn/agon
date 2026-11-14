@@ -1,4 +1,4 @@
-import { readOwnRows } from "@/api/account";
+import { PROVIDER_RAW_BUCKET, readOwnRows, signOwnRawFiles } from "@/api/account";
 import { getProfile } from "@/api/profile";
 import { tableMissing } from "@/api/wellness";
 import { providerAttribution } from "@/lib/activityDisplay";
@@ -54,8 +54,15 @@ const job = (table: string, column: string, select?: string): ExportJob => ({ ta
  * La nutrition et le wellness vivent dans `app_data` (clés `asp:*`), exporté
  * en entier.
  */
-/** Tables de la migration santé (20261110100000), absentes tant qu'elle n'est pas appliquée. */
-const OPTIONAL_TABLES = new Set(["wellness_entries", "body_weight_logs", "body_weight_milestones", "body_weight_goals"]);
+/**
+ * Tables qui peuvent manquer sans que ce soit une erreur : santé (20261110100000) et weekly
+ * review, absentes tant que leur migration n'est pas appliquée ; tables mortes, vides ou plus
+ * écrites, à supprimer (P18) : l'export ne doit pas casser le jour de leur suppression.
+ */
+const OPTIONAL_TABLES = new Set([
+  "wellness_entries", "body_weight_logs", "body_weight_milestones", "body_weight_goals", "weekly_reviews",
+  "workout_rpe", "planning_blocks", "seasons", "test_results",
+]);
 
 export const EXPORT_JOBS: readonly ExportJob[] = [
   // ── Athlète : tout ce qui le concerne (`athlete_id`) ─────────────────────
@@ -88,9 +95,7 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("hyrox_test_analyses", "athlete_id", "*, hyrox_test_axes_drafts(*)"),
   job("macrocycles", "athlete_id", "*, mesocycles(*)"),
   job("measurement_logs", "athlete_id"),
-  job("medical_attachments", "athlete_id"),
   job("medical_entries", "athlete_id"),
-  job("medical_history", "athlete_id"),
   job("performance_logs", "athlete_id"),
   job("performance_notifications", "athlete_id"),
   job("planning_blocks", "athlete_id"),
@@ -107,8 +112,10 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("hr_zone_models", "athlete_id"),
   job(
     "provider_connections", "athlete_id",
-    "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, connected_at, last_sync_at, synced_through, last_error, updated_at",
+    "id, athlete_id, provider, status, external_user_id, api_host, granted_scopes, push_workouts, connected_at, last_sync_at, synced_through, last_error, updated_at",
   ),
+  // Séances Agon publiées sur la montre (identifiants Garmin, état, dernière erreur).
+  job("provider_workout_pushes", "athlete_id"),
   job("provider_dailies", "athlete_id"),
   // Séries de la journée (FC, stress, Body Battery, SpO2…) et activités détectées.
   job("provider_intraday", "athlete_id"),
@@ -116,19 +123,18 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   // Tout ce que Garmin a envoyé, tel quel (échantillons et .FIT : chemins
   // vers le bucket privé `provider-raw`, lisible par l'athlète lui-même).
   job("provider_raw_records", "athlete_id"),
-  job("retours", "athlete_id"),
   job("seasons", "athlete_id"),
   job("staff_invitations", "athlete_id", STAFF_INVITATION_COLUMNS),
   job("test_results", "athlete_id"),
   job("test_sessions", "athlete_id"),
   job("weekly_retours", "athlete_id"),
+  job("weekly_reviews", "athlete_id"),
   job("workout_logs", "athlete_id", "*, workout_exercise_comments(*)"),
   job("workout_rpe", "athlete_id"),
 
   // ── Compte (`user_id`) ───────────────────────────────────────────────────
   job("app_update_reads", "user_id"),
   job("citation_likes", "user_id"),
-  job("retours_votes", "user_id"),
   job("roadmap_votes", "user_id"),
   job("user_consents", "user_id"),
 
@@ -142,8 +148,7 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("staff_invitations", "invited_by", STAFF_INVITATION_COLUMNS),
   job("staff_invitations", "used_by", STAFF_INVITATION_COLUMNS),
 
-  // ── Coach : invitations, assistant IA, fiches et bibliothèques ───────────
-  job("invitations", "coach_id", "id, coach_id, email, used_at, created_at"),
+  // ── Coach : assistant IA, fiches et bibliothèques ───────────
   // Jamais la clé ni son empreinte : nom et dates seulement.
   job("coach_api_keys", "coach_id", "id, coach_id, name, created_at, last_used_at, revoked_at"),
   job("coach_api_drafts", "coach_id"),
@@ -219,6 +224,44 @@ export function withAttribution(table: string, rows: unknown[]): unknown[] {
   });
 }
 
+/** Durée des liens vers les fichiers bruts : 7 jours, le temps de les télécharger. */
+export const RAW_FILE_LINK_DAYS = 7;
+
+export interface RawFileRef {
+  path: string;
+  /** `samples` = échantillons seconde par seconde (.json.gz) ; `file` = fichier d'origine (.FIT). */
+  kind: "samples" | "file";
+  source: string | null;
+  summary_type: string | null;
+  summary_id: string | null;
+}
+
+/**
+ * Fichiers du bucket `provider-raw` cités par les lignes `provider_raw_records`
+ * exportées (`samples_path`, `file_path`). Un chemin cité deux fois n'apparaît
+ * qu'une fois.
+ */
+export function rawFileRefs(rows: unknown[]): RawFileRef[] {
+  const out: RawFileRef[] = [];
+  const seen = new Set<string>();
+  for (const r of rows) {
+    if (!r || typeof r !== "object") continue;
+    const row = r as Record<string, unknown>;
+    const base = {
+      source: typeof row.source === "string" ? row.source : null,
+      summary_type: typeof row.summary_type === "string" ? row.summary_type : null,
+      summary_id: typeof row.summary_id === "string" ? row.summary_id : null,
+    };
+    for (const [col, kind] of [["samples_path", "samples"], ["file_path", "file"]] as const) {
+      const path = row[col];
+      if (typeof path !== "string" || path === "" || seen.has(path)) continue;
+      seen.add(path);
+      out.push({ path, kind, ...base });
+    }
+  }
+  return out;
+}
+
 /**
  * Construit l'archive JSON des données de l'utilisateur.
  *
@@ -266,6 +309,27 @@ export async function buildDataExport(userId: string): Promise<ExportResult> {
   }
   const rowCount = Object.values(tables).reduce((n, rows) => n + rows.length, 0);
 
+  // Fichiers bruts de montre (P37) : liens signés, valables RAW_FILE_LINK_DAYS jours.
+  const refs = rawFileRefs(tables.provider_raw_records ?? []);
+  let rawFiles: unknown[] = [];
+  if (refs.length > 0) {
+    const expiresAt = new Date(Date.now() + RAW_FILE_LINK_DAYS * 86_400_000).toISOString();
+    try {
+      const urls = await signOwnRawFiles(refs.map((f) => f.path), RAW_FILE_LINK_DAYS * 86_400);
+      rawFiles = withAttribution("provider_raw_files", refs.map((f) => ({
+        bucket: PROVIDER_RAW_BUCKET,
+        ...f,
+        url: urls[f.path] ?? null,
+        url_expires_at: urls[f.path] ? expiresAt : null,
+      })));
+      const missing = refs.filter((f) => !urls[f.path]).length;
+      if (missing > 0) failures.push({ table: "provider_raw_files", reason: `${missing} fichier(s) introuvable(s) dans le stockage` });
+    } catch (e) {
+      failures.push({ table: "provider_raw_files", reason: e instanceof Error ? e.message : String(e) });
+      rawFiles = refs.map((f) => ({ bucket: PROVIDER_RAW_BUCKET, ...f, url: null, url_expires_at: null }));
+    }
+  }
+
   const payload = {
     _export: {
       application: "Agon",
@@ -275,8 +339,10 @@ export async function buildDataExport(userId: string): Promise<ExportResult> {
       basis: "RGPD art. 15 (droit d'accès) et art. 20 (portabilité)",
       note:
         "Export réalisé avec vos propres droits d'accès : il contient exactement les données que votre compte peut lire. " +
-        "Les fichiers (documents médicaux, fiches, photos de tests) ne sont pas inclus dans ce JSON ; " +
+        "Les fichiers (fiches, photos de tests) ne sont pas inclus dans ce JSON ; " +
         "leurs chemins figurent dans les tables correspondantes (file_path, image_path) et ils restent téléchargeables depuis l'application. " +
+        `Les fichiers bruts de vos montres (échantillons .json.gz, fichiers .FIT d'origine) sont listés dans « provider_raw_files » avec un lien de téléchargement valable ${RAW_FILE_LINK_DAYS} jours ; ` +
+        "au-delà, refaites un export pour obtenir de nouveaux liens. " +
         "Les secrets (clés d'API, jetons de liens et de montres) ne sont jamais exportés.",
       tables_empty_omitted: true,
       tables_unreadable: failures,
@@ -284,6 +350,7 @@ export async function buildDataExport(userId: string): Promise<ExportResult> {
     // Données du compte, dont la date de naissance (`birth_date`).
     profile: profile ?? null,
     ...tables,
+    ...(rawFiles.length > 0 ? { provider_raw_files: rawFiles } : {}),
   };
 
   return { payload, failures, rowCount };

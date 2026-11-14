@@ -1,5 +1,6 @@
 import LegalLayout, { Section, P, UL } from "./LegalLayout";
 import { COMPANY, HOSTING, LEGAL_ROUTES } from "@/lib/legal";
+import { C } from "@/lib/theme";
 
 /**
  * Mentions légales.
@@ -11,7 +12,7 @@ import { COMPANY, HOSTING, LEGAL_ROUTES } from "@/lib/legal";
  * suffit pas.
  */
 
-const ACCENT = "#FFC933";
+const ACCENT = C.ac;
 
 export default function LegalNotice() {
   return (
@@ -44,6 +45,12 @@ export default function LegalNotice() {
               </a>
             </>,
             <>
+              <strong>Téléphone :</strong>{" "}
+              <a href={`tel:${COMPANY.phone.replace(/\s/g, "")}`} style={{ color: ACCENT }}>
+                {COMPANY.phone}
+              </a>
+            </>,
+            <>
               <strong>TVA :</strong> {COMPANY.vat}
             </>,
             <>
@@ -61,6 +68,7 @@ export default function LegalNotice() {
               <strong>{HOSTING.name}</strong>
             </>,
             <>{HOSTING.address}</>,
+            <>Téléphone : {HOSTING.phone}</>,
             <>
               <a href={HOSTING.website} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT }}>
                 {HOSTING.website}

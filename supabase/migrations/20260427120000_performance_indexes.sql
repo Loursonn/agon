@@ -18,10 +18,8 @@ CREATE INDEX IF NOT EXISTS idx_app_data_updated_at
 CREATE INDEX IF NOT EXISTS idx_competitions_athlete_date
   ON public.competitions (athlete_id, date);
 
--- Index partiel pour les compétitions futures uniquement (optimise le dashboard)
-CREATE INDEX IF NOT EXISTS idx_competitions_future
-  ON public.competitions (athlete_id, date)
-  WHERE date >= CURRENT_DATE;
+-- (Index partiel « compétitions futures » retiré le 2026-11-13 : CURRENT_DATE
+-- n'est pas IMMUTABLE, Postgres le refuse ; il n'a jamais existé en prod.)
 
 -- ── planning_blocks ───────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_planning_blocks_athlete

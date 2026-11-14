@@ -41,12 +41,16 @@ function seed(extra: Record<string, Row[]> = {}, failOn?: { table: string; op: s
     competitions: [
       { id: "co1", athlete_id: A, name: "Régionaux", type: "hyrox", date: "2026-11-15", location: "Lyon", priority: "A", athlete_comment: null },
       { id: "co2", athlete_id: A, name: "Plus tard", type: "hyrox", date: "2026-12-01", location: null, priority: "B" },
+      { id: "co3", athlete_id: A, name: "Stage-course", type: "trail", date: "2026-11-07", date_end: "2026-11-10", location: null, priority: "C" },
     ],
     app_data: [{ athlete_id: A, key: "asp:freesess", value: [
       { id: "f1", date: "2026-11-12", sport: "Vélo", completed: true },
       { id: "f2", date: "2026-12-01", sport: "Ski" },
     ] }],
-    athlete_life_events: [{ id: "le1", athlete_id: A, date_start: "2026-11-14", date_end: "2026-11-17", title: "Vacances" }],
+    athlete_life_events: [
+      { id: "le1", athlete_id: A, date_start: "2026-11-14", date_end: "2026-11-17", title: "Vacances" },
+      { id: "le2", athlete_id: A, date_start: "2026-11-12", date_end: "2026-11-12", title: "Examen", kind: "examen", unavailable: false },
+    ],
     ...extra,
   }, failOn);
 }
@@ -76,6 +80,14 @@ describe("getActivePlan", () => {
     expect(p.weekDays[3].sessions).toEqual([]); // séance annulée exclue
     expect(p.weekDays[4].tests.map((t) => t.id)).toEqual(["t1"]);
     expect(p.weekDays[6].competitions.map((c) => c.id)).toEqual(["co1"]);
+    // compétition sur plusieurs jours (date_end) : du lundi au mardi dans cette semaine
+    expect(p.weekDays[0].competitions.map((c) => c.id)).toEqual(["co3"]);
+    expect(p.weekDays[1].competitions.map((c) => c.id)).toEqual(["co3"]);
+    expect(p.weekDays[2].competitions).toEqual([]);
+    // événements de vie : indisponible par défaut, sauf case décochée
+    expect(p.weekDays[5].lifeEvents).toEqual([{ id: "le1", title: "Vacances", kind: "autre", unavailable: true }]);
+    expect(p.weekDays[6].lifeEvents.map((e) => e.id)).toEqual(["le1"]);
+    expect(p.weekDays[3].lifeEvents).toEqual([{ id: "le2", title: "Examen", kind: "examen", unavailable: false }]);
     expect(p.weekSessionCount).toBe(3);
   });
 
@@ -102,7 +114,7 @@ describe("getCalendarEvents", () => {
     expect(byType("competition").map((e) => e.id)).toEqual(["co1"]);
     expect(byType("energy")[0]).toMatchObject({ id: "e1", title: "VMA courte", partial: true, status: "planned" });
     expect(byType("free_activity")[0]).toMatchObject({ id: "f1", status: "completed", title: "Vélo" });
-    expect(byType("life_event").map((e) => e.date)).toEqual(["2026-11-14", "2026-11-15"]);
+    expect(byType("life_event").map((e) => e.date)).toEqual(["2026-11-12", "2026-11-14", "2026-11-15"]);
   });
 });
 
@@ -111,7 +123,7 @@ describe("getTimeline", () => {
     setDbForTests(seed().db);
     const t = await getTimeline(A, "2026-11-01", "2026-11-30");
     expect(t.cycles.map((c) => c.id)).toEqual(["c-past", "c-now"]);
-    expect(t.competitions.map((c) => c.id)).toEqual(["co1"]);
+    expect(t.competitions.map((c) => c.id)).toEqual(["co3", "co1"]);
     expect(t.tests.map((x) => x.id)).toEqual(["t1"]);
   });
 });

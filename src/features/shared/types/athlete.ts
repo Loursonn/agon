@@ -84,6 +84,10 @@ export interface WellnessData {
   sleepInterruptNote?: string;
   domsZones?: string[];
   domsPoints?: DomsPoint[];
+  domsLevels?: Record<string, 1 | 2 | 3>;
+  envie?: number | null;
+  pain?: number | null;
+  sick?: boolean | null;
   injComment?: string;
 }
 

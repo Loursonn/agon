@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Ruler, Camera, Plus, ChevronLeft, Check, Pencil, Trash2, X } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { C } from '@/lib/theme';
+import { C } from "@/lib/theme";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -139,7 +139,7 @@ function LogCard({
           <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cette saisie ?</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: '8px 0', borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-            <button onClick={() => { onDelete(); setConfirmDel(false); }} style={{ flex: 1, padding: '8px 0', borderRadius: 4, border: 'none', background: C.rV, color: '#0E0C0A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Supprimer</button>
+            <button onClick={() => { onDelete(); setConfirmDel(false); }} style={{ flex: 1, padding: '8px 0', borderRadius: 4, border: 'none', background: C.rV, color: C.ink, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Supprimer</button>
           </div>
         </div>
       )}
@@ -373,7 +373,7 @@ function EntryForm({
                     title="Retirer"
                     style={{
                       position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%',
-                      border: 'none', background: C.rV, color: '#0E0C0A', cursor: 'pointer',
+                      border: 'none', background: C.rV, color: C.ink, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit',
                     }}
                   >
@@ -390,7 +390,7 @@ function EntryForm({
         onClick={handleSave} disabled={saving}
         style={{
           width: '100%', padding: '13px 0', borderRadius: 6, border: 'none',
-          background: saving ? C.s2 : C.g, color: saving ? C.tx3 : '#fff',
+          background: saving ? C.s2 : C.g, color: saving ? C.tx3 : C.tx,
           fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer',
           fontFamily: 'inherit', minHeight: 44,
         }}
@@ -472,7 +472,7 @@ export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }:
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: '12px 0', borderRadius: 6, border: 'none', background: C.g,
-                    color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44,
+                    color: C.tx, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44,
                   }}
                 >
                   <Plus size={16} /> Nouvelle saisie

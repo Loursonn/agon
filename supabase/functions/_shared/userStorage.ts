@@ -2,7 +2,7 @@
  * Purge des fichiers d'un utilisateur dans Storage (droit à l'effacement).
  *
  * Les cascades SQL ne touchent pas `storage.objects` : sans cette étape, les
- * pièces jointes médicales, fiches et photos de tests survivent au compte.
+ * fiches, photos de tests et données brutes des montres survivent au compte.
  * La liste exacte vient de la base (`list_user_storage_objects`, réservée au
  * service_role) ; la suppression passe par l'API Storage, seule voie qui
  * retire aussi le fichier du bucket.
@@ -13,7 +13,7 @@
  */
 
 /** Buckets susceptibles de contenir des fichiers rattachés à un utilisateur. */
-export const USER_BUCKETS = ["medical", "test-files", "garmin-screenshots", "test-media", "avatars", "docs", "provider-raw"];
+export const USER_BUCKETS = ["test-files", "garmin-screenshots", "test-media", "avatars", "docs", "provider-raw", "energy-exercise-photos"];
 
 /** Le strict nécessaire du client service_role (testable sans supabase-js). */
 export interface StorageAdmin {

@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { Plus, Trash2, Pencil, FlaskConical, ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAthleteContext } from '@/features/shared/context/AthleteContext';
-import { C } from '@/lib/theme';
+import { C, H } from "@/lib/theme";
 import { EmptyState } from '@/features/shared/components/EmptyState';
 import { ListSkeleton } from '@/features/shared/components/skeletons';
 import { useAthleteTestResults, useCreateTestResult, useUpdateTestResult, useDeleteTestResult } from '@/features/shared/hooks/tests/useAthleteTests';
@@ -203,7 +203,7 @@ function ResultCard({
                 disabled={deleting}
                 style={{
                   padding: '5px 10px', borderRadius: 6, border: 'none', fontFamily: 'inherit',
-                  background: 'rgba(239,75,75,0.15)', color: '#FF5A33',
+                  background: 'rgba(239,75,75,0.15)', color: C.r,
                   fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 }}
               >
@@ -221,7 +221,7 @@ function ResultCard({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'color 150ms ease-out',
             }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = '#FF5A33')}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = C.r)}
             onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = C.tx3)}
             >
               <Trash2 size={13} />
@@ -381,7 +381,7 @@ function AddResultForm({
           style={{
             padding: '9px 22px', borderRadius: 4, border: 'none', fontFamily: 'inherit',
             background: isValid && !saving ? C.ac : C.s2,
-            color: isValid && !saving ? '#fff' : C.tx3,
+            color: isValid && !saving ? C.tx : C.tx3,
             fontSize: 13, fontWeight: 700,
             cursor: isValid && !saving ? 'pointer' : 'default',
             transition: 'background 150ms ease-out',
@@ -437,7 +437,7 @@ function CoachToFill({ athleteId }: { athleteId: string }) {
                   )}
                 </div>
                 <span style={{ fontSize: 9, fontWeight: 700, color: C.o, background: C.o + '1A', border: '1px solid ' + C.o + '40', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>À remplir</span>
-                <button onClick={() => { setOpenId(open ? null : p.sessionId); setVals({}); }} style={{ padding: '6px 12px', borderRadius: 4, border: 'none', background: C.oV, color: '#0E0C0A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => { setOpenId(open ? null : p.sessionId); setVals({}); }} style={{ padding: '6px 12px', borderRadius: 4, border: 'none', background: C.oV, color: C.ink, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                   {open ? 'Fermer' : 'Remplir'}
                 </button>
               </div>
@@ -464,7 +464,7 @@ function CoachToFill({ athleteId }: { athleteId: string }) {
                   <button
                     onClick={() => submit(p.sessionId, p.variables)}
                     disabled={fill.isPending}
-                    style={{ alignSelf: 'flex-end', marginTop: 4, padding: '8px 18px', borderRadius: 4, border: 'none', background: C.oV, color: '#0E0C0A', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{ alignSelf: 'flex-end', marginTop: 4, padding: '8px 18px', borderRadius: 4, border: 'none', background: C.oV, color: C.ink, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     {fill.isPending ? 'Enregistrement…' : 'Valider la note'}
                   </button>
@@ -527,7 +527,7 @@ export default function TestPage({ embedded = false }: { embedded?: boolean }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 14px', borderRadius: 4, border: 'none',
-                background: C.acV, color: '#0E0C0A', fontSize: 12, fontWeight: 700,
+                background: C.acV, color: C.ink, fontSize: 12, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'opacity 150ms ease-out',
               }}
@@ -596,18 +596,18 @@ const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 11px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
   background: 'rgba(255,255,255,0.04)',
-  color: '#E8E6EA', fontSize: 12, fontFamily: 'inherit',
+  color: H.grisPerle, fontSize: 12, fontFamily: 'inherit',
   outline: 'none', boxSizing: 'border-box',
 };
 
 const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: 10, fontWeight: 600,
-  color: '#7D7468', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6,
+  color: C.tx3, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6,
 };
 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '9px 18px', borderRadius: 4,
   border: '1px solid rgba(255,255,255,0.08)',
-  background: 'transparent', color: '#7D7468',
+  background: 'transparent', color: C.tx3,
   fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
 };

@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import type { ProgSession } from "./types"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
@@ -153,7 +153,7 @@ export function SessionForm({ initial, onSubmit, onCancel }: SessionFormProps) {
         </button>
         <button
           onClick={handleSubmit}
-          style={{ padding: "8px 20px", borderRadius: 4, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ padding: "8px 20px", borderRadius: 4, border: "none", background: VIOLET, color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
         >
           Valider
         </button>

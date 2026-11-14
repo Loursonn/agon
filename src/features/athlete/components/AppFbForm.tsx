@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import type { AppFeedbackEntry } from "@/features/shared/types/athlete";
 
@@ -53,7 +53,7 @@ export default function AppFbForm({ onClose }: Props) {
         <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 8 }}>Commentaire (optionnel)</div>
         <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Ce que tu aimes, ce qui manque, un bug rencontré..." rows={4} style={{ width: "100%", padding: "12px 14px", borderRadius: 6, border: "1px solid " + C.brdL, background: C.s1, color: C.tx, fontSize: 13, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box", lineHeight: 1.6 }} />
       </div>
-      <button onClick={submit} disabled={!rating || sending} style={{ padding: "14px 0", borderRadius: 6, border: "none", background: rating ? C.ac : "#333", color: rating ? "#fff" : C.tx3, fontSize: 14, fontWeight: 700, cursor: rating ? "pointer" : "default", fontFamily: "inherit", opacity: sending ? 0.7 : 1 }}>
+      <button onClick={submit} disabled={!rating || sending} style={{ padding: "14px 0", borderRadius: 6, border: "none", background: rating ? C.ac : H.grisFonce, color: rating ? C.tx : C.tx3, fontSize: 14, fontWeight: 700, cursor: rating ? "pointer" : "default", fontFamily: "inherit", opacity: sending ? 0.7 : 1 }}>
         {sending ? "Envoi…" : "Envoyer mon avis"}
       </button>
     </div>

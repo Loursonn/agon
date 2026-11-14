@@ -10,7 +10,15 @@ type Call = { table: string; column: string; value: string; columns?: string };
 const calls: Call[] = [];
 let rowsFor: (c: Call) => unknown[] = () => [];
 
+let signed: (paths: string[]) => Record<string, string> = (paths) => Object.fromEntries(paths.map((p) => [p, `https://signe/${p}`]));
+const signCalls: Array<{ paths: string[]; expires: number }> = [];
+
 vi.mock("@/api/account", () => ({
+  PROVIDER_RAW_BUCKET: "provider-raw",
+  signOwnRawFiles: vi.fn(async (paths: string[], expires: number) => {
+    signCalls.push({ paths, expires });
+    return signed(paths);
+  }),
   readOwnRows: vi.fn(async (table: string, column: string, value: string, columns?: string) => {
     const c = { table, column, value, columns };
     calls.push(c);
@@ -21,20 +29,22 @@ vi.mock("@/api/profile", () => ({
   getProfile: vi.fn(async (id: string) => ({ id, full_name: "Léa Démo", birth_date: "1998-04-12", role: "athlete" })),
 }));
 
-import { EXPORT_JOBS, buildDataExport, stripSecrets } from "@/lib/dataExport";
+import { EXPORT_JOBS, buildDataExport, rawFileRefs, stripSecrets } from "@/lib/dataExport";
 
 const has = (table: string, column: string) => EXPORT_JOBS.some((j) => j.table === table && j.column === column);
 
 beforeEach(() => {
   calls.length = 0;
+  signCalls.length = 0;
   rowsFor = () => [];
+  signed = (paths) => Object.fromEntries(paths.map((p) => [p, `https://signe/${p}`]));
 });
 
 describe("inventaire de l'export", () => {
   it("couvre les données manquantes de l'audit §9", () => {
-    // Hyrox, tests, compétitions, nutrition (app_data), retours
+    // Hyrox, tests, compétitions, nutrition (app_data), retours hebdo
     for (const t of ["hyrox_results", "hyrox_race_plans", "hyrox_test_analyses", "athlete_test_results",
-      "test_sessions", "performance_logs", "competitions", "app_data", "weekly_retours", "retours"]) {
+      "test_sessions", "performance_logs", "competitions", "app_data", "weekly_retours", "weekly_reviews"]) {
       expect(has(t, "athlete_id"), t).toBe(true);
     }
     // Staff et co-coach, des deux côtés
@@ -58,7 +68,6 @@ describe("inventaire de l'export", () => {
   it("lit les tables à secrets avec une liste de colonnes sans le secret", () => {
     const sel = (t: string) => EXPORT_JOBS.filter((j) => j.table === t).map((j) => j.select ?? "*");
     for (const s of sel("coach_api_keys")) expect(s).not.toMatch(/\*|key_hash|key_prefix/);
-    for (const s of sel("invitations")) expect(s).not.toMatch(/\*|token/);
     for (const s of sel("staff_invitations")) expect(s).not.toMatch(/\*|token/);
     for (const s of sel("provider_connections")) expect(s).not.toMatch(/\*|sync_lock_token/);
   });
@@ -125,10 +134,69 @@ describe("buildDataExport", () => {
     expect((r.payload as Record<string, unknown[]>).app_data).toHaveLength(1);
   });
 
+  it("table morte supprimée (workout_rpe, seasons…) : ignorée sans échec ; une autre table absente reste signalée", async () => {
+    const { ApiError } = await import("@/api/client");
+    rowsFor = (c) => {
+      if (["workout_rpe", "seasons", "habits"].includes(c.table)) throw new ApiError("lecture", { message: "table absente", code: "PGRST205" });
+      return [];
+    };
+    const r = await buildDataExport("u1");
+    expect(r.failures.map((f) => f.table)).toEqual(["habits.athlete_id"]);
+  });
+
   it("garde l'attribution Garmin sur les activités", async () => {
     rowsFor = (c) => (c.table === "provider_activities" ? [{ id: "a", source: "garmin", device_name: "Edge 840" }] : []);
     const r = await buildDataExport("u1");
     const [a] = (r.payload as Record<string, Array<Record<string, unknown>>>).provider_activities;
     expect(a.attribution).toBe("Garmin Edge 840");
+  });
+});
+
+describe("fichiers bruts de montre (P37)", () => {
+  const raw = [
+    { id: "r1", athlete_id: "u1", source: "garmin", summary_type: "activityDetails", summary_id: "9", samples_path: "u1/garmin/activityDetails/9.json.gz", file_path: null },
+    { id: "r2", athlete_id: "u1", source: "garmin", summary_type: "activityFiles", summary_id: "9", samples_path: null, file_path: "u1/garmin/activityFiles/9.fit" },
+    { id: "r3", athlete_id: "u1", source: "garmin", summary_type: "dailies", summary_id: "d", samples_path: null, file_path: null },
+  ];
+
+  it("liste chaque fichier une fois, avec son type", () => {
+    expect(rawFileRefs([...raw, raw[0]])).toEqual([
+      { path: "u1/garmin/activityDetails/9.json.gz", kind: "samples", source: "garmin", summary_type: "activityDetails", summary_id: "9" },
+      { path: "u1/garmin/activityFiles/9.fit", kind: "file", source: "garmin", summary_type: "activityFiles", summary_id: "9" },
+    ]);
+  });
+
+  it("ajoute les liens signés 7 jours, avec l'attribution Garmin", async () => {
+    rowsFor = (c) => (c.table === "provider_raw_records" ? raw : []);
+    const { payload, failures } = await buildDataExport("u1");
+    const files = (payload as { provider_raw_files: Array<Record<string, unknown>> }).provider_raw_files;
+    expect(files).toHaveLength(2);
+    expect(files[0]).toMatchObject({ attribution: "Garmin", bucket: "provider-raw", kind: "samples", url: "https://signe/u1/garmin/activityDetails/9.json.gz" });
+    expect(files[1].url_expires_at).toBeTruthy();
+    expect(signCalls).toEqual([{ paths: ["u1/garmin/activityDetails/9.json.gz", "u1/garmin/activityFiles/9.fit"], expires: 7 * 86_400 }]);
+    expect(failures).toEqual([]);
+  });
+
+  it("fichier absent du stockage : listé sans lien, signalé", async () => {
+    rowsFor = (c) => (c.table === "provider_raw_records" ? raw : []);
+    signed = (paths) => ({ [paths[0]]: "https://signe/a" });
+    const { payload, failures } = await buildDataExport("u1");
+    const files = (payload as { provider_raw_files: Array<Record<string, unknown>> }).provider_raw_files;
+    expect(files[1]).toMatchObject({ url: null, url_expires_at: null });
+    expect(failures).toEqual([{ table: "provider_raw_files", reason: "1 fichier(s) introuvable(s) dans le stockage" }]);
+  });
+
+  it("signature en panne : l'export part quand même, liste sans liens, échec signalé", async () => {
+    rowsFor = (c) => (c.table === "provider_raw_records" ? raw : []);
+    signed = () => { throw new Error("stockage injoignable"); };
+    const { payload, failures } = await buildDataExport("u1");
+    expect((payload as { provider_raw_files: unknown[] }).provider_raw_files).toHaveLength(2);
+    expect(failures[0]).toMatchObject({ table: "provider_raw_files", reason: "stockage injoignable" });
+  });
+
+  it("aucun fichier brut : pas de section, aucun appel au stockage", async () => {
+    const { payload } = await buildDataExport("u1");
+    expect(payload).not.toHaveProperty("provider_raw_files");
+    expect(signCalls).toHaveLength(0);
   });
 });

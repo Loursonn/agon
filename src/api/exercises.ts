@@ -197,6 +197,15 @@ export async function createBankExercise(row: ExerciseInsert): Promise<void> {
   check(await db().from("exercises").insert(row), "Création de l'exercice impossible");
 }
 
+/**
+ * Équivalent Garmin choisi par le coach (`null` : revenir à la proposition
+ * automatique faite depuis le nom). Le couple catégorie / exercice est écrit
+ * en une fois : la base refuse l'un sans l'autre.
+ */
+export async function setGarminEquivalent(id: string, pick: { category: string; name: string } | null): Promise<void> {
+  await updateExercise(id, { garmin_category: pick?.category ?? null, garmin_exercise: pick?.name ?? null });
+}
+
 /** Modifie un exercice (caractéristiques, vidéo, type, validation…). */
 export async function updateExercise(id: string, patch: ExerciseUpdate): Promise<void> {
   check(await db().from("exercises").update(patch).eq("id", id), "Modification de l'exercice impossible");
@@ -206,13 +215,20 @@ export async function deleteExercise(id: string): Promise<void> {
   check(await db().from("exercises").delete().eq("id", id), "Suppression de l'exercice impossible");
 }
 
-type MergeFields = Pick<ExerciseRow, "youtube_id" | "image_url" | "instructions" | "tips">;
+type MergeFields = Pick<ExerciseRow, "youtube_id" | "image_url" | "instructions" | "tips" | "garmin_category" | "garmin_exercise">;
 const MERGE_FIELDS = ["youtube_id", "image_url", "instructions", "tips"] as const;
 
-/** Ce que l'exercice conservé récupère du doublon : seulement les champs qu'il n'a pas. */
+/**
+ * Ce que l'exercice conservé récupère du doublon : seulement les champs qu'il
+ * n'a pas. L'équivalent Garmin passe en couple (jamais l'un sans l'autre).
+ */
 export function mergePatch(keep: Partial<MergeFields>, dup: Partial<MergeFields>): ExerciseUpdate {
   const patch: ExerciseUpdate = {};
   for (const k of MERGE_FIELDS) if (!keep[k] && dup[k]) patch[k] = dup[k];
+  if (!keep.garmin_category && dup.garmin_category && dup.garmin_exercise) {
+    patch.garmin_category = dup.garmin_category;
+    patch.garmin_exercise = dup.garmin_exercise;
+  }
   return patch;
 }
 
@@ -225,7 +241,7 @@ export function mergePatch(keep: Partial<MergeFields>, dup: Partial<MergeFields>
 export async function mergeExercises(keepId: string, deleteId: string): Promise<void> {
   if (keepId === deleteId) throw new ApiError("Fusion impossible", { message: "même exercice" });
   const rows = unwrapRows(
-    await db().from("exercises").select("id, youtube_id, image_url, instructions, tips").in("id", [keepId, deleteId]),
+    await db().from("exercises").select("id, youtube_id, image_url, instructions, tips, garmin_category, garmin_exercise").in("id", [keepId, deleteId]),
     "Fusion impossible",
   );
   const keep = rows.find((r) => r.id === keepId);

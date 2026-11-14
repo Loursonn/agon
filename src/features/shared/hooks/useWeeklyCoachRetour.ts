@@ -9,7 +9,7 @@ export type { RetourReaction, WeeklyRetour } from "@/api/coachRetours";
 export const RETOUR_REACTIONS: { key: RetourReaction; emoji: string; label: string }[] = [
   { key: "like",   emoji: "👍", label: "Bien reçu" },
   { key: "strong", emoji: "💪", label: "Motivé" },
-  { key: "fire",   emoji: "🔥", label: "Chaud" },
+  { key: "fire",   emoji: "🔥", label: "À fond" },
   { key: "heart",  emoji: "❤️", label: "Merci" },
 ];
 

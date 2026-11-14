@@ -1,172 +1,173 @@
 /**
- * ExecutionCard — central card showing current step during execution.
- * Timer countdown, round info, next step preview.
+ * Minuteur plein écran de la séance spécifique (planche Ath2SeanceSpecifique) :
+ * effort en orange, récup en bleu (le prochain exercice passe au premier plan),
+ * tour en cours et exercices du tour en bas.
  */
+import { useEffect } from "react";
 import type { FlatExecStep } from "@/features/athlete/hooks/useSpecificExecution";
-import { formatTarget, formatExerciseStep } from "@/lib/energy/formatTarget";
+import { formatTarget } from "@/lib/energy/formatTarget";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
-
-const PHASE_COLOR: Record<string, string> = {
-  warmup: "#66F03C", work: "#E5484D", recovery: "#4FA3FF",
-  rest: "#8B8A92", cooldown: "#66F03C", open: "#8B8A92",
-};
-const PHASE_LABEL: Record<string, string> = {
-  warmup: "Échauffement", work: "Effort", recovery: "Récupération",
-  rest: "Repos", cooldown: "Retour au calme", open: "Libre",
-};
-const EQUIPMENT_LABEL: Record<string, string> = {
-  rameur: "Rameur", skierg: "SkiErg", bikeerg: "BikeErg", velo: "Vélo",
-  course: "Course", elliptique: "Elliptique", corde: "Corde", autre: "Autre",
-};
-
-function formatTimer(s: number): string {
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${m}:${sec.toString().padStart(2, "0")}`;
-}
+import { StationIcon } from "@/features/shared/components/seance/StationIcon";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import { C, alpha } from "@/lib/theme";
+import { TYPE_COLOR } from "@/lib/peps";
+import {
+  PHASE_LABEL, fmtClock, fmtShort, isRestStep, nextWork, roundOf, roundView, stepDetail, stepSeconds, stepTitle, wodSummary,
+} from "@/lib/specificTimer";
 
 interface Props {
-  current: FlatExecStep;
-  next: FlatExecStep | null;
+  flat: readonly FlatExecStep[];
+  index: number;
   secondsLeft: number;
-  isLastStep: boolean;
-  onNext: () => void;
+  /** EMOM : secondes restantes dans la minute (null hors départ fixe). */
+  minuteLeft?: number | null;
+  elapsed: number;
   onSkip: () => void;
+  /** « Terminer » : arrête le minuteur (format WOD : retour athlète). */
+  onFinish: () => void;
   /** VMA de l'athlète en km/h — sans elle, pas de « % VMA » dans les équivalences. */
   vma?: number | null;
 }
 
-export default function ExecutionCard({ current, next, secondsLeft, isLastStep, onNext, onSkip, vma }: Props) {
-  const { step, roundLabel } = current;
-  const isExercise = step.type === "exercise";
-  const color = isExercise ? "#FFC933" : (PHASE_COLOR[step.role] ?? "#8B8A92");
-  const phaseLabel = isExercise
-    ? (step.role === "work" ? "Effort · Exercice" : "Exercice")
-    : (PHASE_LABEL[step.role] ?? step.role);
+const LABEL = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: C.tx3 };
 
-  const title = isExercise ? step.exercise_name : (
-    step.type === "interval" && step.notes ? step.notes
-    : PHASE_LABEL[step.role] ?? step.role
+export default function ExecutionCard({ flat, index, secondsLeft, minuteLeft = null, elapsed, onSkip, onFinish, vma }: Props) {
+  const current = flat[index];
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+  if (!current) return null;
+
+  const { step } = current;
+  const rest = isRestStep(step);
+  const color = rest ? TYPE_COLOR.energie : TYPE_COLOR.hyrox;
+  const emom = current.emom ?? null;
+  // EMOM : le gros chrono suit la minute, sauf pendant un effort chronométré.
+  const minuteClock = !!emom && (emom.gap || stepSeconds(step) === 0);
+  const total = minuteClock && emom ? emom.every : stepSeconds(step);
+  const clock = minuteClock ? (minuteLeft ?? emom?.every ?? 0) : secondsLeft;
+  const round = roundOf(current);
+  const view = roundView(flat, index);
+  const upcoming = rest ? nextWork(flat, index) : null;
+  const afterUpcoming = upcoming ? nextWork(flat, flat.indexOf(upcoming)) : null;
+  const following = rest ? null : flat[index + 1] ?? null;
+  const followingWork = !rest ? nextWork(flat, index) : null;
+  const target = step.type !== "exercise" && step.target ? formatTarget(step.target) : "";
+  const progress = total > 0 ? Math.min(1, Math.max(0, 1 - clock / total)) : 0;
+
+  const hero = rest && upcoming ? upcoming.step : step;
+  const heroDetail = rest && upcoming ? [fmtShort(stepSeconds(upcoming.step)), stepDetail(upcoming.step)].filter((s) => s && s !== "0 s").join(" · ") : stepDetail(step);
+
+  // EMOM : le repos qui suit n'a pas de durée fixe, c'est le reste de la minute.
+  const followingRest = following && isRestStep(following.step)
+    ? following.emom?.gap
+      ? following.emom.round >= following.emom.rounds
+        ? "Fin du dernier tour"
+        : following.emom.every === 60 ? "Repos jusqu'à la minute suivante" : "Repos jusqu'au départ suivant"
+      : `${PHASE_LABEL[following.step.role] ?? "Récup"} ${fmtShort(stepSeconds(following.step))}`
+    : null;
+  const ensuite = !rest && following
+    ? followingRest
+      ? `${followingRest}${followingWork ? `, puis ${stepTitle(followingWork.step)}` : ""}`
+      : stepTitle(following.step)
+    : null;
+
+  const btn = (label: string, onClick: () => void, primary: boolean) => (
+    <button type="button" onClick={onClick} style={{
+      flex: 1, height: 52, borderRadius: 12, fontSize: 15, fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
+      background: primary ? color : "transparent", color: primary ? C.bg : C.tx, border: primary ? "none" : `1px solid ${alpha(C.tx, 0.18)}`,
+    }}>{label}</button>
   );
 
-  const equipmentLabel = !isExercise && step.type === "interval" && step.equipment
-    ? (EQUIPMENT_LABEL[step.equipment] ?? step.equipment)
-    : null;
-
-  const targetStr = step.target ? formatTarget(step.target) : "";
-  const showTarget = targetStr && targetStr !== "Libre";
-
-  const detail = isExercise
-    ? formatExerciseStep(step)
-    : null;
-
-  const nextTitle = next ? (
-    next.step.type === "exercise" ? [next.step.exercise_name, formatExerciseStep(next.step)].filter(Boolean).join(" — ")
-    : (PHASE_LABEL[next.step.role] ?? next.step.role)
-  ) : null;
-
   return (
-    <div style={{
-      background: "var(--card, #0E0C0A)", border: `1px solid ${color}`,
-      borderRadius: 6, padding: "24px 18px", textAlign: "center",
-    }}>
-      <div style={{
-        fontSize: 12, fontWeight: 700, color, textTransform: "uppercase" as const,
-        letterSpacing: "0.08em",
-      }}>
-        {phaseLabel}
-      </div>
-      <div style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 2px", color: "#F2F1F5" }}>
-        {title}
-      </div>
-      {detail && (
-        <div style={{ fontSize: 13, color: "#8B8A92" }}>{detail}</div>
-      )}
+    <div role="dialog" aria-modal="true" aria-label="Minuteur" style={{ position: "fixed", inset: 0, zIndex: 200, background: C.bg, color: C.tx, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "calc(env(safe-area-inset-top, 0px) + 16px) 20px 20px", display: "flex", flexDirection: "column", gap: 18, maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ ...LABEL, color: TYPE_COLOR.hyrox }}>{wodSummary(flat)}</span>
+          <span style={{ ...MONO, fontSize: 13, color: C.tx2 }}>{fmtClock(elapsed)}</span>
+        </div>
 
-      {/* Equipment + Intensity */}
-      {(equipmentLabel || showTarget) && (
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 6, flexWrap: "wrap" }}>
-          {equipmentLabel && (
-            <span style={{
-              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 6,
-              background: "#4FA3FF20", color: "#4FA3FF",
-              border: "1px solid #4FA3FF40",
-            }}>
-              {equipmentLabel}
-            </span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          {round && emom ? (
+            <span style={{ ...DISPLAY, fontSize: 22, fontWeight: 300 }}>{emom.every === 60 ? "Minute" : "Départ"} <span style={{ ...MONO, fontSize: 26 }}>{round.round}</span> <span style={{ color: C.tx3 }}>/ {round.rounds}</span></span>
+          ) : round ? (
+            <span style={{ ...DISPLAY, fontSize: 22, fontWeight: 300 }}>Tour <span style={{ ...MONO, fontSize: 26 }}>{round.round}</span> <span style={{ color: C.tx3 }}>/ {round.rounds}</span></span>
+          ) : current.roundLabel ? (
+            <span style={{ ...DISPLAY, fontSize: 20, fontWeight: 300 }}>{current.roundLabel}</span>
+          ) : (
+            <span style={{ ...DISPLAY, fontSize: 20, fontWeight: 300 }}>Étape {index + 1} / {flat.length}</span>
           )}
-          {showTarget && (
-            <span style={{
-              fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 6,
-              background: `${color}20`, color,
-              border: `1px solid ${color}40`,
-            }}>
-              {targetStr}
-            </span>
+          {view.names.length > 0 && view.current >= 0 && (
+            <span style={{ fontSize: 12.5, color: C.tx2 }}>{rest ? "ensuite " : ""}exercice {view.current + 1} / {view.names.length}</span>
           )}
         </div>
-      )}
-      {!isExercise && (
-        <div style={{ marginTop: 6 }}>
-          <PaceEquivalents
-            target={step.target}
-            repDistanceM={stepDistanceM(step.type === "interval" ? step.duration : null)}
-            vma={vma}
-            omitPrimary
-            align="center"
-          />
-        </div>
-      )}
 
-      {/* Timer */}
-      <div style={{
-        fontSize: 52, fontWeight: 800, fontVariantNumeric: "tabular-nums",
-        margin: "14px 0 4px", color: "#F2F1F5",
-      }}>
-        {secondsLeft > 0 ? formatTimer(secondsLeft) : "—"}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "18px 0 6px" }}>
+          <span style={{ ...LABEL, color }}>{rest ? (PHASE_LABEL[step.role] ?? "Récup") : step.type === "exercise" ? "Effort" : (PHASE_LABEL[step.role] ?? step.role)}</span>
+          <span style={{ ...MONO, fontSize: 84, lineHeight: 1, color, fontVariantNumeric: "tabular-nums" }}>{total > 0 ? fmtClock(clock) : "—"}</span>
+          {total > 0 && <span style={{ ...MONO, fontSize: 13, color: C.tx3 }}>{minuteClock ? (emom?.every === 60 ? "reste dans la minute" : "avant le départ suivant") : `sur ${fmtClock(total)}`}</span>}
+          {emom && !minuteClock && minuteLeft != null && (
+            <span style={{ ...MONO, fontSize: 13, color: C.tx2 }}>{fmtClock(minuteLeft)} {emom.every === 60 ? "dans la minute" : "avant le départ suivant"}</span>
+          )}
+          {total > 0 && (
+            <div aria-hidden style={{ width: "100%", height: 4, borderRadius: 2, background: alpha(C.tx, 0.1), marginTop: 10, overflow: "hidden" }}>
+              <div style={{ width: `${progress * 100}%`, height: "100%", background: color, transition: "width 1s linear" }} />
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 16, borderRadius: 14, background: alpha(color, 0.08), border: `1px solid ${alpha(color, 0.35)}` }}>
+          {rest && upcoming && <span style={LABEL}>Prochain exercice</span>}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {hero.type === "exercise" && <StationIcon name={stepTitle(hero)} size={28} />}
+            <span style={{ fontSize: 22, fontWeight: 500, lineHeight: 1.2 }}>{rest && !upcoming ? stepTitle(step) : stepTitle(hero)}</span>
+          </div>
+          {heroDetail && <span style={{ fontSize: 13.5, color: C.tx2 }}>{heroDetail}</span>}
+          {target && target !== "Libre" && !rest && <span style={{ ...MONO, fontSize: 13, color }}>{target}</span>}
+          {!rest && step.type !== "exercise" && (
+            <PaceEquivalents target={step.target} repDistanceM={stepDistanceM(step.duration)} vma={vma} omitPrimary align="left" />
+          )}
+        </div>
+
+        {ensuite && (
+          <div style={{ fontSize: 13, color: C.tx2 }}>
+            <span style={LABEL}>Ensuite</span> <span style={{ marginLeft: 6 }}>{ensuite}</span>
+          </div>
+        )}
+        {rest && afterUpcoming && (
+          <div style={{ fontSize: 13, color: C.tx2 }}>
+            <span style={LABEL}>Puis</span> <span style={{ marginLeft: 6 }}>{stepTitle(afterUpcoming.step)}</span>
+          </div>
+        )}
+
+        {view.names.length > 1 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span style={LABEL}>Ce tour</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {view.names.map((n, i) => {
+                const on = i === view.current;
+                const done = i < view.current;
+                return (
+                  <span key={`${n}-${i}`} style={{
+                    padding: "6px 12px", borderRadius: 999, fontSize: 12.5,
+                    background: on ? alpha(color, 0.16) : "transparent", border: `1px solid ${on ? color : alpha(C.tx, 0.18)}`,
+                    color: on ? C.tx : done ? C.tx3 : C.tx2, textDecoration: done ? "line-through" : "none",
+                  }}>{n}</span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Round */}
-      {roundLabel && (
-        <div style={{ fontSize: 13, color: "#F5A623", fontWeight: 600 }}>
-          {roundLabel}
+      <div style={{ padding: "12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)", borderTop: `1px solid ${C.brd}`, background: C.bg }}>
+        <div style={{ display: "flex", gap: 10, maxWidth: 448, margin: "0 auto" }}>
+          {btn(total > 0 ? "Passer" : "Fait", onSkip, total === 0)}
+          {btn("Terminer", onFinish, total > 0)}
         </div>
-      )}
-
-      {/* Next step preview */}
-      {nextTitle && (
-        <div style={{ marginTop: 14, fontSize: 13, color: "#8B8A92" }}>
-          Suivant : <strong style={{ color: "#F2F1F5" }}>{nextTitle}</strong>
-        </div>
-      )}
-
-      {/* Buttons */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16,
-      }}>
-        <button
-          onClick={onSkip}
-          style={{
-            borderRadius: 6, padding: 12, fontSize: 14, fontWeight: 700,
-            cursor: "pointer", border: "1px solid var(--border, #2E2D33)",
-            background: "var(--card2, #26252A)", color: "#8B8A92",
-            fontFamily: "inherit",
-          }}
-        >
-          Passer
-        </button>
-        <button
-          onClick={onNext}
-          style={{
-            borderRadius: 6, padding: 12, fontSize: 14, fontWeight: 700,
-            cursor: "pointer", border: "1px solid var(--border, #2E2D33)",
-            background: "var(--card2, #26252A)", color: "#F2F1F5",
-            fontFamily: "inherit",
-          }}
-        >
-          {isLastStep ? "Terminer ✓" : "Étape suivante ✓"}
-        </button>
       </div>
     </div>
   );

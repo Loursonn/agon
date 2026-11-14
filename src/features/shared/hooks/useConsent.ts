@@ -29,16 +29,16 @@ export const CONSENT_COPY: Record<
 > = {
   health_data: {
     label:
-      "J'accepte que mes données d'entraînement, de bien-être et de santé soient traitées par Agon et partagées avec le coach auquel je suis rattaché.",
+      "J'accepte que mes données d'entraînement, de bien-être et de santé soient traitées par Agon et partagées avec le coach auquel je suis rattaché : séances et charges, bien-être du matin (sommeil, fatigue, douleur, maladie), bilans hebdomadaires, poids, composition corporelle, mensurations et photos du corps, blessures déclarées, et les données de ma montre si je la connecte.",
     detail:
-      "Séances, charges, fatigue, sommeil, poids, blessures déclarées. C'est la raison d'être du service : sans cet accord, l'application ne peut pas fonctionner.",
+      "C'est la raison d'être du service : sans cet accord, l'application ne peut pas fonctionner. Ton coach et ton co-coach voient ces données, tes photos du corps comprises ; ton staff ne voit que ce que tu acceptes à part. Tu peux retirer cet accord ou supprimer ton compte à tout moment.",
     required: true,
   },
   ai_programming: {
     label:
       "J'accepte que mes données d'entraînement soient traitées par des outils d'intelligence artificielle, l'API Google Gemini utilisée par Agon et l'assistant Claude (Anthropic) de mon coach, pour en produire des analyses, des synthèses et des visualisations, et proposer à mon coach des axes de travail et de développement.",
     detail:
-      "Facultatif, et révocable à tout moment. Ton coach reste seul à décider de tes programmes : l'IA l'aide à t'analyser et à préparer son travail, et n'inscrit rien dans Agon sans son accord. L'assistant de ton coach voit aussi les titres des événements que tu ajoutes à ton calendrier (examens, voyages…) : n'y écris rien que tu ne veux pas partager. Via Gemini, tes données ne servent pas à entraîner les modèles de Google. Via Claude, elles passent par le compte personnel de ton coach : leur usage dépend des réglages de ce compte, qu'Agon ne contrôle pas. Si tu refuses, tu gardes tes statistiques et tes graphiques, sans analyse rédigée par l'IA.",
+      "Facultatif, et révocable à tout moment. Ton coach reste seul à décider de tes programmes : l'IA l'aide à t'analyser et à préparer son travail, et n'inscrit rien dans Agon sans son accord. L'assistant de ton coach voit aussi les titres des événements que tu ajoutes à ton calendrier (examens, voyages…) : n'y écris rien que tu ne veux pas partager. Via Gemini, tes données ne servent pas à entraîner les modèles de Google. Via Claude, elles passent par le compte personnel de ton coach : leur usage dépend des réglages de ce compte, qu'Agon ne contrôle pas. Si tu refuses, tu gardes tes statistiques et tes graphiques, sans analyse rédigée par l'IA. Réservé aux 18 ans et plus.",
     required: false,
   },
   garmin_sync: {
@@ -58,7 +58,7 @@ export const CONSENT_COPY: Record<
     label:
       "J'accepte que les professionnels ajoutés par mon coach ou par moi (kiné, ostéo, nutritionniste…) accèdent à mes données selon les droits définis par mon coach.",
     detail:
-      "Facultatif, et révocable à tout moment. Chaque professionnel ne voit que les domaines que ton coach lui ouvre (programme, séances, bien-être, blessures, nutrition…), et tu retrouves la liste de tes pros et de leurs droits dans « Mon staff ». Tant que tu n'as pas accepté, ton staff ne voit aucune de tes données.",
+      "Facultatif, et révocable à tout moment. Chaque professionnel ne voit que les domaines que ton coach lui ouvre (programme, séances, bien-être, blessures, nutrition…), et tu retrouves la liste de tes pros et de leurs droits dans « Mon staff ». Tant que tu n'as pas accepté, ton staff ne voit aucune de tes données. Ce qu'un professionnel écrit dans ton suivi (blessures, fiches, commentaires) est visible de ton coach et de ton co-coach.",
     required: false,
   },
 };

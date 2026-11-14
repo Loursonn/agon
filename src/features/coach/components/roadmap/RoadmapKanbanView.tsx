@@ -159,7 +159,7 @@ function ItemCard({ item, voteCount, voted, isAdmin, userId, onEdit }: ItemCardP
                   onClick={() => { deleteItem.mutate(item.id); setConfirmDel(false); }}
                   style={{
                     padding: "4px 8px", borderRadius: 6, border: "none",
-                    background: C.rV, color: "#0E0C0A", fontSize: 10, fontWeight: 700,
+                    background: C.rV, color: C.ink, fontSize: 10, fontWeight: 700,
                     cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
@@ -262,7 +262,7 @@ export function RoadmapKanbanView({
                         <button
                           type="button"
                           onClick={() => { deletePhase.mutate(phase.id); setConfirmDelPhase(null); }}
-                          style={{ padding: "3px 6px", borderRadius: 5, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                          style={{ padding: "3px 6px", borderRadius: 5, border: "none", background: C.rV, color: C.ink, fontSize: 9, fontWeight: 700, cursor: "pointer" }}
                         >
                           Oui
                         </button>

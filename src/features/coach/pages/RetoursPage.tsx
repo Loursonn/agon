@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
+import AthleteSantePage from "@/features/athlete/pages/AthleteSantePage";
+import { DeclaredWellness } from "@/features/coach/components/sante/DeclaredWellness";
+import { FeltMeasuredChart } from "@/features/coach/components/sante/FeltMeasuredChart";
+import { SanteKicker } from "@/features/coach/components/sante/SanteParts";
+import { FeltVsMeasured } from "@/features/coach/components/FeltVsMeasured";
+import { CoachWellnessPanel } from "@/features/coach/components/retours/CoachWellnessPanel";
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
   addWeeks, subWeeks, startOfWeek, addDays,
@@ -8,7 +14,10 @@ import {
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Heart, Dumbbell, FlaskConical, Trophy, UtensilsCrossed, MessageSquare, Footprints } from "lucide-react";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
+import { DISPLAY, KICK, MONO, SectionHead } from "@/features/shared/components/ordi/OrdiUi";
+
+const RETOURS_TITLE: React.CSSProperties = { margin: "0 0 12px", ...DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx };
 import { MuscleVolumePanel } from "@/features/coach/components/programmation/MuscleVolumePanel";
 import { useMuscleVolume } from "@/features/coach/components/programmation/hooks/useMuscleVolume";
 import { localISO } from "@/lib/date";
@@ -20,6 +29,8 @@ import { useAthleteModifications } from "@/features/shared/hooks/useAthleteModif
 import { MonthCalendarView } from "../components/retours/MonthCalendarView";
 import { WeekView } from "../components/retours/WeekView";
 import { WellnessDetailView } from "../components/retours/WellnessDetailView";
+import { WellnessLightBadge } from "@/features/shared/components/WellnessLightBadge";
+import { useWellnessLight } from "@/features/shared/hooks/useWellnessLight";
 import { WorkoutsDetailView } from "../components/retours/WorkoutsDetailView";
 import { TestsDetailView } from "../components/retours/TestsDetailView";
 import { CompetitionsDetailView } from "../components/retours/CompetitionsDetailView";
@@ -49,7 +60,7 @@ function RetoursMuscleVolume({ athleteId, weekStart }: { athleteId: string | und
     localISO(subWeeks(weekStart, 4)),
     localISO(addWeeks(weekStart, 3)),
   );
-  return <MuscleVolumePanel weeks={weeks} byWeek={byWeek} isLoading={isLoading} showDone title="Séries par muscle et par semaine" />;
+  return <MuscleVolumePanel weeks={weeks} byWeek={byWeek} isLoading={isLoading} showDone title="" />;
 }
 
 export default function RetoursPage() {
@@ -57,6 +68,12 @@ export default function RetoursPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { goals, freeSessions, athleteProfile } = useAthleteContext();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
+  // Planche CoachOrdiASante : « Wellness | Santé » (mesures de la montre).
+  // « Retours | Wellness | Santé » : "wellness" garde la vue semaine / mois historique ; "bienetre" = Wellness P26.
+  const [tab, setTab] = useState<"wellness" | "bienetre" | "sante">(() => {
+    const v = searchParams.get("vue");
+    return v === "sante" ? "sante" : v === "wellness" ? "bienetre" : "wellness";
+  });
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
   const [selectedWeek, setSelectedWeek]   = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [detailView, setDetailView]       = useState<DetailView>(() => detailFromParam(searchParams.get("detail")));
@@ -73,6 +90,7 @@ export default function RetoursPage() {
 
   // Blessures déclarées, en cours d'abord (l'ordre vient déjà de la requête).
   const { data: medicalEntries = [] } = useMedicalEntries(athleteId);
+  const light = useWellnessLight(athleteId);
   const injuries = medicalEntries.filter((e) => e.kind === "blessure");
   const activeCount = activeInjuries(injuries).length;
 
@@ -208,14 +226,64 @@ export default function RetoursPage() {
     ? Math.round(calLogs.reduce((s, l) => s + l.total_calories_consumed!, 0) / calLogs.length)
     : null;
 
+  const firstName = ((athleteProfile as { full_name?: string | null } | null)?.full_name ?? "").trim().split(/\s+/)[0] || "L’athlète";
+  const tabSwitch = (
+    <div role="tablist" style={{ display: "flex", background: C.s2, borderRadius: 8, padding: 2, alignSelf: "flex-start", marginBottom: 16 }}>
+      {(["wellness", "bienetre", "sante"] as const).map((k) => (
+        <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} style={{
+          padding: "5px 14px", borderRadius: 6, border: "none", background: tab === k ? C.s1 : "transparent",
+          color: tab === k ? C.tx : C.tx3, fontSize: 12, fontWeight: tab === k ? 600 : 500, cursor: "pointer", fontFamily: "inherit",
+        }}>
+          {k === "wellness" ? "Retours" : k === "bienetre" ? "Wellness" : "Santé"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (tab === "bienetre" && athleteId) {
+    return (
+      <div style={{ padding: "16px 20px 80px", display: "flex", flexDirection: "column" }}>
+        <h1 style={RETOURS_TITLE}>Retours</h1>
+        {tabSwitch}
+        <CoachWellnessPanel athleteId={athleteId} firstName={firstName} />
+      </div>
+    );
+  }
+
+  if (tab === "sante" && athleteId) {
+    return (
+      <div style={{ padding: "16px 20px 80px", display: "flex", flexDirection: "column" }}>
+        <h1 style={RETOURS_TITLE}>Retours</h1>
+        {tabSwitch}
+        <AthleteSantePage
+          coachView={{ firstName }}
+          top={
+            <section style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
+              <SanteKicker n={1}>Ressenti / mesuré · ce matin</SanteKicker>
+              <div style={{ fontSize: 12.5, color: C.tx3 }}>Ce que {firstName} déclare face à ce que mesure sa montre.</div>
+              <FeltVsMeasured athleteId={athleteId} firstName={firstName} />
+              <SanteKicker n={2} style={{ marginTop: 14 }}>Mesures de la montre</SanteKicker>
+            </section>
+          }
+          bottom={
+            <>
+              <DeclaredWellness athleteId={athleteId} firstName={firstName} n={3} onOpenWellness={() => setTab("bienetre")} />
+              <FeltMeasuredChart athleteId={athleteId} n={4} />
+            </>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "16px 20px 80px" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, letterSpacing: "-0.3px" }}>Retours</div>
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>{periodLabel}</div>
+          <h1 style={{ ...RETOURS_TITLE, marginBottom: 6 }}>Retours</h1>
+          <div style={{ ...KICK }}>{periodLabel}</div>
         </div>
 
         {/* View toggle + nav */}
@@ -263,15 +331,22 @@ export default function RetoursPage() {
         </div>
       </div>
 
+      {tabSwitch}
+
+      {/* Feu du matin calculé (règles du 07/11) */}
+      <div style={{ marginBottom: 16 }}>
+        <WellnessLightBadge result={light.data} loading={light.isLoading} detail />
+      </div>
+
       {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, 140px)", justifyContent: "center", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
         {[
-          { icon: <Heart size={14} style={{ color: "#66F03C" }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
+          { icon: <Heart size={14} style={{ color: C.g }} />,              title: "Wellness moyen", value: avgWellness, subtitle: "/100",                                                    onClick: () => setDetailView("wellness")     },
           { icon: <Dumbbell size={14} style={{ color: C.ac }} />,            title: "Séances",         value: workoutsVal, subtitle: completionRate != null ? `${completionRate}%` : undefined, subtitle2: avgRpeSubtitle, onClick: () => setDetailView("workouts") },
           { icon: <FlaskConical size={14} style={{ color: C.b }} />,         title: "Tests",           value: testsVal,    subtitle: undefined,                                                onClick: () => setDetailView("tests")        },
           { icon: <Footprints size={14} style={{ color: C.ac }} />,          title: "Course à pied",   value: runKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 }), subtitle: "km", subtitle2: runWatchKm > 0 ? `dont ${runWatchKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} ${runOrigins.length ? runOrigins.join(", ") : "montre"}` : undefined },
-          { icon: <Trophy size={14} style={{ color: "#F5A623" }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
-          { icon: <UtensilsCrossed size={14} style={{ color: "#F59E0B" }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
+          { icon: <Trophy size={14} style={{ color: H.miel }} />,         title: "Compétitions",    value: compsVal,    subtitle: undefined,                                                onClick: () => setDetailView("competitions") },
+          { icon: <UtensilsCrossed size={14} style={{ color: H.ambre }} />, title: "Nutrition",       value: avgKcal,     subtitle: avgKcal != null ? "kcal/j" : undefined,                  onClick: () => setDetailView("nutrition")    },
         ].map((kpi) => (
           <KPICard key={kpi.title} {...kpi} />
         ))}
@@ -282,7 +357,7 @@ export default function RetoursPage() {
           marginBottom: 16, padding: "10px 14px", borderRadius: 8,
           background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)",
         }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#EF4444", marginBottom: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: H.rougeVif, marginBottom: 6 }}>
             Blessé / malade signalé dans le wellness
           </div>
           {injuryDays.map(([d, note]) => (
@@ -355,7 +430,7 @@ export default function RetoursPage() {
                 padding: "8px 20px", borderRadius: 4,
                 border: "none",
                 background: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ac : C.s2,
-                color: retourDraft.trim() !== (retourData?.comment ?? "") ? "#0E0C0A" : C.tx3,
+                color: retourDraft.trim() !== (retourData?.comment ?? "") ? C.ink : C.tx3,
                 fontSize: 12, fontWeight: 700, cursor: "pointer",
                 fontFamily: "inherit", opacity: upsertRetour.isPending ? 0.6 : 1,
               }}
@@ -460,15 +535,12 @@ export default function RetoursPage() {
       {/* ── Modifications planning athlète ── */}
       {modifications.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            Modifications planning athlète
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-              background: "rgba(245,158,11,0.12)", color: "#F59E0B",
-              border: "1px solid rgba(245,158,11,0.3)",
-            }}>
-              {modifications.length}
-            </span>
+          <div style={{ marginBottom: 12 }}>
+            <SectionHead
+              n={1}
+              title="Modifications planning athlète"
+              right={<span style={{ ...MONO, fontSize: 10.5, padding: "2px 9px", borderRadius: 999, background: C.o, color: C.ink }}>{modifications.length}</span>}
+            />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {modifications.map((mod) => {
@@ -494,7 +566,7 @@ export default function RetoursPage() {
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{mod.sessionName}</div>
                       <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
                         {dateLabel}
-                        {origLabel && <span style={{ color: "#F59E0B" }}> · Décalée du {origLabel}</span>}
+                        {origLabel && <span style={{ color: H.ambre }}> · Décalée du {origLabel}</span>}
                       </div>
                       {mod.rescheduleReason && (
                         <div style={{ fontSize: 11, color: C.tx3, marginTop: 4, fontStyle: "italic" }}>
@@ -504,12 +576,12 @@ export default function RetoursPage() {
                       {hasBonus && (
                         <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {bonusSetsCount > 0 && (
-                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(245,158,11,0.1)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.25)" }}>
+                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(245,158,11,0.1)", color: H.ambre, border: "1px solid rgba(245,158,11,0.25)" }}>
                               +{bonusSetsCount} série{bonusSetsCount > 1 ? "s" : ""} bonus
                             </span>
                           )}
                           {customExCount > 0 && (
-                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(59,141,240,0.1)", color: "#33B5FF", border: "1px solid rgba(59,141,240,0.25)" }}>
+                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(59,141,240,0.1)", color: C.b, border: "1px solid rgba(59,141,240,0.25)" }}>
                               +{customExCount} exercice{customExCount > 1 ? "s" : ""} ajouté{customExCount > 1 ? "s" : ""}
                             </span>
                           )}
@@ -518,7 +590,7 @@ export default function RetoursPage() {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
                       {isAlert && (
-                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(245,158,11,0.15)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.4)" }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(245,158,11,0.15)", color: H.ambre, border: "1px solid rgba(245,158,11,0.4)" }}>
                           À vérifier
                         </span>
                       )}
@@ -539,14 +611,16 @@ export default function RetoursPage() {
       )}
 
       {/* ── Séries par muscle par semaine ── */}
-      <div style={{ marginTop: 24 }}>
+      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionHead n={modifications.length > 0 ? 2 : 1} title="Séries par muscle et par semaine" />
         <RetoursMuscleVolume athleteId={athleteId} weekStart={selectedWeek} />
       </div>
 
       {/* ── Blessures ── */}
       {/* Lues dans `medical_entries` : ce que le coach voit ici est exactement ce
           que l'athlète a déclaré, détail compris. */}
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionHead n={modifications.length > 0 ? 3 : 2} title="Blessures" />
         {injuries.length > 0 ? (
           <div style={{ background: C.s1, borderRadius: 6, padding: 14, border: "1px solid " + C.r + "30" }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.r, textTransform: "uppercase" as const, letterSpacing: "0.5px", marginBottom: 10 }}>

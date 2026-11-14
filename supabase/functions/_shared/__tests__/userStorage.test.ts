@@ -25,9 +25,10 @@ function admin(objects: Array<{ bucket_id: string; object_name: string }> | null
 }
 
 describe("purgeUserStorage", () => {
-  it("supprime par bucket, fiches (docs) comprises, et ignore les buckets publics de l'app", async () => {
+  it("supprime par bucket, fiches (docs) comprises, et ignore les buckets publics de l'app et le bucket « medical » retiré (hors HDS)", async () => {
     const { a, removed } = admin([
       { bucket_id: "docs", object_name: "c/athletes/u1/fiche.pdf" },
+      { bucket_id: "test-files", object_name: "u1/vma.csv" },
       { bucket_id: "medical", object_name: "u1/irm.png" },
       { bucket_id: "docs", object_name: "u1/x.pdf" },
       { bucket_id: "exercise-images", object_name: "squat.png" },
@@ -35,8 +36,14 @@ describe("purgeUserStorage", () => {
     expect(await purgeUserStorage(a, "u1")).toEqual([]);
     expect(removed).toEqual([
       { bucket: "docs", paths: ["c/athletes/u1/fiche.pdf", "u1/x.pdf"] },
-      { bucket: "medical", paths: ["u1/irm.png"] },
+      { bucket: "test-files", paths: ["u1/vma.csv"] },
     ]);
+  });
+
+  it("supprime les photos d'exercices d'énergie que la base lui renvoie", async () => {
+    const { a, removed } = admin([{ bucket_id: "energy-exercise-photos", object_name: "u1/1700000000000.jpg" }]);
+    expect(await purgeUserStorage(a, "u1")).toEqual([]);
+    expect(removed).toEqual([{ bucket: "energy-exercise-photos", paths: ["u1/1700000000000.jpg"] }]);
   });
 
   it("découpe par lots de 100", async () => {
@@ -48,7 +55,7 @@ describe("purgeUserStorage", () => {
 
   it("signale les erreurs sans lever (liste illisible, fichier récalcitrant)", async () => {
     expect(await purgeUserStorage(admin(null, { listError: "refusé" }).a, "u1")).toEqual(["liste des fichiers: refusé"]);
-    const { a } = admin([{ bucket_id: "medical", object_name: "u1/a" }], { removeError: "indisponible" });
-    expect(await purgeUserStorage(a, "u1")).toEqual(["medical: indisponible"]);
+    const { a } = admin([{ bucket_id: "test-files", object_name: "u1/a" }], { removeError: "indisponible" });
+    expect(await purgeUserStorage(a, "u1")).toEqual(["test-files: indisponible"]);
   });
 });

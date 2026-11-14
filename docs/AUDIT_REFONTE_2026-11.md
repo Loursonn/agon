@@ -188,7 +188,7 @@ Source : audit qualité.
 
 - 🔴 **Pas de CI** (`.github/` absent) : Vercel déploie `main` sans `tsc`, tests ni lint. 🔴 **Pas de protection de branche** ; les 10 dernières PR mergées sans review.
 - 🟠 **119 erreurs `tsc`** (dont de vrais bugs), `strict: false`, `types.ts` périmé (13 tables manquantes), `.jsx` jamais lintés.
-- 🟠 **Tests** : 925 verts mais 1 hook sur 128 ; 8 fichiers de tests RLS pgTAP qui ne tournent jamais automatiquement ; aucun test e2e.
+- 🟠 **Tests** : 925 verts mais 1 hook sur 128 ; 8 fichiers de tests RLS pgTAP qui ne tournent jamais automatiquement *(2026-11-12 : les scripts de `supabase/tests/` tournent en CI, job « Tests SQL »)* ; aucun test e2e.
 - 🟠 **`CLAUDE.md` périmé** (parle d'`app_data` sans auth et du monolithe de 2 500 lignes ; ignore staff, co-coach, providers). `docs/CLAUDE.md` contredit le workflow (feature branches). `docs/AUTOMATISATION PUSH/` fait `git add .`.
 - 🟠 **Règles critiques uniquement dans la mémoire d'Hugo** (jamais `db push`, release notes à chaque lot, `is_coach_of` dans les policies, merger `main` avant PR) → **Tito ne les a pas**.
 - 🟠 **Aucun skill projet.** À créer : `nouvelle-fonctionnalite` (checklist coach/athlète/staff/co-coach, RLS, consentement, export RGPD, tests, release notes), `migration-bdd`, `edge-function`, `integration-provider`, `preparer-pr`, `rgpd-check`.
@@ -211,7 +211,7 @@ Source : audit qualité.
 > Dates : Claude Max s'arrête le **11 novembre** → les chantiers lourds et transverses (beaucoup de fichiers, beaucoup d'agents) passent avant. App stores : janvier-février 2027.
 
 ### Phase 0 — Urgences (avant le 11/11) · ~1-2 j
-- [ ] Dump BDD + vérif PITR.
+- [x] Dump BDD + vérif PITR. PITR non activé (offre gratuite) ; à la place, copie chiffrée quotidienne `backup.yml` (dépôt privé, 30 jours), essai réel réussi le 2026-11-13.
 - [x] Lot sécurité S1→S10 (une migration, tests pgTAP associés).
 - [x] P1 : `sLoad` ne renvoie plus de valeur par défaut sur erreur + blocage des écritures non chargées.
 - [x] P2/P3 : brouillon local de la séance en cours (+ énergie, wellness).
@@ -219,11 +219,11 @@ Source : audit qualité.
 - [x] `App.tsx` : retirer la remontée à chaque navigation + `Suspense` par shell + réglages `QueryClient`. (Gain de vitesse immédiat, ~1 h.)
 
 ### Phase 1 — Garde-fous (avant le 11/11) · ~1-2 j
-- [x] CI GitHub Actions (`npm run check` : `tsc` ≤ `.tsc-baseline` (99), lint, vitest, build) + Dependabot (vers `dev`).
-- [ ] Protection de `main` + secret scanning (réglages GitHub, à faire par le propriétaire du repo).
+- [x] CI GitHub Actions (`npm run check` : `tsc` ≤ `.tsc-baseline` (99), lint, vitest, build) + Dependabot (vers `dev`). **2026-11-13 : 0 erreur TypeScript (`.tsc-baseline` = 0), 0 avertissement ESLint (P3).**
+- [x] Protection de `main` + secret scanning : activés le 2026-11-13 (PR obligatoire, check « Types, lint, tests, build » requis, pas de force push ni de suppression ; secret scanning + push protection).
 - [x] Régénérer `types.ts`.
 - [x] Réécrire `CLAUDE.md` à partir du réel ; y mettre les règles de la mémoire d'Hugo ; supprimer `docs/CLAUDE.md` et `AUTOMATISATION PUSH`.
-- [ ] Sortir `settings.local.json` de git (JSON invalide ligne 80 : virgule manquante avant les lignes Windows) — décision Hugo/Tito.
+- [x] Sortir `settings.local.json` de git : virgule réparée (lignes Windows gardées), fichier retiré du suivi et ajouté au `.gitignore` le 2026-11-13 (décision d'Hugo).
 - [x] Créer les skills projet (§8) : `.claude/skills/`.
 - [x] Supprimer le code mort (84 fichiers, 14 500 lignes) et 24 dépendances inutiles.
 
@@ -241,7 +241,8 @@ Source : audit qualité.
 
 ### Phase 3 — Confort athlète (hors ligne) · ~2 sem.
 - [x] Phase 1 hors ligne : `vite-plugin-pwa`, manifest `standalone`, cache React Query persisté (IndexedDB), toutes les `queryFn` lèvent une erreur au lieu de renvoyer `null` (2026-11-08, PR #138).
-- [x] Phase 2 hors ligne : file d'attente des écritures (IndexedDB, `src/lib/offline/writes.ts`), `coachOverride` séparé (`set_coach_override`), indicateur « N saisies en attente » (2026-11-08, PR #138). Reste : ids côté client pour une séance libre démarrée hors ligne.
+- [x] Phase 2 hors ligne : file d'attente des écritures (IndexedDB, `src/lib/offline/writes.ts`), `coachOverride` séparé (`set_coach_override`), indicateur « N saisies en attente » (2026-11-08, PR #138).
+- [x] Ids côté client pour une séance libre démarrée hors ligne : id choisi sur le téléphone, création rejouable (`workout.plan` → `planWorkout` avec id, `ON CONFLICT DO NOTHING`), placée avant ses saisies dans la file ; scénario complet testé (`src/lib/offline/__tests__/freeSessionOffline.test.ts`) et garanties base vérifiées à blanc en prod (`supabase/tests/free_session_offline.sql`), sans migration (2026-11-12).
 - [x] Sortir le backfill et les écritures miroir du démarrage (lot 0, 2026-11-07).
 
 ### Phase 4 — Couche données (fin des régressions) · ~3-4 sem., entité par entité
@@ -249,8 +250,8 @@ Source : audit qualité.
 - [x] Migrer les 113 fichiers qui importent encore Supabase directement (planning, tests, compétitions, énergie, staff…), puis passer la règle ESLint en erreur (2026-11-08, PR #138).
 - [x] Corriger les requêtes vers des tables ou colonnes inexistantes (`nutrition_*`, `wellness_logs`, `reschedule_reason`, `coach_validated`).
 - [x] Fusion RPE (seule source `workout_logs.rpe_score`).
-- [ ] Fusion tests, poids ; suppression des tables mortes (`workout_rpe` après export) ; `migration repair` si validé.
-- [ ] Sortir santé puis programme d'`app_data`.
+- [ ] Fusion tests, poids (poids fait : `body_weight_*`, RPC `weight_set_day` / `weight_set_goal`) ; suppression des tables mortes (`workout_rpe` après export) ; `migration repair` si validé.
+- [ ] Sortir santé puis programme d'`app_data`. Santé : étapes 1-2 faites (lecteurs P5, écrivains P6) ; étapes 3-4 attendent 30 jours de comptage des versions clientes (`profiles.client_build`, remontée réparée le 2026-11-13).
 
 ### Phase 5 — Design system · ~1-2 sem.
 - [x] Récupérer la charte source (disque `AGON`, `agon-brand-kit/tokens/agon-tokens.css`).
@@ -260,12 +261,15 @@ Source : audit qualité.
 
 ### Phase 6 — 4 fronts (coach PC/mobile, athlète mobile/PC) · écran par écran
 - [x] Shell responsive par rôle (`CoachShell.tsx`, `AthleteLayout.tsx`).
-- [ ] Migrer chaque écran inline → Tailwind avec breakpoints, à partir des maquettes Claude Design ; découper les gros fichiers.
+- [x] Toutes les planches du canvas comparées au code et les écarts « front » corrigés (2026-11-13 : `docs/maquettes/ECARTS_CANVAS_2026-11-13.md`, les B restants y sont listés).
+- [x] Plus aucune couleur hex en dur dans `src/features` et `src/pages` (912 → 0, 2026-11-13) : tout passe par `tokens.css` (`C`, `H` pour les couleurs héritées sans équivalent dans la charte, classes `*-agon-*`) ; garde-fou `src/styles/__tests__/noHardcodedHex.test.ts`.
+- [x] Découper les gros fichiers (2026-11-13, déplacement pur) : `WorkoutDetailPage` 3 616 → 1 680 l., `TodayPage` 1 659 → 936, `ProgramPage` 1 284 → 18, `CalendarMonthView` 1 716 → 697, `DayDetailsDrawer` 1 396 → 435, `RaceAnalysis` en onglets.
+- [ ] Migrer les styles inline restants (~9 950 `style={{`) → Tailwind avec breakpoints, écran par écran ; remplacer les couleurs `H` par la charte finale ; redécouper le composant principal de `WorkoutDetailPage` (~1 600 l. à lui seul).
 
 ### Phase 7 — Stores (janv.-fév. 2027)
 - [x] Décision **Capacitor** (recommandé : réutilise tout le code web et le hors-ligne ; plugins santé suffisants) vs React Native/Expo (réécriture de ~13 000 lignes d'UI athlète). À acter dans `DECISIONS.md` (CLAUDE.md dit encore Expo).
 - [ ] Comptes Apple (99 $/an) + Google (25 $ une fois). Attention : un compte Google personnel récent doit faire un test fermé (12 testeurs, 14 jours) avant la prod.
-- [ ] URL web de suppression de compte, compte démo stable, privacy labels / Data safety. (Vérification d'âge à l'inscription : faite, `src/lib/age.ts` + triggers `min_age_signup`.)
+- [ ] ~~URL web de suppression de compte~~ (`/suppression-compte`), ~~compte démo stable~~ (`scripts/seed-demo.mjs`), privacy labels / Data safety (inventaire prêt : `docs/stores/DONNEES_COLLECTEES.md`). (Vérification d'âge à l'inscription : faite, `src/lib/age.ts` + triggers `min_age_signup`.)
 - [ ] Avis juriste HDS si la feature kiné est ouverte largement.
 
 ---
@@ -277,8 +281,8 @@ Source : audit qualité.
 3. ✅ *Décidé (2026-11-07) : Capacitor.* **Mobile** : Capacitor (recommandé) ou React Native/Expo ?
 4. ✅ *Décidé : supprimer (imports de fichiers gardés).* **Déconnexion d'une montre** : garder ou supprimer les activités importées ? (le dossier Garmin promet la suppression)
 5. ✅ *Décidé : oui, comptées une seule fois.* **Données montre** : les compter dans le volume de course et les rattacher automatiquement aux séances prévues ?
-6. **Legacy** : supprimer `invitations` et `retours` (archivés en CSV avant) ?
-7. **Migrations** : faire le `migration repair` (rend `db push` à nouveau sûr) ?
+6. ✅ *Décidé (2026-11-13) : oui, plan complet de `docs/PLAN_LEGACY.md` §1 (archive CSV sans jetons → code → fermeture → DROP), chaque écriture prod resoumise.* **Legacy** : supprimer `invitations` et `retours` (archivés en CSV avant) ? *Plan prêt : `docs/PLAN_LEGACY.md` §1.*
+7. ✅ *Décidé (2026-11-13) : oui, R0→R2 de `docs/PLAN_LEGACY.md` §3 puis `repair` seulement quand le diff migrations ↔ prod est vide.* **Migrations** : faire le `migration repair` (rend `db push` à nouveau sûr) ? *Plan prêt : `docs/PLAN_LEGACY.md` §3.*
 8. **Charte** : brancher le disque `AGON` pour récupérer la charte source.
 
 ---

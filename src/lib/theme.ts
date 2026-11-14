@@ -58,6 +58,87 @@ export const C = {
   // ── Coach / secondaire ───────────────────────────────────────────────────────
   coach:  t("--agon-coach"),     // SECONDARY — or vif (coach = or)
   coachS: t("--agon-coach-doux"),
+
+  // ── Autres couleurs de la charte utilisées par les écrans ───────────────────
+  ink:   t("--agon-ink"),          // texte posé sur un aplat or / clair
+  rouge: t("--agon-rouge"),        // rouge vif : compétition, Z3, danger
+  pierre: t("--agon-pierre"),
+  sable: t("--agon-sable"),
+  bronze: t("--agon-bronze"),
+  cadence: t("--agon-cadence"),
+  blocCore: t("--agon-bloc-core"),
+  hyroxCourse: t("--agon-hyrox-course"),
+} as const;
+
+/**
+ * Couleurs héritées (anciennes palettes par défaut) encore utilisées par des écrans :
+ * --agon-h-* de tokens.css, valeurs d'origine. À remplacer par la charte, pas à étendre.
+ */
+export const H = {
+  grisFonce: t("--agon-h-gris-fonce"),
+  grisPlomb: t("--agon-h-gris-plomb"),
+  ambre: t("--agon-h-ambre"),
+  miel: t("--agon-h-miel"),
+  rougeVif: t("--agon-h-rouge-vif"),
+  gris: t("--agon-h-gris"),
+  vert: t("--agon-h-vert"),
+  grisClair: t("--agon-h-gris-clair"),
+  encreOr: t("--agon-h-encre-or"),
+  orange: t("--agon-h-orange"),
+  anthracite: t("--agon-h-anthracite"),
+  emeraude: t("--agon-h-emeraude"),
+  noir: t("--agon-h-noir"),
+  rougeDoux: t("--agon-h-rouge-doux"),
+  citron: t("--agon-h-citron"),
+  jaune: t("--agon-h-jaune"),
+  jauneFonce: t("--agon-h-jaune-fonce"),
+  carte: t("--agon-h-carte"),
+  blancCasse: t("--agon-h-blanc-casse"),
+  bleu: t("--agon-h-bleu"),
+  rose: t("--agon-h-rose"),
+  violet: t("--agon-h-violet"),
+  orangeDoux: t("--agon-h-orange-doux"),
+  grisPerle: t("--agon-h-gris-perle"),
+  vertAcide: t("--agon-h-vert-acide"),
+  grisBleu: t("--agon-h-gris-bleu"),
+  bleuRoi: t("--agon-h-bleu-roi"),
+  vertSapin: t("--agon-h-vert-sapin"),
+  sarcelle: t("--agon-h-sarcelle"),
+  orangeVif: t("--agon-h-orange-vif"),
+  roseVif: t("--agon-h-rose-vif"),
+  orangeFeu: t("--agon-h-orange-feu"),
+  creme: t("--agon-h-creme"),
+  creme2: t("--agon-h-creme-2"),
+  sableClair: t("--agon-h-sable-clair"),
+  orangeBrule: t("--agon-h-orange-brule"),
+  orMat: t("--agon-h-or-mat"),
+  grisArgent: t("--agon-h-gris-argent"),
+  rougeFonce: t("--agon-h-rouge-fonce"),
+  rougeBrique: t("--agon-h-rouge-brique"),
+  lin: t("--agon-h-lin"),
+  caramel: t("--agon-h-caramel"),
+  cuivre: t("--agon-h-cuivre"),
+  grege: t("--agon-h-grege"),
+  vertLime: t("--agon-h-vert-lime"),
+  vertPomme: t("--agon-h-vert-pomme"),
+  grisMoyen: t("--agon-h-gris-moyen"),
+  vertHerbe: t("--agon-h-vert-herbe"),
+  bordeaux: t("--agon-h-bordeaux"),
+  taupe: t("--agon-h-taupe"),
+  bleuCiel: t("--agon-h-bleu-ciel"),
+  taupeFonce: t("--agon-h-taupe-fonce"),
+  vertMenthe: t("--agon-h-vert-menthe"),
+  brunGris: t("--agon-h-brun-gris"),
+  bleuVif: t("--agon-h-bleu-vif"),
+  grisArdoise: t("--agon-h-gris-ardoise"),
+  bleuAzur: t("--agon-h-bleu-azur"),
+  brun: t("--agon-h-brun"),
+  basalte3: t("--agon-h-basalte-3"),
+  basalte4: t("--agon-h-basalte-4"),
+  basalte5: t("--agon-h-basalte-5"),
+  turquoise: t("--agon-h-turquoise"),
+  cyan: t("--agon-h-cyan"),
+  vertNuit: t("--agon-h-vert-nuit"),
 } as const;
 
 /**
@@ -81,12 +162,13 @@ export const SUCCESS   = C.g;        // vert vif
 
 const cat = (n: number) => t(`--agon-cat-${n}`);
 
+/** Types de bloc d'une séance (direction « peps », 12/11) : --agon-bloc-* de tokens.css. */
 export const BT = {
-  PERF:   { c: cat(2),  l: "Mvt principal" },   // terracotta vif
-  ESTH:   { c: cat(1),  l: "Hypertrophie"  },   // or vif
-  BESOIN: { c: cat(4),  l: "Besoin indiv."  },  // ardoise vif
-  ASSOC:  { c: cat(6),  l: "Muscles assoc." },  // patine vif
-  CORE:   { c: cat(10), l: "Core"           },  // pierre
+  PERF:   { c: t("--agon-bloc-perf"),   l: "Mvt principal" },   // or
+  ESTH:   { c: t("--agon-bloc-esth"),   l: "Hypertrophie"  },   // rose
+  BESOIN: { c: t("--agon-bloc-besoin"), l: "Besoin indiv."  },  // bleu
+  ASSOC:  { c: t("--agon-bloc-assoc"),  l: "Muscles assoc." },  // turquoise
+  CORE:   { c: t("--agon-bloc-core"),   l: "Core"           },  // orange
 } as const;
 
 /** Couleurs de blocs : --agon-cat-1 … --agon-cat-10, dans l'ordre. */

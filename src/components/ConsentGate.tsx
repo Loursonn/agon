@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { C } from "@/lib/theme";
+import { DISPLAY } from "@/features/shared/components/seance/seanceUi";
+import { AuthLogo } from "@/pages/auth/AuthUi";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { errorMessage } from "@/lib/errors";
 import { AI_CONSENT_SINCE, LEGAL_ROUTES } from "@/lib/legal";
+import { canOfferAiConsent } from "@/lib/age";
 import {
   CONSENT_COPY,
   hasDecided,
@@ -44,17 +48,10 @@ import {
  * non ont le même poids, les deux sont enregistrés, et un refus ne ferme rien.
  */
 
+// Couleurs du thème (planche AccesConnexion, écran 07).
 const S = {
-  bg: "#0E0C0A",
-  s1: "#1E1A16",
-  s2: "#27221D",
-  brd: "rgba(231,211,168,0.10)",
-  brdL: "rgba(231,211,168,0.18)",
-  tx: "#FFFFFF",
-  tx2: "#B9AE9C",
-  tx3: "#7D7468",
-  ac: "#FFC933",
-  r: "#FF5A33",
+  bg: C.bg, s1: C.s1, s2: C.s2, brd: C.brd, brdL: C.brdL,
+  tx: C.tx, tx2: C.tx2, tx3: C.tx3, ac: C.ac, r: C.r,
 };
 
 /** Finalités proposées à l'inscription. Les montres sont demandées au moment
@@ -135,7 +132,7 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
               borderRadius: 4,
               border: "none",
               background: S.ac,
-              color: "#fff",
+              color: S.bg,
               fontSize: 14,
               fontWeight: 700,
               cursor: "pointer",
@@ -151,7 +148,10 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
 
   const athlete = isAthleteRole(profile?.role);
   const askStaff = athlete && !hasDecided(consents, "staff_sharing");
-  const askAi = athlete && !hasDecidedSince(consents, "ai_programming", AI_CONSENT_SINCE);
+  // Accord IA réservé aux 18 ans et plus (conditions Gemini et Claude) : un
+  // athlète de 15 à 17 ans ne le voit ni à l'inscription ni en écran court.
+  const aiOffered = canOfferAiConsent(profile?.birth_date);
+  const askAi = athlete && aiOffered && !hasDecidedSince(consents, "ai_programming", AI_CONSENT_SINCE);
 
   if (hasValidCoreConsent(consents)) {
     // Une question à la fois : l'accord IA d'abord, puis le staff s'il manque.
@@ -162,7 +162,8 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
   }
 
   // Une réponse staff déjà donnée n'est pas reposée (ni écrasée par une case vide).
-  const purposes: ConsentPurpose[] = askStaff ? [...GATE_PURPOSES, "staff_sharing"] : GATE_PURPOSES;
+  const gatePurposes = aiOffered ? GATE_PURPOSES : GATE_PURPOSES.filter((p) => p !== "ai_programming");
+  const purposes: ConsentPurpose[] = askStaff ? [...gatePurposes, "staff_sharing"] : gatePurposes;
   const coreChecked = !!checked.health_data;
   // Un compte déjà consentant mais sur une version antérieure du document :
   // le message doit dire que le texte a changé, pas accueillir l'utilisateur
@@ -182,12 +183,12 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
 
   return (
     <Centered>
-      <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 28, fontWeight: 900, color: S.tx, letterSpacing: "-1px" }}>Agon</div>
+      <div style={{ marginBottom: 24 }}>
+        <AuthLogo size="small" />
       </div>
 
-      <div style={{ background: S.s1, borderRadius: 6, padding: 24, border: "1px solid " + S.brd }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: S.tx, marginBottom: 8 }}>
+      <div>
+        <div style={{ ...DISPLAY, fontWeight: 300, fontSize: 26, lineHeight: 1.12, letterSpacing: "0.06em", color: S.tx, marginBottom: 10 }}>
           {isUpdate ? "Nos conditions ont évolué" : "Avant de commencer"}
         </div>
         <div style={{ fontSize: 13, color: S.tx2, lineHeight: 1.7, marginBottom: 20 }}>
@@ -218,9 +219,9 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
                   gap: 10,
                   cursor: "pointer",
                   padding: "12px 14px",
-                  borderRadius: 4,
-                  background: S.s2,
-                  border: "1px solid " + (on ? S.ac : S.brd),
+                  borderRadius: 14,
+                  background: S.s1,
+                  border: on ? "1.5px solid " + S.ac : "1px solid " + S.brdL,
                 }}
               >
                 <input
@@ -233,6 +234,9 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
                   <div style={{ fontSize: 13, fontWeight: 600, color: S.tx, lineHeight: 1.5 }}>
                     {copy.label}
                     {copy.required && <span style={{ color: S.r }}> *</span>}
+                    {!copy.required && (
+                      <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 999, fontSize: 10.5, fontWeight: 500, color: S.tx2, border: "1px solid " + S.brdL, whiteSpace: "nowrap" }}>Facultatif</span>
+                    )}
                   </div>
                   <div style={{ fontSize: 11, color: S.tx3, marginTop: 4, lineHeight: 1.5 }}>
                     {copy.detail}
@@ -276,13 +280,13 @@ export default function ConsentGate({ children }: { children: React.ReactNode })
           disabled={!coreChecked || setConsent.isPending}
           style={{
             width: "100%",
-            padding: "12px 0",
-            borderRadius: 4,
+            height: 52,
+            borderRadius: 12,
             border: "none",
             background: coreChecked ? S.ac : S.s2,
-            color: coreChecked ? "#fff" : S.tx3,
-            fontSize: 14,
-            fontWeight: 700,
+            color: coreChecked ? S.bg : S.tx3,
+            fontSize: 15,
+            fontWeight: 600,
             cursor: coreChecked && !setConsent.isPending ? "pointer" : "not-allowed",
             fontFamily: "inherit",
             opacity: setConsent.isPending ? 0.7 : 1,

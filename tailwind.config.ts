@@ -98,9 +98,6 @@ export default {
       fontSize: fromScale("text"),
       // p-agon-md, gap-agon-sm, mt-agon-xl…
       spacing: fromScale("space"),
-      backgroundImage: {
-        "agon-or-poli": "var(--agon-or-poli)",
-      },
       keyframes: {
         "accordion-down": {
           from: {

@@ -3,22 +3,35 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Button as BaseButton } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** Styles Agon du bouton (sur un lien : `asChild`). Couleurs : src/styles/tokens.css. */
+/**
+ * Styles Agon du bouton (sur un lien : `asChild`). Couleurs : src/styles/tokens.css.
+ * Charte finale (P10) : aplat, aucun dégradé, aucune ombre floue, aucun halo.
+ * Hauteurs et rayon : --agon-btn-* de tokens.css.
+ *  - primary   : aplat or, texte noir, demi-gras. Un seul par écran.
+ *  - secondary : contour fin, texte blanc.
+ *  - link      : texte or, sans cadre.
+ *  - valider   : vert « Fait » (séance en cours uniquement).
+ *  - danger    : contour rouge, jamais plein.
+ * Tailles : `md` 44 px (ordinateur), `lg` 52 px (action principale au pouce), `touch` 48 px.
+ */
 const buttonStyles = cva(
-  "font-ui font-semibold rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-agon-accent disabled:opacity-50",
+  "font-ui rounded-[var(--agon-btn-radius)] transition-colors focus-visible:ring-2 focus-visible:ring-agon-accent disabled:opacity-40 whitespace-nowrap",
   {
     variants: {
       variant: {
-        primary: "bg-agon-accent text-agon-ink hover:opacity-90",
-        secondary: "border border-agon-brd-l bg-agon-s2 text-agon-tx hover:bg-agon-s1",
-        ghost: "bg-transparent text-agon-tx2 hover:bg-agon-s2 hover:text-agon-tx",
-        danger: "border border-agon-erreur bg-agon-erreur-doux text-agon-erreur hover:bg-agon-erreur hover:text-agon-tx",
+        primary: "bg-agon-accent text-agon-ink font-semibold hover:opacity-90",
+        secondary: "border border-agon-brd-l bg-transparent text-agon-tx font-medium hover:bg-agon-s2",
+        ghost: "bg-transparent text-agon-tx2 font-medium hover:bg-agon-s2 hover:text-agon-tx",
+        link: "bg-transparent text-agon-accent font-medium px-1.5 hover:underline underline-offset-4",
+        valider: "bg-agon-type-fait text-agon-ink font-semibold hover:opacity-90",
+        danger: "border border-agon-rouge bg-transparent text-agon-rouge font-medium hover:bg-agon-rouge/10",
       },
       size: {
-        sm: "h-8 px-agon-md text-agon-sm",
-        md: "h-10 px-agon-lg text-agon-base",
-        lg: "h-12 px-agon-xl text-agon-lg",
-        icon: "h-10 w-10 p-0 text-agon-base",
+        sm: "h-9 px-agon-md text-agon-sm",
+        md: "h-11 px-[18px] text-agon-base",
+        touch: "h-[var(--agon-btn-h-tel-2)] px-[18px] text-agon-base",
+        lg: "h-[var(--agon-btn-h-tel)] px-[18px] text-agon-bouton",
+        icon: "h-[var(--agon-btn-h-ordi)] w-[var(--agon-btn-h-ordi)] p-0 text-agon-base",
       },
       block: { true: "w-full", false: "" },
     },

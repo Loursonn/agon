@@ -2,7 +2,7 @@
  * ProfilAthletePage — onglet « Profil athlète » (route profil-sportif).
  * Header unifié pour les 3 sous-onglets (?view=) :
  *   - sportif  : Profil Sportif Actuel
- *   - general  : Profil Général (profil + antécédents + stratégie)
+ *   - general  : Profil Général (profil + blessures + stratégie)
  *   - testing  : Suivi Testing
  */
 import { useSearchParams } from "react-router-dom";
@@ -20,7 +20,7 @@ const HEADERS: Record<ProfilView, { title: string; subtitle: string }> = {
   },
   general: {
     title: "Profil Général",
-    subtitle: "Informations personnelles, antécédents médicaux et stratégie de suivi.",
+    subtitle: "Informations personnelles, blessures et stratégie de suivi.",
   },
   testing: {
     title: "Suivi Testing",
@@ -37,13 +37,13 @@ export default function ProfilAthletePage() {
 
   return (
     <div style={{ padding: "0 24px 60px" }}>
-      {/* Header commun aux 3 sous-onglets */}
-      <div style={{ padding: "20px 0 16px" }}>
+      {/* Header commun aux sous-onglets ; « Profil sportif » a son propre titre (planche). */}
+      {view !== "sportif" && <div style={{ padding: "20px 0 16px" }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: C.tx }}>{title}</div>
         <div style={{ fontSize: 12, color: C.tx3, marginTop: 4 }}>{subtitle}</div>
-      </div>
+      </div>}
 
-      {view === "sportif" && <ProfilSportifPage />}
+      {view === "sportif" && <div style={{ paddingTop: 24 }}><ProfilSportifPage /></div>}
       {view === "general" && <ProfilGeneralTab />}
       {view === "testing" && <TestPage embedded />}
     </div>

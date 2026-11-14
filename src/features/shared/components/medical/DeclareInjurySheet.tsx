@@ -1,8 +1,8 @@
 /**
  * Déclaration rapide d'une gêne ou d'une blessure, depuis le profil de l'athlète.
  *
- * Le chemin complet reste le formulaire d'antécédent (`MedicalEntriesSection`),
- * qui demande un type, un statut, un diagnostic. Ici, un nom suffit : la gêne
+ * Le chemin complet reste le formulaire de blessure (`MedicalEntriesSection`),
+ * avec zone, date et statut. Ici, un nom suffit : la gêne
  * part en « blessure en cours », datée du jour, et tout le détail est facultatif.
  * Une déclaration qui prend dix secondes est une déclaration qui a lieu — et une
  * blessure qu'on ne voit pas, on ne peut pas la gérer.
@@ -28,15 +28,12 @@ export function DeclareInjurySheet({ athleteId, onClose }: { athleteId: string; 
   const submit = async () => {
     if (!title.trim()) { toast.error("Dis en deux mots ce que tu ressens"); return; }
     const input: MedicalEntryInput = {
-      kind: "blessure",
       // En cours : c'est tout l'intérêt de déclarer maintenant. Le passage en
       // « guéri » se fait depuis le profil, quand c'est vraiment passé.
       status: "en_cours",
       title: title.trim(),
       zone: zone.trim() || null,
       date: localISO(),
-      diagnosis: null,
-      treatment: null,
       notes: notes.trim() || null,
       ...injuryDetailForSave("blessure", detail),
     };

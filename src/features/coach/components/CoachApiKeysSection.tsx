@@ -12,6 +12,8 @@ const API_BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coach-ap
 const fmt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "jamais";
 
+const fmtShort = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+
 const label: React.CSSProperties = {
   fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10,
 };
@@ -70,6 +72,16 @@ export function CoachApiKeysSection() {
   return (
     <div style={{ background: C.s1, borderRadius: 6, padding: 16, border: "1px solid " + C.brd, marginBottom: 16 }}>
       <div style={label}>Assistant IA (Claude)</div>
+      {active.length > 0 && (
+        <div style={{ fontSize: 12, color: C.g, marginBottom: 8 }}>
+          {active.length} clé{active.length > 1 ? "s" : ""} active{active.length > 1 ? "s" : ""}
+          {active.length === 1 ? ` · « ${active[0]!.name} »` : ""}
+          {(() => {
+            const used = active.map((k) => k.last_used_at).filter((d): d is string => !!d).sort().pop();
+            return used ? ` · Utilisée le ${fmtShort(used)}` : "";
+          })()}
+        </div>
+      )}
       <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5, marginBottom: 12 }}>
         Une clé permet à ton assistant IA de lire les données de tes athlètes qui l'ont accepté,
         pour t'en faire des analyses, et de te proposer des axes de travail ou des modifications

@@ -6,6 +6,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { FieldType, FieldSchema, SchemaElement } from "@/types/energy";
 import { FIELD_BACKGROUNDS, FIELD_DISTANCE_LABELS, SCHEMA_COLORS, renderSchemaElementsSVG } from "@/lib/energy/renderSchema";
+import { C, H } from "@/lib/theme";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,8 +32,8 @@ const TOOLS: { value: ToolType; label: string }[] = [
 ];
 
 const S = {
-  bg: "#0E0C0A", card: "#0E0C0A", card2: "#26252A",
-  border: "#2E2D33", txt: "#F2F1F5", muted: "#8B8A92", accent: "#F5A623",
+  bg: C.bg, card: C.bg, card2: H.carte,
+  border: H.anthracite, txt: H.blancCasse, muted: H.grisClair, accent: H.miel,
 } as const;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
   // State
   const [field, setField] = useState<FieldType>(value?.field ?? "rugby");
   const [tool, setToolState] = useState<ToolType>("line");
-  const [color, setColorState] = useState("#E5484D");
+  const [color, setColorState] = useState(H.rougeDoux);
   const [elements, setElements] = useState<SchemaElement[]>(value?.elements ?? []);
 
   const [showDist, setShowDist] = useState(value?.showDistances ?? false);
@@ -97,7 +98,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
       setElements(value?.elements ?? []);
       setShowDist(value?.showDistances ?? false);
       setToolState("line");
-      setColorState("#E5484D");
+      setColorState(H.rougeDoux);
       setDrawingPts([]);
       setPreviewPt(null);
       setSelIdx(null);
@@ -242,7 +243,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
         type: "text" as const,
         x: bubble.svgX,
         y: bubble.svgY,
-        color: "#fff",
+        color: C.tx,
         text: v,
       }]);
     }
@@ -309,7 +310,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
       const ty = el.ty ?? 0;
       const transform = tx || ty ? `translate(${tx},${ty})` : undefined;
       const selected = i === selIdx;
-      const filter = selected ? "drop-shadow(0 0 4px #fff)" : undefined;
+      const filter = selected ? `drop-shadow(0 0 4px ${C.tx})` : undefined;
 
       switch (el.type) {
         case "polyline":
@@ -353,7 +354,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
         case "text":
           return (
             <g key={i} data-eidx={i} transform={transform} style={{ filter }}>
-              <text x={el.x ?? 0} y={el.y ?? 0} fill="#fff" fontSize={13} fontWeight={700}>
+              <text x={el.x ?? 0} y={el.y ?? 0} fill={C.tx} fontSize={13} fontWeight={700}>
                 {el.text}
               </text>
             </g>
@@ -440,7 +441,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
                 onClick={() => setColor(c)}
                 style={{
                   width: 26, height: 26, borderRadius: 99, background: c,
-                  border: color === c ? "2px solid #fff" : "2px solid transparent",
+                  border: color === c ? `2px solid ${C.tx}` : "2px solid transparent",
                   cursor: "pointer",
                 }}
               />
@@ -486,7 +487,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
                   onClick={confirmText}
                   style={{
                     background: S.accent, border: "none", borderRadius: 7,
-                    color: "#1a1204", fontWeight: 700, padding: "0 10px",
+                    color: H.encreOr, fontWeight: 700, padding: "0 10px",
                     cursor: "pointer", fontFamily: "inherit",
                   }}
                 >
@@ -532,7 +533,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               onClick={finishPoly}
               style={{
                 marginTop: 6, background: "none",
-                border: `1px solid #66F03C`, color: "#66F03C",
+                border: `1px solid ${C.g}`, color: C.g,
                 fontSize: 12, fontWeight: 600, padding: "8px 12px",
                 borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
               }}
@@ -547,7 +548,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
               <button
                 onClick={deleteSel}
                 style={{
-                  background: "none", border: `1px solid #E5484D`, color: "#E5484D",
+                  background: "none", border: `1px solid ${H.rougeDoux}`, color: H.rougeDoux,
                   fontSize: 12, fontWeight: 600, padding: "8px 12px",
                   borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
                 }}
@@ -617,7 +618,7 @@ export default function SchemaEditor({ open, onOpenChange, value, onSave }: Prop
             <button
               onClick={handleSave}
               style={{
-                background: S.accent, color: "#1a1204", border: "none",
+                background: S.accent, color: H.encreOr, border: "none",
                 borderRadius: 4, padding: "10px", fontSize: 14, fontWeight: 700,
                 cursor: "pointer", fontFamily: "inherit",
               }}

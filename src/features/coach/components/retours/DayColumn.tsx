@@ -3,13 +3,13 @@ import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { isToday, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Zap, Check, X, ChevronDown, ChevronUp, Hourglass } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { wellnessView } from "@/lib/wellness";
 import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT } from "@shared/domain/wellness";
 import { DayDetailPanel } from "./DayDetailPanel";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsPill } from "./VideoRequestsList";
-import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/SessionPreviewModal";
+import { ROLE_COLOR, ROLE_LABEL_FR } from "@/features/coach/components/energy/energyLabels";
 import { formatS, formatTarget } from "@/lib/energy/formatTarget";
 import type { WeeklyRetourData, WellnessDay, EnergyStepLog, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
@@ -18,8 +18,8 @@ type DayEnergy  = WeeklyRetourData["energy_sessions"][number];
 type DayTest    = WeeklyRetourData["test_sessions"][number];
 
 const TEST_TYPE_COLOR: Record<string, string> = {
-  musculation: "#FFC933", endurance: "#33B5FF", vitesse: "#EF4444",
-  puissance: "#F59E0B", souplesse: "#10B981", autre: "#6B7280",
+  musculation: C.ac, endurance: C.b, vitesse: H.rougeVif,
+  puissance: H.ambre, souplesse: H.emeraude, autre: H.gris,
 };
 
 interface DayColumnProps {
@@ -39,7 +39,7 @@ interface DayColumnProps {
 // ── Status color helper ───────────────────────────────────────────────────────
 
 function statusColors(status: string, rescheduled = false) {
-  if (rescheduled)            return { bg: "#8B5CF612", border: "#8B5CF630", accent: "#8B5CF6", label: "Déplacée" };
+  if (rescheduled)            return { bg: `${H.violet}12`, border: `${H.violet}30`, accent: H.violet, label: "Déplacée" };
   if (status === "completed") return { bg: C.g + "12", border: C.g + "40",  accent: C.g,       label: "✓ Faite" };
   if (status === "missed")    return { bg: C.r + "12", border: C.r + "40",  accent: C.r,       label: "Manquée" };
   if (status === "skipped")   return { bg: C.s2,       border: C.brd,       accent: C.tx3,     label: "Skippée" };
@@ -115,7 +115,7 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail, onOpenE
           <span style={{ fontSize: 8, color: C.tx3, flexShrink: 0 }}>{perfCount} exo{perfCount > 1 ? "s" : ""}</span>
         )}
         {done && workout.rpe_score != null && (
-          <span style={{ fontSize: 8, color: workout.rpe_score >= 8 ? "#EF4444" : workout.rpe_score >= 6 ? "#F59E0B" : C.tx3, flexShrink: 0, fontWeight: 700 }}>RPE {workout.rpe_score}</span>
+          <span style={{ fontSize: 8, color: workout.rpe_score >= 8 ? H.rougeVif : workout.rpe_score >= 6 ? H.ambre : C.tx3, flexShrink: 0, fontWeight: 700 }}>RPE {workout.rpe_score}</span>
         )}
         {!done && (
           <span style={{ fontSize: 8, color: cols.accent, flexShrink: 0 }}>{cols.label}</span>
@@ -165,7 +165,7 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail, onOpenE
               <div style={{ fontSize: 8, color: C.ac }}>{workout.exercise_comments.length} com. coach</div>
             )}
             {(workout.athlete_session_comment || Object.keys(workout.athlete_exercise_comments ?? {}).length > 0) && (
-              <div style={{ fontSize: 8, color: "#f59e0b" }}>
+              <div style={{ fontSize: 8, color: H.ambre }}>
                 {[
                   workout.athlete_session_comment ? "séance" : "",
                   Object.keys(workout.athlete_exercise_comments ?? {}).length > 0
@@ -196,7 +196,7 @@ function EnergyStepRow({ step, log, index }: { step: any; log: Record<string, En
   const entry = log?.[id];
 
   if (step.type === "interval") {
-    const rc  = ROLE_COLOR[step.role as string] ?? "#6B7280";
+    const rc  = ROLE_COLOR[step.role as string] ?? H.gris;
     const dur = step.duration?.kind === "time"     ? formatS(step.duration.value ?? 0)
               : step.duration?.kind === "distance" ? `${step.duration.value ?? 0} m`
               : "Lap";
@@ -211,12 +211,12 @@ function EnergyStepRow({ step, log, index }: { step: any; log: Record<string, En
           {tgt && tgt !== "Libre" && <span style={{ fontSize: 8, color: C.tx3 }}>{tgt}</span>}
           <div style={{ marginLeft: "auto", flexShrink: 0 }}>
             {entry?.status === "done"    && <span style={{ fontSize: 8, fontWeight: 700, color: C.g }}>✓</span>}
-            {entry?.status === "partial" && <span style={{ fontSize: 8, fontWeight: 700, color: "#F59E0B" }}>~</span>}
+            {entry?.status === "partial" && <span style={{ fontSize: 8, fontWeight: 700, color: H.ambre }}>~</span>}
             {!entry && log !== null      && <span style={{ fontSize: 8, color: C.tx3 }}>—</span>}
           </div>
         </div>
         {entry?.status === "partial" && entry.comment && (
-          <div style={{ fontSize: 8, color: "#F59E0B", fontStyle: "italic", marginTop: 2, paddingLeft: 8 }}>
+          <div style={{ fontSize: 8, color: H.ambre, fontStyle: "italic", marginTop: 2, paddingLeft: 8 }}>
             {entry.comment}
           </div>
         )}
@@ -232,11 +232,11 @@ function EnergyStepRow({ step, log, index }: { step: any; log: Record<string, En
         <span style={{ fontSize: 8, color: C.tx3 }}>{(step.children as unknown[])?.length ?? 0} étapes</span>
         <div style={{ marginLeft: "auto" }}>
           {entry?.status === "done"    && <span style={{ fontSize: 8, fontWeight: 700, color: C.g }}>✓</span>}
-          {entry?.status === "partial" && <span style={{ fontSize: 8, fontWeight: 700, color: "#F59E0B" }}>~</span>}
+          {entry?.status === "partial" && <span style={{ fontSize: 8, fontWeight: 700, color: H.ambre }}>~</span>}
         </div>
       </div>
       {entry?.status === "partial" && entry.comment && (
-        <div style={{ fontSize: 8, color: "#F59E0B", fontStyle: "italic", marginTop: 2 }}>
+        <div style={{ fontSize: 8, color: H.ambre, fontStyle: "italic", marginTop: 2 }}>
           {entry.comment}
         </div>
       )}
@@ -254,10 +254,10 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
   const hasDetail = done || session.note || session.duration_min != null;
 
   const kindColors: Record<string, string> = {
-    vo2: "#FFC933", tempo: "#33B5FF", seuil: "#F59E0B",
-    footing: "#10B981", fartlek: "#EF4444", specifique: "#F5A623",
+    vo2: C.ac, tempo: C.b, seuil: H.ambre,
+    footing: H.emeraude, fartlek: H.rougeVif, specifique: H.miel,
   };
-  const kindColor = kindColors[session.session_kind ?? ""] ?? "#6B7280";
+  const kindColor = kindColors[session.session_kind ?? ""] ?? H.gris;
 
   return (
     <div style={{ background: cols.bg, border: "1px solid " + cols.border, borderRadius: 7, overflow: "hidden" }}>
@@ -271,7 +271,7 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
           {session.session_label}
         </span>
         {session.rpe_score != null && (
-          <span style={{ fontSize: 8, color: session.rpe_score >= 8 ? "#EF4444" : session.rpe_score >= 6 ? "#F59E0B" : C.tx3, flexShrink: 0, fontWeight: 700 }}>
+          <span style={{ fontSize: 8, color: session.rpe_score >= 8 ? H.rougeVif : session.rpe_score >= 6 ? H.ambre : C.tx3, flexShrink: 0, fontWeight: 700 }}>
             RPE {session.rpe_score}
           </span>
         )}
@@ -313,7 +313,7 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
                   background: b.done ? C.g : "transparent",
                   border: "1px solid " + (b.done ? C.g : C.tx3),
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 7, color: "#fff",
+                  fontSize: 7, color: C.tx,
                 }}>
                   {b.done ? "✓" : ""}
                 </span>
@@ -343,7 +343,7 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
 
 function TestRow({ test }: { test: DayTest }) {
   const [open, setOpen] = useState(false);
-  const tc = TEST_TYPE_COLOR[test.type] ?? "#6B7280";
+  const tc = TEST_TYPE_COLOR[test.type] ?? H.gris;
   const done = test.completed;
 
   // Parse structured results if available
@@ -493,11 +493,11 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
             <div style={{ padding: "8px 12px", borderRadius: 4, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", flexDirection: "column", gap: 4 }}>
               {workout.athlete_forme != null && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase" }}>Forme athlète</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: H.ambre, textTransform: "uppercase" }}>Forme athlète</span>
                   <span style={{
                     fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 5,
                     background: workout.athlete_forme >= 4 ? "rgba(34,197,94,0.1)" : workout.athlete_forme >= 3 ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)",
-                    color: workout.athlete_forme >= 4 ? "#22c55e" : workout.athlete_forme >= 3 ? "#f59e0b" : "#ef4444",
+                    color: workout.athlete_forme >= 4 ? H.vert : workout.athlete_forme >= 3 ? H.ambre : H.rougeVif,
                   }}>
                     {workout.athlete_forme}/5
                   </span>
@@ -523,7 +523,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{name}</span>
                   {planned?.method && (
-                    <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 4, background: "rgba(123,111,255,0.12)", color: "#FFC933", fontWeight: 600 }}>
+                    <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 4, background: "rgba(123,111,255,0.12)", color: C.ac, fontWeight: 600 }}>
                       {planned.method}
                     </span>
                   )}
@@ -537,7 +537,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                 {/* Planned — chip style */}
                 {planned && planned.sets > 0 && (
                   <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: "#FFC933", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5 }}>Prévu</div>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: C.ac, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5 }}>Prévu</div>
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {[
                         { l: "Séries", v: String(planned.sets) },
@@ -557,7 +557,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                 {/* Performed sets — colored rows */}
                 {performed && performed.sets.length > 0 ? (
                   <div>
-                    <div style={{ fontSize: 9, fontWeight: 800, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, color: H.vert, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>
                       Réalisé ({performed.sets.length} série{performed.sets.length > 1 ? "s" : ""})
                     </div>
                     {performed.sets.map((s) => {
@@ -575,16 +575,16 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                                 {s.kg != null && <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{s.kg} kg</span>}
                                 {s.reps != null && <span style={{ fontSize: 12, color: C.tx }}>× {s.reps}</span>}
                                 {s.rir != null && <span style={{ fontSize: 11, color: C.tx3 }}>RIR {s.rir}</span>}
-                                <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#ef4444" }}>✗</span>
+                                <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: H.rougeVif }}>✗</span>
                               </>
                             ) : (
-                              <span style={{ fontSize: 11, color: "#ef4444" }}>Non réalisé</span>
+                              <span style={{ fontSize: 11, color: H.rougeVif }}>Non réalisé</span>
                             )}
                           </div>
                         );
                       }
                       const ok = plannedMinReps === undefined || (s.reps != null && s.reps >= plannedMinReps);
-                      const sc = ok ? "#22c55e" : "#f59e0b";
+                      const sc = ok ? H.vert : H.ambre;
                       return (
                         <div key={s.set_num} style={{
                           display: "flex", alignItems: "center", gap: 8,
@@ -596,7 +596,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                           {s.kg != null && <span style={{ fontSize: 12, fontWeight: 700, color: C.tx }}>{s.kg} kg</span>}
                           {s.reps != null && <span style={{ fontSize: 12, color: C.tx }}>× {s.reps}</span>}
                           {s.rir != null && <span style={{ fontSize: 11, color: C.tx3 }}>RIR {s.rir}</span>}
-                          {s.method && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: "#FFC933", fontWeight: 600 }}>{s.method}</span>}
+                          {s.method && <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(123,111,255,0.12)", color: C.ac, fontWeight: 600 }}>{s.method}</span>}
                           <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: sc }}>{ok ? "✓" : "~"}</span>
                         </div>
                       );
@@ -606,7 +606,7 @@ function WorkoutDetailModal({ workout, prevWorkout, onClose }: { workout: DayWor
                   <div style={{
                     padding: "7px 10px", borderRadius: 7,
                     background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.40)",
-                    fontSize: 11, color: "#ef4444", fontWeight: 600,
+                    fontSize: 11, color: H.rougeVif, fontWeight: 600,
                   }}>
                     Aucune série enregistrée
                   </div>

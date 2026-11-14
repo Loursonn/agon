@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import SessionPreview from "../energy/SessionPreview";
 import type { EnergySessionRow, EnergyGroup } from "@/types/energy";
 import type { SpecificSport, PhysicalQuality } from "@/types/specific";
@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatSLong } from "@/lib/energy/formatTarget";
 import { expandIntervals, computeTotals } from "@/lib/energy";
 
-const ORANGE = "#F5A623";
+const ORANGE = H.miel;
 
 interface Props {
   session: EnergySessionRow;
@@ -137,7 +137,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
               {quality && (
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: "#FFC93320", color: "#FFC933",
+                  background: `${C.ac}20`, color: C.ac,
                 }}>
                   {quality.name}
                 </span>
@@ -145,8 +145,8 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
               {/* Format pill */}
               <span style={{
                 fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                background: formatLabel === "Classique" ? "#66F03C20" : formatLabel === "Mixte" ? "#FFC93320" : ORANGE + "20",
-                color: formatLabel === "Classique" ? "#66F03C" : formatLabel === "Mixte" ? "#FFC933" : ORANGE,
+                background: formatLabel === "Classique" ? `${C.g}20` : formatLabel === "Mixte" ? `${C.ac}20` : ORANGE + "20",
+                color: formatLabel === "Classique" ? C.g : formatLabel === "Mixte" ? C.ac : ORANGE,
               }}>
                 {formatLabel}
               </span>
@@ -187,7 +187,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
                   <div key={b.id} style={{
                     background: C.s2, borderRadius: 6, padding: "5px 8px",
                     display: "flex", alignItems: "center", gap: 6,
-                    borderLeft: `2px solid ${wod ? ORANGE : "#66F03C"}80`,
+                    borderLeft: `2px solid ${wod ? ORANGE : C.g}80`,
                   }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: C.tx2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {b.title || "Bloc"}
@@ -237,7 +237,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
             }}
           >
             {actionBtn("Attribuer", C.g, () => setShowAssign(true))}
-            {canEdit && actionBtn("Modifier", "#FFC933", handleEdit)}
+            {canEdit && actionBtn("Modifier", C.ac, handleEdit)}
             {actionBtn("Dupliquer", C.tx2, handleDuplicate)}
             {canDelete && actionBtn("Supprimer", C.r, () => setShowConfirmDelete(true))}
           </div>
@@ -308,7 +308,7 @@ export default function SpecificSessionCard({ session, sport, quality, canEdit, 
                 disabled={!assignAthleteId || assignMutation.isPending}
                 style={{
                   padding: "7px 14px", borderRadius: 4, border: "none",
-                  background: assignAthleteId ? C.g : C.tx3, color: "#fff",
+                  background: assignAthleteId ? C.g : C.tx3, color: C.tx,
                   fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                   opacity: assignAthleteId ? 1 : 0.5,
                 }}

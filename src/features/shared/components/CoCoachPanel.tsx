@@ -11,20 +11,27 @@ import { toast } from "sonner";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddCoCoach, useAthleteCoaches, useRemoveCoCoach } from "../hooks/useCoCoach";
+import { Avatar, ORDI_CARD, Pill, SectionHead } from "./ordi/OrdiUi";
+import { btnStyle, frDate } from "./ordi/ordiStyles";
 
-const ghostBtn: React.CSSProperties = {
-  padding: "6px 10px", minHeight: 32, borderRadius: 4, border: "1px solid " + C.brdL,
-  background: "transparent", color: C.tx2, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-};
-
-function CoachRow({ name, tag, action }: { name: string; tag: string; action?: React.ReactNode }) {
+function CoachCard({ name, isMe, tag, line, color, badge, action }: {
+  name: string; isMe: boolean; tag?: string; line: string; color: string; badge?: React.ReactNode; action?: React.ReactNode;
+}) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "10px 12px" }}>
-      <div style={{ flex: 1, minWidth: 140 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.tx }}>{name}</div>
-        <div style={{ fontSize: 11, color: C.tx3 }}>{tag}</div>
+    <div style={{ ...ORDI_CARD, padding: "18px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <Avatar name={name} color={color} />
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: C.tx }}>{name}</span>
+            {isMe && <Pill color={C.tx2}>Toi</Pill>}
+            {tag && <Pill color={color} filled>{tag}</Pill>}
+          </div>
+          <div style={{ fontSize: 12.5, color: C.tx3, marginTop: 2 }}>{line}</div>
+        </div>
+        {badge}
+        {action}
       </div>
-      {action}
     </div>
   );
 }
@@ -32,11 +39,16 @@ function CoachRow({ name, tag, action }: { name: string; tag: string; action?: R
 export function CoCoachPanel({
   athleteId,
   athleteName,
+  athleteFirstName,
   mode,
+  sectionNumber,
 }: {
   athleteId: string;
   athleteName: string;
+  athleteFirstName?: string;
   mode: "coach" | "athlete";
+  /** Numéro de rubrique (« 01 — Coachs · 2 / 2 », planche CoachOrdiBStaff). */
+  sectionNumber?: number;
 }) {
   const { user, profile, refreshAthletes } = useAuth();
   const navigate = useNavigate();
@@ -102,27 +114,43 @@ export function CoCoachPanel({
 
   if (isLoading) return <div style={{ fontSize: 13, color: C.tx3 }}>Chargement…</div>;
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.6 }}>
-        {mode === "coach"
-          ? `Deux coachs maximum. Ils ont les mêmes droits : chacun voit, crée et modifie tous les entraînements de ${athleteName}. Ce que l'un change, l'autre le voit.`
-          : "Tu peux être suivi par deux coachs. Ils ont les mêmes droits sur tes entraînements et reçoivent tous les deux tes retours."}
-      </div>
+  const first = athleteFirstName || athleteName;
+  const count = (referent ? 1 : 0) + (coCoach ? 1 : 0);
+  const addedBy = (c: NonNullable<typeof coCoach>) =>
+    c.added_by_role === "athlete" ? (mode === "athlete" ? "toi" : first) : iAmReferent ? "toi" : "le coach référent";
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {(() => {
+        const hint = mode === "coach"
+          ? `Les deux coachs voient, créent et modifient tous les entraînements de ${first}. Ce que l'un change, l'autre le voit.`
+          : "Tu peux être suivi par deux coachs. Ils ont les mêmes droits sur tes entraînements et reçoivent tous les deux tes retours.";
+        return sectionNumber != null
+          ? <SectionHead n={sectionNumber} title={`Coachs · ${count} / 2`} right="Deux coachs maximum" hint={hint} />
+          : <div style={{ fontSize: 13, color: C.tx3, lineHeight: 1.5 }}>{hint}</div>;
+      })()}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))", gap: 14 }}>
         {referent && (
-          <CoachRow
-            name={referent.id === me ? "Toi" : referent.full_name}
-            tag={selfCoached ? "Coach référent · autocoaché" : "Coach référent"}
+          <CoachCard
+            name={referent.full_name}
+            isMe={referent.id === me}
+            color={C.ac}
+            line={selfCoached
+              ? "Coach référent · autocoaché"
+              : mode === "coach" ? `Coach référent · seul à pouvoir délier ${first} de son compte` : "Coach référent"}
+            badge={<Pill color={C.ac} filled>Référent</Pill>}
           />
         )}
         {coCoach && (
-          <CoachRow
-            name={coCoach.id === me ? "Toi" : coCoach.full_name}
-            tag={`Co-coach · ajouté par ${coCoach.added_by_role === "athlete" ? "l'athlète" : "le coach"} le ${new Date(coCoach.created_at).toLocaleDateString("fr-FR")}`}
+          <CoachCard
+            name={coCoach.full_name}
+            isMe={coCoach.id === me}
+            color={C.pat}
+            tag="Co-coach"
+            line={`Ajouté par ${addedBy(coCoach)} le ${frDate(coCoach.created_at)} · mêmes droits${iAmReferent ? " que toi" : ""}`}
             action={canRemove && (
-              <button onClick={onRemove} disabled={remove.isPending} style={ghostBtn}>
+              <button onClick={onRemove} disabled={remove.isPending} style={btnStyle("danger", "sm", remove.isPending)}>
                 {iAmCoCoach ? "Ne plus co-coacher" : "Retirer"}
               </button>
             )}
@@ -133,39 +161,37 @@ export function CoCoachPanel({
             {mode === "athlete" ? "Rejoins d'abord un coach pour pouvoir en ajouter un second." : "Aucun coach."}
           </div>
         )}
-      </div>
-
-      {canAdd && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            onKeyDown={(e) => { if (e.key === "Enter") onAdd(); }}
-            placeholder="Code du 2e coach"
-            maxLength={12}
-            aria-label="Code coach du second coach"
-            style={{ flex: 1, minWidth: 150, maxWidth: 220, padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", letterSpacing: "1px" }}
-          />
-          <button
-            onClick={() => onAdd()}
-            disabled={add.isPending || !code.trim()}
-            style={{ padding: "9px 16px", borderRadius: 4, border: "none", background: C.ac, color: "#0E0C0A", fontWeight: 700, fontSize: 12, cursor: add.isPending ? "wait" : "pointer", fontFamily: "inherit", opacity: code.trim() ? 1 : 0.5 }}
-          >
-            Ajouter un co-coach
-          </button>
-          {canAddSelf && (
+        {canAdd && (
+          <div style={{ ...ORDI_CARD, padding: "18px 20px", background: "transparent", borderStyle: "dashed", borderColor: C.brdL, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => { if (e.key === "Enter") onAdd(); }}
+              placeholder="Code du 2e coach"
+              maxLength={12}
+              aria-label="Code coach du second coach"
+              style={{ flex: 1, minWidth: 140, height: 36, boxSizing: "border-box", padding: "0 12px", borderRadius: 10, border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", letterSpacing: "1px" }}
+            />
             <button
-              onClick={() => onAdd(profile?.coach_code ?? "")}
-              disabled={add.isPending}
-              title="Programmer ton entraînement en duo avec ton coach"
-              style={{ ...ghostBtn, minHeight: 36, padding: "9px 12px", color: C.coach, borderColor: C.coach + "50" }}
+              onClick={() => onAdd()}
+              disabled={add.isPending || !code.trim()}
+              style={btnStyle("primary", "md", add.isPending || !code.trim())}
             >
-              M'ajouter comme 2e coach
+              Ajouter un co-coach
             </button>
-          )}
-        </div>
-      )}
+            {canAddSelf && (
+              <button
+                onClick={() => onAdd(profile?.coach_code ?? "")}
+                disabled={add.isPending}
+                title="Programmer ton entraînement en duo avec ton coach"
+                style={{ ...btnStyle("ghost"), color: C.coach, borderColor: C.coach + "50" }}
+              >
+                M'ajouter comme 2e coach
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-

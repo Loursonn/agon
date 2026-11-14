@@ -7,6 +7,7 @@ import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTa
 import { estimateIntervalDuration } from "@/lib/energy";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
+import { C, H } from "@/lib/theme";
 
 const EQUIPMENT_LABEL: Record<string, string> = {
   rameur: "Rameur", skierg: "SkiErg", bikeerg: "BikeErg", velo: "Vélo",
@@ -14,9 +15,9 @@ const EQUIPMENT_LABEL: Record<string, string> = {
 };
 
 const COLORS = {
-  warmup: "#66F03C", work: "#E5484D", recovery: "#4FA3FF",
-  rest: "#8B8A92", cooldown: "#66F03C", open: "#8B8A92",
-  exercise: "#FFC933", repeat: "#F5A623",
+  warmup: C.g, work: H.rougeDoux, recovery: H.bleu,
+  rest: H.grisClair, cooldown: C.g, open: H.grisClair,
+  exercise: C.ac, repeat: H.miel,
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -56,7 +57,7 @@ function StepCard({ step, color, vma, children }: {
   return (
     <div style={{
       display: "flex", gap: 12,
-      background: "var(--card, #0E0C0A)", border: "1px solid var(--border, #2E2D33)",
+      background: `var(--card, ${C.bg})`, border: `1px solid var(--border, ${H.anthracite})`,
       borderLeft: `4px solid ${color}`,
       borderRadius: 6, padding: "12px 14px", marginBottom: 8,
     }}>
@@ -64,11 +65,11 @@ function StepCard({ step, color, vma, children }: {
         <span style={{
           fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
           textTransform: "uppercase" as const,
-          color: isExercise ? COLORS.exercise : "#8B8A92",
+          color: isExercise ? COLORS.exercise : H.grisClair,
         }}>
           {kindLabel}
         </span>
-        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, color: "#F2F1F5", whiteSpace: "pre-wrap" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, color: H.blancCasse, whiteSpace: "pre-wrap" }}>
           {title}
         </div>
         {(equipmentLabel || targetStr) && (
@@ -76,14 +77,14 @@ function StepCard({ step, color, vma, children }: {
             {equipmentLabel && (
               <span style={{
                 fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-                background: "#4FA3FF20", color: "#4FA3FF",
-                border: "1px solid #4FA3FF40",
+                background: `${H.bleu}20`, color: H.bleu,
+                border: `1px solid ${H.bleu}40`,
               }}>
                 {equipmentLabel}
               </span>
             )}
             {targetStr && (
-              <span style={{ fontSize: 12, color: "#8B8A92" }}>{targetStr}</span>
+              <span style={{ fontSize: 12, color: H.grisClair }}>{targetStr}</span>
             )}
           </div>
         )}
@@ -111,7 +112,7 @@ function StepCard({ step, color, vma, children }: {
         )}
         {children}
       </div>
-      <span style={{ fontSize: 15, fontWeight: 700, alignSelf: "center", color: "#F2F1F5" }}>
+      <span style={{ fontSize: 15, fontWeight: 700, alignSelf: "center", color: H.blancCasse }}>
         {dur > 0 ? formatS(dur) : "—"}
       </span>
     </div>
@@ -147,7 +148,7 @@ export default function StepTimeline({ steps, vma }: { steps: EnergyStep[]; vma?
               </span>
             </div>
             {group.instructions && (
-              <div style={{ fontSize: 12, color: "#B9AE9C", lineHeight: 1.4, whiteSpace: "pre-wrap", padding: "0 4px 8px" }}>
+              <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", padding: "0 4px 8px" }}>
                 {group.instructions}
               </div>
             )}

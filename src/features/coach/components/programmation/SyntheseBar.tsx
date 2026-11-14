@@ -1,10 +1,10 @@
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import type { ExerciceParams, ParamValue } from "./types"
 import { formatClusterReps } from "./clusterFormat"
 import { formatRepsAt, formatSetsReps, hasIso } from "@/lib/formatSetsReps"
 import { IsoBadge } from "@/features/shared/components/IsoBadge"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 
 interface SyntheseBarProps {
   params: ExerciceParams

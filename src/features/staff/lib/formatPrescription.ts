@@ -18,7 +18,8 @@ function joined<T>(pv: ParamValue<T> | undefined, n: number): string {
   const vals = values(pv, n).filter((v) => v !== null && v !== undefined && v !== "");
   if (vals.length === 0) return "";
   const uniq = vals.every((v) => v === vals[0]) ? [vals[0]] : vals;
-  return uniq.map(String).join("/");
+  // Décimales à la française (« 27,5 kg »).
+  return uniq.map((v) => (typeof v === "number" ? String(v).replace(".", ",") : String(v))).join("/");
 }
 
 function formatCharge(p: ExerciceParams): string {

@@ -11,6 +11,7 @@ import {
 } from "@/features/shared/types/measurements";
 import { ARTICULATIONS, type TestCategory } from "@/features/shared/types/tests";
 import { ApiError, check, db, unwrap, unwrapRows } from "./client";
+import { signupBirthDateError } from "@/lib/age";
 
 /**
  * Profil d'un athlète : fiche (`profiles`), mensurations (`measurement_logs`
@@ -64,6 +65,8 @@ export function invalidateProfile(qc: QueryClient, athleteId: string): Promise<v
 export interface Profile {
   id: string;
   role: "coach" | "athlete" | "coach_athlete" | "staff";
+  /** Fin (ou saut) du premier lancement athlète ; null = à montrer. */
+  onboarded_at?: string | null;
   full_name: string;
   coach_id: string | null;
   coach_code: string | null;
@@ -114,6 +117,35 @@ export async function getProfile(id: string): Promise<Profile | null> {
     "Lecture du profil impossible",
   );
   return (row as unknown as Profile | null) ?? null;
+}
+
+/** Premier lancement terminé (ou passé) pour l'utilisateur connecté. */
+export async function markOnboarded(): Promise<void> {
+  check(await db().rpc("mark_onboarded"), "Premier lancement non enregistré");
+}
+
+/**
+ * Date de naissance d'un compte qui n'en a pas (comptes antérieurs au contrôle d'âge), saisie
+ * une seule fois par l'utilisateur pour lui-même. Même contrôle qu'à l'inscription (15 ans) ;
+ * avant 18 ans la base retire l'accord IA dans la même opération (RPC `set_my_birth_date`,
+ * migration 20261114110000). Lève `BirthDateRefused` (règle d'âge) ou `ApiError` (code PostgREST
+ * gardé : `PGRST202` = fonction absente du serveur, `23505` = date déjà renseignée).
+ */
+export async function setMyBirthDate(day: string): Promise<string> {
+  const msg = signupBirthDateError(day);
+  if (msg) throw new BirthDateRefused(msg);
+  const res = await db().rpc("set_my_birth_date", { p_birth: day.trim() });
+  // Refus de la règle d'âge (23514) : message du serveur tel quel, déjà rédigé pour l'utilisateur.
+  if (res.error?.code === "23514") throw new BirthDateRefused(res.error.message);
+  return unwrap(res, "Date de naissance non enregistrée") as string;
+}
+
+/** Date refusée par la règle d'âge (moins de 15 ans, date invalide) : `message` s'affiche tel quel. */
+export class BirthDateRefused extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BirthDateRefused";
+  }
 }
 
 /** Plusieurs fiches (roster du coach). */
@@ -260,10 +292,16 @@ export async function deleteMeasurementLog(log: Pick<MeasurementLog, "id" | "pho
   check(await db().from("measurement_logs").delete().eq("id", log.id), "Suppression des mensurations impossible");
 }
 
-/** URLs signées (1 h) des photos, par chemin. */
+/**
+ * Durée de vie d'une URL signée de photo (secondes). Courte : le bucket
+ * `test-media` est privé (photos du corps), une URL qui fuit expire vite.
+ */
+export const PHOTO_URL_TTL_S = 600;
+
+/** URLs signées (10 min) des photos, par chemin. */
 export async function getMeasurementPhotoUrls(paths: readonly string[]): Promise<Record<string, string>> {
   if (paths.length === 0) return {};
-  const res = await photos().createSignedUrls([...paths].sort(), 3600);
+  const res = await photos().createSignedUrls([...paths].sort(), PHOTO_URL_TTL_S);
   if (res.error) throw new ApiError("Lecture des photos impossible", res.error);
   const out: Record<string, string> = {};
   for (const item of res.data ?? []) if (item.path && item.signedUrl) out[item.path] = item.signedUrl;

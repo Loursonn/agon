@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 
 interface Option {
   id: string;
@@ -27,7 +27,7 @@ interface Props {
 
 const NONE = "__none__";
 
-export default function TaxonomySelect({ placeholder, options, value, onChange, onCreate, width = 150, accent = "#F5A623" }: Props) {
+export default function TaxonomySelect({ placeholder, options, value, onChange, onCreate, width = 150, accent = H.miel }: Props) {
   const [adding, setAdding]   = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving]   = useState(false);
@@ -69,7 +69,7 @@ export default function TaxonomySelect({ placeholder, options, value, onChange, 
           disabled={saving || !newName.trim()}
           style={{
             padding: "6px 10px", borderRadius: 6, border: "none",
-            background: accent, color: "#1a1204", fontSize: 12, fontWeight: 700,
+            background: accent, color: H.encreOr, fontSize: 12, fontWeight: 700,
             cursor: "pointer", fontFamily: "inherit", opacity: saving || !newName.trim() ? 0.5 : 1,
           }}
         >

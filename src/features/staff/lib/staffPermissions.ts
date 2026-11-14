@@ -6,6 +6,8 @@
  * autorité : ces valeurs ne servent qu'à pré-cocher et à afficher.
  */
 
+import { publicWebOrigin } from "@/lib/native";
+
 export const STAFF_DOMAINS = [
   "seances",
   "fiches",
@@ -49,7 +51,7 @@ export const DOMAIN_LABEL: Record<StaffDomain, string> = {
   planification: "Planification",
   logs: "Séances réalisées",
   wellness: "Bien-être",
-  medical: "Médical",
+  medical: "Blessures",
   nutrition: "Nutrition",
   tests: "Tests",
   commentaires: "Commentaires",
@@ -61,7 +63,7 @@ export const DOMAIN_HINT: Record<StaffDomain, string> = {
   planification: "Saisons, cycles, compétitions",
   logs: "Charges, RPE, records",
   wellness: "Sommeil, fatigue, stress, habitudes",
-  medical: "Antécédents, blessures, pièces jointes",
+  medical: "Blessures sportives (zone, douleur, impact, arrêt)",
   nutrition: "Stratégie, journal, poids, mensurations",
   tests: "Tests de performance",
   commentaires: "Commentaires sur les fiches, retours",
@@ -120,7 +122,7 @@ export function professionLabel(p: string | null | undefined): string {
   return p && p in PROFESSION_LABEL ? PROFESSION_LABEL[p as StaffProfession] : "Professionnel";
 }
 
-/** Résumé court d'une grille : « Médical, Fiches (écriture) · Séances, Tests (lecture) ». */
+/** Résumé court d'une grille : « Blessures, Fiches (écriture) · Séances, Tests (lecture) ». */
 export function summarizePermissions(p: StaffPermissions): string {
   const w = STAFF_DOMAINS.filter((d) => p[d] === "write").map((d) => DOMAIN_LABEL[d]);
   const r = STAFF_DOMAINS.filter((d) => p[d] === "read").map((d) => DOMAIN_LABEL[d]);
@@ -131,5 +133,14 @@ export function summarizePermissions(p: StaffPermissions): string {
 }
 
 export function staffInviteUrl(token: string): string {
-  return `${window.location.origin}/staff-invite/${token}`;
+  return `${publicWebOrigin()}/staff-invite/${token}`;
+}
+
+/** Domaines en écriture / en lecture, libellés, dans l'ordre d'affichage de la planche. */
+export function permissionLists(p: StaffPermissions): { write: string[]; read: string[] } {
+  const order: StaffDomain[] = ["seances", "planification", "logs", "wellness", "medical", "nutrition", "tests", "fiches", "commentaires"];
+  return {
+    write: order.filter((d) => p[d] === "write").map((d) => DOMAIN_LABEL[d]),
+    read: order.filter((d) => p[d] === "read").map((d) => DOMAIN_LABEL[d]),
+  };
 }

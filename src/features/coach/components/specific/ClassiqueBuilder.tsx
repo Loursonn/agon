@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Save, Plus, Zap, ListChecks } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { genId } from "@/lib/energy/treeUtils";
 import IntervalBuilder from "../energy/IntervalBuilder";
 import SpecificItemFields from "./SpecificItemFields";
@@ -22,8 +22,8 @@ import type { EnergyGroup, EnergyStep } from "@/types/energy";
 import type { SessionBlock, ClassiqueBlock, ClassiqueItem, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 
-const ORANGE = "#F5A623";
-const GREEN  = "#66F03C";
+const ORANGE = H.miel;
+const GREEN  = C.g;
 
 // ── Item row (sortable, bloc classique) ──────────────────────────────────────
 

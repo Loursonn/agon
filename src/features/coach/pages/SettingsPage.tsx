@@ -1,14 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSaveBookingUrl } from "@/features/shared/hooks/useCoachBooking";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import { initials } from "@/lib/initials";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { toast } from "sonner";
 import { bookingUrlError, normalizeBookingUrl } from "@/lib/booking";
 import { PrivacySection } from "@/features/shared/components/PrivacySection";
 import { CoachApiKeysSection } from "@/features/coach/components/CoachApiKeysSection";
 
 export default function SettingsPage() {
-  const { profile, logout } = useAuth();
+  const { user, profile, logout, setCoachAthleteMode } = useAuth();
+  const isDesktop = useIsDesktop();
+  const [switching, setSwitching] = useState(false);
   const saveBooking = useSaveBookingUrl();
   const [showLogout, setShowLogout] = useState(false);
   const [bookingUrl, setBookingUrl] = useState("");
@@ -58,146 +63,122 @@ export default function SettingsPage() {
     toast.success(value ? "Lien de réservation enregistré" : "Lien de réservation retiré");
   }
 
+  const isCA = profile?.role === "coach_athlete";
+  async function handleToggleCA() {
+    if (switching) return;
+    setSwitching(true);
+    try {
+      await setCoachAthleteMode(!isCA);
+      toast.success(!isCA ? "Mode coach-athlète activé" : "Tu es maintenant uniquement coach");
+    } catch {
+      toast.error("Le mode n'a pas pu être changé");
+    } finally {
+      setSwitching(false);
+    }
+  }
+
+  const card: CSSProperties = { background: C.s1, borderRadius: 14, padding: 18, border: "1px solid " + C.brd, display: "flex", flexDirection: "column", gap: 12 };
+  const kick: CSSProperties = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2 };
+  const goldBtn = (on: boolean): CSSProperties => ({
+    padding: "8px 16px", borderRadius: 10, border: "none", background: on ? C.ac : C.s2, color: on ? C.bg : C.tx3,
+    fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: on ? "pointer" : "default", alignSelf: "flex-start",
+  });
+
   return (
-    <div style={{ padding: "24px", maxWidth: 560, margin: "0 auto" }}>
-      <div style={{ fontSize: 18, fontWeight: 700, color: C.tx, marginBottom: 24 }}>
-        Paramètres
-      </div>
+    <div style={{ padding: isDesktop ? "32px 48px 48px" : "24px 20px 40px", maxWidth: isDesktop ? 1248 : 560, margin: "0 auto", boxSizing: "border-box" }}>
+      <h1 style={{ ...DISPLAY, margin: 0, fontWeight: 300, fontSize: 28, letterSpacing: "0.06em", color: C.tx }}>Paramètres</h1>
+      <div style={{ fontSize: 13.5, color: C.tx2, marginTop: 6, marginBottom: 24 }}>Compte coach · {profile?.full_name || "—"}</div>
 
-      {/* Profil */}
-      <div
-        style={{
-          background: C.s1, borderRadius: 6, padding: 16,
-          border: "1px solid " + C.brd, marginBottom: 16,
-        }}
-      >
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12 }}>
-          Profil coach
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div
-            style={{
-              width: 44, height: 44, borderRadius: "50%",
-              background: C.coach + "25", border: "1px solid " + C.coach + "40",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, fontWeight: 700, color: C.coach,
-            }}
-          >
-            {(profile?.full_name || "?").charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>
-              {profile?.full_name || "—"}
-            </div>
-            <div style={{ fontSize: 11, color: C.tx3 }}>
-              {profile?.role === "coach_athlete" ? "Coach-athlète" : "Coach"}
+      <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "minmax(0, 1fr) minmax(0, 1fr)" : "1fr", gap: 16, alignItems: "start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Profil */}
+          <div style={card}>
+            <span style={kick}>Profil coach</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ width: 44, height: 44, borderRadius: "50%", background: alpha(C.ac, 0.14), color: C.ac, display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 16, flex: "none" }}>
+                {initials(profile?.full_name || "?")}
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 500, color: C.tx }}>{profile?.full_name || "—"}</div>
+                <div style={{ fontSize: 12, color: C.tx3, marginTop: 2 }}>{isCA ? "Coach-athlète" : "Coach"}{user?.email ? ` · ${user.email}` : ""}</div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Code coach */}
-      <div
-        style={{
-          background: C.s1, borderRadius: 6, padding: 16,
-          border: "1px solid " + C.brd, marginBottom: 16,
-        }}
-      >
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-          Code coach
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 24, fontWeight: 900, color: C.coach, letterSpacing: "0.2em", flex: 1 }}>
-            {profile?.coach_code || "------"}
+          {/* Code coach */}
+          <div style={card}>
+            <span style={kick}>Code coach</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ ...MONO, fontSize: 28, color: C.ac, letterSpacing: "0.2em", flex: 1 }}>{profile?.coach_code || "------"}</span>
+              <button type="button" onClick={handleCopyCode} style={{ padding: "8px 14px", borderRadius: 10, border: "1px solid " + alpha(C.ac, 0.45), background: alpha(C.ac, 0.1), color: C.ac, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Copier
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>
+              Donne ce code à tes athlètes à leur inscription. Un autre coach s’en sert aussi pour devenir 2ᵉ coach d’un de tes athlètes.
+            </div>
           </div>
+
+          {/* Point hebdo — lien Calendly, visible par les athlètes dans leur profil */}
+          <div style={card}>
+            <span style={kick}>Point hebdo · lien de réservation</span>
+            <input
+              type="url"
+              inputMode="url"
+              aria-label="Lien de réservation du point hebdo"
+              value={bookingUrl}
+              onChange={(e) => setBookingUrl(e.target.value)}
+              placeholder="https://calendly.com/ton-compte/30min"
+              style={{ width: "100%", boxSizing: "border-box", padding: "11px 12px", borderRadius: 10, border: "1px solid " + (bookingError ? C.r : C.brdL), background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none" }}
+            />
+            {bookingError ? (
+              <div style={{ fontSize: 12, color: C.r }}>{bookingError}</div>
+            ) : (
+              <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>Tes athlètes voient « Réserver mon point hebdo » dans leur profil. Laisse vide pour le retirer.</div>
+            )}
+            <button type="button" onClick={handleSaveBooking} disabled={!!bookingError || !bookingDirty || savingBooking} style={goldBtn(!bookingError && bookingDirty && !savingBooking)}>
+              {savingBooking ? "Enregistrement…" : "Enregistrer"}
+            </button>
+          </div>
+
+          {/* Mode coach-athlète */}
+          <div style={card}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <span style={kick}>Mode coach-athlète</span>
+                <div style={{ fontSize: 15, fontWeight: 500, color: C.tx, marginTop: 6 }}>Je m’entraîne aussi</div>
+              </div>
+              <button
+                type="button" role="switch" aria-checked={isCA} aria-label="Je m’entraîne aussi" disabled={switching} onClick={handleToggleCA}
+                style={{ width: 46, height: 26, borderRadius: 999, border: "none", padding: 3, cursor: switching ? "default" : "pointer", background: isCA ? C.ac : C.s2, display: "flex", justifyContent: isCA ? "flex-end" : "flex-start", opacity: switching ? 0.6 : 1, flex: "none" }}
+              >
+                <span style={{ width: 20, height: 20, borderRadius: "50%", background: isCA ? C.bg : C.tx3 }} />
+              </button>
+            </div>
+            <div style={{ fontSize: 12.5, color: C.tx2, lineHeight: 1.55 }}>
+              Tu apparais dans ta liste d’athlètes et le bouton <span style={{ ...MONO, fontSize: 11, color: C.ac }}>MODE ATHLÈTE</span> ouvre ton propre espace : séance du jour, saisie des charges, wellness.
+            </div>
+            <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.55 }}>
+              Tu te programmes toi-même, ou tu te fais suivre par un autre coach avec son code. Désactivé, tu restes uniquement coach : tes séances passées sont gardées.
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Clés API pour l'assistant IA personnel du coach */}
+          <CoachApiKeysSection />
+
+          {/* Confidentialité & données — mêmes droits RGPD que côté athlète */}
+          <PrivacySection coach />
+
           <button
-            onClick={handleCopyCode}
-            style={{
-              padding: "6px 14px", borderRadius: 4,
-              border: "1px solid " + C.coach + "50", background: C.coachS,
-              color: C.coach, fontSize: 12, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
+            type="button"
+            onClick={() => setShowLogout(true)}
+            style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
           >
-            Copier
+            Déconnexion
           </button>
         </div>
-        <div style={{ fontSize: 11, color: C.tx3, marginTop: 6 }}>
-          Donne ce code à tes athlètes lors de leur inscription.
-        </div>
-      </div>
-
-      {/* Point hebdo — lien Calendly, visible par les athlètes dans leur profil */}
-      <div
-        style={{
-          background: C.s1, borderRadius: 6, padding: 16,
-          border: "1px solid " + C.brd, marginBottom: 16,
-        }}
-      >
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-          Lien de réservation du point hebdo
-        </div>
-        <input
-          type="url"
-          inputMode="url"
-          value={bookingUrl}
-          onChange={(e) => setBookingUrl(e.target.value)}
-          placeholder="https://calendly.com/ton-compte/30min"
-          style={{
-            width: "100%", boxSizing: "border-box",
-            padding: "10px 12px", borderRadius: 4,
-            border: "1px solid " + (bookingError ? C.r : C.brdL),
-            background: C.s2, color: C.tx,
-            fontSize: 13, fontFamily: "inherit", outline: "none",
-          }}
-        />
-        {bookingError ? (
-          <div style={{ fontSize: 11, color: C.r, marginTop: 6 }}>{bookingError}</div>
-        ) : (
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 6 }}>
-            Tes athlètes verront « Réserver mon point hebdo » dans leur profil. Laisse vide pour le retirer.
-          </div>
-        )}
-        <button
-          onClick={handleSaveBooking}
-          disabled={!!bookingError || !bookingDirty || savingBooking}
-          style={{
-            marginTop: 10, padding: "8px 16px", borderRadius: 4,
-            border: "1px solid " + C.coach + "50",
-            background: !bookingError && bookingDirty ? C.coachS : "transparent",
-            color: !bookingError && bookingDirty ? C.coach : C.tx3,
-            fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-            cursor: !bookingError && bookingDirty && !savingBooking ? "pointer" : "default",
-            opacity: !bookingError && bookingDirty ? 1 : 0.5,
-          }}
-        >
-          {savingBooking ? "Enregistrement…" : "Enregistrer"}
-        </button>
-      </div>
-
-      {/* Clés API pour l'assistant IA personnel du coach */}
-      <CoachApiKeysSection />
-
-      {/* Confidentialité & données — mêmes droits RGPD que côté athlète */}
-      <div style={{ marginTop: 24 }}>
-        <PrivacySection />
-      </div>
-
-      {/* Danger zone */}
-      <div style={{ marginTop: 32 }}>
-        <button
-          onClick={() => setShowLogout(true)}
-          style={{
-            width: "100%", padding: "12px 0", borderRadius: 6,
-            border: "1px solid rgba(239,75,75,0.3)", background: "rgba(239,75,75,0.08)",
-            color: C.r, fontSize: 13, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            transition: "background 150ms",
-          }}
-        >
-          <span>⏻</span><span>Déconnexion</span>
-        </button>
       </div>
 
       {/* Logout confirm */}
@@ -239,7 +220,7 @@ export default function SettingsPage() {
                 onClick={handleLogout}
                 style={{
                   flex: 1, padding: "12px 0", borderRadius: 4,
-                  border: "none", background: C.rV, color: "#0E0C0A",
+                  border: "none", background: C.rV, color: C.ink,
                   fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                 }}
               >

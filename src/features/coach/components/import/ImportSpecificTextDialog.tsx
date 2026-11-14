@@ -19,9 +19,11 @@ import type { SessionBlock } from "@/types/specific";
 import {
   useSpecificSports, usePhysicalQualities, useCreateSport, useCreateQuality,
 } from "@/features/shared/hooks/useSpecificTaxonomy";
-import ImportIssueList, { issueCounts } from "./ImportIssueList";
+import ImportIssueList from "./ImportIssueList";
+import { issueCounts } from "./importIssues";
 import ImportTextDialogShell, { SectionTitle } from "./ImportTextDialogShell";
-import { useExerciseChoices, ExerciseChoiceList, ChoiceRow } from "./ExerciseChoices";
+import { ExerciseChoiceList, ChoiceRow } from "./ExerciseChoices";
+import { useExerciseChoices } from "./useExerciseChoices";
 
 export interface SpecificImportApply {
   name: string;

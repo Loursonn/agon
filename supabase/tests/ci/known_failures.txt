@@ -1,0 +1,4 @@
+# Échecs connus des tests SQL en CI, lus par run.mjs : signalés « ignoré (connu) », sans faire échouer le job.
+# Format : fichier.sql|début du libellé du cas|raison   (« * » = fichier entier, en dernier recours)
+# Chaque ligne est une dette à solder : corriger la base ou le script, puis retirer la ligne.
+# Vide depuis le 2026-11-13 (régression zones, index des FK et 4 scripts corrigés).

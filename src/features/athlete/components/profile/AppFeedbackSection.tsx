@@ -63,7 +63,7 @@ export function AppFeedbackSection() {
         disabled={!text.trim() || send.isPending}
         style={{
           width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 4, border: "none", fontSize: 13, fontWeight: 700, fontFamily: "inherit",
-          background: text.trim() ? C.ac : C.s2, color: text.trim() ? "#fff" : C.tx3, cursor: text.trim() ? "pointer" : "default",
+          background: text.trim() ? C.ac : C.s2, color: text.trim() ? C.tx : C.tx3, cursor: text.trim() ? "pointer" : "default",
         }}
       >
         {send.isPending ? "Envoi…" : "Envoyer"}

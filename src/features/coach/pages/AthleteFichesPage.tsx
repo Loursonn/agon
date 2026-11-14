@@ -45,7 +45,7 @@ function Row({ doc, right, onOpen, isNew }: { doc: Doc; right?: ReactNode; onOpe
       <button onClick={onOpen} style={{ flex: 1, minWidth: 180, minHeight: 40, background: "transparent", border: "none", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>
           📄 {doc.title}{variant && <span style={{ color: C.tx3, fontWeight: 500 }}> · {variant}</span>}
-          {isNew && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 800, color: "#0E0C0A", background: C.ac, borderRadius: 3, padding: "1px 5px" }}>NOUVEAU</span>}
+          {isNew && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 800, color: C.ink, background: C.ac, borderRadius: 3, padding: "1px 5px" }}>NOUVEAU</span>}
           {doc.archived_at && <span style={{ marginLeft: 8, fontSize: 10, color: C.tx3 }}>(archivée)</span>}
         </div>
         <div style={{ fontSize: 11, color: C.tx3 }}>{FICHE_CATEGORY_LABEL[doc.category]} · {formatFileSize(doc.file_size)}</div>

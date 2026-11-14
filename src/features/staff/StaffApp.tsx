@@ -7,40 +7,39 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { useAuth } from "@/hooks/useAuth";
 import { professionLabel } from "./lib/staffPermissions";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Avatar, DISPLAY, Pill } from "@/features/shared/components/ordi/OrdiUi";
+import { btnStyle } from "@/features/shared/components/ordi/ordiStyles";
 
 export default function StaffApp() {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const isCoach = profile?.role === "coach" || profile?.role === "coach_athlete";
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.tx }}>
       <header style={{
-        position: "sticky", top: 0, zIndex: 20, background: C.s1, borderBottom: "1px solid " + C.brd,
-        padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, minHeight: 48,
+        position: "sticky", top: 0, zIndex: 20, background: C.bg, borderBottom: "1px solid " + C.brd,
+        padding: isMobile ? "0 16px" : "0 48px", display: "flex", alignItems: "center", gap: 12, height: 64,
       }}>
-        <button onClick={() => navigate("/staff")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        <button onClick={() => navigate("/staff")} style={{ display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0, color: C.tx }}>
           <img src="/brand/agon-symbole-favicon-marbre.svg" alt="" style={{ width: 26, height: 26 }} />
-          <span style={{ fontSize: 13, fontWeight: 800, color: C.tx }}>Agon</span>
-          <span style={{ fontSize: 10, fontWeight: 700, color: C.b, border: "1px solid " + C.b + "50", borderRadius: 3, padding: "1px 6px" }}>STAFF</span>
+          {!isMobile && <span style={{ ...DISPLAY, fontWeight: 400, fontSize: 15, letterSpacing: "0.22em" }}>Agon</span>}
+          <Pill color={C.b} filled>Staff</Pill>
         </button>
-        <div style={{ flex: 1 }} />
-        <div style={{ fontSize: 12, color: C.tx2, textAlign: "right", lineHeight: 1.2 }}>
-          <div style={{ fontWeight: 600, color: C.tx }}>{profile?.full_name}</div>
-          {profile?.profession && <div style={{ fontSize: 10, color: C.tx3 }}>{professionLabel(profile.profession)}</div>}
+        <span style={{ flex: 1 }} />
+        <div style={{ textAlign: "right", lineHeight: 1.25 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: C.tx }}>{profile?.full_name}</div>
+          {profile?.profession && <div style={{ fontSize: 11.5, color: C.tx3 }}>{professionLabel(profile.profession)}</div>}
         </div>
+        {!isMobile && <Avatar name={profile?.full_name} color={C.b} size={34} />}
         {isCoach && (
-          <button
-            onClick={() => navigate("/coach")}
-            style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid " + C.coach + "40", background: C.coach + "15", color: C.coach, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-          >
+          <button onClick={() => navigate("/coach")} style={{ ...btnStyle("ghost", "sm"), height: 32, fontSize: 12, color: C.coach, borderColor: C.coach + "50" }}>
             Espace coach
           </button>
         )}
-        <button
-          onClick={() => logout()}
-          style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
-        >
+        <button onClick={() => logout()} style={{ ...btnStyle("ghost", "sm"), height: 32, fontSize: 12 }}>
           Déconnexion
         </button>
       </header>

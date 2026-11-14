@@ -55,6 +55,9 @@ export interface DomsPoint {
   intensity?: number;
 }
 
+export type DomsLevel = 1 | 2 | 3;
+export type DomsLevels = Record<string, DomsLevel>;
+
 export interface WellnessSleep {
   bedtime: HourMinute | null;
   wake: HourMinute | null;
@@ -64,6 +67,20 @@ export interface WellnessSleep {
   interruptNote: string | null;
 }
 
+export interface DomsWorkout {
+  id: string;
+  name: string | null;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `{ id, name }` lisible, sinon null (même règle que la projection SQL). */
+export function readDomsWorkout(v: unknown): DomsWorkout | null {
+  if (!isObj(v) || typeof v.id !== "string" || !UUID_RE.test(v.id)) return null;
+  const name = typeof v.name === "string" && v.name.trim() ? v.name.trim().slice(0, 200) : null;
+  return { id: v.id, name };
+}
+
 export interface WellnessEntry {
   /** Jour local de la saisie, "YYYY-MM-DD". */
   day: IsoDay;
@@ -71,6 +88,16 @@ export interface WellnessEntry {
   sleep: WellnessSleep;
   domsZones: string[];
   domsPoints: DomsPoint[];
+  /** Carte du corps par zones (planche 12/11) : zone → 1 légère, 2 marquée, 3 intense. */
+  domsLevels: DomsLevels;
+  /** « Envie de t'entraîner » 1-5 (hors score). */
+  envie: number | null;
+  /** Douleur autre que les courbatures, 0-10. */
+  pain: number | null;
+  /** « Malade ou fiévreux·se ? » */
+  sick: boolean | null;
+  /** Séance de la veille à laquelle les courbatures sont rattachées (nom gardé tel quel). */
+  domsWorkout: DomsWorkout | null;
   /** Réponse « Es-tu blessé/malade ? » : le commentaire, sinon null. */
   injuryNote: string | null;
   /** Poids saisi avec le wellness, tel quel (la courbe de poids reste `asp:wlog`). */
@@ -134,6 +161,23 @@ function points(v: unknown): DomsPoint[] {
   });
 }
 
+/** { zone: 1|2|3 } ; toute autre valeur est écartée. */
+export function readDomsLevels(v: unknown): DomsLevels {
+  if (!isObj(v)) return {};
+  const out: DomsLevels = {};
+  for (const [k, x] of Object.entries(v)) {
+    const n = num(x);
+    if (n === 1 || n === 2 || n === 3) out[k] = n;
+  }
+  return out;
+}
+
+/** Douleur 0-10 entière, sinon null. */
+export function readPain(v: unknown): number | null {
+  const n = num(v);
+  return n != null && n >= 0 && n <= 10 && Number.isInteger(n) ? n : null;
+}
+
 function isEntry(v: unknown): v is WellnessEntry {
   return isObj(v) && isIsoDay(v.day) && isObj(v.items) && isObj(v.sleep);
 }
@@ -147,7 +191,12 @@ function isEntry(v: unknown): v is WellnessEntry {
 export function parseWellnessEntry(raw: unknown, key?: string | null, archived = false): WellnessEntry | null {
   if (isEntry(raw)) {
     const day = (key != null ? toIsoDay(key) : null) ?? raw.day;
-    return { ...raw, day, archived: raw.archived || archived };
+    return {
+      ...raw, day, archived: raw.archived || archived,
+      domsLevels: readDomsLevels(raw.domsLevels), envie: readItem(raw.envie), pain: readPain(raw.pain),
+      sick: typeof raw.sick === "boolean" ? raw.sick : null,
+      domsWorkout: readDomsWorkout(raw.domsWorkout),
+    };
   }
   if (!isObj(raw)) return null;
   const day = (key != null ? toIsoDay(key) : null) ?? toIsoDay(raw.date);
@@ -167,6 +216,11 @@ export function parseWellnessEntry(raw: unknown, key?: string | null, archived =
     },
     domsZones: Array.isArray(raw.domsZones) ? raw.domsZones.filter((z): z is string => typeof z === "string") : [],
     domsPoints: points(raw.domsPoints),
+    domsLevels: readDomsLevels(raw.domsLevels),
+    envie: readItem(isObj(raw.items) ? raw.items.envie : raw.envie),
+    pain: readPain(raw.pain),
+    sick: typeof raw.sick === "boolean" ? raw.sick : null,
+    domsWorkout: readDomsWorkout(raw.domsWorkout),
     injuryNote: text(raw.injComment) ?? text(raw.injuryNote),
     weightKg: (() => {
       const w = num(raw.poids ?? raw.weightKg);
@@ -234,11 +288,17 @@ export interface WellnessRow {
   injury_note: string | null;
   weight_kg: number | string | null;
   archived: boolean;
+  envie?: number | string | null;
+  pain?: number | string | null;
+  sick?: boolean | null;
+  doms_levels?: unknown;
+  doms_workout_id?: string | null;
+  doms_workout_name?: string | null;
 }
 
 /** Colonnes à lire dans `wellness_entries` pour `wellnessRowToEntry`. */
 export const WELLNESS_ROW_COLUMNS =
-  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived";
+  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name";
 
 function toHm(v: unknown): HourMinute | null {
   const m = typeof v === "string" ? /^(\d{1,2}):(\d{2})/.exec(v) : null;
@@ -269,6 +329,11 @@ export function wellnessRowToEntry(row: WellnessRow): WellnessEntry | null {
     },
     domsZones: Array.isArray(row.doms_zones) ? row.doms_zones.filter((z): z is string => typeof z === "string") : [],
     domsPoints: points(row.doms_points),
+    domsLevels: readDomsLevels(row.doms_levels),
+    envie: readItem(row.envie),
+    pain: readPain(row.pain),
+    sick: typeof row.sick === "boolean" ? row.sick : null,
+    domsWorkout: readDomsWorkout({ id: row.doms_workout_id, name: row.doms_workout_name }),
     injuryNote: row.injury_note?.trim() || null,
     weightKg: kg != null && kg > 0 ? kg : null,
     archived: row.archived === true,
@@ -305,6 +370,11 @@ export function toLegacyEntry(e: WellnessEntry): Record<string, unknown> {
   if (score != null) out.score = score;
   out.domsZones = e.domsZones;
   out.domsPoints = e.domsPoints;
+  if (Object.keys(e.domsLevels ?? {}).length > 0) out.domsLevels = e.domsLevels;
+  if (e.envie != null) out.envie = e.envie;
+  if (e.pain != null) out.pain = e.pain;
+  if (e.sick != null) out.sick = e.sick;
+  if (e.domsWorkout) out.domsWorkout = e.domsWorkout;
   if (e.sleep.bedtime) out.coucher = e.sleep.bedtime;
   if (e.sleep.wake) out.reveil = e.sleep.wake;
   if (e.sleep.hours != null) out.sleepDur = e.sleep.hours;

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QK } from "@/lib/queryKeys";
 import { invalidateWorkouts, rescheduleWorkoutByAthlete } from "@/api/workouts";
+import { localIsoDay } from "@shared/domain/dates";
 
 /** Nombre de jours entre deux dates ISO (positif si b > a). */
 function daysBetween(a: string, b: string): number {
@@ -38,8 +39,11 @@ export function useRescheduleWorkout() {
       const newMonday     = mondayOf(newDate);
       const daysAhead     = daysBetween(currentDate, newDate);
 
-      // Interdit : au-delà de la semaine suivante (> 14 jours à l'avance ou > 1 semaine de décalage)
-      if (daysAhead > 14 || daysAhead < -7) {
+      // Interdit : au-delà de la semaine suivante (> 14 jours après aujourd'hui)
+      // ou plus d'une semaine en arrière. Une séance manquée ancienne peut
+      // revenir à aujourd'hui ou plus tard.
+      const fromToday = daysBetween(localIsoDay(), newDate);
+      if (fromToday > 14 || daysAhead < -7) {
         throw new Error("FORBIDDEN_RANGE");
       }
 

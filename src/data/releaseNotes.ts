@@ -38,6 +38,1363 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-comptes-pre-crees-6-mois",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Athlètes créés par toi et jamais activés : supprimés après 6 mois sans séance",
+    summary: "Pour ne pas garder des données sans raison (RGPD), un athlète que tu as créé toi-même et qui n'a jamais activé son compte est supprimé au bout de 6 mois, seulement si aucune séance ne lui a été programmée ou modifiée pendant ces 6 mois.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Tu programmes encore pour un athlète sans application ? Rien ne change : chaque séance créée ou modifiée repousse l'échéance de 6 mois.",
+          "Un athlète que tu as créé puis oublié disparaît de ta liste après 6 mois sans séance, avec ses données.",
+          "Les comptes que tes athlètes ont activés ne sont pas concernés par cette règle.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-date-de-naissance-anciens-comptes",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Date de naissance demandée aux comptes qui n'en ont pas",
+    summary: "Les comptes créés avant le contrôle d'âge saisissent leur date de naissance au prochain lancement, une seule fois. Elle permet de réserver les analyses par intelligence artificielle aux 18 ans et plus, comme l'exigent Google (Gemini) et Anthropic (Claude).",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Un écran court demande la date de naissance avant d'ouvrir l'app, à toi comme à tes athlètes. Il ne revient plus une fois la date enregistrée.",
+          "Tant qu'un athlète n'a pas donné sa date, l'accord pour l'intelligence artificielle ne lui est pas proposé ; le reste de l'app fonctionne normalement.",
+          "Un athlète de moins de 18 ans qui avait accepté l'IA voit cet accord retiré automatiquement à la saisie de sa date.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-nouveautes-relookees",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Page Nouveautés plus lisible",
+    summary: "Les nouveautés non vues ressortent mieux et « J'ai vu » ne prend plus toute l'attention.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque nouveauté non vue porte une pastille « Non vue » et un contour doré.",
+          "Les points de détail sont listés plus clairement, avec une puce par point.",
+          "Un professionnel qui ouvre un lien d'invitation expiré peut maintenant se connecter directement depuis la page.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-charte-finale-couleurs",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Couleurs et boutons harmonisés",
+    summary: "Menus, fenêtres et listes déroulantes prennent exactement l'or et les fonds du reste de l'app. Les boutons de suppression sont désormais bordés de rouge au lieu d'être pleins, comme partout ailleurs.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-ecrans-alignes-maquettes",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Santé, HYROX, Paramètres : les écrans suivent les nouvelles maquettes",
+    summary: "Plusieurs pages ont été complétées pour coller aux maquettes : santé de l'athlète plus complète, analyse de course HYROX plus détaillée, Paramètres et Avis athlètes plus lisibles.",
+    sections: [
+      {
+        title: "Santé d'un athlète",
+        points: [
+          "Retours › Santé ajoute « Wellness déclaré » (la note du jour, les réponses qui contredisent la montre) et « Ressenti et mesuré » sur 28 jours, en sommeil, énergie ou sérénité.",
+          "Sur téléphone, « Détails sur 28 jours » ouvre directement la mesure qui sort de la normale.",
+        ],
+      },
+      {
+        title: "HYROX",
+        points: [
+          "Analyse d'une course : fil d'Ariane, position course et stations, cadence qui chute, tableau des segments avec la position et le coût sur le run suivant.",
+          "Onglet Gains : une cascade montre le chrono actuel, ce que chaque station peut faire gagner, et le chrono possible.",
+          "Bilan : la part du temps en course, stations et Roxzone par course, et la position de l'athlète station par station.",
+        ],
+      },
+      {
+        title: "Ailleurs",
+        points: [
+          "Paramètres : « Données et confidentialité » ouvert, export en un clic, zone de suppression du compte clairement signalée, date de dernière utilisation de ta clé d'assistant IA.",
+          "Avis athlètes : initiales, page concernée en clair, compteur de nouveaux retours.",
+          "Éditeur de séance énergétique : la VMA et les seuils de l'athlète utilisés pour l'estimation s'affichent sous le profil.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-mot-de-passe-8-caracteres",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Mot de passe : 8 caractères minimum",
+    summary: "Pour les nouveaux comptes et les changements de mot de passe, il faut désormais 8 caractères au lieu de 6. Les mots de passe déjà choisis restent valables.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-blessures-sans-soins",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Blessures : Agon garde le sportif, pas le médical",
+    summary: "La section « Antécédents médicaux » devient « Blessures ». On y suit la blessure sportive (zone, douleur, impact sur l'entraînement, arrêt, retour, notes) ; diagnostic, traitement, antécédents et documents médicaux ne sont plus enregistrés dans Agon.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque blessure garde sa zone, sa date, son statut, son détail (type, mécanisme, contexte, douleur, impact, jours d'arrêt, retour prévu) et ses notes.",
+          "Les champs « Diagnostic du médecin », « Traitement », « Vu par », les allergies et traitements en cours, et l'ajout de photos ou PDF médicaux sont retirés.",
+          "Les quelques diagnostics et traitements déjà saisis ont été recopiés dans les notes de la blessure concernée : rien n'est perdu.",
+          "Pourquoi : ces informations relèvent du soin et imposent un hébergement médical certifié. Le suivi médical reste chez le médecin ou le kiné de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-banque-grille-exercices",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Banque : nouvelle grille d'exercices",
+    summary: "La banque d'exercices s'affiche en grande grille sur ordinateur, avec la couleur du type sur chaque carte.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Jusqu'à 4 exercices par ligne sur ordinateur, avec l'aperçu vidéo et « Voir la vidéo ».",
+          "Chaque carte montre « Officiel » ou « Communauté », le type d'exercice (clic pour le changer), le muscle principal et le matériel.",
+          "Une légende des types en haut de la grille.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-affichage-ordi-corrige",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Affichage ordinateur : petites corrections",
+    summary: "Planning, Retours, Wellness, Profil sportif et Fiches s'affichent plus proprement sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Planning en semaine : le type de séance n'est plus coupé, une coche verte indique une séance réalisée.",
+          "Retours : les chiffres de la semaine occupent toute la largeur.",
+          "Wellness : la période affichée suit le choix 7 j / 28 j / 3 mois.",
+          "Profil sportif : le titre n'apparaît plus deux fois.",
+          "Fiches : 3 fiches par ligne, titres moins coupés.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-droits-seances-resserres",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Séances : droits d'écriture resserrés",
+    summary: "Une séance énergie destinée à un athlète ne peut être créée que par son coach (référent ou co-coach), et une séance de votre banque reste à votre nom. Un athlète ne peut plus supprimer lui-même une séance de son programme.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Une séance énergie se crée dans votre banque, pour vous-même, ou pour un athlète que vous suivez (référent ou co-coach) : plus pour l'athlète d'un autre coach.",
+          "Vos athlètes voient, remplissent et valident leurs séances comme avant ; seule la suppression leur est retirée. Vous gardez la main pour supprimer depuis le planning.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-documents-legaux-revus",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Conditions d'utilisation et confidentialité revues",
+    summary: "Les conditions d'utilisation et la politique de confidentialité ont été relues en entier. À votre prochaine connexion, vous et vos athlètes serez invités à accepter la nouvelle version.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Vos engagements de coach sont écrits noir sur blanc : les données de vos athlètes servent seulement à les accompagner, restent confidentielles et ne sortent pas d'Agon sans leur accord.",
+          "Si vous créez le compte d'un athlète avant sa première connexion, prévenez-le et n'y saisissez que le nécessaire.",
+          "Les analyses par intelligence artificielle sont réservées aux athlètes de 18 ans et plus : l'accord n'est plus proposé aux 15-17 ans.",
+          "Les professionnels de santé de votre staff ne doivent pas déposer de documents issus de leurs soins (comptes rendus, ordonnances) : Agon n'est pas un dossier patient.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-banque-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Banque : onglets aux couleurs des types",
+    summary: "Dans la Banque, les onglets Musculaire, Énergétique et Spécifique reprennent les couleurs de la Programmation, et les sous-onglets (Exercices, Méthodes, Blocs, Séances) deviennent des pastilles.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-fiches-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Fiches : rubriques numérotées",
+    summary: "Vos fiches sont rangées en rubriques numérotées par catégorie, avec une pastille verte pour celles en libre-service.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-tests-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Banque de tests : rubriques numérotées",
+    summary: "La banque de tests est rangée en rubriques numérotées par catégorie (bilan articulaire, endurance, force…), vos tests personnalisés à la fin.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-wellness-nuit-montre",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Wellness : la nuit vient de la montre",
+    summary: "Si l'athlète a relié une montre qui mesure son sommeil, le wellness du matin affiche sa nuit (durée, coucher, réveil, modèle de la montre) au lieu de lui demander ses heures. Il peut toujours corriger à la main.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-retours-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retours : rubriques numérotées",
+    summary: "Sous le calendrier des Retours, les rubriques sont numérotées comme sur les autres pages : modifications du planning par l'athlète, séries par muscle, blessures.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-analyse-course-hyrox",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Analyse de course HYROX : le résultat officiel croisé avec la montre",
+    summary: "Dans HYROX › Courses, ouvrez une course puis « Analyse de course ». Les temps officiels sont placés sur une frise, avec la fréquence cardiaque et la cadence de la montre si l'athlète a enregistré la course. Même écran pour vous et pour l'athlète.",
+    sections: [
+      {
+        title: "Ce que vous y trouvez",
+        points: [
+          "Course : la frise des 17 segments avec la FC, jusqu'à 3 constats chiffrés, et ce que dit la montre (course compromise après chaque station, dérive cardiaque, récupération en Roxzone, temps au-dessus de SV2).",
+          "Runs : l'allure de chaque km comparée au run 1, avec la station juste avant, pour voir laquelle coûte le plus.",
+          "Gains : combien de temps l'athlète gagnerait en revenant à la médiane de son niveau, station par station.",
+          "Partager : une image prête pour les réseaux (chrono, record, rang, stations, « Coaché par »), fond sombre ou clair, FC masquable. Elle est créée sur le téléphone, rien n'est envoyé.",
+          "Les constats sont des règles calculées par Agon, sans IA. Sans montre ce jour-là, seuls les temps sont analysés.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-programmation-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Programmation : nouveau look sur ordinateur",
+    summary: "La page Programmation d'un athlète reprend le style des autres pages.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le cycle en cours s'affiche dans un bandeau doré avec la semaine en cours.",
+          "Les onglets Musculation, Énergétique et Spécifique ont chacun leur couleur.",
+          "Les cartes de séance sont plus lisibles : jour et code de la séance en pastilles, la séance ouverte ressort en doré.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-logo-agon",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Le vrai logo Agon à la connexion",
+    summary: "Sur la page de connexion, le premier lancement et les pages légales, le logo s'affichait comme un simple cercle doré. C'est maintenant le symbole Agon.",
+    sections: [],
+  },
+  {
+    id: "2026-11-13-athletes-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Liste des athlètes rafraîchie",
+    summary: "La page Athlètes prend le style des autres pages sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Votre code coach est mis en avant en haut de page, avec un bouton pour le copier.",
+          "Chaque athlète a sa carte : « 2 coachs » ou « Co-coach » en pastille, et les athlètes en attente de première connexion ressortent en orange avec le lien à leur envoyer.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-editeur-energie-cartes",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance d'énergie : des blocs en cartes",
+    summary: "L'éditeur de séance d'énergie se remplit bloc par bloc, et s'enregistre directement au bon jour.",
+    sections: [
+      {
+        title: "Les blocs",
+        points: [
+          "Ajoutez un échauffement, des intervalles, une récup ou un retour au calme : chaque bloc est une carte que vous dépliez pour régler répétitions, effort (durée ou distance), cible (allure, FC, zone ou watts) et récup entre les répétitions.",
+          "Glissez une carte pour changer l'ordre, dupliquez-la ou supprimez-la d'un clic.",
+          "Les séances déjà créées s'ouvrent telles quelles. Un bloc plus complexe (groupe dans un groupe, départ fixe) s'ouvre dans l'éditeur détaillé.",
+        ],
+      },
+      {
+        title: "Enregistrer",
+        points: [
+          "Choisissez la date directement dans l'éditeur : la séance arrive au planning de l'athlète.",
+          "« Garder aussi une copie dans ma banque » pour la réutiliser avec d'autres athlètes, ou « Ma banque seulement » pour la programmer plus tard.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-tuto-import-strava",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Vos athlètes importent eux-mêmes leur historique Strava",
+    summary: "Dans Profil › Montres et données, le tutoriel « Importer mon historique Strava » a une nouvelle vidéo de 30 secondes et des étapes simples : demander l'archive sur Strava, la télécharger depuis l'e-mail, la décompresser, puis glisser le dossier dans la zone d'import. Plus besoin de vous transférer l'e-mail de Strava.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "L'athlète fait tout depuis un ordinateur, en 5 étapes, et ses sorties arrivent directement dans son historique.",
+          "Conseil donné dans le tuto : glisser le dossier plutôt que le choisir, l'ordinateur ne sélectionnant pas toujours tous les fichiers.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-seance-hyrox-coach",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance HYROX : revenir à la proposition d'Agon",
+    summary: "Sur l'onglet Séance d'une simulation HYROX, vous pouvez repartir du découpage proposé par Agon à tout moment.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Revenir à la proposition d'Agon » à côté de « Modifier les tours » : le découpage d'Agon s'ouvre en modification, rien n'est enregistré tant que vous ne cliquez pas sur « Enregistrer ».",
+          "Le graphique indique combien de tours sont posés et s'ils l'ont été automatiquement.",
+          "En zoom sur un tour, la mini-courbe dessous montre où se situe le tour dans la séance.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-import-export-garmin",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Historique Garmin d'avant la connexion",
+    summary: "L'archive d'export du compte Garmin se dépose comme l'archive Strava : toutes les sorties passées entrent dans Agon.",
+    sections: [
+      {
+        title: "Comment faire",
+        points: [
+          "L'athlète demande l'export de ses données sur son compte Garmin (Gestion des données → Exporter vos données) et reçoit un zip par e-mail.",
+          "Il le dépose dans Montres › Importer mes fichiers, ou toi depuis sa fiche : les sorties sont lues sur l'appareil, rien n'est envoyé.",
+          "Une sortie déjà reçue par la connexion Garmin est complétée, jamais dupliquée, et reste attribuée à sa montre Garmin.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-sante-modele-montre",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Santé : le modèle de la montre est indiqué",
+    summary: "Les mesures de la nuit (sommeil, VFC, Body Battery…) disent maintenant de quelle montre elles viennent.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans Retours › Santé, « Mesuré par la montre » devient « Mesuré par Garmin Forerunner 265 » (le modèle de l'athlète).",
+          "Même chose sur la page Santé de l'athlète : chaque mesure porte le nom de la montre qui l'a prise.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-wellness-coach",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retours : un onglet Wellness complet",
+    summary: "Dans les Retours d'un athlète, l'onglet Wellness résume la forme du jour en une page, puis détaille ce qui l'explique.",
+    sections: [
+      {
+        title: "Vue d'ensemble",
+        points: [
+          "Le feu du matin avec sa phrase, puis quatre tuiles : VFC de nuit, FC de repos, ressenti sur 7 jours et courbatures.",
+          "« Ce matin » : les réponses du jour (récupération, sommeil, sérénité, énergie, fraîcheur, envie, douleur, malade).",
+        ],
+      },
+      {
+        title: "Détails",
+        points: [
+          "Les critères du feu cochés un par un, et ce qu'il manque pour passer au rouge.",
+          "Les courbes de VFC et de FC de repos avec la zone habituelle de l'athlète.",
+          "Une grille des 6 questions jour par jour, avec les jours sous l'habitude entourés.",
+          "Les alertes, les courbatures après chaque séance et la carte des zones sur 7 jours.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-import-fichiers-caches-mac",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Import d'historique : plus de fausses erreurs sur Mac",
+    summary: "En important un dossier d'activités copié depuis un Mac (archive Strava dézippée, disque externe), des centaines d'erreurs « contenu compressé illisible » s'affichaient sur des fichiers commençant par « ._ ». Ce sont des fichiers cachés créés par macOS, pas des activités : ils sont maintenant ignorés sans bruit.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les fichiers « ._… », « .DS_Store » et le dossier « __MACOSX » ne sont plus lus ni comptés comme erreurs.",
+          "Vos vraies activités étaient déjà importées correctement : rien à refaire.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-seance-retour-commentaires-tours",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance de montre : l'athlète corrige son retour et commente ses tours HYROX",
+    summary: "Sur l'onglet Séance d'une activité, l'athlète peut modifier sa difficulté ressentie et son commentaire, et laisser un mot sur un tour HYROX ; vous le voyez à une bulle dorée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Modifier mon retour » sous le retour de l'athlète : difficulté de 1 à 10 et commentaire, comme en fin de séance.",
+          "Tableau des tours HYROX : une bulle par tour. Dorée, elle contient le commentaire de l'athlète (passez la souris ou cliquez pour le lire).",
+          "Les stations s'appellent « Sled push 1 », « Wall balls 2 »… : la distance reste dans la colonne Prévu.",
+          "Minuteur EMOM : « Ensuite » annonce le repos jusqu'à la minute suivante au lieu d'une durée fixe.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-planning-semaine",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Planning : la semaine en pleine largeur",
+    summary: "À l'ordinateur, le planning s'ouvre sur la semaine : sept grandes colonnes, la banque de séances en bandeau au-dessus, et la charge de la semaine juste en dessous.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque jour est une colonne haute avec ses séances en cartes : musculation, énergie, spécifique, test, compétition.",
+          "La banque passe en bandeau : choisissez Musculation, Énergie, Spécifique ou Tests, faites défiler les cartes et glissez-en une sur un jour.",
+          "Sous la semaine : séances, volume de course, zones et charge, avec le rapport aigu / chronique.",
+          "Le mois reste disponible dans l'onglet « Mois », et c'est toujours la vue par défaut au téléphone.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-editeur-energie-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Éditeur de séance d'énergie remis en page",
+    summary: "À l'ordinateur, l'éditeur de séance d'énergie suit maintenant trois temps : le profil de la séance en haut, les blocs au centre, l'enregistrement à droite.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le sport (course, vélo, natation, rameur…) se choisit d'un clic dans la carte du titre.",
+          "En haut, la durée et la distance estimées avec le profil de la séance, mis à jour à chaque bloc.",
+          "À droite, la consigne pour l'athlète et les boutons d'enregistrement restent visibles pendant que vous construisez les blocs.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-profil-sportif-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Profil sportif : seuils et références en un coup d'œil",
+    summary: "Le profil sportif d'un athlète s'ouvre sur ses seuils (fréquences cardiaques, seuils de zones), puis ses zones et un tableau de références avec la date et l'origine de chaque valeur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "En haut, les seuils clés en grand : FC max, FC seuil, FC de repos et les deux seuils de ses zones.",
+          "Les références (VMA, vitesse critique, FTP…) sont rangées en tableau : valeur, date, et si elle vient d'un test, de vous ou de l'athlète.",
+          "Un crayon sur chaque ligne pour corriger une valeur sans changer de page.",
+          "Biométrie, records et profils par catégorie restent plus bas, comme avant.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-staff-ordi",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Coachs & staff : nouvelle page à l'ordinateur",
+    summary: "La page Coachs & staff d'un athlète est plus claire : coachs, professionnels, droits et invitations sont réunis et se règlent sans quitter la page.",
+    sections: [
+      {
+        title: "Pour vous",
+        points: [
+          "Chaque professionnel a sa carte : métier, date d'ajout et ce qu'il peut écrire ou seulement consulter.",
+          "Régler les droits ouvre une grille sur deux colonnes ; les lignes changées sont signalées avant d'enregistrer.",
+          "Retirer un accès demande une confirmation et rappelle que ce qu'il a créé reste dans votre banque.",
+          "Les invitations en attente montrent leur date d'expiration et se copient en un clic.",
+        ],
+      },
+      {
+        title: "Pour le professionnel invité",
+        points: [
+          "La page d'invitation affiche ce qu'il pourra faire avant de créer son compte, et jusqu'à quand le lien est valable.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-suppression-photos-seances",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Suppression de compte : les photos des séances partent aussi",
+    summary: "Quand un compte est supprimé, les photos d'exercices qu'il avait ajoutées aux séances d'énergie sont maintenant effacées.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les photos ajoutées dans l'éditeur de séances d'énergie sont effacées avec le compte de leur auteur.",
+          "Une photo encore utilisée par une séance qui reste (bibliothèque, séance d'un autre athlète) est gardée, pour ne pas casser cette séance.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-telephone-energie-corrections",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Séances d'énergie sur téléphone et charges à virgule",
+    summary: "La banque énergétique et l'éditeur de séance d'énergie ne dépassent plus de l'écran du téléphone.",
+    sections: [
+      {
+        title: "Ce qui est corrigé",
+        points: [
+          "Banque énergétique et création d'une séance d'énergie : les boutons passent à la ligne au lieu de sortir de l'écran.",
+          "Les charges s'écrivent avec une virgule (« 27,5 kg ») dans le résumé des séances, côté staff et athlète.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-emom-minuteur",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance spécifique : le minuteur gère l'EMOM",
+    summary: "Quand un bloc a un départ fixe (« départ toutes les 1:00 »), le minuteur de l'athlète affiche « Minute 7 / 12 » et décompte la minute : ses exercices faits, il récupère jusqu'à la minute suivante, qui part toute seule.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "En haut du minuteur : « EMOM · 12 min » et la minute en cours.",
+          "L'athlète tape « Fait » quand ses répétitions sont faites : le reste de la minute devient sa récup.",
+          "S'il n'a pas fini à temps, la minute suivante démarre quand même, comme en salle.",
+          "Départ toutes les 2:00 ou autre : même principe, affiché « Départ 3 / 10 ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-indispo-semaine",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Semaine de l'athlète : indisponibilités et compétitions sur plusieurs jours",
+    summary: "Dans le Programme de l'athlète, ses vacances, stages ou examens apparaissent sur chaque jour concerné, marqués « Indisponible » quand il ne peut pas s'entraîner. Une compétition sur plusieurs jours s'affiche sur chacun d'eux.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Un événement saisi avec « Je ne peux pas m'entraîner » est hachuré « Indisponible » ; sinon il s'affiche simplement.",
+          "Sur ordinateur, « Déplacer » ouvre un petit panneau à côté de la séance au lieu d'un volet en bas d'écran.",
+          "Premier lancement : chaque bulle d'aide pointe ce qu'elle explique (séance du jour, onglet Programme, onglet Tests).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-activite-libre-hors-ligne",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Activités libres gardées sans réseau",
+    summary: "Une activité libre (footing, vélo…) ajoutée par un athlète sans réseau n'est plus perdue : elle part toute seule au retour du réseau.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Avant, l'athlète voyait « Sauvegarde échouée » et l'activité disparaissait au prochain chargement.",
+          "Maintenant, comme pour le wellness ou la pesée, l'activité est gardée sur le téléphone et vous arrive dès que le réseau revient.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-coach-telephone-fiches-banque",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Fiches et banque d'exercices sur téléphone",
+    summary: "Depuis « Plus » sur votre téléphone : lisez et partagez vos fiches, et retrouvez un exercice de la banque pour montrer sa vidéo à un athlète.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Fiches : rangées par catégorie, avec recherche. Vous voyez à qui chaque fiche est partagée et si elle a été lue.",
+          "Partagez une fiche à un ou plusieurs athlètes en une fois, avec un mot facultatif. Ceux qui l'ont déjà sont grisés.",
+          "Banque d'exercices en lecture : recherche, type, muscle, équipement, niveau ; chaque exercice montre sa vidéo, ses consignes et ses muscles.",
+          "Les reviews de la semaine sont aussi accessibles depuis « Plus » et l'onglet « Review » de chaque athlète.",
+          "Importer ou modifier une fiche ou un exercice reste sur ordinateur.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-coach-telephone",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "L'espace coach sur téléphone",
+    summary: "Sur téléphone, l'espace coach a maintenant ses propres écrans : l'essentiel de la journée, vos athlètes et leur suivi, à une main. Sur ordinateur, rien ne change.",
+    sections: [
+      {
+        title: "Ce que vous trouvez sur téléphone",
+        points: [
+          "Accueil : ce qui est à traiter, les séances d'hier faites ou non avec les retours, celles du jour et les prochaines compétitions.",
+          "Athlètes : recherche, filtres Alerte et Compétition, ajout d'un athlète et partage de votre code coach.",
+          "Fiche d'un athlète : planning de la semaine, programmation, retours, wellness, santé (montre) et tests.",
+          "Planning : touchez une séance pour la déplacer, la dupliquer, la passer en repos, la retirer ou la modifier.",
+          "Modifier une séance : séries, répétitions, charge, RIR, tempo et repos, pour ce jour seulement ou à partir de cette séance.",
+          "Tests : saisissez un résultat ou faites passer un test prévu depuis votre téléphone.",
+          "Plus : nouveautés, outils, paramètres et mode athlète.",
+        ],
+      },
+      {
+        title: "Restent sur ordinateur",
+        points: [
+          "Les banques, l'import de texte, la gestion des co-coachs et le détail des retours séance par séance.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-weekly-review",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Weekly review : le bilan de la semaine de chaque athlète",
+    summary: "Chaque dimanche, l'athlète fait le point sur sa semaine depuis son téléphone. Le lundi, tu lis toutes les reviews sur une seule page et tu réponds.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Ouverte du dimanche matin au lundi soir, avec un rappel sur l'accueil.",
+          "Le bilan se remplit tout seul : séances faites sur prévues, durée, distance, RPE moyen, séance la plus dure et moyenne du wellness.",
+          "L'athlète note sa semaine de 1 à 5 (note, énergie, motivation, charge de vie, nutrition), dit s'il a tenu ses engagements, répond à 3 questions et prend 3 engagements pour la semaine suivante.",
+          "Si son feu est orange ou rouge, on lui demande aussi sa douleur (zone et niveau de 0 à 10).",
+          "Sa review est enregistrée au fur et à mesure : il peut s'arrêter et reprendre plus tard.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Menu « Reviews » : une ligne par athlète (reçue, en attente, non faite), avec le feu, la note, les séances et la douleur.",
+          "Onglet « Review » de l'athlète : sa review complète et ta réponse, qui reste ton retour de la semaine, visible sur son accueil.",
+          "Le co-coach voit la même chose. Un membre du staff avec l'accès « bien-être » la lit, sans pouvoir la modifier.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-retirer-activite-montre",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retirer une activité de montre supprimée",
+    summary: "Une sortie supprimée dans Garmin Connect ou COROS restait dans Agon. Vous pouvez maintenant la retirer depuis la liste des sorties de l'athlète.",
+    sections: [
+      {
+        title: "Comment faire",
+        points: [
+          "Ouvrez la sortie dans la liste des activités, puis « Retirer d'Agon » et confirmez. L'athlète peut le faire aussi.",
+          "La courbe, les tours et les zones partent avec elle. La séance prévue à laquelle elle était rattachée reste, avec ce que l'athlète y a saisi.",
+          "Une séance enregistrée dans Agon ne peut pas être retirée de cette façon.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-coach-retours-sante",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Retours › Santé : le ressenti face à la montre",
+    summary: "Dans Retours, l'onglet Santé met face à face ce que l'athlète déclare le matin (sommeil, énergie, sérénité) et ce que mesure sa montre, puis toutes les mesures de la nuit.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Écart » quand l'athlète se dit en forme alors que sa montre mesure nettement moins bien que d'habitude (ou l'inverse) ; « Cohérent » sinon.",
+          "En dessous, les mesures de la montre (sommeil, VFC, FC de repos, stress…) sur le jour, 7 ou 28 jours, comparées à sa propre moyenne.",
+          "Rien ne s'affiche si l'athlète n'a pas de montre reliée ou n'a pas rempli son wellness.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-coach-parametres-mode-athlete",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Paramètres : activez ou coupez le mode coach-athlète",
+    summary: "Dans Paramètres, l'interrupteur « Je m'entraîne aussi » vous ajoute à votre liste d'athlètes et ouvre votre propre espace athlète. Coupé, vous restez uniquement coach et vos séances passées sont gardées.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sur ordinateur, la page Paramètres passe sur 2 colonnes : profil, code, point hebdo et mode à gauche ; assistant IA et données à droite.",
+          "Couper le mode vous retire aussi de la liste d'un autre coach qui vous suivait.",
+          "Pour vos professionnels (kiné, nutri…) : leur accueil liste leurs athlètes avec leurs droits et une colonne « À surveiller » (blessures en cours) ; sur la fiche d'un athlète, leurs accès restent affichés à droite.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-photos-privees",
+    date: "2026-11-13",
+    kind: "fix",
+    title: "Photos de mensurations : accès protégé",
+    summary: "Les photos du corps déposées avec les mensurations ne sont plus accessibles par un simple lien : seuls l'athlète et son coach les ouvrent, par un lien temporaire.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les photos de mensurations s'ouvrent par un lien valable 10 minutes, réservé à l'athlète et à son coach (référent ou co-coach).",
+          "Vous pouvez maintenant déposer ou remplacer les photos de mensurations de vos athlètes.",
+          "Les images d'illustration des séances énergie sont rangées à part ; celles déjà posées s'affichent comme avant.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-confidentialite-v2026-11-13",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Politique de confidentialité et CGU mises à jour",
+    summary: "La politique de confidentialité liste maintenant toutes les données que l'app garde. Vos athlètes et vous serez invités à accepter à nouveau l'accord sur les données de santé à votre prochaine connexion.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Nouvelles données nommées : envie, douleur et maladie du matin, bilan hebdomadaire, photos du corps, masse grasse, tests et HYROX, habitudes, données détaillées des montres (stress, SpO2, Body Battery…) et copie intégrale des données Garmin.",
+          "Ce qui ne part jamais vers une IA est écrit noir sur blanc : montres, photos, douleur, maladie, bilan hebdomadaire, feu du matin, charge.",
+          "Durée des sauvegardes (30 jours au plus) et sort de l'historique des accords à la suppression d'un compte.",
+          "CGU : co-coach et staff, assistant IA du coach, indicateurs présentés comme des repères et non un diagnostic.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-feu-du-matin",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Feu du matin : vert, orange ou rouge, calculé",
+    summary: "Chaque matin, un feu résume l'état de l'athlète à partir de sa VFC et de sa FC de repos (montre), de ses ressentis et de sa charge des 7 derniers jours, toujours comparés à ses propres habitudes.",
+    sections: [
+      {
+        title: "Comment il se décide",
+        points: [
+          "Orange dès qu'un signal apparaît : charge des 7 jours plus de 10 % au-dessus du prévu, km +7 %, sortie non prévue au-dessus du plafond, monotonie au-dessus de 2, VFC sous sa zone habituelle, FC de repos au-dessus de l'habitude, 2 ressentis nettement bas, douleur au-dessus de 3/10.",
+          "Rouge quand la charge monte et que la VFC est sous la zone, avec au moins 2 signes parmi : FC de repos haute, wellness sous l'habitude, envie à 2/5 ou moins, sommeil en baisse. Rouge aussi si l'athlète se dit malade.",
+          "VFC : moyenne des 7 dernières nuits (5 au moins), zone habituelle = moyenne ± 0,5 écart-type des 4 semaines d'avant. L'alerte VFC s'active au 14e jour de mesure.",
+          "Une seule marque de montre à la fois : après un changement de montre, l'habitude repart de zéro. Les scores des marques (Body Battery, readiness…) ne comptent jamais, et ces données ne passent par aucune IA.",
+          "Sans montre, le feu ne passe au rouge que si l'athlète est malade.",
+        ],
+      },
+      {
+        title: "Où le voir",
+        points: [
+          "Retours d'un athlète : le feu du jour en haut, avec tous les signaux.",
+          "L'athlète le voit sur son accueil, sous son score wellness.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-charge-yoxx",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Charge d'entraînement : points YOXX, prévu face au réalisé",
+    summary: "La charge de chaque séance se compte en points (1 point = 1 minute en zone 1), pour la course, les ergos, les séances mixtes et la musculation, prévue et réalisée.",
+    sections: [
+      {
+        title: "Comment c'est compté",
+        points: [
+          "Course et ergos : minutes en zone 1 × 1, en zone 2 × 2, en zone 3 × 3. Les zones viennent du modèle de zones FC que vous avez fixé à la date de la séance (5 et 7 zones sont ramenées à 3).",
+          "En course, un tour plus rapide que le seuil 1 est classé à l'allure : zone 2 jusqu'à la vitesse critique, zone 3 au-delà.",
+          "Séances mixtes, spécifiques, HYROX : la FC de toute la séance ; leurs km comptent à part (« compromised »).",
+          "Musculation : séries dures selon le RIR (0-1 : 1 · 2-3 : 0,75 · 4-5 : 0,4) et le type d'exercice (bas du corps lourd × 1,5, autre polyarticulaire × 1, isolation × 0,5), × 6.",
+          "Sans montre : la séance validée compte comme prévue (au prorata de la durée corrigée).",
+        ],
+      },
+      {
+        title: "Où la voir",
+        points: [
+          "Planning › Mois : sous le calendrier, la semaine en cours : séances, km, zones, charge sur 6 semaines (prévu en pointillé), monotonie, séance la plus coûteuse.",
+          "Charge aiguë (7 j) face à la chronique (4 semaines précédentes) et leur ratio, avec la zone 0,8–1,3 : pour le contexte, il ne déclenche aucune alerte.",
+          "Planning › Résumé : la charge hebdomadaire de chaque mésocycle passe aux points YOXX, prévus et réalisés.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-vitesse-critique",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Vitesse critique : une seule, et une proposition tirée des courses",
+    summary: "Le profil sportif affiche la vitesse critique retenue (test ou saisie, la plus récente) et en propose une nouvelle à partir des courses de l'athlète.",
+    sections: [
+      {
+        title: "Profil sportif › Vitesse",
+        points: [
+          "Sous les références : la VC retenue, sa source (test ou saisie) et sa date, avec la vitesse au seuil 1 qui en découle.",
+          "Si les meilleurs efforts de 3, 6 et 12 min des courses des 90 derniers jours donnent une VC différente, elle vous est proposée : « Utiliser » l'enregistre, sinon rien ne change.",
+          "La même VC sert aux tests HYROX et, bientôt, à la charge d'entraînement (zones 2 et 3).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-coach-nouveautes-repliees",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Nouveautés : celles déjà vues se replient",
+    summary: "Sur cette page, les nouveautés que vous avez déjà vues n'affichent plus que leur titre. « Voir le détail » les rouvre.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le titre indique combien de nouveautés restent à voir.",
+          "Une nouveauté pas encore vue porte l'étiquette « Non vue » et le bouton « J'ai vu ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-ordi-accueil",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète sur ordinateur : onglets en haut, accueil sur 3 colonnes",
+    summary: "Sur ordinateur, l'app athlète met ses onglets dans la barre du haut et l'accueil range ses rubriques sur 3 colonnes : tout tient sur un écran.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Wellness et retour du coach à gauche, semaine, événements et nutrition au centre, test et compétition à droite.",
+          "En dessous : les séances du jour et la tendance de forme.",
+          "Programme : la semaine s'affiche en 7 colonnes, une par jour.",
+          "Santé : les mesures passent sur 4 colonnes. Profil : les rubriques sur 2 colonnes.",
+          "Wellness : tout tient sur une page, les questions et le corps à gauche, la forme du jour, la nuit et la tendance sur 7 ou 28 jours à droite.",
+          "Tests : la liste à gauche, le détail du test choisi à droite. Alimentation : objectif, série et poids sur une seule rangée.",
+          "Sur téléphone, rien ne change.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-acces-inscription",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Inscription en 3 étapes, votre nom s'affiche au code",
+    summary: "Un athlète qui s'inscrit choisit son rôle, entre votre code coach puis crée son compte. Dès le 6ᵉ caractère du code, il voit « Coach trouvé » avec votre nom avant de confirmer.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Fini les inscriptions chez le mauvais coach : le nom s'affiche avant de valider.",
+          "Connexion, mot de passe oublié, nouveau mot de passe, accord sur les données de santé et page introuvable reprennent le style de l'app.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-seance-en-cours-precedent",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : la dernière fois, sous les yeux pendant la séance",
+    summary: "Pendant une séance de musculation, la zone de saisie affiche la charge de la dernière fois, l'écart avec aujourd'hui et le RIR que vous avez prescrit.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Au-dessus des boutons charge et reps : « Précédent 115 × 3 · Écart +5 kg · RIR visé 2 ».",
+          "Sous le bloc en cours, « À suivre » liste les exercices des blocs suivants ; une tape ouvre le bloc.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-seance-specifique",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : nouveau minuteur des séances spécifiques",
+    summary: "Pendant une séance HYROX ou spécifique, l'athlète voit un minuteur plein écran : tour en cours, exercice en cours et le suivant.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Effort en orange, récup en bleu : pendant la récup, le prochain exercice passe au premier plan pour se préparer.",
+          "En bas, les exercices du tour : ceux déjà faits sont barrés.",
+          "Format classique : l'athlète coche chaque élément, ou tout le bloc d'un coup. Un bloc WOD se lance avec son bouton « Minuteur ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-premier-lancement",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : accueil au premier lancement",
+    summary: "Un nouvel athlète est accueilli en 3 écrans : à quoi sert Agon, lier sa montre s'il le souhaite, et son premier wellness en 3 tapes.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Montré une seule fois, après l'accord sur les données de santé. « Passer » mène directement à l'accueil.",
+          "Ensuite, 3 bulles d'aide sur Aujourd'hui : séance du jour, Programme, Tests.",
+          "Vos athlètes déjà inscrits ne voient rien de nouveau.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-saisie-test",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : nouvelle saisie des tests",
+    summary: "Votre athlète saisit son résultat sur un écran clair, note son ressenti de 1 à 5, laisse un mot et voit tout de suite s'il bat son record.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le clavier s'adapte à la valeur : nombre, allure (min ’ s /km), durée (min : s) ou échelle de 1 à 5.",
+          "Son record s'affiche sous la case ; s'il le bat, « Nouveau record » en grand avec l'écart.",
+          "Il peut corriger la date s'il a fait le test un autre jour : le résultat suit.",
+          "Dans le détail du test, chaque résultat montre son ressenti et son commentaire.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-evenements",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : un seul formulaire pour ses événements",
+    summary: "Compétition, stage, voyage, examen ou autre : votre athlète ajoute tout au même endroit, et vous le voyez sur son planning.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Compétition : priorité A (tout vise ce jour), B (on allège avant) ou C (rien ne change), lieu et date de fin si elle dure plusieurs jours.",
+          "Hors compétition : du / au, lieu, et « Indisponible pour m’entraîner » quand il ne peut pas s’entraîner ces jours-là.",
+          "Sur son accueil, « Mes événements » montre aussi ses compétitions, et « Prochaine compétition » annonce la suivante.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-sante-montre",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : page Santé (nuit et récupération de la montre)",
+    summary: "Depuis son wellness, votre athlète ouvre « Santé » : sommeil, VFC, FC de repos, stress, Body Battery, SpO2, respiration, chacun comparé à sa propre moyenne.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Une carte par mesure : valeur de la nuit, état Normal / Bas / Haut par rapport à ses 28 derniers jours, courbe sur 7 ou 28 jours.",
+          "Toucher une mesure ouvre son détail : plus bas, moyenne, plus haut, nuits de suite hors de la zone habituelle et une explication simple.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-seuils-montres",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Athlète : seuils, zones et montres en clair",
+    summary: "Dans son Profil, votre athlète voit ses seuils (SV1, SV2, FC max, FC de repos) et une page « Montres et données ».",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "« Mes seuils et mes zones » : qui les a fixés, les 4 seuils, le modèle choisi et une barre de 100 bpm à la FC max.",
+          "« Montres et données » : une carte par montre, l'accord de partage et l'import de l'historique (archive Strava ou export Garmin).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-hyrox-confirmer-seance",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "HYROX : l'athlète confirme sa séance et commente une station",
+    summary: "Au téléphone, « Valider » ouvre « C'est bien cette séance » : votre athlète vérifie reps, distances et charges station par station, et peut laisser un mot.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Chaque station montre prévu → fait et la charge ; un écart s'affiche « À corriger ».",
+          "Les courses sont résumées en une ligne, les stations conformes au prévu sont repliées quand une autre demande l'attention.",
+          "Les commentaires apparaissent sous la station dans le détail des tours, au téléphone comme sur ordinateur.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-wellness-seance-hier",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Courbatures rattachées à la séance de la veille",
+    summary: "Quand votre athlète note des courbatures le matin, l'app lui montre sa séance de la veille et vous dit après quelle séance elles sont apparues.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans son wellness, l'athlète voit une carte « Séance d'hier » (nom, exercices, séries, RPE) juste avant son bilan.",
+          "Dans le détail d'un jour (Retours), sous les zones du corps : « Après la séance de la veille : … ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-seance-hyrox-tours",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Séance HYROX : tableau des tours allégé, temps saisi à la main sur téléphone",
+    summary: "La page d'une séance HYROX va à l'essentiel, et ajuster un tour au téléphone se fait au clavier.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sous le tableau des tours, seule la ligne Total reste : les sous-totaux Course / Sled push / Wall balls sont retirés.",
+          "Au téléphone, « Ajuster les tours » : début, fin et coupe d'un tour se tapent en minutes et secondes.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-seances-sur-la-montre-garmin",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Les séances partent sur la montre Garmin de l'athlète",
+    summary: "Une séance programmée dans Agon arrive dans le calendrier Garmin Connect de l'athlète, puis sur sa montre, avec les allures, zones et charges calculées par Agon.",
+    sections: [
+      {
+        title: "Ce qui part sur la montre",
+        points: [
+          "Course, vélo, natation, rameur, muscu, HYROX et séances spécifiques des 7 prochains jours, envoyées automatiquement.",
+          "Les cibles viennent d'Agon : zones de FC en bpm, % VMA en allure, % FC max en bpm, % FTP en watts, % RM en kg avec le record de l'athlète.",
+          "S'il manque une donnée (VMA, 1RM…), la consigne part en texte : aucun chiffre n'est inventé.",
+          "HYROX et spécifique : format course, chaque atelier est une étape validée au bouton Tour, avec sa consigne.",
+          "Une séance déplacée, modifiée ou supprimée est mise à jour sur la montre. Une séance faite ou commencée n'est jamais retirée.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Éditeur de séance énergie : nouveau choix du sport (course par défaut), c'est l'activité lancée sur la montre.",
+          "Banque d'exercices › Modifier les caractéristiques : « Équivalent Garmin », proposé depuis le nom de l'exercice, à valider ou corriger. Sans équivalent, la montre affiche le nom Agon.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Profil › Services connectés › Garmin : « Envoyer mes séances sur ma montre », activé par défaut, désactivable à tout moment.",
+          "Aujourd'hui : la mention « Sur ta montre » sur chaque séance envoyée.",
+          "L'athlète doit avoir autorisé l'import de séances au moment de connecter Garmin ; sinon l'écran lui dit quoi faire.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-athlete-tests-profil-hyrox-look",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "App athlète : Tests, Profil, Alimentation et courses HYROX plus lisibles",
+    summary: "Quatre écrans de l'athlète reprennent le nouveau style de l'app, sans rien changer à leurs données.",
+    sections: [
+      {
+        title: "Ce que voit l'athlète",
+        points: [
+          "Tests : chaque valeur porte le picto de sa dominante, et l'historique se lit comme une frise.",
+          "Profil : poids du jour en grand avec les trois dernières pesées ; le tuto Strava s'ouvre d'un toucher.",
+          "HYROX › Courses : toutes les courses dans une seule liste, une case à cocher pour en comparer deux.",
+          "Alimentation : total du jour en anneau, une barre par macro, et la série en cours à côté du poids.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-13-wellness-nouvelle-saisie",
+    date: "2026-11-13",
+    kind: "feature",
+    title: "Wellness du matin : nouvelle saisie",
+    summary: "Vos athlètes notent leurs courbatures par zone du corps et indiquent leur envie de s'entraîner, une douleur éventuelle et s'ils sont malades.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Corps : l'athlète touche une zone (ischios, quadriceps, lombaires…) et choisit légère, marquée ou intense. Plus de points à placer à la main.",
+          "Nouvelle ligne « Envie de t'entraîner » de 1 à 5. Elle ne change pas le score de forme, qui reste calculé sur les 5 notes habituelles.",
+          "Douleur autre que les courbatures de 0 à 10, et « Malade ou fiévreux·se ? ». Une douleur ou une maladie apparaît dans votre rubrique Blessé / malade.",
+          "Dans vos Retours, le détail du jour montre les zones notées avec leur intensité, la douleur et l'envie.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-deplacer-seance-manquee",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Replacer une séance manquée",
+    summary: "Une séance prévue et pas faite peut être replacée à aujourd'hui ou à un jour suivant, par vous ou par l'athlète.",
+    sections: [
+      {
+        title: "Comment",
+        points: [
+          "Vous : planning → cliquez le jour → « Déplacer » sur la séance manquée, choisissez le nouveau jour. Le glisser-déposer marche aussi.",
+          "L'athlète : Programme → menu ⋯ de la séance manquée → choix du jour. Vous voyez le changement dans votre planning.",
+          "L'athlète peut aussi « Passer en repos » une séance pas encore commencée : elle est retirée de sa journée.",
+          "Une séance réalisée, commencée ou notée ne peut pas être déplacée : rien de ce que l'athlète a saisi n'est perdu.",
+          "Le menu de l'athlète ne montre plus la liste « activités importées » : ses sorties de montre et ses fichiers apparaissent dans ses séances et dans votre planning.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-zones-fc-coach",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Zones de fréquence cardiaque : 3, 5 ou 7 zones",
+    summary: "Vous choisissez le modèle de zones de chaque athlète, il s'applique à toutes ses séances à partir du jour du changement.",
+    sections: [
+      {
+        title: "Où le trouver",
+        points: [
+          "Fiche de l'athlète → Profil sportif → « Zones de fréquence cardiaque ».",
+          "3 zones : vous saisissez SV1 et SV2. 5 zones : les bornes habituelles. 7 zones : bornes proposées depuis la FC max (et la FC repos si connue), ajustables une à une.",
+          "Un changement compte à partir d'aujourd'hui : les séances passées gardent leurs zones. « Appliquer aussi aux séances passées » sert à corriger une erreur de saisie.",
+          "Les SV1 / SV2 trouvés par un test vous sont proposés : vous les acceptez ou les refusez. L'historique des changements reste consultable.",
+          "Vos athlètes voient leurs zones dans Profil → « Mes seuils et zones FC », sans pouvoir les modifier.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-app-athlete-nouveau-look",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "App athlète : nouveau look sur téléphone",
+    summary: "Les pages de vos athlètes prennent le style des nouvelles maquettes : grand titre, date en haut, barre du bas plus nette.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "Chaque page (Aujourd'hui, Programme, Tests, HYROX, Alimentation, Profil) a son propre en-tête avec la date ; le menu reste accessible par la petite icône à côté de la date.",
+          "Aujourd'hui : la citation est mise en avant sous « Bonjour », votre retour de la semaine se lit avec quatre réponses en mots (Bien reçu, Motivé, À fond, Merci).",
+          "La séance du jour se déplie pour montrer les exercices, puis « Démarrer la séance ». La prochaine compétition affiche le compte à rebours en grand, et la courbe de forme est plus lisible.",
+          "Fin de séance : pourcentage réalisé en grand, séries faites / passées, forme de 1 à 5 en couleur, commentaire et kilomètres courus, puis « Terminer ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-accueil-coach",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Accueil plus clair",
+    summary: "Votre accueil suit un ordre fixe et numéroté, et une seule nouveauté s'affiche à la fois.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "En haut : la date, « Bonjour », la citation du jour, puis les séances manquées hier et les tests à venir.",
+          "Une seule nouveauté à la fois : « J'ai vu » passe à la suivante, et le lien indique combien il en reste.",
+          "Les rubriques sont numérotées dans l'ordre (Aujourd'hui, Blessé / malade, À traiter, Alertes wellness…) ; celles qui sont vides disparaissent.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-fiches-athlete-ordinateur",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Fiches : lecture à côté de la liste sur ordinateur",
+    summary: "Quand un athlète ouvre ses fiches sur ordinateur, la fiche s'affiche à droite de la liste au lieu de prendre tout l'écran.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Programme › Fiches sur ordinateur : la liste à gauche, la fiche ouverte à droite, avec votre note et les commentaires.",
+          "Sur téléphone, rien ne change : la fiche s'ouvre en plein écran.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-hyrox-fiches-athlete",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "HYROX et fiches plus lisibles sur téléphone",
+    summary: "Les courses HYROX de vos athlètes s'affichent en cartes sur téléphone, et leurs fiches mettent en avant la dernière que vous avez envoyée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "HYROX › Courses : sur téléphone, une carte par course avec le chrono, la course, les stations, la Roxzone et le rang. On coche deux cartes pour les comparer. Sur ordinateur, le tableau reste le même.",
+          "Programme › Fiches : la fiche nouvelle est en tête avec votre mot et un bouton « Lire la fiche ». La recherche et les filtres par catégorie marchent sur toutes ses fiches.",
+          "La bibliothèque en libre accès s'appelle maintenant « Bibliothèque du coach ».",
+          "HYROX › Radar : le classement se fait défiler sur le côté au lieu d'être écrasé.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-tests-athlete-dominante",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Tests de l'athlète rangés par dominante",
+    summary: "Dans l'onglet Tests, vos athlètes retrouvent leurs valeurs rangées par dominante (force, endurance, explosivité, HYROX…), avec l'évolution de chaque test.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Chaque valeur montre le dernier résultat, sa date et l'écart avec le test précédent (vert si c'est mieux).",
+          "Toucher une valeur ouvre son détail : dernier résultat, record, progrès depuis le premier test et une courbe où chaque point porte sa valeur et sa date.",
+          "Pour la VMA, les allures à 100, 90, 80 et 70 % sont calculées automatiquement.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-seance-en-cours",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Séance en cours : un bloc à la fois, saisie au pouce",
+    summary: "Pendant la séance, l'athlète voit un seul bloc et saisit chaque série depuis une zone en bas de l'écran, avec la récup qui démarre seule.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Un seul bloc à l'écran ; les flèches passent au bloc précédent ou suivant. « Toute la séance » réaffiche tout, comme avant.",
+          "En bas : la série à faire, charge et répétitions déjà remplies avec ce que vous avez prescrit, boutons − / + et un gros bouton « Valider la série ».",
+          "Après chaque série validée, il indique combien de répétitions il avait encore en réserve (0 à 4+, au demi près) ; votre consigne est entourée d'or. Il peut passer.",
+          "La récup se lance seule, seulement après une série validée, avec un compte à rebours dans la même zone.",
+          "En superset, la zone enchaîne exercice 1 puis exercice 2 avant la récup.",
+          "La fin de séance montre la part des séries faites, la forme du jour, un mot pour vous et les km courus.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-programme-athlete-semaine",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Le Programme de vos athlètes, plus lisible",
+    summary: "La semaine se lit jour par jour, chaque séance dans la couleur de son type, et l'athlète peut démarrer la séance du jour en un tap.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "En haut, le plan en cours tient sur une carte : son nom, la semaine (S4 / 7) et la part des séances faites.",
+          "Sous le titre de la semaine, le compte des séances faites (« 2 / 4 faites »).",
+          "Le bouton ⋯ d'une séance ouvre « Déplacer au » avec les deux semaines à venir, puis « Voir le détail ». Vous voyez toujours le changement dans votre planning.",
+          "Les cycles terminés sont rangés tout en bas, repliés.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-wellness-deux-ecrans",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Le wellness du matin en deux écrans",
+    summary: "Vos athlètes remplissent leur wellness plus vite : un écran pour la nuit et les cinq notes, un écran pour le corps, puis le bilan.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Premier écran : heures de coucher et de réveil, puis les cinq notes sur une seule page ; le score de forme s'affiche dès la dernière réponse.",
+          "Aucune note n'est cochée d'avance : chaque ligne demande une vraie réponse.",
+          "Second écran : courbatures sur la silhouette, blessure ou maladie avec un mot pour vous, poids à jeun.",
+          "Les réponses envoyées restent les mêmes : rien ne change de votre côté.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-accueil-athlete",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "L'accueil de vos athlètes, réorganisé",
+    summary: "Sur le téléphone, la journée se lit de haut en bas : wellness, votre retour, la semaine et le thème du jour, ses événements, la nutrition, puis les séances.",
+    sections: [
+      {
+        title: "Ce qui change pour l'athlète",
+        points: [
+          "Le wellness du matin tient en une carte : le score, le niveau et un conseil ; le détail des cinq notes se déplie d'un tap.",
+          "La semaine prend la couleur du thème que vous avez posé chaque jour (dur, moyen, facile, récup, repos) et le thème du jour s'affiche juste dessous.",
+          "Chaque séance montre d'abord son nom ; « Aperçu » déplie la liste des exercices avec séries, répétitions et charge, puis le bouton pour démarrer.",
+          "Le bloc « Hier » disparaît de l'accueil : la séance faite et le wellness d'hier restent dans le Programme et le Profil.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-couleurs-par-type",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Une couleur par type de séance, partout",
+    summary: "Musculation en or, énergie en bleu, HYROX en orange, tests en rose, compétitions en rouge : chaque type garde sa couleur dans le planning, les séances et l'app de vos athlètes.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les types de blocs ont aussi leur couleur fixe : mouvement principal en or, hypertrophie en rose, besoin individuel en bleu, muscles associés en turquoise, gainage en orange. Vos blocs existants prennent la nouvelle teinte la plus proche.",
+          "Les boutons sont plus sobres : l'action principale en or plein, les autres en contour.",
+          "Les stations HYROX ont chacune leur picto (SkiErg, sled push, rameur, wall balls…), au-dessus du graphique et dans le tableau des tours.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-12-onglet-seance-cartes-planning",
+    date: "2026-11-12",
+    kind: "feature",
+    title: "Chaque séance de montre a son onglet Séance",
+    summary: "Ouvrez une séance enregistrée par la montre : courbes, temps par zone, tours modifiables. Dans le planning, la séance réalisée remplace la séance prévue.",
+    sections: [
+      {
+        title: "L'onglet Séance",
+        points: [
+          "Allure (ou vitesse à vélo), fréquence cardiaque colorée selon les zones SV1 / SV2 et altitude sur un même graphique. Cliquez un tour pour zoomer dessus.",
+          "Temps passé dans chaque zone, ressenti de l'athlète et tableau des tours avec un total.",
+          "« Modifier les tours » : couper un tour, fusionner, déplacer une limite à la seconde près, renommer. Les tours de la montre restent récupérables.",
+          "HYROX : Agon découpe la séance d'après celle que vous avez programmée. L'athlète vérifie, corrige les reps et la charge, puis valide.",
+          "Sans SV1 / SV2 saisis, les zones ne s'affichent pas : un lien mène au test « Seuils ventilatoires ».",
+        ],
+      },
+      {
+        title: "Dans le planning",
+        points: [
+          "Une activité de montre qui ressemble à la séance prévue du jour s'affiche « À confirmer » : « C'est bien cette séance » la valide, « Ce n'est pas cette séance » la laisse en séance libre.",
+          "Une fois confirmée, une seule carte « Réalisée » : distance, durée, allure, barre des zones et montre utilisée.",
+          "Une activité sans séance prévue apparaît en « Séance libre » ; on peut l'associer plus tard à une séance du jour.",
+          "Dans votre planning du mois, une icône montre marque les séances concernées. Le détail du jour montre les cartes complètes.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-12-archive-strava-fusion",
     date: "2026-11-12",
     kind: "feature",

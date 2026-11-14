@@ -340,7 +340,7 @@ export function CreateCycleAssistant({
                                 padding: "5px 9px", border: "none", cursor: "pointer", fontFamily: "inherit",
                                 fontSize: 10, fontWeight: 700,
                                 background: s.withExos === v ? C.coach : "transparent",
-                                color:      s.withExos === v ? "#fff" : C.tx3,
+                                color:      s.withExos === v ? C.tx : C.tx3,
                               }}
                             >{l}</button>
                           ))}
@@ -364,7 +364,7 @@ export function CreateCycleAssistant({
             disabled={saving || !name.trim() || !parentId}
             style={{
               flex: 2, padding: "11px 0", borderRadius: 4, border: "none",
-              background: C.acV, color: "#0E0C0A", fontSize: 13, fontWeight: 700,
+              background: C.acV, color: C.ink, fontSize: 13, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit",
               opacity: (saving || !name.trim() || !parentId) ? 0.5 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,

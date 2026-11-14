@@ -3,7 +3,7 @@
  *
  * Deux niveaux volontairement séparés. Ce qui change la séance de demain
  * (douleur, impact) est visible tout de suite ; le reste (type, mécanisme,
- * contexte, suivi médical) attend derrière « Préciser ». Une gêne doit pouvoir
+ * contexte, arrêt, retour) attend derrière « Préciser ». Une gêne doit pouvoir
  * se déclarer en dix secondes, donc rien n'est obligatoire et rien ne bloque.
  */
 import { useState } from "react";
@@ -12,7 +12,6 @@ import { C } from "@/lib/theme";
 import { painReading } from "@/lib/injuryDetails";
 import type { InjuryDetail } from "@/lib/injuryDetails";
 import {
-  DIAGNOSED_BY_LABEL,
   INJURY_CONTEXT_LABEL,
   INJURY_DECLARE_INTRO,
   INJURY_MECHANISM_LABEL,
@@ -104,10 +103,6 @@ export function InjuryDetailFields({ value, onChange, startOpen = false }: {
           <ChipChoice
             label="Où ça s'est produit" labels={INJURY_CONTEXT_LABEL}
             value={value.context} onChange={(v) => set("context", v)}
-          />
-          <ChipChoice
-            label="Vu par" labels={DIAGNOSED_BY_LABEL}
-            value={value.diagnosed_by} onChange={(v) => set("diagnosed_by", v)}
           />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>

@@ -316,8 +316,11 @@ INSERT INTO r(k,v) SELECT 'E5 ligne présente après réparation (1)',
   count(*)::text FROM wellness_entries WHERE athlete_id = (SELECT athlete FROM ids) AND day = '2099-01-20';
 
 -- ===== 5. Suppression de compte : tout part en cascade, sans erreur ==========
+-- Compte créé hors session (jwt vidé) et majeur : depuis min_age_signup phase 2, un profil
+-- sans date de naissance créé avec un auth.uid() posé est refusé.
+SELECT set_config('request.jwt.claims', '', true);
 INSERT INTO auth.users (id, email) VALUES ('5a7e0000-0000-4000-8000-000000000001', 'sante-test@example.invalid');
-INSERT INTO profiles (id, role, full_name) VALUES ('5a7e0000-0000-4000-8000-000000000001', 'athlete', 'Test Santé');
+INSERT INTO profiles (id, role, full_name, birth_date) VALUES ('5a7e0000-0000-4000-8000-000000000001', 'athlete', 'Test Santé', '2000-01-01');
 INSERT INTO app_data(athlete_id, key, value) VALUES
   ('5a7e0000-0000-4000-8000-000000000001', 'asp:wh', '{"20990101":{"fatigue":4,"sommeil":4,"stress":4,"energie":4,"doms":4}}'),
   ('5a7e0000-0000-4000-8000-000000000001', 'asp:blockHistory', '[{"wellnessHistory":{"20981231":{"fatigue":3,"sommeil":3,"stress":3,"energie":3,"doms":3}}}]'),

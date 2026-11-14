@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useProgrammation } from "@/features/coach/components/programmation/hooks/useProgrammation";
 import {
@@ -102,7 +102,7 @@ function DraftCard({ draft, athleteId }: { draft: CoachApiDraft; athleteId: stri
       )}
 
       {stale && (
-        <div style={{ fontSize: 11, color: "#F59E0B", background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.35)", borderRadius: 4, padding: "6px 8px", marginBottom: 10, lineHeight: 1.45 }}>
+        <div style={{ fontSize: 11, color: H.ambre, background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.35)", borderRadius: 4, padding: "6px 8px", marginBottom: 10, lineHeight: 1.45 }}>
           {draft.kind === "objectifs" ? "Les objectifs ont été modifiés" : "Le programme a été modifié"} depuis cette proposition.
           Vérifie qu'elle a encore du sens avant de l'appliquer.
         </div>

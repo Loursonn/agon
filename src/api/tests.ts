@@ -225,7 +225,7 @@ export async function deleteTestDefinition(id: string): Promise<void> {
 const RESULT_SELECT = `
   *,
   test_definitions (
-    id, name, kind, category, description,
+    id, name, kind, category, description, battery,
     test_variables (id, key, label, unit, value_type, better_when)
   ),
   athlete_test_values (
@@ -428,15 +428,22 @@ export async function getTestSessionForFill(
   return { session, definition: def ? withSortedVariables(def) : null };
 }
 
-/** L'athlète enregistre son test : séance complétée (le trigger crée le résultat). */
+/**
+ * L'athlète enregistre son test : séance complétée (le trigger crée le
+ * résultat, avec `results_structured.feeling` / `.comment`). `date` : jour
+ * réellement fait, s'il diffère du jour prévu (le résultat suit).
+ */
 export async function completeTestSession(
   sessionId: string,
-  data: { resultsNote: string | null; resultsStructured: Record<string, unknown> | null },
+  data: { resultsNote: string | null; resultsStructured: Record<string, unknown> | null; date?: string },
 ): Promise<void> {
   check(
     await untyped()
       .from("test_sessions")
-      .update({ completed: true, results_note: data.resultsNote, results_structured: data.resultsStructured })
+      .update({
+        completed: true, results_note: data.resultsNote, results_structured: data.resultsStructured,
+        ...(data.date ? { date: data.date } : {}),
+      })
       .eq("id", sessionId),
     "Test non enregistré",
   );

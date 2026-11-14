@@ -44,6 +44,8 @@ export const hyroxKeys = {
   gridSet: (version: string) => ["hyrox", "_grid", version] as const,
   activeGrid: ["hyrox", "_grid", "_active"] as const,
   calibration: ["hyrox", "_calibration"] as const,
+  /** Activités de montre du jour d'une course (analyse de course). */
+  raceActivities: (athleteId: string, date: string) => ["hyrox", athleteId, "race-activities", date] as const,
 };
 
 /**
@@ -104,6 +106,27 @@ export async function listHyroxResults(athleteId: string): Promise<HyroxResult[]
     await untyped().from("hyrox_results").select("*").eq("athlete_id", athleteId).order("date", { ascending: false }),
     "Courses HYROX non chargées",
   ) as HyroxResult[];
+}
+
+export interface RaceActivityCandidate {
+  id: string;
+  durationS: number | null;
+  source: string;
+}
+
+/**
+ * Activités de montre ou de fichier du jour d'une course : l'analyse retient
+ * celle dont la durée est la plus proche du chrono (`pickRaceActivity`).
+ */
+export async function listRaceActivityCandidates(athleteId: string, date: string): Promise<RaceActivityCandidate[]> {
+  const rows = unwrapRows(
+    await db().from("provider_activities")
+      .select("id, duration_s, source")
+      .eq("athlete_id", athleteId)
+      .eq("local_date", date),
+    "Activités du jour de course non chargées",
+  ) as Array<{ id: string; duration_s: number | null; source: string }>;
+  return rows.map((r) => ({ id: r.id, durationS: r.duration_s == null ? null : Number(r.duration_s), source: r.source }));
 }
 
 /** Une course ; `null` si elle n'existe pas (ou n'est pas visible). */

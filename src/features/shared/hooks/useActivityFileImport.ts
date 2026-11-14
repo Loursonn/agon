@@ -17,7 +17,8 @@ export type { ImportReport };
 
 /**
  * Import de fichiers d'activité : archive d'export Strava (fichiers +
- * `activities.csv`), FIT, TCX, GPX.
+ * `activities.csv`), export de compte Garmin (FIT dans des zips imbriqués,
+ * étiqueté `garmin_export`), FIT, TCX, GPX.
  *
  * Tout est lu dans le navigateur : les octets ne quittent pas l'appareil,
  * seules les valeurs décodées partent en base. Une archive pèse couramment
@@ -81,7 +82,7 @@ export function useActivityFileImport(athleteId?: string) {
       if (files.length === 0) throw new Error("Aucun fichier à importer.");
 
       const report = emptyReport();
-      const { activityDetailOf, blobSource, detailPayload, looksLikeActivityName, parseActivityFile, qualityOf } =
+      const { activityDetailOf, blobSource, detailPayload, isOsMetadataName, looksLikeActivityName, parseActivityFile, qualityOf } =
         await decoders();
 
       let done = 0;
@@ -125,7 +126,8 @@ export function useActivityFileImport(athleteId?: string) {
             report.files += scan.files;
             report.ignored += scan.ignored;
             report.csvError ??= scan.csvError;
-            const tag: ImportTag = scan.csvRows > 0 ? "strava_archive" : "file";
+            // Export de compte Garmin : la sortie reste « Garmin » (attribution, exclusion de l'IA).
+            const tag: ImportTag = scan.origin === "strava" ? "strava_archive" : scan.origin === "garmin" ? "garmin_export" : "file";
             total += scan.total;
 
             let batch: Pending[] = [];
@@ -146,6 +148,8 @@ export function useActivityFileImport(athleteId?: string) {
             continue;
           }
 
+          // Fichiers cachés de macOS (._xxx.fit.gz…) : ni activité ni « ignoré ».
+          if (isOsMetadataName(file.name)) continue;
           if (!looksLikeActivityName(file.name)) {
             report.ignored++;
             continue;

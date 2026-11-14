@@ -4,7 +4,7 @@ import { setDbForTests } from "@/api/client";
 import {
   createBankExercise, createExercise, createExercises, deleteExercise, exerciseKeys, getAthleteBankExercises,
   getExerciseBankMuscles, getExerciseBankPage, getExerciseLibrary, getExerciseVideos, invalidateExercises,
-  mergeExercises, mergePatch, searchExercises, searchMergeCandidates, updateExercise,
+  mergeExercises, mergePatch, searchExercises, setGarminEquivalent, searchMergeCandidates, updateExercise,
 } from "@/api/exercises";
 
 const ex = (id: string, name: string, o: Record<string, unknown> = {}) => ({
@@ -158,6 +158,22 @@ describe("api/exercises", () => {
       { youtube_id: "d", image_url: "img", instructions: "faire", tips: "jeter" },
     )).toEqual({ image_url: "img", instructions: "faire" });
     expect(mergePatch({ youtube_id: "k" }, {})).toEqual({});
+  });
+
+  it("mergePatch : l'équivalent Garmin passe en couple, celui du conservé gagne", () => {
+    const dup = { garmin_category: "SQUAT", garmin_exercise: "BACK_SQUAT" };
+    expect(mergePatch({}, dup)).toEqual(dup);
+    expect(mergePatch({ garmin_category: "SQUAT", garmin_exercise: "SQUAT" }, dup)).toEqual({});
+    expect(mergePatch({}, { garmin_category: "SQUAT", garmin_exercise: null })).toEqual({});
+  });
+
+  it("setGarminEquivalent : écrit le couple, null efface les deux", async () => {
+    const { db, tables } = fakeDb({ exercises: [ex("1", "Squat")] });
+    setDbForTests(db);
+    await setGarminEquivalent("1", { category: "SQUAT", name: "BARBELL_BACK_SQUAT" });
+    expect(tables.exercises[0]).toMatchObject({ garmin_category: "SQUAT", garmin_exercise: "BARBELL_BACK_SQUAT" });
+    await setGarminEquivalent("1", null);
+    expect(tables.exercises[0]).toMatchObject({ garmin_category: null, garmin_exercise: null });
   });
 
   it("mergeExercises : complète le conservé puis supprime le doublon", async () => {

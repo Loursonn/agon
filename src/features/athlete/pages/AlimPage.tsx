@@ -1,6 +1,9 @@
+import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import NutritionView from "@/components/athlete/NutritionView";
 import { useNutritionStrategy } from "@/features/shared/hooks/useNutrition";
+import { C } from "@/lib/theme";
 
 /**
  * Le journal est lu et écrit par NutritionView via `src/api/nutrition.ts`
@@ -17,6 +20,8 @@ export default function AlimPage() {
   const bmr = (athleteProfile as { base_metabolism?: number } | null)?.base_metabolism ?? null;
 
   return (
+    <div className="mx-auto w-full max-w-[480px] lg:max-w-none">
+    <AthletePageHeader title="Alimentation" dateStyle="long" background={headerGlow(C.g, C.o)} />
     <NutritionView
       athleteId={athleteId}
       bmr={bmr}
@@ -24,5 +29,6 @@ export default function AlimPage() {
       weightLog={weightLog}
       viewOnly={viewOnly}
     />
+    </div>
   );
 }

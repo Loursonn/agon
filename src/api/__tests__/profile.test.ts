@@ -1,11 +1,11 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { fakeDb, type FakeRpc, type Row } from "@shared/__tests__/fakeDb";
-import { setDbForTests } from "@/api/client";
+import { ApiError, setDbForTests } from "@/api/client";
 import {
   createMeasurementLog, createProfileItem, deleteMeasurementLog, deleteProfileItem, getAiInsights,
   getArticularProfile, getCoachName, getMeasurementLogs, getMeasurementPhotoUrls, getProfile, getProfileItems,
   getBodyWeightGoal, getTrendSessions, getWeightLog, getWeightMilestones, groupArticular, invalidateProfile,
-  profileKeys, recentWeights, recordWeightMilestone, saveWeight, saveWeightGoal, toLegacyBodyWeight, toLegacyMilestones,
+  profileKeys, recentWeights, recordWeightMilestone, saveWeight, saveWeightGoal, setMyBirthDate, BirthDateRefused, toLegacyBodyWeight, toLegacyMilestones,
   toLegacyWeightLog, updateAthleteProfile, updateMeasurementLog, updateProfileItem,
 } from "@/api/profile";
 import type { WellnessHistory } from "@shared/domain/wellness";
@@ -360,5 +360,43 @@ describe("api/profile — tendances", () => {
     expect(keys).toEqual([["profile", "a"], ["articularProfile", "a"], ["athlete-trend-sessions", "a"], ["athlete-insights", "a"]]);
     expect(profileKeys.measurements("a").slice(0, 2)).toEqual(["profile", "a"]);
     expect(profileKeys.articular("a")).toEqual(["articularProfile", "a"]);
+  });
+});
+
+describe("api/profile — date de naissance des anciens comptes (revue juridique C2)", () => {
+  /** RPC simulée : renvoie ce qu'on lui dit, garde les arguments. */
+  function rpcDb(res: { data?: unknown; error?: { message: string; code?: string } | null }) {
+    const calls: Array<[string, unknown]> = [];
+    setDbForTests({ rpc: (fn: string, args: unknown) => (calls.push([fn, args]), Promise.resolve({ data: res.data ?? null, error: res.error ?? null })) });
+    return calls;
+  }
+
+  it("écrit par la RPC set_my_birth_date et renvoie la date enregistrée", async () => {
+    const calls = rpcDb({ data: "1990-04-12" });
+    expect(await setMyBirthDate(" 1990-04-12 ")).toBe("1990-04-12");
+    expect(calls).toEqual([["set_my_birth_date", { p_birth: "1990-04-12" }]]);
+  });
+
+  it("date refusée par la règle d'âge avant l'appel (vide, invalide, moins de 15 ans)", async () => {
+    const calls = rpcDb({ data: "x" });
+    const young = new Date();
+    young.setFullYear(young.getFullYear() - 10);
+    for (const d of ["", "2010-02-30", young.toISOString().slice(0, 10)]) {
+      await expect(setMyBirthDate(d)).rejects.toBeInstanceOf(BirthDateRefused);
+    }
+    expect(calls).toEqual([]);
+  });
+
+  it("refus du serveur : règle d'âge (23514) en message lisible, le reste en ApiError avec son code", async () => {
+    rpcDb({ error: { code: "23514", message: "Tu dois avoir au moins 15 ans pour utiliser Agon." } });
+    const e = await setMyBirthDate("1990-04-12").catch((x) => x);
+    expect(e).toBeInstanceOf(BirthDateRefused);
+    expect(e.message).toBe("Tu dois avoir au moins 15 ans pour utiliser Agon.");
+    for (const code of ["PGRST202", "23505"]) {
+      rpcDb({ error: { code, message: "x" } });
+      const f = await setMyBirthDate("1990-04-12").catch((x) => x);
+      expect(f).toBeInstanceOf(ApiError);
+      expect(f.code).toBe(code);
+    }
   });
 });

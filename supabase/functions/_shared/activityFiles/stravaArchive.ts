@@ -8,7 +8,7 @@
  * sorties ne tient pas décodée en mémoire sur un téléphone. L'appelant
  * consomme par paquets, envoie, oublie.
  */
-import { listZipEntries, readZipEntry, type ByteSource } from "./archive.ts";
+import { isNestedZipName, listZipEntries, openNestedZip, readZipEntry, type ByteSource, type ZipEntry } from "./archive.ts";
 import { activityDetailOf, looksLikeActivityName, parseActivityFile } from "./index.ts";
 import type { NormalizedActivity } from "./stream.ts";
 import { parseStravaCsv, StravaCsvError, type StravaCsvActivity } from "./stravaCsv.ts";
@@ -26,8 +26,19 @@ export type ArchiveItem =
   | { kind: "rejected"; name: string; reason: string };
 
 export interface ArchiveScan {
-  /** Fichiers d'activité dans l'archive. */
+  /** Fichiers d'activité dans l'archive (zips imbriqués compris). */
   files: number;
+  /**
+   * Zips imbriqués ouverts (export de compte Garmin : fichiers d'activité dans
+   * `DI-Connect-Uploaded-Files/*.zip`). 0 pour un export Strava.
+   */
+  nestedZips: number;
+  /**
+   * Provenance reconnue : `strava` (activities.csv), `garmin` (export de compte,
+   * dossier `DI_CONNECT/`), sinon `zip`. Décide de l'étiquette d'import — une
+   * sortie venue de Garmin reste attribuée à Garmin et exclue de l'IA.
+   */
+  origin: "strava" | "garmin" | "zip";
   /** Lignes d'`activities.csv` lues (0 si absent). */
   csvRows: number;
   /** Lignes sans fichier (ou dont le fichier manque) : importées en résumé seul. */
@@ -127,6 +138,24 @@ export async function openStravaArchive(
 ): Promise<{ scan: ArchiveScan; items: () => AsyncGenerator<ArchiveItem> }> {
   const entries = await listZipEntries(source);
   const files = entries.filter((e) => !isMeta(e.name) && looksLikeActivityName(baseName(e.name)));
+
+  /*
+    Zips imbriqués : listés maintenant pour les compteurs, puis rouverts un à
+    un pendant la lecture. Un zip compressé est déplié en mémoire : n'en
+    garder qu'un ouvert à la fois borne la mémoire de l'onglet.
+  */
+  const nestedEntries = entries.filter((e) => isNestedZipName(e.name));
+  const nested: Array<{ entry: ZipEntry; files: ZipEntry[] } | { entry: ZipEntry; error: string }> = [];
+  for (const entry of nestedEntries) {
+    try {
+      const inner = await listZipEntries(await openNestedZip(source, entry));
+      nested.push({ entry, files: inner.filter((e) => !isMeta(e.name) && looksLikeActivityName(baseName(e.name))) });
+    } catch (e) {
+      nested.push({ entry, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  const nestedFiles = nested.reduce((n, z) => n + ("files" in z ? z.files.length : 0), 0);
+  const nestedErrors = nested.filter((z) => "error" in z).length;
   const csvEntry = entries.find((e) => !isMeta(e.name) && /(^|\/)activities\.csv$/i.test(e.name));
 
   let csvRows: StravaCsvActivity[] = [];
@@ -160,53 +189,76 @@ export async function openStravaArchive(
   );
 
   const scan: ArchiveScan = {
-    files: files.length,
+    files: files.length + nestedFiles,
+    nestedZips: nestedEntries.length,
+    origin: csvRows.length > 0
+      ? "strava"
+      : entries.some((e) => /(^|\/)DI_CONNECT\//i.test(e.name)) ? "garmin" : "zip",
     csvRows: csvRows.length,
     summaryOnly: summaryRows.length,
-    ignored: entries.length - files.length - (csvEntry ? 1 : 0),
-    total: files.length + summaryRows.length + csvRejected.length,
+    ignored: entries.length - files.length - nestedEntries.length - (csvEntry ? 1 : 0),
+    total: files.length + nestedFiles + nestedErrors + summaryRows.length + csvRejected.length,
     csvLanguage,
     csvError,
   };
 
+  async function* fileItems(from: ByteSource, entry: ZipEntry): AsyncGenerator<ArchiveItem> {
+    const label = baseName(entry.name);
+    const csv = byPath.get(entry.name.toLowerCase()) ?? byBase.get(label.toLowerCase()) ?? null;
+    let parsed: ParsedActivity[] = [];
+    let detail: NormalizedActivity | null = null;
+    let reason: string | null = null;
+    try {
+      const bytes = await readZipEntry(from, entry);
+      const res = await parseActivityFile(label, bytes);
+      parsed = res.activities;
+      if (res.rejected.length > 0) reason = res.rejected.map((r) => r.reason).join(" ; ");
+      if (options.withDetail && parsed.length === 1) detail = await activityDetailOf(label, bytes);
+    } catch (e) {
+      reason = e instanceof Error ? e.message : String(e);
+    }
+
+    if (parsed.length === 0) {
+      /*
+        Fichier illisible mais ligne CSV présente : la sortie entre quand
+        même, en résumé seul. Un fichier abîmé ne doit pas effacer une
+        sortie dont on connaît la date, la durée et la distance.
+      */
+      yield { kind: "rejected", name: label, reason: reason ?? "aucune activité dans le fichier" };
+      if (csv) yield { kind: "activity", name: label, activity: summaryFromCsv(csv, options.utcOffsetAt), detail: null };
+      return;
+    }
+    // Multisport : la ligne CSV (et son identifiant Strava) va à la première session.
+    for (let i = 0; i < parsed.length; i++) {
+      yield {
+        kind: "activity",
+        name: label,
+        activity: withCsv(parsed[i], i === 0 ? csv : null),
+        detail: i === 0 ? detail : null,
+      };
+    }
+  }
+
   async function* items(): AsyncGenerator<ArchiveItem> {
     for (const r of csvRejected) yield { kind: "rejected", ...r };
 
-    for (const entry of files) {
-      const label = baseName(entry.name);
-      const csv = byPath.get(entry.name.toLowerCase()) ?? byBase.get(label.toLowerCase()) ?? null;
-      let parsed: ParsedActivity[] = [];
-      let detail: NormalizedActivity | null = null;
-      let reason: string | null = null;
-      try {
-        const bytes = await readZipEntry(source, entry);
-        const res = await parseActivityFile(label, bytes);
-        parsed = res.activities;
-        if (res.rejected.length > 0) reason = res.rejected.map((r) => r.reason).join(" ; ");
-        if (options.withDetail && parsed.length === 1) detail = await activityDetailOf(label, bytes);
-      } catch (e) {
-        reason = e instanceof Error ? e.message : String(e);
-      }
+    for (const entry of files) yield* fileItems(source, entry);
 
-      if (parsed.length === 0) {
-        /*
-          Fichier illisible mais ligne CSV présente : la sortie entre quand
-          même, en résumé seul. Un fichier abîmé ne doit pas effacer une
-          sortie dont on connaît la date, la durée et la distance.
-        */
-        yield { kind: "rejected", name: label, reason: reason ?? "aucune activité dans le fichier" };
-        if (csv) yield { kind: "activity", name: label, activity: summaryFromCsv(csv, options.utcOffsetAt), detail: null };
+    for (const z of nested) {
+      if ("error" in z) {
+        yield { kind: "rejected", name: baseName(z.entry.name), reason: z.error };
         continue;
       }
-      // Multisport : la ligne CSV (et son identifiant Strava) va à la première session.
-      for (let i = 0; i < parsed.length; i++) {
-        yield {
-          kind: "activity",
-          name: label,
-          activity: withCsv(parsed[i], i === 0 ? csv : null),
-          detail: i === 0 ? detail : null,
-        };
+      if (z.files.length === 0) continue;
+      let inner: ByteSource;
+      try {
+        inner = await openNestedZip(source, z.entry);
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : String(e);
+        for (const f of z.files) yield { kind: "rejected", name: baseName(f.name), reason };
+        continue;
       }
+      for (const entry of z.files) yield* fileItems(inner, entry);
     }
 
     for (const row of summaryRows) {

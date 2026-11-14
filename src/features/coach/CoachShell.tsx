@@ -23,6 +23,8 @@ import { useCommandPalette } from "./context/CommandPaletteContext";
 import { Search } from "lucide-react";
 import { useAppUpdates } from "@/features/shared/hooks/useAppUpdates";
 import OfflineBanner from "@/features/shared/components/OfflineBanner";
+import { useIsPhone } from "@/hooks/useIsPhone";
+import CoachPhoneShell from "./phone/CoachPhoneShell";
 
 // ── Agon brand icons (inline SVG, currentColor) ─────────────────────────────
 
@@ -46,6 +48,7 @@ const AgonIcons = {
 const NAV_ITEMS = [
   { icon: AgonIcons.stats,       label: "Home",          path: "/coach",            exact: true,  certified: false, roadmap: false },
   { icon: AgonIcons.groupe,      label: "Athlètes",      path: "/coach/athletes",   exact: false, certified: false, roadmap: false },
+  { icon: AgonIcons.message,     label: "Reviews",       path: "/coach/reviews",    exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.barre,       label: "Banque",         path: "/coach/library",    exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.test,        label: "Tests",          path: "/coach/tests",      exact: false, certified: false, roadmap: false },
   { icon: AgonIcons.fiche,       label: "Fiches",         path: "/coach/fiches",     exact: false, certified: false, roadmap: false },
@@ -61,12 +64,12 @@ const NAV_ITEMS = [
 const SIDEBAR_STYLE: React.CSSProperties = {
   "--sidebar-width": "240px",
   "--sidebar-width-icon": "64px",
-  "--sidebar-background": "#0E0C0A",
-  "--sidebar-foreground": "#7D7468",
+  "--sidebar-background": C.bg,
+  "--sidebar-foreground": C.tx3,
   "--sidebar-border": "rgba(231,211,168,0.2)",
   "--sidebar-accent": "rgba(255,201,51,0.10)",
-  "--sidebar-accent-foreground": "#FFC933",
-  "--sidebar-ring": "#FFC933",
+  "--sidebar-accent-foreground": C.ac,
+  "--sidebar-ring": C.ac,
 } as React.CSSProperties;
 
 // ── CoachShell ────────────────────────────────────────────────────────────────
@@ -98,11 +101,11 @@ function CoachSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      style={{ background: "#0E0C0A", borderRight: "1px solid rgba(231,211,168,0.2)" }}
+      style={{ background: C.bg, borderRight: "1px solid rgba(231,211,168,0.2)" }}
     >
       {/* Le tiroir mobile est rendu dans un portail, hors des variables CSS du
           provider : le fond est donc posé ici, identique à celui du PC. */}
-      <div className="flex h-full min-h-0 w-full flex-col" style={{ background: "#0E0C0A" }}>
+      <div className="flex h-full min-h-0 w-full flex-col" style={{ background: C.bg }}>
         {/* Titre lu par les lecteurs d'écran (tiroir mobile = boîte de dialogue) */}
         {isMobile && (
           <>
@@ -195,7 +198,7 @@ function CoachSidebar() {
                     <span className="group-data-[collapsible=icon]:hidden" style={{ flex: 1 }}>{item.label}</span>
                     {item.path === "/coach/nouveautes" && unseenUpdates > 0 && (
                       <span aria-label={`${unseenUpdates} nouveauté(s) non vue(s)`} style={{
-                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 5px", background: C.ac, color: "#0E0C0A",
+                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 5px", background: C.ac, color: C.ink,
                         fontSize: 10, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center",
                       }}>{unseenUpdates}</span>
                     )}
@@ -367,7 +370,10 @@ function CoachShellInner() {
 export default function CoachShell() {
   const { profile } = useAuth();
   // Compte professionnel uniquement : pas d'espace coach.
+  const isPhone = useIsPhone();
   if (profile?.role === "staff") return <Navigate to="/staff" replace />;
+  // Téléphone : app coach à part (barre du bas, en-têtes des planches « Coach tél. »).
+  if (isPhone) return <CoachPhoneShell />;
   return (
     <CommandPaletteProvider>
       <CoachShellInner />

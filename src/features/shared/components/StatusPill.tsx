@@ -1,3 +1,4 @@
+import { C } from "@/lib/theme";
 /** Status pill for workout/session states — palette v2 */
 
 export type SessionStatus = "planned" | "in-progress" | "completed" | "missed" | "skipped";
@@ -9,32 +10,32 @@ const CONFIG: Record<
   planned: {
     label: "Planifiée",
     bg:    "rgba(231,211,168,0.18)",
-    color: "#7D7468",
-    dot:   "#7D7468",
+    color: C.tx3,
+    dot:   C.tx3,
   },
   "in-progress": {
     label: "En cours",
     bg:    "rgba(255,201,51,0.18)",
-    color: "#FFC933",
-    dot:   "#FFC933",
+    color: C.ac,
+    dot:   C.ac,
   },
   completed: {
     label: "Terminée",
     bg:    "rgba(34,201,147,0.15)",
-    color: "#66F03C",
-    dot:   "#66F03C",
+    color: C.g,
+    dot:   C.g,
   },
   missed: {
     label: "Manquée",
     bg:    "rgba(251,146,60,0.15)",
-    color: "#FF9500",
-    dot:   "#FF9500",
+    color: C.o,
+    dot:   C.o,
   },
   skipped: {
     label: "Ignorée",
     bg:    "rgba(244,114,182,0.15)",
-    color: "#FFC933",
-    dot:   "#FFC933",
+    color: C.ac,
+    dot:   C.ac,
   },
 };
 

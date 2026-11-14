@@ -47,7 +47,7 @@ export default function FichePdfView({ url, onError }: Props) {
         error={msg("Impossible d'afficher le PDF. Utilise « Ouvrir / Télécharger ».")}
       >
         {Array.from({ length: pages }, (_, i) => (
-          <div key={i} style={{ marginBottom: 8, background: "#fff", borderRadius: 2, overflow: "hidden" }}>
+          <div key={i} style={{ marginBottom: 8, background: C.tx, borderRadius: 2, overflow: "hidden" }}>
             <Page
               pageNumber={i + 1}
               width={width}

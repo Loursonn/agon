@@ -198,3 +198,38 @@ déploiement soumis à accord.
   pas (ou le passage s'est arrêté sur un état « en attente » non stocké). À relire avec le
   journal de `provider-coros-sync` à la première vraie activité.
 - Toujours non validé : listing / téléchargement / décodage des FIT, volume de course.
+
+### 2026-11-13 — pourquoi le curseur restait vide, et refus « anomalies » de COROS
+
+Mesures lues dans le compte rendu de synchro (`timing`, `fitCall`, `fitProbe` :
+compteurs, durées, noms de paramètres ; aucune donnée d'athlète).
+
+1. **Cause du curseur vide depuis le 09/11 : un bug chez nous, corrigé.**
+   `envNumber` lisait une variable absente comme `Number("") = 0`. Résultat :
+   délai de synchro de 0 ms, donc arrêt « deadline » avant le premier appel de liste
+   (mesuré : 1,5 s, 0 appel). Le même bug donnait aussi 0 jour d'historique, de
+   relecture et de données quotidiennes. `parseEnvNumber` (`provider-coros-sync/sweep.ts`)
+   : absent ou vide → valeur par défaut. Déployé avec accord d'Hugo (commit `45a8fbe`).
+2. **Délais** : 40 s par appel MCP, 30 s par téléchargement de FIT, échéance revérifiée
+   avant chaque resserrement de fenêtre (`e87a5ce`).
+3. **COROS refuse l'outil FIT.** Une fois le délai corrigé, `queryActivityFitFileDownloadUrls`
+   répond en 50 à 500 ms : « Tool call anomalies detected. High risk of session context
+   pollution or request exceeds the LLM capability boundary… ».
+   - Arguments envoyés conformes au schéma publié : `startDate` et `endDate` en
+     `yyyyMMdd`, `limit` 10 (défaut 5, max 10), rien d'obligatoire.
+   - Sonde (`fitProbe`) : même appel dans une **session neuve** → même refus ; **un jour sans
+     `limit`** → même refus ; `querySportRecords` dans une session neuve → répond (55
+     caractères). `queryDailyHealthData` répond dans la même session.
+   - Ce texte contenait « exceed » et était pris pour un quota : la journée était marquée
+     épuisée (50/50 sans téléchargement). Corrigé (`adc4938`) : c'est une erreur, ni un
+     quota ni une liste vide. Le quota du 13/11 a été remis à 0 avec accord d'Hugo.
+4. **Hypothèse à vérifier** : le compte connecté est celui du 09/11 (compte neuf, aucune
+   activité). La réponse courte de `querySportRecords` va dans ce sens. COROS renverrait
+   alors ce refus au lieu d'une liste vide quand il n'y a aucun FIT. Pour trancher :
+   **enregistrer une activité dans ce compte COROS** (même courte, ou saisie à la main dans
+   l'app), puis cliquer sur « Synchroniser ». La sonde tourne au premier refus de chaque
+   exécution et note ce qu'elle voit.
+   - Si le refus persiste avec une activité, c'est une question pour le support COROS :
+     l'outil FIT est-il ouvert aux clients MCP qui ne sont pas des assistants (appel
+     automatisé, sans LLM) ?
+   - Le curseur n'avance pas tant que ce refus dure : aucun jour n'est sauté.

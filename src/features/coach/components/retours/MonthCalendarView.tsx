@@ -5,12 +5,12 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CheckCircle2, Trophy, FlaskConical, Zap, Footprints } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { wellnessView } from "@/lib/wellness";
 import { DayDetailPanel } from "./DayDetailPanel";
 import type { DailyData, WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
-const FREE_COLOR = "#0D9488";
+const FREE_COLOR = H.sarcelle;
 
 interface MonthCalendarViewProps {
   month: Date;

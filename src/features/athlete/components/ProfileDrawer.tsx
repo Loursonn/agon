@@ -20,7 +20,6 @@ import { TrendCard } from "@/features/athlete/components/profile/TrendCard";
 import { AppFeedbackSection } from "@/features/athlete/components/profile/AppFeedbackSection";
 import { PrivacySection } from "@/features/shared/components/PrivacySection";
 import { ConnectedServicesSection } from "@/features/shared/components/ConnectedServicesSection";
-import { ProviderActivityList } from "@/features/shared/components/ProviderActivityList";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { useAthleteRetours } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import type { TrendSummary } from "@/lib/athleteTrends";
@@ -113,7 +112,7 @@ export default function ProfileDrawer({ onClose }: Props) {
       </div>
       <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
         {/* ── En-tête : identité + KPIs ── */}
-        <div style={{ background: "linear-gradient(135deg, " + C.acS + " 0%, " + C.s1 + " 75%)", borderRadius: 6, border: "1px solid " + C.ac + "30", padding: "14px 16px" }}>
+        <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.acS, border: "2px solid " + C.ac + "40", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: C.ac }}>
               {name.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?"}
@@ -153,7 +152,7 @@ export default function ProfileDrawer({ onClose }: Props) {
                   </div>
                 ))}
                 <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>
-                  Le détail se complète depuis l'onglet Profil, section Antécédents.
+                  Le détail se complète depuis l'onglet Profil, section Blessures.
                 </div>
               </div>
             )}
@@ -332,18 +331,6 @@ export default function ProfileDrawer({ onClose }: Props) {
 
         {/* ── Retour sur l'app ── */}
         {!viewOnly && <AppFeedbackSection />}
-
-        {/* ── Sorties enregistrées (montre ou fichier importé) ──
-            Visible aussi en `viewOnly`, contrairement aux deux blocs suivants :
-            la liste ne fait que lire, et un coach qui consulte le profil doit
-            voir les mêmes sorties que son athlète. Ce que la base lui refuse,
-            elle le refuse ici aussi — la liste peut donc être plus courte pour
-            lui, sans message d'erreur. C'est le comportement voulu. */}
-        {athleteId && (
-          <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px" }}>
-            <ProviderActivityList athleteId={athleteId} limit={20} />
-          </div>
-        )}
 
         {/* ── Montres & services connectés ──
             Même raison de masquage qu'en dessous : connecter ou débrancher un
@@ -667,7 +654,7 @@ function CoachSection({ onClose }: { onClose: () => void }) {
           placeholder="Ex: R4BL7M" maxLength={6} autoFocus
           style={{ flex: 1, padding: "8px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", letterSpacing: "0.1em" }}
         />
-        <button onClick={handleJoin} disabled={loading || !code.trim()} style={{ padding: "8px 14px", borderRadius: 4, border: "none", background: code.trim() ? C.ac : C.s2, color: code.trim() ? "#fff" : C.tx3, fontSize: 12, fontWeight: 600, cursor: code.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
+        <button onClick={handleJoin} disabled={loading || !code.trim()} style={{ padding: "8px 14px", borderRadius: 4, border: "none", background: code.trim() ? C.ac : C.s2, color: code.trim() ? C.tx : C.tx3, fontSize: 12, fontWeight: 600, cursor: code.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
           {loading ? "…" : "OK"}
         </button>
       </div>
@@ -692,7 +679,7 @@ function CoachSection({ onClose }: { onClose: () => void }) {
                   Tu n'apparaîtras plus dans tes athlètes et n'auras plus de coach. Continuer ?
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={handleStopSelfCoaching} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={handleStopSelfCoaching} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                     {loading ? "…" : "Confirmer"}
                   </button>
                   <button onClick={() => setConfirmAction(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -750,7 +737,7 @@ function CoachSection({ onClose }: { onClose: () => void }) {
                   {isCoachAthlete ? "Tu redeviendras ton propre coach. Continuer ?" : "Tu n'auras plus de coach. Continuer ?"}
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={handleQuitExternalCoach} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  <button onClick={handleQuitExternalCoach} disabled={loading} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                     {loading ? "…" : "Confirmer"}
                   </button>
                   <button onClick={() => setConfirmAction(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>

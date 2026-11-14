@@ -7,7 +7,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { C } from "@/lib/theme"
+import { C } from "@/lib/theme";
 import { Plus, Library, BookmarkPlus } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import type { Bloc, ProgSession } from "./types"
@@ -21,7 +21,7 @@ import { FicheAttachmentsEditor } from "@/features/shared/components/fiches/Fich
 import { SaveToBankDialog, type SaveToBankTarget } from "./SaveToBankDialog"
 import { maxDefinedWeek, resolveExerciceParams } from "@/lib/sessionOccurrence"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 
 interface SessionBlocEditorProps {
   session: ProgSession

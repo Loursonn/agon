@@ -63,6 +63,18 @@ describe("séances programmées : planification", () => {
     expect(tables.energy_session_assignments).toHaveLength(0);
   });
 
+  it("refuse de déplacer une séance commencée ou réalisée", async () => {
+    const { db } = fakeDb({ energy_session_assignments: [] });
+    setDbForTests(db);
+    const done = await assignEnergySession({ athlete_id: "a", energy_session_id: "s1", scheduled_date: "2026-11-10", status: "completed" });
+    await expect(moveEnergyAssignment(done.id, "2026-11-13")).rejects.toBeInstanceOf(ApiError);
+    const started = await assignEnergySession({
+      athlete_id: "a", energy_session_id: "s1", scheduled_date: "2026-11-10", status: "planned",
+      block_logs: { b1: { done: true } } as never,
+    });
+    await expect(moveEnergyAssignment(started.id, "2026-11-13")).rejects.toBeInstanceOf(ApiError);
+  });
+
   it("modifier une séance disparue lève au lieu d'un faux succès", async () => {
     const { db } = fakeDb({ energy_session_assignments: [] });
     setDbForTests(db);

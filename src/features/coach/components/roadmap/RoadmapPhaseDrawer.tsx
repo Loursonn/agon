@@ -10,6 +10,7 @@ import { X } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useCreatePhase, useUpdatePhase } from "@/features/shared/hooks/useRoadmap";
 import type { RoadmapPhase, RoadmapPhaseStatus } from "@/features/coach/types/roadmap";
+import type { CreatePhaseInput } from "@/api/appContent";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -81,7 +82,8 @@ export function RoadmapPhaseDrawer({ phase, onClose }: Props) {
         onSuccess: onClose,
       });
     } else {
-      create.mutate({ ...vals, description: vals.description || null }, {
+      // Champs obligatoires garantis par le schéma zod (z.infer les rend optionnels sans strictNullChecks).
+      create.mutate({ ...vals, description: vals.description || null } as CreatePhaseInput, {
         onSuccess: onClose,
       });
     }
@@ -187,7 +189,7 @@ export function RoadmapPhaseDrawer({ phase, onClose }: Props) {
               style={{
                 flex: 2, padding: "9px 0", borderRadius: 4,
                 border: "none", background: C.ac,
-                color: "#fff", fontSize: 13, fontWeight: 700,
+                color: C.tx, fontSize: 13, fontWeight: 700,
                 cursor: busy ? "not-allowed" : "pointer",
                 opacity: busy ? 0.6 : 1, fontFamily: "inherit",
               }}

@@ -1,15 +1,12 @@
 import { useState } from "react"
-import { C } from "@/lib/theme"
+import { BLOC_PALETTE } from "@/lib/peps";
+import { C } from "@/lib/theme";
 import type { Bloc, BlocCategory } from "./types"
 import { BLOC_CATEGORIES } from "./types"
 
-const VIOLET = "#FFC933"
+const VIOLET = C.ac
 const VIOLET_S = "rgba(123,111,255,0.12)"
 
-const BLOC_PALETTE = [
-  "#FFC933", "#F97316", "#22C55E", "#EF4444",
-  "#3B9EFF", "#FACC15", "#EC4899", "#14B8A6",
-]
 
 type BlocFormData = Omit<Bloc, 'id' | 'exercices' | 'sort_order'>
 
@@ -112,7 +109,7 @@ export function BlocForm({ initial, onSubmit, onCancel }: BlocFormProps) {
               style={{
                 width: 24, height: 24, borderRadius: 6,
                 background: c,
-                border: color === c ? "2px solid #fff" : "2px solid transparent",
+                border: color === c ? `2px solid ${C.tx}` : "2px solid transparent",
                 outline: color === c ? `2px solid ${c}` : "none",
                 cursor: "pointer",
                 flexShrink: 0,
@@ -213,7 +210,7 @@ export function BlocForm({ initial, onSubmit, onCancel }: BlocFormProps) {
         </button>
         <button
           onClick={handleSubmit}
-          style={{ padding: "8px 20px", borderRadius: 4, border: "none", background: VIOLET, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ padding: "8px 20px", borderRadius: 4, border: "none", background: VIOLET, color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
         >
           Valider
         </button>

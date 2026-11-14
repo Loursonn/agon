@@ -43,6 +43,9 @@ export interface ActiveReference {
   unit: string;
   date: string;
   metricType: string;
+  /** Provenance : test (séance de tests) ou saisie (par qui). */
+  testSessionId?: string | null;
+  createdBy?: string | null;
 }
 
 /** Référence active par nom de métrique canonique. */
@@ -100,6 +103,9 @@ export function invalidateReferences(qc: QueryClient, athleteId: string): Promis
     qc.invalidateQueries({ queryKey: ["athleteTestResults", athleteId] }),
     qc.invalidateQueries({ queryKey: ["athleteCurrentValues", athleteId] }),
     qc.invalidateQueries({ queryKey: ["categoryTestSeries", athleteId] }),
+    // VC et charge YOXX lisent la VC du profil (`criticalSpeedKeys`, `loadKeys`).
+    qc.invalidateQueries({ queryKey: ["criticalSpeed", athleteId] }),
+    qc.invalidateQueries({ queryKey: ["load", athleteId] }),
   ]);
 }
 
@@ -122,7 +128,7 @@ export async function getActiveReferences(athleteId: string): Promise<ActiveRefe
   const rows = unwrapRows(
     await db()
       .from("performance_logs")
-      .select("id, metric_name, metric_type, value, unit, date")
+      .select("id, metric_name, metric_type, value, unit, date, test_session_id, created_by")
       .eq("athlete_id", athleteId)
       .eq("is_active_reference", true),
     "Références non chargées",
@@ -135,6 +141,8 @@ export async function getActiveReferences(athleteId: string): Promise<ActiveRefe
       unit: r.unit,
       date: r.date,
       metricType: r.metric_type,
+      testSessionId: r.test_session_id,
+      createdBy: r.created_by,
     };
   }
   return out;

@@ -7,7 +7,8 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { countAthleteChoices, workoutKeys } from "@/api/workouts";
 import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import {
   Popover,
@@ -29,6 +30,7 @@ const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: b
   { key: "planning",        label: "Planning"        },
   { key: "programmation",   label: "Programmation"   },
   { key: "retours",         label: "Retours"         },
+  { key: "review",          label: "Review"          },
   { key: "profil-sportif",  label: "Profil athlète"  },
   { key: "hyrox",           label: "HYROX", hyroxOnly: true },
   { key: "fiches",          label: "Fiches"          },
@@ -40,6 +42,7 @@ const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: b
 const SUB_TABS: Record<string, { key: string; label: string }[]> = {
   planning: [
     { key: "month",        label: "Mois"          },
+    { key: "week",         label: "Semaine"       },
     { key: "timeline",     label: "Frise"         },
     { key: "summary",      label: "Synthèse"      },
     { key: "competitions", label: "Compétitions"  },
@@ -54,9 +57,9 @@ const SUB_TABS: Record<string, { key: string; label: string }[]> = {
     { key: "bilan",    label: "Bilan"             },
     { key: "courses",  label: "Courses"           },
     { key: "stations", label: "Stations"          },
-    { key: "runs",     label: "Runs et Roxzone"   },
+    { key: "runs",     label: "Runs"              },
     { key: "radar",    label: "Radar"             },
-    { key: "tests",    label: "Tests HYROX"       },
+    { key: "tests",    label: "Tests"             },
     { key: "plan",     label: "Plan de course"    },
   ],
 };
@@ -96,7 +99,9 @@ export default function ContextBar() {
   const searchParams = new URLSearchParams(location.search);
   const activeSubView = searchParams.get("view");
   const subTabs = SUB_TABS[activeTab] ?? [];
-  const defaultSubView = subTabs[0]?.key ?? null;
+  const isDesktop = useIsDesktop();
+  // Planning : la semaine pleine largeur est la vue par défaut à l'ordinateur (P24), le mois au téléphone.
+  const defaultSubView = activeTab === "planning" && isDesktop ? "week" : subTabs[0]?.key ?? null;
   const activeSubTab = activeSubView ?? defaultSubView;
 
   function goTab(key: string) {
@@ -193,7 +198,7 @@ export default function ContextBar() {
               padding: "3px 8px", borderRadius: 6,
               border: "1px solid rgba(245,158,11,0.4)",
               background: "rgba(245,158,11,0.12)",
-              color: "#F59E0B", fontSize: 10, fontWeight: 700,
+              color: H.ambre, fontSize: 10, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
             }}
           >
@@ -319,7 +324,7 @@ export default function ContextBar() {
                 transition: "color 150ms, border-color 150ms",
               }}
               onMouseEnter={(e) => {
-                if (!active) (e.currentTarget as HTMLElement).style.color = "#e0e0e0";
+                if (!active) (e.currentTarget as HTMLElement).style.color = H.grisArgent;
               }}
               onMouseLeave={(e) => {
                 if (!active) (e.currentTarget as HTMLElement).style.color = C.tx3;

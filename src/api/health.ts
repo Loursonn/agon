@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { IsoDay } from "@shared/domain/dates";
 import type { IntradayMeasure } from "@shared/providers/garminHealth";
+import { providerAttribution } from "@/lib/activityDisplay";
 import { db, unwrapRows } from "./client";
 
 /**
@@ -22,7 +23,11 @@ export const healthKeys = {
 
 /** Après une synchro ou une déconnexion. */
 export function invalidateHealth(qc: QueryClient, athleteId: string): Promise<void> {
-  return qc.invalidateQueries({ queryKey: healthKeys.all(athleteId) });
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: healthKeys.all(athleteId) }),
+    // Le feu du matin lit la VFC, la FC de repos et le sommeil.
+    qc.invalidateQueries({ queryKey: ["wellnessLight", athleteId] }),
+  ]).then(() => undefined);
 }
 
 /** Colonnes numériques du résumé du jour (nom en base → nom renvoyé). */
@@ -61,6 +66,38 @@ export type HealthDay = { [K in NumericKey]: number | null } & {
 
 const ATTRIBUTION: Record<string, string> = { garmin: "Garmin", coros: "COROS", garmin_export: "Garmin" };
 
+/** Fournisseur d'une source de santé (l'export de compte Garmin reste Garmin). */
+const brandOf = (source: string) => (source === "garmin_export" ? "garmin" : source);
+
+/**
+ * Dernier modèle de montre connu par fournisseur, lu sur les activités : les
+ * résumés du jour n'en portent pas, et Garmin exige « Garmin [modèle] » à côté
+ * de chaque mesure affichée.
+ */
+async function latestDevices(athleteId: string, sources: readonly string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const brands = [...new Set(sources.map(brandOf))].filter((b) => b === "garmin" || b === "coros");
+  for (const brand of brands) {
+    const rows = unwrapRows(
+      await db().from("provider_activities")
+        .select("device_name, started_at")
+        .eq("athlete_id", athleteId)
+        .eq("source", brand)
+        .order("started_at", { ascending: false })
+        .limit(10),
+      "modèle de la montre",
+    ) as Array<{ device_name: string | null }>;
+    const hit = rows.find((r) => typeof r.device_name === "string" && r.device_name.trim() !== "");
+    if (hit?.device_name) out.set(brand, hit.device_name);
+  }
+  return out;
+}
+
+const attributionOf = (source: string, devices: Map<string, string>) => {
+  const device = devices.get(brandOf(source));
+  return device ? providerAttribution(brandOf(source), device) : ATTRIBUTION[source] ?? source;
+};
+
 const num = (v: unknown): number | null => {
   if (v === null || v === undefined || v === "") return null;
   const n = typeof v === "number" ? v : Number(v);
@@ -82,11 +119,12 @@ export async function getHealthDays(athleteId: string, from: IsoDay, to: IsoDay)
       .order("day", { ascending: true }),
     "santé du jour",
   ) as unknown as Array<Record<string, unknown>>;
+  const devices = rows.length ? await latestDevices(athleteId, rows.map((r) => String(r.source))) : new Map<string, string>();
   return rows.map((r) => {
     const out = {
       day: r.day as IsoDay,
       source: String(r.source),
-      attribution: ATTRIBUTION[String(r.source)] ?? String(r.source),
+      attribution: attributionOf(String(r.source), devices),
       sleepStartAt: (r.sleep_start_at as string | null) ?? null,
       sleepEndAt: (r.sleep_end_at as string | null) ?? null,
       sleepSubscores: (r.sleep_subscores as Record<string, unknown> | null) ?? null,
@@ -124,10 +162,11 @@ export async function getIntraday(
     .lte("day", to);
   if (measures?.length) q = q.in("measure", [...measures]);
   const rows = unwrapRows(await q.order("day", { ascending: true }), "séries de la journée");
+  const devices = rows.length ? await latestDevices(athleteId, rows.map((r) => r.source)) : new Map<string, string>();
   return rows.map((r) => ({
     day: r.day as IsoDay,
     source: r.source,
-    attribution: ATTRIBUTION[r.source] ?? r.source,
+    attribution: attributionOf(r.source, devices),
     measure: r.measure as IntradayMeasure,
     offsets: (r.offsets ?? []).map(Number),
     values: (r.values ?? []).map(Number),

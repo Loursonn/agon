@@ -185,8 +185,8 @@ function RankingTable({ race, refLookup }: { race: HyroxResult; refLookup: RefLo
         Comparé aux athlètes {BRACKET_LABEL[bracket]} ({sampleLabel}+ résultats, saisons 7-8-9, {refDiv})
       </div>
 
-      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 11 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid " + C.brd, color: C.tx3, fontSize: 10, fontWeight: 600 }}>
               <th style={{ padding: "6px 8px", textAlign: "left" }}>Segment</th>

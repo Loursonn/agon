@@ -176,7 +176,31 @@ export async function updateEnergyAssignment(id: string, patch: EnergyAssignment
   return toEnergyAssignment(row);
 }
 
-export function moveEnergyAssignment(id: string, date: IsoDay): Promise<EnergyAssignment> {
+/** Séance énergie réalisée, commencée (un bloc fait) ou notée : on n'y touche pas. */
+function energyTouched(cur: EnergyAssignment): boolean {
+  const logs = (cur.block_logs ?? null) as Record<string, { done?: boolean }> | null;
+  const started = !!logs && Object.values(logs).some((b) => b?.done);
+  return cur.status === "completed" || started || cur.rpe_score != null;
+}
+
+/** L'athlète passe une séance énergie en repos (`skipped`). Refusé si elle a une saisie. */
+export async function restEnergyAssignment(id: string): Promise<EnergyAssignment> {
+  const cur = await getEnergyAssignment(id);
+  if (cur && energyTouched(cur)) {
+    throw new ApiError("Repos refusé", { message: "séance réalisée, commencée ou notée", code: "42501" });
+  }
+  return updateEnergyAssignment(id, { status: "skipped" });
+}
+
+/**
+ * Déplace une séance énergie. Refusé si elle a été réalisée, commencée
+ * (un bloc fait) ou notée : on ne déplace jamais une saisie.
+ */
+export async function moveEnergyAssignment(id: string, date: IsoDay): Promise<EnergyAssignment> {
+  const cur = await getEnergyAssignment(id);
+  if (cur && energyTouched(cur)) {
+    throw new ApiError("Déplacement refusé", { message: "séance réalisée, commencée ou notée", code: "42501" });
+  }
   return updateEnergyAssignment(id, { scheduled_date: date });
 }
 
@@ -332,11 +356,17 @@ export async function deleteEnergySession(id: string): Promise<DeleteEnergySessi
   ) ?? "not_found";
 }
 
-/** Image d'une séance (bucket `test-media`, dossier du coach) ; renvoie l'URL publique. */
+/**
+ * Bucket public des illustrations de séances énergie : contenu du coach, pas
+ * une donnée personnelle. Jamais `test-media`, privé (photos du corps).
+ */
+export const ENERGY_IMAGE_BUCKET = "energy-exercise-photos";
+
+/** Image d'une séance (dossier du coach) ; renvoie l'URL publique. */
 export async function uploadEnergySessionImage(userId: string, file: File): Promise<string> {
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `${userId}/sessions/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const bucket = db().storage.from("test-media");
+  const bucket = db().storage.from(ENERGY_IMAGE_BUCKET);
   check(await bucket.upload(path, file, { contentType: file.type }), "Envoi de l'image impossible");
   return bucket.getPublicUrl(path).data.publicUrl;
 }
@@ -376,6 +406,8 @@ const ATHLETE_SCOPED = new Set<string>([
   "runningVolume",            // volume de course (distance des séances énergie)
   "athlete-trend-sessions",   // tendances athlète
   "coach-api-draft-target",   // propositions de l'assistant (état courant)
+  "load",                     // charge YOXX (src/api/load.ts)
+  "wellnessLight",            // feu du matin (src/api/wellnessLight.ts)
 ]);
 
 /**

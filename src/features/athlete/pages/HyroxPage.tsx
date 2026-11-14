@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxFlag } from "@/features/shared/hooks/hyrox/useHyroxFlag";
 import RacesView from "@/features/coach/components/hyrox/RacesView";
@@ -35,28 +35,17 @@ export default function AthleteHyroxPage() {
   // Téléphone : colonne de 480 px. PC : colonne élargie (les vues dessinent leurs grilles dedans).
   return (
     <div className="mx-auto w-full max-w-[480px] font-ui lg:max-w-4xl">
-      <div role="tablist" className="flex border-b border-agon-brd px-agon-md py-agon-sm lg:px-agon-xl">
-        {TABS.map(t => {
-          const active = t.key === tab;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "min-h-11 flex-1 whitespace-nowrap border-b-2 bg-transparent text-agon-sm transition-colors lg:flex-none lg:px-agon-xl",
-                active ? "border-agon-accent font-bold text-agon-accent" : "border-transparent font-normal text-agon-tx3",
-              )}
-            >
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+      <AthletePageHeader
+        title="HYROX"
+        titleSize={26}
+        padding="56px 20px 24px"
+        tabs={TABS}
+        activeTab={tab}
+        onTab={(k) => setTab(k as TabKey)}
+        tabTone="gold"
+      />
 
-      <div className="px-agon-md pb-10 lg:px-agon-xl">
+      <div className="px-5 pb-10 pt-6 lg:px-agon-xl">
         {tab === "courses" && <RacesView />}
         {tab === "stations" && <StationsView />}
         {tab === "runs" && <RunsView />}

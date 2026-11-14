@@ -218,7 +218,7 @@ export function ScheduleFicheDialog({ athleteId, athleteName, coachId, staffId, 
                   style={{
                     padding: "8px 0", borderRadius: 4, fontSize: 12, fontFamily: "inherit", cursor: "pointer",
                     border: "1px solid " + (on ? C.ac : isSameDay(d, today) ? C.brdL : C.brd),
-                    background: on ? C.ac : "transparent", color: on ? "#0E0C0A" : past ? C.tx3 : C.tx, fontWeight: on ? 800 : 500,
+                    background: on ? C.ac : "transparent", color: on ? C.ink : past ? C.tx3 : C.tx, fontWeight: on ? 800 : 500,
                   }}>
                   {d.getDate()}
                 </button>

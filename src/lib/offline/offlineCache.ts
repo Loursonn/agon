@@ -62,8 +62,8 @@ export function authStorageKey(supabaseUrl: string | undefined): string | null {
 
 /**
  * Requêtes jamais persistées, repérées par un SEGMENT de leur clé (où qu'il
- * soit : `["profile", "_photos", …]`, `["medical", id, "signedUrls", …]`) :
- * - URL signées (photos corporelles, pièces médicales, fiches : valables 1 h,
+ * soit : `["profile", "_photos", …]`) :
+ * - URL signées (photos corporelles, fiches : valables 1 h,
  *   utilisables par quiconque les a) ;
  * - jetons d'invitation / de première connexion ;
  * - clés d'API coach.
@@ -72,7 +72,7 @@ export function authStorageKey(supabaseUrl: string | undefined): string | null {
  */
 export const NEVER_PERSIST_SEGMENTS: ReadonlySet<string> = new Set([
   "signed-url",     // docsKeys.signedUrl
-  "signedUrls",     // medicalKeys.signedUrls
+  "signedUrls",     // ancien medicalKeys.signedUrls (pièces médicales retirées), gardé par prudence
   "_photos",        // profileKeys.photoUrls
   "_claim",         // accountKeys.claimInfo
   "claimLink",      // accountKeys.claimLink

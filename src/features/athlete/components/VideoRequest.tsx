@@ -1,9 +1,9 @@
 import { Video, Check } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import type { WorkoutBlocData } from "@/features/shared/hooks/useWorkoutSession";
 
-const AMBER = "#F5A623";
-const GREEN = "#22c55e";
+const AMBER = H.miel;
+const GREEN = H.vert;
 
 /** Bandeau en tête de séance : nombre d'exercices pour lesquels le coach attend une vidéo. */
 export function VideoRequestBanner({ blocs, videoSent }: { blocs: WorkoutBlocData[]; videoSent?: Record<string, boolean> }) {
@@ -78,7 +78,7 @@ export function VideoRequestRow({
           background: sent ? GREEN : "transparent",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          {sent && <Check size={10} color="#0E0C0A" strokeWidth={4} />}
+          {sent && <Check size={10} color={C.ink} strokeWidth={4} />}
         </span>
         Vidéo envoyée
       </button>

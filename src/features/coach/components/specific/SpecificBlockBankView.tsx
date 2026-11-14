@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from "react";
 import { X, Trash2, Zap, ListChecks, Plus } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { genId } from "@/lib/energy/treeUtils";
 import { useAuth } from "@/hooks/useAuth";
 import IntervalBuilder from "../energy/IntervalBuilder";
@@ -20,8 +20,8 @@ import {
 import type { EnergyGroup, EnergyStep } from "@/types/energy";
 import type { ClassiqueItem, SpecificBlockRow, BlockKind } from "@/types/specific";
 
-const ORANGE = "#F5A623";
-const GREEN  = "#66F03C";
+const ORANGE = H.miel;
+const GREEN  = C.g;
 
 // ── Editor modal ─────────────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ function BlockEditorModal({ initial, onClose }: {
               onChange={setQualityId}
               onCreate={async (n) => user?.id ? await createQuality.mutateAsync({ name: n, coachId: user.id }) : undefined}
               width={150}
-              accent="#FFC933"
+              accent={C.ac}
             />
             {/* Kind toggle */}
             <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
@@ -142,7 +142,7 @@ function BlockEditorModal({ initial, onClose }: {
                     padding: "5px 12px", borderRadius: 6, border: "none",
                     display: "flex", alignItems: "center", gap: 5,
                     background: kind === k ? (k === "wod" ? ORANGE : GREEN) : "transparent",
-                    color: kind === k ? "#1a1204" : C.tx3,
+                    color: kind === k ? H.encreOr : C.tx3,
                     fontSize: 11, fontWeight: kind === k ? 700 : 400,
                     cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
                   }}
@@ -213,7 +213,7 @@ function BlockEditorModal({ initial, onClose }: {
             disabled={isSaving}
             style={{
               padding: "8px 16px", borderRadius: 4, border: "none",
-              background: ORANGE, color: "#1a1204", fontSize: 12, fontWeight: 700,
+              background: ORANGE, color: H.encreOr, fontSize: 12, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit", opacity: isSaving ? 0.7 : 1,
             }}
           >
@@ -283,7 +283,7 @@ export default function SpecificBlockBankView() {
           onChange={(id) => setQualityFilter(id ?? "all")}
           onCreate={async (n) => user?.id ? await createQuality.mutateAsync({ name: n, coachId: user.id }) : undefined}
           width={170}
-          accent="#FFC933"
+          accent={C.ac}
         />
 
         <input
@@ -308,7 +308,7 @@ export default function SpecificBlockBankView() {
           onClick={openCreate}
           style={{
             marginLeft: "auto", padding: "7px 14px", borderRadius: 4, border: "none",
-            background: ORANGE, color: "#1a1204", fontSize: 12,
+            background: ORANGE, color: H.encreOr, fontSize: 12,
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >
@@ -334,7 +334,7 @@ export default function SpecificBlockBankView() {
             onClick={openCreate}
             style={{
               padding: "9px 20px", borderRadius: 4, border: "none",
-              background: ORANGE, color: "#1a1204", fontSize: 13,
+              background: ORANGE, color: H.encreOr, fontSize: 13,
               fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
             }}
           >
@@ -384,7 +384,7 @@ export default function SpecificBlockBankView() {
                           </span>
                         )}
                         {quality && (
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "#FFC93320", color: "#FFC933" }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${C.ac}20`, color: C.ac }}>
                             {quality.name}
                           </span>
                         )}
@@ -442,7 +442,7 @@ export default function SpecificBlockBankView() {
               </button>
               <button
                 onClick={() => { deleteBlock.mutate(confirmDelete.id); setConfirmDelete(null); }}
-                style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
               >
                 Supprimer
               </button>

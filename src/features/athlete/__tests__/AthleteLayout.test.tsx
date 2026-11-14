@@ -21,6 +21,8 @@ vi.mock("@/features/shared/hooks/useUnfinishedWorkouts", () => ({ useUnfinishedW
 vi.mock("@/features/staff/hooks/useAthleteStaff", () => ({ useAthleteStaff: () => ({ data: [] }) }));
 vi.mock("@/features/shared/components/fiches/FicheViewerHost", () => ({ FicheViewerHost: () => null }));
 vi.mock("@/features/athlete/components/ProfileDrawer", () => ({ default: () => <div>Tiroir profil</div> }));
+vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: null, profile: null }) }));
+vi.mock("@/features/shared/hooks/useCoCoach", () => ({ useAthleteCoaches: () => ({ data: null }) }));
 vi.mock("@/features/athlete/components/AppFbForm", () => ({ default: () => null }));
 vi.mock("@/components/athlete/WellnessFlow", () => ({ WellnessFlow: () => null }));
 vi.mock("@/components/coach/CoachComponents", () => ({ NewBlockModal: () => null }));

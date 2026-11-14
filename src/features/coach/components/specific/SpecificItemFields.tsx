@@ -7,11 +7,11 @@
  */
 import { useLayoutEffect, useRef, useState } from "react";
 import { Youtube } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { ExerciceSearch } from "../programmation/ExerciceSearch";
 import type { ClassiqueItem } from "@/types/specific";
 
-const VIOLET = "#FFC933";
+const VIOLET = C.ac;
 
 interface Props {
   item: ClassiqueItem;
@@ -63,7 +63,7 @@ export default function SpecificItemFields({ item, onChange }: Props) {
             <span style={{ flex: 1, minWidth: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere", lineHeight: 1.4 }}>
               {item.name.trim() || "Exercice / consigne…"}
             </span>
-            {item.youtube_id && <Youtube size={12} color="#EF4444" style={{ flexShrink: 0 }} />}
+            {item.youtube_id && <Youtube size={12} color={H.rougeVif} style={{ flexShrink: 0 }} />}
           </button>
         )}
       </div>

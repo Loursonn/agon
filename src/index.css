@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,200..700&family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap');
+@import "./styles/fonts.css";
 @import "./styles/tokens.css";
 
 @tailwind base;
@@ -44,9 +44,6 @@
     --font-display: var(--agon-font-display);
     --font-ui: var(--agon-font-ui);
     --font-data: var(--agon-font-data);
-
-    /* Dégradé or (bouton principal + records) */
-    --gold-gradient: var(--agon-or-poli);
 
     --sidebar-background: var(--agon-ui-bg);
     --sidebar-foreground: var(--agon-ui-tx3);

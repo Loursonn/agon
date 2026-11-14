@@ -30,6 +30,17 @@ describe("santé", () => {
     expect(r[0]).toMatchObject({ offsets: [0, 60], values: [55, 57], attribution: "Garmin" });
   });
 
+  it("attribution « Garmin [modèle] » : dernier appareil connu sur les activités", async () => {
+    const act = (started_at: string, device_name: string | null, source = "garmin") => ({ athlete_id: "lea", source, started_at, device_name });
+    const { db } = fakeDb({
+      provider_dailies: [day("2031-03-04"), day("2031-03-04", { source: "coros" })],
+      provider_activities: [act("2031-03-01T07:00:00Z", "Forerunner 265"), act("2031-03-03T07:00:00Z", null), act("2031-02-01T07:00:00Z", "fenix 7"), act("2031-03-02T07:00:00Z", "Garmin Forerunner 965", "autre")],
+    });
+    setDbForTests(db);
+    const d = await getHealthDays("lea", "2031-03-01", "2031-03-07");
+    expect(d.map((x) => x.attribution).sort()).toEqual(["COROS", "Garmin Forerunner 265"]);
+  });
+
   it("erreur de lecture → lève (jamais une liste vide silencieuse)", async () => {
     const { db } = fakeDb({}, { table: "provider_dailies", op: "select" });
     setDbForTests(db);

@@ -8,7 +8,7 @@ import { useDeleteCompetition } from "@/hooks/useCompetitions";
 import { format, parseISO, isFuture, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { competitionKeys, listCompetitions } from "@/api/competitions";
 import { priorityLabel, COMPETITION_META } from "@/types/planning";
 import { CompetitionFormModal } from "./CompetitionFormModal";
@@ -31,9 +31,9 @@ interface Comp {
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
-  A: "#F5A623",
-  B: "#FFC933",
-  C: "#9194A0",
+  A: H.miel,
+  B: C.ac,
+  C: H.grisBleu,
 };
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
               display: "flex", alignItems: "center", gap: 6,
               padding: "8px 16px", borderRadius: 4,
               border: "none", background: C.ac,
-              color: "#fff", fontSize: 12, fontWeight: 700,
+              color: C.tx, fontSize: 12, fontWeight: 700,
               cursor: "pointer", fontFamily: "inherit",
             }}
           >
@@ -121,7 +121,7 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "8px 18px", borderRadius: 4, border: "none", background: C.ac,
-                color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               }}
             >
               <Plus size={12} /> Ajouter une compétition
@@ -267,7 +267,7 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
           <span style={{ fontSize: 11, color: C.r }}>Supprimer ?</span>
           <button
             onClick={onDelete}
-            style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: C.rV, color: "#0E0C0A", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: C.rV, color: C.ink, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
           >
             Oui
           </button>

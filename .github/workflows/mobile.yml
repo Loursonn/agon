@@ -1,0 +1,133 @@
+name: Mobile (simulateurs)
+
+# Tests natifs de l'app Capacitor, sans Xcode ni Android Studio sur un poste :
+# l'app est construite, installée dans un simulateur iOS et un émulateur
+# Android, lancée, et l'écran de connexion est capturé. Captures et APK sont
+# publiés en artefacts du run. Aucun secret : le build web utilise les valeurs
+# factices de src/integrations/supabase/client.ts (pas de base de prod).
+# Voir docs/MOBILE_CAPACITOR.md.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev, main]
+    paths:
+      - "ios/**"
+      - "android/**"
+      - "capacitor.config.ts"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "ios/**"
+      - "android/**"
+      - "capacitor.config.ts"
+      - ".github/workflows/mobile.yml"
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  APP_ID: com.agontraining.app
+
+jobs:
+  ios:
+    name: iOS (simulateur)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build web + copie dans ios/
+        run: npm run build && npx cap sync ios
+
+      - name: Build pour simulateur (sans signature)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+      - name: Lancer l'app et capturer l'écran de connexion
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for r in sorted(d, reverse=True) if "iOS" in r for x in d[r] if x["name"].startswith("iPhone")))')
+          echo "Simulateur : $DEVICE"
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" build/ios/Build/Products/Debug-iphonesimulator/App.app
+          xcrun simctl launch "$DEVICE" "$APP_ID"
+          sleep 25
+          mkdir -p captures
+          xcrun simctl io "$DEVICE" screenshot captures/ios-connexion.png
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-captures
+          path: captures/
+          if-no-files-found: warn
+
+  android:
+    name: Android (émulateur)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      - name: Build web + copie dans android/
+        run: npm run build && npx cap sync android
+
+      - name: APK debug
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Activer KVM (émulateur accéléré)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Lancer l'app et capturer l'écran de connexion
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: |
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell monkey -p com.agontraining.app -c android.intent.category.LAUNCHER 1
+            sleep 30
+            mkdir -p captures
+            adb exec-out screencap -p > captures/android-connexion.png
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-captures-et-apk
+          path: |
+            captures/
+            android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn

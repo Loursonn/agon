@@ -1,4 +1,4 @@
-import { C } from "@/lib/theme";
+import { C, H } from "@/lib/theme";
 import { useDayThemesRange } from "@/features/shared/hooks/useDayThemes";
 import { computeTotals, expandIntervals } from "@/lib/energy";
 import { formatS } from "@/lib/energy/formatTarget";
@@ -65,7 +65,7 @@ export function WeekDraftPreview({ athleteId, ops, prog }: {
               )}
             </div>
             {replaced && (
-              <div style={{ fontSize: 11, color: "#F59E0B", marginTop: 3 }}>
+              <div style={{ fontSize: 11, color: H.ambre, marginTop: 3 }}>
                 Remplace <span style={{ textDecoration: "line-through" }}>{dayThemeText(before)}</span>
               </div>
             )}

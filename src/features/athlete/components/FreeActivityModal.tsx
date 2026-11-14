@@ -2,24 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { C } from "@/lib/theme";
 import type { FreeSession } from "@/features/shared/types/athlete";
+import { SPORTS } from "./freeActivitySports";
 
 const MONTHS_FR = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
 const DAYS_FULL_FR = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
-export const SPORTS = [
-  { key: "course",    abbr: "CO", label: "Course"       },
-  { key: "velo",      abbr: "VE", label: "Vélo"         },
-  { key: "natation",  abbr: "NA", label: "Natation"     },
-  { key: "muscu",     abbr: "MU", label: "Muscu"        },
-  { key: "marche",    abbr: "MA", label: "Marche"       },
-  { key: "yoga",      abbr: "YO", label: "Yoga"         },
-  { key: "football",  abbr: "FO", label: "Football"     },
-  { key: "tennis",    abbr: "TE", label: "Tennis"       },
-  { key: "boxe",      abbr: "BX", label: "Boxe"         },
-  { key: "escalade",  abbr: "ES", label: "Escalade"     },
-  { key: "ski",       abbr: "SK", label: "Ski"          },
-  { key: "autre",     abbr: "AU", label: "Autre"        },
-];
 
 const DISTANCE_SPORTS = ["course", "velo", "natation", "marche", "ski", "autre"];
 
@@ -123,7 +110,7 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
               <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cette activité ?</div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button type="button" onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-                <button type="button" onClick={() => { onDelete(existing.id); onClose(); }} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "none", background: C.r, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+                <button type="button" onClick={() => { onDelete(existing.id); onClose(); }} style={{ flex: 1, padding: "8px 0", borderRadius: 4, border: "none", background: C.r, color: C.ink, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
               </div>
             </div>
           )}
@@ -247,7 +234,7 @@ export function FreeActivityModal({ date, existing, onClose, onSave, onDelete }:
             onClick={handleSave}
             style={{
               width: "100%", padding: "13px 0", borderRadius: 6,
-              border: "none", background: C.acV, color: "#0E0C0A",
+              border: "none", background: C.acV, color: C.ink,
               fontSize: 14, fontWeight: 700, cursor: "pointer",
               fontFamily: "inherit", minHeight: 44,
             }}
