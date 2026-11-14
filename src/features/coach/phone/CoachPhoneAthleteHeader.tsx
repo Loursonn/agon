@@ -59,6 +59,49 @@ export default function CoachPhoneAthleteHeader() {
   const cycleLine = cycle
     ? `${cycle.name}${weekIndex ? ` · S${weekIndex} / ${weeks.length}` : ""}`
     : null;
+  // Séance de montre (planches SeanceCoachTel, HyroxCoachTel) : en-tête compact,
+  // retour au planning, onglet Planning actif.
+  const seance = pathname.includes("/seance/");
+  const tabs = (
+    <nav aria-label="Onglets de l’athlète" style={{ display: "flex", fontSize: 13.5, overflowX: "auto", scrollbarWidth: "none", margin: "0 -20px", padding: "0 20px" }}>
+      {PHONE_ATHLETE_TABS.map((t) => (
+        <NavLink
+          key={t.to}
+          to={`/coach/athletes/${athleteId}/${t.to}`}
+          style={({ isActive }) => {
+            const on = isActive || (seance && t.to === "planning");
+            return {
+              padding: "9px 0", marginRight: 18, whiteSpace: "nowrap", textDecoration: "none", flex: "none",
+              color: on ? C.tx : C.tx3, borderBottom: `2px solid ${on ? C.ac : "transparent"}`, fontWeight: on ? 500 : 400,
+            };
+          }}
+        >
+          {t.label}
+        </NavLink>
+      ))}
+    </nav>
+  );
+
+  if (seance) {
+    return (
+      <header style={{ padding: "14px 20px 0", display: "flex", flexDirection: "column", gap: 12, borderBottom: `1px solid ${C.brd}`, background: C.bg }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button type="button" aria-label="Retour au planning" onClick={() => navigate(`/coach/athletes/${athleteId}/planning`)} style={{ background: "none", border: "none", padding: 4, margin: -4, cursor: "pointer", display: "flex" }}>
+            <Chevron dir="left" color={C.tx2} size={20} />
+          </button>
+          <Avatar name={name} size={34} gold />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ ...DISPLAY, fontSize: 16, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+            {cycleLine && <div style={{ ...MONO, fontSize: 10.5, color: C.tx2, textTransform: "uppercase", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cycleLine}</div>}
+          </div>
+          <span title={light.data ? light.data.sentence : "Feu du matin : pas de donnée"} style={{ display: "flex" }}>
+            <Dot color={feu} size={10} />
+          </span>
+        </div>
+        {tabs}
+      </header>
+    );
+  }
 
   return (
     <header style={{ padding: "18px 20px 0", display: "flex", flexDirection: "column", gap: 14, borderBottom: `1px solid ${C.brd}`, background: C.bg }}>
@@ -86,20 +129,7 @@ export default function CoachPhoneAthleteHeader() {
           <Dot color={feu} size={12} />
         </span>
       </div>
-      <nav aria-label="Onglets de l’athlète" style={{ display: "flex", fontSize: 13.5, overflowX: "auto", scrollbarWidth: "none", margin: "0 -20px", padding: "0 20px" }}>
-        {PHONE_ATHLETE_TABS.map((t) => (
-          <NavLink
-            key={t.to}
-            to={`/coach/athletes/${athleteId}/${t.to}`}
-            style={({ isActive }) => ({
-              padding: "9px 0", marginRight: 18, whiteSpace: "nowrap", textDecoration: "none", flex: "none",
-              color: isActive ? C.tx : C.tx3, borderBottom: `2px solid ${isActive ? C.ac : "transparent"}`,
-            })}
-          >
-            {t.label}
-          </NavLink>
-        ))}
-      </nav>
+      {tabs}
     </header>
   );
 }
