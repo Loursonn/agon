@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Save, Plus, Zap, ListChecks } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { genId } from "@/lib/energy/treeUtils";
 import IntervalBuilder from "../energy/IntervalBuilder";
 import SpecificItemFields from "./SpecificItemFields";
@@ -22,8 +22,24 @@ import type { EnergyGroup, EnergyStep } from "@/types/energy";
 import type { SessionBlock, ClassiqueBlock, ClassiqueItem, WodBlock } from "@/types/specific";
 import { isWodBlock } from "@/types/specific";
 
-const ORANGE = H.miel;
-const GREEN  = C.g;
+type BlockTone = { borderL: string; badge: string; save: string; add: string };
+/** Teinte par type de bloc : WOD (miel hérité → alerte) ou classique (succès). Classes écrites en entier. */
+const TONE = {
+  wod: {
+    borderL: "border-l-agon-alerte/[0.502]", badge: "bg-agon-alerte/[0.125] text-agon-alerte",
+    save: "border-agon-alerte/25 bg-agon-alerte/[0.071] text-agon-alerte",
+    add: "border-agon-alerte/[0.314] bg-agon-alerte/[0.031] text-agon-alerte",
+  },
+  classique: {
+    borderL: "border-l-agon-succes/[0.502]", badge: "bg-agon-succes/[0.125] text-agon-succes",
+    save: "border-agon-succes/25 bg-agon-succes/[0.071] text-agon-succes",
+    add: "border-agon-succes/[0.314] bg-agon-succes/[0.031] text-agon-succes",
+  },
+} satisfies Record<string, BlockTone>;
+
+const GRIP = "flex cursor-grab bg-transparent p-0.5 text-agon-tx3";
+const DELETE = "flex cursor-pointer bg-transparent p-0.5 text-agon-tx3 hover:text-agon-erreur";
+const ADD_BTN = "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded border py-3 text-[13px] font-semibold [transition:all_150ms]";
 
 // ── Item row (sortable, bloc classique) ──────────────────────────────────────
 
@@ -40,25 +56,20 @@ function ItemRow({ blockId, item, onChange, onDelete }: {
     <div
       ref={setNodeRef}
       data-step-id={item.id}
-      style={{
-        transform: CSS.Transform.toString(transform), transition,
-        opacity: isDragging ? 0.5 : 1,
-        display: "flex", gap: 6, alignItems: "flex-start", flexWrap: "wrap",
-      }}
+      className={cn("flex flex-wrap items-start gap-1.5", isDragging ? "opacity-50" : "opacity-100")}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <button
         {...attributes}
         {...listeners}
-        style={{ background: "none", border: "none", color: C.tx3, cursor: "grab", padding: 2, display: "flex" }}
+        className={GRIP}
       >
         <GripVertical size={13} />
       </button>
       <SpecificItemFields item={item} onChange={onChange} />
       <button
         onClick={onDelete}
-        style={{ background: "none", border: "none", color: C.tx3, cursor: "pointer", padding: 2, display: "flex" }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = C.r)}
-        onMouseLeave={(e) => (e.currentTarget.style.color = C.tx3)}
+        className={DELETE}
       >
         <Trash2 size={13} />
       </button>
@@ -79,7 +90,7 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const wod = isWodBlock(block);
-  const accent = wod ? ORANGE : GREEN;
+  const tone = wod ? TONE.wod : TONE.classique;
 
   function handleItemDragEnd(e: DragEndEvent) {
     if (wod) return;
@@ -101,28 +112,23 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
   return (
     <div
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform), transition,
-        opacity: isDragging ? 0.6 : 1,
-        background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6,
-        borderLeft: `3px solid ${accent}80`,
-        padding: "12px 14px",
-      }}
+      className={cn(
+        "rounded-[6px] border border-l-[3px] border-agon-brd bg-agon-s1 px-3.5 py-3",
+        tone.borderL,
+        isDragging ? "opacity-60" : "opacity-100",
+      )}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       {/* Block header */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+      <div className="mb-2.5 flex items-center gap-2">
         <button
           {...attributes}
           {...listeners}
-          style={{ background: "none", border: "none", color: C.tx3, cursor: "grab", padding: 2, display: "flex" }}
+          className={GRIP}
         >
           <GripVertical size={15} />
         </button>
-        <span style={{
-          fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 4,
-          background: accent + "20", color: accent, flexShrink: 0,
-          display: "flex", alignItems: "center", gap: 4,
-        }}>
+        <span className={cn("flex shrink-0 items-center gap-1 rounded px-[7px] py-0.5 text-[9px] font-extrabold", tone.badge)}>
           {wod ? <Zap size={9} /> : <ListChecks size={9} />}
           {wod ? "WOD" : "CLASSIQUE"}
         </span>
@@ -130,33 +136,20 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
           value={block.title}
           onChange={(e) => onChange({ title: e.target.value } as Partial<SessionBlock>)}
           placeholder="Titre du bloc…"
-          style={{
-            flex: 1, background: "transparent", border: "none",
-            borderBottom: `1px solid ${C.brdL}`,
-            color: C.tx, fontSize: 13, fontWeight: 700,
-            fontFamily: "inherit", outline: "none", padding: "2px 0",
-          }}
+          className="flex-1 border-b border-agon-brd-l bg-transparent py-0.5 text-[13px] font-bold text-agon-tx outline-none"
         />
         {onSaveToBank && (
           <button
             onClick={() => onSaveToBank(block)}
             title="Enregistrer ce bloc dans la banque"
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "4px 9px", borderRadius: 6,
-              border: `1px solid ${accent}40`, background: accent + "12",
-              color: accent, fontSize: 10, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
+            className={cn("flex cursor-pointer items-center gap-[5px] rounded-[6px] border px-[9px] py-1 text-[10px] font-semibold", tone.save)}
           >
             <Save size={11} /> Banque
           </button>
         )}
         <button
           onClick={onDelete}
-          style={{ background: "none", border: "none", color: C.tx3, cursor: "pointer", padding: 2, display: "flex" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = C.r)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = C.tx3)}
+          className={DELETE}
         >
           <Trash2 size={14} />
         </button>
@@ -167,12 +160,7 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
         onChange={(e) => onChange({ instructions: e.target.value || undefined } as Partial<SessionBlock>)}
         placeholder="Consignes du bloc (optionnel)…"
         rows={2}
-        style={{
-          width: "100%", boxSizing: "border-box", resize: "vertical",
-          background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4,
-          color: C.tx, fontSize: 12, lineHeight: 1.4, padding: "6px 8px",
-          fontFamily: "inherit", outline: "none", marginBottom: 10,
-        }}
+        className="mb-2.5 box-border w-full resize-y rounded border border-agon-brd bg-agon-s2 px-2 py-1.5 text-[12px] leading-[1.4] text-agon-tx outline-none"
       />
 
       {/* Body */}
@@ -192,7 +180,7 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
               items={(block as ClassiqueBlock).items.map((i) => `${block.id}::${i.id}`)}
               strategy={verticalListSortingStrategy}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div className="flex flex-col gap-1.5">
                 {(block as ClassiqueBlock).items.map((item) => (
                   <ItemRow
                     key={item.id}
@@ -208,13 +196,7 @@ function BlockCard({ block, onChange, onDelete, onSaveToBank }: {
 
           <button
             onClick={() => onChange({ items: [...(block as ClassiqueBlock).items, { id: genId(), name: "" }] } as Partial<SessionBlock>)}
-            style={{
-              marginTop: 8, display: "flex", alignItems: "center", gap: 5,
-              padding: "5px 10px", borderRadius: 6,
-              border: `1px dashed ${C.brdL}`, background: "transparent",
-              color: C.tx3, fontSize: 11, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
+            className="mt-2 flex cursor-pointer items-center gap-[5px] rounded-[6px] border border-dashed border-agon-brd-l bg-transparent px-2.5 py-[5px] text-[11px] font-semibold text-agon-tx3"
           >
             <Plus size={11} /> Exercice / consigne
           </button>
@@ -251,16 +233,10 @@ export default function ClassiqueBuilder({ blocks, onChange, onImportFromBank, o
     onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } as SessionBlock : b)));
   }
 
-  const addBtnStyle = (color: string): React.CSSProperties => ({
-    flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-    padding: "12px 0", borderRadius: 4,
-    border: `1px dashed ${color}50`, background: color + "08",
-    color, fontSize: 13, fontWeight: 600,
-    cursor: "pointer", fontFamily: "inherit", transition: "all 150ms",
-  });
+  
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex flex-col gap-3">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleBlockDragEnd}>
         <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
           {blocks.map((block) => (
@@ -275,29 +251,22 @@ export default function ClassiqueBuilder({ blocks, onChange, onImportFromBank, o
         </SortableContext>
       </DndContext>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => onChange([...blocks, { id: genId(), title: "", items: [{ id: genId(), name: "" }] }])}
-          style={addBtnStyle(GREEN)}
+          className={cn(ADD_BTN, "border-dashed", TONE.classique.add)}
         >
           <ListChecks size={14} /> + Bloc classique
         </button>
         <button
           onClick={() => onChange([...blocks, { id: genId(), title: "", kind: "wod", steps: [] } as WodBlock])}
-          style={addBtnStyle(ORANGE)}
+          className={cn(ADD_BTN, "border-dashed", TONE.wod.add)}
         >
           <Zap size={14} /> + Bloc WOD
         </button>
         <button
           onClick={onImportFromBank}
-          style={{
-            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "12px 0", borderRadius: 4,
-            border: `1px solid ${C.brdL}`, background: "transparent",
-            color: C.tx2, fontSize: 13, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit", transition: "all 150ms",
-            minWidth: 220,
-          }}
+          className={cn(ADD_BTN, "min-w-[220px] border-agon-brd-l bg-transparent text-agon-tx2")}
         >
           Importer depuis la banque de blocs
         </button>
