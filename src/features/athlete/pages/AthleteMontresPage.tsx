@@ -4,7 +4,6 @@ import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { ProviderCards } from "@/features/shared/components/ConnectedServicesSection";
 import { ActivityFileImport } from "@/features/shared/components/ActivityFileImport";
 import { StravaExportTutorial } from "@/features/athlete/components/StravaExportTutorial";
@@ -33,7 +32,7 @@ export default function AthleteMontresPage() {
   const coach = coaches?.referent?.full_name ?? "ton coach";
   return (
     <div style={{ maxWidth: 480, margin: "0 auto" }}>
-      <AthletePageHeader title="Montres et données" titleSize={22} background={headerGlow(C.b, C.g)} />
+      <AthletePageHeader title="Montres et données" titleSize={22} />
       <div style={{ padding: "20px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ fontSize: 13, color: C.tx2 }}>Tes activités et ta récupération arrivent seules dans Agon.</div>
 

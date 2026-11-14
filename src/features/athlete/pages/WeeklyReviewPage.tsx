@@ -5,7 +5,6 @@ import { C, H } from "@/lib/theme";
 import { localIsoDay, addDays, isIsoDay } from "@shared/domain/dates";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { headerGlow } from "@/features/athlete/components/headerGlow";
 import { useWellnessLight } from "@/features/shared/hooks/useWellnessLight";
 import { useWeeklyCoachRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import {
@@ -156,7 +155,7 @@ export default function WeeklyReviewPage() {
     );
   };
 
-  const header = <AthletePageHeader title="Ta weekly review" titleSize={22} background={headerGlow(H.orangeDoux, H.vertSapin)} />;
+  const header = <AthletePageHeader title="Ta weekly review" titleSize={22} />;
   const wrap = (body: ReactNode) => (
     <div style={{ maxWidth: 520, margin: "0 auto" }}>
       {header}

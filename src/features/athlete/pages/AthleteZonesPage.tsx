@@ -12,7 +12,6 @@ import { activeModelAt } from "@shared/domain/hrZones";
 import { zoneColor } from "@/lib/seance";
 import { zoneBarScale, zoneRows } from "@/lib/athleteZones";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { headerGlow } from "@/features/athlete/components/headerGlow";
 
 const fmtShort = (d: string) => new Date(d.slice(0, 10) + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
@@ -74,7 +73,7 @@ export default function AthleteZonesPage() {
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto" }}>
-      <AthletePageHeader title="Mes seuils et mes zones" titleSize={22} background={headerGlow(C.rouge, C.g)} />
+      <AthletePageHeader title="Mes seuils et mes zones" titleSize={22} />
       <div style={{ padding: "20px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
         {isLoading ? null : (
           <>

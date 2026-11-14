@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { C, H } from "@/lib/theme";
+import { C, H, alpha } from "@/lib/theme";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 
 /** Forme 1 → 5 de la maquette « Séance · fin » : rouge → vert. */
@@ -73,7 +73,7 @@ export function FinishWorkoutSheet({
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 51, maxWidth: 480, margin: "0 auto",
           borderRadius: "24px 24px 0 0", overflow: "hidden", borderTop: "1px solid rgba(255,201,51,0.5)",
-          background: `radial-gradient(80% 45% at 50% 0%, rgba(255,201,51,0.32), rgba(14,12,10,0) 70%), radial-gradient(60% 30% at 15% 22%, rgba(102,240,60,0.2), rgba(14,12,10,0) 70%), ${C.s1}`,
+          background: C.s1,
           maxHeight: "92vh", overflowY: "auto",
         }}
       >
@@ -163,7 +163,7 @@ export function FinishWorkoutSheet({
           <label
             style={{
               display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 14,
-              background: `linear-gradient(160deg, rgba(51,181,255,0.16), rgba(51,181,255,0.06)), ${C.s1}`, border: "1px solid rgba(51,181,255,0.45)",
+              background: alpha(C.b, 0.12), border: "1px solid rgba(51,181,255,0.45)",
             }}
           >
             <span aria-hidden style={{ width: 32, height: 32, flex: "none", borderRadius: 10, background: C.b, display: "flex", alignItems: "center", justifyContent: "center" }}>

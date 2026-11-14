@@ -71,7 +71,7 @@ function RatingRow({ item, index, value, onPick }) {
               role="radio"
               aria-checked={sel}
               onClick={() => onPick(n)}
-              style={{ flex: 1, height: 48, borderRadius: 12, ...MONO_S, fontSize: 18, cursor: "pointer", border: sel ? "none" : "1px solid " + col + "40", background: sel ? col : col + "14", color: sel ? "#0E0C0A" : col, fontWeight: sel ? 500 : 400, boxShadow: sel ? `0 0 18px ${col}55` : "none" }}
+              style={{ flex: 1, height: 48, borderRadius: 12, ...MONO_S, fontSize: 18, cursor: "pointer", border: sel ? "none" : "1px solid " + col + "40", background: sel ? col : col + "14", color: sel ? "#0E0C0A" : col, fontWeight: sel ? 500 : 400 }}
             >
               {n}
             </button>
@@ -135,7 +135,7 @@ function StepHeader({ step, total, title, subtitle, onBack, backLabel = "Retour"
         <span style={{ ...MONO_S, fontSize: 11, color: TX3 }}>{headerDay()}</span>
       </div>
       <div style={{ height: 4, borderRadius: 2, background: "#27221D", overflow: "hidden" }}>
-        <div style={{ width: pct + "%", height: "100%", background: "linear-gradient(90deg,#FF9500,#66F03C)", transition: "width 0.3s" }} />
+        <div style={{ width: pct + "%", height: "100%", background: "#FFC933", transition: "width 0.3s" }} />
       </div>
       <div>
         <h1 style={{ margin: 0, ...DISPLAY_S, fontSize: 22, color: "#FFFFFF" }}>{title}</h1>
@@ -231,7 +231,7 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
   });
 
   const readinessCard = (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 14, border: "1px solid " + (score != null ? ringColor + "73" : "rgba(231,211,168,0.10)"), background: score != null ? `radial-gradient(120% 120% at 0% 0%,${ringColor}2E,transparent 60%),#1E1A16` : "#1E1A16" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 14, border: "1px solid " + (score != null ? ringColor + "73" : "rgba(231,211,168,0.10)"), background: score != null ? ringColor + "1A" : "#1E1A16" }}>
       <ScoreRing score={score} color={ringColor} />
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -243,7 +243,7 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
     </div>
   );
   const nightCard = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 14px", borderRadius: 14, background: "linear-gradient(135deg,rgba(51,181,255,0.14),rgba(51,181,255,0.03)),#1E1A16", border: "1px solid rgba(51,181,255,0.4)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 14px", borderRadius: 14, background: "rgba(51,181,255,0.12)", border: "1px solid rgba(51,181,255,0.4)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", whiteSpace: "nowrap" }}>
         <span style={KICK_S}>Cette nuit</span>
         <span style={{ ...MONO_S, fontSize: 10.5, color: TX3 }}>objectif {fmtH(tgt)}</span>
@@ -425,7 +425,7 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
     <div style={{ paddingBottom: 32 }}>
       <StepHeader step={2} total={2} title="Bilan du jour" onBack={() => setStep(1)} />
       <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px 20px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px", borderRadius: 14, border: "1px solid " + ringColor + "73", background: `radial-gradient(120% 120% at 0% 0%,${ringColor}2E,transparent 60%),#1E1A16` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px", borderRadius: 14, border: "1px solid " + ringColor + "73", background: ringColor + "1A" }}>
           <ScoreRing score={score} color={ringColor} />
           <div>
             <div style={{ ...DISPLAY_S, fontSize: 18, color: ringColor }}>{reco.label}</div>
