@@ -53,10 +53,10 @@ function statusColors(status: string, rescheduled = false) {
 function StatusPill({ cols }: { cols: ReturnType<typeof statusColors> }) {
   return (
     <span style={{
-      ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none",
+      ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none",
       borderRadius: 999, lineHeight: 1.3,
       ...(cols.filled
-        ? { color: C.ink, background: cols.accent, padding: "3px 9px" }
+        ? { color: C.ink, background: cols.accent, padding: "4px 9px" }
         : { color: C.tx2, background: "transparent", border: "1px solid rgba(231,211,168,0.30)", padding: "2px 8px" }),
     }}>{cols.label}</span>
   );
@@ -104,7 +104,7 @@ function WellnessBlock({ wellness, onClick }: { wellness: WellnessDay; onClick: 
           <div style={{ fontSize: 9, color: C.tx, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{injuryNote}</div>
         </div>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${WELLNESS_ITEMS.length}, 1fr)`, gap: 2, ...MONO, fontSize: 10.5, color: C.tx, textAlign: "center", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${WELLNESS_ITEMS.length}, 1fr)`, gap: 2, ...MONO, fontSize: 11, color: C.tx, textAlign: "center", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         {WELLNESS_ITEMS.map((k) => (
           <span key={k} title={`${WELLNESS_ITEM_LABEL[k]} (${WELLNESS_ITEM_SHORT[k]})`}>{items[k] ?? "—"}</span>
         ))}
@@ -700,7 +700,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
           {(wellness || today) && (
             <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, background: today ? C.ac : getReco(wellnessView(wellness!).score ?? 0).c }} />
           )}
-          <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: today ? C.ac : C.tx3 }}>
+          <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: today ? C.ac : C.tx3 }}>
             {dayLabel}
           </span>
           <span style={{ ...MONO, fontSize: 22, lineHeight: 1, color: today ? C.ac : C.tx }}>
@@ -767,7 +767,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
           {/* Rest day */}
           {workouts.length === 0 && energy.length === 0 && tests.length === 0 && freeActivities.length === 0 && !wellness && (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", color: C.tx2, background: C.s2, border: "1px solid " + C.brdL, borderRadius: 999, padding: "2px 8px" }}>Repos</span>
+              <span style={{ ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx2, background: C.s2, border: "1px solid " + C.brdL, borderRadius: 999, padding: "2px 8px" }}>Repos</span>
             </div>
           )}
         </div>

@@ -37,7 +37,7 @@ export function FeltVsMeasured({ athleteId, firstName }: { athleteId: string; fi
           <div key={r.key} style={{ borderRadius: 14, background: C.s1, border: `1px solid ${agr === "ecart" ? alpha(C.o, 0.5) : C.brd}`, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 15, fontWeight: 500 }}>{r.label}</span>
-              {agr && <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: col, border: `1px solid ${alpha(col, 0.5)}`, borderRadius: 999, padding: "2px 9px" }}>{agr === "ecart" ? "Écart" : "Cohérent"}</span>}
+              {agr && <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: col, border: `1px solid ${alpha(col, 0.5)}`, borderRadius: 999, padding: "2px 9px" }}>{agr === "ecart" ? "Écart" : "Cohérent"}</span>}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 24px 1fr", alignItems: "center", gap: 6 }}>
               <div>

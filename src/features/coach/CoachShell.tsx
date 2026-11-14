@@ -199,7 +199,7 @@ function CoachSidebar() {
                     <span className="group-data-[collapsible=icon]:hidden" style={{ flex: 1 }}>{item.label}</span>
                     {item.path === "/coach/nouveautes" && unseenUpdates > 0 && (
                       <span aria-label={`${unseenUpdates} nouveauté(s) non vue(s)`} style={{
-                        ...MONO, fontSize: 10.5, fontWeight: 500, lineHeight: 1.3, borderRadius: 999, padding: "3px 9px",
+                        ...MONO, fontSize: 11, fontWeight: 500, lineHeight: 1.3, borderRadius: 999, padding: "4px 9px",
                         background: C.ac, color: C.ink, display: "inline-flex", alignItems: "center", justifyContent: "center",
                       }}>{unseenUpdates}</span>
                     )}

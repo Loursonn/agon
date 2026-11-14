@@ -123,8 +123,8 @@ export function DroppableDay({
             </div>
             {tc && (
               <span title={dayThemeFullLabel(dayTheme)} style={{
-                ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase",
-                borderRadius: 999, padding: "3px 9px", background: tc.bg, color: tc.fg,
+                ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
+                borderRadius: 999, padding: "4px 9px", background: tc.bg, color: tc.fg,
                 minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{dayThemeChipLabel(dayTheme)}</span>
             )}

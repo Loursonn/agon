@@ -73,7 +73,7 @@ export function PlanningBankBand({
               }}
             >
               {key === "workout" ? "Musculation" : label}
-              <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, opacity: 0.7 }}>{counts[key]}</span>
+              <span style={{ fontFamily: CARD_MONO, fontSize: 11, opacity: 0.7 }}>{counts[key]}</span>
             </button>
           );
         })}
@@ -84,7 +84,7 @@ export function PlanningBankBand({
           aria-label="Rechercher dans la banque"
           style={{ width: 260, height: 32, marginLeft: "auto", padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
         />
-        <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, color: C.tx3, letterSpacing: "0.06em" }}>
+        <span style={{ fontFamily: CARD_MONO, fontSize: 11, color: C.tx3, letterSpacing: "0.06em" }}>
           {shown} élément{shown > 1 ? "s" : ""} · glisse sur un jour
         </span>
         <button

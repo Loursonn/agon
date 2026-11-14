@@ -53,7 +53,7 @@ export function RaceCard({
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontSize: 14, fontWeight: 500, lineHeight: "18px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{race.event_name}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-              <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none", color: C.ink, background: color, borderRadius: 999, padding: "2px 8px" }}>
+              <span style={{ ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none", color: C.ink, background: color, borderRadius: 999, padding: "2px 8px" }}>
                 {race.is_official ? "Compétition" : "Simulation"}
               </span>
               <span style={{ ...MONO, fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>{d && m && y ? `${d}/${m}/${y}` : race.date}</span>
@@ -61,7 +61,7 @@ export function RaceCard({
           </span>
           <span style={{ display: "block", textAlign: "right" }}>
             <span style={{ ...MONO, display: "block", fontSize: 16, lineHeight: "18px", whiteSpace: "nowrap" }}>{formatMmSs(race.total_s, { hours: true })}</span>
-            {isRecord && <span style={{ ...MONO, display: "block", fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.g, marginTop: 2 }}>Record</span>}
+            {isRecord && <span style={{ ...MONO, display: "block", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: C.g, marginTop: 2 }}>Record</span>}
           </span>
         </button>
       </div>

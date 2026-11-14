@@ -152,7 +152,7 @@ export function WeekLoadPanel({ athleteId, weekStart }: { athleteId: string; wee
         <Card color={GOLD}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <Kicker>Charge semaine</Kicker>
-            <span style={{ fontFamily: MONO, fontSize: 10.5, color: C.tx2 }}>prévu {int(w.planned)} · {pct(w.gapPct)}</span>
+            <span style={{ fontFamily: MONO, fontSize: 11, color: C.tx2 }}>prévu {int(w.planned)} · {pct(w.gapPct)}</span>
           </div>
           <Big value={int(w.done)} unit="pts" color={GOLD} />
           <Bars weeks={data.weeks} />

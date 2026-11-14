@@ -41,10 +41,10 @@ function initials(name: string) {
 function Pill({ color, children }: { color: string | null; children: ReactNode }) {
   return (
     <span style={{
-      ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap",
+      ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap",
       flex: "none", borderRadius: 999, lineHeight: 1.3,
       ...(color
-        ? { color: C.ink, background: color, padding: "3px 9px" }
+        ? { color: C.ink, background: color, padding: "4px 9px" }
         : { color: C.tx2, background: "rgba(231,211,168,0.06)", border: `1px solid ${C.brdL}`, padding: "2px 8px" }),
     }}>{children}</span>
   );

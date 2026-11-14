@@ -256,11 +256,12 @@ function ExerciseBank({coachId,onAddToExos}){
   const hasFilter=fMuscles.length>0||fEquip||fDiff||fType;
   return(<div style={{padding:'0 0 60px'}}>
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-      <div><div style={{fontSize:16,fontWeight:700}}>Banque d'exercices</div><div style={{fontSize:11,color:C.tx3}}>{total} exercice{total>1?'s':''}</div></div>
-      <button onClick={()=>setShowCreate(true)} style={{padding:'8px 16px',borderRadius:999,border:'none',background:C.ac,color:'#0E0C0A',fontSize:12.5,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>+ Créer</button>
+      <div><h1 style={{margin:0,fontFamily:"Archivo,system-ui,sans-serif",fontStretch:"125%",textTransform:"uppercase",fontWeight:300,fontSize:28,lineHeight:1.1,letterSpacing:"0.06em",color:C.tx}}>Banque d'exercices</h1><div style={{fontFamily:"'Geist Mono',monospace",fontSize:12,color:C.tx3,marginTop:6}}><span style={{color:C.tx2}}>{total}</span> exercice{total>1?'s':''}</div></div>
+      <button onClick={()=>setShowCreate(true)} style={{height:40,padding:'0 18px',borderRadius:12,border:'none',background:C.ac,color:'#0E0C0A',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>+ Créer</button>
     </div>
-    <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un exercice..." style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1px solid '+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:'inherit',boxSizing:'border-box',marginBottom:10,outline:'none'}}/>
-    <div style={{display:'flex',gap:6,marginBottom:fMuscles.length>0?8:14,overflowX:'auto',paddingBottom:4}}>
+    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:fMuscles.length>0?8:16}}>
+    <input value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un exercice..." style={{flex:'1 1 320px',minWidth:0,height:40,padding:'0 14px',borderRadius:10,border:'1px solid '+C.brdL,background:C.s1,color:C.tx,fontSize:13,fontFamily:'inherit',boxSizing:'border-box',outline:'none'}}/>
+    <div style={{display:'flex',gap:6,alignItems:'center'}}>
       <button onClick={()=>setShowMusclePanel(v=>!v)} style={{flexShrink:0,padding:'5px 12px',borderRadius:999,border:'1px solid '+(fMuscles.length>0?C.ac:C.brdL),background:fMuscles.length>0?C.acS:C.s1,color:fMuscles.length>0?C.ac:C.tx3,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:5}}>
         Muscles{fMuscles.length>0&&<span style={{background:C.ac,color:'#fff',borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:700}}>{fMuscles.length}</span>}
       </button>
@@ -270,6 +271,7 @@ function ExerciseBank({coachId,onAddToExos}){
         </select>
       ))}
       {hasFilter&&<button onClick={()=>{setFMuscles([]);setFEquip('');setFDiff('');setFType('');}} style={{flexShrink:0,padding:'5px 10px',borderRadius:4,border:'1px solid '+C.r+'50',background:C.rS,color:C.r,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>✕</button>}
+    </div>
     </div>
     {showMusclePanel&&<div style={{background:C.s1,borderRadius:6,padding:'10px 12px',marginBottom:10,border:'1px solid '+C.brdL}}>
       <div style={{fontSize:10,fontWeight:600,color:C.tx3,textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:8}}>Principal ou secondaire</div>

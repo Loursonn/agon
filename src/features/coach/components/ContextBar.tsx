@@ -196,8 +196,8 @@ export default function ContextBar() {
             onClick={() => navigate(`/coach/athletes/${athleteId}/retours`)}
             title="Voir les modifications athlète"
             style={{
-              ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase",
-              padding: "3px 9px", borderRadius: 999, border: "none",
+              ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
+              padding: "4px 9px", borderRadius: 999, border: "none",
               background: C.o, color: C.ink, whiteSpace: "nowrap",
               cursor: "pointer", flexShrink: 0,
             }}

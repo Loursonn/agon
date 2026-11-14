@@ -93,7 +93,7 @@ export default function AthletesListPage() {
               {tag && (
                 <span
                   title={a.co_coached_by_me ? "Tu es co-coach de cet athlète" : "Cet athlète a un co-coach"}
-                  style={{ ...MONO, fontSize: 10.5, fontWeight: 500, lineHeight: "14px", letterSpacing: "0.10em", textTransform: "uppercase", flex: "none", color: C.ink, background: tag.color, borderRadius: 999, padding: "2px 9px" }}
+                  style={{ ...MONO, fontSize: 11, fontWeight: 500, lineHeight: "14px", letterSpacing: "0.08em", textTransform: "uppercase", flex: "none", color: C.ink, background: tag.color, borderRadius: 999, padding: "2px 9px" }}
                 >
                   {tag.label}
                 </span>
@@ -101,7 +101,7 @@ export default function AthletesListPage() {
             </span>
             {pending ? (
               <span style={{ display: "block", marginTop: 3, lineHeight: "16px" }}>
-                <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.ink, background: C.o, borderRadius: 999, padding: "1px 8px" }}>
+                <span style={{ ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap", color: C.ink, background: C.o, borderRadius: 999, padding: "1px 8px" }}>
                   En attente de première connexion
                 </span>
               </span>

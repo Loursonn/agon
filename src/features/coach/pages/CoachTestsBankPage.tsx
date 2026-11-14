@@ -691,8 +691,8 @@ export default function CoachTestsBankPage() {
 }
 
 const PILL: React.CSSProperties = {
-  ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: '0.10em', textTransform: 'uppercase',
-  whiteSpace: 'nowrap', flex: 'none', borderRadius: 999, padding: '3px 9px', lineHeight: 1.3,
+  ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
+  whiteSpace: 'nowrap', flex: 'none', borderRadius: 999, padding: '4px 9px', lineHeight: 1.3,
 };
 
 

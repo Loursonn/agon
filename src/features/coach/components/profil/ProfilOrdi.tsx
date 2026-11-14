@@ -40,7 +40,7 @@ function NumberEditor({ initial, unit, step = 1, onSave, onCancel, saving }: {
         onBlur={() => { if (draft.trim() === "") onCancel(); }}
         style={{ width: 80, height: 32, boxSizing: "border-box", padding: "0 8px", borderRadius: 8, border: `1px solid ${C.ac}`, background: C.bg, color: C.tx, ...MONO, fontSize: 14, textAlign: "right", outline: "none" }}
       />
-      <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}>{unit}</span>
+      <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{unit}</span>
       <button onClick={commit} disabled={saving} style={{ height: 32, padding: "0 10px", borderRadius: 8, border: "none", background: C.ac, color: C.bg, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>OK</button>
     </span>
   );
@@ -104,7 +104,7 @@ export function RefTable({ children }: { children: ReactNode }) {
 export function RefGroup({ title, first = false }: { title: string; first?: boolean }) {
   return (
     <div style={{ padding: first ? "12px 18px 6px" : "14px 18px 6px", borderTop: first ? "none" : `1px solid ${C.brd}` }}>
-      <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>{title}</span>
+      <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>{title}</span>
     </div>
   );
 }
@@ -131,14 +131,14 @@ export function RefRow({ label, value, unit, date, source, step, onSave, onDelet
         ) : (
           <>
             <span style={{ ...MONO, fontSize: 15, color: value != null ? C.tx : C.tx3 }}>{value != null ? fmtNum(value) : "—"}</span>
-            {value != null && <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}> {unit}</span>}
+            {value != null && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}> {unit}</span>}
           </>
         )}
       </span>
       <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
         {value != null ? (
           <>
-            <span style={{ ...MONO, fontSize: 10.5, color: C.tx2 }}>{date ? frDate(date) : "—"}</span>
+            <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>{date ? frDate(date) : "—"}</span>
             {source && <span style={{ fontSize: 11.5, color: C.tx3 }}>{source}</span>}
           </>
         ) : (

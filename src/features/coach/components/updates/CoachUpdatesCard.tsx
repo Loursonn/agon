@@ -37,8 +37,8 @@ export function CoachUpdatesCard() {
       <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
       <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "16px 20px 16px 23px" }}>
         <span style={{
-          ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase",
-          background: C.ac, color: C.ink, borderRadius: 999, padding: "3px 9px", flex: "none",
+          ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
+          background: C.ac, color: C.ink, borderRadius: 999, padding: "4px 9px", flex: "none",
         }}>Nouveauté</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{note.title}</div>

@@ -385,7 +385,7 @@ export default function SessionPreview({ intervals, athleteId, compact = false }
             ))}
           </div>
           {/* Légende : lecture du profil + références utilisées */}
-          <div style={{ marginTop: 8, fontSize: 10.5, color: C.tx3, lineHeight: 1.5 }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
             Hauteur = intensité · couleur = zone
             {estimateBasis.length > 0 && <><br />Estimé avec {estimateBasis.join(" · ")}</>}
           </div>

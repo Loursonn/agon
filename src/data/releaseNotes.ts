@@ -38,6 +38,38 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-vue-coach-ordinateur-relookee",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Ton espace coach sur ordinateur prend le nouveau style",
+    summary: "Accueil, menu, fiche athlète, tests, fiches et banque : des couleurs franches pour repérer d'un coup d'œil ce qui demande ton attention.",
+    sections: [
+      {
+        title: "Accueil et menu",
+        points: [
+          "En-tête avec la citation du jour et deux tuiles colorées : séances manquées hier et tests de la semaine.",
+          "Chaque athlète du jour affiche son wellness dans une pastille de couleur et l'état de sa séance (en cours, terminée, RPE).",
+          "Les alertes (blessure, séance manquée, wellness en baisse) ressortent en cartes colorées.",
+        ],
+      },
+      {
+        title: "Fiche athlète",
+        points: [
+          "Planning semaine : chaque jour a son en-tête coloré selon son thème, et chaque séance sa couleur de type.",
+          "Retours : tuiles chiffrées colorées, colonnes des jours à la couleur du wellness, statut de chaque séance en pastille (faite, manquée, déplacée).",
+          "Santé : les mesures de la montre et le wellness déclaré côte à côte, sur toute la largeur de l'écran.",
+        ],
+      },
+      {
+        title: "Tests, fiches et banque",
+        points: [
+          "Chaque catégorie a sa couleur, reprise dans les titres, les filtres et les cartes.",
+          "Banque d'exercices : recherche et filtres sur une seule ligne, chaque type d'exercice a sa couleur (Musculaire en or, Haltérophilie en rose, Pliométrie en orange, Mobilité en turquoise).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-seance-energie-athlete-telephone",
     date: "2026-11-14",
     kind: "feature",

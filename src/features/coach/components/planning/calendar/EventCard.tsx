@@ -37,7 +37,7 @@ export function EventCard({ event, watch }: { event: CalEvent; watch?: PlanningC
     >
       <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: color }} />
       <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", color: C.ink, background: color, borderRadius: 999, padding: "3px 9px" }}>{label}</span>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ink, background: color, borderRadius: 999, padding: "4px 9px" }}>{label}</span>
         <span style={{ flex: 1 }} />
         {st === "completed" && (
           <span title="Réalisée" aria-label="Réalisée" style={{ display: "inline-flex", color: C.g, flexShrink: 0 }}>

@@ -388,7 +388,7 @@ export default function RetoursPage() {
             <MessageSquare size={14} color={C.ac} />
             <span style={{ ...DISPLAY, fontSize: 14, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx }}>Retour coach</span>
             {retourData?.comment && retourDraft === retourData.comment && (
-              <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", color: C.ink, background: C.g, borderRadius: 999, padding: "3px 9px" }}>Enregistré</span>
+              <span style={{ ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ink, background: C.g, borderRadius: 999, padding: "4px 9px" }}>Enregistré</span>
             )}
             {retourData?.comment && (
               <span style={{ marginLeft: "auto", fontSize: 11, color: C.tx3, display: "flex", alignItems: "center", gap: 5 }}>
@@ -540,7 +540,7 @@ export default function RetoursPage() {
             <SectionHead
               n={1}
               title="Modifications planning athlète"
-              right={<span style={{ ...MONO, fontSize: 10.5, padding: "2px 9px", borderRadius: 999, background: C.o, color: C.ink }}>{modifications.length}</span>}
+              right={<span style={{ ...MONO, fontSize: 11, padding: "2px 9px", borderRadius: 999, background: C.o, color: C.ink }}>{modifications.length}</span>}
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
