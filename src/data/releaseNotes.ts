@@ -38,6 +38,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-citation-sans-jaime",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Accueil plus léger : la citation du jour sans « J'aime »",
+    summary:
+      "La citation du jour reste sur l'accueil de vos athlètes, sans bouton « J'aime » ni compteur. L'accueil s'ouvre plus vite et sollicite moins le serveur.",
+    sections: [],
+  },
+  {
     id: "2026-11-14-competitions-annuler-supprimer",
     date: "2026-11-14",
     kind: "feature",

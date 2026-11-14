@@ -3,9 +3,9 @@ import { QueryClient } from "@tanstack/react-query";
 import { fakeDb, type Row } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
 import {
-  appContentKeys, appendUserFeedback, getCitationState, getCoachFeedbacks, getHomeHiddenSections, invalidateRoadmap,
+  appContentKeys, appendUserFeedback, getCoachFeedbacks, getHomeHiddenSections, invalidateRoadmap,
   listAppUpdateReads, listMyRoadmapVotes, listRecentActivity, listUserFeedback, markAppUpdatesSeen, roadmapVoteCounts,
-  sendAppFeedback, setCitationLiked, setHomeHiddenSections, toggleRoadmapVote,
+  sendAppFeedback, setHomeHiddenSections, toggleRoadmapVote,
 } from "@/api/appContent";
 
 function setup(tables: Record<string, Row[]> = {}, failOn?: { table: string; op: string }) {
@@ -53,16 +53,6 @@ describe("api/appContent", () => {
     expect(keys.map((k) => qc.getQueryState(k)?.isInvalidated)).toEqual([true, true, true, false]);
   });
 
-  it("citation : état, like / unlike", async () => {
-    const s = setup({ citation_likes: [], citation_stats: [{ quote_id: 7, likes: 4 }] });
-    expect(await getCitationState("u", 7)).toEqual({ liked: false, count: 4 });
-    await setCitationLiked("u", 7, true);
-    expect((await getCitationState("u", 7)).liked).toBe(true);
-    await setCitationLiked("u", 7, false);
-    expect(s.tables.citation_likes).toHaveLength(0);
-    expect(await getCitationState("u", 99)).toEqual({ liked: false, count: 0 });
-
-  });
 
   it("retour sur l'app : envoi ; refus → lève", async () => {
     const { tables } = setup({ app_feedback: [] });

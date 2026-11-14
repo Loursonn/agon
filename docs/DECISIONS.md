@@ -2464,6 +2464,9 @@ et son README.
   relu au chargement et quand l'app revient au premier plan ; l'utilisateur voit son propre « J'aime » tout de suite.
 - Les tâches cron ne sont pas en cause (toutes les 10-15 min au plus). Si la base resature, la piste suivante est
   la taille de la machine (offre payante), à trancher par Hugo.
+- Mise à jour le même jour (Hugo) : les « J'aime » des citations sont **retirés** de l'app (bouton, compteur,
+  lectures). Les tables `citation_likes` / `citation_stats` restent en base (export RGPD inchangé) ; leur
+  suppression éventuelle passera par une migration validée par Hugo.
 
 ## 2026-11-14 — L'IA d'Agon passe de Gemini à Claude (API Anthropic)
 
