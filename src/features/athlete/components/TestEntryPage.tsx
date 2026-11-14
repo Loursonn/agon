@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronLeft, FlaskConical, Gauge, UserRound } from "lucide-react";
@@ -6,17 +6,15 @@ import { toast } from "sonner";
 import { completeTestSession, getTestSessionForFill, invalidateTests, type TestSessionFill } from "@/api/tests";
 import { useAthleteTestResults } from "@/features/shared/hooks/tests/useAthleteTests";
 import type { TestDefinitionWithVariables, TestVariable } from "@/features/shared/types/tests";
-import { C, alpha, H } from "@/lib/theme";
-import { TYPE_COLOR } from "@/lib/peps";
+import { cn } from "@/lib/utils";
 import { localIsoDay } from "@shared/domain/dates";
 import {
   TEST_GROUP_COLOR, TEST_GROUP_LABEL, buildTestValueCards, displayUnit, fmtTestDate, formatTestDelta, formatTestValue, testGroupOf,
   type TestValueCard,
 } from "@/lib/athleteTestValues";
 import { formatNumberFr, joinSeconds, parseNumberFr, recordOutcome, splitSeconds, type RecordOutcome } from "@/lib/testEntry";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { DateBox } from "./DateBox";
-import { FIELD_BOX, fmtLongDay } from "./dateFormat";
+import { fmtLongDay } from "./dateFormat";
 
 interface Props {
   testId: string | null;
@@ -30,10 +28,21 @@ interface Props {
   resultPath?: ((variableId: string) => string) | null;
 }
 
-const PINK = TYPE_COLOR.test;
-const LABEL: CSSProperties = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3, whiteSpace: "nowrap" };
+/** Étiquette mono majuscule ; la couleur (tx3 ou tx2) est ajoutée à chaque usage. */
+const LABEL = "agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em]";
+/** Champ texte (résultat libre, commentaire). */
+const TEXTAREA =
+  "box-border w-full resize-none rounded-xl border border-agon-tx/[0.18] bg-agon-s1 px-3.5 py-3 text-[15px] text-agon-tx [font-family:inherit] [outline:none]";
+/** Case chiffre sans cadre (minutes, secondes, nombre). */
+const BARE_INPUT = "agon-mono border-none bg-transparent p-0 leading-none text-agon-tx [outline:none]";
 /** Ressenti 1 → 5 : du rouge (très dur) au vert (facile), comme la planche. */
-const FEEL_COLOR = [C.rouge, C.blocCore, C.o, H.vertAcide, C.g];
+const FEEL_CLASS: Array<{ on: string; off: string }> = [
+  { on: "border-agon-rouge bg-agon-rouge text-agon-bg", off: "border-agon-rouge/[0.3] bg-agon-rouge/[0.08] text-agon-rouge" },
+  { on: "border-agon-bloc-core bg-agon-bloc-core text-agon-bg", off: "border-agon-bloc-core/[0.3] bg-agon-bloc-core/[0.08] text-agon-bloc-core" },
+  { on: "border-agon-alerte bg-agon-alerte text-agon-bg", off: "border-agon-alerte/[0.3] bg-agon-alerte/[0.08] text-agon-alerte" },
+  { on: "border-agon-accent bg-agon-accent text-agon-bg", off: "border-agon-accent/[0.3] bg-agon-accent/[0.08] text-agon-accent" },
+  { on: "border-agon-succes bg-agon-succes text-agon-bg", off: "border-agon-succes/[0.3] bg-agon-succes/[0.08] text-agon-succes" },
+];
 
 /** Saisie en cours d'une valeur : texte (nombre) ou cases h / min / s. */
 type Draft = { text: string; h: string; m: string; s: string; scale: number | null };
@@ -56,8 +65,8 @@ function draftValue(v: TestVariable, d: Draft): number | null {
 function Field({ label, right, children }: { label: string; right?: ReactNode; children: ReactNode }) {
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
-        <span style={LABEL}>{label}</span>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className={cn(LABEL, "text-agon-tx3")}>{label}</span>
         {right}
       </div>
       {children}
@@ -80,7 +89,8 @@ function DigitBox({ value, onChange, width, label, maxLen, size, next }: {
         onChange(v);
         if (v.length === maxLen) next?.current?.focus();
       }}
-      style={{ ...MONO, width, fontSize: size, lineHeight: 1, color: C.tx, background: "transparent", border: "none", outline: "none", padding: 0, textAlign: "center" }}
+      className={cn(BARE_INPUT, "text-center")}
+      style={{ width, fontSize: size }}
     />
   );
 }
@@ -90,20 +100,25 @@ function ValueInput({ v, draft, onChange, big, readOnly }: { v: TestVariable; dr
   const secRef = useRef<HTMLInputElement>(null);
   const minRef = useRef<HTMLInputElement>(null);
   const size = big ? 46 : 28;
-  const box: CSSProperties = {
-    display: "flex", alignItems: "baseline", gap: 6, padding: big ? "12px 16px" : "10px 12px", borderRadius: 14,
-    border: `1.5px solid ${PINK}`, background: alpha(PINK, 0.08), pointerEvents: readOnly ? "none" : undefined,
-  };
-  const unit = <span style={{ ...MONO, fontSize: big ? 14 : 12, color: C.tx3 }}>{displayUnit(v.unit, v.value_type)}</span>;
+  const box = cn(
+    "flex items-baseline gap-1.5 rounded-[14px] border-[1.5px] border-agon-type-test bg-agon-type-test/[0.08]",
+    big ? "px-4 py-3" : "px-3 py-2.5",
+    readOnly && "pointer-events-none",
+  );
+  const unitClass = cn("agon-mono text-agon-tx3", big ? "text-[14px]" : "text-[12px]");
+  const unit = <span className={unitClass}>{displayUnit(v.unit, v.value_type)}</span>;
 
   if (v.value_type === "scale5") {
     return (
-      <div style={{ display: "flex", gap: 6 }}>
+      <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map((n) => {
           const on = draft.scale === n;
           return (
             <button key={n} type="button" disabled={readOnly} aria-pressed={on} onClick={() => onChange({ ...draft, scale: on ? null : n })}
-              style={{ flex: 1, height: 42, borderRadius: 10, ...MONO, fontSize: 16, cursor: "pointer", border: `1px solid ${on ? PINK : alpha(C.tx, 0.18)}`, background: on ? PINK : C.s1, color: on ? C.bg : C.tx }}>
+              className={cn(
+                "agon-mono h-[42px] flex-1 cursor-pointer rounded-[10px] border text-[16px]",
+                on ? "border-agon-type-test bg-agon-type-test text-agon-bg" : "border-agon-tx/[0.18] bg-agon-s1 text-agon-tx",
+              )}>
               {n}
             </button>
           );
@@ -114,10 +129,10 @@ function ValueInput({ v, draft, onChange, big, readOnly }: { v: TestVariable; dr
   if (v.value_type === "pace" || v.value_type === "duration") {
     const showH = v.value_type === "duration" && (draft.h !== "" || Number(draft.m) >= 60);
     return (
-      <div style={box}>
+      <div className={box}>
         {showH && <>
           <DigitBox label={`${v.label} : heures`} value={draft.h} onChange={(h) => onChange({ ...draft, h })} width={size * 0.8} maxLen={2} size={size} next={minRef} />
-          <span style={{ ...MONO, fontSize: size * 0.6, color: C.tx3 }}>h</span>
+          <span className="agon-mono text-agon-tx3" style={{ fontSize: size * 0.6 }}>h</span>
         </>}
         <input
           ref={minRef}
@@ -130,9 +145,10 @@ function ValueInput({ v, draft, onChange, big, readOnly }: { v: TestVariable; dr
             onChange({ ...draft, m });
             if (m.length >= 2) secRef.current?.focus();
           }}
-          style={{ ...MONO, width: Math.max(1.2, draft.m.length || 1) * size * 0.62, fontSize: size, lineHeight: 1, color: C.tx, background: "transparent", border: "none", outline: "none", padding: 0, textAlign: "right" }}
+          className={cn(BARE_INPUT, "text-right")}
+          style={{ width: Math.max(1.2, draft.m.length || 1) * size * 0.62, fontSize: size }}
         />
-        <span style={{ ...MONO, fontSize: size * 0.8, color: C.tx3 }}>{v.value_type === "pace" ? "’" : ":"}</span>
+        <span className="agon-mono text-agon-tx3" style={{ fontSize: size * 0.8 }}>{v.value_type === "pace" ? "’" : ":"}</span>
         <input
           ref={secRef}
           aria-label={`${v.label} : secondes`}
@@ -140,22 +156,24 @@ function ValueInput({ v, draft, onChange, big, readOnly }: { v: TestVariable; dr
           value={draft.s}
           placeholder="—"
           onChange={(e) => onChange({ ...draft, s: e.target.value.replace(/\D/g, "").slice(0, 2) })}
-          style={{ ...MONO, width: size * 1.3, fontSize: size, lineHeight: 1, color: C.tx, background: "transparent", border: "none", outline: "none", padding: 0 }}
+          className={BARE_INPUT}
+          style={{ width: size * 1.3, fontSize: size }}
         />
-        <span style={{ flex: 1 }} />
-        <span style={{ ...MONO, fontSize: big ? 14 : 12, color: C.tx3 }}>{v.value_type === "pace" ? "/km" : "min:s"}</span>
+        <span className="flex-1" />
+        <span className={unitClass}>{v.value_type === "pace" ? "/km" : "min:s"}</span>
       </div>
     );
   }
   return (
-    <div style={box}>
+    <div className={box}>
       <input
         aria-label={v.label}
         inputMode="decimal"
         value={draft.text}
         placeholder="—"
         onChange={(e) => onChange({ ...draft, text: e.target.value.replace(/[^\d.,]/g, "") })}
-        style={{ ...MONO, flex: 1, minWidth: 0, fontSize: size, lineHeight: 1, color: C.tx, background: "transparent", border: "none", outline: "none", padding: 0 }}
+        className={cn(BARE_INPUT, "min-w-0 flex-1")}
+        style={{ fontSize: size }}
       />
       {unit}
     </div>
@@ -166,8 +184,8 @@ function recordText(card: TestValueCard | undefined): ReactNode {
   if (!card) return null;
   const unit = displayUnit(card.unit, card.valueType);
   return (
-    <div style={{ fontSize: 12, color: C.tx3, marginTop: 6 }}>
-      Ton record : <span style={{ ...MONO, color: C.tx2 }}>{formatTestValue(card.best.value, card.valueType)} {unit}</span> · {fmtTestDate(card.best.date, false)}
+    <div className="mt-1.5 text-[12px] text-agon-tx3">
+      Ton record : <span className="agon-mono text-agon-tx2">{formatTestValue(card.best.value, card.valueType)} {unit}</span> · {fmtTestDate(card.best.date, false)}
     </div>
   );
 }
@@ -298,12 +316,12 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
   }
 
   const shell = (body: ReactNode, footer: ReactNode) => (
-    <div role="dialog" aria-modal="true" aria-label="Saisir un résultat de test" style={{ position: "fixed", inset: 0, zIndex: 200, background: C.bg, color: C.tx, display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, overflowY: "auto", padding: "calc(env(safe-area-inset-top, 0px) + 16px) 20px 150px", display: "flex", flexDirection: "column", gap: 13 }}>
+    <div role="dialog" aria-modal="true" aria-label="Saisir un résultat de test" className="fixed inset-0 z-[200] flex flex-col bg-agon-bg text-agon-tx">
+      <div className="flex flex-1 flex-col gap-[13px] overflow-y-auto px-5 pb-[150px] pt-[calc(env(safe-area-inset-top,0px)+16px)]">
         {body}
       </div>
       {footer && (
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)", background: C.bg, borderTop: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 border-t border-agon-brd bg-agon-bg px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-3">
           {footer}
         </div>
       )}
@@ -311,17 +329,21 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
   );
 
   const header = (center: string, right: string) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <button type="button" aria-label="Retour" onClick={onClose} style={{ width: 34, height: 34, boxSizing: "border-box", border: `1px solid ${alpha(C.tx, 0.18)}`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "transparent", color: C.tx, cursor: "pointer" }}>
+    <div className="flex items-center gap-2">
+      <button type="button" aria-label="Retour" onClick={onClose} className="box-border flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-[10px] border border-agon-tx/[0.18] bg-transparent text-agon-tx">
         <ChevronLeft size={18} strokeWidth={1.75} />
       </button>
-      <span style={{ flex: 1, textAlign: "center", ...LABEL, color: C.tx2 }}>{center}</span>
-      <span style={{ width: 72, flex: "none", textAlign: "right", fontSize: 12.5, color: C.tx2, whiteSpace: "nowrap" }}>{right}</span>
+      <span className={cn(LABEL, "flex-1 text-center text-agon-tx2")}>{center}</span>
+      <span className="w-[72px] flex-none whitespace-nowrap text-right text-[12.5px] text-agon-tx2">{right}</span>
     </div>
   );
 
   const primaryBtn = (label: string, onClick: () => void, disabled = false) => (
-    <button type="button" disabled={disabled} onClick={onClick} style={{ height: 52, borderRadius: 12, border: "none", background: C.ac, color: C.bg, fontWeight: 600, fontSize: 15, fontFamily: "inherit", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1 }}>
+    <button type="button" disabled={disabled} onClick={onClick}
+      className={cn(
+        "h-[52px] rounded-xl border-none bg-agon-accent text-[15px] font-semibold text-agon-bg [font-family:inherit]",
+        disabled ? "cursor-default opacity-[0.45]" : "cursor-pointer opacity-100",
+      )}>
       {label}
     </button>
   );
@@ -330,37 +352,40 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
   if (saved) {
     const { variable: v, value, outcome } = saved;
     const unit = displayUnit(v.unit, v.value_type);
-    const tone = outcome.isRecord ? TYPE_COLOR.fait : C.tx;
+    const tone = outcome.isRecord ? "text-agon-type-fait" : "text-agon-tx";
     const isVma = /\bvma\b/i.test(`${definition?.name} ${v.label}`) && /km\/?h/i.test(v.unit);
     return shell(
       <>
         {header("Résultat enregistré", "")}
-        <div style={{ marginTop: 56, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12 }}>
-          <span style={{ width: 84, height: 84, borderRadius: "50%", background: alpha(outcome.isRecord ? TYPE_COLOR.fait : C.tx, 0.14), border: `1.5px solid ${outcome.isRecord ? TYPE_COLOR.fait : alpha(C.tx, 0.3)}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Check size={36} color={outcome.isRecord ? TYPE_COLOR.fait : C.tx} strokeWidth={1.75} />
+        <div className="mt-14 flex flex-col items-center gap-3 text-center">
+          <span className={cn(
+            "flex h-[84px] w-[84px] items-center justify-center rounded-full border-[1.5px]",
+            outcome.isRecord ? "border-agon-type-fait bg-agon-type-fait/[0.14]" : "border-agon-tx/[0.3] bg-agon-tx/[0.14]",
+          )}>
+            <Check size={36} className={tone} strokeWidth={1.75} />
           </span>
           {outcome.isRecord && outcome.previousBest && (
-            <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, background: TYPE_COLOR.fait, color: C.bg, ...MONO, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500 }}>Nouveau record</span>
+            <span className="agon-mono inline-flex h-[22px] items-center rounded-full bg-agon-type-fait px-2 text-[10.5px] font-medium uppercase tracking-[0.08em] text-agon-bg">Nouveau record</span>
           )}
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
-            <span style={{ ...MONO, fontSize: 64, lineHeight: 1, color: tone }}>{formatTestValue(value, v.value_type)}</span>
-            <span style={{ ...MONO, fontSize: 15, color: C.tx3 }}>{unit}</span>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className={cn("agon-mono text-[64px] leading-none", tone)}>{formatTestValue(value, v.value_type)}</span>
+            <span className="agon-mono text-[15px] text-agon-tx3">{unit}</span>
           </div>
-          <div style={{ ...MONO, fontSize: 12.5, color: C.tx2 }}>{definition?.name ?? v.label} · {fmtLongDay(saved.date, true).toLowerCase()}</div>
+          <div className="agon-mono text-[12.5px] text-agon-tx2">{definition?.name ?? v.label} · {fmtLongDay(saved.date, true).toLowerCase()}</div>
           {outcome.previousBest && outcome.delta != null && (
-            <div style={{ ...MONO, fontSize: 13, color: outcome.isRecord ? TYPE_COLOR.fait : C.tx2 }}>
+            <div className={cn("agon-mono text-[13px]", outcome.isRecord ? "text-agon-type-fait" : "text-agon-tx2")}>
               {formatTestDelta(outcome.delta, v.value_type)} {v.value_type === "number" ? unit : ""} vs {outcome.isRecord ? "" : "record du "}{fmtTestDate(outcome.previousBest.date, false)}
             </div>
           )}
         </div>
-        <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 12, padding: "0 6px" }}>
-          <div style={{ display: "flex", gap: 10, fontSize: 13, color: C.tx2, lineHeight: 1.45 }}>
-            <UserRound size={16} color={C.tx3} strokeWidth={1.75} style={{ flex: "none", marginTop: 1 }} />
+        <div className="mt-7 flex flex-col gap-3 px-1.5">
+          <div className="flex gap-2.5 text-[13px] leading-[1.45] text-agon-tx2">
+            <UserRound size={16} className="mt-px flex-none text-agon-tx3" strokeWidth={1.75} />
             <span>{coachName ? `${coachName} voit ton résultat.` : "Ton coach voit ton résultat."}</span>
           </div>
           {isVma && (
-            <div style={{ display: "flex", gap: 10, fontSize: 13, color: C.tx2, lineHeight: 1.45 }}>
-              <Gauge size={16} color={C.tx3} strokeWidth={1.75} style={{ flex: "none", marginTop: 1 }} />
+            <div className="flex gap-2.5 text-[13px] leading-[1.45] text-agon-tx2">
+              <Gauge size={16} className="mt-px flex-none text-agon-tx3" strokeWidth={1.75} />
               <span>Tes allures de course sont recalculées sur {formatNumberFr(value)} km/h.</span>
             </div>
           )}
@@ -370,7 +395,7 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
         {resultPath
           ? primaryBtn("Voir le détail du test", () => { onClose(); navigate(resultPath(saved.variableId)); })
           : primaryBtn("Retour aux tests", onClose)}
-        {resultPath && <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: C.ac, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Retour à Aujourd’hui</button>}
+        {resultPath && <button type="button" onClick={onClose} className="cursor-pointer border-none bg-transparent text-[13px] text-agon-accent [font-family:inherit]">Retour à Aujourd’hui</button>}
       </>,
     );
   }
@@ -383,51 +408,51 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
     <>
       {header(readOnly ? "Test fait" : "Test prévu", planned)}
       {loading || !test ? (
-        <div style={{ fontSize: 13, color: C.tx3, marginTop: 20 }}>Chargement…</div>
+        <div className="mt-5 text-[13px] text-agon-tx3">Chargement…</div>
       ) : (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ width: 32, height: 32, borderRadius: 10, background: PINK, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <FlaskConical size={17} color={C.bg} strokeWidth={1.75} />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[10px] bg-agon-type-test">
+              <FlaskConical size={17} className="text-agon-bg" strokeWidth={1.75} />
             </span>
-            <h1 style={{ ...DISPLAY, margin: 0, fontSize: 26, fontWeight: 300, lineHeight: 1.1, minWidth: 0 }}>{test.title}</h1>
+            <h1 className="agon-display m-0 min-w-0 text-[26px] leading-[1.1]">{test.title}</h1>
             {definition && (
-              <span style={{ ...MONO, fontSize: 11, fontWeight: 500, whiteSpace: "nowrap", color: groupColor, border: `1px solid ${groupColor}`, borderRadius: 999, padding: "3px 9px" }}>{TEST_GROUP_LABEL[group]}</span>
+              <span className="agon-mono whitespace-nowrap rounded-full border px-[9px] py-[3px] text-[11px] font-medium" style={{ color: groupColor, borderColor: groupColor }}>{TEST_GROUP_LABEL[group]}</span>
             )}
           </div>
-          <div style={{ fontSize: 12.5, color: C.tx2, marginTop: -6 }}>
+          <div className="-mt-1.5 text-[12.5px] text-agon-tx2">
             Prévu par {coach}{hasVariables && vars.length === 1 && unitText ? ` · ${unitText}` : ""}{hasVariables && vars.length === 1 ? ` · ${betterText}` : ""}
           </div>
 
           {(definition?.protocol?.text || test.description || definition?.description) && (
-            <div style={{ padding: "12px 14px", borderRadius: 14, background: C.s1, border: `1px solid ${C.brd}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ ...LABEL, color: C.tx2 }}>Protocole</span>
-                {definition?.media_url && <a href={definition.media_url} target="_blank" rel="noreferrer" style={{ color: C.ac, fontSize: 12.5, textDecoration: "none" }}>Détail</a>}
+            <div className="rounded-[14px] border border-agon-brd bg-agon-s1 px-3.5 py-3">
+              <div className="flex items-center justify-between">
+                <span className={cn(LABEL, "text-agon-tx2")}>Protocole</span>
+                {definition?.media_url && <a href={definition.media_url} target="_blank" rel="noreferrer" className="text-[12.5px] text-agon-accent no-underline">Détail</a>}
               </div>
-              <div style={{ fontSize: 12.5, color: C.tx2, marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+              <div className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-normal text-agon-tx2">
                 {definition?.protocol?.text || test.description || definition?.description}
               </div>
             </div>
           )}
 
           {coachFilled ? (
-            <div style={{ padding: "12px 14px", borderRadius: 14, border: `1px solid ${alpha(C.o, 0.4)}`, background: C.s1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.o, marginBottom: 4 }}>Rempli par ton coach</div>
-              <div style={{ fontSize: 12.5, color: C.tx2, lineHeight: 1.5 }}>Fais le test : {coach} notera les valeurs. Valide quand c’est fait.</div>
+            <div className="rounded-[14px] border border-agon-alerte/[0.4] bg-agon-s1 px-3.5 py-3">
+              <div className="mb-1 text-[13px] font-semibold text-agon-alerte">Rempli par ton coach</div>
+              <div className="text-[12.5px] leading-normal text-agon-tx2">Fais le test : {coach} notera les valeurs. Valide quand c’est fait.</div>
             </div>
           ) : hasVariables ? (
             vars.length === 1 ? (
               <div>
-                <div style={{ marginBottom: 6 }}><span style={LABEL}>Ta valeur · {first.label}</span></div>
+                <div className="mb-1.5"><span className={cn(LABEL, "text-agon-tx3")}>Ta valeur · {first.label}</span></div>
                 <ValueInput v={first} big readOnly={readOnly} draft={drafts[first.key] ?? emptyDraft} onChange={(d) => setDrafts((cur) => ({ ...cur, [first.key]: d }))} />
                 {recordText(cardOf(first))}
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: vars.length === 2 ? "1fr 1fr" : "1fr", gap: 10 }}>
+              <div className={cn("grid gap-2.5", vars.length === 2 ? "grid-cols-[1fr_1fr]" : "grid-cols-[1fr]")}>
                 {vars.map((v) => (
                   <div key={v.id}>
-                    <div style={{ marginBottom: 6 }}><span style={LABEL}>{v.label}</span></div>
+                    <div className="mb-1.5"><span className={cn(LABEL, "text-agon-tx3")}>{v.label}</span></div>
                     <ValueInput v={v} big={false} readOnly={readOnly} draft={drafts[v.key] ?? emptyDraft} onChange={(d) => setDrafts((cur) => ({ ...cur, [v.key]: d }))} />
                     {recordText(cardOf(v))}
                   </div>
@@ -437,24 +462,28 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
           ) : (
             <Field label="Résultat">
               <textarea value={note} readOnly={readOnly} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Ex : 1RM squat = 120 kg"
-                style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: `1px solid ${alpha(C.tx, 0.18)}`, background: C.s1, color: C.tx, fontSize: 15, fontFamily: "inherit", resize: "none", outline: "none" }} />
+                className={TEXTAREA} />
             </Field>
           )}
-          {invalid && <div style={{ fontSize: 12, color: C.o }}>Vérifie la valeur : les secondes vont de 00 à 59.</div>}
+          {invalid && <div className="text-[12px] text-agon-alerte">Vérifie la valeur : les secondes vont de 00 à 59.</div>}
 
           <Field label="Date du test">
-            {readOnly ? <div style={FIELD_BOX}><span style={{ fontSize: 15 }}>{fmtLongDay(date, true)}</span></div>
+            {readOnly ? <div className="relative box-border flex h-12 items-center gap-2.5 rounded-xl border border-agon-tx/[0.18] bg-agon-s1 px-3.5"><span className="text-[15px]">{fmtLongDay(date, true)}</span></div>
               : <DateBox label="Date du test" value={date} max={localIsoDay()} onChange={setDate} withYear />}
           </Field>
 
-          <Field label="Ressenti" right={<span style={{ fontSize: 11.5, color: C.tx3 }}>1 = très dur · 5 = facile</span>}>
-            <div style={{ display: "flex", gap: 6 }}>
-              {FEEL_COLOR.map((c, i) => {
+          <Field label="Ressenti" right={<span className="text-[11.5px] text-agon-tx3">1 = très dur · 5 = facile</span>}>
+            <div className="flex gap-1.5">
+              {FEEL_CLASS.map((c, i) => {
                 const n = i + 1;
                 const on = feeling === n;
                 return (
                   <button key={n} type="button" disabled={readOnly} aria-pressed={on} aria-label={`Ressenti ${n} sur 5`} onClick={() => setFeeling(on ? null : n)}
-                    style={{ flex: 1, height: 42, borderRadius: 10, ...MONO, fontSize: 16, cursor: readOnly ? "default" : "pointer", background: on ? c : alpha(c, 0.08), color: on ? C.bg : c, border: `1px solid ${on ? c : alpha(c, 0.3)}` }}>
+                    className={cn(
+                      "agon-mono h-[42px] flex-1 rounded-[10px] border text-[16px]",
+                      readOnly ? "cursor-default" : "cursor-pointer",
+                      on ? c.on : c.off,
+                    )}>
                     {n}
                   </button>
                 );
@@ -464,7 +493,7 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
 
           <Field label="Commentaire · facultatif">
             <textarea value={comment} readOnly={readOnly} maxLength={1000} onChange={(e) => setComment(e.target.value)} rows={2} placeholder="Un mot pour ton coach"
-              style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: `1px solid ${alpha(C.tx, 0.18)}`, background: C.s1, color: C.tx, fontSize: 15, fontFamily: "inherit", resize: "none", outline: "none" }} />
+                className={TEXTAREA} />
           </Field>
         </>
       )}
