@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { C } from "@/lib/theme";
 import {
   formatActivityDate,
   formatDistance,
@@ -53,35 +52,35 @@ export function ProviderActivityList({
   if (!athleteId) return null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-[12px] font-semibold uppercase tracking-[0.5px] text-agon-tx3">
           {titre}
         </div>
         {activities && activities.length > 0 && (
-          <div style={{ fontSize: 10, color: C.tx3 }}>
+          <div className="text-[10px] text-agon-tx3">
             {activities.length} sortie{activities.length > 1 ? "s" : ""}
           </div>
         )}
       </div>
 
-      {isLoading && <div style={{ fontSize: 11, color: C.tx3 }}>Chargement…</div>}
+      {isLoading && <div className="text-[11px] text-agon-tx3">Chargement…</div>}
 
       {error && (
-        <div style={{ fontSize: 11, color: C.r, background: C.rS, border: "1px solid " + C.r + "30", borderRadius: 6, padding: "8px 10px" }}>
+        <div className="rounded-[6px] border border-agon-erreur/[0.188] bg-agon-erreur-doux px-2.5 py-2 text-[11px] text-agon-erreur">
           Lecture impossible : {error instanceof Error ? error.message : String(error)}
         </div>
       )}
 
       {activities && activities.length === 0 && (
-        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+        <div className="text-[11px] leading-normal text-agon-tx3">
           Aucune sortie pour l'instant. Elles arrivent par une montre connectée, ou par l'import de
           fichiers d'activité.
         </div>
       )}
 
       {activities && activities.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="flex flex-col gap-1.5">
           {activities.map((a) => (
             <Ligne
               key={a.id}
@@ -132,54 +131,34 @@ function Ligne({
   if (a.rpe != null) mesures.push({ label: "RPE", valeur: `${a.rpe}/10` });
 
   return (
-    <div style={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 4, overflow: "hidden" }}>
+    <div className="overflow-hidden rounded-[4px] border border-agon-brd bg-agon-s2">
       <button
         onClick={onToggle}
-        style={{
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          padding: "9px 11px",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          textAlign: "left",
-        }}
+        className="flex w-full cursor-pointer flex-col gap-1.5 border-none bg-transparent px-[11px] py-[9px] text-left font-[inherit]"
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div className="flex items-baseline gap-2">
+          <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-agon-tx">
             {a.title ?? sportLabel(a.sport)}
-            {a.title && <span style={{ fontWeight: 400, color: C.tx3 }}> · {sportLabel(a.sport)}</span>}
+            {a.title && <span className="font-normal text-agon-tx3"> · {sportLabel(a.sport)}</span>}
           </span>
           {a.commute && (
-            <span style={{ fontSize: 9, color: C.tx3, border: "1px solid " + C.brd, borderRadius: 8, padding: "1px 6px", flexShrink: 0 }}>
+            <span className="shrink-0 rounded-[8px] border border-agon-brd px-1.5 py-px text-[9px] text-agon-tx3">
               Trajet
             </span>
           )}
-          <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>
+          <span className="shrink-0 text-[10px] text-agon-tx3">
             {formatActivityDate(a.localDate)}
           </span>
-          <span
-            style={{
-              fontSize: 9,
-              color: C.tx3,
-              border: "1px solid " + C.brd,
-              borderRadius: 8,
-              padding: "1px 6px",
-              flexShrink: 0,
-            }}
-          >
+          <span className="shrink-0 rounded-[8px] border border-agon-brd px-1.5 py-px text-[9px] text-agon-tx3">
             {/* « Garmin [modèle] » : attribution exigée par les conditions Garmin. */}
             {providerAttribution(a.source, a.deviceName)}
           </span>
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
+        <div className="flex flex-wrap gap-x-3.5 gap-y-1">
           {mesures.map((m) => (
-            <span key={m.label} style={{ fontSize: 11, color: C.tx2 }}>
-              <span style={{ color: C.tx3 }}>{m.label} </span>
+            <span key={m.label} className="text-[11px] text-agon-tx2">
+              <span className="text-agon-tx3">{m.label} </span>
               {m.valeur}
             </span>
           ))}
@@ -187,15 +166,15 @@ function Ligne({
 
         {/* Renvoi vers la séance prévue : les deux blocs restent séparés, ils se citent. */}
         {seance && (
-          <div style={{ fontSize: 10, color: C.g, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div className="truncate text-[10px] text-agon-succes">
             Séance prévue : {seance.plannedLabel}
           </div>
         )}
       </button>
 
       {ouverte && (
-        <div style={{ borderTop: "1px solid " + C.brd, padding: "9px 11px", display: "flex", flexDirection: "column", gap: 5 }}>
-          <div style={{ fontSize: 10, color: C.tx3 }}>
+        <div className="flex flex-col gap-[5px] border-t border-agon-brd px-[11px] py-[9px]">
+          <div className="text-[10px] text-agon-tx3">
             Départ{" "}
             {new Date(a.startedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
             {" · "}
@@ -207,30 +186,30 @@ function Ligne({
           </div>
 
           {a.description && (
-            <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{a.description}</div>
+            <div className="whitespace-pre-wrap text-[11px] leading-[1.45] text-agon-tx2">{a.description}</div>
           )}
           {a.gear && (
-            <div style={{ fontSize: 11, color: C.tx2 }}>
-              <span style={{ color: C.tx3 }}>Matériel : </span>
+            <div className="text-[11px] text-agon-tx2">
+              <span className="text-agon-tx3">Matériel : </span>
               {a.gear}
             </div>
           )}
           {a.sources && a.sources.includes("strava_archive") && (
-            <div style={{ fontSize: 10, color: C.tx3 }}>Complétée par l'archive Strava de l'athlète</div>
+            <div className="text-[10px] text-agon-tx3">Complétée par l'archive Strava de l'athlète</div>
           )}
 
           {provenances.length > 0 ? (
             <>
-              <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>D'où viennent ces chiffres</div>
+              <div className="mt-0.5 text-[10px] text-agon-tx3">D'où viennent ces chiffres</div>
               {provenances.map((p) => (
-                <div key={p.label} style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45 }}>
-                  <span style={{ color: C.tx3 }}>{p.label} : </span>
+                <div key={p.label} className="text-[11px] leading-[1.45] text-agon-tx2">
+                  <span className="text-agon-tx3">{p.label} : </span>
                   {p.text}
                 </div>
               ))}
             </>
           ) : (
-            <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45 }}>
+            <div className="text-[11px] leading-[1.45] text-agon-tx2">
               {provenanceFallback(a.source, a.deviceName)}
             </div>
           )}
@@ -284,19 +263,19 @@ export function ProviderActivitySummary({
   const lignes = [...parSport.entries()].sort((a, b) => b[1].durationS - a[1].durationS);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 10, color: C.tx3 }}>
+    <div className="flex flex-col gap-1.5">
+      <div className="text-[10px] text-agon-tx3">
         {semaines} dernières semaines
       </div>
       {lignes.map(([sport, acc]) => (
-        <div key={sport} style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: 11 }}>
-          <span style={{ color: C.tx, fontWeight: 600, flex: 1, minWidth: 0 }}>{sportLabel(sport)}</span>
-          <span style={{ color: C.tx2 }}>{acc.n} sortie{acc.n > 1 ? "s" : ""}</span>
-          <span style={{ color: C.tx2 }}>{formatDuration(acc.durationS)}</span>
-          {acc.distanceM > 0 && <span style={{ color: C.tx2 }}>{formatDistance(acc.distanceM)}</span>}
+        <div key={sport} className="flex items-baseline gap-2 text-[11px]">
+          <span className="min-w-0 flex-1 font-semibold text-agon-tx">{sportLabel(sport)}</span>
+          <span className="text-agon-tx2">{acc.n} sortie{acc.n > 1 ? "s" : ""}</span>
+          <span className="text-agon-tx2">{formatDuration(acc.durationS)}</span>
+          {acc.distanceM > 0 && <span className="text-agon-tx2">{formatDistance(acc.distanceM)}</span>}
         </div>
       ))}
-      <div style={{ fontSize: 10, color: C.tx3 }}>
+      <div className="text-[10px] text-agon-tx3">
         Sources : {[...provenances].sort().join(", ")}
       </div>
       <GearTotals athleteId={athleteId} />
@@ -309,15 +288,15 @@ function GearTotals({ athleteId }: { athleteId: string | undefined }) {
   const { data } = useGearTotals(athleteId);
   if (!data || data.length === 0) return null;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
-      <div style={{ fontSize: 10, color: C.tx3 }}>Matériel (km cumulés)</div>
+    <div className="mt-1 flex flex-col gap-1">
+      <div className="text-[10px] text-agon-tx3">Matériel (km cumulés)</div>
       {data.slice(0, 8).map((g) => (
-        <div key={g.name} style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: 11 }}>
-          <span style={{ color: C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div key={g.name} className="flex items-baseline gap-2 text-[11px]">
+          <span className="min-w-0 flex-1 truncate text-agon-tx">
             {g.name}
           </span>
-          <span style={{ color: C.tx2 }}>{g.outings} sortie{g.outings > 1 ? "s" : ""}</span>
-          <span style={{ color: C.tx2 }}>{g.distanceM > 0 ? formatDistance(g.distanceM) : "—"}</span>
+          <span className="text-agon-tx2">{g.outings} sortie{g.outings > 1 ? "s" : ""}</span>
+          <span className="text-agon-tx2">{g.distanceM > 0 ? formatDistance(g.distanceM) : "—"}</span>
         </div>
       ))}
     </div>
