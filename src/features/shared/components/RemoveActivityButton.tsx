@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useRemoveProviderActivity } from "@/features/shared/hooks/useRemoveProviderActivity";
 
 /**
@@ -30,21 +30,14 @@ export function RemoveActivityButton({
       onError: (e) => toast.error("Activité non retirée", { description: e.message }),
     });
 
-  const btn = {
-    padding: "6px 10px",
-    borderRadius: 6,
-    background: "transparent",
-    fontSize: 11,
-    fontWeight: 600,
-    fontFamily: "inherit",
-  } as const;
+  const btn = "rounded-[6px] border bg-transparent px-2.5 py-1.5 font-[inherit] text-[11px] font-semibold";
 
   if (!confirmer) {
     return (
       <button
         type="button"
         onClick={() => setConfirmer(true)}
-        style={{ ...btn, alignSelf: "flex-start", marginTop: 4, border: "1px solid " + C.brd, color: C.tx3, cursor: "pointer" }}
+        className={cn(btn, "mt-1 cursor-pointer self-start border-agon-brd text-agon-tx3")}
       >
         Retirer d'Agon
       </button>
@@ -52,17 +45,17 @@ export function RemoveActivityButton({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-      <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45 }}>
+    <div className="mt-1 flex flex-col gap-1.5">
+      <div className="text-[11px] leading-[1.45] text-agon-tx2">
         Retirer cette activité d'Agon, avec sa courbe, ses tours et ses zones ? La séance prévue qui lui
         était rattachée reste. L'activité n'est pas supprimée de la montre.
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="flex gap-2">
         <button
           type="button"
           onClick={() => setConfirmer(false)}
           disabled={remove.isPending}
-          style={{ ...btn, border: "1px solid " + C.brd, color: C.tx, cursor: "pointer" }}
+          className={cn(btn, "cursor-pointer border-agon-brd text-agon-tx")}
         >
           Annuler
         </button>
@@ -70,7 +63,7 @@ export function RemoveActivityButton({
           type="button"
           onClick={retirer}
           disabled={remove.isPending}
-          style={{ ...btn, border: "1px solid " + C.r + "60", color: C.r, cursor: remove.isPending ? "wait" : "pointer" }}
+          className={cn(btn, "border-agon-erreur/[0.38] text-agon-erreur", remove.isPending ? "cursor-wait" : "cursor-pointer")}
         >
           {remove.isPending ? "Retrait…" : "Retirer"}
         </button>
