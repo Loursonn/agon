@@ -2,8 +2,10 @@ import { useState } from "react";
 import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { isToday, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Zap, Check, X, ChevronDown, ChevronUp, Hourglass } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { Check, X, ChevronDown, ChevronUp, Hourglass } from "lucide-react";
+import { C, H, alpha } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { getReco } from "@/lib/wellness";
 import { wellnessView } from "@/lib/wellness";
 import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL, WELLNESS_ITEM_SHORT } from "@shared/domain/wellness";
 import { DayDetailPanel } from "./DayDetailPanel";
@@ -39,12 +41,41 @@ interface DayColumnProps {
 // ── Status color helper ───────────────────────────────────────────────────────
 
 function statusColors(status: string, rescheduled = false) {
-  if (rescheduled)            return { bg: `${H.violet}12`, border: `${H.violet}30`, accent: H.violet, label: "Déplacée" };
-  if (status === "completed") return { bg: C.g + "12", border: C.g + "40",  accent: C.g,       label: "✓ Faite" };
-  if (status === "missed")    return { bg: C.r + "12", border: C.r + "40",  accent: C.r,       label: "Manquée" };
-  if (status === "skipped")   return { bg: C.s2,       border: C.brd,       accent: C.tx3,     label: "Skippée" };
-  return                             { bg: C.s2,       border: C.brd,       accent: C.tx3,     label: "Planifiée" };
+  // Planche CoachRetours : aplat 12 %, filet 42 %, pastille pleine.
+  const tint = (c: string, label: string) => ({ bg: alpha(c, 0.12), border: alpha(c, 0.42), accent: c, label, filled: true });
+  if (rescheduled)            return tint(C.o, "Déplacée");
+  if (status === "completed") return tint(C.g, "Faite");
+  if (status === "missed")    return tint(C.rouge, "Manquée");
+  if (status === "skipped")   return { bg: C.s2, border: C.brd, accent: C.tx3, label: "Sautée", filled: false };
+  return                             { bg: C.s2, border: C.brdL, accent: C.tx3, label: "Planifiée", filled: false };
 }
+
+function StatusPill({ cols }: { cols: ReturnType<typeof statusColors> }) {
+  return (
+    <span style={{
+      ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", whiteSpace: "nowrap", flex: "none",
+      borderRadius: 999, lineHeight: 1.3,
+      ...(cols.filled
+        ? { color: C.ink, background: cols.accent, padding: "3px 9px" }
+        : { color: C.tx2, background: "transparent", border: "1px solid rgba(231,211,168,0.30)", padding: "2px 8px" }),
+    }}>{cols.label}</span>
+  );
+}
+
+/** Ligne titre d'une carte de séance : point de type + nom sur deux lignes. */
+function CardTitle({ color, done, children }: { color: string; done: boolean; children: React.ReactNode }) {
+  return (
+    <span style={{ display: "flex", alignItems: "flex-start", gap: 6, minWidth: 0, fontSize: 12, fontWeight: 500, lineHeight: "15.5px", color: done ? C.tx : C.tx2 }}>
+      <span aria-hidden style={{ width: 6, height: 6, marginTop: 4.5, borderRadius: "50%", flex: "none", background: color }} />
+      <span style={{ minWidth: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{children}</span>
+    </span>
+  );
+}
+
+const CARD_SHELL = (cols: ReturnType<typeof statusColors>, bar: string): React.CSSProperties => ({
+  position: "relative", background: cols.bg, border: "1px solid " + cols.border, borderRadius: 9, overflow: "hidden",
+  boxShadow: `inset 3px 0 0 ${bar}`,
+});
 
 function StatusIcon({ status }: { status: string }) {
   if (status === "completed") return <Check size={10} color={C.g} />;
@@ -61,24 +92,21 @@ function WellnessBlock({ wellness, onClick }: { wellness: WellnessDay; onClick: 
   const { items, score, reco, injuryNote } = wellnessView(wellness);
   const col = reco.c;
   return (
-    <div onClick={onClick} style={{ cursor: "pointer", background: col + "12", border: "1px solid " + col + "40", borderRadius: 4, padding: "7px 8px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 5 }}>
-        <span style={{ fontSize: 20, fontWeight: 900, color: col, lineHeight: 1 }}>{score ?? "—"}</span>
-        <span style={{ fontSize: 9, color: C.tx3 }}>/100</span>
-        <span style={{ marginLeft: "auto", fontSize: 9, color: C.tx3 }}>↗</span>
+    <div onClick={onClick} style={{ cursor: "pointer", background: alpha(col, 0.12), border: "1px solid " + alpha(col, 0.4), borderRadius: 9, padding: "9px 9px 8px", display: "flex", flexDirection: "column", gap: 7 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+        <span aria-hidden style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", background: col }} />
+        <span style={{ ...MONO, fontSize: 22, lineHeight: 1, color: col }}>{score ?? "—"}</span>
+        <span style={{ ...MONO, fontSize: 10, color: C.tx2 }}>/100</span>
       </div>
       {injuryNote && (
-        <div title={injuryNote} style={{ marginBottom: 5, padding: "3px 5px", borderRadius: 3, background: C.r + "18", border: "1px solid " + C.r + "50" }}>
+        <div title={injuryNote} style={{ padding: "3px 5px", borderRadius: 3, background: C.r + "18", border: "1px solid " + C.r + "50" }}>
           <div style={{ fontSize: 8, fontWeight: 800, color: C.r, textTransform: "uppercase" }}>Blessé / malade</div>
           <div style={{ fontSize: 9, color: C.tx, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{injuryNote}</div>
         </div>
       )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${WELLNESS_ITEMS.length}, 1fr)`, gap: 2, ...MONO, fontSize: 10.5, color: C.tx, textAlign: "center", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         {WELLNESS_ITEMS.map((k) => (
-          <div key={k} title={WELLNESS_ITEM_LABEL[k]} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 9 }}>{WELLNESS_ITEM_SHORT[k]}</span>
-            <span style={{ fontSize: 9, fontWeight: 600, color: C.tx2 }}>{items[k] ?? "—"}</span>
-          </div>
+          <span key={k} title={`${WELLNESS_ITEM_LABEL[k]} (${WELLNESS_ITEM_SHORT[k]})`}>{items[k] ?? "—"}</span>
         ))}
       </div>
     </div>
@@ -94,31 +122,26 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail, onOpenE
   const perfCount = workout.performed_exercises.length;
 
   return (
-    <div style={{ background: cols.bg, border: "1px solid " + cols.border, borderRadius: 7, overflow: "hidden" }}>
+    <div style={CARD_SHELL(cols, C.ac)}>
       {/* Header */}
       <div
         onClick={onOpenEvolution ?? (done ? () => setOpen(v => !v) : undefined)}
         title={onOpenEvolution ? "Prévu / Réalisé / Séance +1" : undefined}
-        style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 7px", cursor: onOpenEvolution || done ? "pointer" : "default" }}
+        style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7, padding: "9px 9px 9px 12px", cursor: onOpenEvolution || done ? "pointer" : "default" }}
       >
-        <span style={{ fontSize: 9, color: cols.accent, flexShrink: 0 }}>
-          {workout.status === "completed" ? "✓" : workout.status === "missed" ? "✗" : "–"}
-        </span>
-        <span style={{ flex: 1, fontSize: 10, fontWeight: 600, color: done ? C.tx : C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {workout.session_name}
-        </span>
+        <CardTitle color={C.ac} done={done}>{workout.session_name}</CardTitle>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 5, width: "100%", minWidth: 0 }}>
+        <StatusPill cols={cols} />
+        <span style={{ flex: 1 }} />
         <VideoRequestsPill requests={workout.video_requests} />
         {workout.occurrence != null && (
           <span title={`Séance n°${workout.occurrence}`} style={{ fontSize: 8, fontWeight: 700, color: C.tx3, flexShrink: 0 }}>#{workout.occurrence}</span>
         )}
         {done && perfCount > 0 && (
-          <span style={{ fontSize: 8, color: C.tx3, flexShrink: 0 }}>{perfCount} exo{perfCount > 1 ? "s" : ""}</span>
+          <span style={{ ...MONO, fontSize: 9.5, color: C.tx3, flexShrink: 0 }}>{perfCount} exo{perfCount > 1 ? "s" : ""}</span>
         )}
         {done && workout.rpe_score != null && (
-          <span style={{ fontSize: 8, color: workout.rpe_score >= 8 ? H.rougeVif : workout.rpe_score >= 6 ? H.ambre : C.tx3, flexShrink: 0, fontWeight: 700 }}>RPE {workout.rpe_score}</span>
-        )}
-        {!done && (
-          <span style={{ fontSize: 8, color: cols.accent, flexShrink: 0 }}>{cols.label}</span>
+          <span style={{ ...MONO, fontSize: 9.5, color: workout.rpe_score >= 8 ? C.rouge : workout.rpe_score >= 6 ? C.o : C.tx3, flexShrink: 0 }}>RPE {workout.rpe_score}</span>
         )}
         {done && (
           <span
@@ -128,6 +151,7 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail, onOpenE
             {open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />}
           </span>
         )}
+        </div>
       </div>
 
       {/* Expanded: summary + voir le détail */}
@@ -260,30 +284,28 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
   const kindColor = kindColors[session.session_kind ?? ""] ?? H.gris;
 
   return (
-    <div style={{ background: cols.bg, border: "1px solid " + cols.border, borderRadius: 7, overflow: "hidden" }}>
+    <div style={CARD_SHELL(cols, C.b)}>
       {/* Header */}
       <div
         onClick={hasDetail ? () => setOpen(v => !v) : undefined}
-        style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 7px", cursor: hasDetail ? "pointer" : "default" }}
+        style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7, padding: "9px 9px 9px 12px", cursor: hasDetail ? "pointer" : "default" }}
       >
-        <Zap size={9} color={done ? kindColor : cols.accent} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 10, fontWeight: 600, color: done ? C.tx : C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {session.session_label}
-        </span>
+        <CardTitle color={C.b} done={done}>{session.session_label}</CardTitle>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 5, width: "100%", minWidth: 0 }}>
+        {session.watch_run ? <WatchRunTag match={session.watch_run} size={8} /> : <StatusPill cols={cols} />}
+        <span style={{ flex: 1 }} />
         {session.rpe_score != null && (
-          <span style={{ fontSize: 8, color: session.rpe_score >= 8 ? H.rougeVif : session.rpe_score >= 6 ? H.ambre : C.tx3, flexShrink: 0, fontWeight: 700 }}>
+          <span style={{ ...MONO, fontSize: 9.5, color: session.rpe_score >= 8 ? C.rouge : session.rpe_score >= 6 ? C.o : C.tx3, flexShrink: 0 }}>
             RPE {session.rpe_score}
           </span>
         )}
         {session.session_kind && done && (
-          <span style={{ fontSize: 8, color: kindColor, flexShrink: 0, fontWeight: 700 }}>
+          <span style={{ ...MONO, fontSize: 9.5, color: kindColor, flexShrink: 0 }}>
             {session.session_kind.toUpperCase()}
           </span>
         )}
-        {session.watch_run
-          ? <WatchRunTag match={session.watch_run} size={8} />
-          : !done && <span style={{ fontSize: 8, color: cols.accent, flexShrink: 0 }}>{cols.label}</span>}
         {hasDetail && (open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />)}
+        </div>
       </div>
 
       {/* Expanded: step log */}
@@ -353,24 +375,18 @@ function TestRow({ test }: { test: DayTest }) {
   const hasResults = done && (test.results_note || structuredVars);
 
   return (
-    <div style={{
-      background: done ? tc + "12" : C.s2,
-      border: "1px solid " + (done ? tc + "40" : C.brd),
-      borderRadius: 7, overflow: "hidden",
-    }}>
+    <div style={CARD_SHELL(done ? statusColors("completed") : statusColors("planned"), C.ame)}>
       {/* Header */}
       <div
         onClick={hasResults ? () => setOpen(v => !v) : undefined}
-        style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 7px", cursor: hasResults ? "pointer" : "default" }}
+        style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7, padding: "9px 9px 9px 12px", cursor: hasResults ? "pointer" : "default" }}
       >
-        <span style={{ fontSize: 9, color: tc, flexShrink: 0 }}></span>
-        <span style={{ flex: 1, fontSize: 10, fontWeight: 600, color: done ? C.tx : C.tx3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {test.title}
-        </span>
-        <span style={{ fontSize: 8, fontWeight: 700, color: done ? tc : C.tx3, flexShrink: 0 }}>
-          {done ? "✓" : "—"}
-        </span>
-        {hasResults && (open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />)}
+        <CardTitle color={C.ame} done={done}>{test.title}</CardTitle>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, width: "100%" }}>
+          <StatusPill cols={done ? statusColors("completed") : statusColors("planned")} />
+          <span style={{ flex: 1 }} />
+          {hasResults && (open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />)}
+        </div>
       </div>
 
       {/* Expanded: results */}
@@ -403,22 +419,20 @@ function FreeActivityRow({ activity }: { activity: FreeActivityDetail }) {
   const hasDetail = activity.duration != null || activity.intensity != null || !!activity.note;
 
   return (
-    <div style={{ background: C.s2, borderRadius: 7, overflow: "hidden" }}>
+    <div style={CARD_SHELL(statusColors("completed"), C.g)}>
       <div
         onClick={() => hasDetail && setOpen((v) => !v)}
-        style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 7px", cursor: hasDetail ? "pointer" : "default" }}
+        style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7, padding: "9px 9px 9px 12px", cursor: hasDetail ? "pointer" : "default" }}
       >
-        <Check size={10} color={C.g} />
-        <span style={{
-          flex: 1, fontSize: 10, fontWeight: 600, color: C.tx,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {activity.sportEmoji ? activity.sportEmoji + " " : ""}{activity.name}
-        </span>
-        {activity.intensity != null && (
-          <span style={{ fontSize: 8, color: C.tx3, flexShrink: 0 }}>RPE {activity.intensity}</span>
-        )}
-        {hasDetail && (open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />)}
+        <CardTitle color={C.g} done>{activity.sportEmoji ? activity.sportEmoji + " " : ""}{activity.name}</CardTitle>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, width: "100%" }}>
+          <StatusPill cols={{ ...statusColors("completed"), label: "Activité" }} />
+          <span style={{ flex: 1 }} />
+          {activity.intensity != null && (
+            <span style={{ ...MONO, fontSize: 9.5, color: C.tx3, flexShrink: 0 }}>RPE {activity.intensity}</span>
+          )}
+          {hasDetail && (open ? <ChevronUp size={9} color={C.tx3} /> : <ChevronDown size={9} color={C.tx3} />)}
+        </div>
       </div>
 
       {open && (
@@ -668,30 +682,34 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
     <>
       <div style={{
         minWidth: 120,
+        minHeight: 262,
         background: C.s1,
-        border: today ? "2px solid " + C.ac + "60" : "1px solid " + C.brd,
-        borderRadius: 4,
+        border: "1px solid " + (today ? C.ac : "rgba(231,211,168,0.12)"),
+        borderRadius: 12,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
       }}>
-        {/* Header */}
+        {/* En-tête : filet de la couleur du wellness du jour */}
         <div style={{
-          padding: "8px 8px 6px",
-          background: today ? C.ac + "08" : "transparent",
+          position: "relative",
+          padding: "14px 12px 10px",
           borderBottom: "1px solid " + C.brd,
-          textAlign: "center",
+          display: "flex", alignItems: "baseline", gap: 8,
         }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: today ? C.ac : C.tx3, textTransform: "capitalize", marginBottom: 1 }}>
+          {(wellness || today) && (
+            <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, height: 3, background: today ? C.ac : getReco(wellnessView(wellness!).score ?? 0).c }} />
+          )}
+          <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: today ? C.ac : C.tx3 }}>
             {dayLabel}
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1, color: today ? C.ac : C.tx }}>
+          </span>
+          <span style={{ ...MONO, fontSize: 22, lineHeight: 1, color: today ? C.ac : C.tx }}>
             {dayNum}
-          </div>
+          </span>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, padding: "8px 6px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ flex: 1, padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
 
           {/* Wellness */}
           {wellness ? (
@@ -705,7 +723,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
 
           {/* Workouts */}
           {workouts.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {workouts.map(w => (
                 <WorkoutRow
                   key={w.id}
@@ -721,7 +739,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
 
           {/* Energy sessions */}
           {energy.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {energy.map(e => (
                 <EnergyRow key={e.id} session={e} isRescheduled={rescheduledEnergyIds?.has(e.id)} />
               ))}
@@ -749,7 +767,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
           {/* Rest day */}
           {workouts.length === 0 && energy.length === 0 && tests.length === 0 && freeActivities.length === 0 && !wellness && (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 9, color: C.tx3 }}>Repos</span>
+              <span style={{ ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", color: C.tx2, background: C.s2, border: "1px solid " + C.brdL, borderRadius: 999, padding: "2px 8px" }}>Repos</span>
             </div>
           )}
         </div>

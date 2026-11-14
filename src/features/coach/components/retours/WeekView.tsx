@@ -66,7 +66,7 @@ export function WeekView({ weekData, prevWeekData, athleteId }: WeekViewProps) {
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(7, minmax(130px, 1fr))",
-        gap: 6,
+        gap: 8,
         minWidth: 910,
       }}>
         {days.map((day) => {
