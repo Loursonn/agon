@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { C, alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { TEST_CATEGORY_LABEL } from "@/features/shared/types/tests";
 import type { EnergySessionRow } from "@/types/energy";
-import { BIO_BANK_ID, BIO_TITLE, CARD_MONO, ENERGY_KIND_LABEL, BankTab, BANK_TABS } from "./calendarConstants";
+import { BIO_BANK_ID, BIO_TITLE, ENERGY_KIND_LABEL, BankTab, BANK_TABS } from "./calendarConstants";
+import { BANK_TAB_ON } from "./bankTone";
 import { DraggableSession } from "./DraggableSession";
 
 /**
@@ -53,27 +54,25 @@ export function PlanningBankBand({
   })();
 
   return (
-    <section aria-label="Banque" style={{ background: C.bg, border: "1px solid " + C.brd, borderRadius: 14, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: folded ? "12px 14px" : "12px 14px 0", flexWrap: "wrap" }}>
-        <span style={{ fontFamily: CARD_MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac }}>Programmer</span>
-        <span aria-hidden style={{ width: 1, height: 20, background: C.brd }} />
-        {BANK_TABS.map(({ key, label, color }) => {
+    <section aria-label="Banque" className="overflow-hidden rounded-[14px] border border-agon-brd bg-agon-bg">
+      <div className={cn("flex flex-wrap items-center gap-2.5 px-3.5 pt-3", folded && "pb-3")}>
+        <span className="agon-mono text-[11px] uppercase tracking-[0.14em] text-agon-accent">Programmer</span>
+        <span aria-hidden className="h-5 w-px bg-agon-brd" />
+        {BANK_TABS.map(({ key, label }) => {
           const on = tab === key;
-          const c = key === "workout" ? C.ac : key === "energy" ? C.b : color;
           return (
             <button
               key={key}
               type="button"
               onClick={() => { setTab(key); setFolded(false); }}
               aria-pressed={on}
-              style={{
-                height: 30, padding: "0 12px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 6,
-                border: "1px solid " + (on ? alpha(c, 0.6) : C.brdL), background: on ? alpha(c, 0.14) : "transparent",
-                color: on ? c : C.tx2, fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: "pointer", fontFamily: "inherit",
-              }}
+              className={cn(
+                "inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[12.5px]",
+                on ? BANK_TAB_ON[key] : "border-agon-brd-l bg-transparent font-medium text-agon-tx2",
+              )}
             >
               {key === "workout" ? "Musculation" : label}
-              <span style={{ fontFamily: CARD_MONO, fontSize: 11, opacity: 0.7 }}>{counts[key]}</span>
+              <span className="agon-mono text-[11px] opacity-70">{counts[key]}</span>
             </button>
           );
         })}
@@ -82,23 +81,23 @@ export function PlanningBankBand({
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher dans la banque…"
           aria-label="Rechercher dans la banque"
-          style={{ width: 260, height: 32, marginLeft: "auto", padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+          className="ml-auto h-8 w-[260px] rounded-[10px] border border-agon-brd-l bg-transparent px-3 text-[12.5px] text-agon-tx outline-none"
         />
-        <span style={{ fontFamily: CARD_MONO, fontSize: 11, color: C.tx3, letterSpacing: "0.06em" }}>
+        <span className="agon-mono text-[11px] tracking-[0.06em] text-agon-tx3">
           {shown} élément{shown > 1 ? "s" : ""} · glisse sur un jour
         </span>
         <button
           type="button"
           onClick={() => setFolded((f) => !f)}
-          style={{ height: 30, padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+          className="h-[30px] cursor-pointer rounded-[10px] border border-agon-brd-l bg-transparent px-3 text-[12px] text-agon-tx2"
         >
           {folded ? "Déplier" : "Replier"}
         </button>
       </div>
       {!folded && (
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "10px 14px 12px", scrollbarWidth: "thin" }}>
+        <div className="flex gap-2.5 overflow-x-auto px-3.5 pb-3 pt-2.5 [scrollbar-width:thin]">
           {cards.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: C.tx3, padding: "18px 0" }}>{q ? "Aucun résultat" : "Rien dans la banque pour cette catégorie."}</div>
+            <div className="py-[18px] text-[12.5px] text-agon-tx3">{q ? "Aucun résultat" : "Rien dans la banque pour cette catégorie."}</div>
           ) : cards}
         </div>
       )}
