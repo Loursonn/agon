@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, Share2 } from "lucide-react";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { C, alpha } from "@/lib/theme";
 import { DISPLAY, KICKER, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
 import { useRaceWatch } from "@/features/shared/hooks/hyrox/useRaceWatch";
@@ -50,6 +51,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced }: { race:
   const audience = forced ?? detectAudience();
   const coach = audience === "coach";
   const [tab, setTab] = useState<TabKey>("course");
+  const phone = useIsPhone();
   const watch = useRaceWatch(race);
   const { data: refs = [] } = useHyroxReferences();
   const { data: allRaces = [] } = useHyroxResults(race.athlete_id);
@@ -114,8 +116,78 @@ export default function RaceAnalysis({ race, onBack, audience: forced }: { race:
     ? (pp.run != null && pp.stations != null ? `course top ${pp.run} % · stations top ${pp.stations} %` : undefined)
     : profile === "hybrid" ? "course et stations au même niveau" : undefined;
 
+  const PPILL = { ...PILL, fontSize: 10.5, padding: "3px 8px" };
+  const phoneHead = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <button type="button" onClick={onBack} aria-label="Retour à la course"
+          style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, color: C.tx2, fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+          <ChevronLeft size={16} /> HYROX · Courses
+        </button>
+        <button type="button" onClick={() => setTab(tab === "partager" ? "course" : "partager")} aria-pressed={tab === "partager"} aria-label="Partager"
+          style={{ width: 36, height: 36, flex: "none", borderRadius: 10, border: `1px solid ${tab === "partager" ? C.ac : C.brdL}`, background: tab === "partager" ? alpha(C.ac, 0.16) : "transparent", color: tab === "partager" ? C.ac : C.tx, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <Share2 size={15} />
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <span style={{ ...PPILL, background: race.is_official ? C.rouge : C.o, color: C.ink }}>{race.is_official ? "Compétition" : "Simulation"}</span>
+        <span style={{ ...PPILL, fontWeight: 400, color: C.tx2, border: `1px solid ${C.brdL}`, padding: "2px 7px" }}>{division}</span>
+      </div>
+      <div style={{ ...DISPLAY, fontWeight: 300, fontSize: 24, lineHeight: 1.1, letterSpacing: "0.05em", color: C.tx }}>{race.event_name}</div>
+      <div style={{ fontSize: 12.5, color: C.tx2, marginTop: -4 }}>{dateLabel}</div>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginTop: 2 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ ...MONO, fontSize: 50, lineHeight: 1, letterSpacing: "-0.02em", color: C.tx }}>{fmtClock(race.total_s)}</div>
+          {(isRecord || gap) && (
+            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {isRecord
+                ? <span style={{ ...PPILL, background: C.g, color: C.ink }}>Record</span>
+                : gap && <span style={{ fontSize: 12.5, color: C.tx2 }}>+{fmtGap(gap.gapS)} vs record ({raceShortName(gap.record)})</span>}
+            </div>
+          )}
+        </div>
+        {race.rank_overall != null && race.participants_overall ? (
+          <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 3, paddingBottom: 2, flex: "none" }}>
+            <span style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Rang</span>
+            <div style={{ ...MONO, fontSize: 18, color: C.tx }}>{race.rank_overall}<span style={{ color: C.tx3, fontSize: 13 }}> / {race.participants_overall}</span></div>
+            <div style={{ fontSize: 12, color: C.tx2 }}>Top {Math.max(1, Math.round((race.rank_overall / race.participants_overall) * 100))} %</div>
+          </div>
+        ) : totalPct != null && (
+          <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 3, paddingBottom: 2, flex: "none" }}>
+            <span style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Position</span>
+            <div style={{ ...MONO, fontSize: 18, color: C.tx }}>Top {totalPct} %</div>
+            <div style={{ fontSize: 12, color: C.tx2 }}>{division} · {bracketText}</div>
+          </div>
+        )}
+      </div>
+      {profile && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: C.tx3, flexWrap: "wrap" }}>
+          <span style={{ ...PPILL, fontWeight: 400, color: C.ac, border: `1px solid ${alpha(C.ac, 0.45)}`, padding: "2px 7px" }}>Profil {PROFILE_LABEL[profile].toLowerCase()}</span>
+          {profileSub && <span>{profileSub}</span>}
+        </div>
+      )}
+    </div>
+  );
+  const phoneTabs = (
+    <div role="tablist" style={{ display: "flex", gap: 4, padding: 4, borderRadius: 12, border: `1px solid ${C.brd}` }}>
+      {TABS.map((t) => {
+        const on = tab === t.key;
+        return (
+          <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => setTab(t.key)}
+            style={{
+              ...MONO, flex: 1, height: 34, borderRadius: 8, border: "none", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+              background: on ? alpha(C.ac, 0.16) : "transparent", color: on ? C.ac : C.tx2, cursor: "pointer",
+            }}>
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: phone ? 14 : 16 }}>
+      {phone ? phoneHead : <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         {crumb}
         <button type="button" onClick={() => setTab(tab === "partager" ? "course" : "partager")}
@@ -145,7 +217,9 @@ export default function RaceAnalysis({ race, onBack, audience: forced }: { race:
           : totalPct != null && <Stat bare label="Position" value={`Top ${totalPct} %`} sub={`${division} · ${bracketText}`} />}
         {profile && <Stat bare label="Profil" value={PROFILE_LABEL[profile]} sub={profileSub} />}
       </div>
+      </>}
 
+      {phone ? phoneTabs : (
       <div style={{ display: "flex", gap: 18, borderBottom: `1px solid ${C.brd}` }} role="tablist">
         {TABS.map((t) => {
           const on = tab === t.key;
@@ -161,6 +235,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced }: { race:
           );
         })}
       </div>
+      )}
 
       {tab === "course" && (
         <RaceCourseTab audience={audience} analysis={analysis} stream={stream} watchLoading={watch.loading} offset={offset}

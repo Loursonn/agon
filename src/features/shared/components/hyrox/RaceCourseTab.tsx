@@ -51,14 +51,26 @@ export default function RaceCourseTab(props: {
 
   return (
     <>
+      {!coach && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: -4 }}>
+          <span style={{ ...KICKER, color: C.tx2 }}><span style={{ color: C.ac }}>01 —</span> Le film de ta course</span>
+          {attribution && <span style={{ ...LABEL, fontSize: 10.5 }}>{attribution}</span>}
+        </div>
+      )}
       <div style={{ ...CARD, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        {coach && <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
           <span style={KICKER}>
-            {coach ? `01 — Frise de course · ${nSeg} segments à l'échelle du temps` : "01 — Le film de ta course"}
-            {coach && <span style={{ color: C.tx3, textTransform: "none", letterSpacing: 0 }}> · survoler un segment pour le détail</span>}
+            {`01 — Frise de course · ${nSeg} segments à l'échelle du temps`}
+            <span style={{ color: C.tx3, textTransform: "none", letterSpacing: 0 }}> · survoler un segment pour le détail</span>
           </span>
           {attribution && <span style={{ ...LABEL, fontSize: 10 }}>{attribution}{sv2 != null ? ` · SV2 ${sv2}${sv1 != null ? ` · SV1 ${sv1}` : ""}` : ""}</span>}
-        </div>
+        </div>}
+        {!coach && stream && sv2 != null && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={LABEL}>FC</span>
+            <span style={{ ...LABEL, fontSize: 10 }}>SV2 {sv2}{sv1 != null ? ` · SV1 ${sv1}` : ""}</span>
+          </div>
+        )}
         <RaceFrise analysis={analysis} hr={stream ? { t: stream.t, v: stream.hr ?? [] } : null}
           cadence={coach && stream?.cadence ? { t: stream.t, v: stream.cadence } : null}
           offset={offset} sv1={sv1} sv2={sv2} selected={selected} onSelect={(k) => setSelected(k || null)} curves={coach} hover={coach} />
