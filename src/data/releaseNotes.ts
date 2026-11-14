@@ -38,6 +38,54 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-hyrox-analyse-course",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : l'analyse de course en un clic, le plan de course et l'évolution",
+    summary:
+      "Dans HYROX › Courses, « Analyse › » ouvre directement l'analyse complète d'une course. Vous pouvez préparer un plan de course, comparer la course à ce plan, et voir les leviers qui font gagner le plus de temps.",
+    sections: [
+      {
+        title: "Analyse d'une course",
+        points: [
+          "Le haut de page donne le chrono, la position dans le niveau (top x %), l'écart au record et l'écart au plan de course.",
+          "« Comparer à » : course précédente, plan de course ou médiane du niveau. Le tableau des 17 segments, la frise et les écarts suivent ce choix.",
+          "« Où gagner du temps » classe les stations par gain possible, avec la raison (FC, cadence, Roxzone) et une proposition de travail.",
+          "« Ajouter au programme » copie la proposition et ouvre la programmation de l'athlète, pour la coller dans une séance.",
+        ],
+      },
+      {
+        title: "Plan de course",
+        points: [
+          "Onglet « Plan de course » : entrez un chrono cible, Agon le répartit sur les 17 segments selon la médiane du niveau. Chaque objectif reste modifiable.",
+          "Le plan est lié à une compétition : l'analyse de cette course le reprend automatiquement.",
+        ],
+      },
+      {
+        title: "Évolution (remplace Bilan)",
+        points: [
+          "Le bouton « Évolution » montre le chrono course après course (simulations comprises, filtre « Officielles » possible), la part du temps par bloc et la position par station.",
+          "Une estimation du prochain chrono s'affiche quand l'athlète a des tests récents, avec sa fourchette et sa fiabilité.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Toucher une course ouvre son analyse. L'onglet Gains propose « En parler à » son coach : le message arrive dans le commentaire de la course.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-hyrox-references-completes",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "HYROX : positions et médianes calculées sur toutes les références",
+    summary:
+      "Une partie des références HYROX n'était pas lue : certaines positions (top x %), certains profils et certaines médianes manquaient ou étaient faux. Tout est maintenant pris en compte.",
+    sections: [],
+  },
+  {
     id: "2026-11-15-acces-base-plus-rapide",
     date: "2026-11-15",
     kind: "fix",

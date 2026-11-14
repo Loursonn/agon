@@ -14,7 +14,7 @@ import { FRISE_CADENCE_COLOR, FRISE_PACE_COLOR, STATION_PICTO, segColor } from "
  * HyroxAnaTel) : repère à l'échelle de l'écran, cases hautes numérotées,
  * pictos des stations et axe du temps.
  */
-export default function RaceFrise({ analysis, hr, cadence, offset, sv1, sv2, selected, onSelect, curves = false, hover = false, compact = false, speed = null }: {
+export default function RaceFrise({ analysis, hr, cadence, offset, sv1, sv2, selected, onSelect, curves = false, hover = false, compact = false, speed = null, refPace = null }: {
   analysis: RaceWatchAnalysis;
   hr: { t: number[]; v: Array<number | null> } | null;
   cadence?: { t: number[]; v: Array<number | null> } | null;
@@ -28,6 +28,8 @@ export default function RaceFrise({ analysis, hr, cadence, offset, sv1, sv2, sel
   curves?: boolean;
   hover?: boolean;
   compact?: boolean;
+  /** Référence d'allure par run (s/km) pour le pointillé (« Comparer à ») ; sinon l'allure officielle. */
+  refPace?: ((runKey: string) => number | null) | null;
 }) {
   const W = compact ? 340 : 1000;
   const HH = compact ? 70 : 120;
@@ -75,7 +77,7 @@ export default function RaceFrise({ analysis, hr, cadence, offset, sv1, sv2, sel
   const yCad = (v: number) => HH - 8 - ((v - cLo) / Math.max(1, cHi - cLo)) * (HH - 16);
 
   if (curves) {
-    return <StackedFrise analysis={analysis} pts={pts} cadence={cadence ?? null} speed={speed} offset={offset}
+    return <StackedFrise refPace={refPace} analysis={analysis} pts={pts} cadence={cadence ?? null} speed={speed} offset={offset}
       sv1={sv1} sv2={sv2} selected={selected} onSelect={onSelect} hover={hover} />;
   }
 
@@ -199,8 +201,9 @@ function runSeries(
 
 const fmtPace = (s: number) => `${Math.floor(s / 60)}'${String(Math.round(s % 60)).padStart(2, "0")}`;
 
-function StackedFrise({ analysis, pts, cadence, speed, offset, sv1, sv2, selected, onSelect, hover }: {
+function StackedFrise({ analysis, pts, cadence, speed, offset, sv1, sv2, selected, onSelect, hover, refPace }: {
   analysis: RaceWatchAnalysis;
+  refPace: ((runKey: string) => number | null) | null;
   pts: Array<[number, number]> | null;
   cadence: { t: number[]; v: Array<number | null> } | null;
   speed: { t: number[]; v: Array<number | null> } | null;
@@ -305,10 +308,15 @@ function StackedFrise({ analysis, pts, cadence, speed, offset, sv1, sv2, selecte
         {[pLo + 6, (pLo + pHi) / 2, pHi - 6].map((p) => (
           <text key={`pa${p}`} x={PL - 6} y={yPace(p) + 3.5} fontSize={10} textAnchor="end" fill={C.tx3} style={MONO}>{fmtPace(p)}</text>
         ))}
-        {runs.map((r) => (
-          <line key={`off-${r.key}`} x1={xOf(r.startS)} x2={xOf(r.endS)} y1={yPace(r.officialS)} y2={yPace(r.officialS)}
-            stroke={C.tx2} strokeDasharray="2 3" strokeWidth={1} opacity={0.7} />
-        ))}
+        {runs.map((r) => {
+          const p = refPace ? refPace(r.key) : r.officialS;
+          if (p == null) return null;
+          const y = yPace(Math.min(pHi, Math.max(pLo, p)));
+          return (
+            <line key={`off-${r.key}`} x1={xOf(r.startS)} x2={xOf(r.endS)} y1={y} y2={y}
+              stroke={C.tx2} strokeDasharray="2 3" strokeWidth={1} opacity={0.7} />
+          );
+        })}
         {pace.map((line, k) => line.length > 1 && (
           <polyline key={`p${k}`} fill="none" stroke={FRISE_PACE_COLOR} strokeWidth={1.5}
             points={line.map(([t, v]) => `${xOf(t)},${yPace(Math.min(pHi, Math.max(pLo, v)))}`).join(" ")} />

@@ -16,7 +16,7 @@ const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
  * stations / Roxzone de chaque course, puis le coût de la course compromise
  * (runs 2 à 8 vs run 1), calculé sur les seuls temps.
  */
-export default function BilanTimeSplit({ races }: { races: HyroxResult[] }) {
+export default function EvolutionTimeSplit({ races }: { races: HyroxResult[] }) {
   const rows = races.map((r) => ({ r, s: timeSplit(r), c: compromisedFromTimes(r) }));
   const colors = { run: hyroxPictoColor("course"), stations: hyroxPictoColor("skierg"), roxzone: C.brdL };
   const roxAbove = rows.filter((x) => x.s.pct.roxzone != null && x.s.pct.roxzone > ROX_THRESHOLD).length;

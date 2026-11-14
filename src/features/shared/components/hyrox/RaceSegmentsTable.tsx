@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 import { CARD, KICKER, LABEL, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
 import { HyroxPicto } from "@/features/shared/components/HyroxPicto";
 import type { ActivityStream } from "@shared/activityFiles/stream";
@@ -10,7 +10,6 @@ import { DASH, fmtClock } from "@/lib/seance";
 import { STATION_PICTO, fmtDelta, segColor } from "./raceAnalysisShared";
 
 const pct = (x: number | null) => (x == null ? DASH : `${Math.round(x * 100)} %`);
-const top = (p: number | null) => (p == null ? DASH : `top ${p} %`);
 
 /** FC moyenne pondérée par la durée des segments mesurés. */
 function weightedHr(segs: SegmentWatch[]): number | null {
@@ -24,12 +23,42 @@ const maxHr = (segs: SegmentWatch[]) => {
   return v.length ? Math.max(...v) : null;
 };
 
+/** Station juste avant un run (« après SkiErg »), ou « départ » pour le run 1. */
+function afterLabel(a: RaceWatchAnalysis, s: SegmentWatch): string | null {
+  if (s.kind !== "run") return null;
+  const i = a.segments.indexOf(s);
+  for (let j = i - 1; j >= 0; j--) if (a.segments[j].kind === "station") return `après ${a.segments[j].label}`;
+  return "départ";
+}
+
+/** Coût d'une station sur le run suivant : orange ≥ 25 s/km, rouge ≥ 35. */
+const costColor = (c: number) => (c >= 35 ? C.r : c >= 25 ? C.o : C.tx);
+
+/** Jauge de position (0 = meilleur, à gauche) et « top x % », rouge au-delà de 75. */
+function Position({ p }: { p: number | null }) {
+  if (p == null) return <>{DASH}</>;
+  const bad = p >= 75;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <span aria-hidden style={{ position: "relative", width: 34, height: 4, borderRadius: 2, background: C.s2, display: "inline-block" }}>
+        <span style={{ position: "absolute", left: `${Math.min(100, Math.max(0, p))}%`, top: -3, width: 3, height: 10, marginLeft: -1.5, borderRadius: 1, background: bad ? C.r : C.tx2 }} />
+      </span>
+      <span style={{ color: bad ? C.r : C.tx }}>top {p} %</span>
+    </span>
+  );
+}
+
 /**
  * Tableau des 17 segments : 16 runs et stations, la Roxzone (15 passages) et
- * le total. Position = top % du niveau ; % Z3 = part au-dessus de SV2 ;
- * coût run suivant = allure du run qui suit la station − allure du run 1.
+ * le total. Plan = objectif du plan de course ; Écart = vs la référence
+ * « Comparer à » (médiane sans choix) ; Position = top % du niveau ; % Z3 =
+ * part au-dessus de SV2 ; coût run suivant = allure du run qui suit la
+ * station − allure du run 1.
  */
-export default function RaceSegmentsTable({ analysis, refOf, stream, sv2, offset, totalS, totalRef, compromisedAvg, title, defaultOpen = false }: {
+export default function RaceSegmentsTable({
+  analysis, refOf, stream, sv2, offset, totalS, totalRef, compromisedAvg, title, defaultOpen = false,
+  compare = null, timeSource = null, attribution = null,
+}: {
   analysis: RaceWatchAnalysis;
   refOf: (seg: string) => HyroxReferenceSegment | null;
   stream: ActivityStream | null;
@@ -40,23 +69,34 @@ export default function RaceSegmentsTable({ analysis, refOf, stream, sv2, offset
   compromisedAvg: number | null;
   title: string;
   defaultOpen?: boolean;
+  /** Référence de la colonne Écart et objectifs du plan (coach). */
+  compare?: { label: string; target: (seg: string) => number | null; plan: ((seg: string) => number | null) | null } | null;
+  timeSource?: string | null;
+  attribution?: string | null;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [hovered, setHovered] = useState<string | null>(null);
   const rows = analysis.segments.filter((s) => s.kind !== "roxzone");
   const rox = analysis.segments.filter((s) => s.kind === "roxzone");
   const cost = runCostAfter(analysis);
   const runs = analysis.segments.filter((s) => s.kind === "run");
   const cads = runs.map((r) => r.avgCadence).filter((x): x is number => x != null);
   const z3 = (keep: (s: SegmentWatch) => boolean) => shareAboveHr(analysis, stream, sv2, offset, keep);
+  const target = compare?.target ?? ((seg: string) => refOf(seg)?.p50_s ?? null);
+  const plan = compare?.plan ?? null;
   const th: CSSProperties = { ...LABEL, fontSize: 10, textAlign: "right", padding: "6px 8px", whiteSpace: "nowrap" };
+  const group: CSSProperties = { ...th, fontSize: 9.5, color: C.tx3, textAlign: "center", borderBottom: `1px solid ${C.brd}` };
   const td: CSSProperties = { ...MONO, fontSize: 12.5, textAlign: "right", padding: "7px 8px", borderTop: `1px solid ${C.brd}`, whiteSpace: "nowrap" };
   const left: CSSProperties = { ...td, fontFamily: "inherit", textAlign: "left" };
   const deltaCell = (d: number | null) => (
-    <td style={{ ...td, color: d == null || Math.round(d) === 0 ? C.tx3 : d > 0 ? C.o : C.g }}>{fmtDelta(d, fmtClock)}</td>
+    <td style={{ ...td, color: d == null || Math.round(d) === 0 ? C.tx3 : d > 0 ? C.r : C.g }}>{fmtDelta(d, fmtClock)}</td>
   );
   const roxS = rox.reduce((n, s) => n + s.officialS, 0);
   const roxRef = refOf("roxzone_total");
   const totalMed = totalRef?.p50_s ?? null;
+  const vs = (v: number, t: number | null) => (t != null ? v - t : null);
+  const rowStyle = (key: string): CSSProperties => (hovered === key ? { background: alpha(C.ac, 0.07), boxShadow: `inset 3px 0 0 ${C.ac}` } : {});
+  const watchName = attribution ? attribution.toUpperCase() : "MONTRE";
   return (
     <div style={{ ...CARD, padding: 14 }}>
       <button type="button" onClick={() => setOpen((v) => !v)} style={{ ...buttonStyle(), width: "100%", justifyContent: "space-between" }}>
@@ -64,44 +104,63 @@ export default function RaceSegmentsTable({ analysis, refOf, stream, sv2, offset
       </button>
       {open && (
         <div style={{ overflowX: "auto", marginTop: 10 }}>
-          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 860 }}>
-            <thead><tr>
-              <th style={th}>N°</th><th style={{ ...th, textAlign: "left" }}>Segment</th><th style={th}>Temps</th><th style={th}>Écart</th>
-              <th style={th}>Médiane</th><th style={th}>Position</th><th style={th}>FC moy.</th><th style={th}>FC max</th>
-              <th style={th}>% Z3</th><th style={th}>Cadence</th><th style={th}>Coût run suiv.</th>
-            </tr></thead>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 980 }}>
+            <thead>
+              <tr>
+                <th colSpan={2} />
+                <th colSpan={3} style={group}>Course · {timeSource ?? "temps"}</th>
+                <th colSpan={2} style={group}>Référence · calcul Agon</th>
+                <th colSpan={3} style={group}>Montre · {watchName}</th>
+                <th colSpan={2} style={group}>Calcul Agon</th>
+              </tr>
+              <tr>
+                <th style={th}>N°</th><th style={{ ...th, textAlign: "left" }}>Segment</th><th style={th}>Temps</th><th style={th}>Plan</th>
+                <th style={th}>Écart{compare ? ` · ${compare.label.toLowerCase()}` : ""}</th>
+                <th style={th}>Médiane</th><th style={th}>Position</th><th style={th}>FC moy.</th><th style={th}>FC max</th>
+                <th style={th}>% Z3</th><th style={th}>Cadence</th><th style={th}>Coût run suiv.</th>
+              </tr>
+            </thead>
             <tbody>
               {rows.map((s, i) => {
                 const ref = refOf(s.key);
                 const m = ref?.p50_s ?? null;
                 const c = cost[s.key];
+                const after = afterLabel(analysis, s);
                 return (
-                  <tr key={s.key}>
+                  <tr key={s.key} style={rowStyle(s.key)} onMouseEnter={() => setHovered(s.key)} onMouseLeave={() => setHovered(null)}>
                     <td style={{ ...td, color: C.tx3 }}>{i + 1}</td>
                     <td style={left}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                         <HyroxPicto station={s.kind === "run" ? "course" : STATION_PICTO[s.key] ?? "autre"} size={14} color={segColor(s)} />{s.label}
+                        {after && <span style={{ fontSize: 11, color: C.tx3 }}>{after}</span>}
                       </span>
                     </td>
                     <td style={td}>{fmtClock(s.officialS)}</td>
-                    {deltaCell(m != null ? s.officialS - m : null)}
+                    <td style={{ ...td, color: C.tx3 }}>{fmtClock(plan?.(s.key) ?? null)}</td>
+                    {deltaCell(vs(s.officialS, target(s.key)))}
                     <td style={{ ...td, color: C.tx3 }}>{fmtClock(m)}</td>
-                    <td style={td}>{top(ref ? percentile(s.officialS, ref) : null)}</td>
+                    <td style={td}><Position p={ref ? percentile(s.officialS, ref) : null} /></td>
                     <td style={td}>{s.avgHr ?? DASH}</td>
                     <td style={td}>{s.maxHr ?? DASH}</td>
                     <td style={td}>{pct(z3((x) => x.key === s.key))}</td>
-                    <td style={td}>{s.avgCadence ?? DASH}</td>
-                    <td style={{ ...td, color: c != null && c > 0 ? C.o : C.tx }}>{c != null ? `${c > 0 ? "+" : c < 0 ? "−" : ""}${Math.abs(c)} s/km` : DASH}</td>
+                    <td style={td}>{s.kind === "run" ? s.avgCadence ?? DASH : DASH}</td>
+                    <td style={{ ...td, color: c != null ? costColor(c) : C.tx }}>{c != null ? `${c > 0 ? "+" : c < 0 ? "−" : ""}${Math.abs(c)} s/km` : DASH}</td>
                   </tr>
                 );
               })}
-              <tr>
+              <tr style={rowStyle("rox")} onMouseEnter={() => setHovered("rox")} onMouseLeave={() => setHovered(null)}>
                 <td style={{ ...td, color: C.tx3 }}>{rows.length + 1}</td>
-                <td style={left}>Roxzone · {rox.length} passages{analysis.roxzoneEstimated ? " (répartis)" : ""}</td>
+                <td style={left}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <HyroxPicto station="roxzone" size={14} color={C.tx3} />Roxzone
+                    <span style={{ fontSize: 11, color: C.tx3 }}>{rox.length} passages{analysis.roxzoneEstimated ? " (répartis)" : ""}</span>
+                  </span>
+                </td>
                 <td style={td}>{fmtClock(roxS)}</td>
-                {deltaCell(roxRef ? roxS - roxRef.p50_s : null)}
+                <td style={{ ...td, color: C.tx3 }}>{fmtClock(plan?.("roxzone_total") ?? null)}</td>
+                {deltaCell(vs(roxS, target("roxzone_total")))}
                 <td style={{ ...td, color: C.tx3 }}>{fmtClock(roxRef?.p50_s ?? null)}</td>
-                <td style={td}>{top(roxRef ? percentile(roxS, roxRef) : null)}</td>
+                <td style={td}><Position p={roxRef ? percentile(roxS, roxRef) : null} /></td>
                 <td style={td}>{weightedHr(rox) ?? DASH}</td>
                 <td style={td}>{maxHr(rox) ?? DASH}</td>
                 <td style={td}>{pct(z3((x) => x.kind === "roxzone"))}</td>
@@ -112,9 +171,10 @@ export default function RaceSegmentsTable({ analysis, refOf, stream, sv2, offset
                 <td style={td} />
                 <td style={left}>Total</td>
                 <td style={td}>{fmtClock(totalS)}</td>
-                {deltaCell(totalMed != null ? totalS - totalMed : null)}
+                <td style={{ ...td, color: C.tx3 }}>{fmtClock(plan?.("total") ?? null)}</td>
+                {deltaCell(vs(totalS, target("total")))}
                 <td style={{ ...td, color: C.tx3 }}>{fmtClock(totalMed)}</td>
-                <td style={td}>{top(totalRef ? percentile(totalS, totalRef) : null)}</td>
+                <td style={td}><Position p={totalRef ? percentile(totalS, totalRef) : null} /></td>
                 <td style={td}>{weightedHr(analysis.segments) ?? DASH}</td>
                 <td style={td}>{analysis.raceMaxHr ?? DASH}</td>
                 <td style={td}>{pct(z3(() => true))}</td>
@@ -128,3 +188,4 @@ export default function RaceSegmentsTable({ analysis, refOf, stream, sv2, offset
     </div>
   );
 }
+
