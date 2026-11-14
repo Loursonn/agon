@@ -17,6 +17,16 @@ vi.mock("@/features/shared/hooks/useMedicalEntries", () => ({
   }),
 }));
 vi.mock("@/features/shared/hooks/useWellness", () => ({ useWellnessHistory: (id: string | undefined) => ({ data: id ? {} : undefined }) }));
+// Cycle en cours : la page ne le demande (id défini) que si la planification est lisible.
+const cycleAsked: (string | undefined)[] = [];
+vi.mock("@/features/coach/phone/CoachPhoneAthleteHeader", () => ({
+  useCurrentCycle: (id: string | undefined) => {
+    cycleAsked.push(id);
+    return id
+      ? { cycle: { id: "cy", name: "HYROX Paris" }, weeks: [{}, {}, {}, {}, {}], weekIndex: 1 }
+      : { cycle: null, weeks: [], weekIndex: null };
+  },
+}));
 vi.mock("../../lib/wellnessWatch", () => ({
   wellnessDrop: () => ({ item: "sleep", label: "Sommeil", value: 2, day: "2026-11-12" }),
 }));
@@ -55,6 +65,23 @@ describe("StaffHomePage", () => {
     expect(screen.getByText("Léa Démo · wellness en baisse")).toBeTruthy();
     // Sans accord : ni blessure ni wellness de Tom.
     expect(screen.queryByText(/Tom Démo · /)).toBeNull();
+  });
+
+  it("badge du cycle en cours seulement si la planification est ouverte et l'accord donné", () => {
+    cycleAsked.length = 0;
+    links = {
+      isLoading: false,
+      data: [
+        athlete({ athleteId: "lea", athleteName: "Léa Démo", permissions: perms({ planification: "read" }) }),
+        athlete({ athleteId: "tom", athleteName: "Tom Démo", permissions: perms({ planification: "none" }) }),
+        athlete({ athleteId: "eva", athleteName: "Eva Démo", permissions: perms({ planification: "write" }), sharingConsent: false }),
+      ],
+    };
+    renderPage();
+    expect(screen.getAllByText("HYROX Paris · S1 / 5")).toHaveLength(1);
+    expect(cycleAsked).toContain("lea");
+    expect(cycleAsked).not.toContain("tom");
+    expect(cycleAsked).not.toContain("eva");
   });
 
   it("sans athlète : message d'attente d'invitation", () => {

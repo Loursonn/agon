@@ -2440,3 +2440,15 @@ et son README.
   l'athlète lit sous son thème), « Retirer » et « Plus d'options… », qui ouvre le panneau complet (nom, dominante,
   couleur). Le reste de la case du jour ouvre toujours le panneau. Changer l'intensité garde une couleur choisie à
   la main (`colorForIntensityPick`).
+
+## 2026-11-14 — Badge cycle de l'accueil staff : option A, sans RPC
+
+- Le badge « HYROX PARIS · S1 / 5 » (planche CoachOrdiBStaffAccueil) est le cycle en cours de l'athlète et le rang
+  de la semaine, comme sur l'en-tête téléphone du coach (`useCurrentCycle`).
+- **A retenue** : lecture côté client avec les requêtes existantes (`cycles`, `microcycles`). Le pro qui a
+  « Planification » en lecture les lit déjà en prod (`staff_cycles_read`, `staff_microcycles_read`, via
+  `staff_can`) ; le badge s'affiche seulement si `canRead(planification)` et l'accord `staff_sharing`. Aucune
+  donnée ni aucun destinataire nouveau : rien à changer côté RGPD.
+- **B écartée** : pas de RPC `staff_cycle_badges()` tant que la requête client suffit (deux petites lectures par
+  athlète). Test à blanc 12/12 avant décision (planification fermée, accord retiré, lien révoqué : rien de
+  visible). Fichiers retirés de `supabase/pending/`.

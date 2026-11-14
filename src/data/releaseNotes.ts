@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-staff-cycle-en-cours",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Ton staff voit où en est l'athlète dans son cycle",
+    summary: "Sur l'accueil d'un kiné, d'un ostéo ou d'un nutritionniste, chaque athlète affiche maintenant son cycle en cours et la semaine du jour, par exemple « HYROX PARIS · S1 / 5 ».",
+    sections: [
+      {
+        title: "Qui le voit",
+        points: [
+          "Seulement les pros à qui tu as ouvert la planification, en lecture ou en écriture : c'est déjà le cas par défaut pour tous les métiers sauf « Autre ».",
+          "Si tu fermes la planification, ou si l'athlète n'a pas donné son accord au partage avec son staff, le badge n'apparaît pas.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-avis-app-etoiles",
     date: "2026-11-14",
     kind: "fix",
