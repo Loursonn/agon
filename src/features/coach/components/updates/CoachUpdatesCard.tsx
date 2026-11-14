@@ -7,16 +7,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
-import { C, alpha } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppUpdates, useMarkAppUpdateSeen } from "@/features/shared/hooks/useAppUpdates";
 import { ReleaseNoteContent } from "./ReleaseNoteContent";
 
-const LINK = {
-  ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: C.ac,
-  background: "none", border: "none", padding: 0, cursor: "pointer", whiteSpace: "nowrap" as const,
-};
+/** Lien texte or en capitales mono (« Voir le détail », « Toutes les nouveautés »). */
+const LINK = "agon-mono cursor-pointer whitespace-nowrap border-0 bg-transparent p-0 text-[11px] uppercase tracking-[0.12em] text-agon-accent";
+const ELLIPSIS = "overflow-hidden text-ellipsis whitespace-nowrap";
 
 export function CoachUpdatesCard() {
   const { user } = useAuth();
@@ -30,24 +27,21 @@ export function CoachUpdatesCard() {
   const open = expanded === note.id;
 
   return (
-    <div style={{
-      position: "relative", overflow: "hidden", borderRadius: 14,
-      border: `1px solid ${alpha(C.ac, 0.4)}`, background: alpha(C.ac, 0.12),
-    }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "16px 20px 16px 23px" }}>
-        <span style={{
-          ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
-          background: C.ac, color: C.ink, borderRadius: 999, padding: "4px 9px", flex: "none",
-        }}>Nouveauté</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{note.title}</div>
-          <div style={{ fontSize: 12, color: C.tx2, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{note.summary}</div>
+    <div className="relative overflow-hidden rounded-[14px] border border-agon-accent/40 bg-agon-accent/[0.12]">
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-agon-accent" />
+      {/* Sous xl (barre latérale comprise), les liens passent à la ligne au lieu de déborder du bandeau. */}
+      <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2.5 py-4 pl-[23px] pr-5 xl:flex-nowrap">
+        <span className="agon-mono flex-none rounded-full bg-agon-accent px-[9px] py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-agon-ink">
+          Nouveauté
+        </span>
+        <div className="min-w-0 flex-1 basis-[220px] xl:basis-0">
+          <div className={`${ELLIPSIS} text-[14px] font-medium text-agon-tx`}>{note.title}</div>
+          <div className={`${ELLIPSIS} mt-0.5 text-[12px] text-agon-tx2`}>{note.summary}</div>
         </div>
-        <button type="button" style={LINK} onClick={() => setExpanded(open ? null : note.id)}>
+        <button type="button" className={LINK} onClick={() => setExpanded(open ? null : note.id)}>
           {open ? "Masquer" : "Voir le détail"}
         </button>
-        <button type="button" style={LINK} onClick={() => navigate("/coach/nouveautes")}>
+        <button type="button" className={LINK} onClick={() => navigate("/coach/nouveautes")}>
           {unseen.length > 1 ? `Toutes les nouveautés (${unseen.length}) →` : "Toutes les nouveautés →"}
         </button>
         <button
@@ -56,15 +50,12 @@ export function CoachUpdatesCard() {
           title="Marquer comme vue"
           disabled={mark.isPending}
           onClick={() => mark.mutate({ userId: user.id, updateIds: [note.id] })}
-          style={{
-            width: 26, height: 26, flex: "none", borderRadius: 6, border: `1px solid ${C.brdL}`, background: "transparent",
-            color: C.tx2, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-          }}
+          className="flex size-[26px] flex-none cursor-pointer items-center justify-center rounded-[6px] border border-agon-brd-l bg-transparent text-agon-tx2"
         >
           <X size={14} strokeWidth={1.75} />
         </button>
       </div>
-      {open && <div style={{ padding: "0 20px 16px 23px" }}><ReleaseNoteContent note={note} /></div>}
+      {open && <div className="pb-4 pl-[23px] pr-5"><ReleaseNoteContent note={note} /></div>}
     </div>
   );
 }
