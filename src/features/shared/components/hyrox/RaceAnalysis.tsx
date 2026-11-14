@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, Share2 } from "lucide-react";
-import { C } from "@/lib/theme";
-import { KICKER, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
+import { C, alpha } from "@/lib/theme";
+import { DISPLAY, KICKER, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
 import { useRaceWatch } from "@/features/shared/hooks/hyrox/useRaceWatch";
 import { useHyroxReferences } from "@/features/shared/hooks/hyrox/useHyroxReferences";
 import { pickRef } from "@/api/hyrox";
@@ -40,6 +40,8 @@ const TABS = [
 type TabKey = typeof TABS[number]["key"] | "partager";
 
 /** Coach si l'écran est ouvert sous /coach (le composant sert aux deux espaces). */
+const PILL = { ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" as const, whiteSpace: "nowrap" as const, borderRadius: 999, padding: "4px 9px" };
+
 function detectAudience(): RaceAudience {
   return typeof window !== "undefined" && window.location.pathname.startsWith("/coach") ? "coach" : "athlete";
 }
@@ -93,7 +95,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced }: { race:
   const crumb = (
     <nav aria-label="Fil d'Ariane" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
       <button type="button" onClick={onBack} style={{ ...buttonStyle(), padding: "0 10px" }} aria-label="Retour à la course"><ArrowLeft size={14} /></button>
-      <span style={{ ...KICKER, fontSize: 10.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <span style={{ ...KICKER, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         HYROX › Courses › <span style={{ color: C.tx }}>{race.event_name} · {ddmm(race.date)}</span> › Analyse
       </span>
     </nav>
@@ -122,19 +124,26 @@ export default function RaceAnalysis({ race, onBack, audience: forced }: { race:
         </button>
       </div>
 
-      <div>
-        <div style={KICKER}>{race.is_official ? "Compétition" : "Course"} · {division}</div>
-        <div style={{ fontSize: 22, fontWeight: 600, marginTop: 4 }}>{race.event_name}</div>
-        <div style={{ fontSize: 12, color: C.tx3 }}>{dateLabel}</div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-        <Stat label="Chrono" value={fmtClock(race.total_s)}
+      <div style={{
+        position: "relative", overflow: "hidden", borderRadius: 16, padding: "20px 24px 20px 27px",
+        background: alpha(C.o, 0.12), border: `1px solid ${alpha(C.o, 0.42)}`,
+        display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap",
+      }}>
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.o }} />
+        <div style={{ flex: "1 1 280px", minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ ...PILL, background: race.is_official ? C.rouge : C.o, color: C.ink }}>{race.is_official ? "Compétition" : "Simulation"}</span>
+            <span style={{ ...PILL, color: C.tx2, border: `1px solid ${C.brdL}`, padding: "3px 8px" }}>{division}</span>
+            <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>{dateLabel}</span>
+          </div>
+          <div style={{ ...DISPLAY, fontWeight: 400, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", color: C.tx, marginTop: 10 }}>{race.event_name}</div>
+        </div>
+        <Stat bare label="Chrono" value={fmtClock(race.total_s)}
           sub={isRecord ? "Record" : gap ? `+${fmtGap(gap.gapS)} vs record (${raceShortName(gap.record)})` : undefined} />
         {race.rank_overall != null && race.participants_overall
-          ? <Stat label="Rang" value={String(race.rank_overall)} unit={`/ ${race.participants_overall}`} sub={`Top ${Math.max(1, Math.round((race.rank_overall / race.participants_overall) * 100))} %`} />
-          : totalPct != null && <Stat label="Position" value={`Top ${totalPct} %`} sub={`${division} · ${bracketText}`} />}
-        {profile && <Stat label="Profil" value={PROFILE_LABEL[profile]} sub={profileSub} />}
+          ? <Stat bare label="Rang" value={String(race.rank_overall)} unit={`/ ${race.participants_overall}`} sub={`Top ${Math.max(1, Math.round((race.rank_overall / race.participants_overall) * 100))} %`} />
+          : totalPct != null && <Stat bare label="Position" value={`Top ${totalPct} %`} sub={`${division} · ${bracketText}`} />}
+        {profile && <Stat bare label="Profil" value={PROFILE_LABEL[profile]} sub={profileSub} />}
       </div>
 
       <div style={{ display: "flex", gap: 18, borderBottom: `1px solid ${C.brd}` }} role="tablist">
