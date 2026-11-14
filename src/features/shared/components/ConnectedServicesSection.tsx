@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { relativeSince } from "@/lib/relativeSince";
 import { ActivityFileImport } from "@/features/shared/components/ActivityFileImport";
 import {
@@ -129,6 +129,17 @@ const STATUS_COPY: Record<ProviderConnection["status"], { label: string; tone: "
   revoked: { label: "Accès révoqué", tone: "bad" },
 };
 
+const TONE_CLASS: Record<"ok" | "warn" | "bad", string> = {
+  ok: "text-agon-succes",
+  warn: "text-agon-alerte",
+  bad: "text-agon-erreur",
+};
+
+// Classes communes des boutons et des textes d'aide du panneau.
+const BTN = "rounded-[6px] font-[inherit] text-[12px] font-semibold";
+const HINT = "text-[11px] leading-[1.45] text-agon-tx3";
+const ERROR_BOX = "rounded-[6px] border border-agon-erreur/[0.188] bg-agon-erreur-doux px-2.5 py-2 text-[11px] leading-normal text-agon-erreur";
+
 /** Résultat de l'autorisation posé dans l'URL par la fonction de retour : toast, puis retiré. */
 function useProviderOutcomes(onProblem: () => void) {
 
@@ -166,10 +177,10 @@ function useProviderOutcomes(onProblem: () => void) {
 /** Dans une carte de « Montres et données », le nom est déjà dans l'en-tête de la carte. */
 const InCard = createContext(false);
 function RowTitle({ children }: { children: ReactNode }) {
-  return useContext(InCard) ? null : <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>{children}</div>;
+  return useContext(InCard) ? null : <div className="text-[12px] font-semibold text-agon-tx">{children}</div>;
 }
 
-const CARD_S: CSSProperties = { borderRadius: 14, background: C.s1, border: "1px solid " + C.brd, padding: "14px 14px 16px" };
+const CARD = "rounded-[14px] border border-agon-brd bg-agon-s1 px-3.5 pb-4 pt-3.5";
 
 /**
  * Page « Montres et données » (planche Ath2Montres) : une carte par montre,
@@ -178,22 +189,22 @@ const CARD_S: CSSProperties = { borderRadius: 14, background: C.s1, border: "1px
 export function ProviderCards() {
   const { data: connections, isLoading } = useProviderConnections();
   useProviderOutcomes(() => {});
-  if (isLoading) return <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>;
+  if (isLoading) return <div className="text-[12px] text-agon-tx3">Chargement…</div>;
   const garmin = connectionFor(connections, "garmin");
   const coros = connectionFor(connections, "coros");
   // Montre connectée en premier (planche : Garmin connectée, COROS à connecter).
   const order = coros?.status === "active" && garmin?.status !== "active" ? (["coros", "garmin"] as const) : (["garmin", "coros"] as const);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       {order.map((p) => (
-        <div key={p} style={CARD_S}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 10, background: C.s2, border: "1px solid " + C.brd, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--agon-font-data)", fontSize: 10.5, color: C.tx2, flex: "none" }}>
+        <div key={p} className={CARD}>
+          <div className="mb-2.5 flex items-center gap-2.5">
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] border border-agon-brd bg-agon-s2 font-data text-[10.5px] text-agon-tx2">
               {p === "garmin" ? "GRM" : "CRS"}
             </span>
-            <span style={{ flex: 1 }}>
-              <span style={{ display: "block", fontSize: 14, fontWeight: 500 }}>{PROVIDER_LABEL[p]}</span>
-              <span style={{ display: "block", fontSize: 11.5, color: C.tx3, marginTop: 2 }}>{PROVIDER_VIA[p]}</span>
+            <span className="flex-1">
+              <span className="block text-[14px] font-medium">{PROVIDER_LABEL[p]}</span>
+              <span className="mt-0.5 block text-[11.5px] text-agon-tx3">{PROVIDER_VIA[p]}</span>
             </span>
           </div>
           <InCard.Provider value>
@@ -213,35 +224,35 @@ export function ConnectedServicesSection() {
   useProviderOutcomes(() => setOpen(true));
 
   return (
-    <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
+    <div className="overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1">
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+        className="flex w-full cursor-pointer items-center justify-between border-none bg-transparent px-4 py-3 font-[inherit]"
       >
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <div className="text-[12px] font-semibold uppercase tracking-[0.5px] text-agon-tx3">
           Montres &amp; services connectés
         </div>
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span className="flex items-center gap-2">
           {([["coros", coros], ["garmin", garmin]] as const).map(([p, c]) =>
             c?.status === "active" ? (
-              <span key={p} style={{ fontSize: 10, color: C.g, border: "1px solid " + C.g + "40", background: C.gS, borderRadius: 10, padding: "2px 7px" }}>
+              <span key={p} className="rounded-[10px] border border-agon-succes/[0.25] bg-agon-succes-doux px-[7px] py-0.5 text-[10px] text-agon-succes">
                 {PROVIDER_LABEL[p]}
               </span>
             ) : null,
           )}
-          <span style={{ fontSize: 12, color: C.tx3, display: "inline-block", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }}>∨</span>
+          <span className={cn("inline-block text-[12px] text-agon-tx3 [transition:transform_0.2s]", open && "rotate-180")}>∨</span>
         </span>
       </button>
 
       {open && (
-        <div style={{ borderTop: "1px solid " + C.brd, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="flex flex-col gap-[18px] border-t border-agon-brd px-4 py-3.5">
           {isLoading ? (
-            <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>
+            <div className="text-[12px] text-agon-tx3">Chargement…</div>
           ) : (
             <>
               <CorosRow connection={coros} />
 
-              <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14 }}>
+              <div className="border-t border-agon-brd pt-3.5">
                 <GarminRow connection={garmin} />
               </div>
 
@@ -253,7 +264,7 @@ export function ConnectedServicesSection() {
                 historique ancien — Garmin n'expose que quatre-vingt-dix jours,
                 COROS limite les téléchargements quotidiens.
               */}
-              <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14 }}>
+              <div className="border-t border-agon-brd pt-3.5">
                 <ActivityFileImport />
               </div>
             </>
@@ -274,20 +285,20 @@ function RegionPicker({
 }) {
   return (
     <div>
-      <label htmlFor="coros-region" style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 6 }}>
+      <label htmlFor="coros-region" className="mb-1.5 block text-[11px] text-agon-tx3">
         Région de ton compte COROS
       </label>
       <select
         id="coros-region"
         value={region}
         onChange={(e) => onChange(e.target.value as CorosRegion)}
-        style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit" }}
+        className="w-full rounded-[6px] border border-agon-brd bg-agon-s2 px-3 py-2.5 font-[inherit] text-[13px] text-agon-tx"
       >
         {COROS_REGIONS.map((r) => (
           <option key={r.value} value={r.value}>{r.label}</option>
         ))}
       </select>
-      <div style={{ fontSize: 11, color: C.tx3, marginTop: 6, lineHeight: 1.45 }}>
+      <div className={cn("mt-1.5", HINT)}>
         Celle où tu as créé ton compte COROS. En cas d'erreur, l'autorisation échoue sans
         conséquence et tu peux recommencer.
       </div>
@@ -375,16 +386,16 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
 
   if (connection) {
     const status = STATUS_COPY[connection.status];
-    const tone = status.tone === "ok" ? C.g : status.tone === "warn" ? C.o : C.r;
+    const tone = TONE_CLASS[status.tone];
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-baseline justify-between gap-2.5">
           <RowTitle>COROS</RowTitle>
-          <div style={{ fontSize: 11, color: tone }}>{status.label}</div>
+          <div className={cn("text-[11px]", tone)}>{status.label}</div>
         </div>
 
-        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+        <div className="text-[11px] leading-normal text-agon-tx3">
           Connectée le {fmtDate(connection.connectedAt)}
           {connection.lastSyncAt
             ? ` · dernière synchro ${relativeSince(connection.lastSyncAt) ?? `le ${fmtDate(connection.lastSyncAt)}`}`
@@ -393,7 +404,7 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
         </div>
 
         {connection.lastError && (
-          <div style={{ fontSize: 11, color: C.r, background: C.rS, border: "1px solid " + C.r + "30", borderRadius: 6, padding: "8px 10px", lineHeight: 1.5 }}>
+          <div className={ERROR_BOX}>
             {connection.lastError}
           </div>
         )}
@@ -414,11 +425,11 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
             <button
               onClick={synchroniser}
               disabled={sync.isPending}
-              style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.g + "40", background: C.gS, color: C.g, fontSize: 12, fontWeight: 600, cursor: sync.isPending ? "wait" : "pointer", fontFamily: "inherit" }}
+              className={cn(BTN, "border border-agon-succes/[0.25] bg-agon-succes-doux py-2.5 text-agon-succes", sync.isPending ? "cursor-wait" : "cursor-pointer")}
             >
               {sync.isPending ? "Synchronisation…" : "Synchroniser maintenant"}
             </button>
-            <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+            <div className={HINT}>
               La synchronisation a lieu automatiquement chaque nuit. COROS limite le nombre de
               fichiers téléchargeables par jour : un historique long se remplit donc sur plusieurs
               jours, par tranches.
@@ -429,11 +440,11 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
             <button
               onClick={lancer}
               disabled={busy}
-              style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.o + "40", background: C.s2, color: C.o, fontSize: 12, fontWeight: 600, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}
+              className={cn(BTN, "border border-agon-alerte/[0.25] bg-agon-s2 py-2.5 text-agon-alerte", busy ? "cursor-wait" : "cursor-pointer")}
             >
               {busy ? "Redirection vers COROS…" : "Reconnecter mon compte COROS"}
             </button>
-            <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+            <div className={HINT}>
               {connection.status === "consent_withdrawn"
                 ? "Tu as retiré ton accord : la synchronisation est arrêtée. La reconnecter le redonnera."
                 : "COROS n'accepte plus notre autorisation. Reconnecter ton compte relance la synchronisation là où elle s'est arrêtée."}
@@ -447,9 +458,9 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex flex-col gap-3">
       <RowTitle>COROS</RowTitle>
-      <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+      <div className="text-[11px] leading-normal text-agon-tx3">
         Récupère automatiquement tes activités, ta fréquence cardiaque, ton sommeil et tes
         indicateurs de récupération, et les partage avec ton coach.
       </div>
@@ -458,16 +469,16 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
 
       {/* ── Accord, demandé au moment où il sert ── */}
       {!consentGranted && (
-        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+        <label className="flex cursor-pointer items-start gap-2.5">
           <input
             type="checkbox"
             checked={accepte}
             onChange={(e) => setAccepte(e.target.checked)}
-            style={{ marginTop: 2, flexShrink: 0 }}
+            className="mt-0.5 shrink-0"
           />
-          <span style={{ fontSize: 11, color: C.tx2, lineHeight: 1.5 }}>
+          <span className="text-[11px] leading-normal text-agon-tx2">
             {CONSENT_COPY.coros_sync.label}
-            <span style={{ display: "block", color: C.tx3, marginTop: 3 }}>
+            <span className="mt-[3px] block text-agon-tx3">
               {CONSENT_COPY.coros_sync.detail} Tu pourras le retirer dans « Confidentialité &amp;
               données ».
             </span>
@@ -478,7 +489,12 @@ function CorosRow({ connection }: { connection: ProviderConnection | undefined }
       <button
         onClick={lancer}
         disabled={!pretAConnecter || busy}
-        style={{ padding: "11px 0", borderRadius: 6, border: "1px solid " + (pretAConnecter ? C.g + "40" : C.brd), background: pretAConnecter ? C.gS : C.s2, color: pretAConnecter ? C.g : C.tx3, fontSize: 12, fontWeight: 600, cursor: pretAConnecter && !busy ? "pointer" : "not-allowed", opacity: pretAConnecter ? 1 : 0.6, fontFamily: "inherit" }}
+        className={cn(
+          BTN,
+          "border py-[11px]",
+          pretAConnecter ? "border-agon-succes/[0.25] bg-agon-succes-doux text-agon-succes" : "border-agon-brd bg-agon-s2 text-agon-tx3 opacity-60",
+          pretAConnecter && !busy ? "cursor-pointer" : "cursor-not-allowed",
+        )}
       >
         {busy ? "Redirection vers COROS…" : consentGranted ? "Connecter" : "Connecter mon compte COROS"}
       </button>
@@ -527,11 +543,11 @@ function DisconnectBlock({ provider }: { provider: ProviderName }) {
       <>
         <button
           onClick={() => setConfirmer(true)}
-          style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+          className={cn(BTN, "cursor-pointer border border-agon-brd bg-agon-s2 py-2.5 text-agon-tx")}
         >
           Déconnecter mon compte {nom}
         </button>
-        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+        <div className={HINT}>
           L'accès est révoqué chez {nom}, et les données que {nom} a envoyées à Agon sont
           supprimées. Les fichiers que tu as importés toi-même restent.
         </div>
@@ -540,23 +556,23 @@ function DisconnectBlock({ provider }: { provider: ProviderName }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, border: "1px solid " + C.r + "40", background: C.rS, borderRadius: 6, padding: "10px 12px" }}>
-      <div style={{ fontSize: 11, color: C.tx, lineHeight: 1.5 }}>
+    <div className="flex flex-col gap-2 rounded-[6px] border border-agon-erreur/[0.25] bg-agon-erreur-doux px-3 py-2.5">
+      <div className="text-[11px] leading-normal text-agon-tx">
         Tes activités et données de santé importées depuis {nom} seront supprimées d'Agon, pour
         toi comme pour ton coach. C'est définitif. Les activités importées par fichier restent.
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="flex gap-2">
         <button
           onClick={() => setConfirmer(false)}
           disabled={disconnect.isPending}
-          style={{ flex: 1, padding: "9px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+          className={cn(BTN, "flex-1 cursor-pointer border border-agon-brd bg-agon-s2 py-[9px] text-agon-tx")}
         >
           Annuler
         </button>
         <button
           onClick={couper}
           disabled={disconnect.isPending}
-          style={{ flex: 1, padding: "9px 0", borderRadius: 6, border: "1px solid " + C.r + "60", background: C.s2, color: C.r, fontSize: 12, fontWeight: 600, cursor: disconnect.isPending ? "wait" : "pointer", fontFamily: "inherit" }}
+          className={cn(BTN, "flex-1 border border-agon-erreur/[0.376] bg-agon-s2 py-[9px] text-agon-erreur", disconnect.isPending ? "cursor-wait" : "cursor-pointer")}
         >
           {disconnect.isPending ? "Déconnexion…" : "Déconnecter et supprimer"}
         </button>
@@ -608,9 +624,9 @@ function WorkoutPushBlock({ connection }: { connection: ProviderConnection }) {
     );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 12px", borderRadius: 8, border: "1px solid " + C.brd, background: C.s2 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Envoyer mes séances sur ma montre</div>
+    <div className="flex flex-col gap-2 rounded-[8px] border border-agon-brd bg-agon-s2 px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[12px] font-semibold text-agon-tx">Envoyer mes séances sur ma montre</div>
         <button
           type="button"
           role="switch"
@@ -618,28 +634,32 @@ function WorkoutPushBlock({ connection }: { connection: ProviderConnection }) {
           aria-label="Envoyer mes séances sur ma montre"
           onClick={toggle}
           disabled={setPush.isPending}
-          style={{ position: "relative", width: 38, height: 22, flexShrink: 0, borderRadius: 11, border: "none", padding: 0, background: on ? C.g : C.brd, cursor: setPush.isPending ? "wait" : "pointer", transition: "background .15s" }}
+          className={cn(
+            "relative h-[22px] w-[38px] shrink-0 rounded-[11px] border-none p-0 [transition:background_.15s]",
+            on ? "bg-agon-succes" : "bg-agon-brd",
+            setPush.isPending ? "cursor-wait" : "cursor-pointer",
+          )}
         >
-          <span style={{ position: "absolute", top: 3, left: on ? 19 : 3, width: 16, height: 16, borderRadius: "50%", background: C.tx, transition: "left .15s" }} />
+          <span className={cn("absolute top-[3px] h-4 w-4 rounded-full bg-agon-tx [transition:left_.15s]", on ? "left-[19px]" : "left-[3px]")} />
         </button>
       </div>
-      <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+      <div className="text-[11px] leading-normal text-agon-tx3">
         {on
           ? "Les séances programmées par ton coach pour les 7 prochains jours arrivent dans ton calendrier Garmin Connect, puis sur ta montre à la synchronisation. Une séance modifiée ou supprimée est mise à jour."
           : "Tes séances ne sont pas envoyées sur ta montre."}
       </div>
       {on && sent.length > 0 && (
-        <div style={{ fontSize: 11, color: C.g, lineHeight: 1.5 }}>
+        <div className="text-[11px] leading-normal text-agon-succes">
           {sent.length === 1 ? "1 séance à venir envoyée" : `${sent.length} séances à venir envoyées`}
         </div>
       )}
       {on && connection.grantedScopes.length > 0 && !connection.grantedScopes.includes("WORKOUT_IMPORT") && (
-        <div style={{ fontSize: 11, color: C.o, lineHeight: 1.5 }}>
+        <div className="text-[11px] leading-normal text-agon-alerte">
           Envoi bloqué : {pushErrorText("(412)")}
         </div>
       )}
       {on && failed.length > 0 && (
-        <div style={{ fontSize: 11, color: C.o, lineHeight: 1.5 }}>
+        <div className="text-[11px] leading-normal text-agon-alerte">
           {failed.length === 1 ? "1 séance n'a pas pu être envoyée" : `${failed.length} séances n'ont pas pu être envoyées`}
           {failed[0].lastError ? ` : ${pushErrorText(failed[0].lastError)}` : "."}
         </div>
@@ -691,18 +711,18 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
 
   if (!GARMIN_ENABLED && !connection) {
     return (
-      <div style={{ opacity: 0.6 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+      <div className="opacity-60">
+        <div className="flex items-baseline justify-between gap-2.5">
           <RowTitle>Garmin</RowTitle>
-          <div style={{ fontSize: 11, color: C.tx3 }}>Bientôt disponible</div>
+          <div className="text-[11px] text-agon-tx3">Bientôt disponible</div>
         </div>
-        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5, marginTop: 4 }}>
+        <div className="mt-1 text-[11px] leading-normal text-agon-tx3">
           En attente de validation du programme développeur Garmin. En attendant, l'import de
           fichiers ci-dessous récupère le même contenu.
         </div>
         <button
           disabled
-          style={{ marginTop: 10, width: "100%", padding: "10px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx3, fontSize: 12, fontWeight: 600, cursor: "not-allowed", fontFamily: "inherit" }}
+          className={cn(BTN, "mt-2.5 w-full cursor-not-allowed border border-agon-brd bg-agon-s2 py-2.5 text-agon-tx3")}
         >
           Connecter mon compte Garmin
         </button>
@@ -711,7 +731,7 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
   }
 
   const historique = (
-    <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+    <div className={HINT}>
       Garmin n'envoie que les activités enregistrées après la connexion, sans historique. Pour tes
       sorties plus anciennes, utilise l'import de fichiers ci-dessous.
     </div>
@@ -719,26 +739,26 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
 
   if (connection) {
     const status = STATUS_COPY[connection.status];
-    const tone = status.tone === "ok" ? C.g : status.tone === "warn" ? C.o : C.r;
+    const tone = TONE_CLASS[status.tone];
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-baseline justify-between gap-2.5">
           <RowTitle>Garmin</RowTitle>
-          <div style={{ fontSize: 11, color: tone }}>{status.label}</div>
+          <div className={cn("text-[11px]", tone)}>{status.label}</div>
         </div>
-        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+        <div className="text-[11px] leading-normal text-agon-tx3">
           Connectée le {fmtDate(connection.connectedAt)}
           {connection.lastSyncAt
             ? ` · dernière synchro ${relativeSince(connection.lastSyncAt) ?? `le ${fmtDate(connection.lastSyncAt)}`}`
             : " · aucune donnée reçue pour l'instant"}
         </div>
         {connection.lastError && (
-          <div style={{ fontSize: 11, color: C.r, background: C.rS, border: "1px solid " + C.r + "30", borderRadius: 6, padding: "8px 10px", lineHeight: 1.5 }}>
+          <div className={ERROR_BOX}>
             {connection.lastError}
           </div>
         )}
         {connection.status === "active" && (
-          <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.45 }}>Activités, sommeil, VFC, FC de repos, stress.</div>
+          <div className="text-[11px] leading-[1.45] text-agon-tx2">Activités, sommeil, VFC, FC de repos, stress.</div>
         )}
         {connection.status === "active" && <WorkoutPushBlock connection={connection} />}
         {connection.status === "active" ? historique : (
@@ -746,11 +766,11 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
             <button
               onClick={lancer}
               disabled={busy}
-              style={{ padding: "10px 0", borderRadius: 6, border: "1px solid " + C.o + "40", background: C.s2, color: C.o, fontSize: 12, fontWeight: 600, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}
+              className={cn(BTN, "border border-agon-alerte/[0.25] bg-agon-s2 py-2.5 text-agon-alerte", busy ? "cursor-wait" : "cursor-pointer")}
             >
               {busy ? "Redirection vers Garmin…" : "Reconnecter mon compte Garmin"}
             </button>
-            <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+            <div className={HINT}>
               {connection.status === "consent_withdrawn"
                 ? "Tu as retiré ton accord : la connexion va être fermée chez Garmin et tes données Garmin supprimées."
                 : "Garmin n'accepte plus notre autorisation. Reconnecte ton compte pour continuer à recevoir tes activités."}
@@ -763,9 +783,9 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div className="flex flex-col gap-3">
       <RowTitle>Garmin</RowTitle>
-      <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.5 }}>
+      <div className="text-[11px] leading-normal text-agon-tx3">
         Récupère automatiquement tes activités, ta fréquence cardiaque, ton sommeil et tes
         indicateurs de récupération, et les partage avec ton coach. Les données Garmin ne sont
         jamais envoyées à un service d'intelligence artificielle.
@@ -773,16 +793,16 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
       {historique}
 
       {!consentGranted && (
-        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+        <label className="flex cursor-pointer items-start gap-2.5">
           <input
             type="checkbox"
             checked={accepte}
             onChange={(e) => setAccepte(e.target.checked)}
-            style={{ marginTop: 2, flexShrink: 0 }}
+            className="mt-0.5 shrink-0"
           />
-          <span style={{ fontSize: 11, color: C.tx2, lineHeight: 1.5 }}>
+          <span className="text-[11px] leading-normal text-agon-tx2">
             {CONSENT_COPY.garmin_sync.label}
-            <span style={{ display: "block", color: C.tx3, marginTop: 3 }}>
+            <span className="mt-[3px] block text-agon-tx3">
               {CONSENT_COPY.garmin_sync.detail} Tu pourras le retirer dans « Confidentialité &amp;
               données ».
             </span>
@@ -793,7 +813,12 @@ function GarminRow({ connection }: { connection: ProviderConnection | undefined 
       <button
         onClick={lancer}
         disabled={!pretAConnecter || busy}
-        style={{ padding: "11px 0", borderRadius: 6, border: "1px solid " + (pretAConnecter ? C.g + "40" : C.brd), background: pretAConnecter ? C.gS : C.s2, color: pretAConnecter ? C.g : C.tx3, fontSize: 12, fontWeight: 600, cursor: pretAConnecter && !busy ? "pointer" : "not-allowed", opacity: pretAConnecter ? 1 : 0.6, fontFamily: "inherit" }}
+        className={cn(
+          BTN,
+          "border py-[11px]",
+          pretAConnecter ? "border-agon-succes/[0.25] bg-agon-succes-doux text-agon-succes" : "border-agon-brd bg-agon-s2 text-agon-tx3 opacity-60",
+          pretAConnecter && !busy ? "cursor-pointer" : "cursor-not-allowed",
+        )}
       >
         {busy ? "Redirection vers Garmin…" : "Connecter mon compte Garmin"}
       </button>
