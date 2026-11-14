@@ -26,15 +26,16 @@ import {
 
 // ── Navigation tabs ────────────────────────────────────────────────────────────
 
-const ALL_TABS: { key: string; label: string; pushRight?: boolean; hyroxOnly?: boolean }[] = [
+/** `short` : libellé compact sous 1280 px, pour que la barre tienne sans défiler (ex. 1100 px). */
+const ALL_TABS: { key: string; label: string; short?: string; pushRight?: boolean; hyroxOnly?: boolean }[] = [
   { key: "planning",        label: "Planning"        },
   { key: "programmation",   label: "Programmation"   },
   { key: "retours",         label: "Retours"         },
   { key: "review",          label: "Review"          },
-  { key: "profil-sportif",  label: "Profil athlète"  },
+  { key: "profil-sportif",  label: "Profil athlète", short: "Profil" },
   { key: "hyrox",           label: "HYROX", hyroxOnly: true },
   { key: "fiches",          label: "Fiches"          },
-  { key: "staff",           label: "Coachs & staff"  },
+  { key: "staff",           label: "Coachs & staff", short: "Staff" },
   { key: "athlete-view",    label: "Vue athlète", pushRight: true },
   { key: "donnees",         label: "Historique" },
 ];
@@ -239,14 +240,20 @@ export default function ContextBar() {
             <button
               key={tab.key}
               onClick={() => goTab(tab.key)}
+              title={tab.short ? tab.label : undefined}
               className={cn(
                 TAB_BASE,
-                "h-[42px] px-3.5 text-[13px]",
+                "h-[42px] px-2.5 text-[13px] xl:px-3.5",
                 tab.pushRight && "ml-auto",
                 active ? "text-agon-tx shadow-[inset_0_-2px_0_var(--agon-accent)]" : "text-agon-tx3 hover:text-agon-tx2",
               )}
             >
-              {tab.label}
+              {tab.short ? (
+                <>
+                  <span className="xl:hidden">{tab.short}</span>
+                  <span className="hidden xl:inline">{tab.label}</span>
+                </>
+              ) : tab.label}
             </button>
           );
         })}

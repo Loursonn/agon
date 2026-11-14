@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-onglets-fiche-athlete-ecran-moyen",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Onglets de la fiche athlète visibles en entier",
+    summary: "Sur un écran d'ordinateur moyen (environ 1100 px de large), « Historique » était coupé au bord et la barre d'onglets défilait sur le côté. Tous les onglets tiennent maintenant sur une ligne.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sur un écran de moins de 1280 px, « Profil athlète » devient « Profil » et « Coachs & staff » devient « Staff ». Survole l'onglet pour lire le nom complet.",
+          "Sur un grand écran, rien ne change.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-staff-cycle-en-cours",
     date: "2026-11-14",
     kind: "feature",
