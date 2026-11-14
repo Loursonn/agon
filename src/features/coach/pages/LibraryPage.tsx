@@ -520,7 +520,7 @@ export default function LibraryPage() {
                 height: 40, padding: "0 16px", border: "none", cursor: "pointer", fontFamily: "inherit",
                 fontSize: 13, fontWeight: on ? 500 : 400, color: on ? C.tx : C.tx2, whiteSpace: "nowrap",
                 boxShadow: on ? `inset 0 -3px 0 ${C.ac}` : "none",
-                background: on ? `linear-gradient(0deg, ${alpha(C.ac, 0.12)}, transparent 70%)` : "transparent",
+                background: on ? alpha(C.ac, 0.12) : "transparent",
                 display: "flex", alignItems: "center", gap: 8,
               }}
             >

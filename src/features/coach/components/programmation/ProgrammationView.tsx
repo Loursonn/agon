@@ -88,9 +88,7 @@ function SessionCard({ session, isOpen, cycleId, athleteId, onToggle, onEdit, on
     <div style={{
       position: "relative", borderRadius: 14, overflow: "hidden", marginBottom: 10,
       border: "1px solid " + (isOpen ? alpha(C.ac, 0.6) : C.brd),
-      background: isOpen
-        ? `radial-gradient(120% 140% at 0% 0%, ${alpha(C.ac, 0.2)}, transparent 60%), linear-gradient(${alpha(C.ac, 0.1)}, ${alpha(C.ac, 0.1)}), ${C.s1}`
-        : C.s1,
+      background: isOpen ? alpha(C.ac, 0.12) : C.s1,
       transition: "border-color 150ms",
     }}>
       <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isOpen ? C.ac : alpha(C.ac, 0.5) }} />
@@ -502,7 +500,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
           style={{
             display: "flex", alignItems: "center", gap: 5,
             height: 34, boxSizing: "border-box", padding: "0 18px", borderRadius: 10,
-            border: "none", background: C.ac, color: C.ink, boxShadow: `0 6px 22px ${alpha(C.ac, 0.3)}`,
+            border: "none", background: C.ac, color: C.ink,
             fontSize: 11, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
           }}
         >

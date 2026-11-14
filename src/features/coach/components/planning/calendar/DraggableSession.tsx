@@ -38,7 +38,7 @@ export function DraggableSession({
           width: 186, flex: "none", minHeight: 84, boxSizing: "border-box",
           padding: "10px 12px", borderRadius: 12, position: "relative", overflow: "hidden",
           border: "1px solid " + alpha(color, 0.35),
-          background: `linear-gradient(135deg, ${alpha(color, 0.16)} 0%, ${C.s2} 62%)`,
+          background: alpha(color, 0.12),
           cursor: "grab", userSelect: "none", opacity: isDragging ? 0.45 : 1,
           display: "flex", flexDirection: "column", gap: 6,
         }}

@@ -577,7 +577,7 @@ export default function CoachTestsBankPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
               height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 10, border: 'none',
-              background: C.ac, color: C.ink, fontSize: 12, fontWeight: 600, boxShadow: `0 6px 22px ${alpha(C.ac, 0.3)}`,
+              background: C.ac, color: C.ink, fontSize: 12, fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
               transition: 'opacity 150ms ease-out',
             }}

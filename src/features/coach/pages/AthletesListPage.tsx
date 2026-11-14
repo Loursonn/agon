@@ -74,9 +74,7 @@ export default function AthletesListPage() {
             position: "relative", overflow: "hidden", flex: 1, minWidth: 0, height: 68, boxSizing: "border-box",
             display: "flex", alignItems: "center", gap: 14, padding: "0 16px 0 18px", borderRadius: 14,
             border: `1px solid ${pending ? alpha(C.o, 0.45) : C.brd}`,
-            background: pending
-              ? `radial-gradient(60% 200% at 0% 50%, ${alpha(C.o, 0.22)}, transparent 60%), linear-gradient(${alpha(C.o, 0.12)}, ${alpha(C.o, 0.12)}), ${C.s1}`
-              : `linear-gradient(90deg, ${alpha(C.ac, 0.07)}, ${alpha(C.ac, 0)} 45%), ${C.s1}`,
+            background: alpha(pending ? C.o : C.ac, 0.12),
             cursor: "pointer", fontFamily: "inherit", textAlign: "left", color: C.tx,
           }}
         >
@@ -84,7 +82,7 @@ export default function AthletesListPage() {
           <span style={{
             width: 40, height: 40, boxSizing: "border-box", borderRadius: "50%", flex: "none",
             display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${tone}`,
-            background: pending ? `radial-gradient(circle at 30% 25%, ${alpha(C.o, 0.4)}, ${alpha(C.o, 0.1)} 70%)` : "transparent",
+            background: pending ? alpha(C.o, 0.24) : "transparent",
             color: C.tx, fontWeight: 500, ...MONO, fontSize: 13,
           }}>
             {a.full_name.charAt(0).toUpperCase()}
@@ -210,7 +208,7 @@ export default function AthletesListPage() {
           aria-label="Ajouter un athlète"
           style={{
             width: 44, height: 44, boxSizing: "border-box", borderRadius: 11, flexShrink: 0, border: "none",
-            background: C.ac, boxShadow: `0 6px 22px ${alpha(C.ac, 0.35)}`, color: C.ink, cursor: "pointer",
+            background: C.ac, color: C.ink, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
@@ -222,12 +220,12 @@ export default function AthletesListPage() {
       <div style={{
         position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
         padding: "20px 22px 20px 25px", borderRadius: 14, border: `1px solid ${alpha(C.ac, 0.45)}`,
-        background: `linear-gradient(90deg, ${alpha(C.ac, 0.14)}, ${alpha(C.ac, 0.03)}), ${C.s1}`,
+        background: alpha(C.ac, 0.12),
       }}>
         <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <span style={{ ...KICK, color: C.tx2 }}>Code coach</span>
-          <span style={{ ...MONO, fontSize: 32, lineHeight: 1.1, letterSpacing: "0.24em", color: C.ac, textShadow: `0 0 24px ${alpha(C.ac, 0.35)}` }}>
+          <span style={{ ...MONO, fontSize: 32, lineHeight: 1.1, letterSpacing: "0.24em", color: C.ac }}>
             {profile?.coach_code || "------"}
           </span>
         </div>
@@ -259,7 +257,7 @@ export default function AthletesListPage() {
                 onClick={handleAddSelf}
                 style={{
                   padding: "14px 18px", borderRadius: 14,
-                  border: "1px dashed " + C.ac + "60", background: "transparent",
+                  border: `1px solid ${C.brdL}`, background: "transparent",
                   color: C.ac, fontSize: 13, fontWeight: 600,
                   cursor: "pointer", fontFamily: "inherit", textAlign: "left",
                 }}

@@ -287,16 +287,16 @@ function ExerciseBank({coachId,onAddToExos}){
         <div style={{display:'flex',flexWrap:'wrap',gap:14,justifyContent:'flex-end',fontSize:11,color:C.tx2,marginBottom:12}}>
           {EX_TYPES.map(t=>(
             <span key={t.value} style={{display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>
-              <span style={{width:10,height:10,borderRadius:3,background:exTypeColor(t.value),boxShadow:'0 0 8px '+alpha(exTypeColor(t.value),0.55)}}/>{t.label}
+              <span style={{width:10,height:10,borderRadius:3,background:exTypeColor(t.value)}}/>{t.label}
             </span>
           ))}
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:16}}>
           {exList.map(ex=>{const tc=exTypeColor(ex.ex_type);const thumb=ex.youtube_id?`https://img.youtube.com/vi/${ex.youtube_id}/mqdefault.jpg`:ex.image_url;return(
-            <div key={ex.id} onClick={()=>{setTypeMenu(null);setSel(ex);}} style={{background:`radial-gradient(90% 120% at 0% 100%,${alpha(tc,0.16)},transparent 60%),${C.s1}`,borderRadius:14,border:'1px solid '+alpha(tc,0.4),cursor:'pointer',position:'relative',display:'flex',flexDirection:'column',overflow:'visible'}}>
-              <div style={{width:'100%',height:110,background:`radial-gradient(70% 100% at 50% 45%,${alpha(tc,0.3)},transparent 70%),${C.s2}`,position:'relative',overflow:'hidden',borderRadius:'14px 14px 0 0',borderBottom:'1px solid '+alpha(tc,0.35)}}>
+            <div key={ex.id} onClick={()=>{setTypeMenu(null);setSel(ex);}} style={{background:alpha(tc,0.12),borderRadius:14,border:'1px solid '+alpha(tc,0.4),cursor:'pointer',position:'relative',display:'flex',flexDirection:'column',overflow:'visible'}}>
+              <div style={{width:'100%',height:110,background:alpha(tc,0.12),position:'relative',overflow:'hidden',borderRadius:'14px 14px 0 0',borderBottom:'1px solid '+alpha(tc,0.35)}}>
                 {thumb&&<img src={thumb} style={{width:'100%',height:'100%',objectFit:'cover',opacity:0.35}} alt={ex.name}/>}
-                {ex.youtube_id&&<span style={{position:'absolute',left:'50%',top:'50%',width:34,height:34,margin:'-17px 0 0 -17px',borderRadius:'50%',background:tc,boxShadow:'0 0 18px '+alpha(tc,0.55),display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#0E0C0A'}}>▶</span>}
+                {ex.youtube_id&&<span style={{position:'absolute',left:'50%',top:'50%',width:34,height:34,margin:'-17px 0 0 -17px',borderRadius:'50%',background:tc,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#0E0C0A'}}>▶</span>}
                 <div style={{position:'absolute',left:10,right:10,top:10,display:'flex',justifyContent:'space-between',gap:6,minWidth:0}}>
                 <span style={{flexShrink:0,fontFamily:"'Geist Mono',monospace",fontSize:10.5,fontWeight:500,letterSpacing:'0.1em',textTransform:'uppercase',whiteSpace:'nowrap',color:'#0E0C0A',background:ex.is_verified?C.g:C.o,borderRadius:999,padding:'3px 9px'}}>{ex.is_verified?'Officiel':'Communauté'}</span>
                 {/* Pastille type — clic = changement rapide */}

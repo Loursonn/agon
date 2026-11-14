@@ -146,7 +146,7 @@ function SleepTunnel({ wellness }: { wellness: WellnessDay }) {
           position: "absolute",
           left: `${leftPct}%`, width: `${widthPct}%`,
           height: "100%", borderRadius: 4,
-          background: `linear-gradient(90deg, ${C.b}, ${C.ac})`,
+          background: C.b,
           opacity: 0.85,
         }} />
       </div>

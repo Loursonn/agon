@@ -181,7 +181,7 @@ export default function ProgrammationPage() {
                 fontFamily: "inherit", fontSize: 13, fontWeight: on ? 500 : 400, whiteSpace: "nowrap",
                 color: on ? C.tx : C.tx2,
                 boxShadow: on ? `inset 0 -3px 0 ${C.ac}` : "none",
-                background: on ? `linear-gradient(0deg, ${alpha(C.ac, 0.12)}, transparent 70%)` : "transparent",
+                background: on ? alpha(C.ac, 0.12) : "transparent",
               }}
             >
               <span aria-hidden style={{ width: 9, height: 9, borderRadius: 2, flex: "none", background: t.color }} />
