@@ -183,6 +183,18 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
       draft && setDraft(draft.map((l, i) => (i === selected ? markManual({ ...l, name, exerciseId }) : l))),
   };
 
+  const editorProps = {
+    ...editActions,
+    hyrox,
+    laps: shown,
+    names,
+    selected,
+    cutAtS,
+    saving: save.isPending,
+    watchLapCount: detail.watchLaps.length,
+    dirty,
+  };
+
   const chartCard = (opts: { editing: boolean; children?: ReactNode }) =>
     hasStream ? (
       <SeanceChartCard
@@ -379,21 +391,23 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
                   : "Clique sur un tour pour zoomer"}
             />
           )}
-          {chartCard({
-            editing,
-            children: editing ? (
-              <SeanceLapEditor
-                {...editActions}
-                hyrox={hyrox}
-                laps={shown}
-                names={names}
-                selected={selected}
-                cutAtS={cutAtS}
-                saving={save.isPending}
-                watchLapCount={detail.watchLaps.length}
-                dirty={dirty}
+          {editing && <SeanceLapEditor {...editorProps} part="toolbar" />}
+          {editing && hyrox && shown[selected] ? (
+            // Planche HyroxAjusterOrdi : graphe à gauche, panneau du tour choisi à droite.
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 340px", gap: 14, alignItems: "start" }}>
+              {chartCard({ editing, children: <SeanceLapEditor {...editorProps} part="detail" /> })}
+              <HyroxLapPanel
+                lap={shown[selected]}
+                name={names[selected]}
+                index={selected}
+                onApply={editActions.onApplyExercise}
+                onResetProposal={editActions.onResetProposal}
+                onResetWatch={editActions.onResetWatch}
               />
-            ) : undefined,
+            </div>
+          ) : chartCard({
+            editing,
+            children: editing ? <SeanceLapEditor {...editorProps} part="detail" /> : undefined,
           })}
         </>
       )}
@@ -422,7 +436,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
               </div>
             ) : undefined}
           />
-          <div style={{ display: "grid", gridTemplateColumns: editing && hyrox ? "minmax(0, 1fr) 340px" : "1fr", gap: 14, alignItems: "start" }}>
+          <div>
             <div style={{ overflowX: "auto" }}>
               <div style={{ minWidth: hyrox ? 900 : 960 }}>
                 {hyrox ? (
@@ -442,16 +456,6 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
                 )}
               </div>
             </div>
-            {editing && hyrox && shown[selected] && (
-              <HyroxLapPanel
-                lap={shown[selected]}
-                name={names[selected]}
-                index={selected}
-                onApply={editActions.onApplyExercise}
-                onResetProposal={editActions.onResetProposal}
-                onResetWatch={editActions.onResetWatch}
-              />
-            )}
           </div>
           {hyrox && !editing && (
             <div style={{ fontSize: 11.5, color: C.tx3 }}>

@@ -28,6 +28,9 @@ interface Props extends LapEditorActions {
   saving: boolean;
   watchLapCount: number;
   dirty: boolean;
+  /** "toolbar" : barre d'outils seule (posée au-dessus du graphe, planche HyroxAjusterOrdi) ;
+   *  "detail" : consigne + saisie précise (dans la carte du graphe) ; défaut : les deux. */
+  part?: "toolbar" | "detail";
 }
 
 /** Barre « Modifier les tours » (ordinateur) : outils, saisie précise, choix de l'exercice (HYROX). */
@@ -37,9 +40,12 @@ export function SeanceLapEditor(p: Props) {
   const [name, setName] = useState(lap?.name ?? "");
   useEffect(() => { setName(lap?.name ?? ""); setRenaming(false); }, [p.selected, lap?.name]);
 
+  const showBar = p.part !== "detail";
+  const showDetail = p.part !== "toolbar";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderRadius: 12, background: alpha(C.ac, 0.06), border: `1px solid ${alpha(C.ac, 0.3)}` }}>
+      {showBar && <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "10px 12px", borderRadius: 12, background: alpha(C.ac, 0.12), border: `1px solid ${alpha(C.ac, 0.42)}` }}>
         <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", color: C.ac, marginRight: 6 }}>{p.hyrox ? "AJUSTER LES TOURS" : "MODIFIER LES TOURS"}</span>
         <button type="button" style={buttonStyle("ghost", p.cutAtS == null)} onClick={p.onCut} disabled={p.cutAtS == null}><Scissors size={14} />{p.hyrox ? "Couper" : "Couper ici"}</button>
         <button type="button" style={buttonStyle("ghost", p.selected >= p.laps.length - 1)} onClick={p.onMerge} disabled={p.selected >= p.laps.length - 1}><GitMerge size={14} />{p.hyrox ? "Fusionner" : "Fusionner avec le suivant"}</button>
@@ -48,16 +54,16 @@ export function SeanceLapEditor(p: Props) {
         <span style={{ flex: 1 }} />
         <button type="button" style={buttonStyle()} onClick={p.onCancel}><X size={14} />Annuler</button>
         <button type="button" style={buttonStyle("primary", p.saving || !p.dirty)} onClick={p.onSave} disabled={p.saving || !p.dirty}><Check size={14} />{p.saving ? "Enregistrement…" : "Enregistrer"}</button>
-      </div>
-      <div style={{ fontSize: 12, color: C.tx2 }}>
+      </div>}
+      {showDetail && <div style={{ fontSize: 12, color: C.tx2 }}>
         {p.hyrox
           ? "Clique sur la courbe pour placer une coupe. Glisse une poignée dorée pour caler une limite (fin du sled sur la reprise de FC), ou tape le temps ci-dessous."
           : "Clique sur la courbe pour couper le tour à cet endroit. Glisse une poignée dorée pour déplacer une limite."}
-      </div>
+      </div>}
 
-      {lap && (
+      {showDetail && lap && (
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", padding: "10px 12px", borderRadius: 12, border: `1px solid ${C.brdL}` }}>
-          <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.14em", color: C.tx3 }}>
+          <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", color: C.tx3 }}>
             {p.hyrox ? `TOUR ${p.selected + 1}` : `SAISIE PRÉCISE · TOUR ${p.selected + 1}`}
           </span>
           {renaming ? (
@@ -90,7 +96,7 @@ export function SeanceLapEditor(p: Props) {
         </div>
       )}
 
-      {!p.hyrox && (
+      {showDetail && !p.hyrox && (
         <div style={{ fontSize: 11.5, color: C.tx3 }}>
           Tours d’origine : {p.watchLapCount} (montre). Tes changements ne modifient pas le fichier de la montre ; « Revenir aux tours de la montre » les annule tous.
         </div>

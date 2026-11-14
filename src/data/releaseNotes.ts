@@ -122,6 +122,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         points: [
           "Avis athlètes : chaque retour en carte, type en pastille (bug en rouge, idée en or), filtres regroupés en haut à droite.",
           "Course HYROX : en-tête orange avec le nom de la course en grand et le chrono, temps course / stations / roxzone en tuiles.",
+          "Ajuster les tours d'une séance HYROX : la barre d'outils passe au-dessus du graphique et le tour choisi s'édite dans un panneau à droite du graphique.",
         ],
       },
     ],
