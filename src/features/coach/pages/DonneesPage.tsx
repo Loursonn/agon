@@ -5,14 +5,13 @@ import {
   ProviderActivitySummary,
 } from "@/features/shared/components/ProviderActivityList";
 import { ActivityFileImport } from "@/features/shared/components/ActivityFileImport";
-import { C } from "@/lib/theme";
 
 /** Onglet Historique (route legacy "donnees"). Stratégie vit dans Profil athlète. */
 export default function DonneesPage() {
   const { athleteId } = useAthleteContext();
 
   return (
-    <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="flex flex-col gap-4 px-4 pb-10 pt-4">
       {/*
         Les sorties de montre passent avant l'historique des séances, et non
         après : elles répondent à la question que le coach se pose en ouvrant cet
@@ -22,7 +21,7 @@ export default function DonneesPage() {
         écart comme une erreur.
       */}
       {athleteId && (
-        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3 rounded-[6px] border border-agon-brd bg-agon-s1 px-4 py-3.5">
           <ProviderActivitySummary athleteId={athleteId} />
           <ProviderActivityList athleteId={athleteId} limit={30} />
           <ActivityFileImport athleteId={athleteId} forCoach />

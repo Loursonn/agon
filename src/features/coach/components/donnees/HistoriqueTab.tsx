@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { bodyZoneLabel, levelsList } from "@/lib/bodyZones";
 import { ChevronDown, ChevronRight, Copy, Trash2 } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
 import { getReco } from "@/lib/wellness";
@@ -17,11 +17,35 @@ import { localISO } from "@/lib/date";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_META: Record<string, { icon: string; color: string; label: string }> = {
-  completed: { icon: "✓", color: C.g,   label: "Faite"    },
-  missed:    { icon: "✗", color: C.r,   label: "Manquée"  },
-  skipped:   { icon: "⏭", color: C.tx3, label: "Passée"   },
-  planned:   { icon: "○", color: C.b,   label: "Prévue"   },
+  completed: { icon: "✓", color: "text-agon-succes", label: "Faite"    },
+  missed:    { icon: "✗", color: "text-agon-erreur", label: "Manquée"  },
+  skipped:   { icon: "⏭", color: "text-agon-tx3",    label: "Passée"   },
+  planned:   { icon: "○", color: "text-agon-info",   label: "Prévue"   },
 };
+
+/** Couleur d'un en-tête d'accordéon (classes écrites en entier pour Tailwind). */
+type AccTone = "accent" | "amethyste" | "alerte" | "succes" | "erreur" | "tx3";
+const ACC: Record<AccTone, { text: string; open: string; badge: string }> = {
+  accent:    { text: "text-agon-accent",    open: "bg-agon-accent/[0.063] border-agon-accent/25",       badge: "bg-agon-accent/[0.125] text-agon-accent" },
+  amethyste: { text: "text-agon-amethyste", open: "bg-agon-amethyste/[0.063] border-agon-amethyste/25", badge: "bg-agon-amethyste/[0.125] text-agon-amethyste" },
+  alerte:    { text: "text-agon-alerte",    open: "bg-agon-alerte/[0.063] border-agon-alerte/25",       badge: "bg-agon-alerte/[0.125] text-agon-alerte" },
+  succes:    { text: "text-agon-succes",    open: "bg-agon-succes/[0.063] border-agon-succes/25",       badge: "bg-agon-succes/[0.125] text-agon-succes" },
+  erreur:    { text: "text-agon-erreur",    open: "bg-agon-erreur/[0.063] border-agon-erreur/25",       badge: "bg-agon-erreur/[0.125] text-agon-erreur" },
+  tx3:       { text: "text-agon-tx3",       open: "bg-agon-tx3/[0.063] border-agon-tx3/25",             badge: "bg-agon-tx3/[0.125] text-agon-tx3" },
+};
+/** Palier wellness (bon / moyen / bas / pas de score) → couleur de la charte. */
+function recoTone(tone: string | null | undefined): "succes" | "alerte" | "erreur" | "tx3" {
+  return tone === "good" ? "succes" : tone === "warn" ? "alerte" : tone === "bad" ? "erreur" : "tx3";
+}
+
+const ICON_BTN = "flex h-[26px] w-[26px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border border-agon-brd-l bg-transparent";
+const CANCEL_BTN = "cursor-pointer rounded-[6px] border border-agon-brd-l bg-transparent px-2 py-1 text-[10px] font-semibold text-agon-tx2";
+const DELETE_BTN = "cursor-pointer rounded-[6px] border-none bg-agon-erreur-vif px-2 py-1 text-[10px] font-bold text-agon-ink";
+const EMPTY_CARD = "rounded-[6px] border px-4 py-3.5 text-[12px] bg-agon-s1";
+const TITLE = "mb-1 text-[16px] font-bold";
+const SUBTITLE = "mb-3 text-[12px] text-agon-tx2";
+const NESTED_EMPTY = "pb-1 pl-1.5 pr-0 pt-0.5 text-[11px] text-agon-tx3";
+const PICK_BTN = "cursor-pointer rounded border border-agon-brd-l bg-agon-s2 px-3 py-2.5 text-left text-[13px] font-semibold text-agon-tx";
 
 function fmtDate(d: string): string {
   return new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
@@ -47,29 +71,29 @@ function weeksBetween(start: string, end: string): { start: string; end: string 
 // ── Accordion header ──────────────────────────────────────────────────────────
 
 function AccordionHeader({
-  open, onToggle, level, title, subtitle, badge, color,
+  open, onToggle, level, title, subtitle, badge, tone,
 }: {
   open: boolean; onToggle: () => void;
   level: "macro" | "meso" | "cycle";
-  title: string; subtitle?: string; badge?: string; color: string;
+  title: string; subtitle?: string; badge?: string; tone: AccTone;
 }) {
-  const pad = level === "macro" ? "12px 14px" : level === "meso" ? "10px 12px" : "9px 12px";
-  const fs  = level === "macro" ? 14 : level === "meso" ? 13 : 12.5;
+  const t = ACC[tone];
+  const pad = level === "macro" ? "px-3.5 py-3" : level === "meso" ? "px-3 py-2.5" : "px-3 py-[9px]";
+  const fs  = level === "macro" ? "text-[14px]" : level === "meso" ? "text-[13px]" : "text-[12.5px]";
   return (
     <button
       onClick={onToggle}
-      style={{
-        width: "100%", display: "flex", alignItems: "center", gap: 8, padding: pad,
-        background: open ? color + "10" : C.s1, border: "1px solid " + (open ? color + "40" : C.brd),
-        borderRadius: 4, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const,
-      }}
+      className={cn(
+        "flex w-full cursor-pointer items-center gap-2 rounded border text-left",
+        pad, open ? t.open : "border-agon-brd bg-agon-s1",
+      )}
     >
-      {open ? <ChevronDown size={14} color={color} /> : <ChevronRight size={14} color={C.tx3} />}
-      <span style={{ fontSize: fs, fontWeight: 700, color: open ? color : C.tx, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      {open ? <ChevronDown size={14} className={t.text} /> : <ChevronRight size={14} className="text-agon-tx3" />}
+      <span className={cn("min-w-0 flex-1 truncate font-bold", fs, open ? t.text : "text-agon-tx")}>
         {title}
       </span>
-      {badge && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: color + "20", color, flexShrink: 0 }}>{badge}</span>}
-      {subtitle && <span style={{ fontSize: 10, color: C.tx3, flexShrink: 0 }}>{subtitle}</span>}
+      {badge && <span className={cn("shrink-0 rounded-[6px] px-2 py-0.5 text-[10px] font-bold", t.badge)}>{badge}</span>}
+      {subtitle && <span className="shrink-0 text-[10px] text-agon-tx3">{subtitle}</span>}
     </button>
   );
 }
@@ -80,23 +104,23 @@ function LogRow({ log, onCopy, onDelete }: { log: HistoLog; onCopy: () => void; 
   const [confirm, setConfirm] = useState(false);
   const meta = STATUS_META[log.status] ?? STATUS_META.planned;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.s2, borderRadius: 4, border: "1px solid " + C.brd }}>
-      <span style={{ fontSize: 13, fontWeight: 800, color: meta.color, width: 16, textAlign: "center", flexShrink: 0 }} title={meta.label}>{meta.icon}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.session_name}</div>
-        <div style={{ fontSize: 10, color: C.tx3 }}>{fmtDate(log.scheduled_date)} · {meta.label}</div>
+    <div className="flex items-center gap-2 rounded border border-agon-brd bg-agon-s2 px-2.5 py-[7px]">
+      <span className={cn("w-4 shrink-0 text-center text-[13px] font-extrabold", meta.color)} title={meta.label}>{meta.icon}</span>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[12px] font-semibold text-agon-tx">{log.session_name}</div>
+        <div className="text-[10px] text-agon-tx3">{fmtDate(log.scheduled_date)} · {meta.label}</div>
       </div>
       {confirm ? (
-        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          <button onClick={() => setConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-          <button onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: C.ink, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+        <div className="flex shrink-0 gap-1.5">
+          <button onClick={() => setConfirm(false)} className={CANCEL_BTN}>Annuler</button>
+          <button onClick={() => { onDelete(); setConfirm(false); }} className={DELETE_BTN}>Supprimer</button>
         </div>
       ) : (
-        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-          <button onClick={onCopy} title="Copier vers Séances Type" style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="flex shrink-0 gap-1">
+          <button onClick={onCopy} title="Copier vers Séances Type" className={cn(ICON_BTN, "text-agon-tx3")}>
             <Copy size={12} />
           </button>
-          <button onClick={() => setConfirm(true)} title="Supprimer ce log" style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={() => setConfirm(true)} title="Supprimer ce log" className={cn(ICON_BTN, "text-agon-erreur")}>
             <Trash2 size={12} />
           </button>
         </div>
@@ -124,30 +148,30 @@ function CopyDialog({
     : null;
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 360, background: C.s1, borderRadius: 6, border: "1px solid " + C.brdL, padding: 18 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: C.tx, marginBottom: 4 }}>Copier « {log.session_name} »</div>
-        <div style={{ fontSize: 11, color: C.tx3, marginBottom: 14 }}>
+    <div onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[360px] rounded-[6px] border border-agon-brd-l bg-agon-s1 p-[18px]">
+        <div className="mb-1 text-[14px] font-extrabold text-agon-tx">Copier « {log.session_name} »</div>
+        <div className="mb-3.5 text-[11px] text-agon-tx3">
           La séance sera ajoutée aux <b>Séances Type</b> de l'athlète choisi (squelette réutilisable).
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto" }}>
+        <div className="flex max-h-[280px] flex-col gap-1.5 overflow-y-auto">
           {current && (
-            <button onClick={() => onPick(current.id)} style={{ padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.coach + "50", background: C.coachS, color: C.coach, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
-              {current.full_name} <span style={{ fontSize: 10, fontWeight: 400, color: C.tx3 }}>(cet athlète)</span>
+            <button onClick={() => onPick(current.id)} className="cursor-pointer rounded border border-agon-coach/[0.314] bg-agon-coach-doux px-3 py-2.5 text-left text-[13px] font-bold text-agon-coach">
+              {current.full_name} <span className="text-[10px] font-normal text-agon-tx3">(cet athlète)</span>
             </button>
           )}
           {selfAsAthlete && (
-            <button onClick={() => onPick(selfAsAthlete.id)} style={{ padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
+            <button onClick={() => onPick(selfAsAthlete.id)} className={PICK_BTN}>
               {selfAsAthlete.full_name}
             </button>
           )}
           {others.map((a) => (
-            <button key={a.id} onClick={() => onPick(a.id)} style={{ padding: "10px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}>
+            <button key={a.id} onClick={() => onPick(a.id)} className={PICK_BTN}>
               {a.full_name}
             </button>
           ))}
         </div>
-        <button onClick={onClose} style={{ width: "100%", marginTop: 12, padding: "9px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={onClose} className="mt-3 w-full cursor-pointer rounded border border-agon-brd-l bg-transparent py-[9px] text-[12px] font-semibold text-agon-tx2">
           Annuler
         </button>
       </div>
@@ -167,18 +191,18 @@ function CycleContent({
 }) {
   const weeks = weeksBetween(cycle.start_date, cycle.end_date);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 0 4px 22px" }}>
+    <div className="flex flex-col gap-2 pb-1 pl-[22px] pr-0 pt-2">
       {weeks.map((w, i) => {
         const wLogs = logs.filter((l) => l.scheduled_date >= w.start && l.scheduled_date <= w.end);
         if (wLogs.length === 0) return null;
         const done = wLogs.filter((l) => l.status === "completed").length;
         return (
           <div key={w.start}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.4px", marginBottom: 5, display: "flex", justifyContent: "space-between" }}>
+            <div className="mb-[5px] flex justify-between text-[10px] font-bold uppercase tracking-[0.4px] text-agon-tx3">
               <span>Semaine {i + 1} · {fmtRange(w.start, w.end)}</span>
-              <span style={{ color: done === wLogs.length && wLogs.length > 0 ? C.g : C.tx3 }}>{done}/{wLogs.length} faites</span>
+              <span className={done === wLogs.length && wLogs.length > 0 ? "text-agon-succes" : "text-agon-tx3"}>{done}/{wLogs.length} faites</span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div className="flex flex-col gap-[5px]">
               {wLogs.map((l) => (
                 <LogRow key={l.id} log={l} onCopy={() => onCopy(l)} onDelete={() => onDelete(l.id)} />
               ))}
@@ -187,7 +211,7 @@ function CycleContent({
         );
       })}
       {logs.length === 0 && (
-        <div style={{ fontSize: 11, color: C.tx3, padding: "4px 0" }}>Aucune séance sur ce cycle.</div>
+        <div className="py-1 text-[11px] text-agon-tx3">Aucune séance sur ce cycle.</div>
       )}
     </div>
   );
@@ -195,9 +219,10 @@ function CycleContent({
 
 // ── Wellness history ──────────────────────────────────────────────────────────
 
-function metricColor(v?: number | null): string {
-  if (v == null) return C.tx3;
-  return v >= 4 ? C.g : v >= 3 ? C.o : C.r;
+/** Pastille d'une note /5 (fond 9 % + texte). */
+function metricChip(v?: number | null): string {
+  if (v == null) return "bg-agon-tx3/[0.094] text-agon-tx3";
+  return v >= 4 ? "bg-agon-succes/[0.094] text-agon-succes" : v >= 3 ? "bg-agon-alerte/[0.094] text-agon-alerte" : "bg-agon-erreur/[0.094] text-agon-erreur";
 }
 
 function fmtSleep(h: number): string {
@@ -211,48 +236,48 @@ function WellnessRow({ e, onDelete, deleting }: { e: WellnessEntry; onDelete: ()
   const score = wellnessScore(e);
   const reco = getReco(score);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.s2, borderRadius: 4, border: "1px solid " + C.brd }}>
-      <div style={{ width: 44, flexShrink: 0, textAlign: "center" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: reco.c, lineHeight: 1 }}>{score ?? "—"}</div>
-        <div style={{ fontSize: 8, color: C.tx3, marginTop: 2 }}>{score != null ? reco.label : "incomplet"}</div>
+    <div className="flex items-center gap-2.5 rounded border border-agon-brd bg-agon-s2 px-2.5 py-2">
+      <div className="w-11 shrink-0 text-center">
+        <div className={cn("text-[15px] font-extrabold leading-none", ACC[recoTone(reco.tone)].text)}>{score ?? "—"}</div>
+        <div className="mt-0.5 text-[8px] text-agon-tx3">{score != null ? reco.label : "incomplet"}</div>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.tx, marginBottom: 4 }}>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 text-[11px] font-bold text-agon-tx">
           {new Date(e.day + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "short" })}
-          {e.weightKg != null && <span style={{ fontWeight: 400, color: C.tx3 }}> · {e.weightKg} kg</span>}
-          {e.sleep.hours != null && <span style={{ fontWeight: 400, color: C.tx3 }}> · {fmtSleep(e.sleep.hours)} sommeil</span>}
-          {e.archived && <span style={{ fontWeight: 400, color: C.tx3 }}> · bloc archivé</span>}
+          {e.weightKg != null && <span className="font-normal text-agon-tx3"> · {e.weightKg} kg</span>}
+          {e.sleep.hours != null && <span className="font-normal text-agon-tx3"> · {fmtSleep(e.sleep.hours)} sommeil</span>}
+          {e.archived && <span className="font-normal text-agon-tx3"> · bloc archivé</span>}
         </div>
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <div className="flex flex-wrap gap-1">
           {WELLNESS_ITEMS.map((k) => {
             const v = e.items[k];
             return (
-              <span key={k} title={WELLNESS_ITEM_LABEL[k]} style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: metricColor(v) + "18", color: metricColor(v) }}>
+              <span key={k} title={WELLNESS_ITEM_LABEL[k]} className={cn("rounded-[5px] px-1.5 py-0.5 text-[9px] font-bold", metricChip(v))}>
                 {WELLNESS_ITEM_SHORT[k]} {v ?? "—"}/5
               </span>
             );
           })}
         </div>
         {e.domsZones.length > 0 && (
-          <div style={{ fontSize: 9, color: C.tx3, marginTop: 3 }}>
+          <div className="mt-[3px] text-[9px] text-agon-tx3">
             Zones : {levelsList(e.domsLevels).length > 0
               ? levelsList(e.domsLevels).map((z) => `${z.label} ${z.level}`).join(", ")
               : e.domsZones.map(bodyZoneLabel).join(", ")}
           </div>
         )}
         {e.injuryNote && (
-          <div style={{ fontSize: 10, color: C.r, marginTop: 4, lineHeight: 1.4 }}>
-            <span style={{ fontWeight: 700 }}>Blessé / malade :</span> {e.injuryNote}
+          <div className="mt-1 text-[10px] leading-[1.4] text-agon-erreur">
+            <span className="font-bold">Blessé / malade :</span> {e.injuryNote}
           </div>
         )}
       </div>
       {e.archived ? null : confirm ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-          <button disabled={deleting} onClick={() => { onDelete(); setConfirm(false); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: C.rV, color: C.ink, fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
-          <button onClick={() => setConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+        <div className="flex shrink-0 flex-col gap-1">
+          <button disabled={deleting} onClick={() => { onDelete(); setConfirm(false); }} className={DELETE_BTN}>Supprimer</button>
+          <button onClick={() => setConfirm(false)} className={CANCEL_BTN}>Annuler</button>
         </div>
       ) : (
-        <button onClick={() => setConfirm(true)} title="Supprimer ce wellness" style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.r, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <button onClick={() => setConfirm(true)} title="Supprimer ce wellness" className={cn(ICON_BTN, "text-agon-erreur")}>
           <Trash2 size={12} />
         </button>
       )}
@@ -291,34 +316,34 @@ function WellnessHistory() {
   };
 
   return (
-    <div style={{ marginTop: 24 }}>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Historique wellness</div>
-      <div style={{ fontSize: 12, color: C.tx2, marginBottom: 12 }}>
+    <div className="mt-6">
+      <div className={TITLE}>Historique wellness</div>
+      <div className={SUBTITLE}>
         Check-ins quotidiens · score global /100 + détail /5
       </div>
 
       {del.error && (
-        <div style={{ fontSize: 11, color: C.r, marginBottom: 8 }}>{(del.error as Error).message}</div>
+        <div className="mb-2 text-[11px] text-agon-erreur">{(del.error as Error).message}</div>
       )}
       {error ? (
-        <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.r + "40", fontSize: 12, color: C.r }}>
+        <div className={cn(EMPTY_CARD, "border-agon-erreur/25 text-agon-erreur")}>
           {(error as Error).message}
         </div>
       ) : isLoading ? (
-        <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>
+        <div className="text-[12px] text-agon-tx3">Chargement…</div>
       ) : byMonth.length === 0 ? (
-        <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, fontSize: 12, color: C.tx3 }}>
+        <div className={cn(EMPTY_CARD, "border-agon-brd text-agon-tx3")}>
           Aucun wellness enregistré par cet athlète.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="flex flex-col gap-1.5">
           {byMonth.map(([month, entries]) => {
             const open = openMonths.has(month);
             // Moyenne des scores présents : un jour incomplet ne compte pas comme 0.
             const avg = averageScore(entries.map((e) => wellnessScore(e)));
             const label = new Date(month + "-15T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
             return (
-              <div key={month} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <div key={month} className="flex flex-col gap-[5px]">
                 <AccordionHeader
                   open={open}
                   onToggle={() => toggle(month)}
@@ -326,10 +351,10 @@ function WellnessHistory() {
                   title={label.charAt(0).toUpperCase() + label.slice(1)}
                   subtitle={`${entries.length} jour${entries.length > 1 ? "s" : ""}`}
                   badge={`moy. ${avg ?? "—"}`}
-                  color={getReco(avg).c}
+                  tone={recoTone(getReco(avg).tone)}
                 />
                 {open && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingLeft: 22 }}>
+                  <div className="flex flex-col gap-[5px] pl-[22px]">
                     {entries.map((e) => (
                       <WellnessRow key={e.day} e={e} deleting={del.isPending} onDelete={() => del.mutate(e.day)} />
                     ))}
@@ -382,7 +407,7 @@ export function HistoriqueTab() {
   };
 
   const renderCycle = (c: Cycle) => (
-    <div key={c.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    <div key={c.id} className="flex flex-col gap-1">
       <AccordionHeader
         open={openCycles.has(c.id)}
         onToggle={() => toggle(openCycles, setOpenCycles, c.id)}
@@ -390,7 +415,7 @@ export function HistoriqueTab() {
         title={c.name}
         subtitle={fmtRange(c.start_date, c.end_date)}
         badge={cycleStats(c)}
-        color={C.o}
+        tone="alerte"
       />
       {openCycles.has(c.id) && (
         <CycleContent
@@ -406,7 +431,7 @@ export function HistoriqueTab() {
   const renderMeso = (m: Mesocycle) => {
     const mesoCycles = (data?.cycles ?? []).filter((c) => c.mesocycle_id === m.id);
     return (
-      <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div key={m.id} className="flex flex-col gap-1">
         <AccordionHeader
           open={openMesos.has(m.id)}
           onToggle={() => toggle(openMesos, setOpenMesos, m.id)}
@@ -414,12 +439,12 @@ export function HistoriqueTab() {
           title={m.name}
           subtitle={fmtRange(m.start_date, m.end_date)}
           badge={`${mesoCycles.length} cycle${mesoCycles.length > 1 ? "s" : ""}`}
-          color={H.roseVif}
+          tone="amethyste"
         />
         {openMesos.has(m.id) && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 16 }}>
+          <div className="flex flex-col gap-1 pl-4">
             {mesoCycles.length === 0
-              ? <div style={{ fontSize: 11, color: C.tx3, padding: "2px 0 4px 6px" }}>Aucun cycle dans ce méso.</div>
+              ? <div className={NESTED_EMPTY}>Aucun cycle dans ce méso.</div>
               : mesoCycles.map(renderCycle)}
           </div>
         )}
@@ -430,7 +455,7 @@ export function HistoriqueTab() {
   const renderMacro = (mc: Macrocycle) => {
     const macroMesos = (data?.mesos ?? []).filter((m) => m.macrocycle_id === mc.id);
     return (
-      <div key={mc.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div key={mc.id} className="flex flex-col gap-1">
         <AccordionHeader
           open={openMacros.has(mc.id)}
           onToggle={() => toggle(openMacros, setOpenMacros, mc.id)}
@@ -438,12 +463,12 @@ export function HistoriqueTab() {
           title={mc.name}
           subtitle={fmtRange(mc.start_date, mc.end_date)}
           badge={`${macroMesos.length} méso${macroMesos.length > 1 ? "s" : ""}`}
-          color={C.ac}
+          tone="accent"
         />
         {openMacros.has(mc.id) && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 16 }}>
+          <div className="flex flex-col gap-1 pl-4">
             {macroMesos.length === 0
-              ? <div style={{ fontSize: 11, color: C.tx3, padding: "2px 0 4px 6px" }}>Aucun mésocycle dans ce macro.</div>
+              ? <div className={NESTED_EMPTY}>Aucun mésocycle dans ce macro.</div>
               : macroMesos.map(renderMeso)}
           </div>
         )}
@@ -455,17 +480,17 @@ export function HistoriqueTab() {
 
   return (
     <div>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Historique d'entraînement</div>
-      <div style={{ fontSize: 12, color: C.tx2, marginBottom: 12 }}>
+      <div className={TITLE}>Historique d'entraînement</div>
+      <div className={SUBTITLE}>
         Macros → mésos → cycles · séances par semaine · ✓ faite, ✗ manquée, ○ prévue
       </div>
 
       {isLoading ? (
-        <div style={{ fontSize: 12, color: C.tx3, padding: "16px 0" }}>Chargement…</div>
+        <div className="py-4 text-[12px] text-agon-tx3">Chargement…</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
+        <div className="mb-5 flex flex-col gap-1.5">
           {(data?.macros ?? []).length === 0 && standaloneCycles.length === 0 && (
-            <div style={{ background: C.s1, borderRadius: 6, padding: "14px 16px", border: "1px solid " + C.brd, fontSize: 12, color: C.tx3 }}>
+            <div className={cn(EMPTY_CARD, "border-agon-brd text-agon-tx3")}>
               Aucune planification pour cet athlète — crée un macro/cycle dans l'onglet Planning.
             </div>
           )}
@@ -474,7 +499,7 @@ export function HistoriqueTab() {
 
           {standaloneCycles.length > 0 && (
             <>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase" as const, letterSpacing: "0.5px", margin: "10px 0 2px" }}>
+              <div className="mb-0.5 mt-2.5 text-[10px] font-bold uppercase tracking-[0.5px] text-agon-tx3">
                 Cycles indépendants
               </div>
               {standaloneCycles.map(renderCycle)}
@@ -482,17 +507,17 @@ export function HistoriqueTab() {
           )}
 
           {orphanLogs.length > 0 && (
-            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div className="mt-2.5 flex flex-col gap-1">
               <AccordionHeader
                 open={orphansOpen}
                 onToggle={() => setOrphansOpen(!orphansOpen)}
                 level="cycle"
                 title="Séances hors cycle"
                 badge={String(orphanLogs.length)}
-                color={C.tx3}
+                tone="tx3"
               />
               {orphansOpen && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingLeft: 22 }}>
+                <div className="flex flex-col gap-[5px] pl-[22px]">
                   {orphanLogs.map((l) => (
                     <LogRow key={l.id} log={l} onCopy={() => setCopyLog(l)} onDelete={() => del.mutate(l.id)} />
                   ))}
