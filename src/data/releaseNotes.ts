@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-coach-telephone-et-staff-peps",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Agon sur ton téléphone et l'espace staff passent au nouveau style",
+    summary: "Les écrans coach sur téléphone et l'espace de ton staff (kiné, coach adjoint, nutri) prennent le style « peps » : plus lisibles d'un coup d'œil.",
+    sections: [
+      {
+        title: "Sur ton téléphone",
+        points: [
+          "Wellness : un feu vert, orange ou rouge en tête, puis des tuiles avec l'historique de 28 jours.",
+          "Santé : les mesures hors de sa normale passent en tuiles avec leur courbe, les autres restent en liste avec une petite courbe.",
+          "Tests, fiches et banque d'exercices sont rangés par groupes de couleur, avec une vignette par fiche et par exercice.",
+          "« Modifier une séance » : boutons − / + plus grands et dernier résultat rappelé sous l'exercice.",
+        ],
+      },
+      {
+        title: "Pour ton staff",
+        points: [
+          "Son accueil montre ses athlètes et ce qui est à surveiller côte à côte.",
+          "Dans l'espace d'un athlète, il voit tous les onglets : ceux que tu ne partages pas restent grisés avec un cadenas.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-app-athlete-nouveau-style",
     date: "2026-11-14",
     kind: "feature",
