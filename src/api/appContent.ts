@@ -216,22 +216,6 @@ export async function setCitationLiked(userId: string, quoteId: number, liked: b
   }
 }
 
-/** Suit le compteur de likes en temps réel ; renvoie la fonction d'arrêt. */
-export function subscribeCitationLikes(quoteId: number, onLikes: (likes: number) => void): () => void {
-  const channel = db()
-    .channel(`citation-stats-${quoteId}`)
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "citation_stats", filter: `quote_id=eq.${quoteId}` },
-      (payload) => {
-        const likes = (payload.new as { likes?: number } | null)?.likes;
-        if (typeof likes === "number") onLikes(likes);
-      },
-    )
-    .subscribe();
-  return () => { void db().removeChannel(channel); };
-}
-
 // ── Retours sur l'app (table app_feedback) ───────────────────────────────────
 
 export type AppFeedbackKind = "bug" | "idea" | "other";

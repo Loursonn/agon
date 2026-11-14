@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCitationState, setCitationLiked, subscribeCitationLikes } from "@/api/appContent";
+import { getCitationState, setCitationLiked } from "@/api/appContent";
 import { useAuth } from "@/hooks/useAuth";
 import { citationDuJour } from "@/data/citations";
 import { toast } from "sonner";
@@ -11,6 +11,9 @@ export function useCitationDuJour() {
   const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(0);
   const busy = useRef(false);
+  // Relit le compteur quand l'app revient au premier plan (pas d'abonnement
+  // temps réel : il saturait la petite base de prod, cf. DECISIONS 14/11).
+  const [refresh, setRefresh] = useState(0);
 
   const quoteId = citation.id;
 
@@ -20,6 +23,7 @@ export function useCitationDuJour() {
       if (document.visibilityState === "visible") {
         const fresh = citationDuJour();
         if (fresh.id !== quoteId) setCitation(fresh);
+        else setRefresh((n) => n + 1);
       }
     };
     document.addEventListener("visibilitychange", handler);
@@ -47,10 +51,7 @@ export function useCitationDuJour() {
     );
 
     return () => { cancelled = true; };
-  }, [user, quoteId]);
-
-  // Realtime on citation_stats
-  useEffect(() => subscribeCitationLikes(quoteId, setCount), [quoteId]);
+  }, [user, quoteId, refresh]);
 
   const toggle = useCallback(async () => {
     if (!user || busy.current) return;
