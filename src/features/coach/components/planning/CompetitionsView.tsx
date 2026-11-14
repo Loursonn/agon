@@ -195,8 +195,13 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
     <div className="rounded-[4px] border border-agon-brd bg-agon-s1 px-4 py-3">
     <div className={cn("flex items-center gap-3 transition-opacity duration-150", dimmed && "opacity-70")}>
       {/* Priority badge */}
-      <div className={cn("flex size-7 flex-shrink-0 items-center justify-center rounded-[6px] border text-[11px] font-extrabold", priTone)}>
-        {priorityLabel(comp.priority)}
+      {/* Pastille de 28 px : la lettre seule, le libellé complet en infobulle */}
+      <div
+        title={priorityLabel(comp.priority)}
+        aria-label={priorityLabel(comp.priority)}
+        className={cn("flex size-7 flex-shrink-0 items-center justify-center rounded-[6px] border text-[11px] font-extrabold", priTone)}
+      >
+        {comp.priority ?? "—"}
       </div>
 
       {/* Emoji */}

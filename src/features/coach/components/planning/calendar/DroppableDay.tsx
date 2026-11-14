@@ -112,7 +112,7 @@ export function DroppableDay({
         return (
           <DayThemeMenu athleteId={athleteId} coachId={coachId} date={date} theme={dayTheme} onMoreOptions={onClick}>
           <div title="Thème du jour" style={{
-            position: "relative", overflow: "hidden", flexShrink: 0, padding: "12px 12px 10px", borderRadius: 12,
+            position: "relative", overflow: "hidden", flexShrink: 0, padding: "12px 10px 10px", borderRadius: 12,
             border: "1px solid " + (today ? alpha(C.ac, 0.45) : C.brd), background: C.s1,
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, minWidth: 0,
           }}>
@@ -131,7 +131,10 @@ export function DroppableDay({
               }}>{dayThemeChipLabel(dayTheme)}</span>
             )}
             {!tc && (
-              <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx3 }}>
+              <span style={{
+                ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx3,
+                minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
                 + Thème
               </span>
             )}
