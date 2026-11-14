@@ -16,7 +16,7 @@ import {
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { C, alpha } from "@/lib/theme";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 import { CommandPaletteProvider } from "./context/CommandPaletteContext";
 import { CommandPalette } from "./components/CommandPalette";
 import { useCommandPalette } from "./context/CommandPaletteContext";
@@ -72,6 +72,8 @@ const SIDEBAR_STYLE: React.CSSProperties = {
   "--sidebar-ring": C.ac,
 } as React.CSSProperties;
 
+const TOP_PILL = "agon-mono min-h-9 cursor-pointer whitespace-nowrap rounded-[8px] border bg-transparent px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] md:min-h-0";
+
 // ── CoachShell ────────────────────────────────────────────────────────────────
 
 // Sur mobile (< 768 px), la sidebar shadcn devient un tiroir (Sheet) ouvert par
@@ -99,13 +101,10 @@ function CoachSidebar() {
   }
 
   return (
-    <Sidebar
-      collapsible="icon"
-      style={{ background: C.bg, borderRight: `1px solid ${C.brd}` }}
-    >
+    <Sidebar collapsible="icon" className="border-r border-agon-brd bg-agon-bg">
       {/* Le tiroir mobile est rendu dans un portail, hors des variables CSS du
           provider : le fond est donc posé ici, identique à celui du PC. */}
-      <div className="flex h-full min-h-0 w-full flex-col" style={{ background: C.bg }}>
+      <div className="flex h-full min-h-0 w-full flex-col bg-agon-bg">
         {/* Titre lu par les lecteurs d'écran (tiroir mobile = boîte de dialogue) */}
         {isMobile && (
           <>
@@ -114,51 +113,30 @@ function CoachSidebar() {
           </>
         )}
         {/* Logo */}
-        <SidebarHeader style={{ height: 64, padding: "0 20px", justifyContent: "center", borderBottom: `1px solid ${C.brd}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img
-              src="/brand/agon-symbole-or.svg"
-              alt="Agon"
-              style={{ width: 26, height: 26, flexShrink: 0 }}
-            />
-            <span
-              className="group-data-[collapsible=icon]:hidden"
-              style={{ ...DISPLAY, fontSize: 15, fontWeight: 400, letterSpacing: "0.22em", textTransform: "uppercase", color: C.tx }}
-            >
+        <SidebarHeader className="h-16 justify-center border-b border-agon-brd px-5 py-0">
+          <div className="flex items-center gap-2.5">
+            <img src="/brand/agon-symbole-or.svg" alt="Agon" className="size-[26px] flex-shrink-0" />
+            <span className="agon-display text-[15px] font-normal uppercase tracking-[0.22em] text-agon-tx group-data-[collapsible=icon]:hidden">
               Agon
             </span>
           </div>
         </SidebarHeader>
 
         {/* Search button — opens command palette */}
-        <div className="group-data-[collapsible=icon]:hidden" style={{ padding: "14px 14px 6px" }}>
+        <div className="px-3.5 pb-1.5 pt-3.5 group-data-[collapsible=icon]:hidden">
           <button
             onClick={() => { closeDrawer(); toggle(); }}
-            className="coach-sidebar-search"
-            style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 8,
-              padding: "8px 10px", borderRadius: 8,
-              border: `1px solid ${C.brd}`,
-              background: "transparent",
-              color: C.tx3, fontSize: 12, cursor: "pointer",
-              fontFamily: "inherit", transition: "border-color 150ms ease-out",
-            }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = alpha(C.ac, 0.4))}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brd)}
+            className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] border border-agon-brd bg-transparent px-2.5 py-2 text-[12px] text-agon-tx3 transition-[border-color] duration-150 ease-out hover:border-agon-accent/40"
           >
-            <Search size={13} style={{ flexShrink: 0 }} />
-            <span className="coach-sidebar-label" style={{ flex: 1, textAlign: "left" }}>
-              Rechercher…
-            </span>
-            <span className="coach-sidebar-label" style={{ ...MONO, fontSize: 10 }}>
-              ⌘K
-            </span>
+            <Search size={13} className="flex-shrink-0" />
+            <span className="flex-1 text-left">Rechercher…</span>
+            <span className="agon-mono text-[10px]">⌘K</span>
           </button>
         </div>
 
         {/* Nav items */}
-        <SidebarContent style={{ padding: "8px 0", flex: "none", overflow: "visible" }}>
-          <SidebarMenu style={{ gap: 2 }}>
+        <SidebarContent className="flex-none overflow-visible px-0 py-2 group-data-[collapsible=icon]:overflow-visible">
+          <SidebarMenu className="gap-0.5">
             {NAV_ITEMS.filter(item =>
             (!item.certified || profile?.is_certified_coach) &&
             (!item.roadmap   || profile?.is_certified_coach || profile?.is_admin)
@@ -169,39 +147,23 @@ function CoachSidebar() {
                   <SidebarMenuButton
                     isActive={active}
                     onClick={() => { navigate(item.path); closeDrawer(); }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      height: "auto",
-                      padding: "10px 20px",
-                      borderRadius: 0,
-                      boxShadow: active ? `inset 2px 0 0 ${C.ac}` : "none",
-                      background: active ? alpha(C.ac, 0.12) : "transparent",
-                      color: active ? C.ac : C.tx2,
-                      fontSize: 13,
-                      fontWeight: 400,
-                      cursor: "pointer",
-                      width: "100%",
-                      transition: "all 150ms",
-                      fontFamily: "inherit",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) (e.currentTarget as HTMLElement).style.color = C.tx;
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) (e.currentTarget as HTMLElement).style.color = C.tx2;
-                    }}
+                    className={cn(
+                      "flex h-auto w-full cursor-pointer items-center gap-3 rounded-none px-5 py-2.5 text-[13px] font-normal transition-all duration-150 data-[active=true]:font-normal",
+                      active
+                        ? "bg-agon-accent/[0.12] text-agon-accent shadow-[inset_2px_0_0_var(--agon-accent)] hover:bg-agon-accent/[0.12] hover:text-agon-accent active:bg-agon-accent/[0.12] active:text-agon-accent data-[active=true]:bg-agon-accent/[0.12] data-[active=true]:text-agon-accent"
+                        : "bg-transparent text-agon-tx2 shadow-none hover:bg-transparent hover:text-agon-tx active:bg-transparent active:text-agon-tx",
+                      "leading-5",
+                    )}
                   >
-                    <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
-                      {item.icon}
-                    </span>
-                    <span className="group-data-[collapsible=icon]:hidden" style={{ flex: 1 }}>{item.label}</span>
+                    <span className="flex flex-shrink-0 items-center">{item.icon}</span>
+                    <span className="flex-1 group-data-[collapsible=icon]:hidden">{item.label}</span>
                     {item.path === "/coach/nouveautes" && unseenUpdates > 0 && (
-                      <span aria-label={`${unseenUpdates} nouveauté(s) non vue(s)`} style={{
-                        ...MONO, fontSize: 11, fontWeight: 500, lineHeight: 1.3, borderRadius: 999, padding: "4px 9px",
-                        background: C.ac, color: C.ink, display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      }}>{unseenUpdates}</span>
+                      <span
+                        aria-label={`${unseenUpdates} nouveauté(s) non vue(s)`}
+                        className="agon-mono inline-flex items-center justify-center rounded-full bg-agon-accent px-[9px] py-1 text-[11px] font-medium leading-[1.3] text-agon-ink"
+                      >
+                        {unseenUpdates}
+                      </span>
                     )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -213,45 +175,22 @@ function CoachSidebar() {
         {/* Motif colonnes sous la navigation (planche Coach) */}
         <div
           aria-hidden
-          className="group-data-[collapsible=icon]:hidden"
-          style={{ flex: 1, minHeight: 0, background: "url(/brand/agon-fond-colonnes.svg) center bottom / cover no-repeat", opacity: 0.18 }}
+          className="min-h-0 flex-1 bg-[url(/brand/agon-fond-colonnes.svg)] bg-cover bg-bottom bg-no-repeat opacity-[0.18] group-data-[collapsible=icon]:hidden"
         />
 
         {/* Footer — coach profile */}
-        <SidebarFooter style={{ padding: "14px 20px", borderTop: `1px solid ${C.brd}` }}>
-
-          <div
-            className="group-data-[collapsible=icon]:hidden"
-            style={{ display: "flex", alignItems: "center", gap: 10 }}
-          >
-            <div
-              style={{
-                width: 30, height: 30, borderRadius: "50%",
-                border: `1px solid ${C.ac}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                ...MONO, fontSize: 11, color: C.ac, flexShrink: 0,
-              }}
-            >
+        <SidebarFooter className="border-t border-agon-brd px-5 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="agon-mono flex size-[30px] flex-shrink-0 items-center justify-center rounded-full border border-agon-accent text-[11px] text-agon-accent">
               {(profile?.full_name || "?").charAt(0).toUpperCase()}
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 12, fontWeight: 500, color: C.tx,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}
-              >
+            <div className="min-w-0">
+              <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium text-agon-tx">
                 {profile?.full_name || "Coach"}
               </div>
               <button
                 onClick={() => void logout()}
-                style={{
-                  fontSize: 11, color: C.tx3, background: "none", border: "none",
-                  cursor: "pointer", fontFamily: "inherit", padding: 0,
-                  transition: "color 150ms",
-                }}
-                onMouseEnter={(e) => ((e.target as HTMLElement).style.color = C.r)}
-                onMouseLeave={(e) => ((e.target as HTMLElement).style.color = C.tx3)}
+                className="cursor-pointer border-0 bg-transparent p-0 text-[11px] text-agon-tx3 transition-colors duration-150 hover:text-agon-erreur"
               >
                 Déconnexion
               </button>
@@ -277,67 +216,28 @@ function CoachShellInner() {
 
       {/* ── Main content ── */}
       {/* min-w-0 : une page trop large défile dans sa zone, sans élargir l'écran entier. */}
-      <SidebarInset className="min-w-0" style={{ background: C.bg, display: "flex", flexDirection: "column" }}>
+      <SidebarInset className="flex min-w-0 flex-col bg-agon-bg">
         {/* Topbar with trigger */}
-        <div
-          className="px-3 md:px-7"
-          style={{
-            position: "sticky", top: 0, zIndex: 10,
-            background: C.bg, borderBottom: `1px solid ${C.brd}`,
-            display: "flex", alignItems: "center", gap: 10,
-            flexShrink: 0, height: 52,
-          }}
-        >
+        <div className="sticky top-0 z-10 flex h-[52px] flex-shrink-0 items-center gap-2.5 border-b border-agon-brd bg-agon-bg px-3 md:px-7">
           <SidebarTrigger
             aria-label="Menu"
-            className="h-9 w-9 md:h-7 md:w-7"
-                        style={{
-              borderRadius: 6,
-              border: "1px solid " + C.brdL, background: "transparent",
-              color: C.tx3, cursor: "pointer", display: "flex",
-              alignItems: "center", justifyContent: "center", fontSize: 14,
-            }}
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[6px] border border-agon-brd-l bg-transparent text-[14px] leading-5 text-agon-tx3 hover:bg-transparent hover:text-agon-tx3 md:h-7 md:w-7"
           />
           {/* Mobile : le logo remplace celui de la sidebar, cachée dans le tiroir */}
-          <img
-            src="/brand/agon-symbole-or.svg"
-            alt="Agon"
-            className="md:hidden"
-            style={{ width: 24, height: 24, flexShrink: 0 }}
-          />
+          <img src="/brand/agon-symbole-or.svg" alt="Agon" className="size-6 flex-shrink-0 md:hidden" />
           {/* Cmd+K button in topbar — icône seule sur mobile */}
           <button
             onClick={toggle}
             aria-label="Rechercher"
-            className="min-h-9 md:min-h-0"
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "6px 12px", borderRadius: 8,
-              border: `1px solid ${C.brd}`,
-              background: "transparent",
-              color: C.tx3, fontSize: 12, cursor: "pointer",
-              fontFamily: "inherit", transition: "border-color 150ms ease-out",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = alpha(C.ac, 0.4))}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = C.brd)}
+            className="flex min-h-9 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[8px] border border-agon-brd bg-transparent px-3 py-1.5 text-[12px] text-agon-tx3 transition-[border-color] duration-150 ease-out hover:border-agon-accent/40 md:min-h-0"
           >
             <Search size={12} />
             <span className="hidden md:inline">Rechercher</span>
-            <kbd className="hidden md:inline" style={{ ...MONO, fontSize: 10, marginLeft: 2 }}>⌘K</kbd>
+            <kbd className="agon-mono ml-0.5 hidden text-[10px] md:inline">⌘K</kbd>
           </button>
           {/* Espace pro — coach qui est aussi staff d'athlètes d'autres coachs */}
           {isStaffElsewhere && (
-            <button
-              onClick={() => navigate("/staff")}
-              className="min-h-9 md:min-h-0"
-              style={{
-                marginLeft: "auto", padding: "6px 14px", borderRadius: 8,
-                border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx2,
-                ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <button onClick={() => navigate("/staff")} className={cn(TOP_PILL, "ml-auto border-agon-brd-l text-agon-tx2")}>
               Staff
             </button>
           )}
@@ -345,13 +245,7 @@ function CoachShellInner() {
           {(profile?.role === "coach_athlete" || profile?.role === "coach") && (
             <button
               onClick={() => navigate("/athlete")}
-              className="min-h-9 md:min-h-0"
-              style={{
-                marginLeft: isStaffElsewhere ? 0 : "auto", padding: "6px 14px", borderRadius: 8,
-                border: `1px solid ${C.ac}`, background: "transparent", color: C.ac,
-                ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
+              className={cn(TOP_PILL, "border-agon-accent text-agon-accent", isStaffElsewhere ? "ml-0" : "ml-auto")}
             >
               Mode Athlète
             </button>
@@ -361,7 +255,7 @@ function CoachShellInner() {
         <OfflineBanner variant="coach" />
 
         {/* Page content */}
-        <div className="min-w-0" style={{ flex: 1, overflowY: "auto" }}>
+        <div className="min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </div>
       </SidebarInset>
