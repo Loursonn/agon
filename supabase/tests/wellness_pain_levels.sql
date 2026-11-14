@@ -1,6 +1,6 @@
--- Tests : carte douleur du wellness (migration 20261115120000_wellness_pain_levels).
+-- Tests : carte douleur du wellness (migration 20261115130000_wellness_pain_levels).
 -- Toujours annulé. Avant application :
---   (echo 'BEGIN;'; cat supabase/migrations/20261115120000_wellness_pain_levels.sql \
+--   (echo 'BEGIN;'; cat supabase/migrations/20261115130000_wellness_pain_levels.sql \
 --      supabase/tests/wellness_pain_levels.sql) > "$TMPDIR/w.sql" && supabase db query --linked -f "$TMPDIR/w.sql"
 -- Compte de démonstration seulement (Léa Démo) ; résultats = booléens.
 BEGIN;

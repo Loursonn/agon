@@ -2496,7 +2496,7 @@ et son README.
   fessier, ischios, mollet, Achille), distinct de celui des courbatures (muscles). **Plusieurs zones, une note
   0-10 par zone** ; repères sous l'échelle : 0 aucune, 1-3 gêne, 4 douleur, 10 insupportable.
 - Stockage : `asp:wh` garde `painLevels: { zone: note }` ; colonne `wellness_entries.pain_levels` (migration
-  `20261115120000`, appliquée en prod avec l'accord d'Hugo). `pain` reste la note du jour = la plus forte des
+  `20261115130000`, appliquée en prod avec l'accord d'Hugo). `pain` reste la note du jour = la plus forte des
   zones (feu du matin inchangé). Douleurs saisies avant : **gardées telles quelles**, sans zone.
 - Coach : pastilles par zone dans le détail du jour (Retours), zone la plus forte dans le panneau wellness, note
   « Blessé / malade » réécrite avec zones et notes. Jamais transmis à l'IA.
