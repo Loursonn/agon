@@ -6,12 +6,16 @@
  *   rattachée à une séance prévue HYROX (tours nommés d'après le plan) ;
  * - une 2ᵉ course HYROX officielle « HYROX Lyon » (résultat + activité de montre du jour de course),
  *   pour que l'évolution HYROX ait au moins deux courses ;
+ * - l'activité de montre du jour de la course « HYROX Paris » (« demo-hyrox-paris »), datée
+ *   comme la course et construite sur ses temps, pour que l'analyse de course ait sa FC ;
  * - 7 jours de santé : résumé du jour (sommeil, VFC, FC repos, stress, Body Battery,
  *   SpO2, respiration) et séries de la journée.
  *
  * Additif et rejouable : upserts sur des identifiants « demo-… », rien n'est supprimé.
  * Usage : node scripts/seed-demo-montre.mjs   (Léa Démo doit exister : scripts/seed-demo.mjs)
  *         node scripts/seed-demo-montre.mjs --seulement-course-lyon   (n'ajoute que la course HYROX Lyon)
+ *         node scripts/seed-demo-montre.mjs --aligner-hyrox-paris     (n'écrit que l'activité montre de
+ *           la course HYROX Paris, à la date de la course ; rejouable : upsert « demo-hyrox-paris »)
  * Aussi appelé à la fin de scripts/seed-demo.mjs.
  *
  * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité).
@@ -190,16 +194,31 @@ export function lyonRows(ATH) {
     ...LYON.stations, roxzone_total_s: LYON.roxzone_s, penalties_s: 0,
     coach_comment: LYON_NOTE, created_by: ATH,
   };
+  return { result, blocks: raceBlocks(LYON.runs, st, LYON.roxzone_s), total };
+}
+
+const STATION_KEYS = ["ski_s", "sled_push_s", "sled_pull_s", "bbj_s", "row_s", "farmers_s", "lunges_s", "wall_balls_s"];
+
+/**
+ * Blocs de la série montre d'une course HYROX (run, roxzone, station, roxzone…). Si `totalS` est
+ * donné, les durées sont mises à l'échelle pour que l'enregistrement dure exactement le chrono.
+ */
+export function raceBlocks(runs, stations, roxzoneS, totalS = null) {
   // 16 passages en roxzone : 15 × 15 s + le reste sur le dernier.
-  const rox = Array.from({ length: 16 }, (_, i) => (i < 15 ? 15 : LYON.roxzone_s - 15 * 15));
-  const blocks = [];
-  LYON.runs.forEach((r, i) => {
-    blocks.push({ secs: r, speed: 1000 / r, hr: 166 + i, cadence: 172 });
-    blocks.push({ secs: rox[2 * i], speed: 1.2, hr: 170, cadence: 120, intensity: "rest" });
-    blocks.push({ secs: st[i], speed: 0.25, hr: 174, cadence: null });
-    blocks.push({ secs: rox[2 * i + 1], speed: 1.2, hr: 168, cadence: 120, intensity: "rest" });
+  const rox = Array.from({ length: 16 }, (_, i) => (i < 15 ? 15 : Math.max(15, roxzoneS - 15 * 15)));
+  const raw = [];
+  runs.forEach((r, i) => {
+    raw.push({ secs: r, speed: 1000 / r, hr: 166 + i, cadence: 172 });
+    raw.push({ secs: rox[2 * i], speed: 1.2, hr: 170, cadence: 120, intensity: "rest" });
+    raw.push({ secs: stations[i], speed: 0.25, hr: 174, cadence: null });
+    raw.push({ secs: rox[2 * i + 1], speed: 1.2, hr: 168, cadence: 120, intensity: "rest" });
   });
-  return { result, blocks, total };
+  if (!totalS) return raw;
+  const sum = raw.reduce((a, b) => a + b.secs, 0);
+  const k = totalS / sum;
+  const blocks = raw.map((b) => ({ ...b, secs: Math.max(1, Math.round(b.secs * k)) }));
+  blocks[blocks.length - 1].secs += totalS - blocks.reduce((a, b) => a + b.secs, 0);
+  return blocks;
 }
 
 /** 2ᵉ course HYROX (Lyon) : résultat créé une seule fois, activité montre en upsert (« demo-hyrox-lyon »). */
@@ -310,14 +329,35 @@ async function seedZones(sb, ATH) {
   }), "zones");
 }
 
+/**
+ * Activité de montre du jour de la course « HYROX Paris » (créée par scripts/seed-demo.mjs) :
+ * même date que la course, série construite sur ses temps, durée = chrono. Ne touche ni la
+ * course ni aucune autre activité ; upsert sur « demo-hyrox-paris », donc rejouable.
+ */
+export async function seedParisWatch(sb, ATH) {
+  const race = (await must(
+    sb.from("hyrox_results").select("*").eq("athlete_id", ATH).eq("event_name", "HYROX Paris")
+      .order("date", { ascending: false }).limit(1),
+    "course Paris",
+  ))[0];
+  if (!race) return null;
+  const runs = Array.from({ length: 8 }, (_, i) => race[`run_${i + 1}_s`]);
+  const st = STATION_KEYS.map((k) => race[k]);
+  if ([...runs, ...st].some((v) => !(v > 0))) throw new Error("Course HYROX Paris incomplète : temps manquants.");
+  const blocks = raceBlocks(runs, st, race.roxzone_total_s ?? 216, race.total_s);
+  const startedAt = new Date(`${race.date}T09:10:00Z`);
+  return upsertActivity(sb, ATH, { externalId: "demo-hyrox-paris", startedAt, sport: "hyrox", built: buildStream(blocks, 59) });
+}
+
 /** Ajoute (ou rafraîchit) la démo montre de Léa Démo. */
 export async function seedWatchDemo(sb, ATH, COACH) {
   await seedZones(sb, ATH);
   const run = await seedRun(sb, ATH, COACH);
   const hyrox = await seedHyrox(sb, ATH, COACH);
   const lyon = await seedLyonRace(sb, ATH);
+  const paris = await seedParisWatch(sb, ATH);
   const days = await seedHealth(sb, ATH);
-  console.log(`  montre : course ${run}, HYROX ${hyrox}, course Lyon ${lyon}, ${days} jours de santé`);
+  console.log(`  montre : course ${run}, HYROX ${hyrox}, course Lyon ${lyon}, course Paris ${paris}, ${days} jours de santé`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -333,7 +373,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (lea.length !== 1) throw new Error("Léa Démo introuvable (ou en double) : lancer scripts/seed-demo.mjs");
   const coach = (await must(sb.from("profiles").select("coach_code").eq("id", lea[0].coach_id).single(), "coach démo"));
   if (coach.coach_code !== "DEMO42") throw new Error("Le coach de Léa Démo n'est pas le coach démo : arrêt.");
-  if (process.argv.includes("--seulement-course-lyon")) {
+  if (process.argv.includes("--aligner-hyrox-paris")) {
+    console.log(`  course HYROX Paris : activité montre ${await seedParisWatch(sb, lea[0].id)}`);
+  } else if (process.argv.includes("--seulement-course-lyon")) {
     console.log(`  course HYROX Lyon : activité ${await seedLyonRace(sb, lea[0].id)}`);
   } else {
     await seedWatchDemo(sb, lea[0].id, lea[0].coach_id);
