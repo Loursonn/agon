@@ -69,7 +69,8 @@ function FicheRow({ doc, isNew, meta, date, onOpen, onDelete }: {
   const col = CATEGORY_COLOR[doc.category];
   return (
     <div style={{
-      display: "flex", alignItems: "stretch", background: C.s1, border: `1px solid ${C.brd}`,
+      display: "flex", alignItems: "stretch",
+      background: isNew ? alpha(col, 0.13) : C.s1, border: `1px solid ${isNew ? alpha(col, 0.45) : C.brd}`,
       borderRadius: 12, overflow: "hidden",
     }}>
       <button onClick={onOpen} style={{
@@ -173,7 +174,8 @@ export function AthleteFichesView() {
     () => [...(mine?.assigned ?? [])].sort((a, b) => sentAt(b).localeCompare(sentAt(a))),
     [mine?.assigned],
   );
-  const hero = assigned.find(a => !a.seenAt) ?? null;
+  // Téléphone : la fiche nouvelle en grande carte. PC (planche AthleteFichesOrdi) : ligne surlignée, lue à droite.
+  const hero = wide ? null : assigned.find(a => !a.seenAt) ?? null;
   const myList = assigned.filter(a => a !== hero && matches(a.doc));
   const allCats = FICHE_CATEGORIES.filter(c => assigned.some(a => a.doc.category === c) || bank.some(f => f.origin.category === c));
 

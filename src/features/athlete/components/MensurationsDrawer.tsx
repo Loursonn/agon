@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Ruler, Camera, Plus, ChevronLeft, Check, Pencil, Trash2, X } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { C } from "@/lib/theme";
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -84,20 +85,20 @@ function LogCard({
   }
 
   return (
-    <div style={{ background: C.s1, borderRadius: 6, border: '1px solid ' + C.brd, padding: '14px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: chips.length ? 10 : 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>
+    <div className="rounded-[6px] border border-agon-brd bg-agon-s1 px-4 py-3.5">
+      <div className={cn('flex items-center gap-2', chips.length ? 'mb-2.5' : 'mb-0')}>
+        <span className="text-[13px] font-bold text-agon-tx">
           {format(new Date(log.date + 'T12:00:00'), 'd MMM yyyy', { locale: fr })}
         </span>
         {log.weight_kg != null && (
-          <span style={{ fontSize: 11, color: C.tx3 }}>· {log.weight_kg} kg</span>
+          <span className="text-[11px] text-agon-tx3">· {log.weight_kg} kg</span>
         )}
         {!viewOnly && (
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-            <button onClick={onEdit} title="Modifier" style={iconBtn(C.tx3)}>
+          <div className="ml-auto flex gap-1">
+            <button onClick={onEdit} title="Modifier" className={cn(ICON_BTN, 'text-agon-tx3')}>
               <Pencil size={13} />
             </button>
-            <button onClick={() => setConfirmDel(true)} title="Supprimer" style={iconBtn(C.r)}>
+            <button onClick={() => setConfirmDel(true)} title="Supprimer" className={cn(ICON_BTN, 'text-agon-erreur')}>
               <Trash2 size={13} />
             </button>
           </div>
@@ -105,27 +106,24 @@ function LogCard({
       </div>
 
       {chips.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div className="flex flex-wrap gap-1.5">
           {chips.map((c, i) => (
-            <div key={i} style={{
-              padding: '4px 10px', borderRadius: 7,
-              background: 'rgba(34,201,147,0.08)', border: '1px solid rgba(34,201,147,0.15)',
-            }}>
-              <span style={{ fontSize: 11, color: C.tx3 }}>{c.label} </span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.g }}>{c.value}</span>
+            <div key={i} className="rounded-[7px] border border-agon-succes/[0.15] bg-agon-succes/[0.08] px-2.5 py-1">
+              <span className="text-[11px] text-agon-tx3">{c.label} </span>
+              <span className="text-[12px] font-bold text-agon-succes">{c.value}</span>
             </div>
           ))}
         </div>
       )}
 
       {photoPaths.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {photoPaths.map(([slot, path]) => (
-            <div key={slot} style={{ width: 56, height: 72, borderRadius: 4, overflow: 'hidden', background: C.s2, border: '1px solid ' + C.brd, position: 'relative' }}>
+            <div key={slot} className="relative h-[72px] w-14 overflow-hidden rounded-[4px] border border-agon-brd bg-agon-s2">
               {urls[path] ? (
-                <img src={urls[path]} alt={slot} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={urls[path]} alt={slot} className="h-full w-full object-cover" />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="flex h-full w-full items-center justify-center">
                   <Camera size={14} color={C.tx3} />
                 </div>
               )}
@@ -135,11 +133,11 @@ function LogCard({
       )}
 
       {confirmDel && (
-        <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 4, background: C.rS, border: '1px solid ' + C.r + '40' }}>
-          <div style={{ fontSize: 12, color: C.tx2, marginBottom: 10 }}>Supprimer cette saisie ?</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: '8px 0', borderRadius: 4, border: '1px solid ' + C.brdL, background: 'transparent', color: C.tx2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
-            <button onClick={() => { onDelete(); setConfirmDel(false); }} style={{ flex: 1, padding: '8px 0', borderRadius: 4, border: 'none', background: C.rV, color: C.ink, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Supprimer</button>
+        <div className="mt-3 rounded-[4px] border border-agon-erreur/[0.25] bg-agon-erreur-doux px-3 py-2.5">
+          <div className="mb-2.5 text-[12px] text-agon-tx2">Supprimer cette saisie ?</div>
+          <div className="flex gap-2">
+            <button onClick={() => setConfirmDel(false)} className="flex-1 cursor-pointer rounded-[4px] border border-agon-brd-l bg-transparent py-2 font-[inherit] text-[12px] font-semibold text-agon-tx2">Annuler</button>
+            <button onClick={() => { onDelete(); setConfirmDel(false); }} className="flex-1 cursor-pointer rounded-[4px] border-none bg-agon-erreur-vif py-2 font-[inherit] text-[12px] font-bold text-agon-ink">Supprimer</button>
           </div>
         </div>
       )}
@@ -147,13 +145,11 @@ function LogCard({
   );
 }
 
-function iconBtn(color: string): React.CSSProperties {
-  return {
-    width: 28, height: 28, borderRadius: 7, border: '1px solid ' + C.brdL,
-    background: 'transparent', color, cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  };
-}
+const ICON_BTN = 'flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-[7px] border border-agon-brd-l bg-transparent';
+const INPUT = 'box-border w-full rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2 py-1.5 font-[inherit] text-[14px] font-bold text-agon-tx [outline:none]';
+const FIELD_LABEL = 'text-[11px] font-bold text-agon-tx2';
+const SIDE = 'min-w-[14px] text-[10px] font-bold text-agon-tx3';
+const UNIT = 'text-[11px] text-agon-tx3';
 
 // ── Entry form (création + édition) ────────────────────────────────────────────
 
@@ -262,76 +258,64 @@ function EntryForm({
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '6px 8px', borderRadius: 4,
-    border: '1px solid ' + C.brdL, background: C.s1,
-    color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
-    outline: 'none', boxSizing: 'border-box',
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="flex flex-col gap-4">
       {/* Poids du jour */}
-      <div style={{ background: C.s2, borderRadius: 4, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2 }}>Poids du jour</div>
-          <div style={{ fontSize: 10, color: C.tx3 }}>kg</div>
+      <div className="flex items-center gap-2.5 rounded-[4px] bg-agon-s2 px-3.5 py-2.5">
+        <div className="flex-1">
+          <div className={FIELD_LABEL}>Poids du jour</div>
+          <div className="text-[10px] text-agon-tx3">kg</div>
         </div>
         <input
           type="number" inputMode="decimal" value={weight}
           onChange={(e) => setWeight(e.target.value)} placeholder="0"
-          style={{
-            width: 90, padding: '7px 10px', borderRadius: 4,
-            border: '1px solid ' + C.brdL, background: C.s1,
-            color: C.tx, fontSize: 15, fontWeight: 700, fontFamily: 'inherit',
-            outline: 'none', textAlign: 'right', boxSizing: 'border-box',
-          }}
+          className="box-border w-[90px] rounded-[4px] border border-agon-brd-l bg-agon-s1 px-2.5 py-[7px] text-right font-[inherit] text-[15px] font-bold text-agon-tx [outline:none]"
         />
       </div>
 
       {/* Mensurations */}
       <div>
         <SectionLabel icon={<Ruler size={12} color={C.g} />} text="Mensurations (cm)" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {MEASUREMENT_FIELDS.map(f => {
             if (f.bilateral) {
               const { gKey, dKey } = f.bilateral;
               return (
-                <div key={f.key} style={{ background: C.s2, borderRadius: 4, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2, marginBottom: 6 }}>{f.label}</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, minWidth: 14 }}>G</span>
+                <div key={f.key} className="rounded-[4px] bg-agon-s2 px-3 py-2">
+                  <div className={cn(FIELD_LABEL, 'mb-1.5')}>{f.label}</div>
+                  <div className="grid grid-cols-[1fr_1fr] gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className={SIDE}>G</span>
                       <input
                         type="number" inputMode="decimal" value={values[gKey] ?? ''}
                         onChange={(e) => setVal(gKey, e.target.value)} placeholder="0"
-                        style={inputStyle}
+                        className={INPUT}
                       />
-                      <span style={{ fontSize: 11, color: C.tx3 }}>cm</span>
+                      <span className={UNIT}>cm</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, minWidth: 14 }}>D</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={SIDE}>D</span>
                       <input
                         type="number" inputMode="decimal" value={values[dKey] ?? ''}
                         onChange={(e) => setVal(dKey, e.target.value)} placeholder="0"
-                        style={inputStyle}
+                        className={INPUT}
                       />
-                      <span style={{ fontSize: 11, color: C.tx3 }}>cm</span>
+                      <span className={UNIT}>cm</span>
                     </div>
                   </div>
                 </div>
               );
             }
             return (
-              <div key={f.key} style={{ background: C.s2, borderRadius: 4, padding: '8px 12px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2, marginBottom: 4 }}>{f.label}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div key={f.key} className="rounded-[4px] bg-agon-s2 px-3 py-2">
+                <div className={cn(FIELD_LABEL, 'mb-1')}>{f.label}</div>
+                <div className="flex items-center gap-1.5">
                   <input
                     type="number" inputMode="decimal" value={values[f.key] ?? ''}
                     onChange={(e) => setVal(f.key, e.target.value)} placeholder="0"
-                    style={inputStyle}
+                    className={INPUT}
                   />
-                  <span style={{ fontSize: 11, color: C.tx3 }}>cm</span>
+                  <span className={UNIT}>cm</span>
                 </div>
               </div>
             );
@@ -342,7 +326,7 @@ function EntryForm({
       {/* Photos */}
       <div>
         <SectionLabel icon={<Camera size={12} color={C.g} />} text="Photos (optionnel)" />
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {PHOTO_SLOTS.map(s => {
             const newPrev = previews[s.key];
             const existingPath = existingPhotos[s.key];
@@ -350,32 +334,27 @@ function EntryForm({
             const imgUrl = newPrev ?? (showExisting ? photoUrls[existingPath!] : undefined);
             const hasImg = !!newPrev || showExisting;
             return (
-              <div key={s.key} style={{ flexShrink: 0, textAlign: 'center', position: 'relative' }}>
-                <label style={{ cursor: 'pointer', display: 'block' }}>
-                  <div style={{
-                    width: 72, height: 92, borderRadius: 4, overflow: 'hidden',
-                    background: C.s2, border: '1px dashed ' + (hasImg ? C.g + '60' : C.brdL),
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
+              <div key={s.key} className="relative shrink-0 text-center">
+                <label className="block cursor-pointer">
+                  <div className={cn(
+                    'flex h-[92px] w-[72px] items-center justify-center overflow-hidden rounded-[4px] border border-dashed bg-agon-s2',
+                    hasImg ? 'border-agon-succes/[0.38]' : 'border-agon-brd-l',
+                  )}>
                     {imgUrl ? (
-                      <img src={imgUrl} alt={s.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={imgUrl} alt={s.label} className="h-full w-full object-cover" />
                     ) : (
                       <Plus size={18} color={C.tx3} />
                     )}
                   </div>
-                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                  <input type="file" accept="image/*" className="hidden"
                     onChange={(e) => pickPhoto(s.key, e.target.files?.[0])} />
                 </label>
-                <div style={{ fontSize: 9, color: C.tx3, marginTop: 4, maxWidth: 72 }}>{s.label}</div>
+                <div className="mt-1 max-w-[72px] text-[9px] text-agon-tx3">{s.label}</div>
                 {hasImg && (
                   <button
                     onClick={() => clearPhoto(s.key)}
                     title="Retirer"
-                    style={{
-                      position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%',
-                      border: 'none', background: C.rV, color: C.ink, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit',
-                    }}
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-none bg-agon-erreur-vif font-[inherit] text-agon-ink"
                   >
                     <X size={11} />
                   </button>
@@ -388,12 +367,10 @@ function EntryForm({
 
       <button
         onClick={handleSave} disabled={saving}
-        style={{
-          width: '100%', padding: '13px 0', borderRadius: 6, border: 'none',
-          background: saving ? C.s2 : C.g, color: saving ? C.tx3 : C.tx,
-          fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer',
-          fontFamily: 'inherit', minHeight: 44,
-        }}
+        className={cn(
+          'min-h-[44px] w-full rounded-[6px] border-none py-[13px] font-[inherit] text-[14px] font-bold',
+          saving ? 'cursor-default bg-agon-s2 text-agon-tx3' : 'cursor-pointer bg-agon-succes text-agon-ink',
+        )}
       >
         {saving ? 'Enregistrement…' : isEdit ? 'Mettre à jour' : 'Enregistrer'}
       </button>
@@ -403,9 +380,9 @@ function EntryForm({
 
 function SectionLabel({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+    <div className="mb-2.5 flex items-center gap-1.5">
       {icon}
-      <span style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <span className="text-[10px] font-bold uppercase tracking-[0.5px] text-agon-tx3">
         {text}
       </span>
     </div>
@@ -439,24 +416,24 @@ export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }:
 
   return (
     <Drawer open onOpenChange={(v) => !v && onClose()}>
-      <DrawerContent style={{ background: C.s1, borderTop: '1px solid ' + C.brd, padding: '0 0 40px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-        <DrawerHeader style={{ padding: '16px 20px 12px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <DrawerContent className="flex max-h-[90vh] flex-col border-t-agon-brd bg-agon-s1 p-0 pb-10">
+        <DrawerHeader className="shrink-0 px-5 pb-3 pt-4">
+          <div className="flex items-center gap-2.5">
             {isForm && (
-              <button onClick={() => setMode({ kind: 'list' })} style={{ background: 'none', border: 'none', color: C.tx3, cursor: 'pointer', padding: 0, display: 'flex' }}>
+              <button onClick={() => setMode({ kind: 'list' })} className="flex cursor-pointer border-none bg-transparent p-0 text-agon-tx3">
                 <ChevronLeft size={20} />
               </button>
             )}
-            <div style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0, background: C.gS, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] bg-agon-succes-doux">
               <Ruler size={18} color={C.g} />
             </div>
-            <DrawerTitle style={{ fontSize: 16, fontWeight: 700, color: C.tx }}>
+            <DrawerTitle className="text-[16px] font-bold text-agon-tx">
               {mode.kind === 'new' ? 'Nouvelle saisie' : mode.kind === 'edit' ? 'Modifier la saisie' : 'Mensurations / Photos'}
             </DrawerTitle>
           </div>
         </DrawerHeader>
 
-        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 [scrollbar-width:none]">
           {isForm ? (
             <EntryForm
               athleteId={athleteId}
@@ -469,29 +446,25 @@ export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }:
               {!viewOnly && (
                 <button
                   onClick={() => setMode({ kind: 'new' })}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '12px 0', borderRadius: 6, border: 'none', background: C.g,
-                    color: C.tx, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', minHeight: 44,
-                  }}
+                  className="flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-[6px] border-none bg-agon-succes py-3 font-[inherit] text-[14px] font-bold text-agon-ink"
                 >
                   <Plus size={16} /> Nouvelle saisie
                 </button>
               )}
 
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: 'uppercase', letterSpacing: '0.6px', marginTop: 4 }}>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.6px] text-agon-tx3">
                 Historique — {logs.length}
               </div>
 
               {isLoading ? (
-                <div style={{ fontSize: 12, color: C.tx3, padding: '12px 0' }}>Chargement…</div>
+                <div className="py-3 text-[12px] text-agon-tx3">Chargement…</div>
               ) : logs.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '32px 0', color: C.tx3 }}>
+                <div className="flex flex-col items-center gap-2 py-8 text-agon-tx3">
                   <Check size={22} color={C.tx3} />
-                  <div style={{ fontSize: 12 }}>Aucune saisie pour le moment.</div>
+                  <div className="text-[12px]">Aucune saisie pour le moment.</div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="flex flex-col gap-2.5">
                   {logs.map(l => (
                     <LogCard
                       key={l.id}

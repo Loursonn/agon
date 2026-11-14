@@ -232,13 +232,25 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               onClick={() => setDrawerOpen(true)}
               title="Mon profil"
               aria-label="Mon profil"
-              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md border border-agon-brd-l text-agon-tx3"
+              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md border border-agon-brd-l text-agon-tx3 lg:hidden"
             >
               <AgonIcon name="menu" size={16} />
             </button>
             {userName && (
-              <div className="hidden max-w-[100px] truncate text-agon-xs font-medium text-agon-tx3 min-[420px]:block">{userName}</div>
+              <div className="hidden max-w-[100px] truncate text-agon-xs font-medium text-agon-tx3 min-[420px]:block lg:hidden">{userName}</div>
             )}
+            {/* PC (planche AthOrdiAAujourdhui) : prénom + initiales cerclées d'or, ouvre le menu */}
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Mon profil"
+              className="hidden items-center gap-[10px] text-[13px] text-agon-tx2 hover:text-agon-tx lg:flex"
+            >
+              {userName ?? profile?.full_name}
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-agon-accent font-mono text-[11px] text-agon-accent">
+                {(userName ?? profile?.full_name ?? "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "·"}
+              </span>
+            </button>
           </div>
         </div>
         <OfflineBanner />

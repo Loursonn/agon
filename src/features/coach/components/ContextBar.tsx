@@ -7,8 +7,7 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { countAthleteChoices, workoutKeys } from "@/api/workouts";
 import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
-import { C, H } from "@/lib/theme";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import ClaimLinkButton from "@/features/coach/components/ClaimLinkButton";
 import {
@@ -64,6 +63,9 @@ const SUB_TABS: Record<string, { key: string; label: string }[]> = {
     { key: "plan",     label: "Plan de course"    },
   ],
 };
+
+const OUTLINE_BTN = "h-[30px] flex-shrink-0 cursor-pointer rounded-[8px] border border-agon-brd-l bg-transparent px-3 text-[12px] text-agon-tx2";
+const TAB_BASE = "cursor-pointer whitespace-nowrap border-0 bg-transparent font-normal transition-[color,border-color] duration-150";
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
@@ -133,53 +135,24 @@ export default function ContextBar() {
   ];
 
   return (
-    <div
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 9,
-        background: C.bg,
-        borderBottom: "1px solid " + C.brd,
-        flexShrink: 0,
-      }}
-    >
+    <div className="sticky top-0 z-[9] flex-shrink-0 border-b border-agon-brd bg-agon-bg">
       {/* Athlete info row — compact */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          padding: "14px 24px 6px",
-        }}
-      >
+      <div className="flex items-center gap-3.5 px-4 pb-1.5 pt-3.5 md:px-6">
         {/* Avatar */}
-        <div
-          style={{
-            width: 36, height: 36, boxSizing: "border-box", borderRadius: "50%",
-            border: "1px solid " + C.ac,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            ...MONO, fontSize: 12, color: C.ac, flexShrink: 0,
-          }}
-        >
+        <div className="agon-mono flex size-9 flex-shrink-0 items-center justify-center rounded-full border border-agon-accent text-[12px] text-agon-accent">
           {initials}
         </div>
 
         {/* Name */}
-        <div
-          style={{
-            display: "flex", alignItems: "baseline", gap: 14,
-            overflow: "hidden", whiteSpace: "nowrap",
-            flex: 1, minWidth: 0,
-          }}
-        >
-          <span style={{ ...DISPLAY, fontSize: 17, fontWeight: 400, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx, overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div className="flex min-w-0 flex-1 items-baseline gap-3.5 overflow-hidden whitespace-nowrap">
+          <span className="agon-display overflow-hidden text-ellipsis text-[17px] font-normal uppercase tracking-[0.08em] text-agon-tx">
             {fullName}
           </span>
           {selectedAthlete?.id === user?.id && (
-            <span style={{ ...MONO, fontSize: 11, color: C.ac }}>(moi)</span>
+            <span className="agon-mono text-[11px] text-agon-accent">(moi)</span>
           )}
           {blockConfig?.blockName && (
-            <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: C.tx3, overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span className="agon-mono overflow-hidden text-ellipsis text-[11px] uppercase tracking-[0.1em] text-agon-tx3">
               {blockConfig.blockName} · S{currentWeek} / {tw}
             </span>
           )}
@@ -195,12 +168,7 @@ export default function ContextBar() {
           <button
             onClick={() => navigate(`/coach/athletes/${athleteId}/retours`)}
             title="Voir les modifications athlète"
-            style={{
-              ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
-              padding: "4px 9px", borderRadius: 999, border: "none",
-              background: C.o, color: C.ink, whiteSpace: "nowrap",
-              cursor: "pointer", flexShrink: 0,
-            }}
+            className="agon-mono flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full border-0 bg-agon-alerte px-[9px] py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-agon-ink"
           >
             {modifCount} modif{modifCount > 1 ? "s" : ""}
           </button>
@@ -212,13 +180,7 @@ export default function ContextBar() {
           <button
             onClick={() => setDraftsOpen(true)}
             title={claudeDrafts.length > 0 ? "Propositions de Claude en attente" : "Ce que Claude a inscrit récemment"}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              height: 30, boxSizing: "border-box", padding: "0 12px", borderRadius: 8,
-              border: "1px solid " + C.brdL, background: "transparent",
-              color: C.tx2, fontSize: 12,
-              cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-            }}
+            className={cn(OUTLINE_BTN, "flex items-center gap-1.5")}
           >
             {claudeDrafts.length > 0 ? `Claude · ${claudeDrafts.length}` : "Claude"}
           </button>
@@ -230,33 +192,15 @@ export default function ContextBar() {
         {/* Changer d'athlète — combobox */}
         <Popover open={comboOpen} onOpenChange={setComboOpen}>
           <PopoverTrigger asChild>
-            <button
-              style={{
-                height: 30, boxSizing: "border-box", padding: "0 12px", borderRadius: 8,
-                border: "1px solid " + C.brdL, background: "transparent",
-                color: C.tx2, fontSize: 12, whiteSpace: "nowrap",
-                cursor: "pointer", fontFamily: "inherit",
-                transition: "border-color 150ms, color 150ms",
-                flexShrink: 0,
-              }}
-            >
+            <button className={cn(OUTLINE_BTN, "whitespace-nowrap transition-[border-color,color] duration-150")}>
               Changer ›
             </button>
           </PopoverTrigger>
-          <PopoverContent
-            style={{
-              width: 260, padding: 0,
-              background: C.s1, border: "1px solid " + C.brdL,
-              borderRadius: 6, overflow: "hidden",
-            }}
-          >
-            <Command style={{ background: "transparent" }}>
-              <CommandInput
-                placeholder="Rechercher un athlète…"
-                style={{ color: C.tx, fontSize: 12 }}
-              />
+          <PopoverContent className="w-[260px] overflow-hidden rounded-[6px] border border-agon-brd-l bg-agon-s1 p-0">
+            <Command className="bg-transparent">
+              <CommandInput placeholder="Rechercher un athlète…" className="text-[12px] leading-5 text-agon-tx" />
               <CommandList>
-                <CommandEmpty style={{ color: C.tx3, fontSize: 12, padding: "12px 16px" }}>
+                <CommandEmpty className="px-4 py-3 text-center text-[12px] leading-5 text-agon-tx3">
                   Aucun athlète trouvé.
                 </CommandEmpty>
                 <CommandGroup>
@@ -268,29 +212,16 @@ export default function ContextBar() {
                         setComboOpen(false);
                         navigate(`/coach/athletes/${a.id}/planning`);
                       }}
-                      style={{
-                        cursor: "pointer",
-                        background: a.id === athleteId ? "rgba(255,201,51,0.12)" : "transparent",
-                        color: a.id === athleteId ? C.ac : C.tx,
-                        fontSize: 12,
-                        padding: "8px 12px",
-                      }}
+                      className={cn(
+                        "cursor-pointer px-3 py-2 text-[12px] leading-5",
+                        a.id === athleteId ? "!bg-agon-accent/[0.12] !text-agon-accent" : "!bg-transparent !text-agon-tx",
+                      )}
                     >
-                      <span
-                        style={{
-                          width: 24, height: 24, borderRadius: "50%",
-                          background: C.coach + "25",
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 10, fontWeight: 700, color: C.coach,
-                          marginRight: 8, flexShrink: 0,
-                        }}
-                      >
+                      <span className="mr-2 inline-flex size-6 flex-shrink-0 items-center justify-center rounded-full bg-agon-coach/[0.145] text-[10px] font-bold text-agon-coach">
                         {a.full_name.charAt(0).toUpperCase()}
                       </span>
                       {a.full_name}
-                      {a.id === athleteId && (
-                        <span style={{ marginLeft: "auto", color: C.ac, fontSize: 11 }}>✓</span>
-                      )}
+                      {a.id === athleteId && <span className="ml-auto text-[11px] text-agon-accent">✓</span>}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -301,34 +232,19 @@ export default function ContextBar() {
       </div>
 
       {/* Main tabs */}
-      <div style={{ display: "flex", alignItems: "flex-end", padding: "0 10px", gap: 0, overflowX: "auto" }}>
+      <div className="flex items-end gap-0 overflow-x-auto px-2.5">
         {TABS.map((tab) => {
           const active = tab.key === activeTab;
           return (
             <button
               key={tab.key}
               onClick={() => goTab(tab.key)}
-              style={{
-                height: 42,
-                padding: "0 14px",
-                border: "none",
-                marginLeft: tab.pushRight ? "auto" : undefined,
-                boxShadow: active ? `inset 0 -2px 0 ${C.ac}` : "none",
-                background: "transparent",
-                color: active ? C.tx : C.tx3,
-                fontSize: 13,
-                fontWeight: 400,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                whiteSpace: "nowrap",
-                transition: "color 150ms, border-color 150ms",
-              }}
-              onMouseEnter={(e) => {
-                if (!active) (e.currentTarget as HTMLElement).style.color = H.grisArgent;
-              }}
-              onMouseLeave={(e) => {
-                if (!active) (e.currentTarget as HTMLElement).style.color = C.tx3;
-              }}
+              className={cn(
+                TAB_BASE,
+                "h-[42px] px-3.5 text-[13px]",
+                tab.pushRight && "ml-auto",
+                active ? "text-agon-tx shadow-[inset_0_-2px_0_var(--agon-accent)]" : "text-agon-tx3 hover:text-agon-tx2",
+              )}
             >
               {tab.label}
             </button>
@@ -338,33 +254,24 @@ export default function ContextBar() {
 
       {/* Sub-tabs (Saison/Frise/Mois/Synthèse ou Bloc/Semaine/Jour) */}
       {subTabs.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", padding: "10px 24px", borderTop: "1px solid " + C.brd, overflowX: "auto" }}>
-          <div style={{ display: "flex", padding: 3, gap: 2, border: "1px solid " + C.brd, borderRadius: 10 }}>
-          {subTabs.map((sub) => {
-            const active = sub.key === activeSubTab;
-            return (
-              <button
-                key={sub.key}
-                onClick={() => goSubTab(sub.key)}
-                style={{
-                  height: 26,
-                  padding: "0 12px",
-                  border: "none",
-                  borderRadius: 7,
-                  background: active ? C.s2 : "transparent",
-                  color: active ? C.tx : C.tx3,
-                  fontSize: 12,
-                  fontWeight: 400,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  whiteSpace: "nowrap",
-                  transition: "color 150ms, border-color 150ms",
-                }}
-              >
-                {sub.label}
-              </button>
-            );
-          })}
+        <div className="flex items-center overflow-x-auto border-t border-agon-brd px-4 py-2.5 md:px-6">
+          <div className="flex gap-0.5 rounded-[10px] border border-agon-brd p-[3px]">
+            {subTabs.map((sub) => {
+              const active = sub.key === activeSubTab;
+              return (
+                <button
+                  key={sub.key}
+                  onClick={() => goSubTab(sub.key)}
+                  className={cn(
+                    TAB_BASE,
+                    "h-[26px] rounded-[7px] px-3 text-[12px]",
+                    active ? "bg-agon-s2 text-agon-tx" : "text-agon-tx3",
+                  )}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

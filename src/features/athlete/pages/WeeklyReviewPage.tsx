@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { localIsoDay, addDays, isIsoDay } from "@shared/domain/dates";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
@@ -14,7 +14,6 @@ import {
   useWeeklyReview,
 } from "@/features/shared/hooks/useWeeklyReview";
 import { ReviewAnswersView, ReviewSection, ReviewSummaryCard } from "@/features/shared/components/weekly-review/ReviewParts";
-import { REVIEW_CARD } from "@/features/shared/components/weekly-review/reviewStyle";
 import {
   FEEL_HINT,
   FEEL_KEYS,
@@ -36,20 +35,16 @@ import {
 const fmtDay = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
 const weekLabel = (w: string) => `Semaine du ${fmtDay(w)} au ${fmtDay(addDays(w, 6))}`;
 
-const FIELD: CSSProperties = {
-  width: "100%", boxSizing: "border-box", borderRadius: 10, border: `1px solid ${C.brd}`, background: C.s2, color: C.tx,
-  padding: "10px 12px", fontSize: 14, fontFamily: "inherit", resize: "vertical",
-};
+/** Équivalent en classes de REVIEW_CARD (weekly-review/reviewStyle.ts). */
+const REVIEW_CARD = "rounded-xl border border-agon-brd bg-agon-s1 px-3.5 py-3";
+const FIELD = "box-border w-full resize-y rounded-[10px] border border-agon-brd bg-agon-s2 px-3 py-2.5 font-[inherit] text-[14px] text-agon-tx";
 
 function Choice<K extends string>({ value, options, onChange }: { value: K | null | undefined; options: Record<K, string>; onChange: (k: K) => void }) {
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <div className="flex flex-wrap gap-1.5">
       {(Object.keys(options) as K[]).map((k) => (
         <button key={k} type="button" onClick={() => onChange(k)} aria-pressed={value === k}
-          style={{
-            height: 34, padding: "0 12px", borderRadius: 17, fontSize: 13, cursor: "pointer",
-            border: `1px solid ${value === k ? C.ac : C.brd}`, background: value === k ? C.acS : "transparent", color: value === k ? C.tx : C.tx2,
-          }}>
+          className={cn("h-[34px] cursor-pointer rounded-[17px] border px-3 text-[13px]", value === k ? "border-agon-accent bg-agon-accent-doux text-agon-tx" : "border-agon-brd bg-transparent text-agon-tx2")}>
           {options[k]}
         </button>
       ))}
@@ -60,13 +55,10 @@ function Choice<K extends string>({ value, options, onChange }: { value: K | nul
 function Scale({ value, min, max, onChange, label }: { value: number | null | undefined; min: number; max: number; onChange: (v: number) => void; label: string }) {
   const values = Array.from({ length: max - min + 1 }, (_, i) => min + i);
   return (
-    <div role="radiogroup" aria-label={label} style={{ display: "flex", gap: 4 }}>
+    <div role="radiogroup" aria-label={label} className="flex gap-1">
       {values.map((v) => (
         <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)}
-          style={{
-            flex: 1, minWidth: 0, height: 38, borderRadius: 9, fontSize: 14, cursor: "pointer",
-            border: `1px solid ${value === v ? C.ac : C.brd}`, background: value === v ? C.ac : C.s2, color: value === v ? C.bg : C.tx2,
-          }}>
+          className={cn("h-[38px] min-w-0 flex-1 cursor-pointer rounded-[9px] border text-[14px]", value === v ? "border-agon-accent bg-agon-accent text-agon-bg" : "border-agon-brd bg-agon-s2 text-agon-tx2")}>
           {v}
         </button>
       ))}
@@ -157,10 +149,10 @@ export default function WeeklyReviewPage() {
 
   const header = <AthletePageHeader title="Ta weekly review" titleSize={22} />;
   const wrap = (body: ReactNode) => (
-    <div style={{ maxWidth: 520, margin: "0 auto" }}>
+    <div className="mx-auto max-w-[520px]">
       {header}
-      <div style={{ padding: "16px 16px 48px", display: "flex", flexDirection: "column", gap: 16 }}>
-        {week && <div style={{ fontSize: 13, color: C.tx2 }}>{weekLabel(week)}</div>}
+      <div className="flex flex-col gap-4 px-4 pb-12 pt-4">
+        {week && <div className="text-[13px] text-agon-tx2">{weekLabel(week)}</div>}
         {body}
       </div>
     </div>
@@ -168,12 +160,12 @@ export default function WeeklyReviewPage() {
 
   if (!week) {
     return wrap(
-      <div style={{ ...REVIEW_CARD, fontSize: 14, color: C.tx2 }}>
+      <div className={cn(REVIEW_CARD, "text-[14px] text-agon-tx2")}>
         Ta weekly review s'ouvre dimanche matin et se remplit jusqu'au lundi soir.
       </div>,
     );
   }
-  if (isLoading) return wrap(<div style={{ color: C.tx3, fontSize: 13 }}>Chargement…</div>);
+  if (isLoading) return wrap(<div className="text-[13px] text-agon-tx3">Chargement…</div>);
 
   if (submitted && review) {
     return wrap(
@@ -183,7 +175,7 @@ export default function WeeklyReviewPage() {
         </ReviewSection>
         <ReviewAnswersView answers={review.answers} light={review.light} />
         <ReviewSection n="—" title="Réponse du coach">
-          <div style={{ ...REVIEW_CARD, fontSize: 14, whiteSpace: "pre-wrap", color: retour?.comment ? C.tx : C.tx3 }}>
+          <div className={cn(REVIEW_CARD, "whitespace-pre-wrap text-[14px]", retour?.comment ? "text-agon-tx" : "text-agon-tx3")}>
             {retour?.comment || "Ton coach te répond le lundi."}
           </div>
         </ReviewSection>
@@ -193,7 +185,7 @@ export default function WeeklyReviewPage() {
 
   if (!open) {
     return wrap(
-      <div style={{ ...REVIEW_CARD, fontSize: 14, color: C.tx2 }}>
+      <div className={cn(REVIEW_CARD, "text-[14px] text-agon-tx2")}>
         {today > addDays(week, 7) ? "Cette weekly review n'a pas été faite." : "Cette weekly review s'ouvre le dimanche."}
       </div>,
     );
@@ -203,7 +195,7 @@ export default function WeeklyReviewPage() {
   const kept = a.kept ?? [];
   const next = [...(a.next ?? []), "", "", ""].slice(0, REVIEW_PARAMS.engagements);
   const isMissing = (key: string) => showMissing && missing.some((m) => m.key === key || m.key.startsWith(`${key}.`));
-  const mark = (key: string): CSSProperties => (isMissing(key) ? { outline: `1px solid ${C.r}`, outlineOffset: 4, borderRadius: 10 } : {});
+  const mark = (key: string): string => (isMissing(key) ? "rounded-[10px] outline outline-1 outline-offset-4 outline-agon-erreur" : "");
 
   return wrap(
     <>
@@ -212,12 +204,12 @@ export default function WeeklyReviewPage() {
       </ReviewSection>
 
       <ReviewSection n="02" title="Ton ressenti, de 1 à 5">
-        <div style={{ ...REVIEW_CARD, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className={cn(REVIEW_CARD, "flex flex-col gap-3.5")}>
           {FEEL_KEYS.map((k) => (
-            <div key={k} style={mark(`feel.${k}`)}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, marginBottom: 6 }}>
+            <div key={k} className={mark(`feel.${k}`) || undefined}>
+              <div className="mb-1.5 flex justify-between text-[13.5px]">
                 <span>{FEEL_LABEL[k]}</span>
-                <span style={{ fontSize: 11.5, color: C.tx3 }}>1 {FEEL_HINT[k][0]} · 5 {FEEL_HINT[k][1]}</span>
+                <span className="text-[11.5px] text-agon-tx3">1 {FEEL_HINT[k][0]} · 5 {FEEL_HINT[k][1]}</span>
               </div>
               <Scale label={FEEL_LABEL[k]} min={1} max={5} value={a.feel?.[k]}
                 onChange={(v) => update((x) => ({ ...x, feel: { ...(x.feel ?? {}), [k]: v } }))} />
@@ -228,14 +220,14 @@ export default function WeeklyReviewPage() {
 
       {kept.length > 0 && (
         <ReviewSection n="03" title="Tes engagements de la semaine">
-          <div style={{ ...REVIEW_CARD, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className={cn(REVIEW_CARD, "flex flex-col gap-3.5")}>
             {kept.map((c, i) => (
-              <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6, ...mark(`kept.${i}`) }}>
-                <div style={{ fontSize: 13.5 }}>{c.text}</div>
+              <div key={i} className={cn("flex flex-col gap-1.5", mark(`kept.${i}`))}>
+                <div className="text-[13.5px]">{c.text}</div>
                 <Choice<KeptStatus> value={c.status} options={KEPT_LABEL}
                   onChange={(s) => update((x) => ({ ...x, kept: (x.kept ?? []).map((k, j) => (j === i ? { ...k, status: s } : k)) }))} />
                 {c.status && c.status !== "kept" && (
-                  <input style={FIELD} maxLength={REVIEW_PARAMS.maxText} placeholder="Pourquoi ?" value={c.why ?? ""}
+                  <input className={FIELD} maxLength={REVIEW_PARAMS.maxText} placeholder="Pourquoi ?" value={c.why ?? ""}
                     onChange={(e) => update((x) => ({ ...x, kept: (x.kept ?? []).map((k, j) => (j === i ? { ...k, why: e.target.value } : k)) }))} />
                 )}
               </div>
@@ -245,49 +237,49 @@ export default function WeeklyReviewPage() {
       )}
 
       <ReviewSection n="04" title="3 questions">
-        <div style={{ ...REVIEW_CARD, display: "flex", flexDirection: "column", gap: 12 }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5, ...mark("worked") }}>
+        <div className={cn(REVIEW_CARD, "flex flex-col gap-3")}>
+          <label className={cn("flex flex-col gap-1.5 text-[13.5px]", mark("worked"))}>
             Ce qui a marché
-            <textarea style={FIELD} rows={2} maxLength={REVIEW_PARAMS.maxText} value={a.worked ?? ""}
+            <textarea className={FIELD} rows={2} maxLength={REVIEW_PARAMS.maxText} value={a.worked ?? ""}
               onChange={(e) => update((x) => ({ ...x, worked: e.target.value }))} />
           </label>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5, ...mark("stuck") }}>
+          <div className={cn("flex flex-col gap-1.5 text-[13.5px]", mark("stuck"))}>
             <label htmlFor="wr-stuck">Ce qui a coincé</label>
             <Choice<StuckCause> value={a.stuckCause} options={STUCK_LABEL} onChange={(s) => update((x) => ({ ...x, stuckCause: s }))} />
-            <textarea id="wr-stuck" style={FIELD} rows={2} maxLength={REVIEW_PARAMS.maxText} value={a.stuck ?? ""}
+            <textarea id="wr-stuck" className={FIELD} rows={2} maxLength={REVIEW_PARAMS.maxText} value={a.stuck ?? ""}
               onChange={(e) => update((x) => ({ ...x, stuck: e.target.value }))} />
           </div>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5, ...mark("change") }}>
+          <label className={cn("flex flex-col gap-1.5 text-[13.5px]", mark("change"))}>
             Ce que je change
-            <textarea style={FIELD} rows={2} maxLength={REVIEW_PARAMS.maxText} value={a.change ?? ""}
+            <textarea className={FIELD} rows={2} maxLength={REVIEW_PARAMS.maxText} value={a.change ?? ""}
               onChange={(e) => update((x) => ({ ...x, change: e.target.value }))} />
           </label>
         </div>
       </ReviewSection>
 
       <ReviewSection n="05" title="3 engagements pour la semaine prochaine">
-        <div style={{ ...REVIEW_CARD, display: "flex", flexDirection: "column", gap: 8, ...mark("next") }}>
+        <div className={cn(REVIEW_CARD, "flex flex-col gap-2", mark("next"))}>
           {next.map((t, i) => (
-            <input key={i} style={FIELD} maxLength={REVIEW_PARAMS.maxText} placeholder={`Engagement ${i + 1}`} value={t}
+            <input key={i} className={FIELD} maxLength={REVIEW_PARAMS.maxText} placeholder={`Engagement ${i + 1}`} value={t}
               onChange={(e) => update((x) => {
                 const n = [...(x.next ?? []), "", "", ""].slice(0, REVIEW_PARAMS.engagements);
                 n[i] = e.target.value;
                 return { ...x, next: n };
               })} />
           ))}
-          <div style={{ fontSize: 12, color: C.tx3 }}>Ils reviendront dans ta review de la semaine prochaine.</div>
+          <div className="text-[12px] text-agon-tx3">Ils reviendront dans ta review de la semaine prochaine.</div>
         </div>
       </ReviewSection>
 
       {needPain && (
         <ReviewSection n="06" title="Ta douleur">
-          <div style={{ ...REVIEW_CARD, display: "flex", flexDirection: "column", gap: 10, ...mark("pain") }}>
-            <div style={{ fontSize: 12.5, color: C.tx2 }}>Ton feu est {light === "red" ? "rouge" : "orange"} : dis-nous où tu as mal.</div>
-            <input style={FIELD} maxLength={120} placeholder="Zone (genou droit, bas du dos…)" value={a.pain?.zone ?? ""}
+          <div className={cn(REVIEW_CARD, "flex flex-col gap-2.5", mark("pain"))}>
+            <div className="text-[12.5px] text-agon-tx2">Ton feu est {light === "red" ? "rouge" : "orange"} : dis-nous où tu as mal.</div>
+            <input className={FIELD} maxLength={120} placeholder="Zone (genou droit, bas du dos…)" value={a.pain?.zone ?? ""}
               onChange={(e) => update((x) => ({ ...x, pain: { ...(x.pain ?? {}), zone: e.target.value } }))} />
             <Choice value={a.pain?.kind} options={{ douleur: "Douleur", blessure: "Blessure" }}
               onChange={(k) => update((x) => ({ ...x, pain: { ...(x.pain ?? {}), kind: k } }))} />
-            <div style={{ fontSize: 13 }}>Niveau, de 0 à 10</div>
+            <div className="text-[13px]">Niveau, de 0 à 10</div>
             <Scale label="Niveau de douleur" min={0} max={10} value={a.pain?.level}
               onChange={(v) => update((x) => ({ ...x, pain: { ...(x.pain ?? {}), level: v } }))} />
           </div>
@@ -295,26 +287,26 @@ export default function WeeklyReviewPage() {
       )}
 
       <ReviewSection n={needPain ? "07" : "06"} title="Un mot pour ton coach (facultatif)">
-        <textarea style={FIELD} rows={3} maxLength={REVIEW_PARAMS.maxText} value={a.coachNote ?? ""}
+        <textarea className={FIELD} rows={3} maxLength={REVIEW_PARAMS.maxText} value={a.coachNote ?? ""}
           onChange={(e) => update((x) => ({ ...x, coachNote: e.target.value }))} />
       </ReviewSection>
 
       {showMissing && missing.length > 0 && (
-        <div role="alert" style={{ fontSize: 13, color: C.r }}>
+        <div role="alert" className="text-[13px] text-agon-erreur">
           Il manque : {missing.map((m) => m.label).join(", ")}.
         </div>
       )}
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="flex gap-2">
         <button type="button" onClick={() => { flush(); navigate("/athlete"); }}
-          style={{ flex: 1, height: 46, borderRadius: 12, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 14, cursor: "pointer" }}>
+          className="h-[46px] flex-1 cursor-pointer rounded-xl border border-agon-brd bg-transparent text-[14px] text-agon-tx2">
           Finir plus tard
         </button>
         <button type="button" onClick={submit} disabled={save.isPending || !summary}
-          style={{ flex: 2, height: 46, borderRadius: 12, border: "none", background: C.ac, color: C.bg, fontSize: 15, fontWeight: 600, cursor: "pointer", opacity: save.isPending || !summary ? 0.6 : 1 }}>
+          className={cn("h-[46px] flex-[2] cursor-pointer rounded-xl border-none bg-agon-accent text-[15px] font-semibold text-agon-bg", (save.isPending || !summary) && "opacity-60")}>
           {save.isPending ? "Envoi…" : "Envoyer à mon coach"}
         </button>
       </div>
-      <div style={{ fontSize: 12, color: C.tx3, textAlign: "center" }}>
+      <div className="text-center text-[12px] text-agon-tx3">
         Brouillon enregistré à chaque réponse. Ouverte jusqu'au lundi soir.
       </div>
     </>,

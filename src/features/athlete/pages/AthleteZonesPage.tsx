@@ -1,7 +1,7 @@
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Lock, Watch } from "lucide-react";
 import { C } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { useZoneBoundsAt, useZoneModels } from "@/features/shared/hooks/useZoneModels";
@@ -15,13 +15,13 @@ import { AthletePageHeader } from "@/features/athlete/components/AthletePageHead
 
 const fmtShort = (d: string) => new Date(d.slice(0, 10) + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
-const CARD: CSSProperties = { borderRadius: 12, background: C.s1, border: `1px solid ${C.brd}` };
+const CARD = "rounded-xl border border-agon-brd bg-agon-s1";
 
 function SectionTitle({ n, children }: { n: string; children: ReactNode }) {
   return (
-    <div style={{ marginTop: 6, height: 22, display: "flex", alignItems: "center" }}>
-      <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>
-        <span style={{ color: C.ac }}>{n} —</span> {children}
+    <div className="mt-1.5 flex h-[22px] items-center">
+      <span className="agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-agon-tx2">
+        <span className="text-agon-accent">{n} —</span> {children}
       </span>
     </div>
   );
@@ -29,15 +29,15 @@ function SectionTitle({ n, children }: { n: string; children: ReactNode }) {
 
 function Threshold({ label, value, color, note, source }: { label: string; value: number | null; color?: string; note: string; source?: string | null }) {
   return (
-    <div style={{ ...CARD, padding: "12px 13px", minWidth: 0 }}>
-      <div style={{ fontSize: 12, color: C.tx2, whiteSpace: "nowrap" }}>{label}</div>
-      <div style={{ marginTop: 4, whiteSpace: "nowrap" }}>
-        <span style={{ ...MONO, fontSize: 24, lineHeight: 1.1, color: value != null ? color ?? C.tx : C.tx3 }}>{value ?? "—"}</span>
-        {value != null && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}> bpm</span>}
+    <div className={cn(CARD, "min-w-0 px-[13px] py-3")}>
+      <div className="whitespace-nowrap text-[12px] text-agon-tx2">{label}</div>
+      <div className="mt-1 whitespace-nowrap">
+        <span className="agon-mono text-[24px] leading-[1.1]" style={{ color: value != null ? color ?? C.tx : C.tx3 }}>{value ?? "—"}</span>
+        {value != null && <span className="agon-mono text-[11px] text-agon-tx3"> bpm</span>}
       </div>
-      <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 3, whiteSpace: "nowrap" }}>{note}</div>
+      <div className="mt-[3px] whitespace-nowrap text-[11.5px] text-agon-tx3">{note}</div>
       {source && (
-        <div style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 6, ...MONO, fontSize: 10.5, color: C.tx3, whiteSpace: "nowrap" }}>
+        <div className="agon-mono mt-1.5 inline-flex items-center gap-1.5 whitespace-nowrap text-[10.5px] text-agon-tx3">
           <Watch size={12} strokeWidth={1.5} />{source}
         </div>
       )}
@@ -72,18 +72,18 @@ export default function AthleteZonesPage() {
   const n = b.length + 1;
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+    <div className="mx-auto max-w-[480px]">
       <AthletePageHeader title="Mes seuils et mes zones" titleSize={22} />
-      <div style={{ padding: "20px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="flex flex-col gap-3 px-4 pb-10 pt-5">
         {isLoading ? null : (
           <>
-            <div style={{ ...CARD, display: "flex", gap: 10, alignItems: "center", padding: "12px 14px" }}>
-              <span style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${C.ac}`, display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 10.5, color: C.ac, flex: "none" }}>
+            <div className={cn(CARD, "flex items-center gap-2.5 px-3.5 py-3")}>
+              <span className="agon-mono flex size-8 flex-none items-center justify-center rounded-full border border-agon-accent text-[10.5px] text-agon-accent">
                 {who === "ton coach" ? "—" : initials(who)}
               </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5 }}>{bounds ? `Fixé par ${who}` : "Pas encore fixé par ton coach"}</div>
-                <div style={{ fontSize: 12, color: C.tx3 }}>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13.5px]">{bounds ? `Fixé par ${who}` : "Pas encore fixé par ton coach"}</div>
+                <div className="text-[12px] text-agon-tx3">
                   {fcMaxRef ? `Dernier test le ${fmtShort(fcMaxRef.date)}` : since ? `Depuis le ${fmtShort(since)}` : "En attente"} · lecture seule
                 </div>
               </div>
@@ -91,7 +91,7 @@ export default function AthleteZonesPage() {
             </div>
 
             <SectionTitle n="01">Mes seuils</SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div className="grid grid-cols-2 gap-2">
               <Threshold label="SV1" value={sv1} color={C.o} note="fin de l’effort facile" />
               <Threshold label="SV2" value={sv2} color={C.r} note="limite de l’effort tenu" />
               <Threshold label="FC max" value={fcMax} note={fcMaxRef ? `fixée le ${fmtShort(fcMaxRef.date)}` : "pas encore mesurée"} />
@@ -101,50 +101,50 @@ export default function AthleteZonesPage() {
             <SectionTitle n="02">Modèle de zones</SectionTitle>
             {bounds && scale ? (
               <>
-                <div style={{ display: "flex", padding: 3, borderRadius: 11, background: C.s2, fontSize: 12 }} aria-label="Modèle choisi par ton coach">
+                <div className="flex rounded-[11px] bg-agon-s2 p-[3px] text-[12px]" aria-label="Modèle choisi par ton coach">
                   {([["five", "5 zones"], ["three", "3 zones SV1-SV2"], ["custom", "Personnalisé"]] as const).map(([k, l]) => (
-                    <span key={k} style={{
-                      flex: 1, height: 30, padding: "0 8px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, whiteSpace: "nowrap",
-                      ...(kind === k ? { background: C.s1, color: C.tx, border: `1px solid ${C.brdL}` } : { color: C.tx3 }),
-                    }}>{l}</span>
+                    <span key={k} className={cn(
+                      "flex h-[30px] flex-1 items-center justify-center whitespace-nowrap rounded-[8px] px-2",
+                      kind === k ? "border border-agon-brd-l bg-agon-s1 text-agon-tx" : "text-agon-tx3",
+                    )}>{l}</span>
                   ))}
                 </div>
-                <div style={{ ...CARD, borderRadius: 14, padding: "14px 14px 6px" }}>
-                  <div style={{ position: "relative", height: 72, margin: "0 6px" }}>
-                    <div style={{ position: "absolute", left: 0, right: 0, top: 18, display: "flex", height: 16, borderRadius: 5, overflow: "hidden", gap: 2 }}>
+                <div className="rounded-[14px] border border-agon-brd bg-agon-s1 px-3.5 pb-1.5 pt-3.5">
+                  <div className="relative mx-1.5 h-[72px]">
+                    <div className="absolute inset-x-0 top-[18px] flex h-4 gap-0.5 overflow-hidden rounded-[5px]">
                       {scale.widths.map((w, i) => <span key={i} style={{ width: `${w}%`, background: zoneColor(i + 1, n) }} />)}
                     </div>
                     {([["SV1", sv1], ["SV2", sv2]] as const).filter(([, v]) => v != null).map(([l, v]) => (
                       <span key={l}>
-                        <span style={{ position: "absolute", left: `${scale.at(v!)}%`, top: 0, transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                          <span style={{ ...MONO, fontSize: 10, color: C.tx2 }}>{l}</span>
-                          <span style={{ width: 1.5, height: 22, background: C.tx }} />
+                        <span className="absolute top-0 flex -translate-x-1/2 flex-col items-center gap-0.5" style={{ left: `${scale.at(v!)}%` }}>
+                          <span className="agon-mono text-[10px] text-agon-tx2">{l}</span>
+                          <span className="h-[22px] w-[1.5px] bg-agon-tx" />
                         </span>
-                        <span style={{ position: "absolute", left: `${scale.at(v!)}%`, top: 40, transform: "translateX(-50%)", ...MONO, fontSize: 10, color: C.tx3 }}>{v}</span>
+                        <span className="agon-mono absolute top-10 -translate-x-1/2 text-[10px] text-agon-tx3" style={{ left: `${scale.at(v!)}%` }}>{v}</span>
                       </span>
                     ))}
-                    <div style={{ position: "absolute", left: 0, right: 0, top: 58, display: "flex", justifyContent: "space-between", ...MONO, fontSize: 10, color: C.tx3 }}>
+                    <div className="agon-mono absolute inset-x-0 top-[58px] flex justify-between text-[10px] text-agon-tx3">
                       <span>{scale.min}</span><span>{fcMax ? `FC max ${fcMax}` : scale.max}</span>
                     </div>
                   </div>
-                  <div style={{ marginTop: 8 }}>
+                  <div className="mt-2">
                     {zoneRows(b, fcMax).map((z) => (
-                      <div key={z.zone} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 40, borderTop: `1px solid ${C.brd}` }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 20, minWidth: 28, padding: "0 6px", borderRadius: 999, background: zoneColor(z.zone, n), color: C.bg, ...MONO, fontSize: 10.5, fontWeight: 500, boxSizing: "border-box" }}>Z{z.zone}</span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{z.label}</span>
-                        <span style={{ ...MONO, fontSize: 13, color: C.tx, whiteSpace: "nowrap" }}>{z.range}</span>
+                      <div key={z.zone} className="flex min-h-10 items-center gap-2.5 border-t border-agon-brd">
+                        <span className="agon-mono box-border inline-flex h-5 min-w-7 items-center justify-center rounded-full px-1.5 text-[10.5px] font-medium text-agon-bg" style={{ background: zoneColor(z.zone, n) }}>Z{z.zone}</span>
+                        <span className="min-w-0 flex-1 truncate text-[13px] text-agon-tx2">{z.label}</span>
+                        <span className="agon-mono whitespace-nowrap text-[13px] text-agon-tx">{z.range}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div style={{ fontSize: 12.5, lineHeight: 1.5, color: C.tx3 }}>Ces zones colorent ta courbe de FC et le temps par zone de chaque séance.</div>
+                <div className="text-[12.5px] leading-normal text-agon-tx3">Ces zones colorent ta courbe de FC et le temps par zone de chaque séance.</div>
               </>
             ) : (
-              <div style={{ fontSize: 14, color: C.tx2, lineHeight: 1.5 }}>
+              <div className="text-[14px] leading-normal text-agon-tx2">
                 Ton coach n'a pas encore fixé tes zones de fréquence cardiaque. Elles apparaîtront ici, et dans tes séances, dès qu'il les aura réglées.
               </div>
             )}
-            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: C.tx2 }}>Une valeur te semble fausse ? Parles-en à ton coach : lui seul peut la changer.</div>
+            <div className="text-[12.5px] leading-normal text-agon-tx2">Une valeur te semble fausse ? Parles-en à ton coach : lui seul peut la changer.</div>
           </>
         )}
       </div>

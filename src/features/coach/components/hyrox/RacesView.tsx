@@ -47,7 +47,7 @@ export default function RacesView() {
     <>
       {/* KPI row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 16, marginBottom: 16 }}>
-        <KPICard accent label="Record" value={record ? formatMmSs(record.total_s, { hours: true }) : "—"} sub={record ? `${FORMAT_LABEL[record.format as keyof typeof FORMAT_LABEL] ?? record.format} · ${record.event_name}` : ""} />
+        <KPICard label="Record" value={record ? formatMmSs(record.total_s, { hours: true }) : "—"} sub={record ? `${FORMAT_LABEL[record.format as keyof typeof FORMAT_LABEL] ?? record.format} · ${record.event_name}` : ""} />
         <KPICard label="Courses" value={String(races.length)} sub={`${officialFinished.length} officielles`} />
         <KPICard label="Dernier chrono" value={latest ? formatMmSs(latest.total_s, { hours: true }) : "—"} sub={ecartRecord != null ? `+${formatMmSs(ecartRecord)} vs record` : ""} />
       </div>

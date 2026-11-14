@@ -11,7 +11,6 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { AthleteTestResult } from '@/features/shared/types/tests';
 import { C } from "@/lib/theme";
-import { DISPLAY, MONO } from '@/features/shared/components/seance/seanceUi';
 import { TEST_GROUP_COLOR, TEST_GROUP_LABEL, buildTestValueCards, groupTestCards, testGroupOf } from '@/lib/athleteTestValues';
 import { TestGroupIcon } from "@/features/athlete/components/tests/TestGroupIcon";
 import { RULER_PATH } from "@/features/athlete/components/tests/testGroupPaths";
@@ -23,11 +22,11 @@ import { useIsDesktop } from '@/hooks/useIsDesktop';
 /** Titre numéroté de la planche : « 01 — Mes valeurs » + filet. */
 function SectionTitle({ n, children }: { n: string; children: ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <h2 style={{ margin: 0, height: 20, display: 'flex', alignItems: 'center', ...MONO, fontWeight: 400, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.tx2, whiteSpace: 'nowrap' }}>
-        <span style={{ color: C.ac }}>{n} —</span>&nbsp;{children}
+    <div className="flex flex-col gap-2.5">
+      <h2 className="agon-mono m-0 flex h-5 items-center whitespace-nowrap text-[11px] font-normal uppercase tracking-[0.12em] text-agon-tx2">
+        <span className="text-agon-accent">{n} —</span>&nbsp;{children}
       </h2>
-      <div style={{ height: 1, background: C.brd }} />
+      <div className="h-px bg-agon-brd" />
     </div>
   );
 }
@@ -40,25 +39,25 @@ function ResultRow({ result, last }: { result: AthleteTestResult; last: boolean 
   const color = TEST_GROUP_COLOR[group];
   const name = result.test_definitions?.name ?? 'Test';
   return (
-    <div style={{ display: 'flex', gap: 12 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flex: 'none' }}>
+    <div className="flex gap-3">
+      <div className="flex w-8 flex-none flex-col items-center">
         <TestGroupIcon group={group} color={color} testName={name} size={32} />
-        {!last && <span style={{ flex: 1, width: 2, background: color + '59', marginTop: 4 }} />}
+        {!last && <span className="mt-1 w-0.5 flex-1" style={{ background: color + '59' }} />}
       </div>
-      <div style={{ flex: 1, minWidth: 0, paddingBottom: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 32 }}>
-          <span style={{ fontSize: 15, fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-          <span style={{ flex: 1 }} />
-          <span style={{ ...MONO, fontSize: 11, color: C.tx3, whiteSpace: 'nowrap' }}>{format(new Date(result.performed_at), 'd MMM yyyy', { locale: fr })}</span>
+      <div className="flex min-w-0 flex-1 flex-col gap-2 pb-[18px]">
+        <div className="flex min-h-8 items-center gap-2.5">
+          <span className="min-w-0 truncate text-[15px] font-medium">{name}</span>
+          <span className="flex-1" />
+          <span className="agon-mono whitespace-nowrap text-[11px] text-agon-tx3">{format(new Date(result.performed_at), 'd MMM yyyy', { locale: fr })}</span>
         </div>
         {values.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="flex flex-wrap gap-1.5">
             {values.map(v => {
               const num = Number(v.value);
               return (
-                <span key={v.id} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, height: 28, padding: '0 10px', boxSizing: 'border-box', borderRadius: 8, background: color + '24', border: `1px solid ${color}66`, whiteSpace: 'nowrap' }}>
-                  <span style={{ fontSize: 11, color: C.tx2 }}>{v.test_variables?.label ?? '—'}</span>
-                  <span style={{ ...MONO, fontSize: 12, color, lineHeight: '28px' }}>
+                <span key={v.id} className="box-border inline-flex h-7 items-baseline gap-1.5 whitespace-nowrap rounded-[8px] px-2.5" style={{ background: color + '24', border: `1px solid ${color}66` }}>
+                  <span className="text-[11px] text-agon-tx2">{v.test_variables?.label ?? '—'}</span>
+                  <span className="agon-mono text-[12px] leading-[28px]" style={{ color }}>
                     {Number.isFinite(num) ? (Math.round(num * 10) / 10).toLocaleString('fr-FR') : '—'} {v.test_variables?.unit ?? ''}
                   </span>
                 </span>
@@ -66,7 +65,7 @@ function ResultRow({ result, last }: { result: AthleteTestResult; last: boolean 
             })}
           </div>
         )}
-        {result.notes && <p style={{ margin: 0, fontSize: 12, color: C.tx2, fontStyle: 'italic', lineHeight: 1.5 }}>« {result.notes} »</p>}
+        {result.notes && <p className="m-0 text-[12px] italic leading-normal text-agon-tx2">« {result.notes} »</p>}
       </div>
     </div>
   );
@@ -111,38 +110,38 @@ export default function AthleteTestPage() {
           <button
             type="button"
             onClick={() => setMensuOpen(true)}
-            className="mb-8"
-            style={{ width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: C.tx, background: `linear-gradient(160deg, ${C.g}29, ${C.g}0F), ${C.s1}`, border: `1px solid ${C.g}73`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}
+            className="mb-8 flex w-full cursor-pointer items-center gap-3.5 rounded-[14px] px-4 py-3.5 text-left font-[inherit] text-agon-tx"
+            style={{ background: `linear-gradient(160deg, ${C.g}29, ${C.g}0F), ${C.s1}`, border: `1px solid ${C.g}73` }}
           >
-            <span aria-hidden style={{ width: 40, height: 40, flex: 'none', borderRadius: 10, background: C.g, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span aria-hidden className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-agon-succes">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="1.8" strokeLinecap="square">{RULER_PATH}</svg>
             </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ ...DISPLAY, display: 'block', fontSize: 12, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Mensurations / photos</span>
-              <span style={{ display: 'block', fontSize: 12, color: C.tx2, marginTop: 3, lineHeight: 1.45 }}>Saisir tes mensurations &amp; photos, ou consulter ton historique</span>
+            <span className="min-w-0 flex-1">
+              <span className="agon-display block whitespace-nowrap text-[12px] tracking-[0.06em]">Mensurations / photos</span>
+              <span className="mt-[3px] block text-[12px] leading-[1.45] text-agon-tx2">Saisir tes mensurations &amp; photos, ou consulter ton historique</span>
             </span>
-            <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.tx3} strokeWidth="1.5" strokeLinecap="square" style={{ flex: 'none' }}><path d="M9 5L16 12L9 19" /></svg>
+            <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.tx3} strokeWidth="1.5" strokeLinecap="square" className="flex-none"><path d="M9 5L16 12L9 19" /></svg>
           </button>
 
           {/* Valeurs courantes */}
           <section className="mb-8 lg:mb-0">
             <SectionTitle n="01">Mes valeurs</SectionTitle>
-            <p style={{ margin: '10px 0 14px', fontSize: 12, color: C.tx3 }}>{isDesktop ? 'Rangées par dominante. Clique une valeur pour voir son évolution.' : 'Rangées par dominante. Touche une valeur pour voir tous tes tests et leur évolution.'}</p>
+            <p className="mb-3.5 mt-2.5 text-[12px] text-agon-tx3">{isDesktop ? 'Rangées par dominante. Clique une valeur pour voir son évolution.' : 'Rangées par dominante. Touche une valeur pour voir tous tes tests et leur évolution.'}</p>
             {loadingResults ? (
               <div className="flex gap-agon-md">{[0, 1, 2].map(i => <CardSkeleton key={i} />)}</div>
             ) : groups.length === 0 ? (
               <div className="py-agon-md text-agon-sm text-agon-tx3">Aucune valeur enregistrée pour le moment.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="flex flex-col gap-5">
                 {groups.map(g => (
-                  <div key={g.group} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <span aria-hidden style={{ width: 4, height: 16, borderRadius: 2, background: TEST_GROUP_COLOR[g.group] }} />
-                      <span style={{ ...DISPLAY, fontSize: 13, letterSpacing: '0.06em', color: C.tx }}>{TEST_GROUP_LABEL[g.group]}</span>
-                      <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{g.cards.length} test{g.cards.length > 1 ? 's' : ''}</span>
+                  <div key={g.group} className="flex flex-col gap-2.5">
+                    <div className="flex items-center gap-[9px]">
+                      <span aria-hidden className="h-4 w-1 rounded-[2px]" style={{ background: TEST_GROUP_COLOR[g.group] }} />
+                      <span className="agon-display text-[13px] tracking-[0.06em] text-agon-tx">{TEST_GROUP_LABEL[g.group]}</span>
+                      <span className="agon-mono text-[11px] text-agon-tx3">{g.cards.length} test{g.cards.length > 1 ? 's' : ''}</span>
                     </div>
                     {isDesktop ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="flex flex-col gap-1.5">
                         {g.cards.map(c => (
                           <TestValueTile key={c.variableId} variant="row" selected={deskCard?.variableId === c.variableId} card={c} color={TEST_GROUP_COLOR[g.group]} onOpen={() => setOpenVar(c.variableId)} />
                         ))}
@@ -162,20 +161,20 @@ export default function AthleteTestPage() {
         </div>
 
         {deskCard && (
-          <div style={{ position: 'sticky', top: 24 }}>
+          <div className="sticky top-6">
             <TestDetailView key={deskCard.variableId} card={deskCard} color={TEST_GROUP_COLOR[deskCard.group]} />
           </div>
         )}
 
         {/* Historique (ordinateur : sous les deux colonnes) */}
         <section className={deskCard ? 'lg:col-span-2 lg:mt-agon-xl' : undefined}>
-          <div style={{ marginBottom: 14 }}><SectionTitle n="02">Historique — {results.length}</SectionTitle></div>
+          <div className="mb-3.5"><SectionTitle n="02">Historique — {results.length}</SectionTitle></div>
           {loadingResults ? (
             <ListSkeleton rows={3} />
           ) : results.length === 0 ? (
             <EmptyState icon={FlaskConical} title="Aucun test enregistré" description="Ton coach ajoutera tes résultats après chaque test." />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="flex flex-col">
               {results.map((r, i) => <ResultRow key={r.id} result={r} last={i === results.length - 1} />)}
             </div>
           )}

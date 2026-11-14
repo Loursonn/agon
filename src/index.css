@@ -5,6 +5,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Préréglages typographiques Agon (équivalents des objets DISPLAY / MONO de seanceUi.ts),
+   pour les écrans passés aux classes Tailwind. */
+@layer components {
+  .agon-display {
+    font-family: var(--agon-font-display);
+    font-stretch: 125%;
+    text-transform: uppercase;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+  .agon-mono {
+    font-family: var(--agon-font-data);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 /* Agon — direction artistique "Tranchant B" (mode sombre).
    Aucune valeur ici : tout vient de src/styles/tokens.css (docs/DESIGN_TOKENS.md).
    Les noms shadcn (--primary…) restent pour les primitives de src/components/ui. */

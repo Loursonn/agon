@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { C } from "@/lib/theme";
+import { DISPLAY, KICKER, MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
@@ -16,7 +17,7 @@ import { formatMmSs, formatDelta } from "@/lib/time";
 import { segmentPositions } from "@/lib/hyrox/raceEvolution";
 import BilanTimeSplit from "./BilanTimeSplit";
 import BilanStationPositions from "./BilanStationPositions";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, LabelList } from "recharts";
 
 const PROFILE_LABEL = { runner: "Runner", hybrid: "Hybride", powerhouse: "Powerhouse" };
 const PROFILE_EMOJI = { runner: "🏃", hybrid: "⚖️", powerhouse: "💪" };
@@ -175,10 +176,14 @@ export default function BilanView() {
 
   return (
     <div>
-      <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginTop: 16, marginBottom: 16 }}>Bilan global</div>
+      <div style={{ ...DISPLAY, fontWeight: 300, fontSize: 30, letterSpacing: "0.05em", lineHeight: 1.1, color: C.tx, marginTop: 16 }}>Évolution HYROX</div>
+      <div style={{ fontSize: 13, color: C.tx2, marginTop: 6, marginBottom: 20 }}>
+        {officialRaces.length} course{officialRaces.length > 1 ? "s" : ""} officielle{officialRaces.length > 1 ? "s" : ""} · {chronological.map((r) => r.event_name.replace(/^HYROX\s+/i, "")).join(" → ")}
+      </div>
+      <div style={{ marginBottom: 10 }}><div style={{ ...KICKER, color: C.tx2 }}><span style={{ color: C.ac }}>01 —</span> Chrono et tendance</div></div>
 
       {/* ── Header stats ──────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(175px, 1fr))", gap: 10, marginBottom: 16 }}>
         <StatCard label="Courses" value={String(officialRaces.length)} sub={`${chronological[0].date} → ${chronological[chronological.length - 1].date}`} />
         <StatCard label="Record" value={formatMmSs(record.total_s, { hours: true })} sub={record.event_name + " — " + record.date} color={C.g} />
         <StatCard label="Dernier" value={formatMmSs(latest.total_s, { hours: true })} sub={latest.event_name + " — " + latest.date} />
@@ -198,15 +203,15 @@ export default function BilanView() {
 
       {/* ── Progression chart ─────────────────────────────────────── */}
       {chartData.length >= 2 && (
-        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 14px", marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Évolution du total</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="name" tick={{ fill: C.tx3, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "16px 18px", marginBottom: 16 }}>
+          <div style={{ ...KICKER, fontSize: 11, color: C.tx3, marginBottom: 10 }}>Chrono · plus haut = plus rapide</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData} margin={{ top: 22, right: 24, left: 4, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fill: C.tx3, fontSize: 10, fontFamily: MONO.fontFamily }} axisLine={false} tickLine={false} padding={{ left: 40, right: 40 }} />
               <YAxis
-                tick={{ fill: C.tx3, fontSize: 10 }} axisLine={false} tickLine={false}
+                tick={{ fill: C.tx3, fontSize: 10, fontFamily: MONO.fontFamily }} axisLine={false} tickLine={false} reversed width={52}
                 tickFormatter={(v: number) => formatMmSs(v, { hours: true })}
-                domain={["dataMin - 60", "dataMax + 60"]}
+                domain={[(min: number) => min - 90, (max: number) => max + 90]}
               />
               <Tooltip
                 contentStyle={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 6, fontSize: 11 }}
@@ -214,19 +219,24 @@ export default function BilanView() {
                 formatter={(v: number) => [formatMmSs(v, { hours: true }), "Total"]}
               />
               <ReferenceLine y={record.total_s} stroke={C.g} strokeDasharray="4 4" />
-              <Line type="monotone" dataKey="total" stroke={C.ac} strokeWidth={2} dot={{ r: 4, fill: C.ac }} />
+              <Line type="linear" dataKey="total" stroke={C.tx2} strokeWidth={1.5} dot={{ r: 4.5, fill: C.rouge, stroke: C.s1, strokeWidth: 2 }} isAnimationActive={false}>
+                <LabelList dataKey="total" position="top" offset={10}
+                  formatter={(v: number) => formatMmSs(v, { hours: true })}
+                  style={{ fill: C.tx, fontSize: 11, fontFamily: MONO.fontFamily }} />
+              </Line>
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
 
       {/* ── Où passe le temps + course compromise (HyroxAnaCoachEvolution, 02) ─ */}
+      <div style={{ marginBottom: 10 }}><div style={{ ...KICKER, color: C.tx2 }}><span style={{ color: C.ac }}>02 —</span> Où passe le temps</div></div>
       <BilanTimeSplit races={chronological} />
 
       {/* ── Forces & Faiblesses ───────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 14px" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.g, marginBottom: 8 }}>🟢 Points forts</div>
+        <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px" }}>
+          <div style={{ ...KICKER, fontSize: 11, color: C.g, marginBottom: 8 }}>Points forts</div>
           {strengths.map((s, i) => (
             <div key={s.key} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: i < 2 ? "1px solid " + C.brd : "none" }}>
               <span style={{ fontSize: 11, color: C.tx }}>{s.label}</span>
@@ -234,8 +244,8 @@ export default function BilanView() {
             </div>
           ))}
         </div>
-        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 14px" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.r, marginBottom: 8 }}>🔴 Axes d'amélioration</div>
+        <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px" }}>
+          <div style={{ ...KICKER, fontSize: 11, color: C.r, marginBottom: 8 }}>Axes d'amélioration</div>
           {weaknesses.map((w, i) => (
             <div key={w.key} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: i < 2 ? "1px solid " + C.brd : "none" }}>
               <span style={{ fontSize: 11, color: C.tx }}>{w.label}</span>
@@ -246,12 +256,13 @@ export default function BilanView() {
       </div>
 
       {/* ── Position par station (planche HyroxAnaCoachEvolution, 03) ─ */}
+      <div style={{ marginBottom: 10 }}><div style={{ ...KICKER, color: C.tx2 }}><span style={{ color: C.ac }}>03 —</span> Position par station</div></div>
       <BilanStationPositions rows={positions} races={chronological} pctColor={pctColor}
         refText={`${DIVISION_LABEL[latest.division as HyroxDivision] ?? refDiv}, tranche de chrono de chaque course`} />
 
       {/* ── Coach auto-assessment ─────────────────────────────────── */}
-      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "14px 16px" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Avis global</div>
+      <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px" }}>
+        <div style={{ ...KICKER, fontSize: 11, color: C.tx3, marginBottom: 8 }}>Avis global</div>
         {assessment.map((line, i) => (
           <p key={i} style={{ fontSize: 12, color: C.tx2, lineHeight: 1.6, margin: "0 0 8px" }}>{line}</p>
         ))}
@@ -273,10 +284,10 @@ function pctColor(pct: number): string {
 
 function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "10px 12px" }}>
-      <div style={{ fontSize: 10, color: C.tx3, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: color ?? C.tx, fontFamily: "monospace" }}>{value}</div>
-      {sub && <div style={{ fontSize: 9, color: C.tx3, marginTop: 2 }}>{sub}</div>}
+    <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "12px 14px" }}>
+      <div style={{ ...KICKER, fontSize: 10.5, color: C.tx3, marginBottom: 6 }}>{label}</div>
+      <div style={{ ...MONO, fontSize: 20, color: color ?? C.tx, whiteSpace: "nowrap" }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }

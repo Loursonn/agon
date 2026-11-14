@@ -1,7 +1,8 @@
 import { Dumbbell, Zap, FlaskConical, Ruler } from "lucide-react";
-import { DragOverlay, useDraggable } from "@dnd-kit/core";
-import { C, alpha, H } from "@/lib/theme";
-import { TEST_COLOR, BIO_COLOR, CARD_MONO, BankItemType, BANK_TYPE_LABEL } from "./calendarConstants";
+import { useDraggable } from "@dnd-kit/core";
+import { cn } from "@/lib/utils";
+import { BankItemType, BANK_TYPE_LABEL } from "./calendarConstants";
+import { BANK_TONE } from "./bankTone";
 
 export function DraggableSession({
   session,
@@ -17,8 +18,7 @@ export function DraggableSession({
   variant?: "chip" | "card";
   meta?: string | null;
 }) {
-  const color  = sessionType === "energy" ? C.b : sessionType === "specifique" ? H.miel : sessionType === "test" ? TEST_COLOR : sessionType === "biometric" ? BIO_COLOR : C.ac;
-  const colorS = sessionType === "energy" ? C.bS : sessionType === "specifique" ? `${H.miel}20` : sessionType === "test" ? TEST_COLOR + "20" : sessionType === "biometric" ? BIO_COLOR + "20" : C.acS;
+  const tone = BANK_TONE[sessionType];
 
   // Idem : le fantôme est rendu par <DragOverlay>, la vignette source reste en place.
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -38,22 +38,19 @@ export function DraggableSession({
         {...attributes}
         {...listeners}
         title={`${BANK_TYPE_LABEL[sessionType]} · ${name}`}
-        style={{
-          width: 186, height: 64, flex: "none", boxSizing: "border-box",
-          padding: "10px 10px 10px 14px", borderRadius: 10, position: "relative", overflow: "hidden",
-          border: "1px solid " + alpha(color, 0.33),
-          background: alpha(color, 0.12),
-          cursor: "grab", userSelect: "none", opacity: isDragging ? 0.45 : 1,
-          display: "flex", alignItems: "center", gap: 10,
-        }}
+        className={cn(
+          "relative flex h-16 w-[186px] flex-none cursor-grab select-none items-center gap-2.5 overflow-hidden rounded-[10px] border py-2.5 pl-3.5 pr-2.5",
+          tone.card,
+          isDragging && "opacity-45",
+        )}
       >
-        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
-        <span aria-hidden style={{ width: 24, height: 24, flex: "none", borderRadius: 7, background: color, display: "flex", alignItems: "center", justifyContent: "center", color: C.ink }}>
+        <span aria-hidden className={cn("absolute inset-y-0 left-0 w-[3px]", tone.bar)} />
+        <span aria-hidden className={cn("flex size-6 flex-none items-center justify-center rounded-[7px] text-agon-ink", tone.bar)}>
           <Icon size={13} strokeWidth={2} />
         </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
-          {meta && <div style={{ fontFamily: CARD_MONO, fontSize: 10, color: C.tx3, letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta}</div>}
+        <div className="min-w-0 flex-1">
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-medium text-agon-tx">{name}</div>
+          {meta && <div className="agon-mono overflow-hidden text-ellipsis whitespace-nowrap text-[10px] uppercase tracking-[0.06em] text-agon-tx3">{meta}</div>}
         </div>
       </div>
     );
@@ -64,21 +61,12 @@ export function DraggableSession({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      style={{
-        padding: "7px 10px",
-        borderRadius: 4,
-        border: "1px solid " + color + "40",
-        background: isDragging ? color : colorS,
-        color: isDragging ? C.tx : color,
-        fontSize: 11, fontWeight: 600,
-        cursor: "grab",
-        userSelect: "none",
-        opacity: isDragging ? 0.5 : 1,
-        transition: "opacity 120ms",
-        display: "flex", alignItems: "center", gap: 6,
-      }}
+      className={cn(
+        "flex cursor-grab select-none items-center gap-1.5 rounded-[4px] border px-2.5 py-[7px] text-[11px] font-semibold transition-opacity duration-[120ms]",
+        isDragging ? cn(tone.dragging, "opacity-50") : tone.chip,
+      )}
     >
-      {sessionType === "energy" ? <Zap size={11} /> : sessionType === "test" ? <FlaskConical size={11} /> : sessionType === "biometric" ? <Ruler size={11} /> : <Dumbbell size={11} />}
+      <Icon size={11} />
       {name}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 const VUES = [
   { key: "seances", label: "Séances" },
@@ -8,6 +9,7 @@ const VUES = [
 
 /** En-tête de l'onglet Programme (maquette) : titre + onglets Séances | Fiches (?vue=fiches). */
 export function ProgramHeader() {
+  const isDesktop = useIsDesktop();
   const [params, setParams] = useSearchParams();
   const vue = params.get("vue") === "fiches" ? "fiches" : "seances";
   const go = (v: "seances" | "fiches") => {
@@ -19,9 +21,10 @@ export function ProgramHeader() {
   return (
     <AthletePageHeader
       title="Programme"
-      titleSize={26}
+      titleSize={isDesktop ? 30 : 26}
       titleGap={22}
-      padding="56px 20px 18px"
+      padding={isDesktop ? "28px 0 4px" : "56px 20px 18px"}
+      inline={isDesktop}
       tabs={VUES}
       activeTab={vue}
       onTab={go}

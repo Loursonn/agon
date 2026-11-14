@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { C } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { TYPE_COLOR } from "@/lib/peps";
@@ -41,7 +42,7 @@ function Stepper({ label, hint, value, unit, onMinus, onPlus, onTap }: {
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{label}</span>
+        <span style={{ ...MONO, fontSize: 11, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</span>
         <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{hint}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -50,9 +51,9 @@ function Stepper({ label, hint, value, unit, onMinus, onPlus, onTap }: {
           type="button"
           aria-label={`${label} : saisir au pavé`}
           onClick={onTap}
-          style={{ flex: 1, minWidth: 0, height: 46, borderRadius: 12, border: "1px solid " + C.brd, background: "transparent", color: C.tx, cursor: "pointer", display: "flex", alignItems: "baseline", justifyContent: "center", gap: 3, padding: 0 }}
+          style={{ flex: 1, minWidth: 0, height: 46, border: 0, borderBottom: "1px solid " + C.brdL, borderRadius: 0, background: "transparent", color: C.tx, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 3, padding: 0 }}
         >
-          <span style={{ ...MONO, fontSize: 20, whiteSpace: "nowrap" }}>{fmt(value)}</span>
+          <span style={{ ...MONO, fontSize: 22, whiteSpace: "nowrap" }}>{fmt(value)}</span>
           {unit && <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>{unit}</span>}
         </button>
         <button type="button" aria-label={`${label} : plus`} onClick={onPlus} style={btn}>+</button>
@@ -159,10 +160,13 @@ export function FocusInputBar({
             <button
               type="button"
               onClick={onValidate}
-              style={{ width: "100%", height: 54, borderRadius: 12, border: "none", background: TYPE_COLOR.fait, color: C.bg, fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              style={{ width: "100%", height: 54, borderRadius: 12, border: "none", background: TYPE_COLOR.fait, color: C.ink, fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
             >
-              Valider série {pending.setNumber}
-              {pending.kg || pending.reps ? ` · ${pending.kg ? fmt(pending.kg) + (pending.unit === "kg" ? " kg" : pending.unit === "%" ? " %" : "") : "PDC"} × ${fmt(pending.reps)}${pending.isIso ? " s" : ""}` : ""}
+              <Check size={18} strokeWidth={2.6} aria-hidden />
+              <span>
+                Valider série {pending.setNumber}
+                {pending.kg || pending.reps ? ` · ${pending.kg ? fmt(pending.kg) + (pending.unit === "kg" ? " kg" : pending.unit === "%" ? " %" : "") : "PDC"} × ${fmt(pending.reps)}${pending.isIso ? " s" : ""}` : ""}
+              </span>
             </button>
             {rest ? (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

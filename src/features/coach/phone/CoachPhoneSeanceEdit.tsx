@@ -14,7 +14,7 @@ import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSession
 import type { SessionSetLog } from "@/features/shared/types/athlete";
 import { formatExercice } from "@/features/staff/lib/formatPrescription";
 import { isWeekRecord } from "@/lib/sessionOccurrence";
-import { CARD, KICKER, MONO, PhoneButton, PhonePage, fmtDec, rowLine, shortDate } from "./phoneUi";
+import { CARD, Chevron, DISPLAY, KICKER, MONO, PhoneButton, PhonePage, fmtDec, shortDate } from "./phoneUi";
 import { useCurrentCycle } from "./CoachPhoneAthleteHeader";
 import { applyFromOccurrence, flattenBlocs, useSessionOccurrence } from "./useSessionOccurrence";
 
@@ -29,19 +29,22 @@ const parseMmSs = (s: string): { m: number; s: number } | null => {
   return { m: Number(m[1]), s: Number(m[2] ?? 0) };
 };
 
-function Stepper({ label, value, onMinus, onPlus, disabled }: {
-  label: string; value: string; onMinus: () => void; onPlus: () => void; disabled?: boolean;
+function Stepper({ label, value, unit, onMinus, onPlus, disabled }: {
+  label: string; value: string; unit?: string; onMinus: () => void; onPlus: () => void; disabled?: boolean;
 }) {
   const btn: React.CSSProperties = {
-    width: 36, height: 36, borderRadius: 9, border: `1px solid ${C.brdL}`, background: "transparent", color: C.tx,
-    fontSize: 18, fontFamily: "inherit", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.35 : 1, flex: "none",
+    width: 36, height: 44, border: "none", background: "transparent", color: C.tx2,
+    fontSize: 20, fontFamily: "inherit", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.35 : 1, flex: "none",
   };
   return (
-    <div style={{ padding: "8px 10px", borderRadius: 12, background: C.bg, border: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-      <span style={{ fontSize: 11.5, color: C.tx3 }}>{label}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+      <span style={{ fontSize: 12, color: C.tx2 }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", height: 48, padding: "0 4px", borderRadius: 12, background: C.s2 }}>
         <button type="button" aria-label={`${label} moins`} disabled={disabled} onClick={onMinus} style={btn}>−</button>
-        <span style={{ ...MONO, fontSize: 16, flex: 1, textAlign: "center", whiteSpace: "nowrap" }}>{value}</span>
+        <span style={{ flex: 1, textAlign: "center", whiteSpace: "nowrap" }}>
+          <span style={{ ...MONO, fontSize: 19 }}>{value}</span>
+          {unit && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}> {unit}</span>}
+        </span>
         <button type="button" aria-label={`${label} plus`} disabled={disabled} onClick={onPlus} style={btn}>+</button>
       </div>
     </div>
@@ -231,29 +234,34 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
   const pending = saveProg.isPending || saveOverride.isPending;
   const seg = (m: Mode, label: string, disabled = false) => (
     <button type="button" aria-pressed={mode === m} disabled={disabled} onClick={() => { if (m !== mode) { setDirty(false); setMode(m); } }} style={{
-      flex: 1, height: 36, borderRadius: 9, border: "none", fontFamily: "inherit", fontSize: 13, cursor: disabled ? "default" : "pointer",
-      background: mode === m ? C.s2 : "transparent", color: mode === m ? C.tx : C.tx3, fontWeight: mode === m ? 500 : 400, opacity: disabled ? 0.4 : 1,
+      flex: 1, height: 38, borderRadius: 10, border: mode === m ? `1px solid ${C.brdL}` : "1px solid transparent", fontFamily: "inherit", fontSize: 13, cursor: disabled ? "default" : "pointer",
+      background: mode === m ? C.bg : "transparent", color: mode === m ? C.tx : C.tx3, fontWeight: mode === m ? 500 : 400, opacity: disabled ? 0.4 : 1,
     }}>{label}</button>
   );
   const others = (draft ?? []).flatMap((b, bi) => b.exercices.map((ex, ei) => ({ ex, bi, ei }))).filter((x) => !(x.bi === focus.bi && x.ei === focus.ei));
   const col = curBloc ? blocColor(curBloc.color, focus.bi) : C.ac;
+  const field: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 8, height: 44, padding: "0 12px", borderRadius: 12, background: C.s2,
+    fontSize: 13, color: C.tx3, minWidth: 0,
+  };
   const input: React.CSSProperties = {
-    height: 38, padding: "0 10px", borderRadius: 9, border: `1px solid ${C.brdL}`, background: C.bg, color: C.tx,
-    ...MONO, fontSize: 16, width: "100%", boxSizing: "border-box",
+    flex: 1, minWidth: 0, height: 40, padding: 0, border: "none", background: "transparent", color: C.tx,
+    ...MONO, fontSize: 16, fontWeight: 500, outline: "none",
   };
 
   return (
     <PhonePage gap={12} style={{ paddingTop: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12.5, color: C.tx2 }}>{athleteProfile?.full_name ?? first}{day ? ` · ${shortDate(day).toLowerCase()}` : ""}</span>
-        <button type="button" onClick={goBack} style={{ background: "none", border: "none", color: C.ac, fontSize: 13.5, fontFamily: "inherit", cursor: "pointer", padding: 4 }}>Annuler</button>
+      <div style={{ display: "grid", gridTemplateColumns: "40px 1fr auto", alignItems: "center", gap: 6 }}>
+        <button type="button" aria-label="Retour" onClick={goBack} style={{ background: "none", border: "none", padding: 4, cursor: "pointer", display: "flex" }}><Chevron dir="left" color={C.tx2} size={20} /></button>
+        <span style={{ ...KICKER, color: C.tx2, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{athleteProfile?.full_name ?? first}{day ? ` · ${shortDate(day)}` : ""}</span>
+        <button type="button" onClick={goBack} style={{ background: "none", border: "none", color: C.tx2, fontSize: 13.5, fontFamily: "inherit", cursor: "pointer", padding: 4 }}>Annuler</button>
       </div>
       <div>
         <div style={{ ...KICKER, color: TYPE_COLOR.muscu }}>Musculation{weekIndex ? ` · S${weekIndex} / ${weeks.length}` : ""} · séance n° {occurrence}</div>
-        <div style={{ fontSize: 19, fontWeight: 500, marginTop: 2 }}>{session.name}</div>
+        <h1 style={{ margin: "6px 0 0", ...DISPLAY, fontSize: 24, lineHeight: 1.12 }}>{session.name}</h1>
       </div>
 
-      <div style={{ display: "flex", gap: 4, padding: 3, borderRadius: 11, background: C.s1, border: `1px solid ${C.brd}` }}>
+      <div style={{ display: "flex", gap: 4, padding: 4, borderRadius: 13, background: C.s2 }}>
         {seg("this", "Cette séance", !log)}
         {seg("next", "Celle-ci et les suivantes")}
       </div>
@@ -278,12 +286,12 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
       )}
 
       {cur && curBloc && (
-        <div style={{ ...CARD, padding: 14, display: "flex", flexDirection: "column", gap: 10, borderColor: alpha(col, 0.45) }}>
+        <div style={{ ...CARD, padding: 16, borderRadius: 16, display: "flex", flexDirection: "column", gap: 12, background: alpha(col, 0.05), borderColor: alpha(col, 0.45) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ ...KICKER, color: col }}>{curBloc.category ?? curBloc.name} · {focus.ei + 1}</span>
-            <button type="button" onClick={() => setSearch({ kind: "replace" })} style={{ background: "none", border: "none", color: C.ac, fontSize: 12.5, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>Remplacer</button>
+            <button type="button" onClick={() => setSearch({ kind: "replace" })} style={{ background: "none", border: "none", color: C.tx2, fontSize: 13, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>Remplacer</button>
           </div>
-          <div style={{ fontSize: 17, fontWeight: 500 }}>{cur.exercise_name}</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{cur.exercise_name}</div>
           {p ? (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
@@ -291,7 +299,8 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
                 <Stepper label="Reps" value={reps == null ? "—" : repsMax != null ? `${reps}–${repsMax}` : String(reps)} disabled={p.reps.mode !== "global"} onMinus={() => step("reps", -1, 8, 1)} onPlus={() => step("reps", 1, 8, 1)} />
                 <Stepper
                   label={p.charge_unit === "PDC" ? "Charge" : `Charge ± 2,5`}
-                  value={p.charge_unit === "PDC" ? "PDC" : charge == null ? "—" : `${fmtDec(charge, 1)} ${unit}`}
+                  value={p.charge_unit === "PDC" ? "PDC" : charge == null ? "—" : fmtDec(charge, 1)}
+                  unit={p.charge_unit === "PDC" || charge == null ? undefined : unit}
                   disabled={p.charge_unit === "PDC" || p.charge.mode !== "global"}
                   onMinus={() => step("charge", -2.5, p.charge_unit === "%RM" ? 70 : 20, 0)}
                   onPlus={() => step("charge", 2.5, p.charge_unit === "%RM" ? 70 : 20, 0)}
@@ -299,12 +308,12 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
                 <Stepper label="RIR" value={rir == null ? "—" : fmtDec(rir, 1)} disabled={p.rir.mode !== "global"} onMinus={() => step("rir", -1, 2, 0, 5)} onPlus={() => step("rir", 1, 2, 0, 5)} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <label style={{ fontSize: 11.5, color: C.tx3, display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={field}>
                   Tempo
                   <input value={tempo} placeholder="3-1-X-0" disabled={p.tempo.mode !== "global"} onChange={(e) => { const v = e.target.value; patchParams((pp) => { pp.tempo = { mode: "global", value: v }; }); }} style={input} />
                 </label>
-                <label style={{ fontSize: 11.5, color: C.tx3, display: "flex", flexDirection: "column", gap: 4 }}>
-                  Repos du bloc
+                <label style={field}>
+                  Repos
                   <input
                     defaultValue={repos} placeholder="2:00" inputMode="numeric" key={`${curBloc.id}-${repos}`}
                     onBlur={(e) => {
@@ -330,27 +339,28 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
               {cur.mode === "libre" ? cur.libre_text || "Consigne libre" : "Méthode : à modifier sur ordinateur."}
             </div>
           )}
-          {prevLine && <div style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>Précédent : {prevLine}</div>}
+          {prevLine && <div style={{ fontSize: 13, color: C.tx2 }}>Précédent : <span style={{ ...MONO, fontWeight: 500, color: C.tx }}>{prevLine}</span></div>}
           <button type="button" onClick={removeCurrent} style={{ alignSelf: "flex-start", background: "none", border: "none", color: C.r, fontSize: 12.5, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>Retirer l’exercice</button>
         </div>
       )}
 
       {others.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{ ...KICKER, color: C.tx3 }}>Le reste de la séance</span>
-          <div style={{ ...CARD, padding: "2px 14px" }}>
-            {others.map(({ ex, bi, ei }, i) => {
+        <div style={{ ...CARD, padding: "14px 16px 2px", borderRadius: 16 }}>
+          <span style={{ ...KICKER, color: C.tx2 }}>Le reste de la séance</span>
+          <div style={{ marginTop: 6 }}>
+            {others.map(({ ex, bi, ei }) => {
               const line = formatExercice(ex, occurrence);
               return (
                 <button key={ex.id} type="button" onClick={() => { setFocus({ bi, ei }); setSearch(null); }} style={{
-                  display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 0", background: "none", border: "none",
-                  boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 0", background: "none", border: "none",
+                  boxShadow: `inset 0 1px 0 ${C.brd}`, color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
                 }}>
                   <span aria-hidden style={{ width: 3, alignSelf: "stretch", borderRadius: 2, background: blocColor(draft?.[bi]?.color, bi) }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5 }}>{line.name}</div>
-                    {line.detail && <div style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>{line.detail}</div>}
+                    <div style={{ fontSize: 14.5, fontWeight: 500 }}>{line.name}</div>
+                    {line.detail && <div style={{ ...MONO, fontSize: 11.5, color: C.tx2, marginTop: 2 }}>{line.detail}</div>}
                   </div>
+                  <Chevron />
                 </button>
               );
             })}
@@ -362,7 +372,7 @@ export default function CoachPhoneSeanceEdit({ sessionId, date }: { sessionId: s
         <PhoneButton onClick={() => setSearch({ kind: "add", bi: draft?.length ? Math.min(focus.bi, draft.length - 1) : 0 })} disabled={!draft?.length}>+ Exercice</PhoneButton>
         <PhoneButton onClick={addBloc} disabled={!draft}>+ Bloc</PhoneButton>
       </div>
-      <PhoneButton primary onClick={save} disabled={!draft || !dirty || pending}>{pending ? "Enregistrement…" : "Enregistrer"}</PhoneButton>
+      <PhoneButton primary onClick={save} disabled={!draft || !dirty || pending} style={{ height: 52, borderRadius: 14, fontSize: 15 }}>{pending ? "Enregistrement…" : "Enregistrer"}</PhoneButton>
       <div style={{ fontSize: 11.5, color: C.tx3, textAlign: "center" }}>{first} voit la séance à jour tout de suite.</div>
     </PhonePage>
   );

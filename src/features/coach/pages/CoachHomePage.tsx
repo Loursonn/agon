@@ -3,8 +3,12 @@
  * app », peps). En-tête pleine largeur sur fond « arène » : date, grand titre,
  * citation sans cadre, tuiles « Manquées hier » / « Tests à venir ». Puis le
  * bandeau Nouveauté et deux colonnes de sections numérotées.
+ *
+ * Styles en classes Tailwind (charte : bg-agon-*, text-agon-*) ; seules les
+ * couleurs calculées (alerte, wellness, priorité) restent en ligne.
+ * Breakpoints : marges et tuiles se resserrent sous `md` / `sm`, colonnes à partir de `lg`.
  */
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -21,15 +25,19 @@ import { useWellnessAlerts } from "@/features/shared/hooks/useWellnessAlerts";
 import { formatAssessment } from "@/lib/wellnessBaseline";
 import { useAuth } from "@/hooks/useAuth";
 import { C, alpha } from "@/lib/theme";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 import { localISO } from "@/lib/date";
 import { CitationFigure } from "@/features/shared/components/CitationDuJour";
 import { CoachUpdatesCard } from "@/features/coach/components/updates/CoachUpdatesCard";
 
 // ── Petits éléments de la planche ─────────────────────────────────────────────
 
-const KICK: CSSProperties = { ...MONO, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 };
-const ROW_LINE = "1px solid rgba(231,211,168,0.08)";
+const KICK = "agon-mono text-[10px] uppercase tracking-[0.14em] text-agon-tx3";
+/** Filet entre deux lignes d'une liste. */
+const ROW_LINE = "border-b border-agon-sable/[0.08] last:border-b-0";
+const PANEL = "overflow-hidden rounded-[14px] border border-agon-sable/[0.12] bg-agon-s1";
+const ROW_BTN = "flex w-full cursor-pointer items-center border-0 bg-transparent text-left";
+const ELLIPSIS = "overflow-hidden text-ellipsis whitespace-nowrap";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -40,88 +48,92 @@ function initials(name: string) {
 /** Pastille pleine (« Terminé », « RPE 7 ») ; `null` = contour neutre (« Planifié »). */
 function Pill({ color, children }: { color: string | null; children: ReactNode }) {
   return (
-    <span style={{
-      ...MONO, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap",
-      flex: "none", borderRadius: 999, lineHeight: 1.3,
-      ...(color
-        ? { color: C.ink, background: color, padding: "4px 9px" }
-        : { color: C.tx2, background: "rgba(231,211,168,0.06)", border: `1px solid ${C.brdL}`, padding: "2px 8px" }),
-    }}>{children}</span>
+    <span
+      className={cn(
+        "agon-mono flex-none whitespace-nowrap rounded-full text-[11px] font-medium uppercase leading-[1.3] tracking-[0.08em]",
+        color ? "px-[9px] py-1 text-agon-ink" : "border border-agon-brd-l bg-agon-sable/[0.06] px-2 py-0.5 text-agon-tx2",
+      )}
+      style={color ? { background: color } : undefined}
+    >
+      {children}
+    </span>
   );
 }
 
 /** Rond d'initiales : plein de la couleur (wellness, alerte), sinon neutre. */
 function Avatar({ name, color }: { name: string; color?: string | null }) {
-  const base: CSSProperties = {
-    width: 38, height: 38, boxSizing: "border-box", borderRadius: "50%", flex: "none",
-    display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 12,
-  };
+  const base = "agon-mono flex size-[38px] flex-none items-center justify-center rounded-full text-[12px]";
   return color
-    ? <span style={{ ...base, background: color, color: C.ink, fontWeight: 500, boxShadow: `0 0 0 3px ${alpha(color, 0.18)}` }}>{initials(name)}</span>
-    : <span style={{ ...base, border: "1px solid rgba(231,211,168,0.22)", background: C.s2, color: C.tx2 }}>{initials(name)}</span>;
+    ? <span className={cn(base, "font-medium text-agon-ink")} style={{ background: color, boxShadow: `0 0 0 3px ${alpha(color, 0.18)}` }}>{initials(name)}</span>
+    : <span className={cn(base, "border border-agon-sable/[0.22] bg-agon-s2 text-agon-tx2")}>{initials(name)}</span>;
 }
 
 function SectionHead({ n, children }: { n: number; children: ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <h2 style={{ margin: 0, height: 20, display: "flex", alignItems: "center", ...MONO, fontWeight: 400, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>
-        <span style={{ color: C.ac }}>{String(n).padStart(2, "0")} —</span>&nbsp;{children}
+    <div className="flex flex-col gap-2.5">
+      <h2 className="agon-mono m-0 flex h-5 items-center whitespace-nowrap text-[11px] font-normal uppercase tracking-[0.12em] text-agon-tx2">
+        <span className="text-agon-accent">{String(n).padStart(2, "0")} —</span>&nbsp;{children}
       </h2>
-      <div style={{ height: 1, background: "rgba(231,211,168,0.12)" }} />
+      <div className="h-px bg-agon-sable/[0.12]" />
     </div>
   );
 }
 
 function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <section className="flex flex-col gap-3.5">
       <SectionHead n={n}>{title}</SectionHead>
       {children}
     </section>
   );
 }
 
-const panel: CSSProperties = { background: C.s1, border: "1px solid rgba(231,211,168,0.12)", borderRadius: 14, overflow: "hidden" };
-
 function Empty({ children }: { children: ReactNode }) {
-  return <div style={{ ...panel, padding: "18px 16px", fontSize: 12.5, color: C.tx3, textAlign: "center" }}>{children}</div>;
+  return <div className={cn(PANEL, "px-4 py-[18px] text-center text-[12.5px] text-agon-tx3")}>{children}</div>;
 }
 
 function Loading({ n = 3 }: { n?: number }) {
   return (
-    <div style={{ ...panel, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className={cn(PANEL, "flex flex-col gap-2 p-3.5")}>
       {Array.from({ length: n }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl bg-agon-s2" />)}
     </div>
   );
 }
 
 /** Carte d'alerte teintée (Blessé, À traiter, Alertes wellness, À clôturer…) : aplat 12 %, liseré 3 px. */
-function TintCard({ color, borderAlpha = 0.42, onClick, children, gap = 16, pad = "14px 18px 14px 21px" }: {
-  color: string; borderAlpha?: number; onClick?: () => void; children: ReactNode; gap?: number; pad?: string;
+function TintCard({ color, borderAlpha = 0.42, onClick, children, compact = false }: {
+  color: string; borderAlpha?: number; onClick?: () => void; children: ReactNode;
+  /** Colonne de droite : espacement 14 px (12 px pour les compétitions via `gap`) et marges 16 px. */
+  compact?: boolean | "tight";
 }) {
   return (
-    <button type="button" onClick={onClick} style={{
-      position: "relative", overflow: "hidden", display: "flex", alignItems: "center", gap, padding: pad, width: "100%",
-      background: alpha(color, 0.12), border: `1px solid ${alpha(color, borderAlpha)}`, borderRadius: 14,
-      color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: onClick ? "pointer" : "default",
-    }}>
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative flex w-full items-center overflow-hidden rounded-[14px] border text-left text-agon-tx",
+        onClick ? "cursor-pointer" : "cursor-default",
+        compact ? "py-3.5 pl-[19px] pr-4" : "py-3.5 pl-[21px] pr-[18px]",
+        compact === "tight" ? "gap-3" : compact ? "gap-3.5" : "gap-4",
+      )}
+      style={{ background: alpha(color, 0.12), borderColor: alpha(color, borderAlpha) }}
+    >
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
       {children}
     </button>
   );
 }
 
 function TwoLines({ title, sub }: { title: ReactNode; sub: ReactNode }) {
-  const one: CSSProperties = { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
   return (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ ...one, fontSize: 14, fontWeight: 500 }}>{title}</div>
-      <div style={{ ...one, fontSize: 12, color: C.tx2, marginTop: 2 }}>{sub}</div>
+    <div className="min-w-0 flex-1">
+      <div className={cn(ELLIPSIS, "text-[14px] font-medium")}>{title}</div>
+      <div className={cn(ELLIPSIS, "mt-0.5 text-[12px] text-agon-tx2")}>{sub}</div>
     </div>
   );
 }
 
-const Chevron = () => <ChevronRight size={16} strokeWidth={1.5} style={{ color: C.tx3, flex: "none" }} aria-hidden />;
+const Chevron = () => <ChevronRight size={16} strokeWidth={1.5} className="flex-none text-agon-tx3" aria-hidden />;
 
 // ── Séance du jour ────────────────────────────────────────────────────────────
 
@@ -141,26 +153,23 @@ function rpeColor(rpe: number) {
 function SessionBox({ status }: { status: SessionStatus }) {
   const planned = status === "planned";
   return planned
-    ? <span aria-hidden style={{ width: 20, height: 20, boxSizing: "border-box", flex: "none", borderRadius: 6, border: `1.5px solid ${C.ac}`, background: alpha(C.ac, 0.12) }} />
+    ? <span aria-hidden className="size-5 flex-none rounded-[6px] border-[1.5px] border-agon-accent bg-agon-accent/[0.12]" />
     : (
-      <span aria-hidden style={{ width: 20, height: 20, flex: "none", borderRadius: 6, background: C.ac, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Check size={13} strokeWidth={2.5} style={{ color: C.ink }} />
+      <span aria-hidden className="flex size-5 flex-none items-center justify-center rounded-[6px] bg-agon-accent">
+        <Check size={13} strokeWidth={2.5} className="text-agon-ink" />
       </span>
     );
 }
 
 function WellnessBox({ score, color }: { score: number | null; color: string }) {
-  const box: CSSProperties = {
-    position: "relative", overflow: "hidden", width: 64, height: 36, boxSizing: "border-box", borderRadius: 8,
-    display: "flex", alignItems: "center", justifyContent: "center", ...MONO, fontSize: 22, lineHeight: 1,
-  };
+  const box = "agon-mono relative flex h-9 w-16 items-center justify-center overflow-hidden rounded-[8px] border text-[22px] leading-none";
   if (score == null) {
-    return <span style={{ ...box, background: "rgba(231,211,168,0.04)", border: "1px solid rgba(231,211,168,0.12)", color: C.tx3 }}>—</span>;
+    return <span className={cn(box, "border-agon-sable/[0.12] bg-agon-sable/[0.04] text-agon-tx3")}>—</span>;
   }
   return (
-    <span style={{ ...box, background: alpha(color, 0.14), border: `1px solid ${alpha(color, 0.45)}`, color }}>
+    <span className={box} style={{ background: alpha(color, 0.14), borderColor: alpha(color, 0.45), color }}>
       {score}
-      <span aria-hidden style={{ position: "absolute", left: 0, bottom: 0, height: 3, width: `${Math.max(0, Math.min(100, score))}%`, background: color }} />
+      <span aria-hidden className="absolute bottom-0 left-0 h-[3px]" style={{ width: `${Math.max(0, Math.min(100, score))}%`, background: color }} />
     </span>
   );
 }
@@ -210,35 +219,37 @@ export default function CoachHomePage() {
     <div className="w-full pb-20">
 
       {/* ── En-tête sur fond « arène » ── */}
-      <header style={{
-        position: "relative", overflow: "hidden", padding: "40px 40px 34px", borderBottom: `1px solid ${C.brd}`,
-        background: `url(/brand/agon-fond-arene-entete.svg) center/cover, ${C.bg}`,
-      }}>
-        <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 40, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 680, minWidth: 0 }}>
-            <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac }}>
+      <header
+        className="relative overflow-hidden border-b border-agon-brd px-5 pb-7 pt-8 md:px-10 md:pb-[34px] md:pt-10"
+        style={{ background: `url(/brand/agon-fond-arene-entete.svg) center/cover, ${C.bg}` }}
+      >
+        <div className="relative flex flex-wrap items-end justify-between gap-6 md:gap-10">
+          <div className="flex min-w-0 max-w-[680px] flex-col gap-3">
+            <span className="agon-mono text-[11px] uppercase tracking-[0.14em] text-agon-accent">
               {todayLabel} · {athletes.length} athlète{athletes.length !== 1 ? "s" : ""}
               {isCoachAthlete && canCoachSelf ? " · ton programme inclus" : ""}
             </span>
-            <h1 style={{ margin: 0, ...DISPLAY, fontWeight: 300, fontSize: 44, lineHeight: 1.1, letterSpacing: "0.06em", color: C.tx }}>
+            <h1 className="agon-display m-0 text-[32px] font-light leading-[1.1] tracking-[0.06em] text-agon-tx md:text-[44px]">
               Bonjour, {firstName}
             </h1>
             <CitationFigure barWidth={3} margin="8px 0 0" />
           </div>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="flex w-full gap-3 sm:w-auto">
             {tiles.map((t) => (
-              <button key={t.label} type="button" onClick={() => navigate("/coach/athletes")} style={{
-                width: 168, boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 8, padding: "16px 18px 16px 21px",
-                borderRadius: 14, position: "relative", overflow: "hidden", textAlign: "left", fontFamily: "inherit", cursor: "pointer",
-                background: alpha(t.color, 0.12), border: `1px solid ${alpha(t.color, 0.45)}`, color: C.tx,
-              }}>
-                <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: t.color }} />
-                <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>{t.label}</span>
-                <span style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <button
+                key={t.label}
+                type="button"
+                onClick={() => navigate("/coach/athletes")}
+                className="relative flex flex-1 cursor-pointer flex-col gap-2 overflow-hidden rounded-[14px] border py-4 pl-[21px] pr-[18px] text-left text-agon-tx sm:w-[168px] sm:flex-none"
+                style={{ background: alpha(t.color, 0.12), borderColor: alpha(t.color, 0.45) }}
+              >
+                <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: t.color }} />
+                <span className="agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-agon-tx2">{t.label}</span>
+                <span className="flex items-baseline gap-2.5">
                   {t.loading
                     ? <Skeleton className="h-12 w-10 rounded bg-agon-s2" />
-                    : <span style={{ ...MONO, fontSize: 48, lineHeight: 1, color: t.color }}>{t.count}</span>}
-                  <span style={{ fontSize: 12, color: C.tx2, whiteSpace: "nowrap" }}>{t.unit}</span>
+                    : <span className="agon-mono text-[48px] leading-none" style={{ color: t.color }}>{t.count}</span>}
+                  <span className="whitespace-nowrap text-[12px] text-agon-tx2">{t.unit}</span>
                 </span>
               </button>
             ))}
@@ -246,56 +257,51 @@ export default function CoachHomePage() {
         </div>
       </header>
 
-      <div style={{ padding: "28px 40px 48px", display: "flex", flexDirection: "column", gap: 32 }}>
+      <div className="flex flex-col gap-8 px-5 pb-12 pt-7 md:px-10">
         <CoachUpdatesCard />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 32, alignItems: "start" }}>
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-3">
 
           {/* ── Colonne gauche (2/3) ── */}
-          <div className="lg:col-span-2" style={{ display: "flex", flexDirection: "column", gap: 32, minWidth: 0 }}>
+          <div className="flex min-w-0 flex-col gap-8 lg:col-span-2">
 
             <Section n={nx()} title="Aujourd’hui">
               {isLoadingToday ? <Loading /> : todayAthletes.length === 0 ? (
                 <Empty>Aucune séance planifiée aujourd’hui</Empty>
               ) : (
-                <div style={panel}>
-                  {todayAthletes.map((a, i) => (
+                <div className={PANEL}>
+                  {todayAthletes.map((a) => (
                     <button
                       key={a.athleteId}
                       type="button"
                       onClick={() => navigate(`/coach/athletes/${a.athleteId}/planning`)}
-                      className="hover:bg-[rgba(255,255,255,0.02)]"
-                      style={{
-                        display: "flex", alignItems: "center", gap: 16, padding: "14px 18px", width: "100%",
-                        background: "transparent", border: "none", borderBottom: i < todayAthletes.length - 1 ? ROW_LINE : "none",
-                        color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: "pointer",
-                      }}
+                      className={cn(ROW_BTN, ROW_LINE, "gap-4 px-[18px] py-3.5 text-agon-tx hover:bg-[rgba(255,255,255,0.02)]")}
                     >
                       <Avatar name={a.athleteName} color={a.wellnessScore != null ? a.wellnessColor : null} />
-                      <div style={{ width: 140, flex: "none", minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.athleteName}</div>
-                        <div style={{ fontSize: 11, color: C.tx3 }}>{a.wellnessLabel ?? "—"}</div>
+                      <div className="w-[140px] min-w-0 flex-none">
+                        <div className={cn(ELLIPSIS, "text-[14px] font-medium")}>{a.athleteName}</div>
+                        <div className="text-[11px] text-agon-tx3">{a.wellnessLabel ?? "—"}</div>
                       </div>
-                      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 5 }}>
-                        <span style={KICK}>Séance du jour</span>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
+                        <span className={KICK}>Séance du jour</span>
+                        <div className="flex flex-col gap-1.5">
                           {a.sessions.length === 0 ? (
-                            <span style={{ display: "flex", alignItems: "center", gap: 8, height: 24 }}>
-                              <span aria-hidden style={{ width: 20, height: 20, boxSizing: "border-box", flex: "none", borderRadius: 6, border: `1.5px solid ${C.tx3}`, background: alpha(C.pierre, 0.12) }} />
-                              <span style={{ fontSize: 13, color: C.tx3 }}>Repos</span>
+                            <span className="flex h-6 items-center gap-2">
+                              <span aria-hidden className="size-5 flex-none rounded-[6px] border-[1.5px] border-agon-tx3 bg-agon-pierre/[0.12]" />
+                              <span className="text-[13px] text-agon-tx3">Repos</span>
                             </span>
                           ) : a.sessions.map((s) => (
-                            <span key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, height: 24, minWidth: 0, whiteSpace: "nowrap" }}>
+                            <span key={s.id} className="flex h-6 min-w-0 items-center gap-2 whitespace-nowrap">
                               <SessionBox status={s.status} />
-                              <span style={{ fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis" }}>{s.sessionName ?? "Séance"}</span>
+                              <span className="overflow-hidden text-ellipsis text-[13.5px] font-medium">{s.sessionName ?? "Séance"}</span>
                               <Pill color={STATUS_PILL[s.status].color}>{STATUS_PILL[s.status].label}</Pill>
                               {s.rpeScore != null && <Pill color={rpeColor(s.rpeScore)}>RPE {s.rpeScore}</Pill>}
                             </span>
                           ))}
                         </div>
                       </div>
-                      <div style={{ width: 92, flex: "none", display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
-                        <span style={KICK}>Wellness</span>
+                      <div className="flex w-[92px] flex-none flex-col items-end gap-[5px]">
+                        <span className={KICK}>Wellness</span>
                         <WellnessBox score={a.wellnessScore} color={a.wellnessColor} />
                       </div>
                       <Chevron />
@@ -308,7 +314,7 @@ export default function CoachHomePage() {
             {/* Blessé / malade — réponse du wellness (aujourd'hui ou hier) */}
             {wellnessInjuries.length > 0 && (
               <Section n={nx()} title="Blessé / malade">
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {wellnessInjuries.map((a) => (
                     <TintCard key={`${a.athleteId}_${a.day}`} color={C.rouge} onClick={() => navigate(`/coach/athletes/${a.athleteId}/retours?vue=wellness`)}>
                       <Avatar name={a.athleteName} color={C.rouge} />
@@ -324,7 +330,7 @@ export default function CoachHomePage() {
             {/* À traiter — séances manquées */}
             {missedSessions.length > 0 && (
               <Section n={nx()} title="À traiter">
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {missedSessions.map((m) => (
                     <TintCard key={`${m.athleteId}_${m.date}`} color={C.o} onClick={() => navigate(`/coach/athletes/${m.athleteId}/planning`)}>
                       <Avatar name={m.athleteName} color={C.o} />
@@ -340,7 +346,7 @@ export default function CoachHomePage() {
             {/* Alertes wellness — écart à l'habitude de l'athlète */}
             {wellnessAlerts.length > 0 && (
               <Section n={nx()} title="Alertes wellness">
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {wellnessAlerts.map((a) => {
                     const alerte = a.assessment.level === "alerte";
                     const accent = alerte ? C.rouge : C.o;
@@ -363,7 +369,7 @@ export default function CoachHomePage() {
             {/* Séances à clôturer */}
             {unfinished.length > 0 && (
               <Section n={nx()} title="Séances à clôturer">
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {unfinished.slice(0, 8).map((w) => {
                     const name = athleteNameById.get(w.athleteId)
                       ?? (w.athleteId === user?.id ? (profile?.full_name ?? "Moi") : "Athlète");
@@ -373,7 +379,7 @@ export default function CoachHomePage() {
                         <TwoLines
                           title={name}
                           sub={<>
-                            <span style={{ color: C.ac }}>{w.sessionName}</span>
+                            <span className="text-agon-accent">{w.sessionName}</span>
                             {" — "}{format(new Date(w.scheduledDate + "T12:00:00"), "d MMM", { locale: fr })} ·{" "}
                             {w.loggedSets} série{w.loggedSets > 1 ? "s" : ""} saisie{w.loggedSets > 1 ? "s" : ""}, jamais terminée
                           </>}
@@ -390,24 +396,19 @@ export default function CoachHomePage() {
               {loadActivity ? <Loading n={4} /> : activities.length === 0 ? (
                 <Empty>Aucune activité récente</Empty>
               ) : (
-                <div style={panel}>
-                  {activities.map((act, i) => {
+                <div className={PANEL}>
+                  {activities.map((act) => {
                     const dot = act.type === "session" ? C.g : act.type === "wellness" ? C.ac : C.b;
                     return (
                       <button
                         key={act.id}
                         type="button"
                         onClick={() => navigate(`/coach/athletes/${act.athleteId}/planning`)}
-                        className="hover:bg-[rgba(255,255,255,0.02)]"
-                        style={{
-                          display: "flex", alignItems: "center", gap: 14, padding: "13px 18px", width: "100%",
-                          background: "transparent", border: "none", borderBottom: i < activities.length - 1 ? ROW_LINE : "none",
-                          textAlign: "left", fontFamily: "inherit", cursor: "pointer",
-                        }}
+                        className={cn(ROW_BTN, ROW_LINE, "gap-3.5 px-[18px] py-[13px] hover:bg-[rgba(255,255,255,0.02)]")}
                       >
-                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: dot, flex: "none" }} />
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{act.label}</span>
-                        <span style={{ fontSize: 12, color: C.tx3, whiteSpace: "nowrap" }}>
+                        <span aria-hidden className="size-2 flex-none rounded-[2px]" style={{ background: dot }} />
+                        <span className={cn(ELLIPSIS, "min-w-0 flex-1 text-[13px] text-agon-tx")}>{act.label}</span>
+                        <span className="whitespace-nowrap text-[12px] text-agon-tx3">
                           {formatDistanceToNow(act.updatedAt, { locale: fr, addSuffix: true })}
                         </span>
                       </button>
@@ -419,10 +420,10 @@ export default function CoachHomePage() {
 
             {/* Raccourci vers son propre programme (coach-athlète) */}
             {isCoachAthlete && canCoachSelf && user && (
-              <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <section className="flex flex-col gap-3.5">
                 <TintCard color={C.ac} borderAlpha={0.38} onClick={() => navigate(`/coach/athletes/${user.id}/planning`)}>
                   <Avatar name={profile?.full_name ?? "?"} color={C.ac} />
-                  <TwoLines title={profile?.full_name} sub={<span style={{ color: C.ac }}>Mon programme personnel</span>} />
+                  <TwoLines title={profile?.full_name} sub={<span className="text-agon-accent">Mon programme personnel</span>} />
                   <Chevron />
                 </TintCard>
               </section>
@@ -439,26 +440,25 @@ export default function CoachHomePage() {
           </div>
 
           {/* ── Colonne droite (1/3) ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 32, minWidth: 0 }}>
+          <div className="flex min-w-0 flex-col gap-8">
 
             <Section n={nx()} title="À anticiper">
               {loadMargin ? <Loading /> : endingSoon.length === 0 ? (
                 <Empty>Aucun cycle ne se termine bientôt</Empty>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {endingSoon.map((c) => (
-                    <TintCard key={c.cycleId} color={C.ac} borderAlpha={0.38} gap={14} pad="14px 16px 14px 19px" onClick={() => navigate(`/coach/athletes/${c.athleteId}/planning`)}>
+                    <TintCard key={c.cycleId} color={C.ac} borderAlpha={0.38} compact onClick={() => navigate(`/coach/athletes/${c.athleteId}/planning`)}>
                       <TwoLines
                         title={`${c.athleteName} · fin du cycle`}
                         sub={<>
-                          <span style={{ color: C.ac }}>Dans <span style={MONO}>{c.daysLeft}</span> j</span>
+                          <span className="text-agon-accent">Dans <span className="agon-mono">{c.daysLeft}</span> j</span>
                           {" · jusqu’au "}{format(parseISO(c.endDate), "d MMM", { locale: fr })}
                         </>}
                       />
-                      <span style={{
-                        height: 34, display: "inline-flex", alignItems: "center", padding: "0 14px", borderRadius: 8, flex: "none",
-                        background: C.ac, color: C.ink, fontWeight: 600, fontSize: 14, whiteSpace: "nowrap",
-                      }}>Planifier</span>
+                      <span className="inline-flex h-[34px] flex-none items-center whitespace-nowrap rounded-[8px] bg-agon-accent px-3.5 text-[14px] font-semibold text-agon-ink">
+                        Planifier
+                      </span>
                     </TintCard>
                   ))}
                 </div>
@@ -469,31 +469,27 @@ export default function CoachHomePage() {
               {loadRecords ? <Loading /> : records.length === 0 ? (
                 <Empty>Aucun résultat récent</Empty>
               ) : (
-                <div style={{ background: alpha(C.ame, 0.1), border: `1px solid ${alpha(C.ame, 0.3)}`, borderRadius: 14, overflow: "hidden" }}>
-                  {records.map((r, i) => (
+                <div className="overflow-hidden rounded-[14px] border border-agon-amethyste/30 bg-agon-amethyste/10">
+                  {records.map((r) => (
                     <button
                       key={r.id}
                       type="button"
                       onClick={() => navigate(`/coach/athletes/${r.athleteId}/tests`)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", width: "100%",
-                        background: "transparent", border: "none", borderBottom: i < records.length - 1 ? ROW_LINE : "none",
-                        color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: "pointer",
-                      }}
+                      className={cn(ROW_BTN, ROW_LINE, "gap-3.5 px-4 py-[13px] text-agon-tx")}
                     >
                       {r.coachValidated === true ? (
-                        <span aria-label="Validé" style={{ width: 26, height: 26, flex: "none", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: C.g }}>
-                          <Check size={15} strokeWidth={2.5} style={{ color: C.ink }} />
+                        <span aria-label="Validé" className="flex size-[26px] flex-none items-center justify-center rounded-[8px] bg-agon-succes">
+                          <Check size={15} strokeWidth={2.5} className="text-agon-ink" />
                         </span>
                       ) : (
-                        <span aria-label="À valider" style={{ width: 26, height: 26, boxSizing: "border-box", flex: "none", borderRadius: 8, border: `1.5px dashed ${C.ame}`, background: alpha(C.ame, 0.1) }} />
+                        <span aria-label="À valider" className="size-[26px] flex-none rounded-[8px] border-[1.5px] border-dashed border-agon-amethyste bg-agon-amethyste/10" />
                       )}
-                      <TwoLines title={r.metricName} sub={<span style={{ color: C.tx3 }}>{r.athleteName}</span>} />
-                      <div style={{ textAlign: "right", flex: "none" }}>
-                        <div style={{ ...MONO, fontSize: 20, lineHeight: 1.15, color: C.ac, whiteSpace: "nowrap" }}>
-                          {r.value}<span style={{ fontSize: 11, color: C.tx2 }}> {r.unit}</span>
+                      <TwoLines title={r.metricName} sub={<span className="text-agon-tx3">{r.athleteName}</span>} />
+                      <div className="flex-none text-right">
+                        <div className="agon-mono whitespace-nowrap text-[20px] leading-[1.15] text-agon-accent">
+                          {r.value}<span className="text-[11px] text-agon-tx2"> {r.unit}</span>
                         </div>
-                        <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{format(parseISO(r.date), "dd/MM")}</div>
+                        <div className="agon-mono text-[11px] text-agon-tx3">{format(parseISO(r.date), "dd/MM")}</div>
                       </div>
                     </button>
                   ))}
@@ -505,31 +501,37 @@ export default function CoachHomePage() {
               {loadCompet ? <Loading /> : competitions.length === 0 ? (
                 <Empty>Aucune compétition dans les 30 jours</Empty>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div className="flex flex-col gap-2">
                   {[...compA, ...compBC].map((c) => {
                     const urgent = compA.includes(c);
                     const prio = c.priority === "A" ? C.rouge : c.priority === "B" ? C.o : null;
                     const body = (
                       <>
-                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
-                          <div style={{ fontSize: 12, color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.athleteName}</div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                          <div className={cn(ELLIPSIS, "text-[14px] font-medium")}>{c.name}</div>
+                          <div className={cn(ELLIPSIS, "text-[12px] text-agon-tx2")}>{c.athleteName}</div>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "none" }}>
+                        <div className="flex flex-none items-center gap-3">
                           {c.priority && <Pill color={prio}>Importance {c.priority}</Pill>}
-                          <span style={{ ...MONO, fontSize: urgent ? 22 : 17, lineHeight: 1, color: urgent ? C.rouge : C.tx, minWidth: 52, textAlign: "right" }}>J-{c.daysUntil}</span>
+                          <span className={cn("agon-mono min-w-[52px] text-right", urgent ? "text-[22px] text-agon-rouge" : "text-[17px] text-agon-tx", "leading-none")}>
+                            J-{c.daysUntil}
+                          </span>
                         </div>
                       </>
                     );
                     return urgent ? (
-                      <TintCard key={c.id} color={C.rouge} gap={12} pad="14px 16px 14px 19px" onClick={() => navigate(`/coach/athletes/${c.athlete_id}/planning`)}>
+                      <TintCard key={c.id} color={C.rouge} compact="tight" onClick={() => navigate(`/coach/athletes/${c.athlete_id}/planning`)}>
                         {body}
                       </TintCard>
                     ) : (
-                      <button key={c.id} type="button" onClick={() => navigate(`/coach/athletes/${c.athlete_id}/planning`)} style={{
-                        ...panel, display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%",
-                        color: C.tx, textAlign: "left", fontFamily: "inherit", cursor: "pointer",
-                      }}>{body}</button>
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => navigate(`/coach/athletes/${c.athlete_id}/planning`)}
+                        className={cn(PANEL, "flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left text-agon-tx")}
+                      >
+                        {body}
+                      </button>
                     );
                   })}
                 </div>

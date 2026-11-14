@@ -1,12 +1,17 @@
 import type { CSSProperties } from "react";
 import { C } from "@/lib/theme";
+import { KICKER, MONO } from "@/features/shared/components/seance/seanceUi";
 
+/** Titre de section : sur-titre mono en capitales (planche CoachOrdiBStaffFiche, « Suivi »). */
 export const tabTitle: CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 8px",
+  ...KICKER, fontWeight: 400, color: C.tx2, margin: "0 0 10px",
 };
+/** Ligne de liste : carte arrondie (style peps). */
 export const row: CSSProperties = {
-  background: C.s1, border: "1px solid " + C.brd, borderRadius: 6, padding: "8px 12px",
+  background: C.s1, border: "1px solid " + C.brd, borderRadius: 12, padding: "12px 16px",
 };
+/** Date ou méta d'une ligne. */
+export const meta: CSSProperties = { ...MONO, fontSize: 11, color: C.tx3, letterSpacing: "0.04em" };
 export const empty: CSSProperties = { fontSize: 13, color: C.tx3 };
 
 export function fmtDate(iso: string | null | undefined): string {

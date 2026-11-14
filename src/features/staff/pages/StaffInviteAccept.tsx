@@ -40,13 +40,13 @@ const primary: React.CSSProperties = { ...btnStyle("primary", "lg"), width: "100
 /** Page centrée 960 px, logo au-dessus (planche CoachOrdiBStaffInvitation). */
 function Shell({ children, wide = false, footer }: { children: React.ReactNode; wide?: boolean; footer?: React.ReactNode }) {
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.tx, display: "flex", justifyContent: "center", padding: "64px 16px 72px", boxSizing: "border-box" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.tx, display: "flex", justifyContent: "center", padding: "clamp(28px, 8vw, 64px) 16px 72px", boxSizing: "border-box" }}>
       <div style={{ width: "100%", maxWidth: wide ? 960 : 440, display: "flex", flexDirection: "column", alignItems: "center", gap: 32 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="/brand/agon-symbole-favicon-marbre.svg" alt="" style={{ width: 34, height: 34 }} />
           <span style={{ ...DISPLAY, fontWeight: 400, fontSize: 20, letterSpacing: "0.24em" }}>Agon</span>
         </div>
-        <div style={{ width: "100%", background: C.s1, border: "1px solid " + C.brd, borderRadius: 18, padding: wide ? "36px 40px" : 24, boxSizing: "border-box" }}>
+        <div style={{ width: "100%", background: C.s1, border: "1px solid " + C.brd, borderRadius: 18, padding: wide ? "clamp(22px, 5vw, 36px) clamp(18px, 5vw, 40px)" : 24, boxSizing: "border-box" }}>
           {children}
         </div>
         {footer && <div style={{ fontSize: 12.5, color: C.tx3, textAlign: "center" }}>{footer}</div>}
@@ -78,7 +78,7 @@ export default function StaffInviteAccept() {
         : "Ce lien d'invitation a expiré.";
     return (
       <Shell footer={<>Déjà un compte ? <Link to="/login" style={{ color: C.ac, textDecoration: "none" }}>Me connecter</Link></>}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, marginBottom: 8 }}>Invitation indisponible</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: C.tx, marginBottom: 8 }}>Invitation indisponible</div>
         <div style={{ fontSize: 13, color: C.tx2, lineHeight: 1.6 }}>{msg} Demande un nouveau lien à la personne qui t'a invité.</div>
       </Shell>
     );
@@ -231,7 +231,8 @@ export default function StaffInviteAccept() {
             onClick={() => { setTab(t); setError(""); }}
             style={{
               flex: 1, height: 34, borderRadius: 8, border: "none", fontFamily: "inherit", cursor: "pointer",
-              background: tab === t ? C.s1 : "transparent", color: tab === t ? C.tx : C.tx3, fontSize: 13, fontWeight: tab === t ? 500 : 400,
+              background: tab === t ? C.s1 : "transparent", color: tab === t ? C.tx : C.tx3, fontSize: "clamp(11px, 3.1vw, 13px)", fontWeight: tab === t ? 500 : 400,
+              whiteSpace: "nowrap", padding: "0 6px",
             }}
           >
             {t === "signup" ? "Je suis un professionnel" : "J'ai déjà un compte"}
@@ -260,21 +261,28 @@ export default function StaffInviteAccept() {
         <div style={tab === "signup" ? pair : undefined}>
           <div>
             <span style={label}>Mot de passe</span>
-            <PasswordInput variant="shadcn" name="password" required minLength={8} placeholder="••••••••" />
+            <PasswordInput name="password" required minLength={8} placeholder="••••••••" style={input} iconColor={C.tx3} />
           </div>
           {tab === "signup" && (
             <div>
               <span style={label}>Confirmer le mot de passe</span>
-              <PasswordInput variant="shadcn" name="confirm" required minLength={8} placeholder="••••••••" />
+              <PasswordInput name="confirm" required minLength={8} placeholder="••••••••" style={input} iconColor={C.tx3} />
             </div>
           )}
         </div>
         {tab === "signup" && (
           <div>
             <span style={label}>Métier</span>
-            <select value={pickedProfession} onChange={(e) => setProfession(e.target.value as StaffProfession)} style={input}>
-              {STAFF_PROFESSIONS.map((p) => <option key={p} value={p}>{PROFESSION_LABEL[p]}</option>)}
-            </select>
+            <div style={{ position: "relative" }}>
+              <select value={pickedProfession} onChange={(e) => setProfession(e.target.value as StaffProfession)}
+                style={{ ...input, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}>
+                {STAFF_PROFESSIONS.map((p) => <option key={p} value={p}>{PROFESSION_LABEL[p]}</option>)}
+              </select>
+              <svg aria-hidden width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.tx3} strokeWidth="1.5" strokeLinecap="square"
+                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                <path d="M5 9L12 16L19 9" />
+              </svg>
+            </div>
           </div>
         )}
         {error && <div style={{ fontSize: 13, color: C.r }}>{error}</div>}

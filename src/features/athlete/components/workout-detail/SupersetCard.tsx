@@ -1,3 +1,4 @@
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { ACCENT, SS_LETTERS, SS_ORANGE } from "@/features/athlete/components/workout-detail/workoutDetailConstants";
 import { BadgeTag } from "@/features/athlete/components/workout-detail/BadgeTag";
 import { C } from "@/lib/theme";
@@ -45,11 +46,12 @@ export interface SupersetCardProps {
   canEdit: boolean;
   onStartRest: (key: string, sec: number) => void;
   onStopRest: () => void;
+  onAdjustRest?: (deltaSec: number) => void;
 }
 
 export function SupersetCard({
   groupKey, members, blocColor, restSec, timingMode,
-  restActiveKey, restLeft, restTotal, canEdit, onStartRest, onStopRest,
+  restActiveKey, restLeft, restTotal, canEdit, onStartRest, onStopRest, onAdjustRest,
 }: SupersetCardProps) {
   const rounds = Math.max(...members.map((m) => m.sets.length), 0);
   // Repos entre tours : seulement en timing "repos" (départ = chrono bloc, libre = rien)
@@ -59,6 +61,13 @@ export function SupersetCard({
   const totalSets = members.reduce((sum, m) => sum + m.sets.length, 0);
   const doneSets = members.reduce((sum, m) => sum + m.sets.filter((s) => s.done).length, 0);
   const allDone = doneSets === totalSets && totalSets > 0;
+
+  // Série à saisir : premier exo non validé du premier tour incomplet (planche SeanceEnCoursSuperset)
+  let current: { r: number; id: string } | null = null;
+  for (let r = 0; r < rounds && !current; r++) {
+    const m = members.find((x) => x.sets[r] && !x.sets[r].done && !x.sets[r].skipped);
+    if (m) current = { r, id: m.id };
+  }
 
   return (
     <div style={{
@@ -143,12 +152,12 @@ export function SupersetCard({
       <div style={{
         display: "grid",
         gridTemplateColumns: anyNonPDC
-          ? "34px 1fr 1.15fr 1.15fr 0.9fr 40px"
-          : "34px 1fr 1.15fr 0.9fr 40px",
-        gap: 5,
-        padding: "4px 14px 2px",
-        fontSize: 9, color: C.tx3, fontWeight: 600,
-        letterSpacing: "0.4px", textTransform: "uppercase" as const,
+          ? "28px 1.1fr 0.8fr 1.3fr 0.7fr 42px"
+          : "28px 1fr 1.3fr 0.8fr 42px",
+        gap: 4,
+        padding: "8px 18px 2px 20px",
+        ...MONO, fontSize: 11, color: C.tx3,
+        letterSpacing: "0.14em", textTransform: "uppercase" as const,
       }}>
         <div style={{ textAlign: "center" }}>Exo</div>
         {anyNonPDC && <div style={{ textAlign: "center" }}>Charge</div>}
@@ -182,8 +191,8 @@ export function SupersetCard({
 
               {/* Une série de chaque exo, enchaînées */}
               {roundMembers.map((m, mi) => (
+                <div key={m.id} style={{ marginTop: mi > 0 ? 8 : 0 }}>
                 <SetRow
-                  key={m.id}
                   setIdx={r}
                   state={m.sets[r]}
                   prevStr={m.prevSets[r] ?? "—"}
@@ -194,7 +203,9 @@ export function SupersetCard({
                   onToggle={() => m.onToggle(r)}
                   onOpenPad={(field) => m.onOpenPad(r, field)}
                   isCompleted={!canEdit}
+                  isCurrent={canEdit && current?.r === r && current?.id === m.id}
                 />
+                </div>
               ))}
 
               {/* Repos après le tour (pas après le dernier) */}
@@ -208,6 +219,7 @@ export function SupersetCard({
                   total={restTotal}
                   onStart={() => onStartRest(`ss:${groupKey}:${r}`, restSec)}
                   onStop={onStopRest}
+                  onAdjust={onAdjustRest}
                   canEdit={canEdit}
                 />
               )}

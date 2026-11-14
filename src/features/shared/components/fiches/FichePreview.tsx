@@ -1,11 +1,12 @@
 /**
  * FichePreview — aperçu d'une fiche (image ou PDF) depuis une URL signée.
  */
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
+import { Maximize2 } from "lucide-react";
 import { C } from "@/lib/theme";
 import { useDocSignedUrl } from "@/features/shared/hooks/fiches/useDocs";
 import type { Doc } from "@/features/shared/types/fiches";
-import { btnGhost } from "./ficheStyles";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 
 const FichePdfView = lazy(() => import("./FichePdfView"));
 
@@ -18,6 +19,8 @@ interface Props {
 export function FichePreview({ doc, maxHeight }: Props) {
   const { data: url, isLoading, isError } = useDocSignedUrl(doc.file_path);
   const [pdfFailed, setPdfFailed] = useState(false);
+  const [page, setPage] = useState<{ n: number; total: number } | null>(null);
+  const onPage = useCallback((n: number, total: number) => setPage({ n, total }), []);
 
   const box = (t: string) => (
     <div style={{ padding: "40px 16px", textAlign: "center", color: C.tx3, fontSize: 13 }}>{t}</div>
@@ -34,12 +37,19 @@ export function FichePreview({ doc, maxHeight }: Props) {
         box("Aperçu indisponible sur cet appareil.")
       ) : (
         <Suspense fallback={box("Chargement du lecteur PDF…")}>
-          <FichePdfView url={url} onError={() => setPdfFailed(true)} />
+          <FichePdfView url={url} onError={() => setPdfFailed(true)} onPage={onPage} />
         </Suspense>
       )}
-      <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
-        <a href={url} target="_blank" rel="noopener noreferrer" style={{ ...btnGhost, display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
-          Ouvrir / Télécharger
+      <div style={{
+        position: maxHeight ? "sticky" : undefined, bottom: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
+        gap: 12, padding: "10px 2px", background: C.s1, borderTop: `1px solid ${C.brd}`,
+      }}>
+        <span style={{ ...MONO, fontSize: 11.5, color: C.tx3 }}>
+          {doc.kind !== "image" && page ? `${page.n} / ${page.total}` : ""}
+        </span>
+        <a href={url} target="_blank" rel="noopener noreferrer" title="Ouvrir / Télécharger"
+          style={{ ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.ac, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <Maximize2 size={13} /> Plein écran
         </a>
       </div>
     </div>

@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { invalidateDocs } from "@/api/docs";
 import { useAuth } from "@/hooks/useAuth";
 import { formatFileSize } from "@/lib/compressImage";
@@ -13,9 +14,10 @@ import { PhotoFicheCapture } from "@/features/shared/components/fiches/PhotoFich
 import { PhotoFicheError, photosToFicheFile } from "@/lib/photosToFiche";
 import { FichePreview } from "@/features/shared/components/fiches/FichePreview";
 import { FicheCommentThread } from "@/features/shared/components/fiches/FicheCommentThread";
-import { CATEGORY_COLOR, btnGhost, btnPrimary, sectionTitle } from "@/features/shared/components/fiches/ficheStyles";
+import { CATEGORY_COLOR, btnGhost, btnPrimary } from "@/features/shared/components/fiches/ficheStyles";
 import type { MyStaffAthlete } from "../../hooks/useMyStaffLinks";
 import { canRead, canWrite } from "../../lib/staffPermissions";
+import { tabTitle } from "./staffTabStyles";
 
 /**
  * Fiches de l'athlète, vues par un pro.
@@ -47,7 +49,7 @@ export function StaffFichesTab({ link }: { link: MyStaffAthlete }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <h2 style={{ ...sectionTitle, flex: 1, margin: 0 }}>Fiches · {docs.length}</h2>
+        <h2 style={{ ...tabTitle, flex: 1, margin: 0 }}>Fiches · {docs.length}</h2>
         {writable && link.coachId && (
           <button style={btnPrimary} onClick={() => setAdding(true)}>Ajouter une fiche</button>
         )}
@@ -61,18 +63,24 @@ export function StaffFichesTab({ link }: { link: MyStaffAthlete }) {
       ) : docs.length === 0 ? (
         <div style={{ fontSize: 13, color: C.tx3 }}>Aucune fiche pour cet athlète.</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {docs.map((d) => (
             <div key={d.id} style={{
-              display: "flex", alignItems: "center", gap: 10, background: C.s1, border: "1px solid " + C.brd,
-              borderLeft: "3px solid " + CATEGORY_COLOR[d.category], borderRadius: 6, padding: "8px 12px", flexWrap: "wrap",
+              display: "flex", alignItems: "center", gap: 14, background: C.s1, border: "1px solid " + C.brd,
+              borderRadius: 12, padding: "12px 16px", flexWrap: "wrap",
             }}>
-              <button onClick={() => setPreview(d)} style={{ flex: 1, minWidth: 180, minHeight: 40, background: "transparent", border: "none", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>
-                  📄 {d.title}
-                  {isMine(d) && <span style={{ marginLeft: 8, fontSize: 10, color: C.ac }}>par moi</span>}
-                </div>
-                <div style={{ fontSize: 11, color: C.tx3 }}>{FICHE_CATEGORY_LABEL[d.category]} · {formatFileSize(d.file_size)}</div>
+              <button onClick={() => setPreview(d)} style={{ flex: 1, minWidth: 180, minHeight: 40, background: "transparent", border: "none", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 14, color: C.tx }}>
+                {/* Pavé document teinté de la couleur de la catégorie (peps, comme CoachTelFiches). */}
+                <span aria-hidden style={{ width: 38, height: 38, flex: "none", borderRadius: 10, background: alpha(CATEGORY_COLOR[d.category], 0.12), border: "1px solid " + alpha(CATEGORY_COLOR[d.category], 0.4), display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={CATEGORY_COLOR[d.category]} strokeWidth="1.6" strokeLinecap="square"><path d="M6 3H14L19 8V21H6Z" /><path d="M14 3V8H19" /><path d="M9 13H16M9 17H14" /></svg>
+                </span>
+                <span style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 600 }}>
+                    {d.title}
+                    {isMine(d) && <span style={{ marginLeft: 8, ...MONO, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ac }}>par moi</span>}
+                  </span>
+                  <span style={{ ...MONO, fontSize: 11, color: C.tx3, letterSpacing: "0.04em" }}>{FICHE_CATEGORY_LABEL[d.category]} · {formatFileSize(d.file_size)}</span>
+                </span>
               </button>
               {canDelete(d) && (
                 confirmDel === d.id ? (

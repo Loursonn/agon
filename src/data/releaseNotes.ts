@@ -38,6 +38,197 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-pastille-importance-competitions",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Liste des compétitions : importance lisible",
+    summary: "Dans Planning › Compétitions, la pastille d'importance affiche la lettre (A, B, C) au lieu d'un texte qui débordait.",
+    sections: [
+      {
+        title: "Planning",
+        points: [
+          "Survole la pastille pour lire l'importance en toutes lettres.",
+          "Sur un écran étroit, « + Thème » et le thème du jour restent sur une ligne dans l'en-tête de chaque jour.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-invitation-staff-finitions",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Page d'invitation du staff plus nette",
+    summary: "La page qu'ouvre un kiné, un ostéo ou un nutritionniste quand tu l'invites dans le staff d'un athlète a été relue écran par écran.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les champs mot de passe et métier ont enfin le même aspect que les autres champs du formulaire.",
+          "Sur téléphone, la page respire : la carte prend toute la largeur et les deux onglets tiennent sur une ligne.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-vue-athlete-ordinateur",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "« Vue athlète » lisible sur ordinateur",
+    summary: "L'aperçu de ce que voit ton athlète tenait dans une bande étroite : sur ordinateur, le programme de la semaine s'y écrasait (« Cette semaine » écrit à la verticale). Il prend maintenant toute la largeur, comme l'app de l'athlète sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sur ordinateur, l'aperçu montre les écrans de l'athlète en grand ; sur tablette et téléphone, il garde le format téléphone.",
+          "Alimentation : sur un écran moyen, les glucides, lipides et protéines passent sous l'anneau du jour au lieu d'être tassés.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-staff-semaine-entiere",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Ton staff voit toute la semaine d'un coup",
+    summary: "Dans l'onglet Programme de l'espace staff, les 7 jours tiennent à l'écran sans défiler sur le côté.",
+    sections: [
+      {
+        title: "Pour ton staff",
+        points: [
+          "Sur ordinateur, l'onglet Programme affiche la semaine entière ; le détail des accès s'ouvre avec le bouton « Tes accès ».",
+          "Les séances de la semaine sont plus lisibles : titre sur toute la largeur, statut juste en dessous, couleurs des tests et compétitions comme dans le reste d'Agon.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-competitions-semaine-ordinateur",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Compétitions lisibles dans la semaine sur ordinateur",
+    summary: "Côté athlète, sur ordinateur, une compétition dans la vue semaine du Programme s'écrivait lettre par lettre à la verticale. Elle s'affiche maintenant en carte horizontale : type, nom, importance A/B/C, compte à rebours (J-21) et lieu.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "La carte compétition tient dans la colonne du jour, sans couper les mots.",
+          "Les périodes « Indisponible » s'affichent sur deux lignes au lieu d'être écrasées.",
+          "Le bouton « Compétition » du menu + a retrouvé sa bordure rouge.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-theme-du-jour-menu-rapide",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Thème du jour en un clic",
+    summary: "Dans le planning, clique sur l'en-tête d'un jour : un petit menu s'ouvre sur place, sans panneau sur le côté.",
+    sections: [
+      {
+        title: "Dans le planning (semaine et mois)",
+        points: [
+          "Choisis Hard, Moyen, Easy, Récup active ou Repos : c'est enregistré tout de suite.",
+          "« Ajouter un commentaire » te laisse écrire un mot sur la journée ; ton athlète le lit sous le thème de son jour.",
+          "« Retirer le thème » l'efface, et « Plus d'options… » ouvre le panneau complet (nom, dominante, couleur).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-blessures-et-staff-lisibles",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Blessures et espace staff plus lisibles",
+    summary: "Une blessure en cours se repère d'un coup d'œil, et ton staff retrouve fiches et commentaires dans le même style que le reste d'Agon.",
+    sections: [
+      {
+        title: "Blessures",
+        points: [
+          "Une blessure en cours apparaît sur une carte rouge avec une pastille « En cours » ; une fois guérie, la carte redevient neutre avec une pastille verte.",
+        ],
+      },
+      {
+        title: "Pour ton staff",
+        points: [
+          "Dans la fiche d'un athlète, les fiches s'affichent avec une icône à la couleur de leur catégorie, et les commentaires sont plus faciles à lire.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-analyse-course-hyrox-montre",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Analyse de course HYROX : la montre se lit mieux",
+    summary: "La frise d'une course HYROX sépare la fréquence cardiaque, l'allure et la cadence, et l'évolution de ton athlète se lit d'un coup d'œil.",
+    sections: [
+      {
+        title: "Sur ordinateur",
+        points: [
+          "La frise de course montre les 17 segments en tête (R1 à R8 et les pictos des stations), puis trois pistes alignées : FC par zone, allure des runs et cadence, avec les départs des runs en repère.",
+          "Le bilan HYROX devient « Évolution HYROX » : chrono de chaque course (le plus rapide en haut), où passe le temps et position par station, rangés en trois parties.",
+        ],
+      },
+      {
+        title: "Sur le téléphone de ton athlète",
+        points: [
+          "L'analyse de course s'ouvre sur le chrono en grand, le rang et le profil, puis une frise lisible : cases numérotées, pictos des stations et durée de la course.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-coach-telephone-et-staff-peps",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Agon sur ton téléphone et l'espace staff passent au nouveau style",
+    summary: "Les écrans coach sur téléphone et l'espace de ton staff (kiné, coach adjoint, nutri) prennent le style « peps » : plus lisibles d'un coup d'œil.",
+    sections: [
+      {
+        title: "Sur ton téléphone",
+        points: [
+          "Wellness : un feu vert, orange ou rouge en tête, puis des tuiles avec l'historique de 28 jours.",
+          "Santé : les mesures hors de sa normale passent en tuiles avec leur courbe, les autres restent en liste avec une petite courbe.",
+          "Tests, fiches et banque d'exercices sont rangés par groupes de couleur, avec une vignette par fiche et par exercice.",
+          "« Modifier une séance » : boutons − / + plus grands et dernier résultat rappelé sous l'exercice.",
+        ],
+      },
+      {
+        title: "Pour ton staff",
+        points: [
+          "Son accueil montre ses athlètes et ce qui est à surveiller côte à côte.",
+          "Dans l'espace d'un athlète, il voit tous les onglets : ceux que tu ne partages pas restent grisés avec un cadenas.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-app-athlete-nouveau-style",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "L'app de tes athlètes prend le nouveau style",
+    summary: "Sur téléphone comme sur ordinateur, tes athlètes retrouvent des couleurs franches et des écrans plus lisibles.",
+    sections: [
+      {
+        title: "Sur téléphone",
+        points: [
+          "Fiches : la fiche que tu viens d'envoyer s'affiche en grande carte avec ton mot, et chaque fiche porte la couleur de sa catégorie.",
+          "Aperçu d'une séance depuis le Programme : chaque bloc garde sa couleur, comme dans ta programmation.",
+          "Santé : les phases de sommeil (profond, léger, paradoxal, éveil) en une barre colorée, et un état Normal / Bas / Haut plus visible.",
+        ],
+      },
+      {
+        title: "Sur ordinateur",
+        points: [
+          "En-tête plus compact sur toutes les pages, avec le nom et les initiales de l'athlète en haut à droite.",
+          "Alimentation : le suivi du jour sur deux colonnes, calories actives et enregistrement à droite.",
+          "HYROX utilise toute la largeur de l'écran et les fiches s'ouvrent à côté de la liste.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-vue-coach-ordinateur-relookee",
     date: "2026-11-14",
     kind: "feature",
@@ -72,6 +263,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
         points: [
           "Avis athlètes : chaque retour en carte, type en pastille (bug en rouge, idée en or), filtres regroupés en haut à droite.",
           "Course HYROX : en-tête orange avec le nom de la course en grand et le chrono, temps course / stations / roxzone en tuiles.",
+          "Ajuster les tours d'une séance HYROX : la barre d'outils passe au-dessus du graphique et le tour choisi s'édite dans un panneau à droite du graphique.",
         ],
       },
     ],

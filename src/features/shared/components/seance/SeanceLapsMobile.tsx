@@ -1,3 +1,4 @@
+import { TYPE_COLOR } from "@/lib/peps";
 import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import type { ExpectedBlock } from "@shared/domain/hyroxLaps";
 import { C, alpha } from "@/lib/theme";
@@ -37,7 +38,8 @@ export function SeanceLapsMobile({ laps, names, kinds, blocks, hyrox, zonesN, op
             key={`${l.startS}-${i}`}
             style={{
               padding: "0 12px", borderTop: i ? `1px solid ${C.brd}` : "none",
-              background: on ? alpha(C.ac, 0.1) : l.needsReview ? alpha(C.ac, 0.04) : "transparent",
+              // Planche HyroxToursTel : les stations HYROX teintées à 8 % de la couleur HYROX.
+              background: on ? alpha(C.ac, 0.1) : l.needsReview ? alpha(C.ac, 0.04) : hyrox && kind === "station" ? alpha(TYPE_COLOR.hyrox, 0.08) : "transparent",
               boxShadow: on || l.needsReview ? `inset 3px 0 0 ${C.ac}` : "none",
             }}
           >

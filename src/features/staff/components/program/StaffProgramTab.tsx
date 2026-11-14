@@ -123,7 +123,7 @@ export function StaffProgramTab({ link }: { link: MyStaffAthlete }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{days.map(dayCard)}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(180px, 1fr))", gap: 8, alignItems: "stretch" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(150px, 1fr))", gap: 8, alignItems: "stretch" }}>
               {days.map(dayCard)}
             </div>
           </div>

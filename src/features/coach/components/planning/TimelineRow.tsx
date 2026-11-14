@@ -98,7 +98,7 @@ function TLItem({ id, level, label, isDeload, x, width, onOpen, onAdd, onZoom, o
         className={cn(
           "relative box-border flex h-full w-full select-none items-center overflow-hidden border border-t-[3px] px-[18px] transition-[opacity,box-shadow] duration-100 touch-pan-y",
           style.block, style.top,
-          lockStart ? "cursor-pointer" : dragging ? "cursor-grabbing opacity-80 shadow-lg" : "cursor-grab",
+          lockStart ? "cursor-pointer" : dragging ? "cursor-grabbing opacity-80" : "cursor-grab",
         )}
       >
         {isDeload && <div className={cn("pointer-events-none absolute inset-0", DELOAD_HATCH)} />}

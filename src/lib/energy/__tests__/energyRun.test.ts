@@ -3,7 +3,7 @@ import type { EnergyGroup, EnergyInterval, EnergyStep, EnergyTarget } from "@/ty
 import {
   aimedSeconds, doneLabel, endsByButton, flattenRun, fmtChrono, fmtDist, fmtDur, fmtPace, mainTarget,
   plannedVsDoneRows, profileBars, readBlocks, repLabel, roundRemaining, runNext, runPause, runResume, runStart, runTick, sessionElapsed,
-  sessionLine, sessionRemaining, stepPhrase, stepRemaining, stepTint,
+  sessionLine, sessionRemaining, stepPhrase, stepRemaining, stepTint, zoneScale, hrZoneCount,
 } from "../energyRun";
 
 const iv = (
@@ -209,5 +209,83 @@ describe("récup en dernier pas d'un groupe", () => {
   it("« 4 × 6 min, récup 2 min »", () => {
     const b = readBlocks([group("g", 4, [iv("w", "work", { kind: "time", value: 360 }), iv("r", "recovery", { kind: "time", value: 120 })])]);
     expect(b[0].phrase).toBe("4 × 6 min, récup 2 min");
+  });
+});
+
+describe("lecture : groupe dans un groupe", () => {
+  it("garde l'arbre avec le nombre de séries à chaque niveau", () => {
+    const [, series] = readBlocks(fractionne, VMA);
+    expect(series.tree).toBeDefined();
+    const t = series.tree!;
+    expect(t.repeat).toBe(2);
+    expect(t.label).toBe("2 séries");
+    expect(t.between).toBe("3 min de trot entre les séries");
+    expect(t.items).toHaveLength(1);
+    const line = t.items[0];
+    expect(line.kind).toBe("line");
+    if (line.kind !== "line") return;
+    expect(line.main).toBe("5 × 400 m");
+    expect(line.sub).toBe("récup 1 min 30 s trot");
+    expect(line.target?.unit).toBe("/km");
+    expect(line.tint).toEqual({ kind: "zone", zone: 5 });
+  });
+
+  it("un niveau de plus devient un sous-groupe", () => {
+    const deep = group("a", 3, [group("b", 2, [group("c", 4, [iv("w", "work", { kind: "distance", value: 100 })])])]);
+    const [b] = readBlocks([deep]);
+    expect(b.tree?.repeat).toBe(3);
+    const inner = b.tree!.items[0];
+    expect(inner.kind).toBe("group");
+    if (inner.kind !== "group") return;
+    expect(inner.group.label).toBe("2 séries");
+    expect(inner.group.items[0]).toMatchObject({ kind: "line", main: "4 × 100 m" });
+  });
+
+  it("pas d'arbre pour un groupe simple ni pour un pas seul", () => {
+    const b = readBlocks([
+      iv("wu", "warmup", { kind: "time", value: 600 }),
+      group("g", 4, [iv("w", "work", { kind: "time", value: 360 })]),
+    ]);
+    expect(b[0].tree).toBeUndefined();
+    expect(b[1].tree).toBeUndefined();
+  });
+
+  it("le minuteur aplatit toujours tout l'arbre", () => {
+    expect(flattenRun(fractionne).filter((f) => f.step.id === "400")).toHaveLength(10);
+  });
+});
+
+describe("échelle des zones sous un bloc", () => {
+  const watts = iv("p", "work", { kind: "time", value: 480 }, { kind: "power_test_pct", test_metric: "PMA", min: 95, max: 95 });
+  const fc = (target: EnergyTarget) => iv("h", "work", { kind: "time", value: 600 }, target);
+
+  it("watts : 5 zones, zone visée", () => {
+    expect(zoneScale(watts)).toEqual({ n: 5, active: 4 });
+    expect(readBlocks([watts])[0].scale).toEqual({ n: 5, active: 4 });
+  });
+  it("la puissance reste en 5 zones même si le modèle FC en a 3", () => {
+    expect(zoneScale(watts, null, { hrZones: 3 })?.n).toBe(5);
+  });
+  it("FC : suit le modèle du coach (3, 5 ou 7), 5 par défaut", () => {
+    expect(zoneScale(fc({ kind: "hr_zone", zone: 2 }))).toEqual({ n: 5, active: 2 });
+    expect(zoneScale(fc({ kind: "hr_zone", zone: 2 }), null, { hrZones: 3 })).toEqual({ n: 3, active: 2 });
+    expect(zoneScale(fc({ kind: "hr_zone", zone: 5 }), null, { hrZones: 3 })).toEqual({ n: 3, active: 3 });
+    expect(zoneScale(fc({ kind: "hr_pct", min: 95, max: 95 }), null, { hrZones: 7 })).toEqual({ n: 7, active: 7 });
+    expect(zoneScale(fc({ kind: "hr_pct", min: 50, max: 50 }), null, { hrZones: 7 })).toEqual({ n: 7, active: 1 });
+    expect(zoneScale(fc({ kind: "hr_bpm", min: 150, max: 160 }), null, { hrZones: 4 })?.n).toBe(5);
+  });
+  it("allure, récup ou sans cible : pas d'échelle", () => {
+    expect(readBlocks(fractionne, VMA)[1].scale).toBeUndefined();
+    expect(zoneScale(iv("r", "recovery", { kind: "time", value: 60 }, { kind: "hr_zone", zone: 1 }))).toBeUndefined();
+    expect(zoneScale(null)).toBeUndefined();
+  });
+});
+
+describe("nombre de zones du modèle FC", () => {
+  it("trois, cinq, personnalisé, absent", () => {
+    expect(hrZoneCount({ kind: "three", bounds: [150, 170] })).toBe(3);
+    expect(hrZoneCount({ kind: "five", bounds: [120, 140, 155, 170] })).toBe(5);
+    expect(hrZoneCount({ kind: "custom", bounds: [110, 125, 140, 150, 160, 170] })).toBe(7);
+    expect(hrZoneCount(null)).toBeNull();
   });
 });

@@ -18,25 +18,23 @@ export const TAB_BAR_H = 78;
 /** Page téléphone : colonne avec les marges de la planche. */
 export function PhonePage({ children, gap = 14, style }: { children: ReactNode; gap?: number; style?: CSSProperties }) {
   return (
-    <div style={{ padding: "18px 16px 0", display: "flex", flexDirection: "column", gap, color: C.tx, ...style }}>
+    <div style={{ padding: "22px 20px 0", display: "flex", flexDirection: "column", gap, color: C.tx, ...style }}>
       {children}
     </div>
   );
 }
 
-/** Titre de rubrique « 01 — À traiter  4 ». */
+/** Titre de rubrique « 01 — À traiter » (numéro or), compte à droite en gris. */
 export function Section({ n, title, count, right, children }: {
   n?: number; title: string; count?: ReactNode; right?: ReactNode; children?: ReactNode;
 }) {
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "0 2px" }}>
-        <span style={{ ...KICKER, color: C.tx2 }}>
-          {n != null ? `${String(n).padStart(2, "0")} — ` : ""}{title}
+    <section style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, height: 22 }}>
+        <span style={{ ...KICKER, color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {n != null && <span style={{ color: C.ac }}>{String(n).padStart(2, "0")} — </span>}{title}
         </span>
-        {count != null && <span style={{ ...MONO, fontSize: 11, color: C.ac }}>{count}</span>}
-        <span style={{ flex: 1 }} />
-        {right}
+        {right ?? (count != null && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{count}</span>)}
       </div>
       {children}
     </section>
@@ -88,8 +86,8 @@ export function Chip({ active, onClick, children, color }: { active: boolean; on
       height: 30, padding: "0 12px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 6, flex: "none",
       fontSize: 12.5, fontFamily: "inherit", cursor: "pointer",
       background: active ? (color ? C.s2 : C.tx) : "transparent",
-      color: active ? (color ? C.tx : C.bg) : C.tx2,
-      border: active ? "1px solid transparent" : `1px solid ${C.brdL}`, fontWeight: active ? 500 : 400,
+      color: active ? (color ? C.tx : C.bg) : color ? C.tx3 : C.tx2,
+      border: active || color ? "1px solid transparent" : `1px solid ${C.brdL}`, fontWeight: active ? 500 : 400,
     }}>
       {color && <span aria-hidden style={{ width: 7, height: 7, borderRadius: 2, background: color }} />}
       {children}
@@ -143,3 +141,39 @@ export function lightColor(light: "green" | "orange" | "red" | null | undefined)
 
 /** Filet entre deux lignes d'une carte (ombre interne : pas de mélange border / borderTop). */
 export const rowLine = (i: number): string => (i > 0 ? `inset 0 1px 0 ${C.brd}` : "none");
+
+/** Champ de recherche avec loupe (planches Fiches et Banque). */
+export function SearchField({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <label style={{ position: "relative", display: "block" }}>
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden style={{ position: "absolute", left: 14, top: 13, color: C.tx3 }}>
+        <circle cx="7" cy="7" r="4.8" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="m10.6 10.6 3.4 3.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      <input
+        type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
+        style={{ width: "100%", boxSizing: "border-box", height: 42, padding: "0 12px 0 40px", borderRadius: 12, border: `1px solid ${C.brd}`, background: C.s2, color: C.tx, fontSize: 16, fontFamily: "inherit" }}
+      />
+    </label>
+  );
+}
+
+/** En-tête de page outil : compte en petites capitales, titre large (planches Fiches, Banque). */
+export function ToolHead({ kicker, title }: { kicker?: ReactNode; title: string }) {
+  return (
+    <div>
+      <div style={{ ...KICKER, minHeight: 14 }}>{kicker}</div>
+      <h1 style={{ margin: "8px 0 0", ...DISPLAY, fontSize: 26, lineHeight: 1.1 }}>{title}</h1>
+    </div>
+  );
+}
+
+/** Titre de groupe : barre de couleur, nom en capitales larges, compte. */
+export function GroupHead({ color, label, count }: { color: string; label: string; count: number }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, height: 18 }}>
+      <span aria-hidden style={{ width: 3, height: 14, borderRadius: 2, background: color }} />
+      <span style={{ ...DISPLAY, fontSize: 14, fontWeight: 500 }}>{label}</span>
+      <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{count}</span>
+    </div>
+  );
+}

@@ -1,6 +1,4 @@
 import type { ReactNode } from "react";
-import { C } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { RETOUR_REACTIONS, reactionEmoji, type RetourReaction, type WeeklyRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 
 function weekLabel(weekStart: string): string {
@@ -29,33 +27,25 @@ export function CoachRetourCard({ retour, coachName, onReact, children }: CoachR
   const unread = !!retour && !retour.athlete_reaction;
 
   return (
-    <div
-      style={{
-        position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", gap: 10,
-        border: "1px solid rgba(231,211,168,0.18)", borderRadius: 14, background: C.s1, padding: "12px 14px 12px 17px",
-      }}
-    >
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
+    <div className="relative flex flex-col gap-2.5 overflow-hidden rounded-[14px] border border-agon-brd-l bg-agon-s1 py-3 pl-[17px] pr-3.5">
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-agon-accent" />
       {retour && (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, color: C.tx, fontWeight: 500 }}>{coachName || "Ton coach"}</span>
-            <span style={{ flex: 1 }} />
-            <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx3 }}>{weekLabel(retour.week_start)}</span>
-            {seen && <span style={{ fontSize: 13 }} title={"Ta réaction : " + seen.label}>{reactionEmoji(seen.key)}</span>}
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-medium text-agon-tx">{coachName || "Ton coach"}</span>
+            <span className="flex-1" />
+            <span className="agon-mono text-[11px] uppercase tracking-[0.08em] text-agon-tx3">{weekLabel(retour.week_start)}</span>
+            {seen && <span className="text-[13px]" title={"Ta réaction : " + seen.label}>{reactionEmoji(seen.key)}</span>}
           </div>
-          <p style={{ margin: 0, fontSize: 13, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{retour.comment}</p>
+          <p className="m-0 whitespace-pre-wrap text-[13px] leading-normal text-agon-tx2">{retour.comment}</p>
           {onReact && unread && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+            <div className="grid grid-cols-4 gap-1.5">
               {RETOUR_REACTIONS.map((r) => (
                 <button
                   key={r.key}
                   type="button"
                   onClick={() => onReact(r.key)}
-                  style={{
-                    height: 32, background: "none", border: "1px solid rgba(231,211,168,0.18)", borderRadius: 8, padding: 0,
-                    color: C.tx, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                  }}
+                  className="h-8 cursor-pointer whitespace-nowrap rounded-[8px] border border-agon-brd-l bg-transparent p-0 font-[inherit] text-[12px] text-agon-tx"
                 >
                   {r.label}
                 </button>
@@ -64,7 +54,7 @@ export function CoachRetourCard({ retour, coachName, onReact, children }: CoachR
           )}
         </>
       )}
-      {retour && children && <div style={{ height: 1, background: "rgba(231,211,168,0.10)" }} />}
+      {retour && children && <div className="h-px bg-agon-brd" />}
       {children}
     </div>
   );

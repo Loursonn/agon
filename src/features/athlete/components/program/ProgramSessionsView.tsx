@@ -177,8 +177,8 @@ export function ProgramSessionsView() {
         <ProgramSkeleton />
       ) : (
         // Téléphone : une colonne. PC : rail du plan à gauche, semaine à droite.
-        <div className="grid grid-cols-1 gap-agon-xl px-agon-lg pb-8 pt-agon-lg lg:px-0">
-          <div className="flex flex-col gap-agon-xl lg:max-w-[420px]">
+        <div className="grid grid-cols-1 gap-agon-xl px-agon-lg pb-8 pt-agon-lg lg:grid-cols-[360px_minmax(0,1fr)] lg:items-center lg:px-0">
+          <div className="flex flex-col gap-agon-xl">
             {data?.cycle ? (
               <ActivePlanCard meso={data.cycle} />
             ) : (
@@ -190,8 +190,9 @@ export function ProgramSessionsView() {
             )}
           </div>
 
-          <section className="flex flex-col gap-[18px]">
-            <div className="flex items-center gap-agon-md">
+          {/* PC (planche AthOrdiAProgramme) : plan et navigation de semaine sur une rangée, jours en dessous. */}
+          <section className="flex flex-col gap-[18px] lg:contents">
+            <div className="flex items-center gap-agon-md lg:mx-auto lg:w-full lg:max-w-[440px]">
               <button
                 type="button"
                 aria-label="Semaine précédente"
@@ -206,7 +207,7 @@ export function ProgramSessionsView() {
                 disabled={weekOffset === 0}
                 className={cn("min-w-0 flex-1 bg-transparent p-0 text-center", weekOffset === 0 ? "cursor-default" : "cursor-pointer")}
               >
-                <div style={{ ...DISPLAY, fontSize: 15, color: C.tx }}>{weekLabel(weekOffset)}</div>
+                <div style={{ ...DISPLAY, fontSize: 15, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{weekLabel(weekOffset)}</div>
                 <div style={{ ...MONO, fontSize: 11, color: C.tx3, marginTop: 2 }}>
                   {weekRangeLabel(data?.weekDays ?? [])}
                   {weekDone.planned > 0 && (
@@ -224,6 +225,7 @@ export function ProgramSessionsView() {
                 <ChevronRight size={18} />
               </button>
             </div>
+            <div className="flex flex-col gap-[18px] lg:col-span-2">
             {!data?.weekDays.length ? (
               <div className="rounded-lg border border-agon-brd bg-agon-s1 px-agon-lg py-agon-xl text-center text-agon-sm text-agon-tx3">
                 Aucune séance cette semaine
@@ -276,6 +278,7 @@ export function ProgramSessionsView() {
                 )}
               </div>
             )}
+            </div>
           </section>
         </div>
       )}

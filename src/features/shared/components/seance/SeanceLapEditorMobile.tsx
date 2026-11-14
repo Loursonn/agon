@@ -40,9 +40,15 @@ export function SeanceLapEditorMobile(p: Props) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, background: C.bg, display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 52, padding: "0 12px", borderBottom: `1px solid ${C.brd}`, paddingTop: "env(safe-area-inset-top)" }}>
-        <button type="button" onClick={p.onCancel} style={{ ...buttonStyle(), border: "none" }}>Annuler</button>
-        <span style={{ fontSize: 14, fontWeight: 500 }}>{p.hyrox ? "Ajuster les tours" : "Modifier les tours"}</span>
-        <button type="button" onClick={p.onSave} disabled={p.saving || !p.dirty} style={{ ...buttonStyle("primary"), height: 34, opacity: p.dirty ? 1 : 0.5 }}>
+        <button type="button" onClick={p.onCancel} style={{ ...buttonStyle(), border: "none", color: C.tx2 }}>Annuler</button>
+        {/* Planches HyroxAjusterTel / SeanceModifierToursTel : titre large, « OK » en texte or. */}
+        <span style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", fontWeight: 400, fontSize: 15, letterSpacing: "0.06em" }}>
+          {p.hyrox ? "Ajuster les tours" : "Modifier les tours"}
+        </span>
+        <button type="button" onClick={p.onSave} disabled={p.saving || !p.dirty} style={{
+          ...buttonStyle(), border: "none", height: 34, padding: "0 4px", fontSize: 15, fontWeight: 600,
+          color: p.dirty ? C.ac : C.tx3, cursor: p.dirty ? "pointer" : "default",
+        }}>
           {p.saving ? "…" : "OK"}
         </button>
       </div>

@@ -1,10 +1,11 @@
 import { Watch } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { athleteMoveTitle } from "@/lib/athleteChoices";
 import type { PlanningCardState } from "@/lib/planningCard";
-import { BIO_COLOR, TYPE_COLOR, TYPE_BG, WATCH_MARK } from "./calendarConstants";
-import { isBiometric, energyChipColor } from "./calendarUtils";
+import { WATCH_MARK } from "./calendarConstants";
+import { isBiometric } from "./calendarUtils";
+import { CHIP_TONE, TYPE_TONE, WATCH_TONE, type CardTone } from "./cardTone";
 
 export function EventChip({
   event,
@@ -20,19 +21,18 @@ export function EventChip({
 
   // Energy events use session_kind color; biometric tests get their own color
   const bio = isBiometric(event);
-  const baseColor = event.type === "energy" ? energyChipColor(event) : bio ? BIO_COLOR : TYPE_COLOR[event.type];
-  const baseBg    = event.type === "energy" ? energyChipColor(event) + "20" : bio ? BIO_COLOR + "20" : TYPE_BG[event.type];
+  const baseTone: CardTone = event.type === "energy"
+    ? (event.sessionKind === "specifique" ? "hyrox" : "energie")
+    : bio ? "succes" : TYPE_TONE[event.type];
 
   // Status overrides base type color — partial takes priority over completed
   const isPartialEnergy = event.type === "energy" && event.partial;
-  const color = isPartialEnergy     ? C.b
-              : st === "completed"  ? C.g
-              : st === "missed"     ? C.r
-              : baseColor;
-  const bg    = isPartialEnergy     ? `${C.b}20`
-              : st === "completed"  ? C.gS
-              : st === "missed"     ? C.rS
-              : baseBg;
+  const tone: CardTone = isPartialEnergy ? "info" : st === "completed" ? "succes" : st === "missed" ? "erreur" : baseTone;
+  const bg = isPartialEnergy     ? "bg-agon-info/[0.125]"
+           : st === "completed"  ? "bg-agon-succes-doux"
+           : st === "missed"     ? "bg-agon-erreur-doux"
+           : CHIP_TONE[baseTone].tint;
+  const planned = isProjected && st !== "completed" && st !== "missed";
 
   const blockLogs = isPartialEnergy
     ? (event.raw?.block_logs as Record<string, { done: boolean }> | null | undefined)
@@ -43,49 +43,36 @@ export function EventChip({
 
   return (
     <div
-      style={{
-        background: isProjected ? (st === "completed" ? C.gS : st === "missed" ? C.rS : "transparent") : bg,
-        borderLeft: `2px ${isProjected && st !== "completed" && st !== "missed" ? "dashed" : "solid"} ${color}`,
-        borderRadius: "0 4px 4px 0",
-        padding: compact ? "1px 5px" : "2px 6px",
-        fontSize: compact ? 9 : 10,
-        fontWeight: isProjected ? 400 : 600,
-        color: color,
-        cursor: "pointer",
-        maxWidth: "100%",
-        fontStyle: isProjected && st !== "completed" && st !== "missed" ? "italic" : "normal",
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-        minWidth: 0,
-      }}
+      className={cn(
+        "flex min-w-0 max-w-full cursor-pointer items-center gap-0.5 rounded-r-[4px] border-l-2",
+        CHIP_TONE[tone].fg,
+        isProjected ? (st === "completed" ? "bg-agon-succes-doux" : st === "missed" ? "bg-agon-erreur-doux" : "bg-transparent") : bg,
+        planned ? "border-dashed italic" : "border-solid",
+        isProjected ? "font-normal" : "font-semibold",
+        compact ? "px-[5px] py-px text-[9px]" : "px-1.5 py-0.5 text-[10px]",
+      )}
     >
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
-        {event.type === "workout" ? "" : event.type === "competition" ? "" : event.type === "test" ? (bio ? "" : "") : event.type === "energy" ? "" : event.type === "free_activity" ? (event.sportEmoji ? event.sportEmoji + " " : "") : ""}
+      <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+        {event.type === "free_activity" && event.sportEmoji ? event.sportEmoji + " " : ""}
         {event.title}
         {isPartialEnergy && totalCount > 0 && (
-          <span style={{ opacity: 0.45, fontWeight: 500, marginLeft: 3 }}>{doneCount}/{totalCount}</span>
+          <span className="ml-[3px] font-medium opacity-45">{doneCount}/{totalCount}</span>
         )}
-        {isProjected && st !== "completed" && st !== "missed" && (
-          <span style={{ opacity: 0.5, marginLeft: 3, fontSize: 8 }}>prévu</span>
-        )}
+        {planned && <span className="ml-[3px] text-[8px] opacity-50">prévu</span>}
       </span>
       {event.type === "workout" && event.rescheduledByAthlete && (
-        <span
-          title={athleteMoveTitle(event.date, event.originalScheduledDate)}
-          style={{ flexShrink: 0, marginLeft: 2, fontSize: 8, fontWeight: 800, color: H.ambre }}
-        >
+        <span title={athleteMoveTitle(event.date, event.originalScheduledDate)} className="ml-0.5 flex-shrink-0 text-[8px] font-extrabold text-agon-alerte">
           ↷
         </span>
       )}
       {event.type === "workout" && !!(event.raw?.athlete_modifications as { coachOverride?: unknown } | null)?.coachOverride && (
-        <span title="Séance adaptée pour ce jour" style={{ flexShrink: 0, marginLeft: 2, color: H.ambre }}></span>
+        <span title="Séance adaptée pour ce jour" className="ml-0.5 flex-shrink-0 text-agon-alerte"></span>
       )}
       {event.rpe != null && (
-        <span style={{ flexShrink: 0, opacity: 0.85, fontWeight: 700, marginLeft: 2 }}>RPE {event.rpe}</span>
+        <span className="ml-0.5 flex-shrink-0 font-bold opacity-85">RPE {event.rpe}</span>
       )}
       {watch && WATCH_MARK[watch] && (
-        <span title={WATCH_MARK[watch]!.title} aria-label={WATCH_MARK[watch]!.title} style={{ flexShrink: 0, display: "inline-flex", marginLeft: 2, color: WATCH_MARK[watch]!.color }}>
+        <span title={WATCH_MARK[watch]!.title} aria-label={WATCH_MARK[watch]!.title} className={cn("ml-0.5 inline-flex flex-shrink-0", WATCH_TONE[watch])}>
           <Watch size={compact ? 9 : 10} strokeWidth={2} />
         </span>
       )}

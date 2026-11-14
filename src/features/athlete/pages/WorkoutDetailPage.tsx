@@ -352,6 +352,12 @@ export default function WorkoutDetailPage() {
     setRestActiveKey(null);
   }, []);
 
+  /** −15 s / +15 s (planche SeanceEnCours) : jamais sous 1 s, la durée totale suit. */
+  const adjustRest = useCallback((delta: number) => {
+    setRestLeft((prev) => (prev === null ? null : Math.max(1, prev + delta)));
+    setRestTotal((t) => Math.max(1, t + delta));
+  }, []);
+
   const startRest = useCallback((seconds: number, nextInfo: string | null, activeKey?: string, loop = false) => {
     clearInterval(restRef.current);
     loopRef.current = loop;
@@ -503,6 +509,12 @@ export default function WorkoutDetailPage() {
       const { exId, setIdx, field } = padTarget;
       if (padTarget.noAuto) {
         setSetField(exId, setIdx, field, value);
+        // Planche SeanceEnCours : « OK · reps » passe de la charge aux reps
+        if (field === "kg" && padTarget.thenReps !== undefined) {
+          setPadTarget({ ...padTarget, field: "reps", thenReps: undefined });
+          setPadVal(padTarget.thenReps);
+          return;
+        }
         setPadTarget(null);
         setPadVal("");
         return;
@@ -839,6 +851,22 @@ export default function WorkoutDetailPage() {
       },
     };
   })();
+  // Pavé de la charge ouvert depuis la zone du bas : Prescrit, Préc., +2,5, +5 (planche SeanceEnCours, écran 02).
+  const kgPresets = (t: PadTarget) => {
+    const ex = workout.blocs.flatMap((b) => b.exercices).find((e) => e.id === t.exId);
+    if (!ex || ex.params.charge_unit !== "kg") return undefined;
+    const num = (v: string | number | null | undefined) => (v == null || v === "" ? null : parseFloat(String(v).replace(",", ".")));
+    const presc = num(getSetTarget(ex.params, t.setIdx, oneRmByEx[ex.id]).kg);
+    const prev = num(parsePrevVal(prevSets[ex.id]?.[t.setIdx] ?? "", "kg"));
+    const base = presc ?? prev;
+    if (base == null || Number.isNaN(base)) return undefined;
+    const fr = (n: number) => String(Math.round(n * 4) / 4).replace(".", ",");
+    const out: { label: string; value: string; tone: "ac" | "neutral" | "green" }[] = [];
+    if (presc != null) out.push({ label: "Prescrit", value: fr(presc), tone: "ac" });
+    if (prev != null && !Number.isNaN(prev)) out.push({ label: "Préc.", value: fr(prev), tone: "neutral" });
+    out.push({ label: "+2,5", value: fr(base + 2.5), tone: "green" }, { label: "+5", value: fr(base + 5), tone: "green" });
+    return out;
+  };
   // « 115×3 » (stockage) → « 115 × 3 ».
   const fmtPrev = (v: string) => (v && v !== "—" ? v.replace(/\s*×\s*/, " × ") : undefined);
   const fmtRest = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}` : `${sec} s`);
@@ -1201,6 +1229,7 @@ export default function WorkoutDetailPage() {
                             canEdit={canEdit}
                             onStartRest={(key, sec) => startRest(sec, null, key)}
                             onStopRest={stopRest}
+                        onAdjustRest={adjustRest}
                           />
                         );
                         const videoRows = ch.map((j) => renderVideoRequest(bloc.exercices[j], true)).filter(Boolean);
@@ -1312,6 +1341,7 @@ export default function WorkoutDetailPage() {
                         onCommentChange={(c) => updateExComment(ex.id, c)}
                         onStartRest={(key, sec) => startRest(sec, null, key)}
                         onStopRest={stopRest}
+                        onAdjustRest={adjustRest}
                       />
                       {renderVideoRequest(ex)}
                       {/* Superset connector — no rest between linked exercises */}
@@ -1462,7 +1492,7 @@ export default function WorkoutDetailPage() {
           kgStep={2.5}
           onKgStep={(d) => { const p = focus.pending; if (p) { haptic(); setSetField(p.ex.id, p.setIdx, "kg", stepValue(p.kg, d)); } }}
           onRepsStep={(d) => { const p = focus.pending; if (p) { haptic(); setSetField(p.ex.id, p.setIdx, "reps", stepValue(p.reps, d)); } }}
-          onKgTap={() => { const p = focus.pending; if (p) { setPadTarget({ exId: p.ex.id, setIdx: p.setIdx, field: "kg", chargeUnit: p.ex.params.charge_unit, isIso: p.iso, noAuto: true }); setPadVal(p.kg); } }}
+          onKgTap={() => { const p = focus.pending; if (p) { setPadTarget({ exId: p.ex.id, setIdx: p.setIdx, field: "kg", chargeUnit: p.ex.params.charge_unit, isIso: p.iso, noAuto: true, thenReps: p.reps }); setPadVal(p.kg); } }}
           onRepsTap={() => { const p = focus.pending; if (p) { setPadTarget({ exId: p.ex.id, setIdx: p.setIdx, field: "reps", chargeUnit: p.ex.params.charge_unit, isIso: p.iso, noAuto: true }); setPadVal(p.reps); } }}
           onValidate={() => {
             const p = focus.pending;
@@ -1486,10 +1516,14 @@ export default function WorkoutDetailPage() {
       {/* ── RIR après « Valider série » ── */}
       {rirAsk && (
         <RirAfterSetSheet
-          exName={rirAsk.exName}
           setNumber={rirAsk.setIdx + 1}
           target={rirAsk.target}
-          value={normalizeSet((sets[rirAsk.exId] ?? [])[rirAsk.setIdx]).rir}
+          summary={(() => {
+            const st = normalizeSet((sets[rirAsk.exId] ?? [])[rirAsk.setIdx]);
+            const kg = st.kg ? `${st.kg.replace(".", ",")} kg` : "";
+            return st.reps ? (kg ? `${kg} × ${st.reps}` : `${st.reps} reps`) : kg || null;
+          })()}
+          restLeft={restLeft}
           onPick={(v) => { setSetField(rirAsk.exId, rirAsk.setIdx, "rir", v); setRirAsk(null); }}
           onSkip={() => setRirAsk(null)}
         />
@@ -1560,6 +1594,8 @@ export default function WorkoutDetailPage() {
           onChange={setPadVal}
           onConfirm={() => confirmPad(padVal)}
           onClose={() => { setPadTarget(null); setPadVal(""); }}
+          presets={padTarget.field === "kg" && padTarget.noAuto ? kgPresets(padTarget) : undefined}
+          confirmLabel={padTarget.thenReps !== undefined ? "OK · reps" : undefined}
         />
       ) : null}
 
