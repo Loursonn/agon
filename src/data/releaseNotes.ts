@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-invitation-staff-finitions",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Page d'invitation du staff plus nette",
+    summary: "La page qu'ouvre un kiné, un ostéo ou un nutritionniste quand tu l'invites dans le staff d'un athlète a été relue écran par écran.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les champs mot de passe et métier ont enfin le même aspect que les autres champs du formulaire.",
+          "Sur téléphone, la page respire : la carte prend toute la largeur et les deux onglets tiennent sur une ligne.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-vue-athlete-ordinateur",
     date: "2026-11-14",
     kind: "fix",
