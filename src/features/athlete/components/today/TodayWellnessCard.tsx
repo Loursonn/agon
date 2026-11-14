@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { C, H } from "@/lib/theme";
-import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
+import { C, token } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { ReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import type { WellnessData } from "@/features/shared/types/athlete";
 import { DOMS_LEVEL_COLOR, levelsList } from "@/lib/bodyZones";
@@ -17,21 +17,21 @@ const ITEMS: Array<{ key: string; label: string }> = [
   { key: "doms", label: "Muscles" },
 ];
 
-/** Échelle 1 → 5 du formulaire wellness : rouge → vert. */
-const SCALE5 = [C.rouge, C.blocCore, C.o, H.vertLime, C.g];
+/** Échelle 1 → 5 du formulaire wellness : rouge → vert (4 = vert-jaune de la charte, distinct du vert du 5). */
+const SCALE5 = [C.rouge, C.blocCore, C.o, token("--agon-zone5-2"), C.g];
 const itemColor = (v: number): string => SCALE5[Math.min(5, Math.max(1, Math.round(v))) - 1];
 
 function Ring({ score, color }: { score: number; color: string }) {
   const r = 26;
   const circ = 2 * Math.PI * r;
   return (
-    <svg width={64} height={64} viewBox="0 0 64 64" aria-hidden style={{ flex: "none" }}>
+    <svg width={64} height={64} viewBox="0 0 64 64" aria-hidden className="flex-none">
       <circle cx={32} cy={32} r={r} fill="none" stroke="rgba(231,211,168,0.12)" strokeWidth={6} />
       <circle
         cx={32} cy={32} r={r} fill="none" stroke={color} strokeWidth={6} strokeLinecap="round"
         strokeDasharray={`${(circ * score) / 100} ${circ}`} transform="rotate(-90 32 32)"
       />
-      <text x={32} y={37.5} textAnchor="middle" fill={C.tx} style={{ ...MONO, fontSize: 16 }}>{score}</text>
+      <text x={32} y={37.5} textAnchor="middle" fill={C.tx} className="agon-mono text-[16px]">{score}</text>
     </svg>
   );
 }
@@ -64,11 +64,10 @@ export function TodayWellnessCard({
         type="button"
         onClick={onLog}
         disabled={!onLog}
-        style={{
-          width: "100%", minHeight: 52, borderRadius: 12, border: "none", background: C.ac, color: C.bg,
-          fontFamily: "inherit", fontWeight: 600, fontSize: 15, cursor: onLog ? "pointer" : "default",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        }}
+        className={cn(
+          "flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border-none bg-agon-accent font-[inherit] text-[15px] font-semibold text-agon-ink",
+          onLog ? "cursor-pointer" : "cursor-default",
+        )}
       >
         {answered > 0 ? `Compléter mon wellness (${answered} / ${ITEMS.length})` : "Remplir mon wellness du matin"}
       </button>
@@ -87,24 +86,24 @@ export function TodayWellnessCard({
   const pain = typeof wellness?.pain === "number" && wellness.pain > 0 ? wellness.pain : null;
   const sick = wellness?.sick === true;
   const chip = (key: string, text: string, col: string) => (
-    <span key={key} style={{ ...MONO, fontSize: 11, color: col, border: `1px solid ${col}66`, background: `${col}1A`, borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>{text}</span>
+    <span key={key} className="agon-mono whitespace-nowrap rounded-full border px-[9px] py-[3px] text-[11px]" style={{ color: col, borderColor: `${col}66`, background: `${col}1A` }}>{text}</span>
   );
 
   return (
-    <div style={{ borderRadius: 14, border: `1px solid ${color}66`, background: `${color}1A`, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px" }}>
+    <div className="overflow-hidden rounded-[14px] border" style={{ borderColor: `${color}66`, background: `${color}1A` }}>
+      <div className="flex items-center gap-3.5 px-3.5 py-3">
         <Ring score={score} color={color} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span aria-hidden style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
-            <span style={{ ...DISPLAY, fontWeight: 500, fontSize: 14, color }}>{label}</span>
-            <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{score} / 100</span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="size-2 rounded-full" style={{ background: color }} />
+            <span className="agon-display text-[14px] font-medium" style={{ color }}>{label}</span>
+            <span className="agon-mono text-[11px] text-agon-tx3">{score} / 100</span>
           </div>
-          {advice && <div style={{ fontSize: 13, color: C.tx2 }}>{advice}</div>}
+          {advice && <div className="text-[13px] text-agon-tx2">{advice}</div>}
         </div>
       </div>
       {light !== undefined && (
-        <div style={{ padding: "0 14px 12px" }}>
+        <div className="px-3.5 pb-3">
           <WellnessLightBadge result={light} />
         </div>
       )}
@@ -112,35 +111,33 @@ export function TodayWellnessCard({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        style={{
-          width: "100%", display: "flex", alignItems: "center", gap: 8, background: "none", border: "none",
-          borderTop: `1px solid ${color}33`, padding: "10px 14px", color: C.ac, fontSize: 13, fontFamily: "inherit", cursor: "pointer",
-        }}
+        className="flex w-full cursor-pointer items-center gap-2 border-t bg-transparent px-3.5 py-2.5 font-[inherit] text-[13px] text-agon-accent"
+        style={{ borderTopColor: `${color}33` }}
       >
         {open ? "Masquer le détail" : "Voir le détail"}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" aria-hidden>
           <path d={open ? "M6 15L12 9L18 15" : "M6 9L12 15L18 9"} />
         </svg>
-        <span style={{ flex: 1 }} />
-        <span style={{ display: "flex", gap: 4 }} aria-hidden>
+        <span className="flex-1" />
+        <span className="flex gap-1" aria-hidden>
           {values.map((x) => (
-            <span key={x.key} style={{ width: 6, height: 6, borderRadius: "50%", background: x.v == null ? C.brdL : itemColor(x.v) }} />
+            <span key={x.key} className={cn("size-1.5 rounded-full", x.v == null && "bg-agon-brd-l")} style={x.v == null ? undefined : { background: itemColor(x.v) }} />
           ))}
         </span>
-        <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>Muscles {fraicheur ?? "—"}/5</span>
+        <span className="agon-mono text-[11px] text-agon-tx3">Muscles {fraicheur ?? "—"}/5</span>
       </button>
       {open && (
-        <div style={{ padding: "4px 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+        <div className="flex flex-col gap-2.5 px-3.5 pb-3.5 pt-1">
+        <div className="grid grid-cols-[repeat(5,1fr)] gap-1.5">
           {values.map((x) => (
-            <div key={x.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 2px", borderRadius: 10, background: C.s1, border: `1px solid ${C.brd}` }}>
-              <span style={{ ...MONO, fontSize: 16, color: x.v == null ? C.tx3 : itemColor(x.v) }}>{x.v ?? "—"}</span>
-              <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx3 }}>{x.label}</span>
+            <div key={x.key} className="flex flex-col items-center gap-1 rounded-[10px] border border-agon-brd bg-agon-s1 px-0.5 py-2">
+              <span className={cn("agon-mono text-[16px]", x.v == null && "text-agon-tx3")} style={x.v == null ? undefined : { color: itemColor(x.v) }}>{x.v ?? "—"}</span>
+              <span className="agon-mono text-[10px] uppercase tracking-[0.06em] text-agon-tx3">{x.label}</span>
             </div>
           ))}
         </div>
         {(envie != null || pain != null || sick || zones.length > 0) && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div className="flex flex-wrap gap-1.5">
             {envie != null && chip("envie", `Envie ${envie}/5`, itemColor(envie))}
             {pain != null && chip("pain", `Douleur ${pain}/10`, pain >= 6 ? C.rouge : pain >= 3 ? C.o : C.ac)}
             {sick && chip("sick", "Malade", C.rouge)}
@@ -148,7 +145,7 @@ export function TodayWellnessCard({
           </div>
         )}
         {/* Planche Ath2Sante : la page Santé s'ouvre depuis le wellness. */}
-        <Link to="/athlete/sante" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, color: C.ac, textDecoration: "none" }}>
+        <Link to="/athlete/sante" className="flex items-center justify-between text-[12.5px] text-agon-accent no-underline">
           Santé de la nuit (montre)<span aria-hidden>›</span>
         </Link>
         </div>
