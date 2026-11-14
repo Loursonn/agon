@@ -9,9 +9,7 @@ import { formatTarget } from "@/lib/energy/formatTarget";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
 import { StationIcon } from "@/features/shared/components/seance/StationIcon";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
-import { C, alpha } from "@/lib/theme";
-import { TYPE_COLOR } from "@/lib/peps";
+import { cn } from "@/lib/utils";
 import {
   PHASE_LABEL, fmtClock, fmtShort, isRestStep, nextWork, roundOf, roundView, stepDetail, stepSeconds, stepTitle, wodSummary,
 } from "@/lib/specificTimer";
@@ -30,7 +28,23 @@ interface Props {
   vma?: number | null;
 }
 
-const LABEL = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: C.tx3 };
+const LABEL = "agon-mono text-[11px] uppercase tracking-[0.14em] text-agon-tx3";
+
+/** Effort en orange (HYROX), récup en bleu (énergie). */
+const TONE = {
+  effort: {
+    text: "text-agon-type-hyrox",
+    fill: "bg-agon-type-hyrox",
+    card: "border-agon-type-hyrox/[0.35] bg-agon-type-hyrox/[0.08]",
+    chip: "border-agon-type-hyrox bg-agon-type-hyrox/[0.16]",
+  },
+  recup: {
+    text: "text-agon-type-energie",
+    fill: "bg-agon-type-energie",
+    card: "border-agon-type-energie/[0.35] bg-agon-type-energie/[0.08]",
+    chip: "border-agon-type-energie bg-agon-type-energie/[0.16]",
+  },
+};
 
 export default function ExecutionCard({ flat, index, secondsLeft, minuteLeft = null, elapsed, onSkip, onFinish, vma }: Props) {
   const current = flat[index];
@@ -43,7 +57,7 @@ export default function ExecutionCard({ flat, index, secondsLeft, minuteLeft = n
 
   const { step } = current;
   const rest = isRestStep(step);
-  const color = rest ? TYPE_COLOR.energie : TYPE_COLOR.hyrox;
+  const tone = rest ? TONE.recup : TONE.effort;
   const emom = current.emom ?? null;
   // EMOM : le gros chrono suit la minute, sauf pendant un effort chronométré.
   const minuteClock = !!emom && (emom.gap || stepSeconds(step) === 0);
@@ -76,86 +90,86 @@ export default function ExecutionCard({ flat, index, secondsLeft, minuteLeft = n
     : null;
 
   const btn = (label: string, onClick: () => void, primary: boolean) => (
-    <button type="button" onClick={onClick} style={{
-      flex: 1, height: 52, borderRadius: 12, fontSize: 15, fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
-      background: primary ? color : "transparent", color: primary ? C.bg : C.tx, border: primary ? "none" : `1px solid ${alpha(C.tx, 0.18)}`,
-    }}>{label}</button>
+    <button type="button" onClick={onClick} className={cn(
+      "h-[52px] flex-1 cursor-pointer rounded-xl font-[inherit] text-[15px] font-semibold",
+      primary ? cn("border-none text-agon-ink", tone.fill) : "border border-agon-tx/[0.18] bg-transparent text-agon-tx",
+    )}>{label}</button>
   );
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Minuteur" style={{ position: "fixed", inset: 0, zIndex: 200, background: C.bg, color: C.tx, display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, overflowY: "auto", padding: "calc(env(safe-area-inset-top, 0px) + 16px) 20px 20px", display: "flex", flexDirection: "column", gap: 18, maxWidth: 480, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ ...LABEL, color: TYPE_COLOR.hyrox }}>{wodSummary(flat)}</span>
-          <span style={{ ...MONO, fontSize: 13, color: C.tx2 }}>{fmtClock(elapsed)}</span>
+    <div role="dialog" aria-modal="true" aria-label="Minuteur" className="fixed inset-0 z-[200] flex flex-col bg-agon-bg text-agon-tx">
+      <div className="mx-auto box-border flex w-full max-w-[480px] flex-1 flex-col gap-[18px] overflow-y-auto px-5 pb-5 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
+        <div className="flex items-center justify-between">
+          <span className={cn(LABEL, "text-agon-type-hyrox")}>{wodSummary(flat)}</span>
+          <span className="agon-mono text-[13px] text-agon-tx2">{fmtClock(elapsed)}</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <div className="flex items-baseline gap-2">
           {round && emom ? (
-            <span style={{ ...DISPLAY, fontSize: 22, fontWeight: 300 }}>{emom.every === 60 ? "Minute" : "Départ"} <span style={{ ...MONO, fontSize: 26 }}>{round.round}</span> <span style={{ color: C.tx3 }}>/ {round.rounds}</span></span>
+            <span className="agon-display text-[22px]">{emom.every === 60 ? "Minute" : "Départ"} <span className="agon-mono text-[26px]">{round.round}</span> <span className="text-agon-tx3">/ {round.rounds}</span></span>
           ) : round ? (
-            <span style={{ ...DISPLAY, fontSize: 22, fontWeight: 300 }}>Tour <span style={{ ...MONO, fontSize: 26 }}>{round.round}</span> <span style={{ color: C.tx3 }}>/ {round.rounds}</span></span>
+            <span className="agon-display text-[22px]">Tour <span className="agon-mono text-[26px]">{round.round}</span> <span className="text-agon-tx3">/ {round.rounds}</span></span>
           ) : current.roundLabel ? (
-            <span style={{ ...DISPLAY, fontSize: 20, fontWeight: 300 }}>{current.roundLabel}</span>
+            <span className="agon-display text-[20px]">{current.roundLabel}</span>
           ) : (
-            <span style={{ ...DISPLAY, fontSize: 20, fontWeight: 300 }}>Étape {index + 1} / {flat.length}</span>
+            <span className="agon-display text-[20px]">Étape {index + 1} / {flat.length}</span>
           )}
           {view.names.length > 0 && view.current >= 0 && (
-            <span style={{ fontSize: 12.5, color: C.tx2 }}>{rest ? "ensuite " : ""}exercice {view.current + 1} / {view.names.length}</span>
+            <span className="text-[12.5px] text-agon-tx2">{rest ? "ensuite " : ""}exercice {view.current + 1} / {view.names.length}</span>
           )}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "18px 0 6px" }}>
-          <span style={{ ...LABEL, color }}>{rest ? (PHASE_LABEL[step.role] ?? "Récup") : step.type === "exercise" ? "Effort" : (PHASE_LABEL[step.role] ?? step.role)}</span>
-          <span style={{ ...MONO, fontSize: 84, lineHeight: 1, color, fontVariantNumeric: "tabular-nums" }}>{total > 0 ? fmtClock(clock) : "—"}</span>
-          {total > 0 && <span style={{ ...MONO, fontSize: 13, color: C.tx3 }}>{minuteClock ? (emom?.every === 60 ? "reste dans la minute" : "avant le départ suivant") : `sur ${fmtClock(total)}`}</span>}
+        <div className="flex flex-col items-center gap-1.5 pb-1.5 pt-[18px]">
+          <span className={cn(LABEL, tone.text)}>{rest ? (PHASE_LABEL[step.role] ?? "Récup") : step.type === "exercise" ? "Effort" : (PHASE_LABEL[step.role] ?? step.role)}</span>
+          <span className={cn("agon-mono text-[84px] leading-none", tone.text)}>{total > 0 ? fmtClock(clock) : "—"}</span>
+          {total > 0 && <span className="agon-mono text-[13px] text-agon-tx3">{minuteClock ? (emom?.every === 60 ? "reste dans la minute" : "avant le départ suivant") : `sur ${fmtClock(total)}`}</span>}
           {emom && !minuteClock && minuteLeft != null && (
-            <span style={{ ...MONO, fontSize: 13, color: C.tx2 }}>{fmtClock(minuteLeft)} {emom.every === 60 ? "dans la minute" : "avant le départ suivant"}</span>
+            <span className="agon-mono text-[13px] text-agon-tx2">{fmtClock(minuteLeft)} {emom.every === 60 ? "dans la minute" : "avant le départ suivant"}</span>
           )}
           {total > 0 && (
-            <div aria-hidden style={{ width: "100%", height: 4, borderRadius: 2, background: alpha(C.tx, 0.1), marginTop: 10, overflow: "hidden" }}>
-              <div style={{ width: `${progress * 100}%`, height: "100%", background: color, transition: "width 1s linear" }} />
+            <div aria-hidden className="mt-2.5 h-1 w-full overflow-hidden rounded-[2px] bg-agon-tx/[0.1]">
+              <div className={cn("h-full [transition:width_1s_linear]", tone.fill)} style={{ width: `${progress * 100}%` }} />
             </div>
           )}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: 16, borderRadius: 14, background: alpha(color, 0.08), border: `1px solid ${alpha(color, 0.35)}` }}>
-          {rest && upcoming && <span style={LABEL}>Prochain exercice</span>}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className={cn("flex flex-col gap-1.5 rounded-[14px] border p-4", tone.card)}>
+          {rest && upcoming && <span className={LABEL}>Prochain exercice</span>}
+          <div className="flex items-center gap-3">
             {hero.type === "exercise" && <StationIcon name={stepTitle(hero)} size={28} />}
-            <span style={{ fontSize: 22, fontWeight: 500, lineHeight: 1.2 }}>{rest && !upcoming ? stepTitle(step) : stepTitle(hero)}</span>
+            <span className="text-[22px] font-medium leading-[1.2]">{rest && !upcoming ? stepTitle(step) : stepTitle(hero)}</span>
           </div>
-          {heroDetail && <span style={{ fontSize: 13.5, color: C.tx2 }}>{heroDetail}</span>}
-          {target && target !== "Libre" && !rest && <span style={{ ...MONO, fontSize: 13, color }}>{target}</span>}
+          {heroDetail && <span className="text-[13.5px] text-agon-tx2">{heroDetail}</span>}
+          {target && target !== "Libre" && !rest && <span className={cn("agon-mono text-[13px]", tone.text)}>{target}</span>}
           {!rest && step.type !== "exercise" && (
             <PaceEquivalents target={step.target} repDistanceM={stepDistanceM(step.duration)} vma={vma} omitPrimary align="left" />
           )}
         </div>
 
         {ensuite && (
-          <div style={{ fontSize: 13, color: C.tx2 }}>
-            <span style={LABEL}>Ensuite</span> <span style={{ marginLeft: 6 }}>{ensuite}</span>
+          <div className="text-[13px] text-agon-tx2">
+            <span className={LABEL}>Ensuite</span> <span className="ml-1.5">{ensuite}</span>
           </div>
         )}
         {rest && afterUpcoming && (
-          <div style={{ fontSize: 13, color: C.tx2 }}>
-            <span style={LABEL}>Puis</span> <span style={{ marginLeft: 6 }}>{stepTitle(afterUpcoming.step)}</span>
+          <div className="text-[13px] text-agon-tx2">
+            <span className={LABEL}>Puis</span> <span className="ml-1.5">{stepTitle(afterUpcoming.step)}</span>
           </div>
         )}
 
         {view.names.length > 1 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <span style={LABEL}>Ce tour</span>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div className="flex flex-col gap-2">
+            <span className={LABEL}>Ce tour</span>
+            <div className="flex flex-wrap gap-1.5">
               {view.names.map((n, i) => {
                 const on = i === view.current;
                 const done = i < view.current;
                 return (
-                  <span key={`${n}-${i}`} style={{
-                    padding: "6px 12px", borderRadius: 999, fontSize: 12.5,
-                    background: on ? alpha(color, 0.16) : "transparent", border: `1px solid ${on ? color : alpha(C.tx, 0.18)}`,
-                    color: on ? C.tx : done ? C.tx3 : C.tx2, textDecoration: done ? "line-through" : "none",
-                  }}>{n}</span>
+                  <span key={`${n}-${i}`} className={cn(
+                    "rounded-full border px-3 py-1.5 text-[12.5px]",
+                    on ? cn(tone.chip, "text-agon-tx") : cn("border-agon-tx/[0.18] bg-transparent", done ? "text-agon-tx3" : "text-agon-tx2"),
+                    done && "line-through",
+                  )}>{n}</span>
                 );
               })}
             </div>
@@ -163,8 +177,8 @@ export default function ExecutionCard({ flat, index, secondsLeft, minuteLeft = n
         )}
       </div>
 
-      <div style={{ padding: "12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)", borderTop: `1px solid ${C.brd}`, background: C.bg }}>
-        <div style={{ display: "flex", gap: 10, maxWidth: 448, margin: "0 auto" }}>
+      <div className="border-t border-agon-brd bg-agon-bg px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-3">
+        <div className="mx-auto flex max-w-[448px] gap-2.5">
           {btn(total > 0 ? "Passer" : "Fait", onSkip, total === 0)}
           {btn("Terminer", onFinish, total > 0)}
         </div>
