@@ -2583,3 +2583,30 @@ et son README.
   Côté coach : mention discrète sur la fiche athlète (Profil › Identité). Date limite en constante :
   `AI_BIRTH_DATE_DEADLINE` (`src/lib/aiBirthDateNotice.ts`), testée.
 - Le 22/11 : procédure dans `supabase/pending/README.md` (section 20261114120000). Aucune Edge Function à déployer.
+
+## 2026-11-14 — Feu du matin : hypothèses tranchées par Hugo, persistance sur 2-3 jours
+
+- **Mot d'Hugo** : « feux du matin les douleurs, une motivation touchée, sensation de fatigue, et fc repos qui augmente
+  et vfc en déclin ou anormalement au dessus, voir sur une évolution de 2-3j si ca se répète sur 2/3 jours faut
+  s'inquiéter ». Appliqué dans `_shared/domain/wellnessLight.ts` (paramètres `feux-2026-11-14`).
+- **Signaux du matin** (chacun seul = orange) :
+  - douleur ≥ 4/10 : l'échelle de la carte douleur dit 1-3 = gêne, 4 = douleur (même seuil que l'ancien « > 3 ») ;
+  - envie touchée : envie ≤ 2/5, ou z ≤ −1,5 contre les 28 jours d'avant (7 saisies au moins, plancher d'écart-type 0,5) ;
+  - fatigue : item « Récupération » ≤ 2/5, ou z ≤ −1,5 (mêmes règles d'habitude) ;
+  - FC de repos : moyenne 7 j à z > 1 (règle du 07/11, inchangée) ;
+  - VFC en déclin : moyenne 7 j sous la zone (règle du 07/11) ; **anormalement au-dessus** : moyenne 7 j > moyenne + 1
+    écart-type de l'habitude (deux fois la demi-zone : être juste au-dessus de la zone n'est pas anormal). Alerte à J14.
+- **Persistance** : le **même** signal présent 2 jours de suite ou plus (jour de référence compris) = rouge, « depuis N
+  jours ». Deux signaux différents sur deux jours (douleur hier, envie basse aujourd'hui) ne font pas une répétition.
+  Jour de référence des ressentis : la saisie d'aujourd'hui, sinon d'hier. Un jour sans saisie ou une mesure absente
+  coupe la série (une mesure absente ne compte jamais). Montre : la persistance porte sur la moyenne 7 j de chaque jour.
+- **Changement de comportement** : le contre-exemple 1 sans hausse de charge (VFC sous la zone et FC de repos haute
+  3 jours de suite) était orange depuis le 07/11 ; il passe **rouge** (« si ça se répète sur 2/3 jours faut s'inquiéter »).
+  À confirmer par Hugo.
+- **Gardé tel quel (règles du 07/11, non citées le 14/11)** : signaux de charge (prévu + 10 %, km + 7 %, sortie hors
+  plafond, monotonie > 2), 2 ressentis à z < −1,5, rouge « charge en hausse + VFC sous la zone + ≥ 2 signes », et parmi
+  ces signes **sommeil en baisse** (item sommeil ou durée montre). « Séance repère ratée » et « douleur qui modifie la
+  foulée » restent dans le code mais ne sont jamais alimentées (aucune donnée dans Agon). Rien n'a été ajouté pour eux.
+- **Affichage** : la phrase du feu dit pourquoi la couleur (« Douleur 5/10 depuis 2 jours : le signal se répète, à
+  prendre au sérieux », « … : signal isolé, à surveiller (rouge s'il se répète demain) », « Rien à signaler ce matin »).
+  Sans montre, le feu peut passer au rouge par la douleur, l'envie ou la fatigue répétées.

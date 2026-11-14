@@ -38,6 +38,34 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-feu-du-matin-signaux-repetes",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Feu du matin : un signal qui se répète passe au rouge",
+    summary:
+      "Le feu regarde maintenant les 2-3 derniers jours : un signal isolé met le feu à l'orange, le même signal deux jours de suite le passe au rouge. Une phrase dit toujours pourquoi.",
+    sections: [
+      {
+        title: "Les signaux suivis",
+        points: [
+          "Douleur à 4/10 ou plus (de 1 à 3, c'est une gêne : elle ne compte pas).",
+          "Envie de s'entraîner à 2/5 ou moins, ou nettement sous l'habitude de l'athlète.",
+          "Fatigue : récupération à 2/5 ou moins, ou nettement sous l'habitude.",
+          "FC de repos au-dessus de l'habitude, VFC sous sa zone ou anormalement au-dessus (avec une montre reliée).",
+        ],
+      },
+      {
+        title: "Orange, puis rouge",
+        points: [
+          "Un signal un seul jour : feu orange, à surveiller.",
+          "Le même signal deux jours de suite ou plus : feu rouge, avec « depuis 2 jours », « depuis 3 jours ».",
+          "Un jour sans saisie ou sans mesure ne compte pas et coupe la série.",
+          "La phrase sous le feu explique la couleur, sur l'accueil de l'athlète comme dans Retours et le wellness de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-date-naissance-ia",
     date: "2026-11-14",
     kind: "feature",

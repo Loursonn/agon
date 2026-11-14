@@ -135,7 +135,7 @@ export default function CoachPhoneWellness() {
         )}
         {r && (
           <div style={{ fontSize: 12.5, color: C.tx2 }}>
-            {r.brand ? `Mesures ${r.brand === "garmin" ? "Garmin" : r.brand === "coros" ? "COROS" : r.brand}` : "Sans montre : rouge seulement si malade"}
+            {r.brand ? `Mesures ${r.brand === "garmin" ? "Garmin" : r.brand === "coros" ? "COROS" : r.brand}` : "Sans montre : douleur, envie et fatigue seulement"}
             {hrv?.dayIndex != null && hrv.dayIndex < 14 ? ` · alerte VFC active au 14e jour (J${hrv.dayIndex})` : ""}
           </div>
         )}

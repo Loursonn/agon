@@ -11,11 +11,17 @@
  * Une seule marque de montre par athlète : la plus récente. Les nuits d'une
  * autre marque ne sont ni mélangées ni comparées (changement de montre =
  * nouvelle habitude, l'alerte VFC repart de J1).
+ *
+ * Signaux du matin tranchés par Hugo le 2026-11-14 : douleur, envie touchée,
+ * sensation de fatigue, FC de repos qui augmente, VFC en déclin ou
+ * anormalement au-dessus. Un signal seul = orange (vigilance) ; le même
+ * signal plusieurs jours de suite (2 suffisent) = rouge. Un jour sans la
+ * mesure casse la série : une mesure absente ne compte jamais.
  */
 import { addDays, type IsoDay } from "./dates.ts";
 
 export const LIGHT_PARAMS = {
-  version: "feux-2026-11-13",
+  version: "feux-2026-11-14",
   /** Moyenne glissante VFC / FC de repos. */
   windowDays: 7,
   minWindowNights: 5,
@@ -35,9 +41,28 @@ export const LIGHT_PARAMS = {
   loadOverPlanPct: 10,
   kmRisePct: 7,
   monotony: 2,
-  /** Douleur au-delà de la règle des 3 douleurs (≤ 2-3 / 10). */
-  painMax: 3,
-  /** Rouge : envie ≤ 2, score wellness z < −1. */
+  /**
+   * Douleur du matin : échelle 0-10 de la carte douleur (1-3 = gêne, 4 et plus
+   * = douleur). Signal à partir de 4 (Hugo, 14/11).
+   */
+  painMin: 4,
+  /**
+   * Envie touchée (signal du matin) : `envieLow` ou moins, ou nettement sous
+   * l'habitude (z ≤ `morningItemZ`). Fatigue : item « Récupération » (1 épuisé
+   * → 5 très reposé) ≤ `fatigueLow`, ou z ≤ `morningItemZ`.
+   */
+  fatigueLow: 2,
+  morningItemZ: -1.5,
+  /** Habitude des ressentis : 28 jours avant la saisie, 7 saisies au moins, plancher d'écart-type 0,5. */
+  morningMinEntries: 7,
+  morningSdFloor: 0.5,
+  /** VFC « anormalement au-dessus » : moyenne 7 j > moyenne + 1 écart-type de l'habitude (deux fois la demi-zone). */
+  hrvHighSd: 1,
+  /** Même signal ce nombre de jours de suite = rouge (Hugo : « 2-3 jours »). */
+  persistDays: 2,
+  /** Jours de suite comptés au plus (affichage « depuis N jours »). */
+  streakMaxDays: 7,
+  /** Rouge (regles.md) : envie ≤ 2, score wellness z < −1. Aussi seuil de l'envie touchée. */
   envieLow: 2,
   wellnessScoreZ: -1,
   /** Orange : 2 items du wellness à z < −1,5. */
@@ -74,6 +99,17 @@ export interface WellnessSignals {
   strideChange?: boolean | null;
 }
 
+/** Saisie wellness réduite à ce que lit le feu (une `WellnessEntry` convient). */
+export interface MorningEntry {
+  envie: number | null;
+  /** Douleur 0-10 (la plus forte des zones). */
+  pain: number | null;
+  items: { fatigue?: number | null };
+}
+
+/** Saisies par jour "YYYY-MM-DD" : sert à la persistance sur plusieurs jours. */
+export type MorningHistory = Readonly<Record<IsoDay, MorningEntry>>;
+
 /** Charge des 7 derniers jours (fenêtre glissante, aujourd'hui inclus). */
 export interface LoadSignals {
   done: number;
@@ -91,6 +127,11 @@ export interface LightInputs {
   watch: readonly WatchDay[];
   wellness: WellnessSignals | null;
   load: LoadSignals | null;
+  /**
+   * Saisies des derniers jours (et leur habitude, 28 j avant). Absent : seule
+   * la saisie `wellness` du jour compte, sans persistance.
+   */
+  morning?: MorningHistory | null;
   /** Séance repère ratée : pas encore définie dans Agon (toujours absente). */
   missedBenchmark?: boolean | null;
 }
@@ -107,6 +148,9 @@ export interface HrvStatus {
   below: boolean;
   /** Jours de suite (aujourd'hui compris) sous la zone. */
   belowDays: number;
+  /** Moyenne 7 j anormalement au-dessus (> moyenne + 1 écart-type de l'habitude). */
+  above: boolean;
+  aboveDays: number;
 }
 
 export interface RestingHrStatus {
@@ -119,17 +163,21 @@ export interface RestingHrStatus {
 export type SignalKey =
   | "load_over_plan" | "km_rise" | "unplanned_over_ceiling" | "monotony" | "hrv_low" | "resting_hr_high"
   | "wellness_items" | "pain" | "load_rising" | "wellness_score" | "envie_low" | "sleep_drop"
-  | "missed_benchmark" | "sick" | "stride_pain";
+  | "missed_benchmark" | "sick" | "stride_pain" | "envie_down" | "fatigue" | "hrv_high";
 
 export interface LightSignal {
   key: SignalKey;
   text: string;
+  /** Signaux du matin : jours de suite où il est présent (1 = isolé). */
+  days?: number;
 }
 
 export interface LightResult {
   light: Light;
-  /** Phrase courte à afficher (signal principal). */
+  /** Une phrase qui dit pourquoi le feu a cette couleur. */
   sentence: string;
+  /** Signaux du matin présents (douleur, envie, fatigue, FC de repos, VFC), avec leurs jours de suite. */
+  morning: LightSignal[];
   /** Signaux d'orange (au moins un = orange). */
   orange: LightSignal[];
   /** Signes d'accompagnement comptés pour le rouge. */
@@ -215,7 +263,7 @@ function baselineValues(s: Series, day: IsoDay): number[] {
   return j1 ? valuesBetween(s, j1, day) : [];
 }
 
-function hrvOn(lnHrv: Series, day: IsoDay): Omit<HrvStatus, "belowDays"> {
+function hrvOn(lnHrv: Series, day: IsoDay): Omit<HrvStatus, "belowDays" | "aboveDays"> {
   const P = LIGHT_PARAMS;
   const win = valuesBetween(lnHrv, addDays(day, -(P.windowDays - 1)), day);
   const mean7 = win.length >= P.minWindowNights ? win.reduce((a, b) => a + b, 0) / win.length : null;
@@ -225,17 +273,22 @@ function hrvOn(lnHrv: Series, day: IsoDay): Omit<HrvStatus, "belowDays"> {
   const zoneLow = base?.sd != null ? base.mean - P.hrvZoneSd * base.sd : null;
   const zoneHigh = base?.sd != null ? base.mean + P.hrvZoneSd * base.sd : null;
   const active = mean7 !== null && zoneLow !== null && dayIndex !== null && dayIndex >= P.hrvAlertFromDay;
-  return { mean7, zoneLow, zoneHigh, dayIndex, active, below: active && mean7! < zoneLow! };
+  const above = active && base?.sd != null && mean7! > base.mean + P.hrvHighSd * base.sd;
+  return { mean7, zoneLow, zoneHigh, dayIndex, active, below: active && mean7! < zoneLow!, above };
+}
+
+/** Jours de suite, `day` compris, où `on` est vrai (0 si faux ce jour-là). */
+function streak(day: IsoDay, on: (d: IsoDay) => boolean, max: number): number {
+  let n = 0;
+  while (n < max && on(addDays(day, -n))) n++;
+  return n;
 }
 
 export function hrvStatus(lnHrv: Series, today: IsoDay): HrvStatus {
   const now = hrvOn(lnHrv, today);
-  let belowDays = 0;
-  if (now.below) {
-    belowDays = 1;
-    while (belowDays < 28 && hrvOn(lnHrv, addDays(today, -belowDays)).below) belowDays++;
-  }
-  return { ...now, belowDays };
+  const belowDays = now.below ? streak(today, (d) => hrvOn(lnHrv, d).below, 28) : 0;
+  const aboveDays = now.above ? streak(today, (d) => hrvOn(lnHrv, d).above, LIGHT_PARAMS.streakMaxDays) : 0;
+  return { ...now, belowDays, aboveDays };
 }
 
 export function restingHrStatus(rhr: Series, today: IsoDay): RestingHrStatus {
@@ -262,6 +315,52 @@ function watchSleepDrop(sleep: Series, today: IsoDay): boolean {
   return (m7 - base.mean) / Math.max(base.sd ?? 0, P.sleepSdFloorMin) < P.sleepDropZ;
 }
 
+// ── Ressentis du matin ───────────────────────────────────────────────────────
+
+type MorningKey = "pain" | "envie_down" | "fatigue";
+
+/** Habitude d'un ressenti : les 28 jours avant `day`, 7 saisies au moins. */
+function morningHabit(h: MorningHistory, day: IsoDay, pick: (e: MorningEntry) => number | null): { mean: number; sd: number } | null {
+  const P = LIGHT_PARAMS;
+  const from = addDays(day, -P.baselineDays);
+  const xs: number[] = [];
+  for (const [d, e] of Object.entries(h)) {
+    if (d < from || d >= day) continue;
+    const v = pick(e);
+    if (v != null && Number.isFinite(v)) xs.push(v);
+  }
+  if (xs.length < P.morningMinEntries) return null;
+  const m = meanSd(xs)!;
+  return { mean: m.mean, sd: Math.max(m.sd ?? 0, P.morningSdFloor) };
+}
+
+/** Texte du signal ce jour-là, ou null (signal absent ou mesure absente). */
+function morningOn(h: MorningHistory, day: IsoDay, key: MorningKey): string | null {
+  const P = LIGHT_PARAMS;
+  const e = h[day];
+  if (!e) return null;
+  if (key === "pain") return e.pain != null && e.pain >= P.painMin ? `Douleur ${e.pain}/10` : null;
+  const pick = key === "envie_down" ? (x: MorningEntry) => x.envie : (x: MorningEntry) => x.items.fatigue ?? null;
+  const v = pick(e);
+  if (v == null) return null;
+  const low = key === "envie_down" ? P.envieLow : P.fatigueLow;
+  const label = key === "envie_down" ? `Envie ${v}/5` : `Fatigue : récupération ${v}/5`;
+  if (v <= low) return label;
+  const habit = morningHabit(h, day, pick);
+  return habit && (v - habit.mean) / habit.sd <= P.morningItemZ ? `${label} (habitude ${fr(habit.mean)})` : null;
+}
+
+const MORNING_KEYS: readonly MorningKey[] = ["pain", "envie_down", "fatigue"];
+
+/** Saisie de référence : aujourd'hui, sinon hier ; plus vieille, elle ne dit rien de ce matin. */
+function morningRef(h: MorningHistory, today: IsoDay): IsoDay | null {
+  if (h[today]) return today;
+  const y = addDays(today, -1);
+  return h[y] ? y : null;
+}
+
+const suffix = (days: number) => (days >= 2 ? ` depuis ${days} jours` : "");
+
 // ── Feu ──────────────────────────────────────────────────────────────────────
 
 /** Feu du jour, ou null si rien n'est mesuré (ni wellness récent, ni montre, ni charge). */
@@ -270,14 +369,46 @@ export function wellnessLight(inp: LightInputs): LightResult | null {
   const { brand, days } = currentWatch(inp.watch, inp.today);
   const lnHrv = series(days, (w) => (w.hrvMs != null && w.hrvMs > 0 ? Math.log(w.hrvMs) : null));
   const hrv = hrvStatus(lnHrv, inp.today);
-  const restingHr = restingHrStatus(series(days, (w) => w.restingHr), inp.today);
+  const rhrSeries = series(days, (w) => w.restingHr);
+  const restingHr = restingHrStatus(rhrSeries, inp.today);
   const sleepDropWatch = watchSleepDrop(series(days, (w) => w.sleepMin), inp.today);
 
   const w = inp.wellness;
   const load = inp.load && (inp.load.done > 0 || inp.load.planned != null) ? inp.load : null;
   if (!w && days.size === 0 && !load) return null;
 
-  const orange: LightSignal[] = [];
+  // Signaux du matin (Hugo, 14/11), avec leurs jours de suite.
+  const hist: MorningHistory = inp.morning ?? (w ? { [w.day]: { envie: w.envie, pain: w.pain, items: {} } } : {});
+  const ref = morningRef(hist, inp.today);
+  const morning: LightSignal[] = [];
+  if (ref) {
+    for (const key of MORNING_KEYS) {
+      const text = morningOn(hist, ref, key);
+      if (!text) continue;
+      const n = streak(ref, (d) => morningOn(hist, d, key) !== null, P.streakMaxDays);
+      morning.push({ key, text: text + suffix(n), days: n });
+    }
+  }
+  const rhrHigh = (d: IsoDay) => {
+    const s = d === inp.today ? restingHr : restingHrStatus(rhrSeries, d);
+    return s.z != null && s.z > P.restingHrZ;
+  };
+  if (rhrHigh(inp.today)) {
+    const n = streak(inp.today, rhrHigh, P.streakMaxDays);
+    morning.push({
+      key: "resting_hr_high",
+      text: `FC de repos au-dessus de l'habitude (${fr(restingHr.mean7!, 0)} contre ${fr(restingHr.baselineMean!, 0)} bpm)${suffix(n)}`,
+      days: n,
+    });
+  }
+  if (hrv.below) {
+    morning.push({ key: "hrv_low", text: `VFC sous ta zone habituelle${suffix(hrv.belowDays)}`, days: hrv.belowDays });
+  }
+  if (hrv.above) {
+    morning.push({ key: "hrv_high", text: `VFC anormalement au-dessus de ta zone${suffix(hrv.aboveDays)}`, days: hrv.aboveDays });
+  }
+
+  const orange: LightSignal[] = [...morning];
   if (load) {
     if (load.planned != null && load.planned > 0 && load.done > load.planned * (1 + P.loadOverPlanPct / 100)) {
       orange.push({ key: "load_over_plan", text: `Charge des 7 jours ${Math.round((load.done / load.planned - 1) * 100)} % au-dessus du prévu` });
@@ -290,17 +421,7 @@ export function wellnessLight(inp: LightInputs): LightResult | null {
       orange.push({ key: "monotony", text: `Monotonie ${fr(load.monotony, 2)} (au-dessus de 2)` });
     }
   }
-  if (hrv.below) {
-    orange.push({
-      key: "hrv_low",
-      text: hrv.belowDays > 1 ? `VFC sous ta zone habituelle depuis ${hrv.belowDays} jours` : "VFC sous ta zone habituelle",
-    });
-  }
-  if (restingHr.z != null && restingHr.z > P.restingHrZ) {
-    orange.push({ key: "resting_hr_high", text: `FC de repos au-dessus de l'habitude (${fr(restingHr.mean7!, 0)} contre ${fr(restingHr.baselineMean!, 0)} bpm)` });
-  }
   if (w && w.itemsLow >= P.wellnessItemsLow) orange.push({ key: "wellness_items", text: `${w.itemsLow} ressentis nettement sous l'habitude` });
-  if (w?.pain != null && w.pain > P.painMax) orange.push({ key: "pain", text: `Douleur ${w.pain}/10` });
 
   const redSigns: LightSignal[] = [];
   if (restingHr.z != null && restingHr.z > P.restingHrZ) redSigns.push({ key: "resting_hr_high", text: "FC de repos haute" });
@@ -313,18 +434,35 @@ export function wellnessLight(inp: LightInputs): LightResult | null {
     (load.previous != null && load.done > load.previous) || (load.planned != null && load.done > load.planned)
   );
 
-  let light: Light = orange.length > 0 ? "orange" : "green";
-  let sentence = orange[0]?.text ?? "Rien à signaler";
+  const repeated = morning.filter((s) => (s.days ?? 0) >= P.persistDays);
+  const join = (xs: readonly LightSignal[]) => xs.map((s) => s.text).join(" · ");
+
+  let light: Light;
+  let sentence: string;
   if (w?.sick) {
     light = "red";
-    sentence = "Malade ou fiévreux·se ce matin";
+    sentence = "Malade ou fiévreux·se ce matin : rouge d'office";
   } else if (w?.strideChange) {
     light = "red";
-    sentence = "Douleur qui modifie la foulée";
+    sentence = "Douleur qui modifie la foulée : rouge d'office";
+  } else if (repeated.length > 0) {
+    light = "red";
+    sentence = `${join(repeated)} : ${repeated.length > 1 ? "les signaux se répètent" : "le signal se répète"}, à prendre au sérieux`;
   } else if (loadRising && hrv.below && redSigns.length >= P.redMinSigns) {
     light = "red";
     sentence = `Charge en hausse et VFC sous ta zone · ${redSigns.map((s) => s.text).join(" · ")}`;
+  } else if (morning.length > 0) {
+    light = "orange";
+    sentence = morning.length > 1
+      ? `${join(morning)} : signaux isolés, à surveiller (rouge s'ils se répètent demain)`
+      : `${join(morning)} : signal isolé, à surveiller (rouge s'il se répète demain)`;
+  } else if (orange.length > 0) {
+    light = "orange";
+    sentence = `${orange[0].text} : à surveiller`;
+  } else {
+    light = "green";
+    sentence = "Rien à signaler ce matin";
   }
 
-  return { light, sentence, orange, redSigns, hrv, restingHr, brand, version: P.version };
+  return { light, sentence, morning, orange, redSigns, hrv, restingHr, brand, version: P.version };
 }

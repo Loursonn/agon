@@ -52,7 +52,7 @@ export function WellnessLightBadge({
       )}
       {detail && (
         <div className="pl-[18px] text-[11px] text-agon-tx3">
-          {result.brand ? `Mesures ${result.brand === "garmin" ? "Garmin" : result.brand === "coros" ? "COROS" : result.brand}` : "Sans montre : rouge seulement si malade"}
+          {result.brand ? `Mesures ${result.brand === "garmin" ? "Garmin" : result.brand === "coros" ? "COROS" : result.brand}` : "Sans montre : douleur, envie et fatigue seulement"}
           {result.hrv.dayIndex != null && result.hrv.dayIndex < 14 ? ` · alerte VFC active au 14e jour (J${result.hrv.dayIndex})` : ""}
         </div>
       )}

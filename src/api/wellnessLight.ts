@@ -64,7 +64,8 @@ export function loadSignalsFrom(previous: WeekLoad | undefined, current: WeekLoa
 export async function getWellnessLight(athleteId: string, today: IsoDay): Promise<LightResult | null> {
   const [health, history, load] = await Promise.all([
     getHealthDays(athleteId, addDays(today, -(WATCH_DAYS - 1)), today),
-    getWellnessHistory(athleteId, { from: addDays(today, -(LIGHT_PARAMS.baselineDays + 2)), to: today }),
+    // 28 j d'habitude derrière chacun des jours de la série (persistance « depuis N jours »).
+    getWellnessHistory(athleteId, { from: addDays(today, -(LIGHT_PARAMS.baselineDays + LIGHT_PARAMS.streakMaxDays)), to: today }),
     getLoadWeeks(athleteId, addDays(today, -6), 2),
   ]);
 
@@ -88,6 +89,7 @@ export async function getWellnessLight(athleteId: string, today: IsoDay): Promis
     today,
     watch: watchDaysFromHealth(health),
     wellness,
+    morning: history,
     load: loadSignalsFrom(load.weeks[0], load.weeks[1]),
   });
 }
