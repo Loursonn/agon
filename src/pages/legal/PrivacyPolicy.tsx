@@ -112,7 +112,7 @@ export default function PrivacyPolicy() {
             "Tests et évaluations : résultats, mesures, vidéos ou photos jointes ; courses et tests HYROX (temps, stations, analyses) ; compétitions.",
             "Bien-être du matin : récupération, qualité et durée du sommeil, sérénité, énergie, fraîcheur musculaire, envie de vous entraîner, courbatures par zone et par intensité (et la séance de la veille à laquelle vous les rattachez), douleur éventuelle de 0 à 10, si vous êtes malade ou fiévreux, poids.",
             "Bilan hebdomadaire : ressenti de la semaine (1 à 5), engagements, réponses libres, douleur éventuelle (zone, type, niveau de 0 à 10), message au coach, et un résumé chiffré de la semaine figé à l'envoi. Votre coach et votre staff ne le voient qu'une fois envoyé, jamais à l'état de brouillon.",
-            "Taille, poids de corps, masse grasse, métabolisme de base, et mensurations que vous saisissez.",
+            "Taille, poids de corps, masse grasse, métabolisme de base, et mensurations que vous saisissez (tours, envergure, longueur du membre inférieur et hauteur de départ pour les tests de saut).",
             "Photos du corps (face, côté, dos, jambes) que vous déposez avec vos mensurations. Dans l'application, seuls vous et votre coach les voient.",
             "Blessures sportives et zones douloureuses que vous, votre coach ou votre staff déclarez : zone, dates, type, mécanisme, contexte, douleur, impact sur l'entraînement, jours d'arrêt, date de retour, statut et notes. Agon ne recueille ni diagnostic, ni traitement, ni antécédents médicaux, ni documents médicaux.",
             "Fichiers joints à vos tests (photos, vidéos, PDF) et captures d'écran de votre montre.",

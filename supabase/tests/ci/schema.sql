@@ -8159,11 +8159,30 @@ CREATE TABLE IF NOT EXISTS "public"."measurement_logs" (
     "cuisse_g" numeric(5,1) DEFAULT NULL::numeric,
     "cuisse_d" numeric(5,1) DEFAULT NULL::numeric,
     "mollet_g" numeric(5,1) DEFAULT NULL::numeric,
-    "mollet_d" numeric(5,1) DEFAULT NULL::numeric
+    "mollet_d" numeric(5,1) DEFAULT NULL::numeric,
+    "height_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "wingspan_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "leg_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "jump_start_height_cm" numeric(5,1) DEFAULT NULL::numeric
 );
 
 
 ALTER TABLE "public"."measurement_logs" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."height_cm" IS 'Taille debout, stature (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."wingspan_cm" IS 'Envergure, bras tendus à l''horizontale (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."leg_length_cm" IS 'MyJump : longueur du membre inférieur, grand trochanter → pointe du pied, cheville tendue (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."jump_start_height_cm" IS 'MyJump : hauteur de départ, grand trochanter → sol, genoux à 90° (cm)';
 
 
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (

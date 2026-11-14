@@ -11,10 +11,11 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import {
-  MEASUREMENT_FIELDS, PHOTO_SLOTS,
+  ALL_MEASUREMENT_FIELDS as MEASUREMENT_FIELDS, PHOTO_SLOTS,
   type MeasurementKey, type PhotoSlot, type MeasurementLog,
 } from '@/features/shared/types/measurements';
 import { useMeasurementLogs, useMeasurementPhotoUrls } from '@/features/shared/hooks/useMeasurements';
+import { BiometrySummary } from '@/features/shared/components/BiometrySummary';
 
 function daysBetween(a: string, b: string): number {
   return Math.round((new Date(b + 'T12:00:00').getTime() - new Date(a + 'T12:00:00').getTime()) / 86_400_000);
@@ -245,6 +246,7 @@ export default function MeasurementComparison({ athleteId }: { athleteId: string
         </div>
       ) : (
         <div className={cn(CARD, 'p-4')}>
+          <div className="mb-4"><BiometrySummary logs={logs} /></div>
           {/* Onglets */}
           <div className="mb-4 flex gap-1.5">
             {([['mensu', 'Mensurations', Ruler], ['photos', 'Photos', Camera]] as const).map(([k, label, Icon]) => {

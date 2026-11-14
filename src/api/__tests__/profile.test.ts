@@ -122,6 +122,20 @@ describe("api/profile — mensurations", () => {
     expect((row.photos as { face: string }).face).toMatch(/^a\/mensurations\/m1\/face_\d+\.jpg$/);
   });
 
+  it("biométrie et MyJump : enregistrées à la création, vidées à la modification si non saisies", async () => {
+    const { tables } = world({});
+    await createMeasurementLog("a", {
+      measurements: { height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51 },
+      photoFiles: {}, day: "2026-11-08",
+    });
+    const row = tables.measurement_logs[0];
+    expect(row).toMatchObject({ height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51 });
+    await updateMeasurementLog("a", {
+      id: row.id as string, existingPhotos: {}, measurements: { height_cm: 179 }, newPhotoFiles: {}, removedSlots: [],
+    });
+    expect(tables.measurement_logs[0]).toMatchObject({ height_cm: 179, wingspan_cm: null, leg_length_cm: null, jump_start_height_cm: null });
+  });
+
   it("lecture triée, suppression avec les photos, URLs signées ; lecture en panne → lève", async () => {
     const { tables, removed } = world({ measurement_logs: [
       { id: "m1", athlete_id: "a", date: "2026-10-01", photos: { face: "p1" } },

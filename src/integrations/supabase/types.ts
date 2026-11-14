@@ -3020,7 +3020,10 @@ export type Database = {
           date: string
           epaules: number | null
           hanche: number | null
+          height_cm: number | null
           id: string
+          jump_start_height_cm: number | null
+          leg_length_cm: number | null
           mollet: number | null
           mollet_d: number | null
           mollet_g: number | null
@@ -3028,6 +3031,7 @@ export type Database = {
           poitrine: number | null
           taille: number | null
           weight_kg: number | null
+          wingspan_cm: number | null
         }
         Insert: {
           athlete_id: string
@@ -3041,7 +3045,10 @@ export type Database = {
           date?: string
           epaules?: number | null
           hanche?: number | null
+          height_cm?: number | null
           id?: string
+          jump_start_height_cm?: number | null
+          leg_length_cm?: number | null
           mollet?: number | null
           mollet_d?: number | null
           mollet_g?: number | null
@@ -3049,6 +3056,7 @@ export type Database = {
           poitrine?: number | null
           taille?: number | null
           weight_kg?: number | null
+          wingspan_cm?: number | null
         }
         Update: {
           athlete_id?: string
@@ -3062,7 +3070,10 @@ export type Database = {
           date?: string
           epaules?: number | null
           hanche?: number | null
+          height_cm?: number | null
           id?: string
+          jump_start_height_cm?: number | null
+          leg_length_cm?: number | null
           mollet?: number | null
           mollet_d?: number | null
           mollet_g?: number | null
@@ -3070,6 +3081,7 @@ export type Database = {
           poitrine?: number | null
           taille?: number | null
           weight_kg?: number | null
+          wingspan_cm?: number | null
         }
         Relationships: [
           {
