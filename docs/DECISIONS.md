@@ -2546,3 +2546,16 @@ et son README.
   en invoker, fonctions retirées), puis une migration datée équivalente pour garder le rejeu R2 aligné.
 - Pour la suite : toute nouvelle policy suit la forme rapide (skill `migration-bdd`). Reste lent : `microcycles`
   (`cycle_athlete_id` par ligne, en invoker), à reprendre si besoin.
+
+## 2026-11 — Résultats HYROX : collage par l'athlète, pas d'extraction du site
+
+- Contexte : Hugo voulait importer les temps de course HYROX sans saisie. Étude du 14/11/2026 : aucune API HYROX ;
+  results.hyrox.com (Mika Timing) bloque les robots ; HYROX a mis en demeure en octobre 2026 au moins 8 sites qui
+  aspiraient ses résultats (droit sur la base de données, RGPD, marque) et ne délivre pas de licence.
+- Décision (option A, validée par Hugo) : l'athlète copie sa propre page de résultat et la colle dans Agon
+  (« Coller mon résultat », HYROX › Courses). Agon ne lit jamais le site, ni par lien, ni par une API tierce.
+- Lecture pure et testée : `src/lib/hyrox/resultImport.ts` (copie d'ordinateur, de téléphone, texte d'une capture
+  en colonnes ; le tableau « Race replay » est ignoré). Le total enregistré est le chrono officiel ; alerte si la
+  somme des 17 temps s'en écarte de plus de 20 s (arrondis). Doublon (même chrono à 2 s et même date ou même
+  événement la même année) : mise à jour proposée, création refusée.
+- Rouvrir si HYROX ouvre un accès partenaire (demande possible par Hugo).

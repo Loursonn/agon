@@ -8,11 +8,13 @@ import { runTotal, stationsTotal, roxzoneTotal } from "@/lib/hyrox/calc";
 import { DIVISION_LABEL, FORMAT_LABEL } from "@/features/shared/types/hyrox";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
 import RaceFormDrawer from "./RaceFormDrawer";
+import PasteResultSheet from "./PasteResultSheet";
+import type { RaceImport } from "@/lib/hyrox/resultImport";
 import RaceAnalysis from "@/features/shared/components/hyrox/RaceAnalysis";
 import { useDeleteHyroxResult } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import EvolutionView from "./EvolutionView";
 import RaceCompare from "./RaceCompare";
-import { Plus, HelpCircle, ChevronRight, TrendingUp } from "lucide-react";
+import { Plus, HelpCircle, ChevronRight, TrendingUp, ClipboardPaste } from "lucide-react";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { RaceCard } from "./RaceCard";
 
@@ -21,6 +23,9 @@ export default function RacesView() {
   const { data: races = [], isLoading } = useHyroxResults(athleteId);
   const [showForm, setShowForm] = useState(false);
   const [editRace, setEditRace] = useState<HyroxResult | null>(null);
+  const [showPaste, setShowPaste] = useState(false);
+  const [imported, setImported] = useState<RaceImport | null>(null);
+  const closeForm = () => { setShowForm(false); setEditRace(null); setImported(null); };
   // La course ouverte et la page Évolution vivent dans l'URL (?race=<id>, ?evolution=1) : lien direct et retour du navigateur.
   const [params, setParams] = useSearchParams();
   const coach = useLocation().pathname.startsWith("/coach");
@@ -82,9 +87,20 @@ export default function RacesView() {
       </div>
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, alignItems: "center" }}>
         <button
-          onClick={() => { setEditRace(null); setShowForm(true); }}
+          onClick={() => setShowPaste(true)}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            height: 48, padding: "0 18px", borderRadius: 12, border: "none",
+            background: C.ac, color: C.ink, fontSize: 14, fontWeight: 700, whiteSpace: "nowrap",
+            cursor: "pointer", fontFamily: "inherit",
+          }}
+        >
+          <ClipboardPaste size={14} /> Coller mon résultat
+        </button>
+        <button
+          onClick={() => { setEditRace(null); setImported(null); setShowForm(true); }}
           style={{
             display: "flex", alignItems: "center", gap: 6,
             height: 48, padding: "0 18px", borderRadius: 12, border: "1px solid " + C.brdL,
@@ -138,12 +154,12 @@ export default function RacesView() {
         }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Comment ajouter une course ?</div>
           <ol style={{ margin: "0 0 12px", paddingLeft: 20, fontSize: 12, color: C.tx2, lineHeight: 1.8 }}>
-            <li>Va sur <strong>results.hyrox.com</strong> ou ouvre l'app <strong>ROXFIT</strong></li>
-            <li>Trouve ta course dans ton profil</li>
-            <li>Copie les résultats (tous les splits)</li>
-            <li>Clique <strong>« Ajouter une course »</strong> ci-dessus</li>
-            <li>Utilise le bouton <strong>« Coller les résultats »</strong> pour remplir automatiquement</li>
+            <li>Ouvre ton résultat sur <strong>results.hyrox.com</strong> (cherche ton nom, puis ta course)</li>
+            <li>Copie toute la page (sur téléphone : appui long, puis étire la sélection jusqu'en bas)</li>
+            <li>Touche <strong>« Coller mon résultat »</strong> : la course, la date, la division, le chrono et les 17 temps se remplissent</li>
+            <li>Vérifie la fiche, complète ce qui est signalé, puis enregistre</li>
           </ol>
+          <div style={{ fontSize: 12, color: C.tx3, marginBottom: 12 }}>Pas de résultat officiel (simulation) ? « Ajouter une course » pour tout saisir à la main.</div>
           <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid " + C.brd }}>
             <video
               controls
@@ -257,10 +273,24 @@ export default function RacesView() {
         </>
       )}
 
+      {showPaste && (
+        <PasteResultSheet
+          onClose={() => setShowPaste(false)}
+          onReady={(imp, existing) => {
+            setShowPaste(false);
+            setImported(imp);
+            setEditRace(existing);
+            setShowForm(true);
+          }}
+        />
+      )}
+
       {showForm && (
         <RaceFormDrawer
+          key={imported ? "import" : editRace?.id ?? "new"}
           race={editRace}
-          onClose={() => { setShowForm(false); setEditRace(null); }}
+          imported={imported}
+          onClose={closeForm}
         />
       )}
     </>

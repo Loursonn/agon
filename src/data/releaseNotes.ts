@@ -38,6 +38,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-hyrox-coller-resultat",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : « Coller mon résultat » remplit toute la course",
+    summary:
+      "Dans HYROX › Courses, vos athlètes collent la page de leur résultat results.hyrox.com : la course, la date, la division, le chrono officiel, les classements et les 17 temps se remplissent seuls. Plus rien à taper.",
+    sections: [
+      {
+        title: "Comment ça marche",
+        points: [
+          "L'athlète ouvre son résultat sur results.hyrox.com, copie toute la page (sur téléphone aussi), puis touche « Coller mon résultat ».",
+          "La fiche s'ouvre pré-remplie : il vérifie et enregistre. Ce qu'Agon n'a pas trouvé est signalé en orange, à compléter.",
+          "La date et la compétition sont reprises du calendrier de l'athlète quand la course y figure.",
+          "Une capture d'écran du résultat marche aussi : copier son texte depuis Photos, puis coller.",
+        ],
+      },
+      {
+        title: "Contrôles",
+        points: [
+          "Si la somme des temps ne correspond pas au chrono officiel, Agon le signale avant l'enregistrement.",
+          "Une course déjà enregistrée n'est pas créée deux fois : Agon propose de la mettre à jour.",
+          "Agon ne va jamais lire le site HYROX lui-même : seul le texte collé par l'athlète est utilisé.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-hyrox-analyse-course",
     date: "2026-11-15",
     kind: "feature",
