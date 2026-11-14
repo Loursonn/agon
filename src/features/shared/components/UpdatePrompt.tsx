@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { C } from "@/lib/theme";
 import { SW_UPDATE_CHECK_MS, currentSwEnvironment, shouldRegisterServiceWorker } from "@/lib/pwa";
 import {
   VERSION_RETRY_MS, canReloadNow, currentBuild, fetchServedBuild, isNewerBuild, shouldCheckNow,
@@ -95,26 +94,8 @@ export default function UpdatePrompt() {
   return (
     <div
       role="status"
-      style={{
-        position: "fixed",
-        left: "50%",
-        // En haut : le bas de l'écran athlète est occupé (onglets, minuteur, reprise de séance).
-        top: "calc(8px + env(safe-area-inset-top, 0px))",
-        transform: "translateX(-50%)",
-        zIndex: 1000,
-        maxWidth: "calc(100vw - 32px)",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "8px 10px 8px 14px",
-        borderRadius: 6,
-        background: C.s1,
-        border: "1px solid " + C.brdL,
-        boxShadow: "0 6px 24px rgba(0,0,0,0.45)",
-        color: C.tx,
-        fontSize: 12,
-        fontWeight: 600,
-      }}
+      // En haut : le bas de l'écran athlète est occupé (onglets, minuteur, reprise de séance).
+      className="fixed left-1/2 top-[calc(8px+env(safe-area-inset-top,0px))] z-[1000] flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2.5 rounded-[6px] border border-agon-brd-l bg-agon-s1 py-2 pl-3.5 pr-2.5 text-[12px] font-semibold text-agon-tx shadow-[0_6px_24px_rgba(0,0,0,0.45)]"
     >
       <span>Nouvelle version disponible</span>
       <button
@@ -123,14 +104,14 @@ export default function UpdatePrompt() {
           setReloading(true);
           void updateRef.current?.(true);
         }}
-        style={{ padding: "5px 10px", borderRadius: 4, border: "none", background: C.ac, color: C.bg, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+        className="cursor-pointer rounded-[4px] border-none bg-agon-accent px-2.5 py-[5px] font-[inherit] text-[12px] font-bold text-agon-ink"
       >
         {reloading ? "…" : "Recharger"}
       </button>
       <button
         aria-label="Plus tard"
         onClick={() => setDismissed(true)}
-        style={{ padding: "4px 6px", border: "none", background: "transparent", color: C.tx3, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+        className="cursor-pointer border-none bg-transparent px-1.5 py-1 font-[inherit] text-[14px] text-agon-tx3"
       >
         ×
       </button>
