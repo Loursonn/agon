@@ -85,13 +85,13 @@ export function MuscleVolumePanel({ weeks, byWeek, isLoading, showDone = false, 
           <table className="w-full border-separate border-spacing-[3px] text-[12px]">
             <thead>
               <tr>
-                <th className={cn(STICKY, "pb-1 pr-1.5 text-left text-[10px] font-semibold text-agon-tx3")}>Muscle</th>
+                <th className={cn(STICKY, "p-0 pb-1 pr-1.5 text-left text-[10px] font-semibold text-agon-tx3")}>Muscle</th>
                 {weeks.map((w, i) => (
                   <th
                     key={w}
                     title={`Semaine du ${weekLabel(w)}`}
                     className={cn(
-                      "px-0.5 pb-1 text-center text-[10px] font-semibold",
+                      "p-0 px-0.5 pb-1 text-center text-[10px] font-semibold",
                       showDone ? "min-w-[54px]" : "min-w-10",
                       w === currentWeek ? "text-agon-coach" : "text-agon-tx3",
                     )}
@@ -107,7 +107,7 @@ export function MuscleVolumePanel({ weeks, byWeek, isLoading, showDone = false, 
                 const color = getMC(id)
                 return (
                   <tr key={id}>
-                    <td className={cn(STICKY, "whitespace-nowrap pr-1.5 font-semibold")} style={{ color }}>
+                    <td className={cn(STICKY, "whitespace-nowrap p-0 pr-1.5 font-semibold")} style={{ color }}>
                       {mL(id)}
                     </td>
                     {rows.perWeek.map((wv, i) => {
@@ -133,7 +133,7 @@ export function MuscleVolumePanel({ weeks, byWeek, isLoading, showDone = false, 
                 )
               })}
               <tr>
-                <td className={cn(STICKY, "pr-1.5 pt-1.5 font-bold text-agon-tx2")}>Total</td>
+                <td className={cn(STICKY, "p-0 pr-1.5 pt-1.5 font-bold text-agon-tx2")}>Total</td>
                 {weekTotals.map((t, i) => (
                   <td key={weeks[i]} className="pt-1.5 text-center font-bold tabular-nums text-agon-tx2">
                     {t ? formatSets(t) : "·"}

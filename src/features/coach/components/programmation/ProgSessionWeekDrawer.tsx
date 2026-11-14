@@ -232,7 +232,7 @@ function CellInput({ value, onChange, step = 1, width = "w-14", placeholder }: {
   )
 }
 
-const TH = "px-1 pb-[3px] text-left text-[8px] font-bold uppercase tracking-[0.4px] text-agon-tx3"
+const TH = "px-1 pb-[3px] pt-0 text-left text-[8px] font-bold uppercase tracking-[0.4px] text-agon-tx3"
 const TD = "px-1 py-0.5"
 
 function NextRow({ exercice, params, onPatch }: {

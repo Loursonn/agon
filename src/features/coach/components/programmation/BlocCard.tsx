@@ -172,7 +172,7 @@ export function BlocCard({ bloc, index, athleteId, activeWeek, sessionMultiSemai
           />
         </div>
       ) : (
-        <div className="border-b border-agon-brd-l/50 py-2 pl-4 pr-2.5">
+        <div className="py-2 pl-4 pr-2.5">
           <div className="flex items-center gap-1.5">
             {/* Drag */}
             <div
