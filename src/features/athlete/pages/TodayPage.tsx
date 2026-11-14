@@ -474,10 +474,10 @@ export default function TodayPage() {
             <TodaySection num={sec()} title="Nutrition" right={<SectionLink onClick={() => { navigate("/athlete/alim"); haptic(); }}>Détail →</SectionLink>}>
               <div style={{ borderRadius: 12, border: `1px solid ${tint}73`, background: `${tint}1F`, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ ...MONO, fontSize: 24, color: C.tx }}>{consumed > 0 ? consumed.toLocaleString("fr-FR") : "—"}</span>
+                  <span style={{ ...MONO, fontSize: 24, color: consumed > 0 ? tint : C.tx }}>{consumed > 0 ? consumed.toLocaleString("fr-FR") : "—"}</span>
                   {zoneLabel && <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>/ {zoneLabel} kcal</span>}
                   <span style={{ flex: 1 }} />
-                  <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: meta.color, border: `1px solid ${meta.color}`, borderRadius: 999, padding: "2px 8px" }}>{meta.label}</span>
+                  <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: C.ink, background: meta.color, borderRadius: 999, padding: "3px 9px", fontWeight: 500 }}>{meta.label}</span>
                 </div>
                 {zone && (
                   <div style={{ position: "relative", height: 8, borderRadius: 4, background: "rgba(231,211,168,0.10)", overflow: "hidden" }}>

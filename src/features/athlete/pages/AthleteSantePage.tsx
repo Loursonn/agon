@@ -1,6 +1,6 @@
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
@@ -24,7 +24,11 @@ type Span = "day" | "7" | "28";
 function StatePill({ state }: { state: HealthState }) {
   if (!state) return null;
   const s = STATE[state];
-  return <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: s.color, border: `1px solid ${s.color}88`, borderRadius: 999, padding: "1px 8px", whiteSpace: "nowrap" }}>{s.label}</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, height: 20, padding: "0 7px", borderRadius: 999, background: alpha(s.color, 0.14), color: s.color, fontSize: 11, whiteSpace: "nowrap", flex: "none" }}>
+      <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />{s.label}
+    </span>
+  );
 }
 
 /** Courbe : points du jour, zone habituelle en bande. */
@@ -177,11 +181,33 @@ export default function AthleteSantePage({ coachView, top, montreTitle, bottom }
                   </div>
                 )}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginTop: 10 }}>
-                {([["Profond", today?.sleepDeepMin], ["Léger", today?.sleepLightMin], ["Paradoxal", today?.sleepRemMin], ["Éveil", today?.sleepAwakeMin]] as const).map(([k, v]) => (
-                  <div key={k}><div style={{ fontSize: 10.5, color: C.tx3 }}>{k}</div><div style={{ ...MONO, fontSize: 12.5 }}>{fmtMinutes(v ?? null)}</div></div>
-                ))}
-              </div>
+              {(() => {
+                const phases = [
+                  { k: "Profond", v: today?.sleepDeepMin ?? null, c: C.bP },
+                  { k: "Léger", v: today?.sleepLightMin ?? null, c: C.b },
+                  { k: "Paradoxal", v: today?.sleepRemMin ?? null, c: C.ame },
+                  { k: "Éveil", v: today?.sleepAwakeMin ?? null, c: C.tx3 },
+                ];
+                const total = phases.reduce((a, p) => a + (p.v ?? 0), 0);
+                return (
+                  <>
+                    {total > 0 && (
+                      <div aria-hidden style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", gap: 2, marginTop: 14 }}>
+                        {phases.map((p) => (p.v ?? 0) > 0 && <span key={p.k} style={{ width: `${((p.v ?? 0) / total) * 100}%`, background: p.c }} />)}
+                      </div>
+                    )}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", marginTop: 10, fontSize: 12 }}>
+                      {phases.map((p) => (
+                        <div key={p.k} style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                          <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: p.c, flex: "none" }} />
+                          <span style={{ color: C.tx2 }}>{p.k}</span>
+                          <span style={{ ...MONO, color: C.tx }}>{fmtMinutes(p.v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
               {coachView && sleepScore7.some((p) => p.v != null) ? (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Score de sommeil · 7 nuits</div>
