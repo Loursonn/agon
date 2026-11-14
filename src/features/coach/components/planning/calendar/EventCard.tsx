@@ -1,5 +1,6 @@
 import { Check, Watch } from "lucide-react";
 import { C, alpha, H } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { athleteMoveTitle } from "@/lib/athleteChoices";
 import type { PlanningCardState } from "@/lib/planningCard";
@@ -27,16 +28,16 @@ export function EventCard({ event, watch }: { event: CalEvent; watch?: PlanningC
   return (
     <div
       style={{
-        position: "relative", overflow: "hidden", borderRadius: 10,
-        background: alpha(color, st === "completed" ? 0.14 : 0.08),
-        border: `1px ${isProjected && st !== "completed" ? "dashed" : "solid"} ${alpha(color, st === "missed" ? 0.25 : 0.4)}`,
-        padding: "8px 9px 8px 12px", display: "flex", flexDirection: "column", gap: 4,
+        position: "relative", overflow: "hidden", borderRadius: 12,
+        background: alpha(color, 0.12),
+        border: `1px ${isProjected && st !== "completed" ? "dashed" : "solid"} ${alpha(color, st === "missed" ? 0.2 : 0.33)}`,
+        padding: "12px 12px 12px 16px", display: "flex", flexDirection: "column", gap: 8,
         opacity: st === "missed" ? 0.7 : 1, minWidth: 0,
       }}
     >
-      <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
+      <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: color }} />
       <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: CARD_MONO, fontSize: 9.5, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color }}>{label}</span>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...MONO, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase", color: C.ink, background: color, borderRadius: 999, padding: "3px 9px" }}>{label}</span>
         <span style={{ flex: 1 }} />
         {st === "completed" && (
           <span title="Réalisée" aria-label="Réalisée" style={{ display: "inline-flex", color: C.g, flexShrink: 0 }}>
@@ -52,11 +53,11 @@ export function EventCard({ event, watch }: { event: CalEvent; watch?: PlanningC
           </span>
         )}
       </div>
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: C.tx, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: isProjected && st !== "completed" ? "italic" : "normal" }}>
+      <div style={{ fontSize: 14, fontWeight: 500, color: C.tx, lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontStyle: isProjected && st !== "completed" ? "italic" : "normal" }}>
         {event.type === "free_activity" && event.sportEmoji ? event.sportEmoji + " " : ""}{event.title}
       </div>
       {(status || event.rpe != null) && (
-        <div style={{ display: "flex", gap: 6, alignItems: "center", fontFamily: CARD_MONO, fontSize: 10, color: C.tx3 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", fontFamily: CARD_MONO, fontSize: 11, color: C.tx2 }}>
           {status && <span style={{ color: status.c }}>{status.t}</span>}
           {event.rpe != null && <span>RPE {event.rpe}</span>}
         </div>

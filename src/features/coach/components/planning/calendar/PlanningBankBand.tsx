@@ -53,9 +53,10 @@ export function PlanningBankBand({
   })();
 
   return (
-    <div style={{ background: C.s1, border: "1px solid " + C.brd, borderRadius: 14, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", flexWrap: "wrap", borderBottom: folded ? "none" : "1px solid " + C.brd }}>
-        <span style={{ fontFamily: CARD_MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac, marginRight: 4 }}>Programmer</span>
+    <section aria-label="Banque" style={{ background: C.bg, border: "1px solid " + C.brd, borderRadius: 14, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: folded ? "12px 14px" : "12px 14px 0", flexWrap: "wrap" }}>
+        <span style={{ fontFamily: CARD_MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.ac }}>Programmer</span>
+        <span aria-hidden style={{ width: 1, height: 20, background: C.brd }} />
         {BANK_TABS.map(({ key, label, color }) => {
           const on = tab === key;
           const c = key === "workout" ? C.ac : key === "energy" ? C.b : color;
@@ -81,7 +82,7 @@ export function PlanningBankBand({
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher dans la banque…"
           aria-label="Rechercher dans la banque"
-          style={{ width: 260, height: 32, marginLeft: "auto", padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: C.bg, color: C.tx, fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+          style={{ width: 260, height: 32, marginLeft: "auto", padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
         />
         <span style={{ fontFamily: CARD_MONO, fontSize: 10.5, color: C.tx3, letterSpacing: "0.06em" }}>
           {shown} élément{shown > 1 ? "s" : ""} · glisse sur un jour
@@ -95,12 +96,12 @@ export function PlanningBankBand({
         </button>
       </div>
       {!folded && (
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "12px 16px 14px", scrollbarWidth: "thin" }}>
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "10px 14px 12px", scrollbarWidth: "thin" }}>
           {cards.length === 0 ? (
             <div style={{ fontSize: 12.5, color: C.tx3, padding: "18px 0" }}>{q ? "Aucun résultat" : "Rien dans la banque pour cette catégorie."}</div>
           ) : cards}
         </div>
       )}
-    </div>
+    </section>
   );
 }
