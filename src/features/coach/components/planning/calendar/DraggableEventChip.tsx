@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X as XIcon } from "lucide-react";
 import { DragOverlay, useDraggable } from "@dnd-kit/core";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import { useDeleteCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { PlanningCardState } from "@/lib/planningCard";
@@ -34,7 +34,7 @@ export function DraggableEventChip({
 
   return (
     <div
-      style={{ position: "relative" }}
+      className="relative"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={(e) => { e.stopPropagation(); onEventClick?.(event); }}
@@ -43,11 +43,11 @@ export function DraggableEventChip({
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        style={{
-          opacity: isDragging ? 0.35 : 1,
-          cursor: draggable ? "grab" : "pointer",
-          paddingRight: hovered && deletable ? 14 : 0,
-        }}
+        className={cn(
+          draggable ? "cursor-grab" : "cursor-pointer",
+          isDragging && "opacity-35",
+          hovered && deletable ? "pr-3.5" : "pr-0",
+        )}
       >
         {card ? <EventCard event={event} watch={watch} /> : <EventChip event={event} compact={compact} watch={watch} />}
       </div>
@@ -66,16 +66,10 @@ export function DraggableEventChip({
               status:      event.status,
             });
           }}
-          style={{
-            position: "absolute", top: 0, right: 0,
-            width: card ? 18 : 14, height: "100%", minHeight: 14,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: C.r + "cc", border: "none",
-            borderRadius: card ? "0 10px 10px 0" : "0 4px 4px 0",
-            cursor: "pointer", padding: 0,
-            color: C.tx,
-            zIndex: 1,
-          }}
+          className={cn(
+            "absolute right-0 top-0 z-[1] flex h-full min-h-3.5 cursor-pointer items-center justify-center border-0 bg-agon-erreur/80 p-0 text-agon-tx",
+            card ? "w-[18px] rounded-r-[10px]" : "w-3.5 rounded-r-[4px]",
+          )}
         >
           <XIcon size={8} />
         </button>

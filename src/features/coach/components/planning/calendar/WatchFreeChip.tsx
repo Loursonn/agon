@@ -1,7 +1,6 @@
 import { Watch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { PlanningCardModel } from "@/lib/planningCard";
-import { FREE_COLOR } from "./calendarConstants";
 
 /** Activité de montre sans séance prévue, dans une case du mois : ouvre l'onglet Séance. */
 export function WatchFreeChip({ card, athleteId }: { card: PlanningCardModel; athleteId: string }) {
@@ -11,15 +10,10 @@ export function WatchFreeChip({ card, athleteId }: { card: PlanningCardModel; at
       type="button"
       title={`${card.title} · ${card.summary} · ${card.attribution ?? ""}`}
       onClick={(e) => { e.stopPropagation(); if (card.activityId) navigate(`/coach/athletes/${athleteId}/seance/${card.activityId}`); }}
-      style={{
-        display: "flex", alignItems: "center", gap: 3, width: "100%", minWidth: 0, padding: "1px 5px",
-        border: "none", borderLeft: `2px dashed ${FREE_COLOR}`, borderRadius: "0 4px 4px 0",
-        background: FREE_COLOR + "14", color: FREE_COLOR, fontSize: 9, fontWeight: 500, fontFamily: "inherit",
-        cursor: "pointer", textAlign: "left",
-      }}
+      className="flex w-full min-w-0 cursor-pointer items-center gap-[3px] rounded-r-[4px] border-0 border-l-2 border-dashed border-agon-type-libre bg-agon-type-libre/[0.078] px-[5px] py-px text-left text-[9px] font-medium text-agon-type-libre"
     >
-      <Watch size={9} strokeWidth={2} style={{ flexShrink: 0 }} />
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.title}</span>
+      <Watch size={9} strokeWidth={2} className="flex-shrink-0" />
+      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{card.title}</span>
     </button>
   );
 }
