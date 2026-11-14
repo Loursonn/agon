@@ -7,7 +7,8 @@ import { useProgrammation } from "@/features/coach/components/programmation/hook
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Dumbbell, Zap, FlaskConical, Ruler } from "lucide-react";
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
-import { C, H } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { WeekLoadPanel } from "@/features/coach/components/load/WeekLoadPanel";
 import { useUnifiedCalendar, useAssignWorkout, useRescheduleWorkout, useCreateTestSession, useRescheduleTestSession, toCalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
 import type { CalEvent } from "@/features/shared/hooks/useUnifiedCalendar";
@@ -24,11 +25,15 @@ import { QuickAddDialog } from "./QuickAddDialog";
 import { buildProjectionCoverage, isProjectionCovered } from "@/lib/planningProjection";
 import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
 import { watchCardsOfDay } from "@/lib/planningCard";
-import { DOW_LABELS, TEST_COLOR, BIO_COLOR, BIO_BANK_ID, BIO_TITLE, TYPE_COLOR, CARD_MONO, BankItemType } from "./calendar/calendarConstants";
+import { DOW_LABELS, TEST_COLOR, BIO_COLOR, BIO_BANK_ID, BIO_TITLE, TYPE_COLOR, BankItemType } from "./calendar/calendarConstants";
 import { findCurrentCycleId, dayCollisionDetection } from "./calendar/calendarUtils";
 import { DroppableDay } from "./calendar/DroppableDay";
 import { PlanningBank } from "./calendar/PlanningBank";
 import { PlanningBankBand } from "./calendar/PlanningBankBand";
+
+const WEEK_NAV = "flex size-9 cursor-pointer items-center justify-center rounded-[10px] border border-agon-brd-l bg-transparent text-agon-tx2";
+const MONTH_NAV = "flex size-9 cursor-pointer items-center justify-center rounded-[4px] border border-agon-brd-l bg-transparent text-agon-tx3";
+const FIELD = "rounded-[6px] border bg-agon-s2 px-[7px] py-[3px] text-[11px]";
 
 // ── CalendarMonthView ─────────────────────────────────────────────────────────
 
@@ -331,6 +336,7 @@ export function CalendarMonthView({
   const activeDragIsEnergy = activeDragId ? energySessions.some((s) => s.id === activeDragId) : false;
   const activeDragIsTest   = activeDragId ? testDefinitions.some((s) => s.id === activeDragId) : false;
   const activeDragIsBio    = activeDragId === BIO_BANK_ID;
+  const dragColor = activeDragIsEnergy ? C.b : activeDragIsTest ? TEST_COLOR : activeDragIsBio ? BIO_COLOR : C.ac;
 
   return (
     <DndContext
@@ -339,37 +345,35 @@ export function CalendarMonthView({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="flex flex-col gap-3">
 
           {isWeek ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button type="button" aria-label="Semaine précédente" onClick={() => setWeekStart((w) => addDays(w, -7))} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button type="button" aria-label="Semaine précédente" onClick={() => setWeekStart((w) => addDays(w, -7))} className={WEEK_NAV}>
                 <ChevronLeft size={18} />
               </button>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, minWidth: 0 }}>
-                <span style={{ fontFamily: "var(--agon-font-display)", fontStretch: "125%", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 300, fontSize: 22, color: C.tx }}>
-                  {weekTitle}
-                </span>
-                <span style={{ fontFamily: CARD_MONO, fontSize: 12, color: C.tx2 }}>{weekRangeLabel}</span>
+              <div className="flex min-w-0 items-baseline gap-2.5">
+                <span className="agon-display text-[22px] tracking-[0.06em] text-agon-tx">{weekTitle}</span>
+                <span className="agon-mono text-[12px] text-agon-tx2">{weekRangeLabel}</span>
               </div>
-              <button type="button" aria-label="Semaine suivante" onClick={() => setWeekStart((w) => addDays(w, 7))} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button type="button" aria-label="Semaine suivante" onClick={() => setWeekStart((w) => addDays(w, 7))} className={WEEK_NAV}>
                 <ChevronRight size={18} />
               </button>
               {!isSameDay(weekStart, startOfWeek(new Date(), { weekStartsOn: 1 })) && (
-                <button type="button" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))} style={{ height: 32, padding: "0 12px", borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                <button type="button" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))} className="h-8 cursor-pointer rounded-[10px] border border-agon-brd-l bg-transparent px-3 text-[12px] text-agon-tx2">
                   Cette semaine
                 </button>
               )}
-              <div style={{ marginLeft: "auto", display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div className="ml-auto flex flex-wrap gap-3">
                 {[
-                  { label: "Musculation", color: C.ac },
-                  { label: "Énergie", color: C.b },
-                  { label: "Spécifique", color: H.miel },
-                  { label: "Test", color: TEST_COLOR },
-                  { label: "Compétition", color: C.r },
-                ].map(({ label, color }) => (
-                  <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, color: C.tx3 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />{label}
+                  { label: "Musculation", dot: "bg-agon-accent" },
+                  { label: "Énergie", dot: "bg-agon-info" },
+                  { label: "Spécifique", dot: "bg-agon-type-hyrox" },
+                  { label: "Test", dot: "bg-agon-type-test" },
+                  { label: "Compétition", dot: "bg-agon-erreur" },
+                ].map(({ label, dot }) => (
+                  <span key={label} className="inline-flex items-center gap-[5px] text-[11.5px] text-agon-tx3">
+                    <span className={cn("size-2 rounded-[2px]", dot)} />{label}
                   </span>
                 ))}
               </div>
@@ -377,47 +381,31 @@ export function CalendarMonthView({
           ) : (
           <>
           {/* Month navigation — pleine largeur */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <button
-              onClick={() => setMonth((m) => subMonths(m, 1))}
-              style={{
-                width: 36, height: 36, borderRadius: 4,
-                border: "1px solid " + C.brdL, background: "transparent",
-                color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
+          <div className="flex items-center justify-between">
+            <button onClick={() => setMonth((m) => subMonths(m, 1))} className={MONTH_NAV}>
               <ChevronLeft size={18} />
             </button>
 
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, textTransform: "capitalize" }}>
+            <div className="text-center">
+              <div className="text-[16px] font-extrabold capitalize text-agon-tx">
                 {format(month, "MMMM yyyy", { locale: fr })}
               </div>
-              <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 4, flexWrap: "wrap" }}>
+              <div className="mt-1 flex flex-wrap justify-center gap-2.5">
                 {[
-                  { label: "Séance",  color: C.ac      },
-                  { label: "Énergie", color: C.b        },
-                  { label: "Test",    color: TEST_COLOR  },
-                  { label: "Compét",  color: C.r         },
-                ].map(({ label, color }) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
-                    <span style={{ fontSize: 9, color: C.tx3 }}>{label}</span>
+                  { label: "Séance",  dot: "bg-agon-accent" },
+                  { label: "Énergie", dot: "bg-agon-info" },
+                  { label: "Test",    dot: "bg-agon-type-test" },
+                  { label: "Compét",  dot: "bg-agon-erreur" },
+                ].map(({ label, dot }) => (
+                  <div key={label} className="flex items-center gap-1">
+                    <div className={cn("size-2 rounded-[2px]", dot)} />
+                    <span className="text-[9px] text-agon-tx3">{label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <button
-              onClick={() => setMonth((m) => addMonths(m, 1))}
-              style={{
-                width: 36, height: 36, borderRadius: 4,
-                border: "1px solid " + C.brdL, background: "transparent",
-                color: C.tx3, cursor: "pointer", fontFamily: "inherit",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
+            <button onClick={() => setMonth((m) => addMonths(m, 1))} className={MONTH_NAV}>
               <ChevronRight size={18} />
             </button>
           </div>
@@ -427,15 +415,8 @@ export function CalendarMonthView({
 
           {/* Block-program start-date prompt / legend */}
           {blockConfig && (
-            <div
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 14px", borderRadius: 4,
-                background: C.s1, border: "1px solid " + C.brd,
-                fontSize: 11, flexWrap: "wrap",
-              }}
-            >
-              <span style={{ color: C.tx3, fontWeight: 600 }}>Cycle :</span>
+            <div className="flex flex-wrap items-center gap-2.5 rounded-[4px] border border-agon-brd bg-agon-s1 px-3.5 py-2 text-[11px]">
+              <span className="font-semibold text-agon-tx3">Cycle :</span>
               {/* Cycle selector — links month view to a Frise cycle so resize auto-syncs dates */}
               <select
                 value={blockConfig.cycleId ?? ""}
@@ -458,12 +439,7 @@ export function CalendarMonthView({
                     blockName: cycle.name,
                   }));
                 }}
-                style={{
-                  padding: "3px 7px", borderRadius: 6,
-                  border: "1px solid " + (blockConfig.cycleId ? C.ac + "80" : C.brdL),
-                  background: C.s2, color: C.tx, fontSize: 11, fontFamily: "inherit",
-                  maxWidth: 200,
-                }}
+                className={cn(FIELD, "max-w-[200px] text-agon-tx", blockConfig.cycleId ? "border-agon-accent/50" : "border-agon-brd-l")}
               >
                 <option value="">— lier à un cycle —</option>
                 {allCycles.map(c => (
@@ -473,10 +449,10 @@ export function CalendarMonthView({
                 ))}
               </select>
               {blockConfig.cycleId && (
-                <span style={{ color: C.ac, fontSize: 10, fontWeight: 600 }}>lié</span>
+                <span className="text-[10px] font-semibold text-agon-accent">lié</span>
               )}
-              <span style={{ color: C.tx3 }}>·</span>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, color: C.tx3 }}>
+              <span className="text-agon-tx3">·</span>
+              <label className="flex items-center gap-1.5 text-agon-tx3">
                 Début :
                 <input
                   type="date"
@@ -484,23 +460,17 @@ export function CalendarMonthView({
                   onChange={(e) =>
                     setBlockConfig?.((prev) => ({ ...prev, startDate: e.target.value || null, cycleId: undefined }))
                   }
-                  style={{
-                    padding: "3px 7px", borderRadius: 6,
-                    border: "1px solid " + (blockConfig.startDate ? C.brdL : C.o + "60"),
-                    background: C.s2,
-                    color: blockConfig.startDate ? C.tx : C.o,
-                    fontSize: 11, fontFamily: "inherit",
-                  }}
+                  className={cn(FIELD, blockConfig.startDate ? "border-agon-brd-l text-agon-tx" : "border-agon-alerte/[0.376] text-agon-alerte")}
                 />
               </label>
               {blockConfig.startDate && projectedEvents.length === 0 && (
-                <span style={{ color: C.tx3, fontSize: 10 }}>
+                <span className="text-[10px] text-agon-tx3">
                   (aucune séance dans ce mois)
                 </span>
               )}
               {projectedEvents.length > 0 && (
-                <span style={{ color: C.tx3, fontSize: 10 }}>
-                  — <span style={{ fontStyle: "italic" }}>prévu</span> = séances du programme
+                <span className="text-[10px] text-agon-tx3">
+                  — <span className="italic">prévu</span> = séances du programme
                 </span>
               )}
             </div>
@@ -516,27 +486,17 @@ export function CalendarMonthView({
           )}
 
           {/* ── Rangée : calendrier + banque (alignés en haut) ── */}
-          <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex items-start gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
 
           {/* Grid */}
-          <div
-            style={isWeek ? undefined : {
-              background: C.s1, borderRadius: 6,
-              border: "1px solid " + C.brd, overflow: "hidden",
-            }}
-          >
+          <div className={isWeek ? undefined : "overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1"}>
             {/* DOW header */}
-            {!isWeek && <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+            {!isWeek && <div className="grid grid-cols-7">
               {DOW_LABELS.map((d) => (
                 <div
                   key={d}
-                  style={{
-                    padding: "8px 0", textAlign: "center",
-                    fontSize: 10, fontWeight: 700, color: C.tx3,
-                    textTransform: "uppercase", letterSpacing: "0.4px",
-                    borderBottom: "1px solid " + C.brd,
-                  }}
+                  className="border-b border-agon-brd py-2 text-center text-[10px] font-bold uppercase tracking-[0.4px] text-agon-tx3"
                 >
                   {d}
                 </div>
@@ -545,19 +505,11 @@ export function CalendarMonthView({
 
             {/* Day cells */}
             {isLoading ? (
-              <div style={{ padding: 40, textAlign: "center" }}>
-                <div
-                  style={{
-                    width: 24, height: 24, border: "2px solid " + C.brdL,
-                    borderTopColor: C.ac, borderRadius: "50%",
-                    animation: "spin 0.7s linear infinite",
-                    margin: "0 auto",
-                  }}
-                />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <div className="p-10 text-center">
+                <div className="mx-auto size-6 animate-[spin_0.7s_linear_infinite] rounded-full border-2 border-agon-brd-l border-t-agon-accent" />
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: isWeek ? 8 : 2, padding: isWeek ? 0 : 2 }}>
+              <div className={cn("grid grid-cols-7", isWeek ? "gap-2 p-0" : "gap-0.5 p-0.5")}>
                 {gridDays.map((day) => {
                   const dateStr = format(day, "yyyy-MM-dd");
                   const wKey = dateStr.replace(/-/g, "");
@@ -589,24 +541,18 @@ export function CalendarMonthView({
 
           {/* Stats bar */}
           {!isWeek && events.length > 0 && (
-            <div
-              style={{
-                display: "flex", gap: 16,
-                background: C.s1, borderRadius: 6, padding: "10px 16px",
-                border: "1px solid " + C.brd, flexWrap: "wrap",
-              }}
-            >
+            <div className="flex flex-wrap gap-4 rounded-[6px] border border-agon-brd bg-agon-s1 px-4 py-2.5">
               {[
-                { label: "Séances",      count: events.filter((e) => e.type === "workout").length,     color: C.ac        },
-                { label: "Énergie",      count: events.filter((e) => e.type === "energy").length,      color: C.b         },
-                { label: "Complétées",   count: events.filter((e) => e.status === "completed").length, color: C.g         },
-                { label: "Manquées",     count: events.filter((e) => e.status === "missed").length,    color: C.r         },
-                { label: "Tests",        count: events.filter((e) => e.type === "test").length,        color: TEST_COLOR  },
-                { label: "Compétitions", count: events.filter((e) => e.type === "competition").length, color: C.r         },
-              ].map(({ label, count, color }) => (
-                <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color }}>{count}</span>
-                  <span style={{ fontSize: 10, color: C.tx3 }}>{label}</span>
+                { label: "Séances",      count: events.filter((e) => e.type === "workout").length,     tone: "text-agon-accent"    },
+                { label: "Énergie",      count: events.filter((e) => e.type === "energy").length,      tone: "text-agon-info"      },
+                { label: "Complétées",   count: events.filter((e) => e.status === "completed").length, tone: "text-agon-succes"    },
+                { label: "Manquées",     count: events.filter((e) => e.status === "missed").length,    tone: "text-agon-erreur"    },
+                { label: "Tests",        count: events.filter((e) => e.type === "test").length,        tone: "text-agon-type-test" },
+                { label: "Compétitions", count: events.filter((e) => e.type === "competition").length, tone: "text-agon-erreur"    },
+              ].map(({ label, count, tone }) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <span className={cn("text-[15px] font-extrabold", tone)}>{count}</span>
+                  <span className="text-[10px] text-agon-tx3">{label}</span>
                 </div>
               ))}
             </div>
@@ -628,31 +574,19 @@ export function CalendarMonthView({
           {isWeek && athleteId && <WeekLoadPanel athleteId={athleteId} weekStart={format(weekStart, "yyyy-MM-dd")} />}
       </div>
 
-      {/* Drag overlay — ghost of the dragged item */}
+      {/* Drag overlay — ghost of the dragged item (couleur du type : valeur calculée) */}
       <DragOverlay dropAnimation={null}>
         {activeDragEvent ? (
           <div
-            style={{
-              padding: "4px 10px", borderRadius: 6,
-              border: "1px solid " + TYPE_COLOR[activeDragEvent.type] + "60",
-              background: TYPE_COLOR[activeDragEvent.type], color: C.tx,
-              fontSize: 11, fontWeight: 600,
-              pointerEvents: "none",
-            }}
+            className="pointer-events-none rounded-[6px] border px-2.5 py-1 text-[11px] font-semibold text-agon-tx"
+            style={{ borderColor: alpha(TYPE_COLOR[activeDragEvent.type], 0.376), background: TYPE_COLOR[activeDragEvent.type] }}
           >
             ↕ {activeDragEvent.title}
           </div>
         ) : activeDragSession ? (
           <div
-            style={{
-              padding: "7px 10px", borderRadius: 4,
-              border: "1px solid " + (activeDragIsEnergy ? C.b : activeDragIsTest ? TEST_COLOR : activeDragIsBio ? BIO_COLOR : C.ac) + "60",
-              background: activeDragIsEnergy ? C.b : activeDragIsTest ? TEST_COLOR : activeDragIsBio ? BIO_COLOR : C.ac,
-              color: C.tx,
-              fontSize: 11, fontWeight: 600,
-              pointerEvents: "none",
-              display: "flex", alignItems: "center", gap: 6,
-            }}
+            className="pointer-events-none flex items-center gap-1.5 rounded-[4px] border px-2.5 py-[7px] text-[11px] font-semibold text-agon-tx"
+            style={{ borderColor: alpha(dragColor, 0.376), background: dragColor }}
           >
             {activeDragIsEnergy ? <Zap size={12} /> : activeDragIsTest ? <FlaskConical size={12} /> : activeDragIsBio ? <Ruler size={12} /> : <Dumbbell size={12} />}
             {activeDragSession.name ?? "Séance"}
