@@ -8,7 +8,8 @@ import { useDeleteCompetition } from "@/hooks/useCompetitions";
 import { format, parseISO, isFuture, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { competitionKeys, listCompetitions } from "@/api/competitions";
 import { priorityLabel, COMPETITION_META } from "@/types/planning";
 import { CompetitionFormModal } from "./CompetitionFormModal";
@@ -30,11 +31,14 @@ interface Comp {
   created_at: string;
 }
 
-const PRIORITY_COLOR: Record<string, string> = {
-  A: H.miel,
-  B: C.ac,
-  C: H.grisBleu,
+/** Pastille de priorité (A orange, B or, C pierre : charte). */
+const PRIORITY_TONE: Record<string, string> = {
+  A: "border-agon-alerte/[0.314] bg-agon-alerte/[0.133] text-agon-alerte",
+  B: "border-agon-accent/[0.314] bg-agon-accent/[0.133] text-agon-accent",
+  C: "border-agon-pierre/[0.314] bg-agon-pierre/[0.133] text-agon-pierre",
 };
+const ADD_BTN = "cursor-pointer items-center gap-1.5 rounded-[4px] border-0 bg-agon-accent py-2 text-[12px] font-bold text-agon-tx";
+const ICON_BTN = "flex size-[30px] cursor-pointer items-center justify-center rounded-[7px] border border-agon-brd-l bg-transparent text-agon-tx3";
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
@@ -75,7 +79,7 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
 
   if (isLoading) {
     return (
-      <div style={{ padding: "40px 0", textAlign: "center", color: C.tx3, fontSize: 12 }}>
+      <div className="py-10 text-center text-[12px] text-agon-tx3">
         Chargement…
       </div>
     );
@@ -83,47 +87,28 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
 
   return (
     <>
-      <div style={{ maxWidth: 740, margin: "0 auto" }}>
+      <div className="mx-auto max-w-[740px]">
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div className="mb-5 flex items-center justify-between">
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.tx }}>Compétitions</div>
-            <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>
+            <div className="text-[18px] font-extrabold text-agon-tx">Compétitions</div>
+            <div className="mt-0.5 text-[11px] text-agon-tx3">
               {upcoming.length} à venir · {past.length} passées
             </div>
           </div>
-          <button
-            onClick={() => setFormComp("new")}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "8px 16px", borderRadius: 4,
-              border: "none", background: C.ac,
-              color: C.tx, fontSize: 12, fontWeight: 700,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
+          <button onClick={() => setFormComp("new")} className={cn(ADD_BTN, "flex px-4")}>
             <Plus size={13} /> Ajouter
           </button>
         </div>
 
         {competitions.length === 0 ? (
-          <div style={{
-            padding: "60px 0", textAlign: "center",
-            background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
-          }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}></div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>Aucune compétition</div>
-            <div style={{ fontSize: 12, color: C.tx3, marginTop: 4, marginBottom: 16 }}>
+          <div className="rounded-[6px] border border-agon-brd bg-agon-s1 py-[60px] text-center">
+            <div className="mb-2.5 text-[32px]"></div>
+            <div className="text-[14px] font-bold text-agon-tx">Aucune compétition</div>
+            <div className="mb-4 mt-1 text-[12px] text-agon-tx3">
               Ajoute des compétitions pour planifier la saison.
             </div>
-            <button
-              onClick={() => setFormComp("new")}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 18px", borderRadius: 4, border: "none", background: C.ac,
-                color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-              }}
-            >
+            <button onClick={() => setFormComp("new")} className={cn(ADD_BTN, "inline-flex px-[18px]")}>
               <Plus size={12} /> Ajouter une compétition
             </button>
           </div>
@@ -179,14 +164,11 @@ export function CompetitionsView({ athleteId, coachId }: Props) {
 
 function Section({ title, dimmed, children }: { title: string; dimmed?: boolean; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{
-        fontSize: 10, fontWeight: 700, color: dimmed ? C.tx3 : C.tx2,
-        textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8,
-      }}>
+    <div className="mb-7">
+      <div className={cn("mb-2 text-[10px] font-bold uppercase tracking-[0.8px]", dimmed ? "text-agon-tx3" : "text-agon-tx2")}>
         {title}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="flex flex-col gap-1.5">
         {children}
       </div>
     </div>
@@ -206,55 +188,37 @@ interface CompRowProps {
 
 function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: CompRowProps) {
   const meta     = COMPETITION_META[comp.type as keyof typeof COMPETITION_META] ?? COMPETITION_META.competition;
-  const priColor = PRIORITY_COLOR[comp.priority] ?? C.tx3;
+  const priTone  = PRIORITY_TONE[comp.priority] ?? "border-agon-tx3/[0.314] bg-agon-tx3/[0.133] text-agon-tx3";
   const isConf   = delConfirm === comp.id;
 
   return (
-    <div
-      style={{
-        padding: "12px 16px", borderRadius: 4,
-        background: C.s1, border: "1px solid " + C.brd,
-      }}
-    >
-    <div
-      style={{
-        display: "flex", alignItems: "center", gap: 12,
-        opacity: dimmed ? 0.7 : 1,
-        transition: "opacity 150ms",
-      }}
-    >
+    <div className="rounded-[4px] border border-agon-brd bg-agon-s1 px-4 py-3">
+    <div className={cn("flex items-center gap-3 transition-opacity duration-150", dimmed && "opacity-70")}>
       {/* Priority badge */}
-      <div
-        style={{
-          width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-          background: priColor + "22", border: "1px solid " + priColor + "50",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 11, fontWeight: 800, color: priColor,
-        }}
-      >
+      <div className={cn("flex size-7 flex-shrink-0 items-center justify-center rounded-[6px] border text-[11px] font-extrabold", priTone)}>
         {priorityLabel(comp.priority)}
       </div>
 
       {/* Emoji */}
-      <div style={{ fontSize: 18, flexShrink: 0 }}>{meta.emoji}</div>
+      <div className="flex-shrink-0 text-[18px]">{meta.emoji}</div>
 
       {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{comp.name}</span>
-          <span style={{
-            fontSize: 9, fontWeight: 600, color: meta.color,
-            background: meta.color + "18", padding: "1px 6px", borderRadius: 4,
-            textTransform: "uppercase", letterSpacing: "0.5px",
-          }}>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[13px] font-bold text-agon-tx">{comp.name}</span>
+          {/* Couleur du type de compétition : donnée de COMPETITION_META */}
+          <span
+            className="rounded-[4px] px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.5px]"
+            style={{ color: meta.color, background: alpha(meta.color, 0.094) }}
+          >
             {meta.label}
           </span>
         </div>
-        <div style={{ fontSize: 11, color: C.tx3, marginTop: 2, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="mt-0.5 flex flex-wrap gap-2.5 text-[11px] text-agon-tx3">
           <span>{format(parseISO(comp.date), "d MMMM yyyy", { locale: fr })}</span>
           {comp.location && <span>{comp.location}</span>}
           {comp.notes    && (
-            <span style={{ fontStyle: "italic", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap italic">
               {comp.notes}
             </span>
           )}
@@ -263,35 +227,21 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
 
       {/* Actions */}
       {isConf ? (
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-          <span style={{ fontSize: 11, color: C.r }}>Supprimer ?</span>
-          <button
-            onClick={onDelete}
-            style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: C.rV, color: C.ink, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-          >
+        <div className="flex flex-shrink-0 items-center gap-1.5">
+          <span className="text-[11px] text-agon-erreur">Supprimer ?</span>
+          <button onClick={onDelete} className="cursor-pointer rounded-[6px] border-0 bg-agon-erreur-vif px-2.5 py-1 text-[11px] font-bold text-agon-ink">
             Oui
           </button>
-          <button
-            onClick={onCancelDel}
-            style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
-          >
+          <button onClick={onCancelDel} className="cursor-pointer rounded-[6px] border border-agon-brd-l bg-transparent px-2.5 py-1 text-[11px] text-agon-tx3">
             Non
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-          <button
-            onClick={onEdit}
-            title="Modifier"
-            style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
+        <div className="flex flex-shrink-0 gap-1">
+          <button onClick={onEdit} title="Modifier" className={ICON_BTN}>
             <Pencil size={13} />
           </button>
-          <button
-            onClick={onDelete}
-            title="Supprimer"
-            style={{ width: 30, height: 30, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
+          <button onClick={onDelete} title="Supprimer" className={ICON_BTN}>
             <Trash2 size={13} />
           </button>
         </div>
@@ -300,14 +250,14 @@ function CompRow({ comp, delConfirm, onEdit, onDelete, onCancelDel, dimmed }: Co
 
       {/* Bilan de l'athlète (compétitions passées) */}
       {comp.athlete_comment ? (
-        <div style={{ marginTop: 10, background: C.acS, borderRadius: 4, padding: "8px 10px" }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+        <div className="mt-2.5 rounded-[4px] bg-agon-accent-doux px-2.5 py-2">
+          <div className="mb-[3px] text-[9px] font-bold uppercase tracking-[0.4px] text-agon-accent">
             Retour de l'athlète
           </div>
-          <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{comp.athlete_comment}</div>
+          <div className="whitespace-pre-wrap text-[12px] leading-[1.5] text-agon-tx2">{comp.athlete_comment}</div>
         </div>
       ) : dimmed && (
-        <div style={{ marginTop: 8, fontSize: 11, color: C.tx3, fontStyle: "italic" }}>
+        <div className="mt-2 text-[11px] italic text-agon-tx3">
           Pas encore de retour de l'athlète
         </div>
       )}
