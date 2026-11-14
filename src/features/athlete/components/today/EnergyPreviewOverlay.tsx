@@ -13,6 +13,10 @@ import { useCompleteEnergyAssignment, useUpdateEnergyAssignment, useUpsertEnergy
 import { useEffect, useRef, useState } from "react";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
+import { useZoneModels } from "@/features/shared/hooks/useZoneModels";
+import { activeModelAt } from "@shared/domain/hrZones";
+import { localIsoDay } from "@shared/domain/dates";
+import { hrZoneCount } from "@/lib/energy/energyRun";
 import { EnergyReadView } from "@/features/athlete/components/energy/EnergyReadView";
 import { EnergyRunScreen } from "@/features/athlete/components/energy/EnergyRunScreen";
 import { WatchPushBadge } from "@/features/athlete/components/today/WatchPushBadge";
@@ -49,6 +53,9 @@ export function EnergyPreviewOverlay({
   const navigate = useNavigate();
   // Séance faite avec une montre : activité rattachée à cette séance prévue.
   const day = (event.date ?? undefined) as IsoDay | undefined;
+  // Échelle des zones FC sous un bloc : modèle du coach valable le jour de la séance.
+  const { data: zoneModels } = useZoneModels(athleteId);
+  const hrZones = hrZoneCount(zoneModels ? activeModelAt(zoneModels, day ?? localIsoDay()) : null);
   const { data: pvd } = usePlannedVsDone(athleteId, day, day);
   const watchActivity = pvd?.flatMap((d) => d.planned).find((p) => p.kind === "energy" && p.id === assignmentId)?.activity ?? null;
   const complete        = useCompleteEnergyAssignment();
@@ -374,6 +381,7 @@ export function EnergyPreviewOverlay({
       <EnergyReadView
         session={session}
         refs={refs}
+        hrZones={hrZones}
         badge={<WatchPushBadge athleteId={athleteId} kind="energy" sourceId={assignmentId} />}
         onClose={onClose}
         onStart={() => setPhase("run")}

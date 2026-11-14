@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, FileText } from "lucide-react";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { zoneColor } from "@/lib/seance";
 import { TYPE_COLOR } from "@/lib/peps";
 import { DISPLAY, KICKER, LABEL, MONO } from "@/features/shared/components/seance/seanceUi";
-import { profileBars, readBlocks, sessionLine, type ReadBlock, type Refs } from "@/lib/energy/energyRun";
+import {
+  profileBars, readBlocks, sessionLine, type MainTarget, type ReadBlock, type ReadGroup, type Refs, type ZoneScale,
+} from "@/lib/energy/energyRun";
 import type { EnergySessionRow } from "@/types/energy";
 import { tintColor } from "./energyTint";
 
@@ -13,10 +16,12 @@ import { tintColor } from "./energyTint";
  * une phrase avec UNE cible en grand, consignes du coach repliées.
  */
 export function EnergyReadView({
-  session, refs, badge, onClose, onStart, onNote, onDetail,
+  session, refs, hrZones, badge, onClose, onStart, onNote, onDetail,
 }: {
   session: EnergySessionRow;
   refs: Refs;
+  /** Nombre de zones du modèle FC du coach (3, 5 ou 7) pour l'échelle sous un bloc en FC. */
+  hrZones?: number | null;
   /** « Sur ta montre » quand la séance a été envoyée sur la montre. */
   badge?: React.ReactNode;
   onClose: () => void;
@@ -25,7 +30,7 @@ export function EnergyReadView({
   onDetail: () => void;
 }) {
   const steps = useMemo(() => session.intervals ?? [], [session.intervals]);
-  const blocks = useMemo(() => readBlocks(steps, refs), [steps, refs]);
+  const blocks = useMemo(() => readBlocks(steps, refs, { hrZones }), [steps, refs, hrZones]);
   const bars = useMemo(() => profileBars(steps, refs), [steps, refs]);
   const totalS = session.total_duration_s ?? blocks.reduce((a, b) => a + b.durationS, 0);
   const consignes = [session.notes?.trim(), ...blocks.flatMap((b) => b.instructions)].filter((x): x is string => !!x);
@@ -65,7 +70,12 @@ export function EnergyReadView({
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {blocks.map((b) => <BlockRow key={b.id} b={b} />)}
+          {blocks.map((b) => (
+            <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {b.tree ? <GroupCard b={b} tree={b.tree} /> : <BlockRow b={b} />}
+              {b.scale && <ScaleBar scale={b.scale} />}
+            </div>
+          ))}
           {blocks.length === 0 && <div style={{ color: C.tx2, fontSize: 13 }}>Pas de bloc détaillé : suis les consignes du coach.</div>}
         </div>
 
@@ -107,9 +117,18 @@ export function EnergyReadView({
   );
 }
 
+function Target({ t, color, size = 22 }: { t: MainTarget; color: string; size?: number }) {
+  return (
+    <span style={{ ...MONO, fontSize: size, lineHeight: 1.1, color, whiteSpace: "nowrap" }}>
+      {t.value}<span style={{ fontSize: 12, color: C.tx2 }}>{t.unit}</span>
+    </span>
+  );
+}
+
 /** Ligne de bloc (planche EnergieTelCas, « Lecture ») : barre de couleur, bloc à gauche, la cible en grand à droite. */
 function BlockRow({ b }: { b: ReadBlock }) {
   const color = tintColor(b.tint);
+  const sub = [b.target?.secondary, b.scale?.active ? `Z${b.scale.active}` : null].filter(Boolean).join(" · ");
   return (
     <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 14, padding: "12px 14px", display: "flex", gap: 12, alignItems: "stretch" }}>
       <span aria-hidden style={{ width: 4, borderRadius: 2, background: color, flex: "none" }} />
@@ -124,12 +143,73 @@ function BlockRow({ b }: { b: ReadBlock }) {
       </div>
       {b.target && (
         <div style={{ flex: "none", maxWidth: "48%", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 4, textAlign: "right" }}>
-          <span style={{ ...MONO, fontSize: 22, lineHeight: 1.1, color }}>
-            {b.target.value}<span style={{ fontSize: 12, color: C.tx2 }}>{b.target.unit}</span>
-          </span>
-          {b.target.secondary && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{b.target.secondary}</span>}
+          <Target t={b.target} color={color} />
+          {sub && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{sub}</span>}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Groupe dans un groupe (planche EnergieTelCas, cas 04) : carte teintée, « 2 séries »
+ * et la récup entre séries en tête, les répétitions lues en phrase, en retrait.
+ */
+function GroupCard({ b, tree }: { b: ReadBlock; tree: ReadGroup }) {
+  const color = tintColor(b.tint);
+  return (
+    <div style={{ background: alpha(color, 0.07), border: `1px solid ${alpha(color, 0.33)}`, borderRadius: 14, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <span style={{ ...LABEL, color: C.tx2 }}>{b.title}</span>
+      <GroupLevel tree={tree} color={color} />
+    </div>
+  );
+}
+
+function GroupLevel({ tree, color }: { tree: ReadGroup; color: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+        <span style={{ ...LABEL, color: C.tx2, whiteSpace: "nowrap" }}>{tree.label}</span>
+        {tree.between && <span style={{ fontSize: 12, color: C.tx2, textAlign: "right" }}>{tree.between}</span>}
+      </div>
+      {tree.items.map((it) => {
+        const c = it.kind === "line" ? tintColor(it.tint) : color;
+        return (
+          <div key={it.id} style={{ marginLeft: 12, paddingLeft: 12, borderLeft: `2px solid ${alpha(c, 0.47)}` }}>
+            {it.kind === "group" ? (
+              <GroupLevel tree={it.group} color={color} />
+            ) : (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 16 }}>{it.main}</div>
+                  {it.sub && <div style={{ fontSize: 12.5, color: C.tx2 }}>{it.sub}</div>}
+                </div>
+                {it.target && <Target t={it.target} color={c} />}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Échelle Z1–Zn sous un bloc en watts ou en FC, aux couleurs des zones (vert → rouge). */
+function ScaleBar({ scale }: { scale: ZoneScale }) {
+  const zones = Array.from({ length: scale.n }, (_, i) => i + 1);
+  return (
+    <div role="img" aria-label={`Échelle de ${scale.n} zones${scale.active ? `, zone ${scale.active} visée` : ""}`} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", gap: 4 }}>
+        {zones.map((z) => (
+          <span key={z} style={{
+            flex: 1, height: 6, borderRadius: 3, background: zoneColor(z, scale.n),
+            outline: z === scale.active ? `1.5px solid ${C.tx}` : undefined, outlineOffset: 1,
+          }} />
+        ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", ...MONO, fontSize: 10.5, color: C.tx3 }}>
+        {zones.map((z) => <span key={z} style={{ color: z === scale.active ? C.tx : undefined }}>Z{z}</span>)}
+      </div>
     </div>
   );
 }

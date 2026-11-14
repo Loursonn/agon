@@ -471,6 +471,39 @@ export interface ReadBlock {
   /** Consignes du coach rattachées au bloc. */
   instructions: string[];
   durationS: number;
+  /**
+   * Groupe qui contient d'autres groupes (« 2 × (4 × 200 m) ») : l'arbre lu niveau
+   * par niveau, avec le nombre de séries à chaque niveau. Absent sinon (la phrase suffit).
+   */
+  tree?: ReadGroup;
+  /** Échelle Z1–Zn à afficher sous un bloc en watts ou en FC. Absente pour une allure. */
+  scale?: ZoneScale;
+}
+
+/** Un niveau de groupe : « 2 séries », « 3 min entre les séries », puis ses lignes en retrait. */
+export interface ReadGroup {
+  repeat: number;
+  /** « 2 séries », « 1 série ». */
+  label: string;
+  /** « 3 min entre les séries », « départ toutes les 3 min », « récup 2 min » ; null sinon. */
+  between: string | null;
+  items: ReadItem[];
+}
+
+export type ReadItem =
+  | { kind: "line"; id: string; main: string; sub: string | null; target: MainTarget | null; tint: Tint }
+  | { kind: "group"; id: string; group: ReadGroup };
+
+/** Échelle des zones : nombre de zones du modèle (3, 5 ou 7) et zone visée dans ce modèle. */
+export interface ZoneScale {
+  n: 3 | 5 | 7;
+  /** Zone visée (1..n), null si la cible ne se range pas dans une zone. */
+  active: number | null;
+}
+
+export interface ReadOptions {
+  /** Nombre de zones du modèle FC du coach (3, 5 ou 7) ; 5 par défaut. La puissance reste en 5 zones (décision du 14/11). */
+  hrZones?: number | null;
 }
 
 function firstWork(s: EnergyStep): Leaf | null {
@@ -491,12 +524,12 @@ function firstWork(s: EnergyStep): Leaf | null {
   return visit(s) ?? fallback;
 }
 
-function groupPhrase(g: EnergyGroup, refs: Refs, top: boolean): string {
+function groupParts(g: EnergyGroup, refs: Refs): { body: string; extras: string[]; hasSub: boolean; n: number } {
   // Récup en dernier pas du groupe : lue comme « 4 × 6 min, récup 2 min ».
   const last = g.children[g.children.length - 1];
   const tailRest = g.children.length > 1 && last && last.type !== "group" && isRecovery(last) ? last : null;
   const kids = tailRest ? g.children.slice(0, -1) : g.children;
-  const inner = kids.map((c) => (c.type === "group" ? groupPhrase(c, refs, false) : leafInGroup(c, refs))).join(" + ");
+  const inner = kids.map((c) => (c.type === "group" ? groupPhrase(c, refs) : leafInGroup(c, refs))).join(" + ");
   const n = Math.max(1, Math.round(g.repeat || 1));
   const hasSub = g.children.some((c) => c.type === "group");
   const body = n > 1 ? (kids.length > 1 || hasSub ? `${n} × (${inner})` : `${n} × ${inner}`) : inner;
@@ -508,8 +541,76 @@ function groupPhrase(g: EnergyGroup, refs: Refs, top: boolean): string {
     const what = [durPhrase(r), r.notes?.trim()].filter(Boolean).join(" ");
     extras.push(hasSub ? `${what} entre les séries` : `récup ${what}`);
   }
-  void top;
+  return { body, extras, hasSub, n };
+}
+
+function groupPhrase(g: EnergyGroup, refs: Refs): string {
+  const { body, extras } = groupParts(g, refs);
   return [body, ...extras].join(", ");
+}
+
+/**
+ * Arbre de lecture d'un groupe qui contient des groupes. Un sous-groupe sans
+ * sous-groupe devient une ligne (« 4 × 200 m » / « récup 45 s marche ») ; un
+ * sous-groupe qui en contient encore devient un niveau de plus.
+ */
+function readGroup(g: EnergyGroup, refs: Refs): ReadGroup {
+  const { extras, n } = groupParts(g, refs);
+  const items: ReadItem[] = [];
+  for (const c of g.children) {
+    if (c.type === "group") {
+      if (c.children.some((x) => x.type === "group")) {
+        items.push({ kind: "group", id: c.id, group: readGroup(c, refs) });
+      } else {
+        const p = groupParts(c, refs);
+        const w = firstWork(c);
+        items.push({
+          kind: "line", id: c.id, main: p.body, sub: p.extras.length ? p.extras.join(", ") : null,
+          target: w ? mainTarget(w, refs) : null, tint: w ? stepTint(w, refs) : { kind: "libre" },
+        });
+      }
+    } else if (!(isRecovery(c) && c === g.children[g.children.length - 1] && g.children.length > 1)) {
+      items.push({
+        kind: "line", id: c.id, main: leafInGroup(c, refs), sub: null,
+        target: isRecovery(c) ? null : mainTarget(c, refs), tint: stepTint(c, refs),
+      });
+    }
+  }
+  return { repeat: n, label: `${n} série${n > 1 ? "s" : ""}`, between: extras.length ? extras.join(", ") : null, items };
+}
+
+const SCALE_SIZES = [3, 5, 7] as const;
+
+/** Nombre de zones d'un modèle FC du coach : « three » → 3, « five » → 5, personnalisé → bornes + 1. */
+export function hrZoneCount(model: { kind: string; bounds: readonly number[] } | null | undefined): number | null {
+  if (!model) return null;
+  if (model.kind === "three") return 3;
+  if (model.kind === "five") return 5;
+  return model.bounds.length > 0 ? model.bounds.length + 1 : null;
+}
+
+/** Zone 1..5 ramenée sur un modèle à n zones (même position relative). */
+function rescale(zone5: number, n: number): number {
+  return Math.max(1, Math.min(n, Math.round(((zone5 - 1) / 4) * (n - 1)) + 1));
+}
+
+/**
+ * Échelle à afficher sous un bloc : watts → 5 zones ; FC → le modèle du coach
+ * (3, 5 ou 7, 5 par défaut) ; autre cible (allure, texte…) → pas d'échelle.
+ */
+export function zoneScale(step: Leaf | null, refs?: Refs, opts?: ReadOptions): ZoneScale | undefined {
+  const t = step?.target as EnergyTarget | undefined;
+  if (!step || !t || isRecovery(step)) return undefined;
+  const tint = stepTint(step, refs);
+  const z5 = tint.kind === "zone" ? tint.zone : null;
+  if (t.kind === "power" || t.kind === "power_test_pct") return { n: 5, active: z5 };
+  if (t.kind === "hr_zone" || t.kind === "hr_pct" || t.kind === "hr_bpm") {
+    const raw = opts?.hrZones;
+    const n = (SCALE_SIZES as readonly number[]).includes(raw ?? 0) ? (raw as 3 | 5 | 7) : 5;
+    if (t.kind === "hr_zone" && ok(t.zone)) return { n, active: Math.max(1, Math.min(n, t.zone)) };
+    return { n, active: z5 == null ? null : n === 5 ? z5 : rescale(z5, n) };
+  }
+  return undefined;
 }
 
 function leafInGroup(s: Leaf, refs: Refs): string {
@@ -525,7 +626,7 @@ function collectInstructions(s: EnergyStep, out: string[]) {
   }
 }
 
-export function readBlocks(steps: readonly EnergyStep[], refs?: Refs): ReadBlock[] {
+export function readBlocks(steps: readonly EnergyStep[], refs?: Refs, opts?: ReadOptions): ReadBlock[] {
   const flat = flattenRun(steps);
   return steps.map((s, i) => {
     const main = firstWork(s);
@@ -537,10 +638,11 @@ export function readBlocks(steps: readonly EnergyStep[], refs?: Refs): ReadBlock
     }
     const role = s.type === "group" ? (s.role === "open" || !ROLE_WORD[s.role] ? "Effort" : ROLE_WORD[s.role]) : roleWord(s);
     const phrase = s.type === "group"
-      ? groupPhrase(s, refs, true)
+      ? groupPhrase(s, refs)
       : [durPhrase(s), s.type === "interval" ? s.notes?.trim() : ""].filter(Boolean).join(" ");
     const instructions: string[] = [];
     collectInstructions(s, instructions);
+    const scale = zoneScale(main, refs, opts);
     return {
       id: s.id,
       title: `${i + 1} · ${role}`,
@@ -550,6 +652,8 @@ export function readBlocks(steps: readonly EnergyStep[], refs?: Refs): ReadBlock
       tints,
       instructions,
       durationS: mine.reduce((acc, f) => acc + estimatedSeconds(f.step, refs), 0),
+      ...(s.type === "group" && s.children.some((c) => c.type === "group") ? { tree: readGroup(s, refs) } : {}),
+      ...(scale ? { scale } : {}),
     };
   });
 }
