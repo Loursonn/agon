@@ -107,8 +107,9 @@ export default function ProfilPage() {
   return (
     <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
     <AthletePageHeader title="Profil" />
-    {/* Ordinateur (planche AthOrdiBProfil) : rubriques sur deux colonnes. */}
-    <div className="[&>*]:break-inside-avoid" style={{ padding: "24px 20px 40px", scrollbarWidth: "none", ...(isDesktop ? { columns: 2, columnGap: 32 } : {}) }}>
+    {/* Ordinateur (planche AthOrdiBProfil) : profil à gauche (1/3), le reste à droite (2/3). */}
+    <div style={{ padding: "24px 20px 40px", scrollbarWidth: "none", ...(isDesktop ? { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", columnGap: 32, alignItems: "start" } : {}) }}>
+      <div style={isDesktop ? { display: "flex", flexDirection: "column", minWidth: 0 } : { display: "contents" }}>
       {/* ── Profil ── */}
       <div style={{ marginBottom: 24 }}>
         <SectionTitle n="01">Profil</SectionTitle>
@@ -236,6 +237,8 @@ export default function ProfilPage() {
         </div>
       )}
 
+      </div>
+      <div style={isDesktop ? { display: "flex", flexDirection: "column", minWidth: 0 } : { display: "contents" }}>
       {/* ── Mes coachs (double coach) ── */}
       {!viewOnly && athleteId && (
         <div id="mes-coachs" style={{ marginBottom: 24, scrollMarginTop: 56 }}>
@@ -280,6 +283,7 @@ export default function ProfilPage() {
           </button>
         </div>
       )}
+      </div>
     </div>
     </div>
   );

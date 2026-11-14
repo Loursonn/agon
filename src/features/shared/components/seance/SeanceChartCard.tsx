@@ -56,9 +56,10 @@ export function SeanceChartCard(props: Props) {
   ];
 
   return (
-    <div style={{ ...CARD, padding: compact ? "12px 10px" : "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+    // Téléphone (planche SeanceAthleteTel) : graphique posé sur la page, sans carte, courbes sur une ligne.
+    <div style={{ ...(compact ? { padding: 0, position: "relative" } : { ...CARD, padding: "16px 18px" }), display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: compact ? "nowrap" : "wrap", overflowX: compact ? "auto" : undefined, scrollbarWidth: "none", minWidth: 0 }}>
           {toggles.map((t) => {
             const on = vis[t.k] && t.on;
             return (
@@ -69,7 +70,7 @@ export function SeanceChartCard(props: Props) {
                 onClick={() => setVisible((v) => ({ ...v, [t.k]: !v[t.k] }))}
                 aria-pressed={on}
                 style={{
-                  display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 12px", borderRadius: 999,
+                  display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 12px", borderRadius: 999, flex: "none",
                   border: `1px ${on ? "solid" : "dashed"} ${on ? C.brdL : C.brd}`, background: on ? alpha(C.tx, 0.05) : "transparent",
                   color: on ? C.tx : C.tx3, fontSize: 12.5, cursor: t.on ? "pointer" : "not-allowed", fontFamily: "inherit",
                   opacity: t.on ? 1 : 0.45,
@@ -82,7 +83,7 @@ export function SeanceChartCard(props: Props) {
           })}
         </div>
         {hasDist && (
-          <div style={{ display: "inline-flex", padding: 3, borderRadius: 10, background: C.s2 }} role="tablist">
+          <div style={{ display: "inline-flex", padding: 3, borderRadius: 10, background: C.s2, ...(compact ? { position: "absolute", right: 0, top: -38 } : {}) }} role="tablist">
             {(["time", "distance"] as const).map((a) => (
               <button
                 key={a}
