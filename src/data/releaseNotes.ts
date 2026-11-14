@@ -38,6 +38,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-ia-echelles-forme",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Synthèse IA : la forme et le stress lus dans le bon sens",
+    summary:
+      "Dans « Ce qu'on retient » du profil athlète, l'IA prenait parfois une forme de 4 sur 5 pour de la fatigue. Elle sait maintenant que 5 veut dire très en forme et très détendu.",
+    sections: [],
+  },
+  {
     id: "2026-11-14-energie-durees-longues",
     date: "2026-11-14",
     kind: "fix",
