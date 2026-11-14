@@ -16,6 +16,10 @@
 -- Garde-fous : la migration s'arrête (rien n'est supprimé) si une ligne ou un
 -- fichier subsiste. Prod au 2026-11-13 : 0 ligne, 0 fichier, 0 champ rempli.
 
+-- Transaction explicite : LOCK TABLE n'est accepté que dans une transaction (le rejeu R2
+-- exécute le fichier instruction par instruction).
+BEGIN;
+
 -- Verrous pris d'un coup, dans cet ordre : appliquée sans, la migration a
 -- croisé une requête en cours (deadlock, rien changé). profiles est référencé
 -- par les clés étrangères des deux tables supprimées.
@@ -132,3 +136,5 @@ AS $$
          AND strpos(s.images::text, '/energy-exercise-photos/' || o.name) > 0
     );
 $$;
+
+COMMIT;
