@@ -1,11 +1,5 @@
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { type ActivityType, ACTIVITY_LABEL, type RunDistanceValue } from "./runDistance";
-
-
-
-
-
-
 
 /**
  * Fin de séance énergie / spécifique : activité réellement faite + distance
@@ -16,11 +10,11 @@ export function RunDistanceInput({ value, onChange }: {
   onChange: (v: RunDistanceValue) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+    <div className="flex flex-col gap-2">
+      <div className="text-[10px] font-bold uppercase tracking-[0.4px] text-agon-tx3">
         Activité réalisée
       </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      <div className="flex flex-wrap gap-1.5">
         {(Object.keys(ACTIVITY_LABEL) as ActivityType[]).map((a) => {
           const active = value.activity === a;
           return (
@@ -28,13 +22,10 @@ export function RunDistanceInput({ value, onChange }: {
               key={a}
               type="button"
               onClick={() => onChange({ ...value, activity: a })}
-              style={{
-                padding: "6px 12px", borderRadius: 4, fontSize: 12, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-                border: "1px solid " + (active ? C.ac : C.brdL),
-                background: active ? C.acS : "transparent",
-                color: active ? C.ac : C.tx3,
-              }}
+              className={cn(
+                "cursor-pointer rounded-[4px] border px-3 py-1.5 font-[inherit] text-[12px] font-semibold",
+                active ? "border-agon-accent bg-agon-accent-doux text-agon-accent" : "border-agon-brd-l bg-transparent text-agon-tx3",
+              )}
             >
               {ACTIVITY_LABEL[a]}
             </button>
@@ -42,21 +33,17 @@ export function RunDistanceInput({ value, onChange }: {
         })}
       </div>
       {value.activity === "course" && (
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 12, color: C.tx2, flex: 1 }}>Distance courue</span>
+        <label className="flex items-center gap-2">
+          <span className="flex-1 text-[12px] text-agon-tx2">Distance courue</span>
           <input
             type="text"
             inputMode="decimal"
             value={value.km}
             onChange={(e) => onChange({ ...value, km: e.target.value })}
             placeholder="0"
-            style={{
-              width: 80, padding: "8px 10px", borderRadius: 4, textAlign: "right",
-              border: "1px solid " + C.brdL, background: C.s2, color: C.tx,
-              fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none",
-            }}
+            className="w-20 rounded-[4px] border border-agon-brd-l bg-agon-s2 px-2.5 py-2 text-right font-[inherit] text-[14px] font-bold text-agon-tx [outline:none]"
           />
-          <span style={{ fontSize: 12, color: C.tx3 }}>km</span>
+          <span className="text-[12px] text-agon-tx3">km</span>
         </label>
       )}
     </div>
