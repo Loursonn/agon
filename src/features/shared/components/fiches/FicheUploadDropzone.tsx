@@ -3,7 +3,7 @@
  * PDF et images. Le contrôle de taille / mime définitif est fait à l'upload.
  */
 import { useRef, useState } from "react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { DOC_ALLOWED_MIME } from "@/features/shared/types/fiches";
 
 interface Props {
@@ -37,18 +37,17 @@ export function FicheUploadDropzone({ onFiles, multiple = true, imagesOnly, labe
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); take(e.dataTransfer.files); }}
-      style={{
-        border: "1.5px dashed " + (over ? C.ac : C.brdL),
-        background: over ? C.acS : "transparent",
-        borderRadius: 6, padding: compact ? "12px" : "28px 16px", textAlign: "center",
-        cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1,
-        minHeight: 44,
-      }}
+      className={cn(
+        "min-h-11 rounded-[6px] border-[1.5px] border-dashed text-center",
+        over ? "border-agon-accent bg-agon-accent-doux" : "border-agon-brd-l bg-transparent",
+        compact ? "p-3" : "px-4 py-7",
+        disabled ? "cursor-default opacity-50" : "cursor-pointer opacity-100",
+      )}
     >
-      <div style={{ fontSize: 13, fontWeight: 600, color: C.tx2 }}>
+      <div className="text-[13px] font-semibold text-agon-tx2">
         {label ?? (multiple ? "Glisse tes fichiers ici ou clique pour choisir" : "Glisse un fichier ici ou clique pour choisir")}
       </div>
-      <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>
+      <div className="mt-1 text-[11px] text-agon-tx3">
         {hint ?? (imagesOnly ? "JPG, PNG, WebP" : "PDF, JPG, PNG, WebP · 10 Mo max")}
       </div>
       <input
@@ -56,7 +55,7 @@ export function FicheUploadDropzone({ onFiles, multiple = true, imagesOnly, labe
         type="file"
         accept={accept}
         multiple={multiple}
-        style={{ display: "none" }}
+        className="hidden"
         onChange={(e) => { take(e.target.files); e.target.value = ""; }}
       />
     </div>
