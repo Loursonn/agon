@@ -4,7 +4,7 @@ import { useExerciseBankPage } from "@/features/shared/hooks/useExerciseLibrary"
 import type { ExerciseRow } from "@/api/exercises";
 import { EX_TYPES, exTypeColor, exTypeLabel } from "@/lib/exerciseTypes";
 import { MTREE, mL } from "@/lib/muscles";
-import { CARD, Chevron, Chip, KICKER, MONO, PhonePage, Section, Tag, rowLine } from "./phoneUi";
+import { CARD, Chevron, Chip, KICKER, MONO, PhonePage, SearchField, Section, Tag, ToolHead, rowLine } from "./phoneUi";
 
 const EQUIPS = ["Barre", "Haltères", "Cable", "Machine", "Poids de corps", "Élastique", "Kettlebell", "Smith"];
 const LEVELS = ["Débutant", "Intermédiaire", "Avancé"];
@@ -56,14 +56,8 @@ export default function CoachPhoneBanque() {
 
   return (
     <PhonePage gap={12} style={{ paddingTop: 18 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>Banque</h1>
-        {!filtered && total > 0 && <span style={{ ...MONO, fontSize: 11.5, color: C.tx3 }}>{total} exercices</span>}
-      </div>
-      <input
-        type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Rechercher un exercice" aria-label="Rechercher un exercice"
-        style={{ height: 42, padding: "0 12px", borderRadius: 11, border: `1px solid ${C.brdL}`, background: C.s1, color: C.tx, fontSize: 16, fontFamily: "inherit" }}
-      />
+      <ToolHead kicker={!filtered && total > 0 ? `${total} exercices` : undefined} title="Banque" />
+      <SearchField value={text} onChange={setText} placeholder="Rechercher un exercice" />
       <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
         <Chip active={!type} onClick={() => setType("")}>Tous</Chip>
         {EX_TYPES.map((t) => <Chip key={t.value} active={type === t.value} color={exTypeColor(t.value)} onClick={() => setType(t.value)}>{t.label}</Chip>)}
@@ -83,26 +77,28 @@ export default function CoachPhoneBanque() {
       {!isLoading && !isError && rows.length === 0 && <div style={{ ...CARD, padding: 14, fontSize: 13, color: C.tx3 }}>Aucun exercice ne correspond.</div>}
       {rows.length > 0 && (
         <div style={{ ...CARD, padding: "2px 14px" }}>
-          {rows.map((ex, i) => (
-            <button key={ex.id} type="button" onClick={() => setOpen(ex)} style={{
-              display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 0", background: "none", border: "none",
-              boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.name}</div>
-                {(ex.target || ex.equipment) && (
-                  <div style={{ fontSize: 11.5, color: C.tx3 }}>{[ex.target ? mL(ex.target) : null, ex.equipment].filter(Boolean).join(" · ")}</div>
-                )}
-              </div>
-              {(ex.ex_type || !ex.is_verified) && (
-                <span style={{ fontSize: 11, whiteSpace: "nowrap", textAlign: "right" }}>
-                  {ex.ex_type && <span style={{ color: exTypeColor(ex.ex_type) }}>{exTypeLabel(ex.ex_type)}</span>}
-                  {!ex.is_verified && <span style={{ color: C.tx3 }}>{ex.ex_type ? " · " : ""}communauté</span>}
-                </span>
-              )}
-              <Chevron />
-            </button>
-          ))}
+          {rows.map((ex, i) => {
+            const col = exTypeColor(ex.ex_type);
+            const meta = [ex.target ? mL(ex.target) : null, ex.equipment, ex.is_verified ? null : "communauté"].filter(Boolean).join(" · ");
+            return (
+              <button key={ex.id} type="button" onClick={() => setOpen(ex)} style={{
+                display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 0", background: "none", border: "none",
+                boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
+              }}>
+                <ExTile color={col} video={!!(ex.youtube_id || ex.gif_url)} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.name}</div>
+                  {ex.ex_type && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.tx2, marginTop: 1 }}>
+                      <span aria-hidden style={{ width: 7, height: 7, borderRadius: 2, background: col }} />{exTypeLabel(ex.ex_type)}
+                    </div>
+                  )}
+                  {meta && <div style={{ ...MONO, fontSize: 11, color: C.tx3, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta}</div>}
+                </div>
+                <Chevron />
+              </button>
+            );
+          })}
         </div>
       )}
       {rows.length < total && (
@@ -112,6 +108,26 @@ export default function CoachPhoneBanque() {
       )}
       <div style={{ fontSize: 11.5, color: C.tx3, textAlign: "center" }}>Lecture seule. Créer ou modifier un exercice : sur ordinateur.</div>
     </PhonePage>
+  );
+}
+
+/** Vignette d'exercice : lecture si une vidéo existe, sinon haltère. */
+function ExTile({ color, video }: { color: string; video: boolean }) {
+  return (
+    <span aria-hidden style={{
+      width: 46, height: 46, flex: "none", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center",
+      background: alpha(color, 0.12), border: `1px solid ${alpha(color, 0.35)}`, color,
+    }}>
+      {video ? (
+        <span style={{ width: 22, height: 22, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="8" height="10" viewBox="0 0 8 10"><path d="M0 0l8 5-8 5z" fill={C.bg} /></svg>
+        </span>
+      ) : (
+        <svg width="20" height="12" viewBox="0 0 20 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+          <path d="M1 6h18M4 2v8M7 3.5v5M13 3.5v5M16 2v8" />
+        </svg>
+      )}
+    </span>
   );
 }
 

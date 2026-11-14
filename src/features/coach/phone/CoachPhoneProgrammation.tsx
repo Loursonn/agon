@@ -21,7 +21,7 @@ import CoachPhoneSeanceEdit from "./CoachPhoneSeanceEdit";
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 type Filter = "all" | "muscu" | "energie" | "hyrox";
 const FILTERS: Array<{ key: Filter; label: string; color?: string }> = [
-  { key: "all", label: "Tout" },
+  { key: "all", label: "Tout", color: C.tx },
   { key: "muscu", label: "Muscu", color: TYPE_COLOR.muscu },
   { key: "energie", label: "Énergie", color: TYPE_COLOR.energie },
   { key: "hyrox", label: "Spécifique", color: TYPE_COLOR.hyrox },
@@ -79,14 +79,14 @@ function ProgrammationList() {
   return (
     <PhonePage gap={12} style={{ paddingTop: 14 }}>
       {cycle ? (
-        <div style={{ ...CARD, padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <>
+          <div style={{ padding: "12px 14px", borderRadius: 14, background: alpha(TYPE_COLOR.competition, 0.1), border: `1px solid ${C.brd}`, display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...KICKER, color: C.tx3 }}>Cycle en cours</div>
-              <div style={{ fontSize: 16, fontWeight: 500, marginTop: 2 }}>{cycle.name}</div>
-              <div style={{ ...MONO, fontSize: 11.5, color: C.tx3 }}>{fmtDay(cycle.start_date)} → {fmtDay(cycle.end_date)}</div>
+              <span style={{ ...KICKER, color: C.tx2 }}>Cycle en cours</span>
+              <div style={{ fontSize: 15, fontWeight: 500, marginTop: 2 }}>{cycle.name}</div>
+              <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{fmtDay(cycle.start_date)} → {fmtDay(cycle.end_date)}</div>
             </div>
-            {weekIndex && <Tag color={C.ac}>S{weekIndex} / {weeks.length}</Tag>}
+            {weekIndex && <Tag color={C.tx} filled>S{weekIndex} / {weeks.length}</Tag>}
           </div>
           {weeks.length > 0 && (
             <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
@@ -95,15 +95,15 @@ function ProgrammationList() {
                 const current = weekIndex === i + 1;
                 return (
                   <button key={w.id} type="button" aria-pressed={active} onClick={() => { setPick(i); setOpen(null); }} style={{
-                    flex: "1 0 44px", height: 34, borderRadius: 9, ...MONO, fontSize: 12.5, cursor: "pointer",
-                    background: active ? C.ac : "transparent", color: active ? C.bg : current ? C.ac : C.tx2,
-                    border: active ? "none" : `1px solid ${current ? alpha(C.ac, 0.5) : C.brdL}`, fontWeight: active ? 600 : 400,
+                    flex: "1 0 44px", height: 36, borderRadius: 10, ...MONO, fontSize: 12, cursor: "pointer",
+                    background: active ? C.tx : "transparent", color: active ? C.bg : current ? C.ac : C.tx2,
+                    border: active ? "none" : `1px solid ${current ? alpha(C.ac, 0.5) : C.brdL}`, fontWeight: active ? 500 : 400,
                   }}>S{i + 1}</button>
                 );
               })}
             </div>
           )}
-        </div>
+        </>
       ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 34 }}>
           <button type="button" aria-label="Semaine précédente" onClick={() => setOffset((o) => o - 1)} style={{ background: "none", border: "none", padding: 8, cursor: "pointer", display: "flex" }}><Chevron dir="left" color={C.tx2} size={20} /></button>
@@ -136,20 +136,21 @@ function ProgrammationList() {
           ? session ? `${session.blocs.length} bloc${session.blocs.length > 1 ? "s" : ""} · ${nEx} exercice${nEx > 1 ? "s" : ""}` : "Séance retirée du programme"
           : [labelOf(e), e.status === "completed" ? "Fait" : null].filter(Boolean).join(" · ");
         return (
-          <div key={key} style={{ ...CARD, overflow: "hidden", borderColor: isOpen ? alpha(col, 0.5) : C.brd }}>
+          <div key={key} style={{ position: "relative", borderRadius: 14, overflow: "hidden", background: alpha(col, isOpen ? 0.08 : 0.05), border: `1px solid ${alpha(col, isOpen ? 0.33 : 0.19)}` }}>
+            <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: col }} />
             <button type="button" aria-expanded={isOpen} onClick={() => (e.type === "workout" && session ? setOpen(isOpen ? null : key) : setSelected(e))} style={{
-              display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 14px", background: "none", border: "none",
+              display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 14px 12px 16px", background: "none", border: "none",
               color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
             }}>
-              <div style={{ width: 38, flex: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                <span style={{ fontSize: 11, color: e.date === today ? C.ac : C.tx3 }}>{dowOf(e.date)}</span>
-                <span style={{ ...MONO, fontSize: 10, padding: "2px 5px", borderRadius: 5, background: alpha(col, 0.16), color: col }}>{abbr(session, e.title)}</span>
-              </div>
+              <span style={{ width: 40, flex: "none", textAlign: "center" }}>
+                <span style={{ display: "block", fontSize: 11, color: e.date === today ? C.ac : C.tx3 }}>{dowOf(e.date)}</span>
+                <span style={{ display: "block", ...MONO, fontSize: 12, color: col }}>{abbr(session, e.title)}</span>
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.title}</div>
-                <div style={{ fontSize: 12, color: C.tx3 }}>{sub}</div>
+                <div style={{ fontSize: 11.5, color: C.tx3 }}>{sub}</div>
               </div>
-              {isDone(e) && <span style={{ ...MONO, fontSize: 11, color: C.g }}>✓</span>}
+              {isDone(e) && <Tag color={C.g} filled>Fait</Tag>}
               <Chevron dir={e.type === "workout" && session ? (isOpen ? "up" : "down") : "right"} />
             </button>
             {isOpen && session && (
@@ -166,9 +167,12 @@ function ProgrammationList() {
       })}
 
       <button type="button" onClick={() => setCreating(true)} style={{
-        height: 46, borderRadius: 12, border: `1px solid ${C.brdL}`, background: "transparent",
-        color: C.tx, fontSize: 13.5, fontFamily: "inherit", cursor: "pointer",
-      }}>+ Créer une séance</button>
+        height: 48, borderRadius: 14, border: `1px solid ${C.brdL}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        color: C.tx, fontSize: 14, fontFamily: "inherit", cursor: "pointer",
+      }}>
+        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ac} strokeWidth="1.5" strokeLinecap="square"><path d="M12 5V19M5 12H19" /></svg>
+        Créer une séance
+      </button>
       <div style={{ fontSize: 11.5, color: C.tx3, textAlign: "center" }}>Les banques et l’import de texte restent sur ordinateur.</div>
 
       {selected && (
@@ -194,7 +198,7 @@ function SessionContent({ athleteId, session, date, onEdit, onDuplicate }: {
   const { occurrence, override, isLoading } = useSessionOccurrence(athleteId, session.id, date);
   const blocs: Bloc[] = override ? (override.blocs as Bloc[]) : session.blocs;
   return (
-    <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ margin: "0 14px 0 16px", padding: "12px 0 14px", borderTop: `1px solid ${C.brd}`, display: "flex", flexDirection: "column", gap: 10 }}>
       {override && <div><Tag color={C.ac}>Adaptée pour ce jour</Tag></div>}
       {isLoading ? null : blocs.length === 0 ? (
         <div style={{ fontSize: 12.5, color: C.tx3 }}>Séance vide.</div>
@@ -202,31 +206,34 @@ function SessionContent({ athleteId, session, date, onEdit, onDuplicate }: {
         const col = blocColor(b.color, bi);
         const timing = formatBlocTiming(b);
         return (
-          <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ ...KICKER, color: col }}>{b.category ?? `Bloc ${bi + 1}`}</span>
-              <span style={{ fontSize: 12, color: C.tx2, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</span>
+          <div key={b.id} style={{ display: "flex", gap: 10 }}>
+            <span aria-hidden style={{ width: 3, flex: "none", borderRadius: 2, background: col }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+              <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: col }}>{b.category ?? `Bloc ${bi + 1}`}</span>
+              <span style={{ fontSize: 11.5, color: C.tx3, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{b.name}</span>
               {timing && <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}>{timing}</span>}
             </div>
             {b.exercices.map((ex, i) => {
               // Une adaptation du jour a des params à plat : formatExercice les lit tels quels.
               const line = formatExercice(ex, occurrence);
               return (
-                <div key={ex.id} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <span style={{ ...MONO, fontSize: 11, color: col, width: 14, flex: "none", paddingTop: 2 }}>{i + 1}</span>
+                <div key={ex.id} style={{ display: "flex", gap: 10, padding: "7px 0" }}>
+                  <span style={{ ...MONO, fontSize: 11, color: C.tx3, width: 12, flex: "none" }}>{i + 1}</span>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5 }}>{line.name}</div>
-                    {line.detail && <div style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>{line.detail}</div>}
+                    <div style={{ fontSize: 13 }}>{line.name}</div>
+                    {line.detail && <div style={{ ...MONO, fontSize: 11, color: C.tx2 }}>{line.detail}</div>}
                   </div>
                 </div>
               );
             })}
+            </div>
           </div>
         );
       })}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <PhoneButton primary onClick={onEdit}>Modifier</PhoneButton>
-        <PhoneButton onClick={onDuplicate}>Dupliquer</PhoneButton>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 2 }}>
+        <PhoneButton primary onClick={onEdit} style={{ height: 40, borderRadius: 10, fontSize: 13 }}>Modifier</PhoneButton>
+        <PhoneButton onClick={onDuplicate} style={{ height: 40, borderRadius: 10, fontSize: 13 }}>Dupliquer</PhoneButton>
       </div>
     </div>
   );

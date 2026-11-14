@@ -10,7 +10,7 @@ import { assignDoc, invalidateDocs } from "@/api/docs";
 import { FichePreview } from "@/features/shared/components/fiches/FichePreview";
 import { CATEGORY_COLOR } from "@/features/shared/components/fiches/ficheStyles";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
-import { Avatar, CARD, Chevron, Chip, KICKER, MONO, PhoneButton, PhonePage, Section, Tag, rowLine } from "./phoneUi";
+import { Avatar, CARD, Chevron, Chip, GroupHead, KICKER, MONO, PhoneButton, PhonePage, SearchField, Section, ToolHead, rowLine } from "./phoneUi";
 
 const KIND_LABEL = { pdf: "PDF", image: "Image", questionnaire: "Questionnaire" } as const;
 const SOURCE_LABEL = { manuel: "Envoyée par toi", programme: "Avec une séance", energie: "Avec une séance énergie" } as const;
@@ -50,14 +50,8 @@ export default function CoachPhoneFiches() {
 
   return (
     <PhonePage gap={12} style={{ paddingTop: 18 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>Fiches</h1>
-        <span style={{ ...MONO, fontSize: 11.5, color: C.tx3 }}>{active.length} fiche{active.length > 1 ? "s" : ""}</span>
-      </div>
-      <input
-        type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher une fiche" aria-label="Rechercher une fiche"
-        style={{ height: 42, padding: "0 12px", borderRadius: 11, border: `1px solid ${C.brdL}`, background: C.s1, color: C.tx, fontSize: 16, fontFamily: "inherit" }}
-      />
+      <ToolHead kicker={`${active.length} fiche${active.length > 1 ? "s" : ""}`} title="Fiches" />
+      <SearchField value={q} onChange={setQ} placeholder="Rechercher une fiche" />
       {cats.length > 1 && (
         <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
           <Chip active={cat === "all"} onClick={() => setCat("all")}>Toutes</Chip>
@@ -73,22 +67,21 @@ export default function CoachPhoneFiches() {
         if (!list.length) return null;
         return (
           <div key={c} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span aria-hidden style={{ width: 7, height: 7, borderRadius: 2, background: CATEGORY_COLOR[c] }} />
-              <span style={{ ...KICKER, color: C.tx2 }}>{FICHE_CATEGORY_LABEL[c]}</span>
-              <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{list.length}</span>
-            </div>
+            <GroupHead color={CATEGORY_COLOR[c]} label={FICHE_CATEGORY_LABEL[c]} count={list.length} />
             <div style={{ ...CARD, padding: "2px 14px" }}>
               {list.map((f, i) => (
                 <button key={f.origin.id} type="button" onClick={() => setOpenId(f.origin.id)} style={{
-                  display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 0", background: "none", border: "none",
+                  display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none",
                   boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
                 }}>
+                  <FileTile color={CATEGORY_COLOR[c]} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.origin.title}</div>
-                    <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{metaOf(f)}</div>
+                    <div style={{ fontSize: 14.5, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.origin.title}</div>
+                    <div style={{ fontSize: 12, color: C.tx3, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {metaOf(f)}
+                      {f.origin.is_self_service && <span style={{ ...MONO, fontSize: 10.5, letterSpacing: "0.06em", color: C.g }}> · LIBRE-SERVICE</span>}
+                    </div>
                   </div>
-                  {f.origin.is_self_service && <Tag color={C.g}>Libre-service</Tag>}
                   <Chevron />
                 </button>
               ))}
@@ -98,6 +91,20 @@ export default function CoachPhoneFiches() {
       })}
       <div style={{ fontSize: 11.5, color: C.tx3, textAlign: "center" }}>Importer ou modifier une fiche : sur ordinateur.</div>
     </PhonePage>
+  );
+}
+
+/** Vignette document aux couleurs de la catégorie (planche CoachTelFiches). */
+function FileTile({ color }: { color: string }) {
+  return (
+    <span aria-hidden style={{
+      width: 38, height: 38, flex: "none", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+      background: alpha(color, 0.12), border: `1px solid ${alpha(color, 0.35)}`, color,
+    }}>
+      <svg width="16" height="18" viewBox="0 0 16 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+        <path d="M3 1.5h6.5L13 5v11.5H3z" /><path d="M9.5 1.5V5H13M5.5 9h5M5.5 12h5" strokeLinecap="round" />
+      </svg>
+    </span>
   );
 }
 

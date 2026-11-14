@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { C, alpha } from "@/lib/theme";
 import { useWellnessLight } from "@/features/shared/hooks/useWellnessLight";
@@ -9,22 +9,44 @@ import { addDays, localIsoDay } from "@shared/domain/dates";
 import { toWellnessDay } from "@/lib/retoursWellness";
 import { WellnessDetailView } from "@/features/coach/components/retours/WellnessDetailView";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
-import { CARD, Chevron, KICKER, MONO, PhonePage, fmtDec, lightColor } from "./phoneUi";
+import { CARD, Chevron, DISPLAY, KICKER, MONO, PhonePage, fmtDec, lightColor } from "./phoneUi";
 
 const LIGHT_LABEL = { green: "Vert", orange: "Orange", red: "Rouge" } as const;
 
-function Tile({ label, value, unit, state, stateColor, foot }: {
-  label: string; value: string; unit?: string; state: string; stateColor: string; foot: string;
+/** Note 1-5 (5 = bien) → couleur de l'échelle 5 zones, du rouge au vert. */
+const scaleColor = (v: number | null | undefined): string =>
+  v == null ? C.tx : `var(--agon-zone5-${Math.min(5, Math.max(1, 6 - Math.round(v)))})`;
+
+/** Mini-histogramme 28 jours (barres de 0 à 1, null = pas de saisie). */
+function Bars({ values, colorOf }: { values: Array<number | null>; colorOf: (v: number) => string }) {
+  const n = values.length;
+  const w = 150 / n;
+  return (
+    <svg aria-hidden width="100%" height="40" viewBox="0 0 150 40" preserveAspectRatio="none" style={{ display: "block" }}>
+      {values.map((v, i) => {
+        const h = v == null || v <= 0 ? 2 : Math.max(2, v * 37.5);
+        return <rect key={i} x={i * w} y={40 - h} width={w * 0.63} height={h} rx={1} fill={v == null || v <= 0 ? C.s2 : colorOf(v)} />;
+      })}
+    </svg>
+  );
+}
+
+function Tile({ label, value, unit, big = true, state, stateColor, foot, chart }: {
+  label: string; value: string; unit?: string; big?: boolean; state: string; stateColor: string; foot: string; chart?: ReactNode;
 }) {
   return (
-    <div style={{ ...CARD, padding: "12px 12px", minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-      <span style={{ fontSize: 11.5, color: C.tx3 }}>{label}</span>
-      <span style={{ whiteSpace: "nowrap" }}>
-        <span style={{ ...MONO, fontSize: 20 }}>{value}</span>
+    <div style={{ ...CARD, padding: 12, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 12, color: C.tx2 }}>{label}</span>
+        <span aria-hidden style={{ width: 8, height: 8, borderRadius: "50%", background: stateColor }} />
+      </div>
+      <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span style={big ? { ...MONO, fontSize: 26, lineHeight: 1 } : { fontWeight: 500, fontSize: 20, lineHeight: 1 }}>{value}</span>
         {unit && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}> {unit}</span>}
-      </span>
-      <span style={{ fontSize: 12, color: stateColor }}>{state}</span>
-      <span style={{ fontSize: 11, color: C.tx3 }}>{foot}</span>
+      </div>
+      <div style={{ fontSize: 11, color: stateColor, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{state}</div>
+      {chart}
+      <div style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{foot}</div>
     </div>
   );
 }
@@ -49,7 +71,7 @@ export default function CoachPhoneWellness() {
   const r = light.data ?? null;
   const col = lightColor(r?.light) ?? C.tx3;
 
-  const { todayEntry, scoreNow, scoreHabit, doms, daily } = useMemo(() => {
+  const { todayEntry, scoreNow, scoreHabit, doms, daily, scoreBars, domsBars } = useMemo(() => {
     const h = (hist.data ?? {}) as Record<string, WellnessEntry>;
     const days = Object.keys(h).sort();
     const last = days.length ? h[days[days.length - 1]] : null;
@@ -68,7 +90,14 @@ export default function CoachPhoneWellness() {
     const daily = Object.fromEntries(days.filter((d) => d >= addDays(today, -27)).map((d) => [d, {
       date: d, wellness: toWellnessDay(h[d]), workouts_completed: 0, has_competition: false, has_test: false,
     }]));
-    return { todayEntry, scoreNow, scoreHabit: mean(base), doms, daily };
+    // 28 derniers jours : ressenti (0-1) et courbatures (niveau max / 3).
+    const last28 = Array.from({ length: 28 }, (_, i) => addDays(today, i - 27));
+    const scoreBars = last28.map((d) => { const v = h[d] ? wellnessScore(h[d]) : null; return v == null ? null : v / 100; });
+    const domsBars = last28.map((d) => {
+      const lv = Object.values(h[d]?.domsLevels ?? {});
+      return h[d] ? (lv.length ? Math.max(...lv) / 3 : (h[d].domsZones?.length ? 1 / 3 : 0)) : null;
+    });
+    return { todayEntry, scoreNow, scoreHabit: mean(base), doms, daily, scoreBars, domsBars };
   }, [hist.data, today]);
 
   // Feu : VFC en ln(ms) (moyenne et zone) → reconverties en ms à l'affichage.
@@ -77,36 +106,42 @@ export default function CoachPhoneWellness() {
   const signals = r ? [...r.redSigns, ...r.orange].map((s) => s.text).filter((t, i, a) => a.indexOf(t) === i) : [];
 
   return (
-    <PhonePage gap={12} style={{ paddingTop: 14 }}>
+    <PhonePage gap={12} style={{ paddingTop: 16 }}>
       <div style={{
-        padding: 14, borderRadius: 14, display: "flex", flexDirection: "column", gap: 6,
-        background: alpha(col, 0.1), border: `1px solid ${alpha(col, 0.35)}`,
+        padding: "14px 16px", borderRadius: 16, display: "flex", flexDirection: "column", gap: 8,
+        background: r ? alpha(col, 0.1) : C.s1, border: `1px solid ${r ? alpha(col, 0.5) : C.brd}`,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span aria-hidden style={{ width: 14, height: 14, borderRadius: "50%", background: r ? col : "transparent", border: r ? "none" : `1px solid ${C.brdL}` }} />
-          <span style={{ fontSize: 17, fontWeight: 500, color: r ? col : C.tx3, flex: 1 }}>{r ? LIGHT_LABEL[r.light] : "Feu du matin —"}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span aria-hidden style={{ display: "flex", gap: 6, padding: "6px 8px", borderRadius: 999, background: C.bg, border: `1px solid ${C.brd}` }}>
+            {(["red", "orange", "green"] as const).map((l) => {
+              const c = lightColor(l) ?? C.tx3;
+              return <span key={l} style={{ width: 16, height: 16, borderRadius: "50%", background: r?.light === l ? c : alpha(c, 0.15) }} />;
+            })}
+          </span>
+          <span style={{ ...DISPLAY, fontWeight: 400, fontSize: 20, letterSpacing: "0.08em", color: r ? col : C.tx3 }}>{r ? LIGHT_LABEL[r.light] : "—"}</span>
+          <span style={{ flex: 1 }} />
           {r && signals.length > 0 && (
-            <button type="button" aria-expanded={why} onClick={() => setWhy((v) => !v)} style={{ background: "none", border: "none", color: C.ac, fontSize: 13, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>
+            <button type="button" aria-expanded={why} onClick={() => setWhy((v) => !v)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 12, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>
               Pourquoi {why ? "⌃" : "›"}
             </button>
           )}
         </div>
-        {r && <div style={{ fontSize: 13.5 }}>{r.sentence}</div>}
-        {!r && !light.isLoading && <div style={{ fontSize: 12.5, color: C.tx3 }}>Pas assez de données ce matin (montre ou wellness).</div>}
+        {r && <div style={{ fontSize: 14, fontWeight: 500 }}>{r.sentence}</div>}
+        {!r && !light.isLoading && <div style={{ fontSize: 12.5, color: C.tx2 }}>Pas assez de données ce matin (montre ou wellness).</div>}
         {why && signals.length > 0 && (
-          <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 12.5, color: C.tx2, display: "flex", flexDirection: "column", gap: 2 }}>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: C.tx2, display: "flex", flexDirection: "column", gap: 2 }}>
             {signals.map((s) => <li key={s}>{s}</li>)}
           </ul>
         )}
         {r && (
-          <div style={{ fontSize: 11.5, color: C.tx3 }}>
+          <div style={{ fontSize: 12.5, color: C.tx2 }}>
             {r.brand ? `Mesures ${r.brand === "garmin" ? "Garmin" : r.brand === "coros" ? "COROS" : r.brand}` : "Sans montre : rouge seulement si malade"}
             {hrv?.dayIndex != null && hrv.dayIndex < 14 ? ` · alerte VFC active au 14e jour (J${hrv.dayIndex})` : ""}
           </div>
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
         <Tile
           label="VFC de nuit" value={hrv?.mean7 != null ? fmtDec(Math.exp(hrv.mean7), 0) : "—"} unit={hrv?.mean7 != null ? "ms" : undefined}
           state={hrv?.mean7 == null ? "Pas de mesure" : hrv.below ? `Basse${hrv.belowDays ? ` · ${hrv.belowDays} j` : ""}` : "Dans sa zone"}
@@ -124,34 +159,35 @@ export default function CoachPhoneWellness() {
           state={scoreNow == null ? "Pas de saisie ce matin" : scoreHabit != null && scoreNow < scoreHabit - 5 ? "Un peu bas" : "Dans ses habitudes"}
           stateColor={scoreNow == null ? C.tx3 : scoreHabit != null && scoreNow < scoreHabit - 5 ? C.o : C.g}
           foot={scoreHabit != null ? `Habitude ${Math.round(scoreHabit)}` : "Habitude —"}
+          chart={<Bars values={scoreBars} colorOf={(v) => scaleColor(1 + v * 4)} />}
         />
         <Tile
-          label="Courbatures" value={doms?.zone ?? "—"}
+          label="Courbatures" value={doms?.zone ?? "—"} big={false}
           state={doms ? `${doms.level}${doms.days7 ? ` · ${doms.days7} j / 7` : ""}` : "Aucune signalée"}
-          stateColor={doms ? C.o : C.g}
+          stateColor={doms ? (doms.level === "Légère" ? C.o : C.r) : C.g}
+          chart={<Bars values={domsBars} colorOf={(v) => (v > 0.7 ? C.r : v > 0.4 ? C.o : C.ac)} />}
           foot={doms?.after ? `Après ${doms.after}` : " "}
         />
       </div>
 
-      <div style={{ ...CARD, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ ...CARD, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ ...KICKER, color: C.tx2 }}>Ce matin</span>
-          <button type="button" onClick={() => setDetail(true)} style={{ background: "none", border: "none", color: C.ac, fontSize: 12.5, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>Détails ›</button>
+          <button type="button" onClick={() => setDetail(true)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 12, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>Détails ›</button>
         </div>
         {todayEntry ? (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px 10px" }}>
               {[...WELLNESS_ITEMS.map((k) => ({ l: WELLNESS_ITEM_SHORT[k], v: todayEntry.items[k] })), { l: "Envie", v: todayEntry.envie }].map((x) => (
-                <div key={x.l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", borderRadius: 8, background: C.s2, fontSize: 12 }}>
-                  <span style={{ color: C.tx2 }}>{x.l}</span>
-                  <span style={{ ...MONO, color: x.v != null && x.v <= 2 ? C.o : C.tx }}>{x.v ?? "—"}</span>
-                </div>
+                <span key={x.l} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", fontSize: 12.5, color: C.tx2 }}>
+                  {x.l}<span style={{ ...MONO, fontSize: 14, color: scaleColor(x.v) }}>{x.v ?? "—"}</span>
+                </span>
               ))}
             </div>
-            <div style={{ fontSize: 12, color: C.tx2 }}>
-              Douleur <span style={{ ...MONO, color: (todayEntry.pain ?? 0) > 3 ? C.o : C.tx }}>{todayEntry.pain ?? "—"}</span>
-              {" · "}Malade <span style={{ color: todayEntry.sick ? C.r : C.tx }}>{todayEntry.sick == null ? "—" : todayEntry.sick ? "oui" : "non"}</span>
-              {todayEntry.injuryNote ? <> · « {todayEntry.injuryNote} »</> : null}
+            <div style={{ display: "flex", gap: 16, paddingTop: 8, borderTop: `1px solid ${C.brd}`, fontSize: 12.5, color: C.tx2, flexWrap: "wrap" }}>
+              <span>Douleur <span style={{ ...MONO, color: (todayEntry.pain ?? 0) > 3 ? C.o : C.tx }}>{todayEntry.pain ?? "—"}</span></span>
+              <span>Malade <span style={{ color: todayEntry.sick ? C.r : C.tx }}>{todayEntry.sick == null ? "—" : todayEntry.sick ? "oui" : "non"}</span></span>
+              {todayEntry.injuryNote ? <span>« {todayEntry.injuryNote} »</span> : null}
             </div>
           </>
         ) : (

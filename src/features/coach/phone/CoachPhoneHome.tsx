@@ -16,12 +16,14 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
   planned: "Planifié", in_progress: "En cours", completed: "Terminé", missed: "Manqué", skipped: "Sauté",
 };
 
+const ICON_BTN = { background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" } as const;
+
 interface Todo { key: string; athleteId: string; name: string; tag: string; color: string; text: string; action: string; to: string }
 
 function Counter({ value, label, color }: { value: number | null; label: string; color: string }) {
   return (
     <div style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 12, background: C.s1, border: `1px solid ${C.brd}` }}>
-      <div style={{ ...MONO, fontSize: 24, lineHeight: 1.1, color }}>{value == null ? "—" : value}</div>
+      <div style={{ ...MONO, fontSize: 24, lineHeight: 1.1, color: value ? color : C.tx3 }}>{value == null ? "—" : value}</div>
       <div style={{ fontSize: 11.5, color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
     </div>
   );
@@ -125,6 +127,14 @@ export default function CoachPhoneHome() {
     <PhonePage>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 28 }}>
         <span style={KICKER}>{shortDate(today)} · {athletes.length} athlète{athletes.length > 1 ? "s" : ""}</span>
+        <span style={{ display: "flex", gap: 16 }}>
+          <button type="button" aria-label="Rechercher un athlète" onClick={() => open("/coach/athletes")} style={ICON_BTN}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.tx2} strokeWidth="1.5" strokeLinecap="square"><circle cx="11" cy="11" r="6.5" /><path d="M16 16L21 21" /></svg>
+          </button>
+          <button type="button" aria-label="Nouveautés" onClick={() => open("/coach/nouveautes")} style={ICON_BTN}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.tx2} strokeWidth="1.5" strokeLinecap="square"><path d="M6 16V11A6 6 0 0 1 18 11V16L20 18H4Z" /><path d="M10 21H14" /></svg>
+          </button>
+        </span>
       </div>
       <h1 style={{ margin: 0, ...DISPLAY, fontSize: 22 }}>Bonjour, {firstName}</h1>
       <div style={{ display: "flex", gap: 8 }}>

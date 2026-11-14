@@ -61,7 +61,7 @@ export default function CoachPhoneAthleteHeader() {
     : null;
 
   return (
-    <header style={{ padding: "18px 16px 0", display: "flex", flexDirection: "column", gap: 14, borderBottom: `1px solid ${C.brd}`, background: C.bg }}>
+    <header style={{ padding: "18px 20px 0", display: "flex", flexDirection: "column", gap: 14, borderBottom: `1px solid ${C.brd}`, background: C.bg }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 28 }}>
         <button type="button" aria-label="Retour aux athlètes" onClick={() => navigate("/coach/athletes")} style={{ background: "none", border: "none", padding: 4, margin: -4, cursor: "pointer", display: "flex" }}>
           <Chevron dir="left" color={C.tx2} size={20} />
@@ -86,7 +86,7 @@ export default function CoachPhoneAthleteHeader() {
           <Dot color={feu} size={12} />
         </span>
       </div>
-      <nav aria-label="Onglets de l’athlète" style={{ display: "flex", fontSize: 13.5, overflowX: "auto", scrollbarWidth: "none", margin: "0 -16px", padding: "0 16px" }}>
+      <nav aria-label="Onglets de l’athlète" style={{ display: "flex", fontSize: 13.5, overflowX: "auto", scrollbarWidth: "none", margin: "0 -20px", padding: "0 20px" }}>
         {PHONE_ATHLETE_TABS.map((t) => (
           <NavLink
             key={t.to}

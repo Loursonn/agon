@@ -17,7 +17,7 @@ import { TestEntryPage } from "@/features/athlete/components/TestEntryPage";
 import { parseClock } from "@/lib/seance";
 import { localIsoDay } from "@shared/domain/dates";
 import type { TestDefinitionWithVariables, TestVariable } from "@/features/shared/types/tests";
-import { CARD, Chevron, DISPLAY, KICKER, MONO, PhoneButton, PhonePage, Section, rowLine } from "./phoneUi";
+import { CARD, Chevron, DISPLAY, GroupHead, KICKER, MONO, PhoneButton, PhonePage, Section, Tag, rowLine } from "./phoneUi";
 
 /**
  * Tests d'un athlète sur téléphone (planche CoachTelTests) : tests prévus,
@@ -32,11 +32,11 @@ export default function CoachPhoneTests() {
   const today = localIsoDay();
   const { data: results = [], isLoading, isError } = useAthleteTestResults(athleteId);
   const { data: defs = [] } = useTestDefinitions(user?.id ?? "");
-  /** Domaine d'un test prévu (« Endurance »), retrouvé par son nom dans la banque. */
+  /** Dominante d'un test prévu (endurance…), retrouvée par son nom dans la banque. */
   const domainOf = (title: string) => {
     const def = pickDefinitionByName(defs as TestDefinitionWithVariables[], title);
     const g = def ? testGroupOf(def) : null;
-    return g && g !== "autres" ? TEST_GROUP_LABEL[g] : null;
+    return g && g !== "autres" ? g : null;
   };
   const sessionsQ = useQuery({ queryKey: testKeys.sessions(athleteId), enabled: !!athleteId, queryFn: () => listTestSessions(athleteId) });
   const planned = (sessionsQ.data ?? []).filter((s) => !s.completed && s.date >= today).slice(0, 6);
@@ -62,28 +62,41 @@ export default function CoachPhoneTests() {
 
   return (
     <PhonePage gap={12} style={{ paddingTop: 14 }}>
-      <PhoneButton primary onClick={() => setEntry(true)} style={{ width: "100%" }}>Saisir un résultat pour {first}</PhoneButton>
+      <PhoneButton primary onClick={() => setEntry(true)} style={{ width: "100%", height: 52, borderRadius: 14, gap: 10 }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden><path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+        Saisir un résultat pour {first}
+      </PhoneButton>
 
       <Section n={1} title="Prévus au planning" count={planned.length || undefined}>
         {planned.length === 0 ? (
           <div style={{ ...CARD, padding: 14, fontSize: 13, color: C.tx3 }}>Aucun test prévu.</div>
         ) : (
           <div style={{ ...CARD, padding: "2px 14px" }}>
-            {planned.map((t, i) => (
-              <button key={t.id} type="button" onClick={() => setFill(t.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none",
-                boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
-              }}>
-                <span style={{ ...MONO, width: 52, flex: "none", fontSize: 11.5, color: TYPE_COLOR.test }}>
-                  {new Date(t.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
-                  {domainOf(t.title) && <span style={{ display: "block", fontSize: 11.5, color: C.tx3 }}>{domainOf(t.title)}</span>}
-                </span>
-                <span style={{ fontSize: 12, color: C.ac }}>Saisir</span>
-              </button>
-            ))}
+            {planned.map((t, i) => {
+              const d = new Date(t.date + "T12:00:00");
+              const dom = domainOf(t.title);
+              return (
+                <button key={t.id} type="button" onClick={() => setFill(t.id)} style={{
+                  display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none",
+                  boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
+                }}>
+                  <span style={{ width: 34, flex: "none", textAlign: "center" }}>
+                    <span style={{ display: "block", fontSize: 11, color: C.tx3, textTransform: "capitalize" }}>{d.toLocaleDateString("fr-FR", { weekday: "short" })}</span>
+                    <span style={{ display: "block", ...MONO, fontSize: 20, lineHeight: 1.1 }}>{d.getDate()}</span>
+                  </span>
+                  <span aria-hidden style={{ width: 3, alignSelf: "stretch", borderRadius: 2, background: TYPE_COLOR.test, flex: "none" }} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</span>
+                    {dom && (
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.tx2, marginTop: 2 }}>
+                        <span aria-hidden style={{ width: 7, height: 7, borderRadius: 2, background: TEST_GROUP_COLOR[dom] }} />{TEST_GROUP_LABEL[dom]}
+                      </span>
+                    )}
+                  </span>
+                  <Chevron />
+                </button>
+              );
+            })}
           </div>
         )}
       </Section>
@@ -96,36 +109,37 @@ export default function CoachPhoneTests() {
         ) : (
           <>
             <div style={{ fontSize: 12, color: C.tx3, marginTop: -4 }}>Rangés par dominante. Touche un test pour voir son évolution.</div>
-            {groups.map((g) => (
-              <div key={g.group} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: 2, background: TEST_GROUP_COLOR[g.group] }} />
-                  <span style={{ fontSize: 13, color: TEST_GROUP_COLOR[g.group] }}>{TEST_GROUP_LABEL[g.group]}</span>
-                  <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{g.cards.length}</span>
-                </div>
-                <div style={{ ...CARD, padding: "2px 14px" }}>
-                  {g.cards.map((c, i) => (
-                    <button key={c.variableId} type="button" onClick={() => setOpen(c)} style={{
-                      display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 0", background: "none", border: "none",
-                      boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
-                    }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div>
-                        <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{fmtTestDate(c.latest.date, false)}</div>
-                      </div>
-                      <span style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <span style={{ ...MONO, fontSize: 14 }}>{formatTestValue(c.latest.value, c.valueType)}</span>
-                        <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}> {displayUnit(c.unit, c.valueType)}</span>
-                        <span style={{ display: "block", ...MONO, fontSize: 11, color: c.improved == null ? C.tx3 : c.improved ? C.g : C.o }}>
-                          {c.delta != null ? formatTestDelta(c.delta, c.valueType) : ""}
+            {groups.map((g) => {
+              const col = TEST_GROUP_COLOR[g.group];
+              return (
+                <div key={g.group} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <GroupHead color={col} label={TEST_GROUP_LABEL[g.group]} count={g.cards.length} />
+                  <div style={{ ...CARD, padding: "2px 14px 2px 16px", boxShadow: `inset 3px 0 0 ${col}` }}>
+                    {g.cards.map((c, i) => (
+                      <button key={c.variableId} type="button" onClick={() => setOpen(c)} style={{
+                        display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 0", background: "none", border: "none",
+                        boxShadow: rowLine(i), color: C.tx, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div>
+                          <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{fmtTestDate(c.latest.date, false)}</div>
+                        </div>
+                        <span style={{ whiteSpace: "nowrap" }}>
+                          <span style={{ ...MONO, fontSize: 18, color: col }}>{formatTestValue(c.latest.value, c.valueType)}</span>
+                          <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}> {displayUnit(c.unit, c.valueType)}</span>
                         </span>
-                      </span>
-                      <Chevron />
-                    </button>
-                  ))}
+                        <span style={{ width: 52, display: "flex", justifyContent: "flex-end" }}>
+                          {c.delta != null && (c.improved == null
+                            ? <Tag>{formatTestDelta(c.delta, c.valueType)}</Tag>
+                            : <Tag color={c.improved ? C.g : C.o} filled>{formatTestDelta(c.delta, c.valueType)}</Tag>)}
+                        </span>
+                        <Chevron />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
       </Section>
