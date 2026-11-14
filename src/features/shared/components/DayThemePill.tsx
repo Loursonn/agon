@@ -7,7 +7,6 @@
  * jaune devient invisible. Un thème vide ne rend rien : c'est le composant qui
  * décide de disparaître, pas chaque appelant.
  */
-import { C } from "@/lib/theme";
 import {
   DAY_THEME_DOMINANTE_LABEL,
   DAY_THEME_INTENSITY_LABEL,
@@ -40,10 +39,8 @@ export function DayThemePill({
       <span
         title={hint}
         aria-label={`Thème du jour : ${label}`}
-        style={{
-          width: 6, height: 6, borderRadius: 3,
-          background: bg, flexShrink: 0, display: "inline-block",
-        }}
+        className="inline-block size-1.5 shrink-0 rounded-[3px]"
+        style={{ background: bg }}
       />
     );
   }
@@ -51,13 +48,8 @@ export function DayThemePill({
   return (
     <span
       title={hint}
-      style={{
-        display: "block", maxWidth: "100%",
-        fontSize: 9, fontWeight: 700, lineHeight: 1.3,
-        padding: "1px 4px", borderRadius: 3,
-        background: bg, color: fg,
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}
+      className="block max-w-full truncate rounded-[3px] px-1 py-px text-[9px] font-bold leading-[1.3]"
+      style={{ background: bg, color: fg }}
     >
       {label}
     </span>
@@ -89,32 +81,25 @@ export function DayThemeBanner({
 
   return (
     <div
-      style={{
-        borderRadius: 6, overflow: "hidden",
-        border: "1px solid " + C.brdL, background: C.s2,
-        borderLeft: "3px solid " + bg,
-        padding: "8px 12px",
-      }}
+      className="overflow-hidden rounded-[6px] border border-l-[3px] border-agon-brd-l bg-agon-s2 px-3 py-2"
+      style={{ borderLeftColor: bg }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{
-          fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px",
-          padding: "2px 6px", borderRadius: 4, background: bg, color: fg, flexShrink: 0,
-        }}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className="shrink-0 rounded-[4px] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.5px]"
+          style={{ background: bg, color: fg }}
+        >
           Thème du jour
         </span>
-        <span style={{ fontSize: 13, fontWeight: 800, color: C.tx }}>{label}</span>
+        <span className="text-[13px] font-extrabold text-agon-tx">{label}</span>
         {badges.map((b) => (
-          <span key={b} style={{
-            fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-            background: C.s1, color: C.tx2, border: "1px solid " + C.brd,
-          }}>
+          <span key={b} className="rounded-[4px] border border-agon-brd bg-agon-s1 px-1.5 py-0.5 text-[10px] font-bold text-agon-tx2">
             {b}
           </span>
         ))}
       </div>
       {note && (
-        <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap" }}>
+        <div className="mt-1.5 whitespace-pre-wrap text-[11px] leading-[1.5] text-agon-tx2">
           {note}
         </div>
       )}
