@@ -492,11 +492,16 @@ function firstWork(s: EnergyStep): Leaf | null {
 }
 
 function groupPhrase(g: EnergyGroup, refs: Refs, top: boolean): string {
-  const inner = g.children.map((c) => (c.type === "group" ? groupPhrase(c, refs, false) : leafInGroup(c, refs))).join(" + ");
+  // Récup en dernier pas du groupe : lue comme « 4 × 6 min, récup 2 min ».
+  const last = g.children[g.children.length - 1];
+  const tailRest = g.children.length > 1 && last && last.type !== "group" && isRecovery(last) ? last : null;
+  const kids = tailRest ? g.children.slice(0, -1) : g.children;
+  const inner = kids.map((c) => (c.type === "group" ? groupPhrase(c, refs, false) : leafInGroup(c, refs))).join(" + ");
   const n = Math.max(1, Math.round(g.repeat || 1));
   const hasSub = g.children.some((c) => c.type === "group");
-  const body = n > 1 ? (g.children.length > 1 || hasSub ? `${n} × (${inner})` : `${n} × ${inner}`) : inner;
+  const body = n > 1 ? (kids.length > 1 || hasSub ? `${n} × (${inner})` : `${n} × ${inner}`) : inner;
   const extras: string[] = [];
+  if (tailRest) extras.push(stepPhrase(tailRest, refs));
   if (g.departure_every_s) extras.push(`départ toutes les ${fmtDur(g.departure_every_s)}`);
   else if (g.rest_between && n > 1) {
     const r = g.rest_between;
@@ -573,4 +578,30 @@ export function sessionLine(totalS: number | null | undefined, totalM: number | 
   const d = ok(totalS) && totalS > 0 ? fmtDur(totalS) : DASH;
   const km = ok(totalM) && totalM > 0 ? `${nf(totalM / 1000, 1)} km` : DASH;
   return `${d} · ${km}`;
+}
+
+// ── Après : faite sur la montre ────────────────────────────────────────────
+
+export interface DoneRow {
+  label: string;
+  planned: string;
+  done: string;
+}
+
+/** Prévu / fait d'une séance d'énergie faite avec une montre (planche EnergieTel, écran 05). */
+export function plannedVsDoneRows(
+  plan: { durationS: number | null | undefined; distanceM: number | null | undefined },
+  act: { durationS: number | null | undefined; distanceM: number | null | undefined; avgPaceSPerKm?: number | null; avgHr?: number | null },
+): DoneRow[] {
+  const dist = (m: number | null | undefined) => (ok(m) && m > 0 ? `${nf(m / 1000, 1)} km` : DASH);
+  const dur = (s: number | null | undefined) => (ok(s) && s > 0 ? fmtDur(s) : DASH);
+  const planPace = ok(plan.durationS) && ok(plan.distanceM) && plan.distanceM > 0 && plan.durationS > 0
+    ? (plan.durationS / plan.distanceM) * 1000 : null;
+  const pace = (p: number | null | undefined) => (ok(p) && p > 0 ? `${fmtPace(p)}/km` : DASH);
+  return [
+    { label: "Durée", planned: dur(plan.durationS), done: dur(act.durationS) },
+    { label: "Distance", planned: dist(plan.distanceM), done: dist(act.distanceM) },
+    { label: "Allure moyenne", planned: pace(planPace), done: pace(act.avgPaceSPerKm) },
+    { label: "FC moyenne", planned: DASH, done: ok(act.avgHr) && act.avgHr > 0 ? `${Math.round(act.avgHr)} bpm` : DASH },
+  ];
 }

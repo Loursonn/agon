@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { EnergyGroup, EnergyInterval, EnergyStep, EnergyTarget } from "@/types/energy";
 import {
   aimedSeconds, doneLabel, endsByButton, flattenRun, fmtChrono, fmtDist, fmtDur, fmtPace, mainTarget,
-  profileBars, readBlocks, repLabel, roundRemaining, runNext, runPause, runResume, runStart, runTick, sessionElapsed,
+  plannedVsDoneRows, profileBars, readBlocks, repLabel, roundRemaining, runNext, runPause, runResume, runStart, runTick, sessionElapsed,
   sessionLine, sessionRemaining, stepPhrase, stepRemaining, stepTint,
 } from "../energyRun";
 
@@ -190,5 +190,24 @@ describe("départ fixe : temps avant le départ suivant", () => {
     const s = runStart(f, 0);
     expect(roundRemaining(f, s, 40_000)).toBe(140);
     expect(roundRemaining(flattenRun(fractionne), runStart(flattenRun(fractionne), 0), 1000)).toBeNull();
+  });
+});
+
+describe("faite sur la montre", () => {
+  it("prévu / fait, mesure absente → —", () => {
+    const rows = plannedVsDoneRows({ durationS: 3120, distanceM: 10100 }, { durationS: 3252, distanceM: 10300, avgPaceSPerKm: 316, avgHr: null });
+    expect(rows).toEqual([
+      { label: "Durée", planned: "52 min", done: "54 min 12 s" },
+      { label: "Distance", planned: "10,1 km", done: "10,3 km" },
+      { label: "Allure moyenne", planned: "5:09/km", done: "5:16/km" },
+      { label: "FC moyenne", planned: "—", done: "—" },
+    ]);
+  });
+});
+
+describe("récup en dernier pas d'un groupe", () => {
+  it("« 4 × 6 min, récup 2 min »", () => {
+    const b = readBlocks([group("g", 4, [iv("w", "work", { kind: "time", value: 360 }), iv("r", "recovery", { kind: "time", value: 120 })])]);
+    expect(b[0].phrase).toBe("4 × 6 min, récup 2 min");
   });
 });

@@ -16,6 +16,10 @@ import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferenc
 import { EnergyReadView } from "@/features/athlete/components/energy/EnergyReadView";
 import { EnergyRunScreen } from "@/features/athlete/components/energy/EnergyRunScreen";
 import { WatchPushBadge } from "@/features/athlete/components/today/WatchPushBadge";
+import { EnergyDoneView } from "@/features/athlete/components/energy/EnergyDoneView";
+import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
+import { useNavigate } from "react-router-dom";
+import type { IsoDay } from "@shared/domain/dates";
 
 export function EnergyPreviewOverlay({
   event,
@@ -42,6 +46,11 @@ export function EnergyPreviewOverlay({
 
   const { data: session, isLoading, isError } = useEnergySession(sessionId);
   const { data: refs } = useAthleteReferences(athleteId);
+  const navigate = useNavigate();
+  // Séance faite avec une montre : activité rattachée à cette séance prévue.
+  const day = (event.date ?? undefined) as IsoDay | undefined;
+  const { data: pvd } = usePlannedVsDone(athleteId, day, day);
+  const watchActivity = pvd?.flatMap((d) => d.planned).find((p) => p.kind === "energy" && p.id === assignmentId)?.activity ?? null;
   const complete        = useCompleteEnergyAssignment();
   const updateAssignment = useUpdateEnergyAssignment();
   const upsertRpe       = useUpsertEnergyRpe();
@@ -344,7 +353,22 @@ export function EnergyPreviewOverlay({
   }
 
   // ── Phase PREVIEW ─────────────────────────────────────────────────────────
-  const readable = !isCompleted && session.session_kind !== "specifique" && session.format !== "classique";
+  const energyKind = session.session_kind !== "specifique" && session.format !== "classique";
+  if (energyKind && watchActivity && !showDetail) {
+    return (
+      <EnergyDoneView
+        session={session}
+        refs={refs}
+        activity={watchActivity}
+        isCompleted={isCompleted}
+        onClose={onClose}
+        onNote={!isCompleted ? () => setPhase("log") : undefined}
+        onLaps={() => navigate(`/athlete/program/activity/${watchActivity.id}`)}
+        onDetail={() => setShowDetail(true)}
+      />
+    );
+  }
+  const readable = !isCompleted && energyKind;
   if (readable && !showDetail) {
     return (
       <EnergyReadView
@@ -362,7 +386,7 @@ export function EnergyPreviewOverlay({
     <SessionPreviewModal
       session={session}
       athleteId={athleteId}
-      onClose={readable ? () => setShowDetail(false) : onClose}
+      onClose={readable || (energyKind && watchActivity) ? () => setShowDetail(false) : onClose}
       onValidate={!isCompleted ? () => setPhase("log") : undefined}
       onUnvalidate={isCompleted ? handleUnvalidate : undefined}
     />
