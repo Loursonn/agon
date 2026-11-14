@@ -2,7 +2,7 @@
  * FicheChip — « 📄 Titre · variante », état « Nouveau », × optionnel.
  * Utilisé dans les séances (athlète) et dans l'éditeur de programmation (coach).
  */
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { variantLabel } from "@/features/shared/types/fiches";
 import type { Doc } from "@/features/shared/types/fiches";
 
@@ -27,33 +27,31 @@ export function FicheChip({ doc, fallback = "Fiche", showVariant = true, hint, i
 
   return (
     <span
-      style={{
-        display: "inline-flex", alignItems: "center", maxWidth: "100%",
-        borderRadius: 4, border: "1px solid " + (isNew ? C.ac + "60" : C.brdL),
-        background: isNew ? C.acS : C.s2, overflow: "hidden",
-      }}
+      className={cn(
+        "inline-flex max-w-full items-center overflow-hidden rounded-[4px] border",
+        isNew ? "border-agon-accent/[0.38] bg-agon-accent-doux" : "border-agon-brd-l bg-agon-s2",
+      )}
     >
       <button
         type="button"
         onClick={onClick}
         disabled={!onClick}
         title={title + (variant ? " · " + variant : "")}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0,
-          minHeight: compact ? 32 : 40, padding: compact ? "4px 8px" : "6px 10px",
-          background: "transparent", border: "none", color: archived ? C.tx3 : C.tx,
-          fontSize: compact ? 11 : 12, fontWeight: 600, fontFamily: "inherit",
-          cursor: onClick ? "pointer" : "default", textAlign: "left",
-        }}
+        className={cn(
+          "inline-flex min-w-0 items-center gap-1.5 border-none bg-transparent text-left font-[inherit] font-semibold",
+          compact ? "min-h-8 px-2 py-1 text-[11px]" : "min-h-10 px-2.5 py-1.5 text-[12px]",
+          archived ? "text-agon-tx3" : "text-agon-tx",
+          onClick ? "cursor-pointer" : "cursor-default",
+        )}
       >
         <span aria-hidden>📄</span>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span className="truncate">
           {title}
-          {variant && <span style={{ color: C.tx3, fontWeight: 500 }}> · {variant}</span>}
-          {hint && <span style={{ color: C.tx3, fontWeight: 500 }}> · {hint}</span>}
+          {variant && <span className="font-medium text-agon-tx3"> · {variant}</span>}
+          {hint && <span className="font-medium text-agon-tx3"> · {hint}</span>}
         </span>
         {isNew && (
-          <span style={{ fontSize: 9, fontWeight: 800, color: C.ink, background: C.ac, borderRadius: 3, padding: "1px 5px", flexShrink: 0 }}>
+          <span className="shrink-0 rounded-[3px] bg-agon-accent px-[5px] py-px text-[9px] font-extrabold text-agon-ink">
             NOUVEAU
           </span>
         )}
@@ -63,10 +61,7 @@ export function FicheChip({ doc, fallback = "Fiche", showVariant = true, hint, i
           type="button"
           onClick={onRemove}
           aria-label="Retirer la fiche"
-          style={{
-            alignSelf: "stretch", minWidth: 32, border: "none", borderLeft: "1px solid " + C.brd,
-            background: "transparent", color: C.tx3, fontSize: 15, cursor: "pointer", fontFamily: "inherit",
-          }}
+          className="min-w-8 cursor-pointer self-stretch border-0 border-l border-solid border-agon-brd bg-transparent font-[inherit] text-[15px] text-agon-tx3"
         >×</button>
       )}
     </span>
