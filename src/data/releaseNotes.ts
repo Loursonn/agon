@@ -67,6 +67,13 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Banque d'exercices : recherche et filtres sur une seule ligne, chaque type d'exercice a sa couleur (Musculaire en or, Haltérophilie en rose, Pliométrie en orange, Mobilité en turquoise).",
         ],
       },
+      {
+        title: "Avis, paramètres et HYROX",
+        points: [
+          "Avis athlètes : chaque retour en carte, type en pastille (bug en rouge, idée en or), filtres regroupés en haut à droite.",
+          "Course HYROX : en-tête orange avec le nom de la course en grand et le chrono, temps course / stations / roxzone en tuiles.",
+        ],
+      },
     ],
   },
   {

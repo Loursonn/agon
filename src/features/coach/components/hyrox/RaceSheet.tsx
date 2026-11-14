@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { ArrowLeft, Activity, Pencil, Trash2 } from "lucide-react";
 import RaceAnalysis from "@/features/shared/components/hyrox/RaceAnalysis";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { formatMmSs, formatDelta } from "@/lib/time";
 import {
   runTotal, stationsTotal, roxzoneTotal,
@@ -33,9 +34,9 @@ const PROFILE_LABEL: Record<string, string> = {
 function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span style={{
-      padding: "2px 7px", borderRadius: 4,
-      background: color + "20", color,
-      fontSize: 10, fontWeight: 700,
+      ...MONO, padding: "4px 9px", borderRadius: 999, whiteSpace: "nowrap",
+      background: color, color: C.ink,
+      fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
     }}>
       {text}
     </span>
@@ -45,8 +46,8 @@ function Badge({ text, color }: { text: string; color: string }) {
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: 10, fontWeight: 700, color: C.tx3, letterSpacing: "0.6px",
-      textTransform: "uppercase", marginBottom: 10, marginTop: 20,
+      ...MONO, fontSize: 11, color: C.tx2, letterSpacing: "0.14em",
+      textTransform: "uppercase", marginBottom: 12, marginTop: 28,
     }}>
       {children}
     </div>
@@ -58,15 +59,15 @@ function Pill({
 }: { label: string; value: string; pct: number | null; color: string }) {
   return (
     <div style={{
-      background: C.s2, borderRadius: 6,
+      background: C.s1, borderRadius: 14,
       border: "1px solid " + C.brd,
-      padding: "10px 12px",
-      display: "flex", flexDirection: "column", gap: 3,
+      padding: "14px 16px",
+      display: "flex", flexDirection: "column", gap: 6,
     }}>
-      <div style={{ fontSize: 10, color: C.tx3 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 800, color, fontFamily: "monospace" }}>{value}</div>
+      <div style={{ fontSize: 12, color: C.tx2 }}>{label}</div>
+      <div style={{ ...MONO, fontSize: 22, color, lineHeight: 1.1 }}>{value}</div>
       {pct != null && (
-        <div style={{ fontSize: 10, color: C.tx3 }}>{pct} %</div>
+        <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{pct} %</div>
       )}
     </div>
   );
@@ -112,7 +113,7 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
   // Segment color
   const segColor = (key: string): string => {
     if (RUN_KEYS.includes(key as typeof RUN_KEYS[number])) return C.b;
-    if (STATION_KEYS.includes(key as typeof STATION_KEYS[number])) return C.ac;
+    if (STATION_KEYS.includes(key as typeof STATION_KEYS[number])) return C.o;
     if (key === "roxzone_total") return C.tx3;
     return C.tx2;
   };
@@ -124,10 +125,11 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
     <div style={{ minHeight: "100%" }}>
       {/* Header */}
       <div style={{
-        display: "flex", alignItems: "flex-start", gap: 10,
-        marginBottom: 16, paddingBottom: 16,
-        borderBottom: "1px solid " + C.brd,
+        display: "flex", alignItems: "flex-start", gap: 14, position: "relative", overflow: "hidden",
+        marginBottom: 16, padding: "20px 24px 20px 27px", borderRadius: 16,
+        background: alpha(C.o, 0.12), border: "1px solid " + alpha(C.o, 0.42),
       }}>
+        <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.o }} />
         <button
           onClick={onBack}
           style={{
@@ -141,16 +143,17 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
         </button>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 3 }}>
-            <span style={{ fontSize: 16, fontWeight: 800, color: C.tx }}>{race.event_name}</span>
-            {!race.is_official && <Badge text="Simulation" color={C.o} />}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+            <Badge text="HYROX" color={C.o} />
+            {!race.is_official && <Badge text="Simulation" color={C.ac} />}
             {race.penalties_s > 0 && (
               <Badge text={`+${formatMmSs(race.penalties_s)} pénalités`} color={C.r} />
             )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: C.tx3 }}>{race.date}</span>
+          <div style={{ ...DISPLAY, fontWeight: 400, fontSize: 30, lineHeight: 1.1, letterSpacing: "0.06em", color: C.tx, marginBottom: 8 }}>{race.event_name}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>{race.date}</span>
             <span style={{ fontSize: 11, color: C.tx3 }}>
               {DIVISION_LABEL[race.division as HyroxDivision] ?? race.division}
             </span>
@@ -162,8 +165,7 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
           {/* Total time */}
           <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
             <span style={{
-              fontSize: 28, fontWeight: 900, color: C.tx,
-              fontFamily: "monospace", lineHeight: 1,
+              ...MONO, fontSize: 30, color: C.tx, lineHeight: 1,
             }}>
               {formatMmSs(race.total_s, { hours: true })}
             </span>
@@ -197,8 +199,8 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
         onClick={() => setShowAnalysis(true)}
         style={{
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-          height: 40, marginBottom: 12, borderRadius: 8, border: "1px solid " + C.ac,
-          background: "transparent", color: C.ac, fontWeight: 700, fontSize: 13,
+          height: 44, marginBottom: 12, borderRadius: 12, border: "1px solid " + C.brdL,
+          background: "transparent", color: C.tx, fontWeight: 500, fontSize: 14,
           cursor: "pointer", fontFamily: "inherit",
         }}
       >
@@ -217,7 +219,7 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
           label="Stations"
           value={formatMmSs(st)}
           pct={sh.stations}
-          color={C.ac}
+          color={C.o}
         />
         <Pill
           label="Roxzone"
@@ -229,7 +231,7 @@ export default function RaceSheet({ race, onBack, onEdit }: Props) {
 
       {/* Cumulative table */}
       <SectionTitle>Détail par segment</SectionTitle>
-      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
+      <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid " + C.brd }}>
