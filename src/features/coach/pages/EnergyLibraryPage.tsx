@@ -5,7 +5,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -35,17 +35,20 @@ const KIND_OPTIONS: { value: string; label: string }[] = [
   { value: "custom",     label: "Personnalisé" },
 ];
 
+const PRIMARY_BTN = "cursor-pointer whitespace-nowrap rounded bg-agon-or-vif text-[13px] font-semibold text-agon-ink";
+const BAR = "rounded bg-agon-s2";
+
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 
 function SkeletonCard() {
   return (
-    <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 6, overflow: "hidden" }}>
-      <div style={{ height: 3, background: C.s2 }} />
-      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ height: 13, width: "60%", background: C.s2, borderRadius: 4 }} />
-        <div style={{ height: 9, width: "30%", background: C.s2, borderRadius: 4 }} />
-        <div style={{ height: 120, background: C.s2, borderRadius: 6 }} />
-        <div style={{ height: 10, width: "40%", background: C.s2, borderRadius: 4 }} />
+    <div className="overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1">
+      <div className="h-[3px] bg-agon-s2" />
+      <div className="flex flex-col gap-2.5 px-3.5 py-3">
+        <div className={cn(BAR, "h-[13px] w-[60%]")} />
+        <div className={cn(BAR, "h-[9px] w-[30%]")} />
+        <div className="h-[120px] rounded-[6px] bg-agon-s2" />
+        <div className={cn(BAR, "h-2.5 w-[40%]")} />
       </div>
     </div>
   );
@@ -55,22 +58,13 @@ function SkeletonCard() {
 
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
-    <div style={{
-      gridColumn: "1 / -1",
-      textAlign: "center",
-      padding: "60px 20px",
-      color: C.tx3,
-    }}>
-      <div style={{ marginBottom: 12 }}><Zap size={40} style={{ color: C.tx3 }} /></div>
-      <div style={{ fontSize: 15, fontWeight: 600, color: C.tx2, marginBottom: 6 }}>Aucune séance</div>
-      <div style={{ fontSize: 13, marginBottom: 20 }}>Créez la première séance de la banque énergétique.</div>
+    <div className="col-span-full px-5 py-[60px] text-center text-agon-tx3">
+      <div className="mb-3"><Zap size={40} className="text-agon-tx3" /></div>
+      <div className="mb-1.5 text-[15px] font-semibold text-agon-tx2">Aucune séance</div>
+      <div className="mb-5 text-[13px]">Créez la première séance de la banque énergétique.</div>
       <button
         onClick={onNew}
-        style={{
-          padding: "9px 20px", borderRadius: 4, border: "none",
-          background: C.acV, color: C.ink, fontSize: 13,
-          fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-        }}
+        className={cn(PRIMARY_BTN, "whitespace-normal px-5 py-[9px]")}
       >
         + Nouvelle séance
       </button>
@@ -115,63 +109,42 @@ export default function EnergyLibraryPage() {
   }, [sessions, tab, kindFilter, search, profile?.id]);
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg }}>
+    <div className="min-h-screen bg-agon-bg">
 
       {/* ── Sticky header + filters ── */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 20,
-        background: C.s1, borderBottom: `1px solid ${C.brd}`,
-      }}>
+      <div className="sticky top-0 z-20 border-b border-agon-brd bg-agon-s1">
         {/* Title row */}
-        <div style={{
-          padding: "14px 20px 10px",
-          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-        }}>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: C.tx, margin: 0, flex: 1 }}>
+        <div className="flex flex-wrap items-center gap-3 px-5 pb-2.5 pt-3.5">
+          <h1 className="m-0 flex-1 text-[18px] font-extrabold text-agon-tx">
             Banque énergétique
           </h1>
           <button
             onClick={() => navigate("/coach/energy-library/new?import=texte")}
             title="Coller une séance écrite au format YOXX"
-            style={{
-              padding: "8px 16px", borderRadius: 4, border: `1px solid ${C.ac}40`,
-              background: C.ac + "12", color: C.ac, fontSize: 13,
-              fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-            }}
+            className="cursor-pointer whitespace-nowrap rounded border border-agon-accent/25 bg-agon-accent/[0.071] px-4 py-2 text-[13px] font-semibold text-agon-accent"
           >
             Importer un texte
           </button>
           <button
             onClick={() => navigate("/coach/energy-library/new")}
-            style={{
-              padding: "8px 16px", borderRadius: 4, border: "none",
-              background: C.acV, color: C.ink, fontSize: 13,
-              fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              whiteSpace: "nowrap",
-            }}
+            className={cn(PRIMARY_BTN, "px-4 py-2")}
           >
             + Nouvelle séance
           </button>
         </div>
 
         {/* Filters row */}
-        <div style={{
-          padding: "0 20px 10px",
-          display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
-        }}>
+        <div className="flex flex-wrap items-center gap-2.5 px-5 pb-2.5">
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 2, background: C.s2, borderRadius: 4, padding: 2 }}>
+          <div className="flex gap-0.5 rounded bg-agon-s2 p-0.5">
             {FILTER_TABS.map((t) => (
               <button
                 key={t.value}
                 onClick={() => setTab(t.value)}
-                style={{
-                  padding: "5px 12px", borderRadius: 6, border: "none",
-                  background: tab === t.value ? C.ac : "transparent",
-                  color: tab === t.value ? C.tx : C.tx3,
-                  fontSize: 12, fontWeight: tab === t.value ? 600 : 400,
-                  cursor: "pointer", fontFamily: "inherit", transition: "all 120ms",
-                }}
+                className={cn(
+                  "cursor-pointer rounded-[6px] px-3 py-[5px] text-[12px] [transition:all_120ms]",
+                  tab === t.value ? "bg-agon-accent font-semibold text-agon-tx" : "bg-transparent font-normal text-agon-tx3",
+                )}
               >
                 {t.label}
               </button>
@@ -180,10 +153,7 @@ export default function EnergyLibraryPage() {
 
           {/* Kind select */}
           <Select value={kindFilter} onValueChange={setKind}>
-            <SelectTrigger style={{
-              width: 160, background: C.s2, border: `1px solid ${C.brd}`,
-              color: C.tx, fontSize: 12, height: 32,
-            }}>
+            <SelectTrigger className="h-8 w-[160px] border-agon-brd bg-agon-s2 text-[12px] leading-5 text-agon-tx">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -198,17 +168,12 @@ export default function EnergyLibraryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher…"
-            style={{
-              flex: 1, minWidth: 160, maxWidth: 260,
-              background: C.s2, border: `1px solid ${C.brd}`,
-              borderRadius: 6, color: C.tx, fontSize: 12,
-              padding: "5px 10px", fontFamily: "inherit", outline: "none",
-            }}
+            className="min-w-[160px] max-w-[260px] flex-1 rounded-[6px] border border-agon-brd bg-agon-s2 px-2.5 py-[5px] text-[12px] text-agon-tx outline-none"
           />
 
           {/* Count */}
           {!isLoading && (
-            <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>
+            <span className="whitespace-nowrap text-[11px] text-agon-tx3">
               {filtered.length} séance{filtered.length !== 1 ? "s" : ""}
             </span>
           )}
@@ -216,13 +181,7 @@ export default function EnergyLibraryPage() {
       </div>
 
       {/* ── Grid ── */}
-      <div style={{
-        padding: "20px",
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-        gap: 16,
-        alignItems: "start",
-      }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] items-start gap-4 p-5">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
         ) : filtered.length === 0 ? (
