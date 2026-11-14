@@ -1,11 +1,11 @@
 import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { CalendarDays, Check, GraduationCap, Plane, Trash2, Trophy } from "lucide-react";
 import { CitationFigure } from "@/features/shared/components/CitationDuJour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
-import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { DayPreviewSheet } from "@/features/athlete/components/today/DayPreviewSheet";
 import { type DayProgram, useWeekProgram } from "@/features/shared/hooks/useWeekProgram";
 import { EnergyPreviewOverlay } from "@/features/athlete/components/today/EnergyPreviewOverlay";
@@ -287,7 +287,7 @@ export default function TodayPage() {
 
   return (
     <>
-      <div style={{ maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
+      <div className={cn("mx-auto", isDesktop ? "max-w-[1248px]" : "max-w-[480px]")}>
       {/* En-tête — symbole, date, prénom, citation (maquette « Aujourd'hui ») */}
       <AthletePageHeader
         title={<>Bonjour,{isDesktop ? " " : <br />}{athleteProfile?.first_name ?? athleteProfile?.full_name?.split(" ")[0] ?? "athlète"}</>}
@@ -300,12 +300,7 @@ export default function TodayPage() {
       >
         {show("quote") && <CitationFigure />}
       </AthletePageHeader>
-      <div
-        style={{
-          padding: "22px 20px 24px",
-          scrollbarWidth: "none", display: "flex", flexDirection: "column", gap: 28,
-        }}
-      >
+      <div className="flex flex-col gap-7 px-5 pb-6 pt-[22px] [scrollbar-width:none]">
 
         {!viewOnly && <WeeklyReviewBanner athleteId={athleteId} />}
 
@@ -336,14 +331,12 @@ export default function TodayPage() {
             <button
               type="button"
               onClick={() => { setFbExpanded((v) => !v); haptic(); }}
-              style={{ display: "flex", flexDirection: "column", gap: 4, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const }}
+              className="flex cursor-pointer flex-col gap-1 border-none bg-transparent p-0 text-left font-[inherit]"
             >
-              <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>
+              <span className="agon-mono text-[11px] uppercase tracking-[0.12em] text-agon-tx3">
                 Sur ta séance du {new Date(recentFb.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
               </span>
-              <span style={fbExpanded
-                ? { fontSize: 13, color: C.tx, lineHeight: 1.5, whiteSpace: "pre-wrap" as const, fontStyle: "italic" }
-                : { fontSize: 13, color: C.tx, lineHeight: 1.5, fontStyle: "italic", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+              <span className={cn("text-[13px] italic leading-normal text-agon-tx", fbExpanded ? "whitespace-pre-wrap" : "line-clamp-2")}>
                 « {recentFb.note} »
               </span>
             </button>
@@ -353,8 +346,8 @@ export default function TodayPage() {
               num={sec()}
               title="Retour du coach"
               right={unreadRetours.length > 0 ? (
-                <span style={{ display: "flex", alignItems: "center", gap: 6, ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: TYPE_COLOR.energie }}>
-                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: "50%", background: TYPE_COLOR.energie }} />
+                <span className="agon-mono flex items-center gap-1.5 text-[11px] uppercase tracking-[0.12em] text-agon-type-energie">
+                  <span aria-hidden className="size-[7px] rounded-full bg-agon-type-energie" />
                   Nouveau
                 </span>
               ) : undefined}
@@ -385,7 +378,7 @@ export default function TodayPage() {
           <TodaySection
             num={sec()}
             title="Cette semaine"
-            right={weekCount.planned > 0 ? <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{weekCount.done} / {weekCount.planned} faites</span> : undefined}
+            right={weekCount.planned > 0 ? <span className="agon-mono text-[11px] text-agon-tx3">{weekCount.done} / {weekCount.planned} faites</span> : undefined}
           >
             <TodayWeekStrip days={weekStripDays} today={today} onSelect={(d) => { setSelectedDay(d); haptic(); }} />
             <TodayThemeCard theme={todayTheme} />
@@ -405,9 +398,9 @@ export default function TodayPage() {
             {(() => {
               const upcoming = upcomingEvents(allCompetitions, lifeEvents, today);
               if (upcoming.length === 0) return (
-                <div style={{ borderRadius: 12, padding: 14, border: "1px dashed " + C.brdL, textAlign: "center" }}>
-                  <div style={{ fontSize: 13, color: C.tx2 }}>Aucun événement prévu</div>
-                  <div style={{ fontSize: 12, color: C.tx3, marginTop: 4 }}>Ajoute tes compétitions et indisponibilités pour que ton coach adapte le planning</div>
+                <div className="rounded-xl border border-dashed border-agon-brd-l p-3.5 text-center">
+                  <div className="text-[13px] text-agon-tx2">Aucun événement prévu</div>
+                  <div className="mt-1 text-[12px] text-agon-tx3">Ajoute tes compétitions et indisponibilités pour que ton coach adapte le planning</div>
                 </div>
               );
               return upcoming.map((evt) => {
@@ -415,15 +408,15 @@ export default function TodayPage() {
                 const tint = isComp ? ROUGE : TYPE_COLOR.hyrox;
                 const Icon = isComp ? Trophy : evt.kind === "voyage" ? Plane : evt.kind === "examen" ? GraduationCap : CalendarDays;
                 return (
-                <div key={evt.source + evt.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div key={evt.source + evt.id} className="flex flex-col gap-1.5">
                   <TintCard color={tint} onClick={isComp ? () => setShowAllComps(true) : undefined}>
-                    <Icon size={18} color={tint} strokeWidth={1.75} style={{ flex: "none" }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: C.tx, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{evt.title}</span>
-                        {evt.isNew && <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 8px", borderRadius: 999, background: C.ac, color: C.bg, ...MONO, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500, whiteSpace: "nowrap", flex: "none" }}>Nouveau</span>}
+                    <Icon size={18} color={tint} strokeWidth={1.75} className="flex-none" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-[13px] font-medium text-agon-tx">{evt.title}</span>
+                        {evt.isNew && <span className="agon-mono inline-flex h-[22px] flex-none items-center whitespace-nowrap rounded-full bg-agon-accent px-2 text-[9.5px] font-medium uppercase tracking-[0.08em] text-agon-bg">Nouveau</span>}
                       </div>
-                      <div style={{ ...MONO, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div className="agon-mono truncate text-[11px] uppercase tracking-[0.08em] text-agon-tx2">
                         {fmtShortDay(evt.start)}{evt.end !== evt.start ? ` → ${fmtShortDay(evt.end)}` : ""} · <span style={{ color: tint }}>{eventTag(evt)}</span>
                       </div>
                     </div>
@@ -431,18 +424,18 @@ export default function TodayPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmDelEvt((cur) => (cur === evt.id ? null : evt.id)); }}
                       aria-label="Supprimer l'événement"
-                      style={{ width: 28, height: 28, flex: "none", borderRadius: 8, border: "1px solid " + C.brdL, background: "none", cursor: "pointer", color: confirmDelEvt === evt.id ? ROUGE : C.tx3, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      className={cn("flex size-7 flex-none cursor-pointer items-center justify-center rounded-[8px] border border-agon-brd-l bg-transparent", confirmDelEvt === evt.id ? "text-agon-rouge" : "text-agon-tx3")}
                     >
                       <Trash2 size={13} />
                     </button>
                     )}
                   </TintCard>
                   {!isComp && confirmDelEvt === evt.id && (
-                    <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid " + ROUGE + "66" }}>
-                      <div style={{ fontSize: 13, color: C.tx2, marginBottom: 10 }}>Supprimer cet événement ? Ton coach ne le verra plus sur le planning.</div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => setConfirmDelEvt(null)} style={{ flex: 1, height: 40, borderRadius: 10, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-                        <button onClick={() => { deleteLifeEvent({ id: evt.id, athlete_id: athleteId ?? "" }); setConfirmDelEvt(null); }} style={{ flex: 1, height: 40, borderRadius: 10, border: "1px solid " + ROUGE + "66", background: "transparent", color: ROUGE, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+                    <div className="rounded-[10px] border border-agon-rouge/[0.4] px-3 py-2.5">
+                      <div className="mb-2.5 text-[13px] text-agon-tx2">Supprimer cet événement ? Ton coach ne le verra plus sur le planning.</div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setConfirmDelEvt(null)} className="h-10 flex-1 cursor-pointer rounded-[10px] border border-agon-brd-l bg-transparent font-[inherit] text-[13px] text-agon-tx">Annuler</button>
+                        <button onClick={() => { deleteLifeEvent({ id: evt.id, athlete_id: athleteId ?? "" }); setConfirmDelEvt(null); }} className="h-10 flex-1 cursor-pointer rounded-[10px] border border-agon-rouge/[0.4] bg-transparent font-[inherit] text-[13px] font-semibold text-agon-rouge">Supprimer</button>
                       </div>
                     </div>
                   )}
@@ -458,7 +451,6 @@ export default function TodayPage() {
         {/* 05 — Nutrition */}
         {show("nutrition") && todayNutrition && (() => {
           const { consumed, ev, zone, meta, log: nl } = todayNutrition;
-          const tint = TYPE_COLOR.hyrox;
           const zoneLabel = zone
             ? (zone.targetMin !== zone.targetMax
               ? `${zone.targetMin.toLocaleString("fr-FR")}–${zone.targetMax.toLocaleString("fr-FR")}`
@@ -473,38 +465,38 @@ export default function TodayPage() {
             : null;
           return (
             <TodaySection num={sec()} title="Nutrition" right={<SectionLink onClick={() => { navigate("/athlete/alim"); haptic(); }}>Détail →</SectionLink>}>
-              <div style={{ borderRadius: 12, border: `1px solid ${tint}73`, background: `${tint}1F`, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ ...MONO, fontSize: 24, color: consumed > 0 ? tint : C.tx }}>{consumed > 0 ? consumed.toLocaleString("fr-FR") : "—"}</span>
-                  {zoneLabel && <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>/ {zoneLabel} kcal</span>}
-                  <span style={{ flex: 1 }} />
-                  <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase", color: C.ink, background: meta.color, borderRadius: 999, padding: "3px 9px", fontWeight: 500 }}>{meta.label}</span>
+              <div className="flex flex-col gap-2.5 rounded-xl border border-agon-type-hyrox/[0.45] bg-agon-type-hyrox/[0.12] px-3.5 py-3">
+                <div className="flex flex-wrap items-baseline gap-1.5">
+                  <span className={cn("agon-mono text-[24px]", consumed > 0 ? "text-agon-type-hyrox" : "text-agon-tx")}>{consumed > 0 ? consumed.toLocaleString("fr-FR") : "—"}</span>
+                  {zoneLabel && <span className="agon-mono text-[12px] text-agon-tx3">/ {zoneLabel} kcal</span>}
+                  <span className="flex-1" />
+                  <span className="agon-mono rounded-full px-[9px] py-[3px] text-[10px] font-medium uppercase tracking-[0.10em] text-agon-ink" style={{ background: meta.color }}>{meta.label}</span>
                 </div>
                 {zone && (
-                  <div style={{ position: "relative", height: 8, borderRadius: 4, background: "rgba(231,211,168,0.10)", overflow: "hidden" }}>
-                    <span aria-hidden style={{ position: "absolute", top: 0, bottom: 0, left: pct(zone.targetMin), width: `calc(${pct(zone.targetMax)} - ${pct(zone.targetMin)})`, background: TYPE_COLOR.fait + "40" }} />
-                    <span aria-hidden style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: pct(consumed), background: tint, borderRadius: 4 }} />
+                  <div className="relative h-2 overflow-hidden rounded-[4px] bg-agon-brd">
+                    <span aria-hidden className="absolute inset-y-0 bg-agon-type-fait/[0.25]" style={{ left: pct(zone.targetMin), width: `calc(${pct(zone.targetMax)} - ${pct(zone.targetMin)})` }} />
+                    <span aria-hidden className="absolute inset-y-0 left-0 rounded-[4px] bg-agon-type-hyrox" style={{ width: pct(consumed) }} />
                   </div>
                 )}
                 {consumed <= 0 ? (
-                  <div style={{ fontSize: 13, color: C.tx3 }}>Aucune saisie aujourd'hui.</div>
+                  <div className="text-[13px] text-agon-tx3">Aucune saisie aujourd'hui.</div>
                 ) : (
-                  <div style={{ display: "flex", gap: 14 }}>
+                  <div className="flex gap-3.5">
                     {[
                       { l: "G", v: nl?.glucides_consumed, c: MACRO_COLOR.g },
                       { l: "L", v: nl?.lipides_consumed, c: MACRO_COLOR.l },
                       { l: "P", v: nl?.proteines_consumed, c: MACRO_COLOR.p },
                     ].map((m) => (
-                      <span key={m.l} style={{ display: "flex", alignItems: "center", gap: 5, ...MONO, fontSize: 12, color: C.tx2 }}>
-                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: m.c }} />
+                      <span key={m.l} className="agon-mono flex items-center gap-[5px] text-[12px] text-agon-tx2">
+                        <span aria-hidden className="size-2 rounded-[2px]" style={{ background: m.c }} />
                         {m.l} {m.v ?? "—"} g
                       </span>
                     ))}
                   </div>
                 )}
-                {left && <div style={{ fontSize: 13, color: C.tx2 }}>{left}</div>}
+                {left && <div className="text-[13px] text-agon-tx2">{left}</div>}
                 {!left && ev && (
-                  <div style={{ fontSize: 13, color: ev.status === "ok" ? TYPE_COLOR.fait : ev.status === "close" ? TYPE_COLOR.hyrox : ROUGE }}>
+                  <div className={cn("text-[13px]", ev.status === "ok" ? "text-agon-type-fait" : ev.status === "close" ? "text-agon-type-hyrox" : "text-agon-rouge")}>
                     {ev.status === "ok"
                       ? "Dans l'objectif."
                       : `${ev.status === "close" ? "Proche de l'objectif" : "Hors objectif"} (${ev.diffPct > 0 ? "+" : ""}${ev.diffPct.toFixed(1)} % d'écart).`}
@@ -519,7 +511,7 @@ export default function TodayPage() {
           const sComp = (<>
         {/* Jour de compétition (avant les séances) */}
         {todayComps.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             {todayComps.map((c) => (
               <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
             ))}
@@ -527,7 +519,7 @@ export default function TodayPage() {
         )}
 
           </>);
-          const s06 = (<div data-tip="seance" style={{ display: "contents" }}>
+          const s06 = (<div data-tip="seance" className="contents">
         {/* 06 — Séances du jour : nom → aperçu → détail */}
         {(() => {
           const EKL: Record<string, string> = { vo2: "VO₂", tempo: "Tempo", seuil: "Seuil", footing: "Footing", fartlek: "Fartlek", specifique: "HYROX", autre: "Énergie", custom: "Énergie" };
@@ -544,20 +536,20 @@ export default function TodayPage() {
             <TodaySection
               num={sec()}
               title="Séances du jour"
-              right={totalToday > 0 ? <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{totalToday} prévue{totalToday > 1 ? "s" : ""}</span> : undefined}
+              right={totalToday > 0 ? <span className="agon-mono text-[11px] text-agon-tx3">{totalToday} prévue{totalToday > 1 ? "s" : ""}</span> : undefined}
             >
               {totalToday === 0 ? (
-                <div style={{ borderRadius: 12, padding: "16px 14px", border: "1px solid " + C.brd, background: C.s1, textAlign: "center" }}>
-                  <div style={{ ...DISPLAY, fontSize: 16, color: C.tx, marginBottom: 4 }}>Récupération</div>
-                  <div style={{ fontSize: 13, color: C.tx3 }}>Rien de prévu, profite pour te reposer.</div>
+                <div className="rounded-xl border border-agon-brd bg-agon-s1 px-3.5 py-4 text-center">
+                  <div className="agon-display mb-1 text-[16px] text-agon-tx">Récupération</div>
+                  <div className="text-[13px] text-agon-tx3">Rien de prévu, profite pour te reposer.</div>
                 </div>
               ) : !hasPending ? (
-                <div style={{ borderRadius: 12, padding: "16px 14px", border: "1px solid " + TYPE_COLOR.fait + "73", background: TYPE_COLOR.fait + "1F", textAlign: "center" }}>
-                  <div style={{ marginBottom: 6 }}><Check size={26} color={TYPE_COLOR.fait} /></div>
-                  <div style={{ ...DISPLAY, fontSize: 16, color: TYPE_COLOR.fait }}>
+                <div className="rounded-xl border border-agon-type-fait/[0.45] bg-agon-type-fait/[0.12] px-3.5 py-4 text-center">
+                  <div className="mb-1.5"><Check size={26} color={TYPE_COLOR.fait} /></div>
+                  <div className="agon-display text-[16px] text-agon-type-fait">
                     {totalToday > 1 ? "Séances terminées" : "Séance terminée"}
                   </div>
-                  <div style={{ fontSize: 13, color: C.tx3, marginTop: 4 }}>Bien joué, récupère bien.</div>
+                  <div className="mt-1 text-[13px] text-agon-tx3">Bien joué, récupère bien.</div>
                 </div>
               ) : (
                 <>
@@ -597,20 +589,14 @@ export default function TodayPage() {
           <div>
             <button
               onClick={() => { setShowOtherSessions((v) => !v); haptic(); }}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "10px 14px", borderRadius: 6,
-                border: "1px dashed " + C.brdL, background: C.s1,
-                color: C.tx3, fontSize: 12, fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit", minHeight: 44,
-              }}
+              className="flex min-h-11 w-full cursor-pointer items-center justify-between rounded-[6px] border border-dashed border-agon-brd-l bg-agon-s1 px-3.5 py-2.5 font-[inherit] text-[12px] font-semibold text-agon-tx3"
             >
               <span>Faire une autre séance cette semaine</span>
-              <span style={{ fontSize: 10 }}>{showOtherSessions ? "▲" : "▼"}</span>
+              <span className="text-[10px]">{showOtherSessions ? "▲" : "▼"}</span>
             </button>
 
             {showOtherSessions && (
-              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="mt-2 flex flex-col gap-2">
                 {otherUndoneSessions.map((s) => (
                   <button
                     key={s.id}
@@ -636,20 +622,15 @@ export default function TodayPage() {
                       );
                     }}
                     disabled={startingUnplanned}
-                    style={{
-                      width: "100%", padding: "12px 14px", borderRadius: 6,
-                      border: "1px solid " + C.coach + "40", background: C.coachS,
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-                    }}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-[6px] border border-agon-coach/[0.25] bg-agon-coach-doux px-3.5 py-3 text-left font-[inherit]"
                   >
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{s.sessionName}</div>
-                      <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>
+                      <div className="text-[13px] font-bold text-agon-tx">{s.sessionName}</div>
+                      <div className="mt-px text-[10px] text-agon-tx3">
                         Planifiée {new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long" })}
                       </div>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: C.coach }}>
+                    <span className="text-[11px] font-bold text-agon-coach">
                       Démarrer ▶
                     </span>
                   </button>
@@ -672,9 +653,9 @@ export default function TodayPage() {
               const tc = t.completed ? TYPE_COLOR.fait : TYPE_COLOR.test;
               return (
                 <TintCard key={t.id} as="button" color={tc} onClick={() => { openTest(t.id); haptic(); }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3 }}>{bio ? "Biométrie" : "Test"}</div>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: C.tx, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="agon-mono text-[10px] uppercase tracking-[0.12em] text-agon-tx3">{bio ? "Biométrie" : "Test"}</div>
+                    <div className="mt-0.5 truncate text-[15px] font-medium text-agon-tx">{t.title}</div>
                   </div>
                   {t.completed
                     ? <Check size={18} color={TYPE_COLOR.fait} />
@@ -701,23 +682,19 @@ export default function TodayPage() {
               <button
                 type="button"
                 onClick={() => setShowAllComps(true)}
-                style={{
-                  position: "relative", overflow: "hidden", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: C.tx,
-                  borderRadius: 14, border: `1px solid ${ROUGE}73`, background: `${H.brun} url(/maquette/competition-fond.svg) center/cover`,
-                  padding: "12px 14px 12px 17px", display: "flex", flexDirection: "column", gap: 6,
-                }}
+                className="relative flex w-full cursor-pointer flex-col gap-1.5 overflow-hidden rounded-[14px] border border-agon-rouge/[0.45] bg-agon-h-brun bg-[url('/maquette/competition-fond.svg')] bg-cover bg-center py-3 pl-[17px] pr-3.5 text-left font-[inherit] text-agon-tx"
               >
-                <span aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(21,18,15,0.72)" }} />
-                <span aria-hidden style={{ position: "absolute", inset: 0, background: `${ROUGE}1A` }} />
-                <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: ROUGE }} />
-                <span style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, width: "100%", whiteSpace: "nowrap" }}>
-                  <span style={{ ...DISPLAY, fontSize: 14, fontWeight: 500, letterSpacing: "0.08em", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{nextComp.name}</span>
-                  <span style={{ flex: 1 }} />
+                <span aria-hidden className="absolute inset-0 bg-[rgba(21,18,15,0.72)]" />
+                <span aria-hidden className="absolute inset-0 bg-agon-rouge/[0.1]" />
+                <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-agon-rouge" />
+                <span className="relative flex w-full items-center gap-2.5 whitespace-nowrap">
+                  <span className="agon-display min-w-0 truncate text-[14px] font-medium tracking-[0.08em]">{nextComp.name}</span>
+                  <span className="flex-1" />
                   <TypePill color={ROUGE}>{priorityLabel(nextComp.priority)}</TypePill>
                 </span>
-                <span style={{ position: "relative", display: "flex", alignItems: "baseline", gap: 10, minWidth: 0 }}>
-                  <span style={{ ...MONO, fontSize: 22, color: ROUGE, flex: "none" }}>{nextComp.daysUntil === 0 ? "J" : `J-${nextComp.daysUntil}`}</span>
-                  <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span className="relative flex min-w-0 items-baseline gap-2.5">
+                  <span className="agon-mono flex-none text-[22px] text-agon-rouge">{nextComp.daysUntil === 0 ? "J" : `J-${nextComp.daysUntil}`}</span>
+                  <span className="agon-mono truncate text-[11px] uppercase tracking-[0.06em] text-agon-tx">
                     {fmtShortDay(nextComp.date)}{nextComp.location ? ` · ${nextComp.location}` : ""}
                   </span>
                 </span>
@@ -728,22 +705,22 @@ export default function TodayPage() {
               if (!then) return null;
               const j = daysUntil(then.date, today);
               return (
-                <button type="button" onClick={() => setShowAllComps(true)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 12, background: C.s1, border: `1px solid ${C.brd}`, whiteSpace: "nowrap", width: "100%", cursor: "pointer", fontFamily: "inherit", color: C.tx, textAlign: "left" }}>
-                  <span style={{ fontSize: 12, color: C.tx3 }}>Puis</span>
-                  <span style={{ ...DISPLAY, fontSize: 12.5, letterSpacing: "0.08em", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{then.name}</span>
-                  <span style={{ flex: 1 }} />
-                  <span style={{ ...MONO, fontSize: 12, color: ROUGE }}>{j === 0 ? "J" : `J-${j}`}</span>
-                  <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>· {then.priority}</span>
+                <button type="button" onClick={() => setShowAllComps(true)} className="flex w-full cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-xl border border-agon-brd bg-agon-s1 px-3.5 py-2.5 text-left font-[inherit] text-agon-tx">
+                  <span className="text-[12px] text-agon-tx3">Puis</span>
+                  <span className="agon-display min-w-0 truncate text-[12.5px] tracking-[0.08em]">{then.name}</span>
+                  <span className="flex-1" />
+                  <span className="agon-mono text-[12px] text-agon-rouge">{j === 0 ? "J" : `J-${j}`}</span>
+                  <span className="agon-mono text-[11px] text-agon-tx2">· {then.priority}</span>
                 </button>
               );
             })()}
             {!nextComp && (
-              <div style={{ borderRadius: 12, padding: 16, border: "1px dashed " + C.brdL, textAlign: "center" }}>
-                <div style={{ fontSize: 13, color: C.tx3, marginBottom: myCoachId ? 10 : 0 }}>Aucune compétition prévue</div>
+              <div className="rounded-xl border border-dashed border-agon-brd-l p-4 text-center">
+                <div className={cn("text-[13px] text-agon-tx3", myCoachId && "mb-2.5")}>Aucune compétition prévue</div>
                 {myCoachId && (
                   <button
                     onClick={() => setEventForm("competition")}
-                    style={{ height: 44, padding: "0 18px", borderRadius: 12, border: "1px solid " + C.brdL, background: "transparent", color: C.tx, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                    className="h-11 cursor-pointer rounded-xl border border-agon-brd-l bg-transparent px-[18px] font-[inherit] text-[14px] font-semibold text-agon-tx"
                   >
                     Ajouter une compétition
                   </button>
@@ -752,7 +729,7 @@ export default function TodayPage() {
             )}
             {uncommentedComps.length > 0 && (
               <>
-                <div style={{ ...MONO, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: TYPE_COLOR.competition, marginTop: 4 }}>
+                <div className="agon-mono mt-1 text-[10px] uppercase tracking-[0.12em] text-agon-type-competition">
                   {uncommentedComps.length > 1 ? "Compétitions à commenter" : "Compétition à commenter"}
                 </div>
                 {uncommentedComps.map((comp) => (
@@ -771,41 +748,39 @@ export default function TodayPage() {
         {/* 09 — Tendance de forme */}
         {show("trend") && wellnessTrendHasData && (
           <TodaySection num={sec()} title="Tendance de forme" right={<SectionLink onClick={() => navigate("profil")}>Historique →</SectionLink>}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>Forme moyenne · 7 j</span>
-              <span style={{ flex: 1 }} />
-              <span style={{ ...MONO, fontSize: 18, lineHeight: 1, color: formeColor }}>
+            <div className="flex items-center gap-2.5">
+              <span className="agon-mono text-[11px] uppercase tracking-[0.14em] text-agon-tx3">Forme moyenne · 7 j</span>
+              <span className="flex-1" />
+              <span className="agon-mono text-[18px] leading-none" style={{ color: formeColor }}>
                 {avgFormeScore ?? "—"}
-                {avgFormeScore != null && <span style={{ fontSize: 11, color: C.tx3 }}> / 100</span>}
+                {avgFormeScore != null && <span className="text-[11px] text-agon-tx3"> / 100</span>}
               </span>
               {avgFormeScore != null && <TypePill color={formeColor}>{formeLabel}</TypePill>}
             </div>
             <TodayFormeTrend scores={wellnessTrend.map((d) => d.score)} color={formeColor} />
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div className="flex justify-between">
               {[wellnessTrend[0].iso, wellnessTrend[wellnessTrend.length - 1].iso].map((iso) => (
-                <span key={iso} style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3 }}>
+                <span key={iso} className="agon-mono text-[11px] uppercase tracking-[0.14em] text-agon-tx3">
                   {new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                 </span>
               ))}
             </div>
 
             {(formeAdvice.length > 0 || wellnessBand(avgFormeScore)?.tone === "good") && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div className="flex flex-col gap-1.5">
                 {(formeAdvice.length > 0
                   ? formeAdvice
                   : [{ icon: <Check size={16} />, label: "Forme", text: "bonne, continue sur ta lancée.", color: C.g }]
                 ).map((tip) => (
                   <div
                     key={tip.label}
-                    style={{
-                      position: "relative", overflow: "hidden", display: "flex", alignItems: "center", gap: 10,
-                      padding: "9px 12px 9px 15px", borderRadius: 10, border: `1px solid ${tip.color}66`, background: `${tip.color}1A`,
-                    }}
+                    className="relative flex items-center gap-2.5 overflow-hidden rounded-[10px] py-[9px] pl-[15px] pr-3"
+                    style={{ border: `1px solid ${tip.color}66`, background: `${tip.color}1A` }}
                   >
-                    <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: tip.color }} />
-                    <span style={{ display: "flex", flex: "none", color: tip.color }}>{tip.icon}</span>
-                    <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4 }}>
-                      <span style={{ color: tip.color, fontWeight: 500 }}>{tip.label}</span> · {tip.text}
+                    <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tip.color }} />
+                    <span className="flex flex-none" style={{ color: tip.color }}>{tip.icon}</span>
+                    <div className="text-[12px] leading-[1.4] text-agon-tx2">
+                      <span className="font-medium" style={{ color: tip.color }}>{tip.label}</span> · {tip.text}
                     </div>
                   </div>
                 ))}
@@ -816,25 +791,25 @@ export default function TodayPage() {
           </>);
           if (!isDesktop) return <>{s01}{s02}{s03}{s04}{s05}{sComp}{s06}{s07}{s08}{s09}</>;
           // Ordinateur (planche AthOrdiAAujourdhui) : 3 colonnes, puis séances du jour + tendance.
-          const col = { display: "flex", flexDirection: "column", gap: 28, minWidth: 0 } as const;
+          const col = "flex min-w-0 flex-col gap-7";
           return (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 24, alignItems: "start" }}>
-                <div style={col}>{s01}{s02}</div>
-                <div style={col}>{s03}{s04}{s05}</div>
-                <div style={col}>{sComp}{s07}{s08}</div>
+              <div className="grid grid-cols-3 items-start gap-6">
+                <div className={col}>{s01}{s02}</div>
+                <div className={col}>{s03}{s04}{s05}</div>
+                <div className={col}>{sComp}{s07}{s08}</div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", gap: 24, alignItems: "start" }}>
-                <div style={col}>{s06}</div>
-                <div style={col}>{s09}</div>
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-6">
+                <div className={col}>{s06}</div>
+                <div className={col}>{s09}</div>
               </div>
             </>
           );
         })()}
 
-        <div aria-hidden style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "6px 0 0", opacity: 0.55 }}>
-          <img src="/maquette/agon-grec.svg" alt="" style={{ height: 14 }} />
-          <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.2em", color: C.tx3 }}>LA PROGRESSION PAR LE PLAN</span>
+        <div aria-hidden className="flex flex-col items-center gap-2 pt-1.5 opacity-[0.55]">
+          <img src="/maquette/agon-grec.svg" alt="" className="h-3.5" />
+          <span className="agon-mono text-[10px] tracking-[0.2em] text-agon-tx3">LA PROGRESSION PAR LE PLAN</span>
         </div>
       </div>
       </div>
