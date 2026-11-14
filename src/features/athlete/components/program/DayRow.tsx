@@ -104,18 +104,19 @@ export function DayRow({
 
         {/* Jour de compétition — en tête, séances éventuelles dessous */}
         {isCompDay && day.competitions.map(c => (
-          <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} />
+          <CompetitionDayCard key={c.id} competition={c} viewOnly={viewOnly} compact={vertical} />
         ))}
 
         {/* Événements de vie (vacances, stage, examen…) : « Indisponible » si l'athlète ne peut pas s'entraîner. */}
         {(day.lifeEvents ?? []).map((e) => (
           <div key={e.id} style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 10, fontSize: 12.5, color: C.tx2,
+            display: "flex", flexDirection: vertical ? "column" : "row", alignItems: vertical ? "flex-start" : "center", gap: vertical ? 3 : 8,
+            padding: vertical ? "7px 8px" : "7px 10px", borderRadius: 10, fontSize: 12.5, color: C.tx2, minWidth: 0,
             border: `1px dashed ${e.unavailable ? alpha(C.o, 0.5) : C.brdL}`,
             background: e.unavailable ? `repeating-linear-gradient(135deg, ${alpha(C.o, 0.08)} 0 6px, transparent 6px 12px)` : "transparent",
           }}>
             {e.unavailable && <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.o, flex: "none" }}>Indisponible</span>}
-            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
+            <span title={e.title} style={{ minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</span>
           </div>
         ))}
 
@@ -147,7 +148,7 @@ export function DayRow({
         )}
 
         {!viewOnly && showAdd && (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: vertical ? "column" : "row", gap: vertical ? 6 : 8 }}>
             <button
               type="button"
               onClick={() => { haptic(); setShowAdd(false); onAddActivity(day.date); }}
@@ -159,7 +160,7 @@ export function DayRow({
               <button
                 type="button"
                 onClick={() => { haptic(); setShowAdd(false); onAddCompetition(day.date); }}
-                style={{ flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, borderRadius: 10, border: "1px dashed " + TYPE_COLOR.competition + "73", background: "none", color: TYPE_COLOR.competition, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, borderRadius: 10, border: "1px dashed " + alpha(TYPE_COLOR.competition, 0.45), background: "none", color: TYPE_COLOR.competition, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}
               >
                 <Trophy size={12} /> Compétition
               </button>

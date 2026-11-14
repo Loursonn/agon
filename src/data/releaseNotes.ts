@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-competitions-semaine-ordinateur",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Compétitions lisibles dans la semaine sur ordinateur",
+    summary: "Côté athlète, sur ordinateur, une compétition dans la vue semaine du Programme s'écrivait lettre par lettre à la verticale. Elle s'affiche maintenant en carte horizontale : type, nom, importance A/B/C, compte à rebours (J-21) et lieu.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "La carte compétition tient dans la colonne du jour, sans couper les mots.",
+          "Les périodes « Indisponible » s'affichent sur deux lignes au lieu d'être écrasées.",
+          "Le bouton « Compétition » du menu + a retrouvé sa bordure rouge.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-theme-du-jour-menu-rapide",
     date: "2026-11-14",
     kind: "feature",
