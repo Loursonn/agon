@@ -8,7 +8,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { EnergyInterval, IntervalRole, EnergyDuration, EnergyTarget } from "@/types/energy";
 import { genId } from "@/lib/energy/treeUtils";
 import { paceBounds } from "@/lib/energy/paceCompat";
@@ -90,19 +90,10 @@ function toMMSS(secs: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-const inp = {
-  base: {
-    background: C.s2,
-    border: `1px solid ${C.brd}`,
-    borderRadius: 6,
-    color: C.tx,
-    fontSize: 13,
-    padding: "6px 10px",
-    width: "100%",
-    fontFamily: "inherit",
-    outline: "none",
-  } as React.CSSProperties,
-};
+const INPUT = "w-full rounded-[6px] border border-agon-brd bg-agon-s2 px-2.5 py-1.5 text-[13px] text-agon-tx outline-none";
+const TRIGGER = "border-agon-brd bg-agon-s2 text-agon-tx";
+const UNIT = "text-[12px] text-agon-tx3";
+const HINT = "mt-0.5 text-[10px] text-agon-tx3";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -114,19 +105,19 @@ function RangeInputs({
   onMin: (v: number) => void; onMax: (v: number) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div className="flex items-center gap-2">
       <input
-        type="number" style={{ ...inp.base, width: 80 }}
+        type="number" className={cn(INPUT, "w-20")}
         value={min} onChange={(e) => onMin(Number(e.target.value))}
         placeholder="min"
       />
-      <span style={{ color: C.tx3, fontSize: 12 }}>–</span>
+      <span className={UNIT}>–</span>
       <input
-        type="number" style={{ ...inp.base, width: 80 }}
+        type="number" className={cn(INPUT, "w-20")}
         value={max} onChange={(e) => onMax(Number(e.target.value))}
         placeholder="max"
       />
-      {unit && <span style={{ color: C.tx3, fontSize: 12 }}>{unit}</span>}
+      {unit && <span className={UNIT}>{unit}</span>}
     </div>
   );
 }
@@ -142,19 +133,19 @@ function TimeRangeInputs({
   const fromText = (raw: string) =>
     meters === 1000 ? parseMMSS(raw) : paceFromTimeOverDistance(parseMMSS(raw), meters);
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div className="flex items-center gap-2">
       <input
-        type="text" style={{ ...inp.base, width: 80 }}
+        type="text" className={cn(INPUT, "w-20")}
         value={toText(min)} onChange={(e) => onMin(fromText(e.target.value))}
         placeholder="4:00"
       />
-      <span style={{ color: C.tx3, fontSize: 12 }}>–</span>
+      <span className={UNIT}>–</span>
       <input
-        type="text" style={{ ...inp.base, width: 80 }}
+        type="text" className={cn(INPUT, "w-20")}
         value={toText(max)} onChange={(e) => onMax(fromText(e.target.value))}
         placeholder="5:00"
       />
-      <span style={{ color: C.tx3, fontSize: 12 }}>{unit}</span>
+      <span className={UNIT}>{unit}</span>
     </div>
   );
 }
@@ -261,16 +252,16 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
   }
 
   const label = (t: string) => (
-    <div style={{ fontSize: 11, color: C.tx3, marginBottom: 4, marginTop: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+    <div className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-[0.04em] text-agon-tx3">
       {t}
     </div>
   );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-sm overflow-y-auto" style={{ background: C.s1, borderLeft: `1px solid ${C.brd}`, padding: "20px 20px" }}>
-        <SheetHeader style={{ marginBottom: 4 }}>
-          <SheetTitle style={{ color: C.tx, fontSize: 16 }}>
+      <SheetContent side="right" className="w-full max-w-sm overflow-y-auto border-l border-agon-brd bg-agon-s1 p-5">
+        <SheetHeader className="mb-1">
+          <SheetTitle className="text-[16px] leading-7 text-agon-tx">
             {title ?? "Éditer l'intervalle"}
           </SheetTitle>
         </SheetHeader>
@@ -278,7 +269,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
         {/* Role */}
         {label("Rôle")}
         <Select value={role} onValueChange={(v) => setRole(v as IntervalRole)}>
-          <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx }}>
+          <SelectTrigger className={TRIGGER}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -291,7 +282,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
         {/* Equipment */}
         {label("Matériel")}
         <Select value={equipment} onValueChange={setEquipment}>
-          <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx }}>
+          <SelectTrigger className={TRIGGER}>
             <SelectValue placeholder="Aucun" />
           </SelectTrigger>
           <SelectContent>
@@ -312,7 +303,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
           else if (next === "calories") setDurValue("200");
           else setDurValue("");
         }}>
-          <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx }}>
+          <SelectTrigger className={TRIGGER}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -322,23 +313,23 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
           </SelectContent>
         </Select>
         {durKind !== "lap_button" && (
-          <div style={{ marginTop: 6 }}>
+          <div className="mt-1.5">
             <input
               type={durKind === "time" ? "text" : "number"}
-              style={inp.base}
+              className={INPUT}
               value={durValue}
               onChange={(e) => setDurValue(e.target.value)}
               placeholder={durKind === "time" ? "mm:ss ou h:mm:ss" : durKind === "distance" ? "400" : "200"}
               min={durKind !== "time" ? 0 : undefined}
             />
             {durKind === "time" && (
-              <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>Format MM:SS ou H:MM:SS (ex: 1:30, 1:05:00)</div>
+              <div className={HINT}>Format MM:SS ou H:MM:SS (ex: 1:30, 1:05:00)</div>
             )}
             {durKind === "distance" && (
-              <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>Distance en mètres</div>
+              <div className={HINT}>Distance en mètres</div>
             )}
             {durKind === "calories" && (
-              <div style={{ fontSize: 10, color: C.tx3, marginTop: 2 }}>Calories en kcal</div>
+              <div className={HINT}>Calories en kcal</div>
             )}
           </div>
         )}
@@ -346,7 +337,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
         {/* Target */}
         {label("Cible d'intensité")}
         <Select value={targetKind} onValueChange={(v) => setTargetKind(v as EnergyTarget["kind"])}>
-          <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx }}>
+          <SelectTrigger className={TRIGGER}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -357,10 +348,10 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
         </Select>
 
         {/* Target fields */}
-        <div style={{ marginTop: 8 }}>
+        <div className="mt-2">
           {targetKind === "hr_zone" && (
             <Select value={String(hrZone)} onValueChange={(v) => setHrZone(Number(v) as 1|2|3|4|5)}>
-              <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx }}>
+              <SelectTrigger className={TRIGGER}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -379,7 +370,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
           {targetKind === "pace" && (
             <>
               <Select value={paceInput} onValueChange={(v) => setPaceUnit(v as PaceInputUnit)} >
-                <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx, marginBottom: 6 }}>
+                <SelectTrigger className={cn(TRIGGER, "mb-1.5")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -403,7 +394,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
                   onMax={setRangeMax}
                 />
               )}
-              <div style={{ marginTop: 6 }}>
+              <div className="mt-1.5">
                 <PaceEquivalents
                   target={{ kind: "pace", min_s_per_unit: rangeMin, max_s_per_unit: rangeMax, unit: paceInput === "kmh" ? "kmh" : "min_per_km" }}
                   repDistanceM={repDistanceM}
@@ -415,7 +406,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
           {(targetKind === "pace_test_pct" || targetKind === "power_test_pct") && (
             <>
               <Select value={testMetric} onValueChange={setTestMetric}>
-                <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx }}>
+                <SelectTrigger className={TRIGGER}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -424,7 +415,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
                   ))}
                 </SelectContent>
               </Select>
-              <div style={{ marginTop: 6 }}>
+              <div className="mt-1.5">
                 <RangeInputs min={rangeMin} max={rangeMax} unit="%" onMin={setRangeMin} onMax={setRangeMax} />
               </div>
             </>
@@ -436,7 +427,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
             <>
               <RangeInputs min={rangeMin} max={rangeMax} onMin={setRangeMin} onMax={setRangeMax} />
               <Select value={cadenceUnit} onValueChange={(v) => setCadenceUnit(v as "spm"|"rpm")}>
-                <SelectTrigger style={{ background: C.s2, border: `1px solid ${C.brd}`, color: C.tx, marginTop: 6 }}>
+                <SelectTrigger className={cn(TRIGGER, "mt-1.5")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -448,7 +439,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
           )}
           {targetKind === "text" && (
             <input
-              style={inp.base}
+              className={INPUT}
               value={textValue}
               onChange={(e) => setTextValue(e.target.value)}
               placeholder="Ex: Ressenti 7/10"
@@ -459,22 +450,22 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
         {/* Notes */}
         {label("Notes (optionnel)")}
         <textarea
-          style={{ ...inp.base, minHeight: 60, resize: "vertical" }}
+          className={cn(INPUT, "min-h-[60px] resize-y")}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Consignes additionnelles…"
         />
 
-        <SheetFooter style={{ marginTop: 20, display: "flex", gap: 8, flexDirection: "row", justifyContent: "flex-end" }}>
+        <SheetFooter className="mt-5 flex flex-row justify-end gap-2">
           <button
             onClick={() => onOpenChange(false)}
-            style={{ padding: "8px 16px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded border border-agon-brd bg-transparent px-4 py-2 text-[13px] text-agon-tx2"
           >
             Annuler
           </button>
           <button
             onClick={handleSave}
-            style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: C.acV, color: C.ink, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded bg-agon-or-vif px-4 py-2 text-[13px] font-semibold text-agon-ink"
           >
             Valider
           </button>
