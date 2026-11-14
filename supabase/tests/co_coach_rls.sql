@@ -8,17 +8,18 @@
 --    sed '/^BEGIN;$/d' supabase/tests/co_coach_rls.sql) > /tmp/cc.sql
 --   supabase db query --linked -f /tmp/cc.sql
 -- Chaque ligne k → v : la valeur attendue est dans le libellé.
+-- Coachs tiers B et C : jamais un admin (l'admin voit tous les profils, par conception).
 
 BEGIN;
 CREATE TEMP TABLE r(n serial, k text, v text) ON COMMIT DROP;
 GRANT ALL ON r TO authenticated; GRANT ALL ON SEQUENCE r_n_seq TO authenticated;
 CREATE TEMP TABLE ids ON COMMIT DROP AS
 SELECT a.id AS athlete, a.coach_id AS coach_a,
-  (SELECT p.id FROM profiles p WHERE p.role IN ('coach','coach_athlete') AND p.id <> a.coach_id
+  (SELECT p.id FROM profiles p WHERE p.role IN ('coach','coach_athlete') AND p.id <> a.coach_id AND NOT p.is_admin
      AND p.coach_code IS NOT NULL ORDER BY p.created_at LIMIT 1) AS coach_b,
-  (SELECT p.coach_code FROM profiles p WHERE p.role IN ('coach','coach_athlete') AND p.id <> a.coach_id
+  (SELECT p.coach_code FROM profiles p WHERE p.role IN ('coach','coach_athlete') AND p.id <> a.coach_id AND NOT p.is_admin
      AND p.coach_code IS NOT NULL ORDER BY p.created_at LIMIT 1) AS code_b,
-  (SELECT p.id FROM profiles p WHERE p.role IN ('coach','coach_athlete') AND p.id <> a.coach_id
+  (SELECT p.id FROM profiles p WHERE p.role IN ('coach','coach_athlete') AND p.id <> a.coach_id AND NOT p.is_admin
      AND p.coach_code IS NOT NULL ORDER BY p.created_at OFFSET 1 LIMIT 1) AS coach_c,
   (SELECT o.id FROM profiles o WHERE o.coach_id = a.coach_id AND o.id <> a.id AND o.id <> a.coach_id LIMIT 1) AS other_athlete,
   (SELECT count(*) FROM app_data d WHERE d.athlete_id = a.id) AS n_app_data,
