@@ -1,4 +1,3 @@
-import { C, H } from "@/lib/theme";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
@@ -6,7 +5,7 @@ import { formatReps, hasIso, isAllIso } from "@/lib/formatSetsReps";
 import { isMissedWeekSession } from "@/features/athlete/components/program/programUtils";
 import { useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import { blocColor } from "@/lib/peps";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 
 // ── Workout preview drawer ────────────────────────────────────────────────────
 
@@ -30,27 +29,27 @@ export function WorkoutPreviewDrawer({
 
   return (
     <Drawer open onOpenChange={(v) => !v && onClose()}>
-      <DrawerContent style={{ background: C.s1, borderTop: "1px solid " + C.brd, padding: 0, maxHeight: "86vh", display: "flex", flexDirection: "column" }}>
-        <DrawerHeader style={{ padding: "16px 20px 8px", flexShrink: 0 }}>
-          <DrawerTitle style={{ fontSize: 17, fontWeight: 600, color: C.tx }}>
+      <DrawerContent className="flex max-h-[86vh] flex-col border-t-agon-brd bg-agon-s1 p-0">
+        <DrawerHeader className="shrink-0 px-5 pb-2 pt-4">
+          <DrawerTitle className="text-[17px] font-semibold leading-none text-agon-tx">
             {session.sessionName}
           </DrawerTitle>
         </DrawerHeader>
 
         {/* Blocs — scrollable */}
         {workout.isLoading ? (
-          <div style={{ padding: "24px 16px", textAlign: "center", color: C.tx3, fontSize: 12 }}>
+          <div className="px-4 py-6 text-center text-[12px] text-agon-tx3">
             Chargement…
           </div>
         ) : workout.blocs.length > 0 ? (
-          <div style={{ flex: 1, overflowY: "auto", scrollbarWidth: "none", padding: "0 16px" }}>
+          <div className="flex-1 overflow-y-auto px-4 [scrollbar-width:none]">
             {workout.blocs.map((bloc, blocIdx) => (
-              <div key={bloc.id} style={{ marginBottom: 14 }}>
+              <div key={bloc.id} className="mb-3.5">
                 {/* Bloc header */}
-                <div style={{ ...MONO, fontSize: 11, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>
+                <div className="agon-mono mb-1.5 text-[11px] uppercase tracking-[0.12em] text-agon-tx3">
                   <span style={{ color: blocColor(bloc.color, blocIdx) }}>Bloc {String.fromCharCode(65 + blocIdx)}</span>{bloc.name && bloc.name.trim().toUpperCase() !== String.fromCharCode(65 + blocIdx) ? " — " + bloc.name : ""}
                 </div>
-                <div style={{ background: C.s2, border: "1px solid " + C.brd, borderRadius: 12, overflow: "hidden" }}>
+                <div className="overflow-hidden rounded-xl border border-agon-brd bg-agon-s2">
                   {bloc.exercices.map((ex, idx) => {
                     // Superset : chaîne d'exercices liés (superset_with_next), comme en séance
                     const prevLinked = idx > 0 && !!bloc.exercices[idx - 1].superset_with_next;
@@ -69,46 +68,42 @@ export function WorkoutPreviewDrawer({
                     return (
                       <div key={ex.id}>
                       {chainLen > 1 && (
-                        <div style={{
-                          padding: "6px 14px 0", borderTop: idx > 0 ? "1px solid " + C.brd : "none",
-                          borderLeft: `3px solid ${H.miel}`,
-                          fontSize: 9, fontWeight: 800, color: H.miel, letterSpacing: "0.5px",
-                        }}>
+                        <div className={cn(
+                          "border-l-[3px] border-l-agon-alerte px-3.5 pb-0 pt-1.5 text-[9px] font-extrabold tracking-[0.5px] text-agon-alerte",
+                          idx > 0 ? "border-t border-t-agon-brd" : "border-t-0",
+                        )}>
                           SUPERSET ×{chainLen} · ENCHAÎNÉS SANS REPOS
                         </div>
                       )}
                       <div
-                        style={{
-                          padding: "10px 14px",
-                          borderTop: idx > 0 && !prevLinked && chainLen <= 1 ? "1px solid " + C.brd : "none",
-                          borderLeft: inSuperset ? `3px solid ${H.miel}` : "3px solid transparent",
-                          display: "flex", alignItems: "center", gap: 10,
-                        }}
+                        className={cn(
+                          "flex items-center gap-2.5 border-l-[3px] px-3.5 py-2.5",
+                          inSuperset ? "border-l-agon-alerte" : "border-l-transparent",
+                          idx > 0 && !prevLinked && chainLen <= 1 ? "border-t border-t-agon-brd" : "border-t-0",
+                        )}
                       >
-                        <div style={{
-                          ...MONO, width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                          background: blocColor(bloc.color, blocIdx), color: C.ink,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 11, fontWeight: 500,
-                        }}>
+                        <div
+                          className="agon-mono flex size-[22px] shrink-0 items-center justify-center rounded-[6px] text-[11px] font-medium text-agon-ink"
+                          style={{ background: blocColor(bloc.color, blocIdx) }}
+                        >
                           {String.fromCharCode(65 + blocIdx)}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 14, fontWeight: 500, color: C.tx, display: "block" }}>
+                        <div className="min-w-0 flex-1">
+                          <span className="block text-[14px] font-medium text-agon-tx">
                             {ex.exercise_name}
                           </span>
-                          <div style={{ display: "flex", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-                            <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>{nb} séries × {ex.params ? formatReps(ex.params) : reps}{ex.params?.cluster || isAllIso(ex.params) ? "" : " reps"}{hasIso(ex.params) ? " · Iso" : ""}</span>
+                          <div className="mt-0.5 flex flex-wrap gap-1.5">
+                            <span className="agon-mono text-[11.5px] text-agon-tx2">{nb} séries × {ex.params ? formatReps(ex.params) : reps}{ex.params?.cluster || isAllIso(ex.params) ? "" : " reps"}{hasIso(ex.params) ? " · Iso" : ""}</span>
                             {rir != null && (
-                              <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>· RIR {rir}</span>
+                              <span className="agon-mono text-[11.5px] text-agon-tx2">· RIR {rir}</span>
                             )}
                             {tempo && (
-                              <span style={{ ...MONO, fontSize: 11.5, color: C.tx2 }}>· T {tempo}</span>
+                              <span className="agon-mono text-[11.5px] text-agon-tx2">· T {tempo}</span>
                             )}
                           </div>
                         </div>
                         {ex.superset_with_next && bloc.exercices[idx + 1] && (
-                          <span title="Lié à l'exercice suivant" style={{ fontSize: 12, color: H.miel, flexShrink: 0 }}>↓</span>
+                          <span title="Lié à l'exercice suivant" className="shrink-0 text-[12px] text-agon-alerte">↓</span>
                         )}
                       </div>
                       </div>
@@ -121,15 +116,11 @@ export function WorkoutPreviewDrawer({
         ) : null}
 
         {/* Actions — sticky */}
-        <div style={{ padding: "12px 16px 24px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex shrink-0 flex-col gap-2 px-4 pb-6 pt-3">
           {onStart && (
             <button
               onClick={onStart}
-              style={{
-                width: "100%", height: 52, borderRadius: 12, border: "none",
-                background: C.ac, color: C.ink,
-                fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              }}
+              className="h-[52px] w-full cursor-pointer rounded-xl border-none bg-agon-accent font-[inherit] text-[15px] font-semibold text-agon-ink"
             >
               Démarrer la séance ▶
             </button>
@@ -138,12 +129,7 @@ export function WorkoutPreviewDrawer({
           {canMove && (
             <button
               onClick={onReschedule}
-              style={{
-                width: "100%", height: 48, borderRadius: 12,
-                border: "1px solid " + C.brdL, background: "transparent",
-                color: C.tx, fontSize: 14, fontWeight: 500, cursor: "pointer",
-                fontFamily: "inherit",
-              }}
+              className="h-12 w-full cursor-pointer rounded-xl border border-agon-brd-l bg-transparent font-[inherit] text-[14px] font-medium text-agon-tx"
             >
               Déplacer à une autre date
             </button>
