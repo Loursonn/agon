@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { LIGHT_LABEL } from "./reviewStyle";
+import { LIGHT_LABEL, REVIEW_CARD_CLASS } from "./reviewStyle";
 import { WELLNESS_ITEM_SHORT, WELLNESS_ITEMS } from "@shared/domain/wellness";
 import type { Light } from "@shared/domain/wellnessLight";
 import {
@@ -20,8 +20,6 @@ import {
  * au coach et au staff (lecture). Une mesure absente s'affiche « — ».
  */
 
-/** Équivalent en classes de REVIEW_CARD (./reviewStyle). */
-const REVIEW_CARD = "rounded-xl border border-agon-brd bg-agon-s1 px-3.5 py-3";
 
 /** Feux en couleurs de marque, comme LIGHT_COLOR (./reviewStyle), en classes. */
 const LIGHT_BG: Record<Light, string> = { green: "bg-agon-succes", orange: "bg-agon-alerte", red: "bg-agon-erreur" };
@@ -49,10 +47,10 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 /** Bloc 1 : bilan automatique de la semaine. */
 export function ReviewSummaryCard({ summary }: { summary: WeekSummary | null | undefined }) {
-  if (!summary) return <div className={cn(REVIEW_CARD, "text-[13px] text-agon-tx3")}>Bilan en cours de calcul…</div>;
+  if (!summary) return <div className={cn(REVIEW_CARD_CLASS, "text-[13px] text-agon-tx3")}>Bilan en cours de calcul…</div>;
   const w = summary.wellness;
   return (
-    <div className={cn(REVIEW_CARD, "flex flex-col gap-3")}>
+    <div className={cn(REVIEW_CARD_CLASS, "flex flex-col gap-3")}>
       <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2.5">
         <Stat label="Séances" value={summary.sessions.planned > 0 || summary.sessions.done > 0 ? `${summary.sessions.done} / ${summary.sessions.planned}` : "—"} />
         <Stat label="RPE moyen" value={formatNumber(summary.rpeAvg)} />
@@ -101,14 +99,14 @@ export function ReviewAnswersView({ answers, light }: { answers: ReviewAnswers; 
   return (
     <div className="flex flex-col gap-3.5">
       <ReviewSection n="02" title="Ressenti">
-        <div className={cn(REVIEW_CARD, "grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2.5")}>
+        <div className={cn(REVIEW_CARD_CLASS, "grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2.5")}>
           {FEEL_KEYS.map((k) => <Stat key={k} label={FEEL_LABEL[k]} value={answers.feel?.[k] != null ? `${answers.feel[k]}/5` : "—"} />)}
         </div>
       </ReviewSection>
 
       {kept.length > 0 && (
         <ReviewSection n="03" title="Engagements de la semaine">
-          <div className={cn(REVIEW_CARD, "flex flex-col gap-2")}>
+          <div className={cn(REVIEW_CARD_CLASS, "flex flex-col gap-2")}>
             {kept.map((c, i) => (
               <div key={i} className="text-[13.5px]">
                 <span className="text-agon-tx">{c.text}</span>
@@ -122,7 +120,7 @@ export function ReviewAnswersView({ answers, light }: { answers: ReviewAnswers; 
       )}
 
       <ReviewSection n="04" title="La semaine">
-        <div className={cn(REVIEW_CARD, "flex flex-col gap-2.5")}>
+        <div className={cn(REVIEW_CARD_CLASS, "flex flex-col gap-2.5")}>
           <Line label="Ce qui a marché">{dash(answers.worked)}</Line>
           <Line label={`Ce qui a coincé${answers.stuckCause ? ` (${STUCK_LABEL[answers.stuckCause]})` : ""}`}>{dash(answers.stuck)}</Line>
           <Line label="Ce que je change">{dash(answers.change)}</Line>
@@ -130,7 +128,7 @@ export function ReviewAnswersView({ answers, light }: { answers: ReviewAnswers; 
       </ReviewSection>
 
       <ReviewSection n="05" title="Engagements pour la semaine suivante">
-        <div className={cn(REVIEW_CARD, "flex flex-col gap-1.5")}>
+        <div className={cn(REVIEW_CARD_CLASS, "flex flex-col gap-1.5")}>
           {(answers.next ?? []).length === 0 ? <span className="text-agon-tx3">—</span>
             : (answers.next ?? []).map((t, i) => <div key={i} className="text-[13.5px]">{i + 1}. {t}</div>)}
         </div>
@@ -138,7 +136,7 @@ export function ReviewAnswersView({ answers, light }: { answers: ReviewAnswers; 
 
       {answers.pain && (
         <ReviewSection n="06" title="Douleur">
-          <div className={cn(REVIEW_CARD, "flex items-center gap-2 text-[13.5px]")}>
+          <div className={cn(REVIEW_CARD_CLASS, "flex items-center gap-2 text-[13.5px]")}>
             {light && <span className={cn("h-2.5 w-2.5 flex-none rounded-full", LIGHT_BG[light])} title={`Feu ${LIGHT_LABEL[light]}`} />}
             <span>{dash(answers.pain.zone)}{answers.pain.kind ? ` · ${answers.pain.kind}` : ""} · {answers.pain.level != null ? `${answers.pain.level}/10` : "—"}</span>
           </div>
@@ -147,7 +145,7 @@ export function ReviewAnswersView({ answers, light }: { answers: ReviewAnswers; 
 
       {answers.coachNote && (
         <ReviewSection n="07" title="Mot au coach">
-          <div className={cn(REVIEW_CARD, "whitespace-pre-wrap text-[13.5px]")}>{answers.coachNote}</div>
+          <div className={cn(REVIEW_CARD_CLASS, "whitespace-pre-wrap text-[13.5px]")}>{answers.coachNote}</div>
         </ReviewSection>
       )}
     </div>
