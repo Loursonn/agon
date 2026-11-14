@@ -51,7 +51,7 @@ export function CycleBanner({
       style={{
         position: "relative", overflow: "hidden", borderRadius: 14, padding: "20px 22px 20px 25px",
         border: `1px solid ${alpha(C.ac, 0.45)}`,
-        background: C.s1,
+        background: `url(/brand/agon-fond-arene-entete.svg) center/cover, ${C.bg}`,
       }}
     >
       <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: C.ac }} />
