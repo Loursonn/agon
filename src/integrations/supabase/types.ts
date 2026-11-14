@@ -3068,64 +3068,6 @@ export type Database = {
           },
         ]
       }
-      medical_attachments: {
-        Row: {
-          athlete_id: string
-          created_at: string
-          created_by: string | null
-          entry_id: string
-          file_name: string | null
-          file_path: string
-          file_size: number | null
-          id: string
-          mime_type: string
-        }
-        Insert: {
-          athlete_id: string
-          created_at?: string
-          created_by?: string | null
-          entry_id: string
-          file_name?: string | null
-          file_path: string
-          file_size?: number | null
-          id?: string
-          mime_type: string
-        }
-        Update: {
-          athlete_id?: string
-          created_at?: string
-          created_by?: string | null
-          entry_id?: string
-          file_name?: string | null
-          file_path?: string
-          file_size?: number | null
-          id?: string
-          mime_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "medical_attachments_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "medical_attachments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "medical_attachments_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "medical_entries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       medical_entries: {
         Row: {
           athlete_id: string
@@ -3135,8 +3077,6 @@ export type Database = {
           date: string | null
           days_off: number | null
           declared_by: string | null
-          diagnosed_by: string | null
-          diagnosis: string | null
           id: string
           injury_type: string | null
           kind: string
@@ -3147,7 +3087,6 @@ export type Database = {
           status: string
           title: string
           training_impact: string | null
-          treatment: string | null
           updated_at: string
           zone: string | null
         }
@@ -3159,8 +3098,6 @@ export type Database = {
           date?: string | null
           days_off?: number | null
           declared_by?: string | null
-          diagnosed_by?: string | null
-          diagnosis?: string | null
           id?: string
           injury_type?: string | null
           kind?: string
@@ -3171,7 +3108,6 @@ export type Database = {
           status?: string
           title: string
           training_impact?: string | null
-          treatment?: string | null
           updated_at?: string
           zone?: string | null
         }
@@ -3183,8 +3119,6 @@ export type Database = {
           date?: string | null
           days_off?: number | null
           declared_by?: string | null
-          diagnosed_by?: string | null
-          diagnosis?: string | null
           id?: string
           injury_type?: string | null
           kind?: string
@@ -3195,7 +3129,6 @@ export type Database = {
           status?: string
           title?: string
           training_impact?: string | null
-          treatment?: string | null
           updated_at?: string
           zone?: string | null
         }
@@ -3211,53 +3144,6 @@ export type Database = {
             foreignKeyName: "medical_entries_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      medical_history: {
-        Row: {
-          allergies: string | null
-          athlete_id: string
-          conditions: string | null
-          created_at: string | null
-          current_treatments: string | null
-          id: string
-          medical_notes: string | null
-          past_injuries: Json | null
-          surgeries: Json | null
-          updated_at: string | null
-        }
-        Insert: {
-          allergies?: string | null
-          athlete_id: string
-          conditions?: string | null
-          created_at?: string | null
-          current_treatments?: string | null
-          id?: string
-          medical_notes?: string | null
-          past_injuries?: Json | null
-          surgeries?: Json | null
-          updated_at?: string | null
-        }
-        Update: {
-          allergies?: string | null
-          athlete_id?: string
-          conditions?: string | null
-          created_at?: string | null
-          current_treatments?: string | null
-          id?: string
-          medical_notes?: string | null
-          past_injuries?: Json | null
-          surgeries?: Json | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "medical_history_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

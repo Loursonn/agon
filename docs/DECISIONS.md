@@ -2418,3 +2418,14 @@ et son README.
 - **Peps** : les 23 pages converties dans le canvas sont appliquées à l'app.
 - **Mise en prod** : PR #150 mergée (squash) et déployée ; Supabase Auth exige 8 caractères minimum (comme l'app) ;
   première sauvegarde lancée depuis `main` réussie (11 Mo chiffrés). V1 : les 3 athlètes sont informés.
+
+## 2026-11-14 — HDS temps 2 appliqué (P44)
+
+- Après la mise en production de la PR #150 (le client de `main` n'écrit plus `diagnosis`), migration
+  `20261115100000_hds_temps2_suppression` appliquée en prod : colonnes `medical_entries.diagnosis / treatment /
+  diagnosed_by`, tables `medical_history` et `medical_attachments`, bucket `medical` et ses policies supprimés,
+  `medical` retiré de `list_user_storage_objects`. Prod avant : 0 champ rempli, 0 ligne, 0 fichier. Test
+  `supabase/tests/hds_retrait_soins.sql` 9/9 en prod.
+- Premier essai à blanc tombé sur un deadlock avec une requête en cours (transaction annulée, rien changé) : la
+  migration prend désormais ses verrous d'un coup en tête (`profiles`, `storage.objects`, `storage.buckets`, tables
+  médicales), avec `lock_timeout`. À reprendre pour toute migration qui supprime une table liée à `profiles`.

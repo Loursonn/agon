@@ -2721,11 +2721,11 @@ CREATE OR REPLACE FUNCTION "public"."list_user_storage_objects"("target_user" "u
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'storage'
     AS $$
-  -- Pièces jointes médicales, fichiers de test, données brutes des montres :
+  -- Fichiers de test, captures, photos, données brutes des montres :
   -- chemin préfixé par l'uuid de l'athlète, convention en place dans l'application.
   SELECT o.bucket_id, o.name
   FROM storage.objects o
-  WHERE o.bucket_id IN ('medical', 'test-files', 'garmin-screenshots', 'test-media', 'avatars', 'provider-raw')
+  WHERE o.bucket_id IN ('test-files', 'garmin-screenshots', 'test-media', 'avatars', 'provider-raw')
     AND (
       o.name LIKE target_user::text || '/%'
       OR o.owner = target_user
@@ -2826,12 +2826,7 @@ CREATE OR REPLACE FUNCTION "public"."medical_entries_sans_soins"() RETURNS "trig
     SET "search_path" TO ''
     AS $$
 BEGIN
-  -- Le client de `main` peut encore envoyer ces champs : on les vide plutôt
-  -- que de faire échouer l'enregistrement de la blessure.
   NEW.kind := 'blessure';
-  NEW.diagnosis := NULL;
-  NEW.treatment := NULL;
-  NEW.diagnosed_by := NULL;
   RETURN NEW;
 END;
 $$;
@@ -2840,7 +2835,7 @@ $$;
 ALTER FUNCTION "public"."medical_entries_sans_soins"() OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."medical_entries_sans_soins"() IS 'Hors HDS (2026-11-13) : toute entrée est une blessure sportive, sans diagnostic, traitement ni « vu par ».';
+COMMENT ON FUNCTION "public"."medical_entries_sans_soins"() IS 'Hors HDS (2026-11-13) : toute entrée est une blessure sportive. Diagnostic, traitement et « vu par » supprimés au temps 2.';
 
 
 
@@ -8083,26 +8078,6 @@ CREATE TABLE IF NOT EXISTS "public"."measurement_logs" (
 ALTER TABLE "public"."measurement_logs" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."medical_attachments" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "entry_id" "uuid" NOT NULL,
-    "athlete_id" "uuid" NOT NULL,
-    "file_path" "text" NOT NULL,
-    "file_name" "text",
-    "mime_type" "text" NOT NULL,
-    "file_size" integer,
-    "created_by" "uuid",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
-
-
-ALTER TABLE "public"."medical_attachments" OWNER TO "postgres";
-
-
-COMMENT ON TABLE "public"."medical_attachments" IS 'Retirée (hors HDS, 2026-11-13) : plus aucune écriture, table supprimée au temps 2';
-
-
-
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8110,8 +8085,6 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "title" "text" NOT NULL,
     "zone" "text",
     "date" "date",
-    "diagnosis" "text",
-    "treatment" "text",
     "status" "text" DEFAULT 'gueri'::"text" NOT NULL,
     "notes" "text",
     "created_by" "uuid",
@@ -8123,32 +8096,21 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "pain_level" smallint,
     "training_impact" "text",
     "days_off" integer,
-    "diagnosed_by" "text",
     "return_date" "date",
     "declared_by" "text",
     CONSTRAINT "medical_entries_context_check" CHECK ((("context" IS NULL) OR ("context" = ANY (ARRAY['entrainement'::"text", 'competition'::"text", 'hors_sport'::"text"])))),
     CONSTRAINT "medical_entries_days_off_check" CHECK ((("days_off" IS NULL) OR ("days_off" >= 0))),
     CONSTRAINT "medical_entries_declared_by_check" CHECK ((("declared_by" IS NULL) OR ("declared_by" = ANY (ARRAY['athlete'::"text", 'coach'::"text", 'staff'::"text"])))),
-    CONSTRAINT "medical_entries_diagnosed_by_check" CHECK ((("diagnosed_by" IS NULL) OR ("diagnosed_by" = ANY (ARRAY['personne'::"text", 'medecin'::"text", 'kine'::"text", 'osteo'::"text", 'autre'::"text"])))),
     CONSTRAINT "medical_entries_injury_type_check" CHECK ((("injury_type" IS NULL) OR ("injury_type" = ANY (ARRAY['traumatique'::"text", 'chronique_surmenage'::"text", 'recidive'::"text"])))),
     CONSTRAINT "medical_entries_kind_check" CHECK (("kind" = 'blessure'::"text")),
     CONSTRAINT "medical_entries_mechanism_check" CHECK ((("mechanism" IS NULL) OR ("mechanism" = ANY (ARRAY['contact'::"text", 'sans_contact'::"text", 'chute'::"text", 'geste_repete'::"text", 'inconnu'::"text"])))),
     CONSTRAINT "medical_entries_pain_level_check" CHECK ((("pain_level" IS NULL) OR (("pain_level" >= 0) AND ("pain_level" <= 10)))),
-    CONSTRAINT "medical_entries_sans_soins_check" CHECK ((("diagnosis" IS NULL) AND ("treatment" IS NULL) AND ("diagnosed_by" IS NULL))),
     CONSTRAINT "medical_entries_status_check" CHECK (("status" = ANY (ARRAY['gueri'::"text", 'en_cours'::"text"]))),
     CONSTRAINT "medical_entries_training_impact_check" CHECK ((("training_impact" IS NULL) OR ("training_impact" = ANY (ARRAY['aucun'::"text", 'adapte'::"text", 'arret_partiel'::"text", 'arret_total'::"text"]))))
 );
 
 
 ALTER TABLE "public"."medical_entries" OWNER TO "postgres";
-
-
-COMMENT ON COLUMN "public"."medical_entries"."diagnosis" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
-
-
-
-COMMENT ON COLUMN "public"."medical_entries"."treatment" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
-
 
 
 COMMENT ON COLUMN "public"."medical_entries"."injury_type" IS 'traumatique | chronique_surmenage | recidive';
@@ -8175,36 +8137,11 @@ COMMENT ON COLUMN "public"."medical_entries"."days_off" IS 'Jours d''arrêt déj
 
 
 
-COMMENT ON COLUMN "public"."medical_entries"."diagnosed_by" IS 'Retiré (hors HDS, 2026-11-13) : toujours NULL, colonne supprimée au temps 2';
-
-
-
 COMMENT ON COLUMN "public"."medical_entries"."return_date" IS 'Retour prévu ou effectif';
 
 
 
 COMMENT ON COLUMN "public"."medical_entries"."declared_by" IS 'athlete | coach — côté d''où vient la déclaration';
-
-
-
-CREATE TABLE IF NOT EXISTS "public"."medical_history" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "athlete_id" "uuid" NOT NULL,
-    "conditions" "text" DEFAULT ''::"text",
-    "allergies" "text" DEFAULT ''::"text",
-    "surgeries" "jsonb" DEFAULT '[]'::"jsonb",
-    "past_injuries" "jsonb" DEFAULT '[]'::"jsonb",
-    "current_treatments" "text" DEFAULT ''::"text",
-    "medical_notes" "text" DEFAULT ''::"text",
-    "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."medical_history" OWNER TO "postgres";
-
-
-COMMENT ON TABLE "public"."medical_history" IS 'Retirée (hors HDS, 2026-11-13) : plus aucune écriture, table supprimée au temps 2';
 
 
 
@@ -9213,23 +9150,8 @@ ALTER TABLE ONLY "public"."measurement_logs"
 
 
 
-ALTER TABLE ONLY "public"."medical_attachments"
-    ADD CONSTRAINT "medical_attachments_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."medical_entries"
     ADD CONSTRAINT "medical_entries_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."medical_history"
-    ADD CONSTRAINT "medical_history_athlete_id_key" UNIQUE ("athlete_id");
-
-
-
-ALTER TABLE ONLY "public"."medical_history"
-    ADD CONSTRAINT "medical_history_pkey" PRIMARY KEY ("id");
 
 
 
@@ -9941,10 +9863,6 @@ CREATE INDEX "idx_macrocycles_dates" ON "public"."macrocycles" USING "btree" ("s
 
 
 
-CREATE INDEX "idx_medical_attachments_entry" ON "public"."medical_attachments" USING "btree" ("entry_id");
-
-
-
 CREATE INDEX "idx_medical_entries_athlete" ON "public"."medical_entries" USING "btree" ("athlete_id", "date" DESC);
 
 
@@ -10050,14 +9968,6 @@ CREATE INDEX "idx_workout_rpe_athlete" ON "public"."workout_rpe" USING "btree" (
 
 
 CREATE INDEX "measurement_logs_athlete_date_idx" ON "public"."measurement_logs" USING "btree" ("athlete_id", "date" DESC);
-
-
-
-CREATE INDEX "medical_attachments_athlete_id_fk_idx" ON "public"."medical_attachments" USING "btree" ("athlete_id");
-
-
-
-CREATE INDEX "medical_attachments_created_by_fk_idx" ON "public"."medical_attachments" USING "btree" ("created_by");
 
 
 
@@ -10394,10 +10304,6 @@ CREATE OR REPLACE TRIGGER "set_exercises_updated_at" BEFORE UPDATE ON "public"."
 
 
 CREATE OR REPLACE TRIGGER "set_medical_entries_updated_at" BEFORE UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
-
-
-
-CREATE OR REPLACE TRIGGER "set_medical_history_updated_at" BEFORE UPDATE ON "public"."medical_history" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
 
 
 
@@ -11061,21 +10967,6 @@ ALTER TABLE ONLY "public"."measurement_logs"
 
 
 
-ALTER TABLE ONLY "public"."medical_attachments"
-    ADD CONSTRAINT "medical_attachments_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."medical_attachments"
-    ADD CONSTRAINT "medical_attachments_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
-
-
-
-ALTER TABLE ONLY "public"."medical_attachments"
-    ADD CONSTRAINT "medical_attachments_entry_id_fkey" FOREIGN KEY ("entry_id") REFERENCES "public"."medical_entries"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."medical_entries"
     ADD CONSTRAINT "medical_entries_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -11083,11 +10974,6 @@ ALTER TABLE ONLY "public"."medical_entries"
 
 ALTER TABLE ONLY "public"."medical_entries"
     ADD CONSTRAINT "medical_entries_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
-
-
-
-ALTER TABLE ONLY "public"."medical_history"
-    ADD CONSTRAINT "medical_history_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -11537,10 +11423,6 @@ CREATE POLICY "athlete_own_measurements" ON "public"."measurement_logs" TO "auth
 
 
 
-CREATE POLICY "athlete_own_medical" ON "public"."medical_history" USING (("athlete_id" = "auth"."uid"())) WITH CHECK (("athlete_id" = "auth"."uid"()));
-
-
-
 CREATE POLICY "athlete_own_prs" ON "public"."exercise_pr_logs" USING (("athlete_id" = "auth"."uid"()));
 
 
@@ -11747,10 +11629,6 @@ CREATE POLICY "coach_read_measurements" ON "public"."measurement_logs" FOR SELEC
 
 
 CREATE POLICY "coach_sees_athlete_prs" ON "public"."exercise_pr_logs" FOR SELECT USING ("public"."is_coach_of"("athlete_id"));
-
-
-
-CREATE POLICY "coach_write_athlete_medical" ON "public"."medical_history" USING ("public"."is_coach_of"("athlete_id")) WITH CHECK ("public"."is_coach_of"("athlete_id"));
 
 
 
@@ -12346,21 +12224,11 @@ CREATE POLICY "macrocycles_update" ON "public"."macrocycles" FOR UPDATE USING ("
 ALTER TABLE "public"."measurement_logs" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."medical_attachments" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "medical_attachments_all" ON "public"."medical_attachments" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))) WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
-
-
-
 ALTER TABLE "public"."medical_entries" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "medical_entries_all" ON "public"."medical_entries" USING ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id"))) WITH CHECK ((("athlete_id" = "auth"."uid"()) OR "public"."is_coach_of"("athlete_id")));
 
-
-
-ALTER TABLE "public"."medical_history" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."mesocycles" ENABLE ROW LEVEL SECURITY;
@@ -12861,20 +12729,6 @@ CREATE POLICY "staff_measurement_logs_read" ON "public"."measurement_logs" FOR S
 
 
 
-CREATE POLICY "staff_medical_attachments_delete" ON "public"."medical_attachments" FOR DELETE TO "authenticated" USING ("public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by"));
-
-
-
-CREATE POLICY "staff_medical_attachments_insert" ON "public"."medical_attachments" FOR INSERT TO "authenticated" WITH CHECK ((("created_by" = "auth"."uid"()) AND "public"."staff_can"("athlete_id", 'medical'::"text", 'write'::"text") AND (EXISTS ( SELECT 1
-   FROM "public"."medical_entries" "e"
-  WHERE (("e"."id" = "medical_attachments"."entry_id") AND ("e"."athlete_id" = "medical_attachments"."athlete_id") AND "public"."staff_can_edit"("e"."athlete_id", 'medical'::"text", "e"."created_by"))))));
-
-
-
-CREATE POLICY "staff_medical_attachments_read" ON "public"."medical_attachments" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text"));
-
-
-
 CREATE POLICY "staff_medical_entries_delete" ON "public"."medical_entries" FOR DELETE TO "authenticated" USING ("public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by"));
 
 
@@ -12888,10 +12742,6 @@ CREATE POLICY "staff_medical_entries_read" ON "public"."medical_entries" FOR SEL
 
 
 CREATE POLICY "staff_medical_entries_update" ON "public"."medical_entries" FOR UPDATE TO "authenticated" USING ("public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by")) WITH CHECK ("public"."staff_can_edit"("athlete_id", 'medical'::"text", "created_by"));
-
-
-
-CREATE POLICY "staff_medical_history_read" ON "public"."medical_history" FOR SELECT TO "authenticated" USING ("public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text"));
 
 
 
@@ -22481,21 +22331,9 @@ GRANT ALL ON TABLE "public"."measurement_logs" TO "service_role";
 
 
 
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_attachments" TO "anon";
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_attachments" TO "authenticated";
-GRANT ALL ON TABLE "public"."medical_attachments" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."medical_entries" TO "anon";
 GRANT ALL ON TABLE "public"."medical_entries" TO "authenticated";
 GRANT ALL ON TABLE "public"."medical_entries" TO "service_role";
-
-
-
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_history" TO "anon";
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."medical_history" TO "authenticated";
-GRANT ALL ON TABLE "public"."medical_history" TO "service_role";
 
 
 
