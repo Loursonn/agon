@@ -60,8 +60,8 @@ export function SeanceHeader({ detail, title, subtitle, back, compact }: Props) 
       <section
         style={{
           position: "relative", borderRadius: compact ? 0 : 16, padding: compact ? 0 : "20px 22px",
-          background: compact ? "transparent" : `linear-gradient(160deg, ${alpha(badgeColor, 0.1)}, ${alpha(badgeColor, 0.01)})`,
-          border: compact ? "none" : `1px solid ${alpha(badgeColor, 0.35)}`,
+          background: compact ? "transparent" : alpha(badgeColor, 0.12),
+          border: compact ? "none" : `1px solid ${alpha(badgeColor, 0.42)}`,
           boxShadow: compact ? "none" : `inset 3px 0 0 ${badgeColor}`,
           display: "flex", gap: 16, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap",
         }}
