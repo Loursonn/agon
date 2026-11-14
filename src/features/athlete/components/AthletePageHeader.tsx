@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { C } from "@/lib/theme";
-import { MONO, DISPLAY } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 import { headerDate } from "@/lib/date";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useAthleteChrome } from "../context/AthleteChromeContext";
@@ -58,27 +58,28 @@ export function AthletePageHeader<K extends string>({
 
   // Ordinateur : en-tête compact par défaut (planches AthOrdi*), sauf avis contraire de la page.
   const compact = inline ?? isDesktop;
+  const tabClass = (on: boolean) =>
+    on ? (tabTone === "gold" ? "bg-agon-accent/[0.14] text-agon-accent" : "bg-agon-brd text-agon-tx") : "bg-transparent text-agon-tx3";
+
   if (compact) {
     return (
-      <header style={{ padding: inline ? padding : "28px 20px 8px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
-          <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>
+      <header className="flex flex-wrap items-end justify-between gap-8" style={{ padding: inline ? padding : "28px 20px 8px" }}>
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className="agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-agon-tx2">
             {headerDate(new Date(), "long")}
           </span>
-          <h1 style={{ margin: 0, ...DISPLAY, fontWeight: 400, fontSize: titleSize, lineHeight: 1.1, letterSpacing: "0.06em", color: C.tx }}>{title}</h1>
+          <h1 className="agon-display m-0 font-normal leading-[1.1] tracking-[0.06em] text-agon-tx" style={{ fontSize: titleSize }}>{title}</h1>
         </div>
-        {children && <div style={{ width: 560, maxWidth: "100%" }}>{children}</div>}
+        {children && <div className="w-[560px] max-w-full">{children}</div>}
         {tabs && tabs.length > 0 && (
-          <div role="tablist" style={{ display: "flex", gap: 2, padding: 3, border: `1px solid ${C.brd}`, borderRadius: 10 }}>
+          <div role="tablist" className="flex gap-0.5 rounded-[10px] border border-agon-brd p-[3px]">
             {tabs.map((t) => {
               const on = t.key === activeTab;
               return (
-                <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => onTab?.(t.key)} style={{
-                  height: 30, padding: "0 14px", borderRadius: 7, border: "none", cursor: "pointer", whiteSpace: "nowrap",
-                  ...MONO, fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase",
-                  background: on ? (tabTone === "gold" ? "rgba(255,201,51,0.14)" : "rgba(231,211,168,0.10)") : "transparent",
-                  color: on ? (tabTone === "gold" ? C.ac : C.tx) : C.tx3,
-                }}>{t.label}</button>
+                <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => onTab?.(t.key)}
+                  className={cn("agon-mono h-[30px] cursor-pointer whitespace-nowrap rounded-[7px] border-none px-3.5 text-[10.5px] uppercase tracking-[0.06em]", tabClass(on))}>
+                  {t.label}
+                </button>
               );
             })}
           </div>
@@ -88,28 +89,22 @@ export function AthletePageHeader<K extends string>({
   }
 
   return (
-    <header
-      style={{
-        position: "relative", overflow: "hidden", padding,
-        background: background ?? C.bg, borderBottom: "1px solid rgba(231,211,168,0.10)",
-      }}
-    >
+    <header className="relative overflow-hidden border-b border-agon-brd" style={{ padding, background: background ?? C.bg }}>
       {decor}
-      <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, minHeight: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
-          <img src="/brand/agon-symbole-or.svg" alt="Agon" width={24} height={24} style={{ width: 24, height: 24, flex: "none" }} className="lg:hidden" />
+      <div className="relative flex min-h-6 items-center justify-between gap-2.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <img src="/brand/agon-symbole-or.svg" alt="Agon" width={24} height={24} className="size-6 flex-none lg:hidden" />
           {chrome?.badges}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
-          <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx2, whiteSpace: "nowrap" }}>
+        <div className="flex flex-none items-center gap-2.5">
+          <span className="agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-agon-tx2">
             {headerDate(new Date(), dateStyle)}
           </span>
           {chrome?.onSwitchMode && (
             <button
               type="button"
               onClick={chrome.onSwitchMode}
-              className="lg:hidden"
-              style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ac, background: "rgba(255,201,51,0.10)", border: "1px solid rgba(255,201,51,0.35)", borderRadius: 999, padding: "3px 8px", cursor: "pointer", whiteSpace: "nowrap" }}
+              className="agon-mono cursor-pointer whitespace-nowrap rounded-full border border-agon-accent/35 bg-agon-accent/10 px-2 py-[3px] text-[10px] uppercase tracking-[0.08em] text-agon-accent lg:hidden"
             >
               Coach
             </button>
@@ -120,8 +115,7 @@ export function AthletePageHeader<K extends string>({
               onClick={chrome.openMenu}
               aria-label="Menu"
               title="Menu"
-              className="lg:hidden"
-              style={{ width: 24, height: 24, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", color: C.tx2, cursor: "pointer" }}
+              className="flex size-6 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-agon-tx2 lg:hidden"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden>
                 <path d="M4 7H20M4 12H20M4 17H14" />
@@ -131,19 +125,14 @@ export function AthletePageHeader<K extends string>({
         </div>
       </div>
       <h1
-        style={{
-          position: "relative", margin: `${titleGap}px 0 0`, ...DISPLAY, fontWeight: 300, fontSize: titleSize,
-          lineHeight: titleSize >= 28 ? 1.1 : 1.15, letterSpacing: "0.06em", color: C.tx,
-        }}
+        className={cn("agon-display relative mb-0 tracking-[0.06em] text-agon-tx", titleSize >= 28 ? "leading-[1.1]" : "leading-[1.15]")}
+        style={{ marginTop: titleGap, fontSize: titleSize }}
       >
         {title}
       </h1>
       {children}
       {tabs && tabs.length > 0 && (
-        <div
-          role="tablist"
-          style={{ position: "relative", marginTop: 16, display: "flex", gap: 2, padding: 3, border: "1px solid rgba(231,211,168,0.10)", borderRadius: 11 }}
-        >
+        <div role="tablist" className="relative mt-4 flex gap-0.5 rounded-[11px] border border-agon-brd p-[3px]">
           {tabs.map((t) => {
             const on = t.key === activeTab;
             return (
@@ -153,12 +142,10 @@ export function AthletePageHeader<K extends string>({
                 role="tab"
                 aria-selected={on}
                 onClick={() => onTab?.(t.key)}
-                style={{
-                  flex: 1, minWidth: 0, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "none",
-                  ...MONO, fontSize: 10.5, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", cursor: "pointer",
-                  background: on ? (tabTone === "gold" ? "rgba(255,201,51,0.14)" : "rgba(231,211,168,0.10)") : "transparent",
-                  color: on ? (tabTone === "gold" ? C.ac : C.tx) : C.tx3,
-                }}
+                className={cn(
+                  "agon-mono flex h-[34px] min-w-0 flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-[8px] border-none text-[10.5px] uppercase tracking-[0.04em]",
+                  tabClass(on),
+                )}
               >
                 {t.label}
               </button>
