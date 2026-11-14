@@ -1,4 +1,5 @@
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { EQUIPMENT_LABEL } from "@/features/athlete/components/program/programConstants";
 import type { EnergyStep } from "@/types/energy";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
@@ -8,6 +9,8 @@ import { formatExerciseStep, formatS, formatTarget } from "@/lib/energy/formatTa
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
 
 // ── Step card (done / partial + comment) ──────────────────────────────────────
+
+const STEP_BTN = "flex size-8 cursor-pointer items-center justify-center rounded-[4px] border-none font-[inherit] font-bold";
 
 export function StepCheckRow({
   step, state, vma, onDone, onPartial, onComment,
@@ -23,13 +26,16 @@ export function StepCheckRow({
   const isDone    = status === "done";
   const isPartial = status === "partial";
   const comment   = state?.comment ?? "";
-  const bg        = isDone ? C.g + "18" : isPartial ? `${H.ambre}18` : C.s2;
-  const borderCol = isDone ? C.g + "40" : isPartial ? `${H.ambre}50` : "transparent";
+  const tone      = isDone
+    ? "border-agon-succes/[0.25] bg-agon-succes/[0.094]"
+    : isPartial
+    ? "border-agon-alerte/[0.31] bg-agon-alerte/[0.094]"
+    : "border-transparent bg-agon-s2";
 
   // ── shared step-info block ──────────────────────────────────────────────────
   let infoNode: React.ReactNode;
   if (step.type === "interval") {
-    const rc  = ROLE_COLOR[step.role] ?? H.gris;
+    const rc  = ROLE_COLOR[step.role] ?? C.tx3;
     const dur = step.duration.kind === "time"
       ? formatS(step.duration.value ?? 0)
       : step.duration.kind === "distance"
@@ -40,14 +46,14 @@ export function StepCheckRow({
     const tgt = formatTarget(step.target);
     infoNode = (
       <>
-        <div style={{ width: 3, height: 34, borderRadius: 2, background: rc, flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: rc }}>{ROLE_LABEL_FR[step.role] ?? step.role}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{dur}</span>
+        <div className="h-[34px] w-[3px] shrink-0 rounded-[2px]" style={{ background: rc }} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold" style={{ color: rc }}>{ROLE_LABEL_FR[step.role] ?? step.role}</span>
+            <span className="text-[13px] font-bold text-agon-tx">{dur}</span>
           </div>
           {tgt && tgt !== "Libre" && (
-            <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{tgt}</div>
+            <div className="mt-px text-[10px] text-agon-tx3">{tgt}</div>
           )}
           <PaceEquivalents
             target={step.target}
@@ -57,14 +63,14 @@ export function StepCheckRow({
             fontSize={9}
           />
           {step.equipment && step.equipment !== "none" && (
-            <div style={{ marginTop: 2 }}>
-              <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "rgba(255,255,255,0.08)", color: C.tx2 }}>
+            <div className="mt-0.5">
+              <span className="rounded-[4px] bg-agon-tx/[0.08] px-[5px] py-px text-[8px] font-bold text-agon-tx2">
                 {EQUIPMENT_LABEL[step.equipment] ?? step.equipment}
               </span>
             </div>
           )}
           {step.notes && (
-            <div style={{ fontSize: 9, color: C.tx3, fontStyle: "italic", marginTop: 1 }}>{step.notes}</div>
+            <div className="mt-px text-[9px] italic text-agon-tx3">{step.notes}</div>
           )}
         </div>
       </>
@@ -72,18 +78,18 @@ export function StepCheckRow({
   } else if (step.type === "exercise") {
     // Step exercice (séance spécifique / MetCon) : pas de `children` ni de `repeat`.
     // Sans cette branche, on tombait dans le cas "groupe" → step.children undefined → crash.
-    const rc = ROLE_COLOR[step.role] ?? H.gris;
+    const rc = ROLE_COLOR[step.role] ?? C.tx3;
     const detail = formatExerciseStep(step);
     infoNode = (
       <>
-        <div style={{ width: 3, height: 34, borderRadius: 2, background: rc, flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div className="h-[34px] w-[3px] shrink-0 rounded-[2px]" style={{ background: rc }} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-bold text-agon-tx">
             {step.exercise_name}
           </div>
-          {detail && <div style={{ fontSize: 10, color: C.tx3, marginTop: 1 }}>{detail}</div>}
+          {detail && <div className="mt-px text-[10px] text-agon-tx3">{detail}</div>}
           {step.notes && (
-            <div style={{ fontSize: 9, color: C.tx3, fontStyle: "italic", marginTop: 1 }}>{step.notes}</div>
+            <div className="mt-px text-[9px] italic text-agon-tx3">{step.notes}</div>
           )}
         </div>
       </>
@@ -96,13 +102,13 @@ export function StepCheckRow({
       c.duration.kind === "time" ? formatS(c.duration.value ?? 0) : `${c.duration.value ?? 0}m`
     ).join(" + ");
     infoNode = (
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: C.b }}>× {step.repeat}</span>
-          <span style={{ fontSize: 10, color: C.tx3 }}>répétitions</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] font-extrabold text-agon-info">× {step.repeat}</span>
+          <span className="text-[10px] text-agon-tx3">répétitions</span>
         </div>
         {childSummary && (
-          <div style={{ fontSize: 10, color: C.tx2, marginTop: 1 }}>
+          <div className="mt-px text-[10px] text-agon-tx2">
             {childSummary}{(step.children?.length ?? 0) > 3 ? " …" : ""}
           </div>
         )}
@@ -111,61 +117,44 @@ export function StepCheckRow({
   }
 
   return (
-    <div style={{ borderRadius: 6, background: bg, border: "1px solid " + borderCol, overflow: "hidden" }}>
+    <div className={cn("overflow-hidden rounded-[6px] border", tone)}>
       {/* Main row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
+      <div className="flex items-center gap-2.5 px-3.5 py-3">
         {infoNode}
 
         {/* Action buttons */}
-        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+        <div className="flex shrink-0 gap-[5px]">
           {/* ✓ Fait */}
           <button
             onClick={onDone}
             title="Bloc fait"
-            style={{
-              width: 32, height: 32, borderRadius: 4, border: "none",
-              background: isDone ? C.g : "rgba(255,255,255,0.07)",
-              color: isDone ? C.tx : C.tx3,
-              cursor: "pointer", fontFamily: "inherit", fontSize: 14,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 700,
-            }}
+            className={cn(STEP_BTN, "text-[14px]", isDone ? "bg-agon-succes text-agon-ink" : "bg-agon-tx/[0.07] text-agon-tx3")}
           >✓</button>
 
           {/* ~ Incomplet */}
           <button
             onClick={onPartial}
             title="Bloc non terminé"
-            style={{
-              width: 32, height: 32, borderRadius: 4, border: "none",
-              background: isPartial ? H.ambre : "rgba(255,255,255,0.07)",
-              color: isPartial ? C.tx : C.tx3,
-              cursor: "pointer", fontFamily: "inherit", fontSize: 13,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 700,
-            }}
+            className={cn(STEP_BTN, "text-[13px]", isPartial ? "bg-agon-alerte text-agon-ink" : "bg-agon-tx/[0.07] text-agon-tx3")}
           >~</button>
         </div>
       </div>
 
       {/* Comment — mandatory when partial */}
       {isPartial && (
-        <div style={{ padding: "0 14px 12px" }}>
+        <div className="px-3.5 pb-3">
           <input
             value={comment}
             onChange={(e) => onComment(e.target.value)}
             placeholder="Commentaire obligatoire…"
             autoFocus
-            style={{
-              width: "100%", padding: "8px 10px", borderRadius: 4,
-              border: "1.5px solid " + (comment.trim() ? C.brdL : `${H.ambre}80`),
-              background: "rgba(245,158,11,0.06)",
-              color: C.tx, fontSize: 12, fontFamily: "inherit",
-              boxSizing: "border-box" as const, outline: "none",
-            }}
+            className={cn(
+              "box-border w-full rounded-[4px] border-[1.5px] bg-agon-alerte/[0.06] px-2.5 py-2 font-[inherit] text-[12px] text-agon-tx [outline:none]",
+              comment.trim() ? "border-agon-brd-l" : "border-agon-alerte/[0.5]",
+            )}
           />
           {!comment.trim() && (
-            <div style={{ fontSize: 9, color: H.ambre, marginTop: 3 }}>
+            <div className="mt-[3px] text-[9px] text-agon-alerte">
               Requis avant de terminer la séance
             </div>
           )}
