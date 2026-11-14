@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { fakeDb, type Row } from "./fakeDb";
 import { GarminTrainingError, type GarminTrainingClient } from "../garminTraining/client";
-import { ensureKnownScopes, syncAthleteWorkouts, workoutImportPermission, WORKOUT_IMPORT_MISSING } from "../garminTraining/sync";
+import { checkPushable, ensureKnownScopes, syncAthleteWorkouts, workoutImportPermission, WORKOUT_IMPORT_MISSING } from "../garminTraining/sync";
 import type { GarminWorkout } from "../garminTraining/types";
 
 const A = "athlete-1";
@@ -236,5 +236,103 @@ describe("permission « Workout Import »", () => {
     expect(await ensureKnownScopes(db, "c1", [], async () => [])).toEqual([]);
     const { data } = await db.from("provider_connections").select("*");
     expect((data as Row[])[0].granted_scopes).toEqual([]);
+  });
+});
+
+describe("envoi à la main (« Envoyer sur ma montre »)", () => {
+  const FAR = {
+    id: "as-far",
+    athlete_id: A,
+    scheduled_date: "2026-11-30",
+    status: "planned",
+    energy_sessions: {
+      name: "Sortie longue",
+      session_kind: "footing",
+      modality: null,
+      format: "wod",
+      intervals: [{ type: "interval", role: "work", duration: { kind: "time", value: 5400 }, target: { kind: "hr_zone", zone: 2 } }],
+    },
+  };
+  const farWorld = () => {
+    const db = world();
+    return db.from("energy_session_assignments").insert(FAR).then(() => db);
+  };
+  const created = (calls: string[]) => calls.filter((c) => c.startsWith("create:"));
+
+  it("au-delà des 7 jours : seulement à la demande, puis suivie par le cron sans appel", async () => {
+    const db = await farWorld();
+    const g = fakeGarmin();
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY });
+    expect(created(g.calls)).toEqual(["create:Footing 45'", "create:Force A"]);
+
+    g.calls.length = 0;
+    const report = await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, include: [{ kind: "energy", id: "as-far" }] });
+    expect(report).toMatchObject({ created: 1, errors: [] });
+    expect(g.calls).toEqual(["create:Sortie longue", "schedule:103:2026-11-30"]);
+
+    g.calls.length = 0;
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY });
+    expect(g.calls).toEqual([]);
+    expect((await pushes(db)).map((r) => r.source_id).sort()).toEqual(["as-1", "as-far", "wl-1"]);
+  });
+
+  it("séance envoyée à la main puis déplacée loin : remplacée ; supprimée : retirée", async () => {
+    const db = await farWorld();
+    const g = fakeGarmin();
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, include: [{ kind: "energy", id: "as-far" }] });
+    await db.from("energy_session_assignments").update({ scheduled_date: "2026-12-05" }).eq("id", "as-far");
+    g.calls.length = 0;
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY });
+    expect(g.calls).toEqual(["delete:102", "create:Sortie longue", "schedule:104:2026-12-05"]);
+
+    await db.from("energy_session_assignments").delete().eq("id", "as-far");
+    g.calls.length = 0;
+    const report = await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY });
+    expect(g.calls).toEqual(["delete:104"]);
+    expect(report.removed).toBe(1);
+  });
+
+  it("séance déjà sur la montre : renvoyée quand l'athlète le demande", async () => {
+    const db = world();
+    const g = fakeGarmin();
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY });
+    g.calls.length = 0;
+    const report = await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, include: [{ kind: "energy", id: "as-1" }] });
+    expect(report).toMatchObject({ replaced: 1 });
+    expect(g.calls).toEqual(["delete:101", "create:Footing 45'", "schedule:103:2026-11-14"]);
+  });
+
+  it("muscu au-delà des 7 jours : envoyée à la demande", async () => {
+    const db = world();
+    await db.from("workout_logs").insert({ id: "wl-far", athlete_id: A, session_id: "prog-1", scheduled_date: "2026-11-27", status: "planned" });
+    const g = fakeGarmin();
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, include: [{ kind: "strength", id: "wl-far" }] });
+    expect(g.calls).toContain("schedule:103:2026-11-27");
+  });
+
+  it("envoi coupé : la demande n'envoie rien", async () => {
+    const db = await farWorld();
+    const g = fakeGarmin();
+    await syncAthleteWorkouts(db, g.client, A, false, { today: TODAY, include: [{ kind: "energy", id: "as-far" }] });
+    expect(g.calls).toEqual([]);
+  });
+
+  it("une séance d'un autre athlète n'est jamais lue", async () => {
+    const db = await farWorld();
+    await db.from("energy_session_assignments").insert({ ...FAR, id: "as-other", athlete_id: "athlete-2" });
+    const g = fakeGarmin();
+    await syncAthleteWorkouts(db, g.client, A, true, { today: TODAY, include: [{ kind: "energy", id: "as-other" }] });
+    expect(created(g.calls)).toEqual(["create:Footing 45'", "create:Force A"]);
+  });
+
+  it("checkPushable : à venir et prévue seulement, de l'athlète", async () => {
+    const db = await farWorld();
+    await db.from("energy_session_assignments").insert({ ...FAR, id: "as-past", scheduled_date: "2026-11-10" });
+    expect(await checkPushable(db, A, { kind: "energy", id: "as-far" }, TODAY)).toBeNull();
+    expect(await checkPushable(db, A, { kind: "strength", id: "wl-1" }, TODAY)).toBeNull();
+    expect(await checkPushable(db, A, { kind: "strength", id: "wl-0" }, TODAY)).toBe("deja_faite");
+    expect(await checkPushable(db, A, { kind: "energy", id: "as-past" }, TODAY)).toBe("passee");
+    expect(await checkPushable(db, "athlete-2", { kind: "energy", id: "as-far" }, TODAY)).toBe("introuvable");
+    expect(await checkPushable(db, A, { kind: "energy", id: "nope" }, TODAY)).toBe("introuvable");
   });
 });

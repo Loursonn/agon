@@ -1,16 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ConnectError, disconnectProvider, getConnections, getWorkoutPushes, invalidateProviders, providerKeys,
-  setWorkoutPush, startCorosAuthorization, startGarminAuthorization, syncCoros,
-  type DisconnectResult, type ProviderConnection, type ProviderName, type ProviderStatus, type SyncReport,
-  type WorkoutPush,
+  pushWorkoutNow, setWorkoutPush, startCorosAuthorization, startGarminAuthorization, syncCoros,
+  type DisconnectResult, type ProviderConnection, type ProviderName, type ProviderStatus, type PushNowResult,
+  type SyncReport, type WorkoutPush,
 } from "@/api/providers";
 import { useAuth } from "@/hooks/useAuth";
 import { localIsoDay } from "@shared/domain/dates";
 import { openAuthorization } from "@/lib/native";
 
 export { ConnectError };
-export type { DisconnectResult, ProviderConnection, ProviderName, ProviderStatus, SyncReport, WorkoutPush };
+export type { DisconnectResult, ProviderConnection, ProviderName, ProviderStatus, PushNowResult, SyncReport, WorkoutPush };
 
 /**
  * Services connectés de l'athlète (montres COROS et Garmin).
@@ -170,5 +170,15 @@ export function useSetWorkoutPush() {
   return useMutation<boolean, Error, { provider: ProviderName; enabled: boolean }>({
     mutationFn: ({ provider, enabled }) => setWorkoutPush(provider, enabled),
     onSuccess: () => { if (user) void invalidateProviders(qc, user.id); },
+  });
+}
+
+/** « Envoyer sur ma montre » : une séance précise, tout de suite (Garmin). */
+export function usePushWorkoutNow() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation<PushNowResult, ConnectError, { kind: WorkoutPush["sourceKind"]; sourceId: string }>({
+    mutationFn: ({ kind, sourceId }) => pushWorkoutNow(kind, sourceId),
+    onSettled: () => { if (user) void invalidateProviders(qc, user.id); },
   });
 }

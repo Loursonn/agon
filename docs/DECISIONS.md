@@ -2559,3 +2559,13 @@ et son README.
   somme des 17 temps s'en écarte de plus de 20 s (arrondis). Doublon (même chrono à 2 s et même date ou même
   événement la même année) : mise à jour proposée, création refusée.
 - Rouvrir si HYROX ouvre un accès partenaire (demande possible par Hugo).
+
+## 2026-11-14 — Garmin : « Envoyer sur ma montre » à la main
+
+- Demande d'Hugo : envoyer une séance vers la montre depuis la séance. Précisé par question : bouton côté
+  **athlète seulement**, **Garmin seulement** (COROS n'envoie pas de séances, P7), **même règle** que l'envoi
+  automatique (rien ne part tant que `push_workouts` est faux, donc pas pour les vrais athlètes avant le test d'Hugo).
+- Sans migration : `provider-garmin-push-workout` (jeton de l'athlète) appelle la synchro existante en forçant la
+  séance. Au-delà des 7 jours, le suivi se reconnaît à sa date enregistrée après la fenêtre ; le cron continue de
+  le tenir à jour. Détail : `docs/integrations/GARMIN_TRAINING.md`.
+

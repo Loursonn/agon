@@ -28,6 +28,26 @@ Code pur dans `supabase/functions/_shared/garminTraining/` :
 | `client.ts` | appels HTTP Garmin, erreurs (401/403/412/429 arrêtent l'athlète) |
 | `withdraw.ts` | à la déconnexion : retire les séances à venir de la montre |
 
+## Envoi à la main (« Envoyer sur ma montre »)
+
+Bouton sur la séance prévue côté athlète (`WatchPushButton` : séance d'énergie
+et séance de musculation), Garmin seulement. Edge Function
+`provider-garmin-push-workout`, jeton de session de l'athlète, corps
+`{ kind, sourceId }` :
+
+- refuse sans connexion active (`pas_de_garmin`), envoi coupé (`envoi_coupe`,
+  même règle que le cron : rien ne part tant que `push_workouts` est faux),
+  sans `WORKOUT_IMPORT` (`permission_absente`), séance d'un autre, faite,
+  commencée ou passée (`checkPushable`), bail pris (`occupe`) ;
+- sinon `syncAthleteWorkouts(..., { include: [séance] })` : même traduction,
+  même suivi ; la séance demandée est **forcée** (renvoyée même inchangée), le
+  reste de la fenêtre est remis à jour sans appel pour ce qui n'a pas bougé.
+
+Une séance envoyée au-delà des 7 jours garde une `scheduled_date` après le
+dernier jour de la fenêtre : le cron la relit par identifiant à chaque passage
+(modifiée → remplacée ; supprimée, annulée, repassée → retirée). Une séance
+envoyée par le cron puis déplacée loin reste retirée, comme avant.
+
 ## Données
 
 - `provider_workout_pushes` : une ligne par séance Agon envoyée (`source_kind`

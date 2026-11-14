@@ -19,7 +19,7 @@ import { localIsoDay } from "@shared/domain/dates";
 import { hrZoneCount } from "@/lib/energy/energyRun";
 import { EnergyReadView } from "@/features/athlete/components/energy/EnergyReadView";
 import { EnergyRunScreen } from "@/features/athlete/components/energy/EnergyRunScreen";
-import { WatchPushBadge } from "@/features/athlete/components/today/WatchPushBadge";
+import { WatchPushButton } from "@/features/athlete/components/today/WatchPushButton";
 import { EnergyDoneView } from "@/features/athlete/components/energy/EnergyDoneView";
 import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
 import { useNavigate } from "react-router-dom";
@@ -383,7 +383,7 @@ export function EnergyPreviewOverlay({
         session={session}
         refs={refs}
         hrZones={hrZones}
-        badge={<WatchPushBadge athleteId={athleteId} kind="energy" sourceId={assignmentId} />}
+        badge={<WatchPushButton athleteId={athleteId} kind="energy" sourceId={assignmentId} sessionStatus={event.status} date={event.date} />}
         onClose={onClose}
         onStart={() => setPhase("run")}
         onNote={() => setPhase("log")}

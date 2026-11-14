@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-garmin-envoyer-sur-ma-montre",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Garmin : l'athlète envoie une séance sur sa montre en un appui",
+    summary:
+      "Sur une séance prévue, l'athlète qui a une montre Garmin voit « Envoyer sur ma montre ». La séance part tout de suite dans son calendrier Garmin Connect, même si elle est dans plus de 7 jours.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Le bouton est en haut de la séance d'énergie et de la séance de musculation, tant qu'elle est prévue et pas encore commencée.",
+          "Une séance déjà envoyée affiche « Sur ta montre » : un appui la renvoie, utile si elle a été effacée du calendrier Garmin.",
+          "Une séance envoyée à l'avance reste à jour : si vous la modifiez ou la déplacez, la montre suit ; si vous la supprimez, elle disparaît de la montre.",
+          "Si l'envoi des séances est coupé dans Montres, le bouton l'indique et y renvoie, sans rien envoyer.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-hyrox-coller-resultat",
     date: "2026-11-15",
     kind: "feature",
