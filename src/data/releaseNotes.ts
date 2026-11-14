@@ -38,6 +38,27 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-blessures-et-staff-lisibles",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Blessures et espace staff plus lisibles",
+    summary: "Une blessure en cours se repère d'un coup d'œil, et ton staff retrouve fiches et commentaires dans le même style que le reste d'Agon.",
+    sections: [
+      {
+        title: "Blessures",
+        points: [
+          "Une blessure en cours apparaît sur une carte rouge avec une pastille « En cours » ; une fois guérie, la carte redevient neutre avec une pastille verte.",
+        ],
+      },
+      {
+        title: "Pour ton staff",
+        points: [
+          "Dans la fiche d'un athlète, les fiches s'affichent avec une icône à la couleur de leur catégorie, et les commentaires sont plus faciles à lire.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-analyse-course-hyrox-montre",
     date: "2026-11-14",
     kind: "feature",

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import {
   useDeleteMedicalEntry,
   useMedicalEntries,
@@ -72,7 +73,7 @@ export function MedicalEntriesSection({
       {canEdit && editing === null && (
         <button
           onClick={() => setEditing("new")}
-          style={{ ...ghostBtn, justifyContent: "center", padding: "10px 0", border: "1px dashed " + C.brdL }}
+          style={{ ...ghostBtn, justifyContent: "center", padding: "12px 0", borderRadius: 14, border: "1px dashed " + C.brdL }}
         >
           <Plus size={13} /> Déclarer une blessure
         </button>
@@ -91,19 +92,26 @@ function EntryCard({ entry, athleteId, canEdit, onEdit }: {
   const ongoing = entry.status === "en_cours";
 
   return (
-    <div style={{ ...card, borderColor: ongoing ? C.r + "60" : C.brd }}>
+    // Peps (planche CoachOrdiBStaffFiche) : carte teintée et pastille pleine
+    // quand la blessure est en cours, carte neutre et pastille verte une fois guérie.
+    <div style={{
+      ...card, borderRadius: 14, padding: "16px 18px",
+      background: ongoing ? alpha(C.r, 0.08) : C.s1,
+      border: "1px solid " + (ongoing ? alpha(C.r, 0.4) : C.brd),
+    }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{
-              fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-              background: ongoing ? C.r + "20" : C.g + "20", color: ongoing ? C.r : C.g,
+              display: "inline-flex", alignItems: "center", height: 20, padding: "0 8px", borderRadius: 999,
+              background: ongoing ? C.r : C.g, color: C.ink,
+              ...MONO, fontSize: 10, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
             }}>
               {MEDICAL_STATUS_LABEL[entry.status]}
             </span>
+            <span style={{ fontSize: 15.5, fontWeight: 600, color: C.tx }}>{entry.title}</span>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>{entry.title}</div>
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 1 }}>
+          <div style={{ fontSize: 12.5, color: C.tx2, marginTop: 6 }}>
             {[
               entry.zone,
               fmtInjuryDate(entry.date),
@@ -131,12 +139,12 @@ function EntryCard({ entry, athleteId, canEdit, onEdit }: {
       {injuryFacts(entry).length > 0 && (
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-          gap: 8, marginTop: 10,
+          gap: 8, marginTop: 12,
         }}>
           {injuryFacts(entry).map(({ l, v }) => (
-            <div key={l} style={{ background: C.s2, borderRadius: 4, padding: "6px 8px" }}>
-              <div style={{ ...labelStyle, marginBottom: 2 }}>{l}</div>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: C.tx2 }}>{v}</div>
+            <div key={l} style={{ background: ongoing ? alpha(C.r, 0.06) : C.s2, borderRadius: 10, padding: "8px 10px" }}>
+              <div style={{ ...labelStyle, marginBottom: 3 }}>{l}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: C.tx }}>{v}</div>
             </div>
           ))}
         </div>
