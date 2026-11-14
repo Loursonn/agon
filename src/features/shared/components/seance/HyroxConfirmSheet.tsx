@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { CircleCheck } from "lucide-react";
+import { Check } from "lucide-react";
 import type { ExpectedBlock } from "@shared/domain/hyroxLaps";
 import { C, alpha } from "@/lib/theme";
 import type { DetailLap, DetailLapWithMetrics } from "@/lib/activityDetail";
@@ -86,7 +86,7 @@ export function HyroxConfirmSheet(p: Props) {
       }}>
         <button type="button" aria-label="Fermer" onClick={p.onClose} style={{ width: 40, height: 4, borderRadius: 2, background: alpha(C.tx, 0.18), margin: "0 auto 4px", border: "none", padding: 0, cursor: "pointer", flex: "none" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <CircleCheck size={18} color={C.g} strokeWidth={1.75} />
+          <Check size={18} color={C.g} strokeWidth={2.2} aria-hidden />
           <span style={{ fontSize: 15 }}>C’est bien cette séance</span>
         </div>
         <div style={{ fontSize: 12.5, color: C.tx2 }}>Vérifie ce que tu as vraiment fait. Corrige les reps ou la charge si besoin, et laisse un mot sur une station.</div>
@@ -96,6 +96,7 @@ export function HyroxConfirmSheet(p: Props) {
             <StationIcon name="Course" size={18} />
             <span style={{ flex: 1, fontSize: 13 }}>{model.runLabel}</span>
             {model.runDetail && <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{model.runDetail}</span>}
+            <Check size={15} color={C.g} strokeWidth={2.2} aria-label="Conforme" />
           </div>
         )}
 
@@ -105,7 +106,7 @@ export function HyroxConfirmSheet(p: Props) {
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <StationIcon name={s.name} size={20} />
                 <span style={{ flex: 1, fontSize: 13.5 }}>{s.name}</span>
-                {s.differs && <span style={pillStyle(C.o)}>À corriger</span>}
+                {s.differs ? <span style={pillStyle(C.o)}>À corriger</span> : <Check size={16} color={C.g} strokeWidth={2.2} aria-label="Conforme au prévu" />}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingLeft: 30 }}>
                 <div>

@@ -349,6 +349,7 @@ export function EnergyPreviewOverlay({
       <EnergyRunScreen
         steps={session.intervals ?? []}
         refs={refs}
+        title={session.name}
         onExit={(elapsedS, finished) => {
           if (elapsedS >= 60) setActualDuration(String(Math.round(elapsedS / 60)));
           // Séance allée au bout : tous les blocs d'effort sont cochés d'office.
