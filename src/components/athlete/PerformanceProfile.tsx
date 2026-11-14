@@ -11,6 +11,8 @@ import {
 import { useAddPRLog, useDeletePRLog, usePRsByRef } from "@/features/shared/hooks/usePRLogs";
 import { estimateOneRm, isFcZoneKey } from "@shared/domain/performance";
 import { localIsoDay } from "@shared/domain/dates";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 export type { PerformanceLog };
 
@@ -34,11 +36,30 @@ const METRIC_TYPES: { id: string; label: string; metric?: string; units: string[
   { id: "custom", label: "Autre", units: ["custom"], emoji: "---", description: "Métrique personnalisée" },
 ];
 
-const METRIC_COLORS: Record<string, string> = {
-  vma: "#FF5A33", vitesse_critique: "#F5A623", one_rm: "#FFC933",
-  temps_distance: "#66F03C", pma: "#33B5FF", ftp: "#33B5FF", puissance: "#33B5FF", fc_max: "#FFC933",
-  fc_repos: "#9194A0", custom: "#F060C0",
+/**
+ * Couleur par type de métrique, en couleurs de marque. `color` (valeur concrète)
+ * sert au graphique Recharts ; les classes servent au reste de la carte.
+ * Avant le 14/11 : VC en miel et FC repos en gris bleu (hors charte).
+ */
+interface MetricTone { color: string; text: string; soft: string; chip: string; refBtn: string }
+const METRIC_TONES: Record<string, MetricTone> = {
+  vma: { color: C.r, text: "text-agon-erreur", soft: "bg-agon-erreur/[0.125]", chip: "border-agon-erreur bg-agon-erreur/[0.125] text-agon-erreur", refBtn: "border-agon-erreur/[0.31] bg-agon-erreur/[0.07] text-agon-erreur" },
+  vitesse_critique: { color: C.o, text: "text-agon-alerte", soft: "bg-agon-alerte/[0.125]", chip: "border-agon-alerte bg-agon-alerte/[0.125] text-agon-alerte", refBtn: "border-agon-alerte/[0.31] bg-agon-alerte/[0.07] text-agon-alerte" },
+  one_rm: { color: C.ac, text: "text-agon-accent", soft: "bg-agon-accent/[0.125]", chip: "border-agon-accent bg-agon-accent/[0.125] text-agon-accent", refBtn: "border-agon-accent/[0.31] bg-agon-accent/[0.07] text-agon-accent" },
+  temps_distance: { color: C.g, text: "text-agon-succes", soft: "bg-agon-succes/[0.125]", chip: "border-agon-succes bg-agon-succes/[0.125] text-agon-succes", refBtn: "border-agon-succes/[0.31] bg-agon-succes/[0.07] text-agon-succes" },
+  pma: { color: C.b, text: "text-agon-info", soft: "bg-agon-info/[0.125]", chip: "border-agon-info bg-agon-info/[0.125] text-agon-info", refBtn: "border-agon-info/[0.31] bg-agon-info/[0.07] text-agon-info" },
+  fc_max: { color: C.ac, text: "text-agon-accent", soft: "bg-agon-accent/[0.125]", chip: "border-agon-accent bg-agon-accent/[0.125] text-agon-accent", refBtn: "border-agon-accent/[0.31] bg-agon-accent/[0.07] text-agon-accent" },
+  fc_repos: { color: C.tx3, text: "text-agon-tx3", soft: "bg-agon-tx3/[0.125]", chip: "border-agon-tx3 bg-agon-tx3/[0.125] text-agon-tx3", refBtn: "border-agon-tx3/[0.31] bg-agon-tx3/[0.07] text-agon-tx3" },
+  custom: { color: C.ame, text: "text-agon-amethyste", soft: "bg-agon-amethyste/[0.125]", chip: "border-agon-amethyste bg-agon-amethyste/[0.125] text-agon-amethyste", refBtn: "border-agon-amethyste/[0.31] bg-agon-amethyste/[0.07] text-agon-amethyste" },
 };
+METRIC_TONES.ftp = METRIC_TONES.pma;
+METRIC_TONES.puissance = METRIC_TONES.pma;
+const DEFAULT_TONE = METRIC_TONES.one_rm;
+
+const LABEL = "text-[10px] font-semibold uppercase tracking-[0.5px] text-agon-tx3";
+const FIELD = "box-border w-full rounded-[4px] border border-agon-brd-l bg-agon-s2 px-3 py-[9px] font-[inherit] text-[13px] [outline:none]";
+const BTN_X = "size-[26px] cursor-pointer rounded-[6px] border-none bg-agon-erreur/[0.1] text-[12px] text-agon-erreur";
+const BADGE = "rounded-[4px] px-1.5 py-px text-[9px] font-bold";
 
 /** Type d'affichage d'une métrique : par nom canonique d'abord (saisies du coach : metric_type « reference »). */
 function typeOf(metricName: string, metricType: string) {
@@ -62,7 +83,8 @@ interface Props {
   athleteId: string;
   viewOnly?: boolean;
   isCoach?: boolean;
-  C: Record<string, string>;
+  /** Plus utilisé (couleurs en classes) ; gardé pour les appelants. */
+  C?: Record<string, string>;
 }
 
 // ── Mini graphique ──────────────────────────────────────────────────────────
@@ -71,14 +93,14 @@ function MiniPerfChart({ data, color, activeRef }: { data: { date: string; value
   if (data.length < 2) return null;
   const chartData = data.map(d => ({ label: d.date.slice(5), value: d.value }));
   return (
-    <div style={{ height: 80, marginTop: 8 }}>
+    <div className="mt-2 h-20">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-          <XAxis dataKey="label" tick={{ fontSize: 9, fill: "#555866" }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 9, fill: C.tx3 }} axisLine={false} tickLine={false} />
           <YAxis domain={["auto", "auto"]} hide />
           <Tooltip
-            contentStyle={{ background: "#27221D", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, fontSize: 11 }}
-            labelStyle={{ color: "#9194A0" }}
+            contentStyle={{ background: C.s2, border: `1px solid ${C.brd}`, borderRadius: 4, fontSize: 11 }}
+            labelStyle={{ color: C.tx3 }}
             formatter={(v: number) => [v, ""]}
           />
           {activeRef && <ReferenceLine y={activeRef} stroke={color} strokeDasharray="3 3" strokeOpacity={0.5} />}
@@ -91,7 +113,7 @@ function MiniPerfChart({ data, color, activeRef }: { data: { date: string; value
 
 // ── Composant principal ────────────────────────────────────────────────────────
 
-export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: Props) {
+export default function PerformanceProfile({ athleteId, viewOnly, isCoach }: Props) {
   const { data: logs = [], isLoading: loading, isError } = useMeasurementHistory(athleteId);
   const { bestByRef } = usePRsByRef(athleteId);
   const addMeasurement = useAddMeasurement();
@@ -183,106 +205,105 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
     : null;
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-4">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+      <div className="mb-3.5 flex items-center justify-between">
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.tx }}>Performances sportives</div>
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>VMA, 1RM, VC, temps… avec historique</div>
+          <div className="text-[14px] font-bold text-agon-tx">Performances sportives</div>
+          <div className="mt-0.5 text-[11px] text-agon-tx3">VMA, 1RM, VC, temps… avec historique</div>
         </div>
         {!viewOnly && (
           <button onClick={() => { setForm(emptyForm()); setShowForm(true); }}
-            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.acV, color: "#0E0C0A", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            className="cursor-pointer rounded-[4px] border-none bg-agon-accent px-3.5 py-[7px] font-[inherit] text-[12px] font-bold text-agon-ink">
             + Ajouter
           </button>
         )}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "20px 0", color: C.tx3, fontSize: 12 }}>Chargement…</div>
+        <div className="py-5 text-center text-[12px] text-agon-tx3">Chargement…</div>
       ) : isError ? (
-        <div style={{ background: C.s1, borderRadius: 6, padding: "24px 20px", border: "1px solid " + C.brd, textAlign: "center", fontSize: 13, color: C.tx3 }}>
+        <div className="rounded-[6px] border border-agon-brd bg-agon-s1 px-5 py-6 text-center text-[13px] text-agon-tx3">
           Performances non chargées — vérifie ta connexion
         </div>
       ) : Object.keys(grouped).length === 0 && records.length === 0 ? (
-        <div style={{ background: C.s1, borderRadius: 6, padding: "24px 20px", border: "1px solid " + C.brd, textAlign: "center" }}>
-          <div style={{ fontSize: 14, marginBottom: 8, fontWeight: 700, color: C.tx3 }}>Performances</div>
-          <div style={{ fontSize: 13, color: C.tx3 }}>Aucune performance enregistrée</div>
-          <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>Ajoute une première mesure pour commencer le suivi</div>
+        <div className="rounded-[6px] border border-agon-brd bg-agon-s1 px-5 py-6 text-center">
+          <div className="mb-2 text-[14px] font-bold text-agon-tx3">Performances</div>
+          <div className="text-[13px] text-agon-tx3">Aucune performance enregistrée</div>
+          <div className="mt-1 text-[11px] text-agon-tx3">Ajoute une première mesure pour commencer le suivi</div>
         </div>
       ) : (
         Object.entries(grouped).map(([metricName, entries]) => {
           const activeRef = entries.find(e => e.is_active_reference);
           const latest = entries[0];
           const metricType = typeOf(metricName, latest.metric_type);
-          const color = METRIC_COLORS[metricType?.id ?? latest.metric_type] || C.ac;
+          const tone = METRIC_TONES[metricType?.id ?? latest.metric_type] ?? DEFAULT_TONE;
           const isExpanded = expandedMetric === metricName;
           const chartData = [...entries].reverse().map(e => ({ date: e.date, value: e.value }));
 
           return (
-            <div key={metricName} style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, marginBottom: 10, overflow: "hidden" }}>
+            <div key={metricName} className="mb-2.5 overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1">
               {/* Carte résumé */}
               <div
                 onClick={() => setExpandedMetric(isExpanded ? null : metricName)}
-                style={{ padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}
+                className="flex cursor-pointer items-center gap-3.5 px-4 py-3.5"
               >
-                <div style={{ width: 44, height: 44, borderRadius: 6, background: color + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+                <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-[6px] text-[20px]", tone.soft)}>
                   {metricType?.emoji || "---"}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{metricType?.metric ? metricType.label : metricName}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <div className="text-[13px] font-bold text-agon-tx">{metricType?.metric ? metricType.label : metricName}</div>
                     {activeRef && (
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: C.g + "20", color: C.g }}>REF ACTIVE</span>
+                      <span className={cn(BADGE, "bg-agon-succes/[0.125] text-agon-succes")}>REF ACTIVE</span>
                     )}
                     {latest.coach_validated === false && (
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "#FF5A3320", color: "#FF5A33" }}>REJETÉ</span>
+                      <span className={cn(BADGE, "bg-agon-erreur/[0.125] text-agon-erreur")}>REJETÉ</span>
                     )}
                     {latest.coach_validated === null && !activeRef && (
-                      <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: C.o + "20", color: C.o }}>EN ATTENTE</span>
+                      <span className={cn(BADGE, "bg-agon-alerte/[0.125] text-agon-alerte")}>EN ATTENTE</span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>{entries.length} mesure{entries.length > 1 ? "s" : ""} · dernière : {latest.date}</div>
+                  <div className="mt-0.5 text-[11px] text-agon-tx3">{entries.length} mesure{entries.length > 1 ? "s" : ""} · dernière : {latest.date}</div>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: 24, fontWeight: 900, color, letterSpacing: "-1px" }}>{latest.value}</div>
-                  <div style={{ fontSize: 10, color: C.tx3 }}>{latest.unit}</div>
+                <div className="shrink-0 text-right">
+                  <div className={cn("text-[24px] font-black tracking-[-1px]", tone.text)}>{latest.value}</div>
+                  <div className="text-[10px] text-agon-tx3">{latest.unit}</div>
                 </div>
-                <span style={{ fontSize: 16, color: C.tx3, marginLeft: 4 }}>{isExpanded ? "∧" : "∨"}</span>
+                <span className="ml-1 text-[16px] text-agon-tx3">{isExpanded ? "∧" : "∨"}</span>
               </div>
 
               {/* Détail expandé */}
               {isExpanded && (
-                <div style={{ borderTop: "1px solid " + C.brd, padding: "14px 16px", background: C.bg }}>
+                <div className="border-t border-agon-brd bg-agon-bg px-4 py-3.5">
                   {/* Graphique */}
                   {chartData.length >= 2 && (
-                    <MiniPerfChart data={chartData} color={color} activeRef={activeRef?.value} />
+                    <MiniPerfChart data={chartData} color={tone.color} activeRef={activeRef?.value} />
                   )}
 
                   {/* Liste des entrées */}
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Historique</div>
+                  <div className="mt-3">
+                    <div className={cn(LABEL, "mb-2")}>Historique</div>
                     {entries.map(entry => (
-                      <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid " + C.brd }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: entry.is_active_reference ? color : C.tx }}>{entry.value} {entry.unit}</span>
-                            {entry.is_active_reference && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: C.g + "20", color: C.g, fontWeight: 700 }}>REF</span>}
+                      <div key={entry.id} className="flex items-center gap-2.5 border-b border-agon-brd py-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("text-[14px] font-bold", entry.is_active_reference ? tone.text : "text-agon-tx")}>{entry.value} {entry.unit}</span>
+                            {entry.is_active_reference && <span className="rounded-[4px] bg-agon-succes/[0.125] px-[5px] py-px text-[9px] font-bold text-agon-succes">REF</span>}
                           </div>
-                          <div style={{ fontSize: 10, color: C.tx3 }}>{entry.date}{entry.notes ? " · " + entry.notes : ""}</div>
+                          <div className="text-[10px] text-agon-tx3">{entry.date}{entry.notes ? " · " + entry.notes : ""}</div>
                         </div>
-                        {!viewOnly && <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        {!viewOnly && <div className="flex shrink-0 gap-1.5">
                           {!entry.is_active_reference && (
                             <button
                               onClick={() => handleSetActiveRef(entry.id, entry.metric_name)}
                               disabled={settingRef === entry.id}
-                              style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid " + color + "50", background: color + "12", color, fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                              className={cn("cursor-pointer rounded-[6px] border px-2.5 py-1 font-[inherit] text-[10px] font-semibold", tone.refBtn)}
                             >
                               {settingRef === entry.id ? "…" : "Réf. active"}
                             </button>
                           )}
-                          <button onClick={() => setConfirmDelete(entry.id)}
-                            style={{ width: 26, height: 26, borderRadius: 6, border: "none", background: "rgba(239,75,75,0.1)", color: "#FF5A33", fontSize: 12, cursor: "pointer" }}>×</button>
+                          <button onClick={() => setConfirmDelete(entry.id)} className={BTN_X}>×</button>
                         </div>}
                       </div>
                     ))}
@@ -296,20 +317,19 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
 
       {/* Records (1RM) — même table que ceux du coach, utilisés pour les % RM */}
       {!loading && records.length > 0 && (
-        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, marginBottom: 10, padding: "12px 16px" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Records (1RM)</div>
+        <div className="mb-2.5 rounded-[6px] border border-agon-brd bg-agon-s1 px-4 py-3">
+          <div className={cn(LABEL, "mb-2")}>Records (1RM)</div>
           {records.map((r) => (
-            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: "1px solid " + C.brd }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>{r.exercise_ref}</div>
-                <div style={{ fontSize: 10, color: C.tx3 }}>
+            <div key={r.id} className="flex items-center gap-2.5 border-b border-agon-brd py-1.5">
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-bold text-agon-tx">{r.exercise_ref}</div>
+                <div className="text-[10px] text-agon-tx3">
                   {r.date}{r.source_reps && r.source_reps > 1 && r.source_kg ? ` · ${r.source_kg} kg × ${r.source_reps}` : ""}{r.source === "computed" ? " · séance" : ""}
                 </div>
               </div>
-              <span style={{ fontSize: 18, fontWeight: 900, color: METRIC_COLORS.one_rm }}>{r.kg} kg</span>
+              <span className={cn("text-[18px] font-black", METRIC_TONES.one_rm.text)}>{r.kg} kg</span>
               {!viewOnly && r.source === "manual" && (
-                <button onClick={() => deleteRecord.mutate({ id: r.id, athleteId })} aria-label="Supprimer ce record"
-                  style={{ width: 26, height: 26, borderRadius: 6, border: "none", background: "rgba(239,75,75,0.1)", color: "#FF5A33", fontSize: 12, cursor: "pointer" }}>×</button>
+                <button onClick={() => deleteRecord.mutate({ id: r.id, athleteId })} aria-label="Supprimer ce record" className={BTN_X}>×</button>
               )}
             </div>
           ))}
@@ -318,18 +338,21 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
 
       {/* Modal ajout */}
       {showForm && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setShowForm(false)}>
-          <div style={{ width: "100%", maxWidth: 600, background: C.s1, borderRadius: "6px 6px 0 0", padding: "20px 20px 40px", maxHeight: "85vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>Ajouter une performance</div>
+        <div className="fixed inset-0 z-[500] flex items-end justify-center bg-black/70" onClick={() => setShowForm(false)}>
+          <div className="max-h-[85vh] w-full max-w-[600px] overflow-y-auto rounded-t-[6px] bg-agon-s1 px-5 pb-10 pt-5" onClick={e => e.stopPropagation()}>
+            <div className="mb-4 text-[15px] font-bold text-agon-tx">Ajouter une performance</div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="flex flex-col gap-3.5">
               {/* Type */}
               <div>
-                <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Type de performance</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <div className={cn(LABEL, "mb-2")}>Type de performance</div>
+                <div className="flex flex-wrap gap-1.5">
                   {METRIC_TYPES.map(m => (
                     <button key={m.id} onClick={() => handleMetricTypeChange(m.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 4, border: "1px solid " + (form.metric_type === m.id ? (METRIC_COLORS[m.id] || C.ac) : C.brdL), background: form.metric_type === m.id ? (METRIC_COLORS[m.id] || C.ac) + "20" : "transparent", color: form.metric_type === m.id ? (METRIC_COLORS[m.id] || C.ac) : C.tx3, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                      className={cn(
+                        "flex cursor-pointer items-center gap-[5px] rounded-[4px] border px-3 py-1.5 font-[inherit] text-[11px] font-semibold",
+                        form.metric_type === m.id ? (METRIC_TONES[m.id] ?? DEFAULT_TONE).chip : "border-agon-brd-l bg-transparent text-agon-tx3",
+                      )}>
                       <span>{m.emoji}</span> {m.label}
                     </button>
                   ))}
@@ -338,36 +361,36 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
 
               {/* Nom */}
               <div>
-                <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+                <div className={cn(LABEL, "mb-1.5")}>
                   {form.metric_type === "one_rm" ? "Exercice *" : "Nom de la métrique *"}
                 </div>
                 {formType?.metric ? (
-                  <div style={{ padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx3, fontSize: 13 }}>
+                  <div className={cn(FIELD, "text-agon-tx3")}>
                     {formType.label}
                   </div>
                 ) : (
                   <input value={form.metric_name} onChange={e => setForm(f => ({ ...f, metric_name: e.target.value }))}
                     placeholder={isOneRm ? "Ex: Développé couché" : "Ex: 5 km"}
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                    className={cn(FIELD, "text-agon-tx")} />
                 )}
               </div>
 
               {/* Valeur + Unité */}
-              <div style={{ display: "flex", gap: 10 }}>
-                <div style={{ flex: 2 }}>
-                  <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>{isOneRm ? "Charge *" : "Valeur *"}</div>
+              <div className="flex gap-2.5">
+                <div className="flex-[2]">
+                  <div className={cn(LABEL, "mb-1.5")}>{isOneRm ? "Charge *" : "Valeur *"}</div>
                   <input type="number" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} placeholder="Ex: 18.5"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 14, fontWeight: 700, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                    className={cn(FIELD, "text-[14px] font-bold text-agon-tx")} />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Unité</div>
+                <div className="flex-1">
+                  <div className={cn(LABEL, "mb-1.5")}>Unité</div>
                   {METRIC_TYPES.find(m => m.id === form.metric_type)?.units.length === 1 ? (
-                    <div style={{ padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx3, fontSize: 13 }}>
+                    <div className={cn(FIELD, "text-agon-tx3")}>
                       {form.unit}
                     </div>
                   ) : (
                     <select value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none" }}>
+                      className={cn(FIELD, "text-agon-tx")}>
                       {METRIC_TYPES.find(m => m.id === form.metric_type)?.units.map(u => (
                         <option key={u} value={u}>{u}</option>
                       ))}
@@ -375,44 +398,47 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
                   )}
                   {form.unit === "custom" && (
                     <input value={form.custom_unit} onChange={e => setForm(f => ({ ...f, custom_unit: e.target.value }))} placeholder="Unité"
-                      style={{ marginTop: 6, width: "100%", padding: "8px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                      className={cn(FIELD, "mt-1.5 py-2 text-[12px] text-agon-tx")} />
                   )}
                 </div>
               </div>
 
               {isOneRm && (
                 <div>
-                  <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Répétitions à cette charge</div>
+                  <div className={cn(LABEL, "mb-1.5")}>Répétitions à cette charge</div>
                   <input type="number" min={1} max={30} value={form.reps} onChange={e => setForm(f => ({ ...f, reps: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                    className={cn(FIELD, "text-agon-tx")} />
                   {oneRmPreview != null && (
-                    <div style={{ fontSize: 11, color: C.tx3, marginTop: 6 }}>1RM estimé : <strong style={{ color: METRIC_COLORS.one_rm }}>{oneRmPreview} kg</strong></div>
+                    <div className="mt-1.5 text-[11px] text-agon-tx3">1RM estimé : <strong className={METRIC_TONES.one_rm.text}>{oneRmPreview} kg</strong></div>
                   )}
                 </div>
               )}
 
               {/* Date */}
               <div>
-                <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Date</div>
+                <div className={cn(LABEL, "mb-1.5")}>Date</div>
                 <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                  className={cn(FIELD, "text-agon-tx")} />
               </div>
 
               {/* Notes */}
               <div>
-                <div style={{ fontSize: 10, color: C.tx3, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>Notes (optionnel)</div>
+                <div className={cn(LABEL, "mb-1.5")}>Notes (optionnel)</div>
                 <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Conditions, contexte…"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 4, border: "1px solid " + C.brdL, background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                  className={cn(FIELD, "text-[12px] text-agon-tx")} />
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+            <div className="mt-5 flex gap-2.5">
               <button onClick={() => setShowForm(false)}
-                style={{ flex: 1, padding: "12px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                className="flex-1 cursor-pointer rounded-[4px] border border-agon-brd-l bg-transparent py-3 font-[inherit] text-[13px] font-semibold text-agon-tx3">
                 Annuler
               </button>
               <button onClick={handleSubmit} disabled={!canSubmit || addMeasurement.isPending || addRecord.isPending}
-                style={{ flex: 2, padding: "12px 0", borderRadius: 4, border: "none", background: canSubmit ? C.ac : C.s2, color: canSubmit ? "#fff" : C.tx3, fontSize: 13, fontWeight: 700, cursor: canSubmit ? "pointer" : "default", fontFamily: "inherit" }}>
+                className={cn(
+                  "flex-[2] rounded-[4px] border-none py-3 font-[inherit] text-[13px] font-bold",
+                  canSubmit ? "cursor-pointer bg-agon-accent text-agon-ink" : "cursor-default bg-agon-s2 text-agon-tx3",
+                )}>
                 {addMeasurement.isPending || addRecord.isPending ? "…" : "Enregistrer"}
               </button>
             </div>
@@ -422,12 +448,12 @@ export default function PerformanceProfile({ athleteId, viewOnly, isCoach, C }: 
 
       {/* Confirm delete */}
       {confirmDelete && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setConfirmDelete(null)}>
-          <div style={{ background: C.s1, borderRadius: 6, padding: 24, maxWidth: 300, width: "100%", border: "1px solid " + C.brd }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Supprimer cette mesure ?</div>
-            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: "11px 0", borderRadius: 4, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
-              <button onClick={() => handleDelete(confirmDelete!)} style={{ flex: 1, padding: "11px 0", borderRadius: 4, border: "none", background: "#FF5A33", color: "#0E0C0A", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Supprimer</button>
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 p-6" onClick={() => setConfirmDelete(null)}>
+          <div className="w-full max-w-[300px] rounded-[6px] border border-agon-brd bg-agon-s1 p-6" onClick={e => e.stopPropagation()}>
+            <div className="mb-2 text-[15px] font-bold text-agon-tx">Supprimer cette mesure ?</div>
+            <div className="mt-4 flex gap-2.5">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 cursor-pointer rounded-[4px] border border-agon-brd-l bg-transparent py-[11px] font-[inherit] text-[13px] font-semibold text-agon-tx3">Annuler</button>
+              <button onClick={() => handleDelete(confirmDelete!)} className="flex-1 cursor-pointer rounded-[4px] border-none bg-agon-erreur py-[11px] font-[inherit] text-[13px] font-bold text-agon-ink">Supprimer</button>
             </div>
           </div>
         </div>
