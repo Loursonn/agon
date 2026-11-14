@@ -58,10 +58,6 @@ export const BANK_TYPE_LABEL: Record<BankItemType, string> = {
   workout: "Musculation", energy: "Énergie", specifique: "Spécifique", test: "Test", biometric: "Biométrie",
 };
 
-export const ENERGY_KIND_COLOR: Record<string, string> = {
-  vo2: C.ac, tempo: C.b, seuil: H.ambre,
-  footing: H.emeraude, fartlek: H.rougeVif, autre: H.gris, custom: H.gris,
-};
 export const ENERGY_KIND_LABEL: Record<string, string> = {
   vo2: "VO₂", tempo: "Tempo", seuil: "Seuil",
   footing: "Footing", fartlek: "Fartlek", autre: "Autre", custom: "Custom",
