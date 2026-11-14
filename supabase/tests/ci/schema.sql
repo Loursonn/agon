@@ -9619,6 +9619,10 @@ CREATE INDEX "coach_api_keys_coach_idx" ON "public"."coach_api_keys" USING "btre
 
 
 
+CREATE INDEX "competitions_cancelled_by_fk_idx" ON "public"."competitions" USING "btree" ("cancelled_by");
+
+
+
 CREATE INDEX "competitions_coach_id_fk_idx" ON "public"."competitions" USING "btree" ("coach_id");
 
 
