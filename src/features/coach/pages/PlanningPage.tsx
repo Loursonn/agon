@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,15 +34,15 @@ export default function PlanningPage() {
 
   if (!loaded) {
     return (
-      <div style={{ padding: "16px 24px" }}>
-        <Skeleton style={{ height: 300, borderRadius: 6, background: C.s1 }} />
+      <div className="px-4 py-4 md:px-6">
+        <Skeleton className="h-[300px] rounded-[6px] bg-agon-s1" />
       </div>
     );
   }
 
   return (
     <>
-      <div style={{ padding: "16px 24px 60px" }}>
+      <div className="px-4 pb-[60px] pt-4 md:px-6">
         {view === "timeline" && (
           <TimelineView athleteId={athleteId} />
         )}
@@ -66,7 +65,7 @@ export default function PlanningPage() {
           />
         )}
         {view === "month" && athleteId && (
-          <div style={{ marginTop: 20 }}>
+          <div className="mt-5">
             <WeekLoadPanel athleteId={athleteId} weekStart={mondayOf()} />
           </div>
         )}
