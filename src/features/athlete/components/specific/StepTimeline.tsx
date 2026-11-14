@@ -7,17 +7,18 @@ import { formatS, formatTarget, formatExerciseStep } from "@/lib/energy/formatTa
 import { estimateIntervalDuration } from "@/lib/energy";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { stepDistanceM } from "@/lib/energy/paceEquivalents";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 const EQUIPMENT_LABEL: Record<string, string> = {
   rameur: "Rameur", skierg: "SkiErg", bikeerg: "BikeErg", velo: "Vélo",
   course: "Course", elliptique: "Elliptique", corde: "Corde", autre: "Autre",
 };
 
-const COLORS = {
-  warmup: C.g, work: H.rougeDoux, recovery: H.bleu,
-  rest: H.grisClair, cooldown: C.g, open: H.grisClair,
-  exercise: C.ac, repeat: H.miel,
+/** Filet gauche de la carte, selon le rôle de l'étape. */
+const BORDER = {
+  warmup: "border-l-agon-succes", work: "border-l-agon-erreur", recovery: "border-l-agon-info",
+  rest: "border-l-agon-tx3", cooldown: "border-l-agon-succes", open: "border-l-agon-tx3",
+  exercise: "border-l-agon-accent",
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -25,9 +26,10 @@ const ROLE_LABEL: Record<string, string> = {
   rest: "Repos", cooldown: "Retour au calme", open: "Libre",
 };
 
-function StepCard({ step, color, vma, children }: {
+function StepCard({ step, borderClass, vma, children }: {
   step: EnergyInterval | ExerciseInterval;
-  color: string;
+  /** Classe `border-l-agon-*` du filet gauche. */
+  borderClass: string;
   vma?: number | null;
   children?: React.ReactNode;
 }) {
@@ -55,36 +57,23 @@ function StepCard({ step, color, vma, children }: {
     : step.target.kind !== "none" ? formatTarget(step.target) : step.notes ?? "";
 
   return (
-    <div style={{
-      display: "flex", gap: 12,
-      background: `var(--card, ${C.bg})`, border: `1px solid var(--border, ${H.anthracite})`,
-      borderLeft: `4px solid ${color}`,
-      borderRadius: 6, padding: "12px 14px", marginBottom: 8,
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
-          textTransform: "uppercase" as const,
-          color: isExercise ? COLORS.exercise : H.grisClair,
-        }}>
+    <div className={cn("mb-2 flex gap-3 rounded-[6px] border border-l-4 border-agon-brd bg-agon-s1 px-3.5 py-3", borderClass)}>
+      <div className="min-w-0 flex-1">
+        <span className={cn("text-[10px] font-bold uppercase tracking-[0.05em]", isExercise ? "text-agon-accent" : "text-agon-tx3")}>
           {kindLabel}
         </span>
-        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2, color: H.blancCasse, whiteSpace: "pre-wrap" }}>
+        <div className="mt-0.5 whitespace-pre-wrap text-[15px] font-semibold text-agon-tx">
           {title}
         </div>
         {(equipmentLabel || targetStr) && (
-          <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {equipmentLabel && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-                background: `${H.bleu}20`, color: H.bleu,
-                border: `1px solid ${H.bleu}40`,
-              }}>
+              <span className="rounded-[6px] border border-agon-info/[0.25] bg-agon-info/[0.125] px-2 py-0.5 text-[10px] font-bold text-agon-info">
                 {equipmentLabel}
               </span>
             )}
             {targetStr && (
-              <span style={{ fontSize: 12, color: H.grisClair }}>{targetStr}</span>
+              <span className="text-[12px] text-agon-tx3">{targetStr}</span>
             )}
           </div>
         )}
@@ -101,10 +90,7 @@ function StepCard({ step, color, vma, children }: {
             href={`https://www.youtube.com/watch?v=${step.youtube_id}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              fontSize: 12, color: COLORS.exercise, marginTop: 6, textDecoration: "none",
-            }}
+            className="mt-1.5 inline-flex items-center gap-[5px] text-[12px] text-agon-accent no-underline"
             onClick={(e) => e.stopPropagation()}
           >
             ▶ Voir la démo vidéo
@@ -112,7 +98,7 @@ function StepCard({ step, color, vma, children }: {
         )}
         {children}
       </div>
-      <span style={{ fontSize: 15, fontWeight: 700, alignSelf: "center", color: H.blancCasse }}>
+      <span className="self-center text-[15px] font-bold text-agon-tx">
         {dur > 0 ? formatS(dur) : "—"}
       </span>
     </div>
@@ -125,34 +111,26 @@ export default function StepTimeline({ steps, vma }: { steps: EnergyStep[]; vma?
     <div>
       {steps.map((step, i) => {
         if (step.type === "interval") {
-          const color = COLORS[step.role] ?? COLORS.open;
-          return <StepCard key={step.id ?? i} step={step} color={color} vma={vma} />;
+          return <StepCard key={step.id ?? i} step={step} borderClass={BORDER[step.role] ?? BORDER.open} vma={vma} />;
         }
         if (step.type === "exercise") {
-          return <StepCard key={step.id ?? i} step={step} color={COLORS.exercise} vma={vma} />;
+          return <StepCard key={step.id ?? i} step={step} borderClass={BORDER.exercise} vma={vma} />;
         }
         // Group
         const group = step as EnergyGroup;
         return (
-          <div key={group.id ?? i} style={{
-            border: `1px dashed ${COLORS.repeat}`,
-            borderRadius: 6, padding: 10, marginBottom: 8,
-            background: "rgba(245,166,35,0.03)",
-          }}>
-            <div style={{
-              display: "flex", justifyContent: "space-between",
-              alignItems: "center", padding: "0 4px 8px",
-            }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.repeat, textTransform: "uppercase" as const }}>
+          <div key={group.id ?? i} className="mb-2 rounded-[6px] border border-dashed border-agon-alerte bg-agon-alerte/[0.03] p-2.5">
+            <div className="flex items-center justify-between px-1 pb-2">
+              <span className="text-[12px] font-bold uppercase text-agon-alerte">
                 × {group.repeat} tours
               </span>
             </div>
             {group.instructions && (
-              <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4, whiteSpace: "pre-wrap", padding: "0 4px 8px" }}>
+              <div className="whitespace-pre-wrap px-1 pb-2 text-[12px] leading-[1.4] text-agon-tx2">
                 {group.instructions}
               </div>
             )}
-            <div style={{ marginLeft: 6 }}>
+            <div className="ml-1.5">
               <StepTimeline steps={group.children} vma={vma} />
             </div>
           </div>
