@@ -1,7 +1,7 @@
 import { canOfferAiConsent } from "@/lib/age";
 import { useState } from "react";
 import { toast } from "sonner";
-import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { LEGAL_ROUTES } from "@/lib/legal";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -76,39 +76,39 @@ export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
   };
 
   return (
-    <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
+    <div className="overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1">
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+        className="flex w-full cursor-pointer items-center justify-between border-none bg-transparent px-4 py-3 font-[inherit]"
       >
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <div className="text-[12px] font-semibold uppercase tracking-[0.5px] text-agon-tx3">
           {coach ? "Données et confidentialité" : <>Confidentialité &amp; données</>}
         </div>
-        <span style={{ fontSize: 12, color: C.tx3, display: "inline-block", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }}>∨</span>
+        <span className={cn("inline-block text-[12px] text-agon-tx3 [transition:transform_0.2s]", open && "rotate-180")}>∨</span>
       </button>
 
       {open && (
-        <div style={{ borderTop: "1px solid " + C.brd, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="flex flex-col gap-[18px] border-t border-agon-brd px-4 py-3.5">
           {isLoading ? (
-            <div style={{ fontSize: 12, color: C.tx3 }}>Chargement…</div>
+            <div className="text-[12px] text-agon-tx3">Chargement…</div>
           ) : (
             <>
               {/* ── Accord socle : informatif, car le retirer = quitter le service ── */}
               {core && coach && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Traitement de tes données de santé</div>
-                    <div style={{ fontSize: 11, color: C.tx3, marginTop: 2 }}>Accord donné le {fmtDate(core.decidedAt)}</div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] font-semibold text-agon-tx">Traitement de tes données de santé</div>
+                    <div className="mt-0.5 text-[11px] text-agon-tx3">Accord donné le {fmtDate(core.decidedAt)}</div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.g, background: C.gS, border: "1px solid " + C.g + "50", borderRadius: 999, padding: "2px 10px" }}>Accordé</span>
+                  <span className="rounded-full border border-agon-succes/[0.314] bg-agon-succes-doux px-2.5 py-0.5 text-[11px] font-bold text-agon-succes">Accordé</span>
                 </div>
               )}
               {core && !coach && (
-                <div style={{ background: C.s2, borderRadius: 6, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 12, color: C.tx, fontWeight: 600, marginBottom: 4 }}>
+                <div className="rounded-[6px] bg-agon-s2 px-3.5 py-3">
+                  <div className="mb-1 text-[12px] font-semibold text-agon-tx">
                     Traitement de tes données de santé
                   </div>
-                  <div style={{ fontSize: 11, color: C.tx2, lineHeight: 1.5 }}>
+                  <div className="text-[11px] leading-normal text-agon-tx2">
                     Accord donné le {fmtDate(core.decidedAt)}. C'est la base de fonctionnement
                     d'Agon : le retirer revient à ne plus pouvoir utiliser l'application. Pour cela,
                     utilise la suppression de compte ci-dessous — elle efface aussi tes données.
@@ -117,7 +117,7 @@ export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
               )}
 
               {/* ── Accords facultatifs : retirables en un clic ── */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="flex flex-col gap-3">
                 {OPTIONAL_PURPOSES.map((p) => {
                   const granted = isGranted(consents, p);
                   const row = consents?.find((c) => c.purpose === p);
@@ -130,24 +130,28 @@ export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
                   // Gemini et Claude). Un accord déjà donné reste retirable.
                   if (p === "ai_programming" && !granted && !canOfferAiConsent(profile?.birth_date)) {
                     return (
-                      <div key={p} style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
+                      <div key={p} className="text-[11px] leading-[1.45] text-agon-tx3">
                         Les analyses par intelligence artificielle sont réservées aux 18 ans et plus.
                       </div>
                     );
                   }
                   return (
-                    <div key={p} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div key={p} className="flex items-start gap-3">
                       <button
                         onClick={() => toggle(p, !granted)}
                         disabled={setConsent.isPending}
                         aria-pressed={granted}
-                        style={{ flexShrink: 0, width: 40, height: 22, borderRadius: 11, border: "1px solid " + (granted ? C.g + "50" : C.brd), background: granted ? C.gS : C.s2, cursor: setConsent.isPending ? "wait" : "pointer", padding: 0, position: "relative", transition: "background 0.15s" }}
+                        className={cn(
+                          "relative h-[22px] w-10 shrink-0 rounded-[11px] border p-0 [transition:background_0.15s]",
+                          granted ? "border-agon-succes/[0.314] bg-agon-succes-doux" : "border-agon-brd bg-agon-s2",
+                          setConsent.isPending ? "cursor-wait" : "cursor-pointer",
+                        )}
                       >
-                        <span style={{ position: "absolute", top: 2, left: granted ? 20 : 2, width: 16, height: 16, borderRadius: "50%", background: granted ? C.g : C.tx3, transition: "left 0.15s" }} />
+                        <span className={cn("absolute top-0.5 h-4 w-4 rounded-full [transition:left_0.15s]", granted ? "left-5 bg-agon-succes" : "left-0.5 bg-agon-tx3")} />
                       </button>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, color: C.tx, lineHeight: 1.45 }}>{CONSENT_COPY[p].label}</div>
-                        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45, marginTop: 3 }}>{CONSENT_COPY[p].detail}</div>
+                      <div className="min-w-0">
+                        <div className="text-[12px] leading-[1.45] text-agon-tx">{CONSENT_COPY[p].label}</div>
+                        <div className="mt-[3px] text-[11px] leading-[1.45] text-agon-tx3">{CONSENT_COPY[p].detail}</div>
                       </div>
                     </div>
                   );
@@ -156,15 +160,15 @@ export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
 
               {/* ── Export ── */}
               {coach ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, color: C.tx, fontWeight: 600 }}>Exporter mes données</div>
-                    <div style={{ fontSize: 11, color: C.tx3, marginTop: 2, lineHeight: 1.45 }}>Tout ce qu'Agon détient à ton sujet, dans un fichier lisible.</div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] font-semibold text-agon-tx">Exporter mes données</div>
+                    <div className="mt-0.5 text-[11px] leading-[1.45] text-agon-tx3">Tout ce qu'Agon détient à ton sujet, dans un fichier lisible.</div>
                   </div>
                   <button
                     onClick={runExport}
                     disabled={exportData.isPending}
-                    style={{ padding: "8px 14px", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: exportData.isPending ? "wait" : "pointer", fontFamily: "inherit", flexShrink: 0 }}
+                    className={cn("rounded-[6px] font-[inherit] text-[12px] shrink-0 border border-agon-brd bg-agon-s2 px-3.5 py-2 font-semibold text-agon-tx", exportData.isPending ? "cursor-wait" : "cursor-pointer")}
                   >
                     {exportData.isPending ? "Préparation…" : "Télécharger (JSON)"}
                   </button>
@@ -174,11 +178,11 @@ export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
                 <button
                   onClick={runExport}
                   disabled={exportData.isPending}
-                  style={{ width: "100%", padding: "11px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: exportData.isPending ? "wait" : "pointer", fontFamily: "inherit" }}
+                  className={cn("rounded-[6px] font-[inherit] text-[12px] w-full border border-agon-brd bg-agon-s2 py-[11px] font-semibold text-agon-tx", exportData.isPending ? "cursor-wait" : "cursor-pointer")}
                 >
                   {exportData.isPending ? "Préparation…" : "Télécharger toutes mes données (JSON)"}
                 </button>
-                <div style={{ fontSize: 11, color: C.tx3, marginTop: 6, lineHeight: 1.45 }}>
+                <div className="mt-1.5 text-[11px] leading-[1.45] text-agon-tx3">
                   Tout ce qu'Agon détient à ton sujet, dans un fichier lisible et réutilisable
                   ailleurs.
                 </div>
@@ -186,25 +190,25 @@ export function PrivacySection({ coach = false }: { coach?: boolean } = {}) {
               )}
 
               {/* ── Documents ── */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 11 }}>
-                <a href={LEGAL_ROUTES.privacy} target="_blank" rel="noreferrer" style={{ color: C.tx3, textDecoration: "underline" }}>Confidentialité</a>
-                <a href={LEGAL_ROUTES.terms} target="_blank" rel="noreferrer" style={{ color: C.tx3, textDecoration: "underline" }}>CGU</a>
-                <a href={LEGAL_ROUTES.notice} target="_blank" rel="noreferrer" style={{ color: C.tx3, textDecoration: "underline" }}>Mentions légales</a>
+              <div className="flex flex-wrap gap-3 text-[11px]">
+                <a href={LEGAL_ROUTES.privacy} target="_blank" rel="noreferrer" className="text-agon-tx3 underline">Confidentialité</a>
+                <a href={LEGAL_ROUTES.terms} target="_blank" rel="noreferrer" className="text-agon-tx3 underline">CGU</a>
+                <a href={LEGAL_ROUTES.notice} target="_blank" rel="noreferrer" className="text-agon-tx3 underline">Mentions légales</a>
               </div>
 
               {/* ── Suppression ── */}
-              <div style={{ borderTop: "1px solid " + C.brd, paddingTop: 14 }}>
+              <div className="border-t border-agon-brd pt-3.5">
                 {coach && (
                   <>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.r, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Zone danger</div>
-                    <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45, marginBottom: 10 }}>
+                    <div className="mb-1 text-[12px] font-bold uppercase tracking-[0.5px] text-agon-erreur">Zone danger</div>
+                    <div className="mb-2.5 text-[11px] leading-[1.45] text-agon-tx3">
                       Irréversible : ton compte et tes données sont effacés. Il faudra taper SUPPRIMER pour confirmer.
                     </div>
                   </>
                 )}
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  style={{ width: "100%", padding: "11px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: C.rS, color: C.r, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                  className="rounded-[6px] font-[inherit] text-[12px] w-full cursor-pointer border border-agon-erreur/[0.188] bg-agon-erreur-doux py-[11px] font-semibold text-agon-erreur"
                 >
                   Supprimer mon compte et mes données
                 </button>
@@ -245,54 +249,58 @@ function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   return (
     <div
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/75 p-5"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: C.s1, border: "1px solid " + C.r + "30", borderRadius: 8, padding: 20, maxWidth: 420, width: "100%", display: "flex", flexDirection: "column", gap: 14 }}
+        className="flex w-full max-w-[420px] flex-col gap-3.5 rounded-[8px] border border-agon-erreur/[0.188] bg-agon-s1 p-5"
       >
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.tx }}>Supprimer définitivement ton compte</div>
+        <div className="text-[15px] font-bold text-agon-tx">Supprimer définitivement ton compte</div>
 
-        <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.6 }}>
-          Cette action est <strong style={{ color: C.r }}>irréversible</strong>. Seront effacés :
+        <div className="text-[12px] leading-[1.6] text-agon-tx2">
+          Cette action est <strong className="text-agon-erreur">irréversible</strong>. Seront effacés :
         </div>
-        <ul style={{ fontSize: 12, color: C.tx2, lineHeight: 1.6, margin: 0, paddingLeft: 18 }}>
+        <ul className="m-0 pl-[18px] text-[12px] leading-[1.6] text-agon-tx2">
           <li>tes séances, charges, records et tests</li>
           <li>ton wellness, ton poids, tes mensurations</li>
           <li>tes blessures déclarées</li>
           <li>tes accès aux montres connectées, révoqués chez le fournisseur</li>
         </ul>
-        <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.6 }}>
+        <div className="text-[11px] leading-[1.6] text-agon-tx3">
           Ton coach perdra l'accès à ton suivi. Les programmes qu'il a construits restent dans son
           espace, sans tes données. Télécharge ton export avant de continuer si tu veux en garder
           une copie.
         </div>
 
         <div>
-          <label htmlFor="confirm-delete" style={{ fontSize: 11, color: C.tx3, display: "block", marginBottom: 6 }}>
-            Tape <strong style={{ color: C.tx }}>SUPPRIMER</strong> pour confirmer
+          <label htmlFor="confirm-delete" className="mb-1.5 block text-[11px] text-agon-tx3">
+            Tape <strong className="text-agon-tx">SUPPRIMER</strong> pour confirmer
           </label>
           <input
             id="confirm-delete"
             value={word}
             onChange={(e) => setWord(e.target.value)}
             autoComplete="off"
-            style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit" }}
+            className="w-full rounded-[6px] border border-agon-brd bg-agon-s2 px-3 py-2.5 font-[inherit] text-[13px] text-agon-tx"
           />
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="flex gap-2.5">
           <button
             onClick={onClose}
             disabled={del.isPending}
-            style={{ flex: 1, padding: "11px 0", borderRadius: 6, border: "1px solid " + C.brd, background: C.s2, color: C.tx, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            className="rounded-[6px] font-[inherit] text-[12px] flex-1 cursor-pointer border border-agon-brd bg-agon-s2 py-[11px] font-semibold text-agon-tx"
           >
             Annuler
           </button>
           <button
             onClick={submit}
             disabled={!ready || del.isPending}
-            style={{ flex: 1, padding: "11px 0", borderRadius: 6, border: "1px solid " + C.r + "30", background: ready ? C.r : C.rS, color: ready ? C.ink : C.r, fontSize: 12, fontWeight: 700, cursor: ready && !del.isPending ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.5, fontFamily: "inherit" }}
+            className={cn(
+              "rounded-[6px] font-[inherit] text-[12px] flex-1 border border-agon-erreur/[0.188] py-[11px] font-bold",
+              ready ? "bg-agon-erreur text-agon-ink" : "bg-agon-erreur-doux text-agon-erreur opacity-50",
+              ready && !del.isPending ? "cursor-pointer" : "cursor-not-allowed",
+            )}
           >
             {del.isPending ? "Suppression…" : "Supprimer"}
           </button>
