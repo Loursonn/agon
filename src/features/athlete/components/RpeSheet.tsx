@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useUpsertWorkoutRpe } from "@/features/shared/hooks/useUpsertWorkoutRpe";
 
@@ -46,21 +47,12 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
   return (
     <>
       {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.6)" }}
-      />
+      <div onClick={onClose} className="fixed inset-0 z-[100] bg-black/60" />
 
       {/* Sheet */}
       <div
-        style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
-          background: C.s1,
-          borderRadius: "6px 6px 0 0",
-          borderTop: "1px solid " + C.brd,
-          padding: "24px 20px 40px",
-          animation: "rpeSlideUp 220ms ease-out",
-        }}
+        className="fixed inset-x-0 bottom-0 z-[101] rounded-t-[6px] border-t border-agon-brd bg-agon-s1 px-5 pb-10 pt-6"
+        style={{ animation: "rpeSlideUp 220ms ease-out" }}
       >
         <style>{`
           @keyframes rpeSlideUp {
@@ -70,33 +62,28 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
         `}</style>
 
         {/* Handle */}
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: C.brdL, margin: "0 auto 20px" }} />
+        <div className="mx-auto mb-5 h-1 w-9 rounded-[2px] bg-agon-brd-l" />
 
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, marginBottom: 4 }}>
+        <div className="mb-1 text-[16px] font-extrabold text-agon-tx">
           Comment s'est passée la séance ?
         </div>
-        <div style={{ fontSize: 12, color: C.tx3, marginBottom: 24 }}>
+        <div className="mb-6 text-[12px] text-agon-tx3">
           Évalue ton effort global (échelle Foster 1-10)
         </div>
 
         {/* Number grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 16 }}>
+        <div className="mb-4 grid grid-cols-5 gap-2">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => {
             const isSelected = selected === v;
             return (
               <button
                 key={v}
                 onClick={() => setSelected(v)}
-                style={{
-                  padding: "14px 0",
-                  borderRadius: 6,
-                  border: "1px solid " + (isSelected ? rpeColor(v) + "80" : C.brdL),
-                  background: isSelected ? rpeBg(v) : C.s2,
-                  color: isSelected ? rpeColor(v) : C.tx2,
-                  fontSize: 18, fontWeight: 800,
-                  cursor: "pointer", fontFamily: "inherit",
-                  transition: "all 120ms",
-                }}
+                className={cn(
+                  "cursor-pointer rounded-[6px] border py-3.5 font-[inherit] text-[18px] font-extrabold transition-all [transition-duration:120ms]",
+                  !isSelected && "border-agon-brd-l bg-agon-s2 text-agon-tx2",
+                )}
+                style={isSelected ? { borderColor: rpeColor(v) + "80", background: rpeBg(v), color: rpeColor(v) } : undefined}
               >
                 {v}
               </button>
@@ -106,14 +93,11 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
 
         {/* Foster label */}
         <div
-          style={{
-            minHeight: 28, textAlign: "center", marginBottom: 28,
-            fontSize: 13, fontWeight: 600,
-            color: selected != null ? rpeColor(selected) : C.tx3,
-            background: selected != null ? rpeBg(selected) : "transparent",
-            borderRadius: 4, padding: "4px 12px",
-            transition: "all 150ms",
-          }}
+          className={cn(
+            "mb-7 min-h-7 rounded-[4px] px-3 py-1 text-center text-[13px] font-semibold transition-all duration-150",
+            selected == null && "bg-transparent text-agon-tx3",
+          )}
+          style={selected != null ? { color: rpeColor(selected), background: rpeBg(selected) } : undefined}
         >
           {selected != null ? `${selected}/10 — ${FOSTER[selected]}` : "Sélectionne une valeur"}
         </div>
@@ -122,29 +106,17 @@ export function RpeSheet({ sessionId, scheduledDate, onClose }: RpeSheetProps) {
         <button
           onClick={handleSubmit}
           disabled={isPending || selected == null}
-          style={{
-            width: "100%", padding: "15px 0", borderRadius: 6,
-            border: "none",
-            background: selected != null ? C.ac : C.s2,
-            color: selected != null ? C.tx : C.tx3,
-            fontSize: 14, fontWeight: 700,
-            cursor: selected != null ? "pointer" : "default",
-            fontFamily: "inherit", minHeight: 44,
-            transition: "background 150ms",
-            boxShadow: selected != null ? "0 4px 20px rgba(255,201,51,0.3)" : "none",
-          }}
+          className={cn(
+            "min-h-11 w-full rounded-[6px] border-none py-[15px] font-[inherit] text-[14px] font-bold transition-colors duration-150",
+            selected != null ? "cursor-pointer bg-agon-accent text-agon-ink" : "cursor-default bg-agon-s2 text-agon-tx3",
+          )}
         >
           {isPending ? "Enregistrement…" : "Enregistrer"}
         </button>
 
         <button
           onClick={onClose}
-          style={{
-            width: "100%", marginTop: 12, padding: "10px 0",
-            border: "none", background: "transparent",
-            color: C.tx3, fontSize: 13,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
+          className="mt-3 w-full cursor-pointer border-none bg-transparent py-2.5 font-[inherit] text-[13px] text-agon-tx3"
         >
           Passer
         </button>
