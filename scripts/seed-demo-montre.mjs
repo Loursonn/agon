@@ -4,11 +4,14 @@
  * - une course « Seuil 4×6 min » (série seconde par seconde, 11 tours de la montre) ;
  * - une séance HYROX 4 × (1 km course + 25 m sled push + 20 wall balls), 12 tours,
  *   rattachée à une séance prévue HYROX (tours nommés d'après le plan) ;
+ * - une 2ᵉ course HYROX officielle « HYROX Lyon » (résultat + activité de montre du jour de course),
+ *   pour que l'évolution HYROX ait au moins deux courses ;
  * - 7 jours de santé : résumé du jour (sommeil, VFC, FC repos, stress, Body Battery,
  *   SpO2, respiration) et séries de la journée.
  *
  * Additif et rejouable : upserts sur des identifiants « demo-… », rien n'est supprimé.
  * Usage : node scripts/seed-demo-montre.mjs   (Léa Démo doit exister : scripts/seed-demo.mjs)
+ *         node scripts/seed-demo-montre.mjs --seulement-course-lyon   (n'ajoute que la course HYROX Lyon)
  * Aussi appelé à la fin de scripts/seed-demo.mjs.
  *
  * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité).
@@ -167,6 +170,50 @@ async function seedHyrox(sb, ATH, COACH) {
   return upsertActivity(sb, ATH, { externalId: `demo-hyrox-${day}`, startedAt, sport: "hyrox", built: buildStream(blocks, 77) });
 }
 
+/** Temps de la course démo « HYROX Lyon » (Women, plus lente que Paris : l'évolution montre un progrès). */
+export const LYON = {
+  date: "2026-07-12",
+  runs: [285, 305, 312, 310, 318, 322, 325, 318],
+  stations: { ski_s: 275, sled_push_s: 232, sled_pull_s: 280, bbj_s: 318, row_s: 282, farmers_s: 146, lunges_s: 268, wall_balls_s: 378 },
+  roxzone_s: 236,
+};
+const LYON_NOTE = "Course fictive (compte démo)";
+
+/** Lignes de la course Lyon : résultat HYROX + blocs de la série montre (run, roxzone, station, roxzone…). */
+export function lyonRows(ATH) {
+  const st = Object.values(LYON.stations);
+  const total = LYON.runs.reduce((a, b) => a + b, 0) + st.reduce((a, b) => a + b, 0) + LYON.roxzone_s;
+  const result = {
+    athlete_id: ATH, date: LYON.date, format: "solo", division: "women", status: "finished", source: "manual",
+    is_official: true, event_name: "HYROX Lyon", venue: "Lyon", total_s: total,
+    ...Object.fromEntries(LYON.runs.map((v, i) => [`run_${i + 1}_s`, v])),
+    ...LYON.stations, roxzone_total_s: LYON.roxzone_s, penalties_s: 0,
+    coach_comment: LYON_NOTE, created_by: ATH,
+  };
+  // 16 passages en roxzone : 15 × 15 s + le reste sur le dernier.
+  const rox = Array.from({ length: 16 }, (_, i) => (i < 15 ? 15 : LYON.roxzone_s - 15 * 15));
+  const blocks = [];
+  LYON.runs.forEach((r, i) => {
+    blocks.push({ secs: r, speed: 1000 / r, hr: 166 + i, cadence: 172 });
+    blocks.push({ secs: rox[2 * i], speed: 1.2, hr: 170, cadence: 120, intensity: "rest" });
+    blocks.push({ secs: st[i], speed: 0.25, hr: 174, cadence: null });
+    blocks.push({ secs: rox[2 * i + 1], speed: 1.2, hr: 168, cadence: 120, intensity: "rest" });
+  });
+  return { result, blocks, total };
+}
+
+/** 2ᵉ course HYROX (Lyon) : résultat créé une seule fois, activité montre en upsert (« demo-hyrox-lyon »). */
+export async function seedLyonRace(sb, ATH) {
+  const { result, blocks } = lyonRows(ATH);
+  const has = await must(
+    sb.from("hyrox_results").select("id").eq("athlete_id", ATH).eq("event_name", "HYROX Lyon").eq("date", LYON.date).limit(1),
+    "course Lyon",
+  );
+  if (!has.length) await must(sb.from("hyrox_results").insert(result), "course Lyon");
+  const startedAt = new Date(`${LYON.date}T08:40:00Z`);
+  return upsertActivity(sb, ATH, { externalId: "demo-hyrox-lyon", startedAt, sport: "hyrox", built: buildStream(blocks, 113) });
+}
+
 /** 7 jours de santé fictifs (nuit datée au jour du réveil). */
 async function seedHealth(sb, ATH) {
   const r = rng(2031);
@@ -268,8 +315,9 @@ export async function seedWatchDemo(sb, ATH, COACH) {
   await seedZones(sb, ATH);
   const run = await seedRun(sb, ATH, COACH);
   const hyrox = await seedHyrox(sb, ATH, COACH);
+  const lyon = await seedLyonRace(sb, ATH);
   const days = await seedHealth(sb, ATH);
-  console.log(`  montre : course ${run}, HYROX ${hyrox}, ${days} jours de santé`);
+  console.log(`  montre : course ${run}, HYROX ${hyrox}, course Lyon ${lyon}, ${days} jours de santé`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -285,5 +333,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (lea.length !== 1) throw new Error("Léa Démo introuvable (ou en double) : lancer scripts/seed-demo.mjs");
   const coach = (await must(sb.from("profiles").select("coach_code").eq("id", lea[0].coach_id).single(), "coach démo"));
   if (coach.coach_code !== "DEMO42") throw new Error("Le coach de Léa Démo n'est pas le coach démo : arrêt.");
-  await seedWatchDemo(sb, lea[0].id, lea[0].coach_id);
+  if (process.argv.includes("--seulement-course-lyon")) {
+    console.log(`  course HYROX Lyon : activité ${await seedLyonRace(sb, lea[0].id)}`);
+  } else {
+    await seedWatchDemo(sb, lea[0].id, lea[0].coach_id);
+  }
 }
