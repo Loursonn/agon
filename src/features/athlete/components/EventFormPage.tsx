@@ -1,11 +1,8 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronLeft, MapPin } from "lucide-react";
 import { DateBox } from "./DateBox";
-import { FIELD_BOX } from "./dateFormat";
 import { toast } from "sonner";
-import { C, alpha } from "@/lib/theme";
-import { ROUGE, TYPE_COLOR } from "@/lib/peps";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 import { useCreateLifeEvent, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
 import { useCreateCompetition, useDeleteCompetition } from "@/hooks/useCompetitions";
 import type { CompetitionPriority, LifeEventKind } from "@/types/planning";
@@ -36,15 +33,18 @@ interface Props {
   onClose: () => void;
 }
 
-const LABEL: CSSProperties = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.tx3, whiteSpace: "nowrap" };
+const LABEL = "agon-mono whitespace-nowrap text-[11px] uppercase tracking-[0.14em] text-agon-tx3";
 
-const BOX = FIELD_BOX;
+/** Même boîte que FIELD_BOX (./dateFormat), utilisée par DateBox. */
+const BOX = "relative box-border flex h-12 items-center gap-2.5 rounded-xl border border-agon-tx/[0.18] bg-agon-s1 px-3.5";
+
+const INPUT = "min-w-0 flex-1 border-none bg-transparent p-0 font-[inherit] text-[15px] text-agon-tx [outline:none]";
 
 function Field({ label, right, children }: { label: string; right?: ReactNode; children: ReactNode }) {
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={LABEL}>{label}</span>
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className={LABEL}>{label}</span>
         {right}
       </div>
       {children}
@@ -76,7 +76,6 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
   const saving = createLife.isPending || createComp.isPending;
 
   const isComp = type === "competition";
-  const color = isComp ? ROUGE : TYPE_COLOR.hyrox;
   const coach = coachName ?? "ton coach";
   const ready = !!name.trim() && !!start && !saving;
 
@@ -126,45 +125,44 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Nouvel événement" style={{ position: "fixed", inset: 0, zIndex: 200, background: C.bg, color: C.tx, display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: 1, overflowY: "auto", padding: "calc(env(safe-area-inset-top, 0px) + 16px) 20px 120px", display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button type="button" aria-label="Retour" onClick={onClose} style={{ width: 34, height: 34, boxSizing: "border-box", border: `1px solid ${alpha(C.tx, 0.18)}`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "transparent", color: C.tx, cursor: "pointer" }}>
+    <div role="dialog" aria-modal="true" aria-label="Nouvel événement" className="fixed inset-0 z-[200] flex flex-col bg-agon-bg text-agon-tx">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 pb-[120px] pt-[calc(env(safe-area-inset-top,0px)+16px)]">
+        <div className="flex items-center gap-2">
+          <button type="button" aria-label="Retour" onClick={onClose} className="box-border flex size-[34px] flex-none cursor-pointer items-center justify-center rounded-[10px] border border-agon-tx/[0.18] bg-transparent text-agon-tx">
             <ChevronLeft size={18} strokeWidth={1.75} />
           </button>
-          <span style={{ flex: 1, textAlign: "center", ...LABEL, color: C.tx2 }}>Nouvel événement</span>
-          <span style={{ width: 34, flex: "none" }} />
+          <span className={cn(LABEL, "flex-1 text-center text-agon-tx2")}>Nouvel événement</span>
+          <span className="w-[34px] flex-none" />
         </div>
 
         <Field label="Nom">
-          <div style={BOX}>
+          <div className={BOX}>
             <input
               aria-label="Nom"
               value={name}
               maxLength={120}
               onChange={(e) => setName(e.target.value)}
               placeholder={isComp ? "10 km de Boulogne" : "Week-end à Lyon"}
-              style={{ flex: 1, minWidth: 0, fontSize: 15, color: C.tx, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: 0 }}
+              className={INPUT}
             />
           </div>
         </Field>
 
         <Field label="Type">
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div className="flex flex-wrap gap-2">
             {TYPES.filter((t) => t.value !== "competition" || canCompete).map((t) => {
               const on = t.value === type;
-              const c = t.value === "competition" ? ROUGE : TYPE_COLOR.hyrox;
+              const onColor = t.value === "competition" ? "border-agon-rouge bg-agon-rouge" : "border-agon-type-hyrox bg-agon-type-hyrox";
               return (
                 <button
                   key={t.value}
                   type="button"
                   aria-pressed={on}
                   onClick={() => setType(t.value)}
-                  style={{
-                    height: 36, boxSizing: "border-box", padding: "0 14px", borderRadius: 999, fontSize: 13.5, fontFamily: "inherit", cursor: "pointer",
-                    border: on ? `1px solid ${c}` : `1px solid ${alpha(C.tx, 0.18)}`, background: on ? c : "transparent", color: on ? C.ink : C.tx2,
-                    fontWeight: on ? 500 : 400,
-                  }}
+                  className={cn(
+                    "box-border h-9 cursor-pointer rounded-full border px-3.5 font-[inherit] text-[13.5px]",
+                    on ? cn(onColor, "font-medium text-agon-ink") : "border-agon-tx/[0.18] bg-transparent font-normal text-agon-tx2",
+                  )}
                 >
                   {t.label}
                 </button>
@@ -178,7 +176,7 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
             <Field
               label="Date"
               right={!showEnd && (
-                <button type="button" onClick={() => setShowEnd(true)} style={{ color: C.ac, fontSize: 12, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}>
+                <button type="button" onClick={() => setShowEnd(true)} className="cursor-pointer border-none bg-transparent p-0 font-[inherit] text-[12px] text-agon-accent">
                   + Date de fin
                 </button>
               )}
@@ -191,7 +189,7 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
               </Field>
             )}
             <Field label="Priorité">
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="flex gap-2">
                 {PRIORITIES.map((p) => {
                   const on = p.value === priority;
                   return (
@@ -200,28 +198,27 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
                       type="button"
                       aria-pressed={on}
                       onClick={() => setPriority(p.value)}
-                      style={{
-                        flex: 1, height: 56, boxSizing: "border-box", borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
-                        background: on ? `${ROUGE}24` : C.s1, border: on ? `1.5px solid ${ROUGE}` : `1px solid ${alpha(C.tx, 0.18)}`,
-                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
-                      }}
+                      className={cn(
+                        "box-border flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-px rounded-xl font-[inherit]",
+                        on ? "border-[1.5px] border-agon-rouge bg-agon-rouge/[0.14]" : "border border-agon-tx/[0.18] bg-agon-s1",
+                      )}
                     >
-                      <span style={{ ...MONO, fontSize: 18, color: on ? ROUGE : C.tx }}>{p.value}</span>
-                      <span style={{ fontSize: 11.5, color: on ? C.tx : C.tx3 }}>{p.label}</span>
+                      <span className={cn("agon-mono text-[18px]", on ? "text-agon-rouge" : "text-agon-tx")}>{p.value}</span>
+                      <span className={cn("text-[11.5px]", on ? "text-agon-tx" : "text-agon-tx3")}>{p.label}</span>
                     </button>
                   );
                 })}
               </div>
-              <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 7, lineHeight: 1.45 }}>A : tout vise ce jour · B : on allège avant · C : rien ne change.</div>
+              <div className="mt-[7px] text-[11.5px] leading-[1.45] text-agon-tx3">A : tout vise ce jour · B : on allège avant · C : rien ne change.</div>
             </Field>
           </>
         ) : (
           <>
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="flex gap-2.5">
+              <div className="min-w-0 flex-1">
                 <Field label="Du"><DateBox label="Du" value={start} onChange={setStartDate} withYear={false} /></Field>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="min-w-0 flex-1">
                 <Field label="Au"><DateBox label="Au" value={end} min={start || undefined} onChange={setEnd} withYear={false} /></Field>
               </div>
             </div>
@@ -230,44 +227,47 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
               role="switch"
               aria-checked={unavailable}
               onClick={() => setUnavailable((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, background: C.s1, border: `1px solid ${C.brd}`, textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: C.tx }}
+              className="flex cursor-pointer items-center gap-3 rounded-[14px] border border-agon-brd bg-agon-s1 p-3.5 text-left font-[inherit] text-agon-tx"
             >
-              <span style={{ flex: 1 }}>
-                <span style={{ display: "block", fontSize: 14, fontWeight: 500 }}>Indisponible pour m’entraîner</span>
-                <span style={{ display: "block", fontSize: 12, color: C.tx3, marginTop: 2 }}>Ton coach ne prévoit rien ces jours-là.</span>
+              <span className="flex-1">
+                <span className="block text-[14px] font-medium">Indisponible pour m’entraîner</span>
+                <span className="mt-0.5 block text-[12px] text-agon-tx3">Ton coach ne prévoit rien ces jours-là.</span>
               </span>
-              <span aria-hidden style={{ width: 44, height: 26, borderRadius: 13, background: unavailable ? color : alpha(C.tx, 0.18), position: "relative", flex: "none", transition: "background .15s" }}>
-                <span style={{ position: "absolute", top: 3, left: unavailable ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: C.tx, transition: "left .15s" }} />
+              <span aria-hidden className={cn("relative h-[26px] w-11 flex-none rounded-[13px] [transition:background_.15s]", unavailable ? "bg-agon-type-hyrox" : "bg-agon-tx/[0.18]")}>
+                <span className={cn("absolute top-[3px] size-5 rounded-full bg-agon-tx [transition:left_.15s]", unavailable ? "left-[21px]" : "left-[3px]")} />
               </span>
             </button>
           </>
         )}
 
         <Field label="Lieu · facultatif">
-          <div style={BOX}>
+          <div className={BOX}>
             <input
               aria-label="Lieu"
               value={location}
               maxLength={200}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Lieu"
-              style={{ flex: 1, minWidth: 0, fontSize: 15, color: C.tx, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: 0 }}
+              className={INPUT}
             />
-            <MapPin size={18} color={C.tx3} strokeWidth={1.75} />
+            <MapPin size={18} strokeWidth={1.75} className="text-agon-tx3" />
           </div>
         </Field>
 
-        <div style={{ fontSize: 12, color: C.tx3 }}>
+        <div className="text-[12px] text-agon-tx3">
           {isComp ? "" : "Pas de priorité hors compétition. "}Visible par {coach} sur ton planning.
         </div>
       </div>
 
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)", background: C.bg, borderTop: `1px solid ${C.brd}` }}>
+      <div className="absolute inset-x-0 bottom-0 border-t border-agon-brd bg-agon-bg px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-3">
         <button
           type="button"
           disabled={!ready}
           onClick={submit}
-          style={{ width: "100%", height: 52, borderRadius: 12, border: "none", background: C.ac, color: C.bg, fontWeight: 600, fontSize: 15, fontFamily: "inherit", cursor: ready ? "pointer" : "default", opacity: ready ? 1 : 0.45 }}
+          className={cn(
+            "h-[52px] w-full rounded-xl border-none bg-agon-accent font-[inherit] text-[15px] font-semibold text-agon-ink",
+            ready ? "cursor-pointer opacity-100" : "cursor-default opacity-[0.45]",
+          )}
         >
           {saving ? "Enregistrement…" : "Enregistrer"}
         </button>
