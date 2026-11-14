@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-direction-peps",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Un style plus net, partout",
+    summary: "Les écrans coach et athlète passent au style « peps » : couleurs franches en aplat, plus de halos ni de dégradés.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Cartes, alertes et séances prennent la couleur de leur type en aplat léger, sans halo lumineux.",
+          "Un seul bouton principal or par écran ; les autres boutons ont un contour fin et un texte blanc.",
+          "Les libellés discrets sont un peu plus clairs, donc plus faciles à lire.",
+          "Les graphiques à 5 zones de fréquence cardiaque vont maintenant du vert au rouge.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-comptes-pre-crees-6-mois",
     date: "2026-11-14",
     kind: "feature",
