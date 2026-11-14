@@ -4,13 +4,14 @@
  * (voir src/lib/energy/blockCards.ts). Les blocs trop riches pour la carte
  * (groupes imbriqués, départ fixe, exercices) s'ouvrent dans l'éditeur détaillé.
  */
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, Copy, GripVertical, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { C, alpha } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { zoneColor } from "@/lib/seance";
 import { deleteStep, duplicateStep, makeRootGroup, reorderChildren } from "@/lib/energy/treeUtils";
 import { formatTarget } from "@/lib/energy/formatTarget";
@@ -20,7 +21,7 @@ import {
   type CardTarget, type NewBlock,
 } from "@/lib/energy/blockCards";
 import type { EnergyDuration, EnergyGroup, EnergyInterval, EnergyStep, EnergyTarget, SessionKind } from "@/types/energy";
-import { MONO, ORDI_CARD, Segmented } from "@/features/shared/components/ordi/OrdiUi";
+import { Segmented } from "@/features/shared/components/ordi/OrdiUi";
 import IntervalBuilder from "./IntervalBuilder";
 
 interface Props {
@@ -55,14 +56,14 @@ export function EnergyBlockCards({ root, onChange, athleteId, sessionKind }: Pro
   const detailRoot: EnergyGroup | null = detailIndex >= 0 ? { ...makeRootGroup(), children: [root.children[detailIndex]] } : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       {root.children.length > 1 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.tx3 }}>
+        <div className="flex items-center gap-1.5 text-[12px] text-agon-tx3">
           <GripVertical size={13} /> Glisse un bloc pour le déplacer
         </div>
       )}
       {root.children.length === 0 && (
-        <div style={{ ...ORDI_CARD, padding: "28px 16px", textAlign: "center", color: C.tx3, fontSize: 13, background: "transparent", borderStyle: "dashed" }}>
+        <div className={cn(ORDI_CARD_CLS, "border-dashed bg-transparent px-4 py-7 text-center text-[13px] text-agon-tx3")}>
           Aucun bloc. Commence par un échauffement.
         </div>
       )}
@@ -84,15 +85,15 @@ export function EnergyBlockCards({ root, onChange, athleteId, sessionKind }: Pro
         </SortableContext>
       </DndContext>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: C.tx3, marginRight: 4 }}>Ajouter</span>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[12px] text-agon-tx3">Ajouter</span>
         {(Object.keys(NEW_BLOCK_LABEL) as NewBlock[]).map((k) => (
-          <button key={k} type="button" onClick={() => add(k)} style={chipBtn}>+ {NEW_BLOCK_LABEL[k]}</button>
+          <button key={k} type="button" onClick={() => add(k)} className={CHIP_BTN}>+ {NEW_BLOCK_LABEL[k]}</button>
         ))}
       </div>
 
       <Dialog open={!!detailRoot} onOpenChange={(o) => { if (!o) setDetailId(null); }}>
-        <DialogContent className="max-w-3xl" style={{ background: C.s1, border: `1px solid ${C.brd}`, maxHeight: "85vh", overflowY: "auto" }}>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border border-agon-brd bg-agon-s1">
           <DialogHeader>
             <DialogTitle>Bloc {detailIndex + 1} · modifier en détail</DialogTitle>
           </DialogHeader>
@@ -129,34 +130,34 @@ function BlockCard({ step, index, open, onToggle, onChange, onDuplicate, onDelet
   return (
     <div
       ref={setNodeRef}
+      className={cn(ORDI_CARD_CLS, "relative overflow-hidden p-0", isDragging ? "z-[2] opacity-60" : "opacity-100")}
+      // Déplacement (dnd-kit) et teinte de zone : valeurs calculées, restent en style.
       style={{
-        ...ORDI_CARD, padding: 0, overflow: "hidden", position: "relative",
         transform: CSS.Transform.toString(transform), transition,
-        opacity: isDragging ? 0.6 : 1, zIndex: isDragging ? 2 : undefined,
         borderColor: open ? alpha(color, 0.5) : undefined,
       }}
     >
-      <span aria-hidden style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px 12px 12px" }}>
-        <button type="button" aria-label={`Déplacer le bloc ${index + 1}`} {...attributes} {...listeners} style={{ ...iconBtn, cursor: "grab" }}>
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
+      <div className="flex items-center gap-3 py-3 pl-3 pr-3.5">
+        <button type="button" aria-label={`Déplacer le bloc ${index + 1}`} {...attributes} {...listeners} className={cn(ICON_BTN, "cursor-grab")}>
           <GripVertical size={15} />
         </button>
-        <span style={{ ...MONO, width: 14, fontSize: 12, color: C.tx3 }}>{index + 1}</span>
-        <button type="button" onClick={kind === "advanced" ? onDetail : onToggle} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", textAlign: "left", color: C.tx }}>
-          <span style={{ width: 150, flex: "none", fontSize: 14, fontWeight: 600 }}>{blockTitle(step)}</span>
-          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: C.tx2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span className={cn(MONO_CLS, "w-3.5 text-[12px] text-agon-tx3")}>{index + 1}</span>
+        <button type="button" onClick={kind === "advanced" ? onDetail : onToggle} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 bg-transparent p-0 text-left text-agon-tx">
+          <span className="w-[150px] flex-none text-[14px] font-semibold">{blockTitle(step)}</span>
+          <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] text-agon-tx2">
             {blockSummary(step)}
-            {kind === "advanced" && <span style={{ color: C.ac }}> · modifier en détail</span>}
+            {kind === "advanced" && <span className="text-agon-accent"> · modifier en détail</span>}
           </span>
         </button>
         {zone != null && (
-          <span style={{ ...MONO, fontSize: 11, padding: "2px 7px", borderRadius: 6, background: alpha(color, 0.16), color }}>Z{zone}</span>
+          <span className={cn(MONO_CLS, "rounded-[6px] px-[7px] py-0.5 text-[11px]")} style={{ background: alpha(color, 0.16), color }}>Z{zone}</span>
         )}
-        <button type="button" aria-label="Dupliquer le bloc" title="Dupliquer" onClick={onDuplicate} style={iconBtn}><Copy size={14} /></button>
-        <button type="button" aria-label="Supprimer le bloc" title="Supprimer" onClick={onDelete} style={iconBtn}><Trash2 size={14} /></button>
+        <button type="button" aria-label="Dupliquer le bloc" title="Dupliquer" onClick={onDuplicate} className={ICON_BTN}><Copy size={14} /></button>
+        <button type="button" aria-label="Supprimer le bloc" title="Supprimer" onClick={onDelete} className={ICON_BTN}><Trash2 size={14} /></button>
         {kind !== "advanced" && (
-          <button type="button" aria-label={open ? "Replier" : "Déplier"} onClick={onToggle} style={iconBtn}>
-            <ChevronDown size={16} style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
+          <button type="button" aria-label={open ? "Replier" : "Déplier"} onClick={onToggle} className={ICON_BTN}>
+            <ChevronDown size={16} className={cn("[transition:transform_.15s]", open && "rotate-180")} />
           </button>
         )}
       </div>
@@ -172,18 +173,18 @@ function CardBody({ step, onChange }: { step: EnergyStep; onChange: (s: EnergySt
   const notes = group ? group.instructions ?? "" : (step as EnergyInterval).notes ?? "";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px 16px 46px", borderTop: `1px solid ${C.brd}` }}>
-      <div style={{ height: 6 }} />
+    <div className="flex flex-col gap-3 border-t border-agon-brd pb-4 pl-[46px] pr-[18px] pt-1">
+      <div className="h-1.5" />
       {group && (
         <Row label="Répétitions">
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span className="inline-flex items-center gap-2">
             <input
               type="number" min={1} max={99} value={group.repeat}
               onChange={(e) => onChange(setRepeat(step, Number(e.target.value)))}
               aria-label="Répétitions"
-              style={{ ...field, width: 96, ...MONO }}
+              className={cn(FIELD, MONO_CLS, "w-24")}
             />
-            <span style={{ fontSize: 12.5, color: C.tx3 }}>fois</span>
+            <span className="text-[12.5px] text-agon-tx3">fois</span>
           </span>
         </Row>
       )}
@@ -195,7 +196,7 @@ function CardBody({ step, onChange }: { step: EnergyStep; onChange: (s: EnergySt
       </Row>
       {group && (
         <Row label="Récup entre">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <div className="flex flex-wrap items-center gap-2">
             <DurationField
               value={rest?.duration ?? null}
               allowNone
@@ -208,7 +209,7 @@ function CardBody({ step, onChange }: { step: EnergyStep; onChange: (s: EnergySt
                   onChange={(e) => onChange(setRest(step, { notes: e.target.value || undefined }))}
                   placeholder="Trot léger"
                   aria-label="Consigne de récup"
-                  style={{ ...field, width: 150 }}
+                  className={cn(FIELD, "w-[150px]")}
                 />
                 <RestTarget target={rest.target} onChange={(t) => onChange(setRest(step, { target: t }))} />
               </>
@@ -225,7 +226,7 @@ function CardBody({ step, onChange }: { step: EnergyStep; onChange: (s: EnergySt
           }}
           placeholder={group ? "Consigne du bloc, affichée à l’athlète" : "progressif, FC sous 152 bpm…"}
           aria-label="Note du bloc"
-          style={{ ...field, width: "100%", maxWidth: 420 }}
+          className={cn(FIELD, "w-full max-w-[420px]")}
         />
       </Row>
     </div>
@@ -234,9 +235,9 @@ function CardBody({ step, onChange }: { step: EnergyStep; onChange: (s: EnergySt
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", alignItems: "center", gap: 12 }}>
-      <span style={{ fontSize: 12.5, color: C.tx3 }}>{label}</span>
-      <div style={{ minWidth: 0 }}>{children}</div>
+    <div className="grid grid-cols-[110px_1fr] items-center gap-3">
+      <span className="text-[12.5px] text-agon-tx3">{label}</span>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
@@ -256,7 +257,7 @@ function DurationField({ value, onChange, allowNone = false }: {
     { value: "distance" as DurKind, label: "Distance" },
   ];
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+    <div className="flex flex-wrap items-center gap-2">
       <Segmented<DurKind>
         value={other ? ("" as DurKind) : kind}
         options={options}
@@ -278,7 +279,7 @@ function DurationField({ value, onChange, allowNone = false }: {
           label={value.kind === "time" ? "Durée" : "Distance"}
         />
       )}
-      {other && <span style={{ fontSize: 12.5, color: C.tx2 }}>{formatDuration(value)}</span>}
+      {other && <span className="text-[12.5px] text-agon-tx2">{formatDuration(value)}</span>}
     </div>
   );
 }
@@ -286,8 +287,8 @@ function DurationField({ value, onChange, allowNone = false }: {
 function TargetField({ target, role, onChange }: { target: EnergyTarget; role: EnergyInterval["role"]; onChange: (t: EnergyTarget) => void }) {
   const kind = cardTargetOf(target);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Segmented<CardTarget>
           value={(kind ?? "") as CardTarget}
           options={(Object.keys(CARD_TARGET_LABEL) as CardTarget[]).map((k) => ({ value: k, label: CARD_TARGET_LABEL[k] }))}
@@ -297,17 +298,17 @@ function TargetField({ target, role, onChange }: { target: EnergyTarget; role: E
         />
         {target.kind === "pace" && <PaceRange target={target} onChange={onChange} />}
         {(target.kind === "hr_bpm" || target.kind === "power") && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span className="inline-flex items-center gap-1.5">
             <NumCommit value={target.min} label="Minimum" onCommit={(n) => onChange({ ...target, min: n })} />
-            <span style={{ fontSize: 12, color: C.tx3 }}>à</span>
+            <span className="text-[12px] text-agon-tx3">à</span>
             <NumCommit value={target.max} label="Maximum" onCommit={(n) => onChange({ ...target, max: n })} />
-            <span style={{ fontSize: 12, color: C.tx3 }}>{target.kind === "power" ? "W" : "bpm"}</span>
+            <span className="text-[12px] text-agon-tx3">{target.kind === "power" ? "W" : "bpm"}</span>
           </span>
         )}
         {target.kind === "hr_zone" && <ZoneSelect zone={target.zone} onChange={(z) => onChange({ kind: "hr_zone", zone: z })} />}
       </div>
       {!kind && target.kind !== "none" && (
-        <span style={{ fontSize: 12, color: C.tx3 }}>Cible actuelle : {formatTarget(target) || "—"} (choisis un type pour la remplacer)</span>
+        <span className="text-[12px] text-agon-tx3">Cible actuelle : {formatTarget(target) || "—"} (choisis un type pour la remplacer)</span>
       )}
     </div>
   );
@@ -326,11 +327,11 @@ function PaceRange({ target, onChange }: { target: Extract<EnergyTarget, { kind:
   };
   const set = (min: number, max: number) => onChange({ kind: "pace", unit: target.unit, min_s_per_unit: min, max_s_per_unit: max });
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+    <span className="inline-flex items-center gap-1.5">
       <TextCommit key={`lo-${lo}`} initial={show(lo)} parse={parse} onCommit={(n) => set(n, hi)} width={80} label="Allure basse" />
-      <span style={{ fontSize: 12, color: C.tx3 }}>à</span>
+      <span className="text-[12px] text-agon-tx3">à</span>
       <TextCommit key={`hi-${hi}`} initial={show(hi)} parse={parse} onCommit={(n) => set(lo, n)} width={80} label="Allure haute" />
-      <span style={{ fontSize: 12, color: C.tx3 }}>{kmh ? "km/h" : "/km"}</span>
+      <span className="text-[12px] text-agon-tx3">{kmh ? "km/h" : "/km"}</span>
     </span>
   );
 }
@@ -346,7 +347,7 @@ function RestTarget({ target, onChange }: { target: EnergyTarget; onChange: (t: 
         if (v === "none") onChange({ kind: "none" });
         else if (v !== "other") onChange({ kind: "hr_zone", zone: Number(v) as 1 | 2 | 3 | 4 | 5 });
       }}
-      style={{ ...field, width: 130 }}
+      className={cn(FIELD, "w-[130px]")}
     >
       {value === "other" && <option value="other">{formatTarget(target) || "Autre cible"}</option>}
       <option value="none">Libre</option>
@@ -357,7 +358,7 @@ function RestTarget({ target, onChange }: { target: EnergyTarget; onChange: (t: 
 
 function ZoneSelect({ zone, onChange }: { zone: number; onChange: (z: 1 | 2 | 3 | 4 | 5) => void }) {
   return (
-    <select value={zone} aria-label="Zone" onChange={(e) => onChange(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)} style={{ ...field, width: 110 }}>
+    <select value={zone} aria-label="Zone" onChange={(e) => onChange(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)} className={cn(FIELD, "w-[110px]")}>
       {[1, 2, 3, 4, 5].map((z) => <option key={z} value={z}>Zone {z}</option>)}
     </select>
   );
@@ -380,7 +381,9 @@ function TextCommit({ initial, parse, onCommit, width, label }: {
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-      style={{ ...field, ...MONO, width }}
+      className={cn(FIELD, MONO_CLS)}
+      // Largeur passée par l'appelant (valeur numérique).
+      style={{ width }}
     />
   );
 }
@@ -400,15 +403,9 @@ function NumCommit({ value, label, onCommit }: { value: number; label: string; o
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
-const field: CSSProperties = {
-  height: 32, boxSizing: "border-box", padding: "0 10px", borderRadius: 8,
-  border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
-};
-const iconBtn: CSSProperties = {
-  display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flex: "none",
-  borderRadius: 8, border: "none", background: "transparent", color: C.tx3, cursor: "pointer", padding: 0,
-};
-const chipBtn: CSSProperties = {
-  height: 32, padding: "0 12px", borderRadius: 999, border: `1px dashed ${C.brdL}`, background: "transparent",
-  color: C.tx2, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit",
-};
+/** Carte des planches « ordi » (ORDI_CARD en classes). */
+const ORDI_CARD_CLS = "rounded-[14px] border border-agon-brd bg-agon-s1";
+const MONO_CLS = "font-data tabular-nums";
+const FIELD = "box-border h-8 rounded-[8px] border border-agon-brd-l bg-agon-s2 px-2.5 text-[13px] text-agon-tx outline-none";
+const ICON_BTN = "inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-[8px] bg-transparent p-0 text-agon-tx3";
+const CHIP_BTN = "h-8 cursor-pointer rounded-[999px] border border-dashed border-agon-brd-l bg-transparent px-3 text-[12.5px] text-agon-tx2";
