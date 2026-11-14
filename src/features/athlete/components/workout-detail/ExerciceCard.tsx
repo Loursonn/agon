@@ -11,6 +11,7 @@ import { blocColor } from "@/lib/peps";
 import { hasIso, isAllIso, isIsoAt } from "@/lib/formatSetsReps";
 import { hexToRgba } from "@/features/athlete/components/workout-detail/workoutDetailUtils";
 import { useState } from "react";
+import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 
 // ── ExerciceCard ───────────────────────────────────────────────────────────────
 
@@ -86,12 +87,13 @@ export function ExerciceCard({
   const stripSec = timingMode === "repos" && !supersetTag ? blocRestSec : 0;
   const totalSets = sets.length;
   const allDone = doneSets === totalSets && totalSets > 0;
+  const currentIdx = sets.findIndex((s) => !s?.done && !s?.skipped);
 
   return (
     <div
       style={{
         background: C.s1,
-        borderRadius: 6,
+        borderRadius: 16,
         border: `1px solid ${C.brd}`,
         overflow: "hidden",
       }}
@@ -107,8 +109,12 @@ export function ExerciceCard({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 13,
-                fontWeight: 800,
+                ...DISPLAY,
+                fontSize: 18,
+                fontWeight: 400,
+                letterSpacing: "0.05em",
+                lineHeight: 1.15,
+                textTransform: "uppercase",
                 color: C.tx,
               }}
             >
@@ -208,14 +214,14 @@ export function ExerciceCard({
           style={{
             display: "grid",
             gridTemplateColumns: isPDC
-              ? "34px 1fr 1.15fr 0.9fr 40px"
-              : "34px 1fr 1.15fr 1.15fr 0.9fr 40px",
-            gap: 5,
-            padding: "4px 14px 2px",
-            fontSize: 9,
+              ? "28px 1fr 1.3fr 0.8fr 42px"
+              : "28px 1.1fr 0.8fr 1.3fr 0.7fr 42px",
+            gap: 4,
+            padding: "8px 18px 2px 20px",
+            ...MONO,
+            fontSize: 11,
             color: C.tx3,
-            fontWeight: 600,
-            letterSpacing: "0.4px",
+            letterSpacing: "0.14em",
             textTransform: "uppercase" as const,
           }}
         >
@@ -229,7 +235,7 @@ export function ExerciceCard({
       )}
 
       {/* Set rows */}
-      <div style={{ padding: "0 14px" }}>
+      <div style={{ padding: "6px 14px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
         {params.cluster ? (() => {
           const c = params.cluster;
           const nb = c.nb_clusters;
@@ -314,6 +320,7 @@ export function ExerciceCard({
                 prevStr={prevSets[i] ?? "—"}
                 chargeUnit={params.charge_unit}
                 isIso={isIsoAt(params, i)}
+                isCurrent={canEdit && i === currentIdx}
                 onToggle={() => onToggle(i)}
                 onOpenPad={(field) => onOpenPad(i, field)}
                 isCompleted={!canEdit}

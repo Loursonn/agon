@@ -1,5 +1,6 @@
 import { ACCENT_ALT, GREEN } from "@/features/athlete/components/workout-detail/workoutDetailConstants";
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import { MONO } from "@/features/shared/components/seance/seanceUi";
 import type { SetState } from "@/features/athlete/components/workout-detail/workoutDetailTypes";
 import { haptic, hexToRgba } from "@/features/athlete/components/workout-detail/workoutDetailUtils";
 
@@ -18,55 +19,65 @@ export interface SetRowProps {
   isCompleted: boolean;
   canRemove?: boolean;
   onRemoveSet?: () => void;
+  /** Série à saisir maintenant : carte dorée, case à cocher cerclée d'or. */
+  isCurrent?: boolean;
 }
 
-export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, indexColor, onToggle, onOpenPad, isCompleted, canRemove, onRemoveSet }: SetRowProps) {
+export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, indexColor, onToggle, onOpenPad, isCompleted, canRemove, onRemoveSet, isCurrent }: SetRowProps) {
   const isPDC = chargeUnit === "PDC";
   const checkState = state.done ? "done" : state.skipped ? "skip" : "empty";
   const gridCols = isPDC
-    ? "34px 1fr 1.15fr 0.9fr 40px"
-    : "34px 1fr 1.15fr 1.15fr 0.9fr 40px";
+    ? "28px 1fr 1.3fr 0.8fr 42px"
+    : "28px 1.1fr 0.8fr 1.3fr 0.7fr 42px";
 
+  const live = state.done || isCurrent;
+  // Planche SeanceEnCours : valeurs en Geist Mono 16, grises tant que la série n'est ni faite ni en cours
   function cell(field: "kg" | "reps" | "rir", val: string) {
     return (
       <div
         onClick={() => !isCompleted && onOpenPad(field)}
         style={{
-          background: state.done ? hexToRgba(GREEN, 0.06) : C.s2,
-          border: `1px solid ${state.done ? hexToRgba(GREEN, 0.3) : C.brdL}`,
-          borderRadius: 4,
-          padding: "7px 2px",
-          color: state.done ? GREEN : state.skipped ? C.tx3 : C.tx,
-          fontSize: 13,
-          fontWeight: 700,
+          ...MONO,
+          color: state.skipped ? C.tx3 : live ? C.tx : C.tx3,
+          fontSize: 16,
           textAlign: "center" as const,
           cursor: isCompleted ? "default" : "pointer",
-          transition: "all 100ms",
-          minHeight: 34,
+          minHeight: 44,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          borderRadius: 8,
+          whiteSpace: "nowrap",
           textDecoration: state.skipped ? "line-through" : "none",
         }}
       >
-        {val || <span style={{ color: C.tx3, fontWeight: 400, fontSize: 11 }}>—</span>}
+        {val || <span style={{ color: C.tx3, fontSize: 13 }}>—</span>}
       </div>
     );
   }
+
+  const rowStyle = state.done
+    ? { background: alpha(GREEN, 0.12), border: `1px solid ${alpha(GREEN, 0.45)}` }
+    : isCurrent
+    ? { background: alpha(C.ac, 0.12), border: `1.5px solid ${C.ac}` }
+    : { background: C.s1, border: `1px solid ${C.brd}` };
 
   return (
     <div
       style={{
         display: "grid",
         gridTemplateColumns: gridCols,
-        gap: 5,
+        gap: 4,
         alignItems: "center",
-        padding: "5px 0",
-        borderBottom: `1px solid ${C.brd}`,
+        minHeight: 52,
+        boxSizing: "border-box",
+        padding: "0 4px 0 6px",
+        borderRadius: 14,
+        ...rowStyle,
       }}
     >
       {/* Set number / remove bonus */}
-      <div style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: indexColor ?? C.tx3 }}>
+      <div style={{ ...MONO, textAlign: "center", fontSize: 13, color: indexColor ?? C.tx3 }}>
         {canRemove && onRemoveSet ? (
           <button
             onClick={onRemoveSet}
@@ -92,8 +103,9 @@ export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, 
       {/* prev perf */}
       <div
         style={{
+          ...MONO,
           textAlign: "center",
-          fontSize: 10,
+          fontSize: 12,
           color: C.tx3,
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -114,26 +126,23 @@ export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, 
             haptic();
           }
         }}
+        aria-label={checkState === "done" ? "Série faite" : checkState === "skip" ? "Série passée" : "Valider la série"}
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          border: `2px solid ${
-            checkState === "done" ? GREEN : checkState === "skip" ? ACCENT_ALT : C.brdL
-          }`,
+          width: 42,
+          height: 42,
+          borderRadius: 11,
+          boxSizing: "border-box",
+          border:
+            checkState === "done" ? "0"
+            : checkState === "skip" ? `1.5px solid ${ACCENT_ALT}`
+            : isCurrent ? `2px solid ${C.ac}`
+            : `1px dashed ${C.brdL}`,
           background:
-            checkState === "done"
-              ? GREEN
-              : checkState === "skip"
-              ? hexToRgba(ACCENT_ALT, 0.18)
-              : "transparent",
-          color:
-            checkState === "done"
-              ? C.tx
-              : checkState === "skip"
-              ? ACCENT_ALT
-              : C.tx3,
-          fontSize: 14,
+            checkState === "done" ? GREEN
+            : checkState === "skip" ? hexToRgba(ACCENT_ALT, 0.18)
+            : "transparent",
+          color: checkState === "done" ? C.ink : checkState === "skip" ? ACCENT_ALT : "transparent",
+          fontSize: 18,
           fontWeight: 700,
           cursor: isCompleted ? "default" : "pointer",
           fontFamily: "inherit",
@@ -142,9 +151,8 @@ export function SetRow({ setIdx, state, prevStr, chargeUnit, isIso, indexLabel, 
           justifyContent: "center",
           transition: "all 150ms",
           flexShrink: 0,
-          justifySelf: "center" as const,
-          minWidth: 32,
-          opacity: checkState === "empty" ? 0.35 : 1,
+          justifySelf: "end" as const,
+          padding: 0,
         }}
       >
         {checkState === "skip" ? "✕" : "✓"}
