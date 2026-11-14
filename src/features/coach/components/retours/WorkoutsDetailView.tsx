@@ -74,7 +74,7 @@ export function WorkoutsDetailView({ workouts, energySessions, onClose }: Workou
           ].map(({ label, value, color }) => (
             <div key={label} className={STAT_CARD}>
               <div className={STAT_LABEL}>{label}</div>
-              <div className={cn(STAT_VALUE, "text-[17px]", color)}>{value}</div>
+              <div className={cn(STAT_VALUE, "text-[17px] leading-none", color)}>{value}</div>
             </div>
           ))}
         </div>

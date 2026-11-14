@@ -11,7 +11,7 @@ export const SHEET_CLOSE = "flex size-8 cursor-pointer items-center justify-cent
 /** Tuile de chiffre clé sous l'en-tête. */
 export const STAT_CARD = "rounded-[4px] bg-agon-s2 px-3 py-2.5 text-center";
 export const STAT_LABEL = "mb-1 text-[9px] font-bold uppercase tracking-[0.4px] text-agon-tx3";
-export const STAT_VALUE = "font-extrabold leading-none";
+export const STAT_VALUE = "font-extrabold";
 /** Pastille grise de type (« hyrox », « force »…). */
 export const TYPE_TAG = "flex-none rounded-[6px] bg-agon-brd px-[7px] py-0.5 text-[9px] font-bold uppercase tracking-[0.3px] text-agon-tx3";
 export const SMALL_KICK = "mb-[3px] text-[9px] font-bold uppercase tracking-[0.4px] text-agon-tx3";

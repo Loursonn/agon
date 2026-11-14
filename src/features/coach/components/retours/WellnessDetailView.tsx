@@ -236,7 +236,7 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
           }) => (
             <div key={label} className={STAT_CARD}>
               <div className={STAT_LABEL}>{label}</div>
-              <div className={cn(STAT_VALUE, "text-[20px]", color)}>
+              <div className={cn(STAT_VALUE, "text-[20px] leading-none", color)}>
                 {value ?? "—"}
               </div>
               <div className="text-[9px] text-agon-tx3">{unit}</div>
@@ -362,7 +362,7 @@ export function WellnessDetailView({ dailyData, sleepGoals, onClose }: WellnessD
                   {statCards.map(({ label, value, sub, color }) => (
                     <div key={label} className={STAT_CARD}>
                       <div className={STAT_LABEL}>{label}</div>
-                      <div className={cn(STAT_VALUE, "text-[18px]", color)}>{value}</div>
+                      <div className={cn(STAT_VALUE, "text-[18px] leading-none", color)}>{value}</div>
                       {sub && <div className="mt-[3px] text-[9px] text-agon-tx3">{sub}</div>}
                     </div>
                   ))}

@@ -244,7 +244,7 @@ export function NutritionDetailView({ logs, strategy, bmr = null, onClose }: Nut
           ].map(({ label, value, unit, color }) => (
             <div key={label} className={STAT_CARD}>
               <div className={STAT_LABEL}>{label}</div>
-              <div className={cn(STAT_VALUE, "text-[20px]", color)}>
+              <div className={cn(STAT_VALUE, "text-[20px] leading-none", color)}>
                 {value ?? "—"}
               </div>
               <div className="text-[9px] text-agon-tx3">{unit}</div>

@@ -41,7 +41,7 @@ export function TestsDetailView({ tests, onClose }: TestsDetailViewProps) {
             ].map(({ label, value, tone }) => (
               <div key={label} className={STAT_CARD}>
                 <div className={STAT_LABEL}>{label}</div>
-                <div className={cn(STAT_VALUE, "text-[17px]", tone)}>{value}</div>
+                <div className={cn(STAT_VALUE, "text-[17px] leading-none", tone)}>{value}</div>
               </div>
             ))}
           </div>

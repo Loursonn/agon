@@ -95,7 +95,7 @@ export function CompetitionsDetailView({ competitions, onClose }: CompetitionsDe
             ].map(({ label, value, tone }) => (
               <div key={label} className={STAT_CARD}>
                 <div className={STAT_LABEL}>{label}</div>
-                <div className={cn(STAT_VALUE, "text-[20px]", tone)}>{value}</div>
+                <div className={cn(STAT_VALUE, "text-[20px] leading-none", tone)}>{value}</div>
               </div>
             ))}
           </div>
