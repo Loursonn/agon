@@ -3,7 +3,7 @@ import { addDays, localIsoDay } from "@shared/domain/dates";
 import { WELLNESS_ITEM_SHORT } from "@shared/domain/wellness";
 import { useWellnessHistory } from "@/features/shared/hooks/useWellness";
 import { wellnessTrend, TREND_ITEMS, type TrendItem } from "@/lib/wellnessTrend";
-import { ALL_BZ } from "@/lib/muscles";
+import { bodyZoneLabel } from "@/lib/bodyZones";
 import { cn } from "@/lib/utils";
 
 const LABEL: Record<TrendItem, string> = { ...WELLNESS_ITEM_SHORT, fatigue: "Récupération", doms: "Fraîcheur musc.", envie: "Envie" };
@@ -18,7 +18,7 @@ export function WellnessTrendCard({ athleteId }: { athleteId: string | null | un
   const today = localIsoDay();
   const { data } = useWellnessHistory(athleteId, { from: addDays(today, -27), includeArchived: false });
   const t = wellnessTrend(data ?? {}, today, n);
-  const zone = t.topZone ? ALL_BZ.find((z: { id: string; label: string }) => z.id === t.topZone!.id) : null;
+  const zone = t.topZone ? { label: bodyZoneLabel(t.topZone.id) } : null;
 
   return (
     <div className="flex flex-col gap-3.5 rounded-[14px] border border-agon-brd bg-agon-s1 px-4 py-3.5">
