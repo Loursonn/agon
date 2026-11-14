@@ -1,3 +1,4 @@
+import { KICKER } from "@/features/shared/components/seance/seanceUi";
 import { C } from "@/lib/theme";
 import { hyroxPictoColor } from "@/features/shared/components/hyroxStation";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
@@ -5,7 +6,7 @@ import { raceShortName, timeSplit } from "@/lib/hyrox/raceEvolution";
 import { compromisedFromTimes } from "@/lib/hyrox/raceWatch";
 import { formatMmSs } from "@/lib/time";
 
-const BOX = { background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 14px", marginBottom: 16 } as const;
+const BOX = { background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px", marginBottom: 16 } as const;
 const ROX_THRESHOLD = 7;
 const pctTxt = (p: number | null) => (p == null ? "—" : `${String(p).replace(".", ",")} %`);
 const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
@@ -24,7 +25,7 @@ export default function BilanTimeSplit({ races }: { races: HyroxResult[] }) {
     <>
       <div style={BOX}>
         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Où passe le temps</div>
+          <div style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Part course / stations / roxzone</div>
           <div style={{ display: "flex", gap: 12, fontSize: 10, color: C.tx3 }}>
             <span><span style={{ color: colors.run }}>■</span> Course</span>
             <span><span style={{ color: colors.stations }}>■</span> Stations</span>
@@ -64,7 +65,7 @@ export default function BilanTimeSplit({ races }: { races: HyroxResult[] }) {
 
       {withCost.length > 0 && (
         <div style={BOX}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Coût de la course compromise</div>
+          <div style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Coût de la course compromise</div>
           <div style={{ fontSize: 10, color: C.tx3, marginBottom: 10 }}>Perte moyenne par run après une station, vs allure du run 1</div>
           <div style={{ display: "grid", gridTemplateColumns: `repeat(${withCost.length}, minmax(0, 1fr))`, gap: 10 }}>
             {withCost.map(({ r, c }) => (

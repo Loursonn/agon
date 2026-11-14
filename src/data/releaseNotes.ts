@@ -38,6 +38,28 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-analyse-course-hyrox-montre",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Analyse de course HYROX : la montre se lit mieux",
+    summary: "La frise d'une course HYROX sépare la fréquence cardiaque, l'allure et la cadence, et l'évolution de ton athlète se lit d'un coup d'œil.",
+    sections: [
+      {
+        title: "Sur ordinateur",
+        points: [
+          "La frise de course montre les 17 segments en tête (R1 à R8 et les pictos des stations), puis trois pistes alignées : FC par zone, allure des runs et cadence, avec les départs des runs en repère.",
+          "Le bilan HYROX devient « Évolution HYROX » : chrono de chaque course (le plus rapide en haut), où passe le temps et position par station, rangés en trois parties.",
+        ],
+      },
+      {
+        title: "Sur le téléphone de ton athlète",
+        points: [
+          "L'analyse de course s'ouvre sur le chrono en grand, le rang et le profil, puis une frise lisible : cases numérotées, pictos des stations et durée de la course.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-coach-telephone-et-staff-peps",
     date: "2026-11-14",
     kind: "feature",

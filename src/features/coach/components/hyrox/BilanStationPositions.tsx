@@ -1,3 +1,4 @@
+import { KICKER } from "@/features/shared/components/seance/seanceUi";
 import { C } from "@/lib/theme";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
 import { raceShortName, type SegmentPosition } from "@/lib/hyrox/raceEvolution";
@@ -34,9 +35,9 @@ export default function BilanStationPositions({ rows, races, pctColor, refText }
   refText: string;
 }) {
   return (
-    <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 14px", marginBottom: 16 }}>
+    <div style={{ background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px", marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.tx }}>Position par station</div>
+        <div style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Top % par segment</div>
         <div style={{ fontSize: 10, color: C.tx3 }}>{races.map(raceShortName).join(" · ")}</div>
       </div>
       {rows.map((s) => (

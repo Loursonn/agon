@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C } from "@/lib/theme";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { CARD, KICKER, LABEL, MONO } from "@/features/shared/components/seance/seanceUi";
 import { hyroxPictoColor } from "@/features/shared/components/hyroxStation";
 import type { ActivityStream } from "@shared/activityFiles/stream";
@@ -44,6 +45,7 @@ export default function RaceCourseTab(props: {
   const { audience, analysis, stream, offset, sv1, sv2, attribution } = props;
   const coach = audience === "coach";
   const [selected, setSelected] = useState<string | null>(null);
+  const phone = useIsPhone();
   const sel = analysis.segments.find((s) => s.key === selected) ?? null;
   const nSeg = analysis.segments.filter((s) => s.kind !== "roxzone").length + 1;
   const hasCadence = !!stream?.cadence?.some((v) => v != null && v > 0);
@@ -51,20 +53,32 @@ export default function RaceCourseTab(props: {
 
   return (
     <>
-      {!coach && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: -4 }}>
-          <span style={{ ...KICKER, color: C.tx2 }}><span style={{ color: C.ac }}>01 —</span> Le film de ta course</span>
-          {attribution && <span style={{ ...LABEL, fontSize: 10.5 }}>{attribution}</span>}
+      {coach ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: -4 }}>
+          <span style={{ ...KICKER, color: C.tx2 }}><span style={{ color: C.ac }}>01 —</span> Frise de course · {nSeg} segments à l'échelle du temps</span>
+          <span style={{ fontSize: 12, color: C.tx3 }}>survoler un segment pour le détail</span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: -4 }}>
+          <span style={{ ...KICKER, color: C.tx2, whiteSpace: "nowrap" }}><span style={{ color: C.ac }}>01 —</span> Le film de ta course</span>
+          {attribution && <span style={{ ...MONO, fontSize: 10.5, color: C.tx3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{attribution}</span>}
         </div>
       )}
       <div style={{ ...CARD, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-        {coach && <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-          <span style={KICKER}>
-            {`01 — Frise de course · ${nSeg} segments à l'échelle du temps`}
-            <span style={{ color: C.tx3, textTransform: "none", letterSpacing: 0 }}> · survoler un segment pour le détail</span>
-          </span>
-          {attribution && <span style={{ ...LABEL, fontSize: 10 }}>{attribution}{sv2 != null ? ` · SV2 ${sv2}${sv1 != null ? ` · SV1 ${sv1}` : ""}` : ""}</span>}
-        </div>}
+        {coach && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 11.5, color: C.tx2 }}>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              <span><Swatch color={hyroxPictoColor("course")} /> Run 1 km</span>
+              <span><Swatch color={hyroxPictoColor("skierg")} /> Station</span>
+              <span><Swatch color={C.brdL} /> Roxzone{analysis.roxzoneEstimated ? " (répartie)" : ""}</span>
+              {stream && <span><Line color={zoneColor(2)} /> FC par zone</span>}
+              {stream?.speed && <span><Line color={FRISE_PACE_COLOR} /> Allure</span>}
+              <span><Line color={C.tx2} dashed /> Allure officielle</span>
+              {hasCadence && <span><Line color={FRISE_CADENCE_COLOR} /> Cadence</span>}
+            </div>
+            {attribution && <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}>{attribution}</span>}
+          </div>
+        )}
         {!coach && stream && sv2 != null && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={LABEL}>FC</span>
@@ -73,15 +87,16 @@ export default function RaceCourseTab(props: {
         )}
         <RaceFrise analysis={analysis} hr={stream ? { t: stream.t, v: stream.hr ?? [] } : null}
           cadence={coach && stream?.cadence ? { t: stream.t, v: stream.cadence } : null}
-          offset={offset} sv1={sv1} sv2={sv2} selected={selected} onSelect={(k) => setSelected(k || null)} curves={coach} hover={coach} />
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: C.tx3 }}>
-          <span><span style={{ color: hyroxPictoColor("course") }}>■</span> Run{coach ? " 1 km" : ""}</span>
-          <span><span style={{ color: hyroxPictoColor("skierg") }}>■</span> Station</span>
-          <span><span style={{ color: C.brdL }}>■</span> Roxzone{analysis.roxzoneEstimated ? " (répartie)" : ""}</span>
-          {stream && [1, 2, 3].map((z) => <span key={z}><span style={{ color: zoneColor(z) }}>■</span> Z{z}</span>)}
-          {coach && <span><span style={{ color: FRISE_PACE_COLOR }}>━</span> Allure (plus bas = plus lent)</span>}
-          {coach && hasCadence && <span><span style={{ color: FRISE_CADENCE_COLOR }}>━</span> Cadence</span>}
-        </div>
+          speed={coach && stream?.speed ? { t: stream.t, v: stream.speed } : null}
+          offset={offset} sv1={sv1} sv2={sv2} selected={selected} onSelect={(k) => setSelected(k || null)} curves={coach} hover={coach} compact={phone} />
+        {!coach && (
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: C.tx3 }}>
+            <span><span style={{ color: hyroxPictoColor("course") }}>■</span> Run</span>
+            <span><span style={{ color: hyroxPictoColor("skierg") }}>■</span> Station</span>
+            <span><span style={{ color: C.brdL }}>■</span> Roxzone{analysis.roxzoneEstimated ? " (répartie)" : ""}</span>
+            {stream && [1, 2, 3].map((z) => <span key={z}><span style={{ color: zoneColor(z) }}>■</span> Z{z}</span>)}
+          </div>
+        )}
         {sel
           ? <RaceSegmentDetail s={sel} fresh={analysis.freshPaceSPerKm} medianS={sel.kind === "roxzone" ? null : props.refOf(sel.key)?.p50_s ?? null} coach={coach} />
           : <div style={{ fontSize: 12, color: C.tx3 }}>{coach ? "Survole ou touche un segment pour voir son détail." : "Touche un segment pour voir son détail."}</div>}
@@ -118,4 +133,12 @@ export default function RaceCourseTab(props: {
       </Sources>
     </>
   );
+}
+
+function Swatch({ color }: { color: string }) {
+  return <span aria-hidden style={{ display: "inline-block", width: 9, height: 9, borderRadius: 2, background: color, marginRight: 4, verticalAlign: "-1px" }} />;
+}
+
+function Line({ color, dashed = false }: { color: string; dashed?: boolean }) {
+  return <span aria-hidden style={{ display: "inline-block", width: 14, height: 0, borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}`, marginRight: 5, verticalAlign: "3px" }} />;
 }
