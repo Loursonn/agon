@@ -1,7 +1,7 @@
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { C, alpha } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { useMemo, useState, type ReactNode } from "react";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { DayBars } from "@/features/coach/components/sante/SanteParts";
@@ -13,11 +13,14 @@ import {
   type Baseline, type HealthMetricDef, type HealthState,
 } from "@/lib/healthView";
 
-const CARD: CSSProperties = { borderRadius: 14, background: C.s1, border: `1px solid ${C.brd}`, padding: "12px 13px", minWidth: 0 };
-const STATE: Record<"low" | "high" | "normal", { label: string; color: string }> = {
-  normal: { label: "Normal", color: C.g },
-  low: { label: "↓ Bas", color: C.o },
-  high: { label: "↑ Haut", color: C.o },
+/** Carte sans padding ; CARD = avec le padding par défaut (12px 13px). */
+const CARD_BASE = "min-w-0 rounded-[14px] border border-agon-brd bg-agon-s1";
+const CARD = cn(CARD_BASE, "px-[13px] py-3");
+/** pill : fond 14 % + texte ; dot : pastille pleine. */
+const STATE: Record<"low" | "high" | "normal", { label: string; pill: string; dot: string }> = {
+  normal: { label: "Normal", pill: "bg-agon-succes/[0.14] text-agon-succes", dot: "bg-agon-succes" },
+  low: { label: "↓ Bas", pill: "bg-agon-alerte/[0.14] text-agon-alerte", dot: "bg-agon-alerte" },
+  high: { label: "↑ Haut", pill: "bg-agon-alerte/[0.14] text-agon-alerte", dot: "bg-agon-alerte" },
 };
 type Span = "day" | "7" | "28";
 
@@ -25,8 +28,8 @@ function StatePill({ state }: { state: HealthState }) {
   if (!state) return null;
   const s = STATE[state];
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, height: 20, padding: "0 7px", borderRadius: 999, background: alpha(s.color, 0.14), color: s.color, fontSize: 11, whiteSpace: "nowrap", flex: "none" }}>
-      <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />{s.label}
+    <span className={cn("inline-flex h-5 flex-none items-center gap-[5px] whitespace-nowrap rounded-full px-[7px] text-[11px]", s.pill)}>
+      <span aria-hidden className={cn("size-1.5 rounded-full", s.dot)} />{s.label}
     </span>
   );
 }
@@ -44,7 +47,7 @@ function Spark({ pts, base, h = 34, dots = false }: { pts: Array<{ v: number | n
   const last = [...pts].reverse().findIndex((p) => p.v != null);
   const li = pts.length - 1 - last;
   return (
-    <svg viewBox={`0 0 100 ${h}`} preserveAspectRatio="none" style={{ width: "100%", height: h, display: "block" }} aria-hidden>
+    <svg viewBox={`0 0 100 ${h}`} preserveAspectRatio="none" className="block w-full" style={{ height: h }} aria-hidden>
       {base && <rect x={0} width={100} y={y(base.high)} height={Math.max(1, y(base.low) - y(base.high))} fill={C.tx} opacity={0.06} />}
       <path d={d} fill="none" stroke={C.b} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
       {dots && pts.map((p, i) => p.v != null && <circle key={i} cx={x(i)} cy={y(p.v)} r={1.2} fill={C.b} />)}
@@ -94,12 +97,11 @@ export default function AthleteSantePage({ coachView, top, montreTitle, bottom }
   const sleepScore7 = seriesTo(sleepScores, day, 7);
 
   const tabs = (
-    <div style={{ display: "flex", padding: 3, borderRadius: 11, background: C.s2, fontSize: 12 }} role="tablist">
+    <div className="flex rounded-[11px] bg-agon-s2 p-[3px] text-[12px]" role="tablist">
       {([["day", "Jour"], ["7", "7 j"], ["28", "28 j"]] as const).map(([k, l]) => (
-        <button key={k} type="button" role="tab" aria-selected={span === k} onClick={() => setSpan(k)} style={{
-          flex: 1, height: 30, borderRadius: 8, border: span === k ? `1px solid ${C.brdL}` : "1px solid transparent",
-          background: span === k ? C.s1 : "transparent", color: span === k ? C.tx : C.tx3, fontFamily: "inherit", fontSize: 12, cursor: "pointer",
-        }}>{l}</button>
+        <button key={k} type="button" role="tab" aria-selected={span === k} onClick={() => setSpan(k)}
+          className={cn("h-[30px] flex-1 cursor-pointer rounded-[8px] border font-[inherit] text-[12px]", span === k ? "border-agon-brd-l bg-agon-s1 text-agon-tx" : "border-transparent bg-transparent text-agon-tx3")}
+        >{l}</button>
       ))}
     </div>
   );
@@ -109,35 +111,35 @@ export default function AthleteSantePage({ coachView, top, montreTitle, bottom }
     const vs = s28.map((p) => p.v).filter((v): v is number => v != null);
     const streak = streakOf(opened.values, day, opened.state);
     return (
-      <div style={{ maxWidth: 480, margin: coachView ? 0 : "0 auto" }}>
+      <div className={cn("max-w-[480px]", coachView ? "m-0" : "mx-auto my-0")}>
         {!coachView && <AthletePageHeader title={opened.def.label} titleSize={22} />}
-        <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <button type="button" onClick={() => setOpen(null)} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.tx3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>‹ Santé</button>
-          {opened.source && <div style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{opened.source}</div>}
+        <div className="flex flex-col gap-3 px-4 pb-10 pt-4">
+          <button type="button" onClick={() => setOpen(null)} className="cursor-pointer self-start border-none bg-none p-0 font-[inherit] text-[12.5px] text-agon-tx3">‹ Santé</button>
+          {opened.source && <div className="agon-mono text-[11px] text-agon-tx3">{opened.source}</div>}
           {tabs}
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ ...MONO, fontSize: 40, lineHeight: 1 }}>{fmtValue(opened.def, opened.v)}</span>
-            {opened.def.unit && opened.def.key !== "sleep" && <span style={{ ...MONO, fontSize: 13, color: C.tx3 }}>{opened.def.unit}</span>}
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="agon-mono text-[40px] leading-none">{fmtValue(opened.def, opened.v)}</span>
+            {opened.def.unit && opened.def.key !== "sleep" && <span className="agon-mono text-[13px] text-agon-tx3">{opened.def.unit}</span>}
             <StatePill state={opened.state} />
           </div>
-          {streak > 1 && <div style={{ fontSize: 13, color: C.o }}>{streak}ᵉ nuit {opened.state === "low" ? "sous" : "au-dessus de"} {coachView ? "sa" : "ta"} zone habituelle</div>}
-          <div style={CARD}>
+          {streak > 1 && <div className="text-[13px] text-agon-alerte">{streak}ᵉ nuit {opened.state === "low" ? "sous" : "au-dessus de"} {coachView ? "sa" : "ta"} zone habituelle</div>}
+          <div className={CARD}>
             <Spark pts={span === "day" ? s28 : seriesTo(opened.values, day, n)} base={opened.base} h={120} dots />
-            {opened.base && <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 8 }}>▒ {coachView ? "sa" : "ta"} zone habituelle · moyenne {fmtValue(opened.def, opened.base.mean)}{opened.def.key === "sleep" ? "" : ` ${opened.def.unit}`}</div>}
+            {opened.base && <div className="mt-2 text-[11.5px] text-agon-tx3">▒ {coachView ? "sa" : "ta"} zone habituelle · moyenne {fmtValue(opened.def, opened.base.mean)}{opened.def.key === "sleep" ? "" : ` ${opened.def.unit}`}</div>}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+          <div className="grid grid-cols-[repeat(3,1fr)] gap-2">
             {([["Plus bas", vs.length ? Math.min(...vs) : null], ["Moyenne", vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null], ["Plus haut", vs.length ? Math.max(...vs) : null]] as const).map(([k, v]) => (
-              <div key={k} style={CARD}>
-                <div style={{ fontSize: 11.5, color: C.tx3 }}>{k}</div>
-                <div style={{ ...MONO, fontSize: 18, marginTop: 4 }}>{fmtValue(opened.def, v)}<span style={{ fontSize: 11, color: C.tx3 }}> {opened.def.key === "sleep" ? "" : opened.def.unit}</span></div>
+              <div key={k} className={CARD}>
+                <div className="text-[11.5px] text-agon-tx3">{k}</div>
+                <div className="agon-mono mt-1 text-[18px]">{fmtValue(opened.def, v)}<span className="text-[11px] text-agon-tx3"> {opened.def.key === "sleep" ? "" : opened.def.unit}</span></div>
               </div>
             ))}
           </div>
-          <div style={{ ...CARD, padding: 14 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6 }}>C’est quoi ?</div>
-            <div style={{ fontSize: 12.5, color: C.tx2, lineHeight: 1.5 }}>{opened.def.explain}</div>
+          <div className={cn(CARD_BASE, "p-3.5")}>
+            <div className="mb-1.5 text-[14px] font-medium">C’est quoi ?</div>
+            <div className="text-[12.5px] leading-normal text-agon-tx2">{opened.def.explain}</div>
           </div>
-          <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>« Bas » ou « Haut » : comparé à {coachView ? "sa" : "ta"} propre zone habituelle des 28 derniers jours, jamais aux autres.</div>
+          <div className="text-[12px] leading-normal text-agon-tx3">« Bas » ou « Haut » : comparé à {coachView ? "sa" : "ta"} propre zone habituelle des 28 derniers jours, jamais aux autres.</div>
         </div>
       </div>
     );
@@ -149,35 +151,35 @@ export default function AthleteSantePage({ coachView, top, montreTitle, bottom }
   const coachWide = !!coachView && isDesktop;
   const montre = (
       <>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12.5, color: C.tx2 }}>
+        <div className="flex justify-between gap-2 text-[12.5px] text-agon-tx2">
           <span>{fmtDayShort(day, !!coachView)}</span>
-          {source && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{source}</span>}
+          {source && <span className="agon-mono text-[11px] text-agon-tx3">{source}</span>}
         </div>
         {tabs}
         {isLoading ? null : !days.length ? (
-          <div style={{ ...CARD, padding: 16, fontSize: 13, color: C.tx2, lineHeight: 1.5 }}>
+          <div className={cn(CARD_BASE, "p-4 text-[13px] leading-normal text-agon-tx2")}>
             Aucune donnée de montre pour l’instant. {coachView ? `${coachView.firstName} n’a pas relié de montre : sommeil, VFC et FC de repos arriveront ici chaque matin une fois sa montre reliée.` : "Relie ta montre dans Profil › Montres et données : sommeil, VFC et FC de repos arriveront ici chaque matin."}
           </div>
         ) : (
           <>
-            <button type="button" onClick={() => setOpen("sleep")} style={{ ...CARD, padding: 14, textAlign: "left", color: C.tx, fontFamily: "inherit", cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ flex: 1, fontSize: 13, color: C.tx2 }}>Sommeil</span>
+            <button type="button" onClick={() => setOpen("sleep")} className={cn(CARD_BASE, "cursor-pointer p-3.5 text-left font-[inherit] text-agon-tx")}>
+              <div className="flex items-center gap-2">
+                <span className="flex-1 text-[13px] text-agon-tx2">Sommeil</span>
                 <StatePill state={sleep.state} />
               </div>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginTop: 6 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ ...MONO, fontSize: 30, lineHeight: 1.1 }}>{fmtMinutes(sleep.v)}</div>
-                  <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 4 }}>
+              <div className="mt-1.5 flex items-end gap-3">
+                <div className="flex-1">
+                  <div className="agon-mono text-[30px] leading-[1.1]">{fmtMinutes(sleep.v)}</div>
+                  <div className="mt-1 text-[11.5px] text-agon-tx3">
                     {coachView
                       ? `${sleep.base ? `Moy. 28 j : ${fmtMinutes(sleep.base.mean)}` : "Moy. 28 j : —"}${sleepScoreMean != null ? ` · score ${Math.round(sleepScoreMean)}` : ""} · coucher ${hm(today?.sleepStartAt ?? null)} → lever ${hm(today?.sleepEndAt ?? null)}`
                       : <>{hm(today?.sleepStartAt ?? null)} → {hm(today?.sleepEndAt ?? null)}{sleep.base ? ` · moy. ${fmtMinutes(sleep.base.mean)}` : ""}</>}
                   </div>
                 </div>
                 {today?.sleepScore != null && (
-                  <div style={{ textAlign: "right" }}>
-                    <div><span style={{ ...MONO, fontSize: 22 }}>{Math.round(today.sleepScore)}</span><span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>/100</span></div>
-                    <div style={{ fontSize: 11, color: C.tx3 }}>score {today.attribution}</div>
+                  <div className="text-right">
+                    <div><span className="agon-mono text-[22px]">{Math.round(today.sleepScore)}</span><span className="agon-mono text-[11px] text-agon-tx3">/100</span></div>
+                    <div className="text-[11px] text-agon-tx3">score {today.attribution}</div>
                   </div>
                 )}
               </div>
@@ -192,16 +194,16 @@ export default function AthleteSantePage({ coachView, top, montreTitle, bottom }
                 return (
                   <>
                     {total > 0 && (
-                      <div aria-hidden style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", gap: 2, marginTop: 14 }}>
+                      <div aria-hidden className="mt-3.5 flex h-3 gap-0.5 overflow-hidden rounded-[6px]">
                         {phases.map((p) => (p.v ?? 0) > 0 && <span key={p.k} style={{ width: `${((p.v ?? 0) / total) * 100}%`, background: p.c }} />)}
                       </div>
                     )}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", marginTop: 10, fontSize: 12 }}>
+                    <div className="mt-2.5 grid grid-cols-[1fr_1fr] gap-x-3 gap-y-1.5 text-[12px]">
                       {phases.map((p) => (
-                        <div key={p.k} style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-                          <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: p.c, flex: "none" }} />
-                          <span style={{ color: C.tx2 }}>{p.k}</span>
-                          <span style={{ ...MONO, color: C.tx }}>{fmtMinutes(p.v)}</span>
+                        <div key={p.k} className="flex items-center gap-1.5 whitespace-nowrap">
+                          <span aria-hidden className="size-2 flex-none rounded-[2px]" style={{ background: p.c }} />
+                          <span className="text-agon-tx2">{p.k}</span>
+                          <span className="agon-mono text-agon-tx">{fmtMinutes(p.v)}</span>
                         </div>
                       ))}
                     </div>
@@ -209,45 +211,45 @@ export default function AthleteSantePage({ coachView, top, montreTitle, bottom }
                 );
               })()}
               {coachView && sleepScore7.some((p) => p.v != null) ? (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Score de sommeil · 7 nuits</div>
+                <div className="mt-2.5">
+                  <div className="mb-1.5 text-[11px] text-agon-tx3">Score de sommeil · 7 nuits</div>
                   <DayBars pts={sleepScore7} />
                 </div>
               ) : (
-                <div style={{ marginTop: 8 }}><Spark pts={sleep.series} base={sleep.base} /></div>
+                <div className="mt-2"><Spark pts={sleep.series} base={sleep.base} /></div>
               )}
             </button>
-            <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, minmax(0, 1fr))" : "1fr 1fr", gap: 8 }}>
+            <div className={cn("grid gap-2", isDesktop ? "grid-cols-4" : "grid-cols-[1fr_1fr]")}>
               {rest.map((m) => {
                 const missing = m.v == null && !m.series.some((p) => p.v != null);
                 return (
-                  <button key={m.def.key} type="button" disabled={missing} onClick={() => setOpen(m.def.key)} style={{ ...CARD, textAlign: "left", color: C.tx, fontFamily: "inherit", cursor: missing ? "default" : "pointer" }}>
-                    <div style={{ fontSize: 12, color: C.tx2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.def.label}</div>
+                  <button key={m.def.key} type="button" disabled={missing} onClick={() => setOpen(m.def.key)} className={cn(CARD, "text-left font-[inherit] text-agon-tx", missing ? "cursor-default" : "cursor-pointer")}>
+                    <div className="truncate text-[12px] text-agon-tx2">{m.def.label}</div>
                     {missing ? (
                       <>
-                        <div style={{ fontSize: 11.5, color: C.tx3, marginTop: 6 }}>Non fournie par cette montre</div>
-                        <div style={{ ...MONO, fontSize: 22, color: C.tx3, marginTop: 4 }}>—</div>
+                        <div className="mt-1.5 text-[11.5px] text-agon-tx3">Non fournie par cette montre</div>
+                        <div className="agon-mono mt-1 text-[22px] text-agon-tx3">—</div>
                       </>
                     ) : (
                       <>
-                        <div style={{ marginTop: 4, whiteSpace: "nowrap" }}>
-                          <span style={{ ...MONO, fontSize: 22 }}>{fmtValue(m.def, m.v)}</span>
-                          <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}> {m.def.unit}</span>
+                        <div className="mt-1 whitespace-nowrap">
+                          <span className="agon-mono text-[22px]">{fmtValue(m.def, m.v)}</span>
+                          <span className="agon-mono text-[11px] text-agon-tx3"> {m.def.unit}</span>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, minHeight: 20 }}>
+                        <div className="mt-1 flex min-h-5 items-center gap-1.5">
                           <StatePill state={m.state} />
-                          {m.base && <span style={{ fontSize: 11, color: C.tx3, whiteSpace: "nowrap" }}>moy. {coachView ? `28 j ${fmtValue(m.def, m.base.mean)}${m.def.unit && !m.def.unit.startsWith("/") ? ` ${m.def.unit}` : ""}` : fmtValue(m.def, m.base.mean)}</span>}
+                          {m.base && <span className="whitespace-nowrap text-[11px] text-agon-tx3">moy. {coachView ? `28 j ${fmtValue(m.def, m.base.mean)}${m.def.unit && !m.def.unit.startsWith("/") ? ` ${m.def.unit}` : ""}` : fmtValue(m.def, m.base.mean)}</span>}
                         </div>
-                        <div style={{ marginTop: 6 }}><Spark pts={m.series} base={m.base} h={26} /></div>
+                        <div className="mt-1.5"><Spark pts={m.series} base={m.base} h={26} /></div>
                       </>
                     )}
                   </button>
                 );
               })}
             </div>
-            <div style={{ fontSize: 11.5, color: C.tx3 }}>▒ {coachView ? "sa" : "ta"} moyenne · courbes sur {n} jours · touche une mesure</div>
+            <div className="text-[11.5px] text-agon-tx3">▒ {coachView ? "sa" : "ta"} moyenne · courbes sur {n} jours · touche une mesure</div>
             {coachView && (
-              <div style={{ fontSize: 11.5, color: C.tx3, lineHeight: 1.5 }}>
+              <div className="text-[11.5px] leading-normal text-agon-tx3">
                 Body Battery, score de sommeil et stress sont des scores Garmin : affichés pour information, Agon ne s’en sert dans aucun calcul.
               </div>
             )}
@@ -258,20 +260,20 @@ export default function AthleteSantePage({ coachView, top, montreTitle, bottom }
 
   if (coachWide) {
     return (
-      <div style={{ width: "100%", padding: "0 0 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="flex w-full flex-col gap-3 pb-10">
         {top}
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>{montreTitle}{montre}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>{bottom}</div>
+        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start gap-6">
+          <div className="flex min-w-0 flex-col gap-3">{montreTitle}{montre}</div>
+          <div className="flex min-w-0 flex-col gap-3">{bottom}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ width: "100%", maxWidth: isDesktop ? 1248 : 480, margin: "0 auto" }}>
+    <div className={cn("mx-auto w-full", isDesktop ? "max-w-[1248px]" : "max-w-[480px]")}>
       {!coachView && <AthletePageHeader title="Santé" titleSize={24} />}
-      <div style={{ padding: coachView ? "0 0 40px" : "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className={cn("flex flex-col gap-3", coachView ? "pb-10" : "px-4 pb-10 pt-4")}>
         {top}
         {montreTitle}
         {montre}
