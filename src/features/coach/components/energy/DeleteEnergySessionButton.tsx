@@ -6,7 +6,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
-import { C } from "@/lib/theme";
 import { useDeleteEnergySession } from "@/features/shared/hooks/useEnergySessions";
 
 export function DeleteEnergySessionDialog({ sessionId, sessionName, onClose }: {
@@ -19,23 +18,23 @@ export function DeleteEnergySessionDialog({ sessionId, sessionName, onClose }: {
   return createPortal(
     <div
       onClick={(e) => { e.stopPropagation(); onClose(); }}
-      style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4"
     >
-      <div onClick={(e) => e.stopPropagation()} style={{ background: C.s1, borderRadius: 6, padding: 24, width: 360, maxWidth: "100%", border: `1px solid ${C.brd}` }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 8 }}>Supprimer la séance ?</div>
-        <div style={{ fontSize: 12, color: C.tx3, marginBottom: 18, lineHeight: 1.5 }}>
+      <div onClick={(e) => e.stopPropagation()} className="w-[360px] max-w-full rounded-[6px] border border-agon-brd bg-agon-s1 p-6">
+        <div className="mb-2 text-[15px] font-bold text-agon-tx">Supprimer la séance ?</div>
+        <div className="mb-[18px] text-[12px] leading-[1.5] text-agon-tx3">
           « {sessionName} » sera retirée de la banque. Si elle est déjà programmée chez un athlète, elle reste dans son calendrier avec ses retours.
         </div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded border border-agon-brd bg-transparent px-3.5 py-[7px] text-[13px] text-agon-tx2"
           >
             Annuler
           </button>
           <button
             onClick={() => { deleteMutation.mutate(sessionId); onClose(); }}
-            style={{ padding: "7px 14px", borderRadius: 4, border: "none", background: C.rV, color: C.ink, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            className="cursor-pointer rounded bg-agon-erreur-vif px-3.5 py-[7px] text-[13px] font-semibold text-agon-ink"
           >
             Supprimer
           </button>
@@ -55,11 +54,7 @@ export function DeleteEnergySessionButton({ sessionId, sessionName }: { sessionI
         onClick={(e) => { e.stopPropagation(); setConfirm(true); }}
         title="Supprimer"
         aria-label={`Supprimer ${sessionName}`}
-        style={{
-          width: 28, height: 28, borderRadius: 4, flexShrink: 0,
-          border: `1px solid ${C.r}40`, background: C.rS, color: C.r,
-          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-        }}
+        className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded border border-agon-erreur/25 bg-agon-erreur-doux text-agon-erreur"
       >
         <Trash2 size={12} />
       </button>

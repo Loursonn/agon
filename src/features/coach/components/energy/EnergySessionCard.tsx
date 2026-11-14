@@ -3,7 +3,7 @@
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { C, H } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import SessionPreview from "./SessionPreview";
 import type { EnergySessionRow, EnergyGroup, SessionKind } from "@/types/energy";
 import { useVerifyEnergySession, useCreateEnergySession } from "@/features/shared/hooks/useEnergySessions";
@@ -16,16 +16,35 @@ import { DeleteEnergySessionDialog } from "./DeleteEnergySessionButton";
 
 // ── Kind badge colors ─────────────────────────────────────────────────────────
 
-const KIND_COLOR: Record<SessionKind | string, string> = {
-  vo2:        C.ac,
-  tempo:      C.b,
-  seuil:      C.o,
-  footing:    C.g,
-  fartlek:    C.o,
-  autre:      C.tx3,
-  custom:     C.ac,
-  specifique: H.miel,
+type KindTone = { stripe: string; badge: string; hover: string };
+
+/** Bandeau, pastille et survol par teinte (classes écrites en entier pour Tailwind). */
+const TONES = {
+  accent: { stripe: "bg-agon-accent", badge: "bg-agon-accent/[0.125] text-agon-accent",
+    hover: "hover:border-agon-accent/[0.376] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--agon-accent)_12.5%,transparent)]" },
+  info:   { stripe: "bg-agon-info", badge: "bg-agon-info/[0.125] text-agon-info",
+    hover: "hover:border-agon-info/[0.376] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--agon-info)_12.5%,transparent)]" },
+  alerte: { stripe: "bg-agon-alerte", badge: "bg-agon-alerte/[0.125] text-agon-alerte",
+    hover: "hover:border-agon-alerte/[0.376] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--agon-alerte)_12.5%,transparent)]" },
+  succes: { stripe: "bg-agon-succes", badge: "bg-agon-succes/[0.125] text-agon-succes",
+    hover: "hover:border-agon-succes/[0.376] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--agon-succes)_12.5%,transparent)]" },
+  tx3:    { stripe: "bg-agon-tx3", badge: "bg-agon-tx3/[0.125] text-agon-tx3",
+    hover: "hover:border-agon-tx3/[0.376] hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--agon-tx3)_12.5%,transparent)]" },
+} satisfies Record<string, KindTone>;
+
+const KIND_TONE: Record<SessionKind | string, KindTone> = {
+  vo2:        TONES.accent,
+  tempo:      TONES.info,
+  seuil:      TONES.alerte,
+  footing:    TONES.succes,
+  fartlek:    TONES.alerte,
+  autre:      TONES.tx3,
+  custom:     TONES.accent,
+  specifique: TONES.alerte,
 };
+
+const FIELD = "w-full rounded-[6px] border border-agon-brd bg-agon-s2 px-2.5 py-2 text-[13px] text-agon-tx";
+const BADGE = "rounded px-1.5 py-0.5 text-[9px] font-bold";
 
 const KIND_LABEL: Record<SessionKind | string, string> = {
   vo2:        "VO₂max",
@@ -44,40 +63,25 @@ function DotMenu({ onDuplicate, onDelete, onAssign }: { onDuplicate: () => void;
   const [open, setOpen] = useState(false);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="relative">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        style={{
-          background: "none", border: `1px solid ${C.brd}`, borderRadius: 6,
-          color: C.tx3, fontSize: 14, cursor: "pointer", padding: "2px 7px",
-          lineHeight: 1, fontFamily: "inherit",
-        }}
+        className="cursor-pointer rounded-[6px] border border-agon-brd bg-transparent px-[7px] py-0.5 text-[14px] leading-none text-agon-tx3"
       >
         •••
       </button>
       {open && (
-        <div style={{
-          position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 50,
-          background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 4,
-          minWidth: 140,
-          overflow: "hidden",
-        }}>
+        <div className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[140px] overflow-hidden rounded border border-agon-brd bg-agon-s1">
           {[
-            ...(onAssign ? [{ label: "Programmer", action: onAssign, color: C.g }] : []),
-            { label: "Dupliquer", action: onDuplicate, color: C.tx },
-            { label: "Supprimer", action: onDelete, color: C.r },
-          ].map(({ label, action, color }) => (
+            ...(onAssign ? [{ label: "Programmer", action: onAssign, tone: "text-agon-succes" }] : []),
+            { label: "Dupliquer", action: onDuplicate, tone: "text-agon-tx" },
+            { label: "Supprimer", action: onDelete, tone: "text-agon-erreur" },
+          ].map(({ label, action, tone }) => (
             <button
               key={label}
               onClick={(e) => { e.stopPropagation(); action(); setOpen(false); }}
-              style={{
-                display: "block", width: "100%", textAlign: "left",
-                padding: "9px 14px", background: "none", border: "none",
-                color, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+              className={cn("block w-full cursor-pointer bg-transparent px-3.5 py-[9px] text-left text-[12px] hover:bg-white/[0.04]", tone)}
             >
               {label}
             </button>
@@ -119,7 +123,7 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
 
   const flat   = expandIntervals(root);
   const totals = computeTotals(flat);
-  const kindColor = KIND_COLOR[session.session_kind] ?? C.tx3;
+  const tone = KIND_TONE[session.session_kind] ?? TONES.tx3;
   const kindLabel = session.session_kind === "specifique"
     ? (KIND_LABEL[session.custom_kind ?? ""] ?? session.custom_kind ?? "Spécifique")
     : session.session_kind === "custom" && session.custom_kind
@@ -148,56 +152,30 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
   return (
     <div
       onClick={handleClick}
-      style={{
-        background: C.s1,
-        border: `1px solid ${C.brd}`,
-        borderRadius: 6,
-        overflow: "hidden",
-        cursor: canEdit ? "pointer" : "default",
-        transition: "border-color 150ms, box-shadow 150ms",
-        display: "flex",
-        flexDirection: "column",
-      }}
-      onMouseEnter={(e) => {
-        if (canEdit) {
-          (e.currentTarget as HTMLElement).style.borderColor = kindColor + "60";
-          (e.currentTarget as HTMLElement).style.boxShadow = `0 0 0 1px ${kindColor}20`;
-        }
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = C.brd;
-        (e.currentTarget as HTMLElement).style.boxShadow = "none";
-      }}
+      className={cn(
+        "flex flex-col overflow-hidden rounded-[6px] border border-agon-brd bg-agon-s1 [transition:border-color_150ms,box-shadow_150ms]",
+        canEdit ? cn("cursor-pointer", tone.hover) : "cursor-default",
+      )}
     >
       {/* Top bar — kind color accent */}
-      <div style={{ height: 3, background: kindColor, opacity: 0.7 }} />
+      <div className={cn("h-[3px] opacity-70", tone.stripe)} />
 
-      <div style={{ padding: "10px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="flex flex-1 flex-col gap-1.5 px-3 py-2.5">
 
         {/* Header row */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: 13, fontWeight: 700, color: C.tx,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              marginBottom: 4,
-            }}>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-bold text-agon-tx">
               {session.name || "Sans titre"}
             </div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <div className="flex flex-wrap gap-1">
               {/* Kind badge */}
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                background: kindColor + "20", color: kindColor,
-              }}>
+              <span className={cn(BADGE, tone.badge)}>
                 {kindLabel}
               </span>
               {/* Verified badge */}
               {session.is_verified && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
-                  background: C.g + "20", color: C.g,
-                }}>
+                <span className={cn(BADGE, "bg-agon-succes/[0.125] text-agon-succes")}>
                   ✓ Vérifiée
                 </span>
               )}
@@ -205,17 +183,12 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
           </div>
 
           {/* Actions */}
-          <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+          <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
             {canVerify && !session.is_verified && (
               <button
                 onClick={() => verifyMutation.mutate({ id: session.id, verify: true })}
                 disabled={verifyMutation.isPending}
-                style={{
-                  padding: "4px 8px", borderRadius: 6,
-                  border: `1px solid ${C.g}50`, background: C.g + "12",
-                  color: C.g, fontSize: 10, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}
+                className="cursor-pointer rounded-[6px] border border-agon-succes/[0.314] bg-agon-succes/[0.071] px-2 py-1 text-[10px] font-semibold text-agon-succes"
               >
                 Vérifier
               </button>
@@ -232,17 +205,17 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
 
         {/* Mini preview */}
         {root.children.length > 0 ? (
-          <div style={{ pointerEvents: "none" }}>
+          <div className="pointer-events-none">
             <SessionPreview intervals={root} compact />
           </div>
         ) : (
-          <div style={{ height: 40, background: C.s2, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 10, color: C.tx3 }}>Aucun intervalle</span>
+          <div className="flex h-10 items-center justify-center rounded-[6px] bg-agon-s2">
+            <span className="text-[10px] text-agon-tx3">Aucun intervalle</span>
           </div>
         )}
 
         {/* Metadata footer */}
-        <div style={{ display: "flex", gap: 12, fontSize: 10, color: C.tx3, marginTop: 2 }}>
+        <div className="mt-0.5 flex gap-3 text-[10px] text-agon-tx3">
           {totals.durationS > 0 && (
             <span>{formatSLong(totals.durationS)}</span>
           )}
@@ -263,24 +236,18 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
       {showAssign && (
         <div
           onClick={(e) => e.stopPropagation()}
-          style={{
-            position: "fixed", inset: 0, zIndex: 100,
-            background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center",
-          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60"
         >
-          <div style={{ background: C.s1, borderRadius: 6, padding: 24, width: 340, border: `1px solid ${C.brd}` }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.tx, marginBottom: 16 }}>
+          <div className="w-[340px] rounded-[6px] border border-agon-brd bg-agon-s1 p-6">
+            <div className="mb-4 text-[15px] font-bold text-agon-tx">
               Programmer « {session.name} »
             </div>
 
-            <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Athlète</div>
+            <div className="mb-1.5 text-[11px] text-agon-tx3">Athlète</div>
             <select
               value={assignAthleteId}
               onChange={(e) => setAssignAthleteId(e.target.value)}
-              style={{
-                width: "100%", background: C.s2, border: `1px solid ${C.brd}`,
-                borderRadius: 6, color: C.tx, fontSize: 13, padding: "8px 10px", fontFamily: "inherit", marginBottom: 12,
-              }}
+              className={cn(FIELD, "mb-3")}
             >
               <option value="">Choisir un athlète…</option>
               {athletes.map((a) => (
@@ -288,22 +255,18 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
               ))}
             </select>
 
-            <div style={{ fontSize: 11, color: C.tx3, marginBottom: 6 }}>Date</div>
+            <div className="mb-1.5 text-[11px] text-agon-tx3">Date</div>
             <input
               type="date"
               value={assignDate}
               onChange={(e) => setAssignDate(e.target.value)}
-              style={{
-                width: "100%", background: C.s2, border: `1px solid ${C.brd}`,
-                borderRadius: 6, color: C.tx, fontSize: 13, padding: "8px 10px", fontFamily: "inherit",
-                boxSizing: "border-box",
-              }}
+              className={cn(FIELD, "box-border")}
             />
 
-            <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setShowAssign(false)}
-                style={{ padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.brd}`, background: "transparent", color: C.tx2, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                className="cursor-pointer rounded border border-agon-brd bg-transparent px-3.5 py-[7px] text-[13px] text-agon-tx2"
               >
                 Annuler
               </button>
@@ -319,12 +282,10 @@ export default function EnergySessionCard({ session, canEdit, canVerify, canDele
                   setShowAssign(false);
                 }}
                 disabled={!assignAthleteId || assignMutation.isPending}
-                style={{
-                  padding: "7px 14px", borderRadius: 4, border: "none",
-                  background: assignAthleteId ? C.g : C.tx3, color: C.tx,
-                  fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                  opacity: assignAthleteId ? 1 : 0.5,
-                }}
+                className={cn(
+                  "cursor-pointer rounded px-3.5 py-[7px] text-[13px] font-semibold text-agon-tx",
+                  assignAthleteId ? "bg-agon-succes opacity-100" : "bg-agon-tx3 opacity-50",
+                )}
               >
                 {assignMutation.isPending ? "…" : "Programmer"}
               </button>
