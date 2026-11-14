@@ -8,6 +8,7 @@ import AthleteTestPage from "@/features/athlete/pages/AthleteTestPage";
 import AlimPage from "@/features/athlete/pages/AlimPage";
 import AthleteHyroxPage from "@/features/athlete/pages/HyroxPage";
 import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 const BASE_TABS = [
   { key: "today",   label: "Aujourd'hui" },
@@ -26,9 +27,15 @@ export default function AthleteViewPage() {
   const { athleteProfile, athleteId } = useAthleteContext();
   const INNER_TABS = [...BASE_TABS, ...(athleteProfile?.is_hyrox_athlete ? [HYROX_TAB] : []), ...TAIL_TABS];
   const [tab, setTab] = useState<string>("today");
+  // Les pages athlète choisissent leur mise en page selon l'écran (`lg:`,
+  // useIsDesktop), pas selon ce cadre : sur ordinateur elles se mettent en
+  // colonnes. Un cadre de 480 px les écrasait (7 jours de 62 px, « Cette
+  // semaine » écrit lettre par lettre). Sur ordinateur, l'aperçu prend donc
+  // la largeur disponible, comme l'app de l'athlète sur ordinateur.
+  const isDesktop = useIsDesktop();
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+    <div style={{ maxWidth: isDesktop ? 1200 : 480, margin: "0 auto" }}>
       {/* Preview banner */}
       <div style={{
         padding: "6px 16px", background: C.acS,
@@ -61,12 +68,14 @@ export default function AthleteViewPage() {
         })}
       </div>
 
-      {tab === "today"   && <TodayPage />}
-      {tab === "program" && <ProgramPage />}
-      {tab === "test"    && <AthleteTestPage />}
-      {tab === "hyrox"   && <AthleteHyroxPage />}
-      {tab === "alim"    && <AlimPage />}
-      {tab === "profil"  && <ProfilPage />}
+      <div style={{ padding: isDesktop ? "0 24px" : undefined }}>
+        {tab === "today"   && <TodayPage />}
+        {tab === "program" && <ProgramPage />}
+        {tab === "test"    && <AthleteTestPage />}
+        {tab === "hyrox"   && <AthleteHyroxPage />}
+        {tab === "alim"    && <AlimPage />}
+        {tab === "profil"  && <ProfilPage />}
+      </div>
       <FicheViewerHost athleteId={athleteId} viewOnly />
     </div>
   );

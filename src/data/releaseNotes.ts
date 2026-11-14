@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-vue-athlete-ordinateur",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "« Vue athlète » lisible sur ordinateur",
+    summary: "L'aperçu de ce que voit ton athlète tenait dans une bande étroite : sur ordinateur, le programme de la semaine s'y écrasait (« Cette semaine » écrit à la verticale). Il prend maintenant toute la largeur, comme l'app de l'athlète sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Sur ordinateur, l'aperçu montre les écrans de l'athlète en grand ; sur tablette et téléphone, il garde le format téléphone.",
+          "Alimentation : sur un écran moyen, les glucides, lipides et protéines passent sous l'anneau du jour au lieu d'être tassés.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-staff-semaine-entiere",
     date: "2026-11-14",
     kind: "feature",

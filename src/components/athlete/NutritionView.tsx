@@ -403,7 +403,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
             )}
 
             {/* Total du jour + macros */}
-            <div style={{ background: C.s1, border: `1px solid ${C.brdL}`, borderRadius: isDesktop ? 16 : 14, padding: isDesktop ? "24px 28px" : 16, display: "flex", flexDirection: isDesktop ? "row" : "column", alignItems: isDesktop ? "center" : undefined, gap: isDesktop ? 36 : 16, ...(isDesktop ? { gridColumn: 1, gridRow: "1 / span 2" } : {}) }}>
+            <div style={{ background: C.s1, border: `1px solid ${C.brdL}`, borderRadius: isDesktop ? 16 : 14, padding: isDesktop ? "24px 28px" : 16, display: "flex", flexDirection: isDesktop ? "row" : "column", flexWrap: isDesktop ? "wrap" : undefined, alignItems: isDesktop ? "center" : undefined, gap: isDesktop ? 36 : 16, ...(isDesktop ? { gridColumn: 1, gridRow: "1 / span 2" } : {}) }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, flex: "none" }}>
                 <div style={{ position: "relative", width: 160, height: 160, flex: "none" }}>
                   <svg width="160" height="160" viewBox="0 0 160 160" aria-hidden>
@@ -429,7 +429,8 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
                 )}
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 18 : 16, flex: 1, minWidth: 0 }}>
+              {/* 260 px mini : en dessous, les macros passent sous l'anneau (sinon « / 360 g » s'écrivait sur 3 lignes). */}
+              <div style={{ display: "flex", flexDirection: "column", gap: isDesktop ? 18 : 16, flex: isDesktop ? "1 1 260px" : 1, minWidth: 0 }}>
               {macroTargets.map(m => {
                 const consumed = log[m.key] ?? null;
                 const target = m.targetG;
@@ -449,7 +450,7 @@ export default function NutritionView({ athleteId, bmr, nutritionStrategy, weigh
                         onChange={viewOnly ? undefined : (e => upd(m.key, e.target.value ? parseInt(e.target.value) : null))}
                         readOnly={viewOnly}
                       />
-                      <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{target != null ? `/ ${target} g` : "g"}</span>
+                      <span style={{ ...MONO, fontSize: 11, color: C.tx3, whiteSpace: "nowrap", flex: "none" }}>{target != null ? `/ ${target} g` : "g"}</span>
                       <span style={{ flex: 1 }} />
                       <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>{pct != null ? `${pct} %` : ""}</span>
                     </label>
