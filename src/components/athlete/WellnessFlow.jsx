@@ -6,15 +6,19 @@ import { WELL_ITEMS, calcScore, getReco, getAlerts } from "@/lib/wellness";
 import { useOptionalAthleteContext } from "@/features/shared/context/AthleteContext";
 import { loadDraft, saveDraft, wellnessDraftKey } from "@/lib/localDraft";
 import { BodyZoneMap } from "@/features/athlete/components/wellness/BodyZoneMap";
+import { PainZoneMap } from "@/features/athlete/components/wellness/PainZoneMap";
 import { DOMS_LEVEL_COLOR, PAIN_COLORS, levelsList } from "@/lib/bodyZones";
+import { notedPainLevels, painList, painSummary } from "@/lib/painZones";
+import { cleanWeightText, parseWeightText, weightToText } from "@/lib/weightInput";
 import { useYesterdayWorkout } from "@/features/athlete/hooks/useYesterdayWorkout";
 import { useWatchSleep } from "@/features/athlete/hooks/useWatchSleep";
 import { WellnessTrendCard } from "@/features/athlete/components/wellness/WellnessTrendCard";
 
 // ── Wellness du matin (planche « Wellness athlète » retenue, 12/11) ─────────
 // Écran 1 « Comment tu te sens » : readiness, nuit, 6 lignes (la 6ᵉ, envie de
-// s'entraîner, hors score). Écran 2 « Corps » : zones du corps notées 1-3,
-// douleur 0-10, malade, poids. Puis le bilan. Même enregistrement et même
+// s'entraîner, hors score). Écran 2 « Corps » : zones du corps notées 1-3
+// (courbatures), douleur oui / non puis 2ᵉ corps (zones de douleur notées
+// 0-10, 14/11), malade, poids. Puis le bilan. Même enregistrement et même
 // brouillon local qu'avant.
 
 const MONO_S = { fontFamily: "var(--agon-font-data)", fontVariantNumeric: "tabular-nums" };
@@ -148,14 +152,20 @@ function StepHeader({ step, total, title, subtitle, onBack, backLabel = "Retour"
 const bigBtn = (enabled, bg = "#FFC933") => ({ width: "100%", height: 54, borderRadius: 14, border: "none", background: enabled ? bg : "#27221D", color: enabled ? "#0E0C0A" : TX3, fontSize: 13, fontWeight: 600, cursor: enabled ? "pointer" : "default", fontFamily: "inherit" });
 
 /** Note « blessé / malade » lue par le coach (rubrique Blessé / malade), déduite des réponses. */
-function injuryNoteOf(sick, pain, levels) {
+function injuryNoteOf(sick, painLevels) {
   const parts = [];
   if (sick) parts.push("Malade ou fiévreux·se");
-  if (pain != null && pain > 0) {
-    const z = levelsList(levels).map((x) => x.label.toLowerCase());
-    parts.push(`Douleur ${pain}/10` + (z.length ? ` (${z.join(", ")})` : ""));
-  }
+  const p = painSummary(Object.fromEntries(Object.entries(painLevels).filter(([, v]) => v > 0)));
+  if (p) parts.push(`Douleur : ${p.charAt(0).toLowerCase()}${p.slice(1)}`);
   return parts.length ? parts.join(" · ") : null;
+}
+
+/** Douleur déjà saisie aujourd'hui : oui / non / pas répondu. */
+function initialPainOn(existing) {
+  if (!existing) return null;
+  if (existing.painLevels && Object.keys(existing.painLevels).length > 0) return true;
+  if (typeof existing.pain !== "number") return null;
+  return existing.pain > 0;
 }
 
 function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide = false }) {
@@ -176,7 +186,10 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
   const [selZone, setSelZone] = useState(null);
   // Séance d'hier (planche) : les courbatures y sont rattachées pour le coach.
   const { data: yesterday } = useYesterdayWorkout(athleteId);
-  const [pain, setPain] = useState(draft ? draft.pain ?? null : existing?.pain ?? null);
+  // Douleur (14/11) : oui / non, puis zones du 2ᵉ corps notées 0-10.
+  const [painOn, setPainOn] = useState(draft ? draft.painOn ?? null : initialPainOn(existing));
+  const [painDraft, setPainDraft] = useState(draft?.painLevels ?? (existing?.painLevels || {}));
+  const [selPain, setSelPain] = useState(null);
   const [sick, setSick] = useState(draft ? draft.sick ?? null : existing?.sick ?? null);
   const [coucher, setCoucher] = useState(draft?.coucher ?? (existing?.coucher || { h: 23, m: 0 }));
   const [reveil, setReveil] = useState(draft?.reveil ?? (existing?.reveil || { h: 7, m: 0 }));
@@ -184,9 +197,10 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
   const { data: watchSleep } = useWatchSleep(athleteId);
   const [manualSleep, setManualSleep] = useState(false);
   const fromWatch = !!watchSleep && !manualSleep;
-  const [poids, setPoids] = useState(draft?.poids ?? (existing?.poids || ""));
+  // Texte du champ, avec virgule (« 72,4 ») ; converti en nombre à l'enregistrement.
+  const [poids, setPoids] = useState(() => weightToText(draft?.poids ?? existing?.poids ?? ""));
   const prevPoids = (() => { if (!weightLog) return null; const d = new Date(); d.setDate(d.getDate() - 1); const k = String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0"); return weightLog[k] || null; })();
-  const snapshot = { step, vals, domsLevels: levels, pain, sick, coucher, reveil, poids };
+  const snapshot = { step, vals, domsLevels: levels, painOn, painLevels: painDraft, sick, coucher, reveil, poids };
   const snapJson = JSON.stringify(snapshot);
   const initialSnapRef = useRef(snapJson);
   useEffect(() => {
@@ -210,21 +224,28 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
   const fmtH = (h) => { const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`; };
   const ringColor = score != null ? reco.c : TX3;
 
-  const poidsOn = poids !== "" && poids != null;
+  const poidsKg = parseWeightText(poids);
+  const poidsOn = poids !== "";
   const zones = levelsList(levels);
-  const injComment = injuryNoteOf(sick, pain, levels);
+  const painLevels = painOn ? notedPainLevels(painDraft) : {};
+  const painZonesList = painList(painLevels);
+  // « Oui » sans zone notée : on demande de finir avant d'enregistrer.
+  const painIncomplete = painOn === true && (painList(painDraft).length === 0 || painList(painDraft).some((z) => z.level == null));
+  const painIncompleteLabel = painList(painDraft).length === 0 ? "Touche la zone douloureuse" : "Note ta douleur de 0 à 10";
+  const pain = painOn === false ? 0 : painOn === true ? (painZonesList.length ? Math.max(...painZonesList.map((z) => z.level)) : null) : null;
+  const injComment = injuryNoteOf(sick, painLevels);
   const save = () => onSave({
             ...vals,
             domsZones: zones.length ? zones.map((z) => z.id) : domsZones,
             domsPoints,
             domsLevels: levels,
-            pain, sick,
+            pain, painLevels, sick,
             // Rattachement seulement s'il y a des courbatures notées.
             domsWorkout: yesterday && Object.keys(levels).length > 0 ? { id: yesterday.id, name: yesterday.name } : null,
             coucher: fromWatch && watchSleep.start ? watchSleep.start : coucher,
             reveil: fromWatch && watchSleep.end ? watchSleep.end : reveil,
             sleepDur,
-            poids: +poids || null, score,
+            poids: poidsKg, score,
             injComment,
             sleepInterrupt: existing?.sleepInterrupt ?? null,
             sleepInterruptNote: existing?.sleepInterruptNote ?? null,
@@ -278,27 +299,20 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
   ));
   const bodyBlock = (
     <>
+    <div className="flex items-baseline justify-between">
+      <span style={KICK_S}>Courbatures</span>
+      <span className="text-[11.5px] text-agon-tx3">muscles sollicités hier</span>
+    </div>
     <BodyZoneMap levels={levels} onChange={setLevels} selected={selZone} onSelect={setSelZone} />
 
-    <div style={{ ...CARD_S, display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", whiteSpace: "nowrap" }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>Douleur</span>
-        <span style={{ fontSize: 11.5, color: TX3 }}>autre que les courbatures</span>
+    <div className="flex items-center gap-agon-md rounded-[14px] border border-agon-brd bg-agon-s1 px-[14px] py-agon-md">
+      <div className="min-w-0 flex-1">
+        <div className="text-agon-base font-medium text-agon-tx">Douleur</div>
+        <div className="mt-[2px] text-[11.5px] text-agon-tx3">Autre que les courbatures</div>
       </div>
-      <div role="radiogroup" aria-label="Douleur de 0 à 10" style={{ display: "flex", gap: 3 }}>
-        {PAIN_COLORS.map((col, n) => {
-          const sel = pain === n;
-          return (
-            <button key={n} type="button" role="radio" aria-checked={sel} onClick={() => setPain(n)}
-              style={{ flex: 1, minWidth: 0, height: 36, borderRadius: 8, padding: 0, ...MONO_S, fontSize: 13, cursor: "pointer", border: sel ? "none" : "1px solid " + col + "40", background: sel ? col : col + "14", color: sel ? "#0E0C0A" : col, fontWeight: sel ? 500 : 400 }}>
-              {n}
-            </button>
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: TX3 }}><span>Aucune</span><span>Insupportable</span></div>
-      <div style={{ fontSize: 11.5, color: TX3 }}>Au-dessus de 0, tu touches la zone sur la carte.</div>
+      <YesNo value={painOn} onYes={() => setPainOn(true)} onNo={() => { setPainOn(false); setSelPain(null); }} />
     </div>
+    {painOn === true && <PainZoneMap levels={painDraft} onChange={setPainDraft} selected={selPain} onSelect={setSelPain} />}
 
     <div style={{ ...CARD_S, display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>Malade ou fiévreux·se ?</div>
@@ -310,10 +324,10 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
         <span style={KICK_S}>Poids</span>
         <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 4 }}>
           <input
-            type="number" inputMode="decimal" step="0.1" aria-label="Poids en kg"
-            value={poids} onChange={(e) => setPoids(e.target.value)}
-            placeholder={prevPoids ? String(prevPoids).replace(".", ",") : "—"}
-            style={{ width: `${Math.max(String(poids !== "" && poids != null ? poids : prevPoids ?? "—").length, 1) + 0.6}ch`, padding: 0, border: "none", background: "transparent", color: "#FFFFFF", ...MONO_S, fontSize: 24, outline: "none" }}
+            type="text" inputMode="decimal" autoComplete="off" enterKeyHint="done" aria-label="Poids en kg"
+            value={poids} onChange={(e) => setPoids(cleanWeightText(e.target.value))}
+            placeholder={prevPoids ? weightToText(prevPoids) : "—"}
+            style={{ width: `${Math.max((poids !== "" ? poids : prevPoids ? weightToText(prevPoids) : "—").length, 1) + 0.6}ch`, padding: 0, border: "none", background: "transparent", color: "#FFFFFF", ...MONO_S, fontSize: 24, outline: "none" }}
           />
           <span style={{ ...MONO_S, fontSize: 11, color: TX3 }}>kg</span>
         </div>
@@ -374,8 +388,8 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
             {bodyBlock}
             {injComment && <div style={{ ...CARD_S, borderColor: "rgba(255,59,31,0.45)", fontSize: 13, color: "#FFFFFF" }}><span style={{ ...KICK_S, color: "#FF3B1F", display: "block", marginBottom: 4 }}>Pour ton coach</span>{injComment}</div>}
             {allAnswered && alerts.map((a, i) => <div key={i} style={{ padding: "8px 12px", borderRadius: 10, background: C.o + "14", border: "1px solid " + C.o + "40", fontSize: 12, color: "#FFFFFF" }}>{a}</div>)}
-            <button type="button" disabled={!allAnswered} onClick={save} style={{ ...bigBtn(allAnswered), marginTop: 10 }}>
-              {allAnswered ? "Enregistrer mon wellness" : `Encore ${ROWS.length - answered} ligne${ROWS.length - answered > 1 ? "s" : ""}`}
+            <button type="button" disabled={!allAnswered || painIncomplete} onClick={save} style={{ ...bigBtn(allAnswered && !painIncomplete), marginTop: 10 }}>
+              {!allAnswered ? `Encore ${ROWS.length - answered} ligne${ROWS.length - answered > 1 ? "s" : ""}` : painIncomplete ? painIncompleteLabel : "Enregistrer mon wellness"}
             </button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, position: "sticky", top: 24 }}>
@@ -414,7 +428,9 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
         <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px 20px 20px" }}>
           {bodyBlock}
 
-          <button type="button" onClick={() => setStep(2)} style={{ ...bigBtn(true), marginTop: 6 }}>Voir mon bilan</button>
+          <button type="button" disabled={painIncomplete} onClick={() => setStep(2)} style={{ ...bigBtn(!painIncomplete), marginTop: 6 }}>
+            {painIncomplete ? painIncompleteLabel : "Voir mon bilan"}
+          </button>
         </div>
       </div>
     );
@@ -451,7 +467,17 @@ function WellnessFlow({ existing, onSave, sleepTarget, weightLog, onClose, wide 
             <div style={{ ...MONO_S, fontSize: 18, color: pain != null ? PAIN_COLORS[pain] : TX3 }}>{pain ?? "—"}<span style={{ fontSize: 10, color: TX3 }}>/10</span></div>
           </div>
         </div>
-        {poids !== "" && poids != null && <div style={{ ...CARD_S, fontSize: 13, color: TX2 }}>Poids à jeun : <span style={{ ...MONO_S, color: "#FFFFFF" }}>{String(poids).replace(".", ",")} kg</span></div>}
+        {poidsKg != null && <div style={{ ...CARD_S, fontSize: 13, color: TX2 }}>Poids à jeun : <span style={{ ...MONO_S, color: "#FFFFFF" }}>{weightToText(poidsKg)} kg</span></div>}
+        {painZonesList.length > 0 && (
+          <div className="flex flex-wrap items-center gap-[6px] rounded-[14px] border border-agon-rouge/30 bg-agon-s1 px-[14px] py-agon-md">
+            <span style={{ ...KICK_S, marginRight: 4 }}>Douleur</span>
+            {painZonesList.map((z) => (
+              <span key={z.id} className="flex h-7 items-center gap-[6px] rounded-full px-[10px] text-agon-sm text-agon-tx" style={{ background: PAIN_COLORS[z.level] + "1F", border: "1px solid " + PAIN_COLORS[z.level] + "55" }}>
+                <span className="h-2 w-2 rounded-full" style={{ background: PAIN_COLORS[z.level] }} />{z.label}<span className="font-data text-agon-tx3">{z.level}/10</span>
+              </span>
+            ))}
+          </div>
+        )}
         {zones.length > 0 && (
           <div style={{ ...CARD_S, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
             <span style={{ ...KICK_S, marginRight: 4 }}>Courbatures</span>

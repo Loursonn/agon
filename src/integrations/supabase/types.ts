@@ -5177,6 +5177,7 @@ export type Database = {
           fatigue: number | null
           injury_note: string | null
           pain: number | null
+          pain_levels: Json
           score: number | null
           sick: boolean | null
           sleep_hours: number | null
@@ -5205,6 +5206,7 @@ export type Database = {
           fatigue?: number | null
           injury_note?: string | null
           pain?: number | null
+          pain_levels?: Json
           score?: number | null
           sick?: boolean | null
           sleep_hours?: number | null
@@ -5233,6 +5235,7 @@ export type Database = {
           fatigue?: number | null
           injury_note?: string | null
           pain?: number | null
+          pain_levels?: Json
           score?: number | null
           sick?: boolean | null
           sleep_hours?: number | null
@@ -6021,6 +6024,7 @@ export type Database = {
           fatigue: number | null
           injury_note: string | null
           pain: number | null
+          pain_levels: Json
           score: number | null
           sick: boolean | null
           sleep_hours: number | null

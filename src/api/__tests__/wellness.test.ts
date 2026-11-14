@@ -112,6 +112,7 @@ describe("lecture (table wellness_entries)", () => {
       domsLevels: {},
       envie: null,
       pain: null,
+      painLevels: {},
       sick: null,
       domsWorkout: null,
       injuryNote: "Genou",

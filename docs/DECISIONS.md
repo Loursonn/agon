@@ -2488,3 +2488,17 @@ et son README.
   accord IA, politique de confidentialité, liste des sous-traitants (`LEGAL_VERSION` 2026-11-14, sans
   re-sollicitation), registre, AIPD, fiche stores.
 - Inchangé : rien des montres Garmin et COROS ne part vers l'IA ; accord IA réservé aux 18 ans et plus.
+
+## 2026-11-14 — Wellness : carte douleur séparée des courbatures, poids à virgule
+
+- Demande d'Hugo : « Douleur : oui / non », puis un **2ᵉ corps** (fond rouge, zones articulaires et dos : cou,
+  épaule, coude, poignet, thorax, abdomen, hanche, cuisse, genou, tibia, cheville, nuque, haut du dos, lombaires,
+  fessier, ischios, mollet, Achille), distinct de celui des courbatures (muscles). **Plusieurs zones, une note
+  0-10 par zone** ; repères sous l'échelle : 0 aucune, 1-3 gêne, 4 douleur, 10 insupportable.
+- Stockage : `asp:wh` garde `painLevels: { zone: note }` ; colonne `wellness_entries.pain_levels` (migration
+  `20261115120000`, appliquée en prod avec l'accord d'Hugo). `pain` reste la note du jour = la plus forte des
+  zones (feu du matin inchangé). Douleurs saisies avant : **gardées telles quelles**, sans zone.
+- Coach : pastilles par zone dans le détail du jour (Retours), zone la plus forte dans le panneau wellness, note
+  « Blessé / malade » réécrite avec zones et notes. Jamais transmis à l'IA.
+- Poids du wellness : champ texte à clavier décimal ; l'athlète tape « 72,4 », le stockage reçoit 72.4
+  (`src/lib/weightInput.ts`).

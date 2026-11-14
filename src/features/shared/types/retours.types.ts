@@ -60,6 +60,8 @@ export interface WellnessDay {
   domsLevels?: Record<string, 1 | 2 | 3>;
   envie?: number | null;
   pain?: number | null;
+  /** Carte douleur : zone → note 0-10. */
+  painLevels?: Record<string, number>;
   sick?: boolean | null;
   /** Séance de la veille à laquelle les courbatures sont rattachées. */
   domsWorkout?: { id: string; name: string | null } | null;

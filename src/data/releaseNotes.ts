@@ -38,6 +38,47 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-wellness-poids-virgule",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Wellness : le poids se tape avec une virgule",
+    summary: "Sur téléphone, l'athlète peut écrire 72,4 kg dans son wellness du matin : la virgule n'efface plus la pesée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le champ Poids du wellness ouvre le clavier chiffres avec la virgule et garde la décimale (72,4).",
+          "La pesée arrive bien dans la courbe de poids de l'athlète, comme avant.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-wellness-carte-douleur",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Wellness : la douleur a sa propre carte du corps",
+    summary:
+      "Le matin, l'athlète répond « Douleur : oui / non ». Si oui, il touche la zone sur un 2ᵉ corps (genou, cheville, lombaires…), distinct de celui des courbatures, et la note de 0 à 10.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Deux cartes séparées : courbatures (muscles sollicités la veille) et douleur (articulations, dos, tendons), pour ne plus confondre les deux.",
+          "Une note de 0 à 10 par zone, avec les repères sous l'échelle : 0 aucune, 1 à 3 gêne, 4 douleur, 10 insupportable. Plusieurs zones possibles.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Dans les Retours, le détail du jour affiche une pastille par zone douloureuse (« Douleur genou · 6/10 »), à côté des courbatures.",
+          "La note « Blessé / malade » reprend les zones et leurs notes ; le feu du matin compte la zone la plus douloureuse.",
+          "Les douleurs saisies avant aujourd'hui restent affichées telles quelles, sans zone.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-citation-sans-jaime",
     date: "2026-11-14",
     kind: "fix",

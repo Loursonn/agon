@@ -195,3 +195,25 @@ describe("séance d'hier rattachée aux courbatures", () => {
     expect("domsWorkout" in toLegacyEntry(parseWellnessEntry({ fatigue: 3 }, "20261112")!)).toBe(false);
   });
 });
+
+describe("carte douleur (14/11) : zones notées 0-10", () => {
+  it("lit les zones, écarte les notes hors échelle, la note du jour = la plus forte", () => {
+    const e = parseWellnessEntry({ fatigue: 3, pain: 2, painLevels: { genou: 6, lombaires: 3, cou: 11, coude: "4", hanche: 2.5 } }, "20261114")!;
+    expect(e.painLevels).toEqual({ genou: 6, lombaires: 3 });
+    expect(e.pain).toBe(6);
+  });
+  it("ancienne saisie (note seule, sans zone) : gardée telle quelle", () => {
+    const e = parseWellnessEntry({ fatigue: 3, pain: 5 }, "20261110")!;
+    expect(e.painLevels).toEqual({});
+    expect(e.pain).toBe(5);
+    expect("painLevels" in toLegacyEntry(e)).toBe(false);
+  });
+  it("réécrit et relit depuis la table", () => {
+    const e = parseWellnessEntry({ pain: 0, painLevels: { genou: 4 } }, "20261114")!;
+    expect(toLegacyEntry(e)).toMatchObject({ pain: 4, painLevels: { genou: 4 } });
+    const row = wellnessRowToEntry({ day: "2026-11-14", pain: 4, pain_levels: { genou: 4, x: "a" } } as never)!;
+    expect(row.painLevels).toEqual({ genou: 4 });
+    expect(row.pain).toBe(4);
+    expect(wellnessRowToEntry({ day: "2026-11-14", pain: 0 } as never)?.painLevels).toEqual({});
+  });
+});

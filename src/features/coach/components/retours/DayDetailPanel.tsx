@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DOMS_LEVEL_COLOR, DOMS_LEVEL_LABEL, levelsList } from "@/lib/bodyZones";
+import { DOMS_LEVEL_COLOR, DOMS_LEVEL_LABEL, PAIN_COLORS, levelsList } from "@/lib/bodyZones";
 import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { X, Moon, Sunrise, CheckCircle2, Zap, ChevronDown, ChevronUp, Footprints, BarChart2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -10,6 +10,7 @@ import { wellnessView } from "@/lib/wellness";
 import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL } from "@shared/domain/wellness";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsList } from "./VideoRequestsList";
+import { painList } from "@/lib/painZones";
 import type { WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
 /** Activité libre : patine de la charte (ancienne sarcelle). */
@@ -174,12 +175,14 @@ function SleepTunnel({ wellness }: { wellness: WellnessDay }) {
 function DomsDisplay({ wellness }: { wellness: WellnessDay }) {
   const leveled = levelsList(wellness.domsLevels);
   const zones = wellness.domsZones;
+  // Carte douleur (2ᵉ corps) : une pastille rouge par zone ; ancienne saisie : la note seule.
+  const painZones = painList(wellness.painLevels).filter((z) => z.level != null && z.level > 0);
   const extras = [
-    wellness.pain != null ? `Douleur ${wellness.pain}/10` : null,
+    wellness.pain != null && painZones.length === 0 ? `Douleur ${wellness.pain}/10` : null,
     wellness.envie != null ? `Envie ${wellness.envie}/5` : null,
     wellness.sick ? "Malade" : null,
   ].filter(Boolean) as string[];
-  if (leveled.length > 0 || extras.length > 0) {
+  if (leveled.length > 0 || extras.length > 0 || painZones.length > 0) {
     return (
       <div className="mt-4">
         <div className={cn(SECTION_LABEL, "mb-1.5")}>
@@ -192,6 +195,14 @@ function DomsDisplay({ wellness }: { wellness: WellnessDay }) {
             }}>
               <span className="size-[7px] rounded-full" style={{ background: DOMS_LEVEL_COLOR[z.level] }} />
               {z.label} · {DOMS_LEVEL_LABEL[z.level].toLowerCase()}
+            </span>
+          ))}
+          {painZones.map((z) => (
+            <span key={"p-" + z.id} className="inline-flex items-center gap-[5px] rounded-full border px-[9px] py-[3px] text-[10px] text-agon-tx" style={{
+              background: PAIN_COLORS[z.level!] + "1F", borderColor: PAIN_COLORS[z.level!] + "55",
+            }}>
+              <span className="size-[7px] rounded-full" style={{ background: PAIN_COLORS[z.level!] }} />
+              Douleur {z.label.toLowerCase()} · {z.level}/10
             </span>
           ))}
           {extras.map((t) => (

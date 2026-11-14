@@ -87,6 +87,8 @@ export interface WellnessData {
   domsLevels?: Record<string, 1 | 2 | 3>;
   envie?: number | null;
   pain?: number | null;
+  /** Carte douleur : zone → note 0-10. */
+  painLevels?: Record<string, number>;
   sick?: boolean | null;
   injComment?: string;
 }

@@ -4,7 +4,8 @@ import { C, token } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import type { ReadinessScore } from "@/features/shared/hooks/useReadinessScore";
 import type { WellnessData } from "@/features/shared/types/athlete";
-import { DOMS_LEVEL_COLOR, levelsList } from "@/lib/bodyZones";
+import { DOMS_LEVEL_COLOR, PAIN_COLORS, levelsList } from "@/lib/bodyZones";
+import { painList } from "@/lib/painZones";
 import type { LightResult } from "@shared/domain/wellnessLight";
 import { WellnessLightBadge } from "@/features/shared/components/WellnessLightBadge";
 
@@ -85,6 +86,8 @@ export function TodayWellnessCard({
   const envie = typeof wellness?.envie === "number" ? wellness.envie : null;
   const pain = typeof wellness?.pain === "number" && wellness.pain > 0 ? wellness.pain : null;
   const sick = wellness?.sick === true;
+  // Carte douleur : une pastille par zone (ancienne saisie : la note seule).
+  const painZones = painList(wellness?.painLevels).filter((z) => z.level != null && z.level > 0);
   const chip = (key: string, text: string, col: string) => (
     <span key={key} className="agon-mono whitespace-nowrap rounded-full border px-[9px] py-[3px] text-[11px]" style={{ color: col, borderColor: `${col}66`, background: `${col}1A` }}>{text}</span>
   );
@@ -139,7 +142,8 @@ export function TodayWellnessCard({
         {(envie != null || pain != null || sick || zones.length > 0) && (
           <div className="flex flex-wrap gap-1.5">
             {envie != null && chip("envie", `Envie ${envie}/5`, itemColor(envie))}
-            {pain != null && chip("pain", `Douleur ${pain}/10`, pain >= 6 ? C.rouge : pain >= 3 ? C.o : C.ac)}
+            {painZones.map((z) => chip("pain-" + z.id, `${z.label} ${z.level}/10`, PAIN_COLORS[z.level!]))}
+            {pain != null && painZones.length === 0 && chip("pain", `Douleur ${pain}/10`, pain >= 6 ? C.rouge : pain >= 3 ? C.o : C.ac)}
             {sick && chip("sick", "Malade", C.rouge)}
             {zones.map((z) => chip(z.id, z.label, DOMS_LEVEL_COLOR[z.level]))}
           </div>

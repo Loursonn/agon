@@ -2097,6 +2097,7 @@ CREATE TABLE IF NOT EXISTS "public"."wellness_entries" (
     "doms_levels" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     "doms_workout_id" "uuid",
     "doms_workout_name" "text",
+    "pain_levels" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
     CONSTRAINT "wellness_entries_doms_check" CHECK ((("doms" >= (1)::numeric) AND ("doms" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_doms_levels_check" CHECK (("jsonb_typeof"("doms_levels") = 'object'::"text")),
     CONSTRAINT "wellness_entries_doms_points_check" CHECK (("jsonb_typeof"("doms_points") = 'array'::"text")),
@@ -2105,6 +2106,7 @@ CREATE TABLE IF NOT EXISTS "public"."wellness_entries" (
     CONSTRAINT "wellness_entries_envie_check" CHECK ((("envie" >= (1)::numeric) AND ("envie" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_fatigue_check" CHECK ((("fatigue" >= (1)::numeric) AND ("fatigue" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_pain_check" CHECK ((("pain" >= 0) AND ("pain" <= 10))),
+    CONSTRAINT "wellness_entries_pain_levels_check" CHECK (("jsonb_typeof"("pain_levels") = 'object'::"text")),
     CONSTRAINT "wellness_entries_sleep_hours_check" CHECK ((("sleep_hours" >= (0)::numeric) AND ("sleep_hours" <= (24)::numeric))),
     CONSTRAINT "wellness_entries_sommeil_check" CHECK ((("sommeil" >= (1)::numeric) AND ("sommeil" <= (5)::numeric))),
     CONSTRAINT "wellness_entries_stress_check" CHECK ((("stress" >= (1)::numeric) AND ("stress" <= (5)::numeric))),
@@ -2175,9 +2177,20 @@ BEGIN
     SELECT jsonb_object_agg(z.k, (z.v #>> '{}')::smallint)
       FROM jsonb_each(CASE WHEN jsonb_typeof(p_v->'domsLevels') = 'object' THEN p_v->'domsLevels' ELSE '{}'::jsonb END) AS z(k, v)
      WHERE jsonb_typeof(z.v) = 'number' AND (z.v #>> '{}')::numeric IN (1, 2, 3)), '{}'::jsonb);
-  r.pain := CASE WHEN public.health_num(p_v->'pain') BETWEEN 0 AND 10
-                  AND public.health_num(p_v->'pain') = trunc(public.health_num(p_v->'pain'))
-                 THEN public.health_num(p_v->'pain')::smallint END;
+  -- Carte douleur (2ᵉ corps, 14/11) : { zone: 0..10 entier }, le reste écarté.
+  r.pain_levels := coalesce((
+    SELECT jsonb_object_agg(z.k, (z.v #>> '{}')::smallint)
+      FROM jsonb_each(CASE WHEN jsonb_typeof(p_v->'painLevels') = 'object' THEN p_v->'painLevels' ELSE '{}'::jsonb END) AS z(k, v)
+     WHERE btrim(z.k) <> '' AND length(z.k) <= 40
+       AND jsonb_typeof(z.v) = 'number'
+       AND (z.v #>> '{}')::numeric BETWEEN 0 AND 10
+       AND (z.v #>> '{}')::numeric = trunc((z.v #>> '{}')::numeric)), '{}'::jsonb);
+  -- Note du jour : la plus forte des zones s'il y en a (`painOf` du domaine), sinon la note seule.
+  r.pain := CASE
+    WHEN r.pain_levels <> '{}'::jsonb THEN (SELECT max((v #>> '{}')::smallint) FROM jsonb_each(r.pain_levels) AS t(k, v))
+    WHEN public.health_num(p_v->'pain') BETWEEN 0 AND 10
+     AND public.health_num(p_v->'pain') = trunc(public.health_num(p_v->'pain'))
+    THEN public.health_num(p_v->'pain')::smallint END;
   r.sick := CASE WHEN jsonb_typeof(p_v->'sick') = 'boolean' THEN (p_v->>'sick')::boolean END;
   -- Séance de la veille à laquelle les courbatures sont rattachées (planche wellness).
   IF jsonb_typeof(p_v->'domsWorkout') = 'object'
@@ -2401,10 +2414,10 @@ BEGIN
   )
   INSERT INTO public.wellness_entries AS t (
     athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours,
-    sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name)
+    sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name, pain_levels)
   SELECT p_athlete, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours,
          sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived,
-         envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name
+         envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name, pain_levels
     FROM src
   ON CONFLICT (athlete_id, day) DO UPDATE SET
     fatigue = EXCLUDED.fatigue, sommeil = EXCLUDED.sommeil, stress = EXCLUDED.stress,
@@ -2414,16 +2427,17 @@ BEGIN
     doms_points = EXCLUDED.doms_points, injury_note = EXCLUDED.injury_note,
     weight_kg = EXCLUDED.weight_kg, archived = EXCLUDED.archived, envie = EXCLUDED.envie,
     pain = EXCLUDED.pain, sick = EXCLUDED.sick, doms_levels = EXCLUDED.doms_levels,
-    doms_workout_id = EXCLUDED.doms_workout_id, doms_workout_name = EXCLUDED.doms_workout_name, updated_at = now()
+    doms_workout_id = EXCLUDED.doms_workout_id, doms_workout_name = EXCLUDED.doms_workout_name,
+    pain_levels = EXCLUDED.pain_levels, updated_at = now()
   WHERE (t.fatigue, t.sommeil, t.stress, t.energie, t.doms, t.bedtime, t.wake, t.sleep_hours,
          t.sleep_interrupted, t.sleep_interrupt_note, t.doms_zones, t.doms_points, t.injury_note,
-         t.weight_kg, t.archived, t.envie, t.pain, t.sick, t.doms_levels, t.doms_workout_id, t.doms_workout_name)
+         t.weight_kg, t.archived, t.envie, t.pain, t.sick, t.doms_levels, t.doms_workout_id, t.doms_workout_name, t.pain_levels)
         IS DISTINCT FROM
         (EXCLUDED.fatigue, EXCLUDED.sommeil, EXCLUDED.stress, EXCLUDED.energie, EXCLUDED.doms,
          EXCLUDED.bedtime, EXCLUDED.wake, EXCLUDED.sleep_hours, EXCLUDED.sleep_interrupted,
          EXCLUDED.sleep_interrupt_note, EXCLUDED.doms_zones, EXCLUDED.doms_points, EXCLUDED.injury_note,
          EXCLUDED.weight_kg, EXCLUDED.archived, EXCLUDED.envie, EXCLUDED.pain, EXCLUDED.sick,
-         EXCLUDED.doms_levels, EXCLUDED.doms_workout_id, EXCLUDED.doms_workout_name);
+         EXCLUDED.doms_levels, EXCLUDED.doms_workout_id, EXCLUDED.doms_workout_name, EXCLUDED.pain_levels);
 END;
 $_$;
 

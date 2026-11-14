@@ -16,12 +16,20 @@ import { useWellnessLight } from "@/features/shared/hooks/useWellnessLight";
 import { useWellnessHistory } from "@/features/shared/hooks/useWellness";
 import { useHealthWindow } from "@/features/athlete/hooks/useHealthWindow";
 import { baselineAt, dailyValues } from "@/lib/healthView";
+import { painList } from "@/lib/painZones";
 import { BODY_ZONES, DOMS_LEVEL_COLOR, DOMS_LEVEL_LABEL } from "@/lib/bodyZones";
 import { domsByWorkout, domsByZone, domsMaxLevels, feltSummary, itemGrid, type GridItem } from "@/lib/coachWellness";
 import { Pill, SectionHead, Segmented } from "@/features/shared/components/ordi/OrdiUi";
 import { frDate } from "@/features/shared/components/ordi/ordiStyles";
 
 type Span = "7" | "28" | "90";
+
+/** « Douleur · genou » : la zone la plus forte de la carte douleur (ancienne saisie : « Douleur »). */
+function painZoneTitle(levels: Record<string, number> | undefined): string {
+  const top = painList(levels).filter((z) => z.level != null && z.level > 0).sort((a, b) => (b.level ?? 0) - (a.level ?? 0))[0];
+  return top ? `Douleur · ${top.label.toLowerCase()}` : "Douleur";
+}
+
 const SPANS: { value: Span; label: string }[] = [{ value: "7", label: "7 j" }, { value: "28", label: "28 j" }, { value: "90", label: "3 mois" }];
 
 const LIGHT: Record<LightResult["light"], { label: string; color: string }> = {
@@ -169,7 +177,7 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
   const morning: Array<[string, string]> = last ? [
     ...(["fatigue", "sommeil", "stress", "energie", "doms"] as WellnessItem[]).map((k) => [WELLNESS_ITEM_SHORT[k], int(last.items[k])] as [string, string]),
     ["Envie", int(last.envie)],
-    ["Douleur", last.pain == null ? "—" : String(last.pain)],
+    [painZoneTitle(last.painLevels), last.pain == null ? "—" : String(last.pain)],
     ["Malade", last.sick == null ? "—" : last.sick ? "oui" : "non"],
   ] : [];
 

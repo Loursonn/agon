@@ -57,6 +57,8 @@ export interface DomsPoint {
 
 export type DomsLevel = 1 | 2 | 3;
 export type DomsLevels = Record<string, DomsLevel>;
+/** Carte douleur (2ᵉ corps du wellness, 14/11) : zone → note 0-10. */
+export type PainLevels = Record<string, number>;
 
 export interface WellnessSleep {
   bedtime: HourMinute | null;
@@ -92,8 +94,14 @@ export interface WellnessEntry {
   domsLevels: DomsLevels;
   /** « Envie de t'entraîner » 1-5 (hors score). */
   envie: number | null;
-  /** Douleur autre que les courbatures, 0-10. */
+  /**
+   * Douleur autre que les courbatures, 0-10. Avec la carte douleur : la plus
+   * forte note des zones (0 = « Douleur : non »). Anciennes saisies : note
+   * seule, sans zone.
+   */
   pain: number | null;
+  /** Zones de douleur notées 0-10 (vide si aucune ou ancienne saisie). */
+  painLevels: PainLevels;
   /** « Malade ou fiévreux·se ? » */
   sick: boolean | null;
   /** Séance de la veille à laquelle les courbatures sont rattachées (nom gardé tel quel). */
@@ -178,6 +186,24 @@ export function readPain(v: unknown): number | null {
   return n != null && n >= 0 && n <= 10 && Number.isInteger(n) ? n : null;
 }
 
+/** { zone: 0..10 entier } ; toute autre valeur est écartée (même règle que la projection SQL). */
+export function readPainLevels(v: unknown): PainLevels {
+  if (!isObj(v)) return {};
+  const out: PainLevels = {};
+  for (const [k, x] of Object.entries(v)) {
+    if (typeof x !== "number") continue;
+    const n = readPain(x);
+    if (n != null && k.trim() !== "") out[k] = n;
+  }
+  return out;
+}
+
+/** Note du jour : la plus forte des zones s'il y en a, sinon la note seule. */
+export function painOf(pain: unknown, levels: PainLevels): number | null {
+  const notes = Object.values(levels);
+  return notes.length > 0 ? Math.max(...notes) : readPain(pain);
+}
+
 function isEntry(v: unknown): v is WellnessEntry {
   return isObj(v) && isIsoDay(v.day) && isObj(v.items) && isObj(v.sleep);
 }
@@ -193,7 +219,8 @@ export function parseWellnessEntry(raw: unknown, key?: string | null, archived =
     const day = (key != null ? toIsoDay(key) : null) ?? raw.day;
     return {
       ...raw, day, archived: raw.archived || archived,
-      domsLevels: readDomsLevels(raw.domsLevels), envie: readItem(raw.envie), pain: readPain(raw.pain),
+      domsLevels: readDomsLevels(raw.domsLevels), envie: readItem(raw.envie),
+      painLevels: readPainLevels(raw.painLevels), pain: painOf(raw.pain, readPainLevels(raw.painLevels)),
       sick: typeof raw.sick === "boolean" ? raw.sick : null,
       domsWorkout: readDomsWorkout(raw.domsWorkout),
     };
@@ -218,7 +245,8 @@ export function parseWellnessEntry(raw: unknown, key?: string | null, archived =
     domsPoints: points(raw.domsPoints),
     domsLevels: readDomsLevels(raw.domsLevels),
     envie: readItem(isObj(raw.items) ? raw.items.envie : raw.envie),
-    pain: readPain(raw.pain),
+    painLevels: readPainLevels(raw.painLevels),
+    pain: painOf(raw.pain, readPainLevels(raw.painLevels)),
     sick: typeof raw.sick === "boolean" ? raw.sick : null,
     domsWorkout: readDomsWorkout(raw.domsWorkout),
     injuryNote: text(raw.injComment) ?? text(raw.injuryNote),
@@ -294,11 +322,12 @@ export interface WellnessRow {
   doms_levels?: unknown;
   doms_workout_id?: string | null;
   doms_workout_name?: string | null;
+  pain_levels?: unknown;
 }
 
 /** Colonnes à lire dans `wellness_entries` pour `wellnessRowToEntry`. */
 export const WELLNESS_ROW_COLUMNS =
-  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name";
+  "athlete_id, day, fatigue, sommeil, stress, energie, doms, bedtime, wake, sleep_hours, sleep_interrupted, sleep_interrupt_note, doms_zones, doms_points, injury_note, weight_kg, archived, envie, pain, sick, doms_levels, doms_workout_id, doms_workout_name, pain_levels";
 
 function toHm(v: unknown): HourMinute | null {
   const m = typeof v === "string" ? /^(\d{1,2}):(\d{2})/.exec(v) : null;
@@ -331,7 +360,8 @@ export function wellnessRowToEntry(row: WellnessRow): WellnessEntry | null {
     domsPoints: points(row.doms_points),
     domsLevels: readDomsLevels(row.doms_levels),
     envie: readItem(row.envie),
-    pain: readPain(row.pain),
+    painLevels: readPainLevels(row.pain_levels),
+    pain: painOf(row.pain, readPainLevels(row.pain_levels)),
     sick: typeof row.sick === "boolean" ? row.sick : null,
     domsWorkout: readDomsWorkout({ id: row.doms_workout_id, name: row.doms_workout_name }),
     injuryNote: row.injury_note?.trim() || null,
@@ -373,6 +403,7 @@ export function toLegacyEntry(e: WellnessEntry): Record<string, unknown> {
   if (Object.keys(e.domsLevels ?? {}).length > 0) out.domsLevels = e.domsLevels;
   if (e.envie != null) out.envie = e.envie;
   if (e.pain != null) out.pain = e.pain;
+  if (Object.keys(e.painLevels ?? {}).length > 0) out.painLevels = e.painLevels;
   if (e.sick != null) out.sick = e.sick;
   if (e.domsWorkout) out.domsWorkout = e.domsWorkout;
   if (e.sleep.bedtime) out.coucher = e.sleep.bedtime;
