@@ -12,37 +12,10 @@ import {
 import type { Doc, DocFamily, FicheAttachment, FicheCategory } from "@/features/shared/types/fiches";
 import { useAthleteDocs, useDocsBank, useDocsByIds } from "@/features/shared/hooks/fiches/useDocs";
 import { FicheImportDialog } from "@/features/coach/components/fiches/FicheImportDialog";
+import {
+  BTN_GHOST, BTN_PRIMARY, CATEGORY_BORDER_L, CATEGORY_CHIP_ON, CHIP, CHIP_OFF, CHIP_ON_ACCENT, INPUT, LABEL,
+} from "./ficheStyles";
 
-/* Équivalents en classes de btnGhost, btnPrimary, input, label et chip (./ficheStyles). */
-const BTN_GHOST = "min-h-10 cursor-pointer whitespace-nowrap rounded-[4px] border border-agon-brd-l bg-transparent px-3.5 py-2 font-[inherit] text-[12px] font-semibold text-agon-tx2";
-const BTN_PRIMARY = "min-h-10 cursor-pointer whitespace-nowrap rounded-[4px] border-none bg-agon-accent px-4 py-2 font-[inherit] text-[13px] font-bold text-agon-ink";
-const INPUT = "box-border min-h-10 w-full rounded-[4px] border border-agon-brd-l bg-agon-s2 px-2.5 py-2 font-[inherit] text-[14px] text-agon-tx [outline:none]";
-const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-[0.5px] text-agon-tx3";
-const CHIP = "min-h-8 cursor-pointer whitespace-nowrap rounded-2xl border px-3 py-1.5 font-[inherit] text-[12px] font-semibold";
-const CHIP_OFF = "border-agon-brd-l bg-transparent text-agon-tx2";
-const CHIP_ON_ACCENT = "border-agon-accent/[0.5] bg-agon-accent/[0.12] text-agon-accent";
-
-/** Puce active et filet gauche par catégorie : mêmes couleurs que CATEGORY_COLOR (./ficheStyles). */
-const CATEGORY_CHIP_ON: Record<FicheCategory, string> = {
-  mobilite: "border-agon-patine/[0.5] bg-agon-patine/[0.12] text-agon-patine",
-  pacing: "border-agon-info/[0.5] bg-agon-info/[0.12] text-agon-info",
-  prevention: "border-agon-alerte/[0.5] bg-agon-alerte/[0.12] text-agon-alerte",
-  recuperation: "border-agon-succes/[0.5] bg-agon-succes/[0.12] text-agon-succes",
-  nutrition: "border-agon-amethyste/[0.5] bg-agon-amethyste/[0.12] text-agon-amethyste",
-  education: CHIP_ON_ACCENT,
-  questionnaire: "border-agon-tx2/[0.5] bg-agon-tx2/[0.12] text-agon-tx2",
-  autre: "border-agon-tx3/[0.5] bg-agon-tx3/[0.12] text-agon-tx3",
-};
-const CATEGORY_BORDER_L: Record<FicheCategory, string> = {
-  mobilite: "border-l-agon-patine",
-  pacing: "border-l-agon-info",
-  prevention: "border-l-agon-alerte",
-  recuperation: "border-l-agon-succes",
-  nutrition: "border-l-agon-amethyste",
-  education: "border-l-agon-accent",
-  questionnaire: "border-l-agon-tx2",
-  autre: "border-l-agon-tx3",
-};
 const chip = (active: boolean, on: string = CHIP_ON_ACCENT) => cn(CHIP, active ? on : CHIP_OFF);
 
 type Tab = "banque" | "athlete" | "import";
