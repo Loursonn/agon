@@ -1,9 +1,13 @@
 import { Video, Check } from "lucide-react";
-import { C, H } from "@/lib/theme";
+import { C } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import type { WorkoutBlocData } from "@/features/shared/hooks/useWorkoutSession";
 
-const AMBER = H.miel;
-const GREEN = H.vert;
+/** Demande en attente (ocre) ou vidéo envoyée (vert) : couleurs de la charte. */
+const tone = (ok: boolean) =>
+  ok
+    ? { text: "text-agon-succes", box: "bg-agon-succes/[0.08] border-agon-succes/[0.33]", row: "bg-agon-succes/[0.06] border-agon-succes/[0.27]", color: C.g }
+    : { text: "text-agon-alerte", box: "bg-agon-alerte/[0.08] border-agon-alerte/[0.33]", row: "bg-agon-alerte/[0.06] border-agon-alerte/[0.27]", color: C.o };
 
 /** Bandeau en tête de séance : nombre d'exercices pour lesquels le coach attend une vidéo. */
 export function VideoRequestBanner({ blocs, videoSent }: { blocs: WorkoutBlocData[]; videoSent?: Record<string, boolean> }) {
@@ -11,25 +15,21 @@ export function VideoRequestBanner({ blocs, videoSent }: { blocs: WorkoutBlocDat
   if (requested.length === 0) return null;
   const sent = requested.filter((ex) => videoSent?.[ex.id]).length;
   const allSent = sent === requested.length;
+  const t = tone(allSent);
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10,
-      padding: "10px 14px", borderRadius: 6,
-      background: (allSent ? GREEN : AMBER) + "14",
-      border: "1px solid " + (allSent ? GREEN : AMBER) + "55",
-    }}>
-      <Video size={18} color={allSent ? GREEN : AMBER} style={{ flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: allSent ? GREEN : AMBER }}>
+    <div className={cn("flex items-center gap-2.5 rounded-[6px] border px-3.5 py-2.5", t.box)}>
+      <Video size={18} color={t.color} className="shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className={cn("text-[13px] font-extrabold", t.text)}>
           {allSent ? "Retours vidéo envoyés" : "Retour vidéo demandé"}
         </div>
-        <div style={{ fontSize: 11, color: C.tx2, marginTop: 2 }}>
+        <div className="mt-0.5 text-[11px] text-agon-tx2">
           {requested.map((ex) => ex.exercise_name).join(", ")}
           {" · "}envoie ta vidéo à ton coach puis coche « Vidéo envoyée »
         </div>
       </div>
-      <span style={{ fontSize: 11, fontWeight: 800, color: allSent ? GREEN : AMBER, flexShrink: 0 }}>
+      <span className={cn("shrink-0 text-[11px] font-extrabold", t.text)}>
         {sent}/{requested.length}
       </span>
     </div>
@@ -46,38 +46,29 @@ export function VideoRequestRow({
   canToggle: boolean;
   onToggle: () => void;
 }) {
-  const color = sent ? GREEN : AMBER;
+  const t = tone(sent);
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 8,
-      padding: "8px 12px", borderRadius: 6,
-      background: color + "10", border: "1px solid " + color + "45",
-    }}>
-      <Video size={14} color={color} style={{ flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color }}>
+    <div className={cn("flex items-center gap-2 rounded-[6px] border px-3 py-2", t.row)}>
+      <Video size={14} color={t.color} className="shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className={cn("text-[12px] font-bold", t.text)}>
           Retour vidéo demandé{name ? ` · ${name}` : ""}
         </div>
-        {note && <div style={{ fontSize: 11, color: C.tx2, marginTop: 1 }}>{note}</div>}
+        {note && <div className="mt-px text-[11px] text-agon-tx2">{note}</div>}
       </div>
       <button
         onClick={canToggle ? onToggle : undefined}
         disabled={!canToggle}
-        style={{
-          display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
-          padding: "6px 10px", borderRadius: 4, fontFamily: "inherit",
-          border: "1px solid " + (sent ? GREEN : C.brdL),
-          background: sent ? GREEN + "22" : "transparent",
-          color: sent ? GREEN : C.tx2, fontSize: 11, fontWeight: 700,
-          cursor: canToggle ? "pointer" : "default",
-        }}
+        className={cn(
+          "flex shrink-0 items-center gap-1.5 rounded-[4px] border px-2.5 py-1.5 font-[inherit] text-[11px] font-bold",
+          sent ? "border-agon-succes bg-agon-succes/[0.13] text-agon-succes" : "border-agon-brd-l bg-transparent text-agon-tx2",
+          canToggle ? "cursor-pointer" : "cursor-default",
+        )}
       >
-        <span style={{
-          width: 14, height: 14, borderRadius: 3,
-          border: "2px solid " + (sent ? GREEN : C.brdL),
-          background: sent ? GREEN : "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
+        <span className={cn(
+          "flex size-3.5 items-center justify-center rounded-[3px] border-2",
+          sent ? "border-agon-succes bg-agon-succes" : "border-agon-brd-l bg-transparent",
+        )}>
           {sent && <Check size={10} color={C.ink} strokeWidth={4} />}
         </span>
         Vidéo envoyée
