@@ -82,8 +82,13 @@ Import » à la connexion. `provider-garmin-workouts` lit `granted_scopes` :
 
 ## Activer l'envoi des séances pour les vrais athlètes
 
-État au 13/11/2026 : `push_workouts` (vrai par défaut) a été mis à faux sur les
-deux connexions d'athlètes réels ; seuls les comptes admin envoient.
+**Fait le 14/11/2026** (demande d'Hugo, sans attendre son essai sur sa montre) :
+la dernière connexion coupée est passée à vrai ; 4 connexions Garmin actives sur
+4 envoient, toutes avec `WORKOUT_IMPORT`. Les nouvelles connexions envoient par
+défaut (`push_workouts` vrai par défaut), l'athlète peut couper dans Montres.
+
+Historique : le 13/11/2026, `push_workouts` avait été mis à faux sur les deux
+connexions d'athlètes réels ; seuls les comptes admin envoyaient.
 
 Prérequis, dans l'ordre :
 

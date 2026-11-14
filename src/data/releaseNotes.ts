@@ -38,6 +38,42 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-14-energie-durees-longues",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Séances d'énergie : les durées longues tiennent à l'écran",
+    summary:
+      "Un chrono ou une durée de plusieurs dizaines de minutes (« 45:00 », « 1:20:00 ») débordait de sa zone. Les chiffres s'ajustent maintenant à la place disponible, sur téléphone comme sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui est corrigé",
+        points: [
+          "Minuteur de l'athlète : le chrono reste dans l'anneau et l'allure visée sur une ligne, même pour un bloc d'1 h 20.",
+          "Lecture de la séance et séance faite sur la montre (prévu / fait) : les cibles et les durées longues restent dans leur colonne.",
+          "Éditeur de séance : le résumé d'un bloc s'affiche en entier au lieu d'être coupé par « … », et les durées sous le profil ne sont plus tronquées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-garmin-seances-sur-la-montre-pour-tous",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Garmin : vos séances arrivent sur la montre de vos athlètes",
+    summary:
+      "Pour chaque athlète qui a relié sa montre Garmin, les séances que vous programmez pour les 7 prochains jours partent dans son calendrier Garmin Connect, puis sur sa montre à la synchronisation.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Séances d'énergie et de musculation : allures, zones de fréquence cardiaque et charges sont calculées par Agon pour l'athlète.",
+          "Vous modifiez, déplacez ou supprimez une séance : la montre suit dans les 10 minutes. Une séance déjà faite ou commencée n'est jamais retirée.",
+          "L'athlète peut couper l'envoi dans Montres. S'il n'a pas autorisé l'import de séances chez Garmin, l'écran lui explique comment le faire.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-garmin-envoyer-sur-ma-montre",
     date: "2026-11-14",
     kind: "feature",
