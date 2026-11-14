@@ -4,14 +4,13 @@ import { WELLNESS_ITEM_SHORT } from "@shared/domain/wellness";
 import { useWellnessHistory } from "@/features/shared/hooks/useWellness";
 import { wellnessTrend, TREND_ITEMS, type TrendItem } from "@/lib/wellnessTrend";
 import { ALL_BZ } from "@/lib/muscles";
-import { C, alpha } from "@/lib/theme";
-import { MONO } from "@/features/shared/components/seance/seanceUi";
+import { cn } from "@/lib/utils";
 
 const LABEL: Record<TrendItem, string> = { ...WELLNESS_ITEM_SHORT, fatigue: "Récupération", doms: "Fraîcheur musc.", envie: "Envie" };
 const DOW = ["D", "L", "M", "M", "J", "V", "S"];
-const KICK = { ...MONO, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: C.tx2 };
 const fr1 = (n: number) => String(n).replace(".", ",");
-const barColor = (s: number) => (s >= 70 ? C.g : s >= 50 ? C.o : C.r);
+const barClass = (s: number) => (s >= 70 ? "bg-agon-succes" : s >= 50 ? "bg-agon-alerte" : "bg-agon-erreur");
+const itemClass = (v: number) => (v >= 3.5 ? "bg-agon-succes" : v >= 2.5 ? "bg-agon-alerte" : "bg-agon-erreur");
 
 /** Carte « Tendance » du wellness sur ordinateur (planche AthOrdiAWellness) : 7 ou 28 jours. */
 export function WellnessTrendCard({ athleteId }: { athleteId: string | null | undefined }) {
@@ -22,13 +21,13 @@ export function WellnessTrendCard({ athleteId }: { athleteId: string | null | un
   const zone = t.topZone ? ALL_BZ.find((z: { id: string; label: string }) => z.id === t.topZone!.id) : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "14px 16px", borderRadius: 14, background: C.s1, border: `1px solid ${C.brd}` }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={KICK}>Tendance</span>
-        <span role="tablist" style={{ display: "flex", gap: 4 }}>
+    <div className="flex flex-col gap-3.5 rounded-[14px] border border-agon-brd bg-agon-s1 px-4 py-3.5">
+      <div className="flex items-center justify-between">
+        <span className="agon-mono text-[11px] uppercase tracking-[0.14em] text-agon-tx2">Tendance</span>
+        <span role="tablist" className="flex gap-1">
           {([7, 28] as const).map((k) => (
             <button key={k} type="button" role="tab" aria-selected={n === k} onClick={() => setN(k)}
-              style={{ ...MONO, fontSize: 11, padding: "3px 9px", borderRadius: 999, cursor: "pointer", border: `1px solid ${n === k ? C.ac : C.brd}`, background: n === k ? alpha(C.ac, 0.14) : "transparent", color: n === k ? C.ac : C.tx2 }}>
+              className={cn("agon-mono cursor-pointer rounded-full border px-[9px] py-[3px] text-[11px]", n === k ? "border-agon-accent bg-agon-accent/[0.14] text-agon-accent" : "border-agon-brd bg-transparent text-agon-tx2")}>
               {k} j
             </button>
           ))}
@@ -36,44 +35,44 @@ export function WellnessTrendCard({ athleteId }: { athleteId: string | null | un
       </div>
 
       <div>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, color: C.tx2 }}>Score wellness</span>
-          <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>moy. <span style={{ fontSize: 20, color: C.tx }}>{t.avgScore ?? "—"}</span> / 100</span>
+        <div className="flex items-baseline justify-between">
+          <span className="text-[13px] text-agon-tx2">Score wellness</span>
+          <span className="agon-mono text-[12px] text-agon-tx3">moy. <span className="text-[20px] text-agon-tx">{t.avgScore ?? "—"}</span> / 100</span>
         </div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: n === 7 ? 8 : 2, height: 72, marginTop: 10 }}>
+        <div className={cn("mt-2.5 flex h-[72px] items-end", n === 7 ? "gap-2" : "gap-0.5")}>
           {t.scores.map((s, i) => (
-            <div key={t.days[i]} title={s == null ? "Pas de saisie" : `${s} / 100`} style={{ flex: 1, height: s == null ? 3 : `${Math.max(s, 6)}%`, borderRadius: 3, background: s == null ? C.s2 : barColor(s) }} />
+            <div key={t.days[i]} title={s == null ? "Pas de saisie" : `${s} / 100`} className={cn("flex-1 rounded-[3px]", s == null ? "h-[3px] bg-agon-s2" : barClass(s))} style={s == null ? undefined : { height: `${Math.max(s, 6)}%` }} />
           ))}
         </div>
         {n === 7 && (
-          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-            {t.days.map((d) => <span key={d} style={{ flex: 1, textAlign: "center", ...MONO, fontSize: 10.5, color: C.tx3 }}>{DOW[new Date(d + "T12:00:00").getDay()]}</span>)}
+          <div className="mt-1.5 flex gap-2">
+            {t.days.map((d) => <span key={d} className="agon-mono flex-1 text-center text-[10.5px] text-agon-tx3">{DOW[new Date(d + "T12:00:00").getDay()]}</span>)}
           </div>
         )}
       </div>
 
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 13, color: C.tx2 }}>Tes réponses</span>
-          <span style={{ ...MONO, fontSize: 10.5, color: C.tx3, letterSpacing: "0.1em" }}>MOY. / 5</span>
+        <div className="mb-1.5 flex justify-between">
+          <span className="text-[13px] text-agon-tx2">Tes réponses</span>
+          <span className="agon-mono text-[10.5px] tracking-[0.1em] text-agon-tx3">MOY. / 5</span>
         </div>
         {TREND_ITEMS.map((k) => {
           const v = t.itemAvgs[k];
           return (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0" }}>
-              <span style={{ width: 118, fontSize: 12.5, color: C.tx2 }}>{LABEL[k]}</span>
-              <span style={{ flex: 1, height: 4, borderRadius: 2, background: C.s2, overflow: "hidden" }}>
-                {v != null && <span style={{ display: "block", width: `${(v / 5) * 100}%`, height: "100%", background: v >= 3.5 ? C.g : v >= 2.5 ? C.o : C.r }} />}
+            <div key={k} className="flex items-center gap-2.5 py-[5px]">
+              <span className="w-[118px] text-[12.5px] text-agon-tx2">{LABEL[k]}</span>
+              <span className="h-1 flex-1 overflow-hidden rounded-[2px] bg-agon-s2">
+                {v != null && <span className={cn("block h-full", itemClass(v))} style={{ width: `${(v / 5) * 100}%` }} />}
               </span>
-              <span style={{ ...MONO, fontSize: 13, width: 28, textAlign: "right" }}>{v == null ? "—" : fr1(v)}</span>
+              <span className="agon-mono w-7 text-right text-[13px]">{v == null ? "—" : fr1(v)}</span>
             </div>
           );
         })}
       </div>
 
       {zone && t.topZone && t.topZone.days >= 2 && (
-        <div style={{ fontSize: 12.5, color: C.tx2, lineHeight: 1.5, paddingTop: 10, borderTop: `1px solid ${C.brd}` }}>
-          <span style={{ color: C.tx }}>{zone.label}</span> notés {t.topZone.days} jours sur {n}.
+        <div className="border-t border-agon-brd pt-2.5 text-[12.5px] leading-normal text-agon-tx2">
+          <span className="text-agon-tx">{zone.label}</span> notés {t.topZone.days} jours sur {n}.
         </div>
       )}
     </div>
