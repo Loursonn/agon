@@ -13,6 +13,7 @@ import { DayFiches } from "@/features/shared/components/fiches/DayFiches";
 import type { PlanningCardModel } from "@/lib/planningCard";
 import { LIFE_EVENT_COLOR, CARD_MONO } from "./calendarConstants";
 import { WatchFreeChip } from "./WatchFreeChip";
+import { DayThemeMenu } from "./DayThemeMenu";
 import { DraggableEventChip } from "./DraggableEventChip";
 
 export function DroppableDay({
@@ -109,7 +110,8 @@ export function DroppableDay({
         const tc = themed ? dayThemeColors(dayTheme) : null;
         const accent = isCompDay ? C.r : tc?.bg ?? null;
         return (
-          <div style={{
+          <DayThemeMenu athleteId={athleteId} coachId={coachId} date={date} theme={dayTheme} onMoreOptions={onClick}>
+          <div title="Thème du jour" style={{
             position: "relative", overflow: "hidden", flexShrink: 0, padding: "12px 12px 10px", borderRadius: 12,
             border: "1px solid " + (today ? alpha(C.ac, 0.45) : C.brd), background: C.s1,
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, minWidth: 0,
@@ -128,10 +130,17 @@ export function DroppableDay({
                 minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{dayThemeChipLabel(dayTheme)}</span>
             )}
+            {!tc && (
+              <span style={{ ...MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.tx3 }}>
+                + Thème
+              </span>
+            )}
           </div>
+          </DayThemeMenu>
         );
       })() : (
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+      <DayThemeMenu athleteId={athleteId} coachId={coachId} date={date} theme={dayTheme} onMoreOptions={onClick}>
+      <div title="Thème du jour" style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
         <div
           style={{
             width: 24, height: 24, borderRadius: "50%",
@@ -148,6 +157,7 @@ export function DroppableDay({
           <DayThemePill theme={dayTheme} title={dayThemeFullLabel(dayTheme)} />
         </div>
       </div>
+      </DayThemeMenu>
       )}
 
       {/* Jour de compétition — bandeau en tête du jour */}

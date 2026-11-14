@@ -356,3 +356,22 @@ export function recentDayThemeSuggestions(
 
   return out;
 }
+
+// ── Menu rapide du planning (clic sur l'en-tête du jour) ─────────────────────
+
+/**
+ * Couleur à enregistrer quand le coach choisit une intensité dans le menu
+ * rapide. La couleur de l'intensité, sauf si le thème porte une couleur
+ * choisie à la main (ni la couleur par défaut, ni celle de son intensité
+ * actuelle) : un « Hard » mis en bleu reste bleu.
+ */
+export function colorForIntensityPick(
+  theme: DayThemeLike | null | undefined,
+  next: DayThemeIntensity,
+): string {
+  if (!theme || isDayThemeEmpty(theme)) return DAY_THEME_INTENSITY_COLOR[next];
+  const current = safeThemeColor(theme.color);
+  const auto = isDayThemeIntensity(theme.intensity) ? DAY_THEME_INTENSITY_COLOR[theme.intensity] : null;
+  const custom = current !== DAY_THEME_DEFAULT_COLOR && current !== auto;
+  return custom ? current : DAY_THEME_INTENSITY_COLOR[next];
+}
