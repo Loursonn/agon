@@ -2452,3 +2452,15 @@ et son README.
 - **B écartée** : pas de RPC `staff_cycle_badges()` tant que la requête client suffit (deux petites lectures par
   athlète). Test à blanc 12/12 avant décision (planification fermée, accord retiré, lien révoqué : rien de
   visible). Fichiers retirés de `supabase/pending/`.
+
+## 2026-11-14 — Plus d'abonnement temps réel (base de prod saturée)
+
+- Le 14/11 après-midi, la base de prod (plan gratuit, ~0,5 Go de RAM) a cessé de répondre, puis est restée lente
+  après son retour (mémoire engagée 1,5 Go, swap supérieur à la RAM). Le rapport Query Performance montrait
+  `realtime.list_changes` en tête : 74 000 appels en ~45 min, 28 % du temps de la base. Seul abonnement de l'app :
+  le compteur de « J'aime » de la citation du jour (`postgres_changes` sur `citation_stats`), ouvert par chaque
+  utilisateur sur l'accueil.
+- Décision : aucun abonnement Realtime `postgres_changes` dans l'app tant que la prod est sur ce plan. Le compteur est
+  relu au chargement et quand l'app revient au premier plan ; l'utilisateur voit son propre « J'aime » tout de suite.
+- Les tâches cron ne sont pas en cause (toutes les 10-15 min au plus). Si la base resature, la piste suivante est
+  la taille de la machine (offre payante), à trancher par Hugo.
