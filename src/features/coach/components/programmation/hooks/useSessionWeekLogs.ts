@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { listWorkoutLogs, workoutKeys } from "@/api/workouts"
+import { listInjuryFollowups, medicalKeys } from "@/api/injuries"
+import { sessionPainBySession, sessionPainKey } from "@/lib/sessionPain"
 import type { AthleteModifications } from "@/features/shared/types/athlete"
 import { computeOccurrences } from "@/lib/sessionOccurrence"
 import { localISO } from "@/lib/date"
@@ -13,6 +15,9 @@ export interface SessionWeekLog {
   microcycleId: string | null
   weekNumber: number | null
   notes: string | null
+  /** Douleur déclarée en fin de séance (blessure / suivi) : zone → note 1-10. */
+  painLevels: Record<string, number>
+  painNote: string | null
 }
 
 export function useSessionWeekLogs(
@@ -27,6 +32,16 @@ export function useSessionWeekLogs(
       listWorkoutLogs({ athleteIds: [athleteId!], sessionId, excludeStatuses: ["skipped"], ascending: false }),
   })
 
+  // Douleurs de fin de séance : suivis de blessure liés à ces séances.
+  const logIds = rawLogs.filter(l => l.status === "completed").map(l => l.id)
+  const { data: followups = [] } = useQuery({
+    queryKey: medicalKeys.followups(athleteId ?? "", `logs:${logIds.join(",")}`),
+    enabled: !!athleteId && logIds.length > 0,
+    staleTime: 30_000,
+    queryFn: () => listInjuryFollowups(athleteId!, { workoutLogIds: logIds }),
+  })
+  const painBySession = sessionPainBySession(followups)
+
   // Occurrence = rang chronologique parmi les logs non « skipped » de la séance
   // (1re fois planifiée = 1, 2e = 2…), tous cycles confondus — même règle que
   // côté athlète (fetchSessionOccurrence).
@@ -40,6 +55,8 @@ export function useSessionWeekLogs(
     microcycleId:         log.microcycle_id,
     weekNumber:           occ.get(log.id) ?? null,
     notes:                log.notes,
+    painLevels:           painBySession.get(sessionPainKey.workout(log.id))?.levels ?? {},
+    painNote:             painBySession.get(sessionPainKey.workout(log.id))?.note ?? null,
   }))
 
   const logs: SessionWeekLog[] = logsWithWeek

@@ -38,6 +38,161 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-douleur-de-seance",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Douleur pendant la séance",
+    summary: "En fin de séance, votre athlète dit s'il a eu mal : zone, note sur 10 et commentaire. La douleur devient une blessure déclarée, visible dans son profil, sur la séance dans Retours et dans sa weekly review.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Après la validation d'une séance de muscu, d'énergie ou HYROX, avec le RPE : « Une douleur pendant la séance ? ». Non par défaut : la question ne bloque jamais la validation.",
+          "S'il répond Oui : il touche la zone sur la même carte que le wellness du matin, la note de 0 à 10, et peut laisser un commentaire.",
+          "La douleur rejoint ses blessures en cours ; il la clôture depuis son profil quand c'est passé.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Chaque douleur de séance est une blessure déclarée : elle allume « blessure active » et apparaît dans le profil santé, en cours jusqu'à ce que l'athlète ou vous la clôturiez.",
+          "Pas de doublon : si une blessure est déjà en cours sur la même zone, sa note de douleur est mise à jour.",
+          "Dans Retours, la séance porte une pastille rouge « Douleur » ; le détail du jour donne les zones, les notes et le commentaire de l'athlète.",
+        ],
+      },
+      {
+        title: "Weekly review",
+        points: [
+          "Une douleur de séance déclenche les questions douleur de la weekly review, comme une douleur au wellness ou une blessure, et y est rappelée avec le nom de la séance.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-chargement-plus-rapide",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "L'app se charge plus vite",
+    summary:
+      "Sur un réseau mobile moyen, la fiche d'un athlète s'ouvre en 8 s au lieu de 13 s, et en moins de 3 s quand vous revenez dessus. Côté athlète, l'écran Aujourd'hui gagne 2 à 3 secondes à l'ouverture.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "L'app télécharge en même temps ce qu'elle téléchargeait l'un après l'autre (votre profil, vos accords, l'écran d'arrivée).",
+          "Les graphiques et les fenêtres rarement ouvertes (bilan de bloc, frise, synthèse) ne sont chargés qu'au moment où vous les ouvrez.",
+          "Rien ne change dans ce qui est affiché.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-fiches-categorie-test",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Fiches : une catégorie « Test »",
+    summary: "Rangez à part les fiches qui accompagnent vos tests : protocole, consignes de passation.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans Fiches, un nouveau filtre « Test » regroupe les fiches de vos tests (saut, biométrie, bilan…).",
+          "Pour y ranger une fiche : ouvrez-la et choisissez la catégorie « Test ». Elle reste dans votre banque, sans être liée à un athlète tant que vous ne la donnez pas.",
+          "Votre assistant Claude peut aussi déposer directement ses fiches de test dans cette catégorie.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-assistant-retire-ses-fiches",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Assistant Claude : il retire de nouveau ses fiches",
+    summary: "Une fiche déposée par votre assistant puis retouchée dans Agon ne lui était plus « connue » : il ne pouvait plus la retirer.",
+    sections: [
+      {
+        title: "Ce qui est corrigé",
+        points: [
+          "Votre assistant reconnaît toujours les fiches qu'il a déposées, même si vous avez changé leurs tags ou leur catégorie : il peut retirer un doublon tant qu'aucun athlète ne l'a reçu.",
+          "Quand une fiche est la vôtre (importée par vous dans Agon), il vous le dit clairement au lieu de répondre qu'elle n'existe pas.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-badge-modifs-athlete",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Le badge « modifs » de la fiche athlète compte juste",
+    summary: "Le badge orange en haut à droite ne compte plus que ce que votre athlète a vraiment changé, et vous montre quoi.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Avant, il comptait toutes les séances où l'athlète avait saisi ses charges, depuis toujours. Maintenant : les séances qu'il a déplacées (et les séries ou exercices qu'il a ajoutés), sur les 4 dernières semaines et à venir.",
+          "Un clic sur le badge ouvre la liste : la séance, ce qui a changé (déplacée du mardi au jeudi…), par qui et quand. Les nouvelles ont un point orange.",
+          "Une fois la liste refermée, elles sont vues : le badge disparaît jusqu'à la prochaine modification. « Tout voir dans Retours » mène à la liste complète.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-accueil-records-athletes",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Accueil : records et tests de vos athlètes seulement",
+    summary: "Si vous vous entraînez aussi dans Agon, vos propres mesures ne se mélangent plus à celles de vos athlètes sur l'accueil.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bloc « Records & tests » et la tuile « Tests à venir » ne montrent plus que vos athlètes, y compris ceux que vous suivez en co-coach.",
+          "Vos propres résultats restent dans votre programme personnel.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-seance-hebdo-concrete-cycle",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Planning : une séance hebdomadaire est posée sur tout le cycle",
+    summary: "Une séance créée ou modifiée avec un jour (ex. lundi) n'apparaît plus en « prévu » : elle est posée chaque semaine du cycle.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans Programmation, quand vous créez ou modifiez une séance récurrente avec son jour, elle est posée tout de suite chaque semaine du cycle, à partir d'aujourd'hui. Votre athlète la voit dans son planning.",
+          "Changer le jour déplace les séances à venir. Les séances faites, commencées ou déplacées par votre athlète restent où elles sont, et rien n'est supprimé.",
+          "Une séance ajoutée en cours de cycle ne s'affiche plus « manquée » sur les semaines déjà passées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-programmer-test-vue-semaine",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Planning : trouver un test plus vite dans la vue Semaine",
+    summary: "Les tests ne sont plus alignés sur une seule ligne : ils sont rangés par dominante, avec une recherche.",
+    sections: [
+      {
+        title: "Vue Semaine",
+        points: [
+          "Onglet Tests du bandeau « Programmer » : les tests sont rangés par dominante (bilan articulaire, endurance, explosivité, vitesse, HYROX…). Une pastille par dominante pour n'afficher qu'elle.",
+          "La recherche ignore les accents et trouve aussi une dominante : « explosivite » ou « hyrox » suffit.",
+          "Les tests HYROX apparaissent aussi dans la colonne de la vue Mois.",
+        ],
+      },
+      {
+        title: "Sur téléphone",
+        points: [
+          "« Ajouter » sur un jour libre du planning propose maintenant Séance ou Test : même recherche et même rangement par dominante.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-no-reps-wall-balls",
     date: "2026-11-16",
     kind: "feature",

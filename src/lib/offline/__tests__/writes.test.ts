@@ -16,6 +16,13 @@ describe("writeKey", () => {
       writeKey("weight.day", { athleteId: "a", day: "2026-11-09", kg: 70 }),
     );
   });
+  it("douleur de séance : une clé par séance (deux séances en attente ne se fusionnent pas)", () => {
+    const pain = (source: { workoutLogId: string } | { energyAssignmentId: string }) =>
+      writeKey("session.pain", { athleteId: "a", source, levels: { Genou: 6 }, note: null });
+    expect(pain({ workoutLogId: "L1" })).toBe("session.pain:L1");
+    expect(pain({ energyAssignmentId: "E1" })).toBe("session.pain:E1");
+    expect(pain({ workoutLogId: "L1" })).not.toBe(pain({ workoutLogId: "L2" }));
+  });
   it("activités libres : une seule saisie en attente par athlète (la liste la plus récente remplace)", () => {
     expect(writeKey("freeSessions.set", { athleteId: "a", sessions: [] })).toBe("freeSessions.set:a");
     expect(writeKey("freeSessions.set", { athleteId: "a", sessions: [{ id: "1" }] }))

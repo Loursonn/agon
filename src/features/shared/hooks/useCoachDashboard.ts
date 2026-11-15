@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { getReco } from "@/lib/wellness";
 import { localISO } from "@/lib/date";
+import { athleteIdsExceptSelf } from "@/lib/coachRoster";
 import { wellnessScore, type WellnessEntry } from "@shared/domain/wellness";
 import { listWorkoutLogs } from "@/api/workouts";
 import { coachKeys, listUpcomingTestSessions } from "@/api/coaches";
@@ -42,6 +43,8 @@ const COMMON = { staleTime: 30_000, refetchOnWindowFocus: true } as const;
 export function useCoachDashboard() {
   const { athletes, user } = useAuth();
   const athleteIds = useMemo(() => athletes.map((a) => a.id), [athletes]);
+  // Tests à venir : ceux des athlètes, pas ceux du coach qui se coache lui-même.
+  const testAthleteIds = useMemo(() => athleteIdsExceptSelf(athletes, user?.id), [athletes, user?.id]);
 
   const today = useMemo(() => localISO(), []);
   const yesterday = useMemo(() => {
@@ -74,8 +77,8 @@ export function useCoachDashboard() {
   // ── 4. Upcoming test sessions ──────────────────────────────────────────────
   const testsQ = useQuery({
     queryKey: coachKeys.dashboardUpcomingTests(user?.id ?? "", today),
-    queryFn: () => listUpcomingTestSessions(athleteIds, today),
-    enabled: !!user && athleteIds.length > 0,
+    queryFn: () => listUpcomingTestSessions(testAthleteIds, today),
+    enabled: !!user && testAthleteIds.length > 0,
     staleTime: 60_000,
     refetchOnWindowFocus: true,
   });

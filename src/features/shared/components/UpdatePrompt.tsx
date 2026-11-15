@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { SW_UPDATE_CHECK_MS, currentSwEnvironment, shouldRegisterServiceWorker } from "@/lib/pwa";
+import { SW_REGISTER_DELAY_MS, SW_UPDATE_CHECK_MS, currentSwEnvironment, shouldRegisterServiceWorker } from "@/lib/pwa";
 import {
   VERSION_RETRY_MS, canReloadNow, currentBuild, fetchServedBuild, isNewerBuild, shouldCheckNow,
 } from "@/lib/versionCheck";
@@ -31,9 +31,12 @@ export default function UpdatePrompt() {
 
   useEffect(() => {
     if (registered || !shouldRegisterServiceWorker(currentSwEnvironment())) return;
-    registered = true;
     let interval: ReturnType<typeof setInterval> | undefined;
-    import("virtual:pwa-register")
+    // Enregistrement différé : à la première visite (ou après une mise en
+    // ligne), le SW télécharge toute l'app (~6 Mo) pour le hors ligne. Lancé
+    // au démarrage, ce téléchargement se partageait le réseau avec le premier
+    // écran (pages et données) ; il attend maintenant que celui-ci soit là.
+    const start = window.setTimeout(() => { registered = true; return import("virtual:pwa-register")
       .then(({ registerSW }) => {
         updateRef.current = registerSW({
           onNeedRefresh: () => { needRefreshRef.current = true; setNeedRefresh(true); },
@@ -47,8 +50,8 @@ export default function UpdatePrompt() {
           },
         });
       })
-      .catch(() => { /* pas de SW : l'app marche comme avant, en ligne */ });
-    return () => { if (interval) clearInterval(interval); };
+      .catch(() => { /* pas de SW : l'app marche comme avant, en ligne */ }); }, SW_REGISTER_DELAY_MS);
+    return () => { window.clearTimeout(start); if (interval) clearInterval(interval); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

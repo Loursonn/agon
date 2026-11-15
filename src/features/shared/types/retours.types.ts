@@ -92,6 +92,9 @@ export interface EnergySessionDetail {
   session_kind: string | null;   // energy_sessions.session_kind
   note: string | null;           // plain-text note (coach or athlete)
   rpe_score: number | null;
+  /** Douleur pendant la séance (question de fin de séance) : zone → note 1-10. */
+  pain_levels?: Record<string, number>;
+  pain_note?: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   intervals: any[];              // EnergyStep[] — planned structure
   step_log: Record<string, EnergyStepLog> | null; // per-step completion
@@ -130,6 +133,9 @@ export interface WeeklyRetourData {
     notes: string | null;
     rpe_score: number | null;
     wellness_day: number | null;
+    /** Douleur pendant la séance (question de fin de séance) : zone → note 1-10. */
+    pain_levels?: Record<string, number>;
+    pain_note?: string | null;
     exercise_comments: WorkoutExerciseComment[];
     planned_exercises: PlannedExercise[];
     performed_exercises: PerformedExercise[];
@@ -200,6 +206,9 @@ export interface WorkoutDetail {
   notes: string | null;
   rpe_score: number | null;
   wellness_day: number | null;
+  /** Douleur pendant la séance (question de fin de séance) : zone → note 1-10. */
+  pain_levels?: Record<string, number>;
+  pain_note?: string | null;
   planned_exercises: PlannedExercise[];
   performed_exercises: PerformedExercise[];
   exercise_comments: WorkoutExerciseComment[];

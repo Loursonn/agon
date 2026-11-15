@@ -237,23 +237,25 @@ export async function getCoachRoster(coachId: string): Promise<Profile[]> {
   const links = unwrapRows(coRes, "Lecture des co-coachings impossible") as { athlete_id: string; hidden: boolean }[];
 
   const ownIds = own.map((a) => a.id);
-  const myLinks = ownIds.length
-    ? unwrapRows(
-        await db().from("athlete_co_coaches").select("athlete_id, co_coach_id").in("athlete_id", ownIds),
-        "Lecture des co-coachs impossible",
-      ) as { athlete_id: string; co_coach_id: string }[]
+  // Les deux lectures suivantes sont indépendantes : en parallèle (un aller-retour de moins).
+  const [myLinksRes, coProfiles] = await Promise.all([
+    ownIds.length
+      ? db().from("athlete_co_coaches").select("athlete_id, co_coach_id").in("athlete_id", ownIds)
+      : null,
+    links.length ? getProfiles(links.map((l) => l.athlete_id)) : [],
+  ]);
+  const myLinks = myLinksRes
+    ? unwrapRows(myLinksRes, "Lecture des co-coachs impossible") as { athlete_id: string; co_coach_id: string }[]
     : [];
   const coCoachOf = new Map(myLinks.map((l) => [l.athlete_id, l.co_coach_id]));
 
   const hiddenById = new Map(links.map((l) => [l.athlete_id, l.hidden]));
-  const coList = links.length
-    ? (await getProfiles(links.map((l) => l.athlete_id))).map((a) => ({
-        ...a,
-        coach_hidden: hiddenById.get(a.id) ?? false,
-        co_coached_by_me: true,
-        co_coach_id: coachId,
-      }))
-    : [];
+  const coList = coProfiles.map((a) => ({
+    ...a,
+    coach_hidden: hiddenById.get(a.id) ?? false,
+    co_coached_by_me: true,
+    co_coach_id: coachId,
+  }));
 
   return [
     ...own.map((a) => ({ ...a, co_coach_id: coCoachOf.get(a.id) ?? null })),

@@ -67,13 +67,14 @@ describe("AthleteLayout responsive", () => {
     expect(sideBtn).toHaveAttribute("aria-current", "page");
   });
 
-  it("garde Mode Coach et le tiroir profil", () => {
+  it("garde Mode Coach et le tiroir profil", async () => {
     const onSwitch = vi.fn();
     renderLayout(onSwitch);
     fireEvent.click(screen.getByText("Mode Coach"));
     expect(onSwitch).toHaveBeenCalled();
     fireEvent.click(screen.getByTitle("Mon profil"));
-    expect(screen.getByText("Tiroir profil")).toBeInTheDocument();
+    // Tiroir chargé à la demande (lazy).
+    expect(await screen.findByText("Tiroir profil")).toBeInTheDocument();
     expect(screen.getByTestId("offline-banner")).toBeInTheDocument();
   });
 });

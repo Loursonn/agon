@@ -6,6 +6,7 @@ import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 import { DayRow } from "@/features/athlete/components/program/DayRow";
 import { EmptyState } from "@/features/shared/components/EmptyState";
 import { EnergyPreviewOverlay } from "@/features/athlete/components/program/EnergyPreviewOverlay";
+import { SessionPainSheet } from "@/features/athlete/components/session/SessionPainSheet";
 import { FreeActivityModal } from "@/features/athlete/components/FreeActivityModal";
 import type { FreeSession } from "@/features/shared/types/athlete";
 import { PastCycleCard } from "@/features/athlete/components/program/PastCycleCard";
@@ -115,6 +116,7 @@ export function ProgramSessionsView() {
 
   // Validation : gardée sur le téléphone sans réseau (file hors ligne).
   const completeEnergy = useCompleteEnergyAssignment();
+  const [painFor, setPainFor] = useState<string | null>(null);
 
   const cancelEnergy = useMutation({
     mutationFn: async (assignmentId: string) => {
@@ -323,11 +325,21 @@ export function ProgramSessionsView() {
             // Toasts (validée / gardée hors ligne / séance retirée) : dans le hook.
             completeEnergy.mutate(
               { id: energyPreview.assignmentId, athleteId, ...(stepLogNotes ? { notes: stepLogNotes } : {}) },
-              { onSuccess: () => setEnergyPreview(null) },
+              {
+                onSuccess: () => {
+                  // Pas d'écran RPE sur ce parcours : question douleur juste après.
+                  setPainFor(energyPreview.assignmentId);
+                  setEnergyPreview(null);
+                },
+              },
             );
           }}
           onCancel={() => cancelEnergy.mutate(energyPreview.assignmentId)}
         />
+      )}
+
+      {painFor && athleteId && (
+        <SessionPainSheet target={{ kind: "energy", id: painFor }} athleteId={athleteId} onClose={() => setPainFor(null)} />
       )}
 
       {/* Reschedule drawer (workout + energy) */}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { alpha, C } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -8,22 +8,31 @@ import { AgonIcon } from "@/components/ui/AgonIcon";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
-import ProfileDrawer from "./components/ProfileDrawer";
 import { useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
-import { AthleteOnboarding } from "./components/AthleteOnboarding";
 import { shouldShowOnboarding } from "@/lib/onboarding";
 import { useAuth } from "@/hooks/useAuth";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
-import AppFbForm from "./components/AppFbForm";
-import { WellnessFlow } from "@/components/athlete/WellnessFlow";
-import { NewBlockModal } from "@/components/coach/CoachComponents";
-import { CombinedStatsChart } from "@/components/athlete/StatsCharts";
-import BlockHistoryViewer from "@/features/coach/components/BlockHistoryViewer";
 import { getBig3 } from "@/lib/calculations";
 import OfflineBanner from "@/features/shared/components/OfflineBanner";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { AthleteChromeContext, type AthleteChrome } from "./context/AthleteChromeContext";
+
+// Fenêtres ouvertes à la demande (tiroir profil, bilan de bloc, wellness…) :
+// chargées au premier affichage, pas au démarrage. Le bilan et le tiroir
+// profil tirent Recharts (~100 kB compressés) : hors du premier écran.
+const ProfileDrawer = lazy(() => import("./components/ProfileDrawer"));
+const AthleteOnboarding = lazy(() => import("./components/AthleteOnboarding").then((m) => ({ default: m.AthleteOnboarding })));
+const AppFbForm = lazy(() => import("./components/AppFbForm"));
+const WellnessFlow = lazy<typeof import("@/components/athlete/WellnessFlow")["WellnessFlow"]>(() => import("@/components/athlete/WellnessFlow").then((m) => ({ default: m.WellnessFlow })));
+const NewBlockModal = lazy<typeof import("@/components/coach/CoachComponents")["NewBlockModal"]>(() => import("@/components/coach/CoachComponents").then((m) => ({ default: m.NewBlockModal })));
+const CombinedStatsChart = lazy<typeof import("@/components/athlete/StatsCharts")["CombinedStatsChart"]>(() => import("@/components/athlete/StatsCharts").then((m) => ({ default: m.CombinedStatsChart })));
+const BlockHistoryViewer = lazy(() => import("@/features/coach/components/BlockHistoryViewer"));
+
+/** Wellness = fenêtre du matin : préchargée une fois l'écran affiché et le réseau calme. */
+function preloadWellnessFlow() {
+  void import("@/components/athlete/WellnessFlow");
+}
 
 const ip = { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", width: 20, height: 20, fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "square" as const, strokeLinejoin: "miter" as const };
 
@@ -96,6 +105,12 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
   useEffect(() => {
     if (shouldShowOnboarding({ uid: user?.id, role: profile?.role, onboardedAt: profile?.onboarded_at, viewOnly: !!viewOnly })) setOnboarding(true);
   }, [user?.id, profile?.role, profile?.onboarded_at, viewOnly]);
+
+  useEffect(() => {
+    if (viewOnly) return;
+    const t = window.setTimeout(preloadWellnessFlow, 4000);
+    return () => window.clearTimeout(t);
+  }, [viewOnly]);
 
   // Badge « blessure » : `medical_entries` est la seule source, pour qu'il dise
   // la même chose que la fiche blessure du profil.
@@ -458,7 +473,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               })}
             </div>
             <div className="w-full rounded-lg border border-agon-brd bg-agon-s1 p-agon-lg">
-              <CombinedStatsChart data={combinedData as unknown[]} />
+              <Suspense fallback={null}><CombinedStatsChart data={combinedData as unknown[]} /></Suspense>
             </div>
             <button
               type="button"
@@ -474,6 +489,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       {/* ── Nouveau bloc ── */}
       {showNewBlock && (
+        <Suspense fallback={null}>
         <NewBlockModal
           onStart={archiveAndNewBlock}
           onClose={() => setShowNewBlock(false)}
@@ -482,15 +498,18 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
           blockHistory={blockHistory}
           onDelete={idx => setBlockHistory(blockHistory.filter((_, i) => i !== idx))}
         />
+        </Suspense>
       )}
 
       {/* ── Historique des blocs ── */}
       {showBlockHistory && (
+        <Suspense fallback={null}>
         <BlockHistoryViewer
           blockHistory={blockHistory}
           onClose={() => setShowBlockHistory(false)}
           onDelete={idx => setBlockHistory(blockHistory.filter((_, i) => i !== idx))}
         />
+        </Suspense>
       )}
 
       {/* ── Wellness ── */}
@@ -499,6 +518,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
           {/* PC : une seule page sur 2 colonnes (planche AthOrdiAWellness) */}
           <div>
             {/* Pas de barre : le chevron de l'écran 1 ferme (planche wellness). */}
+            <Suspense fallback={null}>
             <WellnessFlow
               onClose={() => setShowWellness(false)}
               existing={wellness}
@@ -507,6 +527,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               weightLog={weightLog}
               wide={isDesktop}
             />
+            </Suspense>
           </div>
         </div>
       )}
@@ -520,16 +541,17 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
               <div className="text-agon-base font-bold">Avis sur l'app</div>
               <button type="button" onClick={() => setShowAppFeedback(false)} aria-label="Fermer" className="flex h-10 w-10 items-center justify-center text-agon-2xl text-agon-tx3">×</button>
             </div>
-            <AppFbForm onClose={() => setShowAppFeedback(false)} />
+            <Suspense fallback={null}><AppFbForm onClose={() => setShowAppFeedback(false)} /></Suspense>
           </div>
         </div>
       )}
 
-      {drawerOpen && <ProfileDrawer onClose={() => setDrawerOpen(false)} />}
+      {drawerOpen && <Suspense fallback={null}><ProfileDrawer onClose={() => setDrawerOpen(false)} /></Suspense>}
 
       <FicheViewerHost athleteId={athleteId} viewOnly={viewOnly} />
 
       {onboarding && user && (
+        <Suspense fallback={null}>
         <AthleteOnboarding
           uid={user.id}
           firstName={(profile?.full_name ?? "").trim().split(/\s+/)[0] || "toi"}
@@ -537,6 +559,7 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
           saveWellness={saveWellness as (d: Record<string, unknown>) => void | Promise<boolean>}
           onDone={() => { setOnboarding(false); navigate("/athlete"); }}
         />
+        </Suspense>
       )}
 
       {/* ── Confirmation de déconnexion ── */}

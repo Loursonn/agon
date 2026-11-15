@@ -21,7 +21,7 @@ import type { ImportIssue } from "@/lib/import/yoxx/common"
 import { useDuplicateProgSession } from "./hooks/useDuplicateProgSession"
 import { useSessionBank, useUpdateSessionBank } from "./hooks/useSessionBank"
 import { prepareSession } from "./bankUtils"
-import { usePlaceSession } from "@/features/shared/hooks/usePlaceSession"
+import { usePlaceSession, useSyncRecurringSession } from "@/features/shared/hooks/usePlaceSession"
 import { useAuth } from "@/hooks/useAuth"
 import type { ProgSession } from "./types"
 import { SessionForm } from "./SessionForm"
@@ -342,6 +342,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
   // Modèle choisi dans la banque : SessionForm pré-rempli, blocs copiés à la validation
   const [bankTemplate, setBankTemplate] = useState<ProgSession | null>(null)
   const { user } = useAuth()
+  const syncRecurring = useSyncRecurringSession()
   const { data: bankSessions = [] } = useSessionBank(user?.id)
   const updateBank = useUpdateSessionBank(user?.id)
   const [confirmBankDeleteId, setConfirmBankDeleteId] = useState<string | null>(null)
@@ -386,6 +387,19 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
     saveTimer.current = setTimeout(() => send(updated), 800)
   }
 
+  /**
+   * Séance hebdomadaire avec un jour : concrète sur tout le cycle affiché dès
+   * sa création ou sa modification (au lieu d'un « prévu » projeté).
+   */
+  const syncedIds = useRef(new Set<string>())
+  function syncPlanning(session: ProgSession, previous?: ProgSession) {
+    if (!athleteId || !user?.id || !cycleId) return
+    if (session.recurrence !== 'weekly' || session.day_of_week == null) return
+    const previousDay = previous?.recurrence === 'weekly' ? previous.day_of_week : undefined
+    syncedIds.current.add(session.id)
+    syncRecurring.mutate({ session, previousDay, athleteId, coachId: user.id, cycleId })
+  }
+
   function addSession(data: Omit<ProgSession, 'id' | 'blocs'>) {
     const prepared = bankTemplate ? prepareSession(bankTemplate) : null
     const newSession: ProgSession = {
@@ -400,6 +414,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
     send(next)
     setIsAddingSession(false)
     setOpenSessionId(newSession.id)
+    syncPlanning(newSession)
   }
 
   function handleTextImport(session: ProgSession, issues: ImportIssue[]) {
@@ -408,6 +423,7 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
     send(next)
     setShowTextImport(false)
     setOpenSessionId(session.id)
+    syncPlanning(session)
     const shown = issues.filter(i => i.level !== "info")
     setImportReport(shown.length ? { sessionId: session.id, issues: shown } : null)
     const errors = shown.filter(i => i.level === "error").length
@@ -416,16 +432,21 @@ export function ProgrammationView({ athleteId, cycleId, rangeStart, rangeEnd }: 
   }
 
   function updateSessionMeta(id: string, data: Omit<ProgSession, 'id' | 'blocs'>) {
+    const previous = sessions.find(s => s.id === id)
     const next = sessions.map(s => s.id === id ? { ...s, ...data } : s)
     setSessions(next)
     send(next)
     setEditingSessionId(null)
+    const updated = next.find(s => s.id === id)
+    if (updated) syncPlanning(updated, previous)
   }
 
   function updateSessionContent(id: string, updated: ProgSession) {
     const next = sessions.map(s => s.id === id ? updated : s)
     setSessions(next)    // immediate local update → immediate re-render
     debouncedSave(next)  // async debounced save (800ms)
+    // Contenu modifié : la séance devient concrète sur le cycle (une fois par écran).
+    if (!syncedIds.current.has(id)) syncPlanning(updated)
   }
 
   function deleteSession(id: string) {

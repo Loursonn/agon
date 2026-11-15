@@ -2,7 +2,7 @@ import { addDays, type IsoDay } from "@shared/domain/dates";
 import { WELLNESS_ITEMS, type WellnessEntry, type WellnessItem } from "@shared/domain/wellness";
 import type { PlannedVsDoneDay } from "@/lib/plannedVsDone";
 
-export { painRequired, weekPainReports, type InjuryLike, type PainReport, type PainSource } from "./pain";
+export { painRequired, weekPainReports, type InjuryLike, type PainReport, type PainSource, type SessionPainLike } from "./pain";
 
 /**
  * Weekly review de l'athlète (P22) : calculs purs, sans React ni réseau.

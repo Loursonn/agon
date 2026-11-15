@@ -21,7 +21,9 @@ import { useSpecificExecution } from "@/features/athlete/hooks/useSpecificExecut
 import { useAthleteReferences } from "@/features/shared/hooks/useAthleteReferences";
 import StepTimeline from "@/features/athlete/components/specific/StepTimeline";
 import ExecutionCard from "@/features/athlete/components/specific/ExecutionCard";
-import SessionEndForm from "@/features/athlete/components/specific/SessionEndForm";
+import SessionEndForm, { type SessionEndData } from "@/features/athlete/components/specific/SessionEndForm";
+import { useSaveSessionPain } from "@/features/shared/hooks/useSessionPain";
+import { sessionPainPayload } from "@/lib/sessionPain";
 import { RunDistanceInput } from "@/features/shared/components/RunDistanceInput";
 import { initialRunDistance, runDistancePayload, type RunDistanceValue } from "@/features/shared/components/runDistance";
 import type { EnergySessionAssignmentRow, EnergyStep, BlockLogs } from "@/types/energy";
@@ -51,6 +53,7 @@ export default function SpecificExecutionPage() {
   const session = assignment?.energy_sessions;
 
   const completeMutation = useCompleteEnergyAssignment();
+  const savePain = useSaveSessionPain();
   // Km courus pendant la séance (runs HYROX…) → volume de course
   const [runDist, setRunDist] = useState<RunDistanceValue>(initialRunDistance());
 
@@ -179,7 +182,7 @@ export default function SpecificExecutionPage() {
   const classiqueProgress = `${typeLabel} · Bloc ${Math.min(doneBlocks + 1, blocks.length)} / ${blocks.length}`;
 
   // ── End submit ──────────────────────────────────────────────────────────
-  async function handleEndSubmit(data: { rpe: number; respected: boolean; comment: string }) {
+  async function handleEndSubmit(data: SessionEndData) {
     if (!assignment || !user) return;
     const dur = elapsedTotal > 0 ? Math.round(elapsedTotal / 60) : undefined;
     const notes = [
@@ -211,6 +214,9 @@ export default function SpecificExecutionPage() {
         // RPE dans la même écriture : une seule saisie à garder hors ligne.
         rpe_score: data.rpe,
       });
+      // Douleur de séance : après la validation (même ordre dans la file hors ligne).
+      const painPayload = sessionPainPayload(data.pain);
+      if (painPayload) savePain.mutate({ target: { kind: "energy", id: assignment.id }, athleteId: user.id, ...painPayload });
       // Envoyée ou gardée sur le téléphone : la séance est enregistrée.
       navigate("/athlete");
     } catch { /* Error handled by mutation toast */ }

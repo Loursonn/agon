@@ -20,6 +20,8 @@ import { useCurrentCycle } from "./CoachPhoneAthleteHeader";
 import { CompetitionActions, type CompetitionActionTarget } from "@/features/shared/components/CompetitionActions";
 import { cancelledByLabel } from "@shared/domain/competitions";
 import { useAuth } from "@/hooks/useAuth";
+import { useCreateTestSession } from "@/features/shared/hooks/useUnifiedCalendar";
+import { PhoneTestPicker } from "./PhoneTestPicker";
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const SHOWN: UnifiedCalendarEvent["type"][] = ["workout", "energy", "test", "competition", "free_activity"];
@@ -87,6 +89,7 @@ export default function CoachPhonePlanning() {
 
   const close = () => setSelected(null);
   const { actionsFor, pending, assign, coachId } = usePhoneEventActions(athleteId, close);
+  const createTest = useCreateTestSession();
 
   const weekTitle = cycle && cycleWeek ? `Semaine ${cycleWeek}` : offset === 0 ? "Cette semaine" : `Semaine du ${Number(monday.slice(8))}`;
   const range = `${Number(monday.slice(8))} → ${new Date(sunday + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`;
@@ -184,9 +187,11 @@ export default function CoachPhonePlanning() {
 
       {compSel && <CompetitionSheet event={compSel} onClose={() => setCompSel(null)} />}
 
-      {addDay && <AddSessionSheet athleteId={athleteId} date={addDay} onClose={() => setAddDay(null)} onAdd={(s) => assign.mutate(
+      {addDay && <AddSessionSheet athleteId={athleteId} coachId={coachId} date={addDay} onClose={() => setAddDay(null)} onAdd={(s) => assign.mutate(
         { sessionId: s.id, sessionName: s.name, athleteId, coachId, date: addDay }, { onSuccess: () => setAddDay(null) },
-      )} pending={assign.isPending} />}
+      )} onAddTest={(t) => createTest.mutate(
+        { athleteId, coachId, title: t.title, type: t.type, date: addDay }, { onSuccess: () => setAddDay(null) },
+      )} pending={assign.isPending || createTest.isPending} />}
     </PhonePage>
   );
 }
@@ -218,12 +223,15 @@ function CompetitionSheet({ event, onClose }: { event: UnifiedCalendarEvent; onC
   );
 }
 
-/** « Ajouter » un jour vide : une séance du programme de l'athlète. */
-function AddSessionSheet({ athleteId, date, onAdd, onClose, pending }: {
-  athleteId: string; date: string; pending: boolean; onClose: () => void; onAdd: (s: { id: string; name: string }) => void;
+/** « Ajouter » un jour vide : une séance du programme de l'athlète, ou un test de la banque. */
+function AddSessionSheet({ athleteId, coachId, date, onAdd, onAddTest, onClose, pending }: {
+  athleteId: string; coachId: string; date: string; pending: boolean; onClose: () => void;
+  onAdd: (s: { id: string; name: string }) => void;
+  onAddTest: (t: { title: string; type: string }) => void;
 }) {
   const { data: prog = [], isLoading } = useProgrammation(athleteId);
   const navigate = useNavigate();
+  const [mode, setMode] = useState<"seance" | "test">("seance");
   return (
     <Drawer open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DrawerContent style={{ background: C.s1, borderColor: C.brdL, color: C.tx }}>
@@ -231,8 +239,21 @@ function AddSessionSheet({ athleteId, date, onAdd, onClose, pending }: {
           <DrawerTitle style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>
             Ajouter le {new Date(date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
           </DrawerTitle>
-          <DrawerDescription style={{ fontSize: 12, color: C.tx3, margin: 0 }}>Une séance de musculation de son programme.</DrawerDescription>
-          {isLoading ? null : prog.length === 0 ? (
+          <DrawerDescription style={{ fontSize: 12, color: C.tx3, margin: 0 }}>
+            {mode === "seance" ? "Une séance de musculation de son programme." : "Un test de ta banque, rangé par dominante."}
+          </DrawerDescription>
+          <div role="tablist" aria-label="Type" style={{ display: "flex", gap: 6 }}>
+            {([["seance", "Séance"], ["test", "Test"]] as const).map(([k, l]) => (
+              <button key={k} type="button" role="tab" aria-selected={mode === k} onClick={() => setMode(k)} style={{
+                flex: 1, height: 36, borderRadius: 10, fontFamily: "inherit", fontSize: 13, cursor: "pointer",
+                border: `1px solid ${mode === k ? C.ac : C.brdL}`, background: mode === k ? alpha(C.ac, 0.12) : "transparent",
+                color: mode === k ? C.tx : C.tx2, fontWeight: mode === k ? 500 : 400,
+              }}>{l}</button>
+            ))}
+          </div>
+          {mode === "test" ? (
+            <PhoneTestPicker coachId={coachId} pending={pending} onPick={onAddTest} />
+          ) : isLoading ? null : prog.length === 0 ? (
             <div style={{ fontSize: 13, color: C.tx2 }}>Aucune séance dans son programme.</div>
           ) : (
             <div style={{ ...CARD, padding: "2px 14px", background: C.bg }}>
@@ -248,9 +269,9 @@ function AddSessionSheet({ athleteId, date, onAdd, onClose, pending }: {
               ))}
             </div>
           )}
-          <button type="button" onClick={() => navigate(`/coach/athletes/${athleteId}/programmation`)} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.ac, fontSize: 13, fontFamily: "inherit", cursor: "pointer" }}>
+          {mode === "seance" && <button type="button" onClick={() => navigate(`/coach/athletes/${athleteId}/programmation`)} style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: C.ac, fontSize: 13, fontFamily: "inherit", cursor: "pointer" }}>
             Créer une séance ›
-          </button>
+          </button>}
         </div>
       </DrawerContent>
     </Drawer>

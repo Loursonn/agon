@@ -80,7 +80,7 @@ function PainReminder({ reports }: { reports: readonly PainReport[] }) {
         {reports.map((r, i) => (
           <li key={i} className="rounded-[10px] border border-agon-brd bg-agon-s2 px-3 py-2 text-[13px]">
             <div className="text-agon-tx3">
-              {fmtShortDay(r.day)} · {r.source === "wellness" ? "wellness du matin" : "blessure"}
+              {fmtShortDay(r.day)} · {r.source === "wellness" ? "wellness du matin" : r.source === "seance" ? `séance : ${r.sessionName ?? "séance"}` : "blessure"}
             </div>
             <div className="text-agon-tx">{r.text}</div>
             {r.comment && <div className="mt-0.5 whitespace-pre-wrap italic text-agon-tx2">« {r.comment} »</div>}

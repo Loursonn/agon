@@ -118,3 +118,13 @@ describe("divers", () => {
     expect(docFilePath({ coachId: "c", athleteId: "a", docId: "d", ext: "webp" })).toBe("c/athletes/a/d.webp");
   });
 });
+
+describe("catégorie « Test »", () => {
+  it("proposée dans la banque, avec son libellé, et acceptée par l'API de l'assistant", async () => {
+    const { FICHE_CATEGORIES, FICHE_CATEGORY_LABEL } = await import("../fiches");
+    const { API_FICHE_CATEGORIES } = await import("@shared/coachApiFiches.ts");
+    expect(FICHE_CATEGORIES).toContain("test");
+    expect(FICHE_CATEGORY_LABEL.test).toBe("Test");
+    for (const c of FICHE_CATEGORIES) expect(API_FICHE_CATEGORIES as readonly string[]).toContain(c);
+  });
+});

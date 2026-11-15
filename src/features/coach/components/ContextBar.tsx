@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelectedAthlete } from "@/features/coach/context/SelectedAthleteContext";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
-import { countAthleteChoices, workoutKeys } from "@/api/workouts";
+import { AthleteChangesBadge } from "@/features/coach/components/AthleteChangesBadge";
 import { useCoachApiDrafts, useCoachApiHistory } from "@/features/coach/hooks/useCoachApiDrafts";
 import { ClaudeDraftsSheet } from "@/features/coach/components/ClaudeDraftsSheet";
 import { cn } from "@/lib/utils";
@@ -81,16 +80,6 @@ export default function ContextBar() {
   const { data: claudeDrafts = [] } = useCoachApiDrafts(athleteId);
   const { data: claudeHistory = [] } = useCoachApiHistory(athleteId);
 
-  // Badge modifications athlète (reschedule + bonus sets)
-  const { data: modifCount = 0 } = useQuery({
-    // Clé distincte de la liste des Retours : avant, compteur et tableau
-    // partageaient la même clé et s'écrasaient dans le cache.
-    queryKey: workoutKeys.choicesCount(athleteId ?? ""),
-    enabled: !!athleteId,
-    staleTime: 60_000,
-    queryFn: () => countAthleteChoices(athleteId!),
-  });
-
   // Filter HYROX tab based on athlete flag
   const TABS = ALL_TABS.filter(t => !t.hyroxOnly || selectedAthlete?.is_hyrox_athlete);
 
@@ -163,16 +152,8 @@ export default function ContextBar() {
           <ClaimLinkButton athleteId={selectedAthlete.id} pending size={13} />
         )}
 
-        {/* Badge modifications athlète */}
-        {modifCount > 0 && (
-          <button
-            onClick={() => navigate(`/coach/athletes/${athleteId}/retours`)}
-            title="Voir les modifications athlète"
-            className="agon-mono flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full border-0 bg-agon-alerte px-[9px] py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-agon-ink"
-          >
-            {modifCount} modif{modifCount > 1 ? "s" : ""}
-          </button>
-        )}
+        {/* Modifications de l'athlète pas encore vues (liste au clic) */}
+        {athleteId && athleteId !== user?.id && <AthleteChangesBadge athleteId={athleteId} athleteName={fullName} />}
 
         {/* Propositions de l'assistant IA du coach : en attente, ou inscrites
             récemment (à annuler si besoin). */}

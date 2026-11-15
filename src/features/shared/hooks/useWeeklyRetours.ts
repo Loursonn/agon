@@ -3,6 +3,8 @@ import { formatReps, hasIso } from "@/lib/formatSetsReps";
 import { readAppDataKeys } from "@/api/appData";
 import { listWorkoutLogs } from "@/api/workouts";
 import { listEnergyAssignments } from "@/api/energy";
+import { listInjuryFollowups } from "@/api/injuries";
+import { sessionPainBySession, sessionPainKey } from "@/lib/sessionPain";
 import { listTestSessionsWithResults } from "@/api/tests";
 import { listCompetitionsBetween } from "@/api/competitions";
 import { listExerciseComments } from "@/api/coachRetours";
@@ -119,7 +121,7 @@ async function fetchWeekData(
   const blockHistory: ArchivedBlock[]               = appDataMap["asp:blockHistory"]  ?? [];
 
   // ── Parallel DB queries ──────────────────────────────────────────────────────
-  const [workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy] = await Promise.all([
+  const [workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy, painFollowups] = await Promise.all([
     listWorkoutLogs({ athleteIds: [athleteId], from: start, to: end, excludeStatuses: ["skipped"] }),
     listEnergyAssignments({ athleteIds: [athleteId], from: start, to: end, join: "summary" }),
     listTestSessionsWithResults(athleteId, start, end),
@@ -128,7 +130,10 @@ async function fetchWeekData(
     // Nutrition : `app_data` via la couche API (les tables `nutrition_*` n'existent pas).
     getNutritionDays(athleteId, start, end),
     getNutritionStrategy(athleteId),
+    // Douleurs de fin de séance (blessures déclarées / suivis), affichées sur la séance.
+    listInjuryFollowups(athleteId, { from: start, to: end }),
   ]);
+  const painBySession = sessionPainBySession(painFollowups);
 
   const workoutIds = workoutList.map((w) => w.id as string);
 
@@ -297,6 +302,8 @@ async function fetchWeekData(
       duration_s:     w.duration_s ?? null,
       notes:          w.notes      ?? null,
       rpe_score:      w.rpe_score  ?? null,
+      pain_levels:    painBySession.get(sessionPainKey.workout(w.id))?.levels ?? {},
+      pain_note:      painBySession.get(sessionPainKey.workout(w.id))?.note ?? null,
       wellness_day:   mergedWH[w.scheduled_date] ? wellnessScore(mergedWH[w.scheduled_date]) : null,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       exercise_comments: (comments as any[]).filter((c) => c.workout_log_id === w.id),
@@ -342,6 +349,8 @@ async function fetchWeekData(
       session_kind:  es.session_kind     ?? null,
       note,
       rpe_score:     e.rpe_score         ?? null,
+      pain_levels:   painBySession.get(sessionPainKey.energy(e.id))?.levels ?? {},
+      pain_note:     painBySession.get(sessionPainKey.energy(e.id))?.note ?? null,
       intervals:     es.intervals        ?? [],
       step_log:      stepLog,
       block_logs:    e.block_logs        ?? null,

@@ -23,6 +23,9 @@ import { EnergyLogView } from "@/features/athlete/components/energy/EnergyLogVie
 import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
 import { useNavigate } from "react-router-dom";
 import type { IsoDay } from "@shared/domain/dates";
+import { SessionPainQuestion } from "@/features/athlete/components/session/SessionPainQuestion";
+import { useSaveSessionPain } from "@/features/shared/hooks/useSessionPain";
+import { EMPTY_SESSION_PAIN, sessionPainPayload, type SessionPainAnswer } from "@/lib/sessionPain";
 
 export function EnergyPreviewOverlay({
   event,
@@ -46,6 +49,9 @@ export function EnergyPreviewOverlay({
   const [actualDuration, setActualDuration] = useState<string>("");
   const [runDist, setRunDist]           = useState<RunDistanceValue>(initialRunDistance());
   const [rpeSelected, setRpeSelected]   = useState<number | null>(null);
+  // Question douleur de fin de séance (15/11) : Non par défaut, jamais bloquante.
+  const [pain, setPain]                 = useState<SessionPainAnswer>(EMPTY_SESSION_PAIN);
+  const savePain                        = useSaveSessionPain();
   // Minutes mesurées par le minuteur (null : durée préremplie avec le prévu).
   const [timerMin, setTimerMin]         = useState<number | null>(null);
 
@@ -168,13 +174,22 @@ export function EnergyPreviewOverlay({
 
   // ── Phase RPE ──────────────────────────────────────────────────────────────
   if (phase === "rpe" || complete.isSuccess) {
+    const painPayload = sessionPainPayload(pain);
+    const canSave = rpeSelected != null || painPayload != null;
+    const save = () => {
+      if (painPayload) savePain.mutate({ target: { kind: "energy", id: assignmentId }, athleteId, ...painPayload });
+      if (rpeSelected != null)
+        upsertRpe.mutate({ id: assignmentId, athleteId, rpe_score: rpeSelected }, { onSettled: onClose });
+      else
+        onClose();
+    };
     return (
       <>
         <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.65)" }} />
         <div style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 61,
           background: C.s1, borderRadius: "6px 6px 0 0", borderTop: "1px solid " + C.brd,
-          padding: "24px 20px 40px",
+          padding: "24px 20px 40px", maxHeight: "92dvh", overflowY: "auto",
         }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: C.brdL, margin: "0 auto 20px" }} />
           <div style={{ fontSize: 16, fontWeight: 800, color: C.tx, marginBottom: 4 }}>Comment s'est passée la séance ?</div>
@@ -191,26 +206,24 @@ export function EnergyPreviewOverlay({
             ))}
           </div>
           <div style={{
-            minHeight: 28, textAlign: "center", marginBottom: 28, fontSize: 13, fontWeight: 600,
+            minHeight: 28, textAlign: "center", marginBottom: 20, fontSize: 13, fontWeight: 600,
             color: rpeSelected != null ? rpeColor(rpeSelected) : C.tx3,
             background: rpeSelected != null ? rpeBg(rpeSelected) : "transparent",
             borderRadius: 4, padding: "4px 12px",
           }}>
             {rpeSelected != null ? `${rpeSelected}/10 — ${FOSTER_LABELS[rpeSelected]}` : "Sélectionne une valeur"}
           </div>
+          <div style={{ marginBottom: 24 }}>
+            <SessionPainQuestion value={pain} onChange={setPain} />
+          </div>
           <button
-            onClick={() => {
-              if (rpeSelected != null)
-                upsertRpe.mutate({ id: assignmentId, athleteId, rpe_score: rpeSelected }, { onSettled: onClose });
-              else
-                onClose();
-            }}
+            onClick={save}
             disabled={upsertRpe.isPending}
             style={{
               width: "100%", padding: "15px 0", borderRadius: 6, border: "none",
-              background: rpeSelected != null ? C.ac : C.s2,
-              color: rpeSelected != null ? C.tx : C.tx3,
-              fontSize: 14, fontWeight: 700, cursor: rpeSelected != null ? "pointer" : "default",
+              background: canSave ? C.ac : C.s2,
+              color: canSave ? C.tx : C.tx3,
+              fontSize: 14, fontWeight: 700, cursor: canSave ? "pointer" : "default",
               fontFamily: "inherit",
             }}
           >{upsertRpe.isPending ? "Enregistrement…" : "Enregistrer"}</button>

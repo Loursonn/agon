@@ -246,6 +246,13 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       };
       // Une seule lecture du wellness pour l'historique et la saisie du jour.
       // (la relecture après une erreur, elle, refait la requête.)
+      // Cycle ouvert et drapeau de migration : indépendants des lectures
+      // ci-dessous, lancés en même temps qu'elles (avant : deux allers-retours
+      // de plus, en série, avant d'afficher quoi que ce soit).
+      const activeCycleP = determineActiveCycleId(athleteId);
+      const migratedP = sLoadResult<boolean>("asp:percycle_migrated", athleteId);
+      activeCycleP.catch(() => { /* relevé par l'await plus bas */ });
+      migratedP.catch(() => { /* relevé par l'await plus bas */ });
       const readWellness = () => getWellnessHistory(athleteId, { includeArchived: false });
       let firstRead: ReturnType<typeof readWellness> | null = readWellness();
       const wellnessRead = () => firstRead ?? readWellness();
@@ -283,10 +290,10 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       setSessionLogsRaw(sl); setFreeSessionsRaw(fs);
 
       // ── Cycle ouvert + migration legacy → par-cycle (une seule fois) ────────
-      const activeCycleId = await determineActiveCycleId(athleteId);
+      const activeCycleId = await activeCycleP;
       // Lecture en erreur (réseau, session expirée) ≠ « pas encore migré » :
       // dans le doute on ne migre pas, on réessaiera au prochain chargement.
-      const migratedRes = await sLoadResult<boolean>("asp:percycle_migrated", athleteId);
+      const migratedRes = await migratedP;
       if (!readOnly && migratedRes.ok && !migratedRes.value) {
         // Le drapeau "migré" ne doit être posé QUE si les recopies ont réussi.
         // Sinon une écriture ratée (réseau) marquait la migration faite alors

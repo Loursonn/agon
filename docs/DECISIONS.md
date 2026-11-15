@@ -2644,3 +2644,65 @@ et son README.
   celui écrit par l'athlète dans les anciennes saisies l'est.
 - Envoi bloqué tant que les douleurs de la semaine ne sont pas chargées (sinon la question pourrait manquer).
 - Le feu reste enregistré avec la review envoyée et affiché au coach à côté de la douleur.
+
+## 2026-11-15 — Temps de chargement (coach et athlète)
+
+- **Mesure** (`scripts/perf/mesure-chargement.mjs`, build de prod sur agon-test, comptes démo, servi en HTTP/2 par
+  `scripts/perf/serveur-h2.mjs`, réseau « Fast 3G » DevTools, médiane de 3) : temps jusqu'aux données affichées.
+  « Froid » = rien en cache ; « chaud » = 2ᵉ ouverture (cache HTTP + cache React Query persisté). Service worker
+  bloqué pendant la mesure (ses requêtes échappent au ralenti de Chrome).
+
+  | Écran | Froid avant → après | Chaud avant → après |
+  |---|---|---|
+  | Athlète : ouverture → Aujourd'hui (390 px, CPU ×4) | 9,9 s → 7,4 s | 2,2 s → 1,7 s |
+  | Coach : liste athlètes (1440 px) | 7,0 s → 4,8 s | 3,1 s → 1,9 s |
+  | Coach : fiche Léa, planning (1440 px) | 12,8 s → 8,0 s | 5,1 s → 2,8 s |
+
+  JS (gzip) avant l'écran : athlète 663 → 492 kB, liste coach 335 → 279 kB, planning 738 → 511 kB.
+- **Causes corrigées** (sans changement d'affichage) :
+  1. Cascade de démarrage : profil → accords RGPD → layout → page → données, un aller-retour chacun. Maintenant la
+     page d'arrivée est préchargée dès le démarrage (`src/lib/arrivalChunks.ts`, rôle gardé sur l'appareil, sinon
+     dès l'arrivée du profil), les accords sont lus avec le profil, le roster coach part avec le profil quand le rôle
+     est connu, et ses deux dernières lectures sont parallèles.
+  2. Profil et roster lus deux fois à chaque ouverture (`getSession` + évènement `INITIAL_SESSION`) : l'évènement est ignoré.
+  3. Recharts (~100 kB gzip) tiré au démarrage athlète par des fenêtres rarement ouvertes (bilan de bloc, tiroir
+     profil…) et au planning coach par la frise / la synthèse : chargés à l'ouverture (`lazy`). Le wellness est
+     préchargé 4 s après l'arrivée.
+  4. Texte des Nouveautés (~57 kB gzip) dans le démarrage coach pour un simple compteur : chargé à part (`useReleaseNotes`).
+  5. État athlète (`useAthletePersistedState`) : cycle ouvert et drapeau de migration lus en même temps que le reste
+     (deux allers-retours en série de moins avant le planning).
+  Aussi : service worker enregistré 8 s après le démarrage (son précache de ~6 Mo ne concurrence plus le premier
+  écran à la première visite ou après une mise en ligne ; non mesurable par le banc ci-dessus).
+- **Restes** : ~80 requêtes Supabase avant l'écran Aujourd'hui (une par clé `app_data`, plus les préflights CORS
+  qu'un vrai téléphone paie et que le banc ne ralentit pas) ; quelques lectures en double entre hooks
+  (`asp:prog`, `asp:freesess`, compétitions, événements de vie). Pistes : regrouper les clés `app_data` en une
+  lecture, ou servir l'API Supabase sous le domaine de l'app (plus de préflights).
+
+## 2026-11-16 — Douleur de séance : question en fin de séance, enregistrée comme blessure déclarée
+
+- **Mot d'Hugo** (15/11, réponse à « faudrait-il une vraie question douleur en fin de séance ? ») : « oui ajoute la
+  question douleur en fin de séance ». Puis, à « où est-ce enregistré ? » : « Comme blessure déclarée » (badge
+  « blessure active » allumé, blessure en cours jusqu'à clôture).
+- **Question** : « Une douleur pendant la séance ? » Non / Oui ; si Oui, carte douleur du wellness (mêmes zones,
+  `PainZoneMap`), note 0-10 par zone, commentaire facultatif. Non par défaut, jamais bloquante : sans réponse, rien
+  n'est écrit. Composant `SessionPainQuestion`, logique `src/lib/sessionPain.ts`.
+- **Où** : feuille RPE de la muscu (`RpeSheetForLog`), phase RPE de l'énergie (accueil et Programme), formulaire de fin
+  HYROX / spécifique (`SessionEndForm`), RPE énergie de la page « Séance » (`LogSeancePage`), feuille dédiée après une
+  séance classique validée depuis le Programme (`SessionPainSheet`). Pas sur l'ancienne saisie muscu de
+  `LogSeancePage` (séance retrouvée par nom et date, pas par id) ni sur les activités libres (`app_data`).
+- **Stockage** : chaque « oui » est une blessure déclarée (`medical_entries`) : par zone, la blessure en cours de la même
+  zone est suivie (sa note de douleur est mise à jour), sinon une blessure « Douleur en séance » est créée (en cours,
+  datée du jour de la séance, zone = libellé de la carte, contexte entraînement, déclarée par l'athlète). Le modèle des
+  blessures n'avait pas de suivi : nouvelle table `injury_followups` (blessure, jour, note 1-10, commentaire, séance
+  d'origine en lien nullable `ON DELETE SET NULL`), un suivi par blessure et par séance (rejouable sans doublon).
+  Même zone : égalité sans casse, ou un mot de plus d'un côté (« Genou gauche » suit « Genou »).
+  Écriture par la RPC atomique `report_session_pain` (verrou par athlète, `_session_pain_clean`), gardée hors ligne
+  (`session.pain`). Lecture : athlète, coachs (`is_coach_of`), staff « medical » ; aucune policy d'écriture. Aucune
+  colonne sur les séances (pas de second stockage de la même douleur). Export RGPD : `injury_followups`. Migration
+  `20261116120000_session_pain_injury.sql`, test `supabase/tests/session_pain_injury.sql` ; la première version
+  (colonnes `pain_levels` / `pain_note` sur les séances, `20261116110000`) n'est jamais allée en prod et a été retirée
+  d'agon-test.
+- **Weekly review** : les suivis de la semaine comptent dans `weekPainReports` (source « seance », une ligne par séance,
+  « séance : <nom> », zones, commentaire) ; une blessure née d'une séance n'est pas répétée en ligne « blessure ».
+- **Coach** : la blessure apparaît dans le profil santé et les badges « blessure active » ; sur la séance, pastille
+  « Douleur » (Retours semaine et mois, panneau du jour, tiroir « Prévu et réalisé »), lue dans les suivis.

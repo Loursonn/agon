@@ -34,6 +34,7 @@ import type { RecordSet } from "@shared/domain/performance";
 import { writeAppData } from "@/api/appData";
 import { db } from "@/api/client";
 import { completeEnergyAssignment, setEnergyRpe, type CompleteEnergyInput } from "@/api/energy";
+import { reportSessionPain, type SessionPainSource } from "@/api/injuries";
 import { saveDay } from "@/api/nutrition";
 import { computeRecordsFromSession, invalidateRecords } from "@/api/records";
 import { saveWeight } from "@/api/profile";
@@ -74,6 +75,8 @@ export interface WriteArgs {
   "workout.rpe": { athleteId: string; logId: string; rpe: number | null };
   "energy.complete": { athleteId: string; id: string; input: CompleteEnergyInput };
   "energy.rpe": { athleteId: string; id: string; rpe: number | null };
+  /** « Oui, douleur » en fin de séance → blessure déclarée ou suivi (libellé de zone → note 1-10). */
+  "session.pain": { athleteId: string; source: SessionPainSource; levels: Record<string, number>; note: string | null };
   "wellness.day": { athleteId: string; day: IsoDay; form: unknown };
   "nutrition.day": { athleteId: string; day: IsoDay; log: NutritionDailyLog };
   "weight.day": { athleteId: string; day: IsoDay; kg: number };
@@ -97,6 +100,7 @@ export const EXECUTORS: { [K in WriteKind]: (a: WriteArgs[K]) => Promise<unknown
   "workout.rpe": (a) => setWorkoutRpe(a.logId, a.rpe),
   "energy.complete": (a) => completeEnergyAssignment(a.id, a.input),
   "energy.rpe": (a) => setEnergyRpe(a.id, a.rpe),
+  "session.pain": (a) => reportSessionPain(a.source, a.levels, a.note),
   "wellness.day": (a) => saveWellnessForm(a.athleteId, a.form, a.day),
   "nutrition.day": (a) => saveDay(a.athleteId, a.day, a.log),
   "weight.day": (a) => saveWeight(a.athleteId, a.day, a.kg),
@@ -125,7 +129,8 @@ export function mergeWriteArgs(kind: string, prev: unknown, next: unknown): unkn
 /** Une cible = une clé : deux saisies de même clé n'en font qu'une (la dernière). */
 export function writeKey<K extends WriteKind>(kind: K, args: WriteArgs[K]): string {
   const a = args as Record<string, unknown>;
-  const target = (a.logId ?? a.id ?? (a.day !== undefined ? `${a.athleteId}:${a.day}` : a.athleteId)) as string;
+  const src = a.source as { workoutLogId?: string; energyAssignmentId?: string } | undefined;
+  const target = (a.logId ?? a.id ?? src?.workoutLogId ?? src?.energyAssignmentId ?? (a.day !== undefined ? `${a.athleteId}:${a.day}` : a.athleteId)) as string;
   return `${kind}:${target}`;
 }
 
@@ -137,6 +142,7 @@ const LABELS: Record<WriteKind, [string, boolean]> = {
   "workout.rpe": ["RPE de séance", false],
   "energy.complete": ["Séance énergie", true],
   "energy.rpe": ["RPE de séance énergie", false],
+  "session.pain": ["Douleur de séance", true],
   "wellness.day": ["Wellness", false],
   "nutrition.day": ["Nutrition", true],
   "weight.day": ["Pesée", true],

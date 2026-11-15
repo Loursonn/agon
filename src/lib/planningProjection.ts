@@ -122,7 +122,8 @@ export function planDayChange(logs: DayChangeLog[], newDow: number): {
   for (const l of logs) {
     if (!l.week_start) continue;
     if (l.rescheduled_by_athlete) { keptByAthlete++; continue; }
-    if (l.status === "completed") continue;
+    // Faite ou commencée : reste au jour où l'athlète l'a faite.
+    if (l.status === "completed" || l.status === "in_progress") continue;
     const d = new Date(l.week_start + "T12:00:00");
     d.setDate(d.getDate() + newDow);
     updates.push({
@@ -131,4 +132,55 @@ export function planDayChange(logs: DayChangeLog[], newDow: number): {
     });
   }
   return { updates, keptByAthlete };
+}
+
+// ── Séance hebdomadaire rendue concrète sur le cycle ─────────────────────────
+
+export interface CycleWeekLite {
+  id: string;
+  week_number: number;
+  start_date: string;
+  end_date: string;
+}
+
+export interface SessionLogLite {
+  scheduled_date: string;
+  original_scheduled_date?: string | null;
+  microcycle_id?: string | null;
+}
+
+export interface RecurringPlacement {
+  date: string;
+  microcycleId: string;
+  weekNumber: number;
+}
+
+/**
+ * Séances concrètes à créer pour une séance hebdomadaire (`dow` : 0 = lundi
+ * … 6 = dimanche) sur les semaines d'un cycle. Une semaine qui a déjà une
+ * séance de cette séance-type (quel que soit son statut : faite, sautée,
+ * déplacée par l'athlète…) n'est pas touchée ; aucun jour passé n'est créé ;
+ * le jour doit tomber dans la semaine du cycle (cycle commencé un mercredi :
+ * pas de lundi la 1re semaine).
+ */
+export function planRecurringPlacement(
+  weeks: CycleWeekLite[],
+  logs: SessionLogLite[],
+  dow: number,
+  today: string,
+): RecurringPlacement[] {
+  const out: RecurringPlacement[] = [];
+  for (const w of weeks) {
+    const d = new Date(mondayOfISO(w.start_date) + "T12:00:00");
+    d.setDate(d.getDate() + dow);
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (date < today || date < w.start_date || date > w.end_date) continue;
+    const inWeek = (iso?: string | null) => !!iso && iso >= w.start_date && iso <= w.end_date;
+    const covered = logs.some((l) =>
+      l.microcycle_id === w.id || inWeek(l.original_scheduled_date) || (!l.original_scheduled_date && inWeek(l.scheduled_date)),
+    );
+    if (covered) continue;
+    out.push({ date, microcycleId: w.id, weekNumber: w.week_number });
+  }
+  return out;
 }

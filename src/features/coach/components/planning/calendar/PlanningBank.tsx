@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TEST_CATEGORY_LABEL, TEST_CATEGORY_ORDER } from "@/features/shared/types/tests";
+import { foldSearch, groupBankTests } from "@/lib/testBankGroups";
 import type { EnergySessionRow } from "@/types/energy";
 import { BIO_BANK_ID, BIO_TITLE, ENERGY_KIND_LABEL, BankTab, BANK_TABS } from "./calendarConstants";
 import { BANK_SIDE_TAB_ON, ENERGY_KIND_TEXT, TEST_CAT_TONE } from "./bankTone";
@@ -32,16 +32,13 @@ export function PlanningBank({
     });
   }
 
-  const q = search.toLowerCase();
-  const filteredMuscu      = sessions.filter((s) => s.name.toLowerCase().includes(q));
-  const filteredEnergy     = energySessions.filter((s) => s.session_kind !== "specifique" && s.name.toLowerCase().includes(q));
-  const filteredSpecifique = energySessions.filter((s) => s.session_kind === "specifique" && s.name.toLowerCase().includes(q));
-  const filteredTests      = testDefinitions.filter((t) => t.name.toLowerCase().includes(q));
-
-  const testGroups = TEST_CATEGORY_ORDER
-    .map((cat) => ({ cat, tests: filteredTests.filter((t) => t.category === cat) }))
-    .filter((g) => g.tests.length > 0);
-  const uncategorized = filteredTests.filter((t) => !t.category);
+  const q = foldSearch(search);
+  const has = (name: string) => foldSearch(name).includes(q);
+  const filteredMuscu      = sessions.filter((s) => has(s.name));
+  const filteredEnergy     = energySessions.filter((s) => s.session_kind !== "specifique" && has(s.name));
+  const filteredSpecifique = energySessions.filter((s) => s.session_kind === "specifique" && has(s.name));
+  // Tests rangés par dominante (même calcul que le bandeau de la vue Semaine).
+  const testGroups = groupBankTests(testDefinitions, search);
 
   const empty = (msg: string) => (
     <div className="py-3.5 text-center text-[11px] text-agon-tx3">
@@ -135,11 +132,10 @@ export function PlanningBank({
             </div>
 
             {/* Tests : catégories repliables (menu déroulant) */}
-            {filteredTests.length === 0 ? empty("Aucun test dans la banque") : (
+            {testGroups.length === 0 ? empty("Aucun test dans la banque") : (
               <>
-                {[...testGroups.map((g) => ({ ...g, label: TEST_CATEGORY_LABEL[g.cat], tone: TEST_CAT_TONE[g.cat] })),
-                  ...(uncategorized.length > 0 ? [{ cat: "__autres__", tests: uncategorized, label: "Autres", tone: TEST_CAT_TONE.autres }] : []),
-                ].map(({ cat, tests, label, tone }) => {
+                {testGroups.map(({ key: cat, tests, label }) => {
+                  const tone = TEST_CAT_TONE[cat];
                   const isOpen = openCats.has(cat) || !!search.trim();
                   return (
                     <div key={cat} className="flex flex-col gap-1">

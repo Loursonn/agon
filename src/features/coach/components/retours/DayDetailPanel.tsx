@@ -11,6 +11,7 @@ import { WELLNESS_ITEMS, WELLNESS_ITEM_LABEL } from "@shared/domain/wellness";
 import { SessionEvolutionDrawer } from "./SessionEvolutionDrawer";
 import { VideoRequestsList } from "./VideoRequestsList";
 import { painList } from "@/lib/painZones";
+import { SessionPainDetail } from "@/features/shared/components/SessionPain";
 import type { WellnessDay, WorkoutDetail, EnergySessionDetail, FreeActivityDetail } from "@/features/shared/types/retours.types";
 
 /** Activité libre : patine de la charte (ancienne sarcelle). */
@@ -282,6 +283,10 @@ function WorkoutCard({ w, onOpenEvolution }: { w: WorkoutDetail; onOpenEvolution
         </div>
       </div>
 
+      {w.pain_levels && Object.keys(w.pain_levels).length > 0 && (
+        <div className="mb-2.5"><SessionPainDetail levels={w.pain_levels} note={w.pain_note} /></div>
+      )}
+
       {w.video_requests?.length > 0 && (
         <div className="mb-2.5"><VideoRequestsList requests={w.video_requests} /></div>
       )}
@@ -449,6 +454,10 @@ function EnergyCard({ e }: { e: EnergySessionDetail }) {
           {hasDetail && (open ? <ChevronUp size={12} color={C.tx3} /> : <ChevronDown size={12} color={C.tx3} />)}
         </div>
       </div>
+
+      {e.pain_levels && Object.keys(e.pain_levels).length > 0 && (
+        <div className="px-3 pb-2"><SessionPainDetail levels={e.pain_levels} note={e.pain_note} /></div>
+      )}
 
       {/* Expanded: blocks */}
       {open && (

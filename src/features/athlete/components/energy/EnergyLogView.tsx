@@ -207,7 +207,7 @@ export function EnergyLogView({
             <label htmlFor="energy-log-note" style={LABEL}>Note pour ton coach</label>
             <textarea
               id="energy-log-note"
-              placeholder="Sensations, conditions, douleur…"
+              placeholder="Sensations, conditions…"
               value={note}
               onChange={(e) => onNote(e.target.value)}
               rows={3}
