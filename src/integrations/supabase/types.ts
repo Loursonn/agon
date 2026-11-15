@@ -1316,6 +1316,9 @@ export type Database = {
           notes: string | null
           planning_block_id: string | null
           priority: string
+          result_text: string | null
+          result_url: string | null
+          rpe_score: number | null
           season_id: string | null
           type: string
         }
@@ -1335,6 +1338,9 @@ export type Database = {
           notes?: string | null
           planning_block_id?: string | null
           priority?: string
+          result_text?: string | null
+          result_url?: string | null
+          rpe_score?: number | null
           season_id?: string | null
           type?: string
         }
@@ -1354,6 +1360,9 @@ export type Database = {
           notes?: string | null
           planning_block_id?: string | null
           priority?: string
+          result_text?: string | null
+          result_url?: string | null
+          rpe_score?: number | null
           season_id?: string | null
           type?: string
         }
@@ -3188,6 +3197,7 @@ export type Database = {
       injury_followups: {
         Row: {
           athlete_id: string
+          competition_id: string | null
           created_at: string
           created_by: string | null
           day: string
@@ -3200,6 +3210,7 @@ export type Database = {
         }
         Insert: {
           athlete_id: string
+          competition_id?: string | null
           created_at?: string
           created_by?: string | null
           day: string
@@ -3212,6 +3223,7 @@ export type Database = {
         }
         Update: {
           athlete_id?: string
+          competition_id?: string | null
           created_at?: string
           created_by?: string | null
           day?: string
@@ -3228,6 +3240,13 @@ export type Database = {
             columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_followups_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
             referencedColumns: ["id"]
           },
           {
@@ -6838,6 +6857,7 @@ export type Database = {
       report_client_build: { Args: { p_build: string }; Returns: undefined }
       report_session_pain: {
         Args: {
+          p_competition?: string
           p_energy_assignment?: string
           p_levels?: Json
           p_note?: string

@@ -198,6 +198,13 @@ async function plannedOf(kind: PlanLinkInfo["plannedKind"], id: string): Promise
     );
     return { name: w?.session_name ?? null, blocks: null, rpe: num(w?.rpe_score), comment: w?.notes?.trim() || null };
   }
+  if (kind === "competition") {
+    const c = unwrap(
+      await db().from("competitions").select("name, rpe_score, athlete_comment").eq("id", id).maybeSingle(),
+      "compétition",
+    );
+    return { name: c?.name ?? null, blocks: null, rpe: num(c?.rpe_score), comment: c?.athlete_comment?.trim() || null };
+  }
   const t = unwrap(await db().from("test_sessions").select("title").eq("id", id).maybeSingle(), "test prévu");
   return { ...none, name: t?.title ?? null };
 }

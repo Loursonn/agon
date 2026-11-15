@@ -65,7 +65,7 @@ export interface ActivitySummaryInput {
 
 export interface PlanLinkInfo {
   id: string;
-  plannedKind: "energy" | "workout" | "test";
+  plannedKind: "energy" | "workout" | "test" | "competition";
   plannedId: string;
   status: "auto" | "confirmed";
   /** Nom de la séance prévue (« HYROX simulation »), si connu. */

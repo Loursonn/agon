@@ -129,8 +129,8 @@ export function mergeWriteArgs(kind: string, prev: unknown, next: unknown): unkn
 /** Une cible = une clé : deux saisies de même clé n'en font qu'une (la dernière). */
 export function writeKey<K extends WriteKind>(kind: K, args: WriteArgs[K]): string {
   const a = args as Record<string, unknown>;
-  const src = a.source as { workoutLogId?: string; energyAssignmentId?: string } | undefined;
-  const target = (a.logId ?? a.id ?? src?.workoutLogId ?? src?.energyAssignmentId ?? (a.day !== undefined ? `${a.athleteId}:${a.day}` : a.athleteId)) as string;
+  const src = a.source as { workoutLogId?: string; energyAssignmentId?: string; competitionId?: string } | undefined;
+  const target = (a.logId ?? a.id ?? src?.workoutLogId ?? src?.energyAssignmentId ?? src?.competitionId ?? (a.day !== undefined ? `${a.athleteId}:${a.day}` : a.athleteId)) as string;
   return `${kind}:${target}`;
 }
 

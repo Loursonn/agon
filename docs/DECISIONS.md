@@ -2738,3 +2738,20 @@ Demande d'Hugo : empêcher n'importe qui de s'inscrire sur Agon. Choix d'Hugo :
 - invitation créée par l'admin ou par un coach certifié (page Coachs) ;
 - athlètes et staff verrouillés côté serveur aussi : profil créé par RPC (`register_athlete` avec un code coach valide, rattachement dans la même transaction ; `register_staff` avec une invitation staff valide).
 Deux temps (règle « durcissement côté serveur ») : migration `20261116170000_signup_invitations` additive (table, RPC `register_*`), puis, une fois en prod le client qui les appelle, une migration séparée fait refuser par `guard_profile_privileged_fields` toute création de profil hors de ces RPC (drapeau `agon.signup`). Les coachs existants gardent leur accès. Les comptes créés par le serveur (athlètes en attente, `service_role`) ne sont pas concernés.
+
+## 2026-11-16 — La compétition est une séance à remplir le jour J
+
+Demande d'Hugo (15/11) : « lorsqu'un athlète a une compétition, il faut la mettre comme un entraînement à remplir », liable à une sortie Garmin (« Iron Rock » = HYROX, dictée vocale), en faisant attention à l'échauffement, autre activité, avant la course, souvent la plus longue.
+
+**Décisions d'Hugo (15/11)** :
+- La compétition **elle-même** devient la séance du jour J (pas de séance copiée dans le planning, rien à synchroniser) : compétitions et matchs maintenus ; stage, off, autre gardent le simple bilan écrit.
+- Échauffement : activité à part. La course proposée d'office est la plus longue du jour, ou celle dont la durée est la plus proche du chrono HYROX saisi ; l'athlète ou le coach peut choisir l'autre. L'échauffement reste une activité du jour, comptée à part dans la charge.
+- Saisie : résultat libre et lien (pas de chrono ni de classement structurés), plus RPE, ressenti / bilan (`athlete_comment`, existant) et douleur de fin de séance.
+
+**Choix techniques** :
+- Migration en deux temps, parce que le client de `main` (622 commits de retard) n'affiche pas une activité rattachée à un type de séance qu'il ne connaît pas :
+  - A, `20261116190000_competition_session` (additive, appliquée tout de suite) : `competitions.result_text / result_url / rpe_score` ; type `competition` dans `activity_plan_links` et `link_activity_to_plan` (rattachement choisi par l'athlète ou le coach) ; trigger sur `competitions` (date, type, annulation, suppression) ; `injury_followups.competition_id` et `report_session_pain(..., p_competition)` (dernier argument, facultatif : les appels existants ne changent pas).
+  - B, `supabase/pending/20261116190500_competition_auto_link` (après mise en prod du front) : proposition automatique en base (famille `any`, durée de référence = chrono HYROX sinon plus longue activité acceptée du jour), trigger du chrono HYROX, premier calcul. D'ici là la même règle est calculée côté client dans « Ma séance ».
+- Un seul mécanisme de lien : le rapprochement planning. L'analyse HYROX garde son propre lien (`hyrox_results.watch_activity_id` + recalage) mais prend d'office l'activité liée à la compétition.
+- Charge : la course liée à une compétition compte comme une activité (FC), pas comme une séance prévue ; l'échauffement aussi.
+- Prévu / réalisé : un lien vers une séance absente de la lecture (compétition annulée…) laisse l'activité libre, visible, au lieu de la faire disparaître.

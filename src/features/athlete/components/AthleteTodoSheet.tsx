@@ -10,6 +10,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { localIsoDay, addDays } from "@shared/domain/dates";
 import { activeCompetitions } from "@shared/domain/competitions";
+import { COMPETITION_SESSION_TYPES, competitionSessionToFill } from "@/lib/competitionSession";
 import { openReviewWeek } from "@/lib/weekly-review";
 import { buildTodoItems, lastTodoShownDay, markTodoShown, shouldShowTodo, type TodoItem } from "@/lib/athleteTodo";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -54,7 +55,7 @@ export function AthleteTodoSheet({ uid, blocked }: Props) {
       unreadRetours: (retours.data ?? []).filter((r) => !r.athlete_reaction).length,
       unseenFiches: (docs.data?.assigned ?? []).filter((a) => !a.seenAt).length,
       uncommentedComps: activeCompetitions(comps.data ?? [])
-        .filter((c) => c.date < today && !c.athlete_comment)
+        .filter((c) => (COMPETITION_SESSION_TYPES.has(c.type) ? competitionSessionToFill(c, today) : c.date < today && !c.athlete_comment))
         .map((c) => ({ id: c.id, name: c.name })),
       weeklyReview: reviewWeek
         ? { started: !!review.data, submitted: review.data?.status === "submitted", lastDay: today === addDays(reviewWeek, 7) }

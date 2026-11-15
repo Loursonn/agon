@@ -38,6 +38,34 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-competition-seance",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Le jour J, la compétition se remplit comme une séance",
+    summary:
+      "Compétition ou match : l'athlète saisit son résultat, un lien, son RPE, son bilan et une éventuelle douleur, et la lie à l'activité de sa montre.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Dès le jour de la compétition, « Remplir ma séance » sur la carte de la compétition (Aujourd'hui, Programme) : résultat libre (« 12e / 80 », « 3-1 »…), lien vers les résultats, RPE, ressenti, douleur de fin de séance.",
+          "Les activités de la montre du jour (Garmin, COROS ou fichier importé) sont listées : Agon propose la plus longue (la course, l'échauffement étant plus court). L'athlète peut choisir l'autre.",
+          "L'échauffement reste une activité à part : il compte dans la charge du jour, séparément de la course.",
+          "Tant que rien n'est saisi, la compétition reste « à remplir » dans la fenêtre « À faire ».",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Résultat, RPE et lien s'affichent avec le bilan de l'athlète : Retours, panneau du jour du planning, fiche de la compétition.",
+          "Dans le planning, la course rattachée apparaît comme une séance réalisée (ou à confirmer), avec la montre et l'attribution Garmin.",
+          "Une douleur déclarée en fin de compétition devient une blessure (contexte « compétition ») ou met à jour celle déjà en cours sur la zone.",
+          "HYROX : l'analyse de course reprend d'office l'activité liée à la compétition.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-volume-course-semaine",
     date: "2026-11-15",
     kind: "feature",

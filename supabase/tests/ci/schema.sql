@@ -2921,6 +2921,7 @@ BEGIN
     WHEN 'energy' THEN (SELECT athlete_id FROM public.energy_session_assignments WHERE id = p_planned)
     WHEN 'workout' THEN (SELECT athlete_id FROM public.workout_logs WHERE id = p_planned)
     WHEN 'test' THEN (SELECT athlete_id FROM public.test_sessions WHERE id = p_planned)
+    WHEN 'competition' THEN (SELECT athlete_id FROM public.competitions WHERE id = p_planned)
   END;
   IF v_owner IS DISTINCT FROM v_act.athlete_id THEN
     RAISE EXCEPTION 'link_activity_to_plan : séance prévue introuvable pour cet athlète' USING ERRCODE = '22023';
@@ -4686,7 +4687,7 @@ $$;
 ALTER FUNCTION "public"."report_client_build"("p_build" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."report_session_pain"("p_workout_log" "uuid" DEFAULT NULL::"uuid", "p_energy_assignment" "uuid" DEFAULT NULL::"uuid", "p_levels" "jsonb" DEFAULT '{}'::"jsonb", "p_note" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."report_session_pain"("p_workout_log" "uuid" DEFAULT NULL::"uuid", "p_energy_assignment" "uuid" DEFAULT NULL::"uuid", "p_levels" "jsonb" DEFAULT '{}'::"jsonb", "p_note" "text" DEFAULT NULL::"text", "p_competition" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -4701,13 +4702,24 @@ DECLARE
   v_created boolean;
   v_out     jsonb := '[]'::jsonb;
 BEGIN
-  IF num_nonnulls(p_workout_log, p_energy_assignment) <> 1 THEN
+  IF num_nonnulls(p_workout_log, p_energy_assignment, p_competition) <> 1 THEN
     RAISE EXCEPTION 'Une séance attendue' USING ERRCODE = '22023';
   END IF;
   IF p_workout_log IS NOT NULL THEN
     SELECT w.athlete_id, w.scheduled_date INTO v_athlete, v_day FROM public._workout_log_for_write(p_workout_log) w;
-  ELSE
+  ELSIF p_energy_assignment IS NOT NULL THEN
     SELECT a.athlete_id, a.scheduled_date INTO v_athlete, v_day FROM public._energy_assignment_for_write(p_energy_assignment) a;
+  ELSE
+    IF v_me IS NULL THEN
+      RAISE EXCEPTION 'Non connecté' USING ERRCODE = '42501';
+    END IF;
+    SELECT co.athlete_id, co.date INTO v_athlete, v_day FROM public.competitions co WHERE co.id = p_competition;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Séance introuvable' USING ERRCODE = 'P0002';
+    END IF;
+    IF NOT (v_athlete = v_me OR public.is_coach_of(v_athlete) OR public.current_user_is_admin()) THEN
+      RAISE EXCEPTION 'Accès refusé' USING ERRCODE = '42501';
+    END IF;
   END IF;
   c := public._session_pain_clean(p_levels, p_note);
   -- Deux envois simultanés pour le même athlète ne créent pas deux blessures.
@@ -4731,7 +4743,8 @@ BEGIN
       INSERT INTO public.medical_entries
         (athlete_id, kind, title, zone, date, status, notes, pain_level, context, declared_by, created_by)
       VALUES
-        (v_athlete, 'blessure', 'Douleur en séance', k, v_day, 'en_cours', c.note, v_level, 'entrainement',
+        (v_athlete, 'blessure', 'Douleur en séance', k, v_day, 'en_cours', c.note, v_level,
+         CASE WHEN p_competition IS NOT NULL THEN 'competition' ELSE 'entrainement' END,
          CASE WHEN v_me = v_athlete THEN 'athlete' ELSE 'coach' END, v_me)
       RETURNING id INTO v_entry;
     ELSE
@@ -4743,10 +4756,15 @@ BEGIN
       VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_workout_log, v_me)
       ON CONFLICT (entry_id, workout_log_id) WHERE workout_log_id IS NOT NULL
       DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
-    ELSE
+    ELSIF p_energy_assignment IS NOT NULL THEN
       INSERT INTO public.injury_followups (entry_id, athlete_id, day, pain_level, note, energy_assignment_id, created_by)
       VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_energy_assignment, v_me)
       ON CONFLICT (entry_id, energy_assignment_id) WHERE energy_assignment_id IS NOT NULL
+      DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
+    ELSE
+      INSERT INTO public.injury_followups (entry_id, athlete_id, day, pain_level, note, competition_id, created_by)
+      VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_competition, v_me)
+      ON CONFLICT (entry_id, competition_id) WHERE competition_id IS NOT NULL
       DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
     END IF;
 
@@ -4757,7 +4775,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."require_sync_consent"() RETURNS "trigger"
@@ -6465,12 +6483,13 @@ DECLARE
   v_new_day date;
   v_kind text := CASE TG_TABLE_NAME WHEN 'energy_session_assignments' THEN 'energy'
                                     WHEN 'workout_logs' THEN 'workout'
-                                    WHEN 'test_sessions' THEN 'test' END;
+                                    WHEN 'test_sessions' THEN 'test'
+                                    WHEN 'competitions' THEN 'competition' END;
 BEGIN
   IF TG_TABLE_NAME = 'provider_activities' THEN
     IF TG_OP <> 'INSERT' THEN v_old_day := OLD.local_date; END IF;
     IF TG_OP <> 'DELETE' THEN v_new_day := NEW.local_date; END IF;
-  ELSIF TG_TABLE_NAME = 'test_sessions' THEN
+  ELSIF TG_TABLE_NAME IN ('test_sessions', 'competitions') THEN
     IF TG_OP <> 'INSERT' THEN v_old_day := OLD.date; END IF;
     IF TG_OP <> 'DELETE' THEN v_new_day := NEW.date; END IF;
   ELSE
@@ -7271,7 +7290,7 @@ CREATE TABLE IF NOT EXISTS "public"."activity_plan_links" (
     "ai_allowed" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "activity_plan_links_planned_kind_check" CHECK (("planned_kind" = ANY (ARRAY['energy'::"text", 'workout'::"text", 'test'::"text"]))),
+    CONSTRAINT "activity_plan_links_planned_kind_check" CHECK (("planned_kind" = ANY (ARRAY['energy'::"text", 'workout'::"text", 'test'::"text", 'competition'::"text"]))),
     CONSTRAINT "activity_plan_links_status_check" CHECK (("status" = ANY (ARRAY['auto'::"text", 'confirmed'::"text", 'rejected'::"text"])))
 );
 
@@ -7978,7 +7997,13 @@ CREATE TABLE IF NOT EXISTS "public"."competitions" (
     "date_end" "date",
     "cancelled_at" timestamp with time zone,
     "cancelled_by" "uuid",
-    CONSTRAINT "competitions_date_end_check" CHECK ((("date_end" IS NULL) OR ("date_end" >= "date")))
+    "result_text" "text",
+    "result_url" "text",
+    "rpe_score" smallint,
+    CONSTRAINT "competitions_date_end_check" CHECK ((("date_end" IS NULL) OR ("date_end" >= "date"))),
+    CONSTRAINT "competitions_result_text_check" CHECK ((("result_text" IS NULL) OR ("length"("result_text") <= 200))),
+    CONSTRAINT "competitions_result_url_check" CHECK ((("result_url" IS NULL) OR (("length"("result_url") <= 500) AND ("result_url" ~* '^https?://[^[:space:]]+$'::"text")))),
+    CONSTRAINT "competitions_rpe_score_check" CHECK ((("rpe_score" IS NULL) OR (("rpe_score" >= 1) AND ("rpe_score" <= 10))))
 );
 
 
@@ -7998,6 +8023,18 @@ COMMENT ON COLUMN "public"."competitions"."cancelled_at" IS 'Annulée le (null =
 
 
 COMMENT ON COLUMN "public"."competitions"."cancelled_by" IS 'Qui a annulé (coach, co-coach ou athlète). Posé par le trigger, null si rétablie.';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."result_text" IS 'Résultat saisi le jour J, texte libre (« 3-1 », « 12e / 80 »…).';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."result_url" IS 'Lien vers les résultats officiels ou une activité en ligne.';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."rpe_score" IS 'RPE de la compétition (1-10), saisi le jour J.';
 
 
 
@@ -8771,8 +8808,9 @@ CREATE TABLE IF NOT EXISTS "public"."injury_followups" (
     "energy_assignment_id" "uuid",
     "created_by" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "competition_id" "uuid",
     CONSTRAINT "injury_followups_note_check" CHECK ((("note" IS NULL) OR ("length"("note") <= 500))),
-    CONSTRAINT "injury_followups_one_session" CHECK (("num_nonnulls"("workout_log_id", "energy_assignment_id") <= 1)),
+    CONSTRAINT "injury_followups_one_session" CHECK (("num_nonnulls"("workout_log_id", "energy_assignment_id", "competition_id") <= 1)),
     CONSTRAINT "injury_followups_pain_level_check" CHECK ((("pain_level" >= 1) AND ("pain_level" <= 10)))
 );
 
@@ -10846,11 +10884,19 @@ CREATE INDEX "injury_followups_athlete_day_idx" ON "public"."injury_followups" U
 
 
 
+CREATE INDEX "injury_followups_competition_idx" ON "public"."injury_followups" USING "btree" ("competition_id") WHERE ("competition_id" IS NOT NULL);
+
+
+
 CREATE INDEX "injury_followups_created_by_idx" ON "public"."injury_followups" USING "btree" ("created_by");
 
 
 
 CREATE INDEX "injury_followups_energy_idx" ON "public"."injury_followups" USING "btree" ("energy_assignment_id") WHERE ("energy_assignment_id" IS NOT NULL);
+
+
+
+CREATE UNIQUE INDEX "injury_followups_entry_competition_key" ON "public"."injury_followups" USING "btree" ("entry_id", "competition_id") WHERE ("competition_id" IS NOT NULL);
 
 
 
@@ -11115,6 +11161,10 @@ CREATE OR REPLACE TRIGGER "athlete_test_values_propose_zones" AFTER INSERT OR UP
 
 
 CREATE OR REPLACE TRIGGER "citation_likes_sync" AFTER INSERT OR DELETE ON "public"."citation_likes" FOR EACH ROW EXECUTE FUNCTION "public"."citation_likes_sync"();
+
+
+
+CREATE OR REPLACE TRIGGER "competitions_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "date", "type", "cancelled_at" ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink"();
 
 
 
@@ -11920,6 +11970,11 @@ ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
 
 ALTER TABLE ONLY "public"."injury_followups"
     ADD CONSTRAINT "injury_followups_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_competition_id_fkey" FOREIGN KEY ("competition_id") REFERENCES "public"."competitions"("id") ON DELETE SET NULL;
 
 
 
@@ -21653,9 +21708,9 @@ GRANT ALL ON FUNCTION "public"."report_client_build"("p_build" "text") TO "servi
 
 
 
-REVOKE ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") TO "service_role";
 
 
 

@@ -1,4 +1,5 @@
 import { format, isPast, parseISO } from "date-fns";
+import { CompetitionResultLine } from "@/features/shared/components/CompetitionResultLine";
 import { fr } from "date-fns/locale";
 import { MapPin, Trophy } from "lucide-react";
 import { C } from "@/lib/theme";
@@ -60,6 +61,7 @@ export function CompetitionDrawer({ comp, onEdit, onDelete }: Props) {
       )}
 
       {/* Bilan de l'athlète */}
+      <CompetitionResultLine comp={comp} />
       {comp.athlete_comment ? (
         <div style={{ background: C.acS, borderRadius: 4, padding: "12px 14px", border: "1px solid " + C.ac + "30" }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.4px" }}>Retour de l'athlète</div>

@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { hyroxKeys, invalidateHyrox, linkRaceWatch, listRaceActivityCandidates } from "@/api/hyrox";
+import { getCompetitionLink, planLinkKeys } from "@/api/plannedVsDone";
 import { useActivityDetail } from "@/features/shared/hooks/useActivityDetail";
 import { pickRaceActivity } from "@/lib/hyrox/raceWatch";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
 
 /**
  * Série de la montre d'une course HYROX : l'activité liée à la course si
- * l'athlète ou le coach l'a choisie, sinon celle du même jour dont la durée
- * est la plus proche du chrono ; puis son détail (série, zones, attribution).
+ * l'athlète ou le coach l'a choisie, sinon celle rattachée à sa compétition
+ * (séance du jour J), sinon celle du même jour dont la durée est la plus
+ * proche du chrono ; puis son détail (série, zones, attribution).
  */
 export function useRaceWatch(race: HyroxResult | null, chosenId: string | null = null) {
   const athleteId = race?.athlete_id;
@@ -18,10 +20,19 @@ export function useRaceWatch(race: HyroxResult | null, chosenId: string | null =
     staleTime: 60_000,
     queryFn: () => listRaceActivityCandidates(athleteId!, race!.date),
   });
+  const competitionId = race?.competition_id ?? null;
+  const compLink = useQuery({
+    queryKey: planLinkKeys.competition(athleteId ?? "none", competitionId ?? "none"),
+    enabled: !!athleteId && !!competitionId && !race?.watch_activity_id,
+    staleTime: 60_000,
+    queryFn: () => getCompetitionLink(competitionId!),
+  });
   const linkedId = race?.watch_activity_id ?? null;
   const picked = race && candidates.data ? pickRaceActivity(candidates.data, race.total_s) : null;
-  // Choix en cours (pas encore enregistré) > lien enregistré > proposition d'office.
-  const activityId = chosenId ?? linkedId ?? picked?.id ?? null;
+  // Choix en cours (pas encore enregistré) > lien enregistré > activité de la
+  // compétition > proposition d'office.
+  const fromCompetition = compLink.data && candidates.data?.some((c) => c.id === compLink.data!.activityId) ? compLink.data.activityId : null;
+  const activityId = chosenId ?? linkedId ?? fromCompetition ?? picked?.id ?? null;
   const detail = useActivityDetail(athleteId, activityId ?? undefined);
   return {
     loading: candidates.isLoading || (!!activityId && detail.isLoading),

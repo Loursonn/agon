@@ -194,6 +194,33 @@ export async function setCompetitionComment(id: string, athleteComment: string):
   return row as unknown as Competition;
 }
 
+export interface CompetitionSessionInput {
+  resultText: string | null;
+  resultUrl: string | null;
+  rpe: number | null;
+  /** Bilan / ressenti de l'athlète (`athlete_comment`). */
+  comment: string | null;
+}
+
+/**
+ * Séance de compétition du jour J (athlète ou coach) : résultat libre, lien,
+ * RPE et bilan, en une écriture. Le lien avec la montre passe par le
+ * rapprochement (`linkActivityToPlan`, type `competition`).
+ */
+export async function saveCompetitionSession(id: string, input: CompetitionSessionInput): Promise<Competition> {
+  const row = unwrap(
+    await db().from("competitions").update({
+      result_text: input.resultText?.trim() || null,
+      result_url: input.resultUrl?.trim() || null,
+      rpe_score: input.rpe,
+      athlete_comment: input.comment?.trim() || null,
+    }).eq("id", id).select().single(),
+    "Séance de compétition non enregistrée",
+  );
+  if (!row) throw new Error("Séance de compétition non enregistrée");
+  return row as unknown as Competition;
+}
+
 /** Compétitions maintenues d'une période (bornes incluses), par date : retours. Lève en cas d'erreur. */
 export async function listCompetitionsBetween(athleteId: string, from: string, to: string): Promise<Competition[]> {
   const rows = unwrapRows(

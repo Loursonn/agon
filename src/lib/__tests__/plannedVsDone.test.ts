@@ -90,3 +90,28 @@ describe("effectiveRpe (P42)", () => {
     ]);
   });
 });
+
+describe("compétition remplie comme une séance", () => {
+  const day = buildPlannedVsDone({
+    from: "2026-11-14",
+    to: "2026-11-14",
+    planned: [{ kind: "competition", id: "c1", date: "2026-11-14", label: "HYROX Paris", status: "planned" }],
+    activities: [
+      act("warm", "2026-11-14", "2026-11-14T08:30:00Z"),
+      act("race", "2026-11-14", "2026-11-14T09:00:00Z"),
+      act("autre", "2026-11-14", "2026-11-14T18:00:00Z"),
+    ],
+    links: [
+      { id: "l1", activityId: "race", plannedKind: "competition", plannedId: "c1", status: "auto" },
+      // Séance prévue absente (annulée, supprimée) : l'activité reste visible, libre.
+      { id: "l2", activityId: "autre", plannedKind: "competition", plannedId: "annulee", status: "confirmed" },
+    ],
+    zoneSummaries: [],
+  })[0];
+
+  it("la course est rattachée à la compétition, l'échauffement reste libre", () => {
+    expect(day.planned[0]).toMatchObject({ kind: "competition", done: true, linkStatus: "auto" });
+    expect(day.planned[0].activity?.id).toBe("race");
+    expect(day.free.map((a) => a.id)).toEqual(["warm", "autre"]);
+  });
+});

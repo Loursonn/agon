@@ -158,7 +158,7 @@ export async function getWeekPainReports(athleteId: string, weekStart: IsoDay): 
   ]);
   const sessions: SessionPainLike[] = followups.map((f) => ({
     entryId: f.entry_id,
-    sessionId: f.workout_log_id ?? f.energy_assignment_id,
+    sessionId: f.workout_log_id ?? f.energy_assignment_id ?? f.competition_id,
     day: f.day,
     name: f.session_name,
     zone: f.zone,

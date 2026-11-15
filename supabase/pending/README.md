@@ -50,3 +50,38 @@ date » ; dans `schema.sql`, seuls changent la vue `current_consents` et la fonc
 `ai_consent_adults_only` (et leurs commentaires). Types TS inchangés (mêmes colonnes). Ensuite
 `npm run check`, commit, `git push origin dev`, puis
 `node ~/agon-roadmap/bin/roadmap.mjs done T-ia-coupee-sans-date-de-naissance-phase-2`.
+
+## 20261116190500 — Compétition : proposition automatique de l'activité de la montre
+
+Partie B de la compétition = séance à remplir (partie A : `20261116190000_competition_session.sql`,
+déjà dans `supabase/migrations/`). À appliquer **quand le front de `dev` du 16/11/2026 est en
+production** (PR dev → main mergée et déployée) : le client d'avant n'affiche pas une activité de
+la montre rattachée à un type de séance qu'il ne connaît pas (`buildPlannedVsDone` de `main`), donc
+les courses rattachées automatiquement à une compétition disparaîtraient de son planning.
+
+En attendant, l'athlète choisit l'activité lui-même dans « Ma séance » (la proposition est calculée
+côté client, même règle) : seul le rattachement automatique côté serveur attend.
+
+Fichiers :
+- `20261116190500_competition_auto_link.sql` : la migration (famille `any`, compétitions dans
+  `planned_sessions_of_day`, trigger du chrono HYROX, premier calcul des jours de compétition) ;
+- `tests/competition_session.sql` : version A + B du test, à substituer à
+  `supabase/tests/competition_session.sql` le même jour.
+
+Testée sur agon-test le 2026-11-16 : 18/18.
+
+Application, depuis un dossier sur `dev` à jour :
+
+```bash
+PROD="$HOME/Library/Application Support/Claude/side-session-notes/local_5c6d5043-2ee4-41cb-b34d-5a8b413ac928/prod.sh"
+(echo 'BEGIN;'; cat supabase/pending/20261116190500_competition_auto_link.sql; \
+ sed -e '/^BEGIN;$/d' supabase/pending/tests/competition_session.sql) > "$TMPDIR/cs.sql"
+"$PROD" supabase db query --linked -f "$TMPDIR/cs.sql"          # à blanc : 18/18 attendu
+git mv supabase/pending/20261116190500_competition_auto_link.sql supabase/migrations/
+git mv -f supabase/pending/tests/competition_session.sql supabase/tests/competition_session.sql
+"$PROD" supabase db query --linked -f supabase/migrations/20261116190500_competition_auto_link.sql
+"$PROD" supabase migration repair --status applied 20261116190500 --linked
+"$PROD" supabase db push --dry-run --linked                     # « Remote database is up to date »
+```
+
+Puis rafraîchir `supabase/tests/ci/schema.sql` (voir `supabase/tests/ci/README.md`).

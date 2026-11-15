@@ -9,12 +9,15 @@
  * - un lien `auto` ou `confirmed` rattache UNE activité à UNE séance prévue ;
  *   la séance compte comme réalisée (montre) ; `auto` reste « à confirmer » ;
  * - un lien `rejected` est ignoré : l'activité redevient une séance libre ;
+ * - un lien vers une séance absente des séances prévues (annulée, hors
+ *   lecture) est ignoré aussi : l'activité reste visible, libre ;
  * - une activité sans lien actif est une séance libre de son jour ;
  * - une activité marquée doublon par le serveur n'est pas dans les liens et
  *   apparaît libre : l'affichage la regroupe via `dedupeActivities` si besoin.
  */
 
-export type PlannedKind = "energy" | "workout" | "test";
+/** `competition` : compétition ou match du jour, remplie comme une séance. */
+export type PlannedKind = "energy" | "workout" | "test" | "competition";
 export type PlanLinkStatus = "auto" | "confirmed" | "rejected";
 
 export interface PlannedInput {
@@ -130,7 +133,8 @@ export function buildPlannedVsDone(input: {
   const acts = new Map<string, DoneActivity>(
     input.activities.map((a) => [a.id, { ...a, zoneShares: shares(zones.get(a.id)) }]),
   );
-  const active = input.links.filter((l) => l.status !== "rejected" && acts.has(l.activityId));
+  const known = new Set(input.planned.map((p) => `${p.kind}:${p.id}`));
+  const active = input.links.filter((l) => l.status !== "rejected" && acts.has(l.activityId) && known.has(`${l.plannedKind}:${l.plannedId}`));
   const byPlanned = new Map(active.map((l) => [`${l.plannedKind}:${l.plannedId}`, l]));
   const linkedActs = new Set(active.map((l) => l.activityId));
 

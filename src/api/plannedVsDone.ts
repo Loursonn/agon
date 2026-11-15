@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { IsoDay } from "@shared/domain/dates";
+import { isCompetitionSession } from "@/lib/competitionSession";
 import {
   buildPlannedVsDone,
   type LinkInput,
@@ -9,6 +10,7 @@ import {
   type PlanLinkStatus,
 } from "@/lib/plannedVsDone";
 import { check, db, unwrap, unwrapRows } from "./client";
+import { listCompetitionsBetween } from "./competitions";
 import { listEnergyAssignments } from "./energy";
 import { getActivitiesBetween } from "./providers";
 import { listTestSessionsBetween } from "./tests";
@@ -26,6 +28,9 @@ import { getZoneSummaries } from "./zoneModels";
 export const planLinkKeys = {
   all: (aid: string) => ["planLinks", aid] as const,
   week: (aid: string, from: IsoDay, to: IsoDay) => ["planLinks", aid, "week", from, to] as const,
+  competition: (aid: string, competitionId: string) => ["planLinks", aid, "competition", competitionId] as const,
+  /** Activités de montre ou de fichier d'un jour (séance de compétition). */
+  dayActivities: (aid: string, day: string) => ["planLinks", aid, "dayActivities", day] as const,
 };
 
 /**
@@ -62,12 +67,27 @@ export async function listPlanLinks(athleteId: string, from: IsoDay, to: IsoDay)
   }));
 }
 
+/** Activité rattachée à une compétition (proposée ou confirmée), `null` sinon. */
+export async function getCompetitionLink(competitionId: string): Promise<LinkInput | null> {
+  const r = unwrap(
+    await db().from("activity_plan_links")
+      .select("id, activity_id, planned_kind, planned_id, status")
+      .eq("planned_kind", "competition").eq("planned_id", competitionId)
+      .in("status", ["auto", "confirmed"]).maybeSingle(),
+    "activité de la compétition",
+  );
+  return r
+    ? { id: r.id, activityId: r.activity_id, plannedKind: "competition", plannedId: r.planned_id, status: r.status as PlanLinkStatus }
+    : null;
+}
+
 /** Semaine (ou toute plage) du planning : par jour, prévu, réalisé, libre. */
 export async function getPlannedVsDone(athleteId: string, from: IsoDay, to: IsoDay): Promise<PlannedVsDoneDay[]> {
-  const [energy, workouts, tests, activities, links] = await Promise.all([
+  const [energy, workouts, tests, competitions, activities, links] = await Promise.all([
     listEnergyAssignments({ athleteIds: [athleteId], from, to, join: "summary" }),
     listWorkoutLogs({ athleteIds: [athleteId], from, to, withMods: false }),
     listTestSessionsBetween(athleteId, from, to),
+    listCompetitionsBetween(athleteId, from, to),
     getActivitiesBetween(athleteId, from, to),
     listPlanLinks(athleteId, from, to),
   ]);
@@ -88,6 +108,11 @@ export async function getPlannedVsDone(athleteId: string, from: IsoDay, to: IsoD
     })),
     ...tests.map((t) => ({
       kind: "test" as const, id: t.id, date: t.date, label: t.title, status: t.completed ? "completed" : "planned",
+    })),
+    // Compétition ou match : remplie comme une séance le jour J (bilan, RPE, résultat).
+    ...competitions.filter(isCompetitionSession).map((c) => ({
+      kind: "competition" as const, id: c.id, date: c.date, label: c.name,
+      status: c.athlete_comment?.trim() || c.rpe_score ? "completed" : "planned", agonRpe: c.rpe_score ?? null,
     })),
   ];
 

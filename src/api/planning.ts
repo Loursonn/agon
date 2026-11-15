@@ -127,6 +127,11 @@ export interface CompetitionBrief {
   location: string | null;
   priority: "A" | "B" | "C" | null;
   athlete_comment: string | null;
+  /** Séance du jour J (compétition, match). */
+  athlete_id?: string;
+  result_text?: string | null;
+  result_url?: string | null;
+  rpe_score?: number | null;
   /** Annulée : affichée barrée, ne fait pas du jour un jour de compétition. */
   cancelled?: boolean;
 }
@@ -312,6 +317,7 @@ export async function getActivePlan(athleteId: string, weekOffset = 0): Promise<
       push(compsByDate, d, {
         id: c.id, name: c.name, type: c.type, date: c.date, location: c.location ?? null,
         priority: (c.priority ?? null) as CompetitionBrief["priority"], athlete_comment: c.athlete_comment ?? null,
+        athlete_id: c.athlete_id, result_text: c.result_text ?? null, result_url: c.result_url ?? null, rpe_score: c.rpe_score ?? null,
         cancelled: isCancelled(c),
       });
     }

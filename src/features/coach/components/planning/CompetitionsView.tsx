@@ -3,6 +3,7 @@
  * avec création / édition / suppression via CompetitionFormModal.
  */
 import { useState } from "react";
+import { CompetitionResultLine } from "@/features/shared/components/CompetitionResultLine";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isFuture, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -30,6 +31,9 @@ interface Comp {
   priority: string;
   macrocycle_id: string | null;
   athlete_comment: string | null;
+  result_text?: string | null;
+  result_url?: string | null;
+  rpe_score?: number | null;
   cancelled_at?: string | null;
   cancelled_by?: string | null;
   created_at: string;
@@ -260,6 +264,7 @@ function CompRow({ comp, viewerId, onEdit, dimmed }: CompRowProps) {
     {actions.panel}
 
       {/* Bilan de l'athlète (compétitions passées) */}
+      <div className="mt-2.5"><CompetitionResultLine comp={comp} /></div>
       {comp.athlete_comment ? (
         <div className="mt-2.5 rounded-[4px] bg-agon-accent-doux px-2.5 py-2">
           <div className="mb-[3px] text-[9px] font-bold uppercase tracking-[0.4px] text-agon-accent">

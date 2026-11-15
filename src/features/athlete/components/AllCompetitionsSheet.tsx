@@ -117,6 +117,8 @@ export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
                               id: c.id, name: c.name, type: c.type, date: c.date,
                               location: c.location, priority: c.priority,
                               athlete_comment: c.athlete_comment ?? null,
+                              athlete_id: c.athlete_id, result_text: c.result_text ?? null,
+                              result_url: c.result_url ?? null, rpe_score: c.rpe_score ?? null,
                             }}
                             viewOnly={viewOnly}
                             showDate

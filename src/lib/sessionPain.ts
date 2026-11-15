@@ -57,6 +57,7 @@ export interface SessionPainFollowupLike {
   note: string | null;
   workout_log_id: string | null;
   energy_assignment_id: string | null;
+  competition_id?: string | null;
 }
 
 export interface SessionPainShown {
@@ -68,6 +69,7 @@ export interface SessionPainShown {
 export const sessionPainKey = {
   workout: (id: string) => `w:${id}`,
   energy: (id: string) => `e:${id}`,
+  competition: (id: string) => `c:${id}`,
 };
 
 /**
@@ -79,7 +81,8 @@ export function sessionPainBySession(followups: readonly SessionPainFollowupLike
   const out = new Map<string, SessionPainShown>();
   for (const f of followups) {
     const key = f.workout_log_id ? sessionPainKey.workout(f.workout_log_id)
-      : f.energy_assignment_id ? sessionPainKey.energy(f.energy_assignment_id) : null;
+      : f.energy_assignment_id ? sessionPainKey.energy(f.energy_assignment_id)
+      : f.competition_id ? sessionPainKey.competition(f.competition_id) : null;
     if (!key || !(f.pain_level > 0)) continue;
     const cur = out.get(key) ?? { levels: {}, note: null };
     cur.levels[f.zone?.trim() || "Douleur"] = f.pain_level;
