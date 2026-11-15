@@ -135,6 +135,9 @@ export function parseResultPage(raw: string): ParsedHyroxPage | null {
     const f = splitField(line);
     if (f && label.test(f[0])) return f[1];
     if (label.test(line)) return lines[i + 1] ?? null;
+    // « Overall Time 01:17:31 » : libellé et valeur séparés d'un seul espace.
+    const single = line.match(new RegExp(label.source.replace(/\$$/, "\\s+(\\S.*)$"), label.flags));
+    if (single) return single[single.length - 1].trim();
     return null;
   };
 

@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-hyrox-chrono-final",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "HYROX : la frise de course finit au chrono officiel",
+    summary:
+      "La frise d'une course HYROX finissait quelques secondes après le chrono officiel. Elle s'arrête maintenant pile sur le temps officiel.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les temps intermédiaires HYROX sont arrondis à la seconde : leur somme dépasse souvent le chrono de quelques secondes. Les runs et stations gardent leur temps officiel, l'écart est absorbé par la roxzone.",
+          "En collant un résultat, le chrono officiel (« Overall Time ») est reconnu même quand il est séparé de son temps par un simple espace : il n'est plus remplacé par la somme des temps intermédiaires.",
+          "Une course déjà enregistrée avec la somme à la place du chrono : corrigez le chrono dans la course, la frise suit.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-etape-blessure",
     date: "2026-11-16",
     kind: "feature",

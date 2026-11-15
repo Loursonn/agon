@@ -36,6 +36,23 @@ describe("raceTimeline", () => {
     expect(tl.roxzoneEstimated).toBe(true);
     const sum = 2655 + 2010 + 450;
     expect(tl.segments.at(-1)!.endS).toBeCloseTo(sum, 6);
+    expect(tl.gapS).toBe(0);
+  });
+
+  it("finit au chrono officiel : l'écart d'arrondi va dans la roxzone, runs et stations intacts", () => {
+    const sum = 2655 + 2010 + 450;
+    const tl = raceTimeline(result({ total_s: sum - 7 }))!;
+    expect(tl.gapS).toBe(-7);
+    expect(tl.segments.at(-1)!.endS).toBeCloseTo(sum - 7, 6);
+    const run3 = tl.segments.find((s) => s.key === "run_3")!;
+    expect(run3.endS - run3.startS).toBeCloseTo(320, 6);
+    const rox = tl.segments.filter((s) => s.kind === "roxzone").reduce((a, s) => a + s.endS - s.startS, 0);
+    expect(rox).toBeCloseTo(443, 6);
+  });
+
+  it("met tout à l'échelle si la roxzone ne suffit pas à absorber l'écart", () => {
+    const tl = raceTimeline(result({ roxzone_total_s: 0, total_s: 4600 }))!;
+    expect(tl.segments.at(-1)!.endS).toBeCloseTo(4600, 6);
   });
 
   it("temps de passage roxzone détaillés : utilisés tels quels", () => {

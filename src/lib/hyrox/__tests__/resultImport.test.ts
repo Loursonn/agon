@@ -121,6 +121,11 @@ describe("parseResultPage", () => {
     expect(p.officialTotalS).toBeNull();
   });
 
+  it("lit le chrono officiel séparé d'un seul espace (« Overall Time 01:17:31 »)", () => {
+    const p = parseResultPage([...SEGS.map(([l, t]) => `${l} ${t} –`), `Overall Time ${OFFICIAL_STR}`].join("\n"))!;
+    expect(p.officialTotalS).toBe(OFFICIAL);
+  });
+
   it("lit le texte d'une capture en colonnes (libellés puis temps)", () => {
     const cols = ["Split", ...SEGS.map((s) => s[0]), "Time", ...SEGS.map((s) => s[1]), "Place", "–", "100"].join("\n");
     expectAllSegments(parseResultPage(cols));
