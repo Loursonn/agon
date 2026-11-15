@@ -38,6 +38,37 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-hyrox-debrief-saison",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : débrief de course et « Ma saison »",
+    summary: "L'onglet HYROX devient plus visuel : chaque course a son débrief, et vos athlètes voient leur saison d'un coup d'œil.",
+    sections: [
+      {
+        title: "Débrief de course",
+        points: [
+          "En haut de l'analyse : la course segment par segment, en vert ce qui est fort (top 35 % de la catégorie), en orange ce qui est à travailler.",
+          "Trois colonnes : points forts, ce qui a coûté le plus de temps, et où gagner du temps avec le chrono possible.",
+          "Ce qui a bougé depuis la course précédente du même format : chrono, stations, runs, Roxzone et position.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Trois onglets : Ma saison, Courses, Tests. Stations, runs et radar sont regroupés dans Ma saison.",
+          "Ma saison : la dernière course en grand, la courbe du chrono (solo et duo séparés), les progrès, le profil des stations et ce qui fera gagner du temps.",
+          "Sur téléphone, une course s'ouvre sur son débrief : ce qui a marché, ce qui a coûté, quoi travailler.",
+        ],
+      },
+      {
+        title: "Évolution",
+        points: [
+          "Les positions par station deviennent une carte de couleurs, course par course, avec ce qui a progressé et ce qui stagne.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-planification-plus-rapide",
     date: "2026-11-15",
     kind: "fix",

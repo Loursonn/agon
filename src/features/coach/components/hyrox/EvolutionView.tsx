@@ -20,7 +20,7 @@ import { localIsoDay } from "@shared/domain/dates";
 import { Sources } from "@/features/shared/components/hyrox/raceAnalysisUi";
 import { ddmm, fmtGap } from "@/features/shared/components/hyrox/raceAnalysisShared";
 import EvolutionTimeSplit from "./EvolutionTimeSplit";
-import EvolutionStationPositions from "./EvolutionStationPositions";
+import EvolutionHeatmap from "./EvolutionHeatmap";
 import { CATEGORY_LABEL, RACE_FORMAT_LABEL, raceCategory, raceFormat, type RaceFormat } from "@/lib/hyrox/categories";
 
 const MONTH = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -128,9 +128,9 @@ export default function EvolutionView({ onBack }: { onBack: () => void }) {
       </div>
 
       <Section n="03" title="Position par station" right={races.map(raceShortName).join(" · ")} />
-      <EvolutionStationPositions rows={positions} formats={races.map(raceFormat)} />
+      <EvolutionHeatmap races={races} rows={positions} refs={refLookup} />
       <Sources>
-        position de chaque course dans toute sa catégorie ({division}) · 0 = meilleur, pointillé = médiane, bande verte = top 35 % · une courbe par format (solo, duo, relais) · points : {races.map((r) => `${raceShortName(r)} ${ddmm(r.date)}`).join(" → ")}
+        position de chaque course dans toute sa catégorie ({division}) · vert = top 35 %, orange = 35 % les plus lents · solo, duo et relais : chacun dans sa catégorie · courses : {races.map((r) => `${raceShortName(r)} ${ddmm(r.date)}`).join(" → ")}
       </Sources>
       <Sources>
         {races.some((r) => r.is_official) ? "courses officielles : résultats officiels" : ""}{races.some((r) => !r.is_official) ? " · simulations : temps saisis" : ""} · FC : montre de chaque course · positions et projection : calcul Agon, sans IA · mesure absente : « — »

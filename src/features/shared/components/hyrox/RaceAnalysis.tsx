@@ -32,6 +32,8 @@ import RaceShareTab from "./RaceShareTab";
 import { CATEGORY_LABEL, raceCategory, type ReferenceCategory } from "@/lib/hyrox/categories";
 import { equivalentTotal } from "@/lib/hyrox/categoryEquivalence";
 import RaceCategoryCard from "./RaceCategoryCard";
+import RaceDebriefView from "./RaceDebriefView";
+import { raceDebrief, raceStrip } from "@/lib/hyrox/raceDebrief";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
@@ -42,6 +44,7 @@ import RaceCategoryCard from "./RaceCategoryCard";
  */
 
 const TABS = [
+  { key: "debrief", label: "Débrief" },
   { key: "course", label: "Course" },
   { key: "runs", label: "Runs" },
   { key: "gains", label: "Gains" },
@@ -67,8 +70,9 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
 }) {
   const audience = forced ?? detectAudience();
   const coach = audience === "coach";
-  const [tab, setTab] = useState<TabKey>("course");
   const phone = useIsPhone();
+  // Téléphone : le débrief d'abord ; ordinateur : le débrief est au-dessus des onglets.
+  const [tab, setTab] = useState<TabKey>(phone ? "debrief" : "course");
   const watch = useRaceWatch(race);
   const { data: refs = [] } = useHyroxReferences();
   const { data: allRaces = [] } = useHyroxResults(race.athlete_id);
@@ -117,6 +121,15 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const gap = isRecord ? null : recordGap(race, allRaces);
   const prev = previousRace(race, allRaces);
   const previous = prev ? { name: raceShortName(prev), compromised: compromisedFromTimes(prev, refs.length ? median : null) } : null;
+  const strip = useMemo(() => raceStrip(race, posOf), [race, posOf]);
+  const debrief = useMemo(
+    () => raceDebrief({ race, races: allRaces, posOf, median: refs.length ? median : null, refs: refs.length ? refLookup : null, isRecord }),
+    [race, allRaces, posOf, median, refs.length, refLookup, isRecord],
+  );
+  const debriefView = (layout: "phone" | "desktop") => (
+    <RaceDebriefView debrief={debrief} strip={strip} gains={gains?.items ?? []} possibleS={gains && gains.items.length ? gains.possibleS : null}
+      layout={layout} coach={coach} previousName={debrief.previous ? raceShortName(debrief.previous) : null} />
+  );
   const plan = useMemo(() => planForRace(race, plans), [race, plans]);
   const planSegs = useMemo(() => (plan ? planSegments(plan.targets) : null), [plan]);
   const planTotalS = plan ? Object.values(planSegs ?? {}).reduce((n, x) => n + x, 0) || plan.target_total_s : null;
@@ -164,7 +177,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
           style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, color: C.tx2, fontSize: 13, cursor: "pointer", textAlign: "left" }}>
           <ChevronLeft size={16} /> HYROX · Courses
         </button>
-        <button type="button" onClick={() => setTab(tab === "partager" ? "course" : "partager")} aria-pressed={tab === "partager"} aria-label="Partager"
+        <button type="button" onClick={() => setTab(tab === "partager" ? "debrief" : "partager")} aria-pressed={tab === "partager"} aria-label="Partager"
           style={{ width: 36, height: 36, flex: "none", borderRadius: 10, border: `1px solid ${tab === "partager" ? C.ac : C.brdL}`, background: tab === "partager" ? alpha(C.ac, 0.16) : "transparent", color: tab === "partager" ? C.ac : C.tx, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <Share2 size={15} />
         </button>
@@ -278,11 +291,12 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       {refs.length > 0 && (
         <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
       )}
+      {debriefView("desktop")}
       </>}
 
       {phone ? phoneTabs : (
       <div style={{ display: "flex", gap: 18, borderBottom: `1px solid ${C.brd}` }} role="tablist">
-        {TABS.map((t) => {
+        {TABS.filter((t) => t.key !== "debrief").map((t) => {
           const on = tab === t.key;
           return (
             <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => setTab(t.key)}
@@ -298,7 +312,12 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       </div>
       )}
 
-      {tab === "course" && (
+      {tab === "debrief" && phone && debriefView("phone")}
+      {tab === "debrief" && phone && refs.length > 0 && (
+        <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
+      )}
+      {tab === "debrief" && phone && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
+      {(tab === "course" || (tab === "debrief" && !phone)) && (
         <RaceCourseTab audience={audience} analysis={analysis} stream={stream} watchLoading={watch.loading} offset={offset}
           sv1={sv1} sv2={sv2} attribution={attribution} findings={findings} above={above} recov={recov} previous={previous}
           refOf={refOf} posOf={posOf} levelP50={refs.length ? median : null} totalS={race.total_s} totalRef={totalRef} timeSource={timeSource} division={division} bracketText={bracketText}
@@ -314,9 +333,6 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       )}
       {tab === "gains" && (
         <RaceGainsTab gains={gains} atLevel={atLevel} division={division} bracketText={bracketText} timeSource={timeSource} startLabel={raceShortName(race)} />
-      )}
-      {tab === "gains" && phone && refs.length > 0 && (
-        <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
       )}
       {tab === "gains" && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
       {tab !== "partager" && <RaceComments race={race} />}
