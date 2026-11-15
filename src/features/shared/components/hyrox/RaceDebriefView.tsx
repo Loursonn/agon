@@ -121,7 +121,7 @@ function Since({ debrief }: { debrief: RaceDebrief }) {
 
 const empty = (text: string) => <div style={{ fontSize: 12.5, color: C.tx3 }}>{text}</div>;
 
-export default function RaceDebriefView({ debrief, strip, gains, possibleS, layout, previousName, coach = false }: {
+export default function RaceDebriefView({ debrief, strip, gains, possibleS, layout, previousName, coach = false, noReps = null }: {
   debrief: RaceDebrief;
   strip: StripSegment[];
   gains: GainItem[];
@@ -129,6 +129,8 @@ export default function RaceDebriefView({ debrief, strip, gains, possibleS, layo
   layout: "phone" | "desktop";
   previousName: string | null;
   coach?: boolean;
+  /** « Wall balls 5:55 · 6 no reps : 4 cible, 2 parallèle », si saisi. */
+  noReps?: string | null;
 }) {
   const you = coach ? "Le plus de temps perdu" : "Ce qui t'a coûté";
   const good = debrief.good.length
@@ -138,6 +140,7 @@ export default function RaceDebriefView({ debrief, strip, gains, possibleS, layo
     ? debrief.bad.map((b) => <ItemRow key={b.key} item={b} color={C.o} compact={layout === "desktop"} />)
     : empty("Rien de notable : partout au niveau de ta catégorie ou devant.");
   const gainsBlock = gains.length ? <Gains items={gains.slice(0, 4)} possibleS={possibleS} /> : empty("Partout au niveau de la médiane ou devant.");
+  const noRepsLine = noReps ? <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{noReps}</span> : null;
   const sinceTitle = previousName ? `Depuis ${previousName}` : "Depuis la dernière course";
 
   if (layout === "desktop") {
@@ -150,6 +153,7 @@ export default function RaceDebriefView({ debrief, strip, gains, possibleS, layo
             {debrief.headline && <span style={{ fontSize: 13, color: C.tx2 }}>{debrief.headline}</span>}
           </div>
           <RaceStrip segments={strip} tall />
+          {noRepsLine}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
           <div style={col}><span style={{ ...KICKER, color: C.g, marginBottom: 6 }}>Points forts</span>{good}</div>
@@ -177,6 +181,7 @@ export default function RaceDebriefView({ debrief, strip, gains, possibleS, layo
       {debrief.headline && <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.55, color: C.tx }}>{debrief.headline}</p>}
       <Section title="Ta course, segment par segment" color={C.ac}>
         <RaceStrip segments={strip} />
+        {noRepsLine && <div style={{ marginTop: 8 }}>{noRepsLine}</div>}
       </Section>
       <Section n="01" title="Ce qui a marché" color={C.g}>{good}</Section>
       <Section n="02" title={you} color={C.o}>{bad}</Section>

@@ -18,6 +18,7 @@ import { DIVISION_LOADS, RUN_KEYS, STATION_KEYS, STATION_META, type HyroxResult,
 import { roxzoneTotal, type RefLookup } from "./calc";
 import { CATEGORY_LABEL, RACE_FORMAT_LABEL, categoryFormat, raceCategory } from "./categories";
 import { ownTotalPct, raceCruise } from "./raceDebrief";
+import { wallBallNoReps } from "./noReps";
 
 /** En dessous (s), un écart n'est ni un progrès ni un recul. */
 export const COMPARE_NOTABLE_S = 5;
@@ -37,8 +38,8 @@ export interface CompareRow {
   /** Ligne affichée mais non jugée (run 1, station non comparable). */
   judged: boolean;
   note: string | null;
-  /** Format d'affichage : temps (m:ss) ou allure (s/km). */
-  unit: "time" | "pace";
+  /** Format d'affichage : temps (m:ss), allure (s/km) ou nombre (no reps). */
+  unit: "time" | "pace" | "count";
 }
 
 export interface RaceComparison {
@@ -72,7 +73,9 @@ export function compareCandidates(race: HyroxResult, races: readonly HyroxResult
 
 function row(group: CompareGroup, key: string, label: string, before: number | null, after: number | null, judged: boolean, note: string | null, unit: CompareRow["unit"] = "time"): CompareRow {
   const deltaS = before != null && after != null ? Math.round(after - before) : null;
-  const better = !judged || deltaS == null || Math.abs(deltaS) < COMPARE_NOTABLE_S ? null : deltaS < 0;
+  // Nombre (no reps) : un d'écart compte ; temps : 5 s.
+  const notable = unit === "count" ? 1 : COMPARE_NOTABLE_S;
+  const better = !judged || deltaS == null || Math.abs(deltaS) < notable ? null : deltaS < 0;
   return { key, label, group, before, after, deltaS, better, judged, note, unit };
 }
 
@@ -111,6 +114,14 @@ export function compareRaces(x: HyroxResult, y: HyroxResult, refs: RefLookup | n
     const ok = sameFormat && sameLoad;
     const note = !sameFormat ? "Format différent : non comparable." : !sameLoad ? `Charge différente (${loadsB?.[k] ?? "—"} contre ${loadsA?.[k] ?? "—"}).` : null;
     rows.push(row("stations", k, STATION_META[k as StationKey].label, seg(before, k), seg(after, k), ok, note));
+  }
+  // No reps wall balls (saisie manuelle) : moins = mieux ; jugé comme la station (même format et même charge).
+  const nrB = wallBallNoReps(before)?.total ?? null;
+  const nrA = wallBallNoReps(after)?.total ?? null;
+  if (nrB != null || nrA != null) {
+    const wbOk = sameFormat && loadsB?.wall_balls != null && loadsB.wall_balls === loadsA?.wall_balls;
+    rows.push(row("stations", "wall_balls_no_reps", "No reps wall balls", nrB, nrA, wbOk,
+      nrB == null || nrA == null ? "Non saisi sur une des deux courses." : wbOk ? null : "Ballon ou cible différents : non jugé.", "count"));
   }
   rows.push(row("roxzone", "roxzone", "Roxzone", roxzoneTotal(before), roxzoneTotal(after), true, null));
 

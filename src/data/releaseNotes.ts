@@ -38,6 +38,29 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-hyrox-no-reps-wall-balls",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : les no reps aux wall balls",
+    summary: "Notez les no reps d'une course aux wall balls : cible ratée et pas sous la parallèle.",
+    sections: [
+      {
+        title: "Saisir",
+        points: [
+          "Dans la saisie ou la modification d'une course : deux cases, « cible ratée » et « pas sous la parallèle ». Laissées vides, elles restent non renseignées.",
+          "Votre athlète peut les remplir depuis son téléphone. Les résultats officiels ne les donnent pas : « Coller mon résultat » les laisse vides.",
+        ],
+      },
+      {
+        title: "Lire",
+        points: [
+          "Le débrief de la course les affiche sous la frise, à côté du temps des wall balls.",
+          "« Comparer » ajoute une ligne no reps avant / après : moins, c'est mieux.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-fc-montre-recalee",
     date: "2026-11-16",
     kind: "feature",

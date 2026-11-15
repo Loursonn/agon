@@ -17,11 +17,12 @@ import { ddmm } from "./raceAnalysisShared";
 
 const GROUP_TITLE: Record<Exclude<CompareGroup, "chrono">, string> = { runs: "Runs", stations: "Stations", roxzone: "Roxzone" };
 
-const val = (r: CompareRow, v: number | null) => (v == null ? "—" : r.unit === "pace" ? `${fmtPace(v)} /km` : fmtClock(v));
+const val = (r: CompareRow, v: number | null) => (v == null ? "—" : r.unit === "pace" ? `${fmtPace(v)} /km` : r.unit === "count" ? String(v) : fmtClock(v));
 const delta = (r: CompareRow) => {
   if (r.deltaS == null) return "—";
   if (r.deltaS === 0) return "0";
   const abs = Math.abs(r.deltaS);
+  if (r.unit === "count") return `${r.deltaS < 0 ? "−" : "+"}${abs}`;
   return `${r.deltaS < 0 ? "−" : "+"}${abs >= 60 ? fmtClock(abs) : `${abs} s`}`;
 };
 const tone = (r: CompareRow) => (r.better == null ? (r.judged ? C.tx2 : C.tx3) : r.better ? C.g : C.o);
@@ -62,7 +63,7 @@ function Rows({ rows, phone }: { rows: CompareRow[]; phone: boolean }) {
             <span style={{ fontSize: 13, color: r.judged ? C.tx : C.tx3, fontWeight: r.key === "cruise" ? 500 : 400 }}>{r.label}</span>
             <span style={{ ...MONO, fontSize: 12, color: C.tx3, textAlign: "right" }}>{val(r, r.before)}</span>
             <span style={{ ...MONO, fontSize: 12, color: r.judged ? C.tx : C.tx3, textAlign: "right" }}>{val(r, r.after)}</span>
-            {!phone && <DeltaBar r={r} max={max} />}
+            {!phone && (r.unit === "count" ? <span /> : <DeltaBar r={r} max={max} />)}
             <span style={{ ...MONO, fontSize: 13, color: tone(r), textAlign: "right" }}>{delta(r)}</span>
           </div>
           {r.note && <span style={{ fontSize: 11.5, color: C.tx3 }}>{r.note}</span>}

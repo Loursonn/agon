@@ -38,6 +38,7 @@ import { compareCandidates, compareRaces } from "@/lib/hyrox/raceComparison";
 import RaceVersus from "./RaceVersus";
 import RaceWatchLink from "./RaceWatchLink";
 import { autoRaceOffset } from "@/lib/hyrox/watchAlign";
+import { fmtNoReps, wallBallNoReps } from "@/lib/hyrox/noReps";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
@@ -147,9 +148,11 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
     () => raceDebrief({ race, races: allRaces, posOf, median: refs.length ? median : null, refs: refs.length ? refLookup : null, isRecord }),
     [race, allRaces, posOf, median, refs.length, refLookup, isRecord],
   );
+  const noReps = wallBallNoReps(race);
+  const noRepsText = noReps ? `Wall balls ${race.wall_balls_s ? fmtClock(race.wall_balls_s) : "—"} · ${fmtNoReps(noReps)}` : null;
   const debriefView = (layout: "phone" | "desktop") => (
     <RaceDebriefView debrief={debrief} strip={strip} gains={gains?.items ?? []} possibleS={gains && gains.items.length ? gains.possibleS : null}
-      layout={layout} coach={coach} previousName={debrief.previous ? raceShortName(debrief.previous) : null} />
+      layout={layout} coach={coach} previousName={debrief.previous ? raceShortName(debrief.previous) : null} noReps={noRepsText} />
   );
   // « Comparer » : n'importe quelle autre course, par défaut la précédente du même format.
   const candidates = useMemo(() => compareCandidates(race, allRaces), [race, allRaces]);

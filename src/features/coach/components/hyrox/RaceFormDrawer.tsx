@@ -13,6 +13,7 @@ import {
   type HyroxResult, type HyroxDivision, type SegmentKey, type HyroxFormat, type HyroxStatus,
 } from "@/features/shared/types/hyrox";
 import { toast } from "sonner";
+import { parseNoRepInput } from "@/lib/hyrox/noReps";
 
 interface Props {
   race?: HyroxResult | null;
@@ -77,6 +78,9 @@ export default function RaceFormDrawer({ race, imported, onClose }: Props) {
   const [roxzoneStr, setRoxzoneStr] = useState(initSeg("roxzone_total"));
   const [penaltiesS, setPenaltiesS] = useState(String(imp?.penaltiesS ?? race?.penalties_s ?? 0));
   const [penaltiesNote, setPenaltiesNote] = useState(race?.penalties_note ?? "");
+  // No reps wall balls : saisis à la main (le collage ne les donne pas) ; vide = non renseigné.
+  const [noRepTarget, setNoRepTarget] = useState(race?.wall_balls_no_rep_target?.toString() ?? "");
+  const [noRepDepth, setNoRepDepth] = useState(race?.wall_balls_no_rep_depth?.toString() ?? "");
   const [rankOverall, setRankOverall] = useState((imp?.rankOverall ?? race?.rank_overall)?.toString() ?? "");
   const [rankAG, setRankAG] = useState((imp?.rankAgeGroup ?? race?.rank_age_group)?.toString() ?? "");
   const [partOverall, setPartOverall] = useState(race?.participants_overall?.toString() ?? "");
@@ -166,6 +170,10 @@ export default function RaceFormDrawer({ race, imported, onClose }: Props) {
       segFields[`${k}_s`] = v;
     }
 
+    const nrTarget = parseNoRepInput(noRepTarget);
+    const nrDepth = parseNoRepInput(noRepDepth);
+    if (nrTarget === undefined || nrDepth === undefined) { toast.error("No reps wall balls : un nombre entier entre 0 et 500"); return; }
+
     const payload = {
       athlete_id: athleteId,
       date,
@@ -179,6 +187,9 @@ export default function RaceFormDrawer({ race, imported, onClose }: Props) {
       roxzone_splits: null,
       penalties_s: parseInt(penaltiesS) || 0,
       penalties_note: penaltiesNote.trim() || null,
+      // Envoyées seulement si renseignées ou effacées : une course sans no reps s'enregistre comme avant.
+      ...(nrTarget != null || race?.wall_balls_no_rep_target != null ? { wall_balls_no_rep_target: nrTarget } : {}),
+      ...(nrDepth != null || race?.wall_balls_no_rep_depth != null ? { wall_balls_no_rep_depth: nrDepth } : {}),
       rank_overall: rankOverall ? parseInt(rankOverall) : null,
       rank_age_group: rankAG ? parseInt(rankAG) : null,
       participants_overall: partOverall ? parseInt(partOverall) : null,
@@ -411,6 +422,10 @@ export default function RaceFormDrawer({ race, imported, onClose }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
           <div><label style={labelStyle}>Pénalités (s)</label><input style={inputStyle} type="number" min={0} value={penaltiesS} onChange={e => setPenaltiesS(e.target.value)} /></div>
           <div><label style={labelStyle}>Note pénalités</label><input style={inputStyle} value={penaltiesNote} onChange={e => setPenaltiesNote(e.target.value)} /></div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <div><label style={labelStyle}>No reps wall balls · cible ratée</label><input style={inputStyle} type="number" inputMode="numeric" min={0} max={500} placeholder="—" value={noRepTarget} onChange={e => setNoRepTarget(e.target.value)} /></div>
+          <div><label style={labelStyle}>No reps wall balls · pas sous la parallèle</label><input style={inputStyle} type="number" inputMode="numeric" min={0} max={500} placeholder="—" value={noRepDepth} onChange={e => setNoRepDepth(e.target.value)} /></div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
           <div><label style={labelStyle}>Rang overall</label><input style={inputStyle} type="number" min={1} value={rankOverall} onChange={e => setRankOverall(e.target.value)} /></div>

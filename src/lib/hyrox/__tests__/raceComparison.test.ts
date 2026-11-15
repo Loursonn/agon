@@ -61,4 +61,15 @@ describe("comparer deux courses", () => {
     const dnf = race({ id: "dnf", date: "2026-10-10", status: "dnf" });
     expect(compareCandidates(race(), [race(), paris, dnf, race({ id: "nice", date: "2026-07-01" })]).map((r) => r.id)).toEqual(["nice", "paris"]);
   });
+
+  it("no reps wall balls : moins = mieux, un d'écart compte, absente si jamais saisie", () => {
+    expect(compareRaces(paris, race(), refs).rows.some((r) => r.key === "wall_balls_no_reps")).toBe(false);
+    const c = compareRaces(race({ ...paris, wall_balls_no_rep_target: 5, wall_balls_no_rep_depth: 3 }), race({ wall_balls_no_rep_target: 4, wall_balls_no_rep_depth: 2 }), refs);
+    expect(c.rows.find((r) => r.key === "wall_balls_no_reps")).toMatchObject({ before: 8, after: 6, deltaS: -2, better: true, judged: true, unit: "count" });
+    expect(c.improved.some((r) => r.key === "wall_balls_no_reps")).toBe(true);
+    const one = compareRaces(paris, race({ wall_balls_no_rep_target: 4, wall_balls_no_rep_depth: 2 }), refs);
+    expect(one.rows.find((r) => r.key === "wall_balls_no_reps")).toMatchObject({ before: null, after: 6, deltaS: null, better: null });
+    const pro = compareRaces(paris, race({ division: "women_pro", wall_balls_no_rep_target: 1, wall_balls_no_rep_depth: 0 }), refs);
+    expect(pro.rows.find((r) => r.key === "wall_balls_no_reps")?.judged).toBe(false);
+  });
 });
