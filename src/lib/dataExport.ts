@@ -92,6 +92,7 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("habits", "athlete_id"),
   job("hyrox_race_plans", "athlete_id"),
   job("hyrox_results", "athlete_id"),
+  job("hyrox_season_goals", "athlete_id"),
   job("hyrox_test_analyses", "athlete_id", "*, hyrox_test_axes_drafts(*)"),
   job("macrocycles", "athlete_id", "*, mesocycles(*)"),
   job("measurement_logs", "athlete_id"),
