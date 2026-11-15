@@ -33,7 +33,9 @@ import { CATEGORY_LABEL, raceCategory, type ReferenceCategory } from "@/lib/hyro
 import { equivalentTotal } from "@/lib/hyrox/categoryEquivalence";
 import RaceCategoryCard from "./RaceCategoryCard";
 import RaceDebriefView from "./RaceDebriefView";
-import { raceDebrief, raceStrip } from "@/lib/hyrox/raceDebrief";
+import { previousComparable, raceDebrief, raceStrip } from "@/lib/hyrox/raceDebrief";
+import { compareCandidates, compareRaces } from "@/lib/hyrox/raceComparison";
+import RaceVersus from "./RaceVersus";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
@@ -48,6 +50,7 @@ const TABS = [
   { key: "course", label: "Course" },
   { key: "runs", label: "Runs" },
   { key: "gains", label: "Gains" },
+  { key: "comparer", label: "Comparer" },
 ] as const;
 type TabKey = typeof TABS[number]["key"] | "partager";
 
@@ -81,6 +84,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const [compareChoice, setCompareChoice] = useState<CompareKind | null>(null);
   const [categoryChoice, setCategoryChoice] = useState<ReferenceCategory | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [versusId, setVersusId] = useState<string | null>(null);
 
   const detail = watch.detail;
   const stream = detail?.stream ?? null;
@@ -130,6 +134,10 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
     <RaceDebriefView debrief={debrief} strip={strip} gains={gains?.items ?? []} possibleS={gains && gains.items.length ? gains.possibleS : null}
       layout={layout} coach={coach} previousName={debrief.previous ? raceShortName(debrief.previous) : null} />
   );
+  // « Comparer » : n'importe quelle autre course, par défaut la précédente du même format.
+  const candidates = useMemo(() => compareCandidates(race, allRaces), [race, allRaces]);
+  const versus = candidates.find((r) => r.id === versusId) ?? previousComparable(race, allRaces) ?? candidates[0] ?? null;
+  const comparison = useMemo(() => (versus ? compareRaces(versus, race, refs.length ? refLookup : null) : null), [versus, race, refs.length, refLookup]);
   const plan = useMemo(() => planForRace(race, plans), [race, plans]);
   const planSegs = useMemo(() => (plan ? planSegments(plan.targets) : null), [plan]);
   const planTotalS = plan ? Object.values(planSegs ?? {}).reduce((n, x) => n + x, 0) || plan.target_total_s : null;
@@ -233,7 +241,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
         return (
           <button key={t.key} type="button" role="tab" aria-selected={on} onClick={() => setTab(t.key)}
             style={{
-              ...MONO, flex: 1, height: 34, borderRadius: 8, border: "none", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+              ...MONO, flex: 1, minWidth: 0, height: 34, borderRadius: 8, border: "none", fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase",
               background: on ? alpha(C.ac, 0.16) : "transparent", color: on ? C.ac : C.tx2, cursor: "pointer",
             }}>
             {t.label}
@@ -335,7 +343,23 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
         <RaceGainsTab gains={gains} atLevel={atLevel} division={division} bracketText={bracketText} timeSource={timeSource} startLabel={raceShortName(race)} />
       )}
       {tab === "gains" && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
-      {tab !== "partager" && <RaceComments race={race} />}
+      {tab === "comparer" && (
+        candidates.length === 0 || !comparison || !versus
+          ? <div style={{ fontSize: 13, color: C.tx3 }}>Aucune autre course terminée à comparer pour l'instant.</div>
+          : <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 13, color: C.tx2 }}>
+                Comparer à
+                <select value={versus.id} onChange={(e) => setVersusId(e.target.value)} aria-label="Course à comparer"
+                  style={{ height: 40, padding: "0 10px", borderRadius: 10, border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx, fontFamily: "inherit", fontSize: 13, flex: phone ? 1 : "none", minWidth: 0 }}>
+                  {candidates.map((r) => (
+                    <option key={r.id} value={r.id}>{r.event_name} · {ddmm(r.date)}.{r.date.slice(2, 4)} · {CATEGORY_LABEL[raceCategory(r)]} · {fmtClock(r.total_s)}</option>
+                  ))}
+                </select>
+              </label>
+              <RaceVersus cmp={comparison} phone={phone} currentId={race.id} />
+            </div>
+      )}
+      {tab !== "partager" && tab !== "comparer" && <RaceComments race={race} />}
       {tab === "partager" && (
         <RaceShareTab race={race} analysis={analysis} division={division} isRecord={isRecord}
           coachName={coaches?.referent?.full_name ?? null} attribution={attribution}

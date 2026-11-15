@@ -84,6 +84,15 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Les positions par station deviennent une carte de couleurs, course par course, avec ce qui a progressé et ce qui stagne.",
         ],
       },
+      {
+        title: "Comparer deux courses",
+        points: [
+          "Nouvel onglet « Comparer » dans chaque course : choisissez n'importe quelle autre course de l'athlète, elles s'affichent côte à côte.",
+          "Chrono, position, runs, stations et Roxzone ligne à ligne, avec ce qui a progressé et ce qui a reculé. Le run 1 (départ) s'affiche sans être jugé.",
+          "Solo contre duo, open contre pro : c'est indiqué clairement, et seules les mesures comparables sont jugées.",
+          "Toujours possible aussi depuis la liste : cochez deux courses puis « Comparer ».",
+        ],
+      },
     ],
   },
   {
