@@ -191,6 +191,8 @@ async function seed() {
     { user_id: ATH, purpose: "health_data", granted: true, doc_version: V, statement: "J'accepte le traitement de mes données de santé et leur partage avec mon coach." },
     { user_id: ATH, purpose: "ai_programming", granted: true, doc_version: V, statement: "Mon coach peut utiliser l'assistance IA pour préparer mes programmes." },
     { user_id: ATH, purpose: "staff_sharing", granted: true, doc_version: V, statement: "Mon coach peut partager mes données avec son staff." },
+    // Léa a des activités Garmin : sans cet accord, le coach ne les voit pas (source_consent_granted).
+    { user_id: ATH, purpose: "garmin_sync", granted: true, doc_version: V, statement: "J'accepte que les données de ma montre Garmin soient partagées avec mon coach." },
     { user_id: COACH, purpose: "health_data", granted: true, doc_version: V, statement: "J'accepte le traitement des données de santé de mes athlètes." },
   ]), "consents");
 
