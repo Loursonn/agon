@@ -3009,6 +3009,7 @@ export type Database = {
       }
       measurement_logs: {
         Row: {
+          arm_length_cm: number | null
           athlete_id: string
           bras: number | null
           bras_d: number | null
@@ -3029,11 +3030,14 @@ export type Database = {
           mollet_g: number | null
           photos: Json
           poitrine: number | null
+          shank_length_cm: number | null
           taille: number | null
+          thigh_length_cm: number | null
           weight_kg: number | null
           wingspan_cm: number | null
         }
         Insert: {
+          arm_length_cm?: number | null
           athlete_id: string
           bras?: number | null
           bras_d?: number | null
@@ -3054,11 +3058,14 @@ export type Database = {
           mollet_g?: number | null
           photos?: Json
           poitrine?: number | null
+          shank_length_cm?: number | null
           taille?: number | null
+          thigh_length_cm?: number | null
           weight_kg?: number | null
           wingspan_cm?: number | null
         }
         Update: {
+          arm_length_cm?: number | null
           athlete_id?: string
           bras?: number | null
           bras_d?: number | null
@@ -3079,7 +3086,9 @@ export type Database = {
           mollet_g?: number | null
           photos?: Json
           poitrine?: number | null
+          shank_length_cm?: number | null
           taille?: number | null
+          thigh_length_cm?: number | null
           weight_kg?: number | null
           wingspan_cm?: number | null
         }

@@ -125,15 +125,15 @@ describe("api/profile — mensurations", () => {
   it("biométrie et MyJump : enregistrées à la création, vidées à la modification si non saisies", async () => {
     const { tables } = world({});
     await createMeasurementLog("a", {
-      measurements: { height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51 },
+      measurements: { height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51, thigh_length_cm: 44, shank_length_cm: 42.5, arm_length_cm: 33 },
       photoFiles: {}, day: "2026-11-08",
     });
     const row = tables.measurement_logs[0];
-    expect(row).toMatchObject({ height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51 });
+    expect(row).toMatchObject({ height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51, thigh_length_cm: 44, shank_length_cm: 42.5, arm_length_cm: 33 });
     await updateMeasurementLog("a", {
       id: row.id as string, existingPhotos: {}, measurements: { height_cm: 179 }, newPhotoFiles: {}, removedSlots: [],
     });
-    expect(tables.measurement_logs[0]).toMatchObject({ height_cm: 179, wingspan_cm: null, leg_length_cm: null, jump_start_height_cm: null });
+    expect(tables.measurement_logs[0]).toMatchObject({ height_cm: 179, wingspan_cm: null, leg_length_cm: null, jump_start_height_cm: null, thigh_length_cm: null, arm_length_cm: null });
   });
 
   it("lecture triée, suppression avec les photos, URLs signées ; lecture en panne → lève", async () => {

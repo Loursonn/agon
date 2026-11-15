@@ -8163,7 +8163,10 @@ CREATE TABLE IF NOT EXISTS "public"."measurement_logs" (
     "height_cm" numeric(5,1) DEFAULT NULL::numeric,
     "wingspan_cm" numeric(5,1) DEFAULT NULL::numeric,
     "leg_length_cm" numeric(5,1) DEFAULT NULL::numeric,
-    "jump_start_height_cm" numeric(5,1) DEFAULT NULL::numeric
+    "jump_start_height_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "thigh_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "shank_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "arm_length_cm" numeric(5,1) DEFAULT NULL::numeric
 );
 
 
@@ -8183,6 +8186,18 @@ COMMENT ON COLUMN "public"."measurement_logs"."leg_length_cm" IS 'MyJump : longu
 
 
 COMMENT ON COLUMN "public"."measurement_logs"."jump_start_height_cm" IS 'MyJump : hauteur de départ, grand trochanter → sol, genoux à 90° (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."thigh_length_cm" IS 'Longueur de cuisse : grand trochanter → interligne du genou, côté externe (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."shank_length_cm" IS 'Longueur de jambe : interligne du genou → malléole externe (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."arm_length_cm" IS 'Longueur de bras : acromion → coude (épicondyle), bras le long du corps (cm)';
 
 
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (

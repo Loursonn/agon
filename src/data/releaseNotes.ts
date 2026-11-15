@@ -75,14 +75,14 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     id: "2026-11-14-biometrie-taille-envergure-myjump",
     date: "2026-11-14",
     kind: "feature",
-    title: "Biométrie : taille, envergure et mesures MyJump",
+    title: "Biométrie : taille, envergure, segments et mesures MyJump",
     summary:
-      "La saisie Mensurations / Photos de vos athlètes enregistre maintenant aussi leur taille debout, leur envergure, et les deux longueurs que l'app MyJump demande : longueur du membre inférieur et hauteur de départ.",
+      "La saisie Mensurations / Photos de vos athlètes enregistre maintenant aussi leur taille debout, leur envergure, la longueur de leur cuisse, de leur jambe et de leur bras, et les deux longueurs que l'app MyJump demande : longueur du membre inférieur et hauteur de départ.",
     sections: [
       {
         title: "Côté athlète",
         points: [
-          "Dans Tests › Mensurations / photos (ou depuis une mesure biométrique que vous avez planifiée), deux nouveaux blocs : « Biométrie » et « Mesures MyJump ».",
+          "Dans Tests › Mensurations / photos (ou depuis une mesure biométrique que vous avez planifiée), trois nouveaux blocs : « Biométrie », « Segments » et « Mesures MyJump ».",
           "Chaque champ dit comment prendre la mesure, par exemple : accroupi genoux à 90°, du haut de la hanche au sol.",
           "Pas besoin de tout remesurer à chaque fois : les dernières valeurs restent affichées en haut, prêtes à recopier dans MyJump.",
         ],
@@ -90,7 +90,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       {
         title: "Côté coach",
         points: [
-          "Profil sportif › Biométrie : les dernières valeurs (taille, envergure, longueur du membre inférieur, hauteur de départ) et leur date, au-dessus de l'évolution des mensurations.",
+          "Profil sportif › Biométrie : les dernières valeurs (taille, envergure, segments, longueur du membre inférieur, hauteur de départ) et leur date, au-dessus de l'évolution des mensurations.",
           "Chaque nouvelle mesure a sa pastille dans l'évolution, comme les tours.",
           "L'ancien champ « Taille » des mensurations s'appelle maintenant « Tour de taille », pour ne plus le confondre avec la taille debout.",
         ],

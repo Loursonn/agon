@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  MEASUREMENT_FIELDS, BIOMETRY_FIELDS, MYJUMP_FIELDS, ALL_MEASUREMENT_FIELDS, PHOTO_SLOTS, ALL_MEASUREMENT_KEYS,
+  MEASUREMENT_FIELDS, BIOMETRY_FIELDS, SEGMENT_FIELDS, MYJUMP_FIELDS, ALL_MEASUREMENT_FIELDS, PHOTO_SLOTS, ALL_MEASUREMENT_KEYS,
   type MeasurementField, type MeasurementKey, type PhotoSlot, type MeasurementLog,
 } from '@/features/shared/types/measurements';
 import {
@@ -334,6 +334,12 @@ function EntryForm({
       <div>
         <SectionLabel icon={<MoveVertical size={12} color={C.g} />} text="Biométrie (cm)" />
         <div className="flex flex-col gap-2">{BIOMETRY_FIELDS.map(singleField)}</div>
+      </div>
+
+      {/* Longueurs de segment */}
+      <div>
+        <SectionLabel icon={<Ruler size={12} color={C.g} />} text="Segments (cm)" />
+        <div className="flex flex-col gap-2">{SEGMENT_FIELDS.map(singleField)}</div>
       </div>
 
       {/* Les deux longueurs que l'app MyJump demande */}

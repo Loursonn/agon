@@ -28,9 +28,15 @@ describe("MensurationsDrawer : biométrie et MyJump", () => {
     fireEvent.change(screen.getByLabelText("Envergure"), { target: { value: "182" } });
     fireEvent.change(screen.getByLabelText("Longueur du membre inférieur"), { target: { value: "96" } });
     fireEvent.change(screen.getByLabelText("Hauteur de départ"), { target: { value: "51" } });
+    fireEvent.change(screen.getByLabelText("Longueur de cuisse"), { target: { value: "44" } });
+    fireEvent.change(screen.getByLabelText("Longueur de jambe"), { target: { value: "42.5" } });
+    fireEvent.change(screen.getByLabelText("Longueur de bras"), { target: { value: "33" } });
     fireEvent.click(screen.getByText("Enregistrer"));
     await waitFor(() => expect(tables.measurement_logs).toHaveLength(1));
-    expect(tables.measurement_logs[0]).toMatchObject({ height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51 });
+    expect(tables.measurement_logs[0]).toMatchObject({
+      height_cm: 178.5, wingspan_cm: 182, leg_length_cm: 96, jump_start_height_cm: 51,
+      thigh_length_cm: 44, shank_length_cm: 42.5, arm_length_cm: 33,
+    });
   });
 
   it("l'historique affiche les dernières valeurs, « — » si jamais mesuré", async () => {
@@ -41,6 +47,6 @@ describe("MensurationsDrawer : biométrie et MyJump", () => {
     const summary = await screen.findByTestId("biometry-summary");
     expect(within(summary).getByText("179 cm")).toBeInTheDocument();
     expect(within(summary).getByText("96 cm")).toBeInTheDocument();
-    expect(within(summary).getAllByText("—")).toHaveLength(2);
+    expect(within(summary).getAllByText("—")).toHaveLength(5);
   });
 });

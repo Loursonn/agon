@@ -6,7 +6,8 @@ const log = (p: Partial<MeasurementLog>): MeasurementLog => ({
   id: p.id ?? "x", athlete_id: "a", date: "2026-11-01", created_at: "2026-11-01T10:00:00Z", photos: {},
   weight_kg: null, bras: null, bras_g: null, bras_d: null, epaules: null, poitrine: null, taille: null, hanche: null,
   cuisse: null, cuisse_g: null, cuisse_d: null, mollet: null, mollet_g: null, mollet_d: null,
-  height_cm: null, wingspan_cm: null, leg_length_cm: null, jump_start_height_cm: null, ...p,
+  height_cm: null, wingspan_cm: null, leg_length_cm: null, jump_start_height_cm: null,
+  thigh_length_cm: null, shank_length_cm: null, arm_length_cm: null, ...p,
 });
 
 describe("latestValues", () => {

@@ -9,7 +9,8 @@ export type MeasurementKey =
 
 /** Biométrie : stature, envergure et mesures demandées par l'app MyJump. */
 export type BiometryKey =
-  | 'height_cm' | 'wingspan_cm' | 'leg_length_cm' | 'jump_start_height_cm';
+  | 'height_cm' | 'wingspan_cm' | 'leg_length_cm' | 'jump_start_height_cm'
+  | 'thigh_length_cm' | 'shank_length_cm' | 'arm_length_cm';
 
 export type PhotoSlot =
   | 'face' | 'cote' | 'dos' | 'jambes_face' | 'jambes_dos';
@@ -44,8 +45,15 @@ export const MYJUMP_FIELDS: MeasurementField[] = [
   { key: 'jump_start_height_cm', label: 'Hauteur de départ',            hint: 'Accroupi genoux à 90°, du grand trochanter au sol.' },
 ];
 
-/** Tous les champs, dans l'ordre d'affichage (tours, biométrie, MyJump). */
-export const ALL_MEASUREMENT_FIELDS: MeasurementField[] = [...MEASUREMENT_FIELDS, ...BIOMETRY_FIELDS, ...MYJUMP_FIELDS];
+/** Longueurs de segment (cm). Les champs bras / cuisse / mollet plus haut sont des tours. */
+export const SEGMENT_FIELDS: MeasurementField[] = [
+  { key: 'thigh_length_cm', label: 'Longueur de cuisse', hint: 'Debout, côté externe : du grand trochanter (haut de la hanche) à l’interligne du genou.' },
+  { key: 'shank_length_cm', label: 'Longueur de jambe',  hint: 'De l’interligne du genou à la malléole externe (bosse de la cheville).' },
+  { key: 'arm_length_cm',   label: 'Longueur de bras',   hint: 'Bras le long du corps : de l’acromion (pointe de l’épaule) au coude.' },
+];
+
+/** Tous les champs, dans l'ordre d'affichage (tours, biométrie, segments, MyJump). */
+export const ALL_MEASUREMENT_FIELDS: MeasurementField[] = [...MEASUREMENT_FIELDS, ...BIOMETRY_FIELDS, ...SEGMENT_FIELDS, ...MYJUMP_FIELDS];
 
 /** All column keys that map to DB columns (for iteration) */
 export const ALL_MEASUREMENT_KEYS: MeasurementKey[] = [
@@ -54,6 +62,7 @@ export const ALL_MEASUREMENT_KEYS: MeasurementKey[] = [
   'cuisse', 'cuisse_g', 'cuisse_d',
   'mollet', 'mollet_g', 'mollet_d',
   'height_cm', 'wingspan_cm', 'leg_length_cm', 'jump_start_height_cm',
+  'thigh_length_cm', 'shank_length_cm', 'arm_length_cm',
 ];
 
 export const PHOTO_SLOTS: { key: PhotoSlot; label: string }[] = [
@@ -90,6 +99,9 @@ export interface MeasurementLog {
   wingspan_cm: number | null;
   leg_length_cm: number | null;
   jump_start_height_cm: number | null;
+  thigh_length_cm: number | null;
+  shank_length_cm: number | null;
+  arm_length_cm: number | null;
   photos: MeasurementPhotos;
   created_at: string;
 }
