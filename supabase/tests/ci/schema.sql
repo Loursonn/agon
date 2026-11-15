@@ -10377,6 +10377,9 @@ CREATE INDEX "injury_followups_entry_idx" ON "public"."injury_followups" USING "
 CREATE UNIQUE INDEX "injury_followups_entry_workout_key" ON "public"."injury_followups" USING "btree" ("entry_id", "workout_log_id") WHERE ("workout_log_id" IS NOT NULL);
 
 
+CREATE INDEX "injury_followups_workout_idx" ON "public"."injury_followups" USING "btree" ("workout_log_id") WHERE ("workout_log_id" IS NOT NULL);
+
+
 
 CREATE INDEX "measurement_logs_athlete_date_idx" ON "public"."measurement_logs" USING "btree" ("athlete_id", "date" DESC);
 
