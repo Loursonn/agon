@@ -344,7 +344,7 @@ function morningOn(h: MorningHistory, day: IsoDay, key: MorningKey): string | nu
   const v = pick(e);
   if (v == null) return null;
   const low = key === "envie_down" ? P.envieLow : P.fatigueLow;
-  const label = key === "envie_down" ? `Envie ${v}/5` : `Fatigue : récupération ${v}/5`;
+  const label = key === "envie_down" ? `Envie ${v}/5` : `Fatigue (récupération ${v}/5)`;
   if (v <= low) return label;
   const habit = morningHabit(h, day, pick);
   return habit && (v - habit.mean) / habit.sd <= P.morningItemZ ? `${label} (habitude ${fr(habit.mean)})` : null;

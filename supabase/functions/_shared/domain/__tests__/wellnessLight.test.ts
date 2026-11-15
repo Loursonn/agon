@@ -204,7 +204,7 @@ describe("feu du matin : signaux d'Hugo (14/11)", () => {
   it("fatigue : récupération ≤ 2/5 ; deux jours de suite = rouge ; item absent = aucun signal", () => {
     const one = run({ [TODAY]: E({ fatigue: 2 }) });
     expect(one.light).toBe("orange");
-    expect(one.morning).toEqual([{ key: "fatigue", text: "Fatigue : récupération 2/5", days: 1 }]);
+    expect(one.morning).toEqual([{ key: "fatigue", text: "Fatigue (récupération 2/5)", days: 1 }]);
     expect(run({ [day(1)]: E({ fatigue: 1 }), [TODAY]: E({ fatigue: 2 }) }).light).toBe("red");
     expect(run({ [day(1)]: E({ fatigue: 1 }), [TODAY]: E({ fatigue: null, envie: null, pain: null }) }).light).toBe("green");
   });
@@ -252,6 +252,6 @@ describe("feu du matin : signaux d'Hugo (14/11)", () => {
   it("plusieurs signaux isolés : phrase au pluriel", () => {
     const r = run({ [TODAY]: E({ pain: 5, envie: 2, fatigue: 2 }) });
     expect(r.light).toBe("orange");
-    expect(r.sentence).toBe("Douleur 5/10 · Envie 2/5 · Fatigue : récupération 2/5 : signaux isolés, à surveiller (rouge s'ils se répètent demain)");
+    expect(r.sentence).toBe("Douleur 5/10 · Envie 2/5 · Fatigue (récupération 2/5) : signaux isolés, à surveiller (rouge s'ils se répètent demain)");
   });
 });
