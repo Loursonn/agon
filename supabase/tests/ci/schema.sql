@@ -8386,6 +8386,60 @@ COMMENT ON TABLE "public"."hyrox_axes_params" IS 'Paramètres du plan de bloc : 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."hyrox_objective_grid" (
+    "version" "text" NOT NULL,
+    "division" "text" NOT NULL,
+    "run_avg_s" integer NOT NULL,
+    "ski_s" integer NOT NULL,
+    "sled_push_s" integer NOT NULL,
+    "sled_pull_s" integer NOT NULL,
+    "bbj_s" integer NOT NULL,
+    "row_s" integer NOT NULL,
+    "farmers_s" integer NOT NULL,
+    "lunges_s" integer NOT NULL,
+    "wall_balls_s" integer NOT NULL,
+    "roxzone_s" integer NOT NULL,
+    "run_shape" numeric[] NOT NULL,
+    "source" "text" NOT NULL,
+    "is_estimate" boolean DEFAULT false NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "hyrox_objective_grid_bbj_s_check" CHECK (("bbj_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_division_check" CHECK (("division" = ANY (ARRAY['men'::"text", 'women'::"text", 'men_pro'::"text", 'women_pro'::"text", 'doubles_men'::"text", 'doubles_women'::"text", 'doubles_mixed'::"text"]))),
+    CONSTRAINT "hyrox_objective_grid_farmers_s_check" CHECK (("farmers_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_lunges_s_check" CHECK (("lunges_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_row_s_check" CHECK (("row_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_roxzone_s_check" CHECK (("roxzone_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_run_avg_s_check" CHECK ((("run_avg_s" >= 150) AND ("run_avg_s" <= 900))),
+    CONSTRAINT "hyrox_objective_grid_run_shape_check" CHECK (("array_length"("run_shape", 1) = 8)),
+    CONSTRAINT "hyrox_objective_grid_ski_s_check" CHECK (("ski_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_sled_pull_s_check" CHECK (("sled_pull_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_sled_push_s_check" CHECK (("sled_push_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_wall_balls_s_check" CHECK (("wall_balls_s" > 0))
+);
+
+
+ALTER TABLE "public"."hyrox_objective_grid" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."hyrox_objective_grid" IS 'Objectif HYROX : à chaque run moyen (s/km, hors Roxzone), temps médians des 8 stations et de la Roxzone et forme des 8 runs (coefficients, moyenne 1). En doubles, stations de la paire.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."hyrox_objective_versions" (
+    "version" "text" NOT NULL,
+    "active" boolean DEFAULT false NOT NULL,
+    "notes" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."hyrox_objective_versions" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."hyrox_objective_versions" IS 'Versions de la grille de l''objectif HYROX ; une seule active.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."hyrox_race_plans" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8403,12 +8457,28 @@ CREATE TABLE IF NOT EXISTS "public"."hyrox_race_plans" (
     "notes" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "run_avg_s" integer,
+    "model_version" "text",
+    "locked_total" boolean DEFAULT true NOT NULL,
     CONSTRAINT "hyrox_race_plans_profile_check" CHECK (("profile" = ANY (ARRAY['runner'::"text", 'hybrid'::"text", 'powerhouse'::"text"]))),
+    CONSTRAINT "hyrox_race_plans_run_avg_s_check" CHECK ((("run_avg_s" IS NULL) OR (("run_avg_s" >= 150) AND ("run_avg_s" <= 900)))),
     CONSTRAINT "hyrox_race_plans_target_total_s_check" CHECK (("target_total_s" > 0))
 );
 
 
 ALTER TABLE "public"."hyrox_race_plans" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."hyrox_race_plans"."run_avg_s" IS 'Run moyen de l''objectif (s/km, hors Roxzone). NULL : plan ancien, réparti depuis un chrono.';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_race_plans"."model_version" IS 'Version de la grille qui a construit les cibles (ex. obj@1).';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_race_plans"."locked_total" IS 'Chrono verrouillé : modifier une cible redistribue la différence sur les autres.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."hyrox_reference_segments" (
@@ -8526,6 +8596,29 @@ COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_target" IS 'No rep
 
 
 COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_depth" IS 'No reps aux wall balls : squat pas sous la parallèle. NULL : non renseigné.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."hyrox_season_goals" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "athlete_id" "uuid" NOT NULL,
+    "season" "text" NOT NULL,
+    "division" "text" NOT NULL,
+    "run_avg_s" integer NOT NULL,
+    "note" "text",
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "hyrox_season_goals_note_check" CHECK ((("note" IS NULL) OR ("char_length"("note") <= 500))),
+    CONSTRAINT "hyrox_season_goals_run_avg_s_check" CHECK ((("run_avg_s" >= 150) AND ("run_avg_s" <= 900))),
+    CONSTRAINT "hyrox_season_goals_season_check" CHECK (("season" ~ '^[0-9]{4}-[0-9]{2}$'::"text"))
+);
+
+
+ALTER TABLE "public"."hyrox_season_goals" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."hyrox_season_goals" IS 'Run moyen visé par un athlète pour une saison HYROX (15 août → 14 août) et une division. Pré-remplit l''objectif des courses sans plan.';
 
 
 
@@ -9809,6 +9902,16 @@ ALTER TABLE ONLY "public"."hyrox_axes_params"
 
 
 
+ALTER TABLE ONLY "public"."hyrox_objective_grid"
+    ADD CONSTRAINT "hyrox_objective_grid_pkey" PRIMARY KEY ("version", "division", "run_avg_s");
+
+
+
+ALTER TABLE ONLY "public"."hyrox_objective_versions"
+    ADD CONSTRAINT "hyrox_objective_versions_pkey" PRIMARY KEY ("version");
+
+
+
 ALTER TABLE ONLY "public"."hyrox_race_plans"
     ADD CONSTRAINT "hyrox_race_plans_pkey" PRIMARY KEY ("id");
 
@@ -9826,6 +9929,16 @@ ALTER TABLE ONLY "public"."hyrox_reference_segments"
 
 ALTER TABLE ONLY "public"."hyrox_results"
     ADD CONSTRAINT "hyrox_results_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_athlete_id_season_division_key" UNIQUE ("athlete_id", "season", "division");
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_pkey" PRIMARY KEY ("id");
 
 
 
@@ -10381,6 +10494,10 @@ CREATE INDEX "hr_zone_models_test_result_id_fk_idx" ON "public"."hr_zone_models"
 
 
 
+CREATE UNIQUE INDEX "hyrox_objective_versions_one_active" ON "public"."hyrox_objective_versions" USING "btree" ("active") WHERE "active";
+
+
+
 CREATE INDEX "hyrox_race_plans_athlete_id_fk_idx" ON "public"."hyrox_race_plans" USING "btree" ("athlete_id");
 
 
@@ -10406,6 +10523,10 @@ CREATE INDEX "hyrox_results_created_by_fk_idx" ON "public"."hyrox_results" USING
 
 
 CREATE INDEX "hyrox_results_watch_activity_id_fk_idx" ON "public"."hyrox_results" USING "btree" ("watch_activity_id");
+
+
+
+CREATE INDEX "hyrox_season_goals_created_by_fk_idx" ON "public"."hyrox_season_goals" USING "btree" ("created_by");
 
 
 
@@ -11185,6 +11306,10 @@ CREATE OR REPLACE TRIGGER "trg_hyrox_results_updated_at" BEFORE UPDATE ON "publi
 
 
 
+CREATE OR REPLACE TRIGGER "trg_hyrox_season_goals_updated_at" BEFORE UPDATE ON "public"."hyrox_season_goals" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_hyrox_test_analyses_freeze" BEFORE UPDATE ON "public"."hyrox_test_analyses" FOR EACH ROW EXECUTE FUNCTION "public"."hyrox_test_analyses_freeze"();
 
 
@@ -11683,6 +11808,11 @@ ALTER TABLE ONLY "public"."hyrox_axes_params"
 
 
 
+ALTER TABLE ONLY "public"."hyrox_objective_grid"
+    ADD CONSTRAINT "hyrox_objective_grid_version_fkey" FOREIGN KEY ("version") REFERENCES "public"."hyrox_objective_versions"("version") ON UPDATE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."hyrox_race_plans"
     ADD CONSTRAINT "hyrox_race_plans_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -11720,6 +11850,16 @@ ALTER TABLE ONLY "public"."hyrox_results"
 
 ALTER TABLE ONLY "public"."hyrox_results"
     ADD CONSTRAINT "hyrox_results_watch_activity_id_fkey" FOREIGN KEY ("watch_activity_id") REFERENCES "public"."provider_activities"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -12883,6 +13023,22 @@ CREATE POLICY "hrs_update" ON "public"."hyrox_reference_segments" FOR UPDATE USI
 
 
 
+CREATE POLICY "hsg_delete" ON "public"."hyrox_season_goals" FOR DELETE TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
+CREATE POLICY "hsg_insert" ON "public"."hyrox_season_goals" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
+CREATE POLICY "hsg_select" ON "public"."hyrox_season_goals" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
+CREATE POLICY "hsg_update" ON "public"."hyrox_season_goals" FOR UPDATE TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"))) WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
 CREATE POLICY "hta_delete" ON "public"."hyrox_test_analyses" FOR DELETE USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
   WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
@@ -12944,6 +13100,44 @@ CREATE POLICY "hyrox_axes_params_update" ON "public"."hyrox_axes_params" FOR UPD
 
 
 
+ALTER TABLE "public"."hyrox_objective_grid" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "hyrox_objective_grid_delete" ON "public"."hyrox_objective_grid" FOR DELETE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_grid_insert" ON "public"."hyrox_objective_grid" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_grid_select" ON "public"."hyrox_objective_grid" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "hyrox_objective_grid_update" ON "public"."hyrox_objective_grid" FOR UPDATE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")) WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+ALTER TABLE "public"."hyrox_objective_versions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "hyrox_objective_versions_delete" ON "public"."hyrox_objective_versions" FOR DELETE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_versions_insert" ON "public"."hyrox_objective_versions" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_versions_select" ON "public"."hyrox_objective_versions" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "hyrox_objective_versions_update" ON "public"."hyrox_objective_versions" FOR UPDATE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")) WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
 ALTER TABLE "public"."hyrox_race_plans" ENABLE ROW LEVEL SECURITY;
 
 
@@ -12951,6 +13145,9 @@ ALTER TABLE "public"."hyrox_reference_segments" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."hyrox_results" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."hyrox_season_goals" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."hyrox_test_analyses" ENABLE ROW LEVEL SECURITY;
@@ -23313,6 +23510,18 @@ GRANT ALL ON TABLE "public"."hyrox_axes_params" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."hyrox_objective_grid" TO "anon";
+GRANT ALL ON TABLE "public"."hyrox_objective_grid" TO "authenticated";
+GRANT ALL ON TABLE "public"."hyrox_objective_grid" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."hyrox_objective_versions" TO "anon";
+GRANT ALL ON TABLE "public"."hyrox_objective_versions" TO "authenticated";
+GRANT ALL ON TABLE "public"."hyrox_objective_versions" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."hyrox_race_plans" TO "anon";
 GRANT ALL ON TABLE "public"."hyrox_race_plans" TO "authenticated";
 GRANT ALL ON TABLE "public"."hyrox_race_plans" TO "service_role";
@@ -23328,6 +23537,12 @@ GRANT ALL ON TABLE "public"."hyrox_reference_segments" TO "service_role";
 GRANT ALL ON TABLE "public"."hyrox_results" TO "anon";
 GRANT ALL ON TABLE "public"."hyrox_results" TO "authenticated";
 GRANT ALL ON TABLE "public"."hyrox_results" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."hyrox_season_goals" TO "anon";
+GRANT ALL ON TABLE "public"."hyrox_season_goals" TO "authenticated";
+GRANT ALL ON TABLE "public"."hyrox_season_goals" TO "service_role";
 
 
 

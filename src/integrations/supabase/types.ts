@@ -2387,6 +2387,92 @@ export type Database = {
           },
         ]
       }
+      hyrox_objective_grid: {
+        Row: {
+          bbj_s: number
+          created_at: string
+          division: string
+          farmers_s: number
+          is_estimate: boolean
+          lunges_s: number
+          row_s: number
+          roxzone_s: number
+          run_avg_s: number
+          run_shape: number[]
+          ski_s: number
+          sled_pull_s: number
+          sled_push_s: number
+          source: string
+          version: string
+          wall_balls_s: number
+        }
+        Insert: {
+          bbj_s: number
+          created_at?: string
+          division: string
+          farmers_s: number
+          is_estimate?: boolean
+          lunges_s: number
+          row_s: number
+          roxzone_s: number
+          run_avg_s: number
+          run_shape: number[]
+          ski_s: number
+          sled_pull_s: number
+          sled_push_s: number
+          source: string
+          version: string
+          wall_balls_s: number
+        }
+        Update: {
+          bbj_s?: number
+          created_at?: string
+          division?: string
+          farmers_s?: number
+          is_estimate?: boolean
+          lunges_s?: number
+          row_s?: number
+          roxzone_s?: number
+          run_avg_s?: number
+          run_shape?: number[]
+          ski_s?: number
+          sled_pull_s?: number
+          sled_push_s?: number
+          source?: string
+          version?: string
+          wall_balls_s?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_objective_grid_version_fkey"
+            columns: ["version"]
+            isOneToOne: false
+            referencedRelation: "hyrox_objective_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
+      hyrox_objective_versions: {
+        Row: {
+          active: boolean
+          created_at: string
+          notes: string | null
+          version: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          notes?: string | null
+          version: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          notes?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       hyrox_race_plans: {
         Row: {
           athlete_id: string
@@ -2395,6 +2481,8 @@ export type Database = {
           created_by: string | null
           division: string
           id: string
+          locked_total: boolean
+          model_version: string | null
           name: string
           notes: string | null
           predicted_from: Json | null
@@ -2402,6 +2490,7 @@ export type Database = {
           predicted_total_s: number | null
           profile: string
           result_id: string | null
+          run_avg_s: number | null
           target_total_s: number
           targets: Json
           updated_at: string
@@ -2413,6 +2502,8 @@ export type Database = {
           created_by?: string | null
           division: string
           id?: string
+          locked_total?: boolean
+          model_version?: string | null
           name: string
           notes?: string | null
           predicted_from?: Json | null
@@ -2420,6 +2511,7 @@ export type Database = {
           predicted_total_s?: number | null
           profile?: string
           result_id?: string | null
+          run_avg_s?: number | null
           target_total_s: number
           targets: Json
           updated_at?: string
@@ -2431,6 +2523,8 @@ export type Database = {
           created_by?: string | null
           division?: string
           id?: string
+          locked_total?: boolean
+          model_version?: string | null
           name?: string
           notes?: string | null
           predicted_from?: Json | null
@@ -2438,6 +2532,7 @@ export type Database = {
           predicted_total_s?: number | null
           profile?: string
           result_id?: string | null
+          run_avg_s?: number | null
           target_total_s?: number
           targets?: Json
           updated_at?: string
@@ -2718,6 +2813,57 @@ export type Database = {
             columns: ["watch_activity_id"]
             isOneToOne: false
             referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_season_goals: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          created_by: string | null
+          division: string
+          id: string
+          note: string | null
+          run_avg_s: number
+          season: string
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          created_by?: string | null
+          division: string
+          id?: string
+          note?: string | null
+          run_avg_s: number
+          season: string
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          created_by?: string | null
+          division?: string
+          id?: string
+          note?: string | null
+          run_avg_s?: number
+          season?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_season_goals_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_season_goals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
