@@ -1445,6 +1445,29 @@ $$;
 ALTER FUNCTION "public"."cycle_athlete_id"("p_cycle_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."cycle_athlete_id_fast"("p_cycle_id" "uuid") RETURNS "uuid"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT o.athlete
+    FROM (SELECT CASE WHEN cy.mesocycle_id IS NULL THEN cy.athlete_id ELSE ma.athlete_id END AS athlete,
+                 (cy.mesocycle_id IS NOT NULL AND cy.athlete_id IS NOT NULL
+                  AND cy.athlete_id IS DISTINCT FROM ma.athlete_id) AS mixed
+            FROM public.cycles cy
+            LEFT JOIN public.mesocycles  me ON me.id = cy.mesocycle_id
+            LEFT JOIN public.macrocycles ma ON ma.id = me.macrocycle_id
+           WHERE cy.id = p_cycle_id) o
+   WHERE NOT o.mixed AND public.rls_linked_to(o.athlete);
+$$;
+
+
+ALTER FUNCTION "public"."cycle_athlete_id_fast"("p_cycle_id" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."cycle_athlete_id_fast"("p_cycle_id" "uuid") IS 'Pour les policies de microcycles : athlète du cycle sans relancer la RLS, seulement si l''appelant a un lien avec lui et si le cycle n''est pas mixte. Voir cycle_is_mixed et 20261115220000.';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."cycle_coach_id"("p_cycle_id" "uuid") RETURNS "uuid"
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
@@ -1461,6 +1484,30 @@ $$;
 
 
 ALTER FUNCTION "public"."cycle_coach_id"("p_cycle_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."cycle_is_mixed"("p_cycle_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1
+      FROM public.cycles cy
+      JOIN public.mesocycles  me ON me.id = cy.mesocycle_id
+      JOIN public.macrocycles ma ON ma.id = me.macrocycle_id
+     WHERE cy.id = p_cycle_id
+       AND cy.athlete_id IS NOT NULL
+       AND cy.athlete_id IS DISTINCT FROM ma.athlete_id
+       AND public.rls_linked_to(ma.athlete_id)
+  );
+$$;
+
+
+ALTER FUNCTION "public"."cycle_is_mixed"("p_cycle_id" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."cycle_is_mixed"("p_cycle_id" "uuid") IS 'Pour les policies de microcycles : cycle rattaché à un mésocycle et à un autre athlète que celui du macrocycle (et l''appelant a un lien avec ce dernier). Ce cas repasse par cycle_athlete_id, à l''identique.';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."decide_hr_zone_model"("p_id" "uuid", "p_accept" boolean) RETURNS "void"
@@ -3124,6 +3171,25 @@ $$;
 ALTER FUNCTION "public"."mesocycle_athlete_id"("p_mesocycle_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."mesocycle_athlete_id_fast"("p_mesocycle_id" "uuid") RETURNS "uuid"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT ma.athlete_id
+    FROM public.mesocycles me
+    JOIN public.macrocycles ma ON ma.id = me.macrocycle_id
+   WHERE me.id = p_mesocycle_id
+     AND public.rls_linked_to(ma.athlete_id);
+$$;
+
+
+ALTER FUNCTION "public"."mesocycle_athlete_id_fast"("p_mesocycle_id" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."mesocycle_athlete_id_fast"("p_mesocycle_id" "uuid") IS 'Pour les policies de cycles : athlète du mésocycle sans relancer la RLS, seulement si l''appelant a un lien avec lui. Remplace mesocycle_athlete_id dans les policies (même résultat, voir 20261115220000).';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."microcycle_for_athlete_date"("p_athlete_id" "uuid", "p_date" "date" DEFAULT CURRENT_DATE) RETURNS TABLE("microcycle_id" "uuid", "week_number" smallint, "is_deload" boolean, "cycle_name" "text", "mesocycle_name" "text", "macrocycle_name" "text")
     LANGUAGE "sql" STABLE
     SET "search_path" TO 'public'
@@ -4411,6 +4477,26 @@ $$;
 
 
 ALTER FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT p_athlete IS NOT NULL AND (
+    p_athlete = auth.uid()
+    OR public.is_coach_of(p_athlete)
+    OR EXISTS (SELECT 1 FROM public.athlete_staff s
+                WHERE s.athlete_id = p_athlete AND s.staff_id = auth.uid() AND s.status = 'active')
+  );
+$$;
+
+
+ALTER FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") IS 'Pour les policies : l''appelant est-il cet athlète, son coach (référent ou co-coach) ou un pro au lien actif ? Plus large que tout droit de lecture ; sert de garde aux fonctions _fast.';
+
 
 
 CREATE OR REPLACE FUNCTION "public"."run_workout_status_maintenance"() RETURNS TABLE("closed" integer, "missed" integer)
@@ -7959,6 +8045,10 @@ CREATE TABLE IF NOT EXISTS "public"."hyrox_results" (
     "roxzone_rank" integer,
     "roxzone_top_pct" numeric(5,2),
     "roxzone_cause" "text",
+    "watch_activity_id" "uuid",
+    "watch_offset_s" integer,
+    "wall_balls_no_rep_target" integer,
+    "wall_balls_no_rep_depth" integer,
     CONSTRAINT "hyrox_results_division_check" CHECK (("division" = ANY (ARRAY['women'::"text", 'women_pro'::"text", 'men'::"text", 'men_pro'::"text", 'doubles_women'::"text", 'doubles_men'::"text", 'doubles_mixed'::"text", 'doubles_women_pro'::"text", 'doubles_men_pro'::"text", 'relay_women'::"text", 'relay_men'::"text", 'relay_mixed'::"text", 'adaptive'::"text"]))),
     CONSTRAINT "hyrox_results_format_check" CHECK (("format" = ANY (ARRAY['solo'::"text", 'doubles'::"text", 'relay'::"text", 'sim_full'::"text", 'sim_34'::"text", 'sim_half'::"text"]))),
     CONSTRAINT "hyrox_results_roxzone_cause_check" CHECK (("roxzone_cause" = ANY (ARRAY['marche'::"text", 'orga'::"text", 'site'::"text"]))),
@@ -7967,7 +8057,9 @@ CREATE TABLE IF NOT EXISTS "public"."hyrox_results" (
     CONSTRAINT "hyrox_results_source_check" CHECK (("source" = ANY (ARRAY['manual'::"text", 'import'::"text"]))),
     CONSTRAINT "hyrox_results_status_check" CHECK (("status" = ANY (ARRAY['finished'::"text", 'dnf'::"text", 'dns'::"text", 'dq'::"text"]))),
     CONSTRAINT "hyrox_results_top_pct_overall_check" CHECK ((("top_pct_overall" >= (0)::numeric) AND ("top_pct_overall" <= (100)::numeric))),
-    CONSTRAINT "hyrox_results_total_s_check" CHECK (("total_s" > 0))
+    CONSTRAINT "hyrox_results_total_s_check" CHECK (("total_s" > 0)),
+    CONSTRAINT "hyrox_results_wall_balls_no_reps_check" CHECK (((("wall_balls_no_rep_target" IS NULL) OR (("wall_balls_no_rep_target" >= 0) AND ("wall_balls_no_rep_target" <= 500))) AND (("wall_balls_no_rep_depth" IS NULL) OR (("wall_balls_no_rep_depth" >= 0) AND ("wall_balls_no_rep_depth" <= 500))))),
+    CONSTRAINT "hyrox_results_watch_offset_s_check" CHECK ((("watch_offset_s" IS NULL) OR (("watch_offset_s" >= '-3600'::integer) AND ("watch_offset_s" <= 43200))))
 );
 
 
@@ -7983,6 +8075,22 @@ COMMENT ON COLUMN "public"."hyrox_results"."roxzone_top_pct" IS 'Top % en Roxzon
 
 
 COMMENT ON COLUMN "public"."hyrox_results"."roxzone_cause" IS 'Cause d''une perte en Roxzone : marche (après les stations), orga (transitions), site (grand site).';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_results"."watch_activity_id" IS 'Activité de montre liée à la course (choisie par l''athlète ou le coach). NULL : activité du même jour proposée d''office.';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_depth" IS 'No reps aux wall balls : squat pas sous la parallèle. NULL : non renseigné.';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_target" IS 'No reps aux wall balls : cible ratée. NULL : non renseigné.';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_results"."watch_offset_s" IS 'Seconde de l''enregistrement de la montre où la course commence (négatif : montre lancée après le départ). NULL : recalage automatique.';
 
 
 
@@ -8159,11 +8267,45 @@ CREATE TABLE IF NOT EXISTS "public"."measurement_logs" (
     "cuisse_g" numeric(5,1) DEFAULT NULL::numeric,
     "cuisse_d" numeric(5,1) DEFAULT NULL::numeric,
     "mollet_g" numeric(5,1) DEFAULT NULL::numeric,
-    "mollet_d" numeric(5,1) DEFAULT NULL::numeric
+    "mollet_d" numeric(5,1) DEFAULT NULL::numeric,
+    "height_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "wingspan_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "leg_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "jump_start_height_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "thigh_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "shank_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "arm_length_cm" numeric(5,1) DEFAULT NULL::numeric
 );
 
 
 ALTER TABLE "public"."measurement_logs" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."height_cm" IS 'Taille debout, stature (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."wingspan_cm" IS 'Envergure, bras tendus à l''horizontale (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."leg_length_cm" IS 'MyJump : longueur du membre inférieur, grand trochanter → pointe du pied, cheville tendue (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."jump_start_height_cm" IS 'MyJump : hauteur de départ, grand trochanter → sol, genoux à 90° (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."thigh_length_cm" IS 'Longueur de cuisse : grand trochanter → interligne du genou, côté externe (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."shank_length_cm" IS 'Longueur de jambe : interligne du genou → malléole externe (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."arm_length_cm" IS 'Longueur de bras : acromion → coude (épicondyle), bras le long du corps (cm)';
 
 
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
@@ -9747,6 +9889,10 @@ CREATE INDEX "hyrox_results_created_by_fk_idx" ON "public"."hyrox_results" USING
 
 
 
+CREATE INDEX "hyrox_results_watch_activity_id_fk_idx" ON "public"."hyrox_results" USING "btree" ("watch_activity_id");
+
+
+
 CREATE INDEX "hyrox_test_analyses_created_by_fk_idx" ON "public"."hyrox_test_analyses" USING "btree" ("created_by");
 
 
@@ -10998,6 +11144,11 @@ ALTER TABLE ONLY "public"."hyrox_results"
 
 
 
+ALTER TABLE ONLY "public"."hyrox_results"
+    ADD CONSTRAINT "hyrox_results_watch_activity_id_fkey" FOREIGN KEY ("watch_activity_id") REFERENCES "public"."provider_activities"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."hyrox_test_analyses"
     ADD CONSTRAINT "hyrox_test_analyses_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -11771,19 +11922,19 @@ CREATE POLICY "competitions_update_athlete" ON "public"."competitions" FOR UPDAT
 ALTER TABLE "public"."cycles" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "cycles_delete" ON "public"."cycles" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")))));
+CREATE POLICY "cycles_delete" ON "public"."cycles" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id_fast"("mesocycle_id")))));
 
 
 
-CREATE POLICY "cycles_insert" ON "public"."cycles" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))))));
+CREATE POLICY "cycles_insert" ON "public"."cycles" FOR INSERT WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id_fast"("mesocycle_id"))))));
 
 
 
-CREATE POLICY "cycles_select" ON "public"."cycles" FOR SELECT USING (((COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")) = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))))));
+CREATE POLICY "cycles_select" ON "public"."cycles" FOR SELECT USING (((COALESCE("athlete_id", "public"."mesocycle_athlete_id_fast"("mesocycle_id")) = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id_fast"("mesocycle_id"))))));
 
 
 
-CREATE POLICY "cycles_update" ON "public"."cycles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id"))))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")))));
+CREATE POLICY "cycles_update" ON "public"."cycles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id_fast"("mesocycle_id"))))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("athlete_id", "public"."mesocycle_athlete_id_fast"("mesocycle_id")))));
 
 
 
@@ -12386,19 +12537,43 @@ CREATE POLICY "methods_update_own" ON "public"."training_methods" FOR UPDATE USI
 ALTER TABLE "public"."microcycles" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "microcycles_delete" ON "public"."microcycles" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))));
+CREATE POLICY "microcycles_delete" ON "public"."microcycles" FOR DELETE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("public"."cycle_athlete_id_fast"("cycle_id"),
+CASE
+    WHEN "public"."cycle_is_mixed"("cycle_id") THEN "public"."cycle_athlete_id"("cycle_id")
+    ELSE NULL::"uuid"
+END))));
 
 
 
-CREATE POLICY "microcycles_insert" ON "public"."microcycles" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))));
+CREATE POLICY "microcycles_insert" ON "public"."microcycles" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("public"."cycle_athlete_id_fast"("cycle_id"),
+CASE
+    WHEN "public"."cycle_is_mixed"("cycle_id") THEN "public"."cycle_athlete_id"("cycle_id")
+    ELSE NULL::"uuid"
+END))));
 
 
 
-CREATE POLICY "microcycles_select" ON "public"."microcycles" FOR SELECT USING ((("public"."cycle_athlete_id"("cycle_id") = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id")))));
+CREATE POLICY "microcycles_select" ON "public"."microcycles" FOR SELECT USING (((COALESCE("public"."cycle_athlete_id_fast"("cycle_id"),
+CASE
+    WHEN "public"."cycle_is_mixed"("cycle_id") THEN "public"."cycle_athlete_id"("cycle_id")
+    ELSE NULL::"uuid"
+END) = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("public"."cycle_athlete_id_fast"("cycle_id"),
+CASE
+    WHEN "public"."cycle_is_mixed"("cycle_id") THEN "public"."cycle_athlete_id"("cycle_id")
+    ELSE NULL::"uuid"
+END)))));
 
 
 
-CREATE POLICY "microcycles_update" ON "public"."microcycles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id")))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"("public"."cycle_athlete_id"("cycle_id"))));
+CREATE POLICY "microcycles_update" ON "public"."microcycles" FOR UPDATE USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("public"."cycle_athlete_id_fast"("cycle_id"),
+CASE
+    WHEN "public"."cycle_is_mixed"("cycle_id") THEN "public"."cycle_athlete_id"("cycle_id")
+    ELSE NULL::"uuid"
+END)))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."can_coach_athlete"(COALESCE("public"."cycle_athlete_id_fast"("cycle_id"),
+CASE
+    WHEN "public"."cycle_is_mixed"("cycle_id") THEN "public"."cycle_athlete_id"("cycle_id")
+    ELSE NULL::"uuid"
+END))));
 
 
 
@@ -12741,7 +12916,7 @@ CREATE POLICY "staff_competitions_read" ON "public"."competitions" FOR SELECT TO
 
 
 
-CREATE POLICY "staff_cycles_read" ON "public"."cycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"(COALESCE("athlete_id", "public"."mesocycle_athlete_id"("mesocycle_id")), 'planification'::"text", 'read'::"text")));
+CREATE POLICY "staff_cycles_read" ON "public"."cycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"(COALESCE("athlete_id", "public"."mesocycle_athlete_id_fast"("mesocycle_id")), 'planification'::"text", 'read'::"text")));
 
 
 
@@ -12852,7 +13027,11 @@ CREATE POLICY "staff_mesocycles_read" ON "public"."mesocycles" FOR SELECT TO "au
 
 
 
-CREATE POLICY "staff_microcycles_read" ON "public"."microcycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("public"."cycle_athlete_id"("cycle_id"), 'planification'::"text", 'read'::"text")));
+CREATE POLICY "staff_microcycles_read" ON "public"."microcycles" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"(COALESCE("public"."cycle_athlete_id_fast"("cycle_id"),
+CASE
+    WHEN "public"."cycle_is_mixed"("cycle_id") THEN "public"."cycle_athlete_id"("cycle_id")
+    ELSE NULL::"uuid"
+END), 'planification'::"text", 'read'::"text")));
 
 
 
@@ -15745,9 +15924,23 @@ GRANT ALL ON FUNCTION "public"."cycle_athlete_id"("p_cycle_id" "uuid") TO "servi
 
 
 
+REVOKE ALL ON FUNCTION "public"."cycle_athlete_id_fast"("p_cycle_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."cycle_athlete_id_fast"("p_cycle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."cycle_athlete_id_fast"("p_cycle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cycle_athlete_id_fast"("p_cycle_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."cycle_coach_id"("p_cycle_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."cycle_coach_id"("p_cycle_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."cycle_coach_id"("p_cycle_id" "uuid") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."cycle_is_mixed"("p_cycle_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."cycle_is_mixed"("p_cycle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."cycle_is_mixed"("p_cycle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cycle_is_mixed"("p_cycle_id" "uuid") TO "service_role";
 
 
 
@@ -19978,6 +20171,13 @@ GRANT ALL ON FUNCTION "public"."mesocycle_athlete_id"("p_mesocycle_id" "uuid") T
 
 
 
+REVOKE ALL ON FUNCTION "public"."mesocycle_athlete_id_fast"("p_mesocycle_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."mesocycle_athlete_id_fast"("p_mesocycle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."mesocycle_athlete_id_fast"("p_mesocycle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."mesocycle_athlete_id_fast"("p_mesocycle_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."microcycle_for_athlete_date"("p_athlete_id" "uuid", "p_date" "date") TO "anon";
 GRANT ALL ON FUNCTION "public"."microcycle_for_athlete_date"("p_athlete_id" "uuid", "p_date" "date") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."microcycle_for_athlete_date"("p_athlete_id" "uuid", "p_date" "date") TO "service_role";
@@ -20735,6 +20935,13 @@ GRANT ALL ON FUNCTION "public"."results_ne"("text", "text", "text") TO "service_
 REVOKE ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") TO "service_role";
 
 
 

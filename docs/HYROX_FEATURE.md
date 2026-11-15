@@ -142,7 +142,7 @@ Sources : RoxHype 25/26, HYROX Data Lab S7-S8, HYROX Data Lab Utrecht.
 - Références Pro absentes pour les stations (affiche "réf. n.d.")
 - Run 1 non comparable entre salles (terrain, dénivelé, revêtement)
 - Sled push/pull dépend fortement de la surface (turf, béton) → pas de benchmark universel
-- Import automatique depuis results.hyrox.com hors périmètre
+- Pas d'import automatique depuis results.hyrox.com : HYROX interdit l'extraction de sa base (mises en demeure d'octobre 2026). L'athlète colle sa page de résultat (« Coller mon résultat », `src/lib/hyrox/resultImport.ts`) ; Agon ne lit jamais le site lui-même. La page ne donne ni la date exacte ni le genre : date reprise du calendrier (compétition de la même ville et de la même année), genre d'après les courses précédentes, sinon champ signalé à compléter.
 - Mode doubles/relais : on stocke la division mais on ne modélise pas le partage des stations
 
 ---

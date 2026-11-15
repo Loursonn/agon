@@ -45,6 +45,13 @@ export interface HyroxResult {
   athlete_comment: string | null;
   coach_comment: string | null;
   source: 'manual' | 'import';
+  /** Activité de montre liée (migration 20261116090000) ; absente ou null : proposée d'office. */
+  watch_activity_id?: string | null;
+  /** Seconde de l'enregistrement où la course commence ; absente ou null : recalage automatique. */
+  watch_offset_s?: number | null;
+  /** No reps aux wall balls (saisie manuelle) : cible ratée / pas sous la parallèle. */
+  wall_balls_no_rep_target?: number | null;
+  wall_balls_no_rep_depth?: number | null;
   created_at: string;
   updated_at: string;
 }

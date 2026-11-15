@@ -8,7 +8,9 @@ import {
   REFERENCE_DIVISION, RUN_KEYS, STATION_KEYS, STATION_META,
   type HyroxDivision, type HyroxResult, type StationKey,
 } from "@/features/shared/types/hyrox";
-import { bracketOf, percentile, roxzoneTotal, runTotal, stationsTotal, type RefLookup } from "./calc";
+import { POSITION_BRACKET, bracketOf, percentile, roxzoneTotal, runTotal, stationsTotal, type RefLookup } from "./calc";
+import { raceCategory } from "./categories";
+import { cruisePace } from "./runPacing";
 
 const seg = (r: HyroxResult, key: string): number | null =>
   (r as unknown as Record<string, number | null>)[`${key}_s`] ?? null;
@@ -56,6 +58,8 @@ export interface RunPaceRow {
   /** Temps des 8 runs (s/km : un run fait 1 km). */
   runs: number[];
   avg: number;
+  /** Croisière : médiane des runs 2 à 7 (le run 1 et le run 8 ne se comparent pas). */
+  cruise: number;
 }
 
 /** Allure des 8 runs de chaque course complète, de la plus ancienne à la plus récente (`max` dernières). */
@@ -71,6 +75,7 @@ export function runPaceEvolution(races: readonly HyroxResult[], max = 5): RunPac
       date: r.date,
       runs,
       avg: runs.reduce((n, v) => n + v, 0) / runs.length,
+      cruise: cruisePace((k) => runs[Number(k.slice(4)) - 1] ?? null) as number,
     }));
 }
 
@@ -104,13 +109,12 @@ export interface SegmentPosition {
 
 /**
  * Position par station sur plusieurs courses (ordre chronologique attendu) :
- * 8 stations, puis les 8 runs ensemble, puis la Roxzone. Référence : division
- * de la dernière course, tranche de chrono de chaque course.
+ * 8 stations, puis les 8 runs ensemble, puis la Roxzone. Chaque course est
+ * placée dans toute sa catégorie (solo, duo, pro… : la sienne), jamais dans
+ * sa seule tranche de chrono.
  */
 export function segmentPositions(chronological: readonly HyroxResult[], refLookup: RefLookup): SegmentPosition[] {
   if (chronological.length === 0) return [];
-  const latest = chronological[chronological.length - 1];
-  const refDiv = REFERENCE_DIVISION(latest.division as HyroxDivision);
   const rows: Array<{ key: string; label: string; get: (r: HyroxResult) => number | null }> = [
     ...STATION_KEYS.map((k: StationKey) => ({ key: k as string, label: STATION_META[k].label, get: (r: HyroxResult) => seg(r, k) })),
     { key: "run_total", label: "Runs (8 km)", get: runTotal },
@@ -120,7 +124,7 @@ export function segmentPositions(chronological: readonly HyroxResult[], refLooku
     const values = chronological.map(get);
     const pcts = chronological.map((r, i) => {
       const v = values[i];
-      const ref = v != null ? refLookup(refDiv, key, bracketOf(r.total_s)) : undefined;
+      const ref = v != null ? refLookup(raceCategory(r), key, POSITION_BRACKET) : undefined;
       return v != null && ref ? percentile(v, ref) : null;
     });
     const known = pcts.filter((p): p is number => p != null);
@@ -135,10 +139,10 @@ export function segmentPositions(chronological: readonly HyroxResult[], refLooku
   });
 }
 
-/** Percentiles course et stations (moyenne des 8 stations) d'une course : base du profil. */
+/** Percentiles course et stations (moyenne des 8 stations) d'une course, dans toute sa catégorie : base du profil. */
 export function profilePercentiles(r: HyroxResult, refLookup: RefLookup): { run: number | null; stations: number | null } {
-  const refDiv = REFERENCE_DIVISION(r.division as HyroxDivision);
-  const bracket = bracketOf(r.total_s);
+  const refDiv = raceCategory(r);
+  const bracket = POSITION_BRACKET;
   const rt = runTotal(r);
   const runRef = refLookup(refDiv, "run_total", bracket);
   const run = runRef && rt != null ? percentile(rt, runRef) : null;

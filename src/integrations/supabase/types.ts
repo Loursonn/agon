@@ -2518,7 +2518,11 @@ export type Database = {
           total_s: number
           updated_at: string
           venue: string | null
+          wall_balls_no_rep_depth: number | null
+          wall_balls_no_rep_target: number | null
           wall_balls_s: number | null
+          watch_activity_id: string | null
+          watch_offset_s: number | null
         }
         Insert: {
           activity_url?: string | null
@@ -2567,7 +2571,11 @@ export type Database = {
           total_s: number
           updated_at?: string
           venue?: string | null
+          wall_balls_no_rep_depth?: number | null
+          wall_balls_no_rep_target?: number | null
           wall_balls_s?: number | null
+          watch_activity_id?: string | null
+          watch_offset_s?: number | null
         }
         Update: {
           activity_url?: string | null
@@ -2616,7 +2624,11 @@ export type Database = {
           total_s?: number
           updated_at?: string
           venue?: string | null
+          wall_balls_no_rep_depth?: number | null
+          wall_balls_no_rep_target?: number | null
           wall_balls_s?: number | null
+          watch_activity_id?: string | null
+          watch_offset_s?: number | null
         }
         Relationships: [
           {
@@ -2638,6 +2650,20 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_results_watch_activity_id_fkey"
+            columns: ["watch_activity_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_results_watch_activity_id_fkey"
+            columns: ["watch_activity_id"]
+            isOneToOne: false
+            referencedRelation: "provider_activities"
             referencedColumns: ["id"]
           },
         ]
@@ -3009,6 +3035,7 @@ export type Database = {
       }
       measurement_logs: {
         Row: {
+          arm_length_cm: number | null
           athlete_id: string
           bras: number | null
           bras_d: number | null
@@ -3020,16 +3047,23 @@ export type Database = {
           date: string
           epaules: number | null
           hanche: number | null
+          height_cm: number | null
           id: string
+          jump_start_height_cm: number | null
+          leg_length_cm: number | null
           mollet: number | null
           mollet_d: number | null
           mollet_g: number | null
           photos: Json
           poitrine: number | null
+          shank_length_cm: number | null
           taille: number | null
+          thigh_length_cm: number | null
           weight_kg: number | null
+          wingspan_cm: number | null
         }
         Insert: {
+          arm_length_cm?: number | null
           athlete_id: string
           bras?: number | null
           bras_d?: number | null
@@ -3041,16 +3075,23 @@ export type Database = {
           date?: string
           epaules?: number | null
           hanche?: number | null
+          height_cm?: number | null
           id?: string
+          jump_start_height_cm?: number | null
+          leg_length_cm?: number | null
           mollet?: number | null
           mollet_d?: number | null
           mollet_g?: number | null
           photos?: Json
           poitrine?: number | null
+          shank_length_cm?: number | null
           taille?: number | null
+          thigh_length_cm?: number | null
           weight_kg?: number | null
+          wingspan_cm?: number | null
         }
         Update: {
+          arm_length_cm?: number | null
           athlete_id?: string
           bras?: number | null
           bras_d?: number | null
@@ -3062,14 +3103,20 @@ export type Database = {
           date?: string
           epaules?: number | null
           hanche?: number | null
+          height_cm?: number | null
           id?: string
+          jump_start_height_cm?: number | null
+          leg_length_cm?: number | null
           mollet?: number | null
           mollet_d?: number | null
           mollet_g?: number | null
           photos?: Json
           poitrine?: number | null
+          shank_length_cm?: number | null
           taille?: number | null
+          thigh_length_cm?: number | null
           weight_kg?: number | null
+          wingspan_cm?: number | null
         }
         Relationships: [
           {
@@ -5915,7 +5962,9 @@ export type Database = {
       }
       current_user_is_admin: { Args: never; Returns: boolean }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
+      cycle_athlete_id_fast: { Args: { p_cycle_id: string }; Returns: string }
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
+      cycle_is_mixed: { Args: { p_cycle_id: string }; Returns: boolean }
       decide_hr_zone_model: {
         Args: { p_accept: boolean; p_id: string }
         Returns: undefined
@@ -6119,6 +6168,10 @@ export type Database = {
         Returns: Json
       }
       mesocycle_athlete_id: {
+        Args: { p_mesocycle_id: string }
+        Returns: string
+      }
+      mesocycle_athlete_id_fast: {
         Args: { p_mesocycle_id: string }
         Returns: string
       }
@@ -6414,6 +6467,7 @@ export type Database = {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined
       }
+      rls_linked_to: { Args: { p_athlete: string }; Returns: boolean }
       run_workout_status_maintenance: {
         Args: never
         Returns: {

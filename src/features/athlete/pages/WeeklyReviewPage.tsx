@@ -10,6 +10,7 @@ import { useWeeklyCoachRetour } from "@/features/shared/hooks/useWeeklyCoachReto
 import {
   usePreviousWeeklyReview,
   useSaveWeeklyReview,
+  useWeekPainReports,
   useWeekSummary,
   useWeeklyReview,
 } from "@/features/shared/hooks/useWeeklyReview";
@@ -28,6 +29,7 @@ import {
   openReviewWeek,
   painRequired,
   type KeptStatus,
+  type PainReport,
   type ReviewAnswers,
   type StuckCause,
 } from "@/lib/weekly-review";
@@ -66,6 +68,29 @@ function Scale({ value, min, max, onChange, label }: { value: number | null | un
   );
 }
 
+const fmtShortDay = (d: string) =>
+  new Date(`${d}T12:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+
+/** Rappel des douleurs saisies dans la semaine (wellness, blessures), pour que l'athlète se souvienne de ce qu'il avait. */
+function PainReminder({ reports }: { reports: readonly PainReport[] }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="text-[12.5px] text-agon-tx2">Cette semaine, tu as signalé :</div>
+      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+        {reports.map((r, i) => (
+          <li key={i} className="rounded-[10px] border border-agon-brd bg-agon-s2 px-3 py-2 text-[13px]">
+            <div className="text-agon-tx3">
+              {fmtShortDay(r.day)} · {r.source === "wellness" ? "wellness du matin" : "blessure"}
+            </div>
+            <div className="text-agon-tx">{r.text}</div>
+            {r.comment && <div className="mt-0.5 whitespace-pre-wrap italic text-agon-tx2">« {r.comment} »</div>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /**
  * Weekly review de l'athlète (P22). Ouverte du dimanche au lundi soir.
  * Brouillon enregistré en base à chaque champ (repris après fermeture), bilan
@@ -84,12 +109,14 @@ export default function WeeklyReviewPage() {
   const submitted = review?.status === "submitted";
   const open = week ? isReviewOpen(week, today) : false;
   const { data: summary } = useWeekSummary(athleteId, week, !submitted);
+  const { data: pains } = useWeekPainReports(athleteId, week, !submitted);
   const { data: lightRes } = useWellnessLight(athleteId, today);
   const { data: retour } = useWeeklyCoachRetour(athleteId ?? undefined, submitted ? week ?? undefined : undefined);
   const save = useSaveWeeklyReview(athleteId, week);
 
   const light = submitted ? review?.light ?? null : lightRes?.light ?? null;
-  const needPain = painRequired(light);
+  // Questions douleur : seulement si une douleur a été saisie dans la semaine (Hugo, 15/11), quel que soit le feu.
+  const needPain = painRequired(pains);
 
   const [answers, setAnswers] = useState<ReviewAnswers | null>(null);
   const [showMissing, setShowMissing] = useState(false);
@@ -134,7 +161,7 @@ export default function WeeklyReviewPage() {
   const missing = useMemo(() => (answers ? missingFields(answers, { painRequired: needPain }) : []), [answers, needPain]);
 
   const submit = () => {
-    if (!answers || !summary) return;
+    if (!answers || !summary || !pains) return;
     if (missing.length > 0) { setShowMissing(true); return; }
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
     pending.current = null;
@@ -274,7 +301,8 @@ export default function WeeklyReviewPage() {
       {needPain && (
         <ReviewSection n="06" title="Ta douleur">
           <div className={cn(REVIEW_CARD, "flex flex-col gap-2.5", mark("pain"))}>
-            <div className="text-[12.5px] text-agon-tx2">Ton feu est {light === "red" ? "rouge" : "orange"} : dis-nous où tu as mal.</div>
+            <PainReminder reports={pains ?? []} />
+            <div className="text-[12.5px] text-agon-tx2">Où en est cette douleur aujourd'hui ?</div>
             <input className={FIELD} maxLength={120} placeholder="Zone (genou droit, bas du dos…)" value={a.pain?.zone ?? ""}
               onChange={(e) => update((x) => ({ ...x, pain: { ...(x.pain ?? {}), zone: e.target.value } }))} />
             <Choice value={a.pain?.kind} options={{ douleur: "Douleur", blessure: "Blessure" }}

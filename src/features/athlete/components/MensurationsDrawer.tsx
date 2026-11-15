@@ -1,18 +1,19 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { Ruler, Camera, Plus, ChevronLeft, Check, Pencil, Trash2, X } from 'lucide-react';
+import { Ruler, Camera, Plus, ChevronLeft, Check, Pencil, Trash2, X, MoveVertical, Activity } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { C } from "@/lib/theme";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  MEASUREMENT_FIELDS, PHOTO_SLOTS, ALL_MEASUREMENT_KEYS,
-  type MeasurementKey, type PhotoSlot, type MeasurementLog,
+  MEASUREMENT_FIELDS, BIOMETRY_FIELDS, SEGMENT_FIELDS, MYJUMP_FIELDS, ALL_MEASUREMENT_FIELDS, PHOTO_SLOTS, ALL_MEASUREMENT_KEYS,
+  type MeasurementField, type MeasurementKey, type PhotoSlot, type MeasurementLog,
 } from '@/features/shared/types/measurements';
 import {
   useMeasurementLogs, useCreateMeasurementLog,
   useUpdateMeasurementLog, useDeleteMeasurementLog, useMeasurementPhotoUrls,
 } from '@/features/shared/hooks/useMeasurements';
+import { BiometrySummary } from '@/features/shared/components/BiometrySummary';
 
 // ── Draft persistence ─────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ function LogCard({
 
   // Build display chips for measurements
   const chips: { label: string; value: string }[] = [];
-  for (const f of MEASUREMENT_FIELDS) {
+  for (const f of ALL_MEASUREMENT_FIELDS) {
     if (f.bilateral) {
       const g = log[f.bilateral.gKey];
       const d = log[f.bilateral.dKey];
@@ -204,6 +205,24 @@ function EntryForm({
     setValues(prev => ({ ...prev, [key]: v }));
   }
 
+  function singleField(f: MeasurementField) {
+    return (
+      <div key={f.key} className="rounded-[4px] bg-agon-s2 px-3 py-2">
+        <div className={cn(FIELD_LABEL, 'mb-1')}>{f.label}</div>
+        {f.hint && <div className="mb-1.5 text-[10px] leading-snug text-agon-tx3">{f.hint}</div>}
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number" inputMode="decimal" value={values[f.key] ?? ''}
+            onChange={(e) => setVal(f.key, e.target.value)} placeholder="0"
+            aria-label={f.label}
+            className={INPUT}
+          />
+          <span className={UNIT}>cm</span>
+        </div>
+      </div>
+    );
+  }
+
   function pickPhoto(slot: PhotoSlot, file: File | undefined) {
     if (!file) return;
     setFiles(prev => ({ ...prev, [slot]: file }));
@@ -306,21 +325,27 @@ function EntryForm({
                 </div>
               );
             }
-            return (
-              <div key={f.key} className="rounded-[4px] bg-agon-s2 px-3 py-2">
-                <div className={cn(FIELD_LABEL, 'mb-1')}>{f.label}</div>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number" inputMode="decimal" value={values[f.key] ?? ''}
-                    onChange={(e) => setVal(f.key, e.target.value)} placeholder="0"
-                    className={INPUT}
-                  />
-                  <span className={UNIT}>cm</span>
-                </div>
-              </div>
-            );
+            return singleField(f);
           })}
         </div>
+      </div>
+
+      {/* Biométrie : stature, envergure */}
+      <div>
+        <SectionLabel icon={<MoveVertical size={12} color={C.g} />} text="Biométrie (cm)" />
+        <div className="flex flex-col gap-2">{BIOMETRY_FIELDS.map(singleField)}</div>
+      </div>
+
+      {/* Longueurs de segment */}
+      <div>
+        <SectionLabel icon={<Ruler size={12} color={C.g} />} text="Segments (cm)" />
+        <div className="flex flex-col gap-2">{SEGMENT_FIELDS.map(singleField)}</div>
+      </div>
+
+      {/* Les deux longueurs que l'app MyJump demande */}
+      <div>
+        <SectionLabel icon={<Activity size={12} color={C.g} />} text="Mesures MyJump (cm)" />
+        <div className="flex flex-col gap-2">{MYJUMP_FIELDS.map(singleField)}</div>
       </div>
 
       {/* Photos */}
@@ -451,6 +476,8 @@ export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }:
                   <Plus size={16} /> Nouvelle saisie
                 </button>
               )}
+
+              {logs.length > 0 && <BiometrySummary logs={logs} />}
 
               <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.6px] text-agon-tx3">
                 Historique — {logs.length}

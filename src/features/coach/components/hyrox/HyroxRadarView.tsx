@@ -3,8 +3,9 @@ import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
-import { radarAxes, typology, percentile, runTotal, stationsTotal, roxzoneTotal, bracketOf, type RefLookup } from "@/lib/hyrox/calc";
-import { REFERENCE_DIVISION, STATION_KEYS, STATION_META, SEGMENT_LABEL, type StationKey, type HyroxDivision } from "@/features/shared/types/hyrox";
+import { radarAxes, typology, percentile, runTotal, stationsTotal, roxzoneTotal, standing, POSITION_BRACKET, type RefLookup } from "@/lib/hyrox/calc";
+import { CATEGORY_LABEL, raceCategory } from "@/lib/hyrox/categories";
+import { STATION_KEYS, STATION_META, SEGMENT_LABEL, type StationKey } from "@/features/shared/types/hyrox";
 import { formatMmSs } from "@/lib/time";
 import HyroxRadar from "./HyroxRadar";
 
@@ -38,9 +39,9 @@ export default function HyroxRadarView() {
     series.push({ name: "Record — " + formatMmSs(record.total_s, { hours: true }), color: C.g, axes: radarAxes(record, refLookup) });
   }
 
-  // Typology
-  const refDiv = REFERENCE_DIVISION(race.division as HyroxDivision);
-  const bracket = bracketOf(race.total_s);
+  // Typology : positions dans toute la catégorie (pas la tranche de chrono).
+  const refDiv = raceCategory(race);
+  const bracket = POSITION_BRACKET;
   const runRef = refLookup(refDiv, "run_total", bracket);
   const rt = runTotal(race);
   const pctRun = runRef && rt != null ? percentile(rt, runRef) : null;
@@ -54,9 +55,11 @@ export default function HyroxRadarView() {
   const typo = typology(pctRun, pctStations);
 
   // Best/worst axes for typology description
+  // Points forts / faibles : seuils nets (top 35 % / 35 % les plus lents), jamais un classement relatif.
+  // value = 100 − position : position = 100 − value.
   const validAxes = axes.filter(a => a.value != null).sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
-  const best3 = validAxes.slice(0, 3).map(a => a.label);
-  const worst3 = validAxes.slice(-3).map(a => a.label);
+  const best3 = validAxes.filter(a => standing(100 - (a.value as number)) === "fort").slice(0, 3).map(a => a.label);
+  const worst3 = [...validAxes].reverse().filter(a => standing(100 - (a.value as number)) === "faible").slice(0, 3).map(a => a.label);
 
   return (
     <div>
@@ -96,9 +99,10 @@ export default function HyroxRadarView() {
             Profil : {PROFILE_LABEL[typo]}
           </div>
           <div style={{ fontSize: 11, color: C.tx2 }}>
-            {typo === "runner" && `Course et ergos au-dessus de la division (${best3.join(", ")}), ${worst3.join(" et ")} en dessous.`}
-            {typo === "powerhouse" && `Stations solides (${best3.join(", ")}), course en retrait (${worst3.join(", ")}).`}
-            {typo === "hybrid" && `Profil équilibré. Points forts : ${best3.join(", ")}. Points faibles : ${worst3.join(", ")}.`}
+            {typo === "runner" && "Course au-dessus des stations dans la catégorie. "}
+            {typo === "powerhouse" && "Stations au-dessus de la course dans la catégorie. "}
+            {typo === "hybrid" && "Profil équilibré. "}
+            Points forts (top 35 %) : {best3.length ? best3.join(", ") : "aucun"}. Points faibles (35 % les plus lents) : {worst3.length ? worst3.join(", ") : "aucun"}.
           </div>
         </div>
       )}
@@ -133,11 +137,11 @@ function pctLabel(pct: number | null): string {
   return `Top ${pct} %`;
 }
 
-const BRACKET_LABEL: Record<string, string> = { sub70: 'sub 1h10', '70_80': '1h10-1h20', '80_90': '1h20-1h30', '90_plus': '1h30+' };
 
 function RankingTable({ race, refLookup }: { race: HyroxResult; refLookup: RefLookup }) {
-  const refDiv = REFERENCE_DIVISION(race.division as HyroxDivision);
-  const bracket = bracketOf(race.total_s);
+  const refDiv = raceCategory(race);
+  // Classement dans toute la catégorie (décision d'Hugo, 15/11/2026).
+  const bracket = POSITION_BRACKET;
 
   const rows: RankingRow[] = [];
 
@@ -182,7 +186,7 @@ function RankingTable({ race, refLookup }: { race: HyroxResult; refLookup: RefLo
         Classement global
       </div>
       <div style={{ fontSize: 10, color: C.tx3, marginBottom: 8 }}>
-        Comparé aux athlètes {BRACKET_LABEL[bracket]} ({sampleLabel}+ résultats, saisons 7-8-9, {refDiv})
+        Comparé à toute la catégorie {CATEGORY_LABEL[refDiv]} ({sampleLabel}+ résultats, saisons 7-8-9)
       </div>
 
       <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflowX: "auto" }}>

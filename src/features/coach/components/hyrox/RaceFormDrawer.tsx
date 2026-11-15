@@ -1,20 +1,24 @@
 import { useState, useMemo } from "react";
 import { C } from "@/lib/theme";
-import { X, ClipboardPaste } from "lucide-react";
+import { X, ClipboardPaste, AlertTriangle } from "lucide-react";
 import { parseMmSs, formatMmSs } from "@/lib/time";
-import { parseResultText } from "@/lib/hyrox/parseResultText";
+import { durationPhrase, findDuplicateRace, sumMismatch, type RaceImport } from "@/lib/hyrox/resultImport";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateHyroxResult, useUpdateHyroxResult } from "@/features/shared/hooks/hyrox/useHyroxResults";
+import { useRaceImport } from "@/features/shared/hooks/hyrox/useRaceImport";
 import {
   RACE_ORDER, STATION_KEYS, DIVISION_LABEL,
   FORMAT_LABEL, SEGMENT_LABEL,
   type HyroxResult, type HyroxDivision, type SegmentKey, type HyroxFormat, type HyroxStatus,
 } from "@/features/shared/types/hyrox";
 import { toast } from "sonner";
+import { parseNoRepInput } from "@/lib/hyrox/noReps";
 
 interface Props {
   race?: HyroxResult | null;
+  /** Résultat collé (« Coller mon résultat ») : la fiche s'ouvre pré-remplie, à vérifier. */
+  imported?: RaceImport | null;
   onClose: () => void;
 }
 
@@ -24,26 +28,42 @@ const STATUS_OPTIONS: [HyroxStatus, string][] = [
   ["finished", "Terminée"], ["dnf", "DNF"], ["dns", "DNS"], ["dq", "DQ"],
 ];
 
-export default function RaceFormDrawer({ race, onClose }: Props) {
+export default function RaceFormDrawer({ race, imported, onClose }: Props) {
   const { athleteId } = useAthleteContext();
   const { user } = useAuth();
   const createMut = useCreateHyroxResult(athleteId);
   const updateMut = useUpdateHyroxResult(athleteId);
+  const { prepare, races } = useRaceImport(athleteId);
   const isEdit = !!race;
+  const imp = imported ?? null;
+  // Sur une course existante, une division devinée ne remplace pas celle déjà enregistrée.
+  const impDivision = imp && !(imp.divisionGuessed && race) ? imp.division : null;
 
   // Form state
-  const [date, setDate] = useState(race?.date ?? new Date().toISOString().slice(0, 10));
-  const [eventName, setEventName] = useState(race?.event_name ?? "");
-  const [venue, setVenue] = useState(race?.venue ?? "");
-  const [format, setFormat] = useState<HyroxFormat>(race?.format as HyroxFormat ?? "solo");
-  const [division, setDivision] = useState<HyroxDivision>(race?.division as HyroxDivision ?? "men");
-  const [ageGroup, setAgeGroup] = useState(race?.age_group ?? "");
-  const [isOfficial, setIsOfficial] = useState(race?.is_official ?? true);
-  const [status, setStatus] = useState<HyroxStatus>(race?.status as HyroxStatus ?? "finished");
-  const [totalStr, setTotalStr] = useState(race ? formatMmSs(race.total_s, { hours: true }) : "");
+  const [date, setDate] = useState(imp?.date ?? race?.date ?? (imp ? "" : new Date().toISOString().slice(0, 10)));
+  const [eventName, setEventName] = useState(imp?.eventName ?? race?.event_name ?? "");
+  const [venue, setVenue] = useState(imp?.venue ?? race?.venue ?? "");
+  const [format, setFormat] = useState<HyroxFormat>(imp?.format ?? race?.format as HyroxFormat ?? "solo");
+  const [division, setDivision] = useState<HyroxDivision>(impDivision ?? race?.division as HyroxDivision ?? "men");
+  const [ageGroup, setAgeGroup] = useState(imp?.ageGroup ?? race?.age_group ?? "");
+  const [isOfficial, setIsOfficial] = useState(imp ? true : race?.is_official ?? true);
+  const [status, setStatus] = useState<HyroxStatus>(imp?.status ?? race?.status as HyroxStatus ?? "finished");
+  const initTotal = imp?.totalS ?? race?.total_s ?? null;
+  const [totalStr, setTotalStr] = useState(initTotal != null ? formatMmSs(initTotal, { hours: true }) : "");
+  const [competitionId, setCompetitionId] = useState<string | null>(imp?.competitionId ?? race?.competition_id ?? null);
+  const [fromImport, setFromImport] = useState(!!imp);
+  // Champs à compléter après un import ; un champ sort de la liste dès qu'on le touche.
+  const [toCheck, setToCheck] = useState<string[]>(
+    (imp?.missing ?? []).filter((f) => !(race && (f === "Date" || f === "Division"))),
+  );
+  const checked = (field: string) => setToCheck((l) => l.filter((f) => f !== field));
+  const flag = (field: string, empty = true): React.CSSProperties =>
+    toCheck.includes(field) && empty ? { borderColor: C.o, boxShadow: `0 0 0 1px ${C.o}` } : {};
 
   // Segments stored as mm:ss strings
-  const initSeg = (key: string) => {
+  const initSeg = (key: SegmentKey) => {
+    const fromImp = imp?.segments[key];
+    if (fromImp != null) return formatMmSs(fromImp);
     if (!race) return "";
     const val = (race as unknown as Record<string, unknown>)[key + "_s"] as number | null;
     return val != null ? formatMmSs(val) : "";
@@ -55,11 +75,14 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
     return s;
   });
 
-  const [roxzoneStr, setRoxzoneStr] = useState(race?.roxzone_total_s != null ? formatMmSs(race.roxzone_total_s) : "");
-  const [penaltiesS, setPenaltiesS] = useState(String(race?.penalties_s ?? 0));
+  const [roxzoneStr, setRoxzoneStr] = useState(initSeg("roxzone_total"));
+  const [penaltiesS, setPenaltiesS] = useState(String(imp?.penaltiesS ?? race?.penalties_s ?? 0));
   const [penaltiesNote, setPenaltiesNote] = useState(race?.penalties_note ?? "");
-  const [rankOverall, setRankOverall] = useState(race?.rank_overall?.toString() ?? "");
-  const [rankAG, setRankAG] = useState(race?.rank_age_group?.toString() ?? "");
+  // No reps wall balls : saisis à la main (le collage ne les donne pas) ; vide = non renseigné.
+  const [noRepTarget, setNoRepTarget] = useState(race?.wall_balls_no_rep_target?.toString() ?? "");
+  const [noRepDepth, setNoRepDepth] = useState(race?.wall_balls_no_rep_depth?.toString() ?? "");
+  const [rankOverall, setRankOverall] = useState((imp?.rankOverall ?? race?.rank_overall)?.toString() ?? "");
+  const [rankAG, setRankAG] = useState((imp?.rankAgeGroup ?? race?.rank_age_group)?.toString() ?? "");
   const [partOverall, setPartOverall] = useState(race?.participants_overall?.toString() ?? "");
   const [partAG, setPartAG] = useState(race?.participants_age_group?.toString() ?? "");
   const [activityUrl, setActivityUrl] = useState(race?.activity_url ?? "");
@@ -72,23 +95,39 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
   const [pasteText, setPasteText] = useState("");
   const [showTuto, setShowTuto] = useState(false);
 
+  /** Collage dans la fiche ouverte : remplit ce que le texte contient, sans effacer le reste. */
   function handlePaste() {
-    const parsed = parseResultText(pasteText);
-    if (!parsed) { toast.error("Aucun segment reconnu dans le texte collé"); return; }
+    const prepared = prepare(pasteText, { excludeId: race?.id });
+    if (!prepared) { toast.error("Aucun temps reconnu dans le texte collé"); return; }
+    const { imp: p, duplicate } = prepared;
 
     const newSegs: Record<string, string> = { ...segments };
     for (const key of RACE_ORDER) {
-      const val = parsed[(key + "_s") as keyof typeof parsed] as number | null;
+      const val = p.segments[key];
       if (val != null) newSegs[key] = formatMmSs(val);
     }
     setSegments(newSegs);
-
-    if (parsed.roxzone_total_s != null) setRoxzoneStr(formatMmSs(parsed.roxzone_total_s));
-    if (parsed.total_s != null) setTotalStr(formatMmSs(parsed.total_s, { hours: true }));
+    if (p.segments.roxzone_total != null) setRoxzoneStr(formatMmSs(p.segments.roxzone_total));
+    if (p.totalS != null) setTotalStr(formatMmSs(p.totalS, { hours: true }));
+    if (p.date) setDate(p.date);
+    if (p.competitionId) setCompetitionId(p.competitionId);
+    if (p.eventName) setEventName(p.eventName);
+    if (p.venue) setVenue(p.venue);
+    if (p.format) setFormat(p.format);
+    if (p.divisionFound && !(p.divisionGuessed && race)) setDivision(p.division);
+    if (p.ageGroup) setAgeGroup(p.ageGroup);
+    if (p.status !== "finished") setStatus(p.status);
+    if (p.penaltiesS != null) setPenaltiesS(String(p.penaltiesS));
+    if (p.rankOverall != null) setRankOverall(String(p.rankOverall));
+    if (p.rankAgeGroup != null) setRankAG(String(p.rankAgeGroup));
+    setIsOfficial(true);
+    setFromImport(true);
+    setToCheck(p.missing.filter((f) => !(f === "Date" && date) && !(f === "Division" && race)));
 
     setShowPaste(false);
     setPasteText("");
-    toast.success("Segments importés depuis le texte collé");
+    if (duplicate && !isEdit) toast.warning(`Cette course est déjà dans Agon (${duplicate.event_name}, ${duplicate.date}) : ouvre-la pour la modifier.`);
+    else toast.success("Résultat importé : vérifie les champs avant d'enregistrer");
   }
 
   // Live totals
@@ -113,10 +152,16 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
   const segmentsSum = (runSum ?? 0) + (stationSum ?? 0) + (parsedRoxzone ?? 0);
   const ecart = parsedTotal != null && runSum != null && stationSum != null
     ? parsedTotal - segmentsSum : null;
+  // Somme des 17 temps (+ pénalités) ≠ chrono officiel, au-delà des arrondis.
+  const mismatch = sumMismatch({ ...parsedSegments, roxzone_total: parsedRoxzone }, parsedTotal, parseInt(penaltiesS) || 0);
 
   async function handleSave() {
     if (!date || !eventName.trim()) { toast.error("Date et nom d'événement obligatoires"); return; }
     if (parsedTotal == null || parsedTotal <= 0) { toast.error("Total invalide"); return; }
+    if (!isEdit) {
+      const dup = findDuplicateRace(races, { officialTotalS: parsedTotal, eventName: eventName.trim(), year: Number(date.slice(0, 4)) }, date);
+      if (dup) { toast.error(`Cette course est déjà dans Agon (${dup.event_name}, ${dup.date}) : ouvre-la pour la modifier.`); return; }
+    }
 
     const segFields = {} as Record<`${SegmentKey}_s`, number | null>;
     for (const k of RACE_ORDER) {
@@ -124,6 +169,10 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
       if (v != null && (v <= 0 || v > 10800)) { toast.error(`${SEGMENT_LABEL[k]} : valeur invalide`); return; }
       segFields[`${k}_s`] = v;
     }
+
+    const nrTarget = parseNoRepInput(noRepTarget);
+    const nrDepth = parseNoRepInput(noRepDepth);
+    if (nrTarget === undefined || nrDepth === undefined) { toast.error("No reps wall balls : un nombre entier entre 0 et 500"); return; }
 
     const payload = {
       athlete_id: athleteId,
@@ -138,6 +187,9 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
       roxzone_splits: null,
       penalties_s: parseInt(penaltiesS) || 0,
       penalties_note: penaltiesNote.trim() || null,
+      // Envoyées seulement si renseignées ou effacées : une course sans no reps s'enregistre comme avant.
+      ...(nrTarget != null || race?.wall_balls_no_rep_target != null ? { wall_balls_no_rep_target: nrTarget } : {}),
+      ...(nrDepth != null || race?.wall_balls_no_rep_depth != null ? { wall_balls_no_rep_depth: nrDepth } : {}),
       rank_overall: rankOverall ? parseInt(rankOverall) : null,
       rank_age_group: rankAG ? parseInt(rankAG) : null,
       participants_overall: partOverall ? parseInt(partOverall) : null,
@@ -145,9 +197,9 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
       activity_url: activityUrl.trim() || null,
       athlete_comment: comment.trim() || null,
       coach_comment: race?.coach_comment ?? null,
-      competition_id: race?.competition_id ?? null,
+      competition_id: competitionId,
       created_by: race?.created_by ?? user?.id ?? null,
-      source: (race?.source ?? "manual") as "manual" | "import",
+      source: (fromImport ? "import" : race?.source ?? "manual") as "manual" | "import",
     };
 
     try {
@@ -188,10 +240,20 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
           <button onClick={onClose} style={{ background: "none", border: "none", color: C.tx3, cursor: "pointer" }}><X size={18} /></button>
         </div>
 
+        {fromImport && (
+          <div role="status" style={{
+            padding: "10px 12px", borderRadius: 8, marginBottom: 14, fontSize: 12, lineHeight: 1.5,
+            background: C.s1, border: "1px solid " + (toCheck.length > 0 ? C.o : C.brd), color: C.tx2,
+          }}>
+            <strong style={{ color: C.tx }}>Pré-rempli depuis ton résultat HYROX.</strong> Vérifie avant d'enregistrer.
+            {toCheck.length > 0 && <div style={{ color: C.o, marginTop: 4 }}>À compléter : {toCheck.join(", ")}.</div>}
+          </div>
+        )}
+
         {/* Event info */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-          <div><label style={labelStyle}>Date</label><input style={inputStyle} type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
-          <div><label style={labelStyle}>Événement</label><input style={inputStyle} value={eventName} onChange={e => setEventName(e.target.value)} placeholder="HYROX Bordeaux" /></div>
+          <div><label style={labelStyle}>Date</label><input style={{ ...inputStyle, ...flag("Date", !date) }} type="date" value={date} onChange={e => { setDate(e.target.value); checked("Date"); }} /></div>
+          <div><label style={labelStyle}>Événement</label><input style={{ ...inputStyle, ...flag("Événement", !eventName) }} value={eventName} onChange={e => { setEventName(e.target.value); checked("Événement"); }} placeholder="HYROX Bordeaux" /></div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
           <div><label style={labelStyle}>Lieu</label><input style={inputStyle} value={venue} onChange={e => setVenue(e.target.value)} placeholder="Bordeaux" /></div>
@@ -203,7 +265,7 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
           </div>
           <div>
             <label style={labelStyle}>Division</label>
-            <select style={{ ...inputStyle }} value={division} onChange={e => setDivision(e.target.value as HyroxDivision)}>
+            <select style={{ ...inputStyle, ...flag("Division") }} value={division} onChange={e => { setDivision(e.target.value as HyroxDivision); checked("Division"); }}>
               {DIVISION_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
@@ -227,7 +289,7 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
         {/* Total */}
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Temps total (h:mm:ss ou mm:ss)</label>
-          <input style={{ ...timeInputStyle, fontSize: 16, fontWeight: 700 }} value={totalStr} onChange={e => setTotalStr(e.target.value)} placeholder="1:24:12" />
+          <input style={{ ...timeInputStyle, fontSize: 16, fontWeight: 700, ...flag("Temps total", !totalStr) }} value={totalStr} onChange={e => { setTotalStr(e.target.value); checked("Temps total"); }} placeholder="1:24:12" />
         </div>
 
         {/* Paste import */}
@@ -305,7 +367,10 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
             <div key={key}>
               <label style={labelStyle}>{SEGMENT_LABEL[key] ?? key}</label>
               <input
-                style={{ ...timeInputStyle, borderColor: key.startsWith("run_") ? C.b + "40" : C.ac + "40" }}
+                style={{
+                  ...timeInputStyle, borderColor: key.startsWith("run_") ? C.b + "40" : C.ac + "40",
+                  ...(fromImport && !segments[key] ? { borderColor: C.o } : {}),
+                }}
                 value={segments[key]}
                 onChange={e => setSeg(key, e.target.value)}
                 placeholder="m:ss"
@@ -317,7 +382,7 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
         {/* Roxzone */}
         <div style={{ marginBottom: 12 }}>
           <label style={labelStyle}>Roxzone totale (optionnel — déduite si vide)</label>
-          <input style={timeInputStyle} value={roxzoneStr} onChange={e => setRoxzoneStr(e.target.value)} placeholder="6:42" />
+          <input style={{ ...timeInputStyle, ...(fromImport && !roxzoneStr ? { borderColor: C.o } : {}) }} value={roxzoneStr} onChange={e => setRoxzoneStr(e.target.value)} placeholder="6:42" />
         </div>
 
         {/* Live check */}
@@ -338,10 +403,29 @@ export default function RaceFormDrawer({ race, onClose }: Props) {
           </div>
         )}
 
+        {mismatch != null && (
+          <div role="alert" style={{
+            display: "flex", gap: 8, alignItems: "flex-start",
+            padding: "10px 12px", borderRadius: 8, marginBottom: 12, fontSize: 12, lineHeight: 1.5,
+            background: C.o + "14", border: "1px solid " + C.o, color: C.tx,
+          }}>
+            <AlertTriangle size={14} style={{ color: C.o, flex: "none", marginTop: 2 }} />
+            <span>
+              La somme des temps ({formatMmSs(segmentsSum + (parseInt(penaltiesS) || 0), { hours: true })}) ne colle pas au chrono
+              {isOfficial ? " officiel" : ""} ({formatMmSs(parsedTotal, { hours: true })}) : {mismatch > 0 ? "" : "il manque "}
+              {durationPhrase(mismatch)}{mismatch > 0 ? " de trop" : ""}. Vérifie les temps avant d'enregistrer.
+            </span>
+          </div>
+        )}
+
         {/* Penalties & ranks */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
           <div><label style={labelStyle}>Pénalités (s)</label><input style={inputStyle} type="number" min={0} value={penaltiesS} onChange={e => setPenaltiesS(e.target.value)} /></div>
           <div><label style={labelStyle}>Note pénalités</label><input style={inputStyle} value={penaltiesNote} onChange={e => setPenaltiesNote(e.target.value)} /></div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <div><label style={labelStyle}>No reps wall balls · cible ratée</label><input style={inputStyle} type="number" inputMode="numeric" min={0} max={500} placeholder="—" value={noRepTarget} onChange={e => setNoRepTarget(e.target.value)} /></div>
+          <div><label style={labelStyle}>No reps wall balls · pas sous la parallèle</label><input style={inputStyle} type="number" inputMode="numeric" min={0} max={500} placeholder="—" value={noRepDepth} onChange={e => setNoRepDepth(e.target.value)} /></div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
           <div><label style={labelStyle}>Rang overall</label><input style={inputStyle} type="number" min={1} value={rankOverall} onChange={e => setRankOverall(e.target.value)} /></div>

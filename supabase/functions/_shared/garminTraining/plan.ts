@@ -10,7 +10,10 @@
  *   commencée : on ne touche jamais à ce que l'athlète a fait ou est en train
  *   de faire ;
  * - une erreur est réessayée au passage suivant ; après 5 échecs sur la même
- *   version, une fois toutes les 6 h seulement (quota Garmin).
+ *   version, une fois toutes les 6 h seulement (quota Garmin) ;
+ * - une séance « forcée » (bouton « Envoyer sur ma montre ») est renvoyée même
+ *   inchangée ou en attente de nouvel essai : l'athlète l'a peut-être retirée
+ *   de son calendrier Garmin, ou veut réessayer tout de suite.
  */
 import type { IsoDay } from "../domain/dates.ts";
 import type { TranslateResult } from "./types.ts";
@@ -60,6 +63,8 @@ export function planPushActions(input: {
   doneOrStarted: ReadonlySet<string>;
   today: IsoDay;
   now: number;
+  /** Séances (clés `sourceKey`) demandées à la main : renvoyées même inchangées. */
+  force?: ReadonlySet<string>;
 }): PushAction[] {
   const actions: PushAction[] = [];
   const byKey = new Map(input.pushed.map((r) => [sourceKey(r.kind, r.sourceId), r]));
@@ -70,14 +75,15 @@ export function planPushActions(input: {
     wanted.add(key);
     const row = byKey.get(key) ?? null;
     const same = !!row && row.hash === item.hash;
+    const forced = input.force?.has(key) ?? false;
 
     if (!item.result.ok) {
       if (row && row.status === "rejected" && same) continue;
       actions.push({ type: "reject", item, row });
       continue;
     }
-    if (row && same && row.status === "sent" && row.externalWorkoutId) continue;
-    if (row && same && row.status === "error" && row.attempts >= MAX_FAST_ATTEMPTS) {
+    if (!forced && row && same && row.status === "sent" && row.externalWorkoutId) continue;
+    if (!forced && row && same && row.status === "error" && row.attempts >= MAX_FAST_ATTEMPTS) {
       const age = input.now - Date.parse(row.updatedAt);
       if (Number.isFinite(age) && age < SLOW_RETRY_MS) continue;
     }

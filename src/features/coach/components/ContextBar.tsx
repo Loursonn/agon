@@ -55,7 +55,6 @@ const SUB_TABS: Record<string, { key: string; label: string }[]> = {
   ],
   programmation: [],
   hyrox: [
-    { key: "bilan",    label: "Bilan"             },
     { key: "courses",  label: "Courses"           },
     { key: "stations", label: "Stations"          },
     { key: "runs",     label: "Runs"              },

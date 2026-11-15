@@ -21,6 +21,7 @@ import { RirPicker } from "@/features/athlete/components/workout-detail/RirPicke
 import { RpeSheetForLog } from "@/features/athlete/components/workout-detail/RpeSheetForLog";
 import { SupersetCard } from "@/features/athlete/components/workout-detail/SupersetCard";
 import { VideoRequestBanner, VideoRequestRow } from "@/features/athlete/components/VideoRequest";
+import { WatchPushButton } from "@/features/athlete/components/today/WatchPushButton";
 import { WORKOUT_GONE_MESSAGE } from "@/features/shared/hooks/useUpsertWorkoutRpe";
 import { type WorkoutExerciceData, useWorkoutSession } from "@/features/shared/hooks/useWorkoutSession";
 import { applyOptimisticWorkout, draftAlreadyOnServer } from "@/lib/optimisticWorkout";
@@ -942,6 +943,17 @@ export default function WorkoutDetailPage() {
                   ).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                 </span>
               )}
+            {workout.status === "planned" && workout.workoutLogId && (
+              <div style={{ marginTop: 6 }}>
+                <WatchPushButton
+                  athleteId={athleteId}
+                  kind="strength"
+                  sourceId={workout.workoutLogId}
+                  sessionStatus={workout.status}
+                  date={workout.scheduledDate}
+                />
+              </div>
+            )}
           </div>
 
           {/* Timer or "completed" badge */}

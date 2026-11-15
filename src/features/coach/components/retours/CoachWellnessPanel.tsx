@@ -190,9 +190,9 @@ export function CoachWellnessPanel({ athleteId, firstName }: { athleteId: string
       </span>
       <div className="flex min-w-[260px] flex-1 flex-col gap-1">
         <span className="text-[15px] text-agon-tx">{r?.sentence ?? (light.isLoading ? "Calcul du feu…" : `Pas assez de données pour le feu de ${firstName}.`)}</span>
-        {r && r.light === "orange" && (
+        {r && r.light !== "green" && (
           <span className="text-[12.5px] text-agon-tx2">
-            {r.orange.length} signal{r.orange.length > 1 ? "aux" : ""} orange · {r.redSigns.length} signe{r.redSigns.length > 1 ? "s" : ""} d’accompagnement (rouge à partir de 2 avec la charge qui monte).
+            Douleur, envie, fatigue, FC de repos, VFC : orange le jour où le signal apparaît, rouge s’il se répète 2 jours de suite.
           </span>
         )}
       </div>

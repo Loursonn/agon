@@ -33,7 +33,7 @@ describe("getWellnessLight", () => {
     expect(r?.brand).toBeNull();
   });
 
-  it("VFC de la montre sous la zone : orange, phrase VFC", async () => {
+  it("VFC de la montre sous la zone plusieurs jours de suite : rouge, phrase VFC", async () => {
     const dailies = Array.from({ length: 35 }, (_, i) => {
       const day = addDays(TODAY, -34 + i);
       const low = i >= 28;
@@ -43,8 +43,22 @@ describe("getWellnessLight", () => {
     setDbForTests(db);
     const r = await getWellnessLight("ath", TODAY);
     expect(r?.brand).toBe("garmin");
-    expect(r?.light).toBe("orange");
-    expect(r?.sentence).toMatch(/^VFC sous ta zone habituelle/);
+    expect(r?.light).toBe("red");
+    expect(r?.sentence).toMatch(/^VFC sous ta zone habituelle depuis \d jours/);
+  });
+
+  it("douleur 5/10 deux matins de suite (wellness_entries) : rouge", async () => {
+    const { db } = fakeDb({ ...empty, wellness_entries: [entry(addDays(TODAY, -1), { pain: 5 }), entry(TODAY, { pain: 5 })] });
+    setDbForTests(db);
+    const r = await getWellnessLight("ath", TODAY);
+    expect(r?.light).toBe("red");
+    expect(r?.morning).toEqual([{ key: "pain", text: "Douleur 5/10 depuis 2 jours", days: 2 }]);
+  });
+
+  it("douleur 5/10 ce matin seulement : orange", async () => {
+    const { db } = fakeDb({ ...empty, wellness_entries: [entry(addDays(TODAY, -1)), entry(TODAY, { pain: 5 })] });
+    setDbForTests(db);
+    expect((await getWellnessLight("ath", TODAY))?.light).toBe("orange");
   });
 
   it("saisie d'avant-hier et rien d'autre : pas de feu", async () => {

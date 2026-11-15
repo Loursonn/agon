@@ -254,6 +254,25 @@ export async function syncCoros(): Promise<SyncReport | undefined> {
   return data?.reports?.[0];
 }
 
+/** Réponse de « Envoyer sur ma montre » : état de la séance après l'envoi. */
+export interface PushNowResult {
+  status: "sent" | "rejected" | "error";
+  message: string;
+  warnings: string[];
+}
+
+/**
+ * Envoie tout de suite une séance prévue de l'athlète connecté sur sa montre
+ * Garmin, même au-delà des 7 jours envoyés automatiquement. Refus (envoi coupé,
+ * permission absente, séance passée…) : `ConnectError` avec le code serveur.
+ */
+export async function pushWorkoutNow(kind: WorkoutPush["sourceKind"], sourceId: string): Promise<PushNowResult> {
+  const { data, error } = await invoke<PushNowResult>("provider-garmin-push-workout", { body: { kind, sourceId } });
+  if (error) throw await connectError(error);
+  if (!data?.status) throw new ConnectError("L'envoi n'a pas abouti. Réessaie plus tard.", null);
+  return { status: data.status, message: data.message ?? "", warnings: data.warnings ?? [] };
+}
+
 export interface DisconnectResult {
   success: boolean;
   /** Vrai si le fournisseur a confirmé la révocation de son côté. */

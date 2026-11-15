@@ -1,4 +1,5 @@
-import { C } from "@/lib/theme";
+import { C, alpha } from "@/lib/theme";
+import type { Standing } from "@/lib/hyrox/calc";
 import { hyroxPictoColor, type HyroxStation } from "@/features/shared/components/hyroxStation";
 import { DASH } from "@/lib/seance";
 
@@ -43,3 +44,17 @@ export function fmtDuration(s: number): string {
   const m = Math.floor(r / 60);
   return m > 0 ? `${m} min ${String(r % 60).padStart(2, "0")} s` : `${r} s`;
 }
+
+/** Couleur d'une position : vert fort, gris dans la norme, orange à travailler. */
+export function standingColor(s: Standing | null): string {
+  if (s === "fort") return C.g;
+  if (s === "faible") return C.o;
+  return s === "norme" ? alpha(C.tx2, 0.6) : "transparent";
+}
+
+export const STANDING_LEGEND: Array<{ s: Standing; label: string }> = [
+  { s: "fort", label: "Fort (top 35 %)" },
+  { s: "norme", label: "Dans la norme" },
+  { s: "faible", label: "À travailler" },
+];
+

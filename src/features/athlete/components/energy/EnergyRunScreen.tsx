@@ -9,6 +9,7 @@ import {
   stepRemaining, stepTint, timedSeconds, type Refs, type RunStep, type Tint,
 } from "@/lib/energy/energyRun";
 import type { EnergyStep } from "@/types/energy";
+import { FitText } from "@/features/shared/components/FitText";
 import { tintCard, tintColor, tintLabel } from "./energyTint";
 
 type WakeLock = { release: () => Promise<void> };
@@ -187,22 +188,22 @@ export function EnergyRunScreen({ steps, refs, title, onExit }: {
 
         <div style={{ ...tintCard(color), margin: "12px 16px 0", padding: "14px 14px 16px", borderRadius: 20, display: "flex", flexDirection: "column", gap: 12 }}>
           {!recup && step.duration?.kind !== "lap_button" && (
-            <div style={{ ...DISPLAY, fontWeight: 400, textAlign: "center", fontSize: 24, letterSpacing: "0.05em" }}>{durPhrase(step)}</div>
+            <FitText base={24} min={16} style={{ ...DISPLAY, fontWeight: 400, textAlign: "center", letterSpacing: "0.05em", alignSelf: "center" }}>{durPhrase(step)}</FitText>
           )}
           <Ring size={recup ? 230 : 214} color={color} frac={frac}>
             <span style={pill(color)}>{gap ? "Repos" : `${tintLabel(roleWord(step), tint)}${recup && note ? ` · ${note}` : ""}`}</span>
-            <span aria-live="off" style={{ ...MONO, fontSize: chrono.length > 5 ? 56 : 78, lineHeight: 1, letterSpacing: "-0.02em" }}>{chrono}</span>
-            <span style={{ ...MONO, fontSize: 13, color: C.tx2, textAlign: "center", padding: "0 18px" }}>
+            {/* Chrono à la taille de l'anneau : « 0:45 » en grand, « 1:20:00 » réduit pour tenir dans le cercle. */}
+            <FitText aria-live="off" base={78} min={30} maxWidth="76%" style={{ ...MONO, lineHeight: 1, letterSpacing: "-0.02em", textAlign: "center" }}>{chrono}</FitText>
+            <span style={{ ...MONO, fontSize: 13, color: C.tx2, textAlign: "center", padding: "0 18px", maxWidth: "80%" }}>
               {remaining != null ? (dur > 0 ? `sur ${fmtDur(dur)}` : "restant") : aimed != null ? `vise ${fmtDur(aimed)}` : "le chrono monte"}
             </span>
           </Ring>
           {depart != null && <div style={{ ...MONO, textAlign: "center", fontSize: 13, color: C.tx2 }}>départ suivant dans {fmtChrono(depart)}</div>}
           {target && !recup && (
             <>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 10 }}>
-                <span style={{ ...MONO, fontSize: 54, lineHeight: 1, color }}>{target.value}</span>
-                <span style={{ ...MONO, fontSize: 20, color: C.tx2 }}>{target.unit}</span>
-              </div>
+              <FitText base={54} min={22} style={{ ...MONO, lineHeight: 1, color, textAlign: "center", alignSelf: "center" }}>
+                {target.value}<span style={{ fontSize: "0.37em", color: C.tx2, marginLeft: "0.35em" }}>{target.unit.trim()}</span>
+              </FitText>
               {target.secondary && <div style={{ ...MONO, textAlign: "center", fontSize: 12, color: C.tx2, marginTop: -6 }}>{target.secondary}</div>}
             </>
           )}
@@ -222,8 +223,14 @@ export function EnergyRunScreen({ steps, refs, title, onExit }: {
                 {nt.kind === "zone" && <span style={pill(nc, 20)}>Z{nt.zone}</span>}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 6, gap: 10 }}>
-                <span style={{ fontSize: 24, fontWeight: 500 }}>{next.step.duration?.kind === "lap_button" ? roleWord(next.step) : durPhrase(next.step)}</span>
-                {ntarget && <span style={{ ...MONO, fontSize: 34, lineHeight: 1, color: nc, whiteSpace: "nowrap" }}>{ntarget.value}<span style={{ fontSize: 15, color: C.tx2 }}>{ntarget.unit}</span></span>}
+                <span style={{ fontSize: 24, fontWeight: 500, minWidth: 0, flex: "0 1 auto" }}>{next.step.duration?.kind === "lap_button" ? roleWord(next.step) : durPhrase(next.step)}</span>
+                {ntarget && (
+                  <span style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "62%", display: "flex", justifyContent: "flex-end" }}>
+                    <FitText base={34} min={16} style={{ ...MONO, lineHeight: 1, color: nc, textAlign: "right" }}>
+                      {ntarget.value}<span style={{ fontSize: "0.44em", color: C.tx2 }}>{ntarget.unit}</span>
+                    </FitText>
+                  </span>
+                )}
               </div>
               {(naimed != null || ntarget?.secondary) && (
                 <div style={{ ...MONO, fontSize: 12, color: C.tx2, marginTop: 4 }}>{naimed != null ? `vise ${fmtDur(naimed)}` : ntarget?.secondary}</div>

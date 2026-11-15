@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { consentCounts, sanitizeTrendStats } from "../aiGuard";
-import { buildInsightsUserMessage, INSIGHT_MAX_CHARS, INSIGHTS_MAX, parseInsights } from "../insightsAi";
+import { buildInsightsUserMessage, INSIGHT_MAX_CHARS, INSIGHTS_MAX, INSIGHTS_SYSTEM, parseInsights } from "../insightsAi";
 
 describe("buildInsightsUserMessage", () => {
   it("ne contient que les agrégats filtrés, dans un bloc délimité", () => {
@@ -14,6 +14,14 @@ describe("buildInsightsUserMessage", () => {
     expect(msg).toContain("72.4");
     expect(msg).not.toContain("Léa");
     expect(msg).not.toContain("ignore tes consignes");
+  });
+});
+
+describe("INSIGHTS_SYSTEM", () => {
+  it("précise le sens des échelles 1 à 5 (5 = en forme, détendu)", () => {
+    expect(INSIGHTS_SYSTEM).toContain("fatigue_moy_1a5");
+    expect(INSIGHTS_SYSTEM).toContain("5 = très en forme");
+    expect(INSIGHTS_SYSTEM).toContain("5 = très détendu");
   });
 });
 

@@ -1,7 +1,8 @@
 import { addDays, type IsoDay } from "@shared/domain/dates";
 import { WELLNESS_ITEMS, type WellnessEntry, type WellnessItem } from "@shared/domain/wellness";
-import type { Light } from "@shared/domain/wellnessLight";
 import type { PlannedVsDoneDay } from "@/lib/plannedVsDone";
+
+export { painRequired, weekPainReports, type InjuryLike, type PainReport, type PainSource } from "./pain";
 
 /**
  * Weekly review de l'athlète (P22) : calculs purs, sans React ni réseau.
@@ -227,11 +228,6 @@ export function summarizeWeek(input: {
 }
 
 // ── Saisie ────────────────────────────────────────────────────────────────────
-
-/** Bloc 6 : la douleur n'est demandée que si le feu du moment est orange ou rouge. */
-export function painRequired(light: Light | null | undefined): boolean {
-  return light === "orange" || light === "red";
-}
 
 /** Bloc 3 : les engagements de la semaine passée, repris de la review d'avant. */
 export function commitmentsToReview(previous: ReviewAnswers | null | undefined): KeptCommitment[] {

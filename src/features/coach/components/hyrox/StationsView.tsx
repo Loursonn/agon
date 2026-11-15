@@ -3,9 +3,10 @@ import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
-import { percentile, stationPriorities, roxzoneTotal, bracketOf, type RefLookup } from "@/lib/hyrox/calc";
-import { STATION_KEYS, STATION_META, DIVISION_LOADS, REFERENCE_DIVISION, SEGMENT_LABEL, type StationKey, type HyroxDivision, type HyroxResult } from "@/features/shared/types/hyrox";
+import { POSITION_BRACKET, STRONG_MAX_PCT, WEAK_MIN_PCT, percentile, stationPriorities, roxzoneTotal, bracketOf, type RefLookup } from "@/lib/hyrox/calc";
+import { STATION_KEYS, STATION_META, DIVISION_LOADS, SEGMENT_LABEL, type StationKey, type HyroxResult } from "@/features/shared/types/hyrox";
 import { formatMmSs, formatDelta } from "@/lib/time";
+import { raceCategory } from "@/lib/hyrox/categories";
 
 function getStation(r: HyroxResult, k: StationKey): number | null {
   return (r as unknown as Record<string, unknown>)[k + "_s"] as number | null;
@@ -27,7 +28,7 @@ export default function StationsView() {
   if (isLoading) return <div style={{ padding: 20, textAlign: "center", color: C.tx3, fontSize: 12 }}>Chargement…</div>;
   if (!latest) return <div style={{ padding: 40, textAlign: "center", color: C.tx3, fontSize: 12 }}>Aucune course HYROX saisie.</div>;
 
-  const refDiv = REFERENCE_DIVISION(latest.division as HyroxDivision);
+  const refDiv = raceCategory(latest);
   const bracket = bracketOf(latest.total_s);
   const loads = DIVISION_LOADS[refDiv] ?? {};
 
@@ -40,7 +41,9 @@ export default function StationsView() {
       return best == null || v < best ? v : best;
     }, null);
     const ref = refLookup(refDiv, k, bracket);
-    const pct = lastVal != null && ref ? percentile(lastVal, ref) : null;
+    // Position : toute la catégorie ; écart : médiane de la tranche (gain possible).
+    const pos = refLookup(refDiv, k, POSITION_BRACKET);
+    const pct = lastVal != null && pos ? percentile(lastVal, pos) : null;
     const delta = lastVal != null && ref ? lastVal - ref.p50_s : null;
     const sparkData = races.slice().reverse().map(r => getStation(r, k)).filter(v => v != null) as number[];
     return { key: k, label: STATION_META[k].label, lastVal, record, ref, pct, delta, sparkData, load: loads[k] ?? "" };
@@ -49,7 +52,8 @@ export default function StationsView() {
   // Roxzone card
   const lastRox = roxzoneTotal(latest);
   const roxRef = refLookup(refDiv, "roxzone_total", bracket);
-  const roxPct = lastRox != null && roxRef ? percentile(lastRox, roxRef) : null;
+  const roxPos = refLookup(refDiv, "roxzone_total", POSITION_BRACKET);
+  const roxPct = lastRox != null && roxPos ? percentile(lastRox, roxPos) : null;
   const roxDelta = lastRox != null && roxRef ? lastRox - roxRef.p50_s : null;
   const roxSpark = races.slice().reverse().map(r => roxzoneTotal(r)).filter(v => v != null) as number[];
 
@@ -151,7 +155,7 @@ function StationCard({ label, lastVal, record, ref_, pct, delta, sparkData, load
             </span>
           </div>
           <div style={{ marginTop: 3, height: 4, borderRadius: 2, background: C.s2, position: "relative" }}>
-            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", borderRadius: 2, background: pct <= 30 ? C.g : pct <= 60 ? C.ac : C.r, width: (100 - pct) + "%", transition: "width 0.3s" }} />
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", borderRadius: 2, background: pct <= STRONG_MAX_PCT ? C.g : pct < WEAK_MIN_PCT ? C.ac : C.r, width: (100 - pct) + "%", transition: "width 0.3s" }} />
             <div style={{ position: "absolute", left: "50%", top: -1, width: 1, height: 6, background: C.tx3 }} />
           </div>
         </div>

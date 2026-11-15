@@ -12,7 +12,7 @@
  *   SpO2, respiration) et séries de la journée.
  *
  * Additif et rejouable : upserts sur des identifiants « demo-… », rien n'est supprimé.
- * Usage : node scripts/seed-demo-montre.mjs   (Léa Démo doit exister : scripts/seed-demo.mjs)
+ * Usage : node scripts/seed-demo-montre.mjs [--env staging]   (Léa Démo doit exister : scripts/seed-demo.mjs)
  *         node scripts/seed-demo-montre.mjs --seulement-course-lyon   (n'ajoute que la course HYROX Lyon)
  *         node scripts/seed-demo-montre.mjs --aligner-hyrox-paris     (n'écrit que l'activité montre de
  *           la course HYROX Paris, à la date de la course ; rejouable : upsert « demo-hyrox-paris »)
@@ -331,7 +331,7 @@ async function seedZones(sb, ATH) {
 
 /**
  * Activité de montre du jour de la course « HYROX Paris » (créée par scripts/seed-demo.mjs) :
- * même date que la course, série construite sur ses temps, durée = chrono. Ne touche ni la
+ * même date que la course, série construite sur ses temps, échauffement de 10:40 avant le départ. Ne touche ni la
  * course ni aucune autre activité ; upsert sur « demo-hyrox-paris », donc rejouable.
  */
 export async function seedParisWatch(sb, ATH) {
@@ -344,7 +344,15 @@ export async function seedParisWatch(sb, ATH) {
   const runs = Array.from({ length: 8 }, (_, i) => race[`run_${i + 1}_s`]);
   const st = STATION_KEYS.map((k) => race[k]);
   if ([...runs, ...st].some((v) => !(v > 0))) throw new Error("Course HYROX Paris incomplète : temps manquants.");
-  const blocks = raceBlocks(runs, st, race.roxzone_total_s ?? 216, race.total_s);
+  // Montre lancée 10:40 avant le départ (échauffement + accélérations), arrêtée 1:30 après
+  // l'arrivée : la FC est à recaler sur les temps officiels (lien montre, 16/11/2026).
+  const warmup = [];
+  for (let i = 0; i < 4; i++) {
+    warmup.push({ secs: 130, speed: 2.8, hr: 134, cadence: 158, intensity: "warmup" });
+    warmup.push({ secs: 30, speed: 4.2, hr: 150, cadence: 176, intensity: "warmup" });
+  }
+  const blocks = [...warmup, ...raceBlocks(runs, st, race.roxzone_total_s ?? 216, race.total_s),
+    { secs: 90, speed: 0.4, hr: 128, cadence: null, intensity: "rest" }];
   const startedAt = new Date(`${race.date}T09:10:00Z`);
   return upsertActivity(sb, ATH, { externalId: "demo-hyrox-paris", startedAt, sport: "hyrox", built: buildStream(blocks, 59) });
 }
@@ -362,17 +370,22 @@ export async function seedWatchDemo(sb, ATH, COACH) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+  // `--env staging` : base de TEST agon-test (.env.staging), comme scripts/seed-demo.mjs.
+  const envName = (() => { const i = process.argv.indexOf("--env"); return i >= 0 ? process.argv[i + 1] : process.env.AGON_ENV || ""; })();
+  const envFile = envName ? `.env.${envName}` : ".env";
+  console.error(`Base visée : ${envName === "staging" ? "TEST (agon-test)" : "PRODUCTION"} (${envFile})`);
   const env = Object.fromEntries(
-    fs.readFileSync(path.join(root, ".env"), "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
+    fs.readFileSync(path.join(root, envFile), "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
       .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),
   );
   const sb = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const lea = (await must(sb.from("profiles").select("id, coach_id").eq("full_name", "Léa Démo").limit(2), "Léa Démo"));
+  // La Léa Démo du coach démo (DEMO42) ; la base de test a aussi une Léa fictive des tests SQL.
+  const demoCoach = (await must(sb.from("profiles").select("id").eq("coach_code", "DEMO42").limit(2), "coach démo"));
+  if (demoCoach.length !== 1) throw new Error("Coach démo (DEMO42) introuvable ou en double : lancer scripts/seed-demo.mjs");
+  const lea = (await must(sb.from("profiles").select("id, coach_id").eq("full_name", "Léa Démo").eq("coach_id", demoCoach[0].id).limit(2), "Léa Démo"));
   if (lea.length !== 1) throw new Error("Léa Démo introuvable (ou en double) : lancer scripts/seed-demo.mjs");
-  const coach = (await must(sb.from("profiles").select("coach_code").eq("id", lea[0].coach_id).single(), "coach démo"));
-  if (coach.coach_code !== "DEMO42") throw new Error("Le coach de Léa Démo n'est pas le coach démo : arrêt.");
   if (process.argv.includes("--aligner-hyrox-paris")) {
     console.log(`  course HYROX Paris : activité montre ${await seedParisWatch(sb, lea[0].id)}`);
   } else if (process.argv.includes("--seulement-course-lyon")) {

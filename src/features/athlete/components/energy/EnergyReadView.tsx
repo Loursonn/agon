@@ -8,6 +8,7 @@ import {
   profileBars, readBlocks, sessionLine, type MainTarget, type ReadBlock, type ReadGroup, type Refs, type ZoneScale,
 } from "@/lib/energy/energyRun";
 import type { EnergySessionRow } from "@/types/energy";
+import { FitText } from "@/features/shared/components/FitText";
 import { tintColor } from "./energyTint";
 
 /**
@@ -117,11 +118,12 @@ export function EnergyReadView({
   );
 }
 
+/** Cible en grand : rapetisse pour tenir dans sa colonne (« 10:00–12:30/km », « 1:20:00/400 m »). */
 function Target({ t, color, size = 22 }: { t: MainTarget; color: string; size?: number }) {
   return (
-    <span style={{ ...MONO, fontSize: size, lineHeight: 1.1, color, whiteSpace: "nowrap" }}>
-      {t.value}<span style={{ fontSize: 12, color: C.tx2 }}>{t.unit}</span>
-    </span>
+    <FitText base={size} min={12} style={{ ...MONO, lineHeight: 1.1, color, textAlign: "right" }}>
+      {t.value}<span style={{ fontSize: "0.55em", color: C.tx2 }}>{t.unit}</span>
+    </FitText>
   );
 }
 
@@ -142,7 +144,7 @@ function BlockRow({ b }: { b: ReadBlock }) {
         )}
       </div>
       {b.target && (
-        <div style={{ flex: "none", maxWidth: "48%", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 4, textAlign: "right" }}>
+        <div style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "48%", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 4, textAlign: "right" }}>
           <Target t={b.target} color={color} />
           {sub && <span style={{ ...MONO, fontSize: 11, color: C.tx3 }}>{sub}</span>}
         </div>
@@ -184,7 +186,11 @@ function GroupLevel({ tree, color }: { tree: ReadGroup; color: string }) {
                   <div style={{ fontSize: 16 }}>{it.main}</div>
                   {it.sub && <div style={{ fontSize: 12.5, color: C.tx2 }}>{it.sub}</div>}
                 </div>
-                {it.target && <Target t={it.target} color={c} />}
+                {it.target && (
+                  <div style={{ flex: "0 1 auto", minWidth: 0, maxWidth: "55%", display: "flex", justifyContent: "flex-end" }}>
+                    <Target t={it.target} color={c} />
+                  </div>
+                )}
               </div>
             )}
           </div>

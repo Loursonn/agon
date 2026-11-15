@@ -12,6 +12,7 @@ import {
   RUN_KEYS, STATION_KEYS, RACE_ORDER, STATION_META, ROXZONE_WEIGHT,
   REFERENCE_DIVISION, type HyroxDivision,
 } from '@/features/shared/types/hyrox';
+import { raceCategory } from "./categories";
 
 // ── Segment accessors ────────────────────────────────────────────────────────
 
@@ -122,10 +123,11 @@ export function runStats(r: HyroxResult): {
   const fadeIndexPct = best && worst ? Math.round((worst.s - best.s) / best.s * 100) : null;
   const drop12 = r1 != null && r2 != null ? r2 - r1 : null;
 
-  const firstHalf = splits.slice(0, 4).filter(v => v != null) as number[];
-  const secondHalf = splits.slice(4, 8).filter(v => v != null) as number[];
-  const halvesDelta = firstHalf.length === 4 && secondHalf.length === 4
-    ? Math.round(secondHalf.reduce((a, b) => a + b, 0) / 4 - firstHalf.reduce((a, b) => a + b, 0) / 4)
+  // Moitiés comparables : runs 2-4 vs 5-7 (le 1 et le 8 changent selon le parcours).
+  const firstHalf = splits.slice(1, 4).filter(v => v != null) as number[];
+  const secondHalf = splits.slice(4, 7).filter(v => v != null) as number[];
+  const halvesDelta = firstHalf.length === 3 && secondHalf.length === 3
+    ? Math.round(secondHalf.reduce((a, b) => a + b, 0) / 3 - firstHalf.reduce((a, b) => a + b, 0) / 3)
     : null;
 
   // Runs 2-7 core analysis
@@ -171,70 +173,112 @@ export function cumulative(r: HyroxResult): { key: string; split: number | null;
 
 // ── Percentile ───────────────────────────────────────────────────────────────
 
-export function percentile(
-  value: number,
-  ref: { p10_s: number | null; p50_s: number; p90_s: number | null },
-): number | null {
-  const { p10_s, p50_s, p90_s } = ref;
-  if (p10_s == null || p90_s == null) return null;
+/** Percentiles connus d'une ligne de références (les absents sont ignorés). */
+export type PercentileRef = {
+  p1_s?: number | null; p5_s?: number | null; p10_s: number | null; p25_s?: number | null;
+  p50_s: number; p75_s?: number | null; p90_s: number | null;
+};
 
-  // Interpolation linéaire par morceaux
-  if (value <= p10_s) {
-    // Extrapolation below p10 with p10-p50 slope
-    const slope = (50 - 10) / (p50_s - p10_s);
-    const pct = 10 + (value - p10_s) * slope;
-    return Math.max(1, Math.round(pct));
+function refPoints(ref: PercentileRef): Array<[number, number]> {
+  const pts: Array<[number, number | null | undefined]> = [
+    [1, ref.p1_s], [5, ref.p5_s], [10, ref.p10_s], [25, ref.p25_s], [50, ref.p50_s], [75, ref.p75_s], [90, ref.p90_s],
+  ];
+  const out: Array<[number, number]> = [];
+  for (const [p, v] of pts) {
+    // Points strictement croissants seulement (une référence mal saisie ne casse pas l'interpolation).
+    if (v != null && (out.length === 0 || v > out[out.length - 1][1])) out.push([p, v]);
   }
-  if (value <= p50_s) {
-    // Between p10 and p50
-    const pct = 10 + (value - p10_s) / (p50_s - p10_s) * (50 - 10);
-    return Math.round(pct);
+  return out;
+}
+
+/**
+ * Position d'un temps dans une distribution (1 = le plus rapide, 99 = le plus
+ * lent). Interpolation linéaire entre tous les percentiles connus (p1 … p90),
+ * extrapolation au-delà avec la pente du dernier intervalle, bornée à 1-99.
+ * `null` sans p10 ni p90 (référence trop pauvre).
+ */
+export function percentile(value: number, ref: PercentileRef): number | null {
+  if (ref.p10_s == null || ref.p90_s == null) return null;
+  const pts = refPoints(ref);
+  if (pts.length < 2) return null;
+  const at = (i: number) => {
+    const [pa, va] = pts[i];
+    const [pb, vb] = pts[i + 1];
+    return pa + ((value - va) / (vb - va)) * (pb - pa);
+  };
+  let pct: number;
+  if (value <= pts[0][1]) pct = at(0);
+  else if (value >= pts[pts.length - 1][1]) pct = at(pts.length - 2);
+  else {
+    let i = 0;
+    while (value > pts[i + 1][1]) i++;
+    pct = at(i);
   }
-  if (value <= p90_s) {
-    // Between p50 and p90
-    const pct = 50 + (value - p50_s) / (p90_s - p50_s) * (90 - 50);
-    return Math.round(pct);
-  }
-  // Above p90: extrapolation with p50-p90 slope
-  const slope = (90 - 50) / (p90_s - p50_s);
-  const pct = 90 + (value - p90_s) * slope;
-  return Math.min(99, Math.round(pct));
+  return Math.min(99, Math.max(1, Math.round(pct)));
+}
+
+/** Temps correspondant à une position (inverse de `percentile`), pour les équivalences entre catégories. */
+export function timeAtPercentile(ref: PercentileRef, pct: number): number | null {
+  if (ref.p10_s == null || ref.p90_s == null) return null;
+  const pts = refPoints(ref);
+  if (pts.length < 2) return null;
+  const at = (i: number) => {
+    const [pa, va] = pts[i];
+    const [pb, vb] = pts[i + 1];
+    return va + ((pct - pa) / (pb - pa)) * (vb - va);
+  };
+  let i = 0;
+  if (pct <= pts[0][0]) i = 0;
+  else if (pct >= pts[pts.length - 1][0]) i = pts.length - 2;
+  else while (pct > pts[i + 1][0]) i++;
+  return Math.round(at(i));
+}
+
+/**
+ * Les positions (top x %) se calculent sur toute la catégorie (ex. tous les
+ * hommes open), pas sur la tranche de chrono de l'athlète. Décision d'Hugo du
+ * 15/11/2026 : la tranche ne sert qu'au « gain possible » (médiane du niveau).
+ */
+export const POSITION_BRACKET = "all";
+
+/** Point fort : top 35 % de la catégorie ; point faible : les 35 % les plus lents. Entre les deux : dans la norme. */
+export const STRONG_MAX_PCT = 35;
+export const WEAK_MIN_PCT = 65;
+
+export type Standing = "fort" | "norme" | "faible";
+
+export function standing(pct: number | null): Standing | null {
+  if (pct == null) return null;
+  if (pct <= STRONG_MAX_PCT) return "fort";
+  if (pct >= WEAK_MIN_PCT) return "faible";
+  return "norme";
 }
 
 // ── Alerts ───────────────────────────────────────────────────────────────────
 
+/**
+ * Alertes de course, par règles. Le run 1 n'y entre jamais (sa longueur et
+ * le départ changent d'une course à l'autre) ; le run 8 non plus pour
+ * l'allure (arrivée, parcours parfois différent). Décision d'Hugo, 15/11/2026.
+ */
 export function alerts(r: HyroxResult): HyroxAlert[] {
   const result: HyroxAlert[] = [];
-  const stats = runStats(r);
+  const splits = runSplits(r);
   const sh = shares(r);
 
-  if (stats.fade18 != null && stats.fade18 > 90) {
-    result.push({
-      code: 'pacing',
-      level: 'warn',
-      message: `Run 1 plus rapide de ${stats.fade18}s que run 8 : parti trop vite`,
-    });
-  }
-  if (stats.drop12 != null && stats.drop12 > 60) {
-    result.push({
-      code: 'early_drop',
-      level: 'warn',
-      message: `Chute de ${stats.drop12}s entre run 1 et run 2`,
-    });
-  }
-  if (stats.halvesDelta != null && stats.halvesDelta > 20) {
-    result.push({
-      code: 'late_fade',
-      level: 'warn',
-      message: `Seconde moitié en moyenne ${stats.halvesDelta}s plus lente par run`,
-    });
-  }
-  if (stats.best != null && stats.best.index === 7) {
-    result.push({
-      code: 'too_safe',
-      level: 'info',
-      message: 'Meilleur run = dernier : course trop prudente',
-    });
+  // Runs 2-4 vs 5-7 : la croisière tient-elle ?
+  const a = splits.slice(1, 4);
+  const b = splits.slice(4, 7);
+  if (a.every((v) => v != null) && b.every((v) => v != null)) {
+    const avg = (xs: (number | null)[]) => (xs as number[]).reduce((n, v) => n + v, 0) / xs.length;
+    const delta = Math.round(avg(b) - avg(a));
+    if (delta > 20) {
+      result.push({
+        code: 'late_fade',
+        level: 'warn',
+        message: `Runs 5 à 7 en moyenne ${delta} s plus lents que les runs 2 à 4`,
+      });
+    }
   }
   if (sh.roxzone != null && sh.roxzone > 7) {
     result.push({
@@ -284,7 +328,7 @@ export function stationPriorities(
   r: HyroxResult,
   pickRef: RefLookup,
 ): PriorityRow[] {
-  const refDiv = REFERENCE_DIVISION(r.division as HyroxDivision);
+  const refDiv = raceCategory(r);
   const bracket = bracketOf(r.total_s);
   const result: PriorityRow[] = [];
 
@@ -333,8 +377,8 @@ export function radarAxes(
   r: HyroxResult,
   pickRef: RefLookup,
 ): { key: string; label: string; value: number | null }[] {
-  const refDiv = REFERENCE_DIVISION(r.division as HyroxDivision);
-  const bracket = bracketOf(r.total_s);
+  const refDiv = raceCategory(r);
+  const bracket = POSITION_BRACKET;
   const axes: { key: string; label: string; value: number | null }[] = [];
 
   // Run avg

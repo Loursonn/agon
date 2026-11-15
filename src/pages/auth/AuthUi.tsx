@@ -62,6 +62,11 @@ export function AuthError({ children }: { children: ReactNode }) {
   return <div role="alert" style={{ fontSize: 13, color: C.r, padding: "10px 12px", borderRadius: 10, background: alpha(C.r, 0.1), border: `1px solid ${alpha(C.r, 0.3)}` }}>{children}</div>;
 }
 
+/** Information importante, sans être une erreur (accent or). */
+export function AuthNotice({ children }: { children: ReactNode }) {
+  return <div role="status" style={{ fontSize: 14, fontWeight: 600, color: C.tx, padding: "12px 14px", borderRadius: 10, background: alpha(C.ac, 0.12), border: `1px solid ${alpha(C.ac, 0.4)}` }}>{children}</div>;
+}
+
 export function LegalLinks() {
   const l: CSSProperties = { color: C.tx3, textDecoration: "none" };
   return (

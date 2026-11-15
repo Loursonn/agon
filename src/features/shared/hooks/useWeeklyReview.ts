@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, type IsoDay } from "@shared/domain/dates";
 import type { Light } from "@shared/domain/wellnessLight";
-import type { ReviewAnswers, WeekSummary } from "@/lib/weekly-review";
+import type { PainReport, ReviewAnswers, WeekSummary } from "@/lib/weekly-review";
 import {
+  getWeekPainReports,
   getWeekSummary,
   getWeeklyReview,
   invalidateWeeklyReviews,
@@ -42,6 +43,16 @@ export function useWeekSummary(athleteId: string | null | undefined, weekStart: 
   return useQuery<WeekSummary>({
     queryKey: weeklyReviewKeys.summary(athleteId ?? "", weekStart ?? ""),
     queryFn: () => getWeekSummary(athleteId!, weekStart!),
+    enabled: enabled && Boolean(athleteId && weekStart),
+    staleTime: 60_000,
+  });
+}
+
+/** Douleurs saisies dans la semaine : déclenchent et nourrissent le bloc « Ta douleur ». */
+export function useWeekPainReports(athleteId: string | null | undefined, weekStart: IsoDay | null | undefined, enabled = true) {
+  return useQuery<PainReport[]>({
+    queryKey: weeklyReviewKeys.pains(athleteId ?? "", weekStart ?? ""),
+    queryFn: () => getWeekPainReports(athleteId!, weekStart!),
     enabled: enabled && Boolean(athleteId && weekStart),
     staleTime: 60_000,
   });

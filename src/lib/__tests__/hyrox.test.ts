@@ -131,9 +131,9 @@ describe("runStats", () => {
   });
   it("fade18 = 148", () => expect(stats.fade18).toBe(148));
   it("drop12 = 31", () => expect(stats.drop12).toBe(31));
-  it("halvesDelta ≈ 50", () => {
-    // avg(341,330,334,419) = 356 ; avg(271,302,328,325) = 306.5 → delta 49.5 → rounded 50
-    expect(stats.halvesDelta).toBe(50);
+  it("halvesDelta : runs 5-7 vs 2-4 (le 1 et le 8 ne se comparent pas)", () => {
+    // avg(341,330,334) = 335 ; avg(302,328,325) = 318.3 → delta 16.7 → 17
+    expect(stats.halvesDelta).toBe(17);
   });
 });
 
@@ -157,6 +157,16 @@ describe("percentile", () => {
     expect(percentile(3000, ref)).toBe(1);
   });
 
+  it("utilise tous les percentiles connus (p1 … p90)", () => {
+    const full = { p1_s: 227, p5_s: 234, p10_s: 238, p25_s: 244, p50_s: 252, p75_s: 259, p90_s: 267 };
+    expect(percentile(244, full)).toBe(25);
+    expect(percentile(259, full)).toBe(75);
+    // Entre p50 et p75 : linéaire sur cet intervalle seulement.
+    expect(percentile(255, full)).toBe(61);
+    expect(percentile(400, full)).toBe(99);
+    expect(percentile(200, full)).toBe(1);
+  });
+
   it("returns null when p10 or p90 is null", () => {
     expect(percentile(5000, { p10_s: null, p50_s: 5269, p90_s: 7057 })).toBeNull();
     expect(percentile(5000, { p10_s: 4211, p50_s: 5269, p90_s: null })).toBeNull();
@@ -168,19 +178,19 @@ describe("percentile", () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe("alerts", () => {
-  it("triggers pacing and late_fade on sample race", () => {
-    const al = alerts(sampleRace());
-    const codes = al.map(a => a.code);
-    expect(codes).toContain("pacing");     // fade18 = 148 > 90
-    expect(codes).toContain("late_fade");  // halvesDelta = 50 > 20
-    expect(codes).not.toContain("early_drop"); // drop12 = 31 < 60
+  it("jamais d'alerte tirée du run 1 ni du run 8", () => {
+    // Run 1 très rapide, run 8 très lent : aucune alerte d'allure (départ et arrivée changent selon la course).
+    const codes = alerts(sampleRace()).map(a => a.code);
+    expect(codes).not.toContain("pacing");
+    expect(codes).not.toContain("early_drop");
+    expect(codes).not.toContain("too_safe");
+    expect(codes).not.toContain("late_fade"); // runs 5-7 vs 2-4 = +17 s ≤ 20
     expect(codes).toContain("roxzone");    // 8.0% > 7%
   });
 
-  it("triggers too_safe when run 8 is best", () => {
-    const r = sampleRace({ run_8_s: 200 }); // artificially make run8 best
-    const al = alerts(r);
-    expect(al.some(a => a.code === "too_safe")).toBe(true);
+  it("late_fade : runs 5 à 7 nettement plus lents que 2 à 4", () => {
+    const al = alerts(sampleRace({ run_5_s: 360, run_6_s: 355, run_7_s: 360 }));
+    expect(al.find(a => a.code === "late_fade")?.message).toBe("Runs 5 à 7 en moyenne 40 s plus lents que les runs 2 à 4");
   });
 });
 

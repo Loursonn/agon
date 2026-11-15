@@ -92,11 +92,12 @@ describe("raceWatch : compléments", () => {
   const a = crossRaceWithWatch(r, null)!;
 
   it("coût sur le run suivant et course compromise sans montre", () => {
+    // Croisière 335 (médiane des runs 2 à 7).
     const cost = runCostAfter(a);
-    expect(cost.ski).toBe(10);
-    expect(cost.lunges).toBe(60);
+    expect(cost.ski?.costS).toBe(-25);
+    expect(cost.lunges).toMatchObject({ run: "run_8", costS: 25, usualS: null, special: true });
     expect(cost.wall_balls).toBeUndefined();
-    expect(compromisedFromTimes(r)!.worst.key).toBe("run_8");
+    expect(compromisedFromTimes(r)!.worst?.key).toBe("run_8");
   });
 
   it("stations au niveau : médiane connue, absentes des gains", () => {
@@ -112,7 +113,7 @@ describe("raceWatch : compléments", () => {
     const st = stream(total, (t) => (t < 300 ? 150 : 180), (t) => (t >= run8.startS && t < run8.endS ? 160 : 176));
     const b = crossRaceWithWatch(r, st)!;
     const c = cadenceDrop(b)!;
-    expect(c.freshCadence).toBe(176);
+    expect(c.cruiseCadence).toBe(176);
     expect(c.worst).toEqual({ key: "run_8", after: "Sandbag lunges", drop: 16 });
     expect(shareAboveHr(b, st, 170, 0, (s) => s.key === "run_1")).toBe(0);
     expect(shareAboveHr(b, st, 170, 0, (s) => s.key === "run_2")).toBe(1);

@@ -15,6 +15,7 @@ import {
   listBatteryCalendar,
   listBatteryResults,
   listHyroxAnalyses,
+  listHyroxReferences,
   listHyroxResults,
   pickRef,
   saveAxesDraft,
@@ -196,5 +197,16 @@ describe("invalidation", () => {
     await invalidateBatterySessions(qc, "a");
     expect([keys.tests, keys.plan].map(stale)).toEqual([true, true]);
     expect(stale(keys.other)).toBe(false);
+  });
+});
+
+describe("références HYROX", () => {
+  it("lit toutes les lignes par pages de 1000 (sinon « total » manque)", async () => {
+    const rows = Array.from({ length: 1140 }, (_, i) => ({ id: `r${i}`, division: `d${Math.floor(i / 95)}`, bracket: "all", segment: `s${String(i).padStart(4, "0")}`, p50_s: i }));
+    const { db } = fakeDb({ hyrox_reference_segments: rows });
+    setDbForTests(db);
+    const refs = await listHyroxReferences();
+    expect(refs).toHaveLength(1140);
+    expect(new Set(refs.map((r) => r.id)).size).toBe(1140);
   });
 });

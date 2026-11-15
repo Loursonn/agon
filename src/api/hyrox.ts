@@ -5,7 +5,7 @@ import {
   type CalibrationAnalysis, type CalibrationRace, type GridDbRow, type GridSet, type HyroxTestAnalysisRow,
   type HyroxTestAxesDraftRow, type HyroxTestInputs, type ParamsDbRow, type ProfileSource, type RuleDbRow, type ValidatedAxes,
 } from "@/lib/hyrox/tests";
-import type { HyroxReferenceSegment, HyroxResult, HyroxResultInsert } from "@/features/shared/types/hyrox";
+import type { HyroxRacePlan, HyroxReferenceSegment, HyroxResult, HyroxResultInsert } from "@/features/shared/types/hyrox";
 import type { BetterWhen, TestFillMode, ValueType } from "@/features/shared/types/tests";
 import { check, db, unwrap, unwrapRows } from "./client";
 import { invalidateTests } from "./tests";
@@ -33,7 +33,8 @@ export const hyroxKeys = {
   results: (athleteId: string) => ["hyrox", athleteId, "results"] as const,
   /** Une course, par id (fiche course). */
   result: (id: string) => ["hyrox", "_result", id] as const,
-  references: ["hyrox", "_references"] as const,
+  /** « full » : lecture paginée (avant, réponse tronquée à 1000 lignes, gardée 24 h dans le cache persistant). */
+  references: ["hyrox", "_references", "full"] as const,
   battery: ["hyrox", "_battery"] as const,
   batteryResults: (athleteId: string) => ["hyrox", athleteId, "battery-results"] as const,
   batteryCalendar: (athleteId: string, names: readonly string[]) =>
@@ -46,6 +47,8 @@ export const hyroxKeys = {
   calibration: ["hyrox", "_calibration"] as const,
   /** Activités de montre du jour d'une course (analyse de course). */
   raceActivities: (athleteId: string, date: string) => ["hyrox", athleteId, "race-activities", date] as const,
+  /** Plans de course de l'athlète (`hyrox_race_plans`). */
+  plans: (athleteId: string) => ["hyrox", athleteId, "plans"] as const,
 };
 
 /**
@@ -80,11 +83,26 @@ export async function setHyroxFlag(athleteId: string, enabled: boolean): Promise
 
 // ── Temps de référence ───────────────────────────────────────────────────────
 
+/** Lignes par page : l'API Supabase plafonne une réponse à 1000 lignes. */
+const REF_PAGE = 1000;
+
+/**
+ * Toutes les références (12 divisions × 5 tranches × 19 segments ≈ 1140
+ * lignes) : lues par pages, sinon la réponse est tronquée à 1000 lignes et
+ * des médianes (dont « total ») manquent.
+ */
 export async function listHyroxReferences(): Promise<HyroxReferenceSegment[]> {
-  return unwrapRows(
-    await untyped().from("hyrox_reference_segments").select("*"),
-    "Références HYROX non chargées",
-  ) as HyroxReferenceSegment[];
+  const all: HyroxReferenceSegment[] = [];
+  for (let from = 0; ; from += REF_PAGE) {
+    const page = unwrapRows(
+      await untyped().from("hyrox_reference_segments").select("*")
+        .order("division").order("bracket").order("segment")
+        .range(from, from + REF_PAGE - 1),
+      "Références HYROX non chargées",
+    ) as HyroxReferenceSegment[];
+    all.push(...page);
+    if (page.length < REF_PAGE) return all;
+  }
 }
 
 /** Sélecteur pur : ligne de référence, repli bracket→'all' puis division→'all'. */
@@ -112,6 +130,10 @@ export interface RaceActivityCandidate {
   id: string;
   durationS: number | null;
   source: string;
+  startedAt: string | null;
+  deviceName: string | null;
+  sport: string | null;
+  title: string | null;
 }
 
 /**
@@ -121,12 +143,28 @@ export interface RaceActivityCandidate {
 export async function listRaceActivityCandidates(athleteId: string, date: string): Promise<RaceActivityCandidate[]> {
   const rows = unwrapRows(
     await db().from("provider_activities")
-      .select("id, duration_s, source")
+      .select("id, duration_s, source, started_at, device_name, sport, title")
       .eq("athlete_id", athleteId)
-      .eq("local_date", date),
+      .eq("local_date", date)
+      .order("started_at", { ascending: true }),
     "Activités du jour de course non chargées",
-  ) as Array<{ id: string; duration_s: number | null; source: string }>;
-  return rows.map((r) => ({ id: r.id, durationS: r.duration_s == null ? null : Number(r.duration_s), source: r.source }));
+  ) as Array<{ id: string; duration_s: number | null; source: string; started_at: string | null; device_name: string | null; sport: string | null; title: string | null }>;
+  return rows.map((r) => ({
+    id: r.id, durationS: r.duration_s == null ? null : Number(r.duration_s), source: r.source,
+    startedAt: r.started_at, deviceName: r.device_name, sport: r.sport, title: r.title,
+  }));
+}
+
+/**
+ * Lier une course à une activité de montre et enregistrer le recalage
+ * (`offsetS` null = automatique). `activityId` null = revenir à la
+ * proposition d'office.
+ */
+export async function linkRaceWatch(raceId: string, activityId: string | null, offsetS: number | null): Promise<void> {
+  check(
+    await untyped().from("hyrox_results").update({ watch_activity_id: activityId, watch_offset_s: offsetS }).eq("id", raceId),
+    "Lien avec la montre non enregistré",
+  );
 }
 
 /** Une course ; `null` si elle n'existe pas (ou n'est pas visible). */
@@ -157,6 +195,35 @@ export async function updateHyroxResult(id: string, fields: Partial<HyroxResult>
 
 export async function deleteHyroxResult(id: string): Promise<void> {
   check(await untyped().from("hyrox_results").delete().eq("id", id), "Course HYROX non supprimée");
+}
+
+// ── Plans de course (`hyrox_race_plans`) ─────────────────────────────────────
+
+export async function listHyroxRacePlans(athleteId: string): Promise<HyroxRacePlan[]> {
+  return unwrapRows(
+    await untyped().from("hyrox_race_plans").select("*").eq("athlete_id", athleteId).order("updated_at", { ascending: false }),
+    "Plans de course non chargés",
+  ) as HyroxRacePlan[];
+}
+
+export type HyroxRacePlanInput = Pick<
+  HyroxRacePlan,
+  "athlete_id" | "competition_id" | "result_id" | "name" | "division" | "profile" | "target_total_s" | "targets" | "notes"
+>;
+
+/** Crée (`id` absent) ou modifie un plan de course. */
+export async function saveHyroxRacePlan(plan: HyroxRacePlanInput & { id?: string }, createdBy: string | null): Promise<HyroxRacePlan> {
+  const { id, ...fields } = plan;
+  const q = id
+    ? untyped().from("hyrox_race_plans").update(fields).eq("id", id)
+    : untyped().from("hyrox_race_plans").insert({ ...fields, created_by: createdBy });
+  const row = unwrap(await q.select("*").single(), "Plan de course non enregistré") as HyroxRacePlan | null;
+  if (!row) throw new Error("Plan de course non enregistré");
+  return row;
+}
+
+export async function deleteHyroxRacePlan(id: string): Promise<void> {
+  check(await untyped().from("hyrox_race_plans").delete().eq("id", id), "Plan de course non supprimé");
 }
 
 // ── Batterie v3 ──────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ import { addDays, type IsoDay } from "../domain/dates.ts";
 import { bestKgByRef, normalizeMetricName, parseRecordLinks, resolveRecordRef } from "../domain/performance.ts";
 import { canonicalJson, sha256Hex, type Db } from "../oauth.ts";
 import { GarminTrainingError, type GarminTrainingClient } from "./client.ts";
-import { planPushActions, sourceKey, type DesiredWorkout, type PushAction, type PushedRow } from "./plan.ts";
+import { planPushActions, sourceKey, type DesiredWorkout, type PushAction, type PushedRow, type SourceKind } from "./plan.ts";
 import { resolveStrengthSession, type ProgSessionLite } from "./strength.ts";
 import { translateEnergySession, translateStrengthSession } from "./translate.ts";
 import type { AgonEnergySession, AthleteTrainingContext, TranslateResult } from "./types.ts";
@@ -38,15 +38,32 @@ interface Collected {
   doneOrStarted: Set<string>;
 }
 
-/** Ce qu'Agon a programmé pour l'athlète sur la fenêtre, traduit. */
-export async function collectDesired(db: Db, athleteId: string, today: IsoDay): Promise<Collected> {
+/** Séances à lire en plus de la fenêtre, par identifiant (envoi à la main au-delà des 7 jours). */
+export interface ExtraSources {
+  energy: readonly string[];
+  strength: readonly string[];
+}
+
+const ENERGY_COLS = "id, scheduled_date, status, energy_sessions(name, session_kind, modality, format, intervals, classique_structure, notes)";
+const LOG_COLS = "id, session_id, scheduled_date, status";
+
+/**
+ * Ce qu'Agon a programmé pour l'athlète sur la fenêtre, traduit, plus les
+ * séances `extra` (à venir, de l'athlète) quelle que soit leur date.
+ */
+export async function collectDesired(
+  db: Db,
+  athleteId: string,
+  today: IsoDay,
+  extra: ExtraSources = { energy: [], strength: [] },
+): Promise<Collected> {
   const last = addDays(today, PUSH_WINDOW_DAYS - 1);
   const doneOrStarted = new Set<string>();
 
   // ── Lectures ──────────────────────────────────────────────────────────────
   const { data: energyRows, error: eErr } = await db
     .from("energy_session_assignments")
-    .select("id, scheduled_date, status, energy_sessions(name, session_kind, modality, format, intervals, classique_structure, notes)")
+    .select(ENERGY_COLS)
     .eq("athlete_id", athleteId)
     .gte("scheduled_date", today)
     .lte("scheduled_date", last);
@@ -54,7 +71,7 @@ export async function collectDesired(db: Db, athleteId: string, today: IsoDay): 
 
   const { data: logRows, error: lErr } = await db
     .from("workout_logs")
-    .select("id, session_id, scheduled_date, status")
+    .select(LOG_COLS)
     .eq("athlete_id", athleteId)
     .gte("scheduled_date", today)
     .lte("scheduled_date", last);
@@ -62,6 +79,24 @@ export async function collectDesired(db: Db, athleteId: string, today: IsoDay): 
 
   const energy = (energyRows ?? []) as Array<{ id: string; scheduled_date: string; status: string; energy_sessions: AgonEnergySession | null }>;
   const logs = (logRows ?? []) as Array<{ id: string; session_id: string | null; scheduled_date: string; status: string }>;
+
+  // Séances au-delà de la fenêtre (envoyées à la main) : relues par identifiant, toujours de cet athlète et à venir.
+  const moreEnergy = [...new Set(extra.energy)].filter((id) => !energy.some((a) => a.id === id));
+  if (moreEnergy.length) {
+    const { data, error } = await db
+      .from("energy_session_assignments").select(ENERGY_COLS)
+      .eq("athlete_id", athleteId).in("id", moreEnergy).gte("scheduled_date", today);
+    fail("séances énergie", error);
+    energy.push(...((data ?? []) as typeof energy));
+  }
+  const moreLogs = [...new Set(extra.strength)].filter((id) => !logs.some((l) => l.id === id));
+  if (moreLogs.length) {
+    const { data, error } = await db
+      .from("workout_logs").select(LOG_COLS)
+      .eq("athlete_id", athleteId).in("id", moreLogs).gte("scheduled_date", today);
+    fail("séances de musculation", error);
+    logs.push(...((data ?? []) as typeof logs));
+  }
   for (const a of energy) if (DONE_OR_STARTED.has(a.status)) doneOrStarted.add(sourceKey("energy", a.id));
   for (const l of logs) if (DONE_OR_STARTED.has(l.status)) doneOrStarted.add(sourceKey("strength", l.id));
 
@@ -112,13 +147,14 @@ export async function collectDesired(db: Db, athleteId: string, today: IsoDay): 
 
     if (strengthLogs.length > 0) {
       const sessionIds = [...new Set(strengthLogs.map((l) => l.session_id as string))];
+      const lastLog = strengthLogs.reduce((m, l) => (l.scheduled_date.slice(0, 10) > m ? l.scheduled_date.slice(0, 10) : m), last);
       const { data: occRows, error: oErr } = await db
         .from("workout_logs")
         .select("session_id, scheduled_date")
         .eq("athlete_id", athleteId)
         .in("session_id", sessionIds)
         .neq("status", "skipped")
-        .lte("scheduled_date", last)
+        .lte("scheduled_date", lastLog)
         .range(0, 9999);
       fail("occurrences", oErr);
       const occDates = (occRows ?? []) as Array<{ session_id: string; scheduled_date: string }>;
@@ -363,16 +399,27 @@ export async function ensureKnownScopes(
   return fresh;
 }
 
+/** Une séance Agon désignée par l'athlète (bouton « Envoyer sur ma montre »). */
+export interface WorkoutSource {
+  kind: SourceKind;
+  id: string;
+}
+
 /**
  * Un athlète, de bout en bout. `pushEnabled = false` : retire ce qui est à venir.
  * `scopes` connus sans `WORKOUT_IMPORT` : aucun appel (ils répondraient 412).
+ *
+ * `include` : séances demandées à la main, envoyées même au-delà des 7 jours
+ * et même inchangées (renvoi). Une séance envoyée au-delà de la fenêtre (date
+ * suivie après le dernier jour) reste suivie aux passages suivants : modifiée,
+ * elle est remplacée ; supprimée, annulée ou repassée dans le passé, retirée.
  */
 export async function syncAthleteWorkouts(
   db: Db,
   garmin: GarminTrainingClient,
   athleteId: string,
   pushEnabled: boolean,
-  opts: { today?: IsoDay; now?: number; scopes?: readonly string[] | null } = {},
+  opts: { today?: IsoDay; now?: number; scopes?: readonly string[] | null; include?: readonly WorkoutSource[] } = {},
 ): Promise<ExecuteReport> {
   if (workoutImportPermission(opts.scopes) === "missing") {
     return { created: 0, replaced: 0, removed: 0, rejected: 0, forgotten: 0, errors: [], stopped: WORKOUT_IMPORT_MISSING };
@@ -381,9 +428,37 @@ export async function syncAthleteWorkouts(
   const pushed = await loadPushed(db, athleteId);
   // Envoi coupé sans rien sur Garmin : rien à lire.
   if (!pushEnabled && pushed.length === 0) return executeActions(db, garmin, athleteId, []);
-  const collected = await collectDesired(db, athleteId, today);
+  const last = addDays(today, PUSH_WINDOW_DAYS - 1);
+  const include = pushEnabled ? opts.include ?? [] : [];
+  const beyond = pushed.filter((r) => r.date > last);
+  const extra: ExtraSources = {
+    energy: [...beyond.filter((r) => r.kind === "energy").map((r) => r.sourceId), ...include.filter((s) => s.kind === "energy").map((s) => s.id)],
+    strength: [...beyond.filter((r) => r.kind === "strength").map((r) => r.sourceId), ...include.filter((s) => s.kind === "strength").map((s) => s.id)],
+  };
+  const collected = await collectDesired(db, athleteId, today, extra);
   // Envoi coupé : plus rien de voulu, mais les séances faites / commencées restent protégées.
   const desired = pushEnabled ? collected.desired : [];
-  const actions = planPushActions({ desired, doneOrStarted: collected.doneOrStarted, pushed, today, now: opts.now ?? Date.now() });
+  const force = new Set(include.map((s) => sourceKey(s.kind, s.id)));
+  const actions = planPushActions({ desired, doneOrStarted: collected.doneOrStarted, pushed, today, now: opts.now ?? Date.now(), force });
   return executeActions(db, garmin, athleteId, actions);
+}
+
+/** Pourquoi une séance ne peut pas partir sur la montre (codes renvoyés à l'écran). */
+export type NotPushable = "introuvable" | "deja_faite" | "passee";
+
+/**
+ * La séance existe, appartient à l'athlète, est encore prévue et à venir.
+ * Rien d'autre ne part sur la montre : jamais de séance faite, commencée ou passée.
+ */
+export async function checkPushable(db: Db, athleteId: string, source: WorkoutSource, today: IsoDay): Promise<NotPushable | null> {
+  const table = source.kind === "energy" ? "energy_session_assignments" : "workout_logs";
+  const { data, error } = await db
+    .from(table).select("id, scheduled_date, status")
+    .eq("athlete_id", athleteId).eq("id", source.id).maybeSingle();
+  fail("séance", error);
+  const row = data as { scheduled_date: string | null; status: string } | null;
+  if (!row || !row.scheduled_date) return "introuvable";
+  if (row.status !== PLANNED) return "deja_faite";
+  if (row.scheduled_date.slice(0, 10) < today) return "passee";
+  return null;
 }

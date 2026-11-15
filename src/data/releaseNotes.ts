@@ -38,6 +38,390 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-hyrox-no-reps-wall-balls",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : les no reps aux wall balls",
+    summary: "Notez les no reps d'une course aux wall balls : cible ratée et pas sous la parallèle.",
+    sections: [
+      {
+        title: "Saisir",
+        points: [
+          "Dans la saisie ou la modification d'une course : deux cases, « cible ratée » et « pas sous la parallèle ». Laissées vides, elles restent non renseignées.",
+          "Votre athlète peut les remplir depuis son téléphone. Les résultats officiels ne les donnent pas : « Coller mon résultat » les laisse vides.",
+        ],
+      },
+      {
+        title: "Lire",
+        points: [
+          "Le débrief de la course les affiche sous la frise, à côté du temps des wall balls.",
+          "« Comparer » ajoute une ligne no reps avant / après : moins, c'est mieux.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-hyrox-fc-montre-recalee",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : la FC de la montre recalée sur la course",
+    summary: "Liez une course à l'activité de la montre et calez la FC sur les temps officiels, station par station.",
+    sections: [
+      {
+        title: "Lier la montre à la course",
+        points: [
+          "Dans l'analyse d'une course, onglet Course : l'activité de montre du même jour est proposée d'office ; vous pouvez en choisir une autre.",
+          "Votre athlète peut faire la même chose depuis son téléphone.",
+        ],
+      },
+      {
+        title: "Recaler à la seconde",
+        points: [
+          "La montre et le chrono officiel ne démarrent jamais en même temps : l'app propose le décalage (cadence des runs ou montée de FC au départ).",
+          "Ajustez avec le curseur ou les boutons ±1 s / ±10 s, la frise se met à jour en direct, puis enregistrez.",
+        ],
+      },
+      {
+        title: "Lire la FC par segment",
+        points: [
+          "FC moyenne et maximale de chaque run, station et Roxzone, et ce que fait la FC du début à la fin de chaque station.",
+          "En Roxzone : la FC redescend-elle avant le run suivant ?",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-energie-noter-seance",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "Séances d'énergie : « Noter ma séance » refait côté athlète",
+    summary:
+      "L'écran où l'athlète note sa séance d'énergie est plus clair et ne bloque plus : il s'ouvre en bas de l'écran du téléphone, avec le nom de la séance et ce qui était prévu.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "Chaque bloc est nommé par son contenu (« 20 min à Z1 », « 6 min à 4:08–4:17/km ») au lieu de « Bloc 1 », « Bloc 2 ».",
+          "Tous les blocs sont comptés faits : l'athlète décoche seulement ce qu'il n'a pas fait. Le bouton « Valider la séance » n'est plus grisé.",
+          "La note par bloc reste possible, repliée derrière « + note ». La durée réelle est préremplie (prévu ou temps du minuteur) et se règle par 5 minutes.",
+          "Vous recevez les mêmes informations qu'avant : blocs faits ou non, notes, durée, activité et distance.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-weekly-review-douleur-de-la-semaine",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Weekly review : la douleur n'est demandée qu'aux athlètes qui en ont eu",
+    summary:
+      "Avant, la question douleur dépendait du feu du matin : un athlète en orange sans aucune douleur devait quand même en décrire une. Maintenant, elle n'apparaît que si l'athlète a signalé une douleur pendant la semaine, et on lui rappelle ce qu'il avait noté.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "La question « Ta douleur » apparaît seulement si une douleur a été signalée dans la semaine : dans le wellness du matin (même une gêne de 1 à 3 sur 10) ou en déclarant une blessure.",
+          "Au-dessus de la question, l'athlète retrouve ce qu'il a signalé : le jour, la zone, la note et son commentaire.",
+          "Le feu du matin ne décide plus de cette question.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-hyrox-debrief-saison",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : débrief de course et « Ma saison »",
+    summary: "L'onglet HYROX devient plus visuel : chaque course a son débrief, et vos athlètes voient leur saison d'un coup d'œil.",
+    sections: [
+      {
+        title: "Débrief de course",
+        points: [
+          "En haut de l'analyse : la course segment par segment, en vert ce qui est fort (top 35 % de la catégorie), en orange ce qui est à travailler.",
+          "Trois colonnes : points forts, ce qui a coûté le plus de temps, et où gagner du temps avec le chrono possible.",
+          "Ce qui a bougé depuis la course précédente du même format : chrono, stations, runs, Roxzone et position.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Trois onglets : Ma saison, Courses, Tests. Stations, runs et radar sont regroupés dans Ma saison.",
+          "Ma saison : la dernière course en grand, la courbe du chrono (solo et duo séparés), les progrès, le profil des stations et ce qui fera gagner du temps.",
+          "Sur téléphone, une course s'ouvre sur son débrief : ce qui a marché, ce qui a coûté, quoi travailler.",
+        ],
+      },
+      {
+        title: "Évolution",
+        points: [
+          "Les positions par station deviennent une carte de couleurs, course par course, avec ce qui a progressé et ce qui stagne.",
+        ],
+      },
+      {
+        title: "Comparer deux courses",
+        points: [
+          "Nouvel onglet « Comparer » dans chaque course : choisissez n'importe quelle autre course de l'athlète, elles s'affichent côte à côte.",
+          "Chrono, position, runs, stations et Roxzone ligne à ligne, avec ce qui a progressé et ce qui a reculé. Le run 1 (départ) s'affiche sans être jugé.",
+          "Solo contre duo, open contre pro : c'est indiqué clairement, et seules les mesures comparables sont jugées.",
+          "Toujours possible aussi depuis la liste : cochez deux courses puis « Comparer ».",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-planification-plus-rapide",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "La planification s'ouvre plus vite",
+    summary:
+      "Le serveur vérifiait de façon coûteuse qui a le droit de voir chaque semaine d'un cycle. Les règles et la confidentialité restent exactement les mêmes, mais le calcul est bien plus léger : la planification et le programme de vos athlètes se chargent plus vite.",
+    sections: [],
+  },
+  {
+    id: "2026-11-15-hyrox-calculs-justes",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "HYROX : runs, positions et points faibles calculés plus justement",
+    summary:
+      "Le run 1 ne sert plus de référence, les positions se lisent dans toute la catégorie, et une station n'est « point faible » que si elle l'est vraiment. Le duo se compare enfin au duo.",
+    sections: [
+      {
+        title: "Runs",
+        points: [
+          "Le run 1 change d'une course à l'autre (départ, longueur) : il s'affiche mais ne sert plus de point de comparaison.",
+          "L'allure de croisière est la médiane des runs 2 à 7. Le coût d'une station se lit sur le run qui suit, à côté du ralentissement habituel des athlètes du même niveau au même endroit.",
+          "Le run 8 compte (il suit les fentes) mais il est signalé : l'arrivée est parfois différente.",
+        ],
+      },
+      {
+        title: "Positions et points forts / faibles",
+        points: [
+          "Le « top x % » place maintenant chaque temps dans toute la catégorie (ex. tous les hommes open), et non plus seulement parmi les athlètes du même chrono. Le gain possible reste mesuré face à la médiane du niveau.",
+          "Point fort = top 35 %, point faible = les 35 % les plus lents ; entre les deux, la station est dans la norme. Le radar ne cite plus trois « points faibles » d'office.",
+          "Positions calculées sur tous les percentiles des références HYROX (p1 à p90), plus précises.",
+        ],
+      },
+      {
+        title: "Solo, duo, relais",
+        points: [
+          "Une course saisie « Doubles » se compare aux duos, même si la division indique Men ou Women.",
+          "Dans l'analyse, « Comparer à la catégorie » change les médianes et positions (open, pro, duo, mixte, relais), et une carte donne le chrono équivalent au même rang dans chaque catégorie.",
+          "Dans l'Évolution, solo, duo et relais ont chacun leur courbe.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-biometrie-taille-envergure-myjump",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Biométrie : taille, envergure, segments et mesures MyJump",
+    summary:
+      "La saisie Mensurations / Photos de vos athlètes enregistre maintenant aussi leur taille debout, leur envergure, la longueur de leur cuisse, de leur jambe et de leur bras, et les deux longueurs que l'app MyJump demande : longueur du membre inférieur et hauteur de départ.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Dans Tests › Mensurations / photos (ou depuis une mesure biométrique que vous avez planifiée), trois nouveaux blocs : « Biométrie », « Segments » et « Mesures MyJump ».",
+          "Chaque champ dit comment prendre la mesure, par exemple : accroupi genoux à 90°, du haut de la hanche au sol.",
+          "Pas besoin de tout remesurer à chaque fois : les dernières valeurs restent affichées en haut, prêtes à recopier dans MyJump.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Profil sportif › Biométrie : les dernières valeurs (taille, envergure, segments, longueur du membre inférieur, hauteur de départ) et leur date, au-dessus de l'évolution des mensurations.",
+          "Chaque nouvelle mesure a sa pastille dans l'évolution, comme les tours.",
+          "L'ancien champ « Taille » des mensurations s'appelle maintenant « Tour de taille », pour ne plus le confondre avec la taille debout.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-feu-du-matin-signaux-repetes",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Feu du matin : un signal qui se répète passe au rouge",
+    summary:
+      "Le feu regarde maintenant les 2-3 derniers jours : un signal isolé met le feu à l'orange, le même signal deux jours de suite le passe au rouge. Une phrase dit toujours pourquoi.",
+    sections: [
+      {
+        title: "Les signaux suivis",
+        points: [
+          "Douleur à 4/10 ou plus (de 1 à 3, c'est une gêne : elle ne compte pas).",
+          "Envie de s'entraîner à 2/5 ou moins, ou nettement sous l'habitude de l'athlète.",
+          "Fatigue : récupération à 2/5 ou moins, ou nettement sous l'habitude.",
+          "FC de repos au-dessus de l'habitude, VFC sous sa zone ou anormalement au-dessus (avec une montre reliée).",
+        ],
+      },
+      {
+        title: "Orange, puis rouge",
+        points: [
+          "Un signal un seul jour : feu orange, à surveiller.",
+          "Le même signal deux jours de suite ou plus : feu rouge, avec « depuis 2 jours », « depuis 3 jours ».",
+          "Un jour sans saisie ou sans mesure ne compte pas et coupe la série.",
+          "La phrase sous le feu explique la couleur, sur l'accueil de l'athlète comme dans Retours et le wellness de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-date-naissance-ia",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Date de naissance : rappel avant le 21 novembre pour garder l'IA",
+    summary:
+      "Les analyses par IA sont réservées aux 18 ans et plus. À partir du 22 novembre, un athlète sans date de naissance n'y aura plus accès tant qu'il ne l'aura pas renseignée.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "À sa prochaine connexion, l'athlète sans date de naissance la renseigne en une fois ; s'il a accepté l'IA, un message lui rappelle de le faire avant le 21 novembre.",
+          "Sur la fiche de ton athlète (Profil, bloc Identité), une petite mention t'indique s'il doit encore la renseigner : tu peux l'inviter à ouvrir l'app.",
+          "Dès que la date est saisie (18 ans ou plus), l'IA reprend sans rien à refaire.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-ia-echelles-forme",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Synthèse IA : la forme et le stress lus dans le bon sens",
+    summary:
+      "Dans « Ce qu'on retient » du profil athlète, l'IA prenait parfois une forme de 4 sur 5 pour de la fatigue. Elle sait maintenant que 5 veut dire très en forme et très détendu.",
+    sections: [],
+  },
+  {
+    id: "2026-11-14-energie-durees-longues",
+    date: "2026-11-14",
+    kind: "fix",
+    title: "Séances d'énergie : les durées longues tiennent à l'écran",
+    summary:
+      "Un chrono ou une durée de plusieurs dizaines de minutes (« 45:00 », « 1:20:00 ») débordait de sa zone. Les chiffres s'ajustent maintenant à la place disponible, sur téléphone comme sur ordinateur.",
+    sections: [
+      {
+        title: "Ce qui est corrigé",
+        points: [
+          "Minuteur de l'athlète : le chrono reste dans l'anneau et l'allure visée sur une ligne, même pour un bloc d'1 h 20.",
+          "Lecture de la séance et séance faite sur la montre (prévu / fait) : les cibles et les durées longues restent dans leur colonne.",
+          "Éditeur de séance : le résumé d'un bloc s'affiche en entier au lieu d'être coupé par « … », et les durées sous le profil ne sont plus tronquées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-garmin-seances-sur-la-montre-pour-tous",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Garmin : vos séances arrivent sur la montre de vos athlètes",
+    summary:
+      "Pour chaque athlète qui a relié sa montre Garmin, les séances que vous programmez pour les 7 prochains jours partent dans son calendrier Garmin Connect, puis sur sa montre à la synchronisation.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Séances d'énergie et de musculation : allures, zones de fréquence cardiaque et charges sont calculées par Agon pour l'athlète.",
+          "Vous modifiez, déplacez ou supprimez une séance : la montre suit dans les 10 minutes. Une séance déjà faite ou commencée n'est jamais retirée.",
+          "L'athlète peut couper l'envoi dans Montres. S'il n'a pas autorisé l'import de séances chez Garmin, l'écran lui explique comment le faire.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-14-garmin-envoyer-sur-ma-montre",
+    date: "2026-11-14",
+    kind: "feature",
+    title: "Garmin : l'athlète envoie une séance sur sa montre en un appui",
+    summary:
+      "Sur une séance prévue, l'athlète qui a une montre Garmin voit « Envoyer sur ma montre ». La séance part tout de suite dans son calendrier Garmin Connect, même si elle est dans plus de 7 jours.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Le bouton est en haut de la séance d'énergie et de la séance de musculation, tant qu'elle est prévue et pas encore commencée.",
+          "Une séance déjà envoyée affiche « Sur ta montre » : un appui la renvoie, utile si elle a été effacée du calendrier Garmin.",
+          "Une séance envoyée à l'avance reste à jour : si vous la modifiez ou la déplacez, la montre suit ; si vous la supprimez, elle disparaît de la montre.",
+          "Si l'envoi des séances est coupé dans Montres, le bouton l'indique et y renvoie, sans rien envoyer.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-hyrox-coller-resultat",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : « Coller mon résultat » remplit toute la course",
+    summary:
+      "Dans HYROX › Courses, vos athlètes collent la page de leur résultat results.hyrox.com : la course, la date, la division, le chrono officiel, les classements et les 17 temps se remplissent seuls. Plus rien à taper.",
+    sections: [
+      {
+        title: "Comment ça marche",
+        points: [
+          "L'athlète ouvre son résultat sur results.hyrox.com, copie toute la page (sur téléphone aussi), puis touche « Coller mon résultat ».",
+          "La fiche s'ouvre pré-remplie : il vérifie et enregistre. Ce qu'Agon n'a pas trouvé est signalé en orange, à compléter.",
+          "La date et la compétition sont reprises du calendrier de l'athlète quand la course y figure.",
+          "Une capture d'écran du résultat marche aussi : copier son texte depuis Photos, puis coller.",
+        ],
+      },
+      {
+        title: "Contrôles",
+        points: [
+          "Si la somme des temps ne correspond pas au chrono officiel, Agon le signale avant l'enregistrement.",
+          "Une course déjà enregistrée n'est pas créée deux fois : Agon propose de la mettre à jour.",
+          "Agon ne va jamais lire le site HYROX lui-même : seul le texte collé par l'athlète est utilisé.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-hyrox-analyse-course",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : l'analyse de course en un clic, le plan de course et l'évolution",
+    summary:
+      "Dans HYROX › Courses, « Analyse › » ouvre directement l'analyse complète d'une course. Vous pouvez préparer un plan de course, comparer la course à ce plan, et voir les leviers qui font gagner le plus de temps.",
+    sections: [
+      {
+        title: "Analyse d'une course",
+        points: [
+          "Le haut de page donne le chrono, la position dans le niveau (top x %), l'écart au record et l'écart au plan de course.",
+          "« Comparer à » : course précédente, plan de course ou médiane du niveau. Le tableau des 17 segments, la frise et les écarts suivent ce choix.",
+          "« Où gagner du temps » classe les stations par gain possible, avec la raison (FC, cadence, Roxzone) et une proposition de travail.",
+          "« Ajouter au programme » copie la proposition et ouvre la programmation de l'athlète, pour la coller dans une séance.",
+        ],
+      },
+      {
+        title: "Plan de course",
+        points: [
+          "Onglet « Plan de course » : entrez un chrono cible, Agon le répartit sur les 17 segments selon la médiane du niveau. Chaque objectif reste modifiable.",
+          "Le plan est lié à une compétition : l'analyse de cette course le reprend automatiquement.",
+        ],
+      },
+      {
+        title: "Évolution (remplace Bilan)",
+        points: [
+          "Le bouton « Évolution » montre le chrono course après course (simulations comprises, filtre « Officielles » possible), la part du temps par bloc et la position par station.",
+          "Une estimation du prochain chrono s'affiche quand l'athlète a des tests récents, avec sa fourchette et sa fiabilité.",
+        ],
+      },
+      {
+        title: "Côté athlète",
+        points: [
+          "Toucher une course ouvre son analyse. L'onglet Gains propose « En parler à » son coach : le message arrive dans le commentaire de la course.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-hyrox-references-completes",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "HYROX : positions et médianes calculées sur toutes les références",
+    summary:
+      "Une partie des références HYROX n'était pas lue : certaines positions (top x %), certains profils et certaines médianes manquaient ou étaient faux. Tout est maintenant pris en compte.",
+    sections: [],
+  },
+  {
     id: "2026-11-15-acces-base-plus-rapide",
     date: "2026-11-15",
     kind: "fix",

@@ -28,6 +28,26 @@ Code pur dans `supabase/functions/_shared/garminTraining/` :
 | `client.ts` | appels HTTP Garmin, erreurs (401/403/412/429 arrêtent l'athlète) |
 | `withdraw.ts` | à la déconnexion : retire les séances à venir de la montre |
 
+## Envoi à la main (« Envoyer sur ma montre »)
+
+Bouton sur la séance prévue côté athlète (`WatchPushButton` : séance d'énergie
+et séance de musculation), Garmin seulement. Edge Function
+`provider-garmin-push-workout`, jeton de session de l'athlète, corps
+`{ kind, sourceId }` :
+
+- refuse sans connexion active (`pas_de_garmin`), envoi coupé (`envoi_coupe`,
+  même règle que le cron : rien ne part tant que `push_workouts` est faux),
+  sans `WORKOUT_IMPORT` (`permission_absente`), séance d'un autre, faite,
+  commencée ou passée (`checkPushable`), bail pris (`occupe`) ;
+- sinon `syncAthleteWorkouts(..., { include: [séance] })` : même traduction,
+  même suivi ; la séance demandée est **forcée** (renvoyée même inchangée), le
+  reste de la fenêtre est remis à jour sans appel pour ce qui n'a pas bougé.
+
+Une séance envoyée au-delà des 7 jours garde une `scheduled_date` après le
+dernier jour de la fenêtre : le cron la relit par identifiant à chaque passage
+(modifiée → remplacée ; supprimée, annulée, repassée → retirée). Une séance
+envoyée par le cron puis déplacée loin reste retirée, comme avant.
+
 ## Données
 
 - `provider_workout_pushes` : une ligne par séance Agon envoyée (`source_kind`
@@ -62,8 +82,13 @@ Import » à la connexion. `provider-garmin-workouts` lit `granted_scopes` :
 
 ## Activer l'envoi des séances pour les vrais athlètes
 
-État au 13/11/2026 : `push_workouts` (vrai par défaut) a été mis à faux sur les
-deux connexions d'athlètes réels ; seuls les comptes admin envoient.
+**Fait le 14/11/2026** (demande d'Hugo, sans attendre son essai sur sa montre) :
+la dernière connexion coupée est passée à vrai ; 4 connexions Garmin actives sur
+4 envoient, toutes avec `WORKOUT_IMPORT`. Les nouvelles connexions envoient par
+défaut (`push_workouts` vrai par défaut), l'athlète peut couper dans Montres.
+
+Historique : le 13/11/2026, `push_workouts` avait été mis à faux sur les deux
+connexions d'athlètes réels ; seuls les comptes admin envoyaient.
 
 Prérequis, dans l'ordre :
 

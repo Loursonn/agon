@@ -30,6 +30,8 @@
  * et ce qu'un relecteur a saisi entre-temps disparaît.
  *
  * Écrit dans la base de production : ne jamais le lancer sans l'accord d'Hugo.
+ * Sauf avec `--env staging` : base de TEST agon-test (.env.staging), libre d'usage, à préférer
+ * pour toute vérification à l'écran (voir docs/BASE_DE_TEST.md).
  *
  * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité).
  * Les données santé (wellness, poids, palier, objectif) passent par les RPC avec la session de l'athlète démo ;
@@ -38,15 +40,30 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { seedWatchDemo } from "./seed-demo-montre.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// `--env staging` (ou AGON_ENV=staging) : base de TEST agon-test, fichier .env.staging.
+// Cherché à la racine du dossier, puis à celle du dépôt principal (les worktrees n'en ont pas).
+const envName = (() => { const i = process.argv.indexOf("--env"); return i >= 0 ? process.argv[i + 1] : process.env.AGON_ENV || ""; })();
+const envFile = envName ? `.env.${envName}` : ".env";
+const envPath = [root, mainCheckoutRoot()].map((d) => d && path.join(d, envFile)).find((p) => p && fs.existsSync(p));
+if (!envPath) { console.error(`${envFile} introuvable`); process.exit(1); }
 const env = Object.fromEntries(
-  fs.readFileSync(path.join(root, ".env"), "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
+  fs.readFileSync(envPath, "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),
 );
+console.error(`Base visée : ${envName === "staging" ? "TEST (agon-test)" : "PRODUCTION"} (${envFile})`);
+
+function mainCheckoutRoot() {
+  try {
+    const common = execSync("git rev-parse --path-format=absolute --git-common-dir", { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    return path.dirname(common);
+  } catch { return null; }
+}
 const URL_ = env.VITE_SUPABASE_URL, KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY;
 if (!URL_ || !KEY || !ANON) { console.error("VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY / SUPABASE_SERVICE_ROLE_KEY manquants dans .env"); process.exit(1); }
@@ -161,7 +178,7 @@ async function seed() {
   const STAFF = await ensureAccount(STAFF_EMAIL, { full_name: "Sam Démo", role: "staff" });
   console.log("coach", COACH, "| athlète", ATH, "| staff", STAFF);
 
-  await must(sb.from("profiles").insert({ id: COACH, role: "coach", full_name: "Agon Démo", first_name: "Agon", last_name: "Démo", coach_code: "DEMO42", booking_url: "https://calendly.com/agon-demo/point-hebdo", is_pending: false }), "profile coach");
+  await must(sb.from("profiles").insert({ id: COACH, role: "coach", full_name: "Agon Démo", first_name: "Agon", last_name: "Démo", coach_code: "DEMO42", birth_date: "1989-06-21", booking_url: "https://calendly.com/agon-demo/point-hebdo", is_pending: false }), "profile coach");
   await must(sb.from("profiles").insert({
     id: ATH, role: "athlete", full_name: "Léa Démo", first_name: "Léa", last_name: "Démo", coach_id: COACH, gender: "female",
     birth_date: "1998-04-12", height_cm: 171, weight_kg: 78.4, base_metabolism: 1580, is_hyrox_athlete: true, hyrox_category: "open",
@@ -174,6 +191,8 @@ async function seed() {
     { user_id: ATH, purpose: "health_data", granted: true, doc_version: V, statement: "J'accepte le traitement de mes données de santé et leur partage avec mon coach." },
     { user_id: ATH, purpose: "ai_programming", granted: true, doc_version: V, statement: "Mon coach peut utiliser l'assistance IA pour préparer mes programmes." },
     { user_id: ATH, purpose: "staff_sharing", granted: true, doc_version: V, statement: "Mon coach peut partager mes données avec son staff." },
+    // Léa a des activités Garmin : sans cet accord, le coach ne les voit pas (source_consent_granted).
+    { user_id: ATH, purpose: "garmin_sync", granted: true, doc_version: V, statement: "J'accepte que les données de ma montre Garmin soient partagées avec mon coach." },
     { user_id: COACH, purpose: "health_data", granted: true, doc_version: V, statement: "J'accepte le traitement des données de santé de mes athlètes." },
   ]), "consents");
 
@@ -347,7 +366,8 @@ async function seed() {
 
   /* --- médical, HYROX, mensurations --- */
   await must(sb.from("medical_entries").insert({ athlete_id: ATH, kind: "blessure", title: "Entorse cheville gauche", zone: "Cheville gauche", date: ymd(addDays(today, -120)), status: "gueri", injury_type: "traumatique", training_impact: "adapte", days_off: 10, declared_by: "athlete", created_by: ATH }), "medical");
-  await must(sb.from("hyrox_results").insert({ athlete_id: ATH, date: ymd(addDays(today, -60)), format: "solo", division: "women", status: "finished", source: "manual", event_name: "HYROX Paris", venue: "Paris", total_s: 4658, run_1_s: 268, run_2_s: 292, run_3_s: 300, run_4_s: 298, run_5_s: 305, run_6_s: 310, run_7_s: 312, run_8_s: 305, ski_s: 262, sled_push_s: 215, sled_pull_s: 262, bbj_s: 300, row_s: 270, farmers_s: 138, lunges_s: 250, wall_balls_s: 355, roxzone_total_s: 216, penalties_s: 0, created_by: ATH }), "hyrox");
+  const paris = { athlete_id: ATH, date: ymd(addDays(today, -60)), format: "solo", division: "women", status: "finished", source: "manual", event_name: "HYROX Paris", venue: "Paris", total_s: 4658, run_1_s: 268, run_2_s: 292, run_3_s: 300, run_4_s: 298, run_5_s: 305, run_6_s: 310, run_7_s: 312, run_8_s: 305, ski_s: 262, sled_push_s: 215, sled_pull_s: 262, bbj_s: 300, row_s: 270, farmers_s: 138, lunges_s: 250, wall_balls_s: 355, wall_balls_no_rep_target: 4, wall_balls_no_rep_depth: 2, roxzone_total_s: 216, penalties_s: 0, created_by: ATH };
+  await must(sb.from("hyrox_results").insert(paris), "hyrox");
   await must(sb.from("measurement_logs").insert({ athlete_id: ATH, date: ymd(addDays(today, -2)), weight_kg: 78.4, bras_g: 31, bras_d: 31.5, epaules: 108, poitrine: 94, taille: 74, hanche: 98, cuisse_g: 58, cuisse_d: 58.5, mollet_g: 37, mollet_d: 37, photos: {} }), "measurements");
 
 

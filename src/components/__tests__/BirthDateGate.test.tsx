@@ -10,6 +10,9 @@ const auth = {
   logout: vi.fn(),
 };
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => auth }));
+// Accords de l'utilisateur (même lecture que ConsentGate).
+const consents = { data: [] as Array<{ purpose: string; granted: boolean; docVersion: string }> };
+vi.mock("@/features/shared/hooks/useConsent", () => ({ useConsents: () => consents }));
 
 import BirthDateGate from "../BirthDateGate";
 
@@ -30,6 +33,7 @@ beforeEach(() => {
   auth.profile = { role: "athlete", birth_date: null };
   auth.setMyBirthDate.mockReset();
   auth.logout.mockReset();
+  consents.data = [];
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
 });
 
@@ -91,6 +95,30 @@ describe("BirthDateGate (revue juridique C2)", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     renderGate();
     expect(screen.getByText("APP")).toBeInTheDocument();
+  });
+
+  it("préavis IA : accord IA donné sans date, message jusqu'au 21 novembre", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      consents.data = [{ purpose: "ai_programming", granted: true, docVersion: "2026-11-13" }];
+      vi.setSystemTime(new Date("2026-11-15T12:00:00"));
+      const { unmount } = renderGate();
+      expect(screen.getByText(/d’ici le 21 novembre pour garder les analyses de l’IA/)).toBeInTheDocument();
+      unmount();
+      // Après la date limite : plus de préavis (la question reste posée).
+      vi.setSystemTime(new Date("2026-11-22T12:00:00"));
+      renderGate();
+      expect(screen.queryByText(/analyses de l’IA/)).not.toBeInTheDocument();
+      expect(screen.getByText("Ta date de naissance")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("pas d'accord IA : pas de préavis", () => {
+    consents.data = [{ purpose: "ai_programming", granted: false, docVersion: "2026-11-13" }];
+    renderGate();
+    expect(screen.queryByText(/analyses de l’IA/)).not.toBeInTheDocument();
   });
 
   it("« Se déconnecter » reste possible", () => {

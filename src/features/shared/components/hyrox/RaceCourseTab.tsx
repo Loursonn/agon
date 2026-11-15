@@ -15,6 +15,12 @@ import RaceFrise from "./RaceFrise";
 import RaceSegmentDetail from "./RaceSegmentDetail";
 import RaceSegmentsTable from "./RaceSegmentsTable";
 import RaceWatchCards from "./RaceWatchCards";
+import RaceCompareBar from "./RaceCompareBar";
+import RaceLevers from "./RaceLevers";
+import type { HyroxAlert } from "@/features/shared/types/hyrox";
+import { COMPARE_SHORT, type CompareKind } from "@/lib/hyrox/raceCompare";
+import type { RaceLever } from "@/lib/hyrox/raceLevers";
+import { levelRunPattern } from "@/lib/hyrox/runPacing";
 
 /**
  * Onglet « Course » : frise, constats, ce que dit la montre, tableau des
@@ -36,11 +42,28 @@ export default function RaceCourseTab(props: {
   recov: ReturnType<typeof roxzoneRecovery>;
   previous: { name: string; compromised: ReturnType<typeof compromisedRunning> } | null;
   refOf: (seg: string) => HyroxReferenceSegment | null;
+  /** Références de position (toute la catégorie). */
+  posOf: (seg: string) => HyroxReferenceSegment | null;
+  /** Médianes des runs du niveau (habituel), `null` sans références. */
+  levelP50: ((seg: string) => number | null) | null;
   totalS: number;
   totalRef: HyroxReferenceSegment | null;
   timeSource: string;
   division: string;
   bracketText: string;
+  /** Coach : « Comparer à » (référence de la colonne Écart et du pointillé d'allure). */
+  compare?: {
+    kind: CompareKind;
+    onChange: (k: CompareKind) => void;
+    target: (seg: string) => number | null;
+    /** Objectifs du plan de course ; `null` sans plan (colonne « — »). */
+    plan: ((seg: string) => number | null) | null;
+    options: Array<{ key: CompareKind; label: string; available: boolean }>;
+    alerts: HyroxAlert[];
+  };
+  levers?: RaceLever[];
+  athleteId?: string;
+  atLevel?: number;
 }) {
   const { audience, analysis, stream, offset, sv1, sv2, attribution } = props;
   const coach = audience === "coach";
@@ -49,10 +72,18 @@ export default function RaceCourseTab(props: {
   const sel = analysis.segments.find((s) => s.key === selected) ?? null;
   const nSeg = analysis.segments.filter((s) => s.kind !== "roxzone").length + 1;
   const hasCadence = !!stream?.cadence?.some((v) => v != null && v > 0);
-  const compromised = compromisedRunning(analysis);
+  const level = props.levelP50 ? levelRunPattern(props.levelP50) : null;
+  const cmp = coach ? props.compare : undefined;
+  // Numérotation des sections coach : 01 frise, 02 montre, 03 leviers, 04 segments (sans montre : décalée).
+  let n = 1;
+  const num = () => String(++n).padStart(2, "0");
+  const watchTitle = stream ? `${num()} — Ce que dit la montre` : null;
+  const leversTitle = coach && props.levers ? `${num()} — Leviers · quoi travailler` : null;
+  const segmentsTitle = `${num()} — Les ${nSeg} segments`;
 
   return (
     <>
+      {cmp && <RaceCompareBar value={cmp.kind} onChange={cmp.onChange} options={cmp.options} alerts={cmp.alerts} />}
       {coach ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: -4 }}>
           <span style={{ ...KICKER, color: C.tx2 }}><span style={{ color: C.ac }}>01 —</span> Frise de course · {nSeg} segments à l'échelle du temps</span>
@@ -73,7 +104,7 @@ export default function RaceCourseTab(props: {
               <span><Swatch color={C.brdL} /> Roxzone{analysis.roxzoneEstimated ? " (répartie)" : ""}</span>
               {stream && <span><Line color={zoneColor(2)} /> FC par zone</span>}
               {stream?.speed && <span><Line color={FRISE_PACE_COLOR} /> Allure</span>}
-              <span><Line color={C.tx2} dashed /> Allure officielle</span>
+              <span><Line color={C.tx2} dashed /> {cmp ? `Allure ${COMPARE_SHORT[cmp.kind].toLowerCase()}` : "Allure officielle"}</span>
               {hasCadence && <span><Line color={FRISE_CADENCE_COLOR} /> Cadence</span>}
             </div>
             {attribution && <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}>{attribution}</span>}
@@ -88,6 +119,7 @@ export default function RaceCourseTab(props: {
         <RaceFrise analysis={analysis} hr={stream ? { t: stream.t, v: stream.hr ?? [] } : null}
           cadence={coach && stream?.cadence ? { t: stream.t, v: stream.cadence } : null}
           speed={coach && stream?.speed ? { t: stream.t, v: stream.speed } : null}
+          refPace={cmp ? cmp.target : null}
           offset={offset} sv1={sv1} sv2={sv2} selected={selected} onSelect={(k) => setSelected(k || null)} curves={coach} hover={coach} compact={phone} />
         {!coach && (
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: C.tx3 }}>
@@ -98,7 +130,8 @@ export default function RaceCourseTab(props: {
           </div>
         )}
         {sel
-          ? <RaceSegmentDetail s={sel} fresh={analysis.freshPaceSPerKm} medianS={sel.kind === "roxzone" ? null : props.refOf(sel.key)?.p50_s ?? null} coach={coach} />
+          ? <RaceSegmentDetail s={sel} cruise={analysis.cruisePaceSPerKm} usualS={level?.usual[sel.key] ?? null} medianS={sel.kind === "roxzone" ? null : props.refOf(sel.key)?.p50_s ?? null} coach={coach}
+              planS={sel.kind === "roxzone" ? null : cmp?.plan?.(sel.key) ?? null} />
           : <div style={{ fontSize: 12, color: C.tx3 }}>{coach ? "Survole ou touche un segment pour voir son détail." : "Touche un segment pour voir son détail."}</div>}
         {!stream && !props.watchLoading && (
           <div style={{ fontSize: 12, color: C.tx2 }}>Aucune activité de montre ce jour-là : seuls les temps sont analysés. FC et cadence apparaîtront si la course est importée ou synchronisée.</div>
@@ -113,7 +146,7 @@ export default function RaceCourseTab(props: {
           <span style={KICKER}>02 — {props.findings.length} constat{props.findings.length > 1 ? "s" : ""}</span>
           {props.findings.map((f, i) => (
             <div key={i} style={{ ...CARD, padding: "12px 14px", display: "flex", gap: 14, alignItems: "baseline" }}>
-              <span style={{ ...MONO, fontSize: 26, color: C.ac, minWidth: 70 }}>{f.value}<span style={{ fontSize: 11, color: C.tx3 }}> {f.unit}</span></span>
+              <span style={{ ...MONO, fontSize: 26, color: findingColor(f.unit), minWidth: 70 }}>{f.value}<span style={{ fontSize: 11, color: C.tx3 }}> {f.unit}</span></span>
               <span style={{ fontSize: 13, color: C.tx2, lineHeight: 1.45 }}>{f.text}</span>
             </div>
           ))}
@@ -121,18 +154,33 @@ export default function RaceCourseTab(props: {
       )}
 
       {stream && (
-        <RaceWatchCards title={coach ? "02 — Ce que dit la montre" : "Ce que dit la montre"} analysis={analysis}
-          above={props.above} recov={props.recov} sv2={sv2} previous={props.previous} />
+        <RaceWatchCards title={coach ? watchTitle ?? "" : "Ce que dit la montre"} analysis={analysis} attribution={coach ? attribution : null}
+          above={props.above} recov={props.recov} sv2={sv2} previous={props.previous} levelP50={props.levelP50} />
       )}
 
-      <RaceSegmentsTable analysis={analysis} refOf={props.refOf} stream={stream} sv2={sv2} offset={offset}
-        totalS={props.totalS} totalRef={props.totalRef} compromisedAvg={compromised?.avgSPerKm ?? null}
-        title={coach ? `${stream ? "03" : "02"} — Les ${nSeg} segments` : "Les segments un par un"} defaultOpen={coach} />
+      {leversTitle && props.athleteId && (
+        <RaceLevers title={leversTitle} levers={props.levers ?? []} athleteId={props.athleteId}
+          refText={`${props.division} · ${props.bracketText}`} atLevel={props.atLevel ?? 0} />
+      )}
+
+      <RaceSegmentsTable analysis={analysis} refOf={props.refOf} posOf={props.posOf} levelP50={props.levelP50} stream={stream} sv2={sv2} offset={offset}
+        totalS={props.totalS} totalRef={props.totalRef}
+        compare={cmp ? { label: COMPARE_SHORT[cmp.kind], target: cmp.target, plan: cmp.plan } : null}
+        timeSource={props.timeSource} attribution={attribution}
+        title={coach ? segmentsTitle : "Les segments un par un"} defaultOpen={coach} />
       <Sources>
-        temps : {props.timeSource}{attribution ? ` · FC, cadence : ${attribution}` : ""} · médianes : références HYROX ({props.division} {props.bracketText}) · constats calculés par Agon, sans IA · mesure absente : « — »
+        temps : {props.timeSource}{attribution ? ` · FC, cadence : ${attribution}` : ""} · médianes : références HYROX ({props.division} {props.bracketText}) · positions : toute la catégorie · run 1 jamais comparé, croisière = runs 2 à 7 · constats calculés par Agon, sans IA · mesure absente : « — »
       </Sources>
     </>
   );
+}
+
+/** Couleur du grand chiffre d'un constat (planche) : perte d'allure en rouge, part en zone 3 à la couleur Z3, secondes en orange. */
+function findingColor(unit: string): string {
+  if (unit === "s/km") return C.r;
+  if (unit === "%") return zoneColor(3);
+  if (unit === "s") return C.o;
+  return C.ac;
 }
 
 function Swatch({ color }: { color: string }) {

@@ -8,13 +8,19 @@ const t = Array.from({ length: total + 601 }, (_, i) => i);
 const stream = new Proxy({ t, timer: null, hr: t.map((s) => (s < 600 ? 120 : 150 + ((s * 7) % 30))), cadence: t.map(() => 168) } as Record<string, unknown>, {
   get: (o, k: string) => (k in o ? o[k] : null),
 });
+let plans: unknown[] = [];
 let watch: { loading: boolean; activityId: string | null; detail: unknown; error: unknown } = { loading: false, activityId: null, detail: null, error: null };
 
-vi.mock("@/features/shared/hooks/hyrox/useRaceWatch", () => ({ useRaceWatch: () => watch }));
+vi.mock("@/features/shared/hooks/hyrox/useRaceWatch", () => ({
+  useRaceWatch: () => ({ linked: false, candidates: [], ...watch }),
+  useLinkRaceWatch: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock("@/features/shared/hooks/hyrox/useHyroxReferences", () => ({
   useHyroxReferences: () => ({ data: [{ division: "all", bracket: "all", segment: "ski", p1_s: 200, p10_s: 220, p50_s: 240, p90_s: 300 }] }),
 }));
-vi.mock("@/features/shared/hooks/hyrox/useHyroxResults", () => ({ useHyroxResults: () => ({ data: [] }) }));
+vi.mock("@/features/shared/hooks/hyrox/useHyroxRacePlans", () => ({ useHyroxRacePlans: () => ({ data: plans }) }));
+vi.mock("@/features/shared/hooks/hyrox/useHyroxResults", () => ({ useHyroxResults: () => ({ data: [] }), useUpdateHyroxResult: () => ({ mutate: vi.fn(), isPending: false }) }));
+vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@/features/shared/hooks/useCoCoach", () => ({ useAthleteCoaches: () => ({ data: { referent: { id: "c", full_name: "Agon Démo" }, coCoach: null } }) }));
 
 const { default: RaceAnalysis } = await import("../RaceAnalysis");
@@ -35,7 +41,7 @@ describe("RaceAnalysis", () => {
     watch = { loading: false, activityId: null, detail: null, error: null };
     render(<RaceAnalysis race={race} onBack={() => {}} />);
     expect(screen.getByText("HYROX Paris")).toBeTruthy();
-    expect(screen.getByText(/Aucune activité de montre/)).toBeTruthy();
+    expect(screen.getAllByText(/Aucune activité de montre/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("tab", { name: "Gains" }));
     expect(screen.getAllByText("SkiErg").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("tab", { name: "Runs" }));
@@ -48,5 +54,20 @@ describe("RaceAnalysis", () => {
     expect(screen.getAllByText(/Garmin Forerunner 265/).length).toBeGreaterThan(0);
     expect(screen.getByText("Ce que dit la montre")).toBeTruthy();
     expect(screen.getByText(/Départ placé à 10:00/)).toBeTruthy();
+  });
+
+  it("coach : plan de course, « Comparer à », leviers et colonne Plan", () => {
+    watch = { loading: false, activityId: null, detail: null, error: null };
+    const seg = (k: string) => (race as unknown as Record<string, number>)[`${k}_s`];
+    const targets = Object.fromEntries(["run_1", "run_2", "run_3", "run_4", "run_5", "run_6", "run_7", "run_8", "ski", "sled_push", "sled_pull", "bbj", "row", "farmers", "lunges", "wall_balls"].map((k) => [k, seg(k) - 5]));
+    plans = [{ id: "p1", result_id: "r1", competition_id: null, target_total_s: total - 80, targets: { ...targets, roxzone_per_transition: 50 }, updated_at: "2026-10-01" }];
+    render(<RaceAnalysis race={race} onBack={() => {}} audience="coach" />);
+    expect(screen.getByText("Vs plan de course")).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Plan de course" }).getAttribute("aria-checked")).toBe("true");
+    expect((screen.getByRole("radio", { name: /Course précédente/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Leviers · quoi travailler/)).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Ajouter au programme" }).length).toBeGreaterThan(0);
+    expect(screen.getByText("Plan")).toBeTruthy();
+    plans = [];
   });
 });

@@ -2546,3 +2546,101 @@ et son README.
   en invoker, fonctions retirées), puis une migration datée équivalente pour garder le rejeu R2 aligné.
 - Pour la suite : toute nouvelle policy suit la forme rapide (skill `migration-bdd`). Reste lent : `microcycles`
   (`cycle_athlete_id` par ligne, en invoker), à reprendre si besoin.
+
+## 2026-11 — Résultats HYROX : collage par l'athlète, pas d'extraction du site
+
+- Contexte : Hugo voulait importer les temps de course HYROX sans saisie. Étude du 14/11/2026 : aucune API HYROX ;
+  results.hyrox.com (Mika Timing) bloque les robots ; HYROX a mis en demeure en octobre 2026 au moins 8 sites qui
+  aspiraient ses résultats (droit sur la base de données, RGPD, marque) et ne délivre pas de licence.
+- Décision (option A, validée par Hugo) : l'athlète copie sa propre page de résultat et la colle dans Agon
+  (« Coller mon résultat », HYROX › Courses). Agon ne lit jamais le site, ni par lien, ni par une API tierce.
+- Lecture pure et testée : `src/lib/hyrox/resultImport.ts` (copie d'ordinateur, de téléphone, texte d'une capture
+  en colonnes ; le tableau « Race replay » est ignoré). Le total enregistré est le chrono officiel ; alerte si la
+  somme des 17 temps s'en écarte de plus de 20 s (arrondis). Doublon (même chrono à 2 s et même date ou même
+  événement la même année) : mise à jour proposée, création refusée.
+- Rouvrir si HYROX ouvre un accès partenaire (demande possible par Hugo).
+
+## 2026-11-14 — Garmin : « Envoyer sur ma montre » à la main
+
+- Demande d'Hugo : envoyer une séance vers la montre depuis la séance. Précisé par question : bouton côté
+  **athlète seulement**, **Garmin seulement** (COROS n'envoie pas de séances, P7), **même règle** que l'envoi
+  automatique (rien ne part tant que `push_workouts` est faux, donc pas pour les vrais athlètes avant le test d'Hugo).
+- Sans migration : `provider-garmin-push-workout` (jeton de l'athlète) appelle la synchro existante en forçant la
+  séance. Au-delà des 7 jours, le suivi se reconnaît à sa date enregistrée après la fenêtre ; le cron continue de
+  le tenir à jour. Détail : `docs/integrations/GARMIN_TRAINING.md`.
+
+
+## 2026-11-14 — IA coupée sans date de naissance : 7 jours de préavis
+
+- Contexte : revue juridique C2, phase 2. L'accord IA (`ai_programming`) ne doit compter que pour un compte dont la
+  date de naissance est connue et indique 18 ans ou plus. Migration prête : `supabase/pending/20261114120000_ai_requires_birth_date.sql`
+  (vue `current_consents` + trigger `ai_consent_adults_only`), test à blanc en prod 32/32. 6 comptes ont dit oui à
+  l'IA sans date.
+- Décision d'Hugo : **préavis de 7 jours**. Les comptes ont jusqu'au **21/11/2026 inclus** pour saisir leur date ;
+  la migration s'applique le **22/11** (accord d'Hugo déjà donné, sous cette condition).
+- Côté app : l'écran « Ta date de naissance » (`BirthDateGate`, bloquant à l'ouverture, tous les rôles) affiche le
+  préavis aux comptes qui ont dit oui à l'IA. Un bandeau sur l'accueil serait inutile : l'écran passe avant l'accueil.
+  Côté coach : mention discrète sur la fiche athlète (Profil › Identité). Date limite en constante :
+  `AI_BIRTH_DATE_DEADLINE` (`src/lib/aiBirthDateNotice.ts`), testée.
+- Le 22/11 : procédure dans `supabase/pending/README.md` (section 20261114120000). Aucune Edge Function à déployer.
+
+## 2026-11-14 — Feu du matin : hypothèses tranchées par Hugo, persistance sur 2-3 jours
+
+- **Mot d'Hugo** : « feux du matin les douleurs, une motivation touchée, sensation de fatigue, et fc repos qui augmente
+  et vfc en déclin ou anormalement au dessus, voir sur une évolution de 2-3j si ca se répète sur 2/3 jours faut
+  s'inquiéter ». Appliqué dans `_shared/domain/wellnessLight.ts` (paramètres `feux-2026-11-14`).
+- **Signaux du matin** (chacun seul = orange) :
+  - douleur ≥ 4/10 : l'échelle de la carte douleur dit 1-3 = gêne, 4 = douleur (même seuil que l'ancien « > 3 ») ;
+  - envie touchée : envie ≤ 2/5, ou z ≤ −1,5 contre les 28 jours d'avant (7 saisies au moins, plancher d'écart-type 0,5) ;
+  - fatigue : item « Récupération » ≤ 2/5, ou z ≤ −1,5 (mêmes règles d'habitude) ;
+  - FC de repos : moyenne 7 j à z > 1 (règle du 07/11, inchangée) ;
+  - VFC en déclin : moyenne 7 j sous la zone (règle du 07/11) ; **anormalement au-dessus** : moyenne 7 j > moyenne + 1
+    écart-type de l'habitude (deux fois la demi-zone : être juste au-dessus de la zone n'est pas anormal). Alerte à J14.
+- **Persistance** : le **même** signal présent 2 jours de suite ou plus (jour de référence compris) = rouge, « depuis N
+  jours ». Deux signaux différents sur deux jours (douleur hier, envie basse aujourd'hui) ne font pas une répétition.
+  Jour de référence des ressentis : la saisie d'aujourd'hui, sinon d'hier. Un jour sans saisie ou une mesure absente
+  coupe la série (une mesure absente ne compte jamais). Montre : la persistance porte sur la moyenne 7 j de chaque jour.
+- **Changement de comportement** : le contre-exemple 1 sans hausse de charge (VFC sous la zone et FC de repos haute
+  3 jours de suite) était orange depuis le 07/11 ; il passe **rouge** (« si ça se répète sur 2/3 jours faut s'inquiéter »).
+  À confirmer par Hugo.
+- **Gardé tel quel (règles du 07/11, non citées le 14/11)** : signaux de charge (prévu + 10 %, km + 7 %, sortie hors
+  plafond, monotonie > 2), 2 ressentis à z < −1,5, rouge « charge en hausse + VFC sous la zone + ≥ 2 signes », et parmi
+  ces signes **sommeil en baisse** (item sommeil ou durée montre). « Séance repère ratée » et « douleur qui modifie la
+  foulée » restent dans le code mais ne sont jamais alimentées (aucune donnée dans Agon). Rien n'a été ajouté pour eux.
+- **Affichage** : la phrase du feu dit pourquoi la couleur (« Douleur 5/10 depuis 2 jours : le signal se répète, à
+  prendre au sérieux », « … : signal isolé, à surveiller (rouge s'il se répète demain) », « Rien à signaler ce matin »).
+  Sans montre, le feu peut passer au rouge par la douleur, l'envie ou la fatigue répétées.
+
+## 2026-11-15 — RLS des microcycles et des cycles accélérée, mêmes droits
+
+- Constat : `microcycles_*` appelaient `cycle_athlete_id` (invoker) à chaque ligne, qui relisait cycles, mésocycles
+  et macrocycles sous la RLS de l'appelant, en cascade (environ 89 ms pour un athlète sur 148 microcycles).
+- Décision (migration `20261115230000_rls_microcycles_fast`, appliquée avec le oui d'Hugo) : dans les policies
+  seulement, `cycle_athlete_id_fast` et `mesocycle_athlete_id_fast` (SECURITY DEFINER, gardées par
+  `rls_linked_to` : l'athlète, son coach ou co-coach, un pro au lien actif). Le cycle « mixte » (mésocycle d'un
+  athlète, `athlete_id` d'un autre ; 0 ligne en prod) repasse par l'ancienne fonction (`cycle_is_mixed`).
+  `cycle_athlete_id` et `mesocycle_athlete_id` restent inchangées pour les RPC.
+- Preuve d'équivalence : banc local PGlite `supabase/tests/rls_microcycles_pglite.mjs` (fonctions et policies exactes
+  de `schema.sql`, 23 jeux aléatoires : 0 écart sur la lecture, la modification et l'insertion ; trois mutations
+  volontaires détectées), et test `supabase/tests/rls_microcycles_equivalence.sql` (ancienne contre nouvelle
+  expression lue dans `pg_policies`, cycles fictifs de chaque forme). Pas de test massif en prod : la panne du
+  15/11 venait du budget Disk IO du plan gratuit. Gain non mesuré en prod pour la même raison.
+- Retour arrière : `supabase/rollback/20261115230000_rls_microcycles_fast.sql`.
+- Version renommée 20261115220000 → 20261115230000 le 2026-11-15 (doublon avec `measurement_segments`) ; les commentaires SQL en base gardent l'ancien numéro.
+
+## 2026-11-15 — Weekly review : la question douleur suit les douleurs de la semaine, plus le feu
+
+- **Mot d'Hugo** : « Sur la weekly review, le feu n'a aucune influence sur la douleur. […] Moi, typiquement, je suis
+  en feu orange, mais je n'ai pas de douleur. Je ne dois donc pas avoir de questions sur ma douleur. » Remplace D16
+  (13/11 : question douleur si feu orange ou rouge).
+- **Règle** (`src/lib/weekly-review/pain.ts`, `weekPainReports` / `painRequired`) : le bloc « Ta douleur » apparaît
+  si au moins une douleur a été saisie entre le lundi et le dimanche de la semaine revue :
+  - wellness du matin avec une douleur > 0/10 (gêne 1-3 comprise ; carte par zones ou ancienne note seule) ;
+  - blessure déclarée (`medical_entries`, par l'athlète, le coach ou le staff) datée de la semaine, sinon créée dans
+    la semaine ; une blessure notée 0/10 ne compte pas.
+  Les séances n'ont pas de champ douleur, seulement un commentaire libre : pas lu (trop d'ambiguïtés, « pas mal »).
+- **Rappel** : au-dessus des questions, chaque douleur de la semaine (jour, source, zones et notes, commentaire de
+  l'athlète). Le commentaire « blessé / malade » du wellness recomposé par l'app depuis le 14/11 n'est pas répété ;
+  celui écrit par l'athlète dans les anciennes saisies l'est.
+- Envoi bloqué tant que les douleurs de la semaine ne sont pas chargées (sinon la question pourrait manquer).
+- Le feu reste enregistré avec la review envoyée et affiché au coach à côté de la douleur.
