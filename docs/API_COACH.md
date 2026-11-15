@@ -47,7 +47,7 @@ Gemini : il peut l'activer dans son profil, section Confidentialité.
 Ce que l'assistant reçoit : prénom, séances et charges réalisées, séances
 énergétiques (durée, distance, RPE), thèmes du jour que tu as posés,
 compétitions, tests (valeurs mesurées), événements du calendrier de l'athlète
-(dates et titre), bien-être, poids, blessures (zones, dates), records,
+(dates et titre), bien-être, poids, blessures (zones, dates, statut et étape de résolution), records,
 objectifs, données de montre autorisées. Jamais le texte libre écrit par
 l'athlète sur ses séances, ses tests, ses compétitions ou ses blessures ;
 seul le titre de ses événements de calendrier passe, et le texte de

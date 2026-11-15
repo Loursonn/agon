@@ -2720,3 +2720,13 @@ et son README.
 **Choix techniques** :
 - Logique pure dans `src/lib/athleteTodo.ts`, fenêtre `AthleteTodoSheet` montée dans `AthleteLayout`, attend qu'aucune autre fenêtre ne soit ouverte. « Déjà vue aujourd'hui » : localStorage par compte (`agon:todo-shown:<uid>`), donc par appareil.
 - Activation de la weekly review rangée dans `profiles.home_hidden_sections` sous la forme `+weekly_review` (sections « à activer », `HOME_OPT_IN_SECTIONS`) : pas de colonne ni de migration, prod gelée ce jour-là. À migrer vers une vraie colonne si d'autres options s'ajoutent.
+
+## 2026-11-15 — Étape de résolution d'une blessure
+
+Demande d'Hugo : changer le statut d'une blessure active et suivre son degré de résolution. Cinq étapes : Blessé → Réhabilitation → Réhab presque finie → Réathlétisation → Guéri (`medical_entries.recovery_stage`).
+- Qui la change : l'athlète, ses coachs et le staff autorisé sur « medical » (mêmes droits que la blessure, RLS inchangée).
+- Où : frise de 5 étapes sur la carte blessure du profil (coach, athlète, staff) et dans Retours (ordinateur et téléphone).
+- Historique daté de chaque étape (`injury_stage_history`), écrit par déclencheur seulement.
+- `status` reste la source des badges « blessure active », de `report_session_pain` et de l'IA : un déclencheur le tient d'accord (Guéri ⇔ `gueri`, sinon `en_cours`). Un client qui n'écrit que `status` reste juste.
+- L'assistant IA lit l'étape (liste blanche `@shared/domain/injuries`, champ `etape`).
+- Migration additive `20261116160000_injury_recovery_stage`, appliquée en prod le 15/11 ; coach-api redéployée.

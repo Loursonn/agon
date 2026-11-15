@@ -3063,6 +3063,55 @@ export type Database = {
           },
         ]
       }
+      injury_stage_history: {
+        Row: {
+          athlete_id: string
+          changed_at: string
+          changed_by: string | null
+          entry_id: string
+          id: string
+          stage: string
+        }
+        Insert: {
+          athlete_id: string
+          changed_at?: string
+          changed_by?: string | null
+          entry_id: string
+          id?: string
+          stage: string
+        }
+        Update: {
+          athlete_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          entry_id?: string
+          id?: string
+          stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "injury_stage_history_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_stage_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_stage_history_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "medical_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       macrocycles: {
         Row: {
           athlete_id: string
@@ -3221,6 +3270,7 @@ export type Database = {
           mechanism: string | null
           notes: string | null
           pain_level: number | null
+          recovery_stage: string | null
           return_date: string | null
           status: string
           title: string
@@ -3242,6 +3292,7 @@ export type Database = {
           mechanism?: string | null
           notes?: string | null
           pain_level?: number | null
+          recovery_stage?: string | null
           return_date?: string | null
           status?: string
           title: string
@@ -3263,6 +3314,7 @@ export type Database = {
           mechanism?: string | null
           notes?: string | null
           pain_level?: number | null
+          recovery_stage?: string | null
           return_date?: string | null
           status?: string
           title?: string

@@ -2986,6 +2986,31 @@ $$;
 ALTER FUNCTION "public"."mark_onboarded"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."medical_entries_log_stage"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.injury_stage_history (entry_id, athlete_id, stage, changed_at, changed_by)
+    VALUES (NEW.id, NEW.athlete_id, NEW.recovery_stage,
+            least(coalesce(NEW.date::timestamptz, now()), now()), auth.uid());
+  ELSIF NEW.recovery_stage IS DISTINCT FROM OLD.recovery_stage THEN
+    INSERT INTO public.injury_stage_history (entry_id, athlete_id, stage, changed_by)
+    VALUES (NEW.id, NEW.athlete_id, NEW.recovery_stage, auth.uid());
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."medical_entries_log_stage"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."medical_entries_log_stage"() IS 'Écrit injury_stage_history à chaque étape atteinte (15/11/2026).';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."medical_entries_sans_soins"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -3001,6 +3026,32 @@ ALTER FUNCTION "public"."medical_entries_sans_soins"() OWNER TO "postgres";
 
 
 COMMENT ON FUNCTION "public"."medical_entries_sans_soins"() IS 'Hors HDS (2026-11-13) : toute entrée est une blessure sportive. Diagnostic, traitement et « vu par » supprimés au temps 2.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."medical_entries_sync_stage"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  IF TG_OP = 'UPDATE'
+     AND NEW.recovery_stage IS NOT DISTINCT FROM OLD.recovery_stage
+     AND NEW.status IS DISTINCT FROM OLD.status THEN
+    NEW.recovery_stage := CASE WHEN NEW.status = 'gueri' THEN 'gueri' ELSE 'blesse' END;
+  END IF;
+  IF NEW.recovery_stage IS NULL THEN
+    NEW.recovery_stage := CASE WHEN NEW.status = 'gueri' THEN 'gueri' ELSE 'blesse' END;
+  END IF;
+  NEW.status := CASE WHEN NEW.recovery_stage = 'gueri' THEN 'gueri' ELSE 'en_cours' END;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."medical_entries_sync_stage"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."medical_entries_sync_stage"() IS 'Garde recovery_stage et status d''accord (Guéri ⇔ gueri, sinon en_cours), 15/11/2026.';
 
 
 
@@ -8202,7 +8253,7 @@ COMMENT ON COLUMN "public"."hyrox_results"."watch_activity_id" IS 'Activité de 
 
 
 
-COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_depth" IS 'No reps aux wall balls : squat pas sous la parallèle. NULL : non renseigné.';
+COMMENT ON COLUMN "public"."hyrox_results"."watch_offset_s" IS 'Seconde de l''enregistrement de la montre où la course commence (négatif : montre lancée après le départ). NULL : recalage automatique.';
 
 
 
@@ -8210,7 +8261,7 @@ COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_target" IS 'No rep
 
 
 
-COMMENT ON COLUMN "public"."hyrox_results"."watch_offset_s" IS 'Seconde de l''enregistrement de la montre où la course commence (négatif : montre lancée après le départ). NULL : recalage automatique.';
+COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_depth" IS 'No reps aux wall balls : squat pas sous la parallèle. NULL : non renseigné.';
 
 
 
@@ -8376,6 +8427,24 @@ COMMENT ON TABLE "public"."injury_followups" IS 'Suivis d''une blessure déclar�
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."injury_stage_history" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "entry_id" "uuid" NOT NULL,
+    "athlete_id" "uuid" NOT NULL,
+    "stage" "text" NOT NULL,
+    "changed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "changed_by" "uuid",
+    CONSTRAINT "injury_stage_history_stage_check" CHECK (("stage" = ANY (ARRAY['blesse'::"text", 'rehabilitation'::"text", 'rehab_fin'::"text", 'reathletisation'::"text", 'gueri'::"text"])))
+);
+
+
+ALTER TABLE "public"."injury_stage_history" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."injury_stage_history" IS 'Étapes de résolution d''une blessure, datées (15/11/2026). Écrite par le déclencheur medical_entries_log_stage seulement.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."macrocycles" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8452,6 +8521,7 @@ COMMENT ON COLUMN "public"."measurement_logs"."shank_length_cm" IS 'Longueur de 
 COMMENT ON COLUMN "public"."measurement_logs"."arm_length_cm" IS 'Longueur de bras : acromion → coude (épicondyle), bras le long du corps (cm)';
 
 
+
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8472,6 +8542,7 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "days_off" integer,
     "return_date" "date",
     "declared_by" "text",
+    "recovery_stage" "text",
     CONSTRAINT "medical_entries_context_check" CHECK ((("context" IS NULL) OR ("context" = ANY (ARRAY['entrainement'::"text", 'competition'::"text", 'hors_sport'::"text"])))),
     CONSTRAINT "medical_entries_days_off_check" CHECK ((("days_off" IS NULL) OR ("days_off" >= 0))),
     CONSTRAINT "medical_entries_declared_by_check" CHECK ((("declared_by" IS NULL) OR ("declared_by" = ANY (ARRAY['athlete'::"text", 'coach'::"text", 'staff'::"text"])))),
@@ -8479,6 +8550,7 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     CONSTRAINT "medical_entries_kind_check" CHECK (("kind" = 'blessure'::"text")),
     CONSTRAINT "medical_entries_mechanism_check" CHECK ((("mechanism" IS NULL) OR ("mechanism" = ANY (ARRAY['contact'::"text", 'sans_contact'::"text", 'chute'::"text", 'geste_repete'::"text", 'inconnu'::"text"])))),
     CONSTRAINT "medical_entries_pain_level_check" CHECK ((("pain_level" IS NULL) OR (("pain_level" >= 0) AND ("pain_level" <= 10)))),
+    CONSTRAINT "medical_entries_recovery_stage_check" CHECK ((("recovery_stage" IS NULL) OR ("recovery_stage" = ANY (ARRAY['blesse'::"text", 'rehabilitation'::"text", 'rehab_fin'::"text", 'reathletisation'::"text", 'gueri'::"text"])))),
     CONSTRAINT "medical_entries_status_check" CHECK (("status" = ANY (ARRAY['gueri'::"text", 'en_cours'::"text"]))),
     CONSTRAINT "medical_entries_training_impact_check" CHECK ((("training_impact" IS NULL) OR ("training_impact" = ANY (ARRAY['aucun'::"text", 'adapte'::"text", 'arret_partiel'::"text", 'arret_total'::"text"]))))
 );
@@ -8516,6 +8588,10 @@ COMMENT ON COLUMN "public"."medical_entries"."return_date" IS 'Retour prévu ou 
 
 
 COMMENT ON COLUMN "public"."medical_entries"."declared_by" IS 'athlete | coach — côté d''où vient la déclaration';
+
+
+
+COMMENT ON COLUMN "public"."medical_entries"."recovery_stage" IS 'Étape de résolution : blesse | rehabilitation | rehab_fin | reathletisation | gueri. Tenue d''accord avec status par medical_entries_sync_stage.';
 
 
 
@@ -9519,6 +9595,11 @@ ALTER TABLE ONLY "public"."injury_followups"
 
 
 
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."macrocycles"
     ADD CONSTRAINT "macrocycles_pkey" PRIMARY KEY ("id");
 
@@ -10377,7 +10458,20 @@ CREATE INDEX "injury_followups_entry_idx" ON "public"."injury_followups" USING "
 CREATE UNIQUE INDEX "injury_followups_entry_workout_key" ON "public"."injury_followups" USING "btree" ("entry_id", "workout_log_id") WHERE ("workout_log_id" IS NOT NULL);
 
 
+
 CREATE INDEX "injury_followups_workout_idx" ON "public"."injury_followups" USING "btree" ("workout_log_id") WHERE ("workout_log_id" IS NOT NULL);
+
+
+
+CREATE INDEX "injury_stage_history_athlete_idx" ON "public"."injury_stage_history" USING "btree" ("athlete_id");
+
+
+
+CREATE INDEX "injury_stage_history_changed_by_idx" ON "public"."injury_stage_history" USING "btree" ("changed_by") WHERE ("changed_by" IS NOT NULL);
+
+
+
+CREATE INDEX "injury_stage_history_entry_idx" ON "public"."injury_stage_history" USING "btree" ("entry_id", "changed_at");
 
 
 
@@ -10641,7 +10735,15 @@ CREATE OR REPLACE TRIGGER "hr_zone_models_refresh" AFTER INSERT OR UPDATE OF "st
 
 
 
+CREATE OR REPLACE TRIGGER "medical_entries_log_stage" AFTER INSERT OR UPDATE OF "recovery_stage", "status" ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_log_stage"();
+
+
+
 CREATE OR REPLACE TRIGGER "medical_entries_sans_soins" BEFORE INSERT OR UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_sans_soins"();
+
+
+
+CREATE OR REPLACE TRIGGER "medical_entries_sync_stage" BEFORE INSERT OR UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_sync_stage"();
 
 
 
@@ -11402,6 +11504,21 @@ ALTER TABLE ONLY "public"."injury_followups"
 
 ALTER TABLE ONLY "public"."injury_followups"
     ADD CONSTRAINT "injury_followups_workout_log_id_fkey" FOREIGN KEY ("workout_log_id") REFERENCES "public"."workout_logs"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_changed_by_fkey" FOREIGN KEY ("changed_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_entry_id_fkey" FOREIGN KEY ("entry_id") REFERENCES "public"."medical_entries"("id") ON DELETE CASCADE;
 
 
 
@@ -12646,6 +12763,13 @@ CREATE POLICY "injury_followups_read" ON "public"."injury_followups" FOR SELECT 
 
 
 
+ALTER TABLE "public"."injury_stage_history" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "injury_stage_history_read" ON "public"."injury_stage_history" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
+
+
+
 CREATE POLICY "life_events_delete" ON "public"."athlete_life_events" FOR DELETE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
@@ -13187,6 +13311,10 @@ CREATE POLICY "staff_habits_read" ON "public"."habits" FOR SELECT TO "authentica
 
 
 CREATE POLICY "staff_injury_followups_read" ON "public"."injury_followups" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text")));
+
+
+
+CREATE POLICY "staff_injury_stage_history_read" ON "public"."injury_stage_history" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text")));
 
 
 
@@ -20364,9 +20492,19 @@ GRANT ALL ON FUNCTION "public"."materialized_views_are"("name", "name"[], "text"
 
 
 
+REVOKE ALL ON FUNCTION "public"."medical_entries_log_stage"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."medical_entries_log_stage"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "anon";
 GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."medical_entries_sync_stage"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."medical_entries_sync_stage"() TO "service_role";
 
 
 
@@ -22872,6 +23010,12 @@ GRANT ALL ON TABLE "public"."hyrox_work_axes_rules" TO "service_role";
 GRANT ALL ON TABLE "public"."injury_followups" TO "anon";
 GRANT ALL ON TABLE "public"."injury_followups" TO "authenticated";
 GRANT ALL ON TABLE "public"."injury_followups" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."injury_stage_history" TO "anon";
+GRANT ALL ON TABLE "public"."injury_stage_history" TO "authenticated";
+GRANT ALL ON TABLE "public"."injury_stage_history" TO "service_role";
 
 
 

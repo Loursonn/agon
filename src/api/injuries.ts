@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { DeclaredBy, MedicalEntry, MedicalEntryInput } from "@/features/shared/types/medical";
+import type { DeclaredBy, InjuryStageEvent, MedicalEntry, MedicalEntryInput, RecoveryStage } from "@/features/shared/types/medical";
 import { check, db, unwrap, unwrapRows } from "./client";
 
 /**
@@ -23,6 +23,7 @@ export const medicalKeys = {
   all: (athleteId: string) => ["medical", athleteId] as const,
   entries: (athleteId: string) => ["medical", athleteId, "entries"] as const,
   followups: (athleteId: string, scope: string) => ["medical", athleteId, "followups", scope] as const,
+  stages: (athleteId: string) => ["medical", athleteId, "stages"] as const,
 };
 
 async function currentUserId(): Promise<string | null> {
@@ -66,6 +67,30 @@ export async function saveEntry(
 
 export async function deleteEntry(entry: Pick<MedicalEntry, "id">): Promise<void> {
   check(await db().from("medical_entries").delete().eq("id", entry.id), "Suppression de la blessure impossible");
+}
+
+// ── Étape de résolution (15/11) ──────────────────────────────────────────────
+
+/**
+ * Change l'étape d'une blessure. La base met le statut d'accord (Guéri ⇔
+ * guéri) et date l'étape dans `injury_stage_history` (déclencheurs).
+ */
+export async function setInjuryStage(entryId: string, stage: RecoveryStage): Promise<MedicalEntry> {
+  const row = unwrap(
+    await db().from("medical_entries").update({ recovery_stage: stage }).eq("id", entryId).select("*").single(),
+    "Changement d'étape impossible",
+  );
+  return row as unknown as MedicalEntry;
+}
+
+/** Étapes datées des blessures d'un athlète, de la plus ancienne à la plus récente. */
+export async function listStageHistory(athleteId: string): Promise<InjuryStageEvent[]> {
+  const rows = unwrapRows(
+    await db().from("injury_stage_history").select("id, entry_id, stage, changed_at, changed_by")
+      .eq("athlete_id", athleteId).order("changed_at"),
+    "Lecture des étapes de blessure impossible",
+  );
+  return rows as unknown as InjuryStageEvent[];
 }
 
 // ── Douleur de séance → blessure déclarée (15/11) ─────────────────────────────

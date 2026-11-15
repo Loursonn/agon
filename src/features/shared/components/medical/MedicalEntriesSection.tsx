@@ -11,6 +11,7 @@ import {
 import {
   DECLARED_BY_LABEL,
   MEDICAL_STATUS_LABEL,
+  RECOVERY_STAGE_LABEL,
   type MedicalEntry,
   type MedicalEntryInput,
   type MedicalEntryStatus,
@@ -22,7 +23,9 @@ import {
   injuryFacts,
   type InjuryDetail,
 } from "@/lib/injuryDetails";
+import { stageOf } from "@/lib/injuryStage";
 import { InjuryDetailFields, InjuryIntro } from "./InjuryDetailFields";
+import { InjuryStageTrack, stageColor } from "./InjuryStageTrack";
 import { card, ghostBtn, inputStyle, labelStyle, primaryBtn } from "./medicalStyles";
 import { Chip } from "./medicalUi";
 
@@ -104,10 +107,10 @@ function EntryCard({ entry, athleteId, canEdit, onEdit }: {
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{
               display: "inline-flex", alignItems: "center", height: 20, padding: "0 8px", borderRadius: 999,
-              background: ongoing ? C.r : C.g, color: C.ink,
+              background: stageColor(stageOf(entry)), color: C.ink,
               ...MONO, fontSize: 10, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
             }}>
-              {MEDICAL_STATUS_LABEL[entry.status]}
+              {RECOVERY_STAGE_LABEL[stageOf(entry)]}
             </span>
             <span style={{ fontSize: 15.5, fontWeight: 600, color: C.tx }}>{entry.title}</span>
           </div>
@@ -134,6 +137,10 @@ function EntryCard({ entry, athleteId, canEdit, onEdit }: {
             )}
           </div>
         )}
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <InjuryStageTrack entry={entry} athleteId={athleteId} canEdit={canEdit} />
       </div>
 
       {injuryFacts(entry).length > 0 && (

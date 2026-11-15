@@ -71,6 +71,7 @@
       "zone": "Genou G",
       "type": null,
       "statut": "en_cours",
+      "etape": null,
       "douleur": 4,
       "impact": null,
       "debut": "2026-09-20",

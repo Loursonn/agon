@@ -4,8 +4,8 @@
  * Source : `medical_entries` (l'ancienne clé `asp:injuries` n'a plus de ligne
  * en prod : l'assistant ne voyait aucune blessure, 2026-11-08).
  *
- * Liste blanche (docs/COUCHE_API.md §5) : type, statut, douleur, impact sur
- * l'entraînement, dates et zone. Jamais le texte libre — titre, diagnostic,
+ * Liste blanche (docs/COUCHE_API.md §5) : type, statut, étape de résolution,
+ * douleur, impact sur l'entraînement, dates et zone. Jamais le texte libre — titre, diagnostic,
  * traitement, notes — où un diagnostic ou un traitement peut se glisser. Les
  * opérations, pathologies et « autre » ne sortent pas : seules les blessures.
  *
@@ -14,9 +14,11 @@
 import { isIsoDay, type IsoDay } from "./dates.ts";
 
 /** Colonnes à lire, et rien d'autre : la requête ne ramène pas le texte libre. */
-export const INJURY_EXPORT_COLUMNS = "kind, status, zone, date, return_date, injury_type, pain_level, training_impact";
+export const INJURY_EXPORT_COLUMNS = "kind, status, recovery_stage, zone, date, return_date, injury_type, pain_level, training_impact";
 
 export type ExportedInjuryStatus = "en_cours" | "gueri";
+/** Étape de résolution (15/11/2026), du plus blessé au guéri. */
+export type ExportedRecoveryStage = "blesse" | "rehabilitation" | "rehab_fin" | "reathletisation" | "gueri";
 export type ExportedInjuryType = "traumatique" | "chronique_surmenage" | "recidive";
 export type ExportedTrainingImpact = "aucun" | "adapte" | "arret_partiel" | "arret_total";
 
@@ -25,6 +27,8 @@ export interface ExportedInjury {
   zone: string | null;
   type: ExportedInjuryType | null;
   statut: ExportedInjuryStatus;
+  /** Étape : blesse → rehabilitation → rehab_fin → reathletisation → gueri. */
+  etape: ExportedRecoveryStage | null;
   /** Douleur déclarée, 0 à 10. */
   douleur: number | null;
   impact: ExportedTrainingImpact | null;
@@ -35,6 +39,7 @@ export interface ExportedInjury {
 }
 
 const STATUSES: readonly string[] = ["en_cours", "gueri"];
+const STAGES: readonly string[] = ["blesse", "rehabilitation", "rehab_fin", "reathletisation", "gueri"];
 const TYPES: readonly string[] = ["traumatique", "chronique_surmenage", "recidive"];
 const IMPACTS: readonly string[] = ["aucun", "adapte", "arret_partiel", "arret_total"];
 
@@ -67,6 +72,7 @@ export function toExportedInjury(row: unknown): ExportedInjury | null {
     zone: zoneLabel(r.zone),
     type: oneOf<ExportedInjuryType>(r.injury_type, TYPES),
     statut,
+    etape: oneOf<ExportedRecoveryStage>(r.recovery_stage, STAGES),
     douleur: pain(r.pain_level),
     impact: oneOf<ExportedTrainingImpact>(r.training_impact, IMPACTS),
     debut: day(r.date),

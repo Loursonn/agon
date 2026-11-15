@@ -97,6 +97,7 @@ export const EXPORT_JOBS: readonly ExportJob[] = [
   job("measurement_logs", "athlete_id"),
   job("medical_entries", "athlete_id"),
   job("injury_followups", "athlete_id"),
+  job("injury_stage_history", "athlete_id"),
   job("performance_logs", "athlete_id"),
   job("performance_notifications", "athlete_id"),
   job("planning_blocks", "athlete_id"),

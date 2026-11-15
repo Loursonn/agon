@@ -38,6 +38,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-etape-blessure",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Blessures : l'étape de résolution, de « Blessé » à « Guéri »",
+    summary:
+      "Chaque blessure en cours a maintenant son étape : Blessé, Réhabilitation, Réhab presque finie, Réathlétisation, Guéri. Vous, votre athlète ou son staff la changez d'un geste, et chaque étape est datée.",
+    sections: [
+      {
+        title: "Changer l'étape",
+        points: [
+          "Sur la carte de la blessure (fiche de l'athlète › Profil, et le profil de l'athlète) et dans Retours, sur ordinateur comme sur téléphone : touchez l'étape atteinte.",
+          "Passer à « Guéri » clôt la blessure : elle n'apparaît plus comme blessure active. La rouvrir la remet à « Blessé ».",
+          "Votre athlète peut aussi la changer lui-même depuis son profil, tout comme le staff qui a les droits sur les blessures.",
+        ],
+      },
+      {
+        title: "Suivre la guérison",
+        points: [
+          "Sous la frise : depuis quand l'athlète est à cette étape, et les dates des étapes précédentes (par exemple « Blessé 02/11 (6 j) → Réhab 08/11 »).",
+          "Les blessures déjà déclarées démarrent à « Blessé » (ou « Guéri » si elles étaient guéries).",
+          "L'assistant IA lit l'étape, pour adapter la charge à une réathlétisation plutôt qu'à une blessure toute fraîche.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-a-faire-athlete",
     date: "2026-11-16",
     kind: "feature",

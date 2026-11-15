@@ -19,6 +19,41 @@ export const MEDICAL_STATUS_LABEL: Record<MedicalEntryStatus, string> = {
   en_cours: 'En cours',
 };
 
+// ── Étape de résolution (15/11/2026) ────────────────────────────────────────
+// Changée en un geste par l'athlète, le coach ou le staff. La base garde
+// `status` d'accord : Guéri ⇔ 'gueri', toute autre étape ⇔ 'en_cours'.
+
+export type RecoveryStage = 'blesse' | 'rehabilitation' | 'rehab_fin' | 'reathletisation' | 'gueri';
+
+/** Dans l'ordre de la guérison. */
+export const RECOVERY_STAGES: readonly RecoveryStage[] = ['blesse', 'rehabilitation', 'rehab_fin', 'reathletisation', 'gueri'];
+
+export const RECOVERY_STAGE_LABEL: Record<RecoveryStage, string> = {
+  blesse:          'Blessé',
+  rehabilitation:  'Réhabilitation',
+  rehab_fin:       'Réhab presque finie',
+  reathletisation: 'Réathlétisation',
+  gueri:           'Guéri',
+};
+
+/** Libellé court (frise sur téléphone). */
+export const RECOVERY_STAGE_SHORT: Record<RecoveryStage, string> = {
+  blesse:          'Blessé',
+  rehabilitation:  'Réhab',
+  rehab_fin:       'Fin réhab',
+  reathletisation: 'Réathlé',
+  gueri:           'Guéri',
+};
+
+/** Une étape atteinte (`injury_stage_history`). */
+export interface InjuryStageEvent {
+  id: string;
+  entry_id: string;
+  stage: RecoveryStage;
+  changed_at: string;
+  changed_by: string | null;
+}
+
 // ── Détail d'une blessure ───────────────────────────────────────────────────
 // Tous ces champs sont facultatifs et ne concernent que `kind = 'blessure'` :
 // une opération n'a pas de mécanisme, une pathologie n'a pas de niveau de
@@ -81,6 +116,8 @@ export interface MedicalEntry {
   zone: string | null;
   date: string | null;
   status: MedicalEntryStatus;
+  /** Étape de résolution ; absente sur les lignes lues avant la migration. */
+  recovery_stage?: RecoveryStage | null;
   notes: string | null;
   /** Détail blessure — null partout ailleurs, et null tant que l'athlète n'a rien précisé. */
   injury_type: InjuryType | null;
