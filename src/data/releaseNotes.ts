@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-weekly-review-douleur-de-la-semaine",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Weekly review : la douleur n'est demandée qu'aux athlètes qui en ont eu",
+    summary:
+      "Avant, la question douleur dépendait du feu du matin : un athlète en orange sans aucune douleur devait quand même en décrire une. Maintenant, elle n'apparaît que si l'athlète a signalé une douleur pendant la semaine, et on lui rappelle ce qu'il avait noté.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "La question « Ta douleur » apparaît seulement si une douleur a été signalée dans la semaine : dans le wellness du matin (même une gêne de 1 à 3 sur 10) ou en déclarant une blessure.",
+          "Au-dessus de la question, l'athlète retrouve ce qu'il a signalé : le jour, la zone, la note et son commentaire.",
+          "Le feu du matin ne décide plus de cette question.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-hyrox-debrief-saison",
     date: "2026-11-15",
     kind: "feature",

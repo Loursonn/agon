@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { fakeDb } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
-import { getWeekSummary, getWeeklyReview, listReviewsForWeek, saveWeeklyReview, toReview } from "@/api/weeklyReviews";
+import { getWeekPainReports, getWeekSummary, getWeeklyReview, listReviewsForWeek, saveWeeklyReview, toReview } from "@/api/weeklyReviews";
 import type { WeekSummary } from "@/lib/weekly-review";
 
 afterEach(() => setDbForTests(null));
@@ -62,5 +62,25 @@ describe("api/weeklyReviews", () => {
     expect(s.sessions).toEqual({ done: 1, planned: 1 });
     expect(s.durationMin).toBe(60);
     expect(s.hardest).toEqual({ date: WEEK, label: "Force A", rpe: 8, comment: "Dur" });
+  });
+
+  it("douleurs de la semaine : wellness et blessures de l'athlète, rien d'un autre", async () => {
+    const { db } = fakeDb({
+      app_data: [],
+      wellness_entries: [
+        { athlete_id: "ath", day: "2026-11-24", fatigue: 3, archived: false, pain: 5, pain_levels: { genou: 5 } },
+        { athlete_id: "ath", day: "2026-11-25", fatigue: 2, archived: false, pain: 0, pain_levels: {} },
+        { athlete_id: "autre", day: "2026-11-24", fatigue: 3, archived: false, pain: 8, pain_levels: {} },
+      ],
+      medical_entries: [
+        { id: "m1", athlete_id: "ath", title: "Entorse", zone: "Cheville gauche", date: "2026-11-27", status: "en_cours", pain_level: 6, notes: "Tordue en courant", created_at: "2026-11-27T09:00:00Z" },
+        { id: "m2", athlete_id: "autre", title: "Dos", zone: null, date: "2026-11-27", status: "en_cours", pain_level: 6, notes: null, created_at: "2026-11-27T09:00:00Z" },
+      ],
+    });
+    setDbForTests(db);
+    expect(await getWeekPainReports("ath", WEEK)).toEqual([
+      { day: "2026-11-24", source: "wellness", text: "Douleur : genou 5/10", comment: null },
+      { day: "2026-11-27", source: "blessure", text: "Entorse · Cheville gauche · 6/10", comment: "Tordue en courant" },
+    ]);
   });
 });

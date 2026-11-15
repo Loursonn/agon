@@ -2627,3 +2627,20 @@ et son README.
   15/11 venait du budget Disk IO du plan gratuit. Gain non mesuré en prod pour la même raison.
 - Retour arrière : `supabase/rollback/20261115230000_rls_microcycles_fast.sql`.
 - Version renommée 20261115220000 → 20261115230000 le 2026-11-15 (doublon avec `measurement_segments`) ; les commentaires SQL en base gardent l'ancien numéro.
+
+## 2026-11-15 — Weekly review : la question douleur suit les douleurs de la semaine, plus le feu
+
+- **Mot d'Hugo** : « Sur la weekly review, le feu n'a aucune influence sur la douleur. […] Moi, typiquement, je suis
+  en feu orange, mais je n'ai pas de douleur. Je ne dois donc pas avoir de questions sur ma douleur. » Remplace D16
+  (13/11 : question douleur si feu orange ou rouge).
+- **Règle** (`src/lib/weekly-review/pain.ts`, `weekPainReports` / `painRequired`) : le bloc « Ta douleur » apparaît
+  si au moins une douleur a été saisie entre le lundi et le dimanche de la semaine revue :
+  - wellness du matin avec une douleur > 0/10 (gêne 1-3 comprise ; carte par zones ou ancienne note seule) ;
+  - blessure déclarée (`medical_entries`, par l'athlète, le coach ou le staff) datée de la semaine, sinon créée dans
+    la semaine ; une blessure notée 0/10 ne compte pas.
+  Les séances n'ont pas de champ douleur, seulement un commentaire libre : pas lu (trop d'ambiguïtés, « pas mal »).
+- **Rappel** : au-dessus des questions, chaque douleur de la semaine (jour, source, zones et notes, commentaire de
+  l'athlète). Le commentaire « blessé / malade » du wellness recomposé par l'app depuis le 14/11 n'est pas répété ;
+  celui écrit par l'athlète dans les anciennes saisies l'est.
+- Envoi bloqué tant que les douleurs de la semaine ne sont pas chargées (sinon la question pourrait manquer).
+- Le feu reste enregistré avec la review envoyée et affiché au coach à côté de la douleur.

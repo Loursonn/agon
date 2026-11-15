@@ -1,9 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { addDays, type IsoDay } from "@shared/domain/dates";
 import type { Light } from "@shared/domain/wellnessLight";
-import { summarizeWeek, type ReviewAnswers, type WeekSummary, type WorkoutExtra } from "@/lib/weekly-review";
+import { summarizeWeek, weekPainReports, type PainReport, type ReviewAnswers, type WeekSummary, type WorkoutExtra } from "@/lib/weekly-review";
 import type { Json } from "@/integrations/supabase/types";
 import { db, unwrap, unwrapRows } from "./client";
+import { listEntries } from "./injuries";
 import { getPlannedVsDone } from "./plannedVsDone";
 import { getWellnessHistory } from "./wellness";
 import { listWorkoutLogs } from "./workouts";
@@ -40,6 +41,7 @@ export const weeklyReviewKeys = {
   week: (aid: string, week: IsoDay) => ["weeklyReviews", aid, "week", week] as const,
   list: (aid: string) => ["weeklyReviews", aid, "list"] as const,
   summary: (aid: string, week: IsoDay) => ["weeklyReviews", aid, "summary", week] as const,
+  pains: (aid: string, week: IsoDay) => ["weeklyReviews", aid, "pains", week] as const,
   /** Liste du coach (plusieurs athlètes) : préfixe à part, invalidé avec le reste. */
   coachWeek: (week: IsoDay, ids: readonly string[]) => ["weeklyReviewsCoach", week, [...ids].sort().join(",")] as const,
 };
@@ -140,5 +142,17 @@ export async function getWeekSummary(athleteId: string, weekStart: IsoDay): Prom
   const extras: Record<string, WorkoutExtra> = {};
   for (const w of workouts) extras[w.id] = { durationS: w.duration_s, notes: w.notes };
   return summarizeWeek({ weekStart, days, workouts: extras, wellness: Object.values(wellness) });
+}
+
+/**
+ * Douleurs saisies dans la semaine (wellness du matin, blessures déclarées) :
+ * déclenchent les questions douleur de la review et y sont rappelées.
+ */
+export async function getWeekPainReports(athleteId: string, weekStart: IsoDay): Promise<PainReport[]> {
+  const [wellness, injuries] = await Promise.all([
+    getWellnessHistory(athleteId, { from: weekStart, to: addDays(weekStart, 6), includeArchived: false }),
+    listEntries(athleteId),
+  ]);
+  return weekPainReports({ weekStart, wellness: Object.values(wellness), injuries });
 }
 

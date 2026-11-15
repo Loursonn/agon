@@ -13,6 +13,8 @@ import {
   painRequired,
   reviewState,
   summarizeWeek,
+  weekPainReports,
+  type InjuryLike,
   type ReviewAnswers,
 } from "..";
 
@@ -128,11 +130,10 @@ describe("bilan automatique (bloc 1)", () => {
 });
 
 describe("saisie", () => {
-  it("douleur demandée seulement si feu orange ou rouge", () => {
-    expect(painRequired("green")).toBe(false);
+  it("douleur demandée seulement si une douleur a été saisie dans la semaine", () => {
+    expect(painRequired([])).toBe(false);
     expect(painRequired(null)).toBe(false);
-    expect(painRequired("orange")).toBe(true);
-    expect(painRequired("red")).toBe(true);
+    expect(painRequired([{ day: "2026-11-24", source: "wellness", text: "Douleur 5/10", comment: null }])).toBe(true);
   });
 
   it("les 3 engagements d'une semaine sont évalués la semaine d'après", () => {
@@ -181,5 +182,88 @@ describe("saisie", () => {
     expect(formatDuration(45)).toBe("45 min");
     expect(formatDuration(60)).toBe("1 h");
     expect(formatDuration(85)).toBe("1 h 25");
+  });
+});
+
+describe("douleurs de la semaine (retour d'Hugo du 15/11)", () => {
+  const injury = (p: Partial<InjuryLike>): InjuryLike => ({
+    title: "Entorse", zone: null, date: null, pain_level: null, notes: null, created_at: "2026-11-01T10:00:00Z", ...p,
+  });
+
+  it("feu orange sans douleur : aucune question", () => {
+    const r = weekPainReports({ weekStart: WEEK, wellness: [well("2026-11-24", { pain: 0, n: 1 }), well("2026-11-25", {})] });
+    expect(r).toEqual([]);
+    expect(painRequired(r)).toBe(false);
+  });
+
+  it("wellness avec carte douleur : zones notées, dans l'ordre des jours", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [
+        { ...well("2026-11-27", { pain: 3 }), painLevels: { lombaires: 3 } },
+        { ...well("2026-11-24", { pain: 6 }), painLevels: { genou: 6, lombaires: 0 } },
+      ],
+    });
+    expect(r).toEqual([
+      { day: "2026-11-24", source: "wellness", text: "Douleur : genou 6/10", comment: null },
+      { day: "2026-11-27", source: "wellness", text: "Douleur : lombaires 3/10", comment: null },
+    ]);
+    expect(painRequired(r)).toBe(true);
+  });
+
+  it("une gêne (1 à 3/10) compte aussi ; ancienne saisie sans zone : la note seule", () => {
+    const r = weekPainReports({ weekStart: WEEK, wellness: [well("2026-11-25", { pain: 2 })] });
+    expect(r.map((x) => x.text)).toEqual(["Douleur 2/10"]);
+  });
+
+  it("commentaire écrit par l'athlète rappelé ; note recomposée par l'app ignorée", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [
+        { ...well("2026-11-24", { pain: 4 }), injuryNote: "Gêne au genou en descente d'escaliers" },
+        { ...well("2026-11-25", { pain: 5 }), painLevels: { genou: 5 }, injuryNote: "Douleur : genou 5/10" },
+        { ...well("2026-11-26", { pain: 5, sick: true }), injuryNote: "Malade ou fiévreux·se · Douleur : genou 5/10" },
+      ],
+    });
+    expect(r.map((x) => x.comment)).toEqual(["Gêne au genou en descente d'escaliers", null, null]);
+  });
+
+  it("hors semaine, archivé ou sans réponse : ignoré", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [well("2026-11-22", { pain: 7 }), well("2026-11-30", { pain: 7 }), well("2026-11-24", { pain: 7, archived: true }), well("2026-11-25", {})],
+    });
+    expect(r).toEqual([]);
+  });
+
+  it("blessure datée dans la semaine : titre, zone, note et commentaire", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [],
+      injuries: [injury({ date: "2026-11-26", zone: "Cheville gauche", pain_level: 6, notes: " Tordue sur un trottoir " })],
+    });
+    expect(r).toEqual([{ day: "2026-11-26", source: "blessure", text: "Entorse · Cheville gauche · 6/10", comment: "Tordue sur un trottoir" }]);
+  });
+
+  it("blessure sans date : jour de déclaration ; ancienne ou sans douleur (0/10) : ignorée", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [],
+      injuries: [
+        injury({ created_at: "2026-11-28T18:00:00Z" }),
+        injury({ date: "2026-10-02", pain_level: 8 }),
+        injury({ date: "2026-11-25", pain_level: 0 }),
+      ],
+    });
+    expect(r).toEqual([{ day: "2026-11-28", source: "blessure", text: "Entorse", comment: null }]);
+  });
+
+  it("même jour : le wellness avant la blessure", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [well("2026-11-26", { pain: 4 })],
+      injuries: [injury({ date: "2026-11-26", pain_level: 4 })],
+    });
+    expect(r.map((x) => x.source)).toEqual(["wellness", "blessure"]);
   });
 });
