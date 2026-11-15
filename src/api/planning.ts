@@ -11,7 +11,9 @@ import {
   getCurrentMacrocycle, getCurrentMesocycle, getCycleTree, listAthleteCycles,
   listCycleMicrocycles, type CycleTree,
 } from "./cycles";
-import { listSessionOccurrenceLogs, listWorkoutLogs, planWorkoutsIfAbsent, type WorkoutLog } from "./workouts";
+import { listSessionLogsBetween, listSessionOccurrenceLogs, listWorkoutLogs, planWorkoutsIfAbsent, type WorkoutLog } from "./workouts";
+import { rescheduleSessionDay } from "./program";
+import { planRecurringPlacement } from "@/lib/planningProjection";
 
 /**
  * Vues composées du planning : frise coach, plan actif et semaine de
@@ -554,11 +556,12 @@ export async function getCalendarEvents(
 
 /**
  * Pose une séance de la programmation dans le planning. Séance hebdomadaire
- * avec un jour et un cycle : une séance par semaine du cycle non terminée ;
- * sinon une seule séance à `date`. Une séance déjà posée n'est pas touchée.
+ * avec un jour et un cycle : une séance concrète par semaine du cycle qui n'en
+ * a pas encore (jamais dans le passé) ; sinon une seule séance à `date`. Une
+ * séance déjà posée n'est pas touchée.
  */
 export async function placeSession(p: {
-  session: { id: string; name: string; recurrence?: string; day_of_week?: number };
+  session: { id: string; name: string; recurrence?: string; day_of_week?: number | null };
   athleteId: string;
   coachId: string;
   date: IsoDay;
@@ -567,22 +570,70 @@ export async function placeSession(p: {
   today?: IsoDay;
 }): Promise<void> {
   const { session } = p;
-  const recurring = session.recurrence === "weekly" && session.day_of_week !== undefined && !!p.cycleId;
+  const recurring = session.recurrence === "weekly" && session.day_of_week != null && !!p.cycleId;
   if (recurring) {
-    const weeks = await listCycleMicrocycles(p.cycleId!);
-    if (weeks.length > 0) {
-      const today = p.today ?? localIsoDay();
-      await planWorkoutsIfAbsent(weeks
-        .filter((w) => w.end_date >= today)
-        .map((w) => ({
-          athleteId: p.athleteId, coachId: p.coachId, sessionId: session.id, sessionName: session.name,
-          date: addDays(w.start_date, session.day_of_week ?? 0), microcycleId: w.id,
-        })));
-      return;
-    }
+    const created = await scheduleRecurringInCycle({ ...p, session, cycleId: p.cycleId! });
+    if (created !== null) return;
   }
   await planWorkoutsIfAbsent([{
     athleteId: p.athleteId, coachId: p.coachId, sessionId: session.id, sessionName: session.name,
     date: p.date, weekNumber: p.weekNumber ?? null,
   }]);
+}
+
+/**
+ * Rend concrète une séance hebdomadaire sur tout le cycle : une séance
+ * prévue (workout_logs) à son jour, chaque semaine du cycle qui n'en a pas
+ * encore, à partir d'aujourd'hui. Renvoie le nombre de séances créées, ou
+ * `null` si le cycle n'a pas de semaines.
+ */
+export async function scheduleRecurringInCycle(p: {
+  session: { id: string; name: string; day_of_week?: number | null };
+  athleteId: string;
+  coachId: string;
+  cycleId: string;
+  today?: IsoDay;
+}): Promise<number | null> {
+  const dow = p.session.day_of_week;
+  if (dow == null) return 0;
+  const weeks = await listCycleMicrocycles(p.cycleId);
+  if (weeks.length === 0) return null;
+  const today = p.today ?? localIsoDay();
+  // Marge d'une semaine : une séance déplacée hors du cycle couvre encore sa semaine d'origine.
+  const logs = await listSessionLogsBetween({
+    athleteId: p.athleteId, sessionId: p.session.id,
+    from: addDays(weeks[0].start_date, -7), to: addDays(weeks[weeks.length - 1].end_date, 7),
+  });
+  const rows = planRecurringPlacement(weeks, logs, dow, today);
+  await planWorkoutsIfAbsent(rows.map((r) => ({
+    athleteId: p.athleteId, coachId: p.coachId, sessionId: p.session.id, sessionName: p.session.name,
+    date: r.date, microcycleId: r.microcycleId, weekNumber: r.weekNumber,
+  })));
+  return rows.length;
+}
+
+/**
+ * Après création ou modification d'une séance de la programmation : si elle
+ * est hebdomadaire avec un jour, ses séances à venir suivent le nouveau jour
+ * (séances faites, commencées ou déplacées par l'athlète conservées) puis
+ * chaque semaine du cycle qui n'en a pas en reçoit une. Rien n'est supprimé.
+ */
+export async function syncRecurringSession(p: {
+  session: { id: string; name: string; recurrence?: string; day_of_week?: number | null };
+  /** Jour avant modification (absent à la création). */
+  previousDay?: number | null;
+  athleteId: string;
+  coachId: string;
+  cycleId: string;
+  today?: IsoDay;
+}): Promise<{ created: number; moved: number; failed: number; keptByAthlete: number }> {
+  const res = { created: 0, moved: 0, failed: 0, keptByAthlete: 0 };
+  const day = p.session.day_of_week;
+  if (p.session.recurrence !== "weekly" || day == null) return res;
+  if (p.previousDay != null && p.previousDay !== day) {
+    const r = await rescheduleSessionDay({ athleteId: p.athleteId, sessionId: p.session.id, newDay: day, today: p.today });
+    if (r) Object.assign(res, r);
+  }
+  res.created = (await scheduleRecurringInCycle({ ...p, session: p.session })) ?? 0;
+  return res;
 }

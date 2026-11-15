@@ -183,6 +183,7 @@ export function CalendarMonthView({
     );
 
     const out: CalEvent[] = [];
+    const todayStr = format(new Date(), "yyyy-MM-dd");
     // Only project recurring sessions that have a day_of_week
     const recurring = progSessions.filter(
       (s) => s.recurrence === "weekly" && s.day_of_week != null
@@ -196,17 +197,17 @@ export function CalendarMonthView({
         const dateStr = format(d, "yyyy-MM-dd");
         if (activeCyc && (dateStr < activeCyc.start_date || dateStr > activeCyc.end_date)) continue;
         const weekNum = w + 1;
+        // Jour passé sans séance concrète : elle n'a jamais été posée, ce n'est
+        // pas une séance « manquée » (ex. séance créée en cours de cycle).
+        if (dateStr < todayStr) continue;
         if (isProjectionCovered(coverage, sess.id, dateStr, weekNum)) continue;
-
-        const todayStr = format(new Date(), "yyyy-MM-dd");
-        const projStatus = dateStr < todayStr ? "missed" : "planned";
 
         out.push({
           id:     `block-${sess.id}-w${weekNum}`,
           title:  sess.name,
           date:   dateStr,
           type:   "workout",
-          status: projStatus,
+          status: "planned",
           raw:    { session_id: sess.id, source: "block_plan", week: weekNum },
         });
       }

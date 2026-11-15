@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { fakeDb, type Row } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
-import { getActivePlan, getCalendarEvents, getTimeline, getWeekWorkouts, placeSession } from "@/api/planning";
+import { getActivePlan, getCalendarEvents, getTimeline, getWeekWorkouts, placeSession, syncRecurringSession } from "@/api/planning";
 
 const A = "ath-1";
 
@@ -158,5 +158,49 @@ describe("placeSession", () => {
     setDbForTests(db);
     await placeSession({ session: { id: "s7", name: "Test" }, athleteId: A, coachId: "coach", date: "2026-11-12", weekNumber: 2 });
     expect(tables.workout_logs).toEqual([expect.objectContaining({ session_id: "s7", scheduled_date: "2026-11-12", status: "planned", week_number: 2 })]);
+  });
+});
+
+describe("syncRecurringSession", () => {
+  const base = { athleteId: A, coachId: "coach", cycleId: "c-now", today: "2026-11-10" };
+
+  it("création d'une séance du lundi : concrète sur les semaines restantes, une seule fois", async () => {
+    const { db, tables } = seed({ workout_logs: [] });
+    setDbForTests(db);
+    const session = { id: "lun", name: "Haut du corps", recurrence: "weekly", day_of_week: 0 };
+    const r = await syncRecurringSession({ ...base, session });
+    expect(r.created).toBe(2);
+    expect(tables.workout_logs.map((l) => [l.scheduled_date, l.status, l.week_number, l.microcycle_id])).toEqual([
+      ["2026-11-16", "planned", 3, "w3"], ["2026-11-23", "planned", 4, "w4"],
+    ]);
+    // Rejouée (nouvelle modification) : rien de plus.
+    expect((await syncRecurringSession({ ...base, session })).created).toBe(0);
+    expect(tables.workout_logs).toHaveLength(2);
+  });
+
+  it("changement de jour : séances à venir déplacées, séance commencée et faite conservées, rien supprimé", async () => {
+    const { db, tables } = seed({
+      workout_logs: [
+        // `microcycles` : jointure simulée (start_date de la semaine), comme dans program.test.ts.
+        log("fait", "2026-11-09", { session_id: "lun", status: "completed", microcycle_id: "w2", microcycles: { start_date: "2026-11-09" } }),
+        log("commence", "2026-11-16", { session_id: "lun", status: "in_progress", microcycle_id: "w3", original_scheduled_date: "2026-11-16", microcycles: { start_date: "2026-11-16" } }),
+        log("prevu", "2026-11-23", { session_id: "lun", microcycle_id: "w4", original_scheduled_date: "2026-11-23", microcycles: { start_date: "2026-11-23" } }),
+      ],
+    });
+    setDbForTests(db);
+    const r = await syncRecurringSession({
+      ...base, session: { id: "lun", name: "Haut du corps", recurrence: "weekly", day_of_week: 2 }, previousDay: 0,
+    });
+    expect(r).toMatchObject({ moved: 1, created: 0 });
+    const byId = Object.fromEntries(tables.workout_logs.map((l) => [l.id, l.scheduled_date]));
+    expect(byId).toEqual({ fait: "2026-11-09", commence: "2026-11-16", prevu: "2026-11-25" });
+  });
+
+  it("séance ponctuelle ou sans jour : rien", async () => {
+    const { db, tables } = seed({ workout_logs: [] });
+    setDbForTests(db);
+    await syncRecurringSession({ ...base, session: { id: "x", name: "X", recurrence: "once" } });
+    await syncRecurringSession({ ...base, session: { id: "y", name: "Y", recurrence: "weekly" } });
+    expect(tables.workout_logs).toEqual([]);
   });
 });

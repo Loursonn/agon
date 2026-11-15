@@ -4,6 +4,7 @@ import {
   isProjectionCovered,
   mondayOfISO,
   planDayChange,
+  planRecurringPlacement,
   planUnplannedStart,
 } from "@/lib/planningProjection";
 
@@ -85,5 +86,52 @@ describe("planDayChange", () => {
     ], 2);
     expect(r.updates).toEqual([{ id: "a", scheduled_date: "2026-10-21" }]);
     expect(r.keptByAthlete).toBe(1);
+  });
+});
+
+describe("planDayChange — séance commencée", () => {
+  it("une séance commencée garde son jour", () => {
+    const r = planDayChange([{ id: "a", week_start: "2026-10-19", status: "in_progress" }], 2);
+    expect(r.updates).toEqual([]);
+  });
+});
+
+describe("planRecurringPlacement", () => {
+  const weeks = ["2026-11-02", "2026-11-09", "2026-11-16", "2026-11-23"].map((d, i) => ({
+    id: `w${i + 1}`, week_number: i + 1, start_date: d,
+    end_date: `2026-11-${String(Number(d.slice(8)) + 6).padStart(2, "0")}`,
+  }));
+
+  it("séance du lundi créée en cours de cycle : un lundi concret par semaine restante, aucun dans le passé", () => {
+    expect(planRecurringPlacement(weeks, [], 0, "2026-11-10")).toEqual([
+      { date: "2026-11-16", microcycleId: "w3", weekNumber: 3 },
+      { date: "2026-11-23", microcycleId: "w4", weekNumber: 4 },
+    ]);
+  });
+
+  it("le jour même compte (lundi = aujourd'hui)", () => {
+    expect(planRecurringPlacement(weeks, [], 0, "2026-11-16").map((r) => r.date)).toEqual(["2026-11-16", "2026-11-23"]);
+  });
+
+  it("une semaine qui a déjà sa séance (faite, sautée, déplacée par l'athlète) n'en reçoit pas une 2e", () => {
+    const logs = [
+      { scheduled_date: "2026-11-18", original_scheduled_date: "2026-11-16", microcycle_id: "w3" }, // déplacée au mercredi
+      { scheduled_date: "2026-11-25", original_scheduled_date: null, microcycle_id: null },          // ancienne, sans semaine
+    ];
+    expect(planRecurringPlacement(weeks, logs, 0, "2026-11-01")).toEqual([
+      { date: "2026-11-02", microcycleId: "w1", weekNumber: 1 },
+      { date: "2026-11-09", microcycleId: "w2", weekNumber: 2 },
+    ]);
+  });
+
+  it("séance déplacée vers la semaine suivante : couvre sa semaine d'origine, pas la suivante", () => {
+    const logs = [{ scheduled_date: "2026-11-17", original_scheduled_date: "2026-11-13", microcycle_id: null }];
+    expect(planRecurringPlacement(weeks, logs, 4, "2026-11-01").map((r) => r.weekNumber)).toEqual([1, 3, 4]);
+  });
+
+  it("cycle commencé un mercredi : pas de lundi la 1re semaine", () => {
+    const w = [{ id: "x1", week_number: 1, start_date: "2026-11-04", end_date: "2026-11-10" }];
+    expect(planRecurringPlacement(w, [], 0, "2026-11-01")).toEqual([]);
+    expect(planRecurringPlacement(w, [], 4, "2026-11-01")).toEqual([{ date: "2026-11-06", microcycleId: "x1", weekNumber: 1 }]);
   });
 });
