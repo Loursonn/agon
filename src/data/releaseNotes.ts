@@ -124,7 +124,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       {
         title: "Les sorties de la semaine",
         points: [
-          "Sous le graphique : le total de la semaine, sa durée, son dénivelé, et l'écart avec la semaine précédente (en km et en %).",
+          "En tête : le total de la semaine en grand, sa durée, son dénivelé, l'écart avec la semaine précédente (en km et en %), et une frise des 7 jours qui montre quand l'athlète a couru.",
           "Chaque sortie avec son nom, son jour, sa distance, sa durée, son allure, son D+ et d'où elle vient (montre, fichier importé, saisie). Un clic ouvre son détail.",
           "Le vélo, la natation ou le HYROX de la semaine apparaissent à part, hors du total de course.",
           "Les flèches passent d'une semaine à l'autre. Dans Profil athlète → Général, et dans le profil de l'athlète.",
