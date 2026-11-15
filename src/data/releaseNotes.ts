@@ -38,6 +38,32 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-volume-course-semaine",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "Volume de course : 12 semaines, et toutes les sorties d'une semaine d'un geste",
+    summary:
+      "Le graphique des km de course par semaine est plus lisible, et un clic (ou un toucher sur téléphone) sur une semaine affiche toutes ses sorties.",
+    sections: [
+      {
+        title: "Le graphique",
+        points: [
+          "12 semaines au lieu de 8, avec la moyenne des semaines terminées en pointillé et la semaine en cours mise en avant.",
+          "Une semaine sans course s'affiche « — », jamais 0 km.",
+        ],
+      },
+      {
+        title: "Les sorties de la semaine",
+        points: [
+          "Sous le graphique : le total de la semaine, sa durée, son dénivelé, et l'écart avec la semaine précédente (en km et en %).",
+          "Chaque sortie avec son nom, son jour, sa distance, sa durée, son allure, son D+ et d'où elle vient (montre, fichier importé, saisie). Un clic ouvre son détail.",
+          "Le vélo, la natation ou le HYROX de la semaine apparaissent à part, hors du total de course.",
+          "Les flèches passent d'une semaine à l'autre. Dans Profil athlète → Général, et dans le profil de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-inscription-sur-invitation",
     date: "2026-11-16",
     kind: "feature",

@@ -251,7 +251,7 @@ export function ProfilGeneralTab() {
   const navigate = useNavigate();
   const { athleteId: urlAthleteId } = useParams<{ athleteId: string }>();
   const ap = athleteProfile as Profile | null;
-  const { volume: runVolume, isLoading: runLoading } = useRunningVolume(athleteId ?? undefined, freeSessions);
+  const { volume: runVolume, outings: runOutings, others: otherActivities, isLoading: runLoading } = useRunningVolume(athleteId ?? undefined, freeSessions);
   const { enabled: hyroxEnabled, toggling: hyroxToggling, toggle: toggleHyrox } = useHyroxFlag(athleteId);
   const { data: hyroxRaces = [] } = useHyroxResults(hyroxEnabled ? athleteId : undefined);
 
@@ -316,8 +316,14 @@ export function ProfilGeneralTab() {
       )}
 
       {/* ── 1b. Volume de course à pied ── */}
-      <Section icon={Footprints} title="Volume de course à pied" subtitle="Km réalisés : semaine, 7 jours glissants, 8 dernières semaines" tone="accent">
-        <RunningVolumeCard volume={runVolume} isLoading={runLoading} />
+      <Section icon={Footprints} title="Volume de course à pied" subtitle="Km réalisés : semaine, 7 jours glissants, 12 dernières semaines — touche une semaine pour ses sorties" tone="accent">
+        <RunningVolumeCard
+          volume={runVolume}
+          outings={runOutings}
+          others={otherActivities}
+          isLoading={runLoading}
+          activityHref={athleteId ? (id) => `/coach/athletes/${athleteId}/seance/${id}` : undefined}
+        />
       </Section>
 
       {/* ── 2. Composition & Nutrition ── */}

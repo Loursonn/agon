@@ -1,4 +1,5 @@
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
+import { backFrom } from "@/features/shared/components/seance/backFrom";
 import { useAuth } from "@/hooks/useAuth";
 import { SeanceView } from "@/features/shared/components/seance/SeanceView";
 
@@ -6,12 +7,13 @@ import { SeanceView } from "@/features/shared/components/seance/SeanceView";
 export default function ActivitySeancePage() {
   const { activityId = "" } = useParams<{ activityId: string }>();
   const { user } = useAuth();
+  const location = useLocation();
   return (
     <SeanceView
       athleteId={user?.id ?? ""}
       activityId={activityId}
       role="athlete"
-      back={{ to: "/athlete/program", label: "Programme" }}
+      back={backFrom(location.state) ?? { to: "/athlete/program", label: "Programme" }}
       thresholdsLink="/athlete/zones"
     />
   );

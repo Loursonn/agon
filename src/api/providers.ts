@@ -104,6 +104,9 @@ export interface WatchRun {
   distanceM: number | null;
   durationS: number | null;
   deviceName: string | null;
+  title: string | null;
+  elevationGainM: number | null;
+  avgPaceSPerKm: number | null;
 }
 
 /**
@@ -369,7 +372,7 @@ export async function getActivitiesBetween(athleteId: string, from: string, to: 
 export async function getWatchRuns(athleteId: string, from: string): Promise<WatchRun[]> {
   const rows = unwrapRows(
     await db().from("provider_activities")
-      .select("id, source, started_at, local_date, sport, distance_m, duration_s, device_name")
+      .select("id, source, started_at, local_date, sport, distance_m, duration_s, device_name, title, elevation_gain_m, avg_pace_s_per_km")
       .eq("athlete_id", athleteId)
       .gte("local_date", from)
       .order("started_at", { ascending: true })
@@ -385,6 +388,9 @@ export async function getWatchRuns(athleteId: string, from: string): Promise<Wat
     distanceM: num(r.distance_m),
     durationS: num(r.duration_s),
     deviceName: r.device_name ?? null,
+    title: r.title ?? null,
+    elevationGainM: num(r.elevation_gain_m),
+    avgPaceSPerKm: num(r.avg_pace_s_per_km),
   }));
 }
 
