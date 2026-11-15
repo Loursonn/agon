@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-a-faire-athlete",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "« À faire aujourd'hui » à l'ouverture de l'app athlète, et weekly review au choix",
+    summary:
+      "À la première ouverture du jour, votre athlète voit ce qu'il lui reste à faire : wellness, séance à terminer, votre retour, une fiche, sa compétition à raconter, sa weekly review. La weekly review devient une option que vous activez athlète par athlète.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Une fenêtre « À faire aujourd'hui » s'ouvre une fois par jour, seulement s'il reste quelque chose : wellness du jour, séance commencée mais pas terminée, retour du coach pas encore lu, nouvelle fiche, compétition passée sans bilan, weekly review (si vous l'avez activée).",
+          "Chaque ligne mène directement au bon endroit. « Plus tard » la ferme jusqu'au lendemain.",
+        ],
+      },
+      {
+        title: "Weekly review : à activer",
+        points: [
+          "Tous les athlètes n'ont pas besoin d'une weekly review : elle est désormais désactivée par défaut.",
+          "Pour l'activer : fiche de l'athlète › Profil › Identité › Accueil de l'athlète, case « Weekly review ».",
+          "La page Weekly reviews ne liste plus que les athlètes pour qui elle est activée.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-saisie-allures",
     date: "2026-11-16",
     kind: "fix",

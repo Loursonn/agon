@@ -19,6 +19,31 @@ export const HOME_LOCKED_SECTIONS = ["Retour du coach", "Séances du jour", "Jou
 
 export type HomeSectionKey = (typeof HOME_SECTIONS)[number]["key"];
 
+/**
+ * Sections désactivées par défaut, que le coach active athlète par athlète
+ * (weekly review : décision d'Hugo du 2026-11-15, « ça dépend du profil »).
+ * Rangées dans le même tableau `profiles.home_hidden_sections` sous la forme
+ * « +clé » (présent = activé), pour ne pas ajouter de colonne.
+ */
+export const HOME_OPT_IN_SECTIONS = [
+  { key: "weekly_review", label: "Weekly review" },
+] as const;
+
+export type HomeOptInKey = (typeof HOME_OPT_IN_SECTIONS)[number]["key"];
+
+const optInMarker = (k: HomeOptInKey) => `+${k}`;
+
+/** La section `k` est-elle activée par le coach ? (réglages bruts du profil) */
+export function isOptedIn(hidden: readonly string[] | null | undefined, k: HomeOptInKey): boolean {
+  return (hidden ?? []).includes(optInMarker(k));
+}
+
+/** Réglages avec la section `k` activée ou non. */
+export function withOptIn(hidden: readonly string[], k: HomeOptInKey, on: boolean): string[] {
+  const rest = hidden.filter((x) => x !== optInMarker(k));
+  return on ? [...rest, optInMarker(k)] : rest;
+}
+
 const DEFAULT_HIDDEN: HomeSectionKey[] = ["nutrition"];
 
 /** Sections masquées sur l'accueil de l'athlète (réglées par le coach) */
@@ -30,7 +55,13 @@ export function useHomeHiddenSections(athleteId: string | null | undefined) {
     queryFn: async () => (await getHomeHiddenSections(athleteId!)) ?? DEFAULT_HIDDEN,
   });
   const hidden = data ?? DEFAULT_HIDDEN;
-  return { hidden, isVisible: (k: HomeSectionKey) => !hidden.includes(k) };
+  return {
+    hidden,
+    isVisible: (k: HomeSectionKey) => !hidden.includes(k),
+    isEnabled: (k: HomeOptInKey) => isOptedIn(hidden, k),
+    /** Réglages encore en chargement : ne rien décider (une section activée clignoterait). */
+    isLoading: !!athleteId && data === undefined,
+  };
 }
 
 export function useSetHomeHiddenSections(athleteId: string) {

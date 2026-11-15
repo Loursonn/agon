@@ -5,6 +5,7 @@ import { C } from "@/lib/theme";
 import { addDays, localIsoDay } from "@shared/domain/dates";
 import { useAuth } from "@/hooks/useAuth";
 import { useCoachWeekReviews } from "@/features/shared/hooks/useWeeklyReview";
+import { isOptedIn } from "@/features/shared/hooks/useHomeSections";
 import { LIGHT_COLOR, LIGHT_LABEL } from "@/features/shared/components/weekly-review/reviewStyle";
 import { REVIEW_STATE_LABEL, lastReviewWeek, reviewState, type ReviewState } from "@/lib/weekly-review";
 
@@ -21,7 +22,9 @@ const STATE_ORDER: Record<ReviewState, number> = { received: 0, waiting: 1, draf
  */
 export default function CoachReviewsPage() {
   const navigate = useNavigate();
-  const { athletes } = useAuth();
+  const { athletes: allAthletes } = useAuth();
+  // Weekly review activée athlète par athlète (désactivée par défaut, décision du 2026-11-15).
+  const athletes = useMemo(() => allAthletes.filter((a) => isOptedIn(a.home_hidden_sections, "weekly_review")), [allAthletes]);
   const today = localIsoDay();
   const [week, setWeek] = useState(() => lastReviewWeek(today));
   const ids = useMemo(() => athletes.map((a) => a.id), [athletes]);
@@ -58,7 +61,11 @@ export default function CoachReviewsPage() {
       ) : isLoading ? (
         <div style={{ marginTop: 20, color: C.tx3, fontSize: 13 }}>Chargement…</div>
       ) : rows.length === 0 ? (
-        <div style={{ marginTop: 20, color: C.tx3, fontSize: 13 }}>Aucun athlète.</div>
+        <div style={{ marginTop: 20, color: C.tx3, fontSize: 13 }}>
+          {allAthletes.length === 0
+            ? "Aucun athlète."
+            : "Aucun athlète n'a la weekly review activée. Active-la dans sa fiche : Profil › Identité › Accueil de l'athlète."}
+        </div>
       ) : (
         <div style={{ marginTop: 18, borderRadius: 12, border: `1px solid ${C.brd}`, background: C.s1, overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>

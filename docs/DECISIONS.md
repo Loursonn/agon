@@ -2706,3 +2706,17 @@ et son README.
   « séance : <nom> », zones, commentaire) ; une blessure née d'une séance n'est pas répétée en ligne « blessure ».
 - **Coach** : la blessure apparaît dans le profil santé et les badges « blessure active » ; sur la séance, pastille
   « Douleur » (Retours semaine et mois, panneau du jour, tiroir « Prévu et réalisé »), lue dans les suivis.
+
+## 2026-11-16 — Fenêtre « À faire » athlète et weekly review au choix
+
+**Contexte** : idée d'Hugo (14/11) : quand un athlète a des choses à faire, une fenêtre s'ouvre à l'ouverture de l'app, et si possible une notification.
+
+**Décisions d'Hugo (15/11)** :
+- Contenu : wellness du jour, séance pas terminée, retour du coach sans réaction, fiche jamais ouverte, compétition passée sans bilan, weekly review. Pas le test du jour.
+- Une fois par jour (première ouverture du jour, s'il reste quelque chose) ; le wellness est une ligne de la liste, il ne s'ouvre pas tout seul.
+- Notifications : plus tard, avec l'app native (Capacitor, 2027). Sur iPhone, le web ne notifie que si l'app est installée sur l'écran d'accueil.
+- Weekly review **désactivée par défaut**, activée par le coach athlète par athlète (« ça dépend du profil »). Désactivée : plus de bandeau, plus de ligne, page vide côté athlète ; l'athlète sort de la page coach Weekly reviews. L'historique reste visible dans l'onglet Review de l'athlète.
+
+**Choix techniques** :
+- Logique pure dans `src/lib/athleteTodo.ts`, fenêtre `AthleteTodoSheet` montée dans `AthleteLayout`, attend qu'aucune autre fenêtre ne soit ouverte. « Déjà vue aujourd'hui » : localStorage par compte (`agon:todo-shown:<uid>`), donc par appareil.
+- Activation de la weekly review rangée dans `profiles.home_hidden_sections` sous la forme `+weekly_review` (sections « à activer », `HOME_OPT_IN_SECTIONS`) : pas de colonne ni de migration, prod gelée ce jour-là. À migrer vers une vraie colonne si d'autres options s'ajoutent.

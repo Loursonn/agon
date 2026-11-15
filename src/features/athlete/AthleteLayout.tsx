@@ -8,6 +8,7 @@ import { AgonIcon } from "@/components/ui/AgonIcon";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
+import { AthleteTodoSheet } from "./components/AthleteTodoSheet";
 import { useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
 import { shouldShowOnboarding } from "@/lib/onboarding";
 import { useAuth } from "@/hooks/useAuth";
@@ -549,6 +550,11 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
       {drawerOpen && <Suspense fallback={null}><ProfileDrawer onClose={() => setDrawerOpen(false)} /></Suspense>}
 
       <FicheViewerHost athleteId={athleteId} viewOnly={viewOnly} />
+
+      {/* « À faire » : une fois par jour, quand aucune autre fenêtre n'est ouverte. */}
+      {!viewOnly && (
+        <AthleteTodoSheet uid={user?.id} blocked={onboarding || showWellness || showAppFeedback || drawerOpen || isOnWorkoutPage || !!activeWorkout} />
+      )}
 
       {onboarding && user && (
         <Suspense fallback={null}>

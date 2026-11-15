@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { localIsoDay, addDays, isIsoDay } from "@shared/domain/dates";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
+import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 import { useWellnessLight } from "@/features/shared/hooks/useWellnessLight";
 import { useWeeklyCoachRetour } from "@/features/shared/hooks/useWeeklyCoachRetour";
 import {
@@ -96,7 +97,26 @@ function PainReminder({ reports }: { reports: readonly PainReport[] }) {
  * Brouillon enregistré en base à chaque champ (repris après fermeture), bilan
  * automatique figé à l'envoi. `?week=YYYY-MM-DD` : relire une review passée.
  */
+/**
+ * Weekly review activée par le coach, athlète par athlète (désactivée par
+ * défaut, décision d'Hugo du 2026-11-15) : sinon rien à remplir.
+ */
 export default function WeeklyReviewPage() {
+  const { athleteId } = useAthleteContext();
+  const { isEnabled, isLoading } = useHomeHiddenSections(athleteId);
+  if (isLoading) return null;
+  if (!isEnabled("weekly_review")) {
+    return (
+      <div className="mx-auto max-w-[520px]">
+        <AthletePageHeader title="Ta weekly review" titleSize={22} />
+        <p className="px-4 text-[14px] text-agon-tx2">Ton coach n'a pas activé la weekly review pour toi.</p>
+      </div>
+    );
+  }
+  return <WeeklyReviewForm />;
+}
+
+function WeeklyReviewForm() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { athleteId } = useAthleteContext();

@@ -10,12 +10,14 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { User, Flame, Moon, ListChecks, Award, Zap, Footprints, LayoutDashboard, Lock } from "lucide-react";
-import { HOME_LOCKED_SECTIONS, HOME_SECTIONS, useHomeHiddenSections, useSetHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
+import {
+  HOME_LOCKED_SECTIONS, HOME_OPT_IN_SECTIONS, HOME_SECTIONS, isOptedIn, useHomeHiddenSections, useSetHomeHiddenSections, withOptIn,
+} from "@/features/shared/hooks/useHomeSections";
 import { C } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import CoachPerfNotification from "@/components/coach/CoachPerfNotification";
-import type { Profile } from "@/hooks/useAuth";
+import { useAuth, type Profile } from "@/hooks/useAuth";
 import { coachBirthDateHint } from "@/lib/aiBirthDateNotice";
 import type { Goals, Habit } from "@/features/shared/types/athlete";
 import { useHyroxFlag } from "@/features/shared/hooks/hyrox/useHyroxFlag";
@@ -463,6 +465,7 @@ const HOME_ITEM = "flex items-center gap-2.5 rounded-[4px] border px-3 py-[9px] 
 function HomeSectionsEditor({ athleteId }: { athleteId: string }) {
   const { hidden } = useHomeHiddenSections(athleteId);
   const setHidden = useSetHomeHiddenSections(athleteId);
+  const { refreshAthletes } = useAuth();
 
   const toggle = (key: string) =>
     setHidden.mutate(hidden.includes(key) ? hidden.filter((k) => k !== key) : [...hidden, key]);
@@ -494,6 +497,26 @@ function HomeSectionsEditor({ athleteId }: { athleteId: string }) {
               className="size-[15px] shrink-0 cursor-pointer accent-agon-accent"
             />
             <span className="flex-1">{label}</span>
+          </label>
+        );
+      })}
+      {/* Désactivées par défaut : le coach coche les athlètes concernés. */}
+      {HOME_OPT_IN_SECTIONS.map(({ key, label }) => {
+        const on = isOptedIn(hidden, key);
+        return (
+          <label
+            key={key}
+            className={cn(HOME_ITEM, "cursor-pointer", on ? "border-agon-accent/[0.314] bg-agon-accent-doux text-agon-tx" : "border-agon-brd bg-agon-s2 text-agon-tx3")}
+          >
+            <input
+              type="checkbox"
+              checked={on}
+              // La page Weekly reviews lit la liste des athlètes du coach : on la recharge.
+              onChange={() => setHidden.mutate(withOptIn(hidden, key, !on), { onSuccess: () => void refreshAthletes() })}
+              className="size-[15px] shrink-0 cursor-pointer accent-agon-accent"
+            />
+            <span className="flex-1">{label}</span>
+            {!on && <span className="text-[10px]">désactivée</span>}
           </label>
         );
       })}

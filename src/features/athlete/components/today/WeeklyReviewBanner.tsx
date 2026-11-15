@@ -4,17 +4,21 @@ import { C } from "@/lib/theme";
 import { addDays, localIsoDay } from "@shared/domain/dates";
 import { openReviewWeek } from "@/lib/weekly-review";
 import { useWeeklyReview } from "@/features/shared/hooks/useWeeklyReview";
+import { useHomeHiddenSections } from "@/features/shared/hooks/useHomeSections";
 
 /**
  * Relance de la weekly review sur l'accueil : le dimanche et le lundi, tant
- * qu'elle n'est pas envoyée. Rien les autres jours.
+ * qu'elle n'est pas envoyée. Rien les autres jours, ni si le coach ne l'a pas
+ * activée pour cet athlète.
  */
 export function WeeklyReviewBanner({ athleteId }: { athleteId: string | null | undefined }) {
   const navigate = useNavigate();
   const today = localIsoDay();
   const week = openReviewWeek(today);
-  const { data: review, isLoading } = useWeeklyReview(athleteId, week);
-  if (!week || isLoading || review?.status === "submitted") return null;
+  const { isEnabled } = useHomeHiddenSections(athleteId);
+  const enabled = isEnabled("weekly_review");
+  const { data: review, isLoading } = useWeeklyReview(athleteId, enabled ? week : null);
+  if (!enabled || !week || isLoading || review?.status === "submitted") return null;
   const monday = today === addDays(week, 7);
   return (
     <button type="button" onClick={() => navigate("/athlete/review")}

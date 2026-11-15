@@ -20,6 +20,7 @@ vi.mock("@/features/shared/hooks/useMedicalEntries", () => ({ useActiveInjuries:
 vi.mock("@/features/shared/hooks/useUnfinishedWorkouts", () => ({ useUnfinishedWorkouts: () => ({ data: [] }) }));
 vi.mock("@/features/staff/hooks/useAthleteStaff", () => ({ useAthleteStaff: () => ({ data: [] }) }));
 vi.mock("@/features/shared/components/fiches/FicheViewerHost", () => ({ FicheViewerHost: () => null }));
+vi.mock("@/features/athlete/components/AthleteTodoSheet", () => ({ AthleteTodoSheet: () => null }));
 vi.mock("@/features/athlete/components/ProfileDrawer", () => ({ default: () => <div>Tiroir profil</div> }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: null, profile: null }) }));
 vi.mock("@/features/shared/hooks/useCoCoach", () => ({ useAthleteCoaches: () => ({ data: null }) }));
