@@ -79,9 +79,8 @@ function PainReminder({ reports }: { reports: readonly PainReport[] }) {
       <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
         {reports.map((r, i) => (
           <li key={i} className="rounded-[10px] border border-agon-brd bg-agon-s2 px-3 py-2 text-[13px]">
-            <div className="flex flex-wrap gap-x-2">
-              <span className="text-agon-tx3">{fmtShortDay(r.day)}</span>
-              <span className="text-agon-tx3">· {r.source === "wellness" ? "wellness du matin" : "blessure"}</span>
+            <div className="text-agon-tx3">
+              {fmtShortDay(r.day)} · {r.source === "wellness" ? "wellness du matin" : "blessure"}
             </div>
             <div className="text-agon-tx">{r.text}</div>
             {r.comment && <div className="mt-0.5 whitespace-pre-wrap italic text-agon-tx2">« {r.comment} »</div>}
