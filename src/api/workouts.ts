@@ -10,6 +10,7 @@ import {
 import { workoutStats, type WorkoutStats } from "@shared/domain/workoutStats";
 import { ApiError, check, db, unwrap, unwrapRows } from "./client";
 import { isUntouchedSession } from "@/lib/missedSession";
+import { athleteChanges } from "@/lib/athleteChanges";
 
 /**
  * Séances réalisées (`workout_logs`) — seule source des séances (lot 2,
@@ -117,7 +118,6 @@ export const workoutKeys = {
     ["workouts", aid, "previous", sessionId, excludeId, onOrBefore] as const,
   unfinished: (aids: readonly string[]) => ["workouts", "_many", sorted(aids), "unfinished"] as const,
   choices: (aid: string) => ["workouts", aid, "choices"] as const,
-  choicesCount: (aid: string) => ["workouts", aid, "choices-count"] as const,
   stats: (aid: string) => ["workouts", aid, "stats"] as const,
 };
 
@@ -212,64 +212,61 @@ export interface AthleteChoiceLog {
   sessionName: string;
   scheduledDate: IsoDay;
   originalScheduledDate: IsoDay;
+  /** Date d'origine telle qu'enregistrée (null = inconnue). */
+  recordedOriginalDate: IsoDay | null;
   rescheduledByAthlete: boolean;
   /** Plus de colonne en base : toujours `null` (gardé pour l'affichage existant). */
   rescheduleReason: null;
   coachAlert: boolean;
   athleteModifications: AthleteMods | null;
   status: WorkoutStatus;
+  /** Dernière écriture sur la séance. */
+  updatedAt: string | null;
 }
 
 const CHOICE_COLS =
-  "id, session_name, scheduled_date, original_scheduled_date, rescheduled_by_athlete, coach_alert, athlete_modifications, status";
+  "id, session_name, scheduled_date, original_scheduled_date, rescheduled_by_athlete, coach_alert, athlete_modifications, status, updated_at";
 
 /**
- * Deux requêtes (saisie présente / déplacée sans saisie) plutôt qu'un `.or()` :
- * même résultat, et la base simulée des tests les comprend. L'ancienne version
- * demandait `reschedule_reason`, colonne qui n'existe pas : la requête
- * échouait et la section « modifications » des Retours restait vide.
+ * Séances que l'athlète a modifiées (règle : `toAthleteChange`, src/lib/athleteChanges) :
+ * déplacées par lui, ou portant des séries / exercices ajoutés (ancien format).
+ * Une simple saisie (charges, forme, commentaire) n'en est pas une : avant le
+ * 2026-11-15 elle comptait, et le badge « N modifs » valait le nombre de
+ * séances faites. Deux requêtes plutôt qu'un `.or()` (la base simulée des
+ * tests les comprend).
  */
 export async function listAthleteChoices(athleteId: string, limit = 50): Promise<AthleteChoiceLog[]> {
-  const [withMods, movedOnly] = await Promise.all([
+  const [moved, withMods] = await Promise.all([
     db().from("workout_logs").select(CHOICE_COLS)
-      .eq("athlete_id", athleteId).not("athlete_modifications", "is", null)
+      .eq("athlete_id", athleteId).eq("rescheduled_by_athlete", true)
       .order("scheduled_date", { ascending: false }).limit(limit),
     db().from("workout_logs").select(CHOICE_COLS)
-      .eq("athlete_id", athleteId).eq("rescheduled_by_athlete", true).is("athlete_modifications", null)
+      .eq("athlete_id", athleteId).eq("rescheduled_by_athlete", false).not("athlete_modifications", "is", null)
       .order("scheduled_date", { ascending: false }).limit(limit),
   ]);
-  const rows = [
+  const raw = [
+    ...unwrapRows<RawRow>(moved as never, "Lecture des choix de l'athlète impossible"),
     ...unwrapRows<RawRow>(withMods as never, "Lecture des choix de l'athlète impossible"),
-    ...unwrapRows<RawRow>(movedOnly as never, "Lecture des choix de l'athlète impossible"),
-  ]
-    .map(toWorkoutLog)
-    .sort((a, b) => (a.scheduled_date < b.scheduled_date ? 1 : a.scheduled_date > b.scheduled_date ? -1 : 0))
-    .slice(0, limit);
-  return rows.map((w) => ({
+  ];
+  const updatedAt = new Map(raw.map((r) => [String(r.id), (r.updated_at as string | null) ?? null]));
+  const logs: AthleteChoiceLog[] = raw.map(toWorkoutLog).map((w) => ({
     id: w.id,
     sessionName: w.session_name,
     scheduledDate: w.scheduled_date,
     originalScheduledDate: w.original_scheduled_date ?? w.scheduled_date,
+    recordedOriginalDate: w.original_scheduled_date,
     rescheduledByAthlete: w.rescheduled_by_athlete,
     rescheduleReason: null,
     coachAlert: w.coach_alert,
     athleteModifications: w.athlete_modifications,
     status: w.status,
+    updatedAt: updatedAt.get(w.id) ?? null,
   }));
-}
-
-/** Nombre de séances concernées (badge de la barre coach). */
-export async function countAthleteChoices(athleteId: string): Promise<number> {
-  const head = { count: "exact" as const, head: true };
-  const [a, b] = await Promise.all([
-    db().from("workout_logs").select("id", head).eq("athlete_id", athleteId).not("athlete_modifications", "is", null),
-    db().from("workout_logs").select("id", head).eq("athlete_id", athleteId).eq("rescheduled_by_athlete", true).is("athlete_modifications", null),
-  ]);
-  const n = (res: { count?: number | null; data?: unknown; error: { message: string } | null }) => {
-    if (res.error) throw new ApiError("Comptage des choix de l'athlète impossible", res.error);
-    return res.count ?? (Array.isArray(res.data) ? res.data.length : 0);
-  };
-  return n(a as never) + n(b as never);
+  const keep = new Set(athleteChanges(logs).map((c) => c.id));
+  return logs
+    .filter((l) => keep.has(l.id))
+    .sort((a, b) => (a.scheduledDate < b.scheduledDate ? 1 : a.scheduledDate > b.scheduledDate ? -1 : 0))
+    .slice(0, limit);
 }
 
 /** Série et total de séances validées, depuis `workout_logs`. */

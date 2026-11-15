@@ -5,14 +5,14 @@ import { mergeEntries } from "@shared/domain/athleteMods";
 import { setDbForTests } from "@/api/client";
 import {
   deletePlannedWorkouts, listWorkoutLogs, listUnfinishedWorkouts, getPreviousLoggedWorkout,
-  listAthleteChoices, countAthleteChoices, completeWorkout, patchWorkoutEntries, setWorkoutRpe,
+  listAthleteChoices, completeWorkout, patchWorkoutEntries, setWorkoutRpe,
   setCoachOverride, reopenWorkout, removeWorkout, skipWorkout, rescheduleWorkoutByAthlete,
   invalidateWorkouts, workoutKeys, getWorkoutStats, isWorkoutNotFound, getWorkoutLog, planWorkout,
 } from "@/api/workouts";
 
 const log = (id: string, o: Record<string, unknown>) => ({
   id, athlete_id: "a", microcycle_id: "m1", scheduled_date: "2026-11-10",
-  status: "planned", athlete_modifications: null, rpe_score: null, ...o,
+  status: "planned", athlete_modifications: null, rpe_score: null, rescheduled_by_athlete: false, ...o,
 });
 
 function seed() {
@@ -128,21 +128,26 @@ describe("lectures", () => {
     expect(prev?.id).toBe("ancienne");
   });
 
-  it("choix de l'athlète : saisie OU déplacement, sans reschedule_reason, triés, comptés", async () => {
+  it("choix de l'athlète : déplacements et ajouts seulement, pas la simple saisie", async () => {
     const { db } = fakeDb({
       workout_logs: [
-        log("saisie", { scheduled_date: "2026-11-01", athlete_modifications: { sessionComment: "ok" } }),
-        log("deplacee", { scheduled_date: "2026-11-03", rescheduled_by_athlete: true, original_scheduled_date: "2026-11-02" }),
+        log("saisie", { scheduled_date: "2026-11-01", athlete_modifications: { sessionComment: "ok", sessionSets: { e: [{ kg: 60 }] } } }),
+        log("deplacee", { scheduled_date: "2026-11-03", rescheduled_by_athlete: true, original_scheduled_date: "2026-11-02", updated_at: "2026-11-01T08:00:00Z" }),
         log("deplacee-saisie", { scheduled_date: "2026-11-04", rescheduled_by_athlete: true, athlete_modifications: { sessionForme: 3 } }),
+        log("remise", { scheduled_date: "2026-11-06", rescheduled_by_athlete: true, original_scheduled_date: "2026-11-06" }),
+        log("bonus", { scheduled_date: "2026-10-01", athlete_modifications: { bonusSets: [{ sets: [{}, {}] }] } }),
+        log("override-coach", { scheduled_date: "2026-11-07", athlete_modifications: { coachOverride: { blocs: [] } } }),
         log("rien", { scheduled_date: "2026-11-05" }),
       ],
     });
     setDbForTests(db);
     const rows = await listAthleteChoices("a");
-    expect(rows.map((r) => r.id)).toEqual(["deplacee-saisie", "deplacee", "saisie"]);
-    expect(rows[1]).toMatchObject({ originalScheduledDate: "2026-11-02", rescheduledByAthlete: true, rescheduleReason: null });
-    expect(rows[0].originalScheduledDate).toBe("2026-11-04");
-    expect(await countAthleteChoices("a")).toBe(3);
+    expect(rows.map((r) => r.id)).toEqual(["deplacee-saisie", "deplacee", "bonus"]);
+    expect(rows[1]).toMatchObject({
+      originalScheduledDate: "2026-11-02", recordedOriginalDate: "2026-11-02", rescheduledByAthlete: true,
+      rescheduleReason: null, updatedAt: "2026-11-01T08:00:00Z",
+    });
+    expect(rows[0]).toMatchObject({ originalScheduledDate: "2026-11-04", recordedOriginalDate: null });
   });
 
   it("série et total depuis workout_logs", async () => {
@@ -278,7 +283,7 @@ describe("suppression / annulation", () => {
 
 describe("invalidateWorkouts", () => {
   const keys: (readonly unknown[])[] = [
-    workoutKeys.log("a", "w"), workoutKeys.unfinished(["a", "b"]), workoutKeys.choicesCount("a"),
+    workoutKeys.log("a", "w"), workoutKeys.unfinished(["a", "b"]), workoutKeys.choices("a"),
     ["workout-log-detail", "w"], ["cal", "a", "range", "2026-11-01", "2026-11-30"], ["workout-logs-week", "a", "2026-11-09"],
     ["activePlan", "a", 0], ["weeklyRetours", "a", "2026-11-09"], ["monthlyRetours", "a", "2026-11"],
     ["micro-stats", "a", "x", "y"], ["meso-load", "meso1", "a"], ["timeline-data", "a", "s", "e"], ["micro-days", "a", "s", "e"],

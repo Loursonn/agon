@@ -38,6 +38,39 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-badge-modifs-athlete",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Le badge « modifs » de la fiche athlète compte juste",
+    summary: "Le badge orange en haut à droite ne compte plus que ce que votre athlète a vraiment changé, et vous montre quoi.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Avant, il comptait toutes les séances où l'athlète avait saisi ses charges, depuis toujours. Maintenant : les séances qu'il a déplacées (et les séries ou exercices qu'il a ajoutés), sur les 4 dernières semaines et à venir.",
+          "Un clic sur le badge ouvre la liste : la séance, ce qui a changé (déplacée du mardi au jeudi…), par qui et quand. Les nouvelles ont un point orange.",
+          "Une fois la liste refermée, elles sont vues : le badge disparaît jusqu'à la prochaine modification. « Tout voir dans Retours » mène à la liste complète.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-accueil-records-athletes",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Accueil : records et tests de vos athlètes seulement",
+    summary: "Si vous vous entraînez aussi dans Agon, vos propres mesures ne se mélangent plus à celles de vos athlètes sur l'accueil.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bloc « Records & tests » et la tuile « Tests à venir » ne montrent plus que vos athlètes, y compris ceux que vous suivez en co-coach.",
+          "Vos propres résultats restent dans votre programme personnel.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-seance-hebdo-concrete-cycle",
     date: "2026-11-15",
     kind: "fix",
