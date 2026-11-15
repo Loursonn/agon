@@ -38,6 +38,39 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-fiches-categorie-test",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Fiches : une catégorie « Test »",
+    summary: "Rangez à part les fiches qui accompagnent vos tests : protocole, consignes de passation.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans Fiches, un nouveau filtre « Test » regroupe les fiches de vos tests (saut, biométrie, bilan…).",
+          "Pour y ranger une fiche : ouvrez-la et choisissez la catégorie « Test ». Elle reste dans votre banque, sans être liée à un athlète tant que vous ne la donnez pas.",
+          "Votre assistant Claude peut aussi déposer directement ses fiches de test dans cette catégorie.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-assistant-retire-ses-fiches",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Assistant Claude : il retire de nouveau ses fiches",
+    summary: "Une fiche déposée par votre assistant puis retouchée dans Agon ne lui était plus « connue » : il ne pouvait plus la retirer.",
+    sections: [
+      {
+        title: "Ce qui est corrigé",
+        points: [
+          "Votre assistant reconnaît toujours les fiches qu'il a déposées, même si vous avez changé leurs tags ou leur catégorie : il peut retirer un doublon tant qu'aucun athlète ne l'a reçu.",
+          "Quand une fiche est la vôtre (importée par vous dans Agon), il vous le dit clairement au lieu de répondre qu'elle n'existe pas.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-badge-modifs-athlete",
     date: "2026-11-15",
     kind: "fix",

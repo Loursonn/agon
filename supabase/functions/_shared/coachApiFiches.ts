@@ -51,7 +51,7 @@ export function ficheDeleteRefusal(doc: FicheForDelete | null, usage: FicheUsage
     return {
       status: 409,
       code: "fiche_du_coach",
-      message: "Cette fiche a été déposée par le coach dans Agon : seules les fiches déposées par l'assistant se retirent ici. Le coach la supprime depuis Agon (Fiches).",
+      message: "Cette fiche n'a pas été déposée par l'assistant (ou date d'avant son marquage et a perdu l'étiquette « claude ») : c'est le coach qui la supprime, dans Agon (Fiches).",
     };
   }
   if (!usage) return null;
