@@ -55,7 +55,7 @@ export default function RaceRunsEvolution({ rows, currentId }: { rows: RunPaceRo
             </span>
             <span style={{ ...MONO, color: C.tx3, fontSize: 11 }}>run 1 {fmtPace(r.runs[0])}</span>
             <span style={{ ...MONO, color: C.tx3, fontSize: 11 }}>run 8 {fmtPace(r.runs[7])}</span>
-            <span style={{ ...MONO }}>moy. {fmtPace(r.avg)}</span>
+            <span style={{ ...MONO }} title="Médiane des runs 2 à 7">croisière {fmtPace(r.cruise)}</span>
           </div>
         ))}
       </div>

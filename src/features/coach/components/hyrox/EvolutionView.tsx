@@ -9,7 +9,7 @@ import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHy
 import { useHyroxAnalyses } from "@/features/shared/hooks/hyrox/useHyroxTests";
 import { useRaceWatch } from "@/features/shared/hooks/hyrox/useRaceWatch";
 import { competitionKeys, daysUntil, listCompetitions } from "@/api/competitions";
-import { DIVISION_LABEL, REFERENCE_DIVISION, type HyroxDivision, type HyroxResult } from "@/features/shared/types/hyrox";
+import { type HyroxResult } from "@/features/shared/types/hyrox";
 import { bracketOf, type RefLookup } from "@/lib/hyrox/calc";
 import { raceShortName, segmentPositions } from "@/lib/hyrox/raceEvolution";
 import { evolutionRaces, nextHyroxCompetition, raceProjection, runEfficiencySeries } from "@/lib/hyrox/raceProjection";
@@ -21,6 +21,7 @@ import { Sources } from "@/features/shared/components/hyrox/raceAnalysisUi";
 import { ddmm, fmtGap } from "@/features/shared/components/hyrox/raceAnalysisShared";
 import EvolutionTimeSplit from "./EvolutionTimeSplit";
 import EvolutionStationPositions from "./EvolutionStationPositions";
+import { CATEGORY_LABEL, RACE_FORMAT_LABEL, raceCategory, raceFormat, type RaceFormat } from "@/lib/hyrox/categories";
 
 const MONTH = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const monthOf = (date: string) => MONTH[Number(date.slice(5, 7)) - 1] ?? "";
@@ -56,10 +57,15 @@ export default function EvolutionView({ onBack }: { onBack: () => void }) {
     [analyses, all],
   );
   const latest = races[races.length - 1] ?? null;
-  const division = latest ? DIVISION_LABEL[latest.division as HyroxDivision] ?? latest.division : "";
+  const categories = [...new Set(races.map(raceCategory))];
+  const division = categories.map((c) => CATEGORY_LABEL[c]).join(" · ");
+  const levelOf = useCallback(
+    (r: HyroxResult) => (refs.length ? (seg: string) => pickRef(refs, raceCategory(r), seg, bracketOf(r.total_s))?.p50_s ?? null : null),
+    [refs],
+  );
   const levers = useMemo(() => {
     if (!latest || !refs.length) return null;
-    const div = REFERENCE_DIVISION(latest.division as HyroxDivision);
+    const div = raceCategory(latest);
     const b = bracketOf(latest.total_s);
     const g = raceGains(latest, (seg) => pickRef(refs, div, seg, b)?.p50_s ?? null);
     const top = g.items.slice(0, 2);
@@ -106,7 +112,8 @@ export default function EvolutionView({ onBack }: { onBack: () => void }) {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <span style={LABEL}>Chrono</span>
             <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}>
-              <Dot color={C.rouge} /> Résultat officiel · <Dot color={C.o} /> Simulation{projection && next ? " · ▭ Estimation : calcul Agon" : ""}
+              <Dot color={C.rouge} /> Résultat officiel · <Dot color={C.o} /> Simulation{projection && next ? " · ▭ Estimation solo : calcul Agon" : ""}
+              {new Set(races.map(raceFormat)).size > 1 && <> · {[...new Set(races.map(raceFormat))].map((f) => <span key={f} style={{ marginLeft: 6 }}><span style={{ display: "inline-block", width: 12, borderTop: `2px solid ${FORMAT_COLOR[f]}`, marginRight: 3, verticalAlign: "3px" }} />{RACE_FORMAT_LABEL[f]}</span>)}</>}
             </span>
           </div>
           <ChronoChart races={races} projected={projection && next ? { name: raceShortName({ event_name: next.name }), date: next.date, lowS: projection.lowS, highS: projection.highS, midS: projection.medianS } : null} />
@@ -116,14 +123,14 @@ export default function EvolutionView({ onBack }: { onBack: () => void }) {
 
       <Section n="02" title="Où passe le temps" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14, alignItems: "start" }}>
-        <EvolutionTimeSplit races={races} />
+        <EvolutionTimeSplit races={races} levelOf={levelOf} />
         <EfficiencyCard races={races} />
       </div>
 
       <Section n="03" title="Position par station" right={races.map(raceShortName).join(" · ")} />
-      <EvolutionStationPositions rows={positions} />
+      <EvolutionStationPositions rows={positions} formats={races.map(raceFormat)} />
       <Sources>
-        position vs {division} · tranche de chrono de chaque course (0 = meilleur, pointillé = médiane, bande verte = top 35 %) · points : {races.map((r) => `${raceShortName(r)} ${ddmm(r.date)}`).join(" → ")}
+        position de chaque course dans toute sa catégorie ({division}) · 0 = meilleur, pointillé = médiane, bande verte = top 35 % · une courbe par format (solo, duo, relais) · points : {races.map((r) => `${raceShortName(r)} ${ddmm(r.date)}`).join(" → ")}
       </Sources>
       <Sources>
         {races.some((r) => r.is_official) ? "courses officielles : résultats officiels" : ""}{races.some((r) => !r.is_official) ? " · simulations : temps saisis" : ""} · FC : montre de chaque course · positions et projection : calcul Agon, sans IA · mesure absente : « — »
@@ -147,7 +154,14 @@ function Section({ n, title, right }: { n: string; title: string; right?: string
   );
 }
 
-/** Chrono par course : axe inversé (plus haut = plus rapide), point estimé en pointillé. */
+/** Couleur de la courbe de chaque format : solo, duo et relais ne se comparent pas en temps. */
+const FORMAT_COLOR: Record<RaceFormat, string> = { solo: C.tx2, duo: C.b, relais: C.ame };
+
+/**
+ * Chrono par course : axe inversé (plus haut = plus rapide), une courbe par
+ * format (solo, duo, relais : décision d'Hugo du 15/11/2026), point estimé en
+ * pointillé.
+ */
 function ChronoChart({ races, projected }: {
   races: HyroxResult[];
   projected: { name: string; date: string; lowS: number; highS: number; midS: number } | null;
@@ -167,7 +181,10 @@ function ChronoChart({ races, projected }: {
   const step = Math.max(120, Math.ceil((hi - lo) / 5 / 60) * 60);
   const ticks: number[] = [];
   for (let s = lo; s <= hi; s += step) ticks.push(s);
-  const last = races[races.length - 1];
+  const formats = [...new Set(races.map(raceFormat))];
+  // La projection (tests) estime un chrono solo : elle part de la dernière course solo.
+  const last = [...races].reverse().find((r) => raceFormat(r) === "solo") ?? null;
+  const lastIdx = last ? races.indexOf(last) : -1;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block", marginTop: 8 }} role="img" aria-label="Chrono par course">
       {ticks.map((s) => (
@@ -176,12 +193,15 @@ function ChronoChart({ races, projected }: {
           <text x={PL - 10} y={y(s) + 3.5} fontSize={10} textAnchor="end" fill={C.tx3} style={MONO}>{fmtClock(s)}</text>
         </g>
       ))}
-      {races.length > 1 && (
-        <polyline fill="none" stroke={C.tx2} strokeWidth={1.4} points={races.map((r, i) => `${x(i)},${y(r.total_s)}`).join(" ")} />
-      )}
+      {formats.map((f) => {
+        const pts = races.map((r, i) => (raceFormat(r) === f ? `${x(i)},${y(r.total_s)}` : null)).filter(Boolean);
+        return pts.length > 1
+          ? <polyline key={f} fill="none" stroke={FORMAT_COLOR[f]} strokeWidth={1.6} strokeDasharray={f === "relais" ? "4 3" : undefined} points={pts.join(" ")} />
+          : null;
+      })}
       {projected && last && (
         <>
-          <line x1={x(races.length - 1)} y1={y(last.total_s)} x2={x(races.length)} y2={y(projected.midS)} stroke={C.ac} strokeWidth={1.2} strokeDasharray="3 3" />
+          <line x1={x(lastIdx)} y1={y(last.total_s)} x2={x(races.length)} y2={y(projected.midS)} stroke={C.ac} strokeWidth={1.2} strokeDasharray="3 3" />
           <rect x={x(races.length) - 22} y={y(projected.lowS)} width={44} height={Math.max(4, y(projected.highS) - y(projected.lowS))}
             rx={4} fill={alpha(C.ac, 0.12)} stroke={C.ac} strokeDasharray="3 3" strokeWidth={1} />
           <line x1={x(races.length) - 22} x2={x(races.length) + 22} y1={y(projected.midS)} y2={y(projected.midS)} stroke={C.ac} strokeWidth={1.6} />
@@ -195,7 +215,7 @@ function ChronoChart({ races, projected }: {
           <circle cx={x(i)} cy={y(r.total_s)} r={5} fill={r.is_official ? C.rouge : C.o} stroke={C.bg} strokeWidth={1.5} />
           <text x={x(i)} y={y(r.total_s) - 11} fontSize={12} textAnchor="middle" fill={C.tx} style={MONO}>{fmtClock(r.total_s)}</text>
           <text x={x(i)} y={H - PB + 22} fontSize={11} textAnchor="middle" fill={C.tx}>{r.is_official ? r.event_name : "Simulation"}</text>
-          <text x={x(i)} y={H - PB + 36} fontSize={9.5} textAnchor="middle" fill={C.tx3} style={MONO}>{ddmm(r.date)}</text>
+          <text x={x(i)} y={H - PB + 36} fontSize={9.5} textAnchor="middle" fill={formats.length > 1 ? FORMAT_COLOR[raceFormat(r)] : C.tx3} style={MONO}>{ddmm(r.date)}{formats.length > 1 ? ` · ${RACE_FORMAT_LABEL[raceFormat(r)]}` : ""}</text>
         </g>
       ))}
     </svg>
@@ -289,7 +309,7 @@ function EfficiencyCard({ races }: { races: HyroxResult[] }) {
     <div style={{ ...CARD, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
       {races.map((r) => <EfficiencyLoader key={r.id} race={r} onData={onData} />)}
       <span style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Efficacité des runs</span>
-      <div style={{ fontSize: 11.5, color: C.tx3 }}>Mètres parcourus par battement de cœur, run 1 → run 8</div>
+      <div style={{ fontSize: 11.5, color: C.tx3 }}>Mètres parcourus par battement de cœur, run 2 → run 7 (le 1 et le 8 ne se comparent pas)</div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: C.tx2 }}>
         {lines.map((l) => <span key={l.r.id}><span style={{ display: "inline-block", width: 12, borderTop: `2px solid ${l.color}`, marginRight: 4, verticalAlign: "3px" }} />{raceShortName(l.r)}</span>)}
       </div>
@@ -303,7 +323,7 @@ function EfficiencyCard({ races }: { races: HyroxResult[] }) {
       )}
       <div style={{ display: "flex", flexDirection: "column" }}>
         {lines.map((l) => {
-          const first = l.v?.[0] ?? null;
+          const first = l.v ? l.v.find((v) => v != null) ?? null : null;
           const lastV = l.v ? [...l.v].reverse().find((v) => v != null) ?? null : null;
           const pct = first != null && lastV != null ? Math.round((lastV / first - 1) * 100) : null;
           return (

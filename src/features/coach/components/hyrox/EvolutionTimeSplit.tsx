@@ -4,6 +4,7 @@ import { hyroxPictoColor } from "@/features/shared/components/hyroxStation";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
 import { raceShortName, timeSplit } from "@/lib/hyrox/raceEvolution";
 import { compromisedFromTimes } from "@/lib/hyrox/raceWatch";
+import type { RunLookup } from "@/lib/hyrox/runPacing";
 import { formatMmSs } from "@/lib/time";
 
 const BOX = { background: C.s1, borderRadius: 14, border: "1px solid " + C.brd, padding: "14px 16px", marginBottom: 16 } as const;
@@ -13,11 +14,16 @@ const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 /**
  * « 02 — Où passe le temps » (planche HyroxAnaCoachEvolution) : part course /
- * stations / Roxzone de chaque course, puis le coût de la course compromise
- * (runs 2 à 8 vs run 1), calculé sur les seuls temps.
+ * stations / Roxzone de chaque course, puis la course compromise : écart
+ * entre le plus rapide et le plus lent des runs 2 à 7 (le run 1 ne se compare
+ * pas), face à l'écart habituel du niveau. Calculé sur les seuls temps.
  */
-export default function EvolutionTimeSplit({ races }: { races: HyroxResult[] }) {
-  const rows = races.map((r) => ({ r, s: timeSplit(r), c: compromisedFromTimes(r) }));
+export default function EvolutionTimeSplit({ races, levelOf }: {
+  races: HyroxResult[];
+  /** Médianes des runs du niveau de chaque course (catégorie + tranche). */
+  levelOf?: (r: HyroxResult) => RunLookup | null;
+}) {
+  const rows = races.map((r) => ({ r, s: timeSplit(r), c: compromisedFromTimes(r, levelOf?.(r) ?? null) }));
   const colors = { run: hyroxPictoColor("course"), stations: hyroxPictoColor("skierg"), roxzone: C.brdL };
   const roxAbove = rows.filter((x) => x.s.pct.roxzone != null && x.s.pct.roxzone > ROX_THRESHOLD).length;
   const withCost = rows.filter((x) => x.c != null);
@@ -66,13 +72,13 @@ export default function EvolutionTimeSplit({ races }: { races: HyroxResult[] }) 
       {withCost.length > 0 && (
         <div style={BOX}>
           <div style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Coût de la course compromise</div>
-          <div style={{ fontSize: 10, color: C.tx3, marginBottom: 10 }}>Perte moyenne par run après une station, vs allure du run 1</div>
+          <div style={{ fontSize: 10, color: C.tx3, marginBottom: 10 }}>Écart entre le run le plus rapide et le plus lent des runs 2 à 7 (habituel du niveau entre parenthèses)</div>
           <div style={{ display: "grid", gridTemplateColumns: `repeat(${withCost.length}, minmax(0, 1fr))`, gap: 10 }}>
             {withCost.map(({ r, c }) => (
               <div key={r.id}>
                 <div style={{ fontSize: 10, color: C.tx3 }}>{raceShortName(r)}</div>
-                <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "monospace", color: c!.avgSPerKm > 0 ? C.o : C.g }}>
-                  {c!.avgSPerKm > 0 ? "+" : c!.avgSPerKm < 0 ? "−" : ""}{Math.abs(c!.avgSPerKm)} s/km
+                <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "monospace", color: c!.usualSpreadS != null && c!.spreadS - c!.usualSpreadS >= 10 ? C.o : C.tx }}>
+                  {c!.spreadS} s/km{c!.usualSpreadS != null && <span style={{ fontSize: 11, fontWeight: 400, color: C.tx3 }}> ({c!.usualSpreadS})</span>}
                 </div>
               </div>
             ))}

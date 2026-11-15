@@ -4,12 +4,13 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
 import { runStats, runSplits, roxzoneTotal, bracketOf, formatPerRun, formatAvgPerRun, RUN_AXIS_UNIT, type RefLookup } from "@/lib/hyrox/calc";
-import { RUN_KEYS, REFERENCE_DIVISION, SEGMENT_LABEL, STATION_META, type HyroxDivision } from "@/features/shared/types/hyrox";
+import { RUN_KEYS, SEGMENT_LABEL, STATION_META } from "@/features/shared/types/hyrox";
 import { formatMmSs, formatDelta } from "@/lib/time";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine,
   BarChart, Bar, CartesianGrid,
 } from "recharts";
+import { raceCategory } from "@/lib/hyrox/categories";
 
 export default function RunsView() {
   const { athleteId } = useAthleteContext();
@@ -31,7 +32,7 @@ export default function RunsView() {
 
   const splits = runSplits(race);
   const stats = runStats(race);
-  const refDiv = REFERENCE_DIVISION(race.division as HyroxDivision);
+  const refDiv = raceCategory(race);
   const bracket = bracketOf(race.total_s);
 
   // Reference runs for the bracket
@@ -104,7 +105,7 @@ export default function RunsView() {
         <StatCard label="Fade index R2-7" value={stats.fadeIndex27Pct != null ? stats.fadeIndex27Pct + " %" : "—"} color={stats.fadeIndex27Pct != null && stats.fadeIndex27Pct > 15 ? C.o : C.tx} />
         <StatCard label="Meilleur (R2-7)" value={stats.best27 ? `Run ${stats.best27.index + 1} (${formatPerRun(stats.best27.s)})` : "—"} color={C.g} />
         <StatCard label="Pire (R2-7)" value={stats.worst27 ? `Run ${stats.worst27.index + 1} (${formatPerRun(stats.worst27.s)})` : "—"} color={C.r} />
-        <StatCard label="Δ mi-courses" value={stats.halvesDelta != null ? formatDelta(stats.halvesDelta) : "—"} color={stats.halvesDelta != null && stats.halvesDelta > 20 ? C.o : C.tx} />
+        <StatCard label="Δ R5-7 vs R2-4" value={stats.halvesDelta != null ? formatDelta(stats.halvesDelta) : "—"} color={stats.halvesDelta != null && stats.halvesDelta > 20 ? C.o : C.tx} />
       </div>
 
       {/* Runs 1 & 8 apart (course-dependent distance) */}
@@ -112,7 +113,7 @@ export default function RunsView() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
         <StatCard label="Run 1" value={formatPerRun(splits[0])} color={C.tx} />
         <StatCard label="Run 8" value={formatPerRun(splits[7])} color={C.tx} />
-        <StatCard label="Drop (R1→R2)" value={stats.drop12 != null ? formatDelta(stats.drop12) : "—"} color={stats.drop12 != null && stats.drop12 > 60 ? C.o : C.tx} />
+        <StatCard label="Run 8 vs moy. R2-7" value={splits[7] != null && stats.avg27 != null ? formatDelta(splits[7] - stats.avg27) : "—"} color={C.tx} />
       </div>
 
       {/* Per-run detail */}

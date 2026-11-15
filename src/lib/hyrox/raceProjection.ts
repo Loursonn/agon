@@ -59,11 +59,14 @@ export function raceProjection(analyses: readonly CalibrationAnalysis[], races: 
   };
 }
 
-/** Efficacité des 8 runs (mètres par battement) ; `null` pour un run sans FC. */
+/**
+ * Efficacité des 8 runs (mètres par battement) ; `null` pour un run sans FC,
+ * et pour les runs 1 et 8 qui ne se comparent pas (départ, arrivée).
+ */
 export function runEfficiencySeries(a: RaceWatchAnalysis): Array<number | null> {
   return a.segments
     .filter((s) => s.kind === "run")
-    .map((s) => (s.avgHr != null && s.avgHr > 0 && s.officialS > 0 ? 1000 / (s.avgHr * (s.officialS / 60)) : null));
+    .map((s) => (s.key !== "run_1" && s.key !== "run_8" && s.avgHr != null && s.avgHr > 0 && s.officialS > 0 ? 1000 / (s.avgHr * (s.officialS / 60)) : null));
 }
 
 /** Prochaine compétition HYROX (nom contenant « HYROX »), aujourd'hui compris. */

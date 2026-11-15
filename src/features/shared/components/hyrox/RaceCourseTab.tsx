@@ -20,6 +20,7 @@ import RaceLevers from "./RaceLevers";
 import type { HyroxAlert } from "@/features/shared/types/hyrox";
 import { COMPARE_SHORT, type CompareKind } from "@/lib/hyrox/raceCompare";
 import type { RaceLever } from "@/lib/hyrox/raceLevers";
+import { levelRunPattern } from "@/lib/hyrox/runPacing";
 
 /**
  * Onglet « Course » : frise, constats, ce que dit la montre, tableau des
@@ -41,6 +42,10 @@ export default function RaceCourseTab(props: {
   recov: ReturnType<typeof roxzoneRecovery>;
   previous: { name: string; compromised: ReturnType<typeof compromisedRunning> } | null;
   refOf: (seg: string) => HyroxReferenceSegment | null;
+  /** Références de position (toute la catégorie). */
+  posOf: (seg: string) => HyroxReferenceSegment | null;
+  /** Médianes des runs du niveau (habituel), `null` sans références. */
+  levelP50: ((seg: string) => number | null) | null;
   totalS: number;
   totalRef: HyroxReferenceSegment | null;
   timeSource: string;
@@ -67,7 +72,7 @@ export default function RaceCourseTab(props: {
   const sel = analysis.segments.find((s) => s.key === selected) ?? null;
   const nSeg = analysis.segments.filter((s) => s.kind !== "roxzone").length + 1;
   const hasCadence = !!stream?.cadence?.some((v) => v != null && v > 0);
-  const compromised = compromisedRunning(analysis);
+  const level = props.levelP50 ? levelRunPattern(props.levelP50) : null;
   const cmp = coach ? props.compare : undefined;
   // Numérotation des sections coach : 01 frise, 02 montre, 03 leviers, 04 segments (sans montre : décalée).
   let n = 1;
@@ -125,7 +130,7 @@ export default function RaceCourseTab(props: {
           </div>
         )}
         {sel
-          ? <RaceSegmentDetail s={sel} fresh={analysis.freshPaceSPerKm} medianS={sel.kind === "roxzone" ? null : props.refOf(sel.key)?.p50_s ?? null} coach={coach}
+          ? <RaceSegmentDetail s={sel} cruise={analysis.cruisePaceSPerKm} usualS={level?.usual[sel.key] ?? null} medianS={sel.kind === "roxzone" ? null : props.refOf(sel.key)?.p50_s ?? null} coach={coach}
               planS={sel.kind === "roxzone" ? null : cmp?.plan?.(sel.key) ?? null} />
           : <div style={{ fontSize: 12, color: C.tx3 }}>{coach ? "Survole ou touche un segment pour voir son détail." : "Touche un segment pour voir son détail."}</div>}
         {!stream && !props.watchLoading && (
@@ -150,7 +155,7 @@ export default function RaceCourseTab(props: {
 
       {stream && (
         <RaceWatchCards title={coach ? watchTitle ?? "" : "Ce que dit la montre"} analysis={analysis} attribution={coach ? attribution : null}
-          above={props.above} recov={props.recov} sv2={sv2} previous={props.previous} />
+          above={props.above} recov={props.recov} sv2={sv2} previous={props.previous} levelP50={props.levelP50} />
       )}
 
       {leversTitle && props.athleteId && (
@@ -158,13 +163,13 @@ export default function RaceCourseTab(props: {
           refText={`${props.division} · ${props.bracketText}`} atLevel={props.atLevel ?? 0} />
       )}
 
-      <RaceSegmentsTable analysis={analysis} refOf={props.refOf} stream={stream} sv2={sv2} offset={offset}
-        totalS={props.totalS} totalRef={props.totalRef} compromisedAvg={compromised?.avgSPerKm ?? null}
+      <RaceSegmentsTable analysis={analysis} refOf={props.refOf} posOf={props.posOf} levelP50={props.levelP50} stream={stream} sv2={sv2} offset={offset}
+        totalS={props.totalS} totalRef={props.totalRef}
         compare={cmp ? { label: COMPARE_SHORT[cmp.kind], target: cmp.target, plan: cmp.plan } : null}
         timeSource={props.timeSource} attribution={attribution}
         title={coach ? segmentsTitle : "Les segments un par un"} defaultOpen={coach} />
       <Sources>
-        temps : {props.timeSource}{attribution ? ` · FC, cadence : ${attribution}` : ""} · médianes : références HYROX ({props.division} {props.bracketText}) · constats calculés par Agon, sans IA · mesure absente : « — »
+        temps : {props.timeSource}{attribution ? ` · FC, cadence : ${attribution}` : ""} · médianes : références HYROX ({props.division} {props.bracketText}) · positions : toute la catégorie · run 1 jamais comparé, croisière = runs 2 à 7 · constats calculés par Agon, sans IA · mesure absente : « — »
       </Sources>
     </>
   );

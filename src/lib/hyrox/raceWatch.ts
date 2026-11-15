@@ -4,8 +4,9 @@
  * Le résultat officiel fait foi pour les temps (un run HYROX fait 1 km : son
  * temps officiel *est* son allure au kilomètre). La montre apporte ce que le
  * chronométrage ne voit pas : fréquence cardiaque et cadence de chaque
- * segment. Règles calculées, sans IA ; l'allure « fraîche » est celle du run 1
- * (maquettes HyroxAnaTel / HyroxAnaCoachOrdi, validées le 13/11/2026).
+ * segment. Règles calculées, sans IA. Le run 1 n'est jamais une référence :
+ * l'allure de croisière est la médiane des runs 2 à 7 (`runPacing.ts`,
+ * décision d'Hugo du 15/11/2026).
  *
  * Pur et testé. Aucune lecture en base ici.
  */
@@ -17,6 +18,10 @@ import {
   type SegmentKey,
   type StationKey,
 } from "@/features/shared/types/hyrox";
+import {
+  cruisePace, cruiseSpread, levelRunPattern, stationRunCosts, CRUISE_RUNS,
+  type RunLookup, type StationRunCost,
+} from "./runPacing";
 
 export type RaceSegmentKind = "run" | "station" | "roxzone";
 
@@ -98,9 +103,9 @@ export interface RaceFlag {
 
 export interface RaceWatchAnalysis {
   segments: SegmentWatch[];
-  /** Allure fraîche : temps du run 1, en s/km. */
-  freshPaceSPerKm: number;
-  /** Écart de chaque run au run 1 (0,12 = 12 % plus lent). */
+  /** Allure de croisière : médiane des runs 2 à 7, en s/km. */
+  cruisePaceSPerKm: number;
+  /** Écart de chaque run à la croisière (0,12 = 12 % plus lent). Run 1 : affiché, jamais signalé. */
   runDrift: Array<{ key: string; pct: number }>;
   raceMaxHr: number | null;
   roxzoneEstimated: boolean;
@@ -109,9 +114,9 @@ export interface RaceWatchAnalysis {
 
 /** Seuils des règles, réglés pour signaler l'inhabituel, pas chaque seconde perdue. */
 export const RACE_RULES = {
-  /** Run plus lent que le run 1 de plus de 10 %. */
+  /** Run (2 à 8) plus lent que la croisière de plus de 10 %. */
   paceDrop: 0.10,
-  /** Cadence d'un run inférieure de 8 pas/min ou plus à celle du run 1. */
+  /** Cadence d'un run (2 à 8) inférieure de 8 pas/min ou plus à la cadence de croisière. */
   cadenceDrop: 8,
   /** Station dont la FC moyenne atteint 95 % de la FC max de la course. */
   stationHr: 0.95,
@@ -169,8 +174,8 @@ export function crossRaceWithWatch(
   });
 
   const runs = segments.filter((s) => s.kind === "run");
-  const fresh = runs[0].officialS;
-  const runDrift = runs.map((s) => ({ key: s.key, pct: s.officialS / fresh - 1 }));
+  const cruise = cruisePace(runLookup(segments)) ?? medianOf(runs.map((s) => s.officialS)) ?? runs[0].officialS;
+  const runDrift = runs.map((s) => ({ key: s.key, pct: s.officialS / cruise - 1 }));
   const hrs = segments.map((s) => s.maxHr).filter((x): x is number => x != null);
   const raceMaxHr = hrs.length ? Math.max(...hrs) : null;
 
@@ -180,24 +185,26 @@ export function crossRaceWithWatch(
     for (let j = i - 1; j >= 0; j--) if (segments[j].kind === "station") return segments[j].label;
     return null;
   };
-  for (const d of runDrift.slice(1)) {
+  for (const d of runDrift) {
+    if (d.key === "run_1") continue;
     if (d.pct > RACE_RULES.paceDrop) {
       const st = before(d.key);
       flags.push({
         kind: "allure_chute",
         segment: d.key,
-        text: `Run ${d.key.slice(4)} : ${Math.round(d.pct * 100)} % plus lent que le run 1${st ? ` (après ${st})` : ""}`,
+        text: `Run ${d.key.slice(4)} : ${Math.round(d.pct * 100)} % plus lent que ta croisière${st ? ` (après ${st})` : ""}`,
       });
     }
   }
-  const cad1 = runs[0].avgCadence;
-  if (cad1 != null) {
-    for (const s of runs.slice(1)) {
-      if (s.avgCadence != null && cad1 - s.avgCadence >= RACE_RULES.cadenceDrop) {
+  const cadCruise = cruiseCadence(segments);
+  if (cadCruise != null) {
+    for (const s of runs) {
+      if (s.key === "run_1") continue;
+      if (s.avgCadence != null && cadCruise - s.avgCadence >= RACE_RULES.cadenceDrop) {
         flags.push({
           kind: "cadence_chute",
           segment: s.key,
-          text: `${s.label} : cadence ${s.avgCadence} pas/min, ${cad1 - s.avgCadence} de moins qu'au run 1`,
+          text: `${s.label} : cadence ${s.avgCadence} pas/min, ${cadCruise - s.avgCadence} de moins qu'en croisière`,
         });
       }
     }
@@ -224,8 +231,27 @@ export function crossRaceWithWatch(
     }
   }
 
-  return { segments, freshPaceSPerKm: fresh, runDrift, raceMaxHr, roxzoneEstimated: tl.roxzoneEstimated, flags };
+  return { segments, cruisePaceSPerKm: cruise, runDrift, raceMaxHr, roxzoneEstimated: tl.roxzoneEstimated, flags };
 }
+
+function medianOf(xs: number[]): number | null {
+  if (xs.length === 0) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/** Temps officiel de chaque run, pour les règles de `runPacing`. */
+export function runLookup(segments: SegmentWatch[]): RunLookup {
+  return (key) => segments.find((s) => s.key === key)?.officialS ?? null;
+}
+
+/** Cadence de croisière : médiane des cadences des runs 2 à 7 (au moins 3 mesurées). */
+function cruiseCadence(segments: SegmentWatch[]): number | null {
+  const v = CRUISE_RUNS.map((k) => segments.find((s) => s.key === k)?.avgCadence ?? null).filter((x): x is number => x != null);
+  return v.length >= 3 ? Math.round(medianOf(v) as number) : null;
+}
+
 
 // ─────────────────────── Constats complémentaires ────────────────────────────
 
@@ -236,15 +262,17 @@ function meanAt(stream: ActivityStream, col: Array<number | null> | null, from: 
 
 /**
  * Efficacité des runs : mètres parcourus par battement (1 000 m ÷ battements
- * du run). Run 1 → dernier run mesuré ; la baisse dit la dérive cardiaque.
+ * du run). Premier → dernier run mesuré parmi les runs 2 à 7 (le 1 et le 8 ne
+ * se comparent pas) ; la baisse dit la dérive cardiaque.
  */
-export function runEfficiency(a: RaceWatchAnalysis): { first: number; last: number; pct: number } | null {
-  const runs = a.segments.filter((s) => s.kind === "run" && s.avgHr != null);
-  if (runs.length < 2 || runs[0].key !== "run_1") return null;
+export function runEfficiency(a: RaceWatchAnalysis): { first: number; last: number; pct: number; firstKey: string; lastKey: string } | null {
+  const keep = new Set<string>(CRUISE_RUNS);
+  const runs = a.segments.filter((s) => s.kind === "run" && keep.has(s.key) && s.avgHr != null);
+  if (runs.length < 2) return null;
   const mpb = (s: SegmentWatch) => 1000 / ((s.avgHr as number) * (s.officialS / 60));
   const first = mpb(runs[0]);
   const last = mpb(runs[runs.length - 1]);
-  return { first, last, pct: last / first - 1 };
+  return { first, last, pct: last / first - 1, firstKey: runs[0].key, lastKey: runs[runs.length - 1].key };
 }
 
 /** Part du temps (course entière, et stations seules) au-dessus d'un seuil de FC (SV2). */
@@ -297,19 +325,36 @@ export function roxzoneRecovery(
   return { avgDrop: Math.round(drops.reduce((n, d) => n + d.drop, 0) / drops.length), worst };
 }
 
-/** Course compromise : perte moyenne des runs 2 à 8 par rapport au run 1, et la pire. */
-export function compromisedRunning(a: RaceWatchAnalysis): { avgSPerKm: number; worst: { key: string; after: string | null; sPerKm: number } } | null {
-  const runs = a.segments.filter((s) => s.kind === "run");
-  if (runs.length < 2) return null;
-  const fresh = runs[0].officialS;
-  const rest = runs.slice(1).map((s) => {
-    const i = a.segments.indexOf(s);
-    let after: string | null = null;
-    for (let j = i - 1; j >= 0; j--) if (a.segments[j].kind === "station") { after = a.segments[j].label; break; }
-    return { key: s.key, after, sPerKm: Math.round(s.officialS - fresh) };
-  });
-  const worst = rest.reduce((w, r) => (r.sPerKm > w.sPerKm ? r : w));
-  return { avgSPerKm: Math.round(rest.reduce((n, r) => n + r.sPerKm, 0) / rest.length), worst };
+export interface CompromisedRunning {
+  cruiseS: number;
+  /** Écart entre le plus rapide et le plus lent des runs 2 à 7 (s/km). */
+  spreadS: number;
+  /** Même écart chez les athlètes du niveau, `null` sans références. */
+  usualSpreadS: number | null;
+  /** Run qui coûte le plus : surcoût vs l'habituel si connu, sinon vs la croisière. */
+  worst: { key: string; after: string | null; sPerKm: number; usualS: number | null; excessS: number | null } | null;
+}
+
+/**
+ * Course compromise : les runs 2 à 7 sont censés se ressembler. Leur écart
+ * (le plus lent − le plus rapide) mesure ce que les stations coûtent à la
+ * course ; on le compare au même écart chez les athlètes du niveau.
+ */
+export function compromisedRunning(a: RaceWatchAnalysis, levelP50: RunLookup | null = null): CompromisedRunning | null {
+  const run = runLookup(a.segments);
+  const spread = cruiseSpread(run, levelP50);
+  if (!spread) return null;
+  const costs = stationRunCosts(run, levelP50 ? levelRunPattern(levelP50) : null);
+  const rank = (c: StationRunCost) => c.excessS ?? c.costS;
+  const top = costs.length ? costs.reduce((w, c) => (rank(c) > rank(w) ? c : w)) : null;
+  return {
+    cruiseS: a.cruisePaceSPerKm,
+    spreadS: spread.spreadS,
+    usualSpreadS: spread.usualSpreadS,
+    worst: top && top.costS > 0
+      ? { key: top.run, after: STATION_META[top.station].label, sPerKm: top.costS, usualS: top.usualS, excessS: top.excessS }
+      : null,
+  };
 }
 
 // ───────────────────────────── Où gagner du temps ────────────────────────────
@@ -352,7 +397,8 @@ export function raceGains(r: HyroxResult, median: MedianLookup): { currentS: num
   let runGain = 0;
   let runAth = 0;
   let runMed = 0;
-  for (let i = 1; i <= 8; i++) {
+  // Run 1 exclu : sa longueur et le départ changent d'une course à l'autre.
+  for (let i = 2; i <= 8; i++) {
     const v = segValue(r, `run_${i}` as SegmentKey);
     const m = median(`run_${i}`);
     if (v != null && m != null && v > m) {
@@ -390,28 +436,39 @@ const fmtMs = (s: number) => {
   return `${m} min ${String(r).padStart(2, "0")} s`;
 };
 
+/** Surcoût (vs l'habituel du niveau) à partir duquel le run après une station devient un constat. */
+export const RUN_COST_FINDING_S = 10;
+/** Sans références : coût brut vs la croisière. */
+export const RUN_COST_FINDING_NO_REF_S = 15;
+const signed = (x: number) => (x > 0 ? `+${x}` : x < 0 ? `−${Math.abs(x)}` : "0");
+
 /**
- * Trois constats au plus, dans l'ordre : course compromise (dernier run vs
- * run 1), stations au-dessus de SV2, Roxzone vs médiane. Phrases calculées.
+ * Trois constats au plus, dans l'ordre : la station qui coûte le plus au run
+ * suivant (vs la croisière et l'habituel du niveau), stations au-dessus de
+ * SV2, Roxzone vs médiane. Phrases calculées.
  */
 export function athleteFindings(input: {
   analysis: RaceWatchAnalysis;
   above: ReturnType<typeof timeAboveHr>;
   gains: ReturnType<typeof raceGains> | null;
   sv2: number | null;
+  /** Médianes des runs au niveau de l'athlète : « habituel ». */
+  levelP50?: RunLookup | null;
 }): Finding[] {
   const out: Finding[] = [];
   const { analysis, above, gains, sv2 } = input;
-  const runs = analysis.segments.filter((s) => s.kind === "run");
-  const last = runs[runs.length - 1];
-  const delta = Math.round(last.officialS - analysis.freshPaceSPerKm);
-  if (delta > 0) {
-    const i = analysis.segments.indexOf(last);
-    const st = analysis.segments.slice(0, i).reverse().find((s) => s.kind === "station");
+  const level = input.levelP50 ? levelRunPattern(input.levelP50) : null;
+  const costs = stationRunCosts(runLookup(analysis.segments), level);
+  const worst = costs.length ? costs.reduce((w, c) => ((c.excessS ?? c.costS) > (w.excessS ?? w.costS) ? c : w)) : null;
+  const notable = worst && (worst.excessS != null ? worst.excessS >= RUN_COST_FINDING_S : worst.costS >= RUN_COST_FINDING_NO_REF_S);
+  if (worst && notable) {
+    const name = STATION_META[worst.station].label.toLowerCase();
     out.push({
-      value: `+${delta}`,
+      value: `+${worst.costS}`,
       unit: "s/km",
-      text: `${st ? `Après ${st.label.toLowerCase()}, ton` : "Ton"} dernier km a ralenti de ${delta} s/km par rapport au premier.`,
+      text: worst.usualS != null
+        ? `Après ${name}, ton run a ralenti de ${worst.costS} s/km par rapport à ta croisière (runs 2 à 7), contre ${signed(worst.usualS)} d'habitude à ton niveau.`
+        : `Après ${name}, ton run a ralenti de ${worst.costS} s/km par rapport à ta croisière (runs 2 à 7).`,
     });
   }
   if (above && sv2 != null && above.stationShare > 0) {
@@ -468,24 +525,24 @@ function stationBefore(a: RaceWatchAnalysis, s: SegmentWatch): string | null {
 }
 
 /**
- * Chute de cadence : runs 2 à 8 comparés au run 1 (pas/min). Rend les deux
- * plus fortes baisses, ou `null` si la cadence ne baisse jamais.
+ * Chute de cadence : runs 2 à 8 comparés à la cadence de croisière (médiane
+ * des runs 2 à 7, pas/min). Rend les deux plus fortes baisses, ou `null`.
  */
 export function cadenceDrop(a: RaceWatchAnalysis): {
-  freshCadence: number;
+  cruiseCadence: number;
   worst: { key: string; after: string | null; drop: number };
   next: { key: string; after: string | null; drop: number } | null;
 } | null {
-  const runs = a.segments.filter((s) => s.kind === "run");
-  const fresh = runs[0]?.avgCadence;
+  const runs = a.segments.filter((s) => s.kind === "run" && s.key !== "run_1");
+  const fresh = cruiseCadence(a.segments);
   if (fresh == null) return null;
-  const drops = runs.slice(1)
+  const drops = runs
     .filter((s) => s.avgCadence != null)
     .map((s) => ({ key: s.key, after: stationBefore(a, s), drop: fresh - (s.avgCadence as number) }))
     .filter((d) => d.drop > 0)
     .sort((x, y) => y.drop - x.drop);
   if (drops.length === 0) return null;
-  return { freshCadence: fresh, worst: drops[0], next: drops[1] ?? null };
+  return { cruiseCadence: fresh, worst: drops[0], next: drops[1] ?? null };
 }
 
 /**
@@ -511,21 +568,20 @@ export function shareAboveHr(
   return measured ? above / measured : null;
 }
 
-/** Coût d'une station sur le run qui la suit : allure du run suivant − allure du run 1 (s/km). */
-export function runCostAfter(a: RaceWatchAnalysis): Record<string, number> {
-  const out: Record<string, number> = {};
-  a.segments.forEach((s, i) => {
-    if (s.kind !== "station") return;
-    const next = a.segments.slice(i + 1).find((x) => x.kind === "run");
-    if (next) out[s.key] = Math.round(next.officialS - a.freshPaceSPerKm);
-  });
+/**
+ * Coût de chaque station sur le run qui la suit : run suivant − croisière
+ * (s/km), et l'habituel du niveau si ses médianes sont fournies.
+ */
+export function runCostAfter(a: RaceWatchAnalysis, levelP50: RunLookup | null = null): Partial<Record<StationKey, StationRunCost>> {
+  const out: Partial<Record<StationKey, StationRunCost>> = {};
+  for (const c of stationRunCosts(runLookup(a.segments), levelP50 ? levelRunPattern(levelP50) : null)) out[c.station] = c;
   return out;
 }
 
 /** Course compromise à partir des seuls temps (sans montre) : sert à comparer les courses. */
-export function compromisedFromTimes(r: HyroxResult): ReturnType<typeof compromisedRunning> {
+export function compromisedFromTimes(r: HyroxResult, levelP50: RunLookup | null = null): CompromisedRunning | null {
   const a = crossRaceWithWatch(r, null);
-  return a ? compromisedRunning(a) : null;
+  return a ? compromisedRunning(a, levelP50) : null;
 }
 
 /**

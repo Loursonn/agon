@@ -38,6 +38,40 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-hyrox-calculs-justes",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "HYROX : runs, positions et points faibles calculés plus justement",
+    summary:
+      "Le run 1 ne sert plus de référence, les positions se lisent dans toute la catégorie, et une station n'est « point faible » que si elle l'est vraiment. Le duo se compare enfin au duo.",
+    sections: [
+      {
+        title: "Runs",
+        points: [
+          "Le run 1 change d'une course à l'autre (départ, longueur) : il s'affiche mais ne sert plus de point de comparaison.",
+          "L'allure de croisière est la médiane des runs 2 à 7. Le coût d'une station se lit sur le run qui suit, à côté du ralentissement habituel des athlètes du même niveau au même endroit.",
+          "Le run 8 compte (il suit les fentes) mais il est signalé : l'arrivée est parfois différente.",
+        ],
+      },
+      {
+        title: "Positions et points forts / faibles",
+        points: [
+          "Le « top x % » place maintenant chaque temps dans toute la catégorie (ex. tous les hommes open), et non plus seulement parmi les athlètes du même chrono. Le gain possible reste mesuré face à la médiane du niveau.",
+          "Point fort = top 35 %, point faible = les 35 % les plus lents ; entre les deux, la station est dans la norme. Le radar ne cite plus trois « points faibles » d'office.",
+          "Positions calculées sur tous les percentiles des références HYROX (p1 à p90), plus précises.",
+        ],
+      },
+      {
+        title: "Solo, duo, relais",
+        points: [
+          "Une course saisie « Doubles » se compare aux duos, même si la division indique Men ou Women.",
+          "Dans l'analyse, « Comparer à la catégorie » change les médianes et positions (open, pro, duo, mixte, relais), et une carte donne le chrono équivalent au même rang dans chaque catégorie.",
+          "Dans l'Évolution, solo, duo et relais ont chacun leur courbe.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-14-biometrie-taille-envergure-myjump",
     date: "2026-11-14",
     kind: "feature",

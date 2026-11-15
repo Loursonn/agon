@@ -5,9 +5,12 @@ import { DASH, fmtClock, fmtPace } from "@/lib/seance";
 import { fmtDelta } from "./raceAnalysisShared";
 
 /** Détail d'un segment de la frise (touché, ou survolé côté coach). */
-export default function RaceSegmentDetail({ s, fresh, medianS, coach = false, planS = null }: {
+export default function RaceSegmentDetail({ s, cruise, usualS = null, medianS, coach = false, planS = null }: {
   s: SegmentWatch;
-  fresh: number;
+  /** Allure de croisière de l'athlète (médiane des runs 2 à 7). */
+  cruise: number;
+  /** Ralentissement habituel à ce run chez les athlètes du niveau (s/km vs leur croisière). */
+  usualS?: number | null;
   /** Médiane du niveau pour ce segment (« Écart médiane »). */
   medianS: number | null;
   coach?: boolean;
@@ -31,9 +34,16 @@ export default function RaceSegmentDetail({ s, fresh, medianS, coach = false, pl
       {s.kind === "run" && <div><div style={LABEL}>Cadence</div><div style={big}>{s.avgCadence ?? DASH}</div></div>}
       {s.kind === "run" && s.key !== "run_1" && (
         <div>
-          <div style={LABEL}>{coach ? "Coût vs allure fraîche" : "vs run 1"}</div>
-          <div style={{ ...big, color: s.officialS > fresh ? C.o : C.g }}>{s.officialS >= fresh ? "+" : "−"}{Math.abs(Math.round(s.officialS - fresh))} s/km</div>
+          <div style={LABEL}>vs croisière</div>
+          <div style={{ ...big, color: s.officialS > cruise ? C.o : C.g }}>{s.officialS >= cruise ? "+" : "−"}{Math.abs(Math.round(s.officialS - cruise))} s/km</div>
+          {usualS != null && <div style={{ fontSize: 11, color: C.tx3 }}>habituel {usualS >= 0 ? "+" : "−"}{Math.abs(Math.round(usualS))}</div>}
         </div>
+      )}
+      {s.key === "run_1" && (
+        <div style={{ gridColumn: "1 / -1", fontSize: 11.5, color: C.tx3 }}>Run 1 : départ et longueur changent d'une course à l'autre, il ne sert pas de référence.</div>
+      )}
+      {s.key === "run_8" && (
+        <div style={{ gridColumn: "1 / -1", fontSize: 11.5, color: C.tx3 }}>Run 8 : arrivée et parcours parfois différents, à lire avec prudence.</div>
       )}
     </div>
   );

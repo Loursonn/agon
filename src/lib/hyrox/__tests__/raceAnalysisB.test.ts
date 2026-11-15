@@ -127,16 +127,21 @@ describe("leviers", () => {
       (t) => (t >= run3.startS && t < run3.endS ? 82 : 88));
     const a = crossRaceWithWatch(race, st)!;
     expect(sp.key).toBe("sled_push");
-    const l = raceLevers({ race, refs, analysis: a, roxzoneRecoveryBpm: 10 });
+    // Niveau où la course après les farmers ralentit peu d'habitude : run 7 à 285.
+    const levelP50 = (k: string) => (k === "run_7" ? 285 : P50[k] ?? null);
+    const l = raceLevers({ race, refs, analysis: a, roxzoneRecoveryBpm: 10, levelP50 });
     expect(l.find((x) => x.key === "wall_balls")?.reason).toBe("FC moy. 184 bpm, la plus haute de la course");
     expect(l.find((x) => x.key === "sled_push")?.reason).toMatch(/^Cadence du run suivant −\d+ pas\/min$/);
     expect(l.find((x) => x.key === "roxzone")?.reason).toBe("8 % du chrono · récupération −10 bpm en 60 s");
     const ra = l.find((x) => x.watch)!;
-    // coûts Lyon : farmers → run 7 +32, fentes → run 8 +31 ; farmers pas dans la liste
+    // Lyon : croisière 294 ; run 7 = +9 vs croisière, habituel −4 au niveau (croisière 289) → surcoût 13.
     expect(ra.key).toBe("run_after_farmers");
     expect(ra.label).toBe("Course après farmers");
     expect(ra.weight).toBe(RUN_AFTER_STATION_WEIGHT);
-    expect(ra.gainS).toBe(32);
+    expect(ra.gainS).toBe(13);
+    expect(ra.reason).toBe("Run 7 : +9 s/km vs ta croisière, habituel −4");
+    // Sans l'habituel du niveau : pas de levier « Course après ».
+    expect(raceLevers({ race, refs, analysis: a }).some((x) => x.watch)).toBe(false);
   });
 });
 
@@ -166,7 +171,9 @@ describe("évolution", () => {
     expect(runEfficiencySeries(crossRaceWithWatch(race, null)!)).toEqual(Array(8).fill(null));
     const a = crossRaceWithWatch(race, stream(race.total_s + 5, () => 160, () => null))!;
     const e = runEfficiencySeries(a);
-    expect(e[0]).toBeCloseTo(1000 / (160 * (271 / 60)), 5);
+    expect(e[0]).toBeNull(); // run 1 : jamais comparé
+    expect(e[7]).toBeNull(); // run 8 : arrivée parfois différente
+    expect(e[1]).toBeCloseTo(1000 / (160 * (284 / 60)), 5);
   });
 
   it("prochaine compétition HYROX et filtre Toutes / Officielles", () => {

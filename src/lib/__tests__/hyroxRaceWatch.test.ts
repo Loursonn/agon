@@ -51,13 +51,16 @@ describe("raceTimeline", () => {
 });
 
 describe("crossRaceWithWatch", () => {
-  it("allure fraîche = run 1, chute d'allure nommée avec la station d'avant", () => {
+  it("croisière = médiane des runs 2 à 7 ; le run 1 n'est jamais une référence", () => {
     const a = crossRaceWithWatch(result(), null)!;
-    expect(a.freshPaceSPerKm).toBe(300);
-    expect(a.runDrift.find((d) => d.key === "run_4")!.pct).toBeCloseTo(0.1333, 3);
-    const drops = a.flags.filter((f) => f.kind === "allure_chute").map((f) => f.segment);
-    expect(drops).toEqual(["run_4", "run_5", "run_6", "run_7", "run_8"]);
-    expect(a.flags.find((f) => f.segment === "run_4")!.text).toBe("Run 4 : 13 % plus lent que le run 1 (après Sled pull)");
+    // runs 2-7 : 310 320 340 330 345 350 → médiane (330 + 340) / 2
+    expect(a.cruisePaceSPerKm).toBe(335);
+    expect(a.runDrift.find((d) => d.key === "run_8")!.pct).toBeCloseTo(360 / 335 - 1, 4);
+    expect(a.flags.filter((f) => f.kind === "allure_chute")).toEqual([]);
+    // Un run 1 très lent (départ bouché) ne déclenche rien.
+    expect(crossRaceWithWatch(result({ run_1_s: 420 }), null)!.flags.some((f) => f.segment === "run_1")).toBe(false);
+    const slow = crossRaceWithWatch(result({ run_8_s: 400 }), null)!;
+    expect(slow.flags.find((f) => f.kind === "allure_chute")!.text).toBe("Run 8 : 19 % plus lent que ta croisière (après Sandbag lunges)");
     // Sans montre : pas de FC, pas d'alerte « montre incomplète ».
     expect(a.segments[0].avgHr).toBeNull();
     expect(a.flags.some((f) => f.kind === "montre_incomplete")).toBe(false);
@@ -82,7 +85,7 @@ describe("crossRaceWithWatch", () => {
     expect(seg("run_1")).toMatchObject({ avgHr: 160, avgCadence: 172, coverage: 1 });
     expect(a.raceMaxHr).toBe(186);
     expect(a.flags.find((f) => f.kind === "fc_station_haute")!.segment).toBe("wall_balls");
-    expect(a.flags.find((f) => f.kind === "cadence_chute")!.text).toBe("Run 8 : cadence 158 pas/min, 14 de moins qu'au run 1");
+    expect(a.flags.find((f) => f.kind === "cadence_chute")!.text).toBe("Run 8 : cadence 158 pas/min, 14 de moins qu'en croisière");
   });
 
   it("montre arrêtée avant la fin : signalé, segments sans mesure à null", () => {
@@ -102,10 +105,11 @@ describe("constats complémentaires", () => {
   const s = stream(5200, (t) => (t >= run8.startS && t < run8.endS ? 170 : inSeg(t, "station") ? 180 : inSeg(t, "run") ? 160 : 150));
   const a = crossRaceWithWatch(result(), s)!;
 
-  it("efficacité : mètres par battement, run 1 → run 8", () => {
+  it("efficacité : mètres par battement, run 2 → run 7 (le 1 et le 8 ne se comparent pas)", () => {
     const e = runEfficiency(a)!;
-    expect(e.first).toBeCloseTo(1000 / (160 * 5), 4);
-    expect(e.last).toBeCloseTo(1000 / (170 * 6), 4);
+    expect([e.firstKey, e.lastKey]).toEqual(["run_2", "run_7"]);
+    expect(e.first).toBeCloseTo(1000 / (160 * (310 / 60)), 4);
+    expect(e.last).toBeCloseTo(1000 / (160 * (350 / 60)), 4);
     expect(e.pct).toBeLessThan(0);
   });
 
@@ -122,14 +126,27 @@ describe("constats complémentaires", () => {
     expect(r.worst).toEqual({ station: "Sandbag lunges", drop: 10 });
   });
 
-  it("course compromise : moyenne et pire run", () => {
+  it("course compromise : écart des runs 2 à 7, pire coût vs croisière", () => {
     const c = compromisedRunning(a)!;
-    expect(c.worst).toEqual({ key: "run_8", after: "Sandbag lunges", sPerKm: 60 });
-    expect(c.avgSPerKm).toBe(Math.round((10 + 20 + 40 + 30 + 45 + 50 + 60) / 7));
+    expect(c.cruiseS).toBe(335);
+    expect(c.spreadS).toBe(40); // 350 − 310
+    expect(c.usualSpreadS).toBeNull();
+    expect(c.worst).toEqual({ key: "run_8", after: "Sandbag lunges", sPerKm: 25, usualS: null, excessS: null });
+  });
+
+  it("course compromise avec l'habituel du niveau : le surcoût désigne la station", () => {
+    const lvl: Record<string, number> = { run_2: 300, run_3: 310, run_4: 300, run_5: 320, run_6: 320, run_7: 325, run_8: 340 };
+    const c = compromisedRunning(a, (k) => lvl[k] ?? null)!;
+    // Niveau : croisière 315 ; écart habituel des runs 2-7 = 325 − 300.
+    expect(c.usualSpreadS).toBe(25);
+    // Sled pull → run 4 : +5 vs croisière alors que d'habitude −15 → surcoût 20.
+    expect(c.worst).toEqual({ key: "run_4", after: "Sled pull", sPerKm: 5, usualS: -15, excessS: 20 });
   });
 
   it("gains : du plus gros au plus petit, runs regroupés, seuil 10 s", () => {
     const med: Record<string, number> = { roxzone_total: 400, wall_balls: 330, sled_push: 175, ski: 260, run_6: 330, run_7: 335, run_8: 340 };
+    // Run 1 plus lent que sa médiane : jamais compté (départ, longueur variable).
+    med.run_1 = 250;
     const g = raceGains(result({ total_s: 4715 }), (k) => med[k] ?? 10_000);
     expect(g.items.map((x) => [x.label, x.gainS])).toEqual([["Roxzone", 50], ["Runs 6 à 8", 50], ["Wall balls", 30], ["SkiErg", 10]]);
     expect(g.possibleS).toBe(4715 - 140);
@@ -138,8 +155,11 @@ describe("constats complémentaires", () => {
   it("trois constats au plus, phrases calculées", () => {
     const g = raceGains(result(), (k) => (k === "roxzone_total" ? 404 : null));
     const f = athleteFindings({ analysis: a, above: timeAboveHr(a, s, 172), gains: g, sv2: 172 });
-    expect(f.map((x) => x.value)).toEqual(["+60", "100", "+46"]);
-    expect(f[0].text).toBe("Après sandbag lunges, ton dernier km a ralenti de 60 s/km par rapport au premier.");
+    expect(f.map((x) => x.value)).toEqual(["+25", "100", "+46"]);
+    expect(f[0].text).toBe("Après sandbag lunges, ton run a ralenti de 25 s/km par rapport à ta croisière (runs 2 à 7).");
+    const lvl: Record<string, number> = { run_2: 300, run_3: 310, run_4: 300, run_5: 320, run_6: 320, run_7: 325, run_8: 340 };
+    const withLevel = athleteFindings({ analysis: a, above: null, gains: null, sv2: null, levelP50: (k) => lvl[k] ?? null });
+    expect(withLevel[0].text).toBe("Après sled pull, ton run a ralenti de 5 s/km par rapport à ta croisière (runs 2 à 7), contre −15 d'habitude à ton niveau.");
     expect(f[2].text).toBe("Roxzone : 7 min 30 s, soit 46 s de plus que la médiane de ton niveau.");
   });
 

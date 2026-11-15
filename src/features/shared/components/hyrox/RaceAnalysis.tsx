@@ -8,8 +8,8 @@ import { useHyroxReferences } from "@/features/shared/hooks/hyrox/useHyroxRefere
 import { pickRef } from "@/api/hyrox";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
-import { DIVISION_LABEL, REFERENCE_DIVISION, type HyroxDivision, type HyroxResult } from "@/features/shared/types/hyrox";
-import { alerts as raceAlerts, bracketOf, percentile, typology, type RefLookup } from "@/lib/hyrox/calc";
+import { DIVISION_LABEL, type HyroxDivision, type HyroxResult } from "@/features/shared/types/hyrox";
+import { POSITION_BRACKET, alerts as raceAlerts, bracketOf, percentile, typology, type RefLookup } from "@/lib/hyrox/calc";
 import { useHyroxRacePlans } from "@/features/shared/hooks/hyrox/useHyroxRacePlans";
 import { planForRace, planSegments } from "@/lib/hyrox/racePlan";
 import { compareAvailable, compareTarget, defaultCompare, type CompareKind, type CompareSources } from "@/lib/hyrox/raceCompare";
@@ -29,6 +29,9 @@ import RaceCourseTab from "./RaceCourseTab";
 import RaceGainsTab from "./RaceGainsTab";
 import RaceRunsTab from "./RaceRunsTab";
 import RaceShareTab from "./RaceShareTab";
+import { CATEGORY_LABEL, raceCategory, type ReferenceCategory } from "@/lib/hyrox/categories";
+import { equivalentTotal } from "@/lib/hyrox/categoryEquivalence";
+import RaceCategoryCard from "./RaceCategoryCard";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
@@ -72,6 +75,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const { data: coaches } = useAthleteCoaches(race.athlete_id);
   const { data: plans = [] } = useHyroxRacePlans(race.athlete_id);
   const [compareChoice, setCompareChoice] = useState<CompareKind | null>(null);
+  const [categoryChoice, setCategoryChoice] = useState<ReferenceCategory | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const detail = watch.detail;
@@ -83,19 +87,26 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const attribution = stream ? detail?.attribution ?? null : null;
 
   const analysis = useMemo(() => crossRaceWithWatch(race, stream, offset), [race, stream, offset]);
-  const refDiv = REFERENCE_DIVISION(race.division as HyroxDivision);
-  const bracket = bracketOf(race.total_s);
-  const refOf = useMemo(() => (seg: string) => pickRef(refs, refDiv, seg, bracket), [refs, refDiv, bracket]);
-  const median = useMemo(() => (seg: string) => refOf(seg)?.p50_s ?? null, [refOf]);
+  const ownCategory = raceCategory(race);
+  // Catégorie de comparaison : la sienne par défaut ; une autre via le sélecteur.
+  const refDiv = categoryChoice ?? ownCategory;
   const refLookup: RefLookup = useMemo(() => (d, s, b) => pickRef(refs, d, s, b) ?? undefined, [refs]);
+  // Niveau (tranche de chrono) : celui du chrono équivalent dans la catégorie choisie.
+  const levelTotal = refDiv === ownCategory ? race.total_s : equivalentTotal(race.total_s, ownCategory, refDiv, refLookup)?.timeS ?? race.total_s;
+  const bracket = bracketOf(levelTotal);
+  /** Médiane du niveau : gain possible, écarts, habituel des runs. */
+  const refOf = useMemo(() => (seg: string) => pickRef(refs, refDiv, seg, bracket), [refs, refDiv, bracket]);
+  /** Position (top x %) : toute la catégorie. */
+  const posOf = useMemo(() => (seg: string) => pickRef(refs, refDiv, seg, POSITION_BRACKET), [refs, refDiv]);
+  const median = useMemo(() => (seg: string) => refOf(seg)?.p50_s ?? null, [refOf]);
   const gains = useMemo(() => (refs.length ? raceGains(race, median) : null), [race, median, refs.length]);
   const atLevel = useMemo(() => (gains ? stationsAtLevel(race, median, gains) : []), [race, median, gains]);
   const evolution = useMemo(() => runPaceEvolution(allRaces), [allRaces]);
   const above = analysis ? timeAboveHr(analysis, stream, sv2, offset) : null;
-  const findings = analysis ? athleteFindings({ analysis, above, gains, sv2 }) : [];
+  const findings = analysis ? athleteFindings({ analysis, above, gains, sv2, levelP50: refs.length ? median : null }) : [];
   const recov = analysis ? roxzoneRecovery(analysis, stream, offset) : null;
 
-  const totalRef = refOf("total");
+  const totalRef = posOf("total");
   const totalPct = totalRef ? percentile(race.total_s, totalRef) : null;
   const pp = profilePercentiles(race, refLookup);
   const profile = typology(pp.run, pp.stations);
@@ -105,7 +116,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const isRecord = race.is_official && best != null && race.total_s <= best;
   const gap = isRecord ? null : recordGap(race, allRaces);
   const prev = previousRace(race, allRaces);
-  const previous = prev ? { name: raceShortName(prev), compromised: compromisedFromTimes(prev) } : null;
+  const previous = prev ? { name: raceShortName(prev), compromised: compromisedFromTimes(prev, refs.length ? median : null) } : null;
   const plan = useMemo(() => planForRace(race, plans), [race, plans]);
   const planSegs = useMemo(() => (plan ? planSegments(plan.targets) : null), [plan]);
   const planTotalS = plan ? Object.values(planSegs ?? {}).reduce((n, x) => n + x, 0) || plan.target_total_s : null;
@@ -115,10 +126,10 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const target = useMemo(() => compareTarget(compareKind, compareSrc), [compareKind, compareSrc]);
   const planOf = useMemo(() => compareTarget("plan", compareSrc), [compareSrc]);
   const levers = useMemo(
-    () => (coach && refs.length ? raceLevers({ race, refs: refLookup, analysis: stream ? analysis : null, roxzoneRecoveryBpm: recov?.avgDrop ?? null }) : []),
-    [coach, refs.length, race, refLookup, stream, analysis, recov?.avgDrop],
+    () => (coach && refs.length ? raceLevers({ race, refs: refLookup, analysis: stream ? analysis : null, roxzoneRecoveryBpm: recov?.avgDrop ?? null, levelP50: median }) : []),
+    [coach, refs.length, race, refLookup, stream, analysis, recov?.avgDrop, median],
   );
-  const division = DIVISION_LABEL[race.division as HyroxDivision] ?? race.division;
+  const division = CATEGORY_LABEL[refDiv] ?? DIVISION_LABEL[race.division as HyroxDivision] ?? race.division;
   const bracketText = bracketLabel(bracket);
   const dateLabel = new Date(race.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
   const timeSource = race.is_official ? "résultat officiel" : "temps saisis";
@@ -190,7 +201,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
           <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 3, paddingBottom: 2, flex: "none" }}>
             <span style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Position</span>
             <div style={{ ...MONO, fontSize: 18, color: C.tx }}>Top {totalPct} %</div>
-            <div style={{ fontSize: 12, color: C.tx2 }}>{division} · {bracketText}</div>
+            <div style={{ fontSize: 12, color: C.tx2 }}>{division}</div>
           </div>
         )}
       </div>
@@ -257,13 +268,16 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
           sub={isRecord ? "Record" : gap ? `+${fmtGap(gap.gapS)} vs record (${raceShortName(gap.record)})` : undefined} />
         {race.rank_overall != null && race.participants_overall
           ? <Stat bare label="Rang" value={String(race.rank_overall)} unit={`/ ${race.participants_overall}`} sub={`Top ${Math.max(1, Math.round((race.rank_overall / race.participants_overall) * 100))} %`} />
-          : totalPct != null && <Stat bare label="Position" value={`Top ${totalPct} %`} sub={`${division} · ${bracketText}`} />}
+          : totalPct != null && <Stat bare label="Position" value={`Top ${totalPct} %`} sub={division} />}
         {vsPlan != null && planTotalS != null && (
           <Stat bare label="Vs plan de course" value={Math.round(vsPlan) === 0 ? "0" : `${vsPlan > 0 ? "+" : "−"}${fmtGap(vsPlan)}`}
             color={vsPlan > 0 ? C.o : C.g} sub={`plan ${fmtClock(planTotalS)}`} />
         )}
         {profile && <Stat bare label="Profil" value={PROFILE_LABEL[profile]} sub={profileSub} />}
       </div>
+      {refs.length > 0 && (
+        <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
+      )}
       </>}
 
       {phone ? phoneTabs : (
@@ -287,7 +301,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       {tab === "course" && (
         <RaceCourseTab audience={audience} analysis={analysis} stream={stream} watchLoading={watch.loading} offset={offset}
           sv1={sv1} sv2={sv2} attribution={attribution} findings={findings} above={above} recov={recov} previous={previous}
-          refOf={refOf} totalS={race.total_s} totalRef={totalRef} timeSource={timeSource} division={division} bracketText={bracketText}
+          refOf={refOf} posOf={posOf} levelP50={refs.length ? median : null} totalS={race.total_s} totalRef={totalRef} timeSource={timeSource} division={division} bracketText={bracketText}
           compare={{
             kind: compareKind, onChange: setCompareChoice, target, plan: planSegs ? planOf : null, alerts: raceAlerts(race),
             options: ([["previous", prev ? `Course précédente · ${raceShortName(prev)}` : "Course précédente"], ["plan", "Plan de course"], ["median", `Médiane ${division} ${bracketText}`]] as const)
@@ -296,10 +310,13 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
           levers={levers} athleteId={race.athlete_id} atLevel={atLevel.length} />
       )}
       {tab === "runs" && (
-        <RaceRunsTab analysis={analysis} median={median} attribution={attribution} timeSource={timeSource} evolution={evolution} raceId={race.id} />
+        <RaceRunsTab analysis={analysis} median={median} levelP50={refs.length ? median : null} attribution={attribution} timeSource={timeSource} evolution={evolution} raceId={race.id} />
       )}
       {tab === "gains" && (
         <RaceGainsTab gains={gains} atLevel={atLevel} division={division} bracketText={bracketText} timeSource={timeSource} startLabel={raceShortName(race)} />
+      )}
+      {tab === "gains" && phone && refs.length > 0 && (
+        <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
       )}
       {tab === "gains" && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
       {tab !== "partager" && <RaceComments race={race} />}
