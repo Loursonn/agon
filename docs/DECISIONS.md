@@ -2615,7 +2615,7 @@ et son README.
 
 - Constat : `microcycles_*` appelaient `cycle_athlete_id` (invoker) à chaque ligne, qui relisait cycles, mésocycles
   et macrocycles sous la RLS de l'appelant, en cascade (environ 89 ms pour un athlète sur 148 microcycles).
-- Décision (migration `20261115220000_rls_microcycles_fast`, appliquée avec le oui d'Hugo) : dans les policies
+- Décision (migration `20261115230000_rls_microcycles_fast`, appliquée avec le oui d'Hugo) : dans les policies
   seulement, `cycle_athlete_id_fast` et `mesocycle_athlete_id_fast` (SECURITY DEFINER, gardées par
   `rls_linked_to` : l'athlète, son coach ou co-coach, un pro au lien actif). Le cycle « mixte » (mésocycle d'un
   athlète, `athlete_id` d'un autre ; 0 ligne en prod) repasse par l'ancienne fonction (`cycle_is_mixed`).
@@ -2625,4 +2625,5 @@ et son README.
   volontaires détectées), et test `supabase/tests/rls_microcycles_equivalence.sql` (ancienne contre nouvelle
   expression lue dans `pg_policies`, cycles fictifs de chaque forme). Pas de test massif en prod : la panne du
   15/11 venait du budget Disk IO du plan gratuit. Gain non mesuré en prod pour la même raison.
-- Retour arrière : `supabase/rollback/20261115220000_rls_microcycles_fast.sql`.
+- Retour arrière : `supabase/rollback/20261115230000_rls_microcycles_fast.sql`.
+- Version renommée 20261115220000 → 20261115230000 le 2026-11-15 (doublon avec `measurement_segments`) ; les commentaires SQL en base gardent l'ancien numéro.

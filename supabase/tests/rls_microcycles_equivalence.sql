@@ -1,4 +1,4 @@
--- Équivalence des policies de cycles et microcycles réécrites par 20261115220000_rls_microcycles_fast.sql.
+-- Équivalence des policies de cycles et microcycles réécrites par 20261115230000_rls_microcycles_fast.sql.
 -- Ancienne expression (écrite ici) contre la policy installée (lue dans pg_policies), pour chaque
 -- utilisateur de la base (+ anon et un uuid sans compte) et chaque cycle (ceux de la base + des cycles fictifs de chaque forme, dont le cas
 -- « mixte » : mésocycle d'un athlète, athlete_id d'un autre) : la décision (NULL = refus) doit être
@@ -7,7 +7,7 @@
 -- sur chaque cycle (plus un id inexistant). Aucune donnée affichée, seulement des comptes.
 -- Toujours annulé (ROLLBACK).
 -- Avant application (prod, à blanc) : un fichier = BEGIN; + la migration + ce test sans son BEGIN;
---   (echo 'BEGIN;'; cat supabase/migrations/20261115220000_rls_microcycles_fast.sql;
+--   (echo 'BEGIN;'; cat supabase/migrations/20261115230000_rls_microcycles_fast.sql;
 --    sed '/^BEGIN;$/d' supabase/tests/rls_microcycles_equivalence.sql) > /tmp/x.sql
 --   prod.sh supabase db query --linked -f /tmp/x.sql
 BEGIN;

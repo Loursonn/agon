@@ -1,4 +1,4 @@
--- Retour arrière de 20261115220000_rls_microcycles_fast.sql : policies d'origine (état après
+-- Retour arrière de 20261115230000_rls_microcycles_fast.sql : policies d'origine (état après
 -- 20261115193700), puis suppression des fonctions _fast.
 BEGIN;
 

@@ -26,7 +26,7 @@
 --
 -- Preuve : supabase/tests/rls_microcycles_equivalence.sql (ancienne et nouvelle expression,
 -- chaque utilisateur × chaque ligne, plus des cycles fictifs de chaque forme dont le mixte).
--- Retour arrière : supabase/rollback/20261115220000_rls_microcycles_fast.sql
+-- Retour arrière : supabase/rollback/20261115230000_rls_microcycles_fast.sql
 
 -- ── Lectures directes ────────────────────────────────────────────────────────────────────
 
