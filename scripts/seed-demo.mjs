@@ -178,7 +178,7 @@ async function seed() {
   const STAFF = await ensureAccount(STAFF_EMAIL, { full_name: "Sam Démo", role: "staff" });
   console.log("coach", COACH, "| athlète", ATH, "| staff", STAFF);
 
-  await must(sb.from("profiles").insert({ id: COACH, role: "coach", full_name: "Agon Démo", first_name: "Agon", last_name: "Démo", coach_code: "DEMO42", booking_url: "https://calendly.com/agon-demo/point-hebdo", is_pending: false }), "profile coach");
+  await must(sb.from("profiles").insert({ id: COACH, role: "coach", full_name: "Agon Démo", first_name: "Agon", last_name: "Démo", coach_code: "DEMO42", birth_date: "1989-06-21", booking_url: "https://calendly.com/agon-demo/point-hebdo", is_pending: false }), "profile coach");
   await must(sb.from("profiles").insert({
     id: ATH, role: "athlete", full_name: "Léa Démo", first_name: "Léa", last_name: "Démo", coach_id: COACH, gender: "female",
     birth_date: "1998-04-12", height_cm: 171, weight_kg: 78.4, base_metabolism: 1580, is_hyrox_athlete: true, hyrox_category: "open",
